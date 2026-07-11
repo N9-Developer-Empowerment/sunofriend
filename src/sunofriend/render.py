@@ -9,7 +9,8 @@ FluidSynth binary lookup order:
   2. `fluidsynth` on PATH
 SoundFont lookup order:
   1. SUNOFRIEND_SF2 env var
-  2. common install locations (Linux apt, macOS Homebrew)
+  2. Sunofriend's per-user install location
+  3. common install locations (Linux apt, macOS Homebrew)
 """
 from __future__ import annotations
 
@@ -19,6 +20,7 @@ import subprocess
 from pathlib import Path
 
 _SF2_CANDIDATES = [
+    Path.home() / ".local/share/sunofriend/soundfonts/GeneralUser-GS.sf2",
     "/usr/share/sounds/sf2/FluidR3_GM.sf2",
     "/usr/share/sounds/sf2/default-GM.sf2",
     "/usr/local/share/soundfonts/FluidR3_GM.sf2",
@@ -33,27 +35,37 @@ class RenderError(RuntimeError):
 
 def find_fluidsynth() -> str:
     override = os.environ.get("SUNOFRIEND_FLUIDSYNTH")
-    if override and Path(override).exists():
-        return override
+    if override:
+        candidate = Path(override).expanduser()
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return str(candidate)
+        raise RenderError(
+            "SUNOFRIEND_FLUIDSYNTH must point to an executable file: "
+            f"{candidate}"
+        )
     found = shutil.which("fluidsynth")
     if found:
         return found
     raise RenderError(
-        "fluidsynth binary not found. Install it (macOS: `brew install fluidsynth`) "
+        "fluidsynth binary not found. Install it (macOS: `brew install fluid-synth`) "
         "or set SUNOFRIEND_FLUIDSYNTH to its path."
     )
 
 
 def find_soundfont() -> str:
     override = os.environ.get("SUNOFRIEND_SF2")
-    if override and Path(override).exists():
-        return override
+    if override:
+        candidate = Path(override).expanduser()
+        if candidate.is_file():
+            return str(candidate)
+        raise RenderError(f"SUNOFRIEND_SF2 must point to a SoundFont file: {candidate}")
     for candidate in _SF2_CANDIDATES:
-        if Path(candidate).exists():
-            return candidate
+        if Path(candidate).is_file():
+            return str(candidate)
     raise RenderError(
-        "No GM SoundFont found. Download FluidR3_GM.sf2 (or any GM .sf2) and set "
-        "SUNOFRIEND_SF2 to its path."
+        "No GM SoundFont found. Install GeneralUser-GS.sf2 at "
+        "~/.local/share/sunofriend/soundfonts/GeneralUser-GS.sf2, or set "
+        "SUNOFRIEND_SF2 to another GM SoundFont."
     )
 
 
@@ -74,6 +86,8 @@ def render_midi_to_wav(
     command = [
         find_fluidsynth(),
         "-ni",                      # no shell, no MIDI-in
+        "-R", "0",                 # dry proxy: reverb masks note endings
+        "-C", "0",                 # chorus can create pitch/onset ghosts
         "-g", str(gain),
         "-r", str(sample_rate),
         "-F", str(wav_path),        # fast file rendering, no audio device
@@ -84,9 +98,12 @@ def render_midi_to_wav(
     extra_lib = os.environ.get("SUNOFRIEND_FLUIDSYNTH_LIB")
     if extra_lib:
         env["LD_LIBRARY_PATH"] = extra_lib + ":" + env.get("LD_LIBRARY_PATH", "")
-    result = subprocess.run(
-        command, capture_output=True, text=True, timeout=timeout_seconds, env=env
-    )
+    try:
+        result = subprocess.run(
+            command, capture_output=True, text=True, timeout=timeout_seconds, env=env
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise RenderError(f"fluidsynth could not render {midi_path}: {exc}") from exc
     if result.returncode != 0 or not wav_path.exists() or wav_path.stat().st_size < 1024:
         raise RenderError(
             f"fluidsynth failed (exit {result.returncode}): {result.stderr.strip()[:500]}"

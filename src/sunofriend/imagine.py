@@ -19,7 +19,7 @@ from .beatgrid import Grid
 from .chords import chord_at_time, choose_voicing, parse_key
 from .models import ChordSegment, NoteEvent
 
-BASS_LOW, BASS_HIGH = 28, 52       # E1..E3
+BASS_LOW, BASS_HIGH = 23, 52       # B0..E3 (five-string / synth-bass range)
 LEAD_LOW, LEAD_HIGH = 55, 84       # G3..C6
 
 
@@ -29,14 +29,53 @@ def imagine_bass(
     segments: list[ChordSegment],
     key_name: str | None = None,
 ) -> list[NoteEvent]:
-    """Bass line: evidence-first, theory-cleaned, monophonic, bass register."""
+    """Return the default contour-preserving bass interpretation.
+
+    ``imagine_bass_variants`` exposes the evidence and conservative chord-root
+    alternatives for auditioning.  Keeping this wrapper means existing callers
+    continue to receive one list of notes.
+    """
+    return imagine_bass_variants(
+        stem_path,
+        grid=grid,
+        segments=segments,
+        key_name=key_name,
+    )["contour_clean"]
+
+
+def imagine_bass_variants(
+    stem_path: str,
+    grid: Grid,
+    segments: list[ChordSegment],
+    key_name: str | None = None,
+) -> dict[str, list[NoteEvent]]:
+    """Build three deterministic bass candidates from the same stem evidence.
+
+    ``raw_verified`` preserves the hybrid Basic Pitch / pYIN contour without
+    quantisation. ``contour_clean`` adds the existing grid and harmony safety
+    rules while retaining supported passing tones. ``root_safe`` keeps the
+    contour-clean rhythm and expression but uses the active chord root.  The
+    explicit alternatives make the creative trade-off audible instead of
+    silently replacing a walking line with roots.
+    """
     from .transcribe_pitched import transcribe_pitched_stem
 
     evidence = transcribe_pitched_stem(stem_path, kind="bass")
-    evidence = _verified(stem_path, evidence, threshold=0.18)
-    return _theory_clean(
-        evidence, segments, key_name, grid, low=BASS_LOW, high=BASS_HIGH, min_beats=0.4
+    raw_verified = _verified(stem_path, evidence, threshold=0.18)
+    contour_clean = _theory_clean(
+        raw_verified,
+        segments,
+        key_name,
+        grid,
+        low=BASS_LOW,
+        high=BASS_HIGH,
+        min_beats=0.4,
     )
+    return {
+        "raw_verified": raw_verified,
+        "contour_clean": contour_clean,
+        "root_safe": _root_safe_bass(contour_clean, segments, BASS_LOW, BASS_HIGH),
+    }
 
 
 def imagine_lead(
@@ -50,6 +89,14 @@ def imagine_lead(
 
     evidence = transcribe_pitched_stem(stem_path, kind="synth")
     evidence = _verified(stem_path, evidence, threshold=0.10)
+    # Separation models often leave a very quiet, harmonically coherent copy
+    # of the rest of the mix in an otherwise sparse lead stem.  Pitch/spectral
+    # checks alone can mistake that bleed for a full-song melody.  Require each
+    # surviving hypothesis to overlap locally audible activity (still a very
+    # permissive -40 dB relative to the stem's loudest RMS frame, plus an
+    # absolute -66 dBFS RMS floor so an all-bleed file cannot normalize itself
+    # into looking active).
+    evidence = _filter_notes_by_activity(stem_path, evidence, min_peak_ratio=0.01)
     return _theory_clean(
         evidence, segments, key_name, grid, low=LEAD_LOW, high=LEAD_HIGH, min_beats=0.2
     )
@@ -60,6 +107,59 @@ def _verified(stem_path: str, notes: list[NoteEvent], threshold: float) -> list[
     from .verify import verify_notes
 
     return verify_notes(stem_path, notes, threshold=threshold).kept
+
+
+def _filter_notes_by_activity(
+    stem_path: str,
+    notes: list[NoteEvent],
+    *,
+    min_peak_ratio: float = 0.01,
+    absolute_rms_floor: float = 5e-4,
+) -> list[NoteEvent]:
+    """Reject pitch hypotheses that exist only in very-low-level stem bleed.
+
+    This is intentionally a local gate rather than a whole-file RMS test: a
+    legitimate lead can be silent for most of a song.  A small margin around
+    each note catches short attacks that fall just outside a tracker boundary.
+    The absolute floor rejects a uniformly tiny tonal residue even when it is
+    the loudest material in the stem.
+    """
+
+    if not notes:
+        return []
+    if not 0.0 < min_peak_ratio <= 1.0:
+        raise ValueError("min_peak_ratio must be between 0 and 1")
+    if not 0.0 <= absolute_rms_floor <= 1.0:
+        raise ValueError("absolute_rms_floor must be between 0 and 1")
+
+    import librosa
+    import numpy as np
+
+    sample_rate = 22050
+    hop_length = 512
+    audio, _ = librosa.load(stem_path, sr=sample_rate, mono=True)
+    if audio.size == 0:
+        return []
+    rms = librosa.feature.rms(y=audio, hop_length=hop_length)[0]
+    if rms.size == 0:
+        return []
+    peak = float(np.max(rms))
+    if peak <= 1e-9:
+        return []
+    threshold = max(peak * min_peak_ratio, absolute_rms_floor)
+    frame_seconds = hop_length / sample_rate
+    margin_seconds = 0.03
+
+    kept: list[NoteEvent] = []
+    for note in notes:
+        first = max(0, int((note.start - margin_seconds) / frame_seconds))
+        last = min(
+            len(rms),
+            max(first + 1, int(np.ceil((note.end + margin_seconds) / frame_seconds)) + 1),
+        )
+        if first < len(rms) and float(np.max(rms[first:last])) >= threshold:
+            kept.append(note)
+    return kept
 
 
 def imagine_pads(
@@ -128,12 +228,16 @@ def _theory_clean(
         segment = chord_at_time(segments, start)
         on_beat = grid.is_strong(start)
 
-        if note.pitch % 12 in key_pcs and low <= note.pitch <= high:
-            # in key and in register: trust the evidence as-is
-            pitch = note.pitch
+        # Register correction is an octave operation, not a theory operation:
+        # fold first while preserving the detected pitch class.  Previously a
+        # D#1 (MIDI 27) fell below the E1 boundary and could be snapped to E1.
+        folded_pitch = _fold_pitch_to_register(note.pitch, low, high, previous_pitch)
+        if folded_pitch % 12 in key_pcs:
+            # in key: trust the evidence pitch class, including passing tones
+            pitch = folded_pitch
         else:
             allowed = _allowed_pcs(segment, key_pcs, on_beat)
-            pitch = _snap_pitch(note.pitch, allowed, low, high, previous_pitch)
+            pitch = _snap_pitch(folded_pitch, allowed, low, high, previous_pitch)
 
         if notes and notes[-1].start == start:
             continue  # quantization collision: keep the earlier (stronger) voice
@@ -172,6 +276,57 @@ def _to_register(pc: int, low: int, high: int, anchor: int) -> int:
     if not candidates:
         return max(low, min(high, anchor))
     return min(candidates, key=lambda p: abs(p - anchor))
+
+
+def _fold_pitch_to_register(
+    pitch: int,
+    low: int,
+    high: int,
+    previous: int | None = None,
+) -> int:
+    """Move a pitch by whole octaves into ``low..high``.
+
+    Pitch class is an invariant.  The closest octave to the observation wins;
+    melodic continuity is only a tie-breaker, so a previous note can never
+    turn (for example) D# into E.
+    """
+    if low > high:
+        raise ValueError("low must not be greater than high")
+    candidates = [candidate for candidate in range(low, high + 1) if candidate % 12 == pitch % 12]
+    if not candidates:
+        # A range narrower than an octave may not contain the pitch class.  It
+        # is impossible to satisfy both constraints; retain the closest bound
+        # rather than returning an out-of-range note.
+        return min((low, high), key=lambda candidate: abs(candidate - pitch))
+    return min(
+        candidates,
+        key=lambda candidate: (
+            abs(candidate - pitch),
+            abs(candidate - previous) if previous is not None else 0,
+            candidate,
+        ),
+    )
+
+
+def _root_safe_bass(
+    notes: list[NoteEvent],
+    segments: list[ChordSegment],
+    low: int,
+    high: int,
+) -> list[NoteEvent]:
+    """Retain a cleaned line's rhythm while replacing pitches with roots."""
+    result: list[NoteEvent] = []
+    previous_pitch: int | None = None
+    for note in notes:
+        segment = chord_at_time(segments, note.start)
+        if segment is None:
+            pitch = _fold_pitch_to_register(note.pitch, low, high, previous_pitch)
+        else:
+            anchor = previous_pitch if previous_pitch is not None else note.pitch
+            pitch = _to_register(segment.root_pc, low, high, anchor)
+        result.append(NoteEvent(note.start, note.end, pitch, note.velocity))
+        previous_pitch = pitch
+    return result
 
 
 def _monophonic(notes: list[NoteEvent]) -> list[NoteEvent]:

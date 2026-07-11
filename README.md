@@ -1,32 +1,389 @@
 # Sunofriend
 
-Sunofriend generates cleaner GarageBand-ready MIDI remakes from Moises/Suno export folders.
+Sunofriend converts separated Suno/Moises audio stems into editable,
+timing-locked MIDI for GarageBand. It preserves what was actually heard,
+separates uncertain alternatives for auditioning, and clearly labels notes
+that were repaired or musically inferred.
 
-## listen-all: whole export folder in one command
+It complements Suno, Moises and GarageBand rather than replacing them: use
+Suno to generate a song, Moises to export stems and chords, Sunofriend to make
+clean MIDI resources, and GarageBand to choose instruments and finish the mix.
+
+## Getting started (macOS)
+
+### 1. Install Sunofriend and its audio tools
+
+Use Python 3.9–3.11. The following setup uses the dependency versions tested on
+Apple Silicon and installs FluidSynth for offline MIDI previews:
 
 ```bash
-PYTHONPATH=src python -m sunofriend.cli listen-all \
-  "path/to/Suno Export Folder" --out-dir work/mysong
+git clone https://github.com/N9-Developer-Empowerment/sunofriend.git
+cd sunofriend
+brew install python@3.11 fluid-synth
+"$(brew --prefix python@3.11)/bin/python3.11" -m venv .venv
+.venv/bin/python -m ensurepip --upgrade
+.venv/bin/python -m pip install -c constraints-audio-macos.txt -e '.[listen,midi]'
 ```
 
-Finds every stem, the chords PDF, and the metronome automatically; infers
-BPM/key from the folder name. Produces one `<part>_listened.mid` per stem and
-a combined `full_arrangement.mid` (set GarageBand's tempo to the *true* BPM
-printed by the command — derived from the metronome clicks, it is often not
-exactly the nominal BPM).
+Install the validated GeneralUser GS 2.0.3 SoundFont:
 
-What each part gets:
+```bash
+mkdir -p "$HOME/.local/share/sunofriend/soundfonts"
+curl --fail --location \
+  "https://raw.githubusercontent.com/mrbumpy409/GeneralUser-GS/684543d5e5efaef08d02be50dcda8d552478fa60/GeneralUser-GS.sf2" \
+  --output "$HOME/.local/share/sunofriend/soundfonts/GeneralUser-GS.sf2"
+echo "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe  $HOME/.local/share/sunofriend/soundfonts/GeneralUser-GS.sf2" \
+  | shasum -a 256 -c -
+```
 
-- **kick/snare/hat/cymbals/toms/other_kit** — onset transcription + refine loop.
-- **bass/lead** — "imagine" mode: transcription evidence cleaned by music
-  theory (metronome-true grid, key scale, chord chart) so every note is
-  on-grid and in-key.
-- **pads** — chord-mode built from the keys stem: chart voicings with the
-  boundaries aligned to the audio (chroma DP), dynamics from the stem. Use
-  this OR the `keys` transcription track, whichever sounds better.
-- Near-silent stems (separation bleed) are detected and skipped.
+### 2. Check the installation
 
-## Listen mode (new)
+```bash
+.venv/bin/sunofriend doctor
+```
+
+You are ready to convert and preview when `listen_ready` and `render_ready` are
+true. Top-level `ready` additionally confirms a live CoreMIDI destination for
+`play`; that destination is not required for file conversion. The standard
+Basic Pitch path uses ONNX Runtime, so TensorFlow/TFLite warnings are harmless
+when the two conversion checks pass.
+
+### 3. Prepare a stem export
+
+Put one song's files in a folder whose name includes its key, BPM and tuning:
+
+```text
+My Song-B major-119bpm-440hz/
+├── My Song-kick-B major-119bpm-440hz.wav
+├── My Song-snare-B major-119bpm-440hz.wav
+├── My Song-hat-B major-119bpm-440hz.wav
+├── My Song-bass-B major-119bpm-440hz.wav
+├── My Song-keys-B major-119bpm-440hz.wav
+├── My Song-metronome-B major-119bpm-440hz.wav   # optional
+└── My Song-chords.pdf                            # optional
+```
+
+Recognised stem tokens are `kick`, `snare`, `hat`, `cymbals`, `toms`,
+`other_kit`, `bass`, `keys`, `piano`, `strings`, `lead`, `synth` and
+`metronome`. The chord filename must contain `chords`. If key or BPM is not in
+the folder name, provide `--key "B major"` and `--bpm 119` explicitly.
+
+### 4. Convert your first song
+
+Start with `repair`, the conservative default:
+
+```bash
+STEMS="/absolute/path/to/My Song-B major-119bpm-440hz"
+OUT="work/my-song-v2"
+
+.venv/bin/sunofriend listen-all "$STEMS" \
+  --out-dir "$OUT" \
+  --conversion-mode repair
+```
+
+Sunofriend discovers the stems, chord PDF and metronome, evaluates each MIDI
+against its source stem, and prints the exact GarageBand tempo. The first build
+looks like this:
+
+```text
+work/my-song-v2/
+└── mode_repair/
+    ├── full_arrangement.mid
+    ├── kick_listened.mid
+    ├── kick_provenance.json
+    ├── kick_evaluation.json
+    ├── ...other parts...
+    ├── variants/
+    └── listen_all_summary.json
+```
+
+### 5. Import into GarageBand
+
+1. Set GarageBand to the exact `set GarageBand tempo to` value printed by
+   Sunofriend before importing anything.
+2. Place the audio stems and MIDI regions at the same project timeline origin.
+3. Leave MIDI quantisation off and disable audio tempo-follow/stretching for
+   the stems.
+4. Import `mode_repair/full_arrangement.mid`, or import individual
+   `<part>_listened.mid` files when you want separate control.
+5. Choose the real GarageBand patch by ear. Audition family, `possible` and
+   `uncertain` alternatives from `mode_repair/variants/` separately.
+
+## How to
+
+### Choose how much Sunofriend may change
+
+| Mode | Use it when | Main-output policy |
+| --- | --- | --- |
+| `exact` | You want only confident audio evidence | No theory-generated pads or pattern completion |
+| `repair` | You want a faithful but cleaner conversion | Confidence-backed pitch, timing, register and recurring-pattern repairs |
+| `reconstruct` | A stem is weak and you want a creative replacement | Clearly labelled chord, bass and drum-pattern inference is allowed |
+
+Every mode owns a separate directory, so comparing them cannot overwrite a
+previous result. Using the `STEMS` and `OUT` variables from the first
+conversion:
+
+```bash
+.venv/bin/sunofriend listen-all "$STEMS" \
+  --out-dir "$OUT" --conversion-mode exact
+.venv/bin/sunofriend listen-all "$STEMS" \
+  --out-dir "$OUT" --conversion-mode reconstruct
+```
+
+The results are in `mode_exact/`, `mode_repair/` and `mode_reconstruct/`.
+
+### Maintainer worked example: Lidl (local asset)
+
+The local development golden `work/Lidl-B major-119bpm-440hz` contains two kick
+and snare timbres, a walking bass, layered keys and separator artefacts. The
+audio asset is not distributed with the source, so substitute your own export
+if it is absent. This command deliberately requests `pads` as well,
+demonstrating that repair mode reports and skips a part that would require
+reconstruction:
+
+```bash
+LIDL_STEMS="work/Lidl-B major-119bpm-440hz"
+LIDL_OUT="work/lidl-v2"
+
+.venv/bin/sunofriend listen-all "$LIDL_STEMS" \
+  --out-dir "$LIDL_OUT" \
+  --parts bass,cymbals,hat,keys,kick,other_kit,pads,snare,strings,toms \
+  --conversion-mode repair \
+  --max-iterations 2
+```
+
+This run detects an average grid BPM of `118.926`, prints GarageBand tempo
+`119`, and publishes nine usable tracks; pads are correctly skipped because
+repair mode does not invent a missing pads stem. Current golden results are:
+
+| Part | Main result | Useful alternatives |
+| --- | ---: | --- |
+| Kick | 240 hits: 177 deep + 63 high | 12 `possible` hits |
+| Snare | 249 hits: 122 body + 127 bright | 50 `possible` hits |
+| Hat | 484 hits: 337 closed + 147 open | 69 `possible` hits |
+| Cymbals | 18 hits: 3 crash + 15 ride | 6 `possible` hits |
+| Toms | 91 classified hits | 7 `possible` hits |
+| Other kit | 189 classified mixed-kit hits | 182 `uncertain`, 42 `possible` |
+| Bass | 191-note contour-clean line | 204 `raw_verified`, 191 `root_safe` |
+| Keys | 1,227 notes: 533 melody + 694 accompaniment | 251 `uncertain` |
+| Strings | 277 source-observed notes | Reconstruct separately when desired |
+
+The selected part files are under
+`mode_repair/selected_bass-cymbals-hat-keys-kick-other-kit-pads-snare-strings-toms/`.
+Its arrangement and summary sit one level higher in `mode_repair/`, prefixed
+with `selected_arrangement_` and `listen_all_summary_` respectively.
+
+### Lidl reconstruction without doubled chords
+
+For the same Lidl song, reconstruct only the parts that benefit from musical
+inference:
+
+```bash
+.venv/bin/sunofriend listen-all "$LIDL_STEMS" \
+  --out-dir "$LIDL_OUT" \
+  --parts hat,bass,keys,strings,pads \
+  --conversion-mode reconstruct \
+  --max-iterations 1
+```
+
+The resulting arrangement contains 521 hats, a 191-note chord-root-safe bass,
+533 melody-role keys notes and 340 pad notes. The 694-note keys accompaniment
+and 61-note reconstructed strings part remain audition choices rather than
+doubling the chart harmony in the arrangement. Hat provenance distinguishes
+468 observed, 16 repaired and 37 inferred hits; all reconstructed bass, pads
+and strings notes are explicitly labelled `inferred`.
+
+Files are under `mode_reconstruct/selected_bass-hat-keys-pads-strings/`; the
+GarageBand arrangement is
+`mode_reconstruct/selected_arrangement_bass-hat-keys-pads-strings.mid`.
+
+### Re-run only the parts you want to improve
+
+`--parts` is comma-separated. The output directory suffix is sorted so the
+same selection always has the same location:
+
+```bash
+.venv/bin/sunofriend listen-all "$STEMS" \
+  --out-dir "$OUT" \
+  --parts kick,bass,keys \
+  --conversion-mode repair \
+  --evaluate-variants
+```
+
+This writes part files beneath `mode_repair/selected_bass-keys-kick/`, plus
+`mode_repair/selected_arrangement_bass-keys-kick.mid` and
+`mode_repair/listen_all_summary_bass-keys-kick.json`. Other full or selected
+builds remain untouched.
+
+### Convert and diagnose one stem
+
+Use `listen` when you are tuning one problem part. Substitute the real path to
+one of your stems:
+
+```bash
+STEM="/absolute/path/to/My Song-B major-119bpm-440hz/My Song-kick-B major-119bpm-440hz.wav"
+
+.venv/bin/sunofriend listen "$STEM" \
+  --kind kick \
+  --bpm 119 \
+  --out-dir work/single-kick \
+  --conversion-mode repair \
+  --evaluate-variants
+```
+
+The main MIDI is `work/single-kick/mode_repair/kick_listened.mid`. Provenance,
+iteration history, evaluation and conversion summary files are beside it;
+alternatives are under `mode_repair/variants/`.
+
+Single-stem bass, lead or synth repair can also use explicit theory and timing
+inputs. Use `--conversion-mode reconstruct` instead when you explicitly want a
+chart-built replacement such as pads:
+
+```bash
+.venv/bin/sunofriend listen path/to/bass.wav \
+  --kind bass --bpm 119 --key "B major" \
+  --chords-pdf path/to/chords.pdf \
+  --metronome path/to/metronome.wav \
+  --out-dir work/single-bass \
+  --conversion-mode repair
+```
+
+### Evaluate MIDI without reconverting it
+
+```bash
+.venv/bin/sunofriend evaluate \
+  "$STEM" \
+  work/single-kick/mode_repair/kick_listened.mid \
+  --kind kick \
+  --out work/single-kick/kick-check.json
+
+jq '{
+  notes: .note_count,
+  strong_f1: .onsets.strong.f1,
+  possible_f1: .onsets.possible.f1,
+  timing_p95_ms: .onsets.timing.absolute_error_p95_ms,
+  drift_ms: .onsets.timing.drift_ms,
+  families: .drums.family_counts
+}' work/single-kick/kick-check.json
+```
+
+For the Lidl kick golden, this reports possible-tier F1 `0.8511`, timing p95
+`16.34 ms`, drift `-2.79 ms`, and the two kick-family counts shown above.
+
+### Preview or play MIDI through GarageBand
+
+Render an offline WAV with the configured SoundFont:
+
+```bash
+.venv/bin/sunofriend preview \
+  work/single-kick/mode_repair/kick_listened.mid \
+  --out work/single-kick/kick-preview.wav
+```
+
+Or play the MIDI into an armed GarageBand software-instrument track:
+
+```bash
+.venv/bin/sunofriend midi-ports
+.venv/bin/sunofriend play \
+  work/single-kick/mode_repair/kick_listened.mid \
+  --port "GarageBand Virtual In"
+```
+
+Replace `GarageBand Virtual In` with the exact or uniquely matching destination
+shown by `midi-ports`. `play` auditions the notes; it does not start recording
+in GarageBand.
+
+### Store, find and transform reusable MIDI clips
+
+Archive generated parts with exact source timing and musical beat positions:
+
+```bash
+LIBRARY="$HOME/.local/share/sunofriend/library"
+
+.venv/bin/sunofriend listen-all "$STEMS" \
+  --out-dir "$OUT" \
+  --parts bass,keys \
+  --conversion-mode repair \
+  --library "$LIBRARY"
+
+.venv/bin/sunofriend clip-list \
+  --library "$LIBRARY" --role bass --key "B major"
+```
+
+Copy a returned clip ID into these commands:
+
+```bash
+.venv/bin/sunofriend clip-show CLIP_ID --library "$LIBRARY"
+
+.venv/bin/sunofriend clip-transform CLIP_ID \
+  --library "$LIBRARY" \
+  --target-key "G major" \
+  --target-bpm 124 \
+  --timing-mode musical \
+  --out work/variants/bass-g-major-124.mid
+
+.venv/bin/sunofriend clip-export CLIP_ID \
+  --library "$LIBRARY" \
+  --timing-mode auto \
+  --out work/variants/bass-original-timing.mid
+```
+
+Use `musical` timing to preserve bars/beats at a new BPM. Use `stem_locked` to
+preserve exact source seconds against the original stems.
+
+## Outputs, instruments and provenance
+
+### Output layouts
+
+- A full batch writes parts, `full_arrangement.mid`, variants and
+  `listen_all_summary.json` directly under `<out>/mode_<mode>/`.
+- A selected batch writes its part files under
+  `<out>/mode_<mode>/selected_<sorted-parts>/`; its uniquely named arrangement
+  and summary are in `<out>/mode_<mode>/`.
+- A single `listen` run writes its part, provenance, evaluation and conversion
+  summary under `<out>/mode_<mode>/`, with alternatives under `variants/`.
+
+Re-running one scope replaces only that scope's generated files. A disappeared,
+silent or failed stem cannot leave an obsolete MIDI or arrangement looking
+current, and another conversion mode cannot overwrite the result.
+
+### What each instrument gets
+
+| Stem | Conversion behaviour and audition outputs |
+| --- | --- |
+| Drums | Stereo/multiband onset evidence, `main` and `possible` tiers, measured source confidence and GM family tracks |
+| Kick/snare | Deep/high kick and body/bright snare alternatives retain distinct timbres |
+| Hats/cymbals/toms | Closed/open, ride/crash and floor/low/mid/high family tracks; recurring hat repair is mode-controlled |
+| `other_kit` | Mixed events are classified as kicks, snares, hats, toms or crashes; unknowns stay `uncertain` |
+| Bass | Hybrid Basic Pitch + pYIN contour with `raw_verified`, `contour_clean` and `root_safe` choices |
+| Keys/piano | Polyphonic evidence separated into melody, accompaniment and `uncertain`; chords constrain accompaniment only |
+| Lead/synth | Audio evidence cleaned against the metronome, key and chord chart in repair/reconstruct modes |
+| Strings | Source-pitch transcription in exact/repair; reconstruct publishes a chart-based part but keeps it outside the default arrangement for auditioning |
+| Pads | Reconstruct-only chart voicings aligned to keys activity; exact/repair do not invent a missing pads stem |
+
+Near-silent separation bleed is skipped. In reconstruct arrangements, keys use
+the melody role with chart pads, while reconstructed strings remain
+audition-only to avoid doubled or tripled harmony.
+
+### Provenance and semantic reports
+
+Each primary MIDI has `<part>_provenance.json`; every alternative has its own
+sidecar under `variants/`. Every note is labelled `observed`, `repaired` or
+`inferred`, with confidence tier and instrument family when available.
+`confidence_basis` distinguishes measured drum evidence from policy or
+aggregate weights.
+
+The independent evaluator reports strong/possible precision, recall and F1;
+p50/p95/p99 timing error and full-song drift; drum-family distributions; and
+pitched chroma, pitch support, octave accuracy, contour, density and polyphony.
+Use `--evaluate-variants` to generate the same report for every alternative.
+Use `--no-evaluate` only for a faster exploratory conversion; do not combine
+it with `--evaluate-variants`.
+
+When a library is enabled, variants are linked to their primary clip but do not
+inherit its FluidSynth score. Their own semantic report is the valid comparison.
+
+## How the refinement loop works
 
 `listen` transcribes a single stem by actually listening to it, then iteratively
 refines the result:
@@ -38,55 +395,104 @@ refines the result:
    a GM SoundFont (the "proxy instrument" — no GarageBand involved).
 3. **Compare** — rendered audio vs. the original stem in *feature space* (onset
    times for drums, chroma + onsets for pitched), never raw waveforms, so the
-   SoundFont/GarageBand timbre difference doesn't matter.
-4. **Adjust** — missed hits are added, phantom hits removed, mistimed notes
-   shifted, inaudible notes boosted; then repeat until the score plateaus.
+   comparison is less timbre-sensitive. SoundFont attacks, envelopes and
+   harmonics can still influence the score, so the permanent GarageBand A/B
+   listening check remains important.
+4. **Adjust** — supported edits can repair pitch/semitone, octave, timing,
+   duration and velocity/dynamics. SoundFont tail peaks are not allowed to
+   delete source-observed drum events. Each pitched edit records confidence and
+   rationale in the iteration JSON; then the loop repeats until stable.
+
+The automatic repair policy is deliberately conservative. Chord/theory-built
+bass, lead, synth and pad parts keep their generated pitch, timing, duration,
+grid and note count; stem evidence may refine expression only. Automatic
+pitched-note insertion is currently disabled for every pitched part because
+the detector cannot safely decide which voice owns a new note. Layered
+keys/piano evidence is instead split into melody, accompaniment and uncertain
+role tracks.
+
+Supported single-stem kinds are `kick`, `snare`, `hat`, `cymbals`, `toms`,
+`other_kit`, `keys`, `piano`, `synth`, `lead`, `pads` and `bass`.
+
+## Configuration and troubleshooting
+
+`SUNOFRIEND_FLUIDSYNTH` overrides the FluidSynth binary. `SUNOFRIEND_SF2`
+overrides the default SoundFont, and `SUNOFRIEND_LIBRARY` overrides the default
+Clip library location. `listen-all` archives clips only when `--library` is
+supplied; the Clip commands themselves also honour `SUNOFRIEND_LIBRARY`.
+
+- If `doctor` reports `render_ready: false`, check FluidSynth and the SoundFont
+  path or checksum.
+- If `doctor` reports `midi_ready: false`, enable an IAC Driver bus in Audio
+  MIDI Setup, or open GarageBand so that it exposes its virtual destination.
+- If metadata cannot be inferred, add `--bpm` and `--key` instead of renaming
+  the source files.
+- If a run is slow, omit `--evaluate-variants`; use `--no-evaluate` only during
+  quick experiments.
+
+### Inspect an existing GarageBand project
+
+Read the supported metadata and instrument evidence from an existing project
+without modifying its private project data:
 
 ```bash
-PYTHONPATH=src python -m sunofriend.cli listen path/to/hats.wav \
-  --kind hat --bpm 150 --out-dir work/listened
+.venv/bin/sunofriend garageband-info "$HOME/Music/GarageBand/Move your body.band"
 ```
 
-`--kind` is one of: `kick snare hat cymbals toms other_kit keys piano synth lead pads bass`.
+## GarageBand MIDI Clip v1 reference
 
-Outputs: `<kind>_listened.mid` (drag into GarageBand) and `<kind>_iterations.json`
-(score per iteration). The printed per-iteration log shows F-measure / chroma
-similarity, missed/extra counts, and mean timing error.
+Clip v1 stores two explicit timing contracts:
 
-### Listen-mode setup (macOS)
+- `stem_locked` preserves exact source seconds so MIDI continues to match its
+  original stems, including pickups and measured beat wander.
+- `musical` preserves bars/beats and changes elapsed time at a new BPM.
+
+`listen-all --library` can capture both because it has the source audio and
+warped beat grid. `clip-import` can only derive seconds from the MIDI file's
+tempo events; it cannot recreate alignment to audio that was never supplied.
+`clip-export --timing-mode auto` follows the contract stored with the clip.
+
+The earlier worked example shows search, key/BPM transformation and export.
+Use `clip-import` for an existing MIDI and `clip-instrument` to save the patch
+that worked best in GarageBand:
 
 ```bash
-brew install fluidsynth
-pip install -e '.[listen]'    # numpy, librosa, soundfile, basic-pitch
-# any GM SoundFont works, e.g. FluidR3_GM.sf2:
-export SUNOFRIEND_SF2=/path/to/FluidR3_GM.sf2
+LIBRARY="$HOME/.local/share/sunofriend/library"
+
+.venv/bin/sunofriend clip-import \
+  work/my-song-v2/mode_repair/full_arrangement.mid \
+  --library "$LIBRARY" --key "B major" --tag released
+
+.venv/bin/sunofriend clip-instrument CLIP_ID \
+  --library "$LIBRARY" \
+  --suggest "Upright Jazz Bass" --suggest "Sub Bass"
 ```
 
-`SUNOFRIEND_FLUIDSYNTH` overrides the fluidsynth binary path if it's not on PATH.
+Both commands create immutable, auditable clip versions. The local library
+uses SQLite for search metadata and SHA-256-addressed JSON objects for complete
+musical documents. This boundary can later map to DynamoDB metadata and S3
+objects without changing the Clip v1 schema.
 
-### Playing the result on a real GarageBand instrument
+For stem-locked GarageBand imports, follow the tempo, shared-origin,
+quantisation and audio-stretch checklist in Getting started.
 
-The final `.mid` is the deliverable: drag it into a GarageBand track and pick the
-instrument. For live playback from code, enable the IAC Driver in Audio MIDI
-Setup and send MIDI to it — GarageBand receives on the armed track. (GarageBand
-cannot be automated for offline rendering, which is why the refine loop uses the
-FluidSynth proxy instead.)
+## Legacy remake command
 
-## Legacy remake mode
-
-The current workflow is designed for EDM, hip-hop, and club tracks where drums and bass matter most. It does not try to perfectly recover the original AI-generated performance. Instead, it uses separated stems as timing guides and Moises chords as harmonic structure:
+The legacy grid-based workflow is retained for compatibility and can run
+without the audio/ML extras. It is designed for EDM, hip-hop and club tracks
+where drums and bass matter most. It uses separated stems as timing guides and
+Moises chords as harmonic structure rather than attempting a literal
+performance transcription:
 
 - Kick, snare, hats, cymbals, toms, and other kit stems are detected, quantized, and exported as clean drum MIDI.
 - Bass MIDI follows bass/kick rhythmic activity and uses the current chord root.
 - Pad/chord MIDI is generated from the Moises chord PDF using smooth voicings.
 - A full multitrack MIDI file combines drums, bass, and pads.
 
-## Usage
-
 From the project folder:
 
 ```bash
-PYTHONPATH=src python -m sunofriend.cli \
+.venv/bin/sunofriend remake \
   "$HOME/Downloads/Get This Party Start_reference_24bit_44hz_target-14-G major-150bpm-440hz" \
   --out-dir work/get-this-party-start-remake \
   --style edm
@@ -112,5 +518,17 @@ Set the GarageBand project tempo to the BPM in `quality_report.json`, then impor
 ## Tests
 
 ```bash
-PYTHONPATH=src python -m unittest discover -s tests -v
+.venv/bin/python -m unittest discover -s tests -v
 ```
+
+The optional local goldens use ignored source/output assets. Move Your Body
+checks all 299 kick events; guards
+precision/recall, median and p95 timing error, and four-segment drift; verifies
+archive/export keeps the real source-second lead-in; and prevents a
+theory-generated bass from accepting a role-unsafe high note. Lidl is the
+noisy-stem semantic golden: it checks two kick families against an independent
+audio reference, drum uncertainty quarantine, mixed-kit classification,
+bass alternatives, keys role separation and reconstruct-mode provenance. When
+those private assets are absent (for example in CI), only the relevant golden
+checks skip; portable synthetic tests still exercise missed/extra/mistimed
+notes, stereo cancellation, family classification, octave errors and contour.

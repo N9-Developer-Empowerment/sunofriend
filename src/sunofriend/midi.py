@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .grid import seconds_per_beat
 from .models import NoteEvent
+from .note_safety import MidiNoteInterval, normalize_midi_intervals
 
 
 @dataclass(frozen=True)
@@ -22,8 +23,33 @@ def write_midi_file(path: str | Path, tracks: list[MidiTrack], bpm: float, ticks
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
+    raw_notes: list[MidiNoteInterval] = []
+    for track_index, track in enumerate(tracks):
+        for note in track.notes:
+            start = _seconds_to_ticks(note.start, bpm, ticks_per_beat)
+            end = _seconds_to_ticks(note.end, bpm, ticks_per_beat)
+            raw_notes.append(
+                MidiNoteInterval(
+                    owner=track_index,
+                    channel=track.channel,
+                    start_tick=start,
+                    end_tick=end,
+                    pitch=_clamp(note.pitch, 0, 127),
+                    velocity=_clamp(note.velocity, 1, 127),
+                )
+            )
+    safe_notes = normalize_midi_intervals(raw_notes)
+    notes_by_track: dict[int, list[MidiNoteInterval]] = {
+        index: [] for index in range(len(tracks))
+    }
+    for note in safe_notes:
+        notes_by_track[note.owner].append(note)
+
     chunks = [_tempo_track_chunk(bpm)]
-    chunks.extend(_track_chunk(track, bpm, ticks_per_beat) for track in tracks)
+    chunks.extend(
+        _track_chunk(track, notes_by_track[index])
+        for index, track in enumerate(tracks)
+    )
     header = b"MThd" + struct.pack(">IHHH", 6, 1, len(chunks), ticks_per_beat)
     path.write_bytes(header + b"".join(chunks))
 
@@ -43,20 +69,20 @@ def _tempo_track_chunk(bpm: float) -> bytes:
     return b"MTrk" + struct.pack(">I", len(data)) + bytes(data)
 
 
-def _track_chunk(track: MidiTrack, bpm: float, ticks_per_beat: int) -> bytes:
+def _track_chunk(track: MidiTrack, notes: list[MidiNoteInterval]) -> bytes:
     events: list[tuple[int, int, bytes]] = []
     name = track.name.encode("utf-8")
     events.append((0, 0, b"\xff\x03" + _var_len(len(name)) + name))
     if track.channel != 9:
         events.append((0, 1, bytes([0xC0 | track.channel, _clamp(track.program, 0, 127)])))
 
-    for note in track.notes:
-        start = _seconds_to_ticks(note.start, bpm, ticks_per_beat)
-        end = max(start + 1, _seconds_to_ticks(note.end, bpm, ticks_per_beat))
-        pitch = _clamp(note.pitch, 0, 127)
-        velocity = _clamp(note.velocity, 1, 127)
-        events.append((start, 3, bytes([0x90 | track.channel, pitch, velocity])))
-        events.append((end, 2, bytes([0x80 | track.channel, pitch, 0])))
+    for note in notes:
+        events.append(
+            (note.start_tick, 3, bytes([0x90 | track.channel, note.pitch, note.velocity]))
+        )
+        events.append(
+            (note.end_tick, 2, bytes([0x80 | track.channel, note.pitch, note.release_velocity]))
+        )
 
     events.sort(key=lambda event: (event[0], event[1], event[2]))
     data = bytearray()

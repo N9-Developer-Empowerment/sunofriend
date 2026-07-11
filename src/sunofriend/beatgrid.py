@@ -103,7 +103,8 @@ def grid_from_metronome(path: str, nominal_bpm: float | None = None, beats_per_b
         return Grid(bpm=nominal_bpm, offset=0.0, beats_per_bar=beats_per_bar)
 
     intervals = np.diff(times)
-    beat = float(np.median(intervals))
+    click_interval = float(np.median(intervals))
+    beat = click_interval
     if nominal_bpm:
         # metronome may click on half/quarter beats; pick the multiple closest to nominal
         nominal_beat = 60.0 / nominal_bpm
@@ -112,23 +113,32 @@ def grid_from_metronome(path: str, nominal_bpm: float | None = None, beats_per_b
                 beat = beat * factor
                 break
 
-    # cumulative index assignment tolerant of missed/extra clicks AND wander:
-    # each interval advances by its own rounded beat count (>=1)
-    steps = np.maximum(1, np.round(intervals / beat)).astype(int)
-    indices = np.concatenate([[0], np.cumsum(steps)])
+    # Cumulative beat assignment tolerant of missed clicks, wander, and click
+    # tracks that mark eighth/sixteenth notes.  Fractional beat indices are
+    # retained here; clamping every click to one whole beat would double or
+    # quadruple the inferred BPM for a subdivided metronome.
+    ratios = intervals / beat
+    steps = np.maximum(0.25, np.round(ratios * 4.0) / 4.0)
+    indices = np.concatenate([[0.0], np.cumsum(steps)])
 
     a = np.vstack([indices, np.ones_like(indices)]).T
     (beat_fit, offset_fit), *_ = np.linalg.lstsq(a, times, rcond=None)
     bpm = 60.0 / float(beat_fit)
 
     # full warp map: one time per integer beat, gaps filled by interpolation
-    full = np.arange(indices[-1] + 1)
+    full = np.arange(int(np.floor(indices[-1])) + 1, dtype=float)
     beat_times = np.interp(full, indices, times)
 
     # downbeat: find the accent phase if clicks alternate strong/weak
     first_beat_index = 0
-    phases = indices % beats_per_bar
-    means = [float(strengths[phases == p].mean()) if np.any(phases == p) else 0.0 for p in range(beats_per_bar)]
+    whole_clicks = np.isclose(indices, np.round(indices), atol=0.08)
+    whole_indices = np.round(indices[whole_clicks]).astype(int)
+    whole_strengths = strengths[whole_clicks]
+    phases = whole_indices % beats_per_bar
+    means = [
+        float(whole_strengths[phases == p].mean()) if np.any(phases == p) else 0.0
+        for p in range(beats_per_bar)
+    ]
     best = int(np.argmax(means))
     if means[best] > 1.15 * (sum(means) - means[best]) / max(1, beats_per_bar - 1):
         # shift beat numbering so downbeats fall on multiples of beats_per_bar
