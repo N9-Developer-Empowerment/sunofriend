@@ -1,0 +1,5800 @@
+{
+  "conversion_mode": "reconstruct",
+  "counts": {
+    "aggregate_confidence": 0,
+    "inferred": 340,
+    "main": 340,
+    "measured_confidence": 0,
+    "notes": 340,
+    "observed": 0,
+    "policy_confidence": 340,
+    "possible": 0,
+    "repaired": 0,
+    "uncertain": 0
+  },
+  "notes": [
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 1.70054,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 0.22286,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 1.70054,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 0.22286,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 1.70054,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 0.22286,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 3.7206799999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 1.72054,
+      "tier": "main",
+      "velocity": 79
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 3.7206799999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 1.72054,
+      "tier": "main",
+      "velocity": 79
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 3.7206799999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 1.72054,
+      "tier": "main",
+      "velocity": 79
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 6.26327,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 3.74068,
+      "tier": "main",
+      "velocity": 86
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 6.26327,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 3.74068,
+      "tier": "main",
+      "velocity": 86
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 6.26327,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 3.74068,
+      "tier": "main",
+      "velocity": 86
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 7.76095,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 6.28327,
+      "tier": "main",
+      "velocity": 99
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 7.76095,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 6.28327,
+      "tier": "main",
+      "velocity": 99
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 7.76095,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 6.28327,
+      "tier": "main",
+      "velocity": 99
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 10.28032,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 7.78095,
+      "tier": "main",
+      "velocity": 82
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 10.28032,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 7.78095,
+      "tier": "main",
+      "velocity": 82
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 10.28032,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 7.78095,
+      "tier": "main",
+      "velocity": 82
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 10.80277,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 10.30032,
+      "tier": "main",
+      "velocity": 93
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 10.80277,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 10.30032,
+      "tier": "main",
+      "velocity": 93
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 10.80277,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 10.30032,
+      "tier": "main",
+      "velocity": 93
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 12.30045,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 10.82277,
+      "tier": "main",
+      "velocity": 85
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 12.30045,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 10.82277,
+      "tier": "main",
+      "velocity": 85
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 12.30045,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 67,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 10.82277,
+      "tier": "main",
+      "velocity": 85
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 12.30045,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 73,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 10.82277,
+      "tier": "main",
+      "velocity": 85
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 14.320590000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 12.32045,
+      "tier": "main",
+      "velocity": 77
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 14.320590000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 12.32045,
+      "tier": "main",
+      "velocity": 77
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 14.320590000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 12.32045,
+      "tier": "main",
+      "velocity": 77
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 16.34073,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 14.34059,
+      "tier": "main",
+      "velocity": 90
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 16.34073,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 14.34059,
+      "tier": "main",
+      "velocity": 90
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 16.34073,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 14.34059,
+      "tier": "main",
+      "velocity": 90
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 18.38408,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 16.36073,
+      "tier": "main",
+      "velocity": 65
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 18.38408,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 16.36073,
+      "tier": "main",
+      "velocity": 65
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 18.38408,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 16.36073,
+      "tier": "main",
+      "velocity": 65
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 20.381,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 18.40408,
+      "tier": "main",
+      "velocity": 62
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 20.381,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 18.40408,
+      "tier": "main",
+      "velocity": 62
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 20.381,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 18.40408,
+      "tier": "main",
+      "velocity": 62
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 22.401130000000002,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 20.401,
+      "tier": "main",
+      "velocity": 69
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 22.401130000000002,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 20.401,
+      "tier": "main",
+      "velocity": 69
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 22.401130000000002,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 20.401,
+      "tier": "main",
+      "velocity": 69
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 24.42127,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 22.42113,
+      "tier": "main",
+      "velocity": 68
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 24.42127,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 22.42113,
+      "tier": "main",
+      "velocity": 68
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 24.42127,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 22.42113,
+      "tier": "main",
+      "velocity": 68
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 26.44141,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 24.44127,
+      "tier": "main",
+      "velocity": 67
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 26.44141,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 24.44127,
+      "tier": "main",
+      "velocity": 67
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 26.44141,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 24.44127,
+      "tier": "main",
+      "velocity": 67
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 28.43832,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 26.46141,
+      "tier": "main",
+      "velocity": 63
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 28.43832,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 26.46141,
+      "tier": "main",
+      "velocity": 63
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 28.43832,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 26.46141,
+      "tier": "main",
+      "velocity": 63
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 30.48168,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 28.45832,
+      "tier": "main",
+      "velocity": 65
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 30.48168,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 28.45832,
+      "tier": "main",
+      "velocity": 65
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 30.48168,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 28.45832,
+      "tier": "main",
+      "velocity": 65
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 32.47859,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 30.50168,
+      "tier": "main",
+      "velocity": 65
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 32.47859,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 30.50168,
+      "tier": "main",
+      "velocity": 65
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 32.47859,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 30.50168,
+      "tier": "main",
+      "velocity": 65
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 34.498729999999995,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 32.49859,
+      "tier": "main",
+      "velocity": 66
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 34.498729999999995,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 32.49859,
+      "tier": "main",
+      "velocity": 66
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 34.498729999999995,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 32.49859,
+      "tier": "main",
+      "velocity": 66
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 35.00376,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 34.51873,
+      "tier": "main",
+      "velocity": 57
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 35.00376,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 34.51873,
+      "tier": "main",
+      "velocity": 57
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 35.00376,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 34.51873,
+      "tier": "main",
+      "velocity": 57
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 36.51887,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 35.02376,
+      "tier": "main",
+      "velocity": 63
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 36.51887,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 35.02376,
+      "tier": "main",
+      "velocity": 63
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 36.51887,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 67,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 35.02376,
+      "tier": "main",
+      "velocity": 63
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 38.538999999999994,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 36.53887,
+      "tier": "main",
+      "velocity": 55
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 38.538999999999994,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 36.53887,
+      "tier": "main",
+      "velocity": 55
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 38.538999999999994,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 36.53887,
+      "tier": "main",
+      "velocity": 55
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 40.55914,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 38.559,
+      "tier": "main",
+      "velocity": 62
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 40.55914,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 38.559,
+      "tier": "main",
+      "velocity": 62
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 40.55914,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 38.559,
+      "tier": "main",
+      "velocity": 62
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 42.579269999999994,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 40.57914,
+      "tier": "main",
+      "velocity": 59
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 42.579269999999994,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 40.57914,
+      "tier": "main",
+      "velocity": 59
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 42.579269999999994,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 40.57914,
+      "tier": "main",
+      "velocity": 59
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 43.60095,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 42.59927,
+      "tier": "main",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 43.60095,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 42.59927,
+      "tier": "main",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 43.60095,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 42.59927,
+      "tier": "main",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 44.622629999999994,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 43.62095,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 44.622629999999994,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 43.62095,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 44.622629999999994,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 67,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 43.62095,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 46.64277,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 44.64263,
+      "tier": "main",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 46.64277,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 44.64263,
+      "tier": "main",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 46.64277,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 44.64263,
+      "tier": "main",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 48.66289999999999,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 46.66277,
+      "tier": "main",
+      "velocity": 61
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 48.66289999999999,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 46.66277,
+      "tier": "main",
+      "velocity": 61
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 48.66289999999999,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 46.66277,
+      "tier": "main",
+      "velocity": 61
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 50.68304,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 48.6829,
+      "tier": "main",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 50.68304,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 48.6829,
+      "tier": "main",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 50.68304,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 48.6829,
+      "tier": "main",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 52.70317,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 50.70304,
+      "tier": "main",
+      "velocity": 59
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 52.70317,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 50.70304,
+      "tier": "main",
+      "velocity": 59
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 52.70317,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 50.70304,
+      "tier": "main",
+      "velocity": 59
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 54.72331,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 52.72317,
+      "tier": "main",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 54.72331,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 52.72317,
+      "tier": "main",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 54.72331,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 52.72317,
+      "tier": "main",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 56.743449999999996,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 54.74331,
+      "tier": "main",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 56.743449999999996,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 54.74331,
+      "tier": "main",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 56.743449999999996,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 54.74331,
+      "tier": "main",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 58.76358,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 56.76345,
+      "tier": "main",
+      "velocity": 59
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 58.76358,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 56.76345,
+      "tier": "main",
+      "velocity": 59
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 58.76358,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 56.76345,
+      "tier": "main",
+      "velocity": 59
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 60.783719999999995,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 58.78358,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 60.783719999999995,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 58.78358,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 60.783719999999995,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 58.78358,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 62.80385,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 60.80372,
+      "tier": "main",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 62.80385,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 60.80372,
+      "tier": "main",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 62.80385,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 60.80372,
+      "tier": "main",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 64.30154,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 62.82385,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 64.30154,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 62.82385,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 64.30154,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 62.82385,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 67.86,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 66.85832,
+      "tier": "main",
+      "velocity": 42
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 67.86,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 66.85832,
+      "tier": "main",
+      "velocity": 42
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 67.86,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 66.85832,
+      "tier": "main",
+      "velocity": 42
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 70.87859,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 67.88,
+      "tier": "main",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 70.87859,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 67.88,
+      "tier": "main",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 70.87859,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 67.88,
+      "tier": "main",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 72.89873,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 70.89859,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 72.89873,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 70.89859,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 72.89873,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 70.89859,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 74.91887,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 72.91873,
+      "tier": "main",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 74.91887,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 72.91873,
+      "tier": "main",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 74.91887,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 72.91873,
+      "tier": "main",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 76.93900000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 74.93887,
+      "tier": "main",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 76.93900000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 74.93887,
+      "tier": "main",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 76.93900000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 74.93887,
+      "tier": "main",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 78.95914,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 76.959,
+      "tier": "main",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 78.95914,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 76.959,
+      "tier": "main",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 78.95914,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 76.959,
+      "tier": "main",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 80.97927,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 78.97914,
+      "tier": "main",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 80.97927,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 78.97914,
+      "tier": "main",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 80.97927,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 78.97914,
+      "tier": "main",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 82.50018,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 80.99927,
+      "tier": "main",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 82.50018,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 80.99927,
+      "tier": "main",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 82.50018,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 80.99927,
+      "tier": "main",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 84.52032,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 82.52018,
+      "tier": "main",
+      "velocity": 70
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 84.52032,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 82.52018,
+      "tier": "main",
+      "velocity": 70
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 84.52032,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 82.52018,
+      "tier": "main",
+      "velocity": 70
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 87.03968,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 84.54032,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 87.03968,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 84.54032,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 87.03968,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 84.54032,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 88.06136000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 87.05968,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 88.06136000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 87.05968,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 88.06136000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 87.05968,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 91.06254,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 88.08136,
+      "tier": "main",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 91.06254,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 88.08136,
+      "tier": "main",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 91.06254,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 88.08136,
+      "tier": "main",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 93.08268000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 91.08254,
+      "tier": "main",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 93.08268000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 91.08254,
+      "tier": "main",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 93.08268000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 91.08254,
+      "tier": "main",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 95.10281,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 93.10268,
+      "tier": "main",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 95.10281,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 93.10268,
+      "tier": "main",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 95.10281,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 93.10268,
+      "tier": "main",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 97.12295,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 95.12281,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 97.12295,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 95.12281,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 97.12295,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 95.12281,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 99.14308,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 97.14295,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 99.14308,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 97.14295,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 99.14308,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 97.14295,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 101.16322000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 99.16308,
+      "tier": "main",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 101.16322000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 99.16308,
+      "tier": "main",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 101.16322000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 99.16308,
+      "tier": "main",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 103.18336000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 101.18322,
+      "tier": "main",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 103.18336000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 101.18322,
+      "tier": "main",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 103.18336000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 101.18322,
+      "tier": "main",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 105.20349,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 103.20336,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 105.20349,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 103.20336,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 105.20349,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 103.20336,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 107.22363,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 105.22349,
+      "tier": "main",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 107.22363,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 105.22349,
+      "tier": "main",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 107.22363,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 105.22349,
+      "tier": "main",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 109.24376000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 107.24363,
+      "tier": "main",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 109.24376000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 107.24363,
+      "tier": "main",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 109.24376000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 107.24363,
+      "tier": "main",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 111.2639,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 109.26376,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 111.2639,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 109.26376,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 111.2639,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 109.26376,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 113.26082000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 111.2839,
+      "tier": "main",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 113.26082000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 111.2839,
+      "tier": "main",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 113.26082000000001,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 111.2839,
+      "tier": "main",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 115.28095,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 113.28082,
+      "tier": "main",
+      "velocity": 60
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 115.28095,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 113.28082,
+      "tier": "main",
+      "velocity": 60
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 115.28095,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 113.28082,
+      "tier": "main",
+      "velocity": 60
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 116.80186,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 115.30095,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 116.80186,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 115.30095,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 116.80186,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 115.30095,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 119.33864,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 116.82186,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 119.33864,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 116.82186,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 119.33864,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 116.82186,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 122.36304,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 119.35864,
+      "tier": "main",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 122.36304,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 119.35864,
+      "tier": "main",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 122.36304,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 119.35864,
+      "tier": "main",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 126.40331,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 122.38304,
+      "tier": "main",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 126.40331,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 122.38304,
+      "tier": "main",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 126.40331,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 122.38304,
+      "tier": "main",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 130.42036,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 126.42331,
+      "tier": "main",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 130.42036,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 126.42331,
+      "tier": "main",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 130.42036,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 126.42331,
+      "tier": "main",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 132.46372,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 130.44036,
+      "tier": "main",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 132.46372,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 130.44036,
+      "tier": "main",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 132.46372,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 130.44036,
+      "tier": "main",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 134.46062999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 132.48372,
+      "tier": "main",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 134.46062999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 132.48372,
+      "tier": "main",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 134.46062999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 132.48372,
+      "tier": "main",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 136.50399,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 134.48063,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 136.50399,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 134.48063,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 136.50399,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 134.48063,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 138.50090999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 136.52399,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 138.50090999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 136.52399,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 138.50090999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 136.52399,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 140.52104,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 138.52091,
+      "tier": "main",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 140.52104,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 138.52091,
+      "tier": "main",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 140.52104,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 138.52091,
+      "tier": "main",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 142.54118,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 140.54104,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 142.54118,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 140.54104,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 142.54118,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 140.54104,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 144.56132,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 142.56118,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 144.56132,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 142.56118,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 144.56132,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 142.56118,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 146.08221999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 144.58132,
+      "tier": "main",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 146.08221999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 144.58132,
+      "tier": "main",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 146.08221999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 144.58132,
+      "tier": "main",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 148.57836999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 146.10222,
+      "tier": "main",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 148.57836999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 146.10222,
+      "tier": "main",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 148.57836999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 146.10222,
+      "tier": "main",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 150.62171999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 148.59837,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 150.62171999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 148.59837,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 150.62171999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 148.59837,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 152.61864,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 150.64172,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 152.61864,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 150.64172,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 152.61864,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 150.64172,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 154.63878,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 152.63864,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 154.63878,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 152.63864,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 154.63878,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 152.63864,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 156.65891,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 154.65878,
+      "tier": "main",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 156.65891,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 154.65878,
+      "tier": "main",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 156.65891,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 154.65878,
+      "tier": "main",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 158.67905,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 156.67891,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 158.67905,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 156.67891,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 158.67905,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 156.67891,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 160.69917999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 158.69905,
+      "tier": "main",
+      "velocity": 67
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 160.69917999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 158.69905,
+      "tier": "main",
+      "velocity": 67
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 160.69917999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 158.69905,
+      "tier": "main",
+      "velocity": 67
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 162.20268,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 160.71918,
+      "tier": "main",
+      "velocity": 72
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 162.20268,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 160.71918,
+      "tier": "main",
+      "velocity": 72
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 162.20268,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 160.71918,
+      "tier": "main",
+      "velocity": 72
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 164.72204,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 162.22268,
+      "tier": "main",
+      "velocity": 63
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 164.72204,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 162.22268,
+      "tier": "main",
+      "velocity": 63
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 164.72204,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 162.22268,
+      "tier": "main",
+      "velocity": 63
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 166.74218,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 164.74204,
+      "tier": "main",
+      "velocity": 52
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 166.74218,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 164.74204,
+      "tier": "main",
+      "velocity": 52
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 166.74218,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 164.74204,
+      "tier": "main",
+      "velocity": 52
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 168.77973,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 166.76218,
+      "tier": "main",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 168.77973,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 166.76218,
+      "tier": "main",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 168.77973,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 166.76218,
+      "tier": "main",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 170.79986,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 168.79973,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 170.79986,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 168.79973,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 170.79986,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 67,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 168.79973,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 172.82,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 170.81986,
+      "tier": "main",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 172.82,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 170.81986,
+      "tier": "main",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 172.82,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 170.81986,
+      "tier": "main",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 174.82272,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 172.84,
+      "tier": "main",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 174.82272,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 172.84,
+      "tier": "main",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 174.82272,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 172.84,
+      "tier": "main",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 176.81964,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 174.84272,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 176.81964,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 174.84272,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 176.81964,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 174.84272,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 177.34208999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 176.83964,
+      "tier": "main",
+      "velocity": 57
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 177.34208999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 176.83964,
+      "tier": "main",
+      "velocity": 57
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 177.34208999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 176.83964,
+      "tier": "main",
+      "velocity": 57
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 178.83977,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 177.36209,
+      "tier": "main",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 178.83977,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 177.36209,
+      "tier": "main",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 178.83977,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 67,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 177.36209,
+      "tier": "main",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 180.84249,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 178.85977,
+      "tier": "main",
+      "velocity": 63
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 180.84249,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 178.85977,
+      "tier": "main",
+      "velocity": 63
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 180.84249,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 178.85977,
+      "tier": "main",
+      "velocity": 63
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 182.86263,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 180.86249,
+      "tier": "main",
+      "velocity": 60
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 182.86263,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 180.86249,
+      "tier": "main",
+      "velocity": 60
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 182.86263,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 180.86249,
+      "tier": "main",
+      "velocity": 60
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 184.88277,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 182.88263,
+      "tier": "main",
+      "velocity": 55
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 184.88277,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 182.88263,
+      "tier": "main",
+      "velocity": 55
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 184.88277,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 182.88263,
+      "tier": "main",
+      "velocity": 55
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 186.9029,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 184.90277,
+      "tier": "main",
+      "velocity": 57
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 186.9029,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 184.90277,
+      "tier": "main",
+      "velocity": 57
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 186.9029,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 184.90277,
+      "tier": "main",
+      "velocity": 57
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 188.89981999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 186.9229,
+      "tier": "main",
+      "velocity": 69
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 188.89981999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 186.9229,
+      "tier": "main",
+      "velocity": 69
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 188.89981999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 186.9229,
+      "tier": "main",
+      "velocity": 69
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 191.94163,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 188.91982,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 191.94163,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 188.91982,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 191.94163,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 188.91982,
+      "tier": "main",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 196.98036,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 194.49841,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 196.98036,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 194.49841,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 196.98036,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 194.49841,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 199.0005,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 197.00036,
+      "tier": "main",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 199.0005,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 197.00036,
+      "tier": "main",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 199.0005,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 197.00036,
+      "tier": "main",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 200.50399,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 199.0205,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 200.50399,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 199.0205,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 200.50399,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 199.0205,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 203.02336,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 200.52399,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 203.02336,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 200.52399,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 203.02336,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 200.52399,
+      "tier": "main",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 205.04349,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 203.04336,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 205.04349,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 203.04336,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 205.04349,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 203.04336,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 209.06054,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 207.08363,
+      "tier": "main",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 209.06054,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 207.08363,
+      "tier": "main",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 209.06054,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 207.08363,
+      "tier": "main",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 211.08068,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 209.08054,
+      "tier": "main",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 211.08068,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 209.08054,
+      "tier": "main",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 211.08068,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 209.08054,
+      "tier": "main",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 213.10082,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 211.10068,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 213.10082,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 211.10068,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 213.10082,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 211.10068,
+      "tier": "main",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 215.60277,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 213.12082,
+      "tier": "main",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 215.60277,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 213.12082,
+      "tier": "main",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 215.60277,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 213.12082,
+      "tier": "main",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 217.12366999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 215.62277,
+      "tier": "main",
+      "velocity": 52
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 217.12366999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 215.62277,
+      "tier": "main",
+      "velocity": 52
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 217.12366999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 215.62277,
+      "tier": "main",
+      "velocity": 52
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 219.12059,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 217.14367,
+      "tier": "main",
+      "velocity": 55
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 219.12059,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 217.14367,
+      "tier": "main",
+      "velocity": 55
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 219.12059,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 217.14367,
+      "tier": "main",
+      "velocity": 55
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 221.14073,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 219.14059,
+      "tier": "main",
+      "velocity": 55
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 221.14073,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 219.14059,
+      "tier": "main",
+      "velocity": 55
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 221.14073,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 219.14059,
+      "tier": "main",
+      "velocity": 55
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 223.14345,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 221.16073,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 223.14345,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 221.16073,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 223.14345,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 221.16073,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 225.18099999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 223.16345,
+      "tier": "main",
+      "velocity": 58
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 225.18099999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 223.16345,
+      "tier": "main",
+      "velocity": 58
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 225.18099999999998,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 223.16345,
+      "tier": "main",
+      "velocity": 58
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 227.21855,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 225.201,
+      "tier": "main",
+      "velocity": 61
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 227.21855,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 225.201,
+      "tier": "main",
+      "velocity": 61
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 227.21855,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 225.201,
+      "tier": "main",
+      "velocity": 61
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 229.2619,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 227.23855,
+      "tier": "main",
+      "velocity": 58
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 229.2619,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 227.23855,
+      "tier": "main",
+      "velocity": 58
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 229.2619,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 68,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 227.23855,
+      "tier": "main",
+      "velocity": 58
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 231.24141,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 58,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 229.2819,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 231.24141,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 61,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 229.2819,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 231.24141,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 229.2819,
+      "tier": "main",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 234.30592541294584,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 59,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 231.26141,
+      "tier": "main",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 234.30592541294584,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 63,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 231.26141,
+      "tier": "main",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.7,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 234.30592541294584,
+      "family": "pads",
+      "origin": "inferred",
+      "pitch": 66,
+      "sources": [
+        "stem",
+        "listen-pads",
+        "mode:reconstruct"
+      ],
+      "start": 231.26141,
+      "tier": "main",
+      "velocity": 46
+    }
+  ],
+  "schema_version": 1,
+  "source_stem": "work/Lidl-B major-119bpm-440hz/Lidl-keys-B major-119bpm-440hz.wav",
+  "variant": "pads"
+}

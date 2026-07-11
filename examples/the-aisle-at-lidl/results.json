@@ -1,0 +1,148 @@
+{
+  "title": "The Aisle at Lidl",
+  "version": 1,
+  "soundcloud_url": "https://soundcloud.com/ezzye-1/the-aisle-at-lidl?si=97cf744ff4a743bca875bec3db88024f&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing",
+  "authorisation": "Original song written by the repository maintainer and included with the author's permission.",
+  "workflow": [
+    "Suno",
+    "Moises",
+    "Sunofriend",
+    "GarageBand"
+  ],
+  "source": {
+    "key": "B major",
+    "nominal_bpm": 119.0,
+    "detected_average_bpm": 118.926,
+    "garageband_bpm": 119.0,
+    "downbeat_seconds": 0.2229,
+    "tuning_hz": 440,
+    "full_stems_committed": false,
+    "full_stem_set_approx_mb": 765
+  },
+  "compatibility_baselines": {
+    "definitions": {
+      "round_trip_drift": "Difference between the bundled MIDI's first/last event and the same events after DAW import/export.",
+      "source_audio_drift": "Difference measured against an authorised source stem using Sunofriend evaluate; source audio is not bundled."
+    },
+    "repair": {
+      "tracks": 9,
+      "earliest_note_beat": 0.3916667,
+      "earliest_note_seconds": 0.197479,
+      "last_note_end_beat": 464.9958333,
+      "last_note_end_seconds": 234.451829,
+      "assigned_channels_zero_based": {
+        "kick_snare_hat_cymbals_toms_other_kit": 9,
+        "bass": 0,
+        "keys": 1,
+        "strings": 4
+      }
+    },
+    "reconstruct": {
+      "tracks": 4,
+      "earliest_note_beat": 0.4416667,
+      "earliest_note_seconds": 0.222689,
+      "last_note_end_beat": 464.9958333,
+      "last_note_end_seconds": 234.451829,
+      "assigned_channels_zero_based": {
+        "hat": 9,
+        "bass": 0,
+        "keys_melody": 1,
+        "pads": 6
+      }
+    }
+  },
+  "repair": {
+    "arrangement": "midi/repair/full-arrangement.mid",
+    "parts": {
+      "kick": {
+        "notes": 240,
+        "families": {
+          "kick_deep": 177,
+          "kick_high": 63
+        },
+        "possible_notes": 12,
+        "possible_onset_f1": 0.851064,
+        "timing_p95_ms": 16.337868,
+        "drift_ms": -2.794785
+      },
+      "snare": {
+        "notes": 249,
+        "families": {
+          "snare_body": 122,
+          "snare_bright": 127
+        },
+        "possible_notes": 50
+      },
+      "hat": {
+        "notes": 484,
+        "families": {
+          "hat_closed": 337,
+          "hat_open": 147
+        },
+        "possible_notes": 69
+      },
+      "cymbals": {
+        "notes": 18,
+        "families": {
+          "crash": 3,
+          "ride": 15
+        },
+        "possible_notes": 6
+      },
+      "toms": {
+        "notes": 91,
+        "possible_notes": 7
+      },
+      "other_kit": {
+        "notes": 189,
+        "uncertain_notes": 182,
+        "possible_notes": 42
+      },
+      "bass": {
+        "main_notes": 191,
+        "raw_verified_notes": 204,
+        "root_safe_notes": 191,
+        "pitch_support": 0.857396,
+        "octave_accuracy": 0.848168,
+        "contour_direction_accuracy": 0.757895
+      },
+      "keys": {
+        "main_notes": 1227,
+        "melody_notes": 533,
+        "accompaniment_notes": 694,
+        "uncertain_notes": 251,
+        "full_evidence_notes": 1478
+      },
+      "strings": {
+        "notes": 277,
+        "origin": "observed"
+      },
+      "pads": {
+        "status": "skipped: no observed pads stem in repair mode"
+      }
+    }
+  },
+  "reconstruct": {
+    "arrangement": "midi/reconstruct/full-arrangement.mid",
+    "arrangement_notes": 1585,
+    "arrangement_roles": {
+      "hat": 521,
+      "bass": 191,
+      "keys_melody": 533,
+      "pads": 340,
+      "strings": 0
+    },
+    "hat_provenance": {
+      "observed": 468,
+      "repaired": 16,
+      "inferred": 37
+    },
+    "inferred_parts": [
+      "bass",
+      "pads",
+      "strings"
+    ],
+    "audition_only_strings_notes": 61,
+    "audition_only_strings_artifact": "midi/reconstruct/strings-audition-only.mid"
+  }
+}

@@ -1,0 +1,86 @@
+name: DAW / AI compatibility report
+description: Report a Sunofriend test with another DAW, music tool, AI generator, separator or MIDI device.
+title: "[Compatibility]: "
+body:
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Test scope
+      options:
+        - DAW MIDI import or playback
+        - Software instrument or notation tool
+        - Hardware MIDI instrument or sequencer
+        - AI music generator input
+        - Stem separator or chord-analysis input
+        - Operating-system compatibility
+        - Other music software
+    validations:
+      required: true
+  - type: input
+    id: software
+    attributes:
+      label: Software or hardware and version
+      placeholder: "Example: REAPER 7.30, Ableton Live 12, FL Studio 2025, or hardware model/firmware"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Operating system and architecture
+      placeholder: "Example: Windows 11 x64, Ubuntu 24.04, macOS 15 Apple Silicon"
+    validations:
+      required: true
+  - type: input
+    id: sunofriend
+    attributes:
+      label: Sunofriend version or commit
+      placeholder: "Example: 0.3.0 or git commit SHA"
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Source workflow
+      description: Name the authorised AI generator, separator/chord tool, source key/BPM and stem types. Do not attach material you cannot redistribute.
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Sunofriend command
+      description: Include the exact command and conversion mode.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: settings
+    attributes:
+      label: DAW or device settings
+      description: Include project tempo, import options, quantisation, tempo-follow/stretching, channel mapping and relevant UI settings.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behaviour
+      description: Include missing/extra notes, pitch or octave errors, track/channel mapping, first-note offset and end drift where relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and authorised attachments
+      description: Add timing measurements, screenshots, small MIDI/JSON files or logs only when you own them or have permission to share them.
+  - type: checkboxes
+    id: rights
+    attributes:
+      label: Rights and privacy
+      options:
+        - label: I have permission to share every attachment and have removed private or confidential information.
+          required: true

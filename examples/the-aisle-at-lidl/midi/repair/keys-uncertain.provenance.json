@@ -1,0 +1,4287 @@
+{
+  "conversion_mode": "repair",
+  "counts": {
+    "aggregate_confidence": 0,
+    "inferred": 0,
+    "main": 0,
+    "measured_confidence": 0,
+    "notes": 251,
+    "observed": 251,
+    "policy_confidence": 251,
+    "possible": 0,
+    "repaired": 0,
+    "uncertain": 251
+  },
+  "notes": [
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 1.6021768707482993,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 66,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 1.3235374149659864,
+      "tier": "uncertain",
+      "velocity": 40
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 2.346499319727891,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 59,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 1.7298866213151927,
+      "tier": "uncertain",
+      "velocity": 62
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 3.3101274376417233,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 67,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 3.228857596371882,
+      "tier": "uncertain",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 4.5304589569161,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 56,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 4.240209523809524,
+      "tier": "uncertain",
+      "velocity": 72
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 5.0645179138322,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 73,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 4.878758276643991,
+      "tier": "uncertain",
+      "velocity": 42
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 5.227057596371882,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 61,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 5.006468027210884,
+      "tier": "uncertain",
+      "velocity": 40
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 7.016278004535147,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 6.168749659863946,
+      "tier": "uncertain",
+      "velocity": 90
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 8.271439455782312,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 64,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 7.770926530612245,
+      "tier": "uncertain",
+      "velocity": 65
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 7.969580045351474,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 76,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 7.770926530612245,
+      "tier": "uncertain",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 8.329489342403628,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 70,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 8.190169614512472,
+      "tier": "uncertain",
+      "velocity": 41
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 10.94301814058957,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 51,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 10.699208616780046,
+      "tier": "uncertain",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 11.883426303854876,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 92,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 11.813766439909298,
+      "tier": "uncertain",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 12.650968707482994,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 71,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 12.058859863945578,
+      "tier": "uncertain",
+      "velocity": 68
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 12.267839455782314,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 67,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 12.186569614512472,
+      "tier": "uncertain",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 12.70901859410431,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 59,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 12.453599092970522,
+      "tier": "uncertain",
+      "velocity": 55
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 14.5214589569161,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 66,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 14.173159637188208,
+      "tier": "uncertain",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 14.834928344671201,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 49,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 14.312479365079366,
+      "tier": "uncertain",
+      "velocity": 68
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 15.345767346938775,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 14.324089342403628,
+      "tier": "uncertain",
+      "velocity": 72
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 14.567898866213152,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 68,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 14.382139229024943,
+      "tier": "uncertain",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 14.71882857142857,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 63,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 14.602728798185941,
+      "tier": "uncertain",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 17.355577324263038,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 47,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 16.275849433106576,
+      "tier": "uncertain",
+      "velocity": 61
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 18.36692925170068,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 47,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 17.972190022675736,
+      "tier": "uncertain",
+      "velocity": 75
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 19.191237641723355,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 58,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 18.36692925170068,
+      "tier": "uncertain",
+      "velocity": 60
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 21.18943764172336,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 56,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 20.388349206349208,
+      "tier": "uncertain",
+      "velocity": 70
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 21.35197732426304,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 44,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 20.39995918367347,
+      "tier": "uncertain",
+      "velocity": 64
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 21.852490249433107,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 44,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 21.479687074829933,
+      "tier": "uncertain",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 23.908740136054423,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 61,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 21.66544671201814,
+      "tier": "uncertain",
+      "velocity": 61
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 22.107909750566893,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 44,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 22.026639909297053,
+      "tier": "uncertain",
+      "velocity": 42
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 22.86255827664399,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 49,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 22.305279365079365,
+      "tier": "uncertain",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 23.908740136054423,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 42,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 22.38654920634921,
+      "tier": "uncertain",
+      "velocity": 74
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 24.175769614512472,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 64,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 23.920350113378685,
+      "tier": "uncertain",
+      "velocity": 75
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 25.174227664399094,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 63,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 24.175769614512472,
+      "tier": "uncertain",
+      "velocity": 65
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 26.31328934240363,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 24.338309297052156,
+      "tier": "uncertain",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 26.475829024943312,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 47,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 24.419579138321996,
+      "tier": "uncertain",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 26.44099909297052,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 51,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 24.419579138321996,
+      "tier": "uncertain",
+      "velocity": 72
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 29.77434648526077,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 66,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 29.46087709750567,
+      "tier": "uncertain",
+      "velocity": 77
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 31.749326530612244,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 42,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 30.47222902494331,
+      "tier": "uncertain",
+      "velocity": 61
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 30.97145804988662,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 49,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 30.47222902494331,
+      "tier": "uncertain",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 31.23848752834467,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 30.47222902494331,
+      "tier": "uncertain",
+      "velocity": 71
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 30.97145804988662,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 58,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 30.483839002267572,
+      "tier": "uncertain",
+      "velocity": 68
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 32.16856961451247,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 76,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 31.994419954648528,
+      "tier": "uncertain",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 35.15361768707483,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 58,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 34.51506893424036,
+      "tier": "uncertain",
+      "velocity": 67
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 36.060479818594104,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 58,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 35.9676,
+      "tier": "uncertain",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 36.826738321995464,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 71,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 36.292679365079366,
+      "tier": "uncertain",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 38.302489342403625,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 73,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 38.07028979591837,
+      "tier": "uncertain",
+      "velocity": 61
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 39.579586848072566,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 42,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 38.54629886621315,
+      "tier": "uncertain",
+      "velocity": 77
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 39.32416734693878,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 38.55790884353741,
+      "tier": "uncertain",
+      "velocity": 83
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 39.10357777777778,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 58,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 38.55790884353741,
+      "tier": "uncertain",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 42.716848526077094,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 47,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 42.356939229024945,
+      "tier": "uncertain",
+      "velocity": 72
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 43.716590476190476,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 70,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 43.49471700680272,
+      "tier": "uncertain",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 44.622168707483,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 51,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 44.23903945578232,
+      "tier": "uncertain",
+      "velocity": 63
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 45.27232743764173,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 59,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 44.622168707483,
+      "tier": "uncertain",
+      "velocity": 79
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 46.492658956916095,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 73,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 46.12113968253968,
+      "tier": "uncertain",
+      "velocity": 73
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 46.42299909297052,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 85,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 46.19079954648526,
+      "tier": "uncertain",
+      "velocity": 76
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 46.550708843537414,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 51,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 46.225629478458046,
+      "tier": "uncertain",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 46.5855387755102,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 63,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 46.41138911564626,
+      "tier": "uncertain",
+      "velocity": 41
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 47.40984716553288,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 42,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 46.64358866213152,
+      "tier": "uncertain",
+      "velocity": 78
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 47.01510793650793,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 71,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 46.88739818594104,
+      "tier": "uncertain",
+      "velocity": 55
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 50.74447845804988,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 47,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 48.67661859410431,
+      "tier": "uncertain",
+      "velocity": 88
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 50.68642857142857,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 50.33812925170068,
+      "tier": "uncertain",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 51.20887755102041,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 76,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 50.94184807256236,
+      "tier": "uncertain",
+      "velocity": 42
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 51.243707482993194,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 64,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 51.03472789115646,
+      "tier": "uncertain",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 51.744220408163265,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 58,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 51.674560544217684,
+      "tier": "uncertain",
+      "velocity": 33
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 52.893608163265306,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 56,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 52.71945850340136,
+      "tier": "uncertain",
+      "velocity": 52
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 55.74062040816327,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 54.72926848072563,
+      "tier": "uncertain",
+      "velocity": 61
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 54.973078004535154,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 58,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 54.72926848072563,
+      "tier": "uncertain",
+      "velocity": 63
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 55.0195179138322,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 68,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 54.78731836734694,
+      "tier": "uncertain",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 58.00584988662132,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 47,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 56.75068843537415,
+      "tier": "uncertain",
+      "velocity": 83
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 58.26126938775511,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 59,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 56.762298412698414,
+      "tier": "uncertain",
+      "velocity": 86
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 59.4570970521542,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 58,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 58.76049841269842,
+      "tier": "uncertain",
+      "velocity": 60
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 60.51488888888888,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 61,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 60.363959183673465,
+      "tier": "uncertain",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 60.805138321995464,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 61,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 60.67742857142857,
+      "tier": "uncertain",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 61.28114739229025,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 56,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 60.7935283446712,
+      "tier": "uncertain",
+      "velocity": 80
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 62.73367845804989,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 73,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 61.909370068027215,
+      "tier": "uncertain",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 62.7917283446712,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 44,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 62.59435873015873,
+      "tier": "uncertain",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 63.29095736961451,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 61,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 62.80333832199547,
+      "tier": "uncertain",
+      "velocity": 97
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 62.95426802721089,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 77,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 62.80333832199547,
+      "tier": "uncertain",
+      "velocity": 37
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 63.61732063492063,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 58,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 62.81494829931973,
+      "tier": "uncertain",
+      "velocity": 79
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 66.17279954648527,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 73,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 66.10313968253968,
+      "tier": "uncertain",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 70.73808843537415,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 51,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 70.61037868480726,
+      "tier": "uncertain",
+      "velocity": 39
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 72.39959909297052,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 72.14417959183673,
+      "tier": "uncertain",
+      "velocity": 66
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 74.45584897959183,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 47,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 74.03788979591836,
+      "tier": "uncertain",
+      "velocity": 82
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 75.36142721088436,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 75.16405759637188,
+      "tier": "uncertain",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 75.88516009070295,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 75.59491065759637,
+      "tier": "uncertain",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 78.69605850340136,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 66,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 78.60317868480726,
+      "tier": "uncertain",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 79.07918775510204,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 77,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 79.00952789115647,
+      "tier": "uncertain",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 80.45044897959184,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 49,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 80.31112925170069,
+      "tier": "uncertain",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 80.69425850340137,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 80.61298866213153,
+      "tier": "uncertain",
+      "velocity": 52
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 81.74044036281178,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 73,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 81.62434058956916,
+      "tier": "uncertain",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 81.97263990929704,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 66,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 81.7984902494331,
+      "tier": "uncertain",
+      "velocity": 42
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 82.80855827664399,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 47,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 82.62279863945578,
+      "tier": "uncertain",
+      "velocity": 41
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 82.72728843537415,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 59,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 82.63440861678004,
+      "tier": "uncertain",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 83.93600997732426,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 51,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 83.64576054421768,
+      "tier": "uncertain",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 84.28430929705215,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 73,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 84.12176961451247,
+      "tier": "uncertain",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 84.7719283446712,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 51,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 84.65582857142857,
+      "tier": "uncertain",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 85.03895782312925,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 56,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 84.91124807256236,
+      "tier": "uncertain",
+      "velocity": 70
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 85.43498095238095,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 63,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 85.35242721088436,
+      "tier": "uncertain",
+      "velocity": 39
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 86.02708979591837,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 56,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 85.64396054421769,
+      "tier": "uncertain",
+      "velocity": 59
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 86.47987891156463,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 63,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 86.41021904761905,
+      "tier": "uncertain",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 89.48943083900227,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 59,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 89.3023873015873,
+      "tier": "uncertain",
+      "velocity": 38
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 91.56890068027211,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 58,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 91.07999773242629,
+      "tier": "uncertain",
+      "velocity": 83
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 93.36844716553287,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 51,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 92.93887800453514,
+      "tier": "uncertain",
+      "velocity": 85
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 96.134189569161,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 68,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 95.44920090702948,
+      "tier": "uncertain",
+      "velocity": 55
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 96.56375873015874,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 68,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 96.134189569161,
+      "tier": "uncertain",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 97.06298775510204,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 96.62180861678004,
+      "tier": "uncertain",
+      "velocity": 78
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 96.78434829931973,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 68,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 96.70307845804989,
+      "tier": "uncertain",
+      "velocity": 40
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 98.19043945578233,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 73,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 97.74926031746033,
+      "tier": "uncertain",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 98.12077959183674,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 63,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 98.01628979591837,
+      "tier": "uncertain",
+      "velocity": 42
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 99.71263038548753,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 99.28177732426305,
+      "tier": "uncertain",
+      "velocity": 81
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 99.85195011337868,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 77,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 99.77068027210883,
+      "tier": "uncertain",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 100.64142857142856,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 58,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 100.54854875283446,
+      "tier": "uncertain",
+      "velocity": 52
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 101.14065759637188,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 100.8504081632653,
+      "tier": "uncertain",
+      "velocity": 62
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 101.67600045351473,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 56,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 101.45541088435374,
+      "tier": "uncertain",
+      "velocity": 67
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 102.1868394557823,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 56,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 102.01268979591836,
+      "tier": "uncertain",
+      "velocity": 62
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 104.17342947845805,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 103.88318004535148,
+      "tier": "uncertain",
+      "velocity": 64
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 104.18503945578232,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 63,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 103.96444988662131,
+      "tier": "uncertain",
+      "velocity": 60
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 105.05578775510205,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 77,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 104.95129795918368,
+      "tier": "uncertain",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 105.9974798185941,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 73,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 105.84655011337868,
+      "tier": "uncertain",
+      "velocity": 40
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 110.00548979591836,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 85,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 109.87778004535147,
+      "tier": "uncertain",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 110.05192970521541,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 66,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 109.88939002267573,
+      "tier": "uncertain",
+      "velocity": 55
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 112.23588934240362,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 112.09656961451248,
+      "tier": "uncertain",
+      "velocity": 58
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 113.0950276643991,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 77,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 113.02536780045351,
+      "tier": "uncertain",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 115.17449750566894,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 97,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 114.76814829931973,
+      "tier": "uncertain",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 115.32671111111111,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 115.0932276643991,
+      "tier": "uncertain",
+      "velocity": 48
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 116.20906938775511,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 71,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 116.10457959183674,
+      "tier": "uncertain",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 116.39482902494332,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 97,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 116.31355918367348,
+      "tier": "uncertain",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 116.89405804988662,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 80,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 116.81278820861678,
+      "tier": "uncertain",
+      "velocity": 55
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 117.09142766439909,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 73,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 116.82439818594105,
+      "tier": "uncertain",
+      "velocity": 77
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 118.34658911564627,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 51,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 118.23048934240363,
+      "tier": "uncertain",
+      "velocity": 58
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 119.04318775510205,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 73,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 118.83420816326532,
+      "tier": "uncertain",
+      "velocity": 60
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 119.84556009070295,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 119.34633106575963,
+      "tier": "uncertain",
+      "velocity": 85
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 121.12265759637188,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 42,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 119.3579410430839,
+      "tier": "uncertain",
+      "velocity": 67
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 120.53054875283446,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 83,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 120.37961904761904,
+      "tier": "uncertain",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 120.92528798185941,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 92,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 120.7395283446712,
+      "tier": "uncertain",
+      "velocity": 57
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 121.19360136054422,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 83,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 120.98333786848072,
+      "tier": "uncertain",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 121.95985986394558,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 75,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 121.09943764172336,
+      "tier": "uncertain",
+      "velocity": 60
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 121.5767306122449,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 49,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 121.46063083900226,
+      "tier": "uncertain",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 122.02951972789116,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 77,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 121.85537006802721,
+      "tier": "uncertain",
+      "velocity": 61
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 122.15722947845805,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 42,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 122.00629977324263,
+      "tier": "uncertain",
+      "velocity": 57
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 122.33137913832199,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 75,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 122.13400952380952,
+      "tier": "uncertain",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 122.2384993197279,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 71,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 122.14561950113378,
+      "tier": "uncertain",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 123.86518004535148,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 47,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 122.26171927437642,
+      "tier": "uncertain",
+      "velocity": 80
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 122.74933832199547,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 80,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 122.40103900226757,
+      "tier": "uncertain",
+      "velocity": 58
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 125.15517142857144,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 47,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 124.77075827664399,
+      "tier": "uncertain",
+      "velocity": 74
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 128.02411972789116,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 126.59480861678006,
+      "tier": "uncertain",
+      "velocity": 89
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 127.57133061224488,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 71,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 127.43201088435373,
+      "tier": "uncertain",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 128.31436916099773,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 66,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 127.93123990929703,
+      "tier": "uncertain",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 133.26407120181403,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 132.46169886621314,
+      "tier": "uncertain",
+      "velocity": 95
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 135.72667029478458,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 59,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 134.45989886621314,
+      "tier": "uncertain",
+      "velocity": 76
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 135.23905124716555,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 90,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 135.16939138321996,
+      "tier": "uncertain",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 137.02698775510206,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 58,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 136.51614875283448,
+      "tier": "uncertain",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 138.00350975056688,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 51,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 137.81775011337868,
+      "tier": "uncertain",
+      "velocity": 52
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 139.16579138321995,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 51,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 138.7813782312925,
+      "tier": "uncertain",
+      "velocity": 71
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 140.53576870748302,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 51,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 140.1642494331066,
+      "tier": "uncertain",
+      "velocity": 63
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 141.2800911564626,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 49,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 140.52415873015875,
+      "tier": "uncertain",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 141.03499773242632,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 140.53576870748302,
+      "tier": "uncertain",
+      "velocity": 90
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 144.79919818594104,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 67,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 144.67148843537413,
+      "tier": "uncertain",
+      "velocity": 64
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 151.10855147392292,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 47,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 150.49193877551022,
+      "tier": "uncertain",
+      "velocity": 84
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 153.40861088435372,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 59,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 153.26929115646257,
+      "tier": "uncertain",
+      "velocity": 58
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 154.65087845804987,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 51,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 154.40706893424036,
+      "tier": "uncertain",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 160.22751927437642,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 47,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 159.80956009070297,
+      "tier": "uncertain",
+      "velocity": 67
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 160.19268934240364,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 159.99531972789117,
+      "tier": "uncertain",
+      "velocity": 71
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 160.6454784580499,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 47,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 160.4597188208617,
+      "tier": "uncertain",
+      "velocity": 67
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 161.4826807256236,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 55,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 161.34336099773242,
+      "tier": "uncertain",
+      "velocity": 65
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 161.6684403628118,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 67,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 161.34336099773242,
+      "tier": "uncertain",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 162.6436784580499,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 75,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 162.4811387755102,
+      "tier": "uncertain",
+      "velocity": 27
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 162.6668984126984,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 162.52757868480725,
+      "tier": "uncertain",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 163.16741133786846,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 71,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 163.0977514739229,
+      "tier": "uncertain",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 163.65503038548752,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 44,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 163.36478095238095,
+      "tier": "uncertain",
+      "velocity": 63
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 165.71128027210887,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 42,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 165.37459092970522,
+      "tier": "uncertain",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 165.74611020408165,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 80,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 165.49069070294786,
+      "tier": "uncertain",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 166.6749083900227,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 83,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 166.50075873015874,
+      "tier": "uncertain",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 167.27991111111112,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 167.0941514739229,
+      "tier": "uncertain",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 167.66304036281178,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 167.52372063492064,
+      "tier": "uncertain",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 170.70613832199547,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 58,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 168.7659882086168,
+      "tier": "uncertain",
+      "velocity": 65
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 169.90504988662133,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 79,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 168.7659882086168,
+      "tier": "uncertain",
+      "velocity": 66
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 172.61145850340137,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 56,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 170.78740816326533,
+      "tier": "uncertain",
+      "velocity": 75
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 171.83359002267574,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 68,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 170.78740816326533,
+      "tier": "uncertain",
+      "velocity": 73
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 170.89318185941045,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 83,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 170.78740816326533,
+      "tier": "uncertain",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 172.1006195011338,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 71,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 170.7990181405896,
+      "tier": "uncertain",
+      "velocity": 67
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 174.71414829931973,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 172.80882811791383,
+      "tier": "uncertain",
+      "velocity": 84
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 174.36584897959182,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 61,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 172.80882811791383,
+      "tier": "uncertain",
+      "velocity": 76
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 173.1235814058957,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 82,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 172.8204380952381,
+      "tier": "uncertain",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 175.62101043083902,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 174.8186380952381,
+      "tier": "uncertain",
+      "velocity": 89
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 175.30754104308392,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 47,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 174.8186380952381,
+      "tier": "uncertain",
+      "velocity": 99
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 175.33076099773243,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 63,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 174.81992199546485,
+      "tier": "uncertain",
+      "velocity": 58
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 177.37540090702947,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 70,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 176.81812199546485,
+      "tier": "uncertain",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 177.81658004535146,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 58,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 176.82973197278912,
+      "tier": "uncertain",
+      "velocity": 64
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 177.59599047619048,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 67,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 177.31735102040815,
+      "tier": "uncertain",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 179.23428117913832,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 71,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 178.8279319727891,
+      "tier": "uncertain",
+      "velocity": 59
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 179.4316507936508,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 44,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 178.83954195011336,
+      "tier": "uncertain",
+      "velocity": 65
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 179.32716099773242,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 56,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 178.83954195011336,
+      "tier": "uncertain",
+      "velocity": 90
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 180.81452199546484,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 44,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 180.56942857142855,
+      "tier": "uncertain",
+      "velocity": 60
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 180.9190117913832,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 78,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 180.83774195011338,
+      "tier": "uncertain",
+      "velocity": 47
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 181.3718009070295,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 42,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 180.84935192743765,
+      "tier": "uncertain",
+      "velocity": 73
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 181.34858095238096,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 180.86096190476192,
+      "tier": "uncertain",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 181.19765124716554,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 61,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 180.86096190476192,
+      "tier": "uncertain",
+      "velocity": 67
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 180.93062176870748,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 70,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 180.86096190476192,
+      "tier": "uncertain",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 182.17288934240364,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 58,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 181.97551972789117,
+      "tier": "uncertain",
+      "velocity": 41
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 182.77789206349206,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 49,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 182.69533832199548,
+      "tier": "uncertain",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 183.72991020408162,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 182.84755192743762,
+      "tier": "uncertain",
+      "velocity": 96
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 182.99848163265307,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 63,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 182.87077188208616,
+      "tier": "uncertain",
+      "velocity": 37
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 183.56737052154193,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 183.49771065759637,
+      "tier": "uncertain",
+      "velocity": 45
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 185.5539605442177,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 58,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 184.88058185941043,
+      "tier": "uncertain",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 185.10117142857143,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 75,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 185.03151156462587,
+      "tier": "uncertain",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 185.80938004535147,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 70,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 185.54235056689345,
+      "tier": "uncertain",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 186.13445941043085,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 73,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 185.91386984126984,
+      "tier": "uncertain",
+      "velocity": 61
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 186.64529841269842,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 51,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 186.4014888888889,
+      "tier": "uncertain",
+      "velocity": 73
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 187.4592807256236,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 71,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 186.6569083900227,
+      "tier": "uncertain",
+      "velocity": 68
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 188.15587936507936,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 44,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 186.8903918367347,
+      "tier": "uncertain",
+      "velocity": 87
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 187.610210430839,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 78,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 187.54055056689342,
+      "tier": "uncertain",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 188.22553922902495,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 78,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 187.90045986394557,
+      "tier": "uncertain",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 188.8885918367347,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 71,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 188.68993832199547,
+      "tier": "uncertain",
+      "velocity": 40
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 189.7245102040816,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 42,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 188.90020181405893,
+      "tier": "uncertain",
+      "velocity": 74
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 189.42265079365077,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 49,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 188.9118117913832,
+      "tier": "uncertain",
+      "velocity": 63
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 190.95645170068028,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 188.9118117913832,
+      "tier": "uncertain",
+      "velocity": 93
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 189.39943083900226,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 58,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 188.9118117913832,
+      "tier": "uncertain",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 190.6997482993197,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 42,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 190.25856916099772,
+      "tier": "uncertain",
+      "velocity": 70
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 198.47195873015872,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 49,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 198.23975918367347,
+      "tier": "uncertain",
+      "velocity": 73
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 198.96086167800453,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 47,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 198.8679818594104,
+      "tier": "uncertain",
+      "velocity": 52
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 199.4717006802721,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 75,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 199.40204081632652,
+      "tier": "uncertain",
+      "velocity": 39
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 200.85457188208616,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 47,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 200.64430839002267,
+      "tier": "uncertain",
+      "velocity": 54
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 201.16804126984127,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 58,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 201.0983814058957,
+      "tier": "uncertain",
+      "velocity": 41
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 203.52615056689342,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 78,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 203.3055609977324,
+      "tier": "uncertain",
+      "velocity": 40
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 204.0021596371882,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 80,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 203.93249977324263,
+      "tier": "uncertain",
+      "velocity": 39
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 204.57104852607708,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 51,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 204.17630929705214,
+      "tier": "uncertain",
+      "velocity": 91
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 209.0563514739229,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 208.708052154195,
+      "tier": "uncertain",
+      "velocity": 65
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 209.40465079365077,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 59,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 209.32338095238094,
+      "tier": "uncertain",
+      "velocity": 56
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 210.03158956916099,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 70,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 209.60202040816324,
+      "tier": "uncertain",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 210.6133723356009,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 58,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 210.20573922902494,
+      "tier": "uncertain",
+      "velocity": 46
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 210.55403854875283,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 70,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 210.46115873015873,
+      "tier": "uncertain",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 212.05300952380952,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 70,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 211.9020798185941,
+      "tier": "uncertain",
+      "velocity": 39
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 212.34325895691612,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 78,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 212.2155492063492,
+      "tier": "uncertain",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 214.6446022675737,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 214.22535918367348,
+      "tier": "uncertain",
+      "velocity": 87
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 215.8752598639456,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 47,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 215.35281088435374,
+      "tier": "uncertain",
+      "velocity": 85
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 218.59456235827665,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 77,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 218.38429886621316,
+      "tier": "uncertain",
+      "velocity": 38
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 218.98930158730158,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 73,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 218.7571020408163,
+      "tier": "uncertain",
+      "velocity": 49
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 220.58115238095237,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 70,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 220.26639909297052,
+      "tier": "uncertain",
+      "velocity": 51
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 220.89462176870748,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 73,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 220.7669120181406,
+      "tier": "uncertain",
+      "velocity": 67
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 221.2661410430839,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 80,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 221.0455514739229,
+      "tier": "uncertain",
+      "velocity": 40
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 223.8332299319728,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 223.43849070294783,
+      "tier": "uncertain",
+      "velocity": 43
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 224.56594240362813,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 224.15830929705214,
+      "tier": "uncertain",
+      "velocity": 42
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 224.647212244898,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 66,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 224.53111247165535,
+      "tier": "uncertain",
+      "velocity": 44
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 225.5179605442177,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 46,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 225.30898095238098,
+      "tier": "uncertain",
+      "velocity": 41
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 229.3169909297052,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 44,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 227.21430113378685,
+      "tier": "uncertain",
+      "velocity": 81
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 231.39646077097507,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 42,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 229.27055102040816,
+      "tier": "uncertain",
+      "velocity": 71
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 231.3848507936508,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 49,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 229.27055102040816,
+      "tier": "uncertain",
+      "velocity": 71
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 230.56054240362812,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 229.27055102040816,
+      "tier": "uncertain",
+      "velocity": 65
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 229.351820861678,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 61,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 229.27055102040816,
+      "tier": "uncertain",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 231.2919709750567,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 54,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 230.9436716553288,
+      "tier": "uncertain",
+      "velocity": 55
+    },
+    {
+      "confidence": 0.45,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 232.40652879818595,
+      "family": "uncertain",
+      "origin": "observed",
+      "pitch": 63,
+      "sources": [
+        "basic-pitch",
+        "spectral-verification",
+        "keys-role:uncertain"
+      ],
+      "start": 232.22076916099775,
+      "tier": "uncertain",
+      "velocity": 43
+    }
+  ],
+  "schema_version": 1,
+  "source_stem": "work/Lidl-B major-119bpm-440hz/Lidl-keys-B major-119bpm-440hz.wav",
+  "variant": "uncertain"
+}

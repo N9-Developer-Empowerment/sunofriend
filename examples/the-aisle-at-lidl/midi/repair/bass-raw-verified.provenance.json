@@ -1,0 +1,3692 @@
+{
+  "conversion_mode": "repair",
+  "counts": {
+    "aggregate_confidence": 0,
+    "inferred": 0,
+    "main": 204,
+    "measured_confidence": 0,
+    "notes": 204,
+    "observed": 204,
+    "policy_confidence": 204,
+    "possible": 0,
+    "repaired": 0,
+    "uncertain": 0
+  },
+  "notes": [
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 8.898378231292517,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 8.25982947845805,
+      "tier": "main",
+      "velocity": 76
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 9.838786394557824,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 9.014478004535148,
+      "tier": "main",
+      "velocity": 62
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 10.234809523809524,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 9.850396371882086,
+      "tier": "main",
+      "velocity": 78
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 11.813766439909298,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 10.29285941043084,
+      "tier": "main",
+      "velocity": 100
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 12.198179591836736,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 11.813766439909298,
+      "tier": "main",
+      "velocity": 86
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 13.254687528344672,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 12.267839455782314,
+      "tier": "main",
+      "velocity": 89
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 15.35737732426304,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 14.324089342403628,
+      "tier": "main",
+      "velocity": 76
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 34.491848979591836,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 32.55169886621315,
+      "tier": "main",
+      "velocity": 100
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 35.095567800453516,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 34.491848979591836,
+      "tier": "main",
+      "velocity": 92
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 36.501658956916096,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 35.75733650793651,
+      "tier": "main",
+      "velocity": 96
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 38.035459863945576,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 36.51326893424036,
+      "tier": "main",
+      "velocity": 93
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 38.53468888888889,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 38.035459863945576,
+      "tier": "main",
+      "velocity": 86
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 39.09196780045352,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 38.53468888888889,
+      "tier": "main",
+      "velocity": 84
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 39.81307029478458,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 39.09196780045352,
+      "tier": "main",
+      "velocity": 85
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 40.19619954648526,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 39.81307029478458,
+      "tier": "main",
+      "velocity": 88
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 40.56771882086168,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 40.19619954648526,
+      "tier": "main",
+      "velocity": 86
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 42.55430884353741,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 40.56771882086168,
+      "tier": "main",
+      "velocity": 95
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 43.07675782312925,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 42.620226757369615,
+      "tier": "main",
+      "velocity": 73
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 44.622168707483,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 43.84430022675737,
+      "tier": "main",
+      "velocity": 84
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 45.690286621315195,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 44.622168707483,
+      "tier": "main",
+      "velocity": 88
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 46.5855387755102,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 45.690286621315195,
+      "tier": "main",
+      "velocity": 84
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 47.142817687074825,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 46.5855387755102,
+      "tier": "main",
+      "velocity": 92
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 47.91036009070295,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 47.142817687074825,
+      "tier": "main",
+      "velocity": 87
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 48.50246893424036,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 47.91036009070295,
+      "tier": "main",
+      "velocity": 84
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 49.68797052154195,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 48.57212879818594,
+      "tier": "main",
+      "velocity": 104
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 50.16397959183673,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 49.68797052154195,
+      "tier": "main",
+      "velocity": 93
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 50.68642857142857,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 50.16397959183673,
+      "tier": "main",
+      "velocity": 86
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 52.22167800453515,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 50.68642857142857,
+      "tier": "main",
+      "velocity": 103
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 52.661408616780044,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 52.22167800453515,
+      "tier": "main",
+      "velocity": 57
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 54.7060485260771,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 52.661408616780044,
+      "tier": "main",
+      "velocity": 92
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 54.75265306122449,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 54.7060485260771,
+      "tier": "main",
+      "velocity": 71
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 56.83195827664399,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 54.75265306122449,
+      "tier": "main",
+      "velocity": 94
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 58.65600861678005,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 56.83195827664399,
+      "tier": "main",
+      "velocity": 101
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 59.25972743764172,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 58.65600861678005,
+      "tier": "main",
+      "velocity": 96
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 60.18980952380952,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 59.25972743764172,
+      "tier": "main",
+      "velocity": 62
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 66.59482993197278,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 64.67382857142857,
+      "tier": "main",
+      "velocity": 100
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 66.73414965986395,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 37,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 66.61397868480725,
+      "tier": "main",
+      "velocity": 70
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 67.47311700680272,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 66.74168843537414,
+      "tier": "main",
+      "velocity": 73
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 67.83431020408163,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 67.47311700680272,
+      "tier": "main",
+      "velocity": 67
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 69.4160544217687,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 68.90242811791383,
+      "tier": "main",
+      "velocity": 101
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 69.92689342403628,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 69.4160544217687,
+      "tier": "main",
+      "velocity": 84
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 70.94706802721089,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 69.92689342403628,
+      "tier": "main",
+      "velocity": 101
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 72.2138394557823,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 70.94857142857143,
+      "tier": "main",
+      "velocity": 103
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 72.67823854875283,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 72.2138394557823,
+      "tier": "main",
+      "velocity": 69
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 73.53866077097506,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 72.70145850340135,
+      "tier": "main",
+      "velocity": 100
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 74.96668798185941,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 73.53866077097506,
+      "tier": "main",
+      "velocity": 103
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 75.51364081632653,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 74.96668798185941,
+      "tier": "main",
+      "velocity": 63
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 76.18701950113379,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 75.51364081632653,
+      "tier": "main",
+      "velocity": 95
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 76.95327800453515,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 76.18701950113379,
+      "tier": "main",
+      "velocity": 102
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 77.54303854875283,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 76.95327800453515,
+      "tier": "main",
+      "velocity": 102
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 78.57632653061225,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 77.54303854875283,
+      "tier": "main",
+      "velocity": 90
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 79.03274784580499,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 78.57632653061225,
+      "tier": "main",
+      "velocity": 87
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 79.58639455782313,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 79.03274784580499,
+      "tier": "main",
+      "velocity": 87
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 80.05079365079365,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 79.58639455782313,
+      "tier": "main",
+      "velocity": 90
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 80.72908843537415,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 80.05079365079365,
+      "tier": "main",
+      "velocity": 69
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 81.58331065759637,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 81.05416780045353,
+      "tier": "main",
+      "velocity": 102
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 82.75591836734694,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 81.58331065759637,
+      "tier": "main",
+      "velocity": 78
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 82.90143809523809,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 37,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 82.76211836734693,
+      "tier": "main",
+      "velocity": 69
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 83.10421768707484,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 82.91304807256235,
+      "tier": "main",
+      "velocity": 80
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 83.53378684807257,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 83.10421768707484,
+      "tier": "main",
+      "velocity": 66
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 84.07532970521542,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 83.62666666666667,
+      "tier": "main",
+      "velocity": 71
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 84.93446802721088,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 84.09106575963719,
+      "tier": "main",
+      "velocity": 55
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 85.1782775510204,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 84.94607800453515,
+      "tier": "main",
+      "velocity": 93
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 85.56269070294785,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 85.1782775510204,
+      "tier": "main",
+      "velocity": 50
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 87.07198775510204,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 86.65687074829933,
+      "tier": "main",
+      "velocity": 88
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 87.65532879818593,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 87.07198775510204,
+      "tier": "main",
+      "velocity": 84
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 88.3271492063492,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 87.65532879818593,
+      "tier": "main",
+      "velocity": 82
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 90.05831972789115,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 47,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 89.81451020408163,
+      "tier": "main",
+      "velocity": 95
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 91.06838775510204,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 47,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 90.3253492063492,
+      "tier": "main",
+      "velocity": 92
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 92.12617959183673,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 91.06838775510204,
+      "tier": "main",
+      "velocity": 106
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 92.97370793650794,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 92.33515918367347,
+      "tier": "main",
+      "velocity": 95
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 94.15691609977324,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 93.00853786848072,
+      "tier": "main",
+      "velocity": 90
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 97.75600907029478,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 97.14425759637189,
+      "tier": "main",
+      "velocity": 87
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 98.68480725623583,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 97.75600907029478,
+      "tier": "main",
+      "velocity": 100
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 99.22372743764173,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 98.89864807256237,
+      "tier": "main",
+      "velocity": 70
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 99.7645351473923,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 99.22372743764173,
+      "tier": "main",
+      "velocity": 53
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 100.7049433106576,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 99.7645351473923,
+      "tier": "main",
+      "velocity": 78
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 101.18709750566893,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 100.73977324263039,
+      "tier": "main",
+      "velocity": 74
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 101.78467120181406,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 101.18709750566893,
+      "tier": "main",
+      "velocity": 85
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 103.24334739229025,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 101.78467120181406,
+      "tier": "main",
+      "velocity": 87
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 103.79030022675737,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 103.24334739229025,
+      "tier": "main",
+      "velocity": 85
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 104.79165532879819,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 103.79030022675737,
+      "tier": "main",
+      "velocity": 89
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 105.27927437641723,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 104.79165532879819,
+      "tier": "main",
+      "velocity": 77
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 105.83494013605443,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 105.27927437641723,
+      "tier": "main",
+      "velocity": 84
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 107.29908117913833,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 105.83494013605443,
+      "tier": "main",
+      "velocity": 93
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 107.70543038548753,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 107.299410430839,
+      "tier": "main",
+      "velocity": 60
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 108.25142857142858,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 107.81024943310658,
+      "tier": "main",
+      "velocity": 71
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 109.20311746031747,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 108.30947845804988,
+      "tier": "main",
+      "velocity": 63
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 109.81877551020408,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 109.26116734693878,
+      "tier": "main",
+      "velocity": 77
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 110.64308390022676,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 109.81877551020408,
+      "tier": "main",
+      "velocity": 96
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 111.35353106575964,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 110.64308390022676,
+      "tier": "main",
+      "velocity": 82
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 111.87374149659864,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 111.3651410430839,
+      "tier": "main",
+      "velocity": 71
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 112.62839002267573,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 111.87374149659864,
+      "tier": "main",
+      "velocity": 87
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 113.25885124716554,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 112.62839002267573,
+      "tier": "main",
+      "velocity": 80
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 114.30374920634921,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 113.25885124716554,
+      "tier": "main",
+      "velocity": 99
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 115.22093741496599,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 114.53594875283447,
+      "tier": "main",
+      "velocity": 97
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 116.75473832199548,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 115.22093741496599,
+      "tier": "main",
+      "velocity": 95
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 117.13786757369616,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 116.75473832199548,
+      "tier": "main",
+      "velocity": 92
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 118.06794965986396,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 117.20752743764173,
+      "tier": "main",
+      "velocity": 95
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 119.0896276643991,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 118.06794965986396,
+      "tier": "main",
+      "velocity": 95
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 119.33472108843537,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 44,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 119.0896276643991,
+      "tier": "main",
+      "velocity": 90
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 119.64819047619048,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 42,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 119.33472108843537,
+      "tier": "main",
+      "velocity": 68
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 126.13040952380953,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 122.34298911564626,
+      "tier": "main",
+      "velocity": 89
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 126.60680272108844,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 126.13040952380953,
+      "tier": "main",
+      "velocity": 85
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 128.39563900226756,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 126.60680272108844,
+      "tier": "main",
+      "velocity": 97
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 130.42866893424036,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 128.39563900226756,
+      "tier": "main",
+      "velocity": 100
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 132.48145124716552,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 130.42866893424036,
+      "tier": "main",
+      "velocity": 95
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 134.4667573696145,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 132.48145124716552,
+      "tier": "main",
+      "velocity": 94
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 136.43487891156462,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 134.4667573696145,
+      "tier": "main",
+      "velocity": 98
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 138.537568707483,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 136.43487891156462,
+      "tier": "main",
+      "velocity": 103
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 139.94666666666666,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 44,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 138.537568707483,
+      "tier": "main",
+      "velocity": 83
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 143.15058140589568,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 142.58040861678003,
+      "tier": "main",
+      "velocity": 99
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 143.65024943310658,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 143.15058140589568,
+      "tier": "main",
+      "velocity": 91
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 144.4973387755102,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 143.65024943310658,
+      "tier": "main",
+      "velocity": 89
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 145.06751156462585,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 144.67192743764173,
+      "tier": "main",
+      "velocity": 57
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 145.63640045351474,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 145.1487814058957,
+      "tier": "main",
+      "velocity": 65
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 147.19342131519275,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 146.6572335600907,
+      "tier": "main",
+      "velocity": 85
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 148.69110839002266,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 147.19342131519275,
+      "tier": "main",
+      "velocity": 80
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 149.21142857142857,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 148.70271836734693,
+      "tier": "main",
+      "velocity": 81
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 149.68743764172336,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 149.21142857142857,
+      "tier": "main",
+      "velocity": 81
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 150.37583900226758,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 149.68743764172336,
+      "tier": "main",
+      "velocity": 71
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 151.23156462585035,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 150.49193877551022,
+      "tier": "main",
+      "velocity": 93
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 151.70757369614512,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 151.23156462585035,
+      "tier": "main",
+      "velocity": 95
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 152.37403900226758,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 151.70757369614512,
+      "tier": "main",
+      "velocity": 78
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 152.50174875283446,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 37,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 152.37403900226758,
+      "tier": "main",
+      "velocity": 73
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 152.74086167800453,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 152.5318820861678,
+      "tier": "main",
+      "velocity": 83
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 153.4142403628118,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 152.74086167800453,
+      "tier": "main",
+      "velocity": 73
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 153.9194498866213,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 153.4142403628118,
+      "tier": "main",
+      "velocity": 74
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 154.33740907029477,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 153.9194498866213,
+      "tier": "main",
+      "velocity": 52
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 154.69731836734692,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 154.5404081632653,
+      "tier": "main",
+      "velocity": 79
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 155.2674911564626,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 154.74375827664397,
+      "tier": "main",
+      "velocity": 91
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 155.7710657596372,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 155.2674911564626,
+      "tier": "main",
+      "velocity": 89
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 156.28190476190477,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 155.7710657596372,
+      "tier": "main",
+      "velocity": 82
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 156.741958276644,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 156.28190476190477,
+      "tier": "main",
+      "velocity": 87
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 157.2889111111111,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 156.78839818594105,
+      "tier": "main",
+      "velocity": 86
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 157.99711972789115,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 157.2889111111111,
+      "tier": "main",
+      "velocity": 77
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 159.76489795918368,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 158.7053283446712,
+      "tier": "main",
+      "velocity": 88
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 160.43827664399092,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 159.76489795918368,
+      "tier": "main",
+      "velocity": 76
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 160.57581859410433,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 37,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 160.44810884353743,
+      "tier": "main",
+      "velocity": 68
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 160.78479818594104,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 160.57581859410433,
+      "tier": "main",
+      "velocity": 81
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 161.34385487528345,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 160.80979591836734,
+      "tier": "main",
+      "velocity": 72
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 162.24893922902496,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 161.34385487528345,
+      "tier": "main",
+      "velocity": 71
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 162.78299818594104,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 162.57451247165534,
+      "tier": "main",
+      "velocity": 73
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 163.29433106575965,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 162.80621814058958,
+      "tier": "main",
+      "velocity": 94
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 163.82839002267573,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 163.29433106575965,
+      "tier": "main",
+      "velocity": 79
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 164.80362811791383,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 163.82839002267573,
+      "tier": "main",
+      "velocity": 95
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 165.39573696145123,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 164.80362811791383,
+      "tier": "main",
+      "velocity": 92
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 165.83691609977325,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 165.39573696145123,
+      "tier": "main",
+      "velocity": 82
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 166.33614512471655,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 165.83691609977325,
+      "tier": "main",
+      "velocity": 79
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 167.03610158730157,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 166.33614512471655,
+      "tier": "main",
+      "velocity": 77
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 175.5861804988662,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 174.81142857142856,
+      "tier": "main",
+      "velocity": 96
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 176.48014875283448,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 175.5861804988662,
+      "tier": "main",
+      "velocity": 73
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 178.7802081632653,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 176.73556825396827,
+      "tier": "main",
+      "velocity": 109
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 180.0237596371882,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 178.7802081632653,
+      "tier": "main",
+      "velocity": 80
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 180.4068888888889,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 180.0237596371882,
+      "tier": "main",
+      "velocity": 97
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 180.84935192743765,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 180.61586848072562,
+      "tier": "main",
+      "velocity": 94
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 181.615610430839,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 180.84935192743765,
+      "tier": "main",
+      "velocity": 90
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 182.77789206349206,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 181.615610430839,
+      "tier": "main",
+      "velocity": 92
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 183.37000090702946,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 182.77789206349206,
+      "tier": "main",
+      "velocity": 92
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 183.91566984126985,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 183.62542040816325,
+      "tier": "main",
+      "velocity": 84
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 186.91361179138323,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 184.86897188208619,
+      "tier": "main",
+      "velocity": 101
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 187.8888498866213,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 186.91361179138323,
+      "tier": "main",
+      "velocity": 66
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 193.90666984126983,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 192.91982176870746,
+      "tier": "main",
+      "velocity": 122
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 195.59328798185942,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 195.05734149659864,
+      "tier": "main",
+      "velocity": 123
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 196.104126984127,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 195.59328798185942,
+      "tier": "main",
+      "velocity": 93
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 196.99749160997732,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 196.104126984127,
+      "tier": "main",
+      "velocity": 85
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 197.59020408163266,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 197.0793650793651,
+      "tier": "main",
+      "velocity": 87
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 198.34424897959184,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 197.59020408163266,
+      "tier": "main",
+      "velocity": 75
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 198.87891156462584,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 198.34424897959184,
+      "tier": "main",
+      "velocity": 76
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 199.61034013605442,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 198.89120181405895,
+      "tier": "main",
+      "velocity": 107
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 200.07473922902494,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 199.61034013605442,
+      "tier": "main",
+      "velocity": 96
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 200.7849120181406,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 200.07473922902494,
+      "tier": "main",
+      "velocity": 81
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 201.0983814058957,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 200.7849120181406,
+      "tier": "main",
+      "velocity": 84
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 201.55117052154196,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 201.12160136054422,
+      "tier": "main",
+      "velocity": 99
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 202.038789569161,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 201.66530612244898,
+      "tier": "main",
+      "velocity": 86
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 203.01531156462585,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 202.15292517006802,
+      "tier": "main",
+      "velocity": 95
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 203.6538603174603,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 203.01531156462585,
+      "tier": "main",
+      "velocity": 113
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 204.29240907029478,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 203.6538603174603,
+      "tier": "main",
+      "velocity": 92
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 205.14122131519275,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 204.29240907029478,
+      "tier": "main",
+      "velocity": 94
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 205.69850022675737,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 205.1876612244898,
+      "tier": "main",
+      "velocity": 59
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 206.12806938775512,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 205.69850022675737,
+      "tier": "main",
+      "velocity": 70
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 208.33524897959182,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 207.17425124716553,
+      "tier": "main",
+      "velocity": 111
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 208.77061224489796,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 208.33524897959182,
+      "tier": "main",
+      "velocity": 96
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 208.95186167800452,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 37,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 208.817052154195,
+      "tier": "main",
+      "velocity": 116
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 209.13762131519275,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 208.9634716553288,
+      "tier": "main",
+      "velocity": 113
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 209.62524036281178,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 209.16084126984126,
+      "tier": "main",
+      "velocity": 113
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 210.60176235827666,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 209.83421995464852,
+      "tier": "main",
+      "velocity": 108
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 211.10099138321996,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 210.76430204081635,
+      "tier": "main",
+      "velocity": 107
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 211.8356462585034,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 211.15904126984128,
+      "tier": "main",
+      "velocity": 116
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 213.15724126984125,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 211.8356462585034,
+      "tier": "main",
+      "velocity": 112
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 214.18086167800453,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 213.15724126984125,
+      "tier": "main",
+      "velocity": 110
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 214.88841179138322,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 214.18086167800453,
+      "tier": "main",
+      "velocity": 107
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 215.1328798185941,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 34,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 214.96968163265308,
+      "tier": "main",
+      "velocity": 76
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 215.69015873015874,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 215.1677097505669,
+      "tier": "main",
+      "velocity": 100
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 216.8627664399093,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 215.69015873015874,
+      "tier": "main",
+      "velocity": 102
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 217.01432154195012,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 37,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 216.87500181405895,
+      "tier": "main",
+      "velocity": 104
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 217.22330113378686,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 39,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 217.02530612244897,
+      "tier": "main",
+      "velocity": 116
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 219.1634512471655,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 27,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 217.37423083900228,
+      "tier": "main",
+      "velocity": 110
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 221.2080911564626,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 219.20989115646256,
+      "tier": "main",
+      "velocity": 120
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 221.924716553288,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 221.2080911564626,
+      "tier": "main",
+      "velocity": 90
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 222.695452154195,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 30,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 221.924716553288,
+      "tier": "main",
+      "velocity": 67
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 223.21790113378685,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 32,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 222.96248163265307,
+      "tier": "main",
+      "velocity": 62
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 223.6706902494331,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 223.24825396825398,
+      "tier": "main",
+      "velocity": 85
+    },
+    {
+      "confidence": 0.82,
+      "confidence_basis": "policy",
+      "details": {},
+      "end": 234.47510204081632,
+      "family": "bass",
+      "origin": "observed",
+      "pitch": 35,
+      "sources": [
+        "basic-pitch",
+        "pyin",
+        "spectral-verification",
+        "raw_verified"
+      ],
+      "start": 231.5125605442177,
+      "tier": "main",
+      "velocity": 104
+    }
+  ],
+  "schema_version": 1,
+  "source_stem": "work/Lidl-B major-119bpm-440hz/Lidl-bass-B major-119bpm-440hz.wav",
+  "variant": "raw_verified"
+}

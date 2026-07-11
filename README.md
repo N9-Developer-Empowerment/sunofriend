@@ -1,5 +1,7 @@
 # Sunofriend
 
+![Sunofriend — From AI stems to playable MIDI](assets/brand/sunofriend-banner-v2.png)
+
 Sunofriend converts separated Suno/Moises audio stems into editable,
 timing-locked MIDI for GarageBand. It preserves what was actually heard,
 separates uncertain alternatives for auditioning, and clearly labels notes
@@ -8,6 +10,25 @@ that were repaired or musically inferred.
 It complements Suno, Moises and GarageBand rather than replacing them: use
 Suno to generate a song, Moises to export stems and chords, Sunofriend to make
 clean MIDI resources, and GarageBand to choose instruments and finish the mix.
+
+## Hear what it can do
+
+<p align="center">
+  <img src="assets/social/the-aisle-at-lidl-square-v2.png" width="560" alt="The Aisle at Lidl: a Sunofriend worked example, shown as a cyan and coral MIDI supermarket aisle">
+</p>
+
+**[Listen to Version 1 of “The Aisle at Lidl” on SoundCloud](https://soundcloud.com/ezzye-1/the-aisle-at-lidl?si=97cf744ff4a743bca875bec3db88024f&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing).**
+
+The maintainer wrote the song and has approved it as a public example of a
+Suno → Moises → Sunofriend → GarageBand workflow. The repository includes a
+compact [worked-example pack](examples/the-aisle-at-lidl/) with repair and
+reconstruct MIDI files, role/family alternatives and measured results. The
+full stems are intentionally omitted from Git because they total about 765 MB;
+the finished audio remains available through SoundCloud.
+
+Ready-to-post artwork and suggested copy for X, Bluesky, Threads, Instagram,
+Facebook, WhatsApp and Slack are in the [social media kit](SOCIAL.md). Brand
+files and generation notes are under [`assets/`](assets/).
 
 ## Getting started (macOS)
 
@@ -132,14 +153,14 @@ conversion:
 
 The results are in `mode_exact/`, `mode_repair/` and `mode_reconstruct/`.
 
-### Maintainer worked example: Lidl (local asset)
+### Worked example: The Aisle at Lidl
 
-The local development golden `work/Lidl-B major-119bpm-440hz` contains two kick
-and snare timbres, a walking bass, layered keys and separator artefacts. The
-audio asset is not distributed with the source, so substitute your own export
-if it is absent. This command deliberately requests `pads` as well,
-demonstrating that repair mode reports and skips a part that would require
-reconstruction:
+The committed [example pack](examples/the-aisle-at-lidl/) contains the selected
+MIDI outputs. The ignored local golden `work/Lidl-B major-119bpm-440hz` contains
+two kick and snare timbres, a walking bass, layered keys and separator
+artefacts. Substitute your own export when the local audio is absent. This
+command deliberately requests `pads` as well, demonstrating that repair mode
+reports and skips a part that would require reconstruction:
 
 ```bash
 LIDL_STEMS="work/Lidl-B major-119bpm-440hz"
@@ -515,6 +536,24 @@ Outputs:
 
 Set the GarageBand project tempo to the BPM in `quality_report.json`, then import either `full_arrangement.mid` or the separate MIDI files.
 
+## Contributing and compatibility testing
+
+Sunofriend needs testing beyond the current GarageBand, Suno and Moises
+workflow. Contributions are especially useful from people using other DAWs,
+music software, hardware MIDI instruments, AI music generators and stem
+separators.
+
+Please try the MIDI in [`examples/the-aisle-at-lidl/`](examples/the-aisle-at-lidl/)
+or convert your own authorised stems, then report timing, tempo, key, patch,
+import or musical-quality issues. The [contributor guide](CONTRIBUTING.md)
+describes a short compatibility test and the evidence to collect.
+
+Use the **[DAW / AI compatibility report](https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml)**
+for results from Logic Pro, Ableton Live, FL Studio, REAPER, Cubase, Studio One,
+Pro Tools, Bitwig, Ardour, LMMS, other AI generators/separators, or hardware.
+Use a normal GitHub bug report for implementation defects. Please share only
+audio and project material that you own or have permission to distribute.
+
 ## Tests
 
 ```bash
@@ -522,8 +561,8 @@ Set the GarageBand project tempo to the BPM in `quality_report.json`, then impor
 ```
 
 The optional local goldens use ignored source/output assets. Move Your Body
-checks all 299 kick events; guards
-precision/recall, median and p95 timing error, and four-segment drift; verifies
+checks all 299 kick events; guards precision/recall, median and p95 timing
+error, and four-segment drift; verifies
 archive/export keeps the real source-second lead-in; and prevents a
 theory-generated bass from accepting a role-unsafe high note. Lidl is the
 noisy-stem semantic golden: it checks two kick families against an independent
