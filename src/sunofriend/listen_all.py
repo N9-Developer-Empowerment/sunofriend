@@ -7,9 +7,10 @@ everything into one GarageBand-ready multitrack MIDI.
 """
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import time
+from dataclasses import replace
 from pathlib import Path
 
 from .metadata import infer_project_metadata
@@ -288,6 +289,11 @@ def run_listen_all(
                     conversion_mode=conversion_mode,
                     score=result.score,
                 )
+            provenance_records = _retarget_published_role_provenance(
+                provenance_records,
+                name=name,
+                kind=kind,
+            )
             provenance_path = publish_dir / f"{name}_provenance.json"
             write_note_provenance(
                 provenance_path,
@@ -337,6 +343,11 @@ def run_listen_all(
                             confidence_basis="aggregate",
                             sources=("stem", "variant", variant_name),
                         )
+                    records = _retarget_published_role_provenance(
+                        records,
+                        name=name,
+                        kind=kind,
+                    )
                     variant_provenance_path = variants_dir / f"{_safe_token(name)}-{token}.provenance.json"
                     write_note_provenance(
                         variant_provenance_path,
@@ -635,6 +646,58 @@ def _default_note_provenance(
         sources=("stem", f"listen-{kind}", f"mode:{conversion_mode}"),
         family=name,
     )
+
+
+def _retarget_published_role_provenance(
+    records,
+    *,
+    name: str,
+    kind: str,
+):
+    """Label engine output with its public musical role without hiding the engine.
+
+    Some published parts deliberately reuse a transcription engine: strings
+    use the pads engine and piano uses the keys engine.  Their MIDI channel and
+    program already follow the published role, so the sidecar must do the same.
+    The processing kind remains explicit for reproducibility.
+    """
+
+    values = list(records)
+    if name == kind:
+        return values
+
+    engine_source = f"listen-{kind}"
+    published_source = f"listen-{name}"
+    engine_marker = f"processing-engine:{kind}"
+    result = []
+    for record in values:
+        family = record.family
+        if family == kind:
+            family = name
+        elif family and family.startswith(f"{kind}_"):
+            family = f"{name}{family[len(kind):]}"
+
+        sources = tuple(
+            published_source if source == engine_source else source
+            for source in record.sources
+        )
+        if published_source not in sources:
+            sources += (published_source,)
+        if engine_marker not in sources:
+            sources += (engine_marker,)
+
+        details = dict(record.details)
+        details["published_role"] = name
+        details["processing_kind"] = kind
+        result.append(
+            replace(
+                record,
+                family=family,
+                sources=sources,
+                details=details,
+            )
+        )
+    return result
 
 
 def _evaluation_headline(report) -> dict:

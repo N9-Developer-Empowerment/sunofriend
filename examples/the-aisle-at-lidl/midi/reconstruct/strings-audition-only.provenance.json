@@ -16,15 +16,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 12.30045,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 58,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 10.82277,
       "tier": "main",
@@ -33,15 +37,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 12.30045,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 61,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 10.82277,
       "tier": "main",
@@ -50,15 +58,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 12.30045,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 63,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 10.82277,
       "tier": "main",
@@ -67,15 +79,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 12.30045,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 67,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 10.82277,
       "tier": "main",
@@ -84,15 +100,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 14.320590000000001,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 56,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 12.32045,
       "tier": "main",
@@ -101,15 +121,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 14.320590000000001,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 59,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 12.32045,
       "tier": "main",
@@ -118,15 +142,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 14.320590000000001,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 63,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 12.32045,
       "tier": "main",
@@ -135,15 +163,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 16.34073,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 54,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 14.34059,
       "tier": "main",
@@ -152,15 +184,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 16.34073,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 58,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 14.34059,
       "tier": "main",
@@ -169,15 +205,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 16.34073,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 61,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 14.34059,
       "tier": "main",
@@ -186,15 +226,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 26.44141,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 54,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 24.44127,
       "tier": "main",
@@ -203,15 +247,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 26.44141,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 59,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 24.44127,
       "tier": "main",
@@ -220,15 +268,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 26.44141,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 63,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 24.44127,
       "tier": "main",
@@ -237,15 +289,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 28.43832,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 54,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 26.46141,
       "tier": "main",
@@ -254,15 +310,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 28.43832,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 58,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 26.46141,
       "tier": "main",
@@ -271,15 +331,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 28.43832,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 63,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 26.46141,
       "tier": "main",
@@ -288,15 +352,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 32.47859,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 54,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 30.50168,
       "tier": "main",
@@ -305,15 +373,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 32.47859,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 58,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 30.50168,
       "tier": "main",
@@ -322,15 +394,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 32.47859,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 61,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 30.50168,
       "tier": "main",
@@ -339,15 +415,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 48.66289999999999,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 54,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 46.66277,
       "tier": "main",
@@ -356,15 +436,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 48.66289999999999,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 58,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 46.66277,
       "tier": "main",
@@ -373,15 +457,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 48.66289999999999,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 61,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 46.66277,
       "tier": "main",
@@ -390,15 +478,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 50.68304,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 54,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 48.6829,
       "tier": "main",
@@ -407,15 +499,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 50.68304,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 59,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 48.6829,
       "tier": "main",
@@ -424,15 +520,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 50.68304,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 63,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 48.6829,
       "tier": "main",
@@ -441,15 +541,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 52.70317,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 54,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 50.70304,
       "tier": "main",
@@ -458,15 +562,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 52.70317,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 58,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 50.70304,
       "tier": "main",
@@ -475,15 +583,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 52.70317,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 63,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 50.70304,
       "tier": "main",
@@ -492,15 +604,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 54.72331,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 56,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 52.72317,
       "tier": "main",
@@ -509,15 +625,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 54.72331,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 59,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 52.72317,
       "tier": "main",
@@ -526,15 +646,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 54.72331,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 63,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 52.72317,
       "tier": "main",
@@ -543,15 +667,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 119.33864,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 56,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 116.82186,
       "tier": "main",
@@ -560,15 +688,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 119.33864,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 59,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 116.82186,
       "tier": "main",
@@ -577,15 +709,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 119.33864,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 63,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 116.82186,
       "tier": "main",
@@ -594,15 +730,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 130.42036,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 54,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 126.42331,
       "tier": "main",
@@ -611,15 +751,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 130.42036,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 58,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 126.42331,
       "tier": "main",
@@ -628,15 +772,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 130.42036,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 63,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 126.42331,
       "tier": "main",
@@ -645,15 +793,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 132.46372,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 56,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 130.44036,
       "tier": "main",
@@ -662,15 +814,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 132.46372,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 59,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 130.44036,
       "tier": "main",
@@ -679,15 +835,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 132.46372,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 63,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 130.44036,
       "tier": "main",
@@ -696,15 +856,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 134.46062999999998,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 54,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 132.48372,
       "tier": "main",
@@ -713,15 +877,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 134.46062999999998,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 58,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 132.48372,
       "tier": "main",
@@ -730,15 +898,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 134.46062999999998,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 61,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 132.48372,
       "tier": "main",
@@ -747,15 +919,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 136.50399,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 54,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 134.48063,
       "tier": "main",
@@ -764,15 +940,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 136.50399,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 59,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 134.48063,
       "tier": "main",
@@ -781,15 +961,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 136.50399,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 63,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 134.48063,
       "tier": "main",
@@ -798,15 +982,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 138.50090999999998,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 54,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 136.52399,
       "tier": "main",
@@ -815,15 +1003,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 138.50090999999998,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 58,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 136.52399,
       "tier": "main",
@@ -832,15 +1024,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 138.50090999999998,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 63,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 136.52399,
       "tier": "main",
@@ -849,15 +1045,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 140.52104,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 56,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 138.52091,
       "tier": "main",
@@ -866,15 +1066,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 140.52104,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 59,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 138.52091,
       "tier": "main",
@@ -883,15 +1087,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 140.52104,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 63,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 138.52091,
       "tier": "main",
@@ -900,15 +1108,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 142.54118,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 54,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 140.54104,
       "tier": "main",
@@ -917,15 +1129,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 142.54118,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 58,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 140.54104,
       "tier": "main",
@@ -934,15 +1150,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 142.54118,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 61,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 140.54104,
       "tier": "main",
@@ -951,15 +1171,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 162.20268,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 54,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 160.71918,
       "tier": "main",
@@ -968,15 +1192,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 162.20268,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 58,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 160.71918,
       "tier": "main",
@@ -985,15 +1213,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 162.20268,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 63,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 160.71918,
       "tier": "main",
@@ -1002,15 +1234,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 234.30592541294584,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 54,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 231.26141,
       "tier": "main",
@@ -1019,15 +1255,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 234.30592541294584,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 59,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 231.26141,
       "tier": "main",
@@ -1036,15 +1276,19 @@
     {
       "confidence": 0.7,
       "confidence_basis": "policy",
-      "details": {},
+      "details": {
+        "processing_kind": "pads",
+        "published_role": "strings"
+      },
       "end": 234.30592541294584,
-      "family": "pads",
+      "family": "strings",
       "origin": "inferred",
       "pitch": 63,
       "sources": [
         "stem",
-        "listen-pads",
-        "mode:reconstruct"
+        "listen-strings",
+        "mode:reconstruct",
+        "processing-engine:pads"
       ],
       "start": 231.26141,
       "tier": "main",

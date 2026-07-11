@@ -5,6 +5,10 @@ Each later campaign asset used the preceding approved image as its visual
 reference. The first banner draft used “OPEN SOURCE”; the final correction
 replaces that claim pending an owner-selected repository licence.
 
+> The “OPEN SOURCE” wording below is retained only as historical prompt
+> provenance. Do not reuse those superseded draft lines unless the repository
+> owner first adds a licence that grants reuse rights.
+
 ## Logo
 
 ```text

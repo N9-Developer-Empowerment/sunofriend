@@ -4,7 +4,8 @@ Move Your Body remains the sub-millisecond/long-song GarageBand timing golden.
 Lidl deliberately exercises the harder semantic case identified by listening:
 two kick/snare timbres, weak separator residue, a mixed other-kit stem, walking
 bass, and layered keys.  Tests skip cleanly when the user's local golden audio
-or generated acceptance folder is not present.
+or generated acceptance folder is not present; committed-pack integrity tests
+run everywhere.
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ import json
 import unittest
 from pathlib import Path
 
+from sunofriend.clip import read_midi_clips
 from sunofriend.evaluate import evaluate_stem_midi
 from sunofriend.transcribe_drums import transcribe_drum_stem_detailed
 
@@ -35,6 +37,100 @@ EXACT_SUMMARY = (
 RECONSTRUCT_ROOT = (
     ROOT / "work/lidl-v2/mode_reconstruct/selected_bass-hat-keys-pads-strings"
 )
+PUBLIC_EXAMPLE = ROOT / "examples/the-aisle-at-lidl"
+
+
+class LidlCommittedExampleTests(unittest.TestCase):
+    def test_every_provenance_sidecar_matches_its_midi_notes(self):
+        sidecars = sorted(PUBLIC_EXAMPLE.glob("midi/**/*.provenance.json"))
+        self.assertEqual(len(sidecars), 13)
+
+        for sidecar in sidecars:
+            with self.subTest(sidecar=sidecar.relative_to(PUBLIC_EXAMPLE)):
+                midi = sidecar.with_name(
+                    sidecar.name.replace(".provenance.json", ".mid")
+                )
+                self.assertTrue(midi.is_file())
+                document = json.loads(sidecar.read_text(encoding="utf-8"))
+                midi_notes = sorted(
+                    (
+                        note
+                        for clip in read_midi_clips(midi)
+                        for note in clip.notes
+                    ),
+                    key=lambda note: (
+                        note.source_start_seconds,
+                        note.pitch,
+                        note.source_end_seconds,
+                        note.velocity,
+                    ),
+                )
+                provenance = sorted(
+                    document["notes"],
+                    key=lambda note: (
+                        note["start"],
+                        note["pitch"],
+                        note["end"],
+                        note["velocity"],
+                    ),
+                )
+                self.assertEqual(document["counts"]["notes"], len(provenance))
+                self.assertEqual(len(midi_notes), len(provenance))
+                for midi_note, record in zip(midi_notes, provenance):
+                    self.assertEqual(
+                        (midi_note.pitch, midi_note.velocity),
+                        (record["pitch"], record["velocity"]),
+                    )
+                    self.assertAlmostEqual(
+                        midi_note.source_start_seconds,
+                        record["start"],
+                        delta=0.001,
+                    )
+                    self.assertAlmostEqual(
+                        midi_note.source_end_seconds,
+                        record["end"],
+                        delta=0.001,
+                    )
+
+        strings = json.loads(
+            (
+                PUBLIC_EXAMPLE
+                / "midi/reconstruct/strings-audition-only.provenance.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual({note["family"] for note in strings["notes"]}, {"strings"})
+        for note in strings["notes"]:
+            self.assertIn("listen-strings", note["sources"])
+            self.assertIn("processing-engine:pads", note["sources"])
+
+    def test_arrangements_match_the_published_compatibility_baselines(self):
+        results = json.loads(
+            (PUBLIC_EXAMPLE / "results.json").read_text(encoding="utf-8")
+        )["compatibility_baselines"]
+
+        for mode in ("repair", "reconstruct"):
+            with self.subTest(mode=mode):
+                midi = PUBLIC_EXAMPLE / f"midi/{mode}/full-arrangement.mid"
+                raw = midi.read_bytes()
+                track_chunks = int.from_bytes(raw[10:12], "big")
+                clips = read_midi_clips(midi)
+                notes = [note for clip in clips for note in clip.notes]
+                expected = results[mode]
+                self.assertEqual(len(clips), expected["note_tracks"])
+                self.assertEqual(
+                    track_chunks,
+                    expected["smf_track_chunks_including_conductor"],
+                )
+                self.assertAlmostEqual(
+                    min(note.source_start_seconds for note in notes),
+                    expected["earliest_note_seconds"],
+                    delta=1e-6,
+                )
+                self.assertAlmostEqual(
+                    max(note.source_end_seconds for note in notes),
+                    expected["last_note_end_seconds"],
+                    delta=1e-6,
+                )
 
 
 @unittest.skipUnless(

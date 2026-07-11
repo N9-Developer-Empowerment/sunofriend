@@ -25,9 +25,10 @@ Useful test targets include:
 
 1. Import `examples/the-aisle-at-lidl/midi/repair/full-arrangement.mid` at
    119 BPM.
-2. Confirm that the DAW imports nine separate tracks and preserves the assigned
-   channels. The six drum tracks intentionally share zero-based channel 9
-   (General MIDI channel 10).
+2. Confirm that the DAW imports nine note/instrument tracks and preserves the
+   assigned channels. The Standard MIDI File contains ten track chunks because
+   it also has a conductor/meta track. The six drum tracks intentionally share
+   zero-based channel 9 (General MIDI channel 10).
 3. Audition the deep/high kick, three bass choices and keys role files.
 4. Import the reconstruct arrangement and check that melody plus pads does not
    duplicate the omitted strings harmony.
@@ -35,8 +36,10 @@ Useful test targets include:
    tempo, first-note offset, end drift and any remapped instruments.
 
 [`results.json`](examples/the-aisle-at-lidl/results.json) provides the exact
-first/last event baselines. For the repair arrangement they are 0.197479 s and
-234.451829 s; for reconstruct they are 0.222689 s and 234.451829 s.
+earliest note-on/latest note-end baselines. For the repair arrangement they are
+0.197479 s and 234.451829 s; for reconstruct they are 0.222689 s and
+234.451829 s. The reconstruct file contains four note/instrument tracks and
+five Standard MIDI File track chunks including its conductor/meta track.
 “Round-trip drift” means the difference after DAW import/export. “Source-audio
 drift” means comparison with an authorised source stem and cannot be measured
 from the bundled MIDI alone.
@@ -55,7 +58,8 @@ for integration results. Include:
 - operating system and architecture;
 - Sunofriend commit or version;
 - source key/BPM and the GarageBand/DAW project tempo;
-- the exact command and conversion mode;
+- the exact command and conversion mode when you ran a conversion, or the
+  bundled example file you imported directly;
 - expected versus observed behaviour;
 - timing evidence in milliseconds where possible;
 - a minimal MIDI or JSON report when redistribution is authorised.

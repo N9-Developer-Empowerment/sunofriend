@@ -21,11 +21,12 @@
   },
   "compatibility_baselines": {
     "definitions": {
-      "round_trip_drift": "Difference between the bundled MIDI's first/last event and the same events after DAW import/export.",
+      "round_trip_drift": "Difference between the bundled MIDI's earliest note-on/latest note-end and the same note boundaries after DAW import/export.",
       "source_audio_drift": "Difference measured against an authorised source stem using Sunofriend evaluate; source audio is not bundled."
     },
     "repair": {
-      "tracks": 9,
+      "note_tracks": 9,
+      "smf_track_chunks_including_conductor": 10,
       "earliest_note_beat": 0.3916667,
       "earliest_note_seconds": 0.197479,
       "last_note_end_beat": 464.9958333,
@@ -38,7 +39,8 @@
       }
     },
     "reconstruct": {
-      "tracks": 4,
+      "note_tracks": 4,
+      "smf_track_chunks_including_conductor": 5,
       "earliest_note_beat": 0.4416667,
       "earliest_note_seconds": 0.222689,
       "last_note_end_beat": 464.9958333,

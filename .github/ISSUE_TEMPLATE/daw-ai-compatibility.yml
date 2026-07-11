@@ -48,10 +48,8 @@ body:
     id: command
     attributes:
       label: Sunofriend command
-      description: Include the exact command and conversion mode.
+      description: Include the exact command and conversion mode, or enter `N/A — bundled example pack` when you imported the committed MIDI directly.
       render: shell
-    validations:
-      required: true
   - type: textarea
     id: settings
     attributes:

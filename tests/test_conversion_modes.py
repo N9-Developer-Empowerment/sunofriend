@@ -16,7 +16,10 @@ from sunofriend.conversion import (
     validate_conversion_mode,
     write_note_provenance,
 )
-from sunofriend.listen_all import run_listen_all
+from sunofriend.listen_all import (
+    _retarget_published_role_provenance,
+    run_listen_all,
+)
 from sunofriend.library import ClipLibrary
 from sunofriend.clip import read_midi_clips
 from sunofriend.loop import (
@@ -94,6 +97,32 @@ class ConversionModeTests(unittest.TestCase):
         )
         self.assertEqual(records[0].start, 0.125)
         self.assertEqual(records[0].sources, ("stereo_onset", "spectral_family"))
+
+    def test_piano_role_keeps_keys_engine_explicit_in_provenance(self):
+        note = NoteEvent(0.0, 0.5, 60, 80)
+        source = NoteProvenance.from_note(
+            note,
+            origin="observed",
+            confidence=0.9,
+            family="keys_melody",
+            sources=("stem", "listen-keys"),
+            details={"voice": "upper"},
+        )
+
+        record = _retarget_published_role_provenance(
+            [source],
+            name="piano",
+            kind="keys",
+        )[0]
+
+        self.assertEqual(record.family, "piano_melody")
+        self.assertEqual(
+            record.sources,
+            ("stem", "listen-piano", "processing-engine:keys"),
+        )
+        self.assertEqual(record.details["voice"], "upper")
+        self.assertEqual(record.details["published_role"], "piano")
+        self.assertEqual(record.details["processing_kind"], "keys")
 
     def test_variant_provenance_follows_normalized_midi_intervals(self):
         raw = [
@@ -485,6 +514,7 @@ class ConversionModeTests(unittest.TestCase):
         melody = NoteEvent(0.0, 0.5, 84, 100)
         accompaniment = NoteEvent(0.0, 1.0, 48, 70)
         string_chord = NoteEvent(0.0, 1.0, 60, 75)
+        string_texture = NoteEvent(1.0, 2.0, 67, 65)
         pad_chord = NoteEvent(0.0, 1.0, 64, 75)
 
         def fake_refine(**kwargs):
@@ -498,16 +528,50 @@ class ConversionModeTests(unittest.TestCase):
                     "melody": [melody],
                     "accompaniment": [accompaniment],
                 }
+                variant_provenance = {}
             elif part == "strings":
                 notes = [string_chord]
-                variants = {}
+                variants = {"texture": [string_texture]}
+                variant_provenance = {
+                    "texture": [
+                        NoteProvenance.from_note(
+                            string_texture,
+                            origin="inferred",
+                            confidence=0.6,
+                            confidence_basis="policy",
+                            family="pads",
+                            sources=("stem", "listen-pads", "mode:reconstruct"),
+                        )
+                    ]
+                }
             else:
                 notes = [pad_chord]
                 variants = {}
+                variant_provenance = {}
             midi = work / f"{kind}_listened.mid"
             write_midi_file(midi, [MidiTrack(part.title(), 0, 0, notes)], bpm=120)
             (work / f"{kind}_iterations.json").write_text("[]", encoding="utf-8")
-            return RefineResult(notes, 0.8, [], midi, variants=variants)
+            provenance = []
+            if part == "strings":
+                provenance = [
+                    NoteProvenance.from_note(
+                        string_chord,
+                        origin="inferred",
+                        confidence=0.7,
+                        confidence_basis="policy",
+                        family="pads",
+                        sources=("stem", "listen-pads", "mode:reconstruct"),
+                    )
+                ]
+            return RefineResult(
+                notes,
+                0.8,
+                [],
+                midi,
+                variants=variants,
+                note_provenance=provenance,
+                variant_provenance=variant_provenance,
+            )
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -538,6 +602,26 @@ class ConversionModeTests(unittest.TestCase):
                 summary["parts"]["strings"]["arrangement_role"],
                 "audition_only_avoids_chart_doubling",
             )
+            strings_sidecar = json.loads(
+                Path(summary["parts"]["strings"]["provenance"]).read_text(
+                    encoding="utf-8"
+                )
+            )
+            string_record = strings_sidecar["notes"][0]
+            self.assertEqual(string_record["family"], "strings")
+            self.assertIn("listen-strings", string_record["sources"])
+            self.assertIn("processing-engine:pads", string_record["sources"])
+            self.assertNotIn("listen-pads", string_record["sources"])
+            self.assertEqual(string_record["details"]["published_role"], "strings")
+            self.assertEqual(string_record["details"]["processing_kind"], "pads")
+            strings_variant = json.loads(
+                Path(
+                    summary["parts"]["strings"]["variants"]["texture"]["provenance"]
+                ).read_text(encoding="utf-8")
+            )["notes"][0]
+            self.assertEqual(strings_variant["family"], "strings")
+            self.assertIn("listen-strings", strings_variant["sources"])
+            self.assertIn("processing-engine:pads", strings_variant["sources"])
 
     def test_repair_mode_does_not_invent_missing_pads_part(self):
         with tempfile.TemporaryDirectory() as tmp:
