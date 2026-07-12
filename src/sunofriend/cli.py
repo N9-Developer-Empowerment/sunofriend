@@ -11,8 +11,8 @@ from pathlib import Path
 from .pipeline import run_remake
 
 _COMMANDS = {
-    "remake", "listen", "listen-all", "evaluate", "doctor", "preview", "midi-ports", "play",
-    "midi-tempo",
+    "remake", "listen", "listen-all", "vocal-melody", "evaluate", "doctor", "preview", "midi-ports", "play",
+    "midi-tempo", "midi-transform", "midi-anchor", "midi-align",
     "garageband-info", "clip-import", "clip-list", "clip-show", "clip-export",
     "clip-transform", "clip-instrument",
 }
@@ -74,6 +74,44 @@ def build_parser() -> argparse.ArgumentParser:
             "reconstruct=allow clearly-labelled musical inference"
         ),
     )
+
+    vocal = sub.add_parser(
+        "vocal-melody",
+        help="Extract an instrument-playable melody from lead or backing vocals",
+    )
+    vocal.add_argument("stem", help="Lead- or backing-vocal WAV stem")
+    vocal.add_argument(
+        "--role",
+        required=True,
+        choices=["lead", "backing"],
+        help="Lead uses a continuous monophonic F0 contour; backing also tracks polyphonic voices",
+    )
+    vocal.add_argument("--out-dir", required=True, help="Output directory")
+    vocal.add_argument(
+        "--bpm",
+        type=float,
+        default=None,
+        help="GarageBand/export BPM (default: inferred from the parent folder)",
+    )
+    vocal.add_argument(
+        "--tuning-hz",
+        type=float,
+        default=None,
+        help="Concert A of the source, e.g. 429 (default: inferred from the parent folder, else 440)",
+    )
+    vocal.add_argument("--key", default=None, help="Project key recorded in diagnostics")
+    vocal.add_argument(
+        "--chords-pdf",
+        default=None,
+        help="Chord chart recorded in diagnostics; v1 does not force observed vocal notes onto it",
+    )
+    vocal.add_argument(
+        "--metronome",
+        default=None,
+        help="Metronome stem for the gentle-quantized audition variant (auto-discovered when omitted)",
+    )
+    vocal.add_argument("--fmin", type=float, default=65.4, help="Lowest vocal F0 in Hz")
+    vocal.add_argument("--fmax", type=float, default=1046.5, help="Highest vocal F0 in Hz")
 
     listen_all = sub.add_parser(
         "listen-all",
@@ -186,6 +224,189 @@ def build_parser() -> argparse.ArgumentParser:
         help="Replace existing destination MIDI files",
     )
 
+    midi_transform = sub.add_parser(
+        "midi-transform",
+        help="Transpose and retime complete MIDI files without rebuilding their events",
+    )
+    midi_transform.add_argument(
+        "input",
+        help="One .mid/.midi file, or a directory to process recursively",
+    )
+    midi_transform.add_argument(
+        "--out",
+        required=True,
+        help="Output MIDI path for a file, or output directory for a directory",
+    )
+    midi_transform.add_argument(
+        "--semitones",
+        type=int,
+        default=0,
+        help="Transpose pitched channels; General MIDI drum channel 10 is unchanged",
+    )
+    midi_transform.add_argument(
+        "--source-bpm",
+        "--from-bpm",
+        dest="source_bpm",
+        type=float,
+        default=None,
+        help="Optional safety check for the embedded starting tempo",
+    )
+    midi_transform.add_argument(
+        "--target-bpm",
+        "--to-bpm",
+        dest="target_bpm",
+        type=float,
+        default=None,
+        help="New exact musical tempo; unchanged when omitted",
+    )
+    midi_transform.add_argument(
+        "--concert-pitch",
+        action="store_true",
+        help="Remove a safely recognised Sunofriend source-tuning bend for A=440 use",
+    )
+    midi_transform.add_argument(
+        "--max-tuning-cents",
+        type=float,
+        default=100.0,
+        help="Largest constant bend eligible for concert-pitch cleanup (default: 100)",
+    )
+    midi_transform.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace existing destination MIDI files",
+    )
+
+    midi_anchor = sub.add_parser(
+        "midi-anchor",
+        help="Put a song downbeat on a common bar while preserving all tempo wander",
+    )
+    midi_anchor.add_argument(
+        "input",
+        help="One .mid/.midi file, or a directory to process recursively",
+    )
+    midi_anchor.add_argument(
+        "--out",
+        required=True,
+        help="Output MIDI path for a file, or output directory for a directory",
+    )
+    midi_anchor.add_argument(
+        "--source-downbeat-seconds",
+        type=float,
+        required=True,
+        help="Time of the source song's confirmed first downbeat",
+    )
+    midi_anchor.add_argument(
+        "--source-bpm",
+        "--from-bpm",
+        dest="source_bpm",
+        type=float,
+        required=True,
+        help="BPM embedded in the source MIDI",
+    )
+    midi_anchor.add_argument(
+        "--target-bpm",
+        "--to-bpm",
+        dest="target_bpm",
+        type=float,
+        required=True,
+        help="Exact output tempo to use in GarageBand",
+    )
+    midi_anchor.add_argument(
+        "--target-downbeat-beat",
+        type=float,
+        default=4.0,
+        help="Output beat for the downbeat (default: 4, start of bar 2 in 4/4)",
+    )
+    midi_anchor.add_argument(
+        "--semitones",
+        type=int,
+        default=0,
+        help="Transpose pitched channels; General MIDI drum channel 10 is unchanged",
+    )
+    midi_anchor.add_argument(
+        "--concert-pitch",
+        action="store_true",
+        help="Remove a safely recognised Sunofriend source-tuning bend for A=440 use",
+    )
+    midi_anchor.add_argument(
+        "--max-tuning-cents",
+        type=float,
+        default=100.0,
+        help="Largest constant bend eligible for concert-pitch cleanup (default: 100)",
+    )
+    midi_anchor.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace existing destination MIDI files",
+    )
+
+    midi_align = sub.add_parser(
+        "midi-align",
+        help="Map stem-derived MIDI onto an exact straight bar grid for mashups",
+    )
+    midi_align.add_argument(
+        "input",
+        help="One .mid/.midi file, or a directory to process recursively",
+    )
+    midi_align.add_argument(
+        "--metronome",
+        required=True,
+        help="Source song's metronome WAV, used as the tempo-wander map",
+    )
+    midi_align.add_argument(
+        "--source-bpm",
+        "--from-bpm",
+        dest="source_bpm",
+        type=float,
+        required=True,
+        help="BPM embedded in the source MIDI",
+    )
+    midi_align.add_argument(
+        "--target-bpm",
+        "--to-bpm",
+        dest="target_bpm",
+        type=float,
+        required=True,
+        help="Exact output tempo to use in GarageBand",
+    )
+    midi_align.add_argument(
+        "--semitones",
+        type=int,
+        default=0,
+        help="Transpose pitched channels; General MIDI drum channel 10 is unchanged",
+    )
+    midi_align.add_argument(
+        "--count-in-bars",
+        type=float,
+        default=1.0,
+        help="Bars before the detected first downbeat (default: 1, preserving pickups)",
+    )
+    midi_align.add_argument(
+        "--beats-per-bar",
+        type=int,
+        default=4,
+        help="Time-signature numerator (currently must be 4)",
+    )
+    midi_align.add_argument(
+        "--source-downbeat-beat",
+        type=int,
+        default=0,
+        help=(
+            "Detected grid-beat number of the first true downbeat (default: 0); "
+            "use this when the metronome begins with pickup clicks"
+        ),
+    )
+    midi_align.add_argument(
+        "--out",
+        default=None,
+        help="Output MIDI path for a file, or output directory for a directory",
+    )
+    midi_align.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace existing destination MIDI files",
+    )
+
     garageband = sub.add_parser(
         "garageband-info", help="Read tempo/key/instrument evidence from a .band project"
     )
@@ -283,6 +504,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_listen(args)
         if args.command == "listen-all":
             return _run_listen_all(args)
+        if args.command == "vocal-melody":
+            return _run_vocal_melody(args)
         if args.command == "evaluate":
             return _run_evaluate(args)
         if args.command == "doctor":
@@ -295,6 +518,12 @@ def main(argv: list[str] | None = None) -> int:
             return _run_play(args)
         if args.command == "midi-tempo":
             return _run_midi_tempo(args)
+        if args.command == "midi-transform":
+            return _run_midi_transform(args)
+        if args.command == "midi-anchor":
+            return _run_midi_anchor(args)
+        if args.command == "midi-align":
+            return _run_midi_align(args)
         if args.command == "garageband-info":
             return _run_garageband_info(args)
         if args.command == "clip-import":
@@ -399,6 +628,356 @@ def _run_listen(args) -> int:
     summary_path.write_text(json.dumps(publication, indent=2), encoding="utf-8")
     print(summary_path)
     return 0
+
+
+def _run_vocal_melody(args) -> int:
+    """Extract vocal pitch without treating words or vibrato as MIDI notes."""
+
+    from .beatgrid import Grid, grid_from_metronome
+    from .metadata import infer_project_metadata
+    from .vocal import VocalConfig, transcribe_vocal_melody
+
+    stem = Path(args.stem)
+    if not stem.is_file():
+        raise ValueError(f"Vocal stem does not exist: {stem}")
+    metadata = infer_project_metadata(stem.parent)
+    bpm = float(args.bpm if args.bpm is not None else (metadata.bpm or 0.0))
+    if not bpm > 0:
+        raise ValueError("BPM was not provided and could not be inferred from the parent folder")
+    if args.tuning_hz is not None:
+        tuning_hz = float(args.tuning_hz)
+        tuning_source = "command-line"
+    elif metadata.tuning_hz is not None:
+        tuning_hz = float(metadata.tuning_hz)
+        tuning_source = "parent-folder"
+    else:
+        tuning_hz = 440.0
+        tuning_source = "default-a440"
+    if not tuning_hz > 0:
+        raise ValueError("tuning-hz must be positive")
+    key = args.key or metadata.key
+
+    metronome = Path(args.metronome) if args.metronome else _find_exact_stem(stem.parent, "metronome")
+    if metronome is not None and not metronome.is_file():
+        raise ValueError(f"Metronome stem does not exist: {metronome}")
+    grid = (
+        grid_from_metronome(str(metronome), nominal_bpm=bpm)
+        if metronome is not None
+        else Grid(bpm=bpm)
+    )
+    chords_pdf = (
+        Path(args.chords_pdf)
+        if args.chords_pdf
+        else next(iter(sorted(stem.parent.glob("*chords*.pdf"))), None)
+    )
+    if chords_pdf is not None and not chords_pdf.is_file():
+        raise ValueError(f"Chord PDF does not exist: {chords_pdf}")
+
+    config = VocalConfig(
+        role=args.role,
+        tuning_hz=tuning_hz,
+        tuning_source=tuning_source,
+        bpm=bpm,
+        fmin_hz=float(args.fmin),
+        fmax_hz=float(args.fmax),
+    )
+    result = transcribe_vocal_melody(stem, config=config, grid=grid)
+    summary = _publish_vocal_result(
+        result,
+        stem=stem,
+        role=args.role,
+        bpm=bpm,
+        key=key,
+        chords_pdf=chords_pdf,
+        metronome=metronome,
+        grid=grid,
+        out_dir=Path(args.out_dir),
+    )
+    print(json.dumps(summary, indent=2, sort_keys=True))
+    return 0
+
+
+def _find_exact_stem(folder: Path, token: str) -> Path | None:
+    """Find an exact stem token without confusing vocals with backing_vocals."""
+
+    marker = f"-{token}-"
+    return next(
+        (path for path in sorted(folder.glob("*.wav")) if marker in path.name.lower()),
+        None,
+    )
+
+
+def _publish_vocal_result(
+    result,
+    *,
+    stem: Path,
+    role: str,
+    bpm: float,
+    key: str | None,
+    chords_pdf: Path | None,
+    metronome: Path | None,
+    grid,
+    out_dir: Path,
+) -> dict:
+    """Publish vocal variants, contour evidence, provenance, and diagnostics."""
+
+    import csv
+
+    from .conversion import retarget_note_provenance, write_note_provenance
+    from .midi import MidiTrack, pitch_bend_value, write_midi_file
+    from .note_safety import normalize_note_events
+
+    token = "lead_vocal" if role == "lead" else "backing_vocal"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    variants_dir = out_dir / "variants"
+    variants_dir.mkdir(parents=True, exist_ok=True)
+    for path in [
+        out_dir / f"{token}_melody.mid",
+        out_dir / f"{token}_provenance.json",
+        out_dir / "vocal_contour.csv",
+        out_dir / "vocal_analysis.json",
+        out_dir / "vocal_summary.json",
+    ]:
+        path.unlink(missing_ok=True)
+    for path in variants_dir.glob(f"{token}-*"):
+        if path.is_file():
+            path.unlink()
+
+    contour_path = out_dir / "vocal_contour.csv"
+    with contour_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(
+            [
+                "time_seconds",
+                "f0_hz",
+                "fractional_midi",
+                "voiced_probability",
+                "rms",
+                "onset_strength",
+                "source",
+            ]
+        )
+        for frame in result.contour:
+            midi_float = frame.fractional_midi(result.diagnostics.tuning_hz)
+            writer.writerow(
+                [
+                    f"{frame.time:.6f}",
+                    "" if frame.f0_hz is None else f"{frame.f0_hz:.6f}",
+                    "" if midi_float is None else f"{midi_float:.6f}",
+                    f"{frame.voiced_probability:.6f}",
+                    f"{frame.rms:.9f}",
+                    f"{frame.onset_strength:.6f}",
+                    frame.source,
+                ]
+            )
+
+    tuning_cents = float(result.diagnostics.garageband_fine_tune_cents)
+    channel, program = ((2, 73) if role == "lead" else (3, 65))
+    published: dict[str, dict] = {}
+    normalized_variants: dict[str, list] = {}
+    for name, raw_notes in result.variants.items():
+        notes = normalize_note_events(raw_notes)
+        normalized_variants[name] = notes
+        if not notes:
+            published[name] = {
+                "status": "no-evidence",
+                "notes": 0,
+                "description": result.descriptions.get(name),
+            }
+            continue
+        midi_path = variants_dir / f"{token}-{name.replace('_', '-')}.mid"
+        write_midi_file(
+            midi_path,
+            [
+                MidiTrack(
+                    f"{role.title()} Vocal {name.replace('_', ' ').title()}",
+                    channel,
+                    program,
+                    notes,
+                    pitch_bend_cents=tuning_cents,
+                )
+            ],
+            bpm=bpm,
+        )
+        records = retarget_note_provenance(
+            notes,
+            result.provenance.get(name, []),
+            mark_changed_as_repaired=True,
+        )
+        provenance_path = variants_dir / f"{token}-{name.replace('_', '-')}.provenance.json"
+        mode = "exact" if name in {"observed_strict", "harmony_stack", "uncertain"} else "repair"
+        write_note_provenance(
+            provenance_path,
+            records,
+            conversion_mode=mode,
+            source_stem=stem,
+            variant=name,
+        )
+        published[name] = {
+            "status": "ok",
+            "notes": len(notes),
+            "midi": str(midi_path),
+            "provenance": str(provenance_path),
+            "description": result.descriptions.get(name),
+            "metrics": _vocal_variant_metrics(notes, result.contour, result.diagnostics.tuning_hz),
+        }
+
+    primary_notes = normalized_variants.get(result.primary_variant, [])
+    primary_midi = out_dir / f"{token}_melody.mid"
+    primary_provenance = out_dir / f"{token}_provenance.json"
+    if primary_notes:
+        write_midi_file(
+            primary_midi,
+            [
+                MidiTrack(
+                    f"{role.title()} Vocal Melody",
+                    channel,
+                    program,
+                    primary_notes,
+                    pitch_bend_cents=tuning_cents,
+                )
+            ],
+            bpm=bpm,
+        )
+        primary_records = retarget_note_provenance(
+            primary_notes,
+            result.provenance.get(result.primary_variant, []),
+            mark_changed_as_repaired=True,
+        )
+        write_note_provenance(
+            primary_provenance,
+            primary_records,
+            conversion_mode="repair",
+            source_stem=stem,
+            variant=result.primary_variant,
+        )
+        concert_path = variants_dir / f"{token}-concert-pitch.mid"
+        write_midi_file(
+            concert_path,
+            [MidiTrack(f"{role.title()} Vocal Concert Pitch", channel, program, primary_notes)],
+            bpm=bpm,
+        )
+        concert_provenance = variants_dir / f"{token}-concert-pitch.provenance.json"
+        write_note_provenance(
+            concert_provenance,
+            primary_records,
+            conversion_mode="repair",
+            source_stem=stem,
+            variant="concert_pitch",
+        )
+        published["concert_pitch"] = {
+            "status": "ok",
+            "notes": len(primary_notes),
+            "midi": str(concert_path),
+            "provenance": str(concert_provenance),
+            "description": "The primary notes without source-tuning pitch bend.",
+            "metrics": _vocal_variant_metrics(
+                primary_notes, result.contour, result.diagnostics.tuning_hz
+            ),
+        }
+
+    diagnostics = result.diagnostics.to_dict()
+    diagnostics.update(
+        {
+            "source_stem": str(stem),
+            "key": key,
+            "bpm_nominal": bpm,
+            "grid_bpm": float(grid.bpm),
+            "grid_warped": bool(grid.is_warped),
+            "metronome": str(metronome) if metronome else None,
+            "chords_pdf": str(chords_pdf) if chords_pdf else None,
+            "chord_policy": "recorded for audit; observed vocal notes are not forced onto an untimed chart",
+            "pitch_bend_range_semitones": 2,
+            "pitch_bend_14bit": pitch_bend_value(tuning_cents, 2),
+        }
+    )
+    analysis_path = out_dir / "vocal_analysis.json"
+    analysis_path.write_text(
+        json.dumps({"diagnostics": diagnostics, "variants": published}, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    summary = {
+        "status": "complete" if primary_notes else "no-evidence",
+        "role": role,
+        "source_stem": str(stem),
+        "bpm": bpm,
+        "set_garageband_tempo_to": bpm,
+        "tuning_hz": result.diagnostics.tuning_hz,
+        "garageband_fine_tune_cents": tuning_cents,
+        "primary_variant": result.primary_variant,
+        "primary_midi": str(primary_midi) if primary_notes else None,
+        "primary_provenance": str(primary_provenance) if primary_notes else None,
+        "contour": str(contour_path),
+        "analysis": str(analysis_path),
+        "variants": published,
+        "warnings": list(result.diagnostics.warnings),
+    }
+    summary_path = out_dir / "vocal_summary.json"
+    summary["summary"] = str(summary_path)
+    summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    return summary
+
+
+def _vocal_variant_metrics(notes, frames, tuning_hz: float) -> dict:
+    """Compare discrete note rectangles with the continuous source contour."""
+
+    voiced = [
+        frame
+        for frame in frames
+        if frame.f0_hz is not None and frame.voiced_probability >= 0.30
+    ]
+    residuals: list[float] = []
+    covered = 0
+    for frame in voiced:
+        active = [note for note in notes if note.start <= frame.time < note.end]
+        if not active:
+            continue
+        covered += 1
+        source_midi = frame.fractional_midi(tuning_hz)
+        if source_midi is not None:
+            residuals.append(min(abs(source_midi - note.pitch) * 100.0 for note in active))
+    all_times = [frame.time for frame in frames]
+    active_frames = sum(
+        any(note.start <= time < note.end for note in notes)
+        for time in all_times
+    )
+    voiced_times = {frame.time for frame in voiced}
+    active_voiced = sum(
+        time in voiced_times and any(note.start <= time < note.end for note in notes)
+        for time in all_times
+    )
+    return {
+        "note_count": len(notes),
+        "pitch_low": min((note.pitch for note in notes), default=None),
+        "pitch_high": max((note.pitch for note in notes), default=None),
+        "total_note_seconds": round(sum(note.end - note.start for note in notes), 6),
+        "voiced_contour_coverage": round(covered / len(voiced), 6) if voiced else 0.0,
+        "active_frame_voiced_precision": round(active_voiced / active_frames, 6) if active_frames else 0.0,
+        "absolute_pitch_error_p50_cents": _numeric_percentile(residuals, 50.0),
+        "absolute_pitch_error_p90_cents": _numeric_percentile(residuals, 90.0),
+        "pitch_within_50_cents": round(sum(value <= 50.0 for value in residuals) / len(residuals), 6) if residuals else 0.0,
+        "monophonic": _notes_are_monophonic(notes),
+    }
+
+
+def _numeric_percentile(values, percentile: float) -> float | None:
+    import math
+
+    if not values:
+        return None
+    ordered = sorted(float(value) for value in values)
+    position = max(0.0, min(100.0, percentile)) / 100.0 * (len(ordered) - 1)
+    low = int(math.floor(position))
+    high = int(math.ceil(position))
+    if low == high:
+        return round(ordered[low], 6)
+    weight = position - low
+    return round(ordered[low] * (1.0 - weight) + ordered[high] * weight, 6)
+
+
+def _notes_are_monophonic(notes) -> bool:
+    ordered = sorted(notes, key=lambda note: (note.start, note.end, note.pitch))
+    return all(right.start >= left.end - 1e-6 for left, right in zip(ordered, ordered[1:]))
 
 
 def _publish_single_result(
@@ -681,6 +1260,150 @@ def _run_midi_tempo(args) -> int:
                 "source_audio_alignment": (
                     "The retimed MIDI intentionally no longer matches the original "
                     "audio stems unless those stems are time-stretched by the same ratio."
+                ),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _run_midi_transform(args) -> int:
+    from .midi_transform import transform_midi_path
+
+    results = transform_midi_path(
+        args.input,
+        args.out,
+        semitones=args.semitones,
+        target_bpm=args.target_bpm,
+        source_bpm=args.source_bpm,
+        concert_pitch=args.concert_pitch,
+        max_tuning_cents=args.max_tuning_cents,
+        overwrite=args.overwrite,
+    )
+    print(
+        json.dumps(
+            {
+                "operation": "midi-transform",
+                "file_count": len(results),
+                "semitones": int(args.semitones),
+                "source_bpm": args.source_bpm,
+                "target_bpm": args.target_bpm,
+                "set_garageband_tempo_to": args.target_bpm,
+                "concert_pitch_cleanup_requested": bool(args.concert_pitch),
+                "tuning_setups_removed": sum(
+                    result.change.tuning_setups_removed for result in results
+                ),
+                "files": [result.to_dict() for result in results],
+                "timing_contract": (
+                    "Every MIDI tick and groove offset is preserved; changing tempo "
+                    "scales elapsed playback time. The result no longer matches untreated "
+                    "source audio when tempo or pitch changes. Concert-pitch cleanup "
+                    "removes only recognised Sunofriend tuning setups; unrelated or "
+                    "expressive pitch bends are deliberately preserved."
+                ),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _run_midi_anchor(args) -> int:
+    from .midi_anchor import anchor_midi_path
+
+    results = anchor_midi_path(
+        args.input,
+        args.out,
+        source_downbeat_seconds=args.source_downbeat_seconds,
+        source_bpm=args.source_bpm,
+        target_bpm=args.target_bpm,
+        target_downbeat_beat=args.target_downbeat_beat,
+        semitones=args.semitones,
+        concert_pitch=args.concert_pitch,
+        max_tuning_cents=args.max_tuning_cents,
+        overwrite=args.overwrite,
+    )
+    first = results[0].change
+    print(
+        json.dumps(
+            {
+                "operation": "midi-anchor",
+                "file_count": len(results),
+                "semitones": int(args.semitones),
+                "source_bpm": float(args.source_bpm),
+                "target_bpm": float(args.target_bpm),
+                "source_downbeat_seconds": float(args.source_downbeat_seconds),
+                "source_downbeat_tick": first.source_downbeat_tick,
+                "target_downbeat_beat": float(args.target_downbeat_beat),
+                "target_downbeat_tick": first.target_downbeat_tick,
+                "shift_ticks": first.shift_ticks,
+                "set_garageband_tempo_to": float(args.target_bpm),
+                "concert_pitch_cleanup_requested": bool(args.concert_pitch),
+                "tuning_setups_removed": sum(
+                    result.change.transform.tuning_setups_removed
+                    for result in results
+                ),
+                "files": [result.to_dict() for result in results],
+                "timing_contract": (
+                    "All musical events receive one constant tick offset, so the "
+                    "confirmed downbeat is shared while the source performance's "
+                    "tempo wander and microtiming remain intact."
+                ),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _run_midi_align(args) -> int:
+    from .midi_align import align_midi_path
+
+    results = align_midi_path(
+        args.input,
+        metronome_path=args.metronome,
+        source_bpm=args.source_bpm,
+        target_bpm=args.target_bpm,
+        semitones=args.semitones,
+        count_in_bars=args.count_in_bars,
+        beats_per_bar=args.beats_per_bar,
+        source_downbeat_beat=args.source_downbeat_beat,
+        output_path=args.out,
+        overwrite=args.overwrite,
+    )
+    first = results[0].change
+    print(
+        json.dumps(
+            {
+                "operation": "midi-align",
+                "file_count": len(results),
+                "source_bpm": float(args.source_bpm),
+                "target_bpm": float(args.target_bpm),
+                "detected_grid_bpm": first.detected_grid_bpm,
+                "semitones": int(args.semitones),
+                "count_in_bars": float(args.count_in_bars),
+                "source_downbeat_beat": int(args.source_downbeat_beat),
+                "set_garageband_tempo_to": float(args.target_bpm),
+                "note_only_rebuild": True,
+                "assumes_receiver_a_hz": 440.0,
+                "discarded_by_rebuild": [
+                    "controller and sustain automation",
+                    "bank and later program changes",
+                    "pitch bend and aftertouch",
+                    "SysEx",
+                    "release velocity",
+                    "key, chord, lyric and marker metadata",
+                    "later time-signature changes",
+                ],
+                "files": [result.to_dict() for result in results],
+                "timing_contract": (
+                    "The source metronome's tempo wander has been mapped to a straight "
+                    "bar grid; within-beat placement is retained. This creative copy "
+                    "does not remain aligned to untreated source audio."
                 ),
             },
             indent=2,

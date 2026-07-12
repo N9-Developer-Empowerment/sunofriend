@@ -11,6 +11,26 @@ It complements Suno, Moises and GarageBand rather than replacing them: use
 Suno to generate a song, Moises to export stems and chords, Sunofriend to make
 clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 
+## What Sunofriend can do
+
+| Goal | Command | Timing and data contract |
+| --- | --- | --- |
+| Convert a complete folder of instrumental stems | `listen-all` | Stem-locked MIDI with exact, repair and reconstruct policies |
+| Turn lead or backing vocals into playable melodies | `vocal-melody` | Continuous vocal pitch becomes clean note variants; words are not encoded |
+| Speed up or slow down finished MIDI | `midi-tempo` | Only tempo events change; tracks, notes and groove ticks are untouched |
+| Put complete MIDI in a new key and BPM | `midi-transform` | Semitone transposition plus tick-preserving tempo change; channel 10 drums stay fixed |
+| Put two performances on one starting bar | `midi-anchor` | Recommended mashup operation: one constant shift preserves natural tempo wander |
+| Force stem-derived MIDI onto straight bars | `midi-align` | Experimental 4/4 note-only rebuild through the source metronome map |
+| Store and version reusable parts | `clip-import`, `clip-transform`, `clip-export` | Immutable Clip v1 assets with explicit musical or stem-locked timing |
+| Preview or route MIDI to an instrument | `preview`, `play` | FluidSynth WAV preview or CoreMIDI/IAC playback |
+
+For combining songs, first use `midi-transform` to choose a common key, BPM
+and tuning, then use `midi-anchor` to place confirmed downbeats on the same
+bar. Same-mode key changes are exact semitone shifts, but register, instrument
+range and simultaneous chord/melody compatibility still need listening and
+arrangement decisions. Use `midi-align` only when a fully straight grid is
+more important than preserving the performances' original breathing.
+
 ## Hear what it can do
 
 <p align="center">
@@ -89,6 +109,10 @@ Recognised stem tokens are `kick`, `snare`, `hat`, `cymbals`, `toms`,
 `metronome`. The chord filename must contain `chords`. If key or BPM is not in
 the folder name, provide `--key "B major"` and `--bpm 119` explicitly.
 
+Lead and backing vocal stems use the separate `vocal-melody` workflow. They are
+not added automatically to `listen-all`, because continuous vocal pitch and
+polyphonic harmony need different evidence and uncertainty rules.
+
 ### 4. Convert your first song
 
 Start with `repair`, the conservative default:
@@ -131,6 +155,32 @@ work/my-song-v2/
    `uncertain` alternatives from `mode_repair/variants/` separately.
 
 ## How to
+
+### Turn lead or backing vocals into an instrumental melody
+
+Use `vocal-melody` for an isolated `vocals` or `backing_vocals` stem:
+
+```bash
+.venv/bin/sunofriend vocal-melody \
+  "$STEMS/My Song-vocals-B major-119bpm-440hz.wav" \
+  --role lead \
+  --out-dir "$OUT/vocal_melody/lead"
+
+.venv/bin/sunofriend vocal-melody \
+  "$STEMS/My Song-backing_vocals-B major-119bpm-440hz.wav" \
+  --role backing \
+  --out-dir "$OUT/vocal_melody/backing"
+```
+
+The recommended clean melody is accompanied by strict, simplified and gently
+quantised choices. Backing vocals also publish a dominant line, top line and
+full harmony stack when the audio supports them. A noise-floor backing stem is
+reported as `no-evidence` rather than converted into false notes.
+
+The command honours tuning in the folder name. A source recorded at A=429, for
+example, receives a stem-matching pitch bend of about -43.83 cents plus a
+separate A=440 concert-pitch file. See [Vocal melody extraction](docs/VOCAL_MELODY.md)
+for the signal model, variants, metrics and GarageBand workflow.
 
 ### Choose how much Sunofriend may change
 
@@ -264,6 +314,86 @@ retain the original groove. This is an intentional speed change: the new MIDI
 will no longer align with the original 113 BPM audio stems unless those stems
 are separately time-stretched by the same ratio. Provenance/evaluation
 sidecars are therefore not copied into a directory retime.
+
+### Put complete MIDI songs in one key and tempo
+
+Use `midi-transform` when a complete multitrack file or output tree needs both
+key and BPM changes. Unlike Clip v1, it patches the Standard MIDI File without
+rebuilding its tracks, controllers or metadata. This C-major-to-G-major example
+uses the nearest downward interval and changes 85 BPM to 89 BPM:
+
+```bash
+.venv/bin/sunofriend midi-transform \
+  work/song-c-major-85bpm/full_arrangement.mid \
+  --out work/song-g-major-89bpm/full_arrangement.mid \
+  --from-bpm 85 --to-bpm 89 \
+  --semitones -5 \
+  --concert-pitch
+```
+
+Pitched note-on/off events move by the requested semitones; General MIDI
+channel 10 drum notes do not. The operation rejects an out-of-range pitch
+rather than clipping it. Tempo events change at unchanged ticks, preserving
+bars, groove, programs, controllers, automation and velocities.
+
+`--concert-pitch` removes only the exact constant RPN/pitch-bend tuning setup
+written by Sunofriend when it is safe to do so. The JSON report says how many
+setups were removed. Unknown or expressive pitch bends are retained, so a
+request is not itself proof that a third-party MIDI file is at A=440. Raw
+transposition also does not rewrite key-signature or chord-text metadata;
+Sunofriend-generated stem MIDI currently contains neither.
+
+### Give two performances a common starting downbeat
+
+Changing BPM preserves each performance's tempo wander, so two independently
+performed songs can still start on different downbeats and drift later. Use
+`midi-anchor` to place a confirmed downbeat at a shared bar without quantising
+or flattening the groove:
+
+```bash
+.venv/bin/sunofriend midi-anchor \
+  work/song-c-major-85bpm/full_arrangement.mid \
+  --out work/song-g-major-89bpm/bar-aligned.mid \
+  --source-downbeat-seconds 0.79987 \
+  --from-bpm 85 --to-bpm 89 \
+  --target-downbeat-beat 4 \
+  --semitones -5 --concert-pitch
+```
+
+In 4/4, output beat 4 is the start of bar 2, leaving a one-bar count-in for
+pickups. The command first performs the raw key/tempo/tuning transform and then
+adds one constant tick offset to musical notes, timed controllers, automation
+and markers. Tick-zero conductor and instrument setup remains at tick zero.
+The audit reports the source tick, target tick and applied shift.
+
+Use a metronome click plus drum phase to confirm the source downbeat; the first
+detected click is not necessarily beat 1 of a bar. Later song sections may
+still need manual region alignment because one constant shift deliberately
+retains both performances' different rubato shapes.
+
+### Experiment with a completely straight bar grid
+
+`midi-align` non-linearly maps a stem-derived MIDI performance through its
+metronome click map onto an exact straight grid:
+
+```bash
+.venv/bin/sunofriend midi-align \
+  work/song-c-major-85bpm/full_arrangement.mid \
+  --metronome work/song-c-major-85bpm/metronome.wav \
+  --source-bpm 85 --target-bpm 89 \
+  --source-downbeat-beat 1 --count-in-bars 1 \
+  --semitones -5 \
+  --out work/song-g-major-89bpm/grid-locked.mid
+```
+
+This is a creative, 4/4, note-only rebuild at 480 PPQ. It preserves track
+names, channels, initial programs, note-on velocities and within-beat
+placement, but discards controllers/sustain, later bank/program changes,
+pitch bend, aftertouch, SysEx, release velocity, and key/chord/lyric/marker
+metadata. Playback assumes an A=440 receiver. Grid locking can flatten useful
+tempo breathing or magnify a wrongly decoded pickup, so audition a short
+section before processing a whole song. Prefer `midi-anchor` for the first
+mashup pass.
 
 ### Re-run only the parts you want to improve
 

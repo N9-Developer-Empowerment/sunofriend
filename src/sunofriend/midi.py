@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import struct
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,6 +16,12 @@ class MidiTrack:
     channel: int
     program: int
     notes: list[NoteEvent]
+    # A channel-wide bend lets a standard MIDI note track remain aligned with
+    # source material recorded away from A=440.  RPN 0 sets an explicit bend
+    # range before the pitch-wheel event, so playback does not depend on a
+    # synthesizer's implicit range.
+    pitch_bend_cents: float = 0.0
+    pitch_bend_range_semitones: int = 2
 
 
 def write_midi_file(path: str | Path, tracks: list[MidiTrack], bpm: float, ticks_per_beat: int = 480) -> None:
@@ -76,12 +83,36 @@ def _track_chunk(track: MidiTrack, notes: list[MidiNoteInterval]) -> bytes:
     if track.channel != 9:
         events.append((0, 1, bytes([0xC0 | track.channel, _clamp(track.program, 0, 127)])))
 
+    bend_cents = float(track.pitch_bend_cents)
+    if not math.isfinite(bend_cents):
+        raise ValueError("pitch_bend_cents must be finite")
+    bend_range = int(track.pitch_bend_range_semitones)
+    if bend_range != track.pitch_bend_range_semitones or not 1 <= bend_range <= 24:
+        raise ValueError("pitch_bend_range_semitones must be an integer from 1 to 24")
+    if abs(bend_cents) > bend_range * 100.0:
+        raise ValueError("pitch_bend_cents exceeds the configured pitch-bend range")
+    if track.channel != 9 and abs(bend_cents) > 1e-9:
+        status = 0xB0 | track.channel
+        # Registered Parameter Number 0,0 = pitch-bend sensitivity.
+        events.extend(
+            [
+                (0, 2, bytes([status, 101, 0])),
+                (0, 3, bytes([status, 100, 0])),
+                (0, 4, bytes([status, 6, bend_range])),
+                (0, 5, bytes([status, 38, 0])),
+                (0, 6, bytes([status, 101, 127])),
+                (0, 7, bytes([status, 100, 127])),
+            ]
+        )
+        bend = pitch_bend_value(bend_cents, bend_range)
+        events.append((0, 8, bytes([0xE0 | track.channel, bend & 0x7F, bend >> 7])))
+
     for note in notes:
         events.append(
-            (note.start_tick, 3, bytes([0x90 | track.channel, note.pitch, note.velocity]))
+            (note.start_tick, 21, bytes([0x90 | track.channel, note.pitch, note.velocity]))
         )
         events.append(
-            (note.end_tick, 2, bytes([0x80 | track.channel, note.pitch, note.release_velocity]))
+            (note.end_tick, 20, bytes([0x80 | track.channel, note.pitch, note.release_velocity]))
         )
 
     events.sort(key=lambda event: (event[0], event[1], event[2]))
@@ -94,6 +125,23 @@ def _track_chunk(track: MidiTrack, notes: list[MidiNoteInterval]) -> bytes:
     data.extend(_var_len(0))
     data.extend(b"\xff\x2f\x00")
     return b"MTrk" + struct.pack(">I", len(data)) + bytes(data)
+
+
+def pitch_bend_value(cents: float, range_semitones: int = 2) -> int:
+    """Return the 14-bit MIDI pitch-wheel value for a cents offset."""
+
+    cents = float(cents)
+    if not math.isfinite(cents):
+        raise ValueError("cents must be finite")
+    if not isinstance(range_semitones, int) or not 1 <= range_semitones <= 24:
+        raise ValueError("range_semitones must be an integer from 1 to 24")
+    extent = range_semitones * 100.0
+    if abs(cents) > extent:
+        raise ValueError("cents exceeds the configured pitch-bend range")
+    # MIDI's centre is exactly 8192.  The positive endpoint has only 8191
+    # available steps, whereas the negative endpoint has 8192.
+    scale = 8191.0 if cents >= 0 else 8192.0
+    return max(0, min(16383, int(round(8192 + cents / extent * scale))))
 
 
 def _seconds_to_ticks(seconds: float, bpm: float, ticks_per_beat: int) -> int:
