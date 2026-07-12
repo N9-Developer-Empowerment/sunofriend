@@ -3,7 +3,7 @@
 The Moises PDF gives the chord *sequence* but not reliable timing. Spreading
 chords evenly across the song drifts as soon as any section length varies.
 Here we align the sequence to beat-synchronous chroma of a harmonic stem
-(keys/pads) with monotonic dynamic programming: each chord occupies 1..8
+(keys/pads) with monotonic dynamic programming: each chord occupies 1..24
 whole beats, chords stay in order, the whole song is covered, and we pick
 the segmentation whose chroma best matches the chord templates.
 """
@@ -15,7 +15,10 @@ from .beatgrid import Grid
 from .chords import parse_chord_name
 from .models import ChordSegment
 
-MAX_BEATS_PER_CHORD = 8
+# Moises emits chord changes rather than fixed-size cells. Intro harmony and
+# held chords can therefore span substantially more than two 4/4 bars; keep a
+# finite bound for the dynamic program while accommodating six-bar holds.
+MAX_BEATS_PER_CHORD = 24
 
 
 def align_chords_to_audio(

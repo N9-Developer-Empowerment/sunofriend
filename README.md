@@ -218,6 +218,53 @@ Files are under `mode_reconstruct/selected_bass-hat-keys-pads-strings/`; the
 GarageBand arrangement is
 `mode_reconstruct/selected_arrangement_bass-hat-keys-pads-strings.mid`.
 
+### Speed up or slow down finished MIDI tracks
+
+Use `midi-tempo` after stem conversion when you want the same notes, bars and
+groove to play at a new tempo. This example turns every MIDI file under a song
+output—including nested variants—from 113 BPM into 125 BPM:
+
+```bash
+.venv/bin/sunofriend midi-tempo \
+  work/my-song-v2/mode_repair \
+  --from-bpm 113 \
+  --to-bpm 125 \
+  --out work/my-song-125bpm
+```
+
+The command preserves the relative directory layout and changes only MIDI
+tempo events. Note and controller ticks, bars, durations in beats, track names,
+channels, programs, velocities, pitch bends, automation and other MIDI
+metadata remain unchanged. At 125 BPM the elapsed duration is `113 / 125 =
+0.904` of the original, so the result is 9.6% shorter while retaining the same
+musical structure.
+
+For just the combined arrangement:
+
+```bash
+.venv/bin/sunofriend midi-tempo \
+  work/my-song-v2/mode_repair/full_arrangement.mid \
+  --from-bpm 113 \
+  --to-bpm 125 \
+  --out work/my-song-125bpm/full_arrangement.mid
+```
+
+Slowdown uses the same command with a lower target—for example
+`--from-bpm 125 --to-bpm 100`. You may omit `--from-bpm` when every input MIDI
+contains one unambiguous tempo at tick zero; specifying it is safer because it
+catches accidental files from another song. For tempo-less MIDI it declares
+the tempo supplied by the original DAW project; without it, the Standard MIDI
+File default of 120 BPM is used. Existing outputs are protected unless
+`--overwrite` is supplied. With no `--out`, Sunofriend creates a sibling file
+or directory whose name ends in the target BPM.
+
+Set GarageBand to **125 BPM before importing** the transformed files and place
+all tracks at the same project origin. Leave quantisation off if you want to
+retain the original groove. This is an intentional speed change: the new MIDI
+will no longer align with the original 113 BPM audio stems unless those stems
+are separately time-stretched by the same ratio. Provenance/evaluation
+sidecars are therefore not copied into a directory retime.
+
 ### Re-run only the parts you want to improve
 
 `--parts` is comma-separated. The output directory suffix is sorted so the

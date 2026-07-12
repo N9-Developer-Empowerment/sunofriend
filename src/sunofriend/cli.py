@@ -12,6 +12,7 @@ from .pipeline import run_remake
 
 _COMMANDS = {
     "remake", "listen", "listen-all", "evaluate", "doctor", "preview", "midi-ports", "play",
+    "midi-tempo",
     "garageband-info", "clip-import", "clip-list", "clip-show", "clip-export",
     "clip-transform", "clip-instrument",
 }
@@ -144,6 +145,47 @@ def build_parser() -> argparse.ArgumentParser:
     play.add_argument("midi", help="MIDI file to play")
     play.add_argument("--port", default=None, help="Exact name or unique part of a MIDI output name")
 
+    midi_tempo = sub.add_parser(
+        "midi-tempo",
+        help="Speed up or slow down complete MIDI files while preserving bars and tracks",
+    )
+    midi_tempo.add_argument(
+        "input",
+        help="One .mid/.midi file, or a directory to process recursively",
+    )
+    midi_tempo.add_argument(
+        "--source-bpm",
+        "--from-bpm",
+        dest="source_bpm",
+        type=float,
+        default=None,
+        help=(
+            "Expected starting BPM, or the DAW tempo for tempo-less MIDI; "
+            "otherwise inferred at tick zero (SMF default: 120)"
+        ),
+    )
+    midi_tempo.add_argument(
+        "--target-bpm",
+        "--to-bpm",
+        dest="target_bpm",
+        type=float,
+        required=True,
+        help="New musical tempo, e.g. 125",
+    )
+    midi_tempo.add_argument(
+        "--out",
+        default=None,
+        help=(
+            "Output MIDI path for a file, or output directory for a directory; "
+            "default: a sibling name ending in -<target>bpm"
+        ),
+    )
+    midi_tempo.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace existing destination MIDI files",
+    )
+
     garageband = sub.add_parser(
         "garageband-info", help="Read tempo/key/instrument evidence from a .band project"
     )
@@ -251,6 +293,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_midi_ports()
         if args.command == "play":
             return _run_play(args)
+        if args.command == "midi-tempo":
+            return _run_midi_tempo(args)
         if args.command == "garageband-info":
             return _run_garageband_info(args)
         if args.command == "clip-import":
@@ -613,6 +657,36 @@ def _run_play(args) -> int:
         print("MIDI playback stopped", file=sys.stderr)
         return 130
     print(f"played to: {port}")
+    return 0
+
+
+def _run_midi_tempo(args) -> int:
+    from .midi_tempo import retime_midi_path
+
+    results = retime_midi_path(
+        args.input,
+        target_bpm=args.target_bpm,
+        source_bpm=args.source_bpm,
+        output_path=args.out,
+        overwrite=args.overwrite,
+    )
+    print(
+        json.dumps(
+            {
+                "operation": "midi-tempo",
+                "file_count": len(results),
+                "target_bpm": float(args.target_bpm),
+                "set_garageband_tempo_to": float(args.target_bpm),
+                "files": [result.to_dict() for result in results],
+                "source_audio_alignment": (
+                    "The retimed MIDI intentionally no longer matches the original "
+                    "audio stems unless those stems are time-stretched by the same ratio."
+                ),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
     return 0
 
 

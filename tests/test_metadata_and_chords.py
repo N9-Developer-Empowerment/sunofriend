@@ -39,11 +39,34 @@ class MetadataAndChordTests(unittest.TestCase):
         self.assertEqual(chart.chords[:8], ["D", "Gm", "Dsus4", "D", "Am", "C", "G", "D"])
         self.assertEqual(chart.chords[-1], "C")
 
+    def test_extract_chords_decodes_utf16_row_and_normalizes_flat_five(self):
+        utf16_row = "D E F#m A D#m D#dim D#m7&m5 B".encode("utf-16-be")
+        pdf_text = (
+            b"(Key: F# minor) Tj\n"
+            b"(A F#m D E F#m G#m A F#m) Tj\n"
+            b"(" + utf16_row + b") Tj\n"
+            b"(Chords generated with Moises.ai) Tj\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "chords.pdf"
+            path.write_bytes(pdf_text)
+
+            chart = extract_chords_from_moises_pdf(path)
+
+        self.assertEqual(chart.key, "F# minor")
+        self.assertEqual(len(chart.chords), 16)
+        self.assertEqual(
+            chart.chords[8:],
+            ["D", "E", "F#m", "A", "D#m", "D#dim", "D#m7b5", "B"],
+        )
+
     def test_parse_key_and_chord_names(self):
         self.assertEqual(parse_key("G major"), {7, 9, 11, 0, 2, 4, 6})
         self.assertEqual(parse_chord_name("Dsus4"), [2, 7, 9])
         self.assertEqual(parse_chord_name("Am7"), [9, 0, 4, 7])
         self.assertEqual(parse_chord_name("Cmaj7"), [0, 4, 7, 11])
+        self.assertEqual(parse_chord_name("D#m7b5"), [3, 6, 9, 1])
+        self.assertEqual(parse_chord_name("D#m7&m5"), [3, 6, 9, 1])
 
     def test_choose_voicing_keeps_chords_in_playable_range(self):
         first = choose_voicing([7, 11, 2], previous=None)

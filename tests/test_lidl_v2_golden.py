@@ -11,11 +11,13 @@ run everywhere.
 from __future__ import annotations
 
 import json
+import tempfile
 import unittest
 from pathlib import Path
 
 from sunofriend.clip import read_midi_clips
 from sunofriend.evaluate import evaluate_stem_midi
+from sunofriend.midi_tempo import retime_midi_bytes
 from sunofriend.transcribe_drums import transcribe_drum_stem_detailed
 
 
@@ -41,6 +43,45 @@ PUBLIC_EXAMPLE = ROOT / "examples/the-aisle-at-lidl"
 
 
 class LidlCommittedExampleTests(unittest.TestCase):
+    def test_multitrack_arrangement_retimes_without_moving_musical_events(self):
+        source = PUBLIC_EXAMPLE / "midi/repair/full-arrangement.mid"
+        transformed, change = retime_midi_bytes(
+            source.read_bytes(),
+            source_bpm=119,
+            target_bpm=125,
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "full-arrangement-125bpm.mid"
+            output.write_bytes(transformed)
+            before = read_midi_clips(source)
+            after = read_midi_clips(output)
+
+        def musical_contract(clips):
+            return [
+                (
+                    clip.title,
+                    clip.instrument.role,
+                    clip.instrument.channel,
+                    clip.instrument.program,
+                    [
+                        (
+                            note.start_beat,
+                            note.duration_beats,
+                            note.pitch,
+                            note.velocity,
+                            note.release_velocity,
+                        )
+                        for note in clip.notes
+                    ],
+                )
+                for clip in clips
+            ]
+
+        self.assertEqual(len(before), 9)
+        self.assertEqual(musical_contract(after), musical_contract(before))
+        self.assertTrue(all(abs(clip.bpm - 125) < 1e-6 for clip in after))
+        self.assertAlmostEqual(change.duration_ratio, 119 / 125)
+
     def test_every_provenance_sidecar_matches_its_midi_notes(self):
         sidecars = sorted(PUBLIC_EXAMPLE.glob("midi/**/*.provenance.json"))
         self.assertEqual(len(sidecars), 13)

@@ -34,7 +34,10 @@ NOTE_TO_PC = {
 
 MAJOR_SCALE = (0, 2, 4, 5, 7, 9, 11)
 MINOR_SCALE = (0, 2, 3, 5, 7, 8, 10)
-CHORD_TOKEN_RE = re.compile(r"^[A-G](?:#|b)?(?:m|min|maj7|maj|m7|7|sus2|sus4|sus|dim|aug|add9)?$", re.I)
+CHORD_TOKEN_RE = re.compile(
+    r"^[A-G](?:#|b)?(?:m7b5|min7b5|m|min|maj7|maj|m7|7|sus2|sus4|sus|dim|aug|add9)?$",
+    re.I,
+)
 
 
 def extract_chords_from_moises_pdf(path: str | Path) -> ChordChart:
@@ -53,7 +56,7 @@ def extract_chords_from_moises_pdf(path: str | Path) -> ChordChart:
         if "chords generated" in text.lower():
             break
 
-        tokens = text.split()
+        tokens = [_normalize_chord_token(token) for token in text.split()]
         if tokens and all(_looks_like_chord(token) for token in tokens):
             chords.extend(tokens)
 
@@ -120,7 +123,7 @@ def parse_key(key_name: str | None) -> set[int] | None:
 def parse_chord_name(chord_name: str | None) -> list[int] | None:
     if chord_name is None:
         return None
-    name = str(chord_name).strip()
+    name = _normalize_chord_token(str(chord_name))
     if not name or name.upper() in {"N", "NC", "N.C.", "-", "NO"}:
         return None
 
@@ -135,7 +138,9 @@ def parse_chord_name(chord_name: str | None) -> list[int] | None:
         return None
     root_pc = NOTE_TO_PC[root]
 
-    if suffix.startswith(("maj7", "ma7")):
+    if suffix.startswith(("m7b5", "min7b5")):
+        intervals = [0, 3, 6, 10]
+    elif suffix.startswith(("maj7", "ma7")):
         intervals = [0, 4, 7, 11]
     elif suffix.startswith(("m7", "min7", "-7")):
         intervals = [0, 3, 7, 10]
@@ -216,7 +221,16 @@ def chord_at_time(segments: list[ChordSegment], time_seconds: float) -> ChordSeg
 
 
 def _looks_like_chord(token: str) -> bool:
+    token = _normalize_chord_token(token)
     return bool(CHORD_TOKEN_RE.match(token)) and parse_chord_name(token) is not None
+
+
+def _normalize_chord_token(token: str) -> str:
+    """Normalize chord spellings emitted by Moises' PDF text layer."""
+    token = token.strip().replace("♭", "b")
+    # Some Moises PDFs encode the flat-five glyph as the literal text
+    # ``&m5``.  For example, D#m7♭5 is extracted as D#m7&m5.
+    return re.sub(r"m7&m5$", "m7b5", token, flags=re.I)
 
 
 def _normalize_root(letter: str, accidental: str) -> str:
@@ -224,6 +238,22 @@ def _normalize_root(letter: str, accidental: str) -> str:
 
 
 def _decode_pdf_literal(raw: bytes) -> str:
-    text = raw.decode("latin-1", errors="ignore")
+    if raw.startswith(b"\xfe\xff"):
+        text = raw[2:].decode("utf-16-be", errors="ignore")
+    elif raw.startswith(b"\xff\xfe"):
+        text = raw[2:].decode("utf-16-le", errors="ignore")
+    elif len(raw) >= 4 and len(raw) % 2 == 0:
+        pairs = len(raw) // 2
+        even_nuls = raw[0::2].count(0)
+        odd_nuls = raw[1::2].count(0)
+        if even_nuls >= max(2, int(pairs * 0.6)) and odd_nuls <= int(pairs * 0.2):
+            text = raw.decode("utf-16-be", errors="ignore")
+        elif odd_nuls >= max(2, int(pairs * 0.6)) and even_nuls <= int(pairs * 0.2):
+            text = raw.decode("utf-16-le", errors="ignore")
+        else:
+            text = raw.decode("latin-1", errors="ignore")
+    else:
+        text = raw.decode("latin-1", errors="ignore")
+    text = text.lstrip("\ufeff")
     text = text.replace(r"\(", "(").replace(r"\)", ")").replace(r"\\", "\\")
     return text
