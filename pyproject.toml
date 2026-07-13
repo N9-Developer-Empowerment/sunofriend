@@ -1,18 +1,49 @@
 [project]
 name = "sunofriend"
-version = "0.3.0"
-description = "Generate clean MIDI remakes from Moises/Suno stem folders."
+dynamic = ["version"]
+description = "Convert AI-generated music stems and vocals into evaluated, GarageBand-ready MIDI."
+readme = "PYPI.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.9,<3.12"
+authors = [
+    { name = "Errol Elliott" },
+]
+keywords = [
+    "audio-to-midi",
+    "garageband",
+    "midi",
+    "music-production",
+    "stem-transcription",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Developers",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Multimedia :: Sound/Audio :: MIDI",
+]
 dependencies = []
 
+[project.urls]
+Homepage = "https://github.com/N9-Developer-Empowerment/sunofriend"
+Documentation = "https://github.com/N9-Developer-Empowerment/sunofriend#readme"
+Issues = "https://github.com/N9-Developer-Empowerment/sunofriend/issues"
+Source = "https://github.com/N9-Developer-Empowerment/sunofriend"
+
 [project.optional-dependencies]
-# Needed for the `listen` command (transcribe -> render -> compare -> refine).
-# The legacy `remake` command still runs on the standard library alone.
-listen = [
-    "numpy",
-    "librosa>=0.10",
-    "soundfile",
-    "basic-pitch>=0.3",
+# Audio analysis and transcription. FluidSynth remains a system dependency.
+convert = [
+    "numpy>=2.0,<2.1",
+    "librosa>=0.10,<0.12",
+    "soundfile>=0.12,<0.14",
+    "basic-pitch>=0.3,<0.5",
     # Basic Pitch prefers the ONNX model in Sunofriend; this keeps inference
     # available on Apple Silicon without installing TensorFlow.
     "onnxruntime>=1.17,<2",
@@ -21,17 +52,60 @@ listen = [
     # basic-pitch's resampy constraint still imports pkg_resources.
     "setuptools>=69,<81",
 ]
+playback = [
+    "mido>=1.3,<2",
+    "python-rtmidi>=1.5,<2",
+]
+all = [
+    "numpy>=2.0,<2.1",
+    "librosa>=0.10,<0.12",
+    "soundfile>=0.12,<0.14",
+    "basic-pitch>=0.3,<0.5",
+    "onnxruntime>=1.17,<2",
+    "scikit-learn>=1.0,<=1.5.1",
+    "setuptools>=69,<81",
+    "mido>=1.3,<2",
+    "python-rtmidi>=1.5,<2",
+]
+# Compatibility aliases retained for existing install commands.
+listen = [
+    "numpy>=2.0,<2.1",
+    "librosa>=0.10,<0.12",
+    "soundfile>=0.12,<0.14",
+    "basic-pitch>=0.3,<0.5",
+    "onnxruntime>=1.17,<2",
+    "scikit-learn>=1.0,<=1.5.1",
+    "setuptools>=69,<81",
+]
 midi = [
     "mido>=1.3,<2",
     "python-rtmidi>=1.5,<2",
+]
+dev = [
+    "build>=1.2,<2",
+    "pytest>=8,<10",
+    "ruff>=0.15,<0.16",
+    "twine>=6,<7",
 ]
 
 [project.scripts]
 sunofriend = "sunofriend.cli:main"
 
 [build-system]
-requires = ["setuptools>=69,<81"]
+requires = ["setuptools>=77,<81"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+version = { attr = "sunofriend.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]

@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  core-tests:
+    name: Core tests (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+        python: ["3.9", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - name: Install lightweight test environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[dev]' 'numpy>=2.0,<2.1'
+      - name: Lint
+        run: python -m ruff check src tests
+      - name: Test
+        run: python -m pytest -q
+
+  package:
+    name: Build and inspect distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install build tools
+        run: python -m pip install --upgrade build twine
+      - name: Build wheel and source distribution
+        run: python -m build
+      - name: Check package metadata
+        run: python -m twine check dist/*
+      - name: Smoke-test the built wheel
+        run: |
+          python -m venv /tmp/sunofriend-wheel
+          /tmp/sunofriend-wheel/bin/python -m pip install dist/*.whl
+          /tmp/sunofriend-wheel/bin/sunofriend --version
+          /tmp/sunofriend-wheel/bin/python -m sunofriend --help
+
+  audio-tests:
+    name: Audio/ML tests (macOS, Python 3.11)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install FluidSynth and the validated SoundFont
+        run: |
+          brew install fluid-synth
+          mkdir -p "$HOME/.local/share/sunofriend/soundfonts"
+          curl --fail --location \
+            "https://raw.githubusercontent.com/mrbumpy409/GeneralUser-GS/684543d5e5efaef08d02be50dcda8d552478fa60/GeneralUser-GS.sf2" \
+            --output "$HOME/.local/share/sunofriend/soundfonts/GeneralUser-GS.sf2"
+          echo "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe  $HOME/.local/share/sunofriend/soundfonts/GeneralUser-GS.sf2" \
+            | shasum -a 256 -c -
+      - name: Install the complete audio and playback stack
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            -c constraints-audio-macos.txt \
+            -e '.[all,dev]'
+      - name: Check transcription and conversion capabilities
+        run: |
+          python -m sunofriend doctor --require transcribe
+          python -m sunofriend doctor --require convert
+      - name: Run the full test suite
+        run: python -m pytest -q

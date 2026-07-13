@@ -7,6 +7,7 @@ import tempfile
 import unittest
 import wave
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from sunofriend.models import NoteEvent
@@ -402,6 +403,33 @@ class VocalAudioAdapterTests(unittest.TestCase):
                 for warning in result.diagnostics.warnings
             )
         )
+
+    def test_backing_fallback_keeps_notes_when_provenance_is_short(self) -> None:
+        fallback_notes = [
+            NoteEvent(0.0, 0.4, 60, 80),
+            NoteEvent(0.5, 0.9, 62, 82),
+        ]
+        fallback = SimpleNamespace(
+            notes=fallback_notes,
+            provenance={"contour_clean": []},
+        )
+
+        with patch(
+            "sunofriend.vocal.vocal_signal_stats", return_value=(0.5, 0.1)
+        ), patch(
+            "sunofriend.vocal.extract_pitch_frames", return_value=_frames([60.0])
+        ), patch(
+            "sunofriend.vocal.extract_backing_candidates", return_value=[]
+        ), patch(
+            "sunofriend.vocal.transcribe_vocal_frames", return_value=fallback
+        ):
+            result = transcribe_vocal_melody(
+                "backing.wav",
+                config=VocalConfig(role="backing"),
+            )
+
+        self.assertEqual(result.variants["dominant_line"], fallback_notes)
+        self.assertEqual(result.variants["harmony_stack"], fallback_notes)
 
 
 if __name__ == "__main__":

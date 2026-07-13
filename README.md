@@ -50,12 +50,56 @@ Ready-to-post artwork and suggested copy for X, Bluesky, Threads, Instagram,
 Facebook, WhatsApp and Slack are in the [social media kit](SOCIAL.md). Brand
 files and generation notes are under [`assets/`](assets/).
 
+## Use Sunofriend as an AI-agent skill
+
+The repository includes one portable [Sunofriend Agent Skill](skills/sunofriend/)
+for Codex and Claude Code. The skill is the conversational front end: it
+inventories a stem folder, chooses safe commands, runs capability checks,
+keeps source audio local, validates the JSON/MIDI outputs and explains what to
+import into a DAW. The packaged Python CLI remains the deterministic audio and
+MIDI engine.
+
+The checked-in discovery links expose the same skill without maintaining two
+copies:
+
+- Codex reads [`.agents/skills/sunofriend`](.agents/skills/sunofriend).
+- Claude Code reads [`.claude/skills/sunofriend`](.claude/skills/sunofriend).
+
+Clone the repository, install Sunofriend as below, start either agent in the
+repository and ask, for example:
+
+```text
+Use $sunofriend to convert /absolute/path/to/stems into repair-mode
+GarageBand-ready MIDI and validate every main part.
+```
+
+Installing the Python wheel or `uv` tool installs the deterministic CLI, not
+the agent discovery links. Clone-first is therefore the supported skill setup.
+To use the same clone from projects elsewhere on the machine, link it into the
+two user skill directories (each command fails safely if a skill already
+exists there):
+
+```bash
+mkdir -p "$HOME/.agents/skills" "$HOME/.claude/skills"
+ln -s "$PWD/skills/sunofriend" "$HOME/.agents/skills/sunofriend"
+ln -s "$PWD/skills/sunofriend" "$HOME/.claude/skills/sunofriend"
+```
+
+Claude Code also supports explicit `/sunofriend ...` invocation. Both tools
+can select the skill implicitly for stem-to-MIDI, vocal-melody, tempo,
+transposition, mashup-alignment and Clip v1 requests. The skill does not
+separate stems, master audio, edit the GarageBand GUI or make audio uploads.
+See the current [Codex skill documentation](https://developers.openai.com/codex/skills)
+and [Claude Code skill documentation](https://code.claude.com/docs/en/skills)
+for personal/global installation options.
+
 ## Getting started (macOS)
 
 ### 1. Install Sunofriend and its audio tools
 
-Use Python 3.9–3.11. The following setup uses the dependency versions tested on
-Apple Silicon and installs FluidSynth for offline MIDI previews:
+Use Python 3.9–3.11; Python 3.11 is the recommended installation target. The
+following contributor setup uses the dependency versions tested on Apple
+Silicon and installs FluidSynth for offline MIDI previews:
 
 ```bash
 git clone https://github.com/N9-Developer-Empowerment/sunofriend.git
@@ -63,8 +107,25 @@ cd sunofriend
 brew install python@3.11 fluid-synth
 "$(brew --prefix python@3.11)/bin/python3.11" -m venv .venv
 .venv/bin/python -m ensurepip --upgrade
-.venv/bin/python -m pip install -c constraints-audio-macos.txt -e '.[listen,midi]'
+.venv/bin/python -m pip install -c constraints-audio-macos.txt -e '.[all,dev]'
 ```
+
+For an isolated end-user command rather than an editable development checkout,
+install from the cloned repository with `uv`:
+
+```bash
+brew install uv fluid-synth
+uv tool install --python 3.11 \
+  --constraints constraints-audio-macos.txt \
+  '.[all]'
+sunofriend --version
+```
+
+Once a release is published to PyPI, the source argument becomes
+`'sunofriend[all]'`. A lightweight install without `[all]` supports pure MIDI
+tempo/key/alignment and Clip v1 work, but not audio transcription, preview or
+live playback. FluidSynth is deliberately a system dependency rather than a
+Python package.
 
 Install the validated GeneralUser GS 2.0.3 SoundFont:
 
@@ -80,14 +141,17 @@ echo "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe  $HOME/.l
 ### 2. Check the installation
 
 ```bash
-.venv/bin/sunofriend doctor
+.venv/bin/sunofriend doctor --require convert
 ```
 
-You are ready to convert and preview when `listen_ready` and `render_ready` are
-true. Top-level `ready` additionally confirms a live CoreMIDI destination for
-`play`; that destination is not required for file conversion. The standard
-Basic Pitch path uses ONNX Runtime, so TensorFlow/TFLite warnings are harmless
-when the two conversion checks pass.
+The command exits successfully when `convert_ready` is true. Use
+`--require transcribe` for vocal extraction that does not need FluidSynth,
+`--require preview` for offline rendering, `--require playback` for CoreMIDI,
+or `--require all` for the complete setup. `listen_ready` remains as a
+compatibility alias, while top-level `ready` additionally confirms a live
+CoreMIDI destination for `play`. The standard Basic Pitch path uses ONNX
+Runtime, so TensorFlow/TFLite warnings are harmless when the transcription or
+conversion checks pass.
 
 ### 3. Prepare a stem export
 
@@ -623,6 +687,8 @@ supplied; the Clip commands themselves also honour `SUNOFRIEND_LIBRARY`.
   path or checksum.
 - If `doctor` reports `midi_ready: false`, enable an IAC Driver bus in Audio
   MIDI Setup, or open GarageBand so that it exposes its virtual destination.
+- If `doctor` reports `version_consistent: false`, reinstall the editable/tool
+  package so the command and source checkout use the same release.
 - If metadata cannot be inferred, add `--bpm` and `--key` instead of renaming
   the source files.
 - If a run is slow, omit `--evaluate-variants`; use `--no-evaluate` only during
@@ -734,7 +800,8 @@ audio and project material that you own or have permission to distribute.
 ## Tests
 
 ```bash
-.venv/bin/python -m unittest discover -s tests -v
+.venv/bin/python -m pytest
+.venv/bin/python -m ruff check src tests
 ```
 
 The optional local goldens use ignored source/output assets. Move Your Body
@@ -748,3 +815,7 @@ bass alternatives, keys role separation and reconstruct-mode provenance. When
 those private assets are absent (for example in CI), only the relevant golden
 checks skip; portable synthetic tests still exercise missed/extra/mistimed
 notes, stereo cancellation, family classification, octave errors and contour.
+
+## License
+
+Sunofriend is available under the [Apache License 2.0](LICENSE).

@@ -1,0 +1,8 @@
+include CONTRIBUTING.md
+include LICENSE
+include PYPI.md
+include README.md
+include constraints-audio-macos.txt
+recursive-include docs *.md
+recursive-include skills *.md *.yaml
+recursive-include assets/brand *.png

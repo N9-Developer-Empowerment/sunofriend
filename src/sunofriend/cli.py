@@ -5,9 +5,10 @@ import json
 import os
 import sys
 from dataclasses import asdict, replace
-from importlib import metadata as importlib_metadata
 from pathlib import Path
 
+from . import __version__
+from .diagnostics import CAPABILITIES
 from .pipeline import run_remake
 
 _COMMANDS = {
@@ -23,6 +24,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="sunofriend",
         description="Clean GarageBand-ready MIDI from AI-generated stems.",
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
     remake = sub.add_parser("remake", help="Legacy grid-based remake of a Moises/Suno export folder")
@@ -172,7 +174,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="JSON report path (default: beside MIDI as *.evaluation.json)",
     )
 
-    sub.add_parser("doctor", help="Check the audio, ML, SoundFont, and CoreMIDI setup")
+    doctor = sub.add_parser(
+        "doctor", help="Check the audio, ML, SoundFont, and CoreMIDI setup"
+    )
+    doctor.add_argument(
+        "--require",
+        choices=CAPABILITIES,
+        default="all",
+        help="Exit successfully when this capability is ready (default: all)",
+    )
 
     preview = sub.add_parser("preview", help="Render a MIDI file to WAV with FluidSynth")
     preview.add_argument("midi", help="MIDI file to render")
@@ -509,7 +519,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "evaluate":
             return _run_evaluate(args)
         if args.command == "doctor":
-            return _run_doctor()
+            return _run_doctor(args)
         if args.command == "preview":
             return _run_preview(args)
         if args.command == "midi-ports":
@@ -1149,61 +1159,14 @@ def _library_path(value: str | None) -> Path:
     return Path(configured or "~/.local/share/sunofriend/library").expanduser()
 
 
-def _run_doctor() -> int:
-    from .playback import PlaybackError, list_output_ports
-    from .render import RenderError, find_fluidsynth, find_soundfont
+def _run_doctor(args) -> int:
+    from .diagnostics import capability_ready, collect_diagnostics
 
-    result: dict = {"python": sys.version.split()[0], "packages": {}}
-    for package in (
-        "numpy", "librosa", "soundfile", "basic-pitch", "onnxruntime",
-        "scikit-learn", "coremltools", "setuptools", "mido", "python-rtmidi",
-    ):
-        try:
-            result["packages"][package] = importlib_metadata.version(package)
-        except importlib_metadata.PackageNotFoundError:
-            result["packages"][package] = None
-    try:
-        result["fluidsynth"] = find_fluidsynth()
-        result["soundfont"] = find_soundfont()
-        from tempfile import TemporaryDirectory
-
-        from .midi import MidiTrack, write_midi_file
-        from .models import NoteEvent
-        from .render import render_midi_to_wav
-
-        with TemporaryDirectory(prefix="sunofriend_doctor_") as directory:
-            midi = Path(directory) / "probe.mid"
-            wav = Path(directory) / "probe.wav"
-            write_midi_file(
-                midi,
-                [MidiTrack("Doctor", 0, 0, [NoteEvent(0.0, 0.1, 60, 90)])],
-                bpm=120.0,
-            )
-            render_midi_to_wav(midi, wav)
-            result["render_smoke_bytes"] = wav.stat().st_size
-        result["render_ready"] = True
-    except RenderError as exc:
-        result["render_ready"] = False
-        result["audio_error"] = str(exc)
-    required = ("numpy", "librosa", "soundfile", "basic-pitch", "onnxruntime")
-    result["missing_listen_packages"] = [
-        package for package in required if result["packages"][package] is None
-    ]
-    result["listen_ready"] = result["render_ready"] and not result["missing_listen_packages"]
-    try:
-        result["midi_outputs"] = list_output_ports()
-        result["midi_ready"] = bool(result["midi_outputs"])
-        if not result["midi_ready"]:
-            result["midi_error"] = (
-                "No CoreMIDI outputs found. Enable an IAC Driver bus in Audio MIDI Setup."
-            )
-    except PlaybackError as exc:
-        result["midi_outputs"] = []
-        result["midi_ready"] = False
-        result["midi_error"] = str(exc)
-    result["ready"] = result["listen_ready"] and result["midi_ready"]
+    result = collect_diagnostics()
+    result["required_capability"] = args.require
+    result["requirement_ready"] = capability_ready(result, args.require)
     print(json.dumps(result, indent=2, sort_keys=True))
-    return 0 if result["ready"] else 1
+    return 0 if result["requirement_ready"] else 1
 
 
 def _run_preview(args) -> int:

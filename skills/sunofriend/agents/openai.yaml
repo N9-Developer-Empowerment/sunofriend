@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sunofriend"
+  short_description: "Turn music stems and vocals into playable MIDI"
+  default_prompt: "Use $sunofriend to convert my stem folder into GarageBand-ready MIDI and validate the results."

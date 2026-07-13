@@ -465,11 +465,13 @@ def separate_keys_roles(
             else:
                 uncertain.append(note)
 
-    key = lambda note: (note.start, note.pitch, note.end, note.velocity)
+    def note_key(note):
+        return note.start, note.pitch, note.end, note.velocity
+
     return KeysRoleSeparation(
-        melody=sorted(melody, key=key),
-        accompaniment=sorted(accompaniment, key=key),
-        uncertain=sorted(uncertain, key=key),
+        melody=sorted(melody, key=note_key),
+        accompaniment=sorted(accompaniment, key=note_key),
+        uncertain=sorted(uncertain, key=note_key),
     )
 
 

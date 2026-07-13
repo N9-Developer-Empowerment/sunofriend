@@ -19,14 +19,14 @@ def list_output_ports() -> list[str]:
         import mido
     except ImportError as exc:  # pragma: no cover - depends on optional extra
         raise PlaybackError(
-            "Live MIDI needs the midi extra: pip install -e '.[midi]'"
+            "Live MIDI needs the playback extra: pip install 'sunofriend[playback]'"
         ) from exc
     try:
         return sorted(mido.get_output_names(), key=str.casefold)
     except Exception as exc:  # backend import/initialisation errors vary by mido version
         raise PlaybackError(
-            "CoreMIDI backend is unavailable. Install the midi extra "
-            "(`pip install -e '.[midi]'`) and verify python-rtmidi can load. "
+            "CoreMIDI backend is unavailable. Install the playback extra "
+            "(`pip install 'sunofriend[playback]'`) and verify python-rtmidi can load. "
             f"Backend error: {exc}"
         ) from exc
 
@@ -76,7 +76,7 @@ def play_midi(path: str | Path, port: str | None = None) -> str:
         import mido
     except ImportError as exc:  # pragma: no cover - depends on optional extra
         raise PlaybackError(
-            "Live MIDI needs the midi extra: pip install -e '.[midi]'"
+            "Live MIDI needs the playback extra: pip install 'sunofriend[playback]'"
         ) from exc
 
     midi_path = Path(path)

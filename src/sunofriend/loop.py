@@ -12,6 +12,7 @@ The final .mid (best-scoring iteration) is what goes into GarageBand.
 from __future__ import annotations
 
 import json
+import shutil
 import tempfile
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
@@ -133,109 +134,122 @@ def refine_stem(
     notes = normalize_note_events(notes)
 
     workdir = Path(tempfile.mkdtemp(prefix=f"sunofriend_{kind}_"))
-    history: list[IterationRecord] = []
-    best_notes, best_score = list(notes), -1.0
-    best_issue_count = 1_000_000_000
-    stale = 0
+    try:
+        history: list[IterationRecord] = []
+        best_notes, best_score = list(notes), -1.0
+        best_issue_count = 1_000_000_000
+        stale = 0
 
-    iteration_limit = 1 if extended_conversion and conversion_mode == "exact" else max_iterations
-    for iteration in range(iteration_limit):
-        midi_path = workdir / f"iter_{iteration:03d}.mid"
-        wav_path = workdir / f"iter_{iteration:03d}.wav"
-        _write_candidate(midi_path, notes, kind, bpm)
-        render_midi_to_wav(midi_path, wav_path)
-
-        if is_drum:
-            rendered = compare.extract_onsets(str(wav_path))
-            diff = compare.diff_drums(ref_onsets, rendered)
-            issue_count = len(diff.missed) + len(diff.extra)
-            score, detail = diff.score, {
-                "f_measure": round(diff.f_measure, 4),
-                "missed": len(diff.missed),
-                "extra": len(diff.extra),
-                "mean_abs_offset_ms": round(diff.mean_abs_offset * 1000, 1),
-            }
-        else:
-            diff = compare.diff_pitched(
-                stem_path,
-                str(wav_path),
-                notes,
-                ref_chroma=ref_chroma,
-                ref_onsets=ref_onsets,
-                ref_evidence=pitched_reference,
-                allow_additions=allow_pitched_additions,
-                preserve_structure=theory_locked,
-            )
-            issue_count = len(diff.spurious_notes) + len(diff.edits)
-            score, detail = diff.score, {
-                "chroma_similarity": round(diff.chroma_similarity, 4),
-                "onset_f_measure": round(diff.onset_f_measure, 4),
-                "spurious": len(diff.spurious_notes),
-                "evidence_notes": diff.evidence_count,
-                "proposed_repairs": sum(edit.action == "repair" for edit in diff.edits),
-                "proposed_additions": sum(edit.action == "add" for edit in diff.edits),
-                "proposed_edits": compare.pitched_edit_detail(diff),
-                "edit_policy": "theory_locked" if theory_locked else "transcription",
-                "automatic_additions": allow_pitched_additions,
-            }
-            if diff.evidence_error:
-                detail["evidence_warning"] = diff.evidence_error
-
-        history.append(IterationRecord(iteration, round(score, 4), len(notes), detail))
-
-        score_improved = score > best_score + plateau_epsilon
-        # A repair may leave chroma/onset scores numerically identical (most
-        # often duration or velocity).  Prefer the candidate with fewer
-        # evidence-backed issues only when its feature score did not regress.
-        issue_tiebreak = (
-            not is_drum
-            and score + 1e-9 >= best_score
-            and issue_count < best_issue_count
+        iteration_limit = (
+            1
+            if extended_conversion and conversion_mode == "exact"
+            else max_iterations
         )
-        if score_improved or issue_tiebreak:
-            best_notes, best_score = list(notes), score
-            best_issue_count = issue_count
-            stale = 0
-        else:
-            stale += 1
-            if stale >= plateau_patience:
+        for iteration in range(iteration_limit):
+            midi_path = workdir / f"iter_{iteration:03d}.mid"
+            wav_path = workdir / f"iter_{iteration:03d}.wav"
+            _write_candidate(midi_path, notes, kind, bpm)
+            render_midi_to_wav(midi_path, wav_path)
+
+            if is_drum:
+                rendered = compare.extract_onsets(str(wav_path))
+                diff = compare.diff_drums(ref_onsets, rendered)
+                issue_count = len(diff.missed) + len(diff.extra)
+                score, detail = diff.score, {
+                    "f_measure": round(diff.f_measure, 4),
+                    "missed": len(diff.missed),
+                    "extra": len(diff.extra),
+                    "mean_abs_offset_ms": round(diff.mean_abs_offset * 1000, 1),
+                }
+            else:
+                diff = compare.diff_pitched(
+                    stem_path,
+                    str(wav_path),
+                    notes,
+                    ref_chroma=ref_chroma,
+                    ref_onsets=ref_onsets,
+                    ref_evidence=pitched_reference,
+                    allow_additions=allow_pitched_additions,
+                    preserve_structure=theory_locked,
+                )
+                issue_count = len(diff.spurious_notes) + len(diff.edits)
+                score, detail = diff.score, {
+                    "chroma_similarity": round(diff.chroma_similarity, 4),
+                    "onset_f_measure": round(diff.onset_f_measure, 4),
+                    "spurious": len(diff.spurious_notes),
+                    "evidence_notes": diff.evidence_count,
+                    "proposed_repairs": sum(
+                        edit.action == "repair" for edit in diff.edits
+                    ),
+                    "proposed_additions": sum(
+                        edit.action == "add" for edit in diff.edits
+                    ),
+                    "proposed_edits": compare.pitched_edit_detail(diff),
+                    "edit_policy": (
+                        "theory_locked" if theory_locked else "transcription"
+                    ),
+                    "automatic_additions": allow_pitched_additions,
+                }
+                if diff.evidence_error:
+                    detail["evidence_warning"] = diff.evidence_error
+
+            history.append(
+                IterationRecord(iteration, round(score, 4), len(notes), detail)
+            )
+
+            score_improved = score > best_score + plateau_epsilon
+            # A repair may leave chroma/onset scores numerically identical
+            # (most often duration or velocity). Prefer the candidate with
+            # fewer evidence-backed issues only when its feature score did not
+            # regress.
+            issue_tiebreak = (
+                not is_drum
+                and score + 1e-9 >= best_score
+                and issue_count < best_issue_count
+            )
+            if score_improved or issue_tiebreak:
+                best_notes, best_score = list(notes), score
+                best_issue_count = issue_count
+                stale = 0
+            else:
+                stale += 1
+                if stale >= plateau_patience:
+                    break
+
+            edited = (
+                _apply_edits_drums_preserve_observed(notes, diff)
+                if is_drum and extended_conversion
+                else _apply_edits_drums(notes, diff, kind)
+                if is_drum
+                else _apply_edits_pitched(notes, diff)
+            )
+            if not is_drum and edited == notes:
+                break
+            notes = normalize_note_events(edited)
+            if not notes:
                 break
 
-        edited = (
-            _apply_edits_drums_preserve_observed(notes, diff)
-            if is_drum and extended_conversion
-            else _apply_edits_drums(notes, diff, kind)
-            if is_drum
-            else _apply_edits_pitched(notes, diff)
+        best_notes = normalize_note_events(best_notes)
+        final_midi = out_dir / f"{kind}_listened.mid"
+        # Written at output_bpm (an exact DAW-enterable tempo) when provided:
+        # note times are absolute seconds, so stem alignment is preserved.
+        _write_candidate(final_midi, best_notes, kind, output_bpm or bpm)
+        (out_dir / f"{kind}_iterations.json").write_text(
+            json.dumps([r.__dict__ for r in history], indent=2), encoding="utf-8"
         )
-        if not is_drum and edited == notes:
-            break
-        notes = normalize_note_events(edited)
-        if not notes:
-            break
-
-    best_notes = normalize_note_events(best_notes)
-    final_midi = out_dir / f"{kind}_listened.mid"
-    # Written at output_bpm (an exact DAW-enterable tempo) when provided: note
-    # times are absolute seconds, so alignment with the stems is preserved.
-    _write_candidate(final_midi, best_notes, kind, output_bpm or bpm)
-    (out_dir / f"{kind}_iterations.json").write_text(
-        json.dumps([r.__dict__ for r in history], indent=2), encoding="utf-8"
-    )
-    if not keep_workdir:
-        for file in workdir.glob("*"):
-            file.unlink(missing_ok=True)
-        workdir.rmdir()
-    note_provenance = _sync_note_provenance(best_notes, note_provenance)
-    return RefineResult(
-        notes=best_notes,
-        score=best_score,
-        history=history,
-        midi_path=final_midi,
-        variants=variants,
-        note_provenance=note_provenance,
-        variant_provenance=variant_provenance,
-    )
+        note_provenance = _sync_note_provenance(best_notes, note_provenance)
+        return RefineResult(
+            notes=best_notes,
+            score=best_score,
+            history=history,
+            midi_path=final_midi,
+            variants=variants,
+            note_provenance=note_provenance,
+            variant_provenance=variant_provenance,
+        )
+    finally:
+        if not keep_workdir:
+            shutil.rmtree(workdir, ignore_errors=True)
 
 
 def _seed_pitched(
@@ -502,7 +516,10 @@ def _seed_drums_v2(
 
             grid = grid_from_metronome(str(metronome), nominal_bpm=bpm)
             downbeat = grid.time_of(0)
-            snap = lambda value: grid.snap(value, 4)
+
+            def snap(value):
+                return grid.snap(value, 4)
+
             beat_of = grid.beat_of
             time_of = grid.time_of
         else:

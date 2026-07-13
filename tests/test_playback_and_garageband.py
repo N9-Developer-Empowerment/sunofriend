@@ -38,7 +38,7 @@ class PlaybackTests(unittest.TestCase):
 
     def test_doctor_fails_when_no_coremidi_destination_is_available(self):
         stdout = io.StringIO()
-        with patch("sunofriend.cli.importlib_metadata.version", return_value="1.0"), patch(
+        with patch("sunofriend.diagnostics.importlib_metadata.version", return_value="1.0"), patch(
             "sunofriend.render.find_fluidsynth", return_value="/bin/true"
         ), patch(
             "sunofriend.render.find_soundfont", return_value="/tmp/test.sf2"
@@ -53,6 +53,46 @@ class PlaybackTests(unittest.TestCase):
         self.assertTrue(report["listen_ready"])
         self.assertFalse(report["midi_ready"])
         self.assertFalse(report["ready"])
+        self.assertEqual(report["required_capability"], "all")
+
+    def test_doctor_can_require_conversion_without_a_midi_destination(self):
+        stdout = io.StringIO()
+        with patch(
+            "sunofriend.diagnostics.importlib_metadata.version", return_value="1.0"
+        ), patch(
+            "sunofriend.render.find_fluidsynth", return_value="/bin/true"
+        ), patch(
+            "sunofriend.render.find_soundfont", return_value="/tmp/test.sf2"
+        ), patch("sunofriend.render.render_midi_to_wav") as render, patch(
+            "sunofriend.playback.list_output_ports", return_value=[]
+        ), redirect_stdout(stdout):
+            render.side_effect = lambda _midi, wav: Path(wav).write_bytes(b"RIFF" * 300)
+            result = main(["doctor", "--require", "convert"])
+
+        report = json.loads(stdout.getvalue())
+        self.assertEqual(result, 0)
+        self.assertTrue(report["convert_ready"])
+        self.assertFalse(report["playback_ready"])
+        self.assertTrue(report["requirement_ready"])
+
+    def test_doctor_can_require_transcription_without_fluidsynth(self):
+        stdout = io.StringIO()
+        with patch(
+            "sunofriend.diagnostics.importlib_metadata.version", return_value="1.0"
+        ), patch(
+            "sunofriend.render.find_fluidsynth",
+            side_effect=RenderError("fluidsynth unavailable"),
+        ), patch(
+            "sunofriend.playback.list_output_ports", return_value=[]
+        ), redirect_stdout(stdout):
+            result = main(["doctor", "--require", "transcribe"])
+
+        report = json.loads(stdout.getvalue())
+        self.assertEqual(result, 0)
+        self.assertTrue(report["transcribe_ready"])
+        self.assertFalse(report["convert_ready"])
+        self.assertFalse(report["preview_ready"])
+        self.assertTrue(report["requirement_ready"])
 
     def test_invalid_render_overrides_are_rejected(self):
         with tempfile.TemporaryDirectory() as directory, patch.dict(

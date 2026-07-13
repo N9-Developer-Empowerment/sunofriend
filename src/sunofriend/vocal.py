@@ -18,7 +18,7 @@ import math
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from statistics import median
-from typing import Any, Iterable, Literal, Sequence
+from typing import Any, Literal, Sequence
 
 from .conversion import NoteProvenance
 from .models import NoteEvent
@@ -503,12 +503,14 @@ def transcribe_vocal_melody(
             candidates = [
                 VocalCandidate(
                     note,
-                    confidence=record.confidence if index < len(fallback_records) else 0.55,
+                    confidence=(
+                        fallback_records[index].confidence
+                        if index < len(fallback_records)
+                        else 0.55
+                    ),
                     sources=("pyin", "monophonic-fallback"),
                 )
-                for index, (note, record) in enumerate(
-                    zip(fallback.notes, fallback_records)
-                )
+                for index, note in enumerate(fallback.notes)
             ]
             if candidates:
                 warnings.append(

@@ -1,6 +1,6 @@
 # Known-good Sunofriend audio/MIDI stack validated on macOS arm64 with Python 3.9.
 # Use as a constraints file, not as a standalone requirements file:
-#   python -m pip install -c constraints-audio-macos.txt -e '.[listen,midi]'
+#   python -m pip install -c constraints-audio-macos.txt -e '.[all]'
 basic-pitch==0.4.0
 coremltools==9.0
 librosa==0.11.0

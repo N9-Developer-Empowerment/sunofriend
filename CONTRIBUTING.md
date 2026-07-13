@@ -4,6 +4,8 @@ Sunofriend is currently proven most deeply with Suno/Moises exports and
 GarageBand on macOS. Compatibility reports from other workflows are valuable
 even when they reveal a failure: they turn assumptions about MIDI timing,
 tempo, key, instruments and stem quality into reproducible requirements.
+Contributions are accepted under the repository's
+[Apache License 2.0](LICENSE).
 
 ## Test another DAW, music tool or AI workflow
 
@@ -72,14 +74,13 @@ problem per issue.
 Before opening a pull request:
 
 ```bash
-python -m unittest discover -s tests -v
-python -m sunofriend.cli doctor
+python -m pytest
+python -m ruff check src tests
+python -m sunofriend doctor --require convert
 ```
 
-For conversion work, `doctor` must report `listen_ready` and `render_ready` as
-true. A missing live MIDI destination can make the command exit nonzero even
-though conversion is ready; require `midi_ready` only for playback/CoreMIDI
-changes.
+For conversion work, `doctor` must report `convert_ready` as true. Require
+`playback` only for CoreMIDI changes.
 
 Add a deterministic regression test for behaviour changes. Preserve existing
 golden outputs unless the change is intentional and explained with updated
