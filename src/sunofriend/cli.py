@@ -12,10 +12,29 @@ from .diagnostics import CAPABILITIES
 from .pipeline import run_remake
 
 _COMMANDS = {
-    "remake", "listen", "listen-all", "vocal-melody", "evaluate", "doctor", "preview", "midi-ports", "play",
-    "midi-tempo", "midi-transform", "midi-anchor", "midi-align",
-    "garageband-info", "clip-import", "clip-list", "clip-show", "clip-export",
-    "clip-transform", "clip-instrument",
+    "remake",
+    "listen",
+    "listen-all",
+    "vocal-melody",
+    "evaluate",
+    "doctor",
+    "preview",
+    "midi-ports",
+    "play",
+    "midi-tempo",
+    "midi-transform",
+    "midi-anchor",
+    "midi-align",
+    "garageband-info",
+    "instrument-inventory",
+    "instrument-match",
+    "sample-pack",
+    "clip-import",
+    "clip-list",
+    "clip-show",
+    "clip-export",
+    "clip-transform",
+    "clip-instrument",
 }
 
 
@@ -24,14 +43,26 @@ def build_parser() -> argparse.ArgumentParser:
         prog="sunofriend",
         description="Clean GarageBand-ready MIDI from AI-generated stems.",
     )
-    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {__version__}"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    remake = sub.add_parser("remake", help="Legacy grid-based remake of a Moises/Suno export folder")
-    remake.add_argument("input_folder", help="Folder containing Moises stems and a chords PDF")
-    remake.add_argument("--out-dir", required=True, help="Output directory for MIDI files and report")
-    remake.add_argument("--style", default="edm", choices=["edm", "house", "trap", "hiphop"])
-    remake.add_argument("--bpm", type=float, default=None, help="Override BPM if it cannot be inferred")
+    remake = sub.add_parser(
+        "remake", help="Legacy grid-based remake of a Moises/Suno export folder"
+    )
+    remake.add_argument(
+        "input_folder", help="Folder containing Moises stems and a chords PDF"
+    )
+    remake.add_argument(
+        "--out-dir", required=True, help="Output directory for MIDI files and report"
+    )
+    remake.add_argument(
+        "--style", default="edm", choices=["edm", "house", "trap", "hiphop"]
+    )
+    remake.add_argument(
+        "--bpm", type=float, default=None, help="Override BPM if it cannot be inferred"
+    )
     remake.add_argument("--key", default=None, help='Override key, e.g. "G major"')
 
     listen = sub.add_parser(
@@ -42,7 +73,20 @@ def build_parser() -> argparse.ArgumentParser:
     listen.add_argument(
         "--kind",
         required=True,
-        choices=["kick", "snare", "hat", "cymbals", "toms", "other_kit", "keys", "piano", "synth", "lead", "pads", "bass"],
+        choices=[
+            "kick",
+            "snare",
+            "hat",
+            "cymbals",
+            "toms",
+            "other_kit",
+            "keys",
+            "piano",
+            "synth",
+            "lead",
+            "pads",
+            "bass",
+        ],
         help="What instrument the stem contains",
     )
     listen.add_argument(
@@ -55,18 +99,30 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Also compare every audition variant with the source stem",
     )
-    listen.add_argument("--bpm", type=float, required=True, help="Track BPM (from Suno/Moises metadata)")
+    listen.add_argument(
+        "--bpm", type=float, required=True, help="Track BPM (from Suno/Moises metadata)"
+    )
     listen.add_argument("--out-dir", required=True, help="Output directory")
     listen.add_argument("--max-iterations", type=int, default=30)
-    listen.add_argument("--keep-workdir", action="store_true", help="Keep per-iteration MIDI/WAV files")
+    listen.add_argument(
+        "--keep-workdir", action="store_true", help="Keep per-iteration MIDI/WAV files"
+    )
     listen.add_argument(
         "--chords-pdf",
         default=None,
         help="Moises chords PDF: enables theory-constrained 'imagine' mode for bass/lead/synth/pads "
         "(compose in-key, on-grid, chord-aware; stem supplies rhythm + pitch hints)",
     )
-    listen.add_argument("--key", default=None, help='Key override, e.g. "C minor" (default: from chords PDF)')
-    listen.add_argument("--metronome", default=None, help="Metronome stem WAV: derive the true beat grid from clicks")
+    listen.add_argument(
+        "--key",
+        default=None,
+        help='Key override, e.g. "C minor" (default: from chords PDF)',
+    )
+    listen.add_argument(
+        "--metronome",
+        default=None,
+        help="Metronome stem WAV: derive the true beat grid from clicks",
+    )
     listen.add_argument(
         "--conversion-mode",
         choices=["exact", "repair", "reconstruct"],
@@ -101,7 +157,9 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Concert A of the source, e.g. 429 (default: inferred from the parent folder, else 440)",
     )
-    vocal.add_argument("--key", default=None, help="Project key recorded in diagnostics")
+    vocal.add_argument(
+        "--key", default=None, help="Project key recorded in diagnostics"
+    )
     vocal.add_argument(
         "--chords-pdf",
         default=None,
@@ -113,16 +171,29 @@ def build_parser() -> argparse.ArgumentParser:
         help="Metronome stem for the gentle-quantized audition variant (auto-discovered when omitted)",
     )
     vocal.add_argument("--fmin", type=float, default=65.4, help="Lowest vocal F0 in Hz")
-    vocal.add_argument("--fmax", type=float, default=1046.5, help="Highest vocal F0 in Hz")
+    vocal.add_argument(
+        "--fmax", type=float, default=1046.5, help="Highest vocal F0 in Hz"
+    )
 
     listen_all = sub.add_parser(
         "listen-all",
         help="Process a whole Suno/Moises export folder: all stems -> MIDI + combined arrangement",
     )
-    listen_all.add_argument("input_folder", help="Export folder with stems (+ chords PDF, metronome)")
+    listen_all.add_argument(
+        "input_folder", help="Export folder with stems (+ chords PDF, metronome)"
+    )
     listen_all.add_argument("--out-dir", required=True, help="Output directory")
-    listen_all.add_argument("--bpm", type=float, default=None, help="Override BPM (default: from folder name)")
-    listen_all.add_argument("--key", default=None, help="Override key (default: from folder name / chords PDF)")
+    listen_all.add_argument(
+        "--bpm",
+        type=float,
+        default=None,
+        help="Override BPM (default: from folder name)",
+    )
+    listen_all.add_argument(
+        "--key",
+        default=None,
+        help="Override key (default: from folder name / chords PDF)",
+    )
     listen_all.add_argument(
         "--parts",
         default=None,
@@ -164,8 +235,18 @@ def build_parser() -> argparse.ArgumentParser:
         "--kind",
         required=True,
         choices=[
-            "kick", "snare", "hat", "cymbals", "toms", "other_kit",
-            "keys", "piano", "synth", "lead", "pads", "bass",
+            "kick",
+            "snare",
+            "hat",
+            "cymbals",
+            "toms",
+            "other_kit",
+            "keys",
+            "piano",
+            "synth",
+            "lead",
+            "pads",
+            "bass",
         ],
     )
     evaluate.add_argument(
@@ -184,14 +265,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Exit successfully when this capability is ready (default: all)",
     )
 
-    preview = sub.add_parser("preview", help="Render a MIDI file to WAV with FluidSynth")
+    preview = sub.add_parser(
+        "preview", help="Render a MIDI file to WAV with FluidSynth"
+    )
     preview.add_argument("midi", help="MIDI file to render")
-    preview.add_argument("--out", default=None, help="Output WAV (default: beside the MIDI file)")
+    preview.add_argument(
+        "--out", default=None, help="Output WAV (default: beside the MIDI file)"
+    )
 
-    sub.add_parser("midi-ports", help="List CoreMIDI outputs, including enabled IAC buses")
-    play = sub.add_parser("play", help="Play MIDI to GarageBand or hardware through CoreMIDI")
+    sub.add_parser(
+        "midi-ports", help="List CoreMIDI outputs, including enabled IAC buses"
+    )
+    play = sub.add_parser(
+        "play", help="Play MIDI to GarageBand or hardware through CoreMIDI"
+    )
     play.add_argument("midi", help="MIDI file to play")
-    play.add_argument("--port", default=None, help="Exact name or unique part of a MIDI output name")
+    play.add_argument(
+        "--port", default=None, help="Exact name or unique part of a MIDI output name"
+    )
 
     midi_tempo = sub.add_parser(
         "midi-tempo",
@@ -418,21 +509,214 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     garageband = sub.add_parser(
-        "garageband-info", help="Read tempo/key/instrument evidence from a .band project"
+        "garageband-info",
+        help="Read tempo/key/instrument evidence from a .band project",
     )
     garageband.add_argument("project", help="Path to a GarageBand .band bundle")
 
-    clip_import = sub.add_parser("clip-import", help="Import MIDI tracks into a Clip v1 library")
+    instrument_inventory = sub.add_parser(
+        "instrument-inventory",
+        help="List installed GarageBand factory assets and Audio Unit instruments",
+    )
+    instrument_inventory.add_argument(
+        "--out", default=None, help="Also write the inventory to a new JSON file"
+    )
+    instrument_inventory.add_argument(
+        "--garageband-root",
+        default=None,
+        help="Override the GarageBand sampler-assets directory",
+    )
+    instrument_inventory.add_argument(
+        "--drum-root",
+        default=None,
+        help="Override the GarageBand/Logic drum-samples directory",
+    )
+    instrument_inventory.add_argument(
+        "--garageband-instrument-root",
+        default=None,
+        help="Override the GarageBand sampler-instrument definitions directory",
+    )
+    instrument_inventory.add_argument(
+        "--logic-instrument-root",
+        default=None,
+        help="Override the Logic sampler-instrument definitions directory",
+    )
+    instrument_inventory.add_argument(
+        "--no-audio-units",
+        action="store_true",
+        help="Skip macOS Audio Unit discovery through auval",
+    )
+
+    instrument_match = sub.add_parser(
+        "instrument-match",
+        help="Compare a stem with installed sounds and rendered instrument auditions",
+    )
+    instrument_match.add_argument("stem", help="Source stem WAV")
+    instrument_match.add_argument("midi", help="Aligned note-bearing MIDI")
+    instrument_match.add_argument(
+        "--kind",
+        required=True,
+        choices=[
+            "kick",
+            "snare",
+            "hat",
+            "cymbals",
+            "toms",
+            "other_kit",
+            "drums",
+            "keys",
+            "piano",
+            "synth",
+            "lead",
+            "pads",
+            "strings",
+            "bass",
+            "vocal",
+            "vocals",
+            "backing",
+            "backing_vocals",
+        ],
+    )
+    instrument_match.add_argument(
+        "--out-dir", required=True, help="New directory for reports and auditions"
+    )
+    instrument_match.add_argument(
+        "--top", type=int, default=5, help="Matches to retain per evidence path"
+    )
+    instrument_match.add_argument(
+        "--track-index", type=int, default=None, help="Note-bearing MIDI track index"
+    )
+    instrument_match.add_argument(
+        "--garageband-root",
+        default=None,
+        help="Override factory sampler-assets directory",
+    )
+    instrument_match.add_argument(
+        "--drum-root",
+        default=None,
+        help="Override GarageBand/Logic drum-samples directory",
+    )
+    instrument_match.add_argument(
+        "--no-factory",
+        action="store_true",
+        help="Skip installed factory-sample comparison",
+    )
+    instrument_match.add_argument(
+        "--no-gm", action="store_true", help="Skip FluidSynth General MIDI auditions"
+    )
+    instrument_match.add_argument(
+        "--all-programs",
+        action="store_true",
+        help="Render all 128 GM programs instead of a role-specific shortlist",
+    )
+    instrument_match.add_argument(
+        "--max-source-segments",
+        type=int,
+        default=24,
+        help="MIDI-aligned stem excerpts to profile",
+    )
+    instrument_match.add_argument(
+        "--max-samples-per-asset",
+        type=int,
+        default=8,
+        help="Factory samples to profile per asset",
+    )
+
+    sample_pack = sub.add_parser(
+        "sample-pack",
+        help="Build a self-contained GarageBand SF2 instrument from aligned stem notes",
+    )
+    sample_pack.add_argument("stem", help="Source stem WAV you may legally sample")
+    sample_pack.add_argument("midi", help="Aligned note-bearing MIDI")
+    sample_pack.add_argument(
+        "--kind",
+        required=True,
+        choices=[
+            "kick",
+            "snare",
+            "hat",
+            "cymbals",
+            "toms",
+            "other_kit",
+            "drums",
+            "keys",
+            "piano",
+            "synth",
+            "lead",
+            "pads",
+            "strings",
+            "bass",
+            "vocal",
+            "vocals",
+            "backing",
+            "backing_vocals",
+        ],
+    )
+    sample_pack.add_argument(
+        "--out-dir", required=True, help="New sample-pack directory"
+    )
+    sample_pack.add_argument(
+        "--name",
+        default=None,
+        help="Instrument name embedded in the generated SoundFont",
+    )
+    sample_pack.add_argument(
+        "--track-index", type=int, default=None, help="Note-bearing MIDI track index"
+    )
+    sample_pack.add_argument(
+        "--max-samples", type=int, default=12, help="Maximum unique-pitch samples"
+    )
+    sample_pack.add_argument(
+        "--tail-ms",
+        type=float,
+        default=120.0,
+        help="Natural decay retained after each MIDI note",
+    )
+    sample_pack.add_argument(
+        "--max-transpose",
+        type=int,
+        default=6,
+        help="Maximum semitones each melodic sample may cover (default: 6)",
+    )
+    sample_pack.add_argument(
+        "--allow-polyphonic",
+        action="store_true",
+        help="Allow zones containing overlapping notes (normally rejected)",
+    )
+    sample_pack.add_argument(
+        "--no-preview",
+        action="store_true",
+        help="Create the SF2 and audition MIDI without rendering an audition WAV",
+    )
+    sample_pack.add_argument(
+        "--no-auto-tune",
+        action="store_true",
+        help="Do not measure and correct stable sample pitch in the SF2",
+    )
+
+    clip_import = sub.add_parser(
+        "clip-import", help="Import MIDI tracks into a Clip v1 library"
+    )
     clip_import.add_argument("midi", help="MIDI file to import")
     _add_library_argument(clip_import)
     clip_import.add_argument("--key", default=None, help='Key override, e.g. "D minor"')
     clip_import.add_argument("--role", default=None, help="Instrument role override")
-    clip_import.add_argument("--suggest", action="append", default=[], help="Instrument suggestion")
-    clip_import.add_argument("--tag", action="append", default=[], help="Searchable tag")
-    clip_import.add_argument("--track-index", type=int, default=None, help="Import only this note track")
-    clip_import.add_argument("--title", default=None, help="Title override (or prefix for multiple tracks)")
+    clip_import.add_argument(
+        "--suggest", action="append", default=[], help="Instrument suggestion"
+    )
+    clip_import.add_argument(
+        "--tag", action="append", default=[], help="Searchable tag"
+    )
+    clip_import.add_argument(
+        "--track-index", type=int, default=None, help="Import only this note track"
+    )
+    clip_import.add_argument(
+        "--title", default=None, help="Title override (or prefix for multiple tracks)"
+    )
 
-    clip_list = sub.add_parser("clip-list", help="Search/list the local Clip v1 library")
+    clip_list = sub.add_parser(
+        "clip-list", help="Search/list the local Clip v1 library"
+    )
     _add_library_argument(clip_list)
     clip_list.add_argument("--text", default=None)
     clip_list.add_argument("--key", default=None)
@@ -446,7 +730,9 @@ def build_parser() -> argparse.ArgumentParser:
     clip_show.add_argument("clip_id")
     _add_library_argument(clip_show)
 
-    clip_export = sub.add_parser("clip-export", help="Export one library clip as GarageBand MIDI")
+    clip_export = sub.add_parser(
+        "clip-export", help="Export one library clip as GarageBand MIDI"
+    )
     clip_export.add_argument("clip_id")
     clip_export.add_argument("--out", required=True)
     clip_export.add_argument(
@@ -469,17 +755,24 @@ def build_parser() -> argparse.ArgumentParser:
     clip_transform.add_argument("clip_id")
     _add_library_argument(clip_transform)
     key_change = clip_transform.add_mutually_exclusive_group()
-    key_change.add_argument("--target-key", default=None, help='Target such as "G major"')
+    key_change.add_argument(
+        "--target-key", default=None, help='Target such as "G major"'
+    )
     key_change.add_argument("--semitones", type=int, default=None)
-    clip_transform.add_argument("--direction", choices=["nearest", "up", "down"], default="nearest")
+    clip_transform.add_argument(
+        "--direction", choices=["nearest", "up", "down"], default="nearest"
+    )
     clip_transform.add_argument("--target-bpm", type=float, default=None)
     clip_transform.add_argument(
         "--timing-mode", choices=["musical", "stem_locked"], default="musical"
     )
-    clip_transform.add_argument("--out", default=None, help="Also export the final version to MIDI")
+    clip_transform.add_argument(
+        "--out", default=None, help="Also export the final version to MIDI"
+    )
 
     clip_instrument = sub.add_parser(
-        "clip-instrument", help="Version a clip with chosen GarageBand instrument metadata"
+        "clip-instrument",
+        help="Version a clip with chosen GarageBand instrument metadata",
     )
     clip_instrument.add_argument("clip_id")
     _add_library_argument(clip_instrument)
@@ -487,7 +780,9 @@ def build_parser() -> argparse.ArgumentParser:
     clip_instrument.add_argument("--program", type=int, default=None)
     clip_instrument.add_argument("--channel", type=int, default=None)
     clip_instrument.add_argument(
-        "--suggest", action="append", default=None,
+        "--suggest",
+        action="append",
+        default=None,
         help="GarageBand patch suggestion (repeat in preference order)",
     )
     return parser
@@ -536,6 +831,12 @@ def main(argv: list[str] | None = None) -> int:
             return _run_midi_align(args)
         if args.command == "garageband-info":
             return _run_garageband_info(args)
+        if args.command == "instrument-inventory":
+            return _run_instrument_inventory(args)
+        if args.command == "instrument-match":
+            return _run_instrument_match(args)
+        if args.command == "sample-pack":
+            return _run_sample_pack(args)
         if args.command == "clip-import":
             return _run_clip_import(args)
         if args.command == "clip-list":
@@ -590,7 +891,9 @@ def _run_listen(args) -> int:
     )
     print(f"final score: {result.score:.4f} after {len(result.history)} iteration(s)")
     for record in result.history:
-        print(f"  iter {record.iteration:>3}  score={record.score:<8} notes={record.note_count:<5} {record.detail}")
+        print(
+            f"  iter {record.iteration:>3}  score={record.score:<8} notes={record.note_count:<5} {record.detail}"
+        )
     publication = _publish_single_result(
         result,
         stem=Path(args.stem),
@@ -623,8 +926,12 @@ def _run_listen(args) -> int:
                         kind=args.kind,
                         pitch_family_map=v2_pitch_family_map(args.kind),
                     )
-                    variant_path = mode_out / "variants" / (
-                        f"{args.kind}-{variant_name.replace('_', '-')}.evaluation.json"
+                    variant_path = (
+                        mode_out
+                        / "variants"
+                        / (
+                            f"{args.kind}-{variant_name.replace('_', '-')}.evaluation.json"
+                        )
                     )
                     variant_path.write_text(
                         variant_report.to_json() + "\n",
@@ -653,7 +960,9 @@ def _run_vocal_melody(args) -> int:
     metadata = infer_project_metadata(stem.parent)
     bpm = float(args.bpm if args.bpm is not None else (metadata.bpm or 0.0))
     if not bpm > 0:
-        raise ValueError("BPM was not provided and could not be inferred from the parent folder")
+        raise ValueError(
+            "BPM was not provided and could not be inferred from the parent folder"
+        )
     if args.tuning_hz is not None:
         tuning_hz = float(args.tuning_hz)
         tuning_source = "command-line"
@@ -667,7 +976,11 @@ def _run_vocal_melody(args) -> int:
         raise ValueError("tuning-hz must be positive")
     key = args.key or metadata.key
 
-    metronome = Path(args.metronome) if args.metronome else _find_exact_stem(stem.parent, "metronome")
+    metronome = (
+        Path(args.metronome)
+        if args.metronome
+        else _find_exact_stem(stem.parent, "metronome")
+    )
     if metronome is not None and not metronome.is_file():
         raise ValueError(f"Metronome stem does not exist: {metronome}")
     grid = (
@@ -782,7 +1095,7 @@ def _publish_vocal_result(
             )
 
     tuning_cents = float(result.diagnostics.garageband_fine_tune_cents)
-    channel, program = ((2, 73) if role == "lead" else (3, 65))
+    channel, program = (2, 73) if role == "lead" else (3, 65)
     published: dict[str, dict] = {}
     normalized_variants: dict[str, list] = {}
     for name, raw_notes in result.variants.items():
@@ -814,8 +1127,14 @@ def _publish_vocal_result(
             result.provenance.get(name, []),
             mark_changed_as_repaired=True,
         )
-        provenance_path = variants_dir / f"{token}-{name.replace('_', '-')}.provenance.json"
-        mode = "exact" if name in {"observed_strict", "harmony_stack", "uncertain"} else "repair"
+        provenance_path = (
+            variants_dir / f"{token}-{name.replace('_', '-')}.provenance.json"
+        )
+        mode = (
+            "exact"
+            if name in {"observed_strict", "harmony_stack", "uncertain"}
+            else "repair"
+        )
         write_note_provenance(
             provenance_path,
             records,
@@ -829,7 +1148,9 @@ def _publish_vocal_result(
             "midi": str(midi_path),
             "provenance": str(provenance_path),
             "description": result.descriptions.get(name),
-            "metrics": _vocal_variant_metrics(notes, result.contour, result.diagnostics.tuning_hz),
+            "metrics": _vocal_variant_metrics(
+                notes, result.contour, result.diagnostics.tuning_hz
+            ),
         }
 
     primary_notes = normalized_variants.get(result.primary_variant, [])
@@ -864,7 +1185,14 @@ def _publish_vocal_result(
         concert_path = variants_dir / f"{token}-concert-pitch.mid"
         write_midi_file(
             concert_path,
-            [MidiTrack(f"{role.title()} Vocal Concert Pitch", channel, program, primary_notes)],
+            [
+                MidiTrack(
+                    f"{role.title()} Vocal Concert Pitch",
+                    channel,
+                    program,
+                    primary_notes,
+                )
+            ],
             bpm=bpm,
         )
         concert_provenance = variants_dir / f"{token}-concert-pitch.provenance.json"
@@ -903,7 +1231,11 @@ def _publish_vocal_result(
     )
     analysis_path = out_dir / "vocal_analysis.json"
     analysis_path.write_text(
-        json.dumps({"diagnostics": diagnostics, "variants": published}, indent=2, sort_keys=True),
+        json.dumps(
+            {"diagnostics": diagnostics, "variants": published},
+            indent=2,
+            sort_keys=True,
+        ),
         encoding="utf-8",
     )
     summary = {
@@ -924,7 +1256,9 @@ def _publish_vocal_result(
     }
     summary_path = out_dir / "vocal_summary.json"
     summary["summary"] = str(summary_path)
-    summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    summary_path.write_text(
+        json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8"
+    )
     return summary
 
 
@@ -945,11 +1279,12 @@ def _vocal_variant_metrics(notes, frames, tuning_hz: float) -> dict:
         covered += 1
         source_midi = frame.fractional_midi(tuning_hz)
         if source_midi is not None:
-            residuals.append(min(abs(source_midi - note.pitch) * 100.0 for note in active))
+            residuals.append(
+                min(abs(source_midi - note.pitch) * 100.0 for note in active)
+            )
     all_times = [frame.time for frame in frames]
     active_frames = sum(
-        any(note.start <= time < note.end for note in notes)
-        for time in all_times
+        any(note.start <= time < note.end for note in notes) for time in all_times
     )
     voiced_times = {frame.time for frame in voiced}
     active_voiced = sum(
@@ -962,10 +1297,16 @@ def _vocal_variant_metrics(notes, frames, tuning_hz: float) -> dict:
         "pitch_high": max((note.pitch for note in notes), default=None),
         "total_note_seconds": round(sum(note.end - note.start for note in notes), 6),
         "voiced_contour_coverage": round(covered / len(voiced), 6) if voiced else 0.0,
-        "active_frame_voiced_precision": round(active_voiced / active_frames, 6) if active_frames else 0.0,
+        "active_frame_voiced_precision": round(active_voiced / active_frames, 6)
+        if active_frames
+        else 0.0,
         "absolute_pitch_error_p50_cents": _numeric_percentile(residuals, 50.0),
         "absolute_pitch_error_p90_cents": _numeric_percentile(residuals, 90.0),
-        "pitch_within_50_cents": round(sum(value <= 50.0 for value in residuals) / len(residuals), 6) if residuals else 0.0,
+        "pitch_within_50_cents": round(
+            sum(value <= 50.0 for value in residuals) / len(residuals), 6
+        )
+        if residuals
+        else 0.0,
         "monophonic": _notes_are_monophonic(notes),
     }
 
@@ -987,7 +1328,9 @@ def _numeric_percentile(values, percentile: float) -> float | None:
 
 def _notes_are_monophonic(notes) -> bool:
     ordered = sorted(notes, key=lambda note: (note.start, note.end, note.pitch))
-    return all(right.start >= left.end - 1e-6 for left, right in zip(ordered, ordered[1:]))
+    return all(
+        right.start >= left.end - 1e-6 for left, right in zip(ordered, ordered[1:])
+    )
 
 
 def _publish_single_result(
@@ -1050,7 +1393,9 @@ def _publish_single_result(
         result.variants[variant_name] = notes
         if not notes or variant_name in {"main", kind}:
             continue
-        variant_path = variants_dir / f"{_safe_token(kind)}-{_safe_token(variant_name)}.mid"
+        variant_path = (
+            variants_dir / f"{_safe_token(kind)}-{_safe_token(variant_name)}.mid"
+        )
         write_midi_file(
             variant_path,
             [MidiTrack(f"{kind.title()} {variant_name}", channel, program, notes)],
@@ -1104,7 +1449,10 @@ def _run_listen_all(args) -> int:
     from .render import is_available
 
     if not is_available():
-        print("sunofriend: FluidSynth or a GM SoundFont is missing (see README).", file=sys.stderr)
+        print(
+            "sunofriend: FluidSynth or a GM SoundFont is missing (see README).",
+            file=sys.stderr,
+        )
         return 2
     parts = [p.strip() for p in args.parts.split(",")] if args.parts else None
     summary = run_listen_all(
@@ -1120,7 +1468,9 @@ def _run_listen_all(args) -> int:
         evaluate_variants=args.evaluate_variants,
     )
     if "bpm_true" in summary:
-        print(f"detected average bpm: {summary['bpm_true']} (downbeat at {summary['downbeat_offset']}s)")
+        print(
+            f"detected average bpm: {summary['bpm_true']} (downbeat at {summary['downbeat_offset']}s)"
+        )
     print(f"set GarageBand tempo to: {summary['set_garageband_tempo_to']}")
     if summary.get("arrangement"):
         print(summary["arrangement"])
@@ -1306,8 +1656,7 @@ def _run_midi_anchor(args) -> int:
                 "set_garageband_tempo_to": float(args.target_bpm),
                 "concert_pitch_cleanup_requested": bool(args.concert_pitch),
                 "tuning_setups_removed": sum(
-                    result.change.transform.tuning_setups_removed
-                    for result in results
+                    result.change.transform.tuning_setups_removed for result in results
                 ),
                 "files": [result.to_dict() for result in results],
                 "timing_contract": (
@@ -1383,12 +1732,78 @@ def _run_garageband_info(args) -> int:
     return 0
 
 
+def _run_instrument_inventory(args) -> int:
+    from .instrument_catalog import inventory_instruments
+
+    inventory = inventory_instruments(
+        garageband_sampler_root=args.garageband_root,
+        logic_drum_root=args.drum_root,
+        garageband_instrument_root=args.garageband_instrument_root,
+        logic_instrument_root=args.logic_instrument_root,
+        include_audio_units=not args.no_audio_units,
+    ).to_dict()
+    rendered = json.dumps(inventory, indent=2, sort_keys=True) + "\n"
+    if args.out:
+        output = Path(args.out).expanduser()
+        if output.exists():
+            raise ValueError(f"Output file already exists: {output}")
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(rendered, encoding="utf-8")
+    print(rendered, end="")
+    return 0
+
+
+def _run_instrument_match(args) -> int:
+    from .instrument_match import match_instruments
+
+    report = match_instruments(
+        args.stem,
+        args.midi,
+        kind=args.kind,
+        out_dir=args.out_dir,
+        top=args.top,
+        track_index=args.track_index,
+        garageband_sampler_root=args.garageband_root,
+        logic_drum_root=args.drum_root,
+        include_factory=not args.no_factory,
+        include_gm=not args.no_gm,
+        all_programs=args.all_programs,
+        max_source_segments=args.max_source_segments,
+        max_samples_per_asset=args.max_samples_per_asset,
+    )
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_sample_pack(args) -> int:
+    from .instrument_match import build_sample_pack
+
+    report = build_sample_pack(
+        args.stem,
+        args.midi,
+        kind=args.kind,
+        out_dir=args.out_dir,
+        track_index=args.track_index,
+        max_samples=args.max_samples,
+        tail_ms=args.tail_ms,
+        allow_polyphonic=args.allow_polyphonic,
+        instrument_name=args.name,
+        render_preview=not args.no_preview,
+        max_transpose=args.max_transpose,
+        auto_tune=not args.no_auto_tune,
+    )
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
 def _run_clip_import(args) -> int:
     from .clip import read_midi_clips
     from .library import ClipLibrary
 
     clips = list(
-        read_midi_clips(args.midi, key=args.key, role=args.role, suggestions=args.suggest)
+        read_midi_clips(
+            args.midi, key=args.key, role=args.role, suggestions=args.suggest
+        )
     )
     if not clips:
         raise ValueError("MIDI contains no note-bearing tracks")
@@ -1403,7 +1818,9 @@ def _run_clip_import(args) -> int:
         title = clip.title
         if args.title:
             title = args.title if len(clips) == 1 else f"{args.title} - {clip.title}"
-        clip = replace(clip, title=title, tags=tuple(set(clip.tags) | set(args.tag))).with_content_id()
+        clip = replace(
+            clip, title=title, tags=tuple(set(clip.tags) | set(args.tag))
+        ).with_content_id()
         summaries.append(asdict(library.add(clip)))
     print(json.dumps(summaries, indent=2, sort_keys=True))
     return 0
@@ -1478,7 +1895,9 @@ def _run_clip_transform(args) -> int:
     elif args.target_key is not None:
         target = KeySignature.parse(args.target_key)
         if target is None or clip.key is None:
-            raise ValueError("A target-key transformation requires source and target keys")
+            raise ValueError(
+                "A target-key transformation requires source and target keys"
+            )
         if target.mode == clip.key.mode:
             stage(transpose_same_mode(clip, target.tonic, direction=args.direction))
         else:
@@ -1496,7 +1915,12 @@ def _run_clip_transform(args) -> int:
         write_clip_midi(args.out, clip)
     for parent_clip_id, child in staged_versions:
         library.add_version(parent_clip_id, child)
-    print(json.dumps({"clip_id": clip.clip_id, "revision": clip.revision, "midi": args.out}, indent=2))
+    print(
+        json.dumps(
+            {"clip_id": clip.clip_id, "revision": clip.revision, "midi": args.out},
+            indent=2,
+        )
+    )
     return 0
 
 
@@ -1507,13 +1931,17 @@ def _run_clip_instrument(args) -> int:
     library = ClipLibrary(_library_path(args.library))
     clip = library.get(args.clip_id)
     current = clip.instrument
-    if all(value is None for value in (args.role, args.program, args.channel, args.suggest)):
+    if all(
+        value is None for value in (args.role, args.program, args.channel, args.suggest)
+    ):
         raise ValueError("Choose --role, --program, --channel, and/or --suggest")
     instrument = Instrument(
         role=args.role or current.role,
         program=current.program if args.program is None else args.program,
         channel=current.channel if args.channel is None else args.channel,
-        suggestions=current.suggestions if args.suggest is None else tuple(args.suggest),
+        suggestions=current.suggestions
+        if args.suggest is None
+        else tuple(args.suggest),
     )
     recipe = TransformRecipe.create(
         "instrument_profile",

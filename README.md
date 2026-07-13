@@ -21,6 +21,8 @@ clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 | Put complete MIDI in a new key and BPM | `midi-transform` | Semitone transposition plus tick-preserving tempo change; channel 10 drums stay fixed |
 | Put two performances on one starting bar | `midi-anchor` | Recommended mashup operation: one constant shift preserves natural tempo wander |
 | Force stem-derived MIDI onto straight bars | `midi-align` | Experimental 4/4 note-only rebuild through the source metronome map |
+| Inventory and sound-match instruments | `instrument-inventory`, `instrument-match` | Installed GarageBand assets and Audio Units plus audio-based audition rankings |
+| Make a playable instrument from isolated stem notes | `sample-pack` | Self-contained GarageBand/AUSampler SF2, audition MIDI/WAV and extraction evidence |
 | Store and version reusable parts | `clip-import`, `clip-transform`, `clip-export` | Immutable Clip v1 assets with explicit musical or stem-locked timing |
 | Preview or route MIDI to an instrument | `preview`, `play` | FluidSynth WAV preview or CoreMIDI/IAC playback |
 
@@ -555,6 +557,78 @@ Replace `GarageBand Virtual In` with the exact or uniquely matching destination
 shown by `midi-ports`. `play` auditions the notes; it does not start recording
 in GarageBand.
 
+### Discover, match and make instruments
+
+See what is already available before downloading anything:
+
+```bash
+.venv/bin/sunofriend instrument-inventory \
+  --out work/instruments/installed.json
+```
+
+Then compare an aligned stem/MIDI pair with the installed GarageBand/Logic
+sample assets and role-appropriate rendered instruments:
+
+```bash
+.venv/bin/sunofriend instrument-match \
+  "$LIDL_STEMS/Lidl-bass-B major-119bpm-440hz.wav" \
+  examples/the-aisle-at-lidl/midi/repair/bass-contour-clean.mid \
+  --kind bass \
+  --out-dir work/instruments/lidl-bass
+```
+
+The output is a GarageBand audition guide, JSON evidence, a relative timbre
+graph and the best General MIDI proxy MIDI/WAV pairs. Scores shortlist the
+candidates examined; they are not certainty percentages. Factory-family
+matches include related installed sampler-preset names where available.
+`listen-all` also records an exact `instrument_match_command` for every
+successful part.
+
+If the stem has isolated notes and you have the right to sample it, make a
+portable sample instrument:
+
+```bash
+.venv/bin/sunofriend sample-pack \
+  "$LIDL_STEMS/Lidl-bass-B major-119bpm-440hz.wav" \
+  examples/the-aisle-at-lidl/midi/repair/bass-contour-clean.mid \
+  --kind bass \
+  --name "Lidl Walking Bass" \
+  --out-dir work/sample-packs/lidl-bass
+```
+
+The direct handoff is `sunofriend-instrument.sf2`: one self-contained instrument
+with the samples, MIDI root pitches, key ranges and measured cents corrections
+embedded. Sunofriend also writes the source-quality 24-bit WAV zones, portable
+SFZ, JSON report, `garageband-audition.mid`, and an audition WAV rendered from
+the exact generated SF2. Overlapping notes are rejected unless deliberately
+enabled.
+
+To load it in GarageBand:
+
+1. Drag `garageband-audition.mid` into the Tracks area to create a software
+   instrument track, then select that track.
+2. Open Smart Controls and replace the instrument plug-in with **AU Instruments
+   > Apple > AUSampler > Stereo**.
+3. In AUSampler, choose **Load Instrument** and select
+   `sunofriend-instrument.sf2`.
+4. Audition every mapped note, then save the configured track as a custom patch
+   if you want to reuse it.
+
+By default, one sample covers no more than six semitones on either side, and
+stable pitched samples are corrected by up to 99 cents. Use `--max-transpose`
+to narrow the mapping, `--no-auto-tune` to retain the raw sample tuning, or
+`--no-preview` when FluidSynth is unavailable. Separator bleed, effects and
+transitions are baked into samples, so audition carefully and sample only
+recordings you own or may legally reuse. Sample Instrument v2 does not yet add
+seamless sustain loops or velocity layers.
+
+GarageBand can install its additional Apple sound library and compatible
+third-party 64-bit Audio Unit instruments. Sunofriend inventories locally
+exposed instruments but does not download plug-ins or write private Apple
+patch files. The generated SF2 uses the public sound-bank interface supported
+by Apple's sampler. The full method, installation links, score meanings and audition
+workflow are in [Instruments and sound matching](docs/INSTRUMENTS.md).
+
 ### Store, find and transform reusable MIDI clips
 
 Archive generated parts with exact source timing and musical beat positions:
@@ -693,6 +767,9 @@ supplied; the Clip commands themselves also honour `SUNOFRIEND_LIBRARY`.
   the source files.
 - If a run is slow, omit `--evaluate-variants`; use `--no-evaluate` only during
   quick experiments.
+- If `instrument-match` cannot render GM auditions, run
+  `doctor --require preview` or add `--no-gm` to compare installed factory
+  samples only.
 
 ### Inspect an existing GarageBand project
 

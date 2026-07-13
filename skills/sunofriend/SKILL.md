@@ -1,6 +1,6 @@
 ---
 name: sunofriend
-description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for stem separation, mastering, lyric writing, or editing a DAW GUI.
+description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; inventory, sound-match, audition, or build self-contained SF2 sample instruments; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
 ---
 
 # Sunofriend
@@ -21,6 +21,10 @@ scripts.
    - `sunofriend doctor --require convert` for instrumental stem conversion.
    - `sunofriend doctor --require preview` for offline rendering.
    - `sunofriend doctor --require playback` for live MIDI.
+   - `sunofriend instrument-inventory` needs no audio/ML capability check.
+   - `sunofriend doctor --require convert` for factory-sample matching or
+     stem-derived sample instruments. Also require `preview` for rendered GM
+     matches and for sample instruments unless using `--no-preview`.
 5. Inventory the input directory read-only. Confirm files exist and identify
    stem roles, chord PDF, metronome, key, BPM, and tuning.
 6. Use absolute, quoted paths and a fresh output outside the source folder.
@@ -44,6 +48,14 @@ scripts.
 - Fully straight 4/4 grid: use `midi-align` only after explaining its note-only
   data-loss contract.
 - Reusable part storage and versioning: use the `clip-*` commands.
+- Installed GarageBand and Audio Unit discovery: use `instrument-inventory`.
+- Sound-based instrument shortlisting: use `instrument-match` with the
+  unchanged source stem and its aligned MIDI. Keep both factory-asset and
+  rendered-GM evidence unless the user requests one path.
+- New instruments from authorised isolated source notes: use `sample-pack`.
+  Treat `sunofriend-instrument.sf2` as the direct GarageBand/AUSampler handoff.
+  Do not add `--allow-polyphonic` unless the user explicitly accepts chords or
+  bleed baked into each sample.
 - Offline audition: use `preview`; live MIDI: use `midi-ports` then `play`.
 
 Read the live command help for exact options. Typical command shapes are:
@@ -70,6 +82,15 @@ sunofriend midi-anchor "$MIDI_OR_DIRECTORY" \
   --to-bpm "$TARGET_BPM" \
   --target-downbeat-beat 4 \
   --semitones "$SEMITONES"
+
+sunofriend instrument-match "$STEM" "$ALIGNED_MIDI" \
+  --kind "$ROLE" \
+  --out-dir "$FRESH_OUTPUT"
+
+sunofriend sample-pack "$STEM" "$ALIGNED_MIDI" \
+  --kind "$ROLE" \
+  --name "$INSTRUMENT_NAME" \
+  --out-dir "$FRESH_OUTPUT"
 ```
 
 ## Musical and data rules
@@ -88,6 +109,16 @@ sunofriend midi-anchor "$MIDI_OR_DIRECTORY" \
   controllers, sustain, later program changes, pitch bend, aftertouch, SysEx,
   release velocity, markers, lyrics, and chord or key metadata.
 - Preserve separate output directories for source modes and transformed copies.
+- Treat instrument-match scores as relative shortlist evidence, never
+  confidence percentages or proof of the original patch. GarageBand patch
+  names can differ from installed sample-asset names.
+- Do not copy, edit or redistribute Apple factory samples. Do not claim that
+  Sunofriend can headlessly render every private GarageBand patch.
+- For sample packs, use only source audio the user owns or may sample. State
+  that bleed, effects, vibrato and transitions become part of each sample and
+  that Sample Instrument v2 has no inferred loops or velocity layers. Keep
+  auto-tuning enabled unless the user asks to preserve the source's raw tuning;
+  do not present `no-stable-pitch` or rejected tuning estimates as failures.
 
 ## Validate and hand off
 
@@ -106,3 +137,12 @@ sunofriend midi-anchor "$MIDI_OR_DIRECTORY" \
    scope and `render_ready` is true.
 7. Hand off the exact GarageBand BPM, recommended MIDI, audition alternatives,
    instrument suggestions, warnings, and reproducible commands.
+8. For `instrument-match`, confirm the JSON, GarageBand audition guide, timbre
+   graph when present, and retained top GM MIDI/WAV pairs. Report both evidence
+   rankings and ask the user to choose in the full mix.
+9. For `sample-pack`, confirm the SF2, SFZ, audition MIDI, optional audition WAV,
+   source WAVs and JSON exist. Report MIDI roots and key ranges, isolation,
+   tuning status counts, maximum transposition and sustain limitations. Hand
+   off the report's GarageBand steps: put the audition MIDI on a software-
+   instrument track, select Apple AUSampler, load the SF2, audition every zone,
+   then save the configured track as a custom patch if wanted.

@@ -12,6 +12,7 @@ SoundFont lookup order:
   2. Sunofriend's per-user install location
   3. common install locations (Linux apt, macOS Homebrew)
 """
+
 from __future__ import annotations
 
 import os
@@ -40,8 +41,7 @@ def find_fluidsynth() -> str:
         if candidate.is_file() and os.access(candidate, os.X_OK):
             return str(candidate)
         raise RenderError(
-            "SUNOFRIEND_FLUIDSYNTH must point to an executable file: "
-            f"{candidate}"
+            f"SUNOFRIEND_FLUIDSYNTH must point to an executable file: {candidate}"
         )
     found = shutil.which("fluidsynth")
     if found:
@@ -75,6 +75,7 @@ def render_midi_to_wav(
     sample_rate: int = 44100,
     gain: float = 0.7,
     timeout_seconds: float = 120.0,
+    soundfont_path: str | Path | None = None,
 ) -> Path:
     """Render a MIDI file to a WAV file. Returns the output path."""
     midi_path = Path(midi_path)
@@ -82,16 +83,26 @@ def render_midi_to_wav(
     wav_path.parent.mkdir(parents=True, exist_ok=True)
     if not midi_path.exists():
         raise RenderError(f"MIDI file not found: {midi_path}")
+    soundfont = (
+        Path(soundfont_path).expanduser() if soundfont_path else Path(find_soundfont())
+    )
+    if not soundfont.is_file():
+        raise RenderError(f"SoundFont file not found: {soundfont}")
 
     command = [
         find_fluidsynth(),
-        "-ni",                      # no shell, no MIDI-in
-        "-R", "0",                 # dry proxy: reverb masks note endings
-        "-C", "0",                 # chorus can create pitch/onset ghosts
-        "-g", str(gain),
-        "-r", str(sample_rate),
-        "-F", str(wav_path),        # fast file rendering, no audio device
-        find_soundfont(),
+        "-ni",  # no shell, no MIDI-in
+        "-R",
+        "0",  # dry proxy: reverb masks note endings
+        "-C",
+        "0",  # chorus can create pitch/onset ghosts
+        "-g",
+        str(gain),
+        "-r",
+        str(sample_rate),
+        "-F",
+        str(wav_path),  # fast file rendering, no audio device
+        str(soundfont),
         str(midi_path),
     ]
     env = dict(os.environ)
@@ -104,7 +115,11 @@ def render_midi_to_wav(
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise RenderError(f"fluidsynth could not render {midi_path}: {exc}") from exc
-    if result.returncode != 0 or not wav_path.exists() or wav_path.stat().st_size < 1024:
+    if (
+        result.returncode != 0
+        or not wav_path.exists()
+        or wav_path.stat().st_size < 1024
+    ):
         raise RenderError(
             f"fluidsynth failed (exit {result.returncode}): {result.stderr.strip()[:500]}"
         )

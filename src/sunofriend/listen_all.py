@@ -372,6 +372,19 @@ def run_listen_all(
                 "midi": str(final),
                 "provenance": str(provenance_path),
                 "stem": str(stem),
+                "instrument_suggestions": list(
+                    INSTRUMENT_SUGGESTIONS.get(name, ())
+                ),
+                "instrument_match_command": [
+                    "sunofriend",
+                    "instrument-match",
+                    str(stem),
+                    str(final),
+                    "--kind",
+                    name,
+                    "--out-dir",
+                    str(publish_dir / "instrument_matches" / name),
+                ],
             }
             if variants:
                 summary["parts"][name]["variants"] = variants
