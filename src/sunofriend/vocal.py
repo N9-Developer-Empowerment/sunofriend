@@ -18,13 +18,14 @@ import math
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from statistics import median
-from typing import Any, Literal, Sequence
+from typing import Any, Literal, Mapping, Sequence
 
 from .conversion import NoteProvenance
 from .models import NoteEvent
 
 
 VocalRole = Literal["lead", "backing"]
+TrackerMode = Literal["pyin", "consensus"]
 VOCAL_EVIDENCE_PEAK = 0.005
 VOCAL_EVIDENCE_RMS = 5e-4
 
@@ -54,6 +55,13 @@ class VocalConfig:
     quantize_subdivision: int = 4
     quantize_max_shift_ms: float = 55.0
     max_backing_voices: int = 4
+    # Preserve the public library adapter's original lightweight behaviour;
+    # the user-facing vocal-melody command explicitly defaults to consensus.
+    tracker_mode: TrackerMode = "pyin"
+    consensus_tolerance_cents: float = 70.0
+    consensus_min_trackers: int = 2
+    phrase_repair: bool = True
+    phrase_min_support_notes: int = 3
 
     def __post_init__(self) -> None:
         if self.role not in {"lead", "backing"}:
@@ -87,6 +95,19 @@ class VocalConfig:
             raise ValueError("quantize_subdivision must be positive")
         if self.max_backing_voices <= 0:
             raise ValueError("max_backing_voices must be positive")
+        if self.tracker_mode not in {"pyin", "consensus"}:
+            raise ValueError("tracker_mode must be 'pyin' or 'consensus'")
+        if (
+            not math.isfinite(self.consensus_tolerance_cents)
+            or not 0 < self.consensus_tolerance_cents <= 200
+        ):
+            raise ValueError(
+                "consensus_tolerance_cents must be positive and at most 200"
+            )
+        if self.consensus_min_trackers <= 0:
+            raise ValueError("consensus_min_trackers must be positive")
+        if self.phrase_min_support_notes < 2:
+            raise ValueError("phrase_min_support_notes must be at least two")
 
 
 @dataclass(frozen=True)
@@ -196,10 +217,15 @@ class VocalDiagnostics:
     detected_high_midi: int | None
     estimated_voice_count: int
     warnings: tuple[str, ...] = ()
+    tracker_sources: tuple[str, ...] = ()
+    consensus_frame_count: int = 0
+    phrase_repairs: int = 0
+    guide_used: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         value = asdict(self)
         value["warnings"] = list(self.warnings)
+        value["tracker_sources"] = list(self.tracker_sources)
         return value
 
 
@@ -281,6 +307,34 @@ def transcribe_vocal_frames(
         uncertain_notes.append(note)
         uncertain_evidence.append(evidence)
 
+    phrase_notes = list(clean_notes)
+    phrase_evidence = list(clean_evidence)
+    phrase_repairs = 0
+    phrase_lags: tuple[float, ...] = ()
+    if config.phrase_repair and uncertain_notes:
+        (
+            phrase_notes,
+            phrase_evidence,
+            phrase_repairs,
+            phrase_lags,
+        ) = repair_repeated_phrases(
+            clean_notes,
+            clean_evidence,
+            uncertain_notes,
+            uncertain_evidence,
+            config=config,
+        )
+        promoted_keys = {
+            _note_key(note) for note in phrase_notes
+        } - {_note_key(note) for note in clean_notes}
+        retained_uncertain = [
+            (note, evidence)
+            for note, evidence in zip(uncertain_notes, uncertain_evidence)
+            if _note_key(note) not in promoted_keys
+        ]
+        uncertain_notes = [note for note, _ in retained_uncertain]
+        uncertain_evidence = [evidence for _, evidence in retained_uncertain]
+
     variants = {
         "observed_strict": strict_notes,
         "contour_clean": clean_notes,
@@ -293,6 +347,9 @@ def transcribe_vocal_frames(
         "instrument_simple": simple_evidence,
         "gentle_quantized": quantized_evidence,
     }
+    if phrase_repairs:
+        variants["phrase_repaired"] = phrase_notes
+        evidence_by_variant["phrase_repaired"] = phrase_evidence
     if uncertain_notes:
         variants["uncertain"] = uncertain_notes
         evidence_by_variant["uncertain"] = uncertain_evidence
@@ -312,8 +369,10 @@ def transcribe_vocal_frames(
         config,
         estimated_voice_count=1 if clean_notes else 0,
     )
+    if phrase_repairs:
+        diagnostics = replace(diagnostics, phrase_repairs=phrase_repairs)
     return VocalTranscription(
-        primary_variant="contour_clean",
+        primary_variant="phrase_repaired" if phrase_repairs else "contour_clean",
         variants=variants,
         provenance=provenance,
         contour=list(ordered),
@@ -323,6 +382,14 @@ def transcribe_vocal_frames(
             "contour_clean": "Recommended stable intended-note contour; vibrato and slides are not chromatic staircases.",
             "instrument_simple": "Short ornaments are reduced for a simpler instrumental melody.",
             "gentle_quantized": "Only boundaries close to the beat subdivision are moved.",
+            "phrase_repaired": (
+                "Low-confidence notes promoted only where a repeated phrase and source contour agree"
+                + (
+                    f" (detected offsets: {', '.join(f'{value:.2f}s' for value in phrase_lags)})."
+                    if phrase_lags
+                    else "."
+                )
+            ),
             "uncertain": "Low-confidence voiced material quarantined for audition.",
         },
     )
@@ -480,7 +547,13 @@ def transcribe_vocal_melody(
         return result
 
     try:
-        frames = extract_pitch_frames(path, config=config)
+        if config.tracker_mode == "consensus":
+            frames, tracker_warnings = extract_consensus_pitch_frames(
+                path, config=config
+            )
+            warnings.extend(tracker_warnings)
+        else:
+            frames = extract_pitch_frames(path, config=config)
     except Exception as exc:  # optional audio stack must fail soft at this API
         frames = []
         warnings.append(f"F0 extraction unavailable: {type(exc).__name__}: {exc}")
@@ -682,6 +755,261 @@ def extract_pitch_frames(
     return result
 
 
+def extract_consensus_pitch_frames(
+    path: str | Path,
+    *,
+    config: VocalConfig,
+    sample_rate: int = 22_050,
+) -> tuple[list[PitchFrame], tuple[str, ...]]:
+    """Combine independent pYIN and Basic Pitch observations conservatively.
+
+    Basic Pitch supplies a note-level neural hypothesis while pYIN preserves
+    continuous vocal F0 and voicing.  If the optional neural tracker is
+    unavailable, this returns the unmodified pYIN contour and an audit warning.
+    """
+
+    warnings: list[str] = []
+    pyin_frames = extract_pitch_frames(path, config=config, sample_rate=sample_rate)
+    tracks: dict[str, list[PitchFrame]] = {"pyin": pyin_frames}
+    try:
+        basic_frames = extract_basic_pitch_frames(
+            path,
+            config=config,
+            reference_frames=pyin_frames,
+        )
+        if any(frame.f0_hz is not None for frame in basic_frames):
+            tracks["basic-pitch"] = basic_frames
+        else:
+            warnings.append(
+                "Basic Pitch returned no lead-vocal note hypotheses; pYIN remained the sole contour."
+            )
+    except Exception as exc:
+        warnings.append(
+            "Basic Pitch consensus tracker unavailable; pYIN fallback used: "
+            f"{type(exc).__name__}: {exc}"
+        )
+    return consensus_pitch_frames(tracks, config=config), tuple(warnings)
+
+
+def extract_basic_pitch_frames(
+    path: str | Path,
+    *,
+    config: VocalConfig,
+    reference_frames: Sequence[PitchFrame],
+) -> list[PitchFrame]:
+    """Project Basic Pitch note hypotheses onto an existing contour grid."""
+
+    if not reference_frames:
+        return []
+    from basic_pitch.inference import predict
+
+    from .transcribe_pitched import _model_path
+
+    _, _, events = predict(
+        str(path),
+        model_or_model_path=_model_path(),
+        onset_threshold=0.35,
+        frame_threshold=0.22,
+        minimum_note_length=max(45.0, config.min_note_ms),
+        minimum_frequency=config.fmin_hz,
+        maximum_frequency=config.fmax_hz,
+        melodia_trick=False,
+        multiple_pitch_bends=False,
+    )
+    hypotheses = sorted(
+        (
+            float(start),
+            float(end),
+            int(pitch),
+            max(0.0, min(1.0, float(amplitude))),
+        )
+        for start, end, pitch, amplitude, *_ in events
+        if float(end) > float(start)
+    )
+    active: list[tuple[float, float, int, float]] = []
+    event_index = 0
+    result: list[PitchFrame] = []
+    for reference in reference_frames:
+        time = reference.time
+        while event_index < len(hypotheses) and hypotheses[event_index][0] <= time:
+            active.append(hypotheses[event_index])
+            event_index += 1
+        active = [event for event in active if event[1] > time]
+        selected = max(active, key=lambda event: (event[3], -event[2]), default=None)
+        result.append(
+            PitchFrame(
+                time=time,
+                f0_hz=(
+                    fractional_midi_to_hz(float(selected[2]), 440.0)
+                    if selected is not None
+                    else None
+                ),
+                voiced_probability=selected[3] if selected is not None else 0.0,
+                rms=reference.rms,
+                onset_strength=reference.onset_strength,
+                source="basic-pitch",
+            )
+        )
+    return result
+
+
+def consensus_pitch_frames(
+    tracks: Mapping[str, Sequence[PitchFrame]],
+    *,
+    config: VocalConfig,
+) -> list[PitchFrame]:
+    """Fuse tracker contours while publishing disagreement as uncertainty."""
+
+    available = {
+        str(name): _validate_frames(values)
+        for name, values in tracks.items()
+        if values
+    }
+    if not available:
+        return []
+    base_name = "pyin" if "pyin" in available else max(
+        available, key=lambda name: len(available[name])
+    )
+    base = available[base_name]
+    pitched_sources = {
+        name
+        for name, frames in available.items()
+        if any(frame.f0_hz is not None for frame in frames)
+    }
+    if len(pitched_sources) <= 1:
+        return list(base)
+
+    tolerance = config.consensus_tolerance_cents / 100.0
+    required = min(config.consensus_min_trackers, len(pitched_sources))
+    result: list[PitchFrame] = []
+    positions = {name: 0 for name in available}
+    frame_tolerances = {
+        name: max(0.03, _frame_hop(frames) * 0.75)
+        for name, frames in available.items()
+    }
+    for reference in base:
+        observations: list[tuple[str, float, float]] = []
+        for name, frames in available.items():
+            position = positions[name]
+            while position + 1 < len(frames) and abs(
+                frames[position + 1].time - reference.time
+            ) <= abs(frames[position].time - reference.time):
+                position += 1
+            positions[name] = position
+            frame = frames[position]
+            if abs(frame.time - reference.time) > frame_tolerances[name]:
+                frame = None
+            if frame is None or frame.f0_hz is None:
+                continue
+            if frame.voiced_probability < config.uncertain_voicing:
+                continue
+            observations.append(
+                (
+                    name,
+                    hz_to_fractional_midi(frame.f0_hz, config.tuning_hz),
+                    frame.voiced_probability,
+                )
+            )
+        if not observations:
+            result.append(
+                replace(
+                    reference,
+                    f0_hz=None,
+                    voiced_probability=0.0,
+                    source="consensus:unvoiced",
+                )
+            )
+            continue
+
+        clusters: list[list[tuple[str, float, float]]] = []
+        for observation in sorted(observations, key=lambda value: value[1]):
+            compatible = [
+                cluster
+                for cluster in clusters
+                if abs(
+                    observation[1]
+                    - _weighted_median(
+                        [value[1] for value in cluster],
+                        [value[2] for value in cluster],
+                    )
+                )
+                <= tolerance
+            ]
+            if compatible:
+                compatible[0].append(observation)
+            else:
+                clusters.append([observation])
+        best = max(
+            clusters,
+            key=lambda cluster: (
+                len({value[0] for value in cluster}),
+                sum(value[2] for value in cluster),
+                base_name in {value[0] for value in cluster},
+            ),
+        )
+        sources = {value[0] for value in best}
+        base_observation = next(
+            (value for value in observations if value[0] == base_name), None
+        )
+        conflicting = len(observations) > len(best)
+        if len(sources) < required:
+            if base_observation is None:
+                result.append(
+                    replace(
+                        reference,
+                        f0_hz=None,
+                        voiced_probability=0.0,
+                        source="consensus:no-agreement",
+                    )
+                )
+                continue
+            midi_value = base_observation[1]
+            probability = base_observation[2] * 0.85
+            if conflicting:
+                probability = min(
+                    probability,
+                    max(0.0, config.clean_voicing - 0.01),
+                )
+            source = (
+                f"consensus:{base_name}-disputed"
+                if conflicting
+                else f"consensus:{base_name}-solo"
+            )
+        else:
+            midi_value = _weighted_median(
+                [value[1] for value in best],
+                [value[2] for value in best],
+            )
+            agreement = len(sources) / max(1, len(pitched_sources))
+            probability = sum(value[2] for value in best) / len(best)
+            probability *= 0.72 + 0.28 * agreement
+            source = "consensus:" + "+".join(sorted(sources))
+        result.append(
+            PitchFrame(
+                time=reference.time,
+                f0_hz=fractional_midi_to_hz(midi_value, config.tuning_hz),
+                voiced_probability=max(0.0, min(1.0, probability)),
+                rms=reference.rms,
+                onset_strength=reference.onset_strength,
+                source=source,
+            )
+        )
+    return result
+
+
+def _weighted_median(values: Sequence[float], weights: Sequence[float]) -> float:
+    ordered = sorted(zip(values, weights), key=lambda item: item[0])
+    total = sum(max(0.0, weight) for _, weight in ordered)
+    if total <= 0:
+        return float(median(values))
+    running = 0.0
+    for value, weight in ordered:
+        running += max(0.0, weight)
+        if running >= total / 2.0:
+            return float(value)
+    return float(ordered[-1][0])
+
+
 def extract_backing_candidates(
     path: str | Path,
     *,
@@ -821,6 +1149,218 @@ def simplify_vocal_notes(
                 )
             merged.append(note)
     return merged
+
+
+def repair_repeated_phrases(
+    primary_notes: Sequence[NoteEvent],
+    primary_evidence: Sequence[VocalNoteEvidence],
+    uncertain_notes: Sequence[NoteEvent],
+    uncertain_evidence: Sequence[VocalNoteEvidence],
+    *,
+    config: VocalConfig,
+) -> tuple[
+    list[NoteEvent],
+    list[VocalNoteEvidence],
+    int,
+    tuple[float, ...],
+]:
+    """Promote weak notes supported by a repeated, already-observed phrase.
+
+    This is deliberately an omission repair, not a melody generator.  A note
+    must already exist in the lenient source contour, have a same-pitch
+    counterpart at a song-level repeated offset, and fit without overlapping
+    the clean monophonic line.  Chords or key membership never create notes.
+    """
+
+    clean = sorted(primary_notes, key=lambda note: (note.start, note.pitch, note.end))
+    clean_evidence = {
+        _note_key(item.note): item for item in primary_evidence
+    }
+    candidate_evidence = {
+        _note_key(item.note): item for item in uncertain_evidence
+    }
+    if len(clean) < config.phrase_min_support_notes * 2 or not uncertain_notes:
+        return (
+            clean,
+            [clean_evidence[_note_key(note)] for note in clean],
+            0,
+            (),
+        )
+
+    lags = _repeated_phrase_lags(clean, config=config)
+    if not lags:
+        return (
+            clean,
+            [clean_evidence[_note_key(note)] for note in clean],
+            0,
+            (),
+        )
+
+    tolerance = _phrase_time_tolerance(config)
+    promoted: list[tuple[NoteEvent, VocalNoteEvidence, float]] = []
+    for candidate in sorted(
+        uncertain_notes, key=lambda note: (note.start, note.pitch, note.end)
+    ):
+        if any(_notes_overlap(candidate, note, tolerance=0.01) for note in clean):
+            continue
+        evidence = candidate_evidence.get(_note_key(candidate))
+        if evidence is None or evidence.confidence < 0.20:
+            continue
+        supporting_lag = next(
+            (
+                lag
+                for lag in lags
+                if _has_phrase_counterpart(
+                    candidate,
+                    clean,
+                    lag=lag,
+                    tolerance=tolerance,
+                )
+            ),
+            None,
+        )
+        if supporting_lag is None:
+            continue
+        repaired_evidence = replace(
+            evidence,
+            confidence=max(0.60, min(0.90, evidence.confidence + 0.18)),
+            boundary_reasons=tuple(
+                dict.fromkeys(
+                    [*evidence.boundary_reasons, "repeated_phrase_support"]
+                )
+            ),
+            sources=tuple(
+                sorted({*evidence.sources, "phrase-repetition", "source-contour"})
+            ),
+        )
+        promoted.append((candidate, repaired_evidence, supporting_lag))
+
+    accepted: list[tuple[NoteEvent, VocalNoteEvidence, float]] = []
+    for item in sorted(
+        promoted,
+        key=lambda value: (
+            value[0].start,
+            -value[1].confidence,
+            value[0].pitch,
+        ),
+    ):
+        if any(_notes_overlap(item[0], value[0]) for value in accepted):
+            continue
+        accepted.append(item)
+
+    notes = sorted(
+        [*clean, *(note for note, _, _ in accepted)],
+        key=lambda note: (note.start, note.pitch, note.end),
+    )
+    evidence_by_key = dict(clean_evidence)
+    evidence_by_key.update(
+        {_note_key(note): evidence for note, evidence, _ in accepted}
+    )
+    used_lags = tuple(sorted({round(lag, 6) for _, _, lag in accepted}))
+    return (
+        notes,
+        [evidence_by_key[_note_key(note)] for note in notes],
+        len(accepted),
+        used_lags,
+    )
+
+
+def _repeated_phrase_lags(
+    notes: Sequence[NoteEvent], *, config: VocalConfig
+) -> tuple[float, ...]:
+    step = (
+        60.0 / float(config.bpm) / 4.0
+        if config.bpm is not None and config.bpm > 0
+        else 0.10
+    )
+    minimum_lag = (
+        60.0 / float(config.bpm) * 4.0
+        if config.bpm is not None and config.bpm > 0
+        else 2.0
+    )
+    tolerance = _phrase_time_tolerance(config)
+    raw_lags: set[float] = set()
+    for left_index, left in enumerate(notes):
+        for right in notes[left_index + 1 :]:
+            lag = right.start - left.start
+            if lag + 1e-9 < minimum_lag or right.pitch != left.pitch:
+                continue
+            raw_lags.add(round(lag / step) * step)
+
+    supported: list[tuple[int, float, float]] = []
+    for lag in raw_lags:
+        pairs = [
+            note
+            for note in notes
+            if _find_note_near(
+                notes,
+                start=note.start + lag,
+                pitch=note.pitch,
+                tolerance=tolerance,
+            )
+            is not None
+        ]
+        if len(pairs) < config.phrase_min_support_notes:
+            continue
+        span = max(note.start for note in pairs) - min(note.start for note in pairs)
+        minimum_span = (
+            60.0 / float(config.bpm) * 1.5
+            if config.bpm is not None and config.bpm > 0
+            else 0.75
+        )
+        if span + 1e-9 < minimum_span:
+            continue
+        supported.append((len(pairs), span, lag))
+    supported.sort(key=lambda item: (-item[0], -item[1], item[2]))
+    return tuple(item[2] for item in supported[:8])
+
+
+def _phrase_time_tolerance(config: VocalConfig) -> float:
+    if config.bpm is not None and config.bpm > 0:
+        return min(0.18, max(0.055, 60.0 / float(config.bpm) / 5.0))
+    return 0.12
+
+
+def _has_phrase_counterpart(
+    candidate: NoteEvent,
+    notes: Sequence[NoteEvent],
+    *,
+    lag: float,
+    tolerance: float,
+) -> bool:
+    return any(
+        _find_note_near(
+            notes,
+            start=candidate.start + direction * lag,
+            pitch=candidate.pitch,
+            tolerance=tolerance,
+        )
+        is not None
+        for direction in (-1.0, 1.0)
+    )
+
+
+def _find_note_near(
+    notes: Sequence[NoteEvent],
+    *,
+    start: float,
+    pitch: int,
+    tolerance: float,
+) -> NoteEvent | None:
+    return next(
+        (
+            note
+            for note in notes
+            if note.pitch == pitch and abs(note.start - start) <= tolerance
+        ),
+        None,
+    )
+
+
+def _notes_overlap(
+    left: NoteEvent, right: NoteEvent, *, tolerance: float = 0.0
+) -> bool:
+    return min(left.end, right.end) - max(left.start, right.start) > tolerance
 
 
 def gentle_quantize_notes(
@@ -1384,6 +1924,20 @@ def _diagnostics_from_frames(
         )
     if frames and not pitches:
         warnings.append("No sufficiently voiced pitch frames were found.")
+    tracker_sources: set[str] = set()
+    consensus_frames = 0
+    for frame in frames:
+        source = frame.source
+        if source.startswith("consensus:"):
+            detail = source.split(":", 1)[1]
+            if frame.f0_hz is not None and "+" in detail:
+                consensus_frames += 1
+            for tracker in detail.split("+"):
+                tracker = tracker.removesuffix("-solo").removesuffix("-disputed")
+                if tracker not in {"unvoiced", "no-agreement"}:
+                    tracker_sources.add(tracker)
+        else:
+            tracker_sources.add(source)
     return VocalDiagnostics(
         role=config.role,
         tuning_hz=config.tuning_hz,
@@ -1396,6 +1950,8 @@ def _diagnostics_from_frames(
         detected_high_midi=max(pitches) if pitches else None,
         estimated_voice_count=estimated_voice_count,
         warnings=tuple(warnings),
+        tracker_sources=tuple(sorted(tracker_sources)),
+        consensus_frame_count=consensus_frames,
     )
 
 
@@ -1459,13 +2015,17 @@ __all__ = [
     "VocalDiagnostics",
     "VocalNoteEvidence",
     "VocalTranscription",
+    "consensus_pitch_frames",
     "extract_backing_candidates",
+    "extract_basic_pitch_frames",
+    "extract_consensus_pitch_frames",
     "extract_pitch_frames",
     "fractional_midi_to_hz",
     "gentle_quantize_notes",
     "hz_to_fractional_midi",
     "load_audio_phase_safe",
     "phase_safe_downmix",
+    "repair_repeated_phrases",
     "select_backing_vocal_variants",
     "simplify_vocal_notes",
     "transcribe_vocal_frames",

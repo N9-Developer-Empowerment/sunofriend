@@ -16,13 +16,15 @@ clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 | Goal | Command | Timing and data contract |
 | --- | --- | --- |
 | Convert a complete folder of instrumental stems | `listen-all` | Stem-locked MIDI with exact, repair and reconstruct policies |
-| Turn lead or backing vocals into playable melodies | `vocal-melody` | Continuous vocal pitch becomes clean note variants; words are not encoded |
+| Turn lead or backing vocals into playable melodies | `vocal-melody` | pYIN/Basic Pitch consensus, repeated-phrase repair, hummed guidance and editable correction artifacts |
+| Apply reviewed melody edits | `melody-apply` | Validated correction JSON becomes tuned GarageBand-ready MIDI |
 | Speed up or slow down finished MIDI | `midi-tempo` | Only tempo events change; tracks, notes and groove ticks are untouched |
 | Put complete MIDI in a new key and BPM | `midi-transform` | Semitone transposition plus tick-preserving tempo change; channel 10 drums stay fixed |
 | Put two performances on one starting bar | `midi-anchor` | Recommended mashup operation: one constant shift preserves natural tempo wander |
 | Force stem-derived MIDI onto straight bars | `midi-align` | Experimental 4/4 note-only rebuild through the source metronome map |
 | Inventory and sound-match instruments | `instrument-inventory`, `instrument-match` | Installed GarageBand assets and Audio Units plus audio-based audition rankings |
 | Make a playable instrument from isolated stem notes | `sample-pack` | GarageBand-selectable AUSampler preset, self-contained SF2 bank, audition MIDI/WAV and extraction evidence |
+| Keep MIDI, sound and instrument matches together | `instrument-bundle` | Portable Bundle v1 with performance MIDI, source-derived instrument, reference audio, rankings and A/B previews |
 | Store and version reusable parts | `clip-import`, `clip-transform`, `clip-export` | Immutable Clip v1 assets with explicit musical or stem-locked timing |
 | Preview or route MIDI to an instrument | `preview`, `play` | FluidSynth WAV preview or CoreMIDI/IAC playback |
 
@@ -238,10 +240,71 @@ Use `vocal-melody` for an isolated `vocals` or `backing_vocals` stem:
   --out-dir "$OUT/vocal_melody/backing"
 ```
 
-The recommended clean melody is accompanied by strict, simplified and gently
-quantised choices. Backing vocals also publish a dominant line, top line and
-full harmony stack when the audio supports them. A noise-floor backing stem is
-reported as `no-evidence` rather than converted into false notes.
+The default lead path compares the continuous pYIN contour with independent
+Basic Pitch note hypotheses. Agreement increases confidence; disagreement is
+kept below the clean threshold rather than silently choosing a tracker. The
+recommended melody is accompanied by strict, simplified and gently quantised
+choices. When a weak source note completes a phrase that is already repeated
+with at least three clean note anchors, `phrase_repaired` promotes that
+observed note and records the repeated offset in provenance. No chord or key
+rule invents the missing note.
+
+Each run also writes `melody_correction.html` and `melody_corrections.json`.
+The local HTML page overlays the waveform, F0 contour and MIDI notes; it can
+transpose, move, resize, split, merge or remove notes and export reviewed JSON:
+
+```bash
+.venv/bin/sunofriend melody-apply \
+  "$HOME/Downloads/melody-corrections-edited.json" \
+  --out "$OUT/vocal_melody/lead/reviewed-lead.mid"
+```
+
+If automatic extraction cannot tell which continuous line you intend, record
+a rough hum against the same song and use it as a guide:
+
+```bash
+.venv/bin/sunofriend vocal-melody \
+  "$STEMS/My Song-vocals-B major-119bpm-440hz.wav" \
+  --role lead \
+  --guide "$HOME/Music/my-song-hummed-guide.wav" \
+  --prefer-guide \
+  --out-dir "$OUT/vocal_melody/guided-lead"
+```
+
+Sunofriend searches a small time offset and constant register difference, but
+retains a guide note only where the source contour supports it. Use
+`--guide-offset-seconds` when the recording offset is known. Backing vocals
+also publish a dominant line, top line and full harmony stack when the audio
+supports them. A noise-floor stem remains `no-evidence`.
+
+You do not need to hum a complete song. For a more manageable workflow, cut a
+10–15 second reference excerpt, record a matching hum (or `oo`, `la`, whistle,
+or single-note instrument), and supply the approximate excerpt start time in
+the full song. Repeat `--guide-snippet` for as many sections as needed:
+
+```bash
+.venv/bin/sunofriend vocal-melody \
+  "$STEMS/My Song-vocals-B major-119bpm-440hz.wav" \
+  --role lead \
+  --guide-snippet "$GUIDES/verse-reference.wav" "$GUIDES/verse-hum.wav" 42.5 \
+  --guide-snippet "$GUIDES/chorus-reference.wav" "$GUIDES/chorus-hum.wav" 87.0 \
+  --prefer-guide \
+  --out-dir "$OUT/vocal_melody/snippet-guided-lead"
+```
+
+The start time may be approximate: Sunofriend searches two seconds either side.
+It finds a separate comfortable-register transposition for every snippet, then
+remeasures each accepted pitch in the complete vocal stem. `snippet_guides`
+contains only the accepted short sections; `snippet_patched` retains the
+automatic full-song melody and replaces only notes overlapping accepted hums.
+With `--prefer-guide`, the safer full-song `snippet_patched` result becomes the
+primary MIDI and correction-page seed.
+
+For easier tracking, use headphones, start the reference and recording at the
+same phrase boundary, keep the source tempo, and sing a steady open vowel such
+as `oo`. The pitch may be in any comfortable octave. Rhythm and the direction
+of the tune matter more than vocal quality; uncertain notes still cannot bypass
+the source-vocal evidence gate.
 
 The command honours tuning in the folder name. A source recorded at A=429, for
 example, receives a stem-matching pitch bend of about -43.83 cents plus a
@@ -626,6 +689,26 @@ to narrow the mapping, `--no-auto-tune` to retain the raw sample tuning, or
 transitions are baked into samples, so audition carefully and sample only
 recordings you own or may legally reuse. Sample Instrument v2 does not yet add
 seamless sustain loops or velocity layers.
+
+For the normal end-to-end handoff, combine the performance, sound and matches
+in one Instrument Bundle v1:
+
+```bash
+.venv/bin/sunofriend instrument-bundle \
+  "$LIDL_STEMS/Lidl-bass-B major-119bpm-440hz.wav" \
+  examples/the-aisle-at-lidl/midi/repair/bass-contour-clean.mid \
+  --kind bass \
+  --name "Lidl Walking Bass" \
+  --out-dir work/instrument-bundles/lidl-bass
+```
+
+The bundle contains `performance.mid`, a local `source-reference.wav`, the
+complete match report, the source-derived SF2/AUSampler instrument when safe
+isolated notes exist, full-performance and best-GM previews where rendering is
+available, plus `instrument_recipe.json`. Apple factory content is never
+copied: its result is a local patch shortlist. If safe sampling is impossible,
+the bundle is explicitly `partial` but still retains the editable MIDI, source
+reference and match evidence.
 
 GarageBand can install its additional Apple sound library and compatible
 third-party 64-bit Audio Unit instruments. Sunofriend inventories locally

@@ -22,6 +22,8 @@ CLI parsing (`cli.py`)
         +--> creative grid rebuild (`midi_align.py`)
         +--> instrument discovery (`instrument_catalog.py`)
         +--> timbre matching/sample packs (`instrument_match.py`)
+        +--> portable sound/match handoff (`instrument_bundle.py`)
+        +--> hummed guidance and review artifacts (`melody_correction.py`)
         +--> self-contained SoundFont writing (`soundfont.py`)
         +--> reusable Clip v1 library (`clip.py`, `library.py`)
         |

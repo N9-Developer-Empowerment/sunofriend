@@ -8,7 +8,11 @@ from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
+import numpy as np
+import soundfile
+
 from sunofriend.cli import _find_exact_stem, main
+from sunofriend.models import NoteEvent
 from sunofriend.vocal import (
     PitchFrame,
     VocalConfig,
@@ -42,6 +46,50 @@ def _lead_result(tuning_hz: float = 429.0):
 
 
 class VocalCliTests(unittest.TestCase):
+    def test_repeatable_short_hum_snippet_can_patch_primary_melody(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / "Song-C major-85bpm-429hz"
+            folder.mkdir()
+            stem = folder / "Song-vocals-C major-85bpm-429hz.wav"
+            stem.touch()
+            reference = Path(tmp) / "verse-reference.wav"
+            hum = Path(tmp) / "verse-hum.wav"
+            soundfile.write(reference, np.zeros(160_000, dtype=np.float32), 16_000)
+            soundfile.write(hum, np.zeros(160_000, dtype=np.float32), 16_000)
+            output = Path(tmp) / "out"
+
+            with patch(
+                "sunofriend.vocal.transcribe_vocal_melody",
+                return_value=_lead_result(),
+            ), patch(
+                "sunofriend.melody_correction._transcribe_hummed_notes",
+                return_value=([NoteEvent(0.0, 0.35, 55, 84)], []),
+            ), redirect_stdout(StringIO()):
+                status = main(
+                    [
+                        "vocal-melody",
+                        str(stem),
+                        "--role",
+                        "lead",
+                        "--guide-snippet",
+                        str(reference),
+                        str(hum),
+                        "0",
+                        "--prefer-guide",
+                        "--out-dir",
+                        str(output),
+                    ]
+                )
+
+            self.assertEqual(status, 0)
+            summary = json.loads((output / "vocal_summary.json").read_text())
+            self.assertEqual(summary["primary_variant"], "snippet_patched")
+            self.assertEqual(summary["guide_alignment"]["mode"], "snippets")
+            self.assertEqual(
+                summary["guide_alignment"]["accepted_snippet_count"], 1
+            )
+            self.assertIn("snippet_patched", summary["variants"])
+
     def test_exact_stem_lookup_does_not_confuse_backing_and_lead_vocals(self):
         with tempfile.TemporaryDirectory() as tmp:
             folder = Path(tmp)
@@ -89,6 +137,12 @@ class VocalCliTests(unittest.TestCase):
             self.assertNotIn(bytes([0xB2, 101, 0]), concert)
             provenance = json.loads((output / "lead_vocal_provenance.json").read_text())
             self.assertEqual(provenance["counts"]["notes"], 2)
+            self.assertTrue((output / "melody_correction.html").is_file())
+            self.assertTrue((output / "melody_corrections.json").is_file())
+            self.assertEqual(
+                summary["correction"]["html"],
+                str(output / "melody_correction.html"),
+            )
 
     def test_no_evidence_is_a_successful_explicit_result_without_midi(self):
         with tempfile.TemporaryDirectory() as tmp:

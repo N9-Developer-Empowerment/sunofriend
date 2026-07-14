@@ -34,16 +34,22 @@ separate:
    as `no-evidence`; it is never normalised into invented notes.
 2. Load stereo phase-safely so opposite-polarity material does not disappear
    during mono analysis.
-3. Estimate a frame-by-frame F0 contour with pYIN for a lead vocal. Backing
-   vocals also use range-limited polyphonic Basic Pitch candidates.
+3. Estimate a frame-by-frame F0 contour with pYIN and project independent
+   Basic Pitch note hypotheses onto the same timeline. Agreement contributes
+   a consensus frame; a conflicting single-tracker result is downgraded rather
+   than silently selected. `--tracker-mode pyin` retains the original path.
+   Backing vocals also use range-limited polyphonic Basic Pitch candidates.
 4. Convert Hz into fractional MIDI using the source's actual concert-A tuning.
 5. Smooth within voiced regions and use hysteresis/persistence to prevent
    vibrato and slides becoming a chromatic staircase.
 6. Use unvoiced gaps, pitch plateaus, dynamics and spectral attacks to decide
    note boundaries. Brief consonant gaps can be bridged; a supported same-pitch
    reattack remains a new note.
-7. Publish several interpretations instead of hiding ambiguous decisions.
-8. Keep per-note provenance, the full F0 contour and measured comparison
+7. Compare repeated clean phrases. A lenient source note can be promoted only
+   when at least three clean same-pitch anchors establish a repeated offset;
+   the repair never creates a note from chords or key alone.
+8. Publish several interpretations instead of hiding ambiguous decisions.
+9. Keep per-note provenance, the full F0 contour and measured comparison
    statistics for subsequent listening and adjustment.
 
 Lyrics are not encoded. Consonants affect articulation evidence only; words do
@@ -59,6 +65,8 @@ For a lead vocal:
 | `observed_strict` | Only high-voicing-confidence pitch evidence |
 | `instrument_simple` | Removes short ornaments for guitar, sax, clarinet, trumpet or mallet instruments |
 | `gentle_quantized` | Moves only boundaries already close to the warped beat subdivision |
+| `phrase_repaired` | Adds weak source-observed omissions supported by a repeated clean phrase; emitted only when a repair exists |
+| `guide_assisted` | Optional hummed rhythm/contour aligned to the song and retained only where source F0 supports it |
 | `uncertain` | Low-confidence voiced fragments kept outside the main melody |
 | `concert_pitch` | Main notes at ordinary A=440, without the source-tuning bend |
 
@@ -106,6 +114,101 @@ The chord chart is recorded for audit, but v1 does not force observed vocal
 notes onto an untimed chart. This protects chromatic melody notes and avoids
 turning uncertain harmony timing into confident pitch changes.
 
+## Hummed guide and visual correction
+
+When a stem contains competing voices, record a rough hum while listening from
+the same song origin. It may start up to eight seconds early or late and may be
+in another octave or comfortable register:
+
+```bash
+.venv/bin/sunofriend vocal-melody path/to/vocals.wav \
+  --role lead --bpm 119 \
+  --guide path/to/hummed-guide.wav \
+  --prefer-guide \
+  --out-dir work/song-vocals/guided-lead
+```
+
+Sunofriend searches the guide offset and one constant semitone transposition.
+It then takes timing and intended contour from the hum but measures pitch
+again in the source stem. Guide notes with insufficient source voicing or more
+than 1.5 semitones of disagreement are omitted. `guide_alignment` in
+`vocal_summary.json` records the chosen offset, transposition and score.
+
+### Short excerpt workflow
+
+A full-song hum is not required. Short, repeated submissions are usually
+easier and avoid tempo drift over several minutes. For every 10–15 second
+section, keep:
+
+1. a reference excerpt;
+2. a hum, whistle, `oo`/`la` recording, or simple one-note-instrument version
+   beginning at the same phrase boundary; and
+3. the approximate start time of the excerpt in the full song.
+
+The timestamp can come from GarageBand, QuickTime, or another player and only
+needs to be within two seconds:
+
+```bash
+.venv/bin/sunofriend vocal-melody path/to/vocals.wav \
+  --role lead --bpm 119 \
+  --guide-snippet guides/verse-reference.wav guides/verse-hum.wav 42.5 \
+  --guide-snippet guides/chorus-reference.wav guides/chorus-hum.wav 87.0 \
+  --prefer-guide \
+  --out-dir work/song-vocals/snippet-guided-lead
+```
+
+`--guide-snippet` is repeatable and takes `REFERENCE_WAV HUM_WAV START_SECONDS`.
+Five to thirty seconds is accepted without a duration warning; 10–15 seconds
+is the recommended working size. A vocal-stem excerpt is the clearest
+reference, but a vocal-dominant song excerpt is still useful for the person
+recording the guide because final pitch acceptance is measured against the
+full vocal stem, not the excerpt.
+
+Sunofriend searches ±2 seconds around each timestamp and estimates a separate
+constant register change for every hum. It publishes:
+
+- `snippet_guides`: only accepted notes from the submitted excerpts;
+- `snippet_patched`: the automatic full-song melody with only overlapping
+  automatic notes replaced by accepted snippet notes.
+
+`--prefer-guide` selects `snippet_patched`, not the incomplete snippets-only
+track. Failed snippets do not erase the automatic melody. Each snippet's file
+paths, durations, requested start, chosen alignment, transposition, detected
+notes, accepted notes and warnings are recorded under `guide_alignment` in
+`vocal_summary.json` and in the correction JSON.
+
+Practical recording guidance for non-singers:
+
+- listen through headphones so the reference does not leak into the guide;
+- use a close microphone and a steady `oo`, `la`, whistle, kazoo, or one-note
+  keyboard/guitar line;
+- sing in any comfortable octave—Sunofriend estimates the register difference;
+- concentrate on note changes and rhythm rather than vocal tone or lyrics;
+- submit the chorus and other repeated hooks first, then add difficult verses;
+- leave sections without a clear melody to the automatic consensus and visual
+  correction workflow.
+
+Every normal run creates:
+
+- `melody_correction.html`: a local waveform/F0/piano-roll view with pitch,
+  timing, split, merge and delete controls;
+- `melody_corrections.json`: the initial, directly applicable correction
+  document.
+
+Open the HTML file locally, audition the referenced stem, export the reviewed
+JSON, and apply it without overwriting an existing MIDI:
+
+```bash
+.venv/bin/sunofriend melody-apply \
+  path/to/melody-corrections-edited.json \
+  --out work/song-vocals/reviewed-lead.mid
+```
+
+The correction document retains BPM, source tuning, role, channel and program,
+so the result carries the same GarageBand fine-tuning bend. It also writes a
+`.correction.json` audit beside the new MIDI. Use `--no-correction-report` only
+when the HTML/JSON artifacts are not wanted.
+
 ## Tuning and GarageBand
 
 MIDI note 69 normally means A=440. A recording at A=429 is about 43.83 cents
@@ -132,6 +235,9 @@ For the stem-aligned file:
 - pitch range, note count and total note duration;
 - whether a melody variant is monophonic.
 
+Diagnostics also list the tracker sources, number of consensus frames,
+repeated-phrase promotions and whether a hummed guide was used.
+
 These metrics detect omissions, hallucinated notes, mistuning and excessive
 fragmentation, but they do not decide the best musical abstraction. Iterate in
 this order:
@@ -147,4 +253,3 @@ this order:
 An external or manually played reference MIDI can be useful as a scoring aid,
 especially for selecting a backing voice. It should not silently supply notes
 that are absent from the stem; any such repair must be labelled inferred.
-

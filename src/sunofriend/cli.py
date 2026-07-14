@@ -16,6 +16,7 @@ _COMMANDS = {
     "listen",
     "listen-all",
     "vocal-melody",
+    "melody-apply",
     "evaluate",
     "doctor",
     "preview",
@@ -29,6 +30,7 @@ _COMMANDS = {
     "instrument-inventory",
     "instrument-match",
     "sample-pack",
+    "instrument-bundle",
     "clip-import",
     "clip-list",
     "clip-show",
@@ -174,6 +176,60 @@ def build_parser() -> argparse.ArgumentParser:
     vocal.add_argument(
         "--fmax", type=float, default=1046.5, help="Highest vocal F0 in Hz"
     )
+    vocal.add_argument(
+        "--tracker-mode",
+        choices=["consensus", "pyin"],
+        default="consensus",
+        help="Fuse pYIN with Basic Pitch when available, or use pYIN alone",
+    )
+    vocal.add_argument(
+        "--no-phrase-repair",
+        action="store_true",
+        help="Do not promote weak source notes supported by repeated phrases",
+    )
+    guide_input = vocal.add_mutually_exclusive_group()
+    guide_input.add_argument(
+        "--guide",
+        default=None,
+        help="Optional roughly hummed WAV guide recorded against the same song",
+    )
+    guide_input.add_argument(
+        "--guide-snippet",
+        action="append",
+        nargs=3,
+        default=[],
+        metavar=("REFERENCE_WAV", "HUM_WAV", "START_SECONDS"),
+        help=(
+            "Repeatable short reference excerpt, matching hum, and the excerpt's "
+            "start time in the full song"
+        ),
+    )
+    vocal.add_argument(
+        "--guide-offset-seconds",
+        type=float,
+        default=None,
+        help="Known guide-to-song offset; otherwise Sunofriend searches ±8 seconds",
+    )
+    vocal.add_argument(
+        "--prefer-guide",
+        action="store_true",
+        help=(
+            "Publish the source-supported full guide, or the automatic melody "
+            "patched by accepted snippets, as the primary MIDI"
+        ),
+    )
+    vocal.add_argument(
+        "--no-correction-report",
+        action="store_true",
+        help="Skip the local interactive HTML/JSON melody correction artifacts",
+    )
+
+    melody_apply = sub.add_parser(
+        "melody-apply",
+        help="Turn an edited Sunofriend melody-correction JSON file into MIDI",
+    )
+    melody_apply.add_argument("corrections", help="Exported correction JSON")
+    melody_apply.add_argument("--out", required=True, help="New corrected MIDI file")
 
     listen_all = sub.add_parser(
         "listen-all",
@@ -694,6 +750,53 @@ def build_parser() -> argparse.ArgumentParser:
         help="Do not measure and correct stable sample pitch in the SF2",
     )
 
+    instrument_bundle = sub.add_parser(
+        "instrument-bundle",
+        help="Package MIDI, carried source sound, match evidence, and A/B previews",
+    )
+    instrument_bundle.add_argument("stem", help="Source stem WAV you may legally sample")
+    instrument_bundle.add_argument("midi", help="Aligned note-bearing MIDI")
+    instrument_bundle.add_argument(
+        "--kind",
+        required=True,
+        choices=[
+            "kick",
+            "snare",
+            "hat",
+            "cymbals",
+            "toms",
+            "other_kit",
+            "drums",
+            "keys",
+            "piano",
+            "synth",
+            "lead",
+            "pads",
+            "strings",
+            "bass",
+            "vocal",
+            "vocals",
+            "backing",
+            "backing_vocals",
+        ],
+    )
+    instrument_bundle.add_argument("--out-dir", required=True)
+    instrument_bundle.add_argument("--name", default=None)
+    instrument_bundle.add_argument("--track-index", type=int, default=None)
+    instrument_bundle.add_argument("--top", type=int, default=5)
+    instrument_bundle.add_argument("--garageband-root", default=None)
+    instrument_bundle.add_argument("--drum-root", default=None)
+    instrument_bundle.add_argument("--max-samples", type=int, default=12)
+    instrument_bundle.add_argument("--tail-ms", type=float, default=120.0)
+    instrument_bundle.add_argument("--max-transpose", type=int, default=6)
+    instrument_bundle.add_argument("--no-factory", action="store_true")
+    instrument_bundle.add_argument("--no-gm", action="store_true")
+    instrument_bundle.add_argument("--no-source-audio", action="store_true")
+    instrument_bundle.add_argument("--no-source-instrument", action="store_true")
+    instrument_bundle.add_argument("--no-preview", action="store_true")
+    instrument_bundle.add_argument("--allow-polyphonic", action="store_true")
+    instrument_bundle.add_argument("--no-auto-tune", action="store_true")
+
     clip_import = sub.add_parser(
         "clip-import", help="Import MIDI tracks into a Clip v1 library"
     )
@@ -811,6 +914,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_listen_all(args)
         if args.command == "vocal-melody":
             return _run_vocal_melody(args)
+        if args.command == "melody-apply":
+            return _run_melody_apply(args)
         if args.command == "evaluate":
             return _run_evaluate(args)
         if args.command == "doctor":
@@ -837,6 +942,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_instrument_match(args)
         if args.command == "sample-pack":
             return _run_sample_pack(args)
+        if args.command == "instrument-bundle":
+            return _run_instrument_bundle(args)
         if args.command == "clip-import":
             return _run_clip_import(args)
         if args.command == "clip-list":
@@ -1003,8 +1110,46 @@ def _run_vocal_melody(args) -> int:
         bpm=bpm,
         fmin_hz=float(args.fmin),
         fmax_hz=float(args.fmax),
+        tracker_mode=args.tracker_mode,
+        phrase_repair=not args.no_phrase_repair,
     )
     result = transcribe_vocal_melody(stem, config=config, grid=grid)
+    guide_alignment = None
+    has_guide = bool(args.guide or args.guide_snippet)
+    if args.prefer_guide and not has_guide:
+        raise ValueError("--prefer-guide requires --guide or --guide-snippet")
+    if args.guide_offset_seconds is not None and not args.guide:
+        raise ValueError("--guide-offset-seconds requires --guide")
+    if args.guide:
+        from .melody_correction import add_hummed_guide_variant
+
+        result, guide_alignment = add_hummed_guide_variant(
+            result,
+            args.guide,
+            config=config,
+            grid=grid,
+            offset_seconds=args.guide_offset_seconds,
+            prefer_guide=args.prefer_guide,
+        )
+    elif args.guide_snippet:
+        from .melody_correction import add_hummed_snippet_variants
+
+        snippets = []
+        for reference, hum, start_value in args.guide_snippet:
+            try:
+                start_seconds = float(start_value)
+            except ValueError as exc:
+                raise ValueError(
+                    "--guide-snippet START_SECONDS must be a number"
+                ) from exc
+            snippets.append((reference, hum, start_seconds))
+        result, guide_alignment = add_hummed_snippet_variants(
+            result,
+            snippets,
+            config=config,
+            grid=grid,
+            prefer_guide=args.prefer_guide,
+        )
     summary = _publish_vocal_result(
         result,
         stem=stem,
@@ -1016,7 +1161,35 @@ def _run_vocal_melody(args) -> int:
         grid=grid,
         out_dir=Path(args.out_dir),
     )
+    if not args.no_correction_report:
+        from .melody_correction import write_melody_correction_artifacts
+
+        correction = write_melody_correction_artifacts(
+            stem,
+            result,
+            out_dir=Path(args.out_dir),
+            bpm=bpm,
+            key=key,
+            role=args.role,
+            primary_midi=summary.get("primary_midi"),
+            guide_alignment=guide_alignment,
+        )
+        summary["correction"] = correction
+    if guide_alignment is not None:
+        summary["guide_alignment"] = guide_alignment
+    summary_path = Path(args.out_dir) / "vocal_summary.json"
+    summary_path.write_text(
+        json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8"
+    )
     print(json.dumps(summary, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_melody_apply(args) -> int:
+    from .melody_correction import apply_melody_corrections
+
+    report = apply_melody_corrections(args.corrections, out_path=args.out)
+    print(json.dumps(report, indent=2, sort_keys=True))
     return 0
 
 
@@ -1791,6 +1964,34 @@ def _run_sample_pack(args) -> int:
         render_preview=not args.no_preview,
         max_transpose=args.max_transpose,
         auto_tune=not args.no_auto_tune,
+    )
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_instrument_bundle(args) -> int:
+    from .instrument_bundle import build_instrument_bundle
+
+    report = build_instrument_bundle(
+        args.stem,
+        args.midi,
+        kind=args.kind,
+        out_dir=args.out_dir,
+        track_index=args.track_index,
+        top=args.top,
+        garageband_sampler_root=args.garageband_root,
+        logic_drum_root=args.drum_root,
+        include_factory=not args.no_factory,
+        include_gm=not args.no_gm,
+        include_source_audio=not args.no_source_audio,
+        build_source_instrument=not args.no_source_instrument,
+        render_preview=not args.no_preview,
+        allow_polyphonic=args.allow_polyphonic,
+        max_samples=args.max_samples,
+        tail_ms=args.tail_ms,
+        max_transpose=args.max_transpose,
+        auto_tune=not args.no_auto_tune,
+        instrument_name=args.name,
     )
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0

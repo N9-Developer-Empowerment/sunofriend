@@ -6,6 +6,58 @@ the patch changes its attack, decay, brightness, noise, articulation or
 register. Sunofriend therefore produces audition evidence and keeps the final
 choice with the musician.
 
+## Instrument Bundle v1: sound and match together
+
+A Standard MIDI file cannot contain the actual GarageBand patch audio.
+`instrument-bundle` therefore packages the editable performance, a portable
+source-derived sound where possible, the installed-sound shortlist and
+listening references without conflating them:
+
+```bash
+sunofriend instrument-bundle \
+  "/absolute/path/to/song-bass.wav" \
+  "/absolute/path/to/bass_listened.mid" \
+  --kind bass \
+  --name "Song Walking Bass" \
+  --out-dir work/instrument-bundles/song-bass
+```
+
+The default output is:
+
+```text
+work/instrument-bundles/song-bass/
+├── performance.mid
+├── source-reference.wav
+├── instrument_bundle.json
+├── instrument_recipe.json
+├── README.md
+├── matches/
+│   ├── instrument_matches.json
+│   ├── GARAGEBAND_AUDITION.md
+│   └── gm_auditions/...
+├── source-instrument/
+│   ├── sunofriend-instrument.aupreset
+│   ├── sunofriend-instrument.sf2
+│   ├── sunofriend-instrument.sfz
+│   └── samples/...
+└── previews/
+    ├── source-derived-performance.wav
+    └── best-matched-gm.wav
+```
+
+`instrument_recipe.json` records the top local factory asset, ranked
+alternatives, portable GM program hint, carried sample bank and exact
+GarageBand handoff. Factory assets are recommendations only; Apple audio is
+not copied. The source-derived instrument contains audio from the authorised
+stem and remains subject to its licence and the bleed/effects warnings below.
+
+A stem without isolated playable notes produces a `partial` bundle rather
+than failing the whole handoff: MIDI, source reference and match evidence stay
+available, while `source_instrument_error` explains why no SF2 was created.
+Use `--no-source-audio` for a smaller non-portable bundle,
+`--no-source-instrument` when sampling is not authorised, or `--no-gm` when
+FluidSynth previews are unavailable.
+
 ## What is available on this Mac?
 
 Run:

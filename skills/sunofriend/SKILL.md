@@ -1,6 +1,6 @@
 ---
 name: sunofriend
-description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; inventory, sound-match, audition, or build self-contained SF2 sample instruments; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
+description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; combine tracker consensus, repeated phrases, hummed guidance and reviewed melody corrections; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
 ---
 
 # Sunofriend
@@ -25,6 +25,9 @@ scripts.
    - `sunofriend doctor --require convert` for factory-sample matching or
      stem-derived sample instruments. Also require `preview` for rendered GM
      matches and for sample instruments unless using `--no-preview`.
+   - `sunofriend instrument-bundle` has the same requirements as both
+     `instrument-match` and `sample-pack`. `--no-gm --no-preview` removes the
+     FluidSynth requirement; `--no-source-instrument` removes sampling.
 5. Inventory the input directory read-only. Confirm files exist and identify
    stem roles, chord PDF, metronome, key, BPM, and tuning.
 6. Use absolute, quoted paths and a fresh output outside the source folder.
@@ -37,8 +40,17 @@ scripts.
 - Whole instrumental stem folder: use `listen-all`; default to
   `--conversion-mode repair` and leave evaluation enabled.
 - One instrumental stem: use `listen` with an explicit supported `--kind`.
-- Lead or backing vocals: use `vocal-melody` separately. `listen-all` does not
-  include vocals.
+- Lead or backing vocals: use `vocal-melody` separately. It defaults to
+  pYIN/Basic Pitch consensus, conservative repeated-phrase repair and a local
+  correction HTML/JSON report. `listen-all` does not include vocals.
+- Ambiguous intended vocal line: add a roughly time-aligned WAV with `--guide`;
+  add `--prefer-guide` only when the user wants the source-supported guide as
+  primary. Use `--guide-offset-seconds` when the recording offset is known.
+- A full-song hum is difficult: use repeatable `--guide-snippet
+  REFERENCE_WAV HUM_WAV START_SECONDS` inputs, preferably 10–15 seconds each.
+  The start may be approximate within two seconds. `--prefer-guide` publishes
+  the automatic full-song melody patched only where accepted snippets overlap.
+- Reviewed melody JSON exported by the local report: use `melody-apply`.
 - Existing stem/MIDI comparison: use `evaluate`.
 - BPM-only change preserving bars and ticks: use `midi-tempo`.
 - Complete MIDI key, BPM, or recognised Sunofriend tuning change: use
@@ -58,6 +70,11 @@ scripts.
   preset chooser greys out raw SF2 files.
   Do not add `--allow-polyphonic` unless the user explicitly accepts chords or
   bleed baked into each sample.
+- Normal combined MIDI/sound/match handoff: use `instrument-bundle`. It copies
+  the source WAV by default, so use `--no-source-audio` when portability is not
+  wanted. Use `--no-source-instrument` unless sampling is authorised. A
+  `partial` bundle is valid only when its warnings explain the missing sound or
+  match component.
 - Offline audition: use `preview`; live MIDI: use `midi-ports` then `play`.
 
 Read the live command help for exact options. Typical command shapes are:
@@ -70,6 +87,21 @@ sunofriend listen-all "$INPUT" \
 sunofriend vocal-melody "$VOCAL_STEM" \
   --role lead \
   --out-dir "$OUTPUT"
+
+sunofriend vocal-melody "$VOCAL_STEM" \
+  --role lead \
+  --guide "$HUMMED_GUIDE" \
+  --prefer-guide \
+  --out-dir "$OUTPUT"
+
+sunofriend vocal-melody "$VOCAL_STEM" \
+  --role lead \
+  --guide-snippet "$REFERENCE_EXCERPT" "$MATCHING_HUM" "$START_SECONDS" \
+  --prefer-guide \
+  --out-dir "$OUTPUT"
+
+sunofriend melody-apply "$REVIEWED_CORRECTIONS_JSON" \
+  --out "$CORRECTED_MIDI"
 
 sunofriend midi-transform "$MIDI_OR_DIRECTORY" \
   --out "$OUTPUT" \
@@ -90,6 +122,11 @@ sunofriend instrument-match "$STEM" "$ALIGNED_MIDI" \
   --out-dir "$FRESH_OUTPUT"
 
 sunofriend sample-pack "$STEM" "$ALIGNED_MIDI" \
+  --kind "$ROLE" \
+  --name "$INSTRUMENT_NAME" \
+  --out-dir "$FRESH_OUTPUT"
+
+sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   --kind "$ROLE" \
   --name "$INSTRUMENT_NAME" \
   --out-dir "$FRESH_OUTPUT"
@@ -121,6 +158,15 @@ sunofriend sample-pack "$STEM" "$ALIGNED_MIDI" \
   that Sample Instrument v2 has no inferred loops or velocity layers. Keep
   auto-tuning enabled unless the user asks to preserve the source's raw tuning;
   do not present `no-stable-pitch` or rejected tuning estimates as failures.
+- Tracker consensus does not mean certainty. Inspect disputed/solo frame
+  counts and keep `uncertain` separate. Repeated-phrase repair may promote only
+  notes already present in the lenient source contour; a hummed guide may set
+  intention and rhythm but must not bypass source-pitch support.
+- For guide snippets, report every requested and chosen start time, per-snippet
+  transpose, detected/accepted note count and warning. A failed snippet must
+  not remove the automatic full-song melody.
+- A correction JSON is a user-authored replacement note list. Apply it to a
+  fresh MIDI path and retain the adjacent `.correction.json` audit.
 
 ## Validate and hand off
 
@@ -132,7 +178,9 @@ sunofriend sample-pack "$STEM" "$ALIGNED_MIDI" \
    repaired, inferred, possible, or uncertain counts where available. Do not
    invent universal pass thresholds.
 4. For vocals, inspect contour coverage, pitch-error statistics, monophony, and
-   the published variants.
+   the published variants. Also report tracker sources, consensus frame count,
+   repeated-phrase promotions, guide alignment/transpose and the correction
+   HTML/JSON paths when present.
 5. For transformations, inspect the JSON audit for file count, embedded target
    tempo, transposed events, preserved drums, tuning cleanup, and anchor shift.
 6. Render representative MIDI with `preview` when auditory validation is in
@@ -150,3 +198,7 @@ sunofriend sample-pack "$STEM" "$ALIGNED_MIDI" \
    software-instrument track, select Apple AUSampler, load the `.aupreset` from
    its **Manual** preset menu, audition every zone, then save the configured
    track as a custom patch if wanted.
+10. For `instrument-bundle`, confirm `performance.mid`, recipe/report, source
+    reference when requested, match directory, source instrument when safe,
+    and retained previews. Explicitly distinguish an embedded authorised SF2
+    from a non-embedded Apple factory recommendation.

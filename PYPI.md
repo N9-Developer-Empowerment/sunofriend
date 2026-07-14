@@ -9,6 +9,11 @@ sound-based audition shortlists, and extract authorised isolated stem notes as
 self-contained SF2 sample instruments with GarageBand-selectable Apple
 AUSampler preset wrappers, with WAV/SFZ sources and pitch-mapping evidence
 retained.
+Instrument Bundle v1 keeps the MIDI, authorised carried sound, local factory
+and General MIDI match evidence, source reference, and A/B previews together.
+Vocal melody extraction adds pYIN/Basic Pitch consensus, conservative repeated
+phrase repair, an optional hummed guide, and a local visual correction report
+whose reviewed JSON can be converted back into tuned MIDI.
 
 Sunofriend complements AI music generators, stem separators, and DAWs rather
 than replacing them. The current supported production workflow is macOS-first,
