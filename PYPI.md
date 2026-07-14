@@ -6,8 +6,9 @@ accuracy, publish conservative or reconstructed variants, change MIDI key and
 tempo, preserve or straighten groove, and store reusable Clip v1 parts.
 It can also inventory installed GarageBand/Audio Unit instruments, create
 sound-based audition shortlists, and extract authorised isolated stem notes as
-self-contained SF2 sample instruments for direct loading in GarageBand's Apple
-AUSampler, with WAV/SFZ sources and pitch-mapping evidence retained.
+self-contained SF2 sample instruments with GarageBand-selectable Apple
+AUSampler preset wrappers, with WAV/SFZ sources and pitch-mapping evidence
+retained.
 
 Sunofriend complements AI music generators, stem separators, and DAWs rather
 than replacing them. The current supported production workflow is macOS-first,

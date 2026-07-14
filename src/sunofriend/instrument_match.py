@@ -469,6 +469,21 @@ def build_sample_pack(
         ).to_dict()
         soundfont_summary["path"] = "sunofriend-instrument.sf2"
 
+        ausampler_preset = None
+        ausampler_preset_warning = None
+        try:
+            from .ausampler import AUSamplerPresetError, write_ausampler_preset
+
+            ausampler_preset = write_ausampler_preset(
+                sf2_path,
+                work / "sunofriend-instrument.aupreset",
+                referenced_soundfont_path=(
+                    destination.resolve() / "sunofriend-instrument.sf2"
+                ),
+            )
+        except AUSamplerPresetError as exc:
+            ausampler_preset_warning = str(exc)
+
         audition_midi = work / "garageband-audition.mid"
         _write_sample_pack_audition(audition_midi, rows)
         audition_wav = work / "garageband-audition.wav"
@@ -482,7 +497,7 @@ def build_sample_pack(
             )
         warnings = [
             "Separator bleed, room sound, effects, vibrato, and note transitions in the stem become part of every extracted sample.",
-            "The self-contained SF2 is the GarageBand handoff; the SFZ remains an alternative for compatible third-party sampler Audio Units.",
+            "The .aupreset is GarageBand's selectable wrapper; the referenced SF2 contains the samples and mapping. The SFZ remains an alternative for compatible third-party sampler Audio Units.",
             "Use only stems and recordings you own or have permission to sample.",
             "Sustained notes are not looped in Sample Instrument v2; long MIDI notes stop when the embedded sample ends.",
             "SoundFont stores embedded samples as mono PCM16 for broad sampler compatibility; the separate extracted WAVs remain PCM24.",
@@ -493,6 +508,11 @@ def build_sample_pack(
             )
         if selection_warning:
             warnings.append(selection_warning)
+        if ausampler_preset_warning:
+            warnings.append(
+                "GarageBand's preset chooser cannot select a raw SF2. "
+                f"No .aupreset wrapper was created: {ausampler_preset_warning}"
+            )
         if allow_polyphonic and any(not segment.isolated for segment in chosen):
             warnings.append(
                 "Polyphonic extraction was explicitly enabled; some samples contain more than one source note."
@@ -528,17 +548,30 @@ def build_sample_pack(
                 "readme": "README.md",
                 "sfz": "sunofriend-instrument.sfz",
                 "soundfont": "sunofriend-instrument.sf2",
+                "ausampler_preset": (
+                    "sunofriend-instrument.aupreset" if ausampler_preset else None
+                ),
                 "samples": "samples",
                 "audition_midi": "garageband-audition.mid",
                 "audition_wav": ("garageband-audition.wav" if render_preview else None),
             },
-            "garageband_import": [
-                "Drag garageband-audition.mid into the Tracks area, then select the new Software Instrument track.",
-                "Open Smart Controls and choose AU Instruments > Apple > AUSampler > Stereo as the instrument.",
-                "Open AUSampler, choose its load-instrument command, and select sunofriend-instrument.sf2.",
-                "Play the audition region to verify every embedded zone, then replace it with the song MIDI.",
-                "Save the configured track as a custom GarageBand patch if you want it in future projects.",
-            ],
+            "ausampler_preset": ausampler_preset,
+            "garageband_import": (
+                [
+                    "Keep sunofriend-instrument.aupreset and sunofriend-instrument.sf2 in this output directory; the preset points to this exact SF2 path.",
+                    "Drag garageband-audition.mid into the Tracks area, then select the new Software Instrument track.",
+                    "Open Smart Controls and choose AU Instruments > Apple > AUSampler > Stereo as the instrument.",
+                    "Open AUSampler's preset menu (it normally says Manual), choose its load/open setting command, and select sunofriend-instrument.aupreset — not the greyed-out .sf2 bank.",
+                    "Play the audition region to verify every embedded zone, then replace it with the song MIDI.",
+                    "Save the configured track as a custom GarageBand patch if you want it in future projects.",
+                ]
+                if ausampler_preset
+                else [
+                    "GarageBand's AUSampler preset chooser accepts .aupreset files, not raw .sf2 banks.",
+                    "This Mac did not create the optional .aupreset wrapper; use the SF2 in another compatible sampler or regenerate the pack on macOS with the Swift command available.",
+                    "The SF2 remains a valid, self-contained sound bank for compatible hosts and APIs.",
+                ]
+            ),
             "warnings": warnings,
         }
         _write_json(work / "sample_pack.json", report)
@@ -1396,7 +1429,8 @@ def _sample_pack_markdown(report: dict[str, Any]) -> str:
         f"Source stem: `{report['stem']}`",
         f"Aligned MIDI: `{report['midi']}`",
         f"Samples: {report['sample_count']}",
-        f"Direct GarageBand instrument: `{report['artifacts']['soundfont']}`",
+        f"GarageBand-selectable preset: `{report['artifacts']['ausampler_preset'] or 'not created on this system'}`",
+        f"Self-contained SoundFont bank: `{report['artifacts']['soundfont']}`",
         "",
         "## Direct GarageBand import",
         "",
@@ -1405,6 +1439,8 @@ def _sample_pack_markdown(report: dict[str, Any]) -> str:
             for index, step in enumerate(report["garageband_import"], 1)
         ],
         "",
+        "GarageBand's AUSampler preset chooser filters for `.aupreset`; it does not directly select the `.sf2` bank.",
+        "The preset is a small wrapper that points AUSampler to the SF2. Keep both at their generated paths.",
         "The SF2 is self-contained: its PCM16 audio, MIDI root keys, keyboard zones and velocity ranges are embedded in one file.",
         "The separate PCM24 WAV files and SFZ mapping are retained for editing or other samplers.",
         "",

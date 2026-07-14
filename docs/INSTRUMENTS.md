@@ -131,7 +131,8 @@ sample per MIDI pitch. The output is:
 
 ```text
 work/sample-packs/song-bass/
-├── sunofriend-instrument.sf2   # direct, self-contained AUSampler handoff
+├── sunofriend-instrument.aupreset # GarageBand-selectable AUSampler wrapper
+├── sunofriend-instrument.sf2   # self-contained SoundFont sample bank
 ├── sunofriend-instrument.sfz   # mapping for compatible third-party samplers
 ├── garageband-audition.mid     # one note for every generated zone
 ├── garageband-audition.wav     # the exact SF2 rendered through FluidSynth
@@ -154,15 +155,18 @@ pitch-shifted.
    the new software-instrument track.
 2. Open Smart Controls. In the instrument plug-in slot choose **AU Instruments
    > Apple > AUSampler > Stereo**.
-3. Open AUSampler, choose **Load Instrument**, and select
-   `sunofriend-instrument.sf2`.
+3. Open AUSampler's preset menu (normally labelled **Manual**), choose its
+   load/open setting command, and select `sunofriend-instrument.aupreset`.
+   The `.sf2` is the referenced sound bank and is intentionally greyed out in
+   GarageBand's plug-in-preset chooser.
 4. Play the audition region to check every root and transposed zone. Replace it
    with the song MIDI when satisfied.
 5. Save the configured GarageBand track as a custom patch for future projects.
 
-This uses Apple's documented SF2 sound-bank support and avoids manufacturing
-or editing GarageBand's private project or patch format. The directory remains
-portable because the audio is embedded in the SF2.
+The `.aupreset` is a public AUSampler state wrapper around Apple's documented
+SF2 sound-bank support; it is not a private GarageBand project or patch. The
+audio remains embedded in the SF2. Keep the preset and bank at their generated
+paths; regenerate the preset after moving the sample-pack directory.
 
 Useful controls:
 

@@ -53,7 +53,9 @@ scripts.
   unchanged source stem and its aligned MIDI. Keep both factory-asset and
   rendered-GM evidence unless the user requests one path.
 - New instruments from authorised isolated source notes: use `sample-pack`.
-  Treat `sunofriend-instrument.sf2` as the direct GarageBand/AUSampler handoff.
+  Treat `sunofriend-instrument.aupreset` as the GarageBand-selectable wrapper
+  and `sunofriend-instrument.sf2` as its self-contained sound bank. GarageBand's
+  preset chooser greys out raw SF2 files.
   Do not add `--allow-polyphonic` unless the user explicitly accepts chords or
   bleed baked into each sample.
 - Offline audition: use `preview`; live MIDI: use `midi-ports` then `play`.
@@ -140,9 +142,11 @@ sunofriend sample-pack "$STEM" "$ALIGNED_MIDI" \
 8. For `instrument-match`, confirm the JSON, GarageBand audition guide, timbre
    graph when present, and retained top GM MIDI/WAV pairs. Report both evidence
    rankings and ask the user to choose in the full mix.
-9. For `sample-pack`, confirm the SF2, SFZ, audition MIDI, optional audition WAV,
-   source WAVs and JSON exist. Report MIDI roots and key ranges, isolation,
-   tuning status counts, maximum transposition and sustain limitations. Hand
-   off the report's GarageBand steps: put the audition MIDI on a software-
-   instrument track, select Apple AUSampler, load the SF2, audition every zone,
-   then save the configured track as a custom patch if wanted.
+9. For `sample-pack`, confirm the optional macOS `.aupreset` wrapper, SF2, SFZ,
+   audition MIDI, optional audition WAV, source WAVs and JSON exist. Report MIDI
+   roots and key ranges, isolation, tuning status counts, maximum transposition
+   and sustain limitations. Hand off the report's GarageBand steps: keep the
+   preset and bank at their generated paths, put the audition MIDI on a
+   software-instrument track, select Apple AUSampler, load the `.aupreset` from
+   its **Manual** preset menu, audition every zone, then save the configured
+   track as a custom patch if wanted.

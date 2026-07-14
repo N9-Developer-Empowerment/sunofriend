@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import plistlib
 import shutil
 import subprocess
 import sys
@@ -13,6 +14,7 @@ from unittest import mock
 import numpy as np
 import soundfile
 
+from sunofriend.ausampler import write_ausampler_preset
 from sunofriend.instrument_catalog import (
     GM_PROGRAM_NAMES,
     SamplerInstrumentPreset,
@@ -198,6 +200,10 @@ class InstrumentMatchTests(unittest.TestCase):
             self.assertIn("pitch_keycenter=64", sfz)
             self.assertIn("tune=", sfz)
             self.assertTrue((output / "sunofriend-instrument.sf2").is_file())
+            if sys.platform == "darwin" and shutil.which("swift"):
+                self.assertTrue(
+                    (output / "sunofriend-instrument.aupreset").is_file()
+                )
             self.assertTrue((output / "garageband-audition.mid").is_file())
             self.assertFalse((output / "garageband-audition.wav").exists())
             saved = json.loads((output / "sample_pack.json").read_text())
@@ -208,6 +214,11 @@ class InstrumentMatchTests(unittest.TestCase):
             self.assertEqual(
                 saved["artifacts"]["soundfont"], "sunofriend-instrument.sf2"
             )
+            if sys.platform == "darwin" and shutil.which("swift"):
+                self.assertEqual(
+                    saved["artifacts"]["ausampler_preset"],
+                    "sunofriend-instrument.aupreset",
+                )
             self.assertIsNone(saved["artifacts"]["audition_wav"])
             self.assertTrue(all(item["isolated"] for item in saved["samples"]))
             self.assertEqual(saved["samples"][0]["low_key"], 54)
@@ -247,6 +258,32 @@ class InstrumentMatchTests(unittest.TestCase):
 
 
 class SoundFontTests(unittest.TestCase):
+    @unittest.skipUnless(
+        sys.platform == "darwin" and shutil.which("swift"),
+        "AUSampler preset generation requires macOS and Swift",
+    )
+    def test_writes_garageband_selectable_ausampler_preset(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            sample = root / "A3.wav"
+            soundfile.write(sample, _tone(220.0, 0.3), SAMPLE_RATE)
+            soundfont_path = root / "instrument.sf2"
+            write_soundfont(
+                soundfont_path,
+                [SoundFontZone(sample, root_key=57, low_key=51, high_key=63)],
+                name="Preset Fixture",
+            )
+            preset_path = root / "instrument.aupreset"
+
+            summary = write_ausampler_preset(soundfont_path, preset_path)
+
+            self.assertEqual(summary["path"], "instrument.aupreset")
+            with preset_path.open("rb") as handle:
+                state = plistlib.load(handle)
+            self.assertEqual(state["type"], 1635085685)
+            self.assertEqual(state["subtype"], 1935764848)
+            self.assertIn(str(soundfont_path.resolve()), state["file-references"].values())
+
     def test_tuning_estimate_corrects_a_stably_sharp_sample(self):
         sharp_hz = 440.0 * 2.0 ** (18.0 / 1200.0)
 

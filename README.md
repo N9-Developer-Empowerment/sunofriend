@@ -22,7 +22,7 @@ clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 | Put two performances on one starting bar | `midi-anchor` | Recommended mashup operation: one constant shift preserves natural tempo wander |
 | Force stem-derived MIDI onto straight bars | `midi-align` | Experimental 4/4 note-only rebuild through the source metronome map |
 | Inventory and sound-match instruments | `instrument-inventory`, `instrument-match` | Installed GarageBand assets and Audio Units plus audio-based audition rankings |
-| Make a playable instrument from isolated stem notes | `sample-pack` | Self-contained GarageBand/AUSampler SF2, audition MIDI/WAV and extraction evidence |
+| Make a playable instrument from isolated stem notes | `sample-pack` | GarageBand-selectable AUSampler preset, self-contained SF2 bank, audition MIDI/WAV and extraction evidence |
 | Store and version reusable parts | `clip-import`, `clip-transform`, `clip-export` | Immutable Clip v1 assets with explicit musical or stem-locked timing |
 | Preview or route MIDI to an instrument | `preview`, `play` | FluidSynth WAV preview or CoreMIDI/IAC playback |
 
@@ -596,12 +596,15 @@ portable sample instrument:
   --out-dir work/sample-packs/lidl-bass
 ```
 
-The direct handoff is `sunofriend-instrument.sf2`: one self-contained instrument
-with the samples, MIDI root pitches, key ranges and measured cents corrections
-embedded. Sunofriend also writes the source-quality 24-bit WAV zones, portable
-SFZ, JSON report, `garageband-audition.mid`, and an audition WAV rendered from
-the exact generated SF2. Overlapping notes are rejected unless deliberately
-enabled.
+The self-contained sample bank is `sunofriend-instrument.sf2`; it embeds the
+samples, MIDI root pitches, key ranges and measured cents corrections.
+GarageBand's AUSampler preset chooser does not directly select raw SF2 files,
+so on macOS Sunofriend also creates `sunofriend-instrument.aupreset`, a small
+GarageBand-selectable wrapper that points AUSampler to that bank. Keep both
+files at their generated paths. Sunofriend also writes the source-quality
+24-bit WAV zones, portable SFZ, JSON report, `garageband-audition.mid`, and an
+audition WAV rendered from the exact generated SF2. Overlapping notes are
+rejected unless deliberately enabled.
 
 To load it in GarageBand:
 
@@ -609,8 +612,10 @@ To load it in GarageBand:
    instrument track, then select that track.
 2. Open Smart Controls and replace the instrument plug-in with **AU Instruments
    > Apple > AUSampler > Stereo**.
-3. In AUSampler, choose **Load Instrument** and select
-   `sunofriend-instrument.sf2`.
+3. Open AUSampler's preset menu (normally labelled **Manual**), choose its
+   load/open setting command, and select `sunofriend-instrument.aupreset`.
+   Do not select the `.sf2` bank directly; GarageBand greys it out in this
+   preset chooser.
 4. Audition every mapped note, then save the configured track as a custom patch
    if you want to reuse it.
 
