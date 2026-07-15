@@ -8,6 +8,7 @@ from dataclasses import asdict, replace
 from pathlib import Path
 
 from . import __version__
+from .ai_runtime import AI_REQUIREMENTS
 from .diagnostics import CAPABILITIES
 from .pipeline import run_remake
 
@@ -19,6 +20,7 @@ _COMMANDS = {
     "melody-apply",
     "evaluate",
     "doctor",
+    "ai-doctor",
     "preview",
     "midi-ports",
     "play",
@@ -319,6 +321,25 @@ def build_parser() -> argparse.ArgumentParser:
         choices=CAPABILITIES,
         default="all",
         help="Exit successfully when this capability is ready (default: all)",
+    )
+
+    ai_doctor = sub.add_parser(
+        "ai-doctor",
+        help="Check the isolated Python/PyTorch AI transcription environment",
+    )
+    ai_doctor.add_argument(
+        "--python",
+        default=None,
+        help=(
+            "AI worker interpreter (default: SUNOFRIEND_AI_PYTHON or "
+            ".venv-ai/bin/python)"
+        ),
+    )
+    ai_doctor.add_argument(
+        "--require",
+        choices=AI_REQUIREMENTS,
+        default="runtime",
+        help="Exit successfully when this AI capability is ready (default: runtime)",
     )
 
     preview = sub.add_parser(
@@ -920,6 +941,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_evaluate(args)
         if args.command == "doctor":
             return _run_doctor(args)
+        if args.command == "ai-doctor":
+            return _run_ai_doctor(args)
         if args.command == "preview":
             return _run_preview(args)
         if args.command == "midi-ports":
@@ -1688,6 +1711,16 @@ def _run_doctor(args) -> int:
     result = collect_diagnostics()
     result["required_capability"] = args.require
     result["requirement_ready"] = capability_ready(result, args.require)
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0 if result["requirement_ready"] else 1
+
+
+def _run_ai_doctor(args) -> int:
+    from .ai_runtime import ai_requirement_ready, collect_ai_diagnostics
+
+    result = collect_ai_diagnostics(args.python)
+    result["required_capability"] = args.require
+    result["requirement_ready"] = ai_requirement_ready(result, args.require)
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result["requirement_ready"] else 1
 

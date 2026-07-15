@@ -1,0 +1,7 @@
+# Isolated Phase 1 AI bake-off runtime for Apple Silicon.
+#
+# Keep this environment separate from Sunofriend's Python 3.9-3.11 Basic Pitch
+# environment. Model checkpoints are deliberately not downloaded here: their
+# licences and hashes are recorded per bake-off run.
+torch==2.13.0
+muscriptor==0.2.1

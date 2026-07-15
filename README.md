@@ -28,6 +28,12 @@ clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 | Store and version reusable parts | `clip-import`, `clip-transform`, `clip-export` | Immutable Clip v1 assets with explicit musical or stem-locked timing |
 | Preview or route MIDI to an instrument | `preview`, `play` | FluidSynth WAV preview or CoreMIDI/IAC playback |
 
+Development has started on a local-first ensemble of optional transcription
+models, phrase-level melody review and learned instrument matching. See the
+multi-week **[AI transcription and instrument roadmap](docs/AI_TRANSCRIPTION_ROADMAP.md)**
+for Phase 1–4 goals, licence boundaries, success criteria, current checklist
+and daily progress log.
+
 For combining songs, first use `midi-transform` to choose a common key, BPM
 and tuning, then use `midi-anchor` to place confirmed downbeats on the same
 bar. Same-mode key changes are exact semitone shifts, but register, instrument
