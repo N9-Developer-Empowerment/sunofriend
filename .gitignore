@@ -6,6 +6,7 @@ __pycache__/
 .DS_Store
 dist/
 build/
+tmp/
 *.egg-info/
 work/
 .idea

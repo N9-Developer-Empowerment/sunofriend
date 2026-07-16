@@ -1,6 +1,6 @@
 ---
 name: sunofriend
-description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; combine tracker consensus, repeated phrases, hummed guidance and reviewed melody corrections; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
+description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and reviewed melody corrections; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
 ---
 
 # Sunofriend
@@ -18,8 +18,20 @@ scripts.
    `--help` before constructing a command.
 4. Run the narrowest capability check:
    - `sunofriend doctor --require transcribe` for lead or backing vocals.
+   - `sunofriend ai-doctor --require muscriptor-checkpoint` before explicitly
+     requesting the optional `vocal-melody --muscriptor` challenger.
+   - `sunofriend ai-doctor --require game` before a standalone GAME vocal
+     boundary/pitch bake-off. Its explicit setup command is
+     `scripts/setup-game-model.sh`; inference itself must remain offline.
+   - `sunofriend ai-doctor --require rmvpe` before a standalone RMVPE F0
+     bake-off. Its explicit setup command is `scripts/setup-rmvpe-model.sh`;
+     inference must use the existing local ONNX file and remain offline.
+   - `sunofriend ai-doctor --require pesto` before a standalone PESTO F0
+     bake-off. Its explicit setup command is `scripts/setup-pesto-model.sh`;
+     inference must use the hash-checked local `.ckpt` file and remain offline.
    - `sunofriend doctor --require convert` for instrumental stem conversion.
-   - `sunofriend doctor --require preview` for offline rendering.
+   - `sunofriend doctor --require preview` for offline rendering, including
+     `melody-review` MIDI-only and source-overlay alternatives.
    - `sunofriend doctor --require playback` for live MIDI.
    - `sunofriend instrument-inventory` needs no audio/ML capability check.
    - `sunofriend doctor --require convert` for factory-sample matching or
@@ -43,6 +55,46 @@ scripts.
 - Lead or backing vocals: use `vocal-melody` separately. It defaults to
   pYIN/Basic Pitch consensus, conservative repeated-phrase repair and a local
   correction HTML/JSON report. `listen-all` does not include vocals.
+- Model-backed vocal alternative: after the user has accepted and installed a
+  MuScriptor checkpoint, add `--muscriptor`. Keep the resulting model MIDI as
+  an explicit challenger; it does not replace the deterministic primary. Its
+  GarageBand variant may use a separately audited source-energy velocity layer
+  while the raw model event velocity remains untouched. For backing vocals,
+  retain both the MuScriptor line and Sunofriend harmony stack.
+- Independent singing-specific evidence: use `ai-transcribe --backend game`
+  on a short authorised vocal excerpt. After a golden check, add `--game` to
+  `vocal-melody` to publish it as a separate challenger; it must not replace
+  the deterministic primary. Use and report an explicit seed (default 0),
+  because its D3PM boundary decoder is otherwise stochastic; preserve floating
+  pitch in the raw candidate and use the expression MIDI for auditioning. For
+  backing vocals, retain the harmony stack and treat GAME and MuScriptor as
+  alternative monophonic lines.
+- Independent frame-level pitch evidence: use `ai-transcribe --backend rmvpe`
+  on the same short authorised vocal excerpt. Treat `rmvpe.frames.json` as the
+  primary model evidence and `candidate.mid` as Sunofriend's deterministic
+  frame-to-note draft. Do not infer that an upper pitch in backing vocals is
+  automatically the intended dominant line.
+- Lightweight second F0 opinion: use `ai-transcribe --backend pesto` on the
+  same short excerpt. Treat `pesto.frames.json` and the raw
+  `pesto.activations.npy` matrix as independent evidence. The frame-to-note
+  MIDI is a deterministic review draft, not model-supplied boundaries. Do not
+  add PESTO to consensus or promote it from aggregate chroma alone.
+- Auditable tracker comparison: use `vocal-trackers` to publish pYIN and raw
+  Basic Pitch evidence independently. Supply `--rmvpe-frames` only from a
+  completed immutable run on the exact same WAV; the command verifies the
+  source and checkpoint hashes before creating a three-way consensus. Supply
+  `--game-candidate` with RMVPE to test GAME and Basic Pitch boundaries only
+  where pYIN and RMVPE agree on pitch. Preserve all tracker records. Treat
+  consensus and boundary-repair MIDI as `review-required` challengers, never
+  as the normal `vocal-melody` primary. For backing vocals, retain the
+  polyphonic Basic Pitch/harmony evidence rather than reducing the result to
+  only a monophonic consensus or repair line.
+- Recognition-first lead review: use `melody-review` on a completed
+  `vocal-trackers` run with agreed-F0 boundary evidence. It verifies source and
+  evidence hashes, requires a fresh output, presents the weakest regions first
+  and exports the existing correction format. Do not run it on backing vocals,
+  do not choose from metrics alone, and do not call its seed reviewed. The user
+  must select or explicitly accept every phrase before `melody-apply` succeeds.
 - Ambiguous intended vocal line: add a roughly time-aligned WAV with `--guide`;
   add `--prefer-guide` only when the user wants the source-supported guide as
   primary. Use `--guide-offset-seconds` when the recording offset is known.
@@ -86,6 +138,47 @@ sunofriend listen-all "$INPUT" \
 
 sunofriend vocal-melody "$VOCAL_STEM" \
   --role lead \
+  --out-dir "$OUTPUT"
+
+sunofriend ai-transcribe "$VOCAL_STEM" \
+  --backend game \
+  --out-dir "$FRESH_OUTPUT" \
+  --bpm "$BPM" \
+  --instrument voice \
+  --language en \
+  --device cpu \
+  --seed 0
+
+sunofriend ai-transcribe "$VOCAL_STEM" \
+  --backend rmvpe \
+  --out-dir "$FRESH_OUTPUT" \
+  --bpm "$BPM" \
+  --instrument "lead vocal" \
+  --device cpu
+
+sunofriend ai-transcribe "$VOCAL_STEM" \
+  --backend pesto \
+  --out-dir "$FRESH_OUTPUT" \
+  --bpm "$BPM" \
+  --instrument "lead vocal" \
+  --device cpu
+
+sunofriend vocal-trackers "$VOCAL_STEM" \
+  --role lead \
+  --bpm "$BPM" \
+  --rmvpe-frames "$RMVPE_RUN/rmvpe.frames.json" \
+  --game-candidate "$GAME_RUN/candidate.json" \
+  --out-dir "$FRESH_OUTPUT"
+
+sunofriend melody-review "$VOCAL_TRACKER_RUN" \
+  --out-dir "$FRESH_PHRASE_REVIEW"
+
+sunofriend vocal-melody "$VOCAL_STEM" \
+  --role lead \
+  --muscriptor \
+  --game \
+  --game-language en \
+  --game-seed 0 \
   --out-dir "$OUTPUT"
 
 sunofriend vocal-melody "$VOCAL_STEM" \
@@ -159,7 +252,12 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   auto-tuning enabled unless the user asks to preserve the source's raw tuning;
   do not present `no-stable-pitch` or rejected tuning estimates as failures.
 - Tracker consensus does not mean certainty. Inspect disputed/solo frame
-  counts and keep `uncertain` separate. Repeated-phrase repair may promote only
+  counts and keep `uncertain` separate. In a `vocal-trackers` run also inspect
+  agreement, no-agreement, selected-source counts and all independent
+  evaluations; a majority may follow a harmonic or another real backing
+  voice. A boundary repair may borrow Basic Pitch or GAME timing only when
+  pYIN and RMVPE agree on pitch; it must retain every rejected proposal and
+  must not replace backing harmony. Repeated-phrase repair may promote only
   notes already present in the lenient source contour; a hummed guide may set
   intention and rhythm but must not bypass source-pitch support.
 - For guide snippets, report every requested and chosen start time, per-snippet
@@ -167,6 +265,10 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   not remove the automatic full-song melody.
 - A correction JSON is a user-authored replacement note list. Apply it to a
   fresh MIDI path and retain the adjacent `.correction.json` audit.
+- A phrase-review seed is deliberately unreviewed. Never edit its status on
+  the user's behalf. Hand off `melody_phrase_review.html`; after the user
+  exports a reviewed document, ensure every choice is explicit and retain the
+  selected alternatives in the correction audit.
 
 ## Validate and hand off
 
@@ -181,6 +283,36 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
    the published variants. Also report tracker sources, consensus frame count,
    repeated-phrase promotions, guide alignment/transpose and the correction
    HTML/JSON paths when present.
+   When `--muscriptor` is used, also report the checkpoint hash, immutable run
+   manifest, raw candidate, `candidate.quality.json`, source-expression JSON
+   and MIDI, velocity range, model-backed GarageBand MIDI and the fact that it
+   remains a separately auditionable challenger. Do not render, play or
+   recommend an AI candidate marked `review-required` until its density,
+   duplicate, polyphony or label warnings have been understood.
+   For GAME, additionally report its six-component bundle hash, language,
+   boundary/presence thresholds, D3PM schedule, seed, voiced/total region
+   counts and CPU provider. Compare its timing and contour evidence with the
+   existing candidate; do not call it better solely from one aggregate metric.
+   For RMVPE, report adapter and checkpoint versions/hashes, frame count, raw
+   voiced-frame count, decoder policy/parameters, note count, quality status,
+   `rmvpe.frames.json`, raw and expression MIDI, repeat determinism and CPU
+   provider. Compare contour and boundary metrics separately: RMVPE supplies
+   frame F0, not note boundaries.
+   For PESTO, report package/checkpoint versions and hashes, step size,
+   reduction, frame and note counts, activation artifact/shape, repeat
+   determinism and device. Do not call its decoded note boundaries model
+   evidence.
+   For `vocal-trackers`, additionally report
+   pYIN/Basic Pitch/consensus note counts and metrics, input evidence hashes,
+   agreement/disputed/solo/no-agreement counts, boundary proposal acceptance
+   and rejection reasons, provider-specific/combined note and phrase counts,
+   ranked phrase paths, repeat determinism and that consensus/repair remain
+   experimental. Never discard the raw candidates.
+   For `melody-review`, confirm lead role, matching input hashes, phrase and
+   alternative counts, source/MIDI/overlay/evaluation paths, any zero-note
+   alternatives, byte-repeat result and `raw_candidates_mutated: false`.
+   Hand off the HTML, not the unreviewed seed. After user review, report each
+   selected alternative and evaluate the newly applied MIDI against the source.
 5. For transformations, inspect the JSON audit for file count, embedded target
    tempo, transposed events, preserved drums, tuning cleanup, and anchor shift.
 6. Render representative MIDI with `preview` when auditory validation is in

@@ -10,6 +10,7 @@ added and evaluated without making them required dependencies.
 from __future__ import annotations
 
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -21,7 +22,30 @@ from typing import Any, Mapping, Protocol
 AI_RUNTIME_SCHEMA = "sunofriend.ai-runtime.v1"
 AI_REQUEST_SCHEMA = "sunofriend.ai-transcription-request.v1"
 AI_CANDIDATE_SCHEMA = "sunofriend.ai-transcription-candidate.v1"
-AI_REQUIREMENTS = ("runtime", "torch", "muscriptor", "game", "rmvpe", "all")
+AI_REQUIREMENTS = (
+    "runtime",
+    "torch",
+    "muscriptor",
+    "muscriptor-checkpoint",
+    "game",
+    "rmvpe",
+    "pesto",
+    "all",
+)
+GAME_MODEL_FILENAMES = (
+    "config.json",
+    "encoder.onnx",
+    "segmenter.onnx",
+    "estimator.onnx",
+    "dur2bd.onnx",
+    "bd2dur.onnx",
+)
+RMVPE_MODEL_SHA256 = (
+    "5370e71ac80af8b4b7c793d27efd51fd8bf962de3a7ede0766dac0befa3660fd"
+)
+PESTO_MODEL_SHA256 = (
+    "16c32e06ddd950e3e4866dfa3c7f8a87c4988f8adf43e57977b189f031f26f3e"
+)
 
 
 @dataclass(frozen=True)
@@ -57,25 +81,49 @@ AI_MODEL_MANIFESTS: dict[str, AIModelManifest] = {
         name="GAME",
         tasks=("lead-vocal", "backing-vocal", "note-boundaries"),
         code_license="MIT",
-        weights_license="checkpoint-specific; verify before use",
-        package=None,
+        weights_license=(
+            "Official v1.0.3 release asset; repository MIT; no separate "
+            "checkpoint terms stated"
+        ),
+        package="onnxruntime",
         homepage="https://github.com/openvpi/GAME",
         distribution_policy=(
-            "Use an external checkout and explicitly recorded checkpoint; "
-            "do not vendor either into the Apache-2.0 core."
+            "Use the pinned official release asset from an external model "
+            "directory; record every component hash and do not vendor weights."
         ),
     ),
     "rmvpe": AIModelManifest(
         backend="rmvpe",
         name="RMVPE",
         tasks=("vocal-f0", "polyphonic-bleed"),
-        code_license="Apache-2.0",
-        weights_license="checkpoint-specific; verify before use",
-        package=None,
-        homepage="https://github.com/Dream-High/RMVPE",
+        code_license=(
+            "MIT (rmvpe-onnx adapter); Apache-2.0 (authors' reference code)"
+        ),
+        weights_license=(
+            "MIT-labelled lj1995/VoiceConversionWebUI rmvpe.onnx at "
+            "b2c8cae96e3b05de46d36c5ef9970ef6cbccafba"
+        ),
+        package="rmvpe-onnx",
+        homepage="https://github.com/NewComer00/rmvpe-onnx",
         distribution_policy=(
-            "Use an external checkout until checkpoint provenance and "
-            "redistribution terms have been recorded."
+            "Keep the pinned ONNX checkpoint external, verify its canonical hash, "
+            "and record its Hugging Face revision in every setup."
+        ),
+    ),
+    "pesto": AIModelManifest(
+        backend="pesto",
+        name="PESTO",
+        tasks=("vocal-f0", "instrument-f0", "realtime-pitch"),
+        code_license="LGPL-3.0",
+        weights_license=(
+            "LGPL-3.0 repository checkpoint mir-1k_g7 at pinned commit "
+            "62bc0c9702558f19af4593752947fb9db1eadac9"
+        ),
+        package="pesto-pitch",
+        homepage="https://github.com/SonyCSLParis/pesto",
+        distribution_policy=(
+            "Keep PESTO optional in the isolated worker; download the pinned "
+            "checkpoint explicitly, verify its hash and preserve frame evidence."
         ),
     ),
 }
@@ -102,6 +150,10 @@ class AITranscriptionRequest:
             raise ValueError(
                 "backend must be one of: " + ", ".join(sorted(AI_MODEL_MANIFESTS))
             )
+        if not math.isfinite(self.start_seconds):
+            raise ValueError("start_seconds must be finite")
+        if self.end_seconds is not None and not math.isfinite(self.end_seconds):
+            raise ValueError("end_seconds must be finite")
         if self.start_seconds < 0:
             raise ValueError("start_seconds must not be negative")
         if self.end_seconds is not None and self.end_seconds <= self.start_seconds:
@@ -118,6 +170,35 @@ class AITranscriptionRequest:
             "options": dict(self.options),
         }
 
+    @classmethod
+    def from_dict(
+        cls, document: Mapping[str, Any], *, require_audio: bool = True
+    ) -> AITranscriptionRequest:
+        if document.get("schema") != AI_REQUEST_SCHEMA:
+            raise ValueError(f"AI request schema must be {AI_REQUEST_SCHEMA}")
+        roles = document.get("roles", ())
+        options = document.get("options", {})
+        if not isinstance(roles, list) or not all(
+            isinstance(role, str) for role in roles
+        ):
+            raise ValueError("AI request roles must be a list of strings")
+        if not isinstance(options, Mapping):
+            raise ValueError("AI request options must be an object")
+        request = cls(
+            audio_path=str(document.get("audio_path", "")),
+            backend=str(document.get("backend", "")),
+            roles=tuple(roles),
+            start_seconds=float(document.get("start_seconds", 0.0)),
+            end_seconds=(
+                None
+                if document.get("end_seconds") is None
+                else float(document["end_seconds"])
+            ),
+            options=dict(options),
+        )
+        request.validate(require_audio=require_audio)
+        return request
+
 
 @dataclass(frozen=True)
 class AITranscriptionNote:
@@ -132,6 +213,11 @@ class AITranscriptionNote:
     source_event_id: str | None = None
 
     def validate(self) -> None:
+        numeric = (self.start_seconds, self.end_seconds, self.pitch)
+        if not all(math.isfinite(value) for value in numeric):
+            raise ValueError("AI note times and pitch must be finite")
+        if self.confidence is not None and not math.isfinite(self.confidence):
+            raise ValueError("AI note confidence must be finite")
         if self.start_seconds < 0 or self.end_seconds <= self.start_seconds:
             raise ValueError(
                 "AI note must have a positive duration and non-negative start"
@@ -142,6 +228,36 @@ class AITranscriptionNote:
             raise ValueError("AI note confidence must be between 0 and 1")
         if self.velocity is not None and not 1 <= self.velocity <= 127:
             raise ValueError("AI note velocity must be between 1 and 127")
+
+    @classmethod
+    def from_dict(cls, document: Mapping[str, Any]) -> AITranscriptionNote:
+        note = cls(
+            start_seconds=float(document["start_seconds"]),
+            end_seconds=float(document["end_seconds"]),
+            pitch=float(document["pitch"]),
+            confidence=(
+                None
+                if document.get("confidence") is None
+                else float(document["confidence"])
+            ),
+            instrument=(
+                None
+                if document.get("instrument") is None
+                else str(document["instrument"])
+            ),
+            velocity=(
+                None
+                if document.get("velocity") is None
+                else int(document["velocity"])
+            ),
+            source_event_id=(
+                None
+                if document.get("source_event_id") is None
+                else str(document["source_event_id"])
+            ),
+        )
+        note.validate()
+        return note
 
 
 @dataclass(frozen=True)
@@ -175,6 +291,39 @@ class AITranscriptionCandidate:
             "metadata": dict(self.metadata),
             "manifest": asdict(AI_MODEL_MANIFESTS[self.backend]),
         }
+
+    @classmethod
+    def from_dict(cls, document: Mapping[str, Any]) -> AITranscriptionCandidate:
+        if document.get("schema") != AI_CANDIDATE_SCHEMA:
+            raise ValueError(f"AI candidate schema must be {AI_CANDIDATE_SCHEMA}")
+        notes = document.get("notes", ())
+        warnings = document.get("warnings", ())
+        raw_artifacts = document.get("raw_artifacts", ())
+        metadata = document.get("metadata", {})
+        if not isinstance(notes, list) or not all(
+            isinstance(note, Mapping) for note in notes
+        ):
+            raise ValueError("AI candidate notes must be a list of objects")
+        if not isinstance(warnings, list) or not all(
+            isinstance(warning, str) for warning in warnings
+        ):
+            raise ValueError("AI candidate warnings must be a list of strings")
+        if not isinstance(raw_artifacts, list) or not all(
+            isinstance(artifact, str) for artifact in raw_artifacts
+        ):
+            raise ValueError("AI candidate raw_artifacts must be a list of strings")
+        if not isinstance(metadata, Mapping):
+            raise ValueError("AI candidate metadata must be an object")
+        candidate = cls(
+            backend=str(document.get("backend", "")),
+            model_version=str(document.get("model_version", "")),
+            notes=tuple(AITranscriptionNote.from_dict(note) for note in notes),
+            warnings=tuple(warnings),
+            raw_artifacts=tuple(raw_artifacts),
+            metadata=dict(metadata),
+        )
+        candidate.validate()
+        return candidate
 
 
 class AITranscriptionBackend(Protocol):
@@ -220,6 +369,310 @@ def resolve_ai_python(value: str | Path | None = None) -> Path:
     )
 
 
+def _default_muscriptor_checkpoint() -> Path:
+    return (
+        Path.home()
+        / ".local"
+        / "share"
+        / "sunofriend"
+        / "models"
+        / "muscriptor-small"
+        / "model.safetensors"
+    )
+
+
+def resolve_muscriptor_checkpoint(value: str | Path | None = None) -> Path:
+    """Resolve an already-downloaded MuScriptor checkpoint without networking."""
+
+    configured = value or os.environ.get("SUNOFRIEND_MUSCRIPTOR_MODEL")
+    candidate = (
+        Path(configured).expanduser() if configured else _default_muscriptor_checkpoint()
+    )
+    if not candidate.is_file():
+        source = "SUNOFRIEND_MUSCRIPTOR_MODEL" if configured else "default path"
+        raise FileNotFoundError(
+            f"MuScriptor checkpoint was not found via {source}: {candidate}"
+        )
+    if candidate.suffix.lower() != ".safetensors":
+        raise ValueError("MuScriptor checkpoint must be a .safetensors file")
+    return candidate.absolute()
+
+
+def _default_game_home() -> Path:
+    return (
+        Path.home()
+        / ".local"
+        / "share"
+        / "sunofriend"
+        / "checkouts"
+        / "GAME-v1.0.3"
+    )
+
+
+def _default_game_model() -> Path:
+    return (
+        Path.home()
+        / ".local"
+        / "share"
+        / "sunofriend"
+        / "models"
+        / "game-1.0.3-small-onnx"
+        / "GAME-1.0.3-small-onnx"
+    )
+
+
+def resolve_game_model(value: str | Path | None = None) -> Path:
+    """Resolve an official local GAME ONNX bundle without networking."""
+
+    configured = value or os.environ.get("SUNOFRIEND_GAME_MODEL")
+    candidate = Path(configured).expanduser() if configured else _default_game_model()
+    if not candidate.is_dir():
+        source = "SUNOFRIEND_GAME_MODEL" if configured else "default path"
+        raise FileNotFoundError(f"GAME model bundle was not found via {source}: {candidate}")
+    missing = [name for name in GAME_MODEL_FILENAMES if not (candidate / name).is_file()]
+    if missing:
+        raise ValueError(
+            "GAME model bundle is incomplete; missing: " + ", ".join(missing)
+        )
+    return candidate.absolute()
+
+
+def _default_rmvpe_model() -> Path:
+    return (
+        Path.home()
+        / ".local"
+        / "share"
+        / "sunofriend"
+        / "models"
+        / "rmvpe-onnx-0.2.3"
+        / "rmvpe.onnx"
+    )
+
+
+def resolve_rmvpe_model(value: str | Path | None = None) -> Path:
+    """Resolve the pinned local RMVPE ONNX checkpoint without networking."""
+
+    configured = value or os.environ.get("SUNOFRIEND_RMVPE_MODEL")
+    candidate = Path(configured).expanduser() if configured else _default_rmvpe_model()
+    if not candidate.is_file():
+        source = "SUNOFRIEND_RMVPE_MODEL" if configured else "default path"
+        raise FileNotFoundError(
+            f"RMVPE ONNX checkpoint was not found via {source}: {candidate}; "
+            "run scripts/setup-rmvpe-model.sh"
+        )
+    if candidate.suffix.lower() != ".onnx":
+        raise ValueError("RMVPE checkpoint must be an .onnx file")
+    return candidate.absolute()
+
+
+def _default_pesto_model() -> Path:
+    return (
+        Path.home()
+        / ".local"
+        / "share"
+        / "sunofriend"
+        / "models"
+        / "pesto-pitch-2.0.1"
+        / "mir-1k_g7.ckpt"
+    )
+
+
+def resolve_pesto_model(value: str | Path | None = None) -> Path:
+    """Resolve the pinned local PESTO checkpoint without networking."""
+
+    configured = value or os.environ.get("SUNOFRIEND_PESTO_MODEL")
+    candidate = Path(configured).expanduser() if configured else _default_pesto_model()
+    if not candidate.is_file():
+        source = "SUNOFRIEND_PESTO_MODEL" if configured else "default path"
+        raise FileNotFoundError(
+            f"PESTO checkpoint was not found via {source}: {candidate}; "
+            "run scripts/setup-pesto-model.sh"
+        )
+    if candidate.suffix.lower() != ".ckpt":
+        raise ValueError("PESTO checkpoint must be a .ckpt file")
+    return candidate.absolute()
+
+
+def _sha256_file(path: Path) -> str:
+    import hashlib
+
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _sha256_game_bundle(path: Path) -> str:
+    import hashlib
+
+    digest = hashlib.sha256()
+    for name in GAME_MODEL_FILENAMES:
+        digest.update(name.encode("utf-8"))
+        digest.update(b"\0")
+        with (path / name).open("rb") as handle:
+            for block in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(block)
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def collect_muscriptor_checkpoint() -> dict[str, Any]:
+    """Report only local checkpoint/config evidence; never download weights."""
+
+    try:
+        checkpoint = resolve_muscriptor_checkpoint()
+    except (FileNotFoundError, ValueError) as exc:
+        return {
+            "checkpoint_ready": False,
+            "checkpoint_error": str(exc),
+            "configuration": {
+                "model_env": "SUNOFRIEND_MUSCRIPTOR_MODEL",
+                "default_path": str(_default_muscriptor_checkpoint()),
+            },
+        }
+
+    config = checkpoint.with_name("config.json")
+    report: dict[str, Any] = {
+        "checkpoint_ready": True,
+        "checkpoint": str(checkpoint),
+        "checkpoint_bytes": checkpoint.stat().st_size,
+        "checkpoint_sha256": _sha256_file(checkpoint),
+        "config_ready": config.is_file(),
+        "config": str(config) if config.is_file() else None,
+        "configuration": {
+            "model_env": "SUNOFRIEND_MUSCRIPTOR_MODEL",
+            "default_path": str(_default_muscriptor_checkpoint()),
+        },
+    }
+    if config.is_file():
+        report["config_sha256"] = _sha256_file(config)
+        try:
+            document = json.loads(config.read_text(encoding="utf-8"))
+            report["variant"] = document.get("variant")
+            report["model_config"] = document
+        except (OSError, json.JSONDecodeError) as exc:
+            report["config_error"] = f"{type(exc).__name__}: {exc}"
+    return report
+
+
+def collect_game_model() -> dict[str, Any]:
+    """Report the exact local GAME release bundle; never download it."""
+
+    configured = os.environ.get("SUNOFRIEND_GAME_MODEL")
+    try:
+        model = resolve_game_model(configured)
+    except (FileNotFoundError, ValueError) as exc:
+        return {
+            "checkpoint_ready": False,
+            "checkpoint_error": str(exc),
+            "configuration": {
+                "model_env": "SUNOFRIEND_GAME_MODEL",
+                "default_path": str(_default_game_model()),
+            },
+        }
+
+    components = {
+        name: {
+            "bytes": (model / name).stat().st_size,
+            "sha256": _sha256_file(model / name),
+        }
+        for name in GAME_MODEL_FILENAMES
+    }
+    report: dict[str, Any] = {
+        "checkpoint_ready": True,
+        "checkpoint": str(model),
+        "checkpoint_bytes": sum(item["bytes"] for item in components.values()),
+        "checkpoint_sha256": _sha256_game_bundle(model),
+        "components": components,
+        "config_ready": True,
+        "configuration": {
+            "model_env": "SUNOFRIEND_GAME_MODEL",
+            "default_path": str(_default_game_model()),
+        },
+    }
+    try:
+        config = json.loads((model / "config.json").read_text(encoding="utf-8"))
+        report["variant"] = "1.0.3-small-onnx"
+        report["model_config"] = config
+    except (OSError, json.JSONDecodeError) as exc:
+        report["config_ready"] = False
+        report["config_error"] = f"{type(exc).__name__}: {exc}"
+    return report
+
+
+def collect_rmvpe_model() -> dict[str, Any]:
+    """Report the exact local RMVPE checkpoint; never download it."""
+
+    configured = os.environ.get("SUNOFRIEND_RMVPE_MODEL")
+    try:
+        model = resolve_rmvpe_model(configured)
+    except (FileNotFoundError, ValueError) as exc:
+        return {
+            "checkpoint_ready": False,
+            "checkpoint_error": str(exc),
+            "configuration": {
+                "model_env": "SUNOFRIEND_RMVPE_MODEL",
+                "default_path": str(_default_rmvpe_model()),
+            },
+        }
+
+    sha256 = _sha256_file(model)
+    return {
+        "checkpoint_ready": sha256 == RMVPE_MODEL_SHA256,
+        "checkpoint": str(model),
+        "checkpoint_bytes": model.stat().st_size,
+        "checkpoint_sha256": sha256,
+        "expected_checkpoint_sha256": RMVPE_MODEL_SHA256,
+        "checkpoint_error": (
+            None
+            if sha256 == RMVPE_MODEL_SHA256
+            else "RMVPE checkpoint hash does not match the pinned canonical model"
+        ),
+        "variant": "rmvpe-onnx-0.2.3/canonical-rmvpe.onnx",
+        "configuration": {
+            "model_env": "SUNOFRIEND_RMVPE_MODEL",
+            "default_path": str(_default_rmvpe_model()),
+        },
+    }
+
+
+def collect_pesto_model() -> dict[str, Any]:
+    """Report the exact local PESTO checkpoint; never download it."""
+
+    configured = os.environ.get("SUNOFRIEND_PESTO_MODEL")
+    try:
+        model = resolve_pesto_model(configured)
+    except (FileNotFoundError, ValueError) as exc:
+        return {
+            "checkpoint_ready": False,
+            "checkpoint_error": str(exc),
+            "configuration": {
+                "model_env": "SUNOFRIEND_PESTO_MODEL",
+                "default_path": str(_default_pesto_model()),
+            },
+        }
+
+    sha256 = _sha256_file(model)
+    return {
+        "checkpoint_ready": sha256 == PESTO_MODEL_SHA256,
+        "checkpoint": str(model),
+        "checkpoint_bytes": model.stat().st_size,
+        "checkpoint_sha256": sha256,
+        "expected_checkpoint_sha256": PESTO_MODEL_SHA256,
+        "checkpoint_error": (
+            None
+            if sha256 == PESTO_MODEL_SHA256
+            else "PESTO checkpoint hash does not match the pinned mir-1k_g7 model"
+        ),
+        "variant": "pesto-pitch-2.0.1/mir-1k_g7",
+        "configuration": {
+            "model_env": "SUNOFRIEND_PESTO_MODEL",
+            "default_path": str(_default_pesto_model()),
+        },
+    }
+
+
 _RUNTIME_PROBE = r"""
 import importlib.metadata
 import json
@@ -227,7 +680,15 @@ import platform
 import sys
 
 packages = {}
-for distribution in ("torch", "muscriptor"):
+for distribution in (
+    "torch",
+    "muscriptor",
+    "onnxruntime",
+    "rmvpe-onnx",
+    "soxr",
+    "pesto-pitch",
+    "torchaudio",
+):
     try:
         packages[distribution] = importlib.metadata.version(distribution)
     except importlib.metadata.PackageNotFoundError:
@@ -262,23 +723,6 @@ print(json.dumps({
     "torch": torch_report,
 }))
 """
-
-
-def _external_backend_report(
-    name: str, *, home_env: str, model_env: str
-) -> dict[str, Any]:
-    home_value = os.environ.get(home_env)
-    model_value = os.environ.get(model_env)
-    home = Path(home_value).expanduser() if home_value else None
-    model = Path(model_value).expanduser() if model_value else None
-    return {
-        "software_ready": bool(home and home.is_dir()),
-        "checkpoint_ready": bool(model and model.is_file()),
-        "home": str(home.resolve()) if home and home.exists() else home_value,
-        "checkpoint": str(model.resolve()) if model and model.exists() else model_value,
-        "configuration": {"home_env": home_env, "model_env": model_env},
-        "manifest": asdict(AI_MODEL_MANIFESTS[name]),
-    }
 
 
 def collect_ai_diagnostics(
@@ -322,26 +766,50 @@ def collect_ai_diagnostics(
 
     version_info = tuple(worker.get("python_info", (0, 0, 0)))
     torch_report = worker.get("torch", {})
+    muscriptor_checkpoint = collect_muscriptor_checkpoint()
     backends = {
         "muscriptor": {
             "software_ready": bool(worker["packages"].get("muscriptor"))
             and bool(torch_report.get("importable")),
-            "checkpoint_ready": False,
-            "checkpoint_note": (
-                "Weights are gated and downloaded only after the user accepts "
-                "the CC-BY-NC-4.0 terms; no checkpoint was probed."
-            ),
             "version": worker["packages"].get("muscriptor"),
             "manifest": asdict(AI_MODEL_MANIFESTS["muscriptor"]),
+            **muscriptor_checkpoint,
         },
-        "game": _external_backend_report(
-            "game", home_env="SUNOFRIEND_GAME_HOME", model_env="SUNOFRIEND_GAME_MODEL"
-        ),
-        "rmvpe": _external_backend_report(
-            "rmvpe",
-            home_env="SUNOFRIEND_RMVPE_HOME",
-            model_env="SUNOFRIEND_RMVPE_MODEL",
-        ),
+        "game": {
+            "software_ready": bool(worker["packages"].get("onnxruntime"))
+            and bool(worker["packages"].get("soxr")),
+            "version": worker["packages"].get("onnxruntime"),
+            "resampler_version": worker["packages"].get("soxr"),
+            "home": str(
+                Path(os.environ.get("SUNOFRIEND_GAME_HOME", _default_game_home()))
+                .expanduser()
+                .absolute()
+            ),
+            "home_ready": Path(
+                os.environ.get("SUNOFRIEND_GAME_HOME", _default_game_home())
+            )
+            .expanduser()
+            .is_dir(),
+            "manifest": asdict(AI_MODEL_MANIFESTS["game"]),
+            **collect_game_model(),
+        },
+        "rmvpe": {
+            "software_ready": bool(worker["packages"].get("rmvpe-onnx"))
+            and bool(worker["packages"].get("onnxruntime")),
+            "version": worker["packages"].get("rmvpe-onnx"),
+            "onnxruntime_version": worker["packages"].get("onnxruntime"),
+            "manifest": asdict(AI_MODEL_MANIFESTS["rmvpe"]),
+            **collect_rmvpe_model(),
+        },
+        "pesto": {
+            "software_ready": bool(worker["packages"].get("pesto-pitch"))
+            and bool(worker["packages"].get("torchaudio"))
+            and bool(torch_report.get("importable")),
+            "version": worker["packages"].get("pesto-pitch"),
+            "torchaudio_version": worker["packages"].get("torchaudio"),
+            "manifest": asdict(AI_MODEL_MANIFESTS["pesto"]),
+            **collect_pesto_model(),
+        },
     }
     return {
         "schema": AI_RUNTIME_SCHEMA,
@@ -367,6 +835,36 @@ def ai_requirement_ready(report: Mapping[str, Any], requirement: str) -> bool:
     if requirement == "torch":
         return bool(report.get("runtime_ready") and report.get("torch_ready"))
     backends = report.get("backends", {})
+    if requirement == "muscriptor-checkpoint":
+        muscriptor = backends.get("muscriptor", {})
+        return bool(
+            report.get("runtime_ready")
+            and muscriptor.get("software_ready")
+            and muscriptor.get("checkpoint_ready")
+            and muscriptor.get("config_ready")
+        )
+    if requirement == "game":
+        game = backends.get("game", {})
+        return bool(
+            report.get("runtime_ready")
+            and game.get("software_ready")
+            and game.get("checkpoint_ready")
+            and game.get("config_ready")
+        )
+    if requirement == "rmvpe":
+        rmvpe = backends.get("rmvpe", {})
+        return bool(
+            report.get("runtime_ready")
+            and rmvpe.get("software_ready")
+            and rmvpe.get("checkpoint_ready")
+        )
+    if requirement == "pesto":
+        pesto = backends.get("pesto", {})
+        return bool(
+            report.get("runtime_ready")
+            and pesto.get("software_ready")
+            and pesto.get("checkpoint_ready")
+        )
     if requirement == "all":
         return bool(report.get("runtime_ready") and report.get("torch_ready")) and all(
             bool(backends.get(name, {}).get("software_ready"))
@@ -383,12 +881,23 @@ __all__ = [
     "AI_REQUEST_SCHEMA",
     "AI_REQUIREMENTS",
     "AI_RUNTIME_SCHEMA",
+    "GAME_MODEL_FILENAMES",
+    "RMVPE_MODEL_SHA256",
+    "PESTO_MODEL_SHA256",
     "AIModelManifest",
     "AITranscriptionBackend",
     "AITranscriptionCandidate",
     "AITranscriptionNote",
     "AITranscriptionRequest",
     "ai_requirement_ready",
+    "collect_muscriptor_checkpoint",
+    "collect_game_model",
+    "collect_rmvpe_model",
+    "collect_pesto_model",
     "collect_ai_diagnostics",
     "resolve_ai_python",
+    "resolve_muscriptor_checkpoint",
+    "resolve_game_model",
+    "resolve_rmvpe_model",
+    "resolve_pesto_model",
 ]

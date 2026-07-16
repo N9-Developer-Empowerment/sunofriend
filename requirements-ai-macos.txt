@@ -3,5 +3,12 @@
 # Keep this environment separate from Sunofriend's Python 3.9-3.11 Basic Pitch
 # environment. Model checkpoints are deliberately not downloaded here: their
 # licences and hashes are recorded per bake-off run.
+numpy==2.3.5
+numba==0.63.1
 torch==2.13.0
+torchaudio==2.11.0
 muscriptor==0.2.1
+onnxruntime==1.27.0
+rmvpe-onnx==0.2.3
+soxr==1.1.0
+pesto-pitch==2.0.1

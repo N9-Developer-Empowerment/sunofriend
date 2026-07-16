@@ -801,30 +801,40 @@ def extract_basic_pitch_frames(
 
     if not reference_frames:
         return []
-    from basic_pitch.inference import predict
-
-    from .transcribe_pitched import _model_path
-
-    _, _, events = predict(
-        str(path),
-        model_or_model_path=_model_path(),
-        onset_threshold=0.35,
-        frame_threshold=0.22,
-        minimum_note_length=max(45.0, config.min_note_ms),
-        minimum_frequency=config.fmin_hz,
-        maximum_frequency=config.fmax_hz,
-        melodia_trick=False,
-        multiple_pitch_bends=False,
+    candidates = extract_backing_candidates(path, config=config)
+    return project_basic_pitch_candidates(
+        candidates,
+        config=config,
+        reference_frames=reference_frames,
     )
+
+
+def project_basic_pitch_candidates(
+    candidates: Sequence[VocalCandidate],
+    *,
+    config: VocalConfig,
+    reference_frames: Sequence[PitchFrame],
+) -> list[PitchFrame]:
+    """Project saved Basic Pitch events onto a tracker-neutral time grid.
+
+    Keeping this operation separate from inference lets bake-offs retain the
+    untouched Basic Pitch note events and reuse exactly those events during
+    consensus.  The event pitch is interpreted in the source tuning so an
+    integer Basic Pitch label and a pYIN F0 converted with the same concert-A
+    reference occupy the same semantic MIDI space.
+    """
+
+    if not reference_frames:
+        return []
     hypotheses = sorted(
         (
-            float(start),
-            float(end),
-            int(pitch),
-            max(0.0, min(1.0, float(amplitude))),
+            candidate.note.start,
+            candidate.note.end,
+            candidate.note.pitch,
+            candidate.confidence,
         )
-        for start, end, pitch, amplitude, *_ in events
-        if float(end) > float(start)
+        for candidate in candidates
+        if candidate.note.end > candidate.note.start
     )
     active: list[tuple[float, float, int, float]] = []
     event_index = 0
@@ -840,7 +850,7 @@ def extract_basic_pitch_frames(
             PitchFrame(
                 time=time,
                 f0_hz=(
-                    fractional_midi_to_hz(float(selected[2]), 440.0)
+                    fractional_midi_to_hz(float(selected[2]), config.tuning_hz)
                     if selected is not None
                     else None
                 ),
@@ -860,13 +870,31 @@ def consensus_pitch_frames(
 ) -> list[PitchFrame]:
     """Fuse tracker contours while publishing disagreement as uncertainty."""
 
+    frames, _audit = consensus_pitch_frames_with_audit(tracks, config=config)
+    return frames
+
+
+def consensus_pitch_frames_with_audit(
+    tracks: Mapping[str, Sequence[PitchFrame]],
+    *,
+    config: VocalConfig,
+) -> tuple[list[PitchFrame], list[dict[str, Any]]]:
+    """Fuse aligned contours and retain every observation and decision.
+
+    The returned audit uses the pYIN timeline when available.  It records
+    missing, weak, agreeing and conflicting tracker observations rather than
+    reducing the result to only the selected pitch.  This is intentionally a
+    pure operation so an immutable bake-off can hash its independent inputs
+    and reproduce the same consensus without rerunning a model.
+    """
+
     available = {
         str(name): _validate_frames(values)
         for name, values in tracks.items()
         if values
     }
     if not available:
-        return []
+        return [], []
     base_name = "pyin" if "pyin" in available else max(
         available, key=lambda name: len(available[name])
     )
@@ -877,11 +905,23 @@ def consensus_pitch_frames(
         if any(frame.f0_hz is not None for frame in frames)
     }
     if len(pitched_sources) <= 1:
-        return list(base)
+        audit = [
+            {
+                "time_seconds": round(frame.time, 9),
+                "classification": "single-tracker",
+                "observations": {
+                    base_name: _tracker_observation(frame, config, time_delta=0.0)
+                },
+                "selected": _selected_frame_record(frame, config),
+            }
+            for frame in base
+        ]
+        return list(base), audit
 
     tolerance = config.consensus_tolerance_cents / 100.0
     required = min(config.consensus_min_trackers, len(pitched_sources))
     result: list[PitchFrame] = []
+    audit: list[dict[str, Any]] = []
     positions = {name: 0 for name in available}
     frame_tolerances = {
         name: max(0.03, _frame_hop(frames) * 0.75)
@@ -889,6 +929,7 @@ def consensus_pitch_frames(
     }
     for reference in base:
         observations: list[tuple[str, float, float]] = []
+        observation_records: dict[str, dict[str, Any]] = {}
         for name, frames in available.items():
             position = positions[name]
             while position + 1 < len(frames) and abs(
@@ -897,11 +938,24 @@ def consensus_pitch_frames(
                 position += 1
             positions[name] = position
             frame = frames[position]
-            if abs(frame.time - reference.time) > frame_tolerances[name]:
+            time_delta = frame.time - reference.time
+            if abs(time_delta) > frame_tolerances[name]:
                 frame = None
-            if frame is None or frame.f0_hz is None:
+            if frame is None:
+                observation_records[name] = {
+                    "status": "missing",
+                    "time_delta_seconds": round(time_delta, 9),
+                }
+                continue
+            observation_records[name] = _tracker_observation(
+                frame,
+                config,
+                time_delta=time_delta,
+            )
+            if frame.f0_hz is None:
                 continue
             if frame.voiced_probability < config.uncertain_voicing:
+                observation_records[name]["status"] = "weak"
                 continue
             observations.append(
                 (
@@ -911,12 +965,21 @@ def consensus_pitch_frames(
                 )
             )
         if not observations:
-            result.append(
-                replace(
+            selected = replace(
+                reference,
+                f0_hz=None,
+                voiced_probability=0.0,
+                source="consensus:unvoiced",
+            )
+            result.append(selected)
+            audit.append(
+                _consensus_audit_record(
                     reference,
-                    f0_hz=None,
-                    voiced_probability=0.0,
-                    source="consensus:unvoiced",
+                    selected,
+                    config=config,
+                    classification="unvoiced",
+                    observations=observation_records,
+                    agreeing_sources=(),
                 )
             )
             continue
@@ -954,12 +1017,21 @@ def consensus_pitch_frames(
         conflicting = len(observations) > len(best)
         if len(sources) < required:
             if base_observation is None:
-                result.append(
-                    replace(
+                selected = replace(
+                    reference,
+                    f0_hz=None,
+                    voiced_probability=0.0,
+                    source="consensus:no-agreement",
+                )
+                result.append(selected)
+                audit.append(
+                    _consensus_audit_record(
                         reference,
-                        f0_hz=None,
-                        voiced_probability=0.0,
-                        source="consensus:no-agreement",
+                        selected,
+                        config=config,
+                        classification="no-agreement",
+                        observations=observation_records,
+                        agreeing_sources=tuple(sorted(sources)),
                     )
                 )
                 continue
@@ -975,6 +1047,7 @@ def consensus_pitch_frames(
                 if conflicting
                 else f"consensus:{base_name}-solo"
             )
+            classification = "disputed" if conflicting else "solo"
         else:
             midi_value = _weighted_median(
                 [value[1] for value in best],
@@ -984,17 +1057,76 @@ def consensus_pitch_frames(
             probability = sum(value[2] for value in best) / len(best)
             probability *= 0.72 + 0.28 * agreement
             source = "consensus:" + "+".join(sorted(sources))
-        result.append(
-            PitchFrame(
-                time=reference.time,
-                f0_hz=fractional_midi_to_hz(midi_value, config.tuning_hz),
-                voiced_probability=max(0.0, min(1.0, probability)),
-                rms=reference.rms,
-                onset_strength=reference.onset_strength,
-                source=source,
+            classification = "agreement"
+        selected = PitchFrame(
+            time=reference.time,
+            f0_hz=fractional_midi_to_hz(midi_value, config.tuning_hz),
+            voiced_probability=max(0.0, min(1.0, probability)),
+            rms=reference.rms,
+            onset_strength=reference.onset_strength,
+            source=source,
+        )
+        result.append(selected)
+        audit.append(
+            _consensus_audit_record(
+                reference,
+                selected,
+                config=config,
+                classification=classification,
+                observations=observation_records,
+                agreeing_sources=tuple(sorted(sources)),
             )
         )
-    return result
+    return result, audit
+
+
+def _tracker_observation(
+    frame: PitchFrame,
+    config: VocalConfig,
+    *,
+    time_delta: float,
+) -> dict[str, Any]:
+    midi = frame.fractional_midi(config.tuning_hz)
+    return {
+        "status": "voiced" if midi is not None else "unvoiced",
+        "time_seconds": round(frame.time, 9),
+        "time_delta_seconds": round(time_delta, 9),
+        "frequency_hz": None if frame.f0_hz is None else round(frame.f0_hz, 9),
+        "fractional_midi": None if midi is None else round(midi, 9),
+        "confidence": round(frame.voiced_probability, 9),
+        "source": frame.source,
+    }
+
+
+def _selected_frame_record(
+    frame: PitchFrame,
+    config: VocalConfig,
+) -> dict[str, Any]:
+    midi = frame.fractional_midi(config.tuning_hz)
+    return {
+        "source": frame.source,
+        "frequency_hz": None if frame.f0_hz is None else round(frame.f0_hz, 9),
+        "fractional_midi": None if midi is None else round(midi, 9),
+        "confidence": round(frame.voiced_probability, 9),
+    }
+
+
+def _consensus_audit_record(
+    reference: PitchFrame,
+    selected: PitchFrame,
+    *,
+    config: VocalConfig,
+    classification: str,
+    observations: Mapping[str, Mapping[str, Any]],
+    agreeing_sources: Sequence[str],
+) -> dict[str, Any]:
+    return {
+        "time_seconds": round(reference.time, 9),
+        "classification": classification,
+        "agreeing_sources": list(agreeing_sources),
+        "observations": {name: dict(value) for name, value in sorted(observations.items())},
+        "selected": _selected_frame_record(selected, config),
+    }
 
 
 def _weighted_median(values: Sequence[float], weights: Sequence[float]) -> float:
@@ -2016,6 +2148,7 @@ __all__ = [
     "VocalNoteEvidence",
     "VocalTranscription",
     "consensus_pitch_frames",
+    "consensus_pitch_frames_with_audit",
     "extract_backing_candidates",
     "extract_basic_pitch_frames",
     "extract_consensus_pitch_frames",
@@ -2025,6 +2158,7 @@ __all__ = [
     "hz_to_fractional_midi",
     "load_audio_phase_safe",
     "phase_safe_downmix",
+    "project_basic_pitch_candidates",
     "repair_repeated_phrases",
     "select_backing_vocal_variants",
     "simplify_vocal_notes",

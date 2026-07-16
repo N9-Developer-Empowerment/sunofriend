@@ -21,6 +21,7 @@ from sunofriend.vocal import (
     VocalConfig,
     VocalNoteEvidence,
     consensus_pitch_frames,
+    consensus_pitch_frames_with_audit,
     fractional_midi_to_hz,
     repair_repeated_phrases,
     transcribe_vocal_frames,
@@ -80,6 +81,49 @@ class MelodyConsensusTests(unittest.TestCase):
         self.assertEqual(got[1].source, "consensus:pyin-disputed")
         self.assertLess(got[1].voiced_probability, config.clean_voicing)
         self.assertIn("basic-pitch+pyin", got[2].source)
+
+    def test_three_tracker_audit_retains_agreement_override_and_dispute(self):
+        config = VocalConfig(
+            tracker_mode="consensus",
+            clean_voicing=0.55,
+            uncertain_voicing=0.30,
+        )
+        pyin = [
+            _frame(0.0, 60.0, 0.92, "pyin"),
+            _frame(0.1, 62.0, 0.93, "pyin"),
+            _frame(0.2, 64.0, 0.91, "pyin"),
+        ]
+        basic = [
+            _frame(0.0, 60.0, 0.86, "basic-pitch"),
+            _frame(0.1, 67.0, 0.90, "basic-pitch"),
+            _frame(0.2, None, 0.0, "basic-pitch"),
+        ]
+        rmvpe = [
+            _frame(0.0, 60.1, 0.88, "rmvpe"),
+            _frame(0.1, 67.1, 0.89, "rmvpe"),
+            _frame(0.2, 65.0, 0.90, "rmvpe"),
+        ]
+
+        frames, audit = consensus_pitch_frames_with_audit(
+            {"pyin": pyin, "basic-pitch": basic, "rmvpe": rmvpe},
+            config=config,
+        )
+
+        self.assertEqual(len(frames), len(audit))
+        self.assertEqual(audit[0]["classification"], "agreement")
+        self.assertEqual(
+            audit[0]["agreeing_sources"], ["basic-pitch", "pyin", "rmvpe"]
+        )
+        self.assertEqual(audit[1]["classification"], "agreement")
+        self.assertEqual(
+            audit[1]["agreeing_sources"], ["basic-pitch", "rmvpe"]
+        )
+        self.assertNotIn("pyin", frames[1].source)
+        self.assertEqual(audit[2]["classification"], "disputed")
+        self.assertEqual(frames[2].source, "consensus:pyin-disputed")
+        self.assertEqual(
+            set(audit[2]["observations"]), {"basic-pitch", "pyin", "rmvpe"}
+        )
 
 
 class PhraseRepetitionTests(unittest.TestCase):

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+import hashlib
 import json
 import math
 from bisect import bisect_left
@@ -644,6 +645,28 @@ def apply_melody_corrections(
     document = json.loads(corrections.read_text(encoding="utf-8"))
     if document.get("format") != CORRECTION_FORMAT:
         raise ValueError(f"Correction JSON must use format {CORRECTION_FORMAT}")
+    source_sha256 = document.get("source_stem_sha256")
+    if source_sha256 is not None:
+        source = Path(str(document.get("source_stem", ""))).expanduser()
+        if not source.is_file():
+            raise ValueError("Correction JSON source stem is missing")
+        if _file_sha256(source) != str(source_sha256):
+            raise ValueError("Correction JSON source stem hash does not match")
+    review = document.get("review")
+    if isinstance(review, dict) and review.get("format") == (
+        "sunofriend.melody-phrase-review.v1"
+    ):
+        choices = review.get("choices", [])
+        if review.get("status") != "reviewed":
+            raise ValueError("Phrase-review correction must be reviewed before apply")
+        if not isinstance(choices, list) or not choices or any(
+            not isinstance(choice, dict)
+            or not choice.get("reviewed")
+            or choice.get("selected")
+            not in {"basic-pitch", "game-boundary", "combined"}
+            for choice in choices
+        ):
+            raise ValueError("Phrase-review correction has incomplete choices")
     bpm = float(document.get("bpm", 0.0))
     if not math.isfinite(bpm) or bpm <= 0:
         raise ValueError("Correction JSON bpm must be positive")
@@ -694,6 +717,7 @@ def apply_melody_corrections(
         "bpm": bpm,
         "tuning_cents": tuning_cents,
         "note_count": len(notes),
+        "review": review,
     }
     audit_path = output.with_suffix(".correction.json")
     _write_json(audit_path, audit)
@@ -786,6 +810,14 @@ def _write_json(path: Path, value: dict[str, Any]) -> None:
         json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     temporary.replace(path)
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def _correction_html(

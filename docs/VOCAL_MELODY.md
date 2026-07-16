@@ -114,6 +114,63 @@ The chord chart is recorded for audit, but v1 does not force observed vocal
 notes onto an untimed chart. This protects chromatic melody notes and avoids
 turning uncertain harmony timing into confident pitch changes.
 
+## Independent tracker evidence and experimental consensus
+
+The normal `vocal-melody` command is a creative workflow. Use
+`vocal-trackers` when the question is which pitch tracker observed what:
+
+```bash
+.venv/bin/sunofriend vocal-trackers path/to/vocals.wav \
+  --role lead --bpm 119 --tuning-hz 440 \
+  --out-dir work/song-vocal-trackers
+```
+
+That command preserves separately scored `pyin.evidence.json` and
+`basic-pitch.evidence.json` records plus their GarageBand-ready candidate
+MIDI. Basic Pitch remains raw and may be polyphonic; pYIN keeps continuous F0
+plus a named deterministic note decoder. A repeat never overwrites an existing
+run.
+
+After a standalone RMVPE run has produced `rmvpe.frames.json`, opt into a
+three-way comparison:
+
+```bash
+.venv/bin/sunofriend vocal-trackers path/to/vocals.wav \
+  --role lead --bpm 119 \
+  --rmvpe-frames work/rmvpe-runs/RUN_ID/rmvpe.frames.json \
+  --game-candidate work/game-runs/RUN_ID/candidate.json \
+  --out-dir work/song-vocal-trackers
+```
+
+The RMVPE record must remain beside its `candidate.json` and `run.json`, and
+the recorded source SHA-256 must exactly match the supplied WAV. Consensus is
+time-aligned to pYIN frames, requires two agreeing pitched trackers within 70
+cents, and retains every per-frame observation in `consensus.evidence.json`.
+It can select Basic Pitch plus RMVPE when both disagree with pYIN; pYIN-only
+evidence is retained below clean confidence, and unresolved conflicts are
+explicit. `consensus.candidate.mid` is always `review-required`. Compare its
+evaluation and listen to it, but do not assume voting is musically superior—
+especially for polyphonic backing vocals where different trackers may follow
+different genuine voices.
+
+`--game-candidate` is optional and requires `--rmvpe-frames`. Sunofriend checks
+the source and checkpoint SHA-256 values against both inputs' adjacent,
+completed immutable run manifests. It then treats Basic Pitch and GAME only
+as boundary proposals. A proposal is accepted when pYIN and RMVPE are voiced,
+agree within 70 cents, cover enough of the note with stable pitch, and support
+both edges. The output pitch is the equal midpoint of pYIN and RMVPE; their
+unrelated confidence scales do not vote on pitch or provider selection.
+
+The command publishes separate `boundary-basic-pitch.candidate.mid` and
+`boundary-game.candidate.mid` variants plus a non-overlapping monophonic
+`boundary-repair.candidate.mid`. `boundary-repair.evidence.json` preserves
+every proposal, rejection reason, selected provider and confidence-ranked
+phrase. All three are `review-required`. Raw Basic Pitch, pYIN, RMVPE and GAME
+artifacts remain authoritative and unchanged. In particular, do not replace a
+backing-vocal harmony stack with this monophonic experiment: the first backing
+golden retained only six notes and no supported notes, while the lead result
+provided a useful 23-note phrase-review candidate.
+
 ## Hummed guide and visual correction
 
 When a stem contains competing voices, record a rough hum while listening from
@@ -208,6 +265,33 @@ The correction document retains BPM, source tuning, role, channel and program,
 so the result carries the same GarageBand fine-tuning bend. It also writes a
 `.correction.json` audit beside the new MIDI. Use `--no-correction-report` only
 when the HTML/JSON artifacts are not wanted.
+
+### Phrase review from independent trackers
+
+After `vocal-trackers` has published an agreed-F0 boundary repair, build a
+fresh local recognition-first package:
+
+```bash
+.venv/bin/sunofriend melody-review \
+  work/song-vocal-trackers/RUN_ID \
+  --out-dir work/song-vocal-phrase-review
+```
+
+`melody-review` verifies the run, source WAV, Basic Pitch evidence, combined
+MIDI and boundary evidence by SHA-256 before writing anything. It is lead-only
+in v1; backing vocals retain their polyphonic Basic Pitch and harmony stack.
+Each ranked region includes three explicit alternatives—raw Basic Pitch,
+GAME boundaries over agreed pitch, and the combined repair—plus the source,
+neutral MIDI, source-plus-MIDI audio, piano roll and phrase-local evaluation.
+No-evidence alternatives remain visible as zero-note silence.
+
+Open `melody_phrase_review.html`, review the weakest regions first, select one
+alternative per phrase (or explicitly accept all current combined defaults),
+then export `melody-corrections-reviewed.json`. Apply that file with
+`melody-apply`. The adjacent unreviewed seed cannot be applied: the command
+requires reviewed choices and a matching source hash, and carries those
+choices into the final `.correction.json` audit. This is a human selection
+layer; aggregate metrics never choose the melody automatically.
 
 ## Tuning and GarageBand
 

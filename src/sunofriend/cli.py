@@ -17,10 +17,13 @@ _COMMANDS = {
     "listen",
     "listen-all",
     "vocal-melody",
+    "vocal-trackers",
+    "melody-review",
     "melody-apply",
     "evaluate",
     "doctor",
     "ai-doctor",
+    "ai-transcribe",
     "preview",
     "midi-ports",
     "play",
@@ -189,6 +192,102 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Do not promote weak source notes supported by repeated phrases",
     )
+    vocal.add_argument(
+        "--muscriptor",
+        action="store_true",
+        help=(
+            "Also run the optional local MuScriptor worker and publish its raw "
+            "voice transcription as a separate GarageBand-ready variant"
+        ),
+    )
+    vocal.add_argument(
+        "--muscriptor-checkpoint",
+        default=None,
+        help=(
+            "Existing accepted MuScriptor .safetensors checkpoint; defaults to "
+            "SUNOFRIEND_MUSCRIPTOR_MODEL or the standard local small model"
+        ),
+    )
+    vocal.add_argument(
+        "--muscriptor-device",
+        choices=("auto", "cpu", "mps"),
+        default="cpu",
+        help="MuScriptor inference device (default: cpu for short small-model clips)",
+    )
+    vocal.add_argument(
+        "--muscriptor-python",
+        default=None,
+        help="AI interpreter (default: SUNOFRIEND_AI_PYTHON or .venv-ai)",
+    )
+    vocal.add_argument(
+        "--muscriptor-timeout-seconds",
+        type=float,
+        default=1800.0,
+        help="Kill the isolated MuScriptor worker after this many seconds",
+    )
+    vocal.add_argument(
+        "--game",
+        action="store_true",
+        help=(
+            "Also run the optional local GAME vocal worker and publish its "
+            "seeded note-boundary transcription as a separate variant"
+        ),
+    )
+    vocal.add_argument(
+        "--game-model",
+        default=None,
+        help=(
+            "Existing GAME ONNX bundle; defaults to SUNOFRIEND_GAME_MODEL or "
+            "the pinned local v1.0.3 small bundle"
+        ),
+    )
+    vocal.add_argument(
+        "--game-language",
+        choices=("auto", "en", "ja", "yue", "zh"),
+        default="auto",
+        help="GAME vocal language hint (default: universal/auto)",
+    )
+    vocal.add_argument(
+        "--game-seed",
+        type=int,
+        default=0,
+        help="GAME diffusion seed for reproducible boundaries (default: 0)",
+    )
+    vocal.add_argument(
+        "--game-boundary-threshold",
+        type=float,
+        default=0.2,
+        help="GAME note-boundary threshold (default: official 0.2)",
+    )
+    vocal.add_argument(
+        "--game-boundary-radius-ms",
+        type=float,
+        default=20.0,
+        help="GAME local boundary radius in milliseconds (default: 20)",
+    )
+    vocal.add_argument(
+        "--game-presence-threshold",
+        type=float,
+        default=0.2,
+        help="GAME voiced-note threshold (default: official 0.2)",
+    )
+    vocal.add_argument(
+        "--game-steps",
+        type=int,
+        default=8,
+        help="GAME D3PM segmentation steps (default: official 8)",
+    )
+    vocal.add_argument(
+        "--game-python",
+        default=None,
+        help="AI interpreter (default: SUNOFRIEND_AI_PYTHON or .venv-ai)",
+    )
+    vocal.add_argument(
+        "--game-timeout-seconds",
+        type=float,
+        default=1800.0,
+        help="Kill the isolated GAME worker after this many seconds",
+    )
     guide_input = vocal.add_mutually_exclusive_group()
     guide_input.add_argument(
         "--guide",
@@ -224,6 +323,90 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-correction-report",
         action="store_true",
         help="Skip the local interactive HTML/JSON melody correction artifacts",
+    )
+
+    vocal_trackers = sub.add_parser(
+        "vocal-trackers",
+        help=(
+            "Publish immutable pYIN and Basic Pitch evidence, scores, and an "
+            "optional RMVPE consensus/agreed-F0 boundary repair"
+        ),
+    )
+    vocal_trackers.add_argument("stem", help="Lead- or backing-vocal WAV stem")
+    vocal_trackers.add_argument(
+        "--role",
+        required=True,
+        choices=("lead", "backing"),
+        help="Vocal role used for GarageBand channel and patch defaults",
+    )
+    vocal_trackers.add_argument(
+        "--out-dir",
+        required=True,
+        help="Parent directory for a fresh immutable tracker run",
+    )
+    vocal_trackers.add_argument(
+        "--bpm",
+        type=float,
+        default=None,
+        help="GarageBand BPM (default: inferred from the parent folder)",
+    )
+    vocal_trackers.add_argument(
+        "--tuning-hz",
+        type=float,
+        default=None,
+        help="Source concert A (default: parent-folder value, else 440)",
+    )
+    vocal_trackers.add_argument(
+        "--fmin", type=float, default=65.4, help="Lowest vocal F0 in Hz"
+    )
+    vocal_trackers.add_argument(
+        "--fmax", type=float, default=1046.5, help="Highest vocal F0 in Hz"
+    )
+    vocal_trackers.add_argument(
+        "--rmvpe-frames",
+        default=None,
+        help=(
+            "Existing rmvpe.frames.json from an immutable ai-transcribe run; "
+            "when supplied, create an experimental three-tracker consensus"
+        ),
+    )
+    vocal_trackers.add_argument(
+        "--game-candidate",
+        default=None,
+        help=(
+            "Existing GAME candidate.json from the exact same WAV; use its note "
+            "boundaries only where pYIN and RMVPE agree on pitch"
+        ),
+    )
+    vocal_trackers.add_argument(
+        "--run-id",
+        default=None,
+        help="Optional unique reproducible test label; an existing run is never replaced",
+    )
+
+    melody_review = sub.add_parser(
+        "melody-review",
+        help="Build a local phrase-by-phrase audition and correction package",
+    )
+    melody_review.add_argument(
+        "tracker_run",
+        help="Completed lead vocal-trackers run directory or its run.json",
+    )
+    melody_review.add_argument(
+        "--out-dir",
+        required=True,
+        help="Fresh output directory for HTML, MIDI, audio and evaluation files",
+    )
+    melody_review.add_argument(
+        "--source-stem",
+        default=None,
+        help="Moved source WAV; its SHA-256 must match the tracker run",
+    )
+    melody_review.add_argument(
+        "--padding-seconds",
+        type=float,
+        default=0.25,
+        help="Context before and after each phrase, from 0 to 2 seconds",
     )
 
     melody_apply = sub.add_parser(
@@ -340,6 +523,148 @@ def build_parser() -> argparse.ArgumentParser:
         choices=AI_REQUIREMENTS,
         default="runtime",
         help="Exit successfully when this AI capability is ready (default: runtime)",
+    )
+
+    ai_transcribe = sub.add_parser(
+        "ai-transcribe",
+        help="Run an isolated local AI transcription and preserve an immutable record",
+    )
+    ai_transcribe.add_argument("audio", help="Source WAV or other local audio file")
+    ai_transcribe.add_argument(
+        "--backend",
+        choices=("muscriptor", "game", "rmvpe", "pesto"),
+        default="muscriptor",
+        help="Optional local AI backend (default: muscriptor)",
+    )
+    ai_transcribe.add_argument(
+        "--checkpoint",
+        default=None,
+        help=(
+            "Existing local checkpoint, GAME bundle, RMVPE ONNX model or PESTO "
+            "checkpoint; defaults to the backend's SUNOFRIEND_*_MODEL or "
+            "standard local model"
+        ),
+    )
+    ai_transcribe.add_argument(
+        "--out-dir", required=True, help="Parent directory for a fresh immutable run"
+    )
+    ai_transcribe.add_argument(
+        "--bpm", required=True, type=float, help="Tempo written into candidate.mid"
+    )
+    ai_transcribe.add_argument(
+        "--instrument",
+        action="append",
+        default=[],
+        help="Model role/instrument name (repeat where the backend supports it)",
+    )
+    ai_transcribe.add_argument(
+        "--start-seconds", type=float, default=0.0, help="Optional excerpt start"
+    )
+    ai_transcribe.add_argument(
+        "--end-seconds", type=float, default=None, help="Optional excerpt end"
+    )
+    ai_transcribe.add_argument(
+        "--device",
+        choices=("auto", "cpu", "mps"),
+        default="auto",
+        help="Inference device (default: MPS when available, otherwise CPU)",
+    )
+    ai_transcribe.add_argument(
+        "--beam-size", type=int, default=1, help="MuScriptor decoding beam size"
+    )
+    ai_transcribe.add_argument(
+        "--batch-size", type=int, default=None, help="Optional inference batch size"
+    )
+    ai_transcribe.add_argument(
+        "--language",
+        choices=("auto", "en", "ja", "yue", "zh"),
+        default="auto",
+        help="GAME vocal language hint (default: universal/auto)",
+    )
+    ai_transcribe.add_argument(
+        "--boundary-threshold",
+        type=float,
+        default=0.2,
+        help="GAME note-boundary threshold (default: official 0.2)",
+    )
+    ai_transcribe.add_argument(
+        "--boundary-radius-ms",
+        type=float,
+        default=20.0,
+        help="GAME local boundary radius in milliseconds (default: 20)",
+    )
+    ai_transcribe.add_argument(
+        "--presence-threshold",
+        type=float,
+        default=0.2,
+        help="GAME voiced-note threshold (default: official 0.2)",
+    )
+    ai_transcribe.add_argument(
+        "--game-steps",
+        type=int,
+        default=8,
+        help="GAME D3PM segmentation steps (default: official 8)",
+    )
+    ai_transcribe.add_argument(
+        "--seed",
+        type=int,
+        default=0,
+        help="GAME diffusion seed for reproducible boundaries (default: 0)",
+    )
+    ai_transcribe.add_argument(
+        "--confidence-threshold",
+        type=float,
+        default=None,
+        help=(
+            "Frame voiced-confidence threshold (default: RMVPE 0.03; PESTO 0.2)"
+        ),
+    )
+    ai_transcribe.add_argument(
+        "--minimum-note-ms",
+        type=float,
+        default=80.0,
+        help="F0 decoder minimum note length in milliseconds (default: 80)",
+    )
+    ai_transcribe.add_argument(
+        "--maximum-gap-ms",
+        type=float,
+        default=50.0,
+        help="F0 decoder maximum same-pitch unvoiced gap to bridge (default: 50)",
+    )
+    ai_transcribe.add_argument(
+        "--pitch-change-semitones",
+        type=float,
+        default=0.75,
+        help="F0 decoder pitch-change hysteresis in semitones (default: 0.75)",
+    )
+    ai_transcribe.add_argument(
+        "--pesto-step-ms",
+        type=float,
+        default=10.0,
+        help="PESTO frame step in milliseconds (default: 10)",
+    )
+    ai_transcribe.add_argument(
+        "--pesto-reduction",
+        choices=("alwa", "argmax", "mean"),
+        default="alwa",
+        help="PESTO pitch decoder (default: alwa)",
+    )
+    ai_transcribe.add_argument(
+        "--pesto-chunks",
+        type=int,
+        default=1,
+        help="PESTO inference chunks; increase to reduce memory (default: 1)",
+    )
+    ai_transcribe.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=1800.0,
+        help="Kill the isolated worker after this many seconds (default: 1800)",
+    )
+    ai_transcribe.add_argument(
+        "--python",
+        default=None,
+        help="AI interpreter (default: SUNOFRIEND_AI_PYTHON or .venv-ai)",
     )
 
     preview = sub.add_parser(
@@ -935,6 +1260,10 @@ def main(argv: list[str] | None = None) -> int:
             return _run_listen_all(args)
         if args.command == "vocal-melody":
             return _run_vocal_melody(args)
+        if args.command == "vocal-trackers":
+            return _run_vocal_trackers(args)
+        if args.command == "melody-review":
+            return _run_melody_review(args)
         if args.command == "melody-apply":
             return _run_melody_apply(args)
         if args.command == "evaluate":
@@ -943,6 +1272,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_doctor(args)
         if args.command == "ai-doctor":
             return _run_ai_doctor(args)
+        if args.command == "ai-transcribe":
+            return _run_ai_transcribe(args)
         if args.command == "preview":
             return _run_preview(args)
         if args.command == "midi-ports":
@@ -1184,6 +1515,42 @@ def _run_vocal_melody(args) -> int:
         grid=grid,
         out_dir=Path(args.out_dir),
     )
+    ai_challengers = {}
+    if args.muscriptor:
+        challenger = _publish_muscriptor_vocal_challenger(
+            result=result,
+            stem=stem,
+            role=args.role,
+            bpm=bpm,
+            out_dir=Path(args.out_dir),
+            checkpoint=args.muscriptor_checkpoint,
+            device=args.muscriptor_device,
+            python=args.muscriptor_python,
+            timeout_seconds=args.muscriptor_timeout_seconds,
+        )
+        ai_challengers["muscriptor"] = challenger
+        summary["variants"]["muscriptor"] = challenger
+    if args.game:
+        challenger = _publish_game_vocal_challenger(
+            result=result,
+            stem=stem,
+            role=args.role,
+            bpm=bpm,
+            out_dir=Path(args.out_dir),
+            model=args.game_model,
+            language=args.game_language,
+            seed=args.game_seed,
+            boundary_threshold=args.game_boundary_threshold,
+            boundary_radius_ms=args.game_boundary_radius_ms,
+            presence_threshold=args.game_presence_threshold,
+            steps=args.game_steps,
+            python=args.game_python,
+            timeout_seconds=args.game_timeout_seconds,
+        )
+        ai_challengers["game"] = challenger
+        summary["variants"]["game"] = challenger
+    if ai_challengers:
+        summary["ai_challengers"] = ai_challengers
     if not args.no_correction_report:
         from .melody_correction import write_melody_correction_artifacts
 
@@ -1206,6 +1573,350 @@ def _run_vocal_melody(args) -> int:
     )
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0
+
+
+def _run_vocal_trackers(args) -> int:
+    """Preserve raw trackers before opt-in consensus and boundary repair."""
+
+    from .metadata import infer_project_metadata
+    from .vocal_trackers import run_vocal_tracker_bakeoff
+
+    stem = Path(args.stem)
+    if not stem.is_file():
+        raise ValueError(f"Vocal stem does not exist: {stem}")
+    metadata = infer_project_metadata(stem.parent)
+    bpm = float(args.bpm if args.bpm is not None else (metadata.bpm or 0.0))
+    if not bpm > 0:
+        raise ValueError(
+            "BPM was not provided and could not be inferred from the parent folder"
+        )
+    tuning_hz = float(
+        args.tuning_hz
+        if args.tuning_hz is not None
+        else (metadata.tuning_hz or 440.0)
+    )
+    result = run_vocal_tracker_bakeoff(
+        audio_path=stem,
+        out_dir=args.out_dir,
+        bpm=bpm,
+        role=args.role,
+        tuning_hz=tuning_hz,
+        fmin_hz=float(args.fmin),
+        fmax_hz=float(args.fmax),
+        rmvpe_frames_path=args.rmvpe_frames,
+        game_candidate_path=args.game_candidate,
+        run_id=args.run_id,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_melody_review(args) -> int:
+    """Publish a fresh recognition-first phrase review package."""
+
+    from .phrase_review import build_melody_phrase_review
+
+    result = build_melody_phrase_review(
+        args.tracker_run,
+        out_dir=args.out_dir,
+        source_stem=args.source_stem,
+        padding_seconds=args.padding_seconds,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _publish_muscriptor_vocal_challenger(
+    *,
+    result,
+    stem: Path,
+    role: str,
+    bpm: float,
+    out_dir: Path,
+    checkpoint: str | None,
+    device: str,
+    python: str | None,
+    timeout_seconds: float,
+) -> dict:
+    """Run MuScriptor as an explicit model-neutral vocal challenger."""
+
+    from .ai_runtime import resolve_muscriptor_checkpoint
+
+    return _publish_ai_vocal_challenger(
+        result=result,
+        stem=stem,
+        role=role,
+        bpm=bpm,
+        out_dir=out_dir,
+        backend="muscriptor",
+        display_name="MuScriptor",
+        model_path=resolve_muscriptor_checkpoint(checkpoint),
+        options={"device": device, "beam_size": 1},
+        python=python,
+        timeout_seconds=timeout_seconds,
+        description=(
+            "MuScriptor voice challenger with a separate source-energy velocity "
+            "layer, source-tuned for GarageBand."
+        ),
+    )
+
+
+def _publish_game_vocal_challenger(
+    *,
+    result,
+    stem: Path,
+    role: str,
+    bpm: float,
+    out_dir: Path,
+    model: str | None,
+    language: str,
+    seed: int,
+    boundary_threshold: float,
+    boundary_radius_ms: float,
+    presence_threshold: float,
+    steps: int,
+    python: str | None,
+    timeout_seconds: float,
+) -> dict:
+    """Run seeded GAME as an explicit vocal note-boundary challenger."""
+
+    from .ai_runtime import resolve_game_model
+
+    return _publish_ai_vocal_challenger(
+        result=result,
+        stem=stem,
+        role=role,
+        bpm=bpm,
+        out_dir=out_dir,
+        backend="game",
+        display_name="GAME",
+        model_path=resolve_game_model(model),
+        options={
+            "device": "cpu",
+            "language": language,
+            "seed": seed,
+            "boundary_threshold": boundary_threshold,
+            "boundary_radius_ms": boundary_radius_ms,
+            "presence_threshold": presence_threshold,
+            "game_steps": steps,
+        },
+        python=python,
+        timeout_seconds=timeout_seconds,
+        description=(
+            "Seeded GAME singing-note boundary and floating-pitch challenger "
+            "with a separate source-energy velocity layer, source-tuned for "
+            "GarageBand."
+        ),
+    )
+
+
+def _publish_ai_vocal_challenger(
+    *,
+    result,
+    stem: Path,
+    role: str,
+    bpm: float,
+    out_dir: Path,
+    backend: str,
+    display_name: str,
+    model_path: Path,
+    options: dict,
+    python: str | None,
+    timeout_seconds: float,
+    description: str,
+) -> dict:
+    """Publish one isolated AI candidate without changing the primary melody."""
+
+    from .ai_bakeoff import run_ai_transcription
+    from .ai_runtime import AITranscriptionCandidate
+    from .conversion import (
+        NoteProvenance,
+        retarget_note_provenance,
+        write_note_provenance,
+    )
+    from .midi import MidiTrack, write_midi_file
+    from .models import NoteEvent
+    from .note_safety import normalize_note_events
+
+    run_parent = out_dir / "ai-runs" / backend
+    manifest = run_ai_transcription(
+        audio_path=stem,
+        out_dir=run_parent,
+        checkpoint_path=model_path,
+        bpm=bpm,
+        backend=backend,
+        roles=("voice",),
+        options=options,
+        python=python,
+        timeout_seconds=timeout_seconds,
+    )
+    run_dir = run_parent / manifest["run_id"]
+    candidate_path = run_dir / "candidate.json"
+    candidate = AITranscriptionCandidate.from_dict(
+        json.loads(candidate_path.read_text(encoding="utf-8"))
+    )
+    quality_path = run_dir / "candidate.quality.json"
+    quality_document = (
+        json.loads(quality_path.read_text(encoding="utf-8"))
+        if quality_path.is_file()
+        else None
+    )
+    expression_path = run_dir / "candidate.expression.json"
+    expression_midi_path = run_dir / "candidate.expression.mid"
+    expression_document = None
+    expression_note_records: list[dict] = []
+    recovered_velocities: list[int] | None = None
+    if expression_path.is_file():
+        from .ai_expression import expression_velocities
+
+        expression_document = json.loads(expression_path.read_text(encoding="utf-8"))
+        if expression_document.get("status") in {"complete", "no-evidence"}:
+            recovered_velocities = expression_velocities(
+                expression_document,
+                expected_notes=len(candidate.notes),
+            )
+            expression_note_records = sorted(
+                expression_document["notes"],
+                key=lambda note: int(note["candidate_index"]),
+            )
+    raw_notes = [
+        NoteEvent(
+            start=float(note.start_seconds),
+            end=float(note.end_seconds),
+            pitch=int(round(note.pitch)),
+            velocity=(
+                recovered_velocities[index]
+                if recovered_velocities is not None
+                else (
+                    int(round(note.velocity)) if note.velocity is not None else 88
+                )
+            ),
+        )
+        for index, note in enumerate(candidate.notes)
+    ]
+    notes = normalize_note_events(raw_notes)
+    token = "lead_vocal" if role == "lead" else "backing_vocal"
+    variants_dir = out_dir / "variants"
+    variants_dir.mkdir(parents=True, exist_ok=True)
+    midi_path = variants_dir / f"{token}-{backend}.mid"
+    provenance_path = variants_dir / f"{token}-{backend}.provenance.json"
+    channel, program = (2, 73) if role == "lead" else (3, 65)
+    tuning_cents = float(result.diagnostics.garageband_fine_tune_cents)
+    write_midi_file(
+        midi_path,
+        [
+            MidiTrack(
+                f"{role.title()} Vocal {display_name}",
+                channel,
+                program,
+                notes,
+                pitch_bend_cents=tuning_cents,
+            )
+        ],
+        bpm=bpm,
+    )
+    records = []
+    for index, (note, source) in enumerate(zip(raw_notes, candidate.notes)):
+        expression_note = (
+            expression_note_records[index]
+            if index < len(expression_note_records)
+            else None
+        )
+        records.append(
+            NoteProvenance.from_note(
+                note,
+                origin="observed",
+                confidence=(
+                    float(source.confidence)
+                    if source.confidence is not None
+                    else 0.5
+                ),
+                confidence_basis=(
+                    "measured" if source.confidence is not None else "policy"
+                ),
+                family="voice",
+                sources=(backend,),
+                details={
+                    "source_event_id": source.source_event_id,
+                    "model_instrument": source.instrument,
+                    "raw_pitch": source.pitch,
+                    "raw_velocity": source.velocity,
+                    "recovered_velocity": (
+                        expression_note.get("velocity") if expression_note else None
+                    ),
+                    "velocity_source": (
+                        expression_note.get("velocity_source")
+                        if expression_note
+                        else "neutral-fallback"
+                    ),
+                    "run_id": manifest["run_id"],
+                },
+            )
+        )
+    write_note_provenance(
+        provenance_path,
+        retarget_note_provenance(
+            notes,
+            records,
+            mark_changed_as_repaired=True,
+        ),
+        conversion_mode="repair",
+        source_stem=stem,
+        variant=backend,
+    )
+    published_status = "ok" if notes else "no-evidence"
+    if quality_document and quality_document.get("status") == "review-required":
+        published_status = "review-required"
+    published = {
+        "status": published_status,
+        "backend": backend,
+        "model_version": candidate.model_version,
+        "model_metadata": dict(candidate.metadata),
+        "notes": len(notes),
+        "midi": str(midi_path) if notes else None,
+        "provenance": str(provenance_path),
+        "raw_candidate": str(candidate_path),
+        "candidate_quality": str(quality_path) if quality_path.is_file() else None,
+        "quality_status": (
+            quality_document.get("status") if quality_document else None
+        ),
+        "quality_warnings": (
+            quality_document.get("warnings", []) if quality_document else []
+        ),
+        "raw_midi": str(run_dir / "candidate.mid"),
+        "source_expression": (
+            str(expression_path) if expression_path.is_file() else None
+        ),
+        "source_expression_midi": (
+            str(expression_midi_path) if expression_midi_path.is_file() else None
+        ),
+        "velocity_summary": (
+            expression_document.get("velocity_summary")
+            if expression_document
+            else None
+        ),
+        "run_manifest": str(run_dir / "run.json"),
+        "run_id": manifest["run_id"],
+        "checkpoint_sha256": manifest["checkpoint"]["sha256"],
+        "description": (
+            description
+            + " The raw model candidate remains untouched and the deterministic "
+            "Sunofriend primary is unchanged."
+        ),
+        "selection_policy": "explicit challenger; never automatic primary",
+        "metrics": _vocal_variant_metrics(
+            notes,
+            result.contour,
+            result.diagnostics.tuning_hz,
+        ),
+    }
+    analysis_path = out_dir / "vocal_analysis.json"
+    analysis = json.loads(analysis_path.read_text(encoding="utf-8"))
+    analysis["variants"][backend] = published
+    analysis_path.write_text(
+        json.dumps(analysis, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    return published
 
 
 def _run_melody_apply(args) -> int:
@@ -1723,6 +2434,78 @@ def _run_ai_doctor(args) -> int:
     result["requirement_ready"] = ai_requirement_ready(result, args.require)
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result["requirement_ready"] else 1
+
+
+def _run_ai_transcribe(args) -> int:
+    from .ai_bakeoff import run_ai_transcription
+    from .ai_runtime import (
+        resolve_game_model,
+        resolve_muscriptor_checkpoint,
+        resolve_pesto_model,
+        resolve_rmvpe_model,
+    )
+
+    if args.backend == "game":
+        checkpoint = resolve_game_model(args.checkpoint)
+        options = {
+            "device": args.device,
+            "language": args.language,
+            "boundary_threshold": args.boundary_threshold,
+            "boundary_radius_ms": args.boundary_radius_ms,
+            "presence_threshold": args.presence_threshold,
+            "game_steps": args.game_steps,
+            "seed": args.seed,
+        }
+    elif args.backend == "rmvpe":
+        checkpoint = resolve_rmvpe_model(args.checkpoint)
+        options = {
+            "device": args.device,
+            "confidence_threshold": (
+                0.03
+                if args.confidence_threshold is None
+                else args.confidence_threshold
+            ),
+            "minimum_note_ms": args.minimum_note_ms,
+            "maximum_gap_ms": args.maximum_gap_ms,
+            "pitch_change_semitones": args.pitch_change_semitones,
+        }
+    elif args.backend == "pesto":
+        checkpoint = resolve_pesto_model(args.checkpoint)
+        options = {
+            "device": args.device,
+            "confidence_threshold": (
+                0.2 if args.confidence_threshold is None else args.confidence_threshold
+            ),
+            "minimum_note_ms": args.minimum_note_ms,
+            "maximum_gap_ms": args.maximum_gap_ms,
+            "pitch_change_semitones": args.pitch_change_semitones,
+            "step_size_ms": args.pesto_step_ms,
+            "reduction": args.pesto_reduction,
+            "num_chunks": args.pesto_chunks,
+        }
+    else:
+        checkpoint = resolve_muscriptor_checkpoint(args.checkpoint)
+        options = {
+            "device": args.device,
+            "beam_size": args.beam_size,
+        }
+        if args.batch_size is not None:
+            options["batch_size"] = args.batch_size
+    result = run_ai_transcription(
+        audio_path=args.audio,
+        out_dir=args.out_dir,
+        checkpoint_path=checkpoint,
+        bpm=args.bpm,
+        backend=args.backend,
+        roles=args.instrument,
+        start_seconds=args.start_seconds,
+        end_seconds=args.end_seconds,
+        options=options,
+        python=args.python,
+        timeout_seconds=args.timeout_seconds,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
 
 
 def _run_preview(args) -> int:

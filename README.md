@@ -17,6 +17,8 @@ clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 | --- | --- | --- |
 | Convert a complete folder of instrumental stems | `listen-all` | Stem-locked MIDI with exact, repair and reconstruct policies |
 | Turn lead or backing vocals into playable melodies | `vocal-melody` | pYIN/Basic Pitch consensus, repeated-phrase repair, hummed guidance and editable correction artifacts |
+| Compare and conservatively repair vocal trackers | `vocal-trackers` | Immutable pYIN/Basic Pitch evidence, optional RMVPE consensus, and Basic Pitch/GAME boundaries accepted only where pYIN and RMVPE agree on pitch |
+| Review a lead melody phrase by phrase | `melody-review` | Hash-checked source, MIDI-only and source-overlay auditions, explicit human choices and an unreviewed seed that cannot be applied accidentally |
 | Apply reviewed melody edits | `melody-apply` | Validated correction JSON becomes tuned GarageBand-ready MIDI |
 | Speed up or slow down finished MIDI | `midi-tempo` | Only tempo events change; tracks, notes and groove ticks are untouched |
 | Put complete MIDI in a new key and BPM | `midi-transform` | Semitone transposition plus tick-preserving tempo change; channel 10 drums stay fixed |
@@ -27,12 +29,14 @@ clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 | Keep MIDI, sound and instrument matches together | `instrument-bundle` | Portable Bundle v1 with performance MIDI, source-derived instrument, reference audio, rankings and A/B previews |
 | Store and version reusable parts | `clip-import`, `clip-transform`, `clip-export` | Immutable Clip v1 assets with explicit musical or stem-locked timing |
 | Preview or route MIDI to an instrument | `preview`, `play` | FluidSynth WAV preview or CoreMIDI/IAC playback |
+| Run an optional local AI transcription challenger | `ai-transcribe` | Isolated worker, explicit local checkpoint, raw candidate, MIDI, hashes and immutable logs |
 
 Development has started on a local-first ensemble of optional transcription
 models, phrase-level melody review and learned instrument matching. See the
 multi-week **[AI transcription and instrument roadmap](docs/AI_TRANSCRIPTION_ROADMAP.md)**
 for Phase 1–4 goals, licence boundaries, success criteria, current checklist
-and daily progress log.
+and daily progress log. The measured backend decisions and final listening
+gate are in the **[Phase 1 bake-off close-out report](docs/PHASE1_TRANSCRIPTION_BAKEOFF.md)**.
 
 For combining songs, first use `midi-transform` to choose a common key, BPM
 and tuning, then use `midi-anchor` to place confirmed downbeats on the same
@@ -163,6 +167,257 @@ CoreMIDI destination for `play`. The standard Basic Pitch path uses ONNX
 Runtime, so TensorFlow/TFLite warnings are harmless when the transcription or
 conversion checks pass.
 
+### Optional: run a Phase 1 AI transcription challenger
+
+The experimental AI runtime is isolated from the stable Python 3.9 CLI. Set
+it up and check it independently:
+
+```bash
+brew install uv
+scripts/setup-ai-runtime.sh
+.venv/bin/sunofriend ai-doctor --require muscriptor
+```
+
+MuScriptor code is installed, but its gated CC-BY-NC-4.0 checkpoint is not
+downloaded or accepted for you. After you have personally accepted those
+terms and placed the checkpoint on disk, transcribe a short authorised excerpt
+with an explicit local path:
+
+```bash
+.venv/bin/sunofriend ai-transcribe \
+  "/absolute/path/to/lead-vocal.wav" \
+  --checkpoint "/absolute/path/to/accepted/model.safetensors" \
+  --out-dir "/absolute/path/to/work/ai-bakeoff/my-song" \
+  --bpm 119 \
+  --start-seconds 30 \
+  --end-seconds 45 \
+  --device auto
+```
+
+The standard small-model location is
+`~/.local/share/sunofriend/models/muscriptor-small/model.safetensors`. Once it
+exists, verify both code and weights with:
+
+```bash
+.venv/bin/sunofriend ai-doctor --require muscriptor-checkpoint
+```
+
+At that location `--checkpoint` may be omitted. For another accepted local
+checkpoint, pass `--checkpoint` or set `SUNOFRIEND_MUSCRIPTOR_MODEL`.
+
+For an independent vocal-specific result, install GAME's pinned official
+v1.0.3 small ONNX release explicitly, then run the same authorised excerpt:
+
+```bash
+scripts/setup-game-model.sh
+.venv/bin/sunofriend ai-doctor --require game
+
+.venv/bin/sunofriend ai-transcribe \
+  "/absolute/path/to/lead-vocal.wav" \
+  --backend game \
+  --out-dir "/absolute/path/to/work/ai-bakeoff/my-song/game" \
+  --bpm 119 \
+  --instrument voice \
+  --start-seconds 30 \
+  --end-seconds 45 \
+  --language en \
+  --device cpu \
+  --seed 0
+```
+
+The setup script clones the tagged MIT-licensed GAME code and downloads the
+official release asset only when the script is deliberately invoked. It pins
+the tag commit, release ZIP SHA-256 and all six extracted component hashes.
+Inference itself accepts only the existing local ONNX directory, defaults to
+`~/.local/share/sunofriend/models/game-1.0.3-small-onnx/GAME-1.0.3-small-onnx`,
+and never contacts the network. Override that location with `--checkpoint` or
+`SUNOFRIEND_GAME_MODEL`.
+
+GAME preserves its floating MIDI pitch and separate voiced/unvoiced regions in
+`candidate.raw.json`; the playable MIDI rounds pitch only at the final MIDI
+boundary. Its diffusion boundary decoder is stochastic unless seeded, so
+Sunofriend defaults to and records `--seed 0`. `--boundary-threshold`,
+`--boundary-radius-ms`, `--presence-threshold` and `--game-steps` expose the
+official inference controls for deliberate bake-offs. GAME currently runs
+through ONNX Runtime's CPU provider; `mps` is rejected rather than silently
+falling back.
+
+RMVPE is the independent frame-level F0 challenger. Its setup is also a
+separate, explicit network action:
+
+```bash
+scripts/setup-rmvpe-model.sh
+.venv/bin/sunofriend ai-doctor --require rmvpe
+
+.venv/bin/sunofriend ai-transcribe \
+  "/absolute/path/to/lead-vocal.wav" \
+  --backend rmvpe \
+  --out-dir "/absolute/path/to/work/ai-bakeoff/my-song/rmvpe" \
+  --bpm 119 \
+  --instrument "lead vocal" \
+  --start-seconds 30 \
+  --end-seconds 45 \
+  --device cpu
+```
+
+This pins `rmvpe-onnx==0.2.3`, the MIT-labelled
+`lj1995/VoiceConversionWebUI` model revision
+`b2c8cae96e3b05de46d36c5ef9970ef6cbccafba`, and checkpoint SHA-256
+`5370e71ac80af8b4b7c793d27efd51fd8bf962de3a7ede0766dac0befa3660fd`.
+The authors' reference code is Apache-2.0; the ONNX adapter and labelled model
+distribution are MIT. The model stays outside the repository. Normal
+diagnostics and inference accept only the existing local `.onnx` file and do
+not contact the network.
+
+`rmvpe.frames.json` preserves every model F0 and confidence observation at
+about 10 ms resolution. `candidate.raw.json` contains a conservative,
+deterministic note draft produced from those frames using a confidence gate,
+five-frame median smoothing, short same-pitch gap bridging, pitch hysteresis
+and minimum-note cleanup. Tune that explicitly with
+`--confidence-threshold`, `--minimum-note-ms`, `--maximum-gap-ms` and
+`--pitch-change-semitones`. The frame artifact is the primary model evidence;
+the decoded notes are Sunofriend's versioned adapter output, not note
+boundaries supplied by RMVPE.
+
+PESTO is the small optional second F0 oracle. It is useful for independent
+pitch-class evidence, not as another automatic winner. Install its LGPL-3.0
+package in the isolated runtime, fetch the pinned checkpoint explicitly and
+run it on the same short excerpt:
+
+```bash
+scripts/setup-pesto-model.sh
+.venv/bin/sunofriend ai-doctor --require pesto
+
+.venv/bin/sunofriend ai-transcribe \
+  "/absolute/path/to/lead-vocal.wav" \
+  --backend pesto \
+  --out-dir "/absolute/path/to/work/ai-bakeoff/my-song/pesto" \
+  --bpm 119 \
+  --instrument "lead vocal" \
+  --device cpu
+```
+
+The setup pins `pesto-pitch==2.0.1` and `mir-1k_g7.ckpt` SHA-256
+`16c32e06ddd950e3e4866dfa3c7f8a87c4988f8adf43e57977b189f031f26f3e`.
+Every run preserves `pesto.frames.json` plus the untouched activation matrix
+in `pesto.activations.npy`. Use `--pesto-step-ms`, `--pesto-reduction`,
+`--pesto-chunks` and the shared frame-to-note controls only for deliberate
+bake-offs. Phase 1 retains PESTO as a vocal F0 oracle and rejects its decoded
+MIDI for the current bass golden; it is not part of automatic consensus.
+
+Add a repeated `--instrument "exact MuScriptor name"` to restrict the model.
+Every invocation creates a new run directory and refuses to overwrite an old
+one. It contains the request, raw and validated candidates, `candidate.mid`,
+worker logs, source/checkpoint hashes and a final `run.json`. It now also
+writes:
+
+- `candidate.quality.json`, which flags decoder bursts, implausible density,
+  duplicate rectangles, extreme polyphony and restricted-label leakage;
+- `candidate.expression.json`, containing note-local source-energy evidence;
+- `candidate.expression.mid`, with relative source-derived velocities when
+  the model supplies none.
+
+Frame-producing backends may declare additional immutable evidence. RMVPE adds
+`rmvpe.frames.json`; PESTO adds `pesto.frames.json` and
+`pesto.activations.npy`. Every artifact is confined to the run directory and
+included with its own hash in `run.json`.
+
+The raw candidate is never mutated. `candidate.mid` therefore keeps neutral
+velocity when a backend supplies none, while the separate expression MIDI is
+the more playable audition. A model alias such as `small` or a URL is
+deliberately rejected so inference cannot trigger an unrecorded checkpoint
+download. Neither MIDI has undergone Sunofriend melody repair. Do not promote
+or audition a candidate whose quality status is `review-required` until its
+warnings have been understood; extreme polyphony can overload a synth.
+
+After a short bake-off has shown that MuScriptor is useful for the material,
+MuScriptor and GAME can also be requested directly from the normal vocal
+workflow:
+
+```bash
+.venv/bin/sunofriend vocal-melody \
+  "$STEMS/My Song-vocals-B major-119bpm-440hz.wav" \
+  --role lead \
+  --out-dir "$OUT/vocal_melody/lead" \
+  --muscriptor \
+  --game \
+  --game-language en \
+  --game-seed 0
+```
+
+This writes `variants/lead_vocal-muscriptor.mid` and
+`variants/lead_vocal-game.mid` (or the corresponding backing-vocal files),
+note provenance and separate immutable `ai-runs/<backend>/<run-id>/` records.
+Either flag may be used alone. Both GarageBand variants use separately recorded
+source-expression velocity layers; provenance identifies recovered velocity
+and GAME's original floating pitch, while each raw null-velocity candidate
+remains unchanged. They are explicit challengers: neither silently replaces
+the deterministic primary or correction-page seed. A `review-required`
+quality result is surfaced in `vocal_summary.json`.
+
+For backing vocals, treat GAME and MuScriptor as alternative monophonic
+dominant lines and retain Sunofriend's separate polyphonic `harmony-stack`.
+The Lidl backing golden gave GAME much stronger onset coverage while
+MuScriptor retained better timing and contour, so there is deliberately no
+automatic winner or merge. GAME records its language, thresholds, D3PM
+schedule, seed and model bundle hash in the summary. CPU is the default for
+MuScriptor because it was faster than MPS for the first 15-second golden; use
+`--muscriptor-device auto` or `mps` to re-test other hardware and models. The
+MuScriptor checkpoint remains optional, gated and CC-BY-NC-4.0; neither model
+bundle is included in Sunofriend's Apache-2.0 package.
+
+RMVPE remains outside the automatic `vocal-melody` primary, but its saved
+frames can now be compared safely with independent pYIN and Basic Pitch
+records:
+
+```bash
+.venv/bin/sunofriend vocal-trackers \
+  "$STEMS/My Song-vocals-B major-119bpm-440hz.wav" \
+  --role lead --bpm 119 --tuning-hz 440 \
+  --rmvpe-frames "$RMVPE_RUN/rmvpe.frames.json" \
+  --game-candidate "$GAME_RUN/candidate.json" \
+  --out-dir "$OUT/vocal-tracker-runs"
+```
+
+`vocal-trackers` creates a fresh immutable run. `pyin.evidence.json` retains
+every continuous F0 frame and the named contour-to-note adapter;
+`basic-pitch.evidence.json` retains the raw note events and exact packaged
+model hash. Each has its own MIDI and source comparison. RMVPE is accepted
+only when its adjacent immutable `run.json` proves that it analysed the exact
+same WAV SHA-256. The optional `consensus.evidence.json` then aligns all three
+trackers on the pYIN timeline and records every observation, selected source,
+agreement, solo frame, dispute and no-agreement frame. Its MIDI is always an
+experimental `review-required` challenger; none of the inputs is modified or
+deleted. `--game-candidate` is optional and requires RMVPE. Both saved AI
+inputs must belong to completed immutable runs for the exact same WAV and
+must match the checkpoint hashes recorded in their adjacent manifests.
+
+When RMVPE is present, Sunofriend also tests note boundaries from raw Basic
+Pitch and, when supplied, GAME. A boundary is accepted only where pYIN and
+RMVPE are both voiced, agree within 70 cents, support enough of the proposed
+note and support its edges. Pitch comes from the equal pYIN/RMVPE midpoint;
+tracker confidence values are deliberately not compared as though they shared
+one calibrated scale. The run publishes `boundary-basic-pitch.candidate.mid`,
+`boundary-game.candidate.mid`, `boundary-repair.candidate.mid` and a complete
+`boundary-repair.evidence.json` audit with accepted/rejected reasons and
+ranked phrases. These are review candidates, not edits to any raw model file.
+
+On the Lidl goldens, raw Basic Pitch was stronger than consensus v1. Lead
+Basic Pitch emitted 71 raw notes with possible-onset F1 `0.4058`, chroma
+`0.9323` and supported-note ratio `0.6197`; the 35-note consensus scored
+`0.2542`, `0.9253` and `0.3714`. Backing Basic Pitch emitted 52 polyphonic
+hypotheses with strong-onset F1 `0.3733`; reducing the three trackers to one
+14-note consensus line lost useful harmony evidence. All evidence, evaluation
+and MIDI files were byte-identical in fresh repeat runs. The decision is to
+keep raw Basic Pitch, pYIN and RMVPE independently auditionable and not promote
+consensus v1 into `vocal-melody`. The conservative boundary experiment reduced
+the lead to 23 notes and raised strong-onset F1 from consensus's `0.1481` to
+`0.3810`, with possible-onset F1 `0.3396` and chroma `0.8872`; it is a useful
+phrase-review option, not a new primary. On backing vocals it retained only six
+notes and zero supported-note ratio. That negative result is intentional:
+retain raw polyphonic Basic Pitch and the normal backing harmony stack rather
+than replacing either with a sparse monophonic boundary repair.
+
 ### 3. Prepare a stem export
 
 Put one song's files in a folder whose name includes its key, BPM and tuning:
@@ -246,6 +501,12 @@ Use `vocal-melody` for an isolated `vocals` or `backing_vocals` stem:
   --out-dir "$OUT/vocal_melody/backing"
 ```
 
+Add `--muscriptor` when the optional AI runtime and accepted checkpoint are
+available and you want its model-backed melody beside these deterministic
+variants. Inspect `vocal_summary.json` under `ai_challengers.muscriptor` for
+the exact checkpoint hash, raw candidate, run manifest, note count and tuned
+GarageBand MIDI path.
+
 The default lead path compares the continuous pYIN contour with independent
 Basic Pitch note hypotheses. Agreement increases confidence; disagreement is
 kept below the clean threshold rather than silently choosing a tracker. The
@@ -264,6 +525,37 @@ transpose, move, resize, split, merge or remove notes and export reviewed JSON:
   "$HOME/Downloads/melody-corrections-edited.json" \
   --out "$OUT/vocal_melody/lead/reviewed-lead.mid"
 ```
+
+When `vocal-trackers` has produced an agreed-F0 boundary repair, use
+`melody-review` for an easier recognition-first choice:
+
+```bash
+.venv/bin/sunofriend melody-review \
+  "$OUT/vocal-tracker-runs/RUN_ID" \
+  --out-dir "$OUT/lead-phrase-review"
+```
+
+The command verifies the source WAV and every input evidence hash, requires a
+fresh output and currently accepts lead vocals only. Open
+`melody_phrase_review.html` locally. The least-confident regions appear first;
+each has raw Basic Pitch, GAME-boundary and combined agreed-F0 choices with a
+small piano roll, MIDI-only audio and a source-plus-MIDI overlay. A missing
+GAME phrase is shown as zero notes and silence rather than invented evidence.
+Scores are clues, not automatic winners.
+
+Select or explicitly accept every phrase, export
+`melody-corrections-reviewed.json`, then use the normal command:
+
+```bash
+.venv/bin/sunofriend melody-apply \
+  "$HOME/Downloads/melody-corrections-reviewed.json" \
+  --out "$OUT/vocal_melody/lead/reviewed-lead.mid"
+```
+
+The generated seed is deliberately `unreviewed`; `melody-apply` refuses it,
+an incomplete set of choices, or a correction whose source SHA-256 no longer
+matches. The resulting `.correction.json` audit retains the selected
+alternative for every phrase. Raw tracker artifacts are never modified.
 
 If automatic extraction cannot tell which continuous line you intend, record
 a rough hum against the same song and use it as a guide:
