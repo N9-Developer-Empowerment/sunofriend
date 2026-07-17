@@ -1,9 +1,9 @@
 """Write small, self-contained SoundFont 2 instruments.
 
-Sample Pack v2 uses SF2 as its direct GarageBand handoff. Apple's sampler can
-load SF2 banks, the samples travel inside one file, and FluidSynth can validate
-and audition the same artifact without automating GarageBand's private patch
-format.
+Sample Pack v2 and explicitly reviewed Sample Instrument v3 experiments use
+SF2 as their direct GarageBand handoff. Apple's sampler can load SF2 banks, the
+samples travel inside one file, and FluidSynth can validate and audition the
+same artifact without automating GarageBand's private patch format.
 
 The writer intentionally implements a narrow SoundFont 2.01 subset: one bank,
 one preset, one instrument, mono PCM16 samples, key/velocity zones, optional
@@ -104,6 +104,7 @@ def write_soundfont(
     name: str,
     preset: int = 0,
     bank: int = 0,
+    software: str = "Sunofriend Sample Instrument v2",
 ) -> SoundFontSummary:
     """Write and structurally validate a one-instrument SoundFont 2.01 bank."""
 
@@ -165,7 +166,7 @@ def write_soundfont(
                     "Generated locally from authorised source audio by Sunofriend"
                 ),
             ),
-            _chunk(b"ISFT", _info_string("Sunofriend Sample Instrument v2")),
+            _chunk(b"ISFT", _info_string(software)),
         ],
     )
     sample_data = b"".join(record.pcm + (b"\x00\x00" * 46) for record in records)

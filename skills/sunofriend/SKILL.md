@@ -1,6 +1,6 @@
 ---
 name: sunofriend
-description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and reviewed melody corrections; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
+description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance, explicit reviewed choices and local advisory review-history profiles; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
 ---
 
 # Sunofriend
@@ -17,7 +17,8 @@ scripts.
 3. Run `sunofriend --version`, `sunofriend --help`, and the selected command's
    `--help` before constructing a command.
 4. Run the narrowest capability check:
-   - `sunofriend doctor --require transcribe` for lead or backing vocals.
+   - `sunofriend doctor --require transcribe` for lead or backing vocals and
+     short `melody-guide` pitch/contour guides.
    - `sunofriend ai-doctor --require muscriptor-checkpoint` before explicitly
      requesting the optional `vocal-melody --muscriptor` challenger.
    - `sunofriend ai-doctor --require game` before a standalone GAME vocal
@@ -31,15 +32,26 @@ scripts.
      inference must use the hash-checked local `.ckpt` file and remain offline.
    - `sunofriend doctor --require convert` for instrumental stem conversion.
    - `sunofriend doctor --require preview` for offline rendering, including
-     `melody-review` MIDI-only and source-overlay alternatives.
+     `melody-review` and `melody-guide` MIDI-only and source-overlay
+     alternatives.
+   - `sunofriend melody-profile` itself needs no audio/ML capability check; it
+     reads only the explicitly supplied reviewed correction JSON files.
    - `sunofriend doctor --require playback` for live MIDI.
    - `sunofriend instrument-inventory` needs no audio/ML capability check.
    - `sunofriend doctor --require convert` for factory-sample matching or
      stem-derived sample instruments. Also require `preview` for rendered GM
      matches and for sample instruments unless using `--no-preview`.
+     Optional learned instrument evidence additionally needs the explicit,
+     existing local OpenL3 path created by `scripts/setup-openl3-model.sh`;
+     matching itself must remain offline and hash-check the model.
    - `sunofriend instrument-bundle` has the same requirements as both
      `instrument-match` and `sample-pack`. `--no-gm --no-preview` removes the
      FluidSynth requirement; `--no-source-instrument` removes sampling.
+   - `sunofriend sample-pack-review` needs `convert` to extract local listening
+     WAVs. `sample-pack-apply` also needs `convert`, plus `preview` unless
+     `--no-preview` is used.
+   - `sunofriend sample-pack-boundary-review` needs `preview` for its velocity
+     ramps and constant-velocity repeated-beat comparison.
 5. Inventory the input directory read-only. Confirm files exist and identify
    stem roles, chord PDF, metronome, key, BPM, and tuning.
 6. Use absolute, quoted paths and a fresh output outside the source folder.
@@ -91,10 +103,37 @@ scripts.
   only a monophonic consensus or repair line.
 - Recognition-first lead review: use `melody-review` on a completed
   `vocal-trackers` run with agreed-F0 boundary evidence. It verifies source and
-  evidence hashes, requires a fresh output, presents the weakest regions first
-  and exports the existing correction format. Do not run it on backing vocals,
-  do not choose from metrics alone, and do not call its seed reviewed. The user
-  must select or explicitly accept every phrase before `melody-apply` succeeds.
+  evidence hashes, requires a fresh output, merges consecutive note clusters
+  into two-to-eight-bar units, presents the weakest units first and exports the
+  existing correction format. Bar duration does not confirm a downbeat. Do not
+  run it on backing vocals, do not choose from metrics alone, and do not call
+  its seed reviewed. The user must select or explicitly accept every unit
+  before `melody-apply` succeeds.
+- Personal review-history hints: use `melody-profile` only on correction files
+  the user actually exported as reviewed, then pass the resulting JSON through
+  `melody-review --ranking-profile`. Build each profile at a fresh explicit path
+  from the complete wanted input set; do not discover correction files, create
+  a hidden store or mutate an existing profile. Treat the ranking as advisory
+  history, not confidence. It must not reorder candidates, alter the combined
+  default, mark a seed reviewed or select a melody. Manual choices have full
+  weight and explicit repeated-unit propagation has half weight. Warn when
+  legacy choices have only global counts.
+- Repeated review units: treat the fixed repeat detector as a conservative
+  suggestion, not a decision. It requires absolute pitch, contour, note-count,
+  timing and duration agreement. Propagate only through the page's explicit
+  button. This copies an alternative name while each target retains its own
+  source-backed notes. Do not treat octave-equivalent phrases as accepted v1
+  repeats, do not propagate a unit-specific guide, and retain the pair metrics,
+  source unit and policy in the exported correction audit.
+- Unresolved review unit: after the user marks **None are close**, use
+  `melody-guide` with that one-based unit number and a short local WAV. Choose
+  `hum`, `whistle` or `contour` for rhythm plus pitch direction, or
+  `single-note`/`tap` for rhythm only. The guide may add a fourth alternative
+  but its pitch must remain supported by the source pYIN frames. Require a
+  fresh child output, verify every parent artifact and never replace the three
+  automatic alternatives. A no-evidence guide stays zero-note and unresolved.
+  v1 does not combine several guided review units; use repeatable
+  `vocal-melody --guide-snippet` inputs for that existing workflow.
 - Ambiguous intended vocal line: add a roughly time-aligned WAV with `--guide`;
   add `--prefer-guide` only when the user wants the source-supported guide as
   primary. Use `--guide-offset-seconds` when the recording offset is known.
@@ -115,13 +154,86 @@ scripts.
 - Installed GarageBand and Audio Unit discovery: use `instrument-inventory`.
 - Sound-based instrument shortlisting: use `instrument-match` with the
   unchanged source stem and its aligned MIDI. Keep both factory-asset and
-  rendered-GM evidence unless the user requests one path.
+  rendered-GM evidence unless the user requests one path. Add
+  `--embedding-model` only when the user requests Phase 3 learned evidence or
+  supplies an existing pinned OpenL3 model. Treat its separate order as an
+  audition challenger; never merge it into or replace the explainable order.
+  Always retain `source_event_clusters.json` and its SVG. Treat candidate
+  timbre families, articulation groups and outliers as review evidence, not
+  physical-instrument recognition. Never remove a rare event from MIDI or a
+  sample pack solely because v1 marks it as an outlier.
+  Also retain `source_event_dynamics.json` and its SVG. Treat its source-level
+  layers and alternate-sample sets as listening candidates only; never call
+  them valid velocity layers or round robins without comparing the indexed
+  source events. They must not alter MIDI velocity, sample selection or
+  sampler zones automatically.
+  Also retain `source_sample_loops.json`, its SVG and any `loop-auditions/`
+  WAVs. Treat ranked boundaries as advisory listening evidence only. Never
+  infer acceptance from the continuity score, never call a raw repeat seamless,
+  and confirm that the generated SF2/SFZ remain unlooped. Drum and percussion
+  one-shots should be reported as not applicable.
+  For `kick`, `snare`, `hat`, `cymbals`, `toms`, `other_kit` or `drums`, leave
+  GM enabled to produce `gm_drum_family_mapping.json` plus a separate proposed
+  channel-10 MIDI/WAV. The mapper splits an audio family by its existing note
+  before scoring, preserves outliers, and changes a valid role note only after
+  the documented score-55/eight-point guardrails. These thresholds are policy,
+  not confidence. Never replace the source MIDI or call the proposed copy an
+  accepted repair without listening with the intended kit.
 - New instruments from authorised isolated source notes: use `sample-pack`.
   Treat `sunofriend-instrument.aupreset` as the GarageBand-selectable wrapper
   and `sunofriend-instrument.sf2` as its self-contained sound bank. GarageBand's
   preset chooser greys out raw SF2 files.
   Do not add `--allow-polyphonic` unless the user explicitly accepts chords or
   bleed baked into each sample.
+  Use its source-event report to compare selected zones with unselected events;
+  `selected_for_sample_pack` is an audit of the existing selector, not a
+  cluster-driven decision. `--embedding-model` may add the OpenL3 opinion for
+  drums or pitched sources even when GM auditions are disabled.
+- Applying reviewed source dynamics: use `sample-pack-review` on an unchanged
+  v2 directory, hand off its HTML, and wait for the user-exported reviewed JSON.
+  Each event must retain the exact isolated evidence plus its pinned source
+  context and role audition. Drum/percussion roles use a repeated beat; pitched
+  roles use a short sampler pitch phrase. Explain that source context retains
+  relative stem level, role auditions are normalised for timbre comparison,
+  and neither makes a selection.
+  Never mark a unit accepted/rejected or select a primary on the user's behalf.
+  Use `sample-pack-apply` only on that reviewed export and always write a fresh
+  v3 directory. It permits one accepted unit per MIDI pitch and validates all
+  pinned source, MIDI, v2 sample/SF2, cluster/dynamics and review-audio hashes.
+  Report only features actually accepted: SF2/AUSampler applies velocity
+  layers only when the review accepted them; accepted alternates become
+  separate GarageBand A/B banks and true SFZ sequence round robin. If neither
+  was accepted, state that both features are absent. Keep `baseline-v2/` as
+  the rollback. Use the zone audition to verify mappings, then the generated
+  performance audition to compare the same representative source rhythm
+  through the source stem, v2 bank and v3 bank. State its bar/beat/second
+  window, pitch coverage, note and velocity range, channel-1 routing and that
+  it is an audition-only derivative rather than a source-MIDI mutation.
+  When velocity layers exist, also use the generated velocity sweep to compare
+  the v2 single-sample response with the exact reviewed v3 transition. Report
+  every boundary and transition pair, sweep velocities and hashes; never infer
+  a better boundary or alter the reviewed mapping from the sweep alone.
+  If the transition needs adjustment, use `sample-pack-boundary-review` on the
+  unchanged completed v3, hand off its HTML and wait for the user's exported
+  JSON. Never select even the current mapping for the user. Require a lower-
+  event-only choice, upper-event-only choice and the candidate boundaries.
+  Compare the two events first with identical constant-velocity repeated-beat
+  MIDI, then compare every complete mapping with one common velocity ramp.
+  Report the source MIDI's actual velocity range and warn when a layer is
+  unreachable. Candidates may deactivate an accepted event but must not add a
+  source event or alter sample audio. Use
+  `sample-pack-boundary-apply` only on the explicitly reviewed, hash-pinned
+  v2 export and write a fresh v3 directory; it may select one of the already
+  accepted sources or a reviewed boundary, but must not change source MIDI.
+- Blinded v2/v3 close-out: use `sample-pack-ab-review` with one or more
+  completed, unchanged v3 directories. Hand off `sample_ab_review.html` and
+  explicitly tell the user not to open its separate answer key first. Require
+  Candidate A, Candidate B, equivalent or neither for every role. The source
+  reference is not a candidate, and any velocity sweep uses the same hidden
+  mapping. Use `sample-pack-ab-resolve` only on the user's reviewed export; it
+  must verify every v3 report, copied WAV, manifest and answer-key hash. Never
+  reveal or infer the v2/v3 mapping before review, and never turn the resolved
+  preference into an automatic sampler change.
 - Normal combined MIDI/sound/match handoff: use `instrument-bundle`. It copies
   the source WAV by default, so use `--no-source-audio` when portability is not
   wanted. Use `--no-source-instrument` unless sampling is authorised. A
@@ -171,7 +283,26 @@ sunofriend vocal-trackers "$VOCAL_STEM" \
   --out-dir "$FRESH_OUTPUT"
 
 sunofriend melody-review "$VOCAL_TRACKER_RUN" \
-  --out-dir "$FRESH_PHRASE_REVIEW"
+  --out-dir "$FRESH_PHRASE_REVIEW" \
+  --minimum-bars 2 \
+  --maximum-bars 8 \
+  --beats-per-bar 4
+
+sunofriend melody-profile \
+  "$REVIEWED_CORRECTION_A" \
+  "$REVIEWED_CORRECTION_B" \
+  --out "$FRESH_MELODY_PROFILE"
+
+sunofriend melody-review "$VOCAL_TRACKER_RUN" \
+  --ranking-profile "$FRESH_MELODY_PROFILE" \
+  --out-dir "$FRESH_PROFILED_REVIEW"
+
+sunofriend melody-guide "$PHRASE_REVIEW" \
+  --unit "$ONE_BASED_UNIT" \
+  --guide "$SHORT_GUIDE_WAV" \
+  --guide-kind hum \
+  --search-seconds 0.75 \
+  --out-dir "$FRESH_GUIDED_REVIEW"
 
 sunofriend vocal-melody "$VOCAL_STEM" \
   --role lead \
@@ -214,10 +345,40 @@ sunofriend instrument-match "$STEM" "$ALIGNED_MIDI" \
   --kind "$ROLE" \
   --out-dir "$FRESH_OUTPUT"
 
+sunofriend instrument-match "$STEM" "$ALIGNED_MIDI" \
+  --kind "$ROLE" \
+  --out-dir "$FRESH_OUTPUT" \
+  --embedding-model "$OPENL3_MODEL"
+
 sunofriend sample-pack "$STEM" "$ALIGNED_MIDI" \
   --kind "$ROLE" \
   --name "$INSTRUMENT_NAME" \
   --out-dir "$FRESH_OUTPUT"
+
+sunofriend sample-pack "$STEM" "$ALIGNED_MIDI" \
+  --kind "$ROLE" \
+  --name "$INSTRUMENT_NAME" \
+  --out-dir "$FRESH_OUTPUT" \
+  --embedding-model "$OPENL3_MODEL"
+
+sunofriend sample-pack-review "$SAMPLE_PACK_V2" \
+  --out-dir "$FRESH_REVIEW"
+
+sunofriend sample-pack-apply "$USER_EXPORTED_REVIEWED_JSON" \
+  --name "$INSTRUMENT_NAME Reviewed" \
+  --out-dir "$FRESH_SAMPLE_PACK_V3"
+
+sunofriend sample-pack-boundary-review "$SAMPLE_PACK_V3" \
+  --out-dir "$FRESH_BOUNDARY_REVIEW"
+
+sunofriend sample-pack-boundary-apply "$USER_EXPORTED_BOUNDARY_REVIEW" \
+  --out-dir "$FRESH_BOUNDARY_REVIEWED_V3"
+
+sunofriend sample-pack-ab-review "$V3_A" "$V3_B" \
+  --out-dir "$FRESH_BLIND_REVIEW"
+
+sunofriend sample-pack-ab-resolve "$USER_EXPORTED_BLIND_REVIEW" \
+  --out "$FRESH_BLIND_RESULT_JSON"
 
 sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   --kind "$ROLE" \
@@ -248,9 +409,17 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   Sunofriend can headlessly render every private GarageBand patch.
 - For sample packs, use only source audio the user owns or may sample. State
   that bleed, effects, vibrato and transitions become part of each sample and
-  that Sample Instrument v2 has no inferred loops or velocity layers. Keep
+  that Sample Instrument v2 does not automatically enable loops, velocity
+  layers or round-robin playback. Its loop and dynamics reports are advisory
+  and do not add zones. Keep
   auto-tuning enabled unless the user asks to preserve the source's raw tuning;
   do not present `no-stable-pitch` or rejected tuning estimates as failures.
+- Never apply a Sample Instrument v3 review from an unreviewed seed or infer
+  acceptance from scores. Do not accept conflicting units at one MIDI pitch.
+  Do not call separate SF2 alternate banks automatic round robin.
+- Never inspect or reveal a Sample Instrument blind-review answer key before
+  the user exports a complete review. Candidate equivalence, neither and v2
+  preference are valid results; a resolved preference changes no sampler.
 - Tracker consensus does not mean certainty. Inspect disputed/solo frame
   counts and keep `uncertain` separate. In a `vocal-trackers` run also inspect
   agreement, no-agreement, selected-source counts and all independent
@@ -269,6 +438,10 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   the user's behalf. Hand off `melody_phrase_review.html`; after the user
   exports a reviewed document, ensure every choice is explicit and retain the
   selected alternatives in the correction audit.
+- A personal ranking profile is learned only from the user's explicitly
+  reviewed files and stays local. Its scores are relative history rankings,
+  not calibrated probabilities. Preserve its input/profile hashes and never
+  let it change candidate order, default selection or review state.
 
 ## Validate and hand off
 
@@ -308,11 +481,25 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
    and rejection reasons, provider-specific/combined note and phrase counts,
    ranked phrase paths, repeat determinism and that consensus/repair remain
    experimental. Never discard the raw candidates.
-   For `melody-review`, confirm lead role, matching input hashes, phrase and
+   For `melody-review`, confirm lead role, matching input hashes, source-cluster
+   and review-unit counts, duration bars/status, grouping configuration,
    alternative counts, source/MIDI/overlay/evaluation paths, any zero-note
-   alternatives, byte-repeat result and `raw_candidates_mutated: false`.
+   alternatives, evaluated/accepted repeat-pair counts, rejection reasons,
+   repeat groups, byte-repeat result and `raw_candidates_mutated: false`.
    Hand off the HTML, not the unreviewed seed. After user review, report each
-   selected alternative and evaluate the newly applied MIDI against the source.
+   selected alternative, any explicitly propagated choices with their canonical
+   pair evidence, and evaluate the newly applied MIDI against the source.
+   When `--ranking-profile` is used, additionally report the profile hash,
+   explicit/contextual choice counts, warnings and history-first candidate per
+   unit. Confirm `automatic_selection`, `candidate_order_changed` and
+   `default_selection_changed` are all false, the seed is still unreviewed and
+   a second fresh build is byte-identical. For `melody-profile`, also confirm
+   unique input hashes, manual/propagated weights, choice totals and that no raw
+   candidate was mutated.
+   For `melody-guide`, also confirm parent-review artifact count/hash, pYIN and
+   guide hashes, one-based unit, guide kind/duration, detected and accepted note
+   counts, alignment offset/score, source-pitch support, warnings, zero-note
+   status, byte-repeat result and that parent/raw candidates remain unchanged.
 5. For transformations, inspect the JSON audit for file count, embedded target
    tempo, transposed events, preserved drums, tuning cleanup, and anchor shift.
 6. Render representative MIDI with `preview` when auditory validation is in
@@ -321,7 +508,22 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
    instrument suggestions, warnings, and reproducible commands.
 8. For `instrument-match`, confirm the JSON, GarageBand audition guide, timbre
    graph when present, and retained top GM MIDI/WAV pairs. Report both evidence
-   rankings and ask the user to choose in the full mix.
+   rankings and ask the user to choose in the full mix. When OpenL3 was
+   explicitly enabled, also confirm `openl3_embedding_evidence.json`, its
+   checkpoint/SoundFont hashes, and `gm_embedding_auditions/`; state that the
+   learned ranking did not alter the explainable ranking.
+   Also confirm `source_event_clusters.json` and its SVG, event/family/
+   articulation/outlier counts, medoids, method weights and zero-change
+   effects. Never call a cluster a confirmed instrument or an outlier noise
+   without listening.
+   Confirm `source_event_dynamics.json` and its SVG, exact comparison-unit
+   rules, candidate layer/set/event and retained-outlier counts, and all-zero
+   effects. Never call a layer or alternate valid from source level alone.
+   For drum roles, also confirm `gm_drum_family_mapping.json`, the separate
+   proposed MIDI/WAV, original before/after hash equality, mapping-unit and
+   changed-note counts, guardrail decisions, retained outliers and assigned
+   one-shot auditions. Compare source MIDI and proposal by ear; do not accept
+   a mixed-kit reassignment from its score alone.
 9. For `sample-pack`, confirm the optional macOS `.aupreset` wrapper, SF2, SFZ,
    audition MIDI, optional audition WAV, source WAVs and JSON exist. Report MIDI
    roots and key ranges, isolation, tuning status counts, maximum transposition
@@ -330,6 +532,52 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
    software-instrument track, select Apple AUSampler, load the `.aupreset` from
    its **Manual** preset menu, audition every zone, then save the configured
    track as a custom patch if wanted.
+   Also report source-event family/articulation/outlier counts and whether any
+   selected sample is a review outlier; v1 must report zero automatic removals.
+   Report dynamics candidate counts separately and confirm they did not add a
+   zone, change a velocity range or enable round-robin playback.
+   Report loop candidate/sample counts separately, confirm all loop effects are
+   zero and hand off every raw repeated audition. For pitched samples, ask the
+   user to choose a candidate or none by listening; for drum/percussion roles,
+   confirm the report is not applicable. Never edit the SoundFont/SFZ or claim
+   an accepted sustain loop from the numeric order alone.
+   For `sample-pack-review`, confirm the seed is `unreviewed`, all source and
+   review-audio hashes are pinned, the HTML and every reported excerpt exist,
+   candidate unit/layer/set/event counts match and all effects are zero. Also
+   report the initial audition BPM, role mode, isolated/context file counts and
+   confirm the source-context, repeated-beat or pitched-phrase WAVs have no
+   selection effect. Hand off the HTML and do not manufacture a reviewed file.
+   For `sample-pack-apply`, require the user's reviewed export; report accepted
+   and rejected units, exact event indices, reviewed pitch/boundary, extracted
+   event and zone counts, review/output hashes, baseline hash equality, A/B
+   MIDI/WAVs and alternate banks. Confirm MIDI changes are zero, v2 is embedded
+   under `baseline-v2/`, and the applied-feature counts match the review. When
+   alternates were accepted, confirm SF2 alternates are manual A/B and only SFZ
+   claims true sequence round robin; otherwise confirm neither is reported.
+   Also confirm the performance source/v2/v3 WAVs share one excerpt MIDI,
+   pitches and velocities are unchanged, the source and output channel are
+   explicit, the source MIDI hash is unchanged and a fresh build repeats.
+   For a velocity sweep, confirm its MIDI/v2/v3 files, accepted boundary,
+   adjacent transition velocities, audit-only status, zero mapping/sample
+   changes and repeat hashes.
+   For `sample-pack-boundary-review`, confirm no candidate is preselected,
+   single-lower/single-upper/layered choices exist, the two source events share
+   one fixed-velocity repeated beat, all complete mappings share one velocity
+   ramp, actual source-MIDI velocities and unreachable layers are reported,
+   every source/candidate hash is pinned, and the source v3 tree is unchanged.
+   Hand off the HTML; do not manufacture the reviewed export. For
+   `sample-pack-boundary-apply`, validate the user export, report every
+   before/after mapping and changed/kept decision, active events removed, new
+   events introduced, sample-audio modifications and source-MIDI changes, and
+   verify that a fresh output regenerates all A/B, performance and sweep
+   artifacts consistently.
+   For `sample-pack-ab-review`, confirm every source v3 and performance hash,
+   copied audio-manifest hash, answer-key hash, neutral null choices, absent
+   answer mapping in the HTML, same hidden assignment for performance/sweep,
+   zero effects and byte-repeat output. Hand off the HTML without reading the
+   key. For `sample-pack-ab-resolve`, require the reviewed export and report
+   v2, v3, equivalent and neither counts plus notes, while confirming all
+   sampler/MIDI effects remain zero.
 10. For `instrument-bundle`, confirm `performance.mid`, recipe/report, source
     reference when requested, match directory, source instrument when safe,
     and retained previews. Explicitly distinguish an embedded authorised SF2

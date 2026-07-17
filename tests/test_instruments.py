@@ -23,11 +23,14 @@ from sunofriend.instrument_catalog import (
     program_candidates,
 )
 from sunofriend.instrument_match import (
+    _rank_gm_programs,
     _estimate_sample_tuning,
     _related_sampler_presets,
     build_sample_pack,
     match_instruments,
 )
+from sunofriend.instrument_embedding import EmbeddingFingerprint
+from sunofriend.clip import read_midi_clips
 from sunofriend.midi import MidiTrack, write_midi_file
 from sunofriend.models import NoteEvent
 from sunofriend.render import RenderError, find_fluidsynth, render_midi_to_wav
@@ -173,9 +176,189 @@ class InstrumentMatchTests(unittest.TestCase):
             self.assertTrue((output / "instrument_matches.json").is_file())
             self.assertTrue((output / "GARAGEBAND_AUDITION.md").is_file())
             self.assertTrue((output / "timbre_profiles.svg").is_file())
+            self.assertTrue((output / "source_event_clusters.json").is_file())
+            self.assertTrue((output / "source_event_clusters.svg").is_file())
+            self.assertTrue((output / "source_event_dynamics.json").is_file())
+            self.assertTrue((output / "source_event_dynamics.svg").is_file())
             saved = json.loads((output / "instrument_matches.json").read_text())
             self.assertEqual(saved["artifacts"]["profile_graph"], "timbre_profiles.svg")
             self.assertEqual(saved["track"]["selected_index"], 0)
+            self.assertEqual(
+                saved["source_evidence"]["event_clusters"]["source_event_count"], 2
+            )
+
+    def test_learned_gm_evidence_does_not_change_explainable_ranking(self):
+        class FakeEmbeddingModel:
+            @staticmethod
+            def fingerprint(values, sample_rate):
+                audio = np.asarray(values, dtype=np.float32)
+                spectrum = np.abs(np.fft.rfft(audio))
+                vector = np.zeros(512, dtype=np.float32)
+                vector[: min(512, len(spectrum))] = spectrum[:512]
+                vector /= max(float(np.linalg.norm(vector)), 1e-12)
+                return EmbeddingFingerprint(
+                    embeddings=vector.reshape(1, 512),
+                    rms=np.asarray([np.sqrt(np.mean(audio**2))], dtype=np.float32),
+                    start_seconds=np.asarray([0.0], dtype=np.float32),
+                )
+
+            @staticmethod
+            def model_record():
+                return {"name": "fake-openl3", "sha256": "fixture"}
+
+            @staticmethod
+            def preprocessing_record():
+                return {"window_seconds": 1.0}
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            stem, midi = self._write_source(root)
+            source_audio, _ = soundfile.read(stem, dtype="float32")
+            clip = list(read_midi_clips(midi))[0]
+            soundfont_path = root / "fixture.sf2"
+            soundfont_path.write_bytes(b"fixture-soundfont")
+            plain_work = root / "plain"
+            embedded_work = root / "embedded"
+            plain_work.mkdir()
+            embedded_work.mkdir()
+
+            def fake_render(midi_path, wav_path, **_kwargs):
+                program = list(read_midi_clips(midi_path))[0].instrument.program
+                if program == 0:
+                    rendered = source_audio
+                else:
+                    random = np.random.default_rng(17)
+                    rendered = (
+                        random.standard_normal(len(source_audio)) * 0.08
+                    ).astype(np.float32)
+                soundfile.write(wav_path, rendered, SAMPLE_RATE)
+                return Path(wav_path)
+
+            with (
+                mock.patch(
+                    "sunofriend.render.find_soundfont", return_value=str(soundfont_path)
+                ),
+                mock.patch(
+                    "sunofriend.render.render_midi_to_wav", side_effect=fake_render
+                ),
+            ):
+                plain, plain_learned, plain_evidence = _rank_gm_programs(
+                    stem_audio=source_audio,
+                    stem_path=stem,
+                    sample_rate=SAMPLE_RATE,
+                    clip=clip,
+                    programs=[0, 1],
+                    top=2,
+                    work_dir=plain_work,
+                )
+                embedded, learned, evidence = _rank_gm_programs(
+                    stem_audio=source_audio,
+                    stem_path=stem,
+                    sample_rate=SAMPLE_RATE,
+                    clip=clip,
+                    programs=[0, 1],
+                    top=2,
+                    work_dir=embedded_work,
+                    embedding_model=FakeEmbeddingModel(),
+                )
+
+            self.assertEqual(
+                [row.to_dict() | {"midi": None, "preview_wav": None} for row in plain],
+                [
+                    row.to_dict() | {"midi": None, "preview_wav": None}
+                    for row in embedded
+                ],
+            )
+            self.assertEqual(plain_learned, [])
+            self.assertIsNone(plain_evidence)
+            self.assertEqual(len(learned), 2)
+            self.assertEqual(
+                evidence["schema"], "sunofriend.instrument-embedding-evidence.v1"
+            )
+            self.assertEqual(len(evidence["candidates"]), 2)
+            self.assertTrue(evidence["advisory_only"])
+            self.assertTrue(evidence["ranking_effect"].startswith("none;"))
+
+    def test_invalid_embedding_checkpoint_leaves_no_output_directory(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            stem, midi = self._write_source(root)
+            model = root / "wrong.onnx"
+            model.write_bytes(b"not-the-pinned-openl3-model")
+            output = root / "match"
+
+            with self.assertRaisesRegex(RuntimeError, "SHA-256 mismatch"):
+                match_instruments(
+                    stem,
+                    midi,
+                    kind="lead",
+                    out_dir=output,
+                    include_factory=False,
+                    embedding_model_path=model,
+                )
+
+            self.assertFalse(output.exists())
+
+            sample_output = root / "sample-pack"
+            with self.assertRaisesRegex(RuntimeError, "SHA-256 mismatch"):
+                build_sample_pack(
+                    stem,
+                    midi,
+                    kind="lead",
+                    out_dir=sample_output,
+                    render_preview=False,
+                    embedding_model_path=model,
+                )
+            self.assertFalse(sample_output.exists())
+
+    def test_drum_match_writes_separate_review_proposal_and_preserves_source_midi(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            stem, midi = self._write_source(root)
+            source_midi = midi.read_bytes()
+            source_audio, _ = soundfile.read(stem, dtype="float32")
+            soundfont_path = root / "fixture.sf2"
+            soundfont_path.write_bytes(b"fixture-soundfont")
+            output = root / "drum-match"
+
+            def fake_render(_midi_path, wav_path, **_kwargs):
+                soundfile.write(wav_path, source_audio, SAMPLE_RATE)
+                return Path(wav_path)
+
+            with (
+                mock.patch(
+                    "sunofriend.render.find_soundfont", return_value=str(soundfont_path)
+                ),
+                mock.patch(
+                    "sunofriend.render.render_midi_to_wav", side_effect=fake_render
+                ),
+            ):
+                report = match_instruments(
+                    stem,
+                    midi,
+                    kind="kick",
+                    out_dir=output,
+                    include_factory=False,
+                )
+
+            self.assertEqual(midi.read_bytes(), source_midi)
+            self.assertTrue((output / "gm_drum_family_mapping.json").is_file())
+            self.assertTrue((output / "drum_family_mapping.proposed.mid").is_file())
+            self.assertTrue((output / "drum_family_mapping.proposed.wav").is_file())
+            self.assertTrue((output / "drum_note_auditions").is_dir())
+            self.assertIsInstance(report["gm_drum_family_mapping"], dict)
+            mapping = json.loads((output / "gm_drum_family_mapping.json").read_text())
+            self.assertTrue(mapping["review_required"])
+            self.assertFalse(mapping["effects"]["source_midi_overwritten"])
+            self.assertEqual(
+                mapping["source"]["midi_sha256_before"],
+                mapping["source"]["midi_sha256_after"],
+            )
+            proposed = list(
+                read_midi_clips(output / "drum_family_mapping.proposed.mid")
+            )[0]
+            self.assertEqual(proposed.instrument.channel, 9)
+            self.assertTrue({note.pitch for note in proposed.notes} <= {35, 36, 60, 64})
 
     def test_sample_pack_extracts_unique_isolated_pitches_and_sfz_zones(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -201,11 +384,15 @@ class InstrumentMatchTests(unittest.TestCase):
             self.assertIn("tune=", sfz)
             self.assertTrue((output / "sunofriend-instrument.sf2").is_file())
             if sys.platform == "darwin" and shutil.which("swift"):
-                self.assertTrue(
-                    (output / "sunofriend-instrument.aupreset").is_file()
-                )
+                self.assertTrue((output / "sunofriend-instrument.aupreset").is_file())
             self.assertTrue((output / "garageband-audition.mid").is_file())
             self.assertFalse((output / "garageband-audition.wav").exists())
+            self.assertTrue((output / "source_event_clusters.json").is_file())
+            self.assertTrue((output / "source_event_clusters.svg").is_file())
+            self.assertTrue((output / "source_event_dynamics.json").is_file())
+            self.assertTrue((output / "source_event_dynamics.svg").is_file())
+            self.assertTrue((output / "source_sample_loops.json").is_file())
+            self.assertTrue((output / "source_sample_loops.svg").is_file())
             saved = json.loads((output / "sample_pack.json").read_text())
             self.assertEqual(saved["format_version"], 2)
             self.assertEqual(saved["instrument_name"], "Fixture Lead")
@@ -220,7 +407,21 @@ class InstrumentMatchTests(unittest.TestCase):
                     "sunofriend-instrument.aupreset",
                 )
             self.assertIsNone(saved["artifacts"]["audition_wav"])
+            self.assertEqual(
+                saved["artifacts"]["sample_loop_suggestions"],
+                "source_sample_loops.json",
+            )
+            self.assertEqual(saved["soundfont"]["looped_zone_count"], 0)
             self.assertTrue(all(item["isolated"] for item in saved["samples"]))
+            clusters = json.loads((output / "source_event_clusters.json").read_text())
+            self.assertEqual(clusters["summary"]["selected_sample_event_count"], 2)
+            self.assertEqual(clusters["effects"]["sample_events_removed"], 0)
+            dynamics = json.loads((output / "source_event_dynamics.json").read_text())
+            self.assertEqual(dynamics["effects"]["sample_events_added"], 0)
+            self.assertEqual(dynamics["effects"]["soundfont_zones_changed"], 0)
+            loops = json.loads((output / "source_sample_loops.json").read_text())
+            self.assertTrue(loops["advisory_only"])
+            self.assertEqual(loops["effects"]["looped_zones_added"], 0)
             self.assertEqual(saved["samples"][0]["low_key"], 54)
             self.assertEqual(saved["samples"][0]["high_key"], 62)
             self.assertEqual(saved["samples"][1]["low_key"], 63)
@@ -282,7 +483,9 @@ class SoundFontTests(unittest.TestCase):
                 state = plistlib.load(handle)
             self.assertEqual(state["type"], 1635085685)
             self.assertEqual(state["subtype"], 1935764848)
-            self.assertIn(str(soundfont_path.resolve()), state["file-references"].values())
+            self.assertIn(
+                str(soundfont_path.resolve()), state["file-references"].values()
+            )
 
     def test_tuning_estimate_corrects_a_stably_sharp_sample(self):
         sharp_hz = 440.0 * 2.0 ** (18.0 / 1200.0)

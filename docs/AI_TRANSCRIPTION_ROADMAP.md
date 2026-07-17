@@ -1,6 +1,6 @@
 # Sunofriend AI roadmap
 
-Status: Phases 1 and 2 in progress
+Status: Phase 1 and Phase 2 engineering complete; Phase 3 complete
 Started: 15 July 2026  
 Scope: local-first AI assistance for transcription, review, instrument matching
 and source-derived instruments
@@ -64,9 +64,9 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 
 | Phase | State | Outcome |
 | --- | --- | --- |
-| 1. AI Transcription Bake-off v1 | **In progress** | Independent local model candidates, common JSON, repeatable metrics and selection evidence |
-| 2. Phrase Review v2 | **In progress** | Recognition-first correction using short candidates, hum/tap/contour guidance and repeated-phrase propagation |
-| 3. Instrument Intelligence v2 | Planned | Learned sound matching, sample clustering, articulation and velocity layers, bleed rejection |
+| 1. AI Transcription Bake-off v1 | **Engineering complete; listening gate pending** | Independent local model candidates, common JSON, repeatable metrics and selection evidence; see the close-out report |
+| 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
+| 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | Planned | Optional source cleanup and explicitly labelled neural timbre experiments |
 
 ## Phase 1: AI Transcription Bake-off v1
@@ -321,7 +321,8 @@ Planned features:
 - contour/time alignment that does not require the guide to be in the source
   key or octave;
 - accepted correction propagation to repeated phrases;
-- a small personal ranking/calibration model trained from explicit choices;
+- a small deterministic personal ranking/calibration signal learned from
+  explicit choices;
 - untouched automatic and reviewed versions with complete audit history.
 
 Phase 2 succeeds when a user who cannot hum a whole song can correct its main
@@ -335,12 +336,19 @@ Implemented so far:
 - [x] capture explicit choices in the existing correction JSON contract;
 - [x] require completed review and matching source hash before MIDI export;
 - [x] preserve every raw tracker artifact and refuse monophonic backing review;
-- [ ] merge note clusters into musical two-to-eight-bar review units;
-- [ ] add short hum/tap/contour correction only for unresolved regions;
-- [ ] propagate accepted choices across genuinely repeated phrases;
-- [ ] learn a personal ranking only from explicit reviewed choices.
+- [x] merge note clusters into musical two-to-eight-bar review units;
+- [x] add source-supported short hum/whistle/tap/single-note correction only
+  for one explicitly unresolved review unit at a time;
+- [x] suggest genuinely repeated absolute-pitch/rhythm units and propagate an
+  alternative only after an explicit, audited user action;
+- [x] learn a local advisory personal ranking only from explicit reviewed
+  choices, without changing candidate order, defaults or review status.
 
 ## Phase 3: Instrument Intelligence v2
+
+Status: **complete**. See [the Phase 3 close-out report](PHASE3_INSTRUMENT_INTELLIGENCE.md)
+for the implemented evidence, reproducible goldens and final listening
+decisions.
 
 Planned features:
 
@@ -355,8 +363,50 @@ Planned features:
 - user accept/reject feedback stored as instrument-choice evidence;
 - backward-compatible Instrument Bundle output and GarageBand audition steps.
 
-Phase 3 succeeds when the top suggestions sound closer in blinded A/B tests and
-source-derived instruments remain useful across several pitches and dynamics.
+Implemented so far:
+
+- [x] optional local, hash-pinned OpenL3 music embeddings beside the unchanged
+  explainable spectral/dynamics/attack score;
+- [x] compare the source and every FluidSynth candidate using the same aligned
+  MIDI performance and active one-second windows;
+- [x] retain separate learned MIDI/WAV auditions, complete evidence JSON and
+  additive Instrument Bundle v1 fields without automatic score blending.
+- [x] deterministically cluster MIDI-aligned source events into advisory
+  candidate timbre families and independent articulation groups, retain robust
+  outliers, and carry JSON/SVG evidence through matching, sample packs and
+  Instrument Bundle v1 without changing selection.
+- [x] turn drum/percussion mapping units into role-specific GM channel-10
+  proposals with assigned one-shot auditions, existing-note guardrails,
+  immutable input hashes and additive Instrument Bundle v1 handoff.
+- [x] discover advisory velocity-layer and round-robin candidates only within
+  one timbre-family/note/articulation unit, retain a visual/source-index audit,
+  and apply zero MIDI, sample, SoundFont or drum-mapping changes.
+- [x] require an explicit all-unit listening review before applying candidates
+  to a separate Sample Instrument v3; pin every input/review excerpt, retain a
+  self-contained v2 rollback, use real SF2 velocity layers, expose true SFZ
+  round robin and honest separate GarageBand alternate banks.
+- [x] retain every isolated candidate while adding hash-pinned source-context
+  and role auditions: repeated two-bar beats for drums/percussion and short
+  sampler pitch phrases for pitched instruments, with zero selection effect.
+- [x] add a real-MIDI source/v2/v3 musical A/B and explicit velocity-boundary
+  sweeps to reviewed v3 outputs without altering source MIDI or review choices.
+- [x] rank advisory post-attack/pre-release loop boundaries using waveform and
+  spectral continuity, render raw repeated-loop auditions, exclude percussive
+  one-shots, and leave every SF2/SFZ zone unlooped until a human accepts one.
+- [x] build neutral, context-rich and byte-reproducible close-out reviews for
+  snare, hats, cymbals and toms without carrying earlier kick or `other_kit`
+  choices into another role.
+- [x] hide v2/v3 identity behind deterministic Candidate A/B performance and
+  velocity-sweep audio, keep the answer key outside the HTML, and resolve only
+  a complete hash-pinned user export with zero sampler or MIDI effects.
+- [x] close the human gate with a GarageBand/AUSampler snare decision and an
+  explicit pitched-loop candidate, while retaining v2 rollback and leaving the
+  sampler loop disabled.
+
+Phase 3 evaluation is complete. Its evidence showed that reviewed suggestions
+can improve an isolated sample without consistently sounding closer in a full
+performance; blind proxy and final DAW listening therefore remain mandatory
+selection gates.
 
 ## Phase 4: Cleanup and Neural Timbre Lab
 
@@ -407,6 +457,941 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-17 — Phase 3 completed
+
+- Goal: close the final GarageBand and pitched-loop listening gates without
+  converting either decision into an unreviewed sampler mutation.
+- Change or experiment: recorded the listener's explicit `snare v2` and
+  `loop 1` decisions in a versioned close-out document and reconciled them
+  with the earlier blinded FluidSynth result.
+- Inputs: the reviewed snare v2/v3 GarageBand instruments; the three raw Lidl
+  bass loop auditions; the hash-pinned blind A/B result and loop report.
+- Model/runtime/checkpoint: no model. Human DAW listening and local immutable
+  evidence only.
+- Evidence and metrics: GarageBand preferred snare v2, overriding the blind
+  proxy preference for v3. Candidate 1 for the 1.002396-second MIDI-30 bass
+  sample spans 0.304438–0.902167 seconds, lasts 0.597729 seconds and has
+  continuity score 0.116972. Its audition SHA-256 is
+  `cdf639ff05b43ec5bc66680fc91372c0d250cdb89fdd514d28746c39d43bf6d8`.
+- Listening result: final cross-role selections are v2 for snare, hats,
+  cymbals and toms. Bass loop candidate 1 is the reviewed suggestion. Earlier
+  kick event-17 and `other_kit` event-25 v3 packs remain experiments.
+- Decision: mark Phase 3 complete. Do not promote the reviewed cross-role v3
+  packs, and do not enable candidate 1 in SF2/SFZ automatically. The
+  machine-readable close-out SHA-256 is
+  `31332e2b076367d697fbc7a7f3acf9141b85003e59e7d42d16af2c1db28e0ebe`.
+- Problems/risks: a good isolated sample does not guarantee the best musical
+  result in a full DAW performance. The selected loop remains advisory because
+  automatic loop application and crossfade tuning are deliberately outside
+  this phase.
+- Next smallest step: begin Phase 4 only when explicitly requested; no Phase 3
+  engineering or human-review task remains open.
+
+### 2026-07-17 — Blinded v2/v3 performance result resolved
+
+- Goal: reveal v2/v3 identity only after the listener completed every neutral
+  Candidate A/B choice, then retain the musical result without altering a
+  sampler automatically.
+- Change or experiment: validated reviewed export SHA-256
+  `573e23366f80ea4120ed54007c57ca558496ddea59ff3e3a51b6036d3cfec876`
+  against three unchanged v3 reports, every copied WAV, manifest SHA-256
+  `46272b4b6604188049703adab20b369a46e089a40c8e36f23c132b55fa1e867e`
+  and answer-key SHA-256
+  `b8b6e241dd8c2ac2757cd4096cc9d87d855c614e9d45f32b85519733c3748d23`.
+  Resolved it twice at fresh result paths.
+- Inputs: the completed three-unit blind export; the reviewed snare, hats and
+  toms v3 packs and embedded v2 baselines.
+- Model/runtime/checkpoint: no model. Local JSON/hash validation only.
+- Evidence and metrics: Candidate B was selected for snare and hats; Candidate
+  A for toms. The answer key revealed snare B as v3, hats B as v2 and toms A as
+  v2. The listener noted that selected snare and hats candidates were useful
+  but not as rich as the source. Result SHA-256 is
+  `95cc52ab61e8aa5d4a3e6a24d67625a539cc8c6a9287df2c78497166f59f4e91`;
+  the repeat result is byte-identical. Summary: one v3 preference, two v2
+  preferences, zero equivalent/neither and zero sampler/MIDI effects.
+- Listening result: retain snare v3 as the only cross-role challenger. Retain
+  unchanged v2 for hats and toms; the full-performance result outweighs their
+  accepted isolated source-event choices. Cymbals already remain v2 because
+  every proposal was rejected.
+- Decision: do not promote the reviewed hats v3 or the tom velocity-layer v3.
+  Keep them as evidence and rollback experiments. Take only snare v3 to the
+  final GarageBand comparison.
+- Problems/risks: FluidSynth is still a proxy and the selected snare remains
+  less rich than the source stem. An eight-bar excerpt may not expose every mix
+  context.
+- Next smallest step: confirm snare v3 against its v2 rollback in
+  GarageBand/AUSampler using the supplied real-performance MIDI, and record a
+  candidate-or-none bass loop decision before closing Phase 3.
+
+### 2026-07-17 — Reviewed cross-role v3 and blinded close-out gate
+
+- Goal: apply the completed snare, hats, cymbals and toms reviews exactly, then
+  test the resulting challengers without revealing v2/v3 identity.
+- Change or experiment: validated four new exports against all pinned source
+  evidence. Built and repeated separate reviewed snare, hats and toms v3 packs.
+  The all-rejected cymbal export correctly produced no no-op v3. Added a
+  blinded multi-pack page with copied source reference, Candidate A/B
+  performance audio, the tom velocity sweep, a separate answer key and a
+  hash-checking resolver.
+- Inputs: reviewed export SHA-256 values: snare
+  `8e5c99e9bb220951c877b66d2cd4c674fd077eb1b23b0d19c13b421ef2f60572`,
+  hats `0baf25457f9048cebe6d159fd0b1f69ef3a141aed11c044d47533ca51660f6cf`,
+  cymbals `d2a6d33db92e18105feec1cb5e8328b8fb2444c8dcdec4d45c956f7654043c3a`
+  and toms `b9aace5ef10baaec91b15c62c4eeb582c7143f05c408e6d2b3513da6500698fb`.
+- Model/runtime/checkpoint: no model. Deterministic source-event extraction,
+  SF2/SFZ generation, FluidSynth rendering and local HTML/JSON only.
+- Evidence and metrics: snare accepted event 44 at MIDI 40; hats accepted event
+  35 at MIDI 42 and event 21 at MIDI 46; cymbals rejected all three units;
+  toms accepted events 5/39 as MIDI-45 velocity layers split at 107/108 plus
+  event 9 at MIDI 48 and event 14 at MIDI 50. No alternates were accepted.
+  The v3 SoundFont hashes are snare
+  `ccc891b7619ebdf9d3e368e41c2d26032944d4db1118d4cc10ac3626471af0df`,
+  hats `6d09775e2f3e1ea50d1db5c5fb9a6ad87240173461483cb8483f3598f7c84739`
+  and toms `c4c592df360facffc0c68b68b3b79dd780a8e44f6114a37abdc160ff698dae4c`.
+  Main/repeat musical artifacts, sample trees and normalized reports match.
+  The blind page contains three neutral units and one tom sweep; answer-key
+  SHA-256 is
+  `b8b6e241dd8c2ac2757cd4096cc9d87d855c614e9d45f32b85519733c3748d23`
+  and audio-manifest SHA-256 is
+  `46272b4b6604188049703adab20b369a46e089a40c8e36f23c132b55fa1e867e`.
+  The complete repository suite passes with 351 tests.
+- Listening result: source-event choices are complete; blinded v2/v3 preference
+  remains open. The listener must not inspect the separate answer key first.
+- Decision: retain the three reviewed challengers and the unchanged cymbal v2.
+  Do not call any challenger better until the blinded export is resolved. Keep
+  the tom boundary at 107/108 unless its sweep motivates a separate reviewed
+  boundary workflow.
+- Problems/risks: FluidSynth remains a proxy for GarageBand/AUSampler and a
+  short 8-bar excerpt may not expose every arrangement context. Blinding hides
+  version identity, not audible extraction artefacts.
+- Next smallest step: review and export the three-unit blinded page, resolve it
+  against the pinned answer key, record the bass loop candidate-or-none result,
+  and confirm any preferred v3 once in GarageBand before closing Phase 3.
+
+### 2026-07-17 — Phase 3 engineering close-out and sustain-loop evidence
+
+- Goal: resolve the final unchecked Phase 3 engineering feature and prepare a
+  cross-role listening gate without manufacturing any musical decisions.
+- Change or experiment: added deterministic advisory loop-boundary analysis for
+  pitched sample packs, with waveform/spectral continuity metrics, an SVG and
+  click-revealing raw-repeat WAVs. Built fresh neutral Sample Instrument v2
+  packs and review pages for Lidl snare, hats, cymbals and toms, then repeated
+  the whole batch at independent output paths.
+- Inputs: the permanent authorised Lidl stems and listened repair MIDI; the
+  existing Lidl bass 200–215-second fixture for pitched loop evidence. Source
+  and MIDI hashes are pinned in each generated report.
+- Model/runtime/checkpoint: no new learned model. Loop ranking uses deterministic
+  PCM waveform, log-spectrum, centroid and within-loop level evidence. The
+  existing optional OpenL3 path remains separate and unchanged.
+- Evidence and metrics: the bass pack contains five zones. Four source samples
+  are below the 0.65-second advisory minimum; MIDI 30 is 1.002396 seconds and
+  produced 791 evaluated boundary pairs plus three review candidates. The first
+  candidate spans 0.304438–0.902167 seconds with continuity score 0.116972.
+  The generated SF2/SFZ contain zero looped zones. The drum batch exposes 12
+  review units and 42 exact candidate events: snare 4/15, hats 2/6, cymbals
+  3/9 and toms 3/12. Snare and toms each have one possible velocity split.
+  Every seed remains unreviewed, every primary starts blank and all effects are
+  zero. Main/repeat SF2, SFZ, MIDI, WAV, sample, analysis and review-audio
+  hashes match after output-path provenance is normalised. The repository's
+  348 tests pass; wheel/source builds, `twine check` and a supported-Python
+  clean-install CLI smoke test also pass.
+- Listening result: open. A continuity score cannot decide whether a loop
+  repeats phrase motion, vibrato, bleed or an effect. Likewise, source-event
+  clustering cannot establish that two drum hits are the same instrument.
+- Decision: mark Phase 3 engineering complete but keep Phase 3 itself open at
+  its explicit listening gate. Apply no loop, drum-family, velocity-layer or
+  alternate-sample choice automatically.
+- Problems/risks: raw loop auditions intentionally reveal discontinuities and
+  do not preview a crossfade. Short extracted notes cannot sustain indefinitely.
+  FluidSynth and extracted stem context remain proxies for GarageBand/AUSampler
+  use in a full arrangement.
+- Next smallest step: the listener reviews the four neutral drum pages and the
+  three bass loop auditions. Apply accepted drum choices to fresh v3 outputs,
+  retain rejected roles unchanged, and record whether any loop candidate is
+  musically usable before declaring the Phase 3 listening gate closed.
+
+### 2026-07-17 — Reviewed Lidl kick event 17 applied
+
+- Goal: apply the listener's explicit Lidl kick review while preserving the
+  source MIDI, v2 instrument and every unselected source event as evidence.
+- Change or experiment: validated the exported review against its pinned stem,
+  MIDI, v2 report/SF2, cluster/dynamics reports and nine review WAVs. Built a
+  fresh Sample Instrument v3 in which MIDI 36 uses reviewed event 17; MIDI 35
+  retains its v2 zone. Repeated the complete apply at a second fresh path.
+- Inputs: reviewed JSON SHA-256
+  `1e4767b7a03137e6230840ceb902176a40dd512f731a9acbe9ab12ee016dd88c`;
+  source v2 report SHA-256
+  `bb3d0bfb623f6fc33f94e4fea52ff4df6af37f72963944975a2cbebab30b219b`;
+  source repair MIDI SHA-256
+  `91a1ed0a573cfed46300c1567db3344f32c81d0db36d063112231dc9ea5e689a`.
+- Model/runtime/checkpoint: no learned model. Reviewed source extraction,
+  deterministic SF2/SFZ construction and FluidSynth A/B rendering only.
+- Evidence and metrics: one unit was accepted at MIDI 36 with event 17 as its
+  sole primary; events 42 and 6 were not accepted as alternates. The v3 has two
+  zones, one reviewed replacement, no velocity layer, no round robin and no
+  GarageBand alternate bank. It changed zero MIDI pitches and velocities and
+  left the source v2 tree unchanged. SF2 SHA-256 is
+  `0237587bf6ea22440e5e721c7c09a426a91c24494fa1cc3859a518b31b34fd4b`.
+  The eight-bar performance A/B contains 35 notes, both source pitches 35/36,
+  velocities 103–120, and source beats 396–428 (199.664–215.798 seconds).
+  Performance MIDI SHA-256 is
+  `74a6a7c5e649680671085fd20f77f13da0ec53a0864c722de3605c33a0a46481`;
+  the new v3 preview SHA-256 is
+  `80fc15ed92525fa91183b3ccab8c8b4fc48e38cd06e49d2b1608999e61b7135d`.
+  The repeat build reproduced every musical artifact and sample-tree hash.
+- Listening result: the reviewer explicitly accepted event 17 as primary and
+  selected no alternates. No textual reason was supplied, so none is inferred.
+- Decision: retain event 17 as the sole reviewed MIDI-36 replacement in this
+  experimental v3. Do not claim round robin or a velocity layer. Keep the
+  embedded v2 bank as the authoritative rollback.
+- Problems/risks: event 17 still contains the source stem's separation,
+  processing and room context. FluidSynth preview is a proxy for AUSampler;
+  the event choice still needs source/v2/v3 listening in GarageBand context.
+- Next smallest step: compare the shared eight-bar source, v2 and v3 renders;
+  if event 17 remains preferable in context, retain this pack and prepare the
+  next clean drum role for the same explicit review workflow.
+
+### 2026-07-17 — Lidl kick alternate-sample review v1
+
+- Goal: test the Phase 3 dynamics workflow on a cleaner, single-role drum stem
+  after rejecting an unlike `other_kit` velocity pair, without carrying that
+  earlier listening decision into a different instrument.
+- Change or experiment: built a fresh two-zone Sample Instrument v2 from the
+  user-written Lidl kick stem and its unchanged repair MIDI, then generated a
+  context-rich, unreviewed sample review. Each candidate has an isolated hit,
+  a source-rhythm excerpt and the same normalized repeated two-bar audition.
+  Final handoff QA also removed the review page's visual first-primary default:
+  every primary now starts blank, and an accepted layer cannot be marked
+  reviewed until the listener explicitly chooses one.
+- Inputs: `Lidl-kick-B major-119bpm-440hz.wav` SHA-256
+  `6070f98d222eac1d19a78b529e71a8b10d09581483f9c83833766079aef16022`;
+  published repair `kick.mid` SHA-256
+  `91a1ed0a573cfed46300c1567db3344f32c81d0db36d063112231dc9ea5e689a`.
+- Model/runtime/checkpoint: no learned model. Existing explainable event
+  features, deterministic clustering/dynamics policy, PCM extraction, SF2
+  construction and FluidSynth preview only.
+- Evidence and metrics: the broad match experiment had profiled 240 events
+  with polyphonic windows permitted and proposed one velocity-layer unit. The
+  sample-pack path instead profiled its default 48 isolated candidate windows;
+  no velocity-layer unit survived that safer scope. It retained one MIDI-36
+  alternate set containing events 42, 6 and 17 at velocities 120, 111 and 115
+  and RMS levels -12.340, -12.763 and -12.911 dB. The v2 bank has two zones;
+  SF2 SHA-256 is
+  `b83604899a91d3aa12b41164342292ec16ac1efa730eef439b0b79cbb77532d5`.
+  The review pins nine WAVs, six of them contextual, under manifest SHA-256
+  `057a7245e22dfb85d363d74289154b76a0f103b318d0085259b62521e7398895`.
+  A second clean run reproduced every SF2, SFZ, MIDI, WAV, sample-tree and
+  review-audio hash. The corrected v2 review retains the same pinned manifest
+  because the listening audio is unchanged; only the decision UI changed.
+- Listening result: open. The review must establish whether the three events
+  retain the same kick pitch, attack/body balance and decay, with only useful
+  natural variation; it must not assume similarity from cluster membership.
+- Decision: expose one alternate-sample review only. Supersede the first page
+  with the explicit-primary v2 page, keep the seed unreviewed, accept no
+  velocity layer and make no MIDI, sample-selection, baseline or SoundFont-zone
+  change.
+- Problems/risks: the 48-event cap is a deterministic evidence subset rather
+  than every isolated event in the song. Normalized repeated beats reveal
+  timbre but not original level; source-context excerpts retain relative level
+  but also contain musical context and possible separator residue.
+- Next smallest step: collect the explicit review export. If events are judged
+  one identity, build a fresh v3 with one primary and only the explicitly
+  checked alternates; otherwise reject the proposal and retain v2 unchanged.
+
+### 2026-07-17 — Reviewed single-upper mapping applied
+
+- Goal: resolve the audible MIDI-35 identity change using the listener's
+  explicit v2 mapping choice, while preserving the source MIDI, source sample
+  audio and earlier v3 pack.
+- Change or experiment: validated the hash-pinned reviewed export and applied
+  `single-high`. The fresh v3 maps upper source event 25 across velocities
+  0–127, deactivates lower event 13 and removes the former boundary at 116.
+  A second clean build was made only to test deterministic output.
+- Inputs: unchanged Lidl `other_kit` context-reviewed v3; reviewed schema v2
+  export; MIDI 35 events 13 and 25; original source MIDI SHA-256
+  `de5926a88993b1e0af29724363b924e9c42c275249662403131765d980fd3155`.
+- Model/runtime/checkpoint: no learned model. Deterministic MIDI/SF2 generation,
+  FluidSynth rendering and SHA-256 validation only.
+- Evidence and metrics: the final SF2 has 11 zones, four reviewed primary
+  replacements and no velocity layer, round robin or alternate bank. The
+  boundary apply changed zero MIDI notes and zero velocities, introduced zero
+  source events, modified zero source sample files and removed one active
+  event. SF2 SHA-256 is
+  `2301d36e54e010fa5d1a33ee0b8de922de47674a9d896667836aa8a84eda9dde`;
+  the 12-bar performance MIDI remains
+  `49a676dbfb643079a6eb8d3afcfc2c0ae8883a37966fc88e6b0033679bdb05d9`;
+  its new v3 preview is
+  `7e6b943cf31d5de1d28b438836b51f91134070158b4b9ccdb3a8556bf7ddad34`.
+  A repeat build produced identical SF2, SFZ, MIDI, preview-WAV, decision and
+  sample-tree hashes. The original v3 tree remained byte-for-byte unchanged.
+- Listening result: the reviewer heard lower event 13 and upper event 25 as
+  different sounds. Event 25 alone retained the same tone at every velocity,
+  so the reviewer explicitly selected the upper event only.
+- Decision: accept event 25 as the sole MIDI-35 source in this experimental v3.
+  Do not retain event 13 as a velocity layer. Keep the embedded v2 baseline and
+  the earlier context-reviewed v3 available for rollback and comparison.
+- Problems/risks: one sample preserves identity but cannot reproduce true
+  acoustic velocity-dependent timbre; FluidSynth remains a proxy for final
+  GarageBand/AUSampler listening. Stem bleed and room/effect character remain
+  baked into the extracted event.
+- Next smallest step: compare source, v2 and single-event v3 performance renders
+  in context, then repeat this explicit identity-versus-dynamics review only
+  for another accepted layer candidate with genuinely similar timbre.
+
+### 2026-07-17 — Velocity-layer mapping review v2
+
+- Goal: represent the listener's real decision—whether two samples belong in
+  one velocity-layered instrument at all—instead of forcing every answer to be
+  a numeric boundary.
+- Change or experiment: upgraded the boundary-review schema to v2. Every unit
+  now offers lower event only, upper event only and the existing layered
+  boundaries. A fixed-velocity repeated two-bar beat renders both individual
+  events at identical pitch, velocity and rhythm before one common velocity
+  ramp tests every complete mapping. The page reports actual source-MIDI
+  velocities and flags a lower or upper zone that the song cannot trigger.
+  Apply may deactivate one already accepted event, but cannot introduce a new
+  event, modify sample audio or edit source MIDI. Legacy v1 exports are refused.
+- Inputs: the unchanged Lidl `other_kit` context-reviewed v3; MIDI 35; lower
+  event 13, upper event 25, current split 116 and user feedback that pitch,
+  tone and texture changed between the two sources.
+- Model/runtime/checkpoint: no learned model. Deterministic MIDI/SF2 generation,
+  FluidSynth rendering and SHA-256 validation only.
+- Evidence and metrics: source MIDI 35 uses velocities 102, 107, 109, 110, 111,
+  112, 114, 116, 119 and 120. The old boundary-124 choice therefore made the
+  125–127 upper zone unreachable and acted implicitly like lower-event-only.
+  v2 presents ten mappings and 34 pinned files. Both tone previews use velocity
+  111; repeated-beat MIDI SHA-256 is
+  `f78e1be6225610f5c2c710f42385bf2c5736eb9cbd9c68dcc3040adee2d621a7`.
+  Lower/upper tone WAV hashes are
+  `51a85006afe92da375b7afc736341caf3e401a29bd5abfdb027acc556050140e`
+  and `4bfe51b380701a4bfafa145b64132d2ffa9160fa8a8b9b10cf64081e8c0fc904`.
+  The complete manifest SHA-256 is
+  `2d62857062aeeadedb768ca9b968921273d1e7a661cf83ea61e352f56e7405b5`.
+- Listening result: the first review found the two events perceptually unlike;
+  choosing the final boundary was a sensible way to minimise the switch, but
+  it exposed that “no layer” was missing from the decision surface.
+- Decision: supersede the un-applied v1 export with a fresh unreviewed v2 page.
+  Do not infer lower-event-only; let the user choose it explicitly after the
+  equal-velocity comparison.
+- Problems/risks: both extracted events are individually peak-normalised, so
+  the equal-velocity test deliberately emphasises timbre/envelope identity.
+  A real acoustic velocity layer can become brighter or harder, but an obvious
+  instrument or pitch-identity change still argues for one source event.
+- Next smallest step: collect the v2 mapping export and rebuild a fresh v3. If
+  lower-event-only is selected, verify one MIDI-35 zone, no velocity sweep,
+  one deactivated accepted event and unchanged source MIDI/sample WAV hashes.
+
+### 2026-07-17 — Explicit sampler boundary review v1
+
+- Goal: turn an audible velocity-layer transition question into a deliberate
+  listening decision without treating “carry on” as approval to move the
+  reviewed MIDI-35 boundary or replace either accepted sample.
+- Change or experiment: added `sample-pack-boundary-review` and
+  `sample-pack-boundary-apply`. Review rebuilds candidate SF2/AUSampler banks
+  around each accepted two-layer split and renders one identical unit-specific
+  velocity sweep through every bank. It labels but never preselects the current
+  boundary. Apply accepts only a complete user export, validates its manifest
+  and regenerates the full v3 pack from the original reviewed sample choices
+  with only the chosen boundary overrides.
+- Inputs: unchanged Lidl `other_kit` context-reviewed v3; MIDI 35; accepted
+  low event 13, high event 25 and current boundary 116.
+- Model/runtime/checkpoint: no learned model. Deterministic MIDI/SF2 generation,
+  FluidSynth listening renders and SHA-256 evidence only.
+- Evidence and metrics: the review offers boundaries 96, 100, 104, 108, 112,
+  116, 120 and 124. Every candidate uses the same 29-hit MIDI velocities 32,
+  48, 64, 80, 95–97, 99–101, 103–105, 107–109, 111–113, 115–117,
+  119–121, 123–125 and 127. The seed is `unreviewed`, selected boundary is
+  null, effects are all zero and 25 candidate MIDI/SF2/AUSampler/WAV artifacts
+  are pinned by manifest SHA-256
+  `8cafd80b6e8976c8deed5bfe1229c074533979a793e83823bfde1bd39133f84e`.
+  Source v3 report SHA-256 remains
+  `b183861f3bdd8eb44c1ec74506a3f7f90e8572a1c03b1d76e2a5cc7458b63005`;
+  its reviewed sample decision SHA-256 remains
+  `686b7ec1aec40b4058362f57dfe67f9a55c20134e9476a9e1165f0204d17b9da`.
+- Listening result: open. The reviewer should prefer a candidate whose quiet-
+  to-loud sweep changes naturally in level and timbre, and may explicitly keep
+  116 if it remains best.
+- Decision: hand off the unreviewed HTML. Do not build a boundary-adjusted v3
+  until the user exports `sample_boundary_review.reviewed.json`.
+- Problems/risks: velocity controls both sample selection and playback level,
+  so boundary choice remains perceptual. FluidSynth is a proxy; the generated
+  `.aupreset` plus shared MIDI supports a final AUSampler comparison.
+- Next smallest step: collect the explicit boundary export, apply it to a fresh
+  v3 pack and compare source/v2/new-v3 real-performance and sweep artifacts.
+
+### 2026-07-17 — Reviewed velocity-layer sweep v1
+
+- Goal: expose whether the accepted Lidl MIDI-35 sample switch at velocity 116
+  sounds natural, without automatically moving the boundary or replacing
+  either user-selected event.
+- Change or experiment: `sample-pack-apply` now creates an audit-only velocity
+  sweep whenever a review accepts a two-layer unit. It plays coarse dynamics
+  plus dense steps at boundary −8/−4/−2/−1, the exact boundary, and
+  +1/+2/+4/+8, clamps to valid MIDI values and removes duplicates. The same
+  MIDI is rendered through the v2 one-sample bank and reviewed v3 bank.
+- Inputs: context-reviewed Lidl `other_kit`; MIDI pitch 35; accepted events 13
+  and 25; reviewed low/high ranges 0–116 and 117–127.
+- Model/runtime/checkpoint: no learned model. Deterministic MIDI generation and
+  the existing FluidSynth/SF2 A/B renderer only.
+- Evidence and metrics: the 119 BPM sweep contains 16 hits at velocities 32,
+  48, 64, 80, 96, 104, 108, 112, 114, 115, 116, 117, 118, 120, 124 and 127.
+  Both renders are 7.885 seconds. The sweep MIDI SHA-256 is
+  `b542f1f9d7f4cc0467aece91bb06e670d65c31a6005f31c569ee6029dd29c4c4`;
+  v2 WAV is
+  `68a275fb982062bce4057021deb81aa9e62054ed287b3a4e6bf6e41a2a985740`;
+  v3 WAV is
+  `b1fbd95195b4fee5bae3097dd88b07a89a3ad6a6b7672159263a8a008cbdbe50`.
+  Independent builds reproduced these and all preceding performance artifacts
+  byte-for-byte. Mapping and source-sample change counts remain zero.
+- Listening result: open. The critical adjacent hits are velocity 116 on event
+  13 followed by velocity 117 on event 25.
+- Decision: ship the sweep as an audit artifact only. Preserve the reviewed
+  116 boundary until the user explicitly reports that another transition is
+  musically preferable.
+- Problems/risks: MIDI velocity simultaneously changes playback level and
+  selects the sample, so a perceived jump can combine loudness and timbre.
+  FluidSynth is a proxy for AUSampler, making the GarageBand preset comparison
+  the final decision surface.
+- Next smallest step: collect the v2/v3 transition preference. If 116→117 is
+  unnatural, implement a separate hash-pinned boundary-choice review and apply
+  workflow rather than silently tuning a threshold.
+
+### 2026-07-17 — Real-performance sampler A/B v1
+
+- Goal: judge a reviewed percussion rack with musical evidence rather than
+  relying on isolated events or a sequential note-per-zone test.
+- Change or experiment: `sample-pack-apply` now retains the zone audit and
+  additionally selects a representative real-MIDI excerpt. It searches
+  bar-aligned 8-, 12- and 16-bar windows, stops at the shortest window covering
+  every source pitch, and otherwise maximises pitch coverage, note density and
+  then earliest position. The excerpt is shifted to bar 1 and channel 1 for
+  AUSampler without pitch, velocity or rhythm edits. It publishes one source
+  stem reference and identical v2/v3-bank renders.
+- Inputs: the context-reviewed Lidl `other_kit` v3 decision, its 194-note
+  source MIDI and authorised source stem.
+- Model/runtime/checkpoint: no learned model. Clip v1 performs deterministic
+  MIDI import/export; FluidSynth renders the two local sample banks.
+- Evidence and metrics: the shortest complete-palette window is 12 bars,
+  source beats 112–160 or 56.470624–80.672320 seconds at 119 BPM. It contains
+  50 notes, all 11 rack pitches and velocities 52–120. Source channel 10 is
+  changed only in the audition copy to channel 1 for the custom bank. The
+  source MIDI reports zero pitch/velocity mutations and retains SHA-256
+  `de5926a88993b1e0af29724363b924e9c42c275249662403131765d980fd3155`.
+  Source, v2 and v3 WAV durations are 24.202, 26.124 and 26.124 seconds; the
+  latter include sampler release tails. Independent builds produced identical
+  source WAV (`a5b5b860678a6a38cae7eb651cd87b691de8c3be4e993b215d7f8f54be6adeb1`),
+  MIDI (`49a676dbfb643079a6eb8d3afcfc2c0ae8883a37966fc88e6b0033679bdb05d9`),
+  v2 WAV (`d8d819ddc88abe0b8509a9a748b450975aa6ef546e7bec4d8adf548415341651`)
+  and v3 WAV (`e6bdac6aa05161f91c8b3bcd075db8e5d2d99c1ec0cdb3f089f0bb37d6effeae`).
+- Listening result: open. The three files are the first direct source-versus-
+  conservative-bank-versus-reviewed-bank musical comparison.
+- Decision: add this performance comparison to every reviewed v3 output while
+  retaining the sequential zone audit. It is an audition artifact only and
+  cannot promote v3, edit the original MIDI or imply that all source timbre is
+  captured by one sample per zone.
+- Problems/risks: a 12-bar density/coverage window is representative of the
+  MIDI pitch palette, not necessarily the song's most recognisable section.
+  Source and sampler levels differ, and rendered banks have longer release
+  tails. Channel 1 is required because the generated SF2 is a melodic bank,
+  even for a percussion rack.
+- Next smallest step: collect the user's source/v2/v3 preference and whether
+  the velocity-116 layer transition is natural. If not, add a reviewed boundary
+  adjustment rather than changing it automatically.
+
+### 2026-07-16 — Context-reviewed Lidl percussion rack v3
+
+- Goal: apply the first user decision made with isolated, source-context and
+  repeated-beat evidence, without changing the conservative v2 bank or
+  inventing alternates the reviewer did not select.
+- Change or experiment: validated the exported v6 review against all 63 pinned
+  WAVs and applied its exact choices to a fresh Sample Instrument v3 with a
+  common GarageBand audition, v2/v3 renders and embedded v2 rollback.
+- Inputs: authorised user-written Lidl `other_kit` pack; reviewed export
+  SHA-256
+  `686b7ec1aec40b4058362f57dfe67f9a55c20134e9476a9e1165f0204d17b9da`;
+  contextual manifest SHA-256
+  `4a18bb8c8b186c98f0300cd712734833219d46d4cba4816ea2c38ce076a1d7a0`.
+- Model/runtime/checkpoint: no learned model. Selection is entirely the user's
+  explicit local listening review; rendering uses the existing FluidSynth
+  path only for A/B previews.
+- Evidence and metrics: four units were accepted and two rejected. MIDI 35
+  uses event 13 for velocities 0–116 and event 25 for 117–127. MIDI 40 uses
+  event 44, MIDI 42 uses event 39, and MIDI 50 uses event 12. The competing
+  MIDI-42 family and MIDI 48 were rejected. Five reviewed events replaced four
+  v2 roots; zones changed 11→12 solely because of the accepted velocity split.
+  MIDI notes and velocities changed by zero, no alternate event was accepted,
+  and no round robin or GarageBand alternate bank was generated. The reviewed
+  SF2 SHA-256 is
+  `abd7131c27bf7d29828ddcaaaa8e3b0cd7c6a4f29b7e88c8e63aa6ce56e2bbeb`;
+  the embedded baseline remains
+  `55085be93289608810cceb33d02b7d1ef49c85e1caa963b8529663fb6c01a8b2`.
+  Independent builds produced byte-identical SF2, SFZ, audition MIDI, v2/v3
+  preview WAVs and all five extracted source WAVs.
+- Listening result: the explicit review accepted a broader four-note
+  percussion palette than the earlier one-event review and selected the only
+  proposed two-level unit. The user's reasons are represented by the choices;
+  no automatic interpretation or relabelling was added.
+- Decision: publish this as a separate context-reviewed challenger. Keep v2
+  embedded and authoritative until the user compares the two presets in the
+  full song. Do not add round robin because no alternate checkbox was accepted.
+- Problems/risks: the velocity boundary of 116 gives the louder sample a
+  narrow 117–127 trigger range; that is the reviewed proposal but may need a
+  later musical boundary review in GarageBand. Samples still contain any
+  source bleed, effects and transitions present in their 0.208-second events.
+- Next smallest step: compare the common audition and then the real
+  `other_kit` MIDI through the v2 and context-reviewed AUSampler presets. Record
+  whether the MIDI-35 layer transition and the four replacements improve the
+  full percussion rack before changing a default or threshold.
+
+### 2026-07-16 — Role-aware contextual sample auditions v1
+
+- Goal: make advisory sampler candidates recognisable to a listener who cannot
+  reliably distinguish similar 0.13–0.21-second one-shots in isolation.
+- Change or experiment: retained the exact normalised event WAV and added two
+  pinned views per candidate. A four-beat source excerpt uses one shared
+  stem-level gain to retain relative dynamics, nearby rhythm and bleed. A
+  normalised role audition uses a repeated two-bar beat for drum/percussion
+  roles or a short sampler-resampling pitch phrase for pitched roles. The HTML
+  labels all three, and apply verifies their manifest before accepting a
+  reviewed document.
+- Inputs: authorised user-written Lidl `other_kit` Sample Instrument v2, its
+  119 BPM aligned MIDI and the same six-unit/21-event review set used for the
+  first heard v3 decision.
+- Model/runtime/checkpoint: no learned model and no external renderer. Context
+  audio is deterministic local PCM24; pitched phrases emulate sampler playback
+  through deterministic resampling.
+- Evidence and metrics: the fresh page contains 21 isolated one-shots, 21
+  source-context excerpts and 21 repeated-beat auditions (63 pinned WAVs,
+  about 19 MB). Source contexts are 2.017 seconds; repeated beats are
+  4.172–4.243 seconds. Original-level context peaks span 0.1887–0.8900 while
+  isolated/role auditions use a 0.8900 comparison peak. Two independent builds
+  produced byte-identical WAVs and manifest SHA-256
+  `4a18bb8c8b186c98f0300cd712734833219d46d4cba4816ea2c38ce076a1d7a0`.
+  JavaScript syntax, focused tests and the unchanged zero-effect audit pass.
+- Listening result: the user reported hearing many different percussion
+  sounds and judged that variety potentially representative of `other_kit`.
+  This supports treating the stem as a multi-sound percussion palette rather
+  than forcing every mapped note to resemble one physical instrument.
+- Decision: preserve timbral diversity and make musical usefulness the review
+  question. Do not merge families, relabel MIDI pitch as acoustic pitch or
+  infer acceptance from the new auditions.
+- Problems/risks: a repeated beat repeats one candidate recording and is not a
+  reconstruction of the surrounding source performance. The source-context
+  player identifies the target by its recorded offset rather than adding an
+  audible marker. Pitched resampling changes sample duration like a basic
+  sampler and does not model a sophisticated instrument.
+- Next smallest step: collect listening feedback from the new Lidl page. If
+  individual sounds remain difficult to place, add a separate post-build
+  multi-pitch percussion-rack groove without changing the source-event review
+  contract.
+
+### 2026-07-16 — First heard Lidl Sample Instrument v3
+
+- Goal: apply the user's completed `other_kit` listening review without
+  inferring any additional musical choices, then prove that the resulting
+  instrument and rollback are reproducible.
+- Change or experiment: applied the exported reviewed JSON to a fresh v3
+  directory, corrected v3 reporting so proposed-but-rejected velocity layers
+  and alternates are not described as active, and added a regression test for
+  the one-primary/no-layer/no-alternate case.
+- Inputs: the authorised user-written Lidl `other_kit` Sample Instrument v2
+  and reviewed export SHA-256
+  `4a5d336209efb9a8ea477fbbf809ba4eb57686d29a48ee6fe337496e75c151fa`.
+- Model/runtime/checkpoint: no learned model. This remains an explicit human
+  listening gate over deterministic source-event evidence.
+- Evidence and metrics: the user accepted only unit `I1-P050-A1`, primary
+  event 10 at MIDI pitch 50, and rejected the other five units. The build
+  extracted one 0.209-second source event, retained 11 SF2 zones before and
+  after, changed zero MIDI notes or velocities, produced zero velocity-layer
+  units, zero round-robin layers and zero GarageBand alternate banks, and
+  embedded the unchanged baseline SF2 SHA-256
+  `55085be93289608810cceb33d02b7d1ef49c85e1caa963b8529663fb6c01a8b2`.
+  Two fresh builds produced byte-identical reviewed SF2, SFZ, audition MIDI,
+  v2/v3 WAV previews and extracted event WAV. The reviewed SF2 SHA-256 is
+  `4ad6450d7275fea863a72cc7c6f83ef867baa8926a4b15d487208d111c7bd448`.
+- Listening result: the reviewer found the isolated 0.13–0.21-second drum
+  excerpts difficult to distinguish because they sounded like similar short
+  thuds. One source event was recognisably useful; the remainder were rejected.
+- Decision: preserve that exact choice as a one-sample replacement. Do not
+  apply the proposed two-level unit, alternates or any inferred instrument
+  identity. A feature is now reported as active only when the reviewed choices
+  actually activate it.
+- Problems/risks: isolated one-shots hide rhythmic role, consistency and bleed
+  in musical context. A mixed residual `other_kit` stem is not one physical
+  instrument, and MIDI pitch 50 is a sampler mapping rather than proof of a
+  high tom.
+- Next smallest step: add role-aware contextual review auditions: repeated
+  beats and source-rhythm comparisons for drum/percussion units, and short
+  scale/phrase auditions for pitched instruments, while retaining the exact
+  one-shot evidence and explicit review gate.
+
+### 2026-07-16 — Phase 3 reviewed Sample Instrument v3 gate
+
+- Goal: let heard and explicitly accepted source-event candidates improve a
+  sampler without silently promoting advisory level groups or making the v2
+  instrument difficult to recover.
+- Change or experiment: added `sample-pack-review`, which extracts exact local
+  listening WAVs and an unreviewed HTML/JSON decision page, plus
+  `sample-pack-apply`, which accepts only a complete reviewed document. Apply
+  creates a separate velocity-layered SF2/AUSampler bank, sequence-round-robin
+  SFZ, separate alternate SF2/AUSampler A/B banks, shared audition MIDI/WAVs,
+  mutation audit and embedded v2 rollback. Portable SF2's lack of round-robin
+  selection is recorded rather than hidden.
+- Inputs: a deterministic synthetic two-dynamic/16-event kick fixture for apply
+  tests, plus the authorised user-written Lidl `other_kit` Sample Instrument v2
+  for the real unreviewed listening handoff.
+- Model/runtime/checkpoint: no learned model. The gate consumes the existing
+  explainable source-event cluster and dynamics evidence.
+- Evidence and metrics: the Lidl page contains six review units, one possible
+  two-layer unit, seven alternate sets and 21 pinned event-audio excerpts. It
+  records zero baseline, MIDI or SoundFont changes because no musical choice
+  has yet been made. Two fresh Lidl review builds produced byte-identical 21
+  WAV evidence sets and manifest SHA-256
+  `aefccc3f2c15394b37e52bdf211c856597f5a29606968d21c34f6dd42ef06973`.
+  The synthetic accepted fixture produced two SF2 velocity
+  zones from one v2 zone, four reviewed event WAVs, true two-event SFZ sequence
+  round robin, one alternate GarageBand bank and byte-identical main SF2/SFZ
+  hashes on a fresh repeat.
+- Listening result: intentionally open. No Lidl unit was accepted or rejected
+  by the implementation; the page is the handoff for user judgement.
+- Decision: keep v2 as the default. Refuse unreviewed/incomplete choices,
+  unknown event indices, multiple accepted units at one pitch and any changed
+  source, MIDI, v2 report/sample/SF2, cluster/dynamics or review-audio file.
+- Problems/risks: source excerpts can still contain bleed, effects or phrase
+  transitions; a level split can still reflect mixing; and AUSampler requires
+  separate A/B banks instead of automatic round robin.
+- Next smallest step: listen to the six Lidl units, export a reviewed document
+  and build the first real v3 A/B only if at least one proposal is recognisably
+  useful. Use that listening result before changing thresholds or defaults.
+
+### 2026-07-16 — Phase 3 advisory dynamics and alternate samples v1
+
+- Goal: identify repeated source events worth auditioning as quiet/loud layers
+  or round-robin alternatives without letting a source-level split rewrite MIDI
+  expression or silently expand a sample instrument.
+- Change or experiment: added deterministic analysis within the intersection of
+  candidate timbre family, existing MIDI pitch and articulation. A two-layer
+  unit needs at least eight events, at least four and 20% of the unit per
+  layer, and at least 3 dB median RMS separation. An alternate set needs three
+  isolated events; it selects the medoid plus diverse central examples while
+  excluding the most distant 20%. Matching, Sample Instrument v2 and
+  Instrument Bundle v1 retain JSON and SVG evidence with explicit all-zero
+  mutation effects.
+- Inputs: the authorised user-written full Lidl `other_kit` stem and its
+  194-note listened repair MIDI. The sample-pack handoff used its existing
+  conservative 48-event analysis ceiling; the bundle handoff used the Lidl
+  kick fixture.
+- Model/runtime/checkpoint: no learned model. The analysis uses the existing
+  explainable source-event timbre, articulation, RMS and isolation evidence.
+- Evidence and metrics: the full mixed-kit run produced 28 comparable units,
+  five two-layer candidates, 20 alternate-sample sets, 60 candidate events and
+  two retained/unassigned outliers among 194 events. The real sample pack kept
+  its existing 11 single-velocity zones while retaining one layer candidate
+  and seven alternate sets from the 48 analyzed events. The kick Instrument
+  Bundle recipe carries its match-side dynamics report and graph. Two fresh
+  full mixed-kit runs produced byte-identical dynamics JSON SHA-256
+  `afdec6f5b32074adbcbc65273c63a66677fe88e2601ef4e378ecf04aabc05b90`
+  and SVG SHA-256
+  `4edc60014fd76790439ee65c18db863bb381a6e3c0ad1ccc723ca2b13921ef74`.
+- Listening result: open. The timeline clearly exposes candidate groups and
+  exact source-event indices; it deliberately does not assert that apparent
+  level groups are real separately recorded dynamics.
+- Decision: ship discovery only as additive review evidence. Record zero MIDI
+  note/velocity changes, zero sample additions/removals, zero SoundFont-zone
+  changes and no drum-family change. Do not call a candidate a valid layer or
+  round robin until its indexed excerpts have been compared by ear.
+- Problems/risks: MIDI velocity already uses source energy and is therefore not
+  independent evidence; bleed, room sound, phrase context or section-level mix
+  changes can create a false split; and alternate events can preserve unwanted
+  transitions even after centrality filtering.
+- Next smallest step: add an explicit reviewed-sampler experiment that applies
+  only user-accepted event indices to a new Sample Instrument v3 copy, with an
+  A/B audition and rollback path. Do not alter the v2 default.
+
+### 2026-07-16 — Phase 3 conservative GM drum-family proposals v1
+
+- Goal: distinguish real kick, snare, hat, cymbal, tom and mixed-percussion
+  sounds without treating MIDI pitch as acoustic pitch or silently replacing
+  a repair that already classified the kit well.
+- Change or experiment: added role-specific GM percussion candidates rendered
+  through the configured SoundFont, explainable 80% timbre/20% articulation
+  scoring, deterministic distinct-candidate assignment, assigned one-shot
+  auditions and a separate channel-10 MIDI/WAV. Mapping units are the
+  intersection of source timbre family and existing MIDI note, preventing a
+  broad cluster from collapsing useful kit-piece labels. A valid existing role
+  note changes only when a candidate scores at least 55 and leads by at least
+  eight relative points. Original MIDI hashes are checked before and after.
+- Inputs: authorised user-written Lidl full snare, hat, cymbals, toms and
+  `other_kit` stems with newly generated repair MIDI, plus the permanent Lidl
+  kick seconds 200–215 fixture and its existing 33-note repair MIDI.
+- Model/runtime/checkpoint: no learned model. FluidSynth rendered the installed
+  GeneralUser-GS SoundFont; every report records its path and SHA-256.
+- Evidence and metrics: kick retained one persistent unit, four rare hits and
+  all existing notes. Snare retained 249/249 notes across four mapping units;
+  hats 484/484 across four units (15 outliers and one ceiling-retained event);
+  cymbals 18/18 across three units; and toms 90/90 across eight units. Mixed
+  `other_kit` retained all existing labels except two guarded experiments: 34
+  note-42 events mapped to side stick and seven note-49 events mapped to cabasa,
+  for 41 proposed changes among 194 notes, with two outliers retained. Every
+  input MIDI before/after hash matched. Two fresh `other_kit` runs produced
+  byte-identical report SHA-256
+  `62d553a8e873b26bad3a43131f2d4a09df2627c9021e6d904155b5619b19a58a`,
+  MIDI SHA-256
+  `9bfeac77a0f9714484c078808c8728c75b62fc268fb32f39124fa0fbd169f10d`
+  and WAV SHA-256
+  `4439fbc9375f9757a39cd4ba5322ab4e5f266b5daab685981a6228d82fa45e9e`.
+- Listening result: open. The unchanged role-specific proposals are a useful
+  no-regression result. The two mixed-kit reassignments require source/proposal
+  and intended-GarageBand-kit A/B before either is accepted.
+- Decision: integrate only as review-required additive evidence. Keep
+  `performance.mid` and the supplied MIDI authoritative; put the proposal and
+  its WAV in `matches/` and bundle `previews/`. Call 55/eight-point rules policy
+  guardrails rather than confidence calibration.
+- Problems/risks: SoundFont kit pieces differ from GarageBand kits; separator
+  bleed can form coherent families; the 512-event ceiling can leave a small
+  number of hits unanalyzed; and mixed-kit candidates remain especially easy
+  to mislabel even when their relative feature score is strong.
+- Next smallest step: listen to the retained mixed-kit A/B in GarageBand. If
+  useful, add velocity-layer and round-robin evidence inside an accepted drum
+  mapping unit without changing its note assignment automatically.
+
+### 2026-07-16 — Phase 3 source-event clustering v1
+
+- Goal: expose when one nominal stem contains several timbres, articulations or
+  separator artefacts without automatically deleting musically useful events.
+- Change or experiment: added deterministic robust-distance/k-medoids candidate
+  timbre families, independent articulation grouping, retained nearest-neighbour
+  outliers, per-event/medoid JSON and an SVG pitch/timeline. Matching uses
+  source-rate excerpts; sample packs mark selected events. Instrument Bundle v1
+  carries both reports. Optional OpenL3 contributes 30% identity distance while
+  explainable features retain 70%.
+- Inputs: a 13-event synthetic two-family/two-articulation fixture with one
+  deliberate outlier, plus the authorised user-written Lidl bass seconds
+  200–215 and its aligned 20-note repair MIDI.
+- Model/runtime/checkpoint: default clustering is model-free. The learned golden
+  used the same pinned OpenL3 ONNX CPU checkpoint and hash recorded in the next
+  log entry.
+- Evidence and metrics: the synthetic fixture recovered both six-event timbre
+  families, both articulation groups and the one retained outlier. On Lidl,
+  explainable-only evidence found two candidate families, one articulation
+  group and retained the short MIDI-39 event beginning at 8.941586s as an
+  outlier. OpenL3-assisted evidence instead retained all events and found three
+  candidate families of 11, 4 and 5 events with identity silhouette 0.302704.
+  Two fresh learned runs produced byte-identical cluster JSON SHA-256
+  `f5c151811743aed20ffc11470253005b38e6edfd602db3ae00a7b52721914f4e`,
+  SVG SHA-256
+  `462d5dada8bc27623304a6e2faa1c6ed2d0e8ed46040175c73ee27b38ed3bf86`
+  and complete match report SHA-256
+  `f8bff7cbbfd830673ab33c6cbc5162c116e66d9375d8d807f0c96cb8769330ca`.
+- Listening result: open. The explainable/OpenL3 disagreement is preserved for
+  review; no method is promoted from clustering metrics alone.
+- Decision: integrate the report and visual as advisory evidence. Keep every
+  event eligible for MIDI, matching and sampling; a rare articulation must not
+  be called noise or removed without listening.
+- Problems/risks: normal phrase, pitch, intensity or source-rate differences can
+  create a candidate family even when one physical instrument played all notes.
+  A single articulation cluster means the conservative selector found no stable
+  multi-event split, not that every attack is identical.
+- Next smallest step: completed by the conservative GM drum-family proposal
+  increment above; continue only after listening to the mixed-kit A/B.
+
+### 2026-07-16 — Phase 3 optional OpenL3 instrument evidence v1
+
+- Goal: test whether a small local learned music representation can add useful
+  timbre evidence without weakening the existing explainable matcher.
+- Change or experiment: added an opt-in OpenL3 music/mel128/embedding-512 ONNX
+  path, an explicit hash-verifying setup script, aligned one-second source and
+  rendered-candidate fingerprints, a separate learned shortlist and auditions,
+  complete candidate/window evidence, and additive Instrument Bundle v1 fields.
+  The default ranking and behavior remain unchanged.
+- Inputs: the authorised user-written Lidl bass fixture, original song seconds
+  200–215, and its aligned 20-note Sunofriend repair MIDI; eight role-specific
+  General MIDI bass programs rendered through the configured local SoundFont.
+- Model/runtime/checkpoint: OpenL3 music mel128 embedding-512 ONNX on
+  ONNX Runtime CPU; original weights CC-BY-4.0; checkpoint SHA-256
+  `81c24c8a723054717fdea5c7448acb6023baaf70a0fc526deb030c2032db0ed3`.
+- Evidence and metrics: all eight candidates had 15 aligned active windows.
+  OpenL3 ranked Fretless Bass first at 97.589 relative cosine similarity,
+  followed by Acoustic Bass at 97.511; the existing explainable score instead
+  ranked Acoustic Bass first at 86.521 and Fretless Bass fifth at 82.334. Two
+  fresh complete runs produced byte-identical evidence JSON SHA-256
+  `83c955b6545bb1c9951e9a83b2458f8082b264965211baf963acc49dfa0d7d9a`
+  and report SHA-256
+  `4f169110b04333032f24839c37026a2226a91a2be93f8e9641984110c2ad59cf`.
+- Listening result: open. The separate Fretless and Acoustic Bass auditions are
+  retained specifically for blinded/full-mix comparison; no preference is
+  inferred from the scores.
+- Decision: integrate OpenL3 as optional advisory evidence only. Never download
+  it during matching, accept an altered checkpoint, call cosine similarity
+  confidence, blend it into the explainable score, or change the default order.
+- Problems/risks: related music embeddings produce a narrow high-score range;
+  the General MIDI SoundFont remains only a proxy for GarageBand patches; a
+  strong timbre embedding can still miss articulation, emotion and mix fit.
+- Next smallest step: listen to the retained Lidl bass A/B candidates, then add
+  source-event clustering for identity/articulation/outlier evidence before
+  attempting velocity layers or round robins.
+
+### 2026-07-16 — Phase 2 explicit-choice personal ranking v1
+
+- Goal: reduce repeated comparison effort by showing which alternative the user
+  chose in similar past review units, without turning preference history into
+  an automatic melody decision.
+- Change or experiment: the new `melody-profile` command builds one fresh,
+  deterministic local profile only from complete explicitly reviewed correction
+  files. `melody-review --ranking-profile` adds a separate history panel based
+  on review-unit duration, tracker agreement, selection score and combined-note
+  density. Manual decisions have weight 1.0 and explicitly propagated repeated
+  choices have weight 0.5. Guided child reviews inherit and hash-check the same
+  profile.
+- Inputs: deterministic test corrections plus a clearly labelled synthetic
+  three-choice technical calibration fixture matched to the private Lidl
+  30–45 second lead-vocal golden. The fixture is not a user review, listening
+  result or statement of musical preference.
+- Model/runtime/checkpoint: no model, checkpoint, network call or hidden
+  preference store. Ranking is a deterministic nearest-context calculation over
+  explicit local JSON inputs.
+- Evidence and metrics: the profile contains one input, three explicit choices
+  and three contextual observations, one per automatic alternative. On the
+  three Lidl units, the matching artificial choices appeared history-first as
+  GAME boundary, combined and Basic Pitch respectively. Two profile builds had
+  identical SHA-256 `f1ef178ddd0357b04bdb032369f3daf16546c515f31f3870fbadb6129954ab39`.
+  Two fresh review packages were byte-identical across 42 files. All three
+  candidate orders remained `basic-pitch`, `game-boundary`, `combined`; all
+  correction seeds remained unreviewed and selected `combined`; raw candidates
+  remained unmodified.
+- Listening result: deliberately not claimed. The synthetic fixture proves the
+  immutable advisory mechanism, not that any hint matches the user's taste.
+  Real calibration begins only after the user supplies actual reviewed choices.
+- Decision: integrate the advisory panel and explicit profile builder. Call its
+  score a relative personal-history ranking, never confidence. Reject incomplete
+  reviews, duplicate input hashes, invalid propagation, changed profile hashes
+  and existing output paths. Never scan for or silently update preference data.
+- Problems/risks: sparse or stylistically narrow history can rank an irrelevant
+  choice first, context features are deliberately small and propagated choices
+  are not independent decisions. Candidate order and the combined default stay
+  fixed so a misleading hint cannot silently change output.
+- Next smallest step: collect genuine reviewed choices and record whether the
+  history panel reduces review time or improves the final GarageBand A/B. Then
+  begin Phase 3 Instrument Intelligence v2 without treating Phase 2 listening
+  calibration as complete evidence.
+
+### 2026-07-16 — Phase 2 explicit repeated-unit propagation v1
+
+- Goal: reduce repeated listening decisions without allowing similarity scores
+  to make musical choices automatically.
+- Change or experiment: `melody-review` now compares every unit pair using a
+  fixed conservative policy: at least three notes, exact note-count equality,
+  matching absolute pitches and contour intervals, similar unit/content
+  duration and onset timing within a quarter beat at p90. Accepted pairs expose
+  an explicit browser button that copies only the selected alternative name;
+  the target retains its own notes, timing and source evidence. The correction
+  audit records the source unit, canonical pair and policy, and
+  `melody-apply` rejects tampering or mismatched choices.
+- Inputs: the private Lidl 30–45 second lead-vocal golden and deterministic
+  synthetic positive/rejection fixtures covering exact repeats, octave
+  transposition, sparse units and unequal note counts.
+- Model/runtime/checkpoint: no model or checkpoint. This is a deterministic
+  review-layer comparison over the immutable combined agreed-F0 MIDI.
+- Evidence and metrics: the three Lidl units produced three evaluated pairs and
+  zero accepted pairs; all had unequal note counts and therefore could not be
+  treated as repeats. The exact synthetic repeat scored 1.000 for overall,
+  pitch, interval and timing evidence. Its octave-transposed counterpart was
+  rejected despite interval similarity 1.000. Two fresh Lidl packages were
+  byte identical across 42 files, with 41 recorded artifacts and
+  `raw_candidates_mutated: false`.
+- Listening result: no Lidl selection changed because no strong repeat existed.
+  Positive UI behaviour is regression-tested with synthetic repeated phrases;
+  a future longer authorised golden is still needed for human A/B assessment.
+- Decision: integrate pairwise suggestions and explicit propagation. Do not
+  infer octave-equivalent or approximate note-count repeats in v1, do not copy
+  notes between units, and invalidate dependent propagation after a manual
+  source change.
+- Problems/risks: the initial policy favours precision over recall and will miss
+  repeated phrases with ornaments, omissions or deliberate octave changes.
+  Connected repeat groups remain informational; every propagation action is
+  still pairwise and explicit.
+- Next smallest step: learn a local personal ranking/calibration signal only
+  from explicit reviewed choices, without changing automatic candidates.
+
+### 2026-07-16 — Phase 2 unresolved-unit short guides v1
+
+- Goal: let a user reject all automatic melodies for one manageable review
+  unit and add guidance without having to hum a complete song.
+- Change or experiment: the review page now has an explicit unresolved choice.
+  `melody-guide` verifies the complete parent review and tracker evidence, then
+  adds a fourth alternative to one numbered unit from a short hum, whistle,
+  contour, single-note rhythm or tapped rhythm. Hum-like guides contribute
+  rhythm and contour; single-note and tap inputs contribute rhythm only. Every
+  accepted pitch is still measured from the immutable source pYIN frames.
+- Inputs: the private Lidl 30–45 second lead-vocal golden, its three-unit Phase
+  2 review, and a 4.371-second unit-2 source excerpt used only as a technical
+  self-guide ceiling fixture. This is not presented as a realistic humming
+  result or as training data.
+- Model/runtime/checkpoint: existing local pYIN/Basic Pitch stack and
+  FluidSynth preview; no new model, network call or checkpoint.
+- Evidence and metrics: all 41 parent artifacts were hash-verified. The guide
+  detector proposed three notes and source gating accepted three at MIDI
+  pitches 63, 63 and 64. Alignment offset was 5.238668 seconds, transposition
+  zero and alignment score 0.988569. Only unit 2 gained `guide-assisted`; units
+  1 and 3 retained exactly three alternatives. The child package contains 46
+  recorded artifacts plus its manifest, and two independent builds were byte
+  identical across all 47 files. The guide evaluation reported chroma 0.787
+  and supported-note ratio 0.333, reinforcing that its label is not an
+  automatic recommendation.
+- Listening result: human recognition review remains pending. The ceiling
+  fixture proves timing, evidence gating, rendering and audit flow, but cannot
+  establish that an imperfect human hum will be preferable.
+- Decision: integrate unresolved export and `melody-guide`; accept one guide
+  and one unit per fresh run, preserve every automatic candidate, and refuse
+  `melody-apply` while any exported choice remains unresolved. No-source
+  evidence and tap/single-note pitch-ignoring paths have regression tests.
+- Problems/risks: a guide can improve segmentation yet still be a worse
+  musical abstraction, and weak pYIN regions cannot be repaired by this path.
+  v1 evaluates one guide for one unit and does not yet combine guided units.
+- Next smallest step: identify genuinely repeated review units and offer
+  explicit propagation of an accepted choice without modifying unrelated
+  phrases.
+
+### 2026-07-16 — Phase 2 musical-length review units v1
+
+- Goal: replace the nine short note-cluster cards in the recognition-first
+  review with a smaller number of musical-scale decisions.
+- Change or experiment: `melody-review` now groups consecutive immutable
+  boundary clusters into configurable review units, defaulting to two-to-eight
+  bars at four beats per bar. Each unit retains its original cluster indices,
+  weighted agreement/selection evidence, providers, duration status and all
+  three alternatives. Bar duration is derived from BPM; the implementation
+  explicitly does not claim that an excerpt starts on a confirmed downbeat.
+- Inputs: the private Lidl lead-vocal 30–45 second golden, B major, 119 BPM,
+  A=440, and its completed boundary-repair v2 tracker run.
+- Model/runtime/checkpoint: no new model. The increment is a deterministic
+  review-layer transformation over the existing hashed Basic Pitch, GAME,
+  pYIN and RMVPE evidence.
+- Evidence and metrics: nine source clusters became three review units covering
+  clusters 0–2, 3–5 and 6–8. Their content spans are 2.091, 2.167 and 2.005
+  bars; none is below the two-bar preference or above the eight-bar maximum.
+  Each unit retains raw Basic Pitch, GAME-boundary and combined MIDI, neutral
+  audio, source overlay and evaluation. For example, unit 3 strong-onset F1
+  was 0.333/0.462/0.400 respectively, while chroma was
+  0.963/0.935/0.937—useful evidence that one metric still cannot choose the
+  intended melody.
+- Listening result: the new local page presents three longer recognition
+  choices instead of nine fragmented decisions. Human selection remains
+  pending. The in-app browser security policy does not permit automated
+  navigation to local `file://` pages, so the page is handed off for local
+  review rather than bypassing that restriction.
+- Decision: integrate musical-length grouping as the `melody-review` default,
+  expose `--minimum-bars`, `--maximum-bars` and `--beats-per-bar`, retain
+  `phrase_count` for compatibility, and add explicit source-cluster and
+  review-unit counts to the manifest and correction audit.
+- Problems/risks: duration in bars is not the same as downbeat-aligned musical
+  form; a confirmed downbeat is unavailable for this excerpt. Short sources or
+  widely isolated clusters remain visible with an explicit warning instead of
+  being stretched or joined across more than the configured maximum.
+- Next smallest step: add a short hum/tap/contour guide only to a review unit
+  the user marks unresolved, retaining the three automatic alternatives and
+  source-pitch support rules.
 
 ### 2026-07-16 — Phase 1 optional close-out and PESTO F0 oracle
 

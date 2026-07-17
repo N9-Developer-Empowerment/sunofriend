@@ -39,6 +39,7 @@ def build_instrument_bundle(
     max_transpose: int = 6,
     auto_tune: bool = True,
     instrument_name: str | None = None,
+    embedding_model_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Build one self-describing GarageBand instrument handoff directory.
 
@@ -88,8 +89,11 @@ def build_instrument_bundle(
                 logic_drum_root=logic_drum_root,
                 include_factory=include_factory,
                 include_gm=include_gm,
+                embedding_model_path=embedding_model_path,
             )
         except Exception as exc:
+            if embedding_model_path is not None:
+                raise
             match_error = f"{type(exc).__name__}: {exc}"
             warnings.append(f"Instrument matching was unavailable: {match_error}")
 
@@ -113,6 +117,7 @@ def build_instrument_bundle(
                     render_preview=render_preview,
                     max_transpose=max_transpose,
                     auto_tune=auto_tune,
+                    embedding_model_path=embedding_model_path,
                 )
             except Exception as exc:
                 sample_error = f"{type(exc).__name__}: {exc}"
@@ -168,6 +173,12 @@ def build_instrument_bundle(
         best_gm_preview = _copy_best_gm_preview(
             match_report, matches_dir=matches_dir, previews_dir=previews_dir
         )
+        best_embedding_preview = _copy_best_embedding_preview(
+            match_report, matches_dir=matches_dir, previews_dir=previews_dir
+        )
+        drum_proposal_midi, drum_proposal_preview = _copy_drum_family_proposal(
+            match_report, matches_dir=matches_dir, previews_dir=previews_dir
+        )
         if not any(previews_dir.iterdir()):
             previews_dir.rmdir()
 
@@ -179,8 +190,17 @@ def build_instrument_bundle(
         gm_matches = (
             list(match_report.get("gm_rendered_matches", [])) if match_report else []
         )
+        embedding_matches = (
+            list(match_report.get("gm_learned_embedding_matches", []))
+            if match_report
+            else []
+        )
         best_gm = gm_matches[0] if gm_matches else None
+        best_embedding = embedding_matches[0] if embedding_matches else None
         best_factory = factory_matches[0] if factory_matches else None
+        drum_family_mapping = (
+            match_report.get("gm_drum_family_mapping") if match_report else None
+        )
         recipe = {
             "format": BUNDLE_FORMAT,
             "format_version": 1,
@@ -197,6 +217,11 @@ def build_instrument_bundle(
                     if best_gm
                     else None
                 ),
+                "review_drum_family_proposal": (
+                    str(Path("matches") / "drum_family_mapping.proposed.mid")
+                    if drum_family_mapping
+                    else None
+                ),
             },
             "sound": {
                 "source_reference": (
@@ -211,6 +236,30 @@ def build_instrument_bundle(
                         "soundfont": sample_report["artifacts"]["soundfont"],
                         "sfz": sample_report["artifacts"]["sfz"],
                         "sample_count": sample_report["sample_count"],
+                        "source_event_clusters": sample_report["source_event_clusters"],
+                        "source_event_dynamics": sample_report["source_event_dynamics"],
+                        "source_event_dynamics_report": str(
+                            Path("source-instrument") / "source_event_dynamics.json"
+                        ),
+                        "source_event_dynamics_graph": str(
+                            Path("source-instrument") / "source_event_dynamics.svg"
+                        ),
+                        "sample_loop_suggestions": sample_report.get(
+                            "sample_loop_suggestions"
+                        ),
+                        "sample_loop_suggestions_report": str(
+                            Path("source-instrument") / "source_sample_loops.json"
+                        ),
+                        "sample_loop_suggestions_graph": str(
+                            Path("source-instrument") / "source_sample_loops.svg"
+                        ),
+                        "sample_loop_auditions": (
+                            str(Path("source-instrument") / "loop-auditions")
+                            if sample_report["artifacts"].get(
+                                "sample_loop_auditions"
+                            )
+                            else None
+                        ),
                     }
                     if sample_report
                     else None
@@ -221,8 +270,51 @@ def build_instrument_bundle(
                 "directory": "matches" if match_report is not None else None,
                 "best_garageband_factory_asset": best_factory,
                 "best_rendered_gm_proxy": best_gm,
+                "best_learned_embedding_proxy": best_embedding,
                 "factory_candidates": factory_matches,
                 "gm_candidates": gm_matches,
+                "learned_embedding_candidates": embedding_matches,
+                "learned_embedding_evidence": (
+                    str(Path("matches") / "openl3_embedding_evidence.json")
+                    if embedding_matches
+                    else None
+                ),
+                "source_event_clusters": (
+                    str(Path("matches") / "source_event_clusters.json")
+                    if match_report
+                    else None
+                ),
+                "source_event_clusters_graph": (
+                    str(Path("matches") / "source_event_clusters.svg")
+                    if match_report
+                    else None
+                ),
+                "source_event_cluster_summary": (
+                    match_report.get("source_evidence", {}).get("event_clusters")
+                    if match_report
+                    else None
+                ),
+                "source_event_dynamics": (
+                    str(Path("matches") / "source_event_dynamics.json")
+                    if match_report
+                    else None
+                ),
+                "source_event_dynamics_graph": (
+                    str(Path("matches") / "source_event_dynamics.svg")
+                    if match_report
+                    else None
+                ),
+                "source_event_dynamics_summary": (
+                    match_report.get("source_evidence", {}).get("event_dynamics")
+                    if match_report
+                    else None
+                ),
+                "gm_drum_family_mapping": (
+                    str(Path("matches") / "gm_drum_family_mapping.json")
+                    if drum_family_mapping
+                    else None
+                ),
+                "gm_drum_family_mapping_summary": drum_family_mapping,
                 "error": match_error,
                 "interpretation": (
                     "Relative audition evidence only; a factory asset name may not "
@@ -245,9 +337,30 @@ def build_instrument_bundle(
                     if best_gm_preview is not None
                     else None
                 ),
+                "best_learned_embedding_gm": (
+                    str(Path("previews") / best_embedding_preview.name)
+                    if best_embedding_preview is not None
+                    else None
+                ),
+                "gm_drum_family_proposed_midi": (
+                    str(Path("previews") / drum_proposal_midi.name)
+                    if drum_proposal_midi is not None
+                    else None
+                ),
+                "gm_drum_family_proposed_wav": (
+                    str(Path("previews") / drum_proposal_preview.name)
+                    if drum_proposal_preview is not None
+                    else None
+                ),
             },
             "garageband": {
-                "steps": _garageband_steps(sample_report, best_factory, best_gm),
+                "steps": _garageband_steps(
+                    sample_report,
+                    best_factory,
+                    best_gm,
+                    best_embedding,
+                    drum_family_mapping,
+                ),
                 "factory_content_embedded": False,
                 "reason": (
                     "Apple factory content is referenced as a recommendation, not copied. "
@@ -331,10 +444,50 @@ def _copy_best_gm_preview(
     return output
 
 
+def _copy_best_embedding_preview(
+    match_report: dict[str, Any] | None,
+    *,
+    matches_dir: Path,
+    previews_dir: Path,
+) -> Path | None:
+    if not match_report:
+        return None
+    matches = list(match_report.get("gm_learned_embedding_matches", []))
+    if not matches:
+        return None
+    source = matches_dir / str(matches[0].get("preview_wav", ""))
+    if not source.is_file():
+        return None
+    output = previews_dir / "best-openl3-matched-gm.wav"
+    shutil.copy2(source, output)
+    return output
+
+
+def _copy_drum_family_proposal(
+    match_report: dict[str, Any] | None,
+    *,
+    matches_dir: Path,
+    previews_dir: Path,
+) -> tuple[Path | None, Path | None]:
+    if not match_report or not match_report.get("gm_drum_family_mapping"):
+        return None, None
+    source_midi = matches_dir / "drum_family_mapping.proposed.mid"
+    source_wav = matches_dir / "drum_family_mapping.proposed.wav"
+    if not source_midi.is_file() or not source_wav.is_file():
+        return None, None
+    output_midi = previews_dir / "gm-drum-family-proposal.mid"
+    output_wav = previews_dir / "gm-drum-family-proposal.wav"
+    shutil.copy2(source_midi, output_midi)
+    shutil.copy2(source_wav, output_wav)
+    return output_midi, output_wav
+
+
 def _garageband_steps(
     sample_report: dict[str, Any] | None,
     best_factory: dict[str, Any] | None,
     best_gm: dict[str, Any] | None,
+    best_embedding: dict[str, Any] | None,
+    drum_family_mapping: dict[str, Any] | None,
 ) -> list[str]:
     steps = [
         "Drag performance.mid into the GarageBand Tracks area at the project origin.",
@@ -357,6 +510,19 @@ def _garageband_steps(
             "Use the portable GM fallback "
             f"'{best_gm['name']}' (program {best_gm['patch_number']}) as an audition hint, not an exact GarageBand patch."
         )
+    if best_embedding:
+        steps.append(
+            "Also audition the independent OpenL3 hint "
+            f"'{best_embedding['name']}' (program {best_embedding['patch_number']}); "
+            "its learned score did not alter the explainable GM order."
+        )
+    if drum_family_mapping:
+        steps.append(
+            "For separated drum-hit families, audition "
+            "previews/gm-drum-family-proposal.mid and its WAV against "
+            "performance.mid. It is a review copy; accept or edit its channel-10 "
+            "notes only after listening with the intended GarageBand kit."
+        )
     steps.append(
         "Compare the source reference, source-derived preview, and matched preview at similar loudness before saving a custom GarageBand patch."
     )
@@ -375,6 +541,10 @@ def _bundle_markdown(report: dict[str, Any], recipe: dict[str, Any]) -> str:
     source_sound = recipe["sound"]["source_instrument"]
     best_factory = recipe["match"]["best_garageband_factory_asset"]
     best_gm = recipe["match"]["best_rendered_gm_proxy"]
+    best_embedding = recipe["match"]["best_learned_embedding_proxy"]
+    event_clusters = recipe["match"].get("source_event_cluster_summary") or {}
+    event_dynamics = recipe["match"].get("source_event_dynamics_summary") or {}
+    drum_mapping = recipe["match"].get("gm_drum_family_mapping_summary") or {}
     lines = [
         "# Sunofriend Instrument Bundle v1",
         "",
@@ -388,6 +558,29 @@ def _bundle_markdown(report: dict[str, Any], recipe: dict[str, Any]) -> str:
         f"- Source-derived playable instrument: {'yes' if source_sound else 'not available'}",
         f"- Best installed GarageBand asset: {best_factory['asset_name'] if best_factory else 'no match retained'}",
         f"- Best rendered GM proxy: {best_gm['name'] if best_gm else 'no match retained'}",
+        f"- Best optional OpenL3 proxy: {best_embedding['name'] if best_embedding else 'not requested'}",
+        (
+            "- Review-only GM drum-family proposal: "
+            f"{drum_mapping.get('candidate_timbre_family_count', 0)} family/note units / "
+            f"{drum_mapping.get('distinct_assigned_note_count', 0)} distinct notes / "
+            f"{drum_mapping.get('proposed_note_change_count', 0)} proposed changes"
+            if drum_mapping
+            else "- Review-only GM drum-family proposal: not applicable"
+        ),
+        (
+            "- Source-event review: "
+            f"{event_clusters.get('identity_candidate_cluster_count', 0)} candidate "
+            "timbre families, "
+            f"{event_clusters.get('articulation_cluster_count', 0)} articulation groups, "
+            f"{event_clusters.get('identity_outlier_count', 0)} retained outliers"
+        ),
+        (
+            "- Candidate dynamics: "
+            f"{event_dynamics.get('velocity_layer_candidate_unit_count', 0)} "
+            "two-layer units, "
+            f"{event_dynamics.get('round_robin_candidate_set_count', 0)} "
+            "round-robin sets; advisory only"
+        ),
         "- Apple factory samples embedded: no",
         "",
         "## GarageBand",

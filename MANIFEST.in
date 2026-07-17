@@ -8,6 +8,7 @@ include scripts/setup-ai-runtime.sh
 include scripts/setup-game-model.sh
 include scripts/setup-rmvpe-model.sh
 include scripts/setup-pesto-model.sh
+include scripts/setup-openl3-model.sh
 recursive-include docs *.md
 recursive-include skills *.md *.yaml
 recursive-include assets/brand *.png

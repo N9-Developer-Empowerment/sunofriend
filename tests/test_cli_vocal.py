@@ -46,11 +46,83 @@ def _lead_result(tuning_hz: float = 429.0):
 
 
 class VocalCliTests(unittest.TestCase):
+    def test_melody_profile_routes_reviewed_choices_to_fresh_profile(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            first = Path(tmp) / "reviewed-first.json"
+            second = Path(tmp) / "reviewed-second.json"
+            output = Path(tmp) / "profile.json"
+            result = {
+                "status": "complete",
+                "explicit_choice_count": 4,
+            }
+
+            with patch(
+                "sunofriend.melody_profile.build_personal_melody_profile",
+                return_value=result,
+            ) as build, redirect_stdout(StringIO()):
+                status = main(
+                    [
+                        "melody-profile",
+                        str(first),
+                        str(second),
+                        "--out",
+                        str(output),
+                    ]
+                )
+
+            self.assertEqual(status, 0)
+            build.assert_called_once_with(
+                [str(first), str(second)],
+                out_path=str(output),
+            )
+
+    def test_melody_guide_routes_one_unit_to_fresh_review(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            review = Path(tmp) / "review"
+            guide = Path(tmp) / "guide.wav"
+            output = Path(tmp) / "guided"
+            result = {
+                "status": "review-required",
+                "guide": {"status": "complete"},
+            }
+
+            with patch(
+                "sunofriend.phrase_review.build_guided_melody_phrase_review",
+                return_value=result,
+            ) as build, redirect_stdout(StringIO()):
+                status = main(
+                    [
+                        "melody-guide",
+                        str(review),
+                        "--unit",
+                        "2",
+                        "--guide",
+                        str(guide),
+                        "--guide-kind",
+                        "tap",
+                        "--search-seconds",
+                        "0.4",
+                        "--out-dir",
+                        str(output),
+                    ]
+                )
+
+            self.assertEqual(status, 0)
+            build.assert_called_once_with(
+                str(review),
+                unit=2,
+                guide_path=str(guide),
+                out_dir=str(output),
+                guide_kind="tap",
+                search_seconds=0.4,
+            )
+
     def test_melody_review_routes_tracker_run_and_fresh_output(self):
         with tempfile.TemporaryDirectory() as tmp:
             run = Path(tmp) / "tracker-run"
             output = Path(tmp) / "review"
             source = Path(tmp) / "moved.wav"
+            ranking_profile = Path(tmp) / "profile.json"
             result = {
                 "status": "review-required",
                 "phrase_count": 2,
@@ -70,6 +142,14 @@ class VocalCliTests(unittest.TestCase):
                         str(source),
                         "--padding-seconds",
                         "0.4",
+                        "--minimum-bars",
+                        "3",
+                        "--maximum-bars",
+                        "6",
+                        "--beats-per-bar",
+                        "3",
+                        "--ranking-profile",
+                        str(ranking_profile),
                     ]
                 )
 
@@ -79,6 +159,10 @@ class VocalCliTests(unittest.TestCase):
                 out_dir=str(output),
                 source_stem=str(source),
                 padding_seconds=0.4,
+                minimum_bars=3,
+                maximum_bars=6,
+                beats_per_bar=3,
+                ranking_profile=str(ranking_profile),
             )
 
     def test_vocal_trackers_routes_independent_evidence_and_rmvpe_input(self):

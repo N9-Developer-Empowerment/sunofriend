@@ -274,24 +274,104 @@ fresh local recognition-first package:
 ```bash
 .venv/bin/sunofriend melody-review \
   work/song-vocal-trackers/RUN_ID \
-  --out-dir work/song-vocal-phrase-review
+  --out-dir work/song-vocal-phrase-review \
+  --minimum-bars 2 --maximum-bars 8 --beats-per-bar 4
 ```
 
 `melody-review` verifies the run, source WAV, Basic Pitch evidence, combined
 MIDI and boundary evidence by SHA-256 before writing anything. It is lead-only
 in v1; backing vocals retain their polyphonic Basic Pitch and harmony stack.
-Each ranked region includes three explicit alternatives—raw Basic Pitch,
-GAME boundaries over agreed pitch, and the combined repair—plus the source,
-neutral MIDI, source-plus-MIDI audio, piano roll and phrase-local evaluation.
-No-evidence alternatives remain visible as zero-note silence.
+Consecutive note clusters are merged into two-to-eight-bar review units. This
+uses BPM to calculate a human-scale duration without asserting an unconfirmed
+downbeat. Every unit retains the original cluster indices and includes three
+explicit alternatives—raw Basic Pitch, GAME boundaries over agreed pitch, and
+the combined repair—plus the source, neutral MIDI, source-plus-MIDI audio,
+piano roll and unit-local evaluation. No-evidence alternatives remain visible
+as zero-note silence. A source too short to meet the preferred minimum remains
+reviewable with an explicit warning.
 
-Open `melody_phrase_review.html`, review the weakest regions first, select one
-alternative per phrase (or explicitly accept all current combined defaults),
+`melody-review` also compares the combined source-backed notes between units.
+A repeat suggestion requires at least three notes, equal note counts, the same
+absolute pitches and contour intervals, similar unit/content duration and an
+onset-error p90 no greater than a quarter beat. An octave-equivalent contour is
+not accepted. These fixed conservative thresholds generate review suggestions,
+never automatic selections.
+
+For an accepted pair, the page offers **Apply this unit's current choice to
+repeat unit …**. Clicking it explicitly marks both choices reviewed and copies
+only `basic-pitch`, `game-boundary` or `combined` to the target; the target's
+own candidate notes remain unchanged. Guide-assisted alternatives cannot be
+propagated because the guide was aligned to only one source unit. Manual edits
+invalidate dependent propagation until reviewed again. The exported correction
+retains the canonical pair evidence and policy, which `melody-apply` validates
+before writing MIDI.
+
+Open `melody_phrase_review.html`, review the weakest units first, select one
+alternative per unit (or explicitly accept all current combined defaults),
 then export `melody-corrections-reviewed.json`. Apply that file with
 `melody-apply`. The adjacent unreviewed seed cannot be applied: the command
 requires reviewed choices and a matching source hash, and carries those
 choices into the final `.correction.json` audit. This is a human selection
 layer; aggregate metrics never choose the melody automatically.
+
+### Local review-history hints
+
+Once you have explicitly reviewed more than one phrase package, combine those
+choices into a fresh local advisory profile:
+
+```bash
+.venv/bin/sunofriend melody-profile \
+  work/reviews/song-a-melody-corrections-reviewed.json \
+  work/reviews/song-b-melody-corrections-reviewed.json \
+  --out work/reviews/my-melody-profile-v1.json
+
+.venv/bin/sunofriend melody-review \
+  work/another-song-vocal-trackers/RUN_ID \
+  --ranking-profile work/reviews/my-melody-profile-v1.json \
+  --out-dir work/another-song-vocal-phrase-review
+```
+
+Only a correction with review status `reviewed` and `reviewed: true` on every
+choice is accepted. The profile records hashes and counts from the supplied
+files; it never scans a home directory or writes a hidden preference store.
+Manual choices count as `1.0`, while an explicitly propagated repeated-unit
+choice counts as `0.5`. Context-aware choices compare review-unit length,
+tracker agreement, selection evidence and combined-note density. Legacy
+reviewed files without those fields still contribute global counts and carry a
+warning.
+
+The review page calls this evidence **Your local review history**. Its scores
+are relative history rankings, not calibrated confidence. The hint cannot
+reorder candidates, change the unchanged `combined` seed, auto-select a choice
+or mark it reviewed. To incorporate new decisions, create another profile from
+the complete set of correction files at a new output path. A guided child
+review inherits and hash-verifies its parent's profile so later file changes
+are rejected.
+
+If a unit has no recognisable automatic choice, mark **None are close — add a
+short guide**. Record just that unit, then create a fresh review with one extra
+alternative:
+
+```bash
+.venv/bin/sunofriend melody-guide \
+  work/song-vocal-phrase-review \
+  --unit 2 \
+  --guide work/guides/unit-02-hum.wav \
+  --guide-kind hum \
+  --search-seconds 0.75 \
+  --out-dir work/song-vocal-unit-02-guided-review
+```
+
+The guide can be a `hum`, `whistle`, sung/played `contour`, `single-note`
+rhythm or `tap` rhythm. Pitch-aware guides supply contour and rhythm; tapping
+and single-note guides deliberately ignore their pitch. All accepted output
+pitches still come from hash-checked pYIN frames for the source vocal unit.
+The guide cannot fill a source region with no voiced evidence. Its WAV, timing
+alignment, accepted notes and provenance are stored in `guide.evidence.json`.
+The parent review and its automatic alternatives remain byte-for-byte
+unchanged; the child review must use a new output directory. v1 adds one guide
+to one unit per child review. Use repeatable `vocal-melody --guide-snippet`
+inputs when several guided excerpts need to be combined into a single melody.
 
 ## Tuning and GarageBand
 

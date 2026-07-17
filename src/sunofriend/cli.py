@@ -10,6 +10,7 @@ from pathlib import Path
 from . import __version__
 from .ai_runtime import AI_REQUIREMENTS
 from .diagnostics import CAPABILITIES
+from .phrase_guide import GUIDE_KINDS
 from .pipeline import run_remake
 
 _COMMANDS = {
@@ -19,6 +20,8 @@ _COMMANDS = {
     "vocal-melody",
     "vocal-trackers",
     "melody-review",
+    "melody-profile",
+    "melody-guide",
     "melody-apply",
     "evaluate",
     "doctor",
@@ -35,6 +38,12 @@ _COMMANDS = {
     "instrument-inventory",
     "instrument-match",
     "sample-pack",
+    "sample-pack-review",
+    "sample-pack-apply",
+    "sample-pack-boundary-review",
+    "sample-pack-boundary-apply",
+    "sample-pack-ab-review",
+    "sample-pack-ab-resolve",
     "instrument-bundle",
     "clip-import",
     "clip-list",
@@ -406,7 +415,82 @@ def build_parser() -> argparse.ArgumentParser:
         "--padding-seconds",
         type=float,
         default=0.25,
-        help="Context before and after each phrase, from 0 to 2 seconds",
+        help="Context before and after each review unit, from 0 to 2 seconds",
+    )
+    melody_review.add_argument(
+        "--minimum-bars",
+        type=int,
+        default=2,
+        help="Preferred minimum review-unit length in bars (default: 2)",
+    )
+    melody_review.add_argument(
+        "--maximum-bars",
+        type=int,
+        default=8,
+        help="Maximum review-unit length before a cluster boundary (default: 8)",
+    )
+    melody_review.add_argument(
+        "--beats-per-bar",
+        type=int,
+        default=4,
+        help="Beats used to calculate bar duration; does not assert a downbeat",
+    )
+    melody_review.add_argument(
+        "--ranking-profile",
+        default=None,
+        help="Optional local melody-profile JSON; advisory and never auto-selects",
+    )
+
+    melody_profile = sub.add_parser(
+        "melody-profile",
+        help="Build a local advisory profile from explicitly reviewed choices",
+    )
+    melody_profile.add_argument(
+        "corrections",
+        nargs="+",
+        help="One or more melody-corrections-reviewed.json files",
+    )
+    melody_profile.add_argument(
+        "--out",
+        required=True,
+        help="Fresh profile JSON path; existing files are never replaced",
+    )
+
+    melody_guide = sub.add_parser(
+        "melody-guide",
+        help="Add a source-supported short guide to one melody review unit",
+    )
+    melody_guide.add_argument(
+        "review_package",
+        help="Existing melody-review directory or its phrase_review.json",
+    )
+    melody_guide.add_argument(
+        "--unit",
+        type=int,
+        required=True,
+        help="One-based review-unit number to refine",
+    )
+    melody_guide.add_argument(
+        "--guide",
+        required=True,
+        help="Short matching WAV: hum, whistle, contour, single note or taps",
+    )
+    melody_guide.add_argument(
+        "--guide-kind",
+        choices=GUIDE_KINDS,
+        default="hum",
+        help="How to interpret the short guide (default: hum)",
+    )
+    melody_guide.add_argument(
+        "--search-seconds",
+        type=float,
+        default=0.75,
+        help="Local timing-offset search radius from 0 to 2 seconds",
+    )
+    melody_guide.add_argument(
+        "--out-dir",
+        required=True,
+        help="Fresh output directory; the parent review remains unchanged",
     )
 
     melody_apply = sub.add_parser(
@@ -615,9 +699,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--confidence-threshold",
         type=float,
         default=None,
-        help=(
-            "Frame voiced-confidence threshold (default: RMVPE 0.03; PESTO 0.2)"
-        ),
+        help=("Frame voiced-confidence threshold (default: RMVPE 0.03; PESTO 0.2)"),
     )
     ai_transcribe.add_argument(
         "--minimum-note-ms",
@@ -1023,6 +1105,14 @@ def build_parser() -> argparse.ArgumentParser:
         default=8,
         help="Factory samples to profile per asset",
     )
+    instrument_match.add_argument(
+        "--embedding-model",
+        default=None,
+        help=(
+            "Optional local hash-pinned OpenL3 ONNX model for source-event clusters "
+            "and a separate pitched-GM ranking; never downloads a model"
+        ),
+    )
 
     sample_pack = sub.add_parser(
         "sample-pack",
@@ -1095,12 +1185,106 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Do not measure and correct stable sample pitch in the SF2",
     )
+    sample_pack.add_argument(
+        "--embedding-model",
+        default=None,
+        help=(
+            "Optional local hash-pinned OpenL3 ONNX model for advisory source-event "
+            "timbre clustering; never removes a sample automatically"
+        ),
+    )
+
+    sample_pack_review = sub.add_parser(
+        "sample-pack-review",
+        help="Create a local listening review for v2 layer/alternate candidates",
+    )
+    sample_pack_review.add_argument(
+        "sample_pack", help="Existing unchanged Sample Instrument v2 directory"
+    )
+    sample_pack_review.add_argument(
+        "--out-dir", required=True, help="New unreviewed listening-review directory"
+    )
+
+    sample_pack_apply = sub.add_parser(
+        "sample-pack-apply",
+        help="Build a separate reviewed Sample Instrument v3 experiment",
+    )
+    sample_pack_apply.add_argument(
+        "review", help="Explicitly reviewed JSON exported by sample-pack-review"
+    )
+    sample_pack_apply.add_argument(
+        "--out-dir", required=True, help="New Sample Instrument v3 directory"
+    )
+    sample_pack_apply.add_argument(
+        "--name", default=None, help="Instrument name embedded in generated banks"
+    )
+    sample_pack_apply.add_argument(
+        "--no-preview",
+        action="store_true",
+        help="Build banks and audition MIDI without rendering A/B WAVs",
+    )
+
+    sample_boundary_review = sub.add_parser(
+        "sample-pack-boundary-review",
+        help="Compare single-sample and layered mappings without changing v3",
+    )
+    sample_boundary_review.add_argument(
+        "sample_pack_v3", help="Existing completed Sample Instrument v3 directory"
+    )
+    sample_boundary_review.add_argument(
+        "--out-dir", required=True, help="New unreviewed mapping-listening directory"
+    )
+
+    sample_boundary_apply = sub.add_parser(
+        "sample-pack-boundary-apply",
+        help="Regenerate v3 from an explicitly reviewed velocity-mapping export",
+    )
+    sample_boundary_apply.add_argument(
+        "review", help="Reviewed JSON exported by sample-pack-boundary-review"
+    )
+    sample_boundary_apply.add_argument(
+        "--out-dir", required=True, help="New mapping-reviewed v3 directory"
+    )
+    sample_boundary_apply.add_argument(
+        "--name", default=None, help="Instrument name embedded in generated banks"
+    )
+    sample_boundary_apply.add_argument(
+        "--no-preview",
+        action="store_true",
+        help="Build banks and audition MIDI without rendering A/B WAVs",
+    )
+
+    sample_ab_review = sub.add_parser(
+        "sample-pack-ab-review",
+        help="Create a blinded v2/v3 performance review for completed packs",
+    )
+    sample_ab_review.add_argument(
+        "sample_pack_v3",
+        nargs="+",
+        help="One or more completed Sample Instrument v3 directories",
+    )
+    sample_ab_review.add_argument(
+        "--out-dir", required=True, help="New blinded listening-review directory"
+    )
+
+    sample_ab_resolve = sub.add_parser(
+        "sample-pack-ab-resolve",
+        help="Resolve an explicitly reviewed blind export against its pinned key",
+    )
+    sample_ab_resolve.add_argument(
+        "review", help="Reviewed JSON exported by sample-pack-ab-review"
+    )
+    sample_ab_resolve.add_argument(
+        "--out", required=True, help="Fresh resolved Phase 3 result JSON"
+    )
 
     instrument_bundle = sub.add_parser(
         "instrument-bundle",
         help="Package MIDI, carried source sound, match evidence, and A/B previews",
     )
-    instrument_bundle.add_argument("stem", help="Source stem WAV you may legally sample")
+    instrument_bundle.add_argument(
+        "stem", help="Source stem WAV you may legally sample"
+    )
     instrument_bundle.add_argument("midi", help="Aligned note-bearing MIDI")
     instrument_bundle.add_argument(
         "--kind",
@@ -1142,6 +1326,11 @@ def build_parser() -> argparse.ArgumentParser:
     instrument_bundle.add_argument("--no-preview", action="store_true")
     instrument_bundle.add_argument("--allow-polyphonic", action="store_true")
     instrument_bundle.add_argument("--no-auto-tune", action="store_true")
+    instrument_bundle.add_argument(
+        "--embedding-model",
+        default=None,
+        help="Optional local hash-pinned OpenL3 ONNX model for match evidence",
+    )
 
     clip_import = sub.add_parser(
         "clip-import", help="Import MIDI tracks into a Clip v1 library"
@@ -1264,6 +1453,10 @@ def main(argv: list[str] | None = None) -> int:
             return _run_vocal_trackers(args)
         if args.command == "melody-review":
             return _run_melody_review(args)
+        if args.command == "melody-profile":
+            return _run_melody_profile(args)
+        if args.command == "melody-guide":
+            return _run_melody_guide(args)
         if args.command == "melody-apply":
             return _run_melody_apply(args)
         if args.command == "evaluate":
@@ -1296,6 +1489,18 @@ def main(argv: list[str] | None = None) -> int:
             return _run_instrument_match(args)
         if args.command == "sample-pack":
             return _run_sample_pack(args)
+        if args.command == "sample-pack-review":
+            return _run_sample_pack_review(args)
+        if args.command == "sample-pack-apply":
+            return _run_sample_pack_apply(args)
+        if args.command == "sample-pack-boundary-review":
+            return _run_sample_pack_boundary_review(args)
+        if args.command == "sample-pack-boundary-apply":
+            return _run_sample_pack_boundary_apply(args)
+        if args.command == "sample-pack-ab-review":
+            return _run_sample_pack_ab_review(args)
+        if args.command == "sample-pack-ab-resolve":
+            return _run_sample_pack_ab_resolve(args)
         if args.command == "instrument-bundle":
             return _run_instrument_bundle(args)
         if args.command == "clip-import":
@@ -1591,9 +1796,7 @@ def _run_vocal_trackers(args) -> int:
             "BPM was not provided and could not be inferred from the parent folder"
         )
     tuning_hz = float(
-        args.tuning_hz
-        if args.tuning_hz is not None
-        else (metadata.tuning_hz or 440.0)
+        args.tuning_hz if args.tuning_hz is not None else (metadata.tuning_hz or 440.0)
     )
     result = run_vocal_tracker_bakeoff(
         audio_path=stem,
@@ -1621,6 +1824,40 @@ def _run_melody_review(args) -> int:
         out_dir=args.out_dir,
         source_stem=args.source_stem,
         padding_seconds=args.padding_seconds,
+        minimum_bars=args.minimum_bars,
+        maximum_bars=args.maximum_bars,
+        beats_per_bar=args.beats_per_bar,
+        ranking_profile=args.ranking_profile,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_melody_profile(args) -> int:
+    """Build a fresh local preference profile from explicit review choices."""
+
+    from .melody_profile import build_personal_melody_profile
+
+    result = build_personal_melody_profile(
+        args.corrections,
+        out_path=args.out,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_melody_guide(args) -> int:
+    """Publish a fresh review package with one short-guide alternative."""
+
+    from .phrase_review import build_guided_melody_phrase_review
+
+    result = build_guided_melody_phrase_review(
+        args.review_package,
+        unit=args.unit,
+        guide_path=args.guide,
+        out_dir=args.out_dir,
+        guide_kind=args.guide_kind,
+        search_seconds=args.search_seconds,
     )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0
@@ -1787,9 +2024,7 @@ def _publish_ai_vocal_challenger(
             velocity=(
                 recovered_velocities[index]
                 if recovered_velocities is not None
-                else (
-                    int(round(note.velocity)) if note.velocity is not None else 88
-                )
+                else (int(round(note.velocity)) if note.velocity is not None else 88)
             ),
         )
         for index, note in enumerate(candidate.notes)
@@ -1827,9 +2062,7 @@ def _publish_ai_vocal_challenger(
                 note,
                 origin="observed",
                 confidence=(
-                    float(source.confidence)
-                    if source.confidence is not None
-                    else 0.5
+                    float(source.confidence) if source.confidence is not None else 0.5
                 ),
                 confidence_basis=(
                     "measured" if source.confidence is not None else "policy"
@@ -1891,9 +2124,7 @@ def _publish_ai_vocal_challenger(
             str(expression_midi_path) if expression_midi_path.is_file() else None
         ),
         "velocity_summary": (
-            expression_document.get("velocity_summary")
-            if expression_document
-            else None
+            expression_document.get("velocity_summary") if expression_document else None
         ),
         "run_manifest": str(run_dir / "run.json"),
         "run_id": manifest["run_id"],
@@ -2461,9 +2692,7 @@ def _run_ai_transcribe(args) -> int:
         options = {
             "device": args.device,
             "confidence_threshold": (
-                0.03
-                if args.confidence_threshold is None
-                else args.confidence_threshold
+                0.03 if args.confidence_threshold is None else args.confidence_threshold
             ),
             "minimum_note_ms": args.minimum_note_ms,
             "maximum_gap_ms": args.maximum_gap_ms,
@@ -2759,6 +2988,7 @@ def _run_instrument_match(args) -> int:
         all_programs=args.all_programs,
         max_source_segments=args.max_source_segments,
         max_samples_per_asset=args.max_samples_per_asset,
+        embedding_model_path=args.embedding_model,
     )
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0
@@ -2780,7 +3010,68 @@ def _run_sample_pack(args) -> int:
         render_preview=not args.no_preview,
         max_transpose=args.max_transpose,
         auto_tune=not args.no_auto_tune,
+        embedding_model_path=args.embedding_model,
     )
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_sample_pack_review(args) -> int:
+    from .sample_review import create_sample_pack_review
+
+    report = create_sample_pack_review(args.sample_pack, out_dir=args.out_dir)
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_sample_pack_apply(args) -> int:
+    from .sample_review import apply_sample_pack_review
+
+    report = apply_sample_pack_review(
+        args.review,
+        out_dir=args.out_dir,
+        render_preview=not args.no_preview,
+        instrument_name=args.name,
+    )
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_sample_pack_boundary_review(args) -> int:
+    from .sample_review import create_sample_boundary_review
+
+    report = create_sample_boundary_review(
+        args.sample_pack_v3, out_dir=args.out_dir
+    )
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_sample_pack_boundary_apply(args) -> int:
+    from .sample_review import apply_sample_boundary_review
+
+    report = apply_sample_boundary_review(
+        args.review,
+        out_dir=args.out_dir,
+        render_preview=not args.no_preview,
+        instrument_name=args.name,
+    )
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_sample_pack_ab_review(args) -> int:
+    from .sample_ab_review import create_sample_ab_review
+
+    report = create_sample_ab_review(args.sample_pack_v3, out_dir=args.out_dir)
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_sample_pack_ab_resolve(args) -> int:
+    from .sample_ab_review import resolve_sample_ab_review
+
+    report = resolve_sample_ab_review(args.review, out=args.out)
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0
 
@@ -2808,6 +3099,7 @@ def _run_instrument_bundle(args) -> int:
         max_transpose=args.max_transpose,
         auto_tune=not args.no_auto_tune,
         instrument_name=args.name,
+        embedding_model_path=args.embedding_model,
     )
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0

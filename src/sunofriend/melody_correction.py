@@ -10,7 +10,7 @@ from bisect import bisect_left
 from dataclasses import replace
 from pathlib import Path
 from statistics import median
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 from .conversion import NoteProvenance
 from .models import NoteEvent
@@ -288,6 +288,19 @@ def _transcribe_hummed_notes(
         grid=grid,
     )
     return list(guide_result.notes), warnings
+
+
+def transcribe_short_pitch_guide(
+    guide_path: str | Path,
+    *,
+    config: VocalConfig,
+) -> tuple[list[NoteEvent], list[str]]:
+    """Decode a local monophonic hum, whistle or single-note rhythm guide."""
+
+    guide = Path(guide_path).expanduser().absolute()
+    if not guide.is_file():
+        raise ValueError(f"Short guide WAV not found: {guide}")
+    return _transcribe_hummed_notes(guide, config=config, grid=None)
 
 
 def _select_non_overlapping_snippet_notes(
@@ -657,16 +670,22 @@ def apply_melody_corrections(
         "sunofriend.melody-phrase-review.v1"
     ):
         choices = review.get("choices", [])
+        if review.get("status") == "unresolved":
+            unresolved = review.get("unresolved_unit_indices", [])
+            if not isinstance(unresolved, list) or not all(
+                isinstance(value, int) and not isinstance(value, bool) and value >= 0
+                for value in unresolved
+            ):
+                raise ValueError(
+                    "Phrase-review correction has invalid unresolved unit indices"
+                )
+            labels = ", ".join(str(value + 1) for value in unresolved) or "unknown"
+            raise ValueError(
+                f"Phrase-review correction has unresolved units: {labels}"
+            )
         if review.get("status") != "reviewed":
             raise ValueError("Phrase-review correction must be reviewed before apply")
-        if not isinstance(choices, list) or not choices or any(
-            not isinstance(choice, dict)
-            or not choice.get("reviewed")
-            or choice.get("selected")
-            not in {"basic-pitch", "game-boundary", "combined"}
-            for choice in choices
-        ):
-            raise ValueError("Phrase-review correction has incomplete choices")
+        _validate_phrase_review_choices(review, choices)
     bpm = float(document.get("bpm", 0.0))
     if not math.isfinite(bpm) or bpm <= 0:
         raise ValueError("Correction JSON bpm must be positive")
@@ -723,6 +742,107 @@ def apply_melody_corrections(
     _write_json(audit_path, audit)
     audit["audit"] = str(audit_path)
     return audit
+
+
+def _validate_phrase_review_choices(
+    review: Mapping[str, Any],
+    choices: Any,
+) -> None:
+    allowed = {
+        "basic-pitch",
+        "game-boundary",
+        "combined",
+        "guide-assisted",
+    }
+    if not isinstance(choices, list) or not choices:
+        raise ValueError("Phrase-review correction has incomplete choices")
+    indexed: dict[int, Mapping[str, Any]] = {}
+    for choice in choices:
+        if (
+            not isinstance(choice, dict)
+            or not choice.get("reviewed")
+            or choice.get("selected") not in allowed
+        ):
+            raise ValueError("Phrase-review correction has incomplete choices")
+        phrase_index = choice.get("phrase_index")
+        if (
+            not isinstance(phrase_index, int)
+            or isinstance(phrase_index, bool)
+            or phrase_index < 0
+            or phrase_index in indexed
+        ):
+            raise ValueError("Phrase-review correction has invalid choice indices")
+        indexed[phrase_index] = choice
+
+    repetition = review.get("repetition")
+    policy = repetition.get("policy") if isinstance(repetition, Mapping) else None
+    policy_name = policy.get("name") if isinstance(policy, Mapping) else None
+    accepted = (
+        repetition.get("accepted_pairs", [])
+        if isinstance(repetition, Mapping)
+        else []
+    )
+    if not isinstance(accepted, list):
+        raise ValueError("Phrase-review correction has invalid repetition evidence")
+    accepted_by_index: dict[int, Mapping[str, Any]] = {}
+    for pair in accepted:
+        if not isinstance(pair, Mapping):
+            raise ValueError("Phrase-review correction has invalid repetition evidence")
+        pair_index = pair.get("pair_index")
+        left_index = pair.get("left_phrase_index")
+        right_index = pair.get("right_phrase_index")
+        if (
+            not isinstance(pair_index, int)
+            or isinstance(pair_index, bool)
+            or pair_index < 0
+            or pair_index in accepted_by_index
+            or not isinstance(left_index, int)
+            or isinstance(left_index, bool)
+            or left_index < 0
+            or not isinstance(right_index, int)
+            or isinstance(right_index, bool)
+            or right_index < 0
+            or left_index == right_index
+            or pair.get("status") != "accepted"
+        ):
+            raise ValueError("Phrase-review correction has invalid repetition evidence")
+        accepted_by_index[pair_index] = pair
+    propagation_fields = {
+        "propagated_from_phrase_index",
+        "propagation_policy",
+        "repeat_match",
+    }
+    for target_index, choice in indexed.items():
+        present = propagation_fields.intersection(choice)
+        if not present:
+            continue
+        if present != propagation_fields:
+            raise ValueError("Phrase-review correction has incomplete propagation audit")
+        source_index = choice["propagated_from_phrase_index"]
+        if (
+            not isinstance(source_index, int)
+            or isinstance(source_index, bool)
+            or source_index < 0
+            or source_index == target_index
+        ):
+            raise ValueError("Phrase-review correction has invalid propagation source")
+        source = indexed.get(source_index)
+        if source is None or source.get("selected") != choice.get("selected"):
+            raise ValueError("Phrase-review propagation source choice does not match")
+        if choice.get("propagation_policy") != policy_name or not policy_name:
+            raise ValueError("Phrase-review propagation policy does not match")
+        match = choice.get("repeat_match")
+        if not isinstance(match, Mapping) or match.get("status") != "accepted":
+            raise ValueError("Phrase-review propagation repeat evidence is invalid")
+        canonical = accepted_by_index.get(match.get("pair_index"))
+        if canonical is None or dict(canonical) != dict(match):
+            raise ValueError("Phrase-review propagation repeat evidence does not match")
+        pair_indices = {
+            int(match["left_phrase_index"]),
+            int(match["right_phrase_index"]),
+        }
+        if pair_indices != {source_index, target_index}:
+            raise ValueError("Phrase-review propagation units do not match repeat evidence")
 
 
 def _source_region(
@@ -884,5 +1004,6 @@ __all__ = [
     "add_hummed_snippet_variants",
     "align_hummed_guide",
     "apply_melody_corrections",
+    "transcribe_short_pitch_guide",
     "write_melody_correction_artifacts",
 ]

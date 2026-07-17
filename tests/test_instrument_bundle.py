@@ -73,6 +73,35 @@ class InstrumentBundleTests(unittest.TestCase):
                 recipe["sound"]["source_instrument"]["soundfont"],
                 "sunofriend-instrument.sf2",
             )
+            self.assertEqual(
+                recipe["match"]["source_event_clusters"],
+                "matches/source_event_clusters.json",
+            )
+            self.assertTrue((output / "matches/source_event_clusters.svg").is_file())
+            self.assertTrue((output / "matches/source_event_dynamics.json").is_file())
+            self.assertTrue((output / "matches/source_event_dynamics.svg").is_file())
+            self.assertTrue(
+                (output / "source-instrument/source_event_clusters.json").is_file()
+            )
+            self.assertTrue(
+                (output / "source-instrument/source_event_dynamics.json").is_file()
+            )
+            self.assertTrue(
+                (output / "source-instrument/source_sample_loops.json").is_file()
+            )
+            self.assertTrue(
+                (output / "source-instrument/source_sample_loops.svg").is_file()
+            )
+            self.assertEqual(
+                recipe["match"]["source_event_dynamics"],
+                "matches/source_event_dynamics.json",
+            )
+            self.assertEqual(
+                recipe["sound"]["source_instrument"][
+                    "sample_loop_suggestions_report"
+                ],
+                "source-instrument/source_sample_loops.json",
+            )
 
     def test_bundle_reports_partial_when_safe_sampling_is_unavailable(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -97,6 +126,54 @@ class InstrumentBundleTests(unittest.TestCase):
             self.assertTrue((output / "performance.mid").is_file())
             self.assertFalse((output / "source-instrument").exists())
             self.assertIn("no isolated notes", " ".join(report["warnings"]))
+
+    def test_bundle_carries_drum_family_review_midi_wav_and_evidence(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            stem, midi = self._source(root)
+            source_audio, sample_rate = soundfile.read(stem, dtype="float32")
+            soundfont = root / "fixture.sf2"
+            soundfont.write_bytes(b"fixture-soundfont")
+            output = root / "drum-bundle"
+
+            def fake_render(_midi_path, wav_path, **_kwargs):
+                soundfile.write(wav_path, source_audio, sample_rate)
+                return Path(wav_path)
+
+            with (
+                patch("sunofriend.render.find_soundfont", return_value=str(soundfont)),
+                patch("sunofriend.render.render_midi_to_wav", side_effect=fake_render),
+            ):
+                report = build_instrument_bundle(
+                    stem,
+                    midi,
+                    kind="kick",
+                    out_dir=output,
+                    include_factory=False,
+                    include_gm=True,
+                    build_source_instrument=False,
+                    render_preview=False,
+                )
+
+            self.assertEqual(report["status"], "complete")
+            self.assertTrue((output / "matches/gm_drum_family_mapping.json").is_file())
+            self.assertTrue((output / "previews/gm-drum-family-proposal.mid").is_file())
+            self.assertTrue((output / "previews/gm-drum-family-proposal.wav").is_file())
+            recipe = json.loads((output / "instrument_recipe.json").read_text())
+            self.assertEqual(
+                recipe["match"]["gm_drum_family_mapping"],
+                "matches/gm_drum_family_mapping.json",
+            )
+            self.assertTrue(
+                recipe["match"]["gm_drum_family_mapping_summary"][
+                    "candidate_timbre_family_count"
+                ]
+                >= 1
+            )
+            self.assertIn(
+                "previews/gm-drum-family-proposal.mid",
+                " ".join(recipe["garageband"]["steps"]),
+            )
 
 
 if __name__ == "__main__":

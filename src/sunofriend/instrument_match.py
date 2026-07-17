@@ -15,6 +15,7 @@ decision.
 from __future__ import annotations
 
 import html
+import hashlib
 import json
 import math
 import re
@@ -99,6 +100,23 @@ class GmProgramMatch:
 
 
 @dataclass(frozen=True)
+class LearnedGmProgramMatch:
+    rank: int
+    program: int
+    patch_number: int
+    name: str
+    embedding_similarity: float
+    active_window_count: int
+    p10_similarity: float
+    p90_similarity: float
+    midi: str | None = None
+    preview_wav: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class _SelectedSegment:
     note_index: int
     start_seconds: float
@@ -145,6 +163,7 @@ def match_instruments(
     all_programs: bool = False,
     max_source_segments: int = 24,
     max_samples_per_asset: int = 8,
+    embedding_model_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Rank installed factory assets and rendered GM proxies for one stem.
 
@@ -169,6 +188,11 @@ def match_instruments(
         raise ValueError(f"Output directory already exists: {destination}")
 
     clip, available_tracks, selected_track_index = _select_clip(midi, track_index)
+    embedding_model = None
+    if embedding_model_path is not None:
+        from .instrument_embedding import OpenL3MusicEmbedding
+
+        embedding_model = OpenL3MusicEmbedding(embedding_model_path)
     audio, sample_rate = _load_audio(stem, target_sample_rate=22_050)
     segments, selection_warning = _select_source_segments(
         audio,
@@ -185,6 +209,49 @@ def match_instruments(
     ]
     source_profile = _median_vector(source_vectors)
     target_pitch = _median([segment.pitch for segment in segments])
+    from .instrument_cluster import (
+        cluster_source_events,
+        source_event_clusters_svg,
+    )
+
+    cluster_audio, cluster_sample_rate = _load_audio(stem, target_sample_rate=None)
+    cluster_limit = (
+        min(max(len(clip.notes), max_source_segments), 512)
+        if normalized_kind in DRUM_KINDS
+        else max_source_segments
+    )
+    cluster_segments, _ = _select_source_segments(
+        cluster_audio,
+        cluster_sample_rate,
+        clip.notes,
+        kind=normalized_kind,
+        limit=cluster_limit,
+        allow_polyphonic=True,
+    )
+    if cluster_segments:
+        cluster_vectors = [
+            _timbre_vector(segment.samples, cluster_sample_rate)
+            for segment in cluster_segments
+        ]
+    else:
+        cluster_segments = segments
+        cluster_vectors = source_vectors
+        cluster_sample_rate = sample_rate
+    source_event_clusters = cluster_source_events(
+        cluster_segments,
+        cluster_vectors,
+        sample_rate=cluster_sample_rate,
+        source_path=stem,
+        midi_path=midi,
+        feature_names=FEATURE_NAMES,
+        embedding_model=embedding_model,
+    )
+    from .instrument_dynamics import (
+        analyze_source_event_dynamics,
+        source_event_dynamics_svg,
+    )
+
+    source_event_dynamics = analyze_source_event_dynamics(source_event_clusters)
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     work = Path(
@@ -241,14 +308,18 @@ def match_instruments(
                 )
 
         gm_matches: list[GmProgramMatch] = []
+        learned_gm_matches: list[LearnedGmProgramMatch] = []
+        embedding_evidence: dict[str, Any] | None = None
+        drum_family_mapping: dict[str, Any] | None = None
         if (
             include_gm
             and normalized_kind not in DRUM_KINDS
             and clip.instrument.channel != 9
         ):
             try:
-                gm_matches = _rank_gm_programs(
+                gm_matches, learned_gm_matches, embedding_evidence = _rank_gm_programs(
                     stem_audio=audio,
+                    stem_path=stem,
                     sample_rate=sample_rate,
                     clip=clip,
                     programs=program_candidates(
@@ -256,16 +327,30 @@ def match_instruments(
                     ),
                     top=top,
                     work_dir=work,
+                    embedding_model=embedding_model,
                 )
             except Exception as exc:
+                if embedding_model is not None:
+                    raise
                 warnings.append(
                     f"Rendered GM audition unavailable: {type(exc).__name__}: {exc}"
                 )
         elif include_gm and normalized_kind in DRUM_KINDS:
-            warnings.append(
-                "GM program audition is skipped for drums because kit selection is bank- and "
-                "renderer-specific; installed one-shot kit samples are ranked instead."
-            )
+            try:
+                drum_family_mapping = _build_gm_drum_family_mapping(
+                    stem_path=stem,
+                    midi_path=midi,
+                    clip=clip,
+                    kind=normalized_kind,
+                    source_event_clusters=source_event_clusters,
+                    source_vectors=cluster_vectors,
+                    sample_rate=cluster_sample_rate,
+                    work_dir=work,
+                )
+            except Exception as exc:
+                warnings.append(
+                    f"GM drum-family proposal unavailable: {type(exc).__name__}: {exc}"
+                )
 
         inventory = inventory_instruments(
             garageband_sampler_root=garageband_sampler_root,
@@ -273,7 +358,11 @@ def match_instruments(
         )
         report: dict[str, Any] = {
             "operation": "instrument-match",
-            "status": "complete" if factory_matches or gm_matches else "no-match",
+            "status": (
+                "complete"
+                if factory_matches or gm_matches or drum_family_mapping
+                else "no-match"
+            ),
             "stem": str(stem.resolve()),
             "midi": str(midi.resolve()),
             "kind": normalized_kind,
@@ -292,12 +381,22 @@ def match_instruments(
                 "median_midi_pitch": round(target_pitch, 3),
                 "segments": [segment.evidence_dict() for segment in segments],
                 "timbre_profile": _named_profile(source_profile),
+                "event_clusters": source_event_clusters["summary"],
+                "event_dynamics": source_event_dynamics["summary"],
             },
             "garageband_factory_matches": [
                 _factory_match_dict(match, inventory.sampler_instrument_presets)
                 for match in factory_matches
             ],
             "gm_rendered_matches": [match.to_dict() for match in gm_matches],
+            "gm_learned_embedding_matches": [
+                match.to_dict() for match in learned_gm_matches
+            ],
+            "gm_drum_family_mapping": (
+                drum_family_mapping["summary"]
+                if drum_family_mapping is not None
+                else None
+            ),
             "installed_audio_unit_instruments": [
                 item.to_dict() for item in inventory.audio_unit_instruments
             ],
@@ -321,6 +420,39 @@ def match_instruments(
                     "General MIDI program. Aligned log-mel spectral shape contributes "
                     "70%, dynamics 15%, and attack envelope 15%."
                 ),
+                "gm_drum_notes": (
+                    "For drum roles, each source-event timbre-family/existing-note "
+                    "mapping unit is compared with role-appropriate GM channel-10 "
+                    "one-shots. A separate review MIDI uses distinct notes where "
+                    "guardrails permit; the supplied MIDI is never overwritten."
+                    if drum_family_mapping is not None
+                    else "Not available or not applicable to this role."
+                ),
+                "learned_embeddings": (
+                    "When explicitly enabled, the same aligned source and rendered-GM "
+                    "one-second windows are compared with a hash-pinned OpenL3 music "
+                    "embedding. This creates a separate advisory ranking and never "
+                    "changes the explainable GM score or order."
+                    if embedding_evidence is not None
+                    else (
+                        "The explicitly supplied OpenL3 model contributed to source-event "
+                        "timbre clustering only; learned GM ranking was unavailable or "
+                        "disabled for this role."
+                        if embedding_model is not None
+                        else "Not requested; no learned model was loaded."
+                    )
+                ),
+                "source_event_clusters": (
+                    "Every MIDI-aligned source excerpt is grouped independently by "
+                    "candidate timbre family and articulation shape. Robust outliers "
+                    "are retained for review; no note, rank or sample selection changes."
+                ),
+                "source_event_dynamics": (
+                    "Repeated events within the same timbre family, MIDI pitch "
+                    "and articulation are checked for conservative source-RMS "
+                    "layers and isolated alternate-sample candidates. Results "
+                    "are advisory and do not change MIDI, samples or mappings."
+                ),
                 "ranking_scope": (
                     "Exploratory shortlist for audition, not proof that a patch is the "
                     "original instrument or an automatic production choice."
@@ -331,14 +463,55 @@ def match_instruments(
                 "Keep the GarageBand project at the MIDI's existing BPM and timeline origin.",
                 "Search the Library for the top factory asset names; patch names can differ from sample asset names.",
                 "Use the rendered GM results as timbral-family evidence, then choose the closest GarageBand or Audio Unit patch by ear.",
+                *(
+                    [
+                        "Compare drum_family_mapping.proposed.mid and its WAV with the supplied MIDI; accept or edit the separated channel-10 notes only after auditioning the intended GarageBand kit."
+                    ]
+                    if drum_family_mapping is not None
+                    else []
+                ),
                 "Audition at song level: an isolated timbre match can still occupy the wrong emotional or spectral space in the mix.",
             ],
             "artifacts": {
                 "report": "instrument_matches.json",
                 "audition_guide": "GARAGEBAND_AUDITION.md",
                 "profile_graph": ("timbre_profiles.svg" if factory_matches else None),
+                "embedding_evidence": (
+                    "openl3_embedding_evidence.json"
+                    if embedding_evidence is not None
+                    else None
+                ),
+                "source_event_clusters": "source_event_clusters.json",
+                "source_event_clusters_graph": "source_event_clusters.svg",
+                "source_event_dynamics": "source_event_dynamics.json",
+                "source_event_dynamics_graph": "source_event_dynamics.svg",
+                "gm_drum_family_mapping": (
+                    "gm_drum_family_mapping.json"
+                    if drum_family_mapping is not None
+                    else None
+                ),
+                "gm_drum_family_proposed_midi": (
+                    "drum_family_mapping.proposed.mid"
+                    if drum_family_mapping is not None
+                    else None
+                ),
+                "gm_drum_family_proposed_wav": (
+                    "drum_family_mapping.proposed.wav"
+                    if drum_family_mapping is not None
+                    else None
+                ),
             },
         }
+        _write_json(work / "source_event_clusters.json", source_event_clusters)
+        (work / "source_event_clusters.svg").write_text(
+            source_event_clusters_svg(source_event_clusters), encoding="utf-8"
+        )
+        _write_json(work / "source_event_dynamics.json", source_event_dynamics)
+        (work / "source_event_dynamics.svg").write_text(
+            source_event_dynamics_svg(source_event_dynamics), encoding="utf-8"
+        )
+        if embedding_evidence is not None:
+            _write_json(work / "openl3_embedding_evidence.json", embedding_evidence)
         _write_json(work / "instrument_matches.json", report)
         (work / "GARAGEBAND_AUDITION.md").write_text(
             _audition_markdown(report), encoding="utf-8"
@@ -353,6 +526,32 @@ def match_instruments(
         report["audition_guide"] = str(destination / "GARAGEBAND_AUDITION.md")
         if factory_matches:
             report["profile_graph"] = str(destination / "timbre_profiles.svg")
+        if embedding_evidence is not None:
+            report["embedding_evidence"] = str(
+                destination / "openl3_embedding_evidence.json"
+            )
+        report["source_event_clusters"] = str(
+            destination / "source_event_clusters.json"
+        )
+        report["source_event_clusters_graph"] = str(
+            destination / "source_event_clusters.svg"
+        )
+        report["source_event_dynamics"] = str(
+            destination / "source_event_dynamics.json"
+        )
+        report["source_event_dynamics_graph"] = str(
+            destination / "source_event_dynamics.svg"
+        )
+        if drum_family_mapping is not None:
+            report["gm_drum_family_mapping_report"] = str(
+                destination / "gm_drum_family_mapping.json"
+            )
+            report["gm_drum_family_proposed_midi"] = str(
+                destination / "drum_family_mapping.proposed.mid"
+            )
+            report["gm_drum_family_proposed_wav"] = str(
+                destination / "drum_family_mapping.proposed.wav"
+            )
         return report
     except Exception:
         shutil.rmtree(work, ignore_errors=True)
@@ -373,6 +572,7 @@ def build_sample_pack(
     render_preview: bool = True,
     max_transpose: int = 6,
     auto_tune: bool = True,
+    embedding_model_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Extract samples and create a self-contained GarageBand-ready SF2 bank."""
 
@@ -394,6 +594,11 @@ def build_sample_pack(
         raise ValueError("max_transpose must be an integer from 0 to 24")
 
     clip, available_tracks, selected_track_index = _select_clip(midi, track_index)
+    embedding_model = None
+    if embedding_model_path is not None:
+        from .instrument_embedding import OpenL3MusicEmbedding
+
+        embedding_model = OpenL3MusicEmbedding(embedding_model_path)
     audio, sample_rate = _load_audio(stem, target_sample_rate=None)
     segments, selection_warning = _select_source_segments(
         audio,
@@ -410,6 +615,30 @@ def build_sample_pack(
     chosen = _choose_sample_pack_segments(
         segments, kind=normalized_kind, limit=max_samples
     )
+    cluster_vectors = [
+        _timbre_vector(segment.samples, sample_rate) for segment in segments
+    ]
+    from .instrument_cluster import (
+        cluster_source_events,
+        source_event_clusters_svg,
+    )
+
+    source_event_clusters = cluster_source_events(
+        segments,
+        cluster_vectors,
+        sample_rate=sample_rate,
+        source_path=stem,
+        midi_path=midi,
+        feature_names=FEATURE_NAMES,
+        embedding_model=embedding_model,
+        selected_note_indices=[segment.note_index for segment in chosen],
+    )
+    from .instrument_dynamics import (
+        analyze_source_event_dynamics,
+        source_event_dynamics_svg,
+    )
+
+    source_event_dynamics = analyze_source_event_dynamics(source_event_clusters)
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     work = Path(
@@ -444,6 +673,16 @@ def build_sample_pack(
             rows,
             drums=is_drums,
             max_transpose=max_transpose,
+        )
+        from .instrument_loops import (
+            analyze_sample_loop_suggestions,
+            sample_loop_suggestions_svg,
+        )
+
+        sample_loop_suggestions = analyze_sample_loop_suggestions(
+            work,
+            rows,
+            kind=normalized_kind,
         )
         sfz = _sfz_text(rows)
         (work / "sunofriend-instrument.sfz").write_text(sfz, encoding="utf-8")
@@ -499,8 +738,9 @@ def build_sample_pack(
             "Separator bleed, room sound, effects, vibrato, and note transitions in the stem become part of every extracted sample.",
             "The .aupreset is GarageBand's selectable wrapper; the referenced SF2 contains the samples and mapping. The SFZ remains an alternative for compatible third-party sampler Audio Units.",
             "Use only stems and recordings you own or have permission to sample.",
-            "Sustained notes are not looped in Sample Instrument v2; long MIDI notes stop when the embedded sample ends.",
+            "Sample Instrument v2 remains unlooped. For pitched samples, source_sample_loops.json and its raw-repeat auditions provide advisory boundaries that require listening before any later loop is applied.",
             "SoundFont stores embedded samples as mono PCM16 for broad sampler compatibility; the separate extracted WAVs remain PCM24.",
+            "Source-event timbre families, articulation groups and outliers are advisory in v1; no candidate sample was removed automatically.",
         ]
         if not is_drums:
             warnings.append(
@@ -541,6 +781,9 @@ def build_sample_pack(
             "tuning_statuses": tuning_statuses,
             "instrument_name": soundfont_summary["name"],
             "samples": rows,
+            "source_event_clusters": source_event_clusters["summary"],
+            "source_event_dynamics": source_event_dynamics["summary"],
+            "sample_loop_suggestions": sample_loop_suggestions["summary"],
             "sfz": "sunofriend-instrument.sfz",
             "soundfont": soundfont_summary,
             "artifacts": {
@@ -554,6 +797,17 @@ def build_sample_pack(
                 "samples": "samples",
                 "audition_midi": "garageband-audition.mid",
                 "audition_wav": ("garageband-audition.wav" if render_preview else None),
+                "source_event_clusters": "source_event_clusters.json",
+                "source_event_clusters_graph": "source_event_clusters.svg",
+                "source_event_dynamics": "source_event_dynamics.json",
+                "source_event_dynamics_graph": "source_event_dynamics.svg",
+                "sample_loop_suggestions": "source_sample_loops.json",
+                "sample_loop_suggestions_graph": "source_sample_loops.svg",
+                "sample_loop_auditions": (
+                    "loop-auditions"
+                    if sample_loop_suggestions["summary"]["suggested_loop_count"]
+                    else None
+                ),
             },
             "ausampler_preset": ausampler_preset,
             "garageband_import": (
@@ -574,6 +828,18 @@ def build_sample_pack(
             ),
             "warnings": warnings,
         }
+        _write_json(work / "source_event_clusters.json", source_event_clusters)
+        (work / "source_event_clusters.svg").write_text(
+            source_event_clusters_svg(source_event_clusters), encoding="utf-8"
+        )
+        _write_json(work / "source_event_dynamics.json", source_event_dynamics)
+        (work / "source_event_dynamics.svg").write_text(
+            source_event_dynamics_svg(source_event_dynamics), encoding="utf-8"
+        )
+        _write_json(work / "source_sample_loops.json", sample_loop_suggestions)
+        (work / "source_sample_loops.svg").write_text(
+            sample_loop_suggestions_svg(sample_loop_suggestions), encoding="utf-8"
+        )
         _write_json(work / "sample_pack.json", report)
         (work / "README.md").write_text(_sample_pack_markdown(report), encoding="utf-8")
         work.rename(destination)
@@ -854,21 +1120,35 @@ def _rank_factory_profiles(
 def _rank_gm_programs(
     *,
     stem_audio: Any,
+    stem_path: Path,
     sample_rate: int,
     clip: Any,
     programs: Sequence[int],
     top: int,
     work_dir: Path,
-) -> list[GmProgramMatch]:
+    embedding_model: Any | None = None,
+) -> tuple[list[GmProgramMatch], list[LearnedGmProgramMatch], dict[str, Any] | None]:
     from .clip import Instrument, write_clip_midi
-    from .render import render_midi_to_wav
+    from .render import find_soundfont, render_midi_to_wav
+
+    from .instrument_embedding import compare_embedding_fingerprints
 
     source = _performance_fingerprint(stem_audio, sample_rate)
+    source_embedding = (
+        embedding_model.fingerprint(stem_audio, sample_rate)
+        if embedding_model is not None
+        else None
+    )
+    soundfont = Path(find_soundfont()).expanduser().resolve()
     audition_dir = work_dir / "gm_auditions"
     audition_dir.mkdir(exist_ok=True)
+    embedding_audition_dir = work_dir / "gm_embedding_auditions"
+    if embedding_model is not None:
+        embedding_audition_dir.mkdir(exist_ok=True)
     temporary_dir = work_dir / ".gm_work"
     temporary_dir.mkdir(exist_ok=True)
     scored: list[tuple[float, float, float, float, int, Path]] = []
+    embedding_rows: list[dict[str, Any]] = []
     for program in programs:
         name = GM_PROGRAM_NAMES[program]
         candidate = replace(
@@ -883,12 +1163,35 @@ def _rank_gm_programs(
         midi_path = temporary_dir / f"program-{program:03d}.mid"
         wav_path = temporary_dir / f"program-{program:03d}.wav"
         write_clip_midi(midi_path, candidate)
-        render_midi_to_wav(midi_path, wav_path)
+        render_midi_to_wav(midi_path, wav_path, soundfont_path=soundfont)
         rendered, rendered_rate = _load_audio(wav_path, target_sample_rate=sample_rate)
         fingerprint = _performance_fingerprint(rendered, rendered_rate)
         spectral, dynamics, attack = _performance_similarity(source, fingerprint)
         combined = 0.70 * spectral + 0.15 * dynamics + 0.15 * attack
         scored.append((combined, spectral, dynamics, attack, program, midi_path))
+        if embedding_model is not None and source_embedding is not None:
+            candidate_embedding = embedding_model.fingerprint(rendered, rendered_rate)
+            comparison = compare_embedding_fingerprints(
+                source_embedding, candidate_embedding
+            )
+            embedding_rows.append(
+                {
+                    "program": program,
+                    "patch_number": program + 1,
+                    "name": name,
+                    "midi_sha256": _file_sha256(midi_path),
+                    "rendered_wav_sha256": _file_sha256(wav_path),
+                    "candidate_fingerprint": candidate_embedding.summary(),
+                    "embedding_comparison": comparison,
+                    "explainable_comparison": {
+                        "combined_score": round(combined * 100.0, 3),
+                        "spectral_shape_similarity": round(spectral * 100.0, 3),
+                        "dynamics_similarity": round(dynamics * 100.0, 3),
+                        "attack_similarity": round(attack * 100.0, 3),
+                    },
+                    "temporary_midi": midi_path,
+                }
+            )
         wav_path.unlink(missing_ok=True)
     scored.sort(key=lambda item: (-item[0], item[4]))
 
@@ -900,7 +1203,7 @@ def _rank_gm_programs(
         output_midi = audition_dir / f"{rank:02d}-{program:03d}-{token}.mid"
         output_wav = audition_dir / f"{rank:02d}-{program:03d}-{token}.wav"
         shutil.copyfile(midi_path, output_midi)
-        render_midi_to_wav(output_midi, output_wav)
+        render_midi_to_wav(output_midi, output_wav, soundfont_path=soundfont)
         matches.append(
             GmProgramMatch(
                 rank=rank,
@@ -915,8 +1218,222 @@ def _rank_gm_programs(
                 preview_wav=str(Path("gm_auditions") / output_wav.name),
             )
         )
+
+    learned_matches: list[LearnedGmProgramMatch] = []
+    embedding_evidence = None
+    if embedding_model is not None and source_embedding is not None:
+        ranked_embeddings = sorted(
+            embedding_rows,
+            key=lambda row: (
+                -float(row["embedding_comparison"]["similarity_score"]),
+                int(row["program"]),
+            ),
+        )
+        for rank, row in enumerate(ranked_embeddings[:top], 1):
+            program = int(row["program"])
+            token = _safe_token(str(row["name"]))
+            output_midi = (
+                embedding_audition_dir / f"{rank:02d}-{program:03d}-{token}.mid"
+            )
+            output_wav = (
+                embedding_audition_dir / f"{rank:02d}-{program:03d}-{token}.wav"
+            )
+            shutil.copyfile(Path(row["temporary_midi"]), output_midi)
+            render_midi_to_wav(output_midi, output_wav, soundfont_path=soundfont)
+            comparison = row["embedding_comparison"]
+            percentiles = comparison["similarity_percentiles"]
+            learned_matches.append(
+                LearnedGmProgramMatch(
+                    rank=rank,
+                    program=program,
+                    patch_number=program + 1,
+                    name=str(row["name"]),
+                    embedding_similarity=float(comparison["similarity_score"]),
+                    active_window_count=int(comparison["active_window_count"]),
+                    p10_similarity=float(percentiles["p10"]),
+                    p90_similarity=float(percentiles["p90"]),
+                    midi=str(Path("gm_embedding_auditions") / output_midi.name),
+                    preview_wav=str(Path("gm_embedding_auditions") / output_wav.name),
+                )
+            )
+        evidence_candidates = []
+        for row in sorted(embedding_rows, key=lambda item: int(item["program"])):
+            evidence_candidates.append(
+                {key: value for key, value in row.items() if key != "temporary_midi"}
+            )
+        embedding_evidence = {
+            "schema": "sunofriend.instrument-embedding-evidence.v1",
+            "operation": "instrument-match",
+            "status": "complete",
+            "advisory_only": True,
+            "ranking_effect": (
+                "none; gm_rendered_matches retains the existing explainable "
+                "spectral/dynamics/attack score and order"
+            ),
+            "model": embedding_model.model_record(),
+            "preprocessing": embedding_model.preprocessing_record(),
+            "source": {
+                "path": str(stem_path.resolve()),
+                "sha256": _file_sha256(stem_path),
+                "fingerprint": source_embedding.summary(),
+            },
+            "renderer": {
+                "name": "FluidSynth",
+                "soundfont_path": str(soundfont),
+                "soundfont_sha256": _file_sha256(soundfont),
+                "reverb": False,
+                "chorus": False,
+            },
+            "candidate_programs": [int(value) for value in programs],
+            "candidates": evidence_candidates,
+            "learned_ranking": [match.to_dict() for match in learned_matches],
+            "interpretation": (
+                "Relative cosine similarity for aligned active windows within this "
+                "candidate set. Scores are not confidence or proof of instrument identity."
+            ),
+        }
     shutil.rmtree(temporary_dir, ignore_errors=True)
-    return matches
+    return matches, learned_matches, embedding_evidence
+
+
+def _build_gm_drum_family_mapping(
+    *,
+    stem_path: Path,
+    midi_path: Path,
+    clip: Any,
+    kind: str,
+    source_event_clusters: dict[str, Any],
+    source_vectors: Sequence[Sequence[float]],
+    sample_rate: int,
+    work_dir: Path,
+) -> dict[str, Any]:
+    """Render, score and export a review-only GM drum-note proposal."""
+
+    from .clip import write_clip_midi
+    from .drum_mapping import (
+        GM_DRUM_NOTE_NAMES,
+        drum_note_candidates,
+        propose_drum_family_mapping,
+    )
+    from .midi import MidiTrack, write_midi_file
+    from .models import NoteEvent
+    from .render import find_soundfont, render_midi_to_wav
+
+    source_hash_before = _file_sha256(midi_path)
+    soundfont = Path(find_soundfont()).expanduser().resolve()
+    temporary_dir = work_dir / ".gm_drum_work"
+    temporary_dir.mkdir(exist_ok=True)
+    candidate_vectors: dict[int, tuple[float, ...]] = {}
+    candidate_paths: dict[int, tuple[Path, Path]] = {}
+    try:
+        for note in drum_note_candidates(kind):
+            token = _safe_token(GM_DRUM_NOTE_NAMES[note])
+            candidate_midi = temporary_dir / f"note-{note:03d}-{token}.mid"
+            candidate_wav = temporary_dir / f"note-{note:03d}-{token}.wav"
+            write_midi_file(
+                candidate_midi,
+                [
+                    MidiTrack(
+                        "GM drum-note audition",
+                        channel=9,
+                        program=0,
+                        notes=[NoteEvent(0.05, 0.85, note, 104)],
+                    )
+                ],
+                bpm=120.0,
+            )
+            render_midi_to_wav(
+                candidate_midi,
+                candidate_wav,
+                sample_rate=sample_rate,
+                soundfont_path=soundfont,
+            )
+            candidate_audio, candidate_rate = _load_audio(
+                candidate_wav, target_sample_rate=sample_rate
+            )
+            candidate_vectors[note] = _timbre_vector(candidate_audio, candidate_rate)
+            candidate_paths[note] = (candidate_midi, candidate_wav)
+
+        proposed_clip, evidence = propose_drum_family_mapping(
+            kind=kind,
+            clip=clip,
+            source_event_clusters=source_event_clusters,
+            source_vectors=source_vectors,
+            candidate_vectors=candidate_vectors,
+        )
+        proposed_midi = work_dir / "drum_family_mapping.proposed.mid"
+        proposed_wav = work_dir / "drum_family_mapping.proposed.wav"
+        write_clip_midi(proposed_midi, proposed_clip)
+        render_midi_to_wav(
+            proposed_midi,
+            proposed_wav,
+            sample_rate=sample_rate,
+            soundfont_path=soundfont,
+        )
+
+        audition_dir = work_dir / "drum_note_auditions"
+        audition_dir.mkdir(exist_ok=True)
+        audition_rows = []
+        assigned_notes = sorted(
+            {int(row["assigned_note"]) for row in evidence["family_mappings"]}
+        )
+        for note in assigned_notes:
+            token = _safe_token(GM_DRUM_NOTE_NAMES[note])
+            output_midi = audition_dir / f"note-{note:03d}-{token}.mid"
+            output_wav = audition_dir / f"note-{note:03d}-{token}.wav"
+            shutil.copy2(candidate_paths[note][0], output_midi)
+            shutil.copy2(candidate_paths[note][1], output_wav)
+            audition_rows.append(
+                {
+                    "note": note,
+                    "name": GM_DRUM_NOTE_NAMES[note],
+                    "midi": str(Path("drum_note_auditions") / output_midi.name),
+                    "preview_wav": str(Path("drum_note_auditions") / output_wav.name),
+                }
+            )
+
+        source_hash_after = _file_sha256(midi_path)
+        if source_hash_after != source_hash_before:
+            raise RuntimeError("The supplied MIDI changed while building the proposal")
+        evidence.update(
+            {
+                "source": {
+                    "stem_path": str(stem_path.resolve()),
+                    "stem_sha256": _file_sha256(stem_path),
+                    "midi_path": str(midi_path.resolve()),
+                    "midi_sha256_before": source_hash_before,
+                    "midi_sha256_after": source_hash_after,
+                },
+                "renderer": {
+                    "name": "FluidSynth",
+                    "soundfont_path": str(soundfont),
+                    "soundfont_sha256": _file_sha256(soundfont),
+                    "sample_rate": sample_rate,
+                    "reverb": False,
+                    "chorus": False,
+                },
+                "auditions": audition_rows,
+                "artifacts": {
+                    "source_event_clusters": "source_event_clusters.json",
+                    "mapping_report": "gm_drum_family_mapping.json",
+                    "proposed_midi": proposed_midi.name,
+                    "proposed_wav": proposed_wav.name,
+                    "assigned_note_auditions": "drum_note_auditions",
+                },
+            }
+        )
+        evidence["effects"].update(
+            {
+                "source_midi_sha256_before": source_hash_before,
+                "source_midi_sha256_after": source_hash_after,
+                "proposed_midi_sha256": _file_sha256(proposed_midi),
+                "proposed_wav_sha256": _file_sha256(proposed_wav),
+            }
+        )
+        _write_json(work_dir / "gm_drum_family_mapping.json", evidence)
+        return evidence
+    finally:
+        shutil.rmtree(temporary_dir, ignore_errors=True)
 
 
 def _performance_fingerprint(values: Any, sample_rate: int) -> _PerformanceFingerprint:
@@ -1366,6 +1883,32 @@ def _audition_markdown(report: dict[str, Any]) -> str:
         f"MIDI: `{report['midi']}`",
         f"Role: `{report['kind']}`",
         "",
+        "## Source-event cluster review",
+        "",
+        (
+            f"{report['source_evidence']['event_clusters']['source_event_count']} "
+            "MIDI-aligned events produced "
+            f"{report['source_evidence']['event_clusters']['identity_candidate_cluster_count']} "
+            "candidate timbre families, "
+            f"{report['source_evidence']['event_clusters']['articulation_cluster_count']} "
+            "articulation groups and "
+            f"{report['source_evidence']['event_clusters']['identity_outlier_count']} "
+            "retained outliers."
+        ),
+        "",
+        "Open `source_event_clusters.svg` for the pitch/timeline view and `source_event_clusters.json` for per-event evidence. Clusters and outliers are advisory; no MIDI note or ranking changed.",
+        "",
+        "## Velocity-layer and alternate-sample review",
+        "",
+        (
+            f"{report['source_evidence']['event_dynamics']['velocity_layer_candidate_unit_count']} "
+            "comparable units have a two-layer source-loudness candidate; "
+            f"{report['source_evidence']['event_dynamics']['round_robin_candidate_set_count']} "
+            "layers have isolated round-robin candidates."
+        ),
+        "",
+        "Open `source_event_dynamics.svg` for the source-RMS timeline and `source_event_dynamics.json` for event indices and thresholds. No MIDI velocity, sample, SoundFont zone or drum mapping changed.",
+        "",
         "## Installed GarageBand factory-sample matches",
         "",
         "| Rank | Asset | Audio | Role prior | Combined | Evidence |",
@@ -1396,6 +1939,46 @@ def _audition_markdown(report: dict[str, Any]) -> str:
         )
     if not report["gm_rendered_matches"]:
         lines.append("| — | — | No rendered proxy match | — | — | — | — |")
+    lines.extend(
+        [
+            "",
+            "## Optional learned OpenL3 proxy matches",
+            "",
+            "| Rank | Program | Instrument | Embedding | Active windows | p10 | p90 |",
+            "| ---: | ---: | --- | ---: | ---: | ---: | ---: |",
+        ]
+    )
+    for row in report["gm_learned_embedding_matches"]:
+        lines.append(
+            f"| {row['rank']} | {row['patch_number']} | {row['name']} | "
+            f"{row['embedding_similarity']:.1f} | {row['active_window_count']} | "
+            f"{row['p10_similarity']:.1f} | {row['p90_similarity']:.1f} |"
+        )
+    if not report["gm_learned_embedding_matches"]:
+        lines.append("| — | — | Not requested | — | — | — | — |")
+    drum_mapping = report.get("gm_drum_family_mapping")
+    if drum_mapping:
+        lines.extend(
+            [
+                "",
+                "## Review-only GM drum-family proposal",
+                "",
+                (
+                    f"{drum_mapping['candidate_timbre_family_count']} family/note "
+                    "mapping units from "
+                    f"{drum_mapping['source_identity_cluster_count']} source "
+                    "timbre families were scored. The proposal uses "
+                    f"{drum_mapping['distinct_assigned_note_count']} distinct GM "
+                    "drum notes. "
+                    f"{drum_mapping['proposed_note_change_count']} note pitches "
+                    "differ in the proposed copy."
+                ),
+                "",
+                "Listen to `drum_family_mapping.proposed.wav`, then drag `drum_family_mapping.proposed.mid` into GarageBand only if the separated kit pieces are useful. The supplied MIDI was not overwritten; outliers and unanalyzed events retain their original notes.",
+                "",
+                "Open `gm_drum_family_mapping.json` for every candidate score and `drum_note_auditions/` for the assigned one-shots.",
+            ]
+        )
     lines.extend(
         [
             "",
@@ -1443,6 +2026,39 @@ def _sample_pack_markdown(report: dict[str, Any]) -> str:
         "The preset is a small wrapper that points AUSampler to the SF2. Keep both at their generated paths.",
         "The SF2 is self-contained: its PCM16 audio, MIDI root keys, keyboard zones and velocity ranges are embedded in one file.",
         "The separate PCM24 WAV files and SFZ mapping are retained for editing or other samplers.",
+        "",
+        "## Source-event review",
+        "",
+        (
+            f"{report['source_event_clusters']['source_event_count']} candidate events "
+            f"produced {report['source_event_clusters']['identity_candidate_cluster_count']} "
+            "candidate timbre families, "
+            f"{report['source_event_clusters']['articulation_cluster_count']} articulation "
+            f"groups and {report['source_event_clusters']['identity_outlier_count']} retained outliers."
+        ),
+        "",
+        "Open `source_event_clusters.svg` for the timeline and `source_event_clusters.json` before deciding whether a rare event is a useful articulation, bleed or an artefact. v1 did not remove any sample automatically.",
+        "",
+        "## Candidate dynamics and alternates",
+        "",
+        (
+            f"{report['source_event_dynamics']['velocity_layer_candidate_unit_count']} "
+            "comparable units have a two-layer source-loudness candidate; "
+            f"{report['source_event_dynamics']['round_robin_candidate_set_count']} "
+            "layers have isolated round-robin candidates."
+        ),
+        "",
+        "Open `source_event_dynamics.svg` and `source_event_dynamics.json` to review them. Sample Instrument v2 did not add these events or alter any velocity range automatically.",
+        "",
+        "## Advisory sustain loops",
+        "",
+        (
+            f"{report['sample_loop_suggestions']['candidate_sample_count']} samples "
+            f"have {report['sample_loop_suggestions']['suggested_loop_count']} "
+            "ranked boundary suggestions."
+        ),
+        "",
+        "Open `source_sample_loops.svg` and `source_sample_loops.json`, then listen to any `loop-auditions/` WAVs. The auditions repeat raw boundaries without a crossfade so clicks and timbre changes remain audible. No loop was added to the SF2 or SFZ.",
         "",
         "## Zones and tuning",
         "",
@@ -1545,6 +2161,14 @@ def _write_json(path: Path, value: Any) -> None:
     )
 
 
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def _safe_token(value: str) -> str:
     cleaned = "".join(
         character if character.isalnum() else "-" for character in value.casefold()
@@ -1556,6 +2180,7 @@ __all__ = [
     "FEATURE_NAMES",
     "FactoryInstrumentMatch",
     "GmProgramMatch",
+    "LearnedGmProgramMatch",
     "build_sample_pack",
     "match_instruments",
 ]

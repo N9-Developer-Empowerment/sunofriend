@@ -18,14 +18,18 @@ clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 | Convert a complete folder of instrumental stems | `listen-all` | Stem-locked MIDI with exact, repair and reconstruct policies |
 | Turn lead or backing vocals into playable melodies | `vocal-melody` | pYIN/Basic Pitch consensus, repeated-phrase repair, hummed guidance and editable correction artifacts |
 | Compare and conservatively repair vocal trackers | `vocal-trackers` | Immutable pYIN/Basic Pitch evidence, optional RMVPE consensus, and Basic Pitch/GAME boundaries accepted only where pYIN and RMVPE agree on pitch |
-| Review a lead melody phrase by phrase | `melody-review` | Hash-checked source, MIDI-only and source-overlay auditions, explicit human choices and an unreviewed seed that cannot be applied accidentally |
+| Review a lead melody in musical units | `melody-review` | Hash-checked two-to-eight-bar units, repeat suggestions, MIDI/source auditions, explicit human choices and an unreviewed seed that cannot be applied accidentally |
+| Refine one unresolved melody unit | `melody-guide` | A short hum, whistle, single-note rhythm or taps adds a fourth alternative only where the vocal stem supports it |
+| Learn review hints from your choices | `melody-profile` | Local, deterministic and advisory ranking built only from explicitly reviewed correction files |
 | Apply reviewed melody edits | `melody-apply` | Validated correction JSON becomes tuned GarageBand-ready MIDI |
 | Speed up or slow down finished MIDI | `midi-tempo` | Only tempo events change; tracks, notes and groove ticks are untouched |
 | Put complete MIDI in a new key and BPM | `midi-transform` | Semitone transposition plus tick-preserving tempo change; channel 10 drums stay fixed |
 | Put two performances on one starting bar | `midi-anchor` | Recommended mashup operation: one constant shift preserves natural tempo wander |
 | Force stem-derived MIDI onto straight bars | `midi-align` | Experimental 4/4 note-only rebuild through the source metronome map |
-| Inventory and sound-match instruments | `instrument-inventory`, `instrument-match` | Installed GarageBand assets and Audio Units plus audio-based audition rankings |
-| Make a playable instrument from isolated stem notes | `sample-pack` | GarageBand-selectable AUSampler preset, self-contained SF2 bank, audition MIDI/WAV and extraction evidence |
+| Inventory and sound-match instruments | `instrument-inventory`, `instrument-match` | Installed GarageBand assets and Audio Units, explainable rendered auditions, and optional local OpenL3 evidence |
+| Make a playable instrument from isolated stem notes | `sample-pack` | GarageBand-selectable AUSampler preset, self-contained SF2 bank, audition MIDI/WAV, extraction evidence and advisory sustain-loop auditions |
+| Review and apply sampler dynamics | `sample-pack-review`, `sample-pack-apply`, `sample-pack-boundary-review`, `sample-pack-boundary-apply` | Explicit listening gates, reviewed velocity layers/boundaries, SFZ round robin, GarageBand A/B banks and embedded v2 rollback |
+| Blind-test reviewed instruments | `sample-pack-ab-review`, `sample-pack-ab-resolve` | Hash-pinned source and neutral Candidate A/B performances with a separate answer key and zero sampler changes |
 | Keep MIDI, sound and instrument matches together | `instrument-bundle` | Portable Bundle v1 with performance MIDI, source-derived instrument, reference audio, rankings and A/B previews |
 | Store and version reusable parts | `clip-import`, `clip-transform`, `clip-export` | Immutable Clip v1 assets with explicit musical or stem-locked timing |
 | Preview or route MIDI to an instrument | `preview`, `play` | FluidSynth WAV preview or CoreMIDI/IAC playback |
@@ -37,6 +41,9 @@ multi-week **[AI transcription and instrument roadmap](docs/AI_TRANSCRIPTION_ROA
 for Phase 1–4 goals, licence boundaries, success criteria, current checklist
 and daily progress log. The measured backend decisions and final listening
 gate are in the **[Phase 1 bake-off close-out report](docs/PHASE1_TRANSCRIPTION_BAKEOFF.md)**.
+Phase 3 is complete; its implemented instrument features, reproducible golden
+evidence and final GarageBand/loop decisions are recorded in the
+**[Instrument Intelligence v2 close-out report](docs/PHASE3_INSTRUMENT_INTELLIGENCE.md)**.
 
 For combining songs, first use `midi-transform` to choose a common key, BPM
 and tuning, then use `midi-anchor` to place confirmed downbeats on the same
@@ -532,18 +539,36 @@ When `vocal-trackers` has produced an agreed-F0 boundary repair, use
 ```bash
 .venv/bin/sunofriend melody-review \
   "$OUT/vocal-tracker-runs/RUN_ID" \
-  --out-dir "$OUT/lead-phrase-review"
+  --out-dir "$OUT/lead-phrase-review" \
+  --minimum-bars 2 \
+  --maximum-bars 8 \
+  --beats-per-bar 4
 ```
 
 The command verifies the source WAV and every input evidence hash, requires a
 fresh output and currently accepts lead vocals only. Open
-`melody_phrase_review.html` locally. The least-confident regions appear first;
-each has raw Basic Pitch, GAME-boundary and combined agreed-F0 choices with a
-small piano roll, MIDI-only audio and a source-plus-MIDI overlay. A missing
-GAME phrase is shown as zero notes and silence rather than invented evidence.
-Scores are clues, not automatic winners.
+`melody_phrase_review.html` locally. Consecutive note clusters are grouped into
+two-to-eight-bar review units and the least-confident units appear first. Bar
+duration comes from BPM; this does not pretend the excerpt begins on a known
+downbeat. Each unit retains its source-cluster indices and has raw Basic Pitch,
+GAME-boundary and combined agreed-F0 choices with a small piano roll, MIDI-only
+audio and a source-plus-MIDI overlay. A missing GAME unit is shown as zero
+notes and silence rather than invented evidence. Scores are clues, not
+automatic winners. Short excerpts or isolated clusters that cannot reach the
+minimum are retained with an explicit warning.
 
-Select or explicitly accept every phrase, export
+When two units have the same absolute-pitch sequence, contour intervals, note
+count and closely matching source timing, a **Conservative repeat suggestion**
+appears. It is only a suggestion: click **Apply this unit's current choice to
+repeat unit …** to confirm it. Sunofriend copies the alternative name, not the
+notes, so the target continues to use its own source-backed pitch, timing and
+expression. Octave-transposed contours, unequal note counts, sparse phrases
+and timing mismatches are rejected. The exported JSON records the source unit,
+repeat metrics and fixed policy; `melody-apply` rejects altered evidence or a
+propagated choice that no longer matches its source. If no strong pair exists,
+the review page shows no propagation control.
+
+Select or explicitly accept every review unit, export
 `melody-corrections-reviewed.json`, then use the normal command:
 
 ```bash
@@ -552,10 +577,66 @@ Select or explicitly accept every phrase, export
   --out "$OUT/vocal_melody/lead/reviewed-lead.mid"
 ```
 
+After you have several explicitly reviewed correction files, build a fresh
+local profile and use it to put the most similar past choice at the top of a
+separate history panel:
+
+```bash
+.venv/bin/sunofriend melody-profile \
+  "$HOME/Downloads/song-a-melody-corrections-reviewed.json" \
+  "$HOME/Downloads/song-b-melody-corrections-reviewed.json" \
+  --out "$OUT/my-melody-review-profile-v1.json"
+
+.venv/bin/sunofriend melody-review \
+  "$OUT/vocal-tracker-runs/ANOTHER_RUN_ID" \
+  --ranking-profile "$OUT/my-melody-review-profile-v1.json" \
+  --out-dir "$OUT/another-lead-phrase-review"
+```
+
+`melody-profile` accepts only complete phrase-review corrections whose every
+choice was explicitly reviewed. Manual choices have full weight; choices that
+you explicitly propagated to a repeated unit have half weight. Older reviewed
+files without unit context still contribute global counts and produce a
+warning. The displayed scores are relative similarity to your local review
+history, not confidence or proof of correctness. They never reorder the audio
+cards, change the `combined` default, mark a choice reviewed or select a melody
+automatically. Profiles and review packages are write-once: to add more choices,
+rebuild from all wanted correction files at a new path. No profile or correction
+is written outside the paths you provide.
+
+If none of the three automatic versions is recognisable, select **None are
+close — add a short guide**, export the unresolved review for its audit, and
+record only that numbered unit. You can hum or whistle its contour, play its
+rhythm repeatedly on one note, or tap its rhythm:
+
+```bash
+.venv/bin/sunofriend melody-guide \
+  "$OUT/lead-phrase-review" \
+  --unit 2 \
+  --guide "$GUIDES/lead-unit-02-hum.wav" \
+  --guide-kind hum \
+  --search-seconds 0.75 \
+  --out-dir "$OUT/lead-unit-02-guided-review"
+```
+
+`--guide-kind` accepts `hum`, `whistle`, `contour`, `single-note` or `tap`.
+Hum, whistle and contour recordings contribute rhythm and pitch direction;
+single-note and tap recordings contribute rhythm only. In every case the
+emitted MIDI pitch is remeasured from the original vocal stem. A guide with no
+source support produces a zero-note fourth alternative and cannot invent a
+melody. The command verifies the complete parent review, tracker run and pYIN
+evidence, writes a fresh child review and leaves all automatic candidates
+unchanged. Open the new `melody_phrase_review.html`, compare the new **Short
+guide + source contour** choice with the original three. This v1 command
+evaluates one guide for one unit per child review; use the existing repeatable
+`vocal-melody --guide-snippet` workflow when several guided excerpts must be
+combined into one full-song candidate.
+
 The generated seed is deliberately `unreviewed`; `melody-apply` refuses it,
-an incomplete set of choices, or a correction whose source SHA-256 no longer
-matches. The resulting `.correction.json` audit retains the selected
-alternative for every phrase. Raw tracker artifacts are never modified.
+an unresolved unit, an incomplete set of choices, or a correction whose source
+SHA-256 no longer matches. The resulting `.correction.json` audit retains the
+selected alternative for every unit and its original cluster indices. Raw
+tracker artifacts are never modified.
 
 If automatic extraction cannot tell which continuous line you intend, record
 a rough hum against the same song and use it as a guide:
@@ -945,6 +1026,71 @@ matches include related installed sampler-preset names where available.
 `listen-all` also records an exact `instrument_match_command` for every
 successful part.
 
+It also writes `source_event_clusters.json` and a
+`source_event_clusters.svg` pitch/timeline view. These group MIDI-aligned
+events into candidate timbre families and articulation shapes and flag rare
+events for listening. They are advisory: no MIDI note, instrument rank or
+sample is changed. With `--embedding-model`, OpenL3 supplies 30% of the event
+identity distance while the existing explainable features retain 70%.
+
+The companion `source_event_dynamics.json` and
+`source_event_dynamics.svg` look for repeated events that may support quiet
+and loud sample layers or alternate round-robin samples. Comparisons stay
+inside one timbre family, MIDI note and articulation group. A two-layer
+candidate needs at least eight events, at least four and 20% of the unit on
+each side, and at least 3 dB between the two median source levels. Alternate
+samples are chosen only from at least three isolated events and exclude the
+most distant 20% from selection. This is listening evidence only: MIDI notes
+and velocities, sample selection, SoundFont zones and drum mappings all remain
+unchanged.
+
+For drum roles, the same command also writes a separate channel-10
+`drum_family_mapping.proposed.mid`, rendered WAV, per-family candidate report
+and assigned one-shot auditions. It never overwrites the input MIDI. Each
+timbre family is split by its existing MIDI note first, so useful kick, snare,
+hat, tom or cymbal distinctions cannot be collapsed by one broad audio
+cluster. A valid existing role note changes in the proposal only when the
+alternative reaches a relative score of 55 and leads by at least eight points;
+these are conservative policy guardrails, not confidence calibration.
+
+```bash
+.venv/bin/sunofriend instrument-match \
+  "$LIDL_STEMS/Lidl-kick-B major-119bpm-440hz.wav" \
+  examples/the-aisle-at-lidl/midi/repair/kick.mid \
+  --kind kick \
+  --out-dir work/instruments/lidl-kick-families
+```
+
+Listen to `drum_family_mapping.proposed.wav` before importing its MIDI into
+GarageBand, then try the intended GarageBand drum kit: GM note timbre varies
+by kit. Outliers and unanalyzed hits retain their original notes. `--no-gm`
+disables this proposal.
+
+For an independent learned timbre comparison, explicitly install the pinned
+OpenL3 music checkpoint and supply its local path. This adds a separate
+audition order without changing the default spectral/dynamics/attack ranking:
+
+```bash
+scripts/setup-openl3-model.sh
+
+OPENL3="$HOME/.local/share/sunofriend/models/openl3-music-mel128-emb512-3/openl3-music-mel128-emb512-3.onnx"
+
+.venv/bin/sunofriend instrument-match \
+  "$LIDL_STEMS/Lidl-bass-B major-119bpm-440hz.wav" \
+  examples/the-aisle-at-lidl/midi/repair/bass-contour-clean.mid \
+  --kind bass \
+  --out-dir work/instruments/lidl-bass-openl3 \
+  --embedding-model "$OPENL3"
+```
+
+Matching remains offline and never fetches a model implicitly. The output adds
+`openl3_embedding_evidence.json` and `gm_embedding_auditions/`; the evidence
+pins the OpenL3 and SoundFont hashes and records every aligned active-window
+comparison. These are relative shortlist scores, not confidence percentages.
+The checkpoint weights are CC-BY-4.0; see the
+[OpenL3 project](https://github.com/marl/openl3) and
+[Essentia model catalogue](https://essentia.upf.edu/models.html).
+
 If the stem has isolated notes and you have the right to sample it, make a
 portable sample instrument:
 
@@ -967,6 +1113,19 @@ files at their generated paths. Sunofriend also writes the source-quality
 audition WAV rendered from the exact generated SF2. Overlapping notes are
 rejected unless deliberately enabled.
 
+The sample pack carries the same source-event JSON/SVG and marks exactly which
+events became zones. Outliers remain eligible in v1 so a rare musically useful
+articulation cannot disappear automatically. Append `--embedding-model
+"$OPENL3"` when the optional learned clustering evidence is wanted.
+It also carries the dynamics JSON/SVG, but Sample Instrument v2 does not turn
+its candidate layers or alternates into zones automatically.
+For pitched samples it also writes `source_sample_loops.json`,
+`source_sample_loops.svg` and raw repeated-loop WAVs under `loop-auditions/`
+when a sample is long enough to analyse. These rank post-attack/pre-release
+boundary candidates using waveform and spectral continuity. They are listening
+evidence only: the generated SF2 and SFZ remain unlooped, and drum/percussion
+one-shots are marked not applicable.
+
 To load it in GarageBand:
 
 1. Drag `garageband-audition.mid` into the Tracks area to create a software
@@ -985,8 +1144,127 @@ stable pitched samples are corrected by up to 99 cents. Use `--max-transpose`
 to narrow the mapping, `--no-auto-tune` to retain the raw sample tuning, or
 `--no-preview` when FluidSynth is unavailable. Separator bleed, effects and
 transitions are baked into samples, so audition carefully and sample only
-recordings you own or may legally reuse. Sample Instrument v2 does not yet add
-seamless sustain loops or velocity layers.
+recordings you own or may legally reuse. Sample Instrument v2 does not
+automatically enable sustain loops, velocity layers or round-robin playback.
+Its loop and dynamics reports are evidence-led starting points for listening,
+not applied sampler mappings. A low loop-continuity score is not proof that a
+repeat is musically seamless.
+
+To turn only choices you have actually heard into a separate Sample Instrument
+v3 experiment, create a local review:
+
+```bash
+.venv/bin/sunofriend sample-pack-review \
+  work/sample-packs/lidl-bass \
+  --out-dir work/sample-reviews/lidl-bass-v1
+```
+
+Open `sample_pack_review.html`. Every candidate now has three pinned auditions:
+the exact normalised one-shot, a four-beat excerpt at the stem's shared level
+so its source rhythm and bleed remain audible, and a role-aware normalised
+audition. Drum/percussion candidates play a repeated two-bar rhythm at the
+MIDI's initial tempo; pitched candidates play a short sampler-style pitch
+phrase. These contexts are listening evidence only and never choose a sample.
+Explicitly accept or reject every unit, choose one primary event per layer and
+optionally check other acceptable recordings. If two candidate units share a
+MIDI pitch, accept at most one. Export the reviewed JSON, then apply it to a
+fresh output:
+
+```bash
+.venv/bin/sunofriend sample-pack-apply \
+  "$HOME/Downloads/sample_pack_review.reviewed.json" \
+  --name "Lidl Walking Bass Reviewed" \
+  --out-dir work/sample-packs/lidl-bass-v3
+```
+
+Apply refuses an unreviewed document, an unknown event, two accepted units at
+one pitch, or changed source, MIDI, v2 sample, SF2, cluster, dynamics or review
+audio evidence. The original v2 directory is never edited. The v3 output
+always contains the reviewed SF2/AUSampler bank, one common audition MIDI,
+optional rendered WAVs, and a self-contained `baseline-v2/` rollback. It adds
+velocity zones only when the review accepts layers. It adds sequence round
+robin to the SFZ and separate GarageBand A/B banks only when the review accepts
+alternate source events. Portable SF2 has no round-robin opcode, so any
+GarageBand alternatives remain separate banks rather than pretending to switch
+automatically. The report and README state the actual applied feature counts;
+rejected proposals are never described as active sampler features.
+
+Apply also creates a musical performance A/B from the reviewed pack's real
+source MIDI. It chooses the shortest bar-aligned 8-, 12- or 16-bar window that
+covers the source pitch palette where possible, then prefers note density and
+the earliest tie. `garageband-performance-ab.mid` retains the selected notes,
+velocities and rhythm, shifts the excerpt to bar 1, and routes it to channel 1
+for the custom AUSampler bank. Compare `garageband-performance-source.wav`,
+`baseline-v2/garageband-performance-v2.wav` and
+`garageband-performance-v3.wav`. The source MIDI is hash-checked and never
+edited.
+
+To avoid knowing which performance is v2 or v3, build one blinded page from
+one or more completed v3 packs:
+
+```bash
+.venv/bin/sunofriend sample-pack-ab-review \
+  work/sample-packs/lidl-snare-v3 \
+  work/sample-packs/lidl-hats-v3 \
+  work/sample-packs/lidl-toms-v3 \
+  --out-dir work/sample-reviews/lidl-phase3-blind-ab
+```
+
+Open `sample_ab_review.html` without opening its separate answer key. The page
+copies and pins the source reference plus neutral Candidate A/B performance
+WAVs; accepted velocity sweeps use the same hidden mapping. Choose Candidate
+A, Candidate B, equivalent or neither for every instrument, mark the page
+reviewed and export its JSON. Resolve the labels only after exporting:
+
+```bash
+.venv/bin/sunofriend sample-pack-ab-resolve \
+  "$HOME/Downloads/sample_ab_review.reviewed.json" \
+  --out work/sample-reviews/lidl-phase3-blind-result.json
+```
+
+The resolver verifies the unchanged v3 reports, copied WAV manifest and
+answer-key hash. Neither command edits MIDI, samples, zones or either bank.
+
+When the review accepts a velocity layer, apply additionally creates
+`garageband-velocity-sweep.mid`. It plays coarse quiet-to-loud steps plus dense
+steps immediately below and above every accepted boundary. The v2 and v3 WAVs
+make the sample switch audible while keeping the reviewed mapping untouched.
+Use the sweep to decide whether a separate explicit boundary review is needed;
+Sunofriend does not move a boundary from this audition automatically.
+
+If the transition sounds abrupt—or the two sources sound like different
+instruments—compare complete mapping choices in a separate, hash-pinned
+review. This never preselects even the current mapping:
+
+```bash
+.venv/bin/sunofriend sample-pack-boundary-review \
+  work/sample-packs/lidl-other-kit-v3 \
+  --out-dir work/sample-reviews/lidl-other-kit-boundaries-v1
+```
+
+Open `sample_boundary_review.html` in a normal browser. First compare the lower
+and upper accepted events with one identical, constant-velocity repeated beat;
+this exposes pitch, tone and texture without a MIDI-level change. Then compare
+the same velocity ramp through every complete mapping. Choices include the
+lower event at all velocities, the upper event at all velocities and each
+two-event boundary. The page reports the real source-MIDI velocity range and
+warns when a proposed layer would never trigger. Choose exactly one mapping,
+mark it reviewed and export the JSON. Keeping the current mapping is also an
+explicit choice. Apply only that export to another fresh directory:
+
+```bash
+.venv/bin/sunofriend sample-pack-boundary-apply \
+  "$HOME/Downloads/sample_boundary_review.reviewed.json" \
+  --out-dir work/sample-packs/lidl-other-kit-boundary-reviewed-v3
+```
+
+Apply verifies the source v3 report, SF2, SFZ, reviewed decisions, every
+source sample, source MIDI/cluster record and every candidate
+MIDI/bank/preset/WAV hash. It then rebuilds all v3 artifacts from the original
+reviewed sample decisions plus only the selected mapping. A single-source
+choice deactivates one already accepted event; it never invents a replacement
+or modifies sample audio. It refuses unreviewed, legacy-v1, unknown or modified
+choices. The source v3 and source MIDI remain unchanged.
 
 For the normal end-to-end handoff, combine the performance, sound and matches
 in one Instrument Bundle v1:
@@ -1002,8 +1280,10 @@ in one Instrument Bundle v1:
 
 The bundle contains `performance.mid`, a local `source-reference.wav`, the
 complete match report, the source-derived SF2/AUSampler instrument when safe
-isolated notes exist, full-performance and best-GM previews where rendering is
-available, plus `instrument_recipe.json`. Apple factory content is never
+isolated notes exist, full-performance and explainable/learned best-GM previews
+where requested and available, plus `instrument_recipe.json`. Append
+`--embedding-model "$OPENL3"` to carry the optional OpenL3 evidence and preview.
+Apple factory content is never
 copied: its result is a local patch shortlist. If safe sampling is impossible,
 the bundle is explicitly `partial` but still retains the editable MIDI, source
 reference and match evidence.
