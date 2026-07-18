@@ -67,7 +67,7 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 1. AI Transcription Bake-off v1 | **Engineering complete; listening gate pending** | Independent local model candidates, common JSON, repeatable metrics and selection evidence; see the close-out report |
 | 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
-| 4. Cleanup and Neural Timbre Lab | Planned | Optional source cleanup and explicitly labelled neural timbre experiments |
+| 4. Cleanup and Neural Timbre Lab | **In progress; stabilized foundations** | Bass/keys private golden, role-aware auditions, reproducible MIDI-mask target/residual baseline and a cleanup listening gate; see the Phase 4 lab and stabilization review |
 
 ## Phase 1: AI Transcription Bake-off v1
 
@@ -424,8 +424,31 @@ Planned experiments:
 - no generic image diffusion over spectrograms without an audio-valid decoder;
 - no generated output promoted to `exact` evidence.
 
+Implemented foundations:
+
+- [x] add a short, transparent MIDI-informed harmonic-mask baseline with
+  explicit note-bearing track selection;
+- [x] persist source excerpt, target, residual and zero-based guide MIDI with
+  hashes and source/MIDI zero-mutation effects;
+- [x] measure persisted target-plus-residual reconstruction and refuse excerpts
+  longer than 60 seconds;
+- [x] make WAV evidence byte-reproducible with GarageBand-friendly PCM24 rather
+  than timestamped float-WAV PEAK chunks;
+- [x] compare harmonic-only and explicitly labelled broadband-transient
+  challengers without promoting either; and
+- [x] re-transcribe source, target and residual separately and publish a local
+  listening page;
+- [x] reject incomplete source samplers with an arrangement-aware playability
+  gate before timbre matching; and
+- [x] retain explicit full-mix/solo patch choices in a deterministic local
+  advisory profile without changing rankings, defaults or playability.
+
 Phase 4 succeeds only if an experiment beats the simpler sample/DSP path in
 listening tests and remains reproducible, attributable and safe to distribute.
+The current foundations meet the reproducibility and safety requirements, but
+no cleanup or neural-timbre challenger has yet beaten the simpler path. See the
+[Phase 4 stabilization review](PHASE4_STABILIZATION_REVIEW.md) for the
+goals-versus-execution matrix and the gate before the next experiment.
 
 ## Daily progress routine
 
@@ -457,6 +480,163 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-18 — Phase 4 stabilization review
+
+- Goal: compare delivered behavior with the original Phase 4 goals and remove
+  maintainability or handoff ambiguity before another model experiment.
+- Change or experiment: audited the full uncommitted Phase 4 diff and private
+  Slayyyter evidence; tightened instrument feedback/profile validation,
+  centralized policy contracts, simplified coverage accounting and clarified
+  texture-only Bundle instructions.
+- Inputs: the existing 16-second keys mask golden, the 413-note keys MIDI,
+  source-derived keys bank, reviewed Small Time Piano decision and profiled
+  OpenL3 bundle. No new musical challenger was introduced.
+- Model/runtime/checkpoint: no model; local deterministic JSON, MIDI, SF2 and
+  PCM24 evidence only.
+- Evidence and metrics: the stabilization rebuild retained 388/413 mapped
+  notes, 328/413 attack-supported notes and 244/413 musical-duration-supported
+  notes. The profile repeated byte-for-byte at SHA-256
+  `6ff152ecccde09ce214cf889e4e5f6ecdc9adb2e34f59df5c5a65548bbd90b53`;
+  the copied performance MIDI remained
+  `4c3171886544a56a2f470ce8b0df95a2334dcac6e223f0a8f9e51871c21db533`.
+- Listening result: unchanged. Small Time Piano remains the usable primary
+  keys patch; the source sampler remains optional texture; unchanged-source
+  MIDI remains the best keys melody transcription.
+- Decision: the guardrails are stable enough to checkpoint, but Phase 4's
+  musical success criterion is not met. Begin no new model work until the
+  stabilized code is committed and one clearly audible target passage has a
+  predeclared listening test.
+- Problems/risks: the CLI and instrument orchestration functions remain large;
+  split them incrementally behind characterization tests rather than mixing a
+  broad rewrite with research.
+- Next smallest step: after checkpointing, test one learned-separation
+  challenger on a clearly melody-carrying short passage, or use the more
+  promising monophonic bass line if no suitable keys passage exists.
+
+### 2026-07-18 — Explicit GarageBand patch preference profile
+
+- Goal: learn from the successful Small Time Piano full-mix decision without
+  turning personal history into an automatic or hidden selector.
+- Change or experiment: added `instrument-feedback` to hash-pin one explicit
+  DAW choice to a Bundle v1 report/recipe/performance, `instrument-profile` to
+  aggregate only named reviewed files, and additive `instrument-bundle
+  --preference-profile` guidance.
+- Inputs: the private Slayyyter keys playability-gated bundle and the explicit
+  full-mix preference for Small Time Piano over the incomplete source sampler.
+- Model/runtime/checkpoint: no model. Local deterministic JSON and SHA-256
+  evidence only; OpenL3 and explainable match orders remain separate.
+- Evidence and metrics: preferred/acceptable/rejected decision weights are
+  1/0.5/−1; full-mix/solo context weights are 1/0.5. Duplicate hashes,
+  unreviewed feedback, policy mutations and existing outputs are refused. The
+  reviewed feedback hash is `b4ba10f58ca5b5310a2041a9a888c45d2064124df2a0a1d7d9eac38fd2710089`;
+  two profile builds are byte-identical at
+  `6ff152ecccde09ce214cf889e4e5f6ecdc9adb2e34f59df5c5a65548bbd90b53`.
+- Listening result: Small Time Piano remains the user's current keys choice
+  because it played every note with a consistent usable tone.
+- Decision: show a positive history-first patch in future same-role bundle
+  instructions, but never reorder factory/GM/OpenL3 evidence, change the MIDI,
+  auto-select a patch or bypass a `texture-only` result. The profiled golden
+  confirms all three ranking arrays, portable program hint and usability report
+  are exactly unchanged.
+- Problems/risks: one song is not enough to generalise a universal keys patch;
+  profiles therefore preserve counts, negative feedback and listening context.
+- Next smallest step: add further decisions only after real full-mix listening
+  on new songs, then assess whether context beyond role is justified by data.
+
+### 2026-07-18 — Source-instrument playability gate
+
+- Goal: stop successfully built but incomplete samplers from being recommended
+  as primary GarageBand instruments.
+- Change or experiment: added Instrument Usability Gate v1, every-performance-
+  pitch and velocity-probe auditions, additive Bundle v1 selection evidence and
+  an explicit complete-patch fallback. The gate changes no MIDI, samples or
+  SoundFont zones.
+- Inputs: the private Slayyyter keys baseline and electric-piano sampler, plus
+  synthetic coverage, duration, pitched and drum regressions.
+- Model/runtime/checkpoint: no new model; deterministic MIDI/SoundFont evidence.
+- Evidence and metrics: the baseline MIDI spans 35–95 but the source bank spans
+  44–87, leaving 25/413 notes silent; the electric-piano bank spans 51–80 and
+  leaves 55/413 silent. Both use short unlooped one-shots and fail as main
+  pitched instruments.
+- Listening result: GarageBand's Small Time Piano played the full keys MIDI
+  consistently and was “night and day” more useful than the source sampler.
+- Decision: playability precedes similarity. Demote failing source banks to
+  `texture-only`, keep a complete GarageBand/GM patch primary, and require
+  listening even after a functional pass. Keys matching now excludes GM synth
+  leads/pads, which had produced a musically inappropriate sawtooth winner.
+- Problems/risks: pitch detection and timbre clustering cannot establish
+  instrument consistency; they remain review evidence. A complete factory
+  patch still needs arrangement-level selection by ear.
+- Next smallest step: retain Small Time Piano as the current human preference,
+  then capture future full-mix patch choices as local advisory ranking feedback.
+  Do not let similarity bypass functional checks.
+
+### 2026-07-18 — MIDI-informed keys cleanup baseline
+
+- Goal: determine whether an AI-labelled electric-piano role can separate a
+  cleaner transcription target from one short mixed keys passage.
+- Change or experiment: added `midi-mask`, a deterministic harmonic target and
+  waveform-defined residual with an optional short broadband-onset window.
+  It writes a cropped guide MIDI, PCM24 audio, hashes, reconstruction evidence
+  and zero input-mutation effects to a fresh directory.
+- Inputs: seconds 200–216 of the private B-minor keys stem and MuScriptor's
+  electric-piano track 2 with 88 intersecting notes.
+- Model/runtime/checkpoint: no new model. The already preserved MuScriptor
+  candidate supplies only the guide; librosa STFT/ISTFT supplies the transparent
+  DSP baseline.
+- Evidence and metrics: persisted reconstruction maximum error is
+  `1.19209e-7`. The guide's mean pitch support was `0.503` against the harmonic
+  target and `0.026` against the residual, but strong-onset F1 remained higher
+  against the residual (`0.439`) than target (`0.330`). The transient target
+  raised guide strong-onset F1 only to `0.348`.
+- Listening result: the AI electric-piano guide sounded like accompaniment and
+  lacked the musical theme. The unchanged-source transcription contained the
+  clearest bare bones of the tune. The harmonic target was less convincing and
+  more accompaniment-like; the transient target had no real tune; the harmonic
+  residual was jumbled/random; and the transient residual was not useful.
+- Decision: keep unchanged-source MIDI as the primary result, retain harmonic-
+  target MIDI only as an optional accompaniment candidate, and reject the
+  remaining masked transcriptions for music-making. The mask is not promoted
+  as melody cleanup. Recognition and musical usefulness override favourable
+  isolation or polyphony metrics.
+- Problems/risks: shared harmonics can leak into the target; a broadband onset
+  window can admit simultaneous non-target attacks. Float WAV initially broke
+  byte reproducibility through a changing PEAK timestamp, so final evidence is
+  deterministic PCM24.
+- Next smallest step: do not force this accompaniment-like keys role to become
+  the melody. Test a learned separator only on a passage with a clearly audible
+  target role, and compare it against unchanged-source MIDI plus this exact DSP
+  baseline. Separately improve role selection so a melody experiment starts
+  from a guide that actually carries the theme.
+
+### 2026-07-17 — Phase 4 bass/keys golden and honest auditions
+
+- Goal: determine whether local AI improves difficult bass and layered keys,
+  and make transcription/timbre comparisons independently audible.
+- Change or experiment: built the deterministic 113 BPM full arrangement,
+  ran full-song MuScriptor bass and keys challengers, fixed role-blind General
+  MIDI program assignment, added custom-SF2 previewing and packaged baseline
+  and challenger Instrument Bundle v1 outputs.
+- Inputs: one private 236-second B-minor song with 17 local stems, metronome
+  and chord chart. No source audio or extracted sample is checked into Git.
+- Model/runtime/checkpoint: local MuScriptor small checkpoint under its
+  accepted CC-BY-NC-4.0 terms; stable Sunofriend CLI and FluidSynth comparison
+  path. Full hashes remain in each immutable run.
+- Evidence and metrics: bass strong-onset F1 rose from 0.070 to 0.324 and
+  contour accuracy from 0.521 to 0.693 with similar mean pitch support. Keys
+  strong-onset F1 rose from 0.223 to 0.438, but mean pitch support fell from
+  0.646 to 0.283 and mean polyphony rose from 0.965 to 1.860.
+- Listening result: pending GarageBand full-mix review. Source/GM and 2×2
+  MIDI/sample-bank auditions are ready under ignored `work/`.
+- Decision: retain the baseline arrangement; treat AI bass as a challenger and
+  split AI keys by role. Do not promote the combined AI keys candidate.
+- Problems/risks: model roles were previously all rendered as program-0 piano;
+  that defect changed timbre but not model notes. Short bass events and mixed
+  keyboard layers still limit source-derived sampler quality.
+- Next smallest step: review the prepared bass and keys comparisons in
+  GarageBand, then select one short mixed-keys passage for a target/residual
+  cleanup experiment.
 
 ### 2026-07-17 — Phase 3 completed
 

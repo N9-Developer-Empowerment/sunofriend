@@ -20,8 +20,11 @@ CLI parsing (`cli.py`)
         +--> lossless MIDI transforms (`midi_tempo.py`, `midi_transform.py`,
         |                            `midi_anchor.py`)
         +--> creative grid rebuild (`midi_align.py`)
+        +--> short MIDI-guided cleanup evidence (`midi_mask.py`)
         +--> instrument discovery (`instrument_catalog.py`)
         +--> timbre matching/sample packs (`instrument_match.py`)
+        +--> arrangement-aware sampler gate (`instrument_usability.py`)
+        +--> explicit local patch preferences (`instrument_preference.py`)
         +--> portable sound/match handoff (`instrument_bundle.py`)
         +--> hummed guidance and review artifacts (`melody_correction.py`)
         +--> self-contained SoundFont writing (`soundfont.py`)
@@ -31,6 +34,13 @@ CLI parsing (`cli.py`)
 MIDI + provenance/evaluation JSON + optional WAV preview
 ```
 
+`midi_mask.py` is an experimental Phase 4 boundary, not a generic separator.
+It accepts one explicit note-bearing MIDI track, limits work to a short audio
+excerpt, and publishes source, harmonic target and waveform-defined residual
+as deterministic PCM24. Persisted target-plus-residual reconstruction, hashes
+and zero input-mutation effects are part of its report contract; listening and
+re-transcription decide whether either derivative is useful.
+
 Instrument matching deliberately has two adapters rather than a private DAW
 integration: installed GarageBand/Logic sample assets are profiled directly,
 while candidate MIDI programs are rendered through the existing FluidSynth
@@ -38,6 +48,21 @@ boundary. The output is an audition shortlist. Stem-derived sample instruments
 write cleaned WAV/SFZ assets plus a narrow, self-contained SoundFont 2.01 bank
 that Apple's public sampler interface and FluidSynth can load. They never
 mutate Apple factory content, private patch files or GarageBand project bundles.
+
+`instrument_usability.py` is the boundary between successful artifact creation
+and a usable musical instrument. It tests the generated zones against the
+actual selected MIDI track for key/velocity coverage and effective one-shot
+duration. A failure demotes the bank to an optional texture layer in Instrument
+Bundle v1; it does not modify notes, samples or mappings. Pitch estimates and
+timbre clusters remain listening evidence rather than automatic rejection.
+
+`instrument_preference.py` is a deliberately explicit feedback boundary. It
+hash-pins one reviewed DAW patch choice to an Instrument Bundle, then builds a
+deterministic profile only from paths named by the user. Bundle integration is
+additive: it copies the profile and displays a history-first hint while leaving
+factory/GM/OpenL3 ranking, defaults, MIDI and the usability gate unchanged.
+There is no implicit file discovery, hidden preference database or automatic
+patch selection.
 
 The CLI command names, exit codes, JSON reports, Clip v1 schema and generated
 MIDI timing contracts are compatibility surfaces. Private helpers beginning

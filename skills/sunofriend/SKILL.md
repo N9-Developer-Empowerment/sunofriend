@@ -1,6 +1,6 @@
 ---
 name: sunofriend
-description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance, explicit reviewed choices and local advisory review-history profiles; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
+description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance, explicit reviewed choices and local advisory review-history profiles; create short experimental MIDI-guided target/residual cleanup pairs; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
 ---
 
 # Sunofriend
@@ -31,6 +31,8 @@ scripts.
      bake-off. Its explicit setup command is `scripts/setup-pesto-model.sh`;
      inference must use the hash-checked local `.ckpt` file and remain offline.
    - `sunofriend doctor --require convert` for instrumental stem conversion.
+   - `sunofriend doctor --require convert` for the short experimental
+     `midi-mask` target/residual workflow.
    - `sunofriend doctor --require preview` for offline rendering, including
      `melody-review` and `melody-guide` MIDI-only and source-overlay
      alternatives.
@@ -38,6 +40,9 @@ scripts.
      reads only the explicitly supplied reviewed correction JSON files.
    - `sunofriend doctor --require playback` for live MIDI.
    - `sunofriend instrument-inventory` needs no audio/ML capability check.
+   - `sunofriend instrument-feedback` and `instrument-profile` need no audio/ML
+     capability check. They read explicit local Bundle/review JSON and MIDI
+     hashes only.
    - `sunofriend doctor --require convert` for factory-sample matching or
      stem-derived sample instruments. Also require `preview` for rendered GM
      matches and for sample instruments unless using `--no-preview`.
@@ -64,6 +69,13 @@ scripts.
 - Whole instrumental stem folder: use `listen-all`; default to
   `--conversion-mode repair` and leave evaluation enabled.
 - One instrumental stem: use `listen` with an explicit supported `--kind`.
+- One proposed role inside a mixed pitched stem: use `midi-mask` only on a
+  short excerpt with an aligned note-bearing MIDI track. Treat its harmonic
+  target and waveform-defined residual as transparent challengers, not a
+  physical source identification. Require an explicit `--track-index` for
+  multi-track MIDI, preserve both outputs and never promote from reconstruction
+  accuracy or metrics alone. A separately requested broadband transient window
+  may improve attacks but can admit simultaneous instruments.
 - Lead or backing vocals: use `vocal-melody` separately. It defaults to
   pYIN/Basic Pitch consensus, conservative repeated-phrase repair and a local
   correction HTML/JSON report. `listen-all` does not include vocals.
@@ -158,6 +170,9 @@ scripts.
   `--embedding-model` only when the user requests Phase 3 learned evidence or
   supplies an existing pinned OpenL3 model. Treat its separate order as an
   audition challenger; never merge it into or replace the explainable order.
+  Treat `--kind` as a hard candidate-family boundary before ranking. For
+  example, `keys` must not promote synth-lead/pad programs; use `synth` or
+  `pads` only when that is the intended musical role.
   Always retain `source_event_clusters.json` and its SVG. Treat candidate
   timbre families, articulation groups and outliers as review evidence, not
   physical-instrument recognition. Never remove a rare event from MIDI or a
@@ -183,6 +198,13 @@ scripts.
   Treat `sunofriend-instrument.aupreset` as the GarageBand-selectable wrapper
   and `sunofriend-instrument.sf2` as its self-contained sound bank. GarageBand's
   preset chooser greys out raw SF2 files.
+  Read `instrument_usability.json` before recommending the bank. A successful
+  build with `status: texture-only` is not a main instrument: use a complete
+  GarageBand/GM patch on the primary MIDI track and offer the sampler only as
+  an optional quiet texture layer. `review-required` means mapping and duration
+  gates passed, not that tone or tuning has been accepted. Play the usability
+  audition, which covers every performance pitch and four velocity probes.
+  Silence or abrupt endings are functional failures, not timbre preferences.
   Do not add `--allow-polyphonic` unless the user explicitly accepts chords or
   bleed baked into each sample.
   Use its source-event report to compare selected zones with unselected events;
@@ -239,6 +261,20 @@ scripts.
   wanted. Use `--no-source-instrument` unless sampling is authorised. A
   `partial` bundle is valid only when its warnings explain the missing sound or
   match component.
+  A `complete` bundle may correctly contain a `texture-only` source instrument:
+  the artifact build succeeded, but the recipe must make a complete patch
+  primary. Report the separate bundle and source-instrument statuses.
+- Explicit DAW patch choice: use `instrument-feedback` only after the user has
+  stated the exact patch and listening result. Pin it to the unchanged Bundle
+  v1 directory, record full-mix or solo context, comparisons and notes, and
+  write a fresh reviewed JSON. Never infer preferences from match order, file
+  presence or an unreviewed audition.
+- Personal patch history: use `instrument-profile` only with the complete set
+  of explicitly named reviewed feedback files, then pass it with
+  `instrument-bundle --preference-profile`. Treat history-first as an advisory
+  audition hint, not confidence or selection. It must not reorder factory, GM
+  or OpenL3 evidence, change the portable program, select a patch or bypass the
+  source-instrument usability status.
 - Offline audition: use `preview`; live MIDI: use `midi-ports` then `play`.
 
 Read the live command help for exact options. Typical command shapes are:
@@ -267,6 +303,12 @@ sunofriend ai-transcribe "$VOCAL_STEM" \
   --bpm "$BPM" \
   --instrument "lead vocal" \
   --device cpu
+
+sunofriend midi-mask "$MIXED_PITCHED_STEM" "$ALIGNED_MULTI_TRACK_MIDI" \
+  --track-index "$ZERO_BASED_ROLE_INDEX" \
+  --start-seconds "$START" \
+  --end-seconds "$END" \
+  --out-dir "$FRESH_OUTPUT"
 
 sunofriend ai-transcribe "$VOCAL_STEM" \
   --backend pesto \
@@ -384,12 +426,31 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   --kind "$ROLE" \
   --name "$INSTRUMENT_NAME" \
   --out-dir "$FRESH_OUTPUT"
+
+sunofriend instrument-feedback "$INSTRUMENT_BUNDLE" \
+  --patch "$EXACT_DAW_PATCH" \
+  --decision preferred \
+  --context full-mix \
+  --out "$FRESH_FEEDBACK_JSON"
+
+sunofriend instrument-profile "$REVIEWED_FEEDBACK_JSON" \
+  --out "$FRESH_INSTRUMENT_PROFILE"
+
+sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
+  --kind "$ROLE" \
+  --preference-profile "$FRESH_INSTRUMENT_PROFILE" \
+  --out-dir "$FRESH_PROFILED_BUNDLE"
 ```
 
 ## Musical and data rules
 
 - Use `exact` for confident observed evidence, `repair` for conservative
   corrections, and `reconstruct` only for explicitly requested inference.
+- `midi-mask` is a cleanup experiment, not `exact` transcription or generic
+  source separation. Keep excerpts at 60 seconds or less, retain the original,
+  target and residual together, and require persisted reconstruction plus
+  listening. Shared harmonics can enter the target; attacks can stay in the
+  residual. Use `--transient-ms` only as a separate labelled challenger.
 - Do not describe a major-to-minor or minor-to-major change as simple
   transposition. Same-mode key changes are mechanical semitone shifts, but
   register and instrument range still require auditioning.
@@ -405,6 +466,11 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
 - Treat instrument-match scores as relative shortlist evidence, never
   confidence percentages or proof of the original patch. GarageBand patch
   names can differ from installed sample-asset names.
+- Instrument preference feedback must come from an explicit user listening
+  decision against a hash-pinned Bundle. Profiles stay local, discover no files
+  automatically and preserve preferred, acceptable and rejected choices plus
+  full-mix/solo context. A history score is not confidence, instrument identity
+  or permission to bypass playability.
 - Do not copy, edit or redistribute Apple factory samples. Do not claim that
   Sunofriend can headlessly render every private GarageBand patch.
 - For sample packs, use only source audio the user owns or may sample. State
@@ -452,16 +518,24 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
    recall or F1, timing p95 and drift, pitch or octave evidence, and observed,
    repaired, inferred, possible, or uncertain counts where available. Do not
    invent universal pass thresholds.
+   For `midi-mask`, additionally report source/MIDI hashes, selected track and
+   role, excerpt bounds, intersecting notes/pitches, mask parameters, source/
+   target/residual RMS, persisted PCM24 reconstruction error and threshold,
+   repeat artifact hashes and all zero input-mutation effects. Re-transcribe
+   source, target and residual separately. A target that improves pitch support
+   but loses attacks is not a cleanup success.
 4. For vocals, inspect contour coverage, pitch-error statistics, monophony, and
    the published variants. Also report tracker sources, consensus frame count,
    repeated-phrase promotions, guide alignment/transpose and the correction
    HTML/JSON paths when present.
    When `--muscriptor` is used, also report the checkpoint hash, immutable run
-   manifest, raw candidate, `candidate.quality.json`, source-expression JSON
-   and MIDI, velocity range, model-backed GarageBand MIDI and the fact that it
-   remains a separately auditionable challenger. Do not render, play or
-   recommend an AI candidate marked `review-required` until its density,
-   duplicate, polyphony or label warnings have been understood.
+   manifest, raw candidate, `candidate.quality.json`,
+   `candidate.programs.json`, source-expression JSON and MIDI, velocity range,
+   model-backed GarageBand MIDI and the fact that it remains a separately
+   auditionable challenger. Confirm role-aware GM programs changed zero notes
+   and are audition hints rather than GarageBand patch identifications. Do not
+   render, play or recommend an AI candidate marked `review-required` until
+   its density, duplicate, polyphony or label warnings have been understood.
    For GAME, additionally report its six-component bundle hash, language,
    boundary/presence thresholds, D3PM schedule, seed, voiced/total region
    counts and CPU provider. Compare its timing and contour evidence with the
@@ -503,7 +577,9 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
 5. For transformations, inspect the JSON audit for file count, embedded target
    tempo, transposed events, preserved drums, tuning cleanup, and anchor shift.
 6. Render representative MIDI with `preview` when auditory validation is in
-   scope and `render_ready` is true.
+   scope and `render_ready` is true. Use `preview --soundfont PATH` to compare
+   the same performance through an authorised source-derived SF2; do not call
+   that render a factory-patch or transcription improvement.
 7. Hand off the exact GarageBand BPM, recommended MIDI, audition alternatives,
    instrument suggestions, warnings, and reproducible commands.
 8. For `instrument-match`, confirm the JSON, GarageBand audition guide, timbre
@@ -525,13 +601,17 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
    one-shot auditions. Compare source MIDI and proposal by ear; do not accept
    a mixed-kit reassignment from its score alone.
 9. For `sample-pack`, confirm the optional macOS `.aupreset` wrapper, SF2, SFZ,
-   audition MIDI, optional audition WAV, source WAVs and JSON exist. Report MIDI
+   audition MIDI, optional audition WAV, usability JSON/MIDI/WAV, source WAVs
+   and JSON exist. Report MIDI
    roots and key ranges, isolation, tuning status counts, maximum transposition
-   and sustain limitations. Hand off the report's GarageBand steps: keep the
+   and sustain limitations. Report mapped/unmapped performance notes, attack
+   and musical-duration support, functional status and recommended use. Never
+   recommend a `texture-only` bank as the sole instrument. Hand off the report's
+   GarageBand steps: keep the
    preset and bank at their generated paths, put the audition MIDI on a
    software-instrument track, select Apple AUSampler, load the `.aupreset` from
-   its **Manual** preset menu, audition every zone, then save the configured
-   track as a custom patch if wanted.
+   its **Manual** preset menu, play the every-performance-pitch usability
+   audition, then the whole song. Save a custom patch only if both checks pass.
    Also report source-event family/articulation/outlier counts and whether any
    selected sample is a review outlier; v1 must report zero automatic removals.
    Report dynamics candidate counts separately and confirm they did not add a
@@ -582,3 +662,13 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
     reference when requested, match directory, source instrument when safe,
     and retained previews. Explicitly distinguish an embedded authorised SF2
     from a non-embedded Apple factory recommendation.
+    When `--preference-profile` is supplied, also confirm the copied profile and
+    hash, role observation count, history-first patch and all false selection,
+    ranking/default and playability-bypass effects. Verify factory/GM/OpenL3
+    orders and the portable program hint were not changed by history.
+11. For `instrument-feedback`, report the exact patch/source/decision/context,
+    bundle report/recipe/performance hashes and all zero effects. For
+    `instrument-profile`, confirm unique reviewed input hashes, per-role
+    decision counts/weights, deterministic repeat output and that automatic
+    selection, match reordering, default change and playability bypass are all
+    false.

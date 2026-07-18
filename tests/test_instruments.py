@@ -52,6 +52,8 @@ class InstrumentCatalogTests(unittest.TestCase):
     def test_general_midi_catalog_and_role_candidates_are_valid(self):
         self.assertEqual(len(GM_PROGRAM_NAMES), 128)
         self.assertEqual(program_candidates("bass"), tuple(range(32, 40)))
+        self.assertEqual(program_candidates("keys"), tuple(range(0, 24)))
+        self.assertNotIn(81, program_candidates("keys"))
         self.assertEqual(
             program_candidates("unknown", all_programs=True), tuple(range(128))
         )
@@ -393,8 +395,19 @@ class InstrumentMatchTests(unittest.TestCase):
             self.assertTrue((output / "source_event_dynamics.svg").is_file())
             self.assertTrue((output / "source_sample_loops.json").is_file())
             self.assertTrue((output / "source_sample_loops.svg").is_file())
+            self.assertTrue((output / "instrument_usability.json").is_file())
+            self.assertTrue(
+                (output / "instrument-usability-audition.mid").is_file()
+            )
+            self.assertFalse(
+                (output / "instrument-usability-audition.wav").exists()
+            )
             saved = json.loads((output / "sample_pack.json").read_text())
             self.assertEqual(saved["format_version"], 2)
+            self.assertEqual(saved["build_status"], "complete")
+            self.assertEqual(saved["status"], "review-required")
+            self.assertEqual(saved["usability"]["functional_status"], "pass")
+            self.assertEqual(saved["usability"]["coverage"]["note_coverage_ratio"], 1.0)
             self.assertEqual(saved["instrument_name"], "Fixture Lead")
             self.assertEqual(saved["soundfont"]["zone_count"], 2)
             self.assertEqual(saved["artifacts"]["samples"], "samples")

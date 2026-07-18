@@ -172,7 +172,12 @@ GM_PROGRAM_NAMES: tuple[str, ...] = (
 
 ROLE_GM_PROGRAMS: dict[str, tuple[int, ...]] = {
     "bass": tuple(range(32, 40)),
-    "keys": tuple([*range(0, 24), *range(80, 96)]),
+    # A generic separated keys stem can contain layered synthesis, but a keys
+    # audition still needs to behave like a keyboard instrument.  Programs
+    # 80-95 are synth leads/pads and produced misleading sawtooth winners for
+    # electric-piano material.  Use ``synth`` or ``pads`` when those families
+    # are the intended role.
+    "keys": tuple(range(0, 24)),
     "piano": tuple(range(0, 16)),
     "pads": tuple([*range(40, 56), *range(88, 96)]),
     "strings": tuple([*range(40, 56), 46, 47, 60, 61]),

@@ -13,8 +13,10 @@ import numpy as np
 import soundfile
 
 from sunofriend.ai_bakeoff import (
+    AI_GM_PROGRAM_MAPPING_SCHEMA,
     AI_RUN_SCHEMA,
     AIWorkerRunError,
+    _candidate_tracks,
     run_ai_transcription,
 )
 from sunofriend.ai_expression import (
@@ -172,6 +174,19 @@ class AIBakeoffTests(unittest.TestCase):
             )
             self.assertTrue((run_dir / "candidate.raw.json").is_file())
             self.assertEqual((run_dir / "candidate.mid").read_bytes()[:4], b"MThd")
+            programs = json.loads(
+                (run_dir / "candidate.programs.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(programs["schema"], AI_GM_PROGRAM_MAPPING_SCHEMA)
+            self.assertEqual(programs["tracks"][0]["instrument"], "lead vocal")
+            self.assertEqual(programs["tracks"][0]["program"], 52)
+            self.assertEqual(programs["notes_mutated"], 0)
+            self.assertFalse(programs["raw_candidate_mutated"])
+            self.assertIn("candidate.programs.json", saved["artifacts"])
+            self.assertEqual(
+                saved["postprocessing"]["gm_program_mapping"]["policy"],
+                "canonical-instrument-label-v1",
+            )
             quality = json.loads(
                 (run_dir / "candidate.quality.json").read_text(encoding="utf-8")
             )
@@ -240,6 +255,50 @@ class AIBakeoffTests(unittest.TestCase):
             )
             self.assertEqual(candidate["backend"], "game")
             self.assertEqual(candidate["manifest"]["code_license"], "MIT")
+
+    def test_ai_candidate_tracks_use_role_aware_gm_audition_programs(self) -> None:
+        candidate = AITranscriptionCandidate(
+            backend="muscriptor",
+            model_version="test-small",
+            notes=(
+                AITranscriptionNote(
+                    0.0,
+                    0.5,
+                    40.0,
+                    instrument="electric_bass",
+                    source_event_id="bass",
+                ),
+                AITranscriptionNote(
+                    0.0,
+                    0.5,
+                    60.0,
+                    instrument="electric_piano",
+                    source_event_id="keys",
+                ),
+                AITranscriptionNote(
+                    0.0,
+                    0.5,
+                    64.0,
+                    instrument="synth_pad",
+                    source_event_id="pad",
+                ),
+                AITranscriptionNote(
+                    0.0,
+                    0.1,
+                    36.0,
+                    instrument="drums",
+                    source_event_id="kick",
+                ),
+            ),
+        )
+
+        tracks = {track.name: track for track in _candidate_tracks(candidate)}
+
+        self.assertEqual(tracks["electric_bass"].program, 33)
+        self.assertEqual(tracks["electric_piano"].program, 4)
+        self.assertEqual(tracks["synth_pad"].program, 89)
+        self.assertEqual(tracks["drums"].channel, 9)
+        self.assertEqual(tracks["drums"].program, 0)
 
     def test_rmvpe_file_and_declared_frame_evidence_are_recorded(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

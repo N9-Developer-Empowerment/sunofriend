@@ -28,7 +28,64 @@ from .models import NoteEvent
 
 
 AI_RUN_SCHEMA = "sunofriend.ai-bakeoff-run.v1"
+AI_GM_PROGRAM_MAPPING_SCHEMA = "sunofriend.ai-gm-program-mapping.v1"
 _SAFE_RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+# Zero-based General MIDI programs used only for an immediately intelligible
+# audition.  The model's instrument label and raw notes remain authoritative
+# evidence; this map neither identifies a GarageBand patch nor changes a note.
+AI_GM_PROGRAMS = {
+    "acoustic_piano": 0,
+    "electric_piano": 4,
+    "chromatic_percussion": 11,
+    "organ": 16,
+    "acoustic_guitar": 24,
+    "clean_electric_guitar": 27,
+    "distorted_electric_guitar": 30,
+    "acoustic_bass": 32,
+    "electric_bass": 33,
+    "violin": 40,
+    "viola": 41,
+    "cello": 42,
+    "contrabass": 43,
+    "orchestral_harp": 46,
+    "timpani": 47,
+    "string_ensemble": 48,
+    "synth_strings": 50,
+    "voice": 52,
+    "orchestra_hit": 55,
+    "trumpet": 56,
+    "trombone": 57,
+    "tuba": 58,
+    "french_horn": 60,
+    "brass_section": 61,
+    "soprano_and_alto_sax": 64,
+    "tenor_sax": 66,
+    "baritone_sax": 67,
+    "oboe": 68,
+    "english_horn": 69,
+    "bassoon": 70,
+    "clarinet": 71,
+    "flutes": 73,
+    "synth_lead": 81,
+    "synth_pad": 89,
+}
+AI_GM_PROGRAM_ALIASES = {
+    "piano": "acoustic_piano",
+    "keys": "electric_piano",
+    "bass": "electric_bass",
+    "lead": "synth_lead",
+    "lead_vocal": "voice",
+    "lead_vocals": "voice",
+    "backing": "voice",
+    "backing_vocal": "voice",
+    "backing_vocals": "voice",
+    "vocal": "voice",
+    "vocals": "voice",
+    "strings": "string_ensemble",
+    "pads": "synth_pad",
+    "flute": "flutes",
+}
 
 
 class AIWorkerRunError(RuntimeError):
@@ -190,13 +247,48 @@ def _candidate_tracks(
             MidiTrack(
                 name=name,
                 channel=channel,
-                program=0,
+                program=_gm_program_for_instrument(name),
                 notes=sorted(
                     grouped[name], key=lambda note: (note.start, note.pitch, note.end)
                 ),
             )
         )
     return tracks
+
+
+def _canonical_instrument_label(name: str) -> str:
+    label = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+    return AI_GM_PROGRAM_ALIASES.get(label, label)
+
+
+def _gm_program_for_instrument(name: str) -> int:
+    """Return a conservative GM audition program without altering model evidence."""
+
+    return AI_GM_PROGRAMS.get(_canonical_instrument_label(name), 0)
+
+
+def _gm_program_mapping(candidate: AITranscriptionCandidate) -> dict[str, Any]:
+    tracks = _candidate_tracks(candidate)
+    return {
+        "schema": AI_GM_PROGRAM_MAPPING_SCHEMA,
+        "status": "complete",
+        "policy": "canonical-instrument-label-v1",
+        "purpose": "General MIDI audition only; not a GarageBand patch identification.",
+        "raw_candidate_mutated": False,
+        "notes_mutated": 0,
+        "tracks": [
+            {
+                "instrument": track.name,
+                "channel": track.channel,
+                "program": track.program,
+                "matched_label": (
+                    _canonical_instrument_label(track.name) in AI_GM_PROGRAMS
+                ),
+                "note_count": len(track.notes),
+            }
+            for track in tracks
+        ],
+    }
 
 
 def run_ai_transcription(
@@ -275,6 +367,7 @@ def run_ai_transcription(
     candidate_path = run_dir / "candidate.json"
     quality_path = run_dir / "candidate.quality.json"
     midi_path = run_dir / "candidate.mid"
+    program_mapping_path = run_dir / "candidate.programs.json"
     expression_path = run_dir / "candidate.expression.json"
     expression_midi_path = run_dir / "candidate.expression.mid"
     stdout_path = run_dir / "worker.stdout.log"
@@ -319,6 +412,11 @@ def run_ai_transcription(
         "status": "not-run",
         "promotion_allowed": False,
         "raw_candidate_mutated": False,
+    }
+    program_mapping_record: dict[str, Any] = {
+        "status": "not-run",
+        "raw_candidate_mutated": False,
+        "notes_mutated": 0,
     }
     try:
         completed = subprocess.run(
@@ -377,6 +475,8 @@ def run_ai_transcription(
                         **quality_record,
                     },
                 )
+            program_mapping_record = _gm_program_mapping(candidate)
+            _atomic_json(program_mapping_path, program_mapping_record)
             write_midi_file(midi_path, _candidate_tracks(candidate), bpm=bpm)
             try:
                 from .ai_expression import (
@@ -442,6 +542,7 @@ def run_ai_transcription(
         candidate_path,
         quality_path,
         midi_path,
+        program_mapping_path,
         expression_path,
         expression_midi_path,
         stdout_path,
@@ -470,7 +571,10 @@ def run_ai_transcription(
         "bpm": bpm,
         "note_count": len(candidate.notes) if candidate else 0,
         "candidate_quality": quality_record,
-        "postprocessing": {"source_velocity": expression_record},
+        "postprocessing": {
+            "source_velocity": expression_record,
+            "gm_program_mapping": program_mapping_record,
+        },
         "artifacts": artifacts,
         "error": error,
     }
@@ -480,4 +584,9 @@ def run_ai_transcription(
     return manifest
 
 
-__all__ = ["AI_RUN_SCHEMA", "AIWorkerRunError", "run_ai_transcription"]
+__all__ = [
+    "AI_GM_PROGRAM_MAPPING_SCHEMA",
+    "AI_RUN_SCHEMA",
+    "AIWorkerRunError",
+    "run_ai_transcription",
+]

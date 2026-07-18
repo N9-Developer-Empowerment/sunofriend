@@ -27,13 +27,15 @@ clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 | Put two performances on one starting bar | `midi-anchor` | Recommended mashup operation: one constant shift preserves natural tempo wander |
 | Force stem-derived MIDI onto straight bars | `midi-align` | Experimental 4/4 note-only rebuild through the source metronome map |
 | Inventory and sound-match instruments | `instrument-inventory`, `instrument-match` | Installed GarageBand assets and Audio Units, explainable rendered auditions, and optional local OpenL3 evidence |
-| Make a playable instrument from isolated stem notes | `sample-pack` | GarageBand-selectable AUSampler preset, self-contained SF2 bank, audition MIDI/WAV, extraction evidence and advisory sustain-loop auditions |
+| Make and function-check an instrument from isolated stem notes | `sample-pack` | GarageBand-selectable AUSampler preset, self-contained SF2 bank, every-performance-pitch usability audition, extraction evidence and advisory sustain-loop auditions |
 | Review and apply sampler dynamics | `sample-pack-review`, `sample-pack-apply`, `sample-pack-boundary-review`, `sample-pack-boundary-apply` | Explicit listening gates, reviewed velocity layers/boundaries, SFZ round robin, GarageBand A/B banks and embedded v2 rollback |
 | Blind-test reviewed instruments | `sample-pack-ab-review`, `sample-pack-ab-resolve` | Hash-pinned source and neutral Candidate A/B performances with a separate answer key and zero sampler changes |
-| Keep MIDI, sound and instrument matches together | `instrument-bundle` | Portable Bundle v1 with performance MIDI, source-derived instrument, reference audio, rankings and A/B previews |
+| Keep MIDI, sound and instrument matches together | `instrument-bundle` | Portable Bundle v1 with performance MIDI, reference audio, rankings, A/B previews and a complete-patch fallback when the source sampler is texture-only |
+| Learn from explicit DAW patch choices | `instrument-feedback`, `instrument-profile` | Hash-pinned full-mix/solo decisions become a local advisory role profile with no auto-selection, ranking mutation or playability bypass |
 | Store and version reusable parts | `clip-import`, `clip-transform`, `clip-export` | Immutable Clip v1 assets with explicit musical or stem-locked timing |
 | Preview or route MIDI to an instrument | `preview`, `play` | FluidSynth WAV preview or CoreMIDI/IAC playback |
 | Run an optional local AI transcription challenger | `ai-transcribe` | Isolated worker, explicit local checkpoint, raw candidate, MIDI, hashes and immutable logs |
+| Test one MIDI-defined layer inside a mixed stem | `midi-mask` | Short, local harmonic target plus residual with persisted reconstruction evidence and no automatic promotion |
 
 Development has started on a local-first ensemble of optional transcription
 models, phrase-level melody review and learned instrument matching. See the
@@ -44,6 +46,12 @@ gate are in the **[Phase 1 bake-off close-out report](docs/PHASE1_TRANSCRIPTION_
 Phase 3 is complete; its implemented instrument features, reproducible golden
 evidence and final GarageBand/loop decisions are recorded in the
 **[Instrument Intelligence v2 close-out report](docs/PHASE3_INSTRUMENT_INTELLIGENCE.md)**.
+Phase 4 has started with an evidence-first bass/keys golden. The current
+experiments, listening order and promotion rules are in the
+**[Cleanup and Neural Timbre Lab](docs/PHASE4_CLEANUP_TIMBRE_LAB.md)**. The
+**[Phase 4 stabilization review](docs/PHASE4_STABILIZATION_REVIEW.md)**
+compares those executions with the original goals and records the gate before
+another model experiment begins.
 
 For combining songs, first use `midi-transform` to choose a common key, BPM
 and tuning, then use `midi-anchor` to place confirmed downbeats on the same
@@ -320,6 +328,9 @@ writes:
 
 - `candidate.quality.json`, which flags decoder bursts, implausible density,
   duplicate rectangles, extreme polyphony and restricted-label leakage;
+- `candidate.programs.json`, which maps each model role to a conservative
+  zero-based General MIDI audition program without changing any note or raw
+  model evidence;
 - `candidate.expression.json`, containing note-local source-energy evidence;
 - `candidate.expression.mid`, with relative source-derived velocities when
   the model supplies none.
@@ -976,6 +987,52 @@ jq '{
 For the Lidl kick golden, this reports possible-tier F1 `0.8511`, timing p95
 `16.34 ms`, drift `-2.79 ms`, and the two kick-family counts shown above.
 
+### Test a MIDI-defined layer inside a mixed pitched stem
+
+Phase 4's experimental `midi-mask` command uses one aligned MIDI track as a
+transparent time-and-pitch query. It opens narrow bands around the guide notes
+and their harmonics, writes the proposed target, and defines the residual as
+the original excerpt minus that target. It is a DSP baseline for later cleanup
+models—not a claim that it has recovered the physical original instrument.
+
+Use it on a focused excerpt of at most 60 seconds and a fresh output path:
+
+```bash
+.venv/bin/sunofriend midi-mask \
+  path/to/keys.wav \
+  work/ai-run/candidate.mid \
+  --track-index 2 \
+  --start-seconds 200 \
+  --end-seconds 216 \
+  --out-dir work/keys-electric-piano-mask
+```
+
+Multi-track MIDI requires an explicit zero-based `--track-index`; the command
+lists the available note-bearing track names if it is omitted. The output has
+`source-excerpt.wav`, `target.wav`, `residual.wav`, a zero-based
+`guide-excerpt.mid` and `midi_mask.json`. The report pins every input/output
+hash, measures the persisted PCM24 reconstruction error and confirms that the
+source WAV and guide MIDI were not changed.
+
+If the tonal target loses useful attacks, test a separate broadband-onset
+challenger rather than altering the first result:
+
+```bash
+.venv/bin/sunofriend midi-mask \
+  path/to/keys.wav \
+  work/ai-run/candidate.mid \
+  --track-index 2 \
+  --start-seconds 200 \
+  --end-seconds 216 \
+  --transient-ms 45 \
+  --transient-strength 0.35 \
+  --out-dir work/keys-electric-piano-mask-with-transients
+```
+
+Compare source, target and residual by ear, then transcribe them separately.
+Shared harmonics and simultaneous attacks can enter the target; a cleaner
+numeric pitch score does not justify replacing the original stem or MIDI.
+
 ### Preview or play MIDI through GarageBand
 
 Render an offline WAV with the configured SoundFont:
@@ -985,6 +1042,20 @@ Render an offline WAV with the configured SoundFont:
   work/single-kick/mode_repair/kick_listened.mid \
   --out work/single-kick/kick-preview.wav
 ```
+
+To hear the same MIDI through a Sunofriend source-derived instrument, provide
+the bundle or sample pack's self-contained SF2 explicitly:
+
+```bash
+.venv/bin/sunofriend preview \
+  work/instrument-bundle/performance.mid \
+  --soundfont work/instrument-bundle/source-instrument/sunofriend-instrument.sf2 \
+  --out work/instrument-bundle/source-instrument-preview.wav
+```
+
+This is an offline comparison only. In GarageBand, load the neighbouring
+`sunofriend-instrument.aupreset` through AUSampler so that the preset resolves
+the same SF2 bank.
 
 Or play the MIDI into an armed GarageBand software-instrument track:
 
@@ -1126,6 +1197,19 @@ boundary candidates using waveform and spectral continuity. They are listening
 evidence only: the generated SF2 and SFZ remain unlooped, and drum/percussion
 one-shots are marked not applicable.
 
+Building a valid SF2 does not prove that it is a usable main instrument.
+Instrument Usability Gate v1 checks the generated key/velocity zones against
+every note in the supplied MIDI and checks whether the one-shot audio lasts
+long enough to make those notes audible. It writes `instrument_usability.json`
+and `instrument-usability-audition.mid` (plus a WAV unless `--no-preview`). The
+audition plays every distinct performance pitch and then four velocity probes.
+`review-required` means the functional checks passed but tone and musical fit
+still need listening. `texture-only` means at least one note is unmapped or the
+audio is too short: use a complete GarageBand/GM instrument as the main sound
+and, if useful, keep the source sampler only as a quiet duplicate texture.
+Failed or inconclusive pitch detection remains review evidence; it does not by
+itself discard a noisy or percussive sample.
+
 To load it in GarageBand:
 
 1. Drag `garageband-audition.mid` into the Tracks area to create a software
@@ -1136,8 +1220,11 @@ To load it in GarageBand:
    load/open setting command, and select `sunofriend-instrument.aupreset`.
    Do not select the `.sf2` bank directly; GarageBand greys it out in this
    preset chooser.
-4. Audition every mapped note, then save the configured track as a custom patch
-   if you want to reuse it.
+4. Play `instrument-usability-audition.mid` first. Silence or abruptly cut-off
+   notes are functional failures, not subjective timbre choices.
+5. If the report says `texture-only`, put a normal complete GarageBand patch on
+   the main MIDI track. Use the AUSampler track only as an optional quiet layer.
+   Otherwise, audition the whole song before saving a custom patch.
 
 By default, one sample covers no more than six semitones on either side, and
 stable pitched samples are corrected by up to 99 cents. Use `--max-transpose`
@@ -1287,6 +1374,43 @@ Apple factory content is never
 copied: its result is a local patch shortlist. If safe sampling is impossible,
 the bundle is explicitly `partial` but still retains the editable MIDI, source
 reference and match evidence.
+
+If an SF2 is successfully built but fails the usability gate, the bundle build
+can still be `complete` while `source_instrument_status` is `texture-only`.
+Its recipe then makes a complete GarageBand/GM patch primary and labels the
+sampler as an optional layer. Playability is evaluated before timbre similarity:
+a close-sounding bank that drops notes is not a usable main instrument.
+
+Record a real GarageBand listening decision only after trying the patch in the
+arrangement, then build an explicit local profile:
+
+```bash
+.venv/bin/sunofriend instrument-feedback \
+  work/instrument-bundles/song-keys \
+  --patch "Small Time Piano" \
+  --decision preferred \
+  --context full-mix \
+  --compared-with sunofriend-instrument \
+  --notes "Consistent tone and every note audible" \
+  --out work/instrument-feedback/song-keys-small-time-piano.json
+
+.venv/bin/sunofriend instrument-profile \
+  work/instrument-feedback/song-keys-small-time-piano.json \
+  --out work/instrument-feedback/my-patch-profile.json
+
+.venv/bin/sunofriend instrument-bundle STEM.wav PART.mid \
+  --kind keys \
+  --preference-profile work/instrument-feedback/my-patch-profile.json \
+  --out-dir work/instrument-bundles/song-keys-profiled
+```
+
+Feedback pins the source Bundle report, recipe and performance-MIDI hashes and
+changes none of them. Profiles are deterministic, use only explicitly supplied
+reviewed files and have no hidden store. A full-mix preferred choice has weight
+1, an acceptable choice 0.5, solo listening half the corresponding full-mix
+weight, and rejection negative weight. The profiled bundle displays the
+history-first patch separately; factory, GM and OpenL3 orders remain unchanged,
+the patch is not selected automatically, and the usability gate still wins.
 
 GarageBand can install its additional Apple sound library and compatible
 third-party 64-bit Audio Unit instruments. Sunofriend inventories locally

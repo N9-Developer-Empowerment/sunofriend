@@ -708,6 +708,38 @@ def build_sample_pack(
         ).to_dict()
         soundfont_summary["path"] = "sunofriend-instrument.sf2"
 
+        from .instrument_usability import (
+            analyze_sample_instrument_usability,
+            write_instrument_usability_audition,
+        )
+
+        usability = analyze_sample_instrument_usability(
+            clip,
+            rows,
+            kind=normalized_kind,
+            cluster_summary=source_event_clusters["summary"],
+            looped_zone_count=int(soundfont_summary["looped_zone_count"]),
+        )
+        usability_midi = work / "instrument-usability-audition.mid"
+        usability_audition = write_instrument_usability_audition(
+            usability_midi,
+            clip,
+            bpm=float(clip.tempo_map.bpm),
+        )
+        usability_wav = work / "instrument-usability-audition.wav"
+        if render_preview:
+            from .render import render_midi_to_wav
+
+            render_midi_to_wav(
+                usability_midi,
+                usability_wav,
+                soundfont_path=sf2_path,
+            )
+        usability["audition"] = {
+            **usability_audition,
+            "wav": usability_wav.name if render_preview else None,
+        }
+
         ausampler_preset = None
         ausampler_preset_warning = None
         try:
@@ -757,6 +789,16 @@ def build_sample_pack(
             warnings.append(
                 "Polyphonic extraction was explicitly enabled; some samples contain more than one source note."
             )
+        if usability["functional_status"] == "fail":
+            failure_text = "; ".join(
+                str(item["detail"]) for item in usability["failures"]
+            )
+            warnings.append(
+                "Instrument Usability Gate v1 classified this bank as texture-only: "
+                + failure_text
+                + ". Do not use it as the sole instrument for the supplied MIDI."
+            )
+        warnings.extend(str(item) for item in usability["warnings"])
         tuning_statuses: dict[str, int] = {}
         for row in rows:
             status = str(row["tuning"]["status"])
@@ -764,7 +806,8 @@ def build_sample_pack(
         report = {
             "operation": "sample-pack",
             "format_version": 2,
-            "status": "complete",
+            "build_status": "complete",
+            "status": usability["status"],
             "stem": str(stem.resolve()),
             "midi": str(midi.resolve()),
             "kind": normalized_kind,
@@ -772,6 +815,7 @@ def build_sample_pack(
                 "selected_index": selected_track_index,
                 "selected_title": clip.title,
                 "available_titles": available_tracks,
+                "instrument_suggestions": list(clip.instrument.suggestions),
             },
             "sample_rate": sample_rate,
             "sample_count": len(rows),
@@ -784,6 +828,7 @@ def build_sample_pack(
             "source_event_clusters": source_event_clusters["summary"],
             "source_event_dynamics": source_event_dynamics["summary"],
             "sample_loop_suggestions": sample_loop_suggestions["summary"],
+            "usability": usability,
             "sfz": "sunofriend-instrument.sfz",
             "soundfont": soundfont_summary,
             "artifacts": {
@@ -797,6 +842,11 @@ def build_sample_pack(
                 "samples": "samples",
                 "audition_midi": "garageband-audition.mid",
                 "audition_wav": ("garageband-audition.wav" if render_preview else None),
+                "instrument_usability": "instrument_usability.json",
+                "usability_audition_midi": usability_midi.name,
+                "usability_audition_wav": (
+                    usability_wav.name if render_preview else None
+                ),
                 "source_event_clusters": "source_event_clusters.json",
                 "source_event_clusters_graph": "source_event_clusters.svg",
                 "source_event_dynamics": "source_event_dynamics.json",
@@ -816,8 +866,13 @@ def build_sample_pack(
                     "Drag garageband-audition.mid into the Tracks area, then select the new Software Instrument track.",
                     "Open Smart Controls and choose AU Instruments > Apple > AUSampler > Stereo as the instrument.",
                     "Open AUSampler's preset menu (it normally says Manual), choose its load/open setting command, and select sunofriend-instrument.aupreset — not the greyed-out .sf2 bank.",
-                    "Play the audition region to verify every embedded zone, then replace it with the song MIDI.",
-                    "Save the configured track as a custom GarageBand patch if you want it in future projects.",
+                    "Play instrument-usability-audition.mid to check every pitch used by the supplied performance and its velocity probes.",
+                    (
+                        "This bank is texture-only: keep a complete GarageBand instrument as the main sound and use this sampler only as an optional quiet layer."
+                        if usability["status"] == "texture-only"
+                        else "After the usability audition, compare the complete song MIDI before treating this review-required bank as a primary candidate."
+                    ),
+                    "Save the configured track as a custom GarageBand patch only after the full-range and full-song listening checks pass.",
                 ]
                 if ausampler_preset
                 else [
@@ -840,6 +895,7 @@ def build_sample_pack(
         (work / "source_sample_loops.svg").write_text(
             sample_loop_suggestions_svg(sample_loop_suggestions), encoding="utf-8"
         )
+        _write_json(work / "instrument_usability.json", usability)
         _write_json(work / "sample_pack.json", report)
         (work / "README.md").write_text(_sample_pack_markdown(report), encoding="utf-8")
         work.rename(destination)
@@ -2006,9 +2062,14 @@ def _audition_markdown(report: dict[str, Any]) -> str:
 
 
 def _sample_pack_markdown(report: dict[str, Any]) -> str:
+    usability = report["usability"]
+    coverage = usability["coverage"]
+    duration = usability["duration_support"]
     lines = [
         "# Sunofriend Sample Instrument v2",
         "",
+        f"Build status: **{report['build_status']}**",
+        f"Instrument usability: **{report['status']}**",
         f"Source stem: `{report['stem']}`",
         f"Aligned MIDI: `{report['midi']}`",
         f"Samples: {report['sample_count']}",
@@ -2027,6 +2088,32 @@ def _sample_pack_markdown(report: dict[str, Any]) -> str:
         "The SF2 is self-contained: its PCM16 audio, MIDI root keys, keyboard zones and velocity ranges are embedded in one file.",
         "The separate PCM24 WAV files and SFZ mapping are retained for editing or other samplers.",
         "",
+        "## Instrument Usability Gate v1",
+        "",
+        (
+            f"The supplied performance has {usability['performance']['note_count']} "
+            f"notes across MIDI {usability['performance']['pitch_range'][0]}–"
+            f"{usability['performance']['pitch_range'][1]}. This bank maps "
+            f"{coverage['mapped_note_count']} notes and leaves "
+            f"{coverage['unmapped_note_count']} silent."
+        ),
+        (
+            f"Audible-attack support: {duration['attack_supported_note_count']}/"
+            f"{usability['performance']['note_count']}; musical-duration support: "
+            f"{duration['musical_supported_note_count']}/"
+            f"{usability['performance']['note_count']}."
+        ),
+        f"Recommended use: `{usability['recommended_use']}`.",
+        "",
+        "Listen to `instrument-usability-audition.mid` (and its rendered WAV when present). It plays every distinct pitch used by the performance, then four velocity probes. The gate changes no MIDI, sample audio or sampler mapping.",
+        "",
+        *(
+            ["Hard functional failures:", ""]
+            + [f"- {item['detail']}" for item in usability["failures"]]
+            + [""]
+            if usability["failures"]
+            else ["No hard functional failure was detected; full-song listening is still required.", ""]
+        ),
         "## Source-event review",
         "",
         (

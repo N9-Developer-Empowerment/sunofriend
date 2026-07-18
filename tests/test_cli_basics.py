@@ -3,6 +3,8 @@ from __future__ import annotations
 import io
 import unittest
 from contextlib import redirect_stdout
+from pathlib import Path
+from unittest.mock import patch
 
 from sunofriend import __version__
 from sunofriend.cli import build_parser, main
@@ -62,6 +64,94 @@ class CliBasicsTests(unittest.TestCase):
         self.assertEqual(match.embedding_model, "openl3.onnx")
         self.assertEqual(bundle.embedding_model, "openl3.onnx")
         self.assertEqual(sample_pack.embedding_model, "openl3.onnx")
+
+    def test_instrument_preference_commands_are_explicit_and_advisory(self) -> None:
+        parser = build_parser()
+
+        feedback = parser.parse_args(
+            [
+                "instrument-feedback",
+                "bundle",
+                "--patch",
+                "Small Time Piano",
+                "--compared-with",
+                "sunofriend-instrument",
+                "--out",
+                "feedback.json",
+            ]
+        )
+        profile = parser.parse_args(
+            [
+                "instrument-profile",
+                "feedback.json",
+                "--out",
+                "profile.json",
+            ]
+        )
+        bundle = parser.parse_args(
+            [
+                "instrument-bundle",
+                "stem.wav",
+                "part.mid",
+                "--kind",
+                "keys",
+                "--out-dir",
+                "bundle-v2",
+                "--preference-profile",
+                "profile.json",
+            ]
+        )
+
+        self.assertEqual(feedback.patch, "Small Time Piano")
+        self.assertEqual(feedback.decision, "preferred")
+        self.assertEqual(feedback.context, "full-mix")
+        self.assertEqual(profile.feedback, ["feedback.json"])
+        self.assertEqual(bundle.preference_profile, "profile.json")
+
+    def test_preview_accepts_a_source_derived_soundfont(self) -> None:
+        parser = build_parser()
+
+        preview = parser.parse_args(
+            [
+                "preview",
+                "performance.mid",
+                "--out",
+                "performance.wav",
+                "--soundfont",
+                "sunofriend-instrument.sf2",
+            ]
+        )
+
+        self.assertEqual(preview.midi, "performance.mid")
+        self.assertEqual(preview.out, "performance.wav")
+        self.assertEqual(preview.soundfont, "sunofriend-instrument.sf2")
+
+        stdout = io.StringIO()
+        with (
+            patch(
+                "sunofriend.render.render_midi_to_wav",
+                return_value=Path("performance.wav"),
+            ) as render,
+            redirect_stdout(stdout),
+        ):
+            result = main(
+                [
+                    "preview",
+                    "performance.mid",
+                    "--out",
+                    "performance.wav",
+                    "--soundfont",
+                    "sunofriend-instrument.sf2",
+                ]
+            )
+
+        self.assertEqual(result, 0)
+        render.assert_called_once_with(
+            Path("performance.mid"),
+            Path("performance.wav"),
+            soundfont_path="sunofriend-instrument.sf2",
+        )
+        self.assertEqual(stdout.getvalue().strip(), "performance.wav")
 
     def test_sample_pack_review_commands_keep_review_and_apply_separate(self) -> None:
         parser = build_parser()

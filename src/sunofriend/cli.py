@@ -27,6 +27,7 @@ _COMMANDS = {
     "doctor",
     "ai-doctor",
     "ai-transcribe",
+    "midi-mask",
     "preview",
     "midi-ports",
     "play",
@@ -44,6 +45,8 @@ _COMMANDS = {
     "sample-pack-boundary-apply",
     "sample-pack-ab-review",
     "sample-pack-ab-resolve",
+    "instrument-feedback",
+    "instrument-profile",
     "instrument-bundle",
     "clip-import",
     "clip-list",
@@ -749,12 +752,93 @@ def build_parser() -> argparse.ArgumentParser:
         help="AI interpreter (default: SUNOFRIEND_AI_PYTHON or .venv-ai)",
     )
 
+    midi_mask = sub.add_parser(
+        "midi-mask",
+        help="Build an experimental MIDI-guided target/residual audio excerpt",
+    )
+    midi_mask.add_argument("audio", help="Unchanged source stem WAV")
+    midi_mask.add_argument("midi", help="Aligned note-bearing guide MIDI")
+    midi_mask.add_argument(
+        "--track-index",
+        type=int,
+        default=None,
+        help="Zero-based note-bearing track index; required for multi-track MIDI",
+    )
+    midi_mask.add_argument(
+        "--start-seconds", type=float, default=0.0, help="Excerpt start in source time"
+    )
+    midi_mask.add_argument(
+        "--end-seconds",
+        type=float,
+        default=None,
+        help="Excerpt end in source time; excerpts are limited to 60 seconds",
+    )
+    midi_mask.add_argument(
+        "--harmonics",
+        type=int,
+        default=8,
+        help="Number of guide-note harmonics from 1 to 32 (default: 8)",
+    )
+    midi_mask.add_argument(
+        "--bandwidth-cents",
+        type=float,
+        default=55.0,
+        help="Gaussian width around each harmonic from 10 to 200 cents (default: 55)",
+    )
+    midi_mask.add_argument(
+        "--attack-seconds",
+        type=float,
+        default=0.06,
+        help="Mask fade-in before each guide note from 0 to 1 second",
+    )
+    midi_mask.add_argument(
+        "--release-seconds",
+        type=float,
+        default=0.12,
+        help="Mask fade-out after each guide note from 0 to 2 seconds",
+    )
+    midi_mask.add_argument(
+        "--transient-ms",
+        type=float,
+        default=0.0,
+        help="Optional broadband window after guide onsets from 0 to 250 ms",
+    )
+    midi_mask.add_argument(
+        "--transient-strength",
+        type=float,
+        default=0.35,
+        help="Broadband transient-mask level from 0 to 1 (default: 0.35)",
+    )
+    midi_mask.add_argument(
+        "--n-fft",
+        type=int,
+        default=4096,
+        help="Power-of-two FFT size from 512 to 8192 (default: 4096)",
+    )
+    midi_mask.add_argument(
+        "--hop-length",
+        type=int,
+        default=512,
+        help="STFT hop in samples, no larger than n-fft (default: 512)",
+    )
+    midi_mask.add_argument(
+        "--out-dir", required=True, help="Fresh output directory; never overwritten"
+    )
+
     preview = sub.add_parser(
         "preview", help="Render a MIDI file to WAV with FluidSynth"
     )
     preview.add_argument("midi", help="MIDI file to render")
     preview.add_argument(
         "--out", default=None, help="Output WAV (default: beside the MIDI file)"
+    )
+    preview.add_argument(
+        "--soundfont",
+        default=None,
+        help=(
+            "Optional local SF2 bank, including a Sunofriend sample instrument "
+            "(default: configured General MIDI SoundFont)"
+        ),
     )
 
     sub.add_parser(
@@ -1278,6 +1362,64 @@ def build_parser() -> argparse.ArgumentParser:
         "--out", required=True, help="Fresh resolved Phase 3 result JSON"
     )
 
+    instrument_feedback = sub.add_parser(
+        "instrument-feedback",
+        help="Record one explicit GarageBand/DAW patch listening decision",
+    )
+    instrument_feedback.add_argument(
+        "bundle", help="Instrument Bundle v1 directory or instrument_bundle.json"
+    )
+    instrument_feedback.add_argument(
+        "--patch", required=True, help="Exact patch name heard in the DAW"
+    )
+    instrument_feedback.add_argument(
+        "--patch-source",
+        choices=(
+            "garageband-library",
+            "audio-unit",
+            "general-midi",
+            "source-instrument",
+            "other",
+        ),
+        default="garageband-library",
+        help="Where the patch came from (default: garageband-library)",
+    )
+    instrument_feedback.add_argument(
+        "--decision",
+        choices=("preferred", "acceptable", "rejected"),
+        default="preferred",
+        help="Explicit listening decision (default: preferred)",
+    )
+    instrument_feedback.add_argument(
+        "--context",
+        choices=("full-mix", "solo"),
+        default="full-mix",
+        help="Listening context (default: full-mix)",
+    )
+    instrument_feedback.add_argument(
+        "--compared-with",
+        action="append",
+        default=[],
+        help="Patch or source instrument compared against; repeat as needed",
+    )
+    instrument_feedback.add_argument(
+        "--notes", default=None, help="Optional concise listening notes"
+    )
+    instrument_feedback.add_argument(
+        "--out", required=True, help="Fresh reviewed feedback JSON path"
+    )
+
+    instrument_profile = sub.add_parser(
+        "instrument-profile",
+        help="Build a local advisory patch profile from explicit feedback",
+    )
+    instrument_profile.add_argument(
+        "feedback", nargs="+", help="One or more reviewed instrument-feedback JSONs"
+    )
+    instrument_profile.add_argument(
+        "--out", required=True, help="Fresh profile JSON path"
+    )
+
     instrument_bundle = sub.add_parser(
         "instrument-bundle",
         help="Package MIDI, carried source sound, match evidence, and A/B previews",
@@ -1330,6 +1472,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--embedding-model",
         default=None,
         help="Optional local hash-pinned OpenL3 ONNX model for match evidence",
+    )
+    instrument_bundle.add_argument(
+        "--preference-profile",
+        default=None,
+        help=(
+            "Optional local instrument-profile JSON; advisory and never "
+            "auto-selects or bypasses playability"
+        ),
     )
 
     clip_import = sub.add_parser(
@@ -1467,6 +1617,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_ai_doctor(args)
         if args.command == "ai-transcribe":
             return _run_ai_transcribe(args)
+        if args.command == "midi-mask":
+            return _run_midi_mask(args)
         if args.command == "preview":
             return _run_preview(args)
         if args.command == "midi-ports":
@@ -1501,6 +1653,10 @@ def main(argv: list[str] | None = None) -> int:
             return _run_sample_pack_ab_review(args)
         if args.command == "sample-pack-ab-resolve":
             return _run_sample_pack_ab_resolve(args)
+        if args.command == "instrument-feedback":
+            return _run_instrument_feedback(args)
+        if args.command == "instrument-profile":
+            return _run_instrument_profile(args)
         if args.command == "instrument-bundle":
             return _run_instrument_bundle(args)
         if args.command == "clip-import":
@@ -2737,12 +2893,35 @@ def _run_ai_transcribe(args) -> int:
     return 0
 
 
+def _run_midi_mask(args) -> int:
+    from .midi_mask import create_midi_mask
+
+    result = create_midi_mask(
+        args.audio,
+        args.midi,
+        out_dir=args.out_dir,
+        track_index=args.track_index,
+        start_seconds=args.start_seconds,
+        end_seconds=args.end_seconds,
+        harmonics=args.harmonics,
+        bandwidth_cents=args.bandwidth_cents,
+        attack_seconds=args.attack_seconds,
+        release_seconds=args.release_seconds,
+        transient_seconds=args.transient_ms / 1000.0,
+        transient_strength=args.transient_strength,
+        n_fft=args.n_fft,
+        hop_length=args.hop_length,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0 if result["status"] == "complete" else 1
+
+
 def _run_preview(args) -> int:
     from .render import render_midi_to_wav
 
     midi = Path(args.midi)
     output = Path(args.out) if args.out else midi.with_suffix(".preview.wav")
-    print(render_midi_to_wav(midi, output))
+    print(render_midi_to_wav(midi, output, soundfont_path=args.soundfont))
     return 0
 
 
@@ -3100,7 +3279,33 @@ def _run_instrument_bundle(args) -> int:
         auto_tune=not args.no_auto_tune,
         instrument_name=args.name,
         embedding_model_path=args.embedding_model,
+        preference_profile_path=args.preference_profile,
     )
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_instrument_feedback(args) -> int:
+    from .instrument_preference import record_instrument_patch_feedback
+
+    report = record_instrument_patch_feedback(
+        args.bundle,
+        patch_name=args.patch,
+        out_path=args.out,
+        patch_source=args.patch_source,
+        decision=args.decision,
+        listening_context=args.context,
+        compared_with=args.compared_with,
+        notes=args.notes,
+    )
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_instrument_profile(args) -> int:
+    from .instrument_preference import build_personal_instrument_profile
+
+    report = build_personal_instrument_profile(args.feedback, out_path=args.out)
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0
 

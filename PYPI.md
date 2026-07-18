@@ -11,6 +11,11 @@ AUSampler preset wrappers, with WAV/SFZ sources and pitch-mapping evidence
 retained.
 Instrument Bundle v1 keeps the MIDI, authorised carried sound, local factory
 and General MIDI match evidence, source reference, and A/B previews together.
+An arrangement-aware usability gate demotes incomplete source samplers to
+optional texture layers. Explicit DAW choices can be hash-pinned with
+`instrument-feedback`, combined into a deterministic local advisory profile,
+and shown in later bundles without automatic patch selection or match
+reordering.
 Vocal melody extraction adds pYIN/Basic Pitch consensus, conservative repeated
 phrase repair, an optional hummed guide, and a local visual correction report
 whose reviewed JSON can be converted back into tuned MIDI.
