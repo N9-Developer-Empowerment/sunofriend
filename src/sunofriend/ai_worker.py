@@ -14,13 +14,16 @@ import importlib.metadata
 import json
 import math
 import os
+import resource
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
 
 REQUEST_SCHEMA = "sunofriend.ai-transcription-request.v1"
 CANDIDATE_SCHEMA = "sunofriend.ai-transcription-candidate.v1"
+MUSCRIPTOR_PERFORMANCE_SCHEMA = "sunofriend.muscriptor-performance.v1"
 GAME_MODEL_FILENAMES = (
     "config.json",
     "encoder.onnx",
@@ -29,6 +32,26 @@ GAME_MODEL_FILENAMES = (
     "dur2bd.onnx",
     "bd2dur.onnx",
 )
+
+
+def _normalise_peak_rss_bytes(
+    ru_maxrss: int | float, platform_name: str
+) -> int:
+    """Normalise ``getrusage().ru_maxrss`` for supported worker platforms."""
+
+    value = float(ru_maxrss)
+    if not math.isfinite(value) or value < 0:
+        raise ValueError("ru_maxrss must be finite and non-negative")
+    if platform_name == "darwin":
+        return int(value)
+    if platform_name.startswith("linux"):
+        return int(value * 1024)
+    raise ValueError(f"unsupported ru_maxrss platform: {platform_name}")
+
+
+def _peak_process_rss_bytes() -> int:
+    usage = resource.getrusage(resource.RUSAGE_SELF)
+    return _normalise_peak_rss_bytes(usage.ru_maxrss, sys.platform)
 
 
 def _load_request(path: Path) -> dict[str, Any]:
@@ -205,7 +228,12 @@ def _sha256_game_bundle(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _transcribe_muscriptor(document: dict[str, Any]) -> dict[str, Any]:
+def _transcribe_muscriptor(
+    document: dict[str, Any],
+    *,
+    performance_path: Path,
+    worker_started_at: float,
+) -> dict[str, Any]:
     options = document.get("options", {})
     if not isinstance(options, dict):
         raise ValueError("request options must be an object")
@@ -233,9 +261,11 @@ def _transcribe_muscriptor(document: dict[str, Any]) -> dict[str, Any]:
         end_seconds is not None and not math.isfinite(end_seconds)
     ):
         raise ValueError("excerpt start/end seconds must be finite")
+    audio_preparation_started_at = time.perf_counter()
     audio, excerpt_duration, source_sample_rate = _prepared_audio(
         audio_path, start_seconds, end_seconds, torch
     )
+    audio_preparation_seconds = time.perf_counter() - audio_preparation_started_at
 
     instruments = document.get("roles") or None
     if instruments is not None and not all(
@@ -290,12 +320,24 @@ def _transcribe_muscriptor(document: dict[str, Any]) -> dict[str, Any]:
         },
     }
 
+    model_load_started_at = time.perf_counter()
     model = TranscriptionModel.load_model(str(checkpoint), device=device)
+    model_load_seconds = time.perf_counter() - model_load_started_at
     starts: dict[int, NoteStartEvent] = {}
     notes: list[dict[str, Any]] = []
     warnings: list[str] = []
     progress: list[dict[str, int]] = []
     events_after_excerpt = 0
+    note_start_observed_at: dict[int, float] = {}
+    first_note_start_seconds: float | None = None
+    first_completed_note_seconds: float | None = None
+    first_completed_chunk_seconds: float | None = None
+    valid_note_start_observations: list[float] = []
+    reported_chunks = 0
+    # MuScriptor returns a lazy iterator.  Iterating it performs the backend's
+    # audio preprocessing, condition construction and decoding, so this is an
+    # inclusive transcription timer rather than a model-forward-only timer.
+    transcription_started_at = time.perf_counter()
     events = model.transcribe(
         audio,
         use_sampling=use_sampling,
@@ -309,6 +351,9 @@ def _transcribe_muscriptor(document: dict[str, Any]) -> dict[str, Any]:
     for event in events:
         if isinstance(event, NoteStartEvent):
             starts[event.index] = event
+            note_start_observed_at[event.index] = (
+                time.perf_counter() - worker_started_at
+            )
         elif isinstance(event, NoteEndEvent):
             start = starts.pop(event.start_event_index, event.start_event)
             local_start = float(start.start_time)
@@ -332,8 +377,26 @@ def _transcribe_muscriptor(document: dict[str, Any]) -> dict[str, Any]:
                     "source_event_id": str(start.index),
                 }
             )
+            observed_start = note_start_observed_at.get(start.index)
+            if observed_start is not None:
+                valid_note_start_observations.append(observed_start)
+            if first_completed_note_seconds is None:
+                first_completed_note_seconds = (
+                    time.perf_counter() - worker_started_at
+                )
         elif isinstance(event, ProgressEvent):
             progress.append({"completed": event.completed, "total": event.total})
+            reported_chunks = max(reported_chunks, int(event.completed))
+            if first_completed_chunk_seconds is None and event.completed > 0:
+                first_completed_chunk_seconds = time.perf_counter() - worker_started_at
+
+    transcription_seconds = time.perf_counter() - transcription_started_at
+
+    if notes:
+        first_note_start_seconds = min(valid_note_start_observations, default=None)
+    else:
+        first_note_start_seconds = None
+        first_completed_note_seconds = None
 
     if starts:
         warnings.append(f"discarded {len(starts)} unterminated note start event(s)")
@@ -349,13 +412,13 @@ def _transcribe_muscriptor(document: dict[str, Any]) -> dict[str, Any]:
         )
     )
     version = importlib.metadata.version("muscriptor")
-    return {
+    candidate = {
         "schema": CANDIDATE_SCHEMA,
         "backend": "muscriptor",
         "model_version": f"muscriptor-{version}/{checkpoint_sha256[:12]}",
         "notes": notes,
         "warnings": warnings,
-        "raw_artifacts": [],
+        "raw_artifacts": [performance_path.name],
         "metadata": {
             "device": device,
             "checkpoint_sha256": checkpoint_sha256,
@@ -371,6 +434,31 @@ def _transcribe_muscriptor(document: dict[str, Any]) -> dict[str, Any]:
             "velocity_policy": "not supplied by MuScriptor; preserved as null",
         },
     }
+    performance = {
+        "schema": MUSCRIPTOR_PERFORMANCE_SCHEMA,
+        "measurement_mode": "fresh-process",
+        "device": device,
+        "timings_seconds": {
+            "audio_preparation": audio_preparation_seconds,
+            "model_load": model_load_seconds,
+            "transcription": transcription_seconds,
+            "worker_total": time.perf_counter() - worker_started_at,
+            "time_to_first_note_start": first_note_start_seconds,
+            "time_to_first_completed_note": first_completed_note_seconds,
+            "time_to_first_completed_chunk": first_completed_chunk_seconds,
+        },
+        "chunks": {
+            "seconds": 5.0,
+            "planned": math.ceil(excerpt_duration / 5.0),
+            "reported": reported_chunks,
+        },
+        "note_count": len(notes),
+        "peak_process_rss_bytes": _peak_process_rss_bytes(),
+        "memory_scope": "process RSS high-water; accelerator allocation excluded",
+        "clock": "time.perf_counter",
+    }
+    _atomic_json(performance_path, performance)
+    return candidate
 
 
 def _game_excerpt(
@@ -1138,10 +1226,14 @@ def _transcribe_pesto(
 
 
 def _transcribe(
-    document: dict[str, Any], *, output_path: Path
+    document: dict[str, Any], *, output_path: Path, worker_started_at: float
 ) -> dict[str, Any]:
     if document["backend"] == "muscriptor":
-        return _transcribe_muscriptor(document)
+        return _transcribe_muscriptor(
+            document,
+            performance_path=output_path.with_name("muscriptor.performance.json"),
+            worker_started_at=worker_started_at,
+        )
     if document["backend"] == "game":
         return _transcribe_game(document)
     if document["backend"] == "rmvpe":
@@ -1166,13 +1258,18 @@ def _atomic_json(path: Path, document: dict[str, Any]) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    worker_started_at = time.perf_counter()
     parser = argparse.ArgumentParser(prog="sunofriend-ai-worker")
     parser.add_argument("--request", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
         request = _load_request(args.request)
-        candidate = _transcribe(request, output_path=args.output)
+        candidate = _transcribe(
+            request,
+            output_path=args.output,
+            worker_started_at=worker_started_at,
+        )
         _atomic_json(args.output, candidate)
     except Exception as exc:
         print(f"sunofriend-ai-worker: {type(exc).__name__}: {exc}", file=sys.stderr)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -45,6 +46,57 @@ class CliBasicsTests(unittest.TestCase):
         self.assertEqual(args.port, 8123)
         self.assertTrue(args.open)
         self.assertTrue(args.inspect)
+
+    def test_ai_benchmark_requires_explicit_runs_and_fresh_output(self) -> None:
+        args = build_parser().parse_args(
+            [
+                "ai-benchmark",
+                "--run",
+                "repetition-01",
+                "--run",
+                "repetition-02",
+                "--out",
+                "benchmark.json",
+            ]
+        )
+
+        self.assertEqual(args.run, ["repetition-01", "repetition-02"])
+        self.assertEqual(args.out, "benchmark.json")
+
+    @patch("sunofriend.ai_benchmark.write_ai_performance_benchmark")
+    def test_ai_benchmark_routes_completed_runs_without_inference(self, write) -> None:
+        write.return_value = {
+            "schema": "sunofriend.ai-performance-benchmark.v1",
+            "repetition_count": 2,
+        }
+        stdout = io.StringIO()
+
+        with redirect_stdout(stdout):
+            result = main(
+                [
+                    "ai-benchmark",
+                    "--run",
+                    "repetition-01",
+                    "--run",
+                    "repetition-02",
+                    "--out",
+                    "benchmark.json",
+                ]
+            )
+
+        self.assertEqual(result, 0)
+        write.assert_called_once_with(
+            ["repetition-01", "repetition-02"], "benchmark.json"
+        )
+        self.assertEqual(
+            json.loads(stdout.getvalue()),
+            {
+                "output": str(Path("benchmark.json").absolute()),
+                "repetition_count": 2,
+                "schema": "sunofriend.ai-performance-benchmark.v1",
+                "status": "complete",
+            },
+        )
 
     def test_instrument_commands_accept_an_explicit_embedding_model(self) -> None:
         parser = build_parser()

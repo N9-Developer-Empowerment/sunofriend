@@ -49,7 +49,16 @@ model/config, label, boundary and safety diagnostics; severe or zero-note
 results remain diagnostic-only. `sunofriend ai-matrix` compares controlled
 immutable lanes without changing raw candidates or MIDI. Its M4 contract
 compares distinct one-role passes only when source, excerpt and BPM match and
-reports possible role collapse as diagnostic overlap. `ai-label-split` can
+reports possible role collapse as diagnostic overlap. Fresh MuScriptor runs
+also preserve model-load, inclusive-transcription, first-note, chunk and
+process-memory evidence outside the deterministic candidate JSON. The
+inclusive timer covers MuScriptor preprocessing, condition construction and
+decoding. `sunofriend ai-benchmark` verifies two or more sequential,
+non-overlapping completed runs with the same runtime identity and source-frame-
+derived actual processed duration, then writes a
+path-free timing and exact-output repeatability report without launching a
+model; fresh-process repeats are not mislabelled as warm-model runs.
+`ai-label-split` can
 then create an exact raw-event label partition plus deterministic requested and
 complement MIDI auditions while retaining a byte-identical full-candidate
 control. MIDI quantisation/normalisation effects are reported explicitly; this

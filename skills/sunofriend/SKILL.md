@@ -1,6 +1,6 @@
 ---
 name: sunofriend
-description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes, partition model-reported labels exactly, and review existing source/MIDI alternatives; render cached neutral previews, save explicit solo/full-mix choices, hear the selected arrangement and export unchanged choices in a GarageBand handoff through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
+description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes, benchmark verified repeated local AI runs, partition model-reported labels exactly, and review existing source/MIDI alternatives; render cached neutral previews, save explicit solo/full-mix choices, hear the selected arrangement and export unchanged choices in a GarageBand handoff through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
 ---
 
 # Sunofriend
@@ -24,6 +24,10 @@ scripts.
    - `sunofriend ai-doctor --require muscriptor-checkpoint` before producing
      MuScriptor lanes for `ai-matrix`. The matrix command itself uses completed
      local runs and needs no model inference capability.
+   - `sunofriend ai-benchmark` needs no model capability: it reads at least two
+     completed comparable MuScriptor runs, verifies their immutable evidence
+     and starts no worker. Run the MuScriptor checkpoint check only when making
+     new repetitions first.
    - `sunofriend ai-label-split` needs no audio, model or preview capability.
      It verifies and partitions one completed immutable AI run.
    - `sunofriend ai-doctor --require game` before a standalone GAME vocal
@@ -139,6 +143,20 @@ scripts.
   the audit. The pinned MuScriptor 0.2.1 baseline is greedy, batch 1, beam 1,
   CFG 1.0 and independent five-second chunks; it does not support prelude
   forcing, so do not request or claim it.
+- Repeated comparable MuScriptor runs: use `ai-benchmark` with at least two
+  repeated `--run RUN_DIR` values and a fresh `--out`. Require identical source,
+  excerpt, BPM, requested roles, effective device, checkpoint, config, worker
+  and execution profile, path-free platform/Python/PyTorch/MuScriptor runtime
+  identity and source-frame-derived actual processed duration. Require
+  timezone-aware, sequential, non-overlapping repetition windows and nested
+  pipeline/subprocess/worker timings. Report pipeline/subprocess/inclusive-
+  transcription RTF, model-load and first-note latency, chunks, process peak
+  RSS, boundary diagnostics and candidate/MIDI repeatability. Inclusive
+  transcription includes MuScriptor preprocessing, condition construction and
+  decoding. A current repetition uses a fresh process and
+  reloads the model; the OS file cache is uncontrolled, so never call a later
+  repetition warm-model evidence. The report is diagnostic and cannot promote
+  a musical candidate.
 - Mixed-role M4 matrix: require every M4 lane to use the same source audio,
   excerpt and positive BPM, request exactly one role and use a distinct role
   from every other M4 lane. Inspect `m4_role_overlap` for possible duplicated
@@ -692,6 +710,11 @@ sunofriend ai-matrix \
   --lane "M3-bass=$M3_BASS_RUN" \
   --out "$FRESH_MATRIX_JSON"
 
+sunofriend ai-benchmark \
+  --run "$SMALL_CPU_REPEAT_1" \
+  --run "$SMALL_CPU_REPEAT_2" \
+  --out "$FRESH_PERFORMANCE_JSON"
+
 sunofriend ai-label-split "$COMPLETED_M4_RUN" \
   --label clean_electric_guitar \
   --out-dir "$FRESH_LABEL_SPLIT"
@@ -716,6 +739,14 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
    overlap ratio. Confirm all source, worker, raw artifact, candidate,
    MIDI, checkpoint and config hashes verified and both mutation totals are
    zero. Retain failed lanes and never turn overlap or quality into a winner.
+   For `ai-benchmark`, confirm the cache regime says fresh process, no reused
+   model, no application cache, uncontrolled OS cache and no cold-start claim.
+   Report exact-output repeatability and keep pipeline, subprocess and
+   inclusive-transcription timings distinct. Verify the same runtime profile,
+   source-frame-derived actual processed duration and non-overlapping execution
+   windows across repetitions. Process RSS excludes
+   accelerator allocation. Do not infer a warm-model speedup or a musical
+   promotion from the timing report.
    For `ai-label-split`, additionally confirm the source run and artifact
    hashes, exact requested label, detected-label counts, selected/complement
    source indices, disjoint/exhaustive raw-event partition and all-zero source

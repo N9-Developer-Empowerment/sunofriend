@@ -11,6 +11,8 @@ from itertools import combinations
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+import soundfile
+
 from .ai_quality import (
     AI_QUALITY_SCHEMA,
     assess_candidate_quality,
@@ -200,10 +202,19 @@ def _load_lane(
     request = AITranscriptionRequest.from_dict(request_document, require_audio=False)
     if Path(request.audio_path).expanduser().resolve() != source_path:
         raise ValueError(f"AI matrix lane {lane} request source differs from run source")
+    source_duration, duration_tolerance = _source_excerpt_duration(
+        source_path, request, lane=lane
+    )
     if isinstance(run.get("request"), Mapping) and run["request"] != request_document:
         raise ValueError(f"AI matrix lane {lane} request.json differs from run.json")
     candidate_document = _read_json(run_dir / "candidate.json")
     candidate = AITranscriptionCandidate.from_dict(candidate_document)
+    _validate_candidate_excerpt_duration(
+        candidate,
+        source_duration=source_duration,
+        tolerance_seconds=duration_tolerance,
+        lane=lane,
+    )
     if candidate.backend != run.get("backend") or candidate.backend != request.backend:
         raise ValueError(f"AI matrix lane {lane} backend records disagree")
     if len(candidate.notes) != int(run.get("note_count", -1)):
@@ -277,6 +288,7 @@ def _load_lane(
         "candidate_midi_sha256": artifacts["candidate.mid"]["sha256"],
         "candidate_json_sha256": artifacts["candidate.json"]["sha256"],
         "bpm": bpm,
+        "duration_seconds": source_duration,
     }
 
 
@@ -295,7 +307,7 @@ def _lane_report(
     block_reasons = list(severe_codes)
     if not candidate.notes:
         block_reasons.append("no-note-evidence")
-    duration = _duration_seconds(candidate, request, metrics)
+    duration = float(item["duration_seconds"])
     elapsed = float(run.get("elapsed_seconds", 0.0))
     execution = item["execution"]
     return {
@@ -628,24 +640,64 @@ def _greedy_note_overlap(
     return matches
 
 
-def _duration_seconds(
-    candidate: AITranscriptionCandidate,
+def _source_excerpt_duration(
+    source_path: Path,
     request: AITranscriptionRequest,
-    metrics: Mapping[str, Any],
-) -> float:
-    if request.end_seconds is not None:
-        return request.end_seconds - request.start_seconds
+    *,
+    lane: str,
+) -> tuple[float, float]:
+    """Reproduce the worker's frame-exact clipping from verified source audio."""
+
+    try:
+        info = soundfile.info(str(source_path))
+    except (OSError, RuntimeError) as exc:
+        raise ValueError(
+            f"AI matrix lane {lane} source audio metadata is unavailable"
+        ) from exc
+    sample_rate = int(info.samplerate)
+    frames = int(info.frames)
+    if sample_rate <= 0 or frames <= 0:
+        raise ValueError(f"AI matrix lane {lane} source audio is empty or invalid")
+    start_frame = round(request.start_seconds * sample_rate)
+    end_frame = (
+        frames
+        if request.end_seconds is None
+        else min(frames, round(request.end_seconds * sample_rate))
+    )
+    if start_frame >= frames or end_frame <= start_frame:
+        raise ValueError(
+            f"AI matrix lane {lane} request does not overlap the source audio"
+        )
+    return (end_frame - start_frame) / sample_rate, 1.0 / sample_rate
+
+
+def _validate_candidate_excerpt_duration(
+    candidate: AITranscriptionCandidate,
+    *,
+    source_duration: float,
+    tolerance_seconds: float,
+    lane: str,
+) -> None:
     excerpt = candidate.metadata.get("excerpt")
-    if isinstance(excerpt, Mapping):
-        value = excerpt.get("duration_seconds")
-        if isinstance(value, (int, float)) and math.isfinite(value) and value > 0:
-            return float(value)
-    value = metrics.get("duration_seconds")
-    if isinstance(value, (int, float)) and math.isfinite(value) and value > 0:
-        return float(value)
-    if candidate.notes:
-        return max(note.end_seconds for note in candidate.notes) - request.start_seconds
-    return 0.001
+    if not isinstance(excerpt, Mapping) or "duration_seconds" not in excerpt:
+        return
+    value = excerpt.get("duration_seconds")
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not math.isfinite(value)
+        or value <= 0
+    ):
+        raise ValueError(
+            f"AI matrix lane {lane} candidate excerpt duration is invalid"
+        )
+    if not math.isclose(
+        float(value), source_duration, rel_tol=0.0, abs_tol=tolerance_seconds
+    ):
+        raise ValueError(
+            f"AI matrix lane {lane} candidate excerpt duration disagrees with "
+            "verified source frames"
+        )
 
 
 def _path_free_execution(value: Any) -> dict[str, Any] | None:

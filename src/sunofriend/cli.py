@@ -27,6 +27,7 @@ _COMMANDS = {
     "doctor",
     "ai-doctor",
     "ai-transcribe",
+    "ai-benchmark",
     "ai-matrix",
     "ai-label-split",
     "ai-cleanup",
@@ -830,6 +831,28 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=80.0,
         help="Onset tolerance for cross-lane same-pitch diagnostics (default: 80ms)",
+    )
+    ai_benchmark = sub.add_parser(
+        "ai-benchmark",
+        help=(
+            "Compare timing and repeatability of completed immutable MuScriptor "
+            "runs without running a model"
+        ),
+    )
+    ai_benchmark.add_argument(
+        "--run",
+        action="append",
+        required=True,
+        metavar="RUN_DIR",
+        help=(
+            "Completed comparable immutable MuScriptor run directory; repeat at "
+            "least twice"
+        ),
+    )
+    ai_benchmark.add_argument(
+        "--out",
+        required=True,
+        help="Fresh path for the path-free performance benchmark JSON report",
     )
     ai_label_split = sub.add_parser(
         "ai-label-split",
@@ -1923,6 +1946,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_ai_doctor(args)
         if args.command == "ai-transcribe":
             return _run_ai_transcribe(args)
+        if args.command == "ai-benchmark":
+            return _run_ai_benchmark(args)
         if args.command == "ai-matrix":
             return _run_ai_matrix(args)
         if args.command == "ai-label-split":
@@ -3212,6 +3237,25 @@ def _run_ai_transcribe(args) -> int:
         timeout_seconds=args.timeout_seconds,
     )
     print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_ai_benchmark(args) -> int:
+    from .ai_benchmark import write_ai_performance_benchmark
+
+    report = write_ai_performance_benchmark(args.run, args.out)
+    print(
+        json.dumps(
+            {
+                "status": "complete",
+                "output": str(Path(args.out).expanduser().absolute()),
+                "schema": report["schema"],
+                "repetition_count": report["repetition_count"],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
     return 0
 
 

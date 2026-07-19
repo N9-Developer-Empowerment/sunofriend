@@ -1,7 +1,8 @@
 # Sunofriend AI roadmap
 
 Status: Phase 1 and Phase 2 engineering complete; Phase 3 complete; Phase 4
-fixed-MIDI review complete; Phase 5.1 private listening complete
+fixed-MIDI review complete; Phase 5.1 private listening and the Phase 5.2
+fresh-process small-CPU baseline complete
 Started: 15 July 2026  
 Scope: local-first AI assistance for transcription, review, instrument matching
 and source-derived instruments
@@ -69,7 +70,7 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
-| 5. MuScriptor Full-Mix and Community Learning | **In progress: Phase 5.0 and Phase 5.1 private listening complete** | Local Workbench, immutable MuScriptor execution manifest, path-free quality diagnostics, M0–M4 matrices and exact label partitions implemented; role-specific M1/M2/M3 choices are reviewed and model-size/performance comparison remains |
+| 5. MuScriptor Full-Mix and Community Learning | **In progress: Phase 5.0/5.1 complete; Phase 5.2 fresh-process small-CPU baseline complete** | Local Workbench, immutable MuScriptor evidence, M0–M4 matrices, exact label partitions and a verified repeated-run performance report are implemented; persistent worker, cache, other devices and model-size comparisons remain |
 
 ## Phase 1: AI Transcription Bake-off v1
 
@@ -515,6 +516,57 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-19 — Phase 5.2 fresh-process small-model baseline
+
+- Goal: establish an honest, reproducible speed baseline before adding a
+  persistent worker, cache, larger checkpoint or faster decoding setting.
+- Change or experiment: added a separate hash-pinned
+  `muscriptor.performance.json` to fresh MuScriptor runs, parent-observed worker
+  subprocess timing, and `sunofriend ai-benchmark`. The report reuses the
+  immutable matrix verifier, requires equal source/requested-and-actual-
+  excerpt/BPM/roles/device/checkpoint/config/worker/execution/runtime evidence,
+  source-frame-derived duration, nested timers and non-overlapping repetition
+  windows; it is path-free and never launches a model or promotes a musical
+  result.
+- Inputs: two fresh sequential runs of the existing private 15-second Lidl M2
+  full-mix golden at 119 BPM. The original source and all generated evidence
+  remain under ignored `work/` paths.
+- Model/runtime/checkpoint: MuScriptor 0.2.1 small on CPU; checkpoint
+  `bbd482c786b895cf7d8f44185073d951adae2ebb8a66f82ca84cd1f84569549c`,
+  config `3008fc481e4a1cd978e337eb3759260c270892204db5039235ac939e1f42aeb2`,
+  greedy, batch 1, beam 1, CFG 1.0 and three independent five-second chunks.
+  No checkpoint was downloaded.
+- Evidence and metrics: both repetitions produced byte-identical 107-note
+  candidate MIDI. Median pipeline wall time was `5.189138 s` (RTF `0.345943`),
+  worker subprocess `5.114512 s` (RTF `0.340967`), inclusive transcription
+  `3.654508 s` (RTF `0.243634`), model load `0.291326 s`, first note start
+  `1.478891 s`, first completed note `1.580453 s`, first completed chunk
+  `2.541311 s`, and peak process RSS `1,142,669,312` bytes (about `1.06 GiB`).
+  First/later pipeline ratio was `1.117054`.
+- Comparability: both runs used `macOS-26.5.1-arm64-arm-64bit`, Python 3.12.10,
+  PyTorch 2.13.0 and MuScriptor 0.2.1. All RTFs use the 15-second duration
+  verified from the pinned source frames and request bounds. Inclusive
+  transcription is iteration of
+  MuScriptor's lazy `model.transcribe` result, so it includes backend
+  preprocessing, condition construction and decoding rather than only model
+  forward time.
+- Listening result: none required. This increment measures execution and exact
+  output repeatability; it does not compare musical alternatives.
+- Decision: keep the small CPU fresh-process measurements as the Phase 5.2
+  baseline. The second process may benefit from an uncontrolled OS file cache,
+  but both runs reload the model, so neither is called a warm-model run.
+- Controls: the new candidate MIDI hash
+  `9bc1ede96cf8be5704573456753f7892748c14ecbe1b1c294249afb0c45d4e05`
+  matches the earlier M2 MIDI. The five-track Phase 5.1 selection hash remains
+  `1dce19ce7595a72b8417225b8d23679e0fc92e53581807ccf9db6ea929d7709c`
+  and the handoff ZIP remains
+  `7824e25850037821287fd77337ae9e8ad2d61cea2cbd2ea57e3b2f92e0c532f8`.
+- Problems/risks: process RSS excludes accelerator allocation; pipeline time
+  includes local post-processing but ends before the final runtime snapshot and
+  manifest write; two repetitions are a baseline, not a hardware distribution.
+- Next smallest step: implement one persistent local small-model worker and
+  compare true reused-model repetitions with this exact fresh-process control.
 
 ### 2026-07-19 — Safe-lane bass, keys and vocal review completed
 

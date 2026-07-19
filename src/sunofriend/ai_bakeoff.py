@@ -554,6 +554,8 @@ def run_ai_transcription(
         "raw_candidate_mutated": False,
         "notes_mutated": 0,
     }
+    worker_subprocess_started_clock = time.monotonic()
+    worker_subprocess_elapsed_seconds: float | None = None
     try:
         completed = subprocess.run(
             command,
@@ -561,6 +563,9 @@ def run_ai_transcription(
             text=True,
             timeout=timeout_seconds,
             check=False,
+        )
+        worker_subprocess_elapsed_seconds = (
+            time.monotonic() - worker_subprocess_started_clock
         )
         exit_code = completed.returncode
         stdout_path.write_text(completed.stdout, encoding="utf-8")
@@ -652,6 +657,9 @@ def run_ai_transcription(
                     },
                 )
     except subprocess.TimeoutExpired as exc:
+        worker_subprocess_elapsed_seconds = (
+            time.monotonic() - worker_subprocess_started_clock
+        )
         exit_code = None
         error = f"worker timed out after {timeout_seconds:g} seconds"
         stdout = exc.stdout or ""
@@ -663,6 +671,10 @@ def run_ai_transcription(
         stdout_path.write_text(stdout, encoding="utf-8")
         stderr_path.write_text(stderr, encoding="utf-8")
     except Exception as exc:
+        if worker_subprocess_elapsed_seconds is None:
+            worker_subprocess_elapsed_seconds = (
+                time.monotonic() - worker_subprocess_started_clock
+            )
         error = f"{type(exc).__name__}: {exc}"
         if not stdout_path.exists():
             stdout_path.write_text("", encoding="utf-8")
@@ -696,6 +708,7 @@ def run_ai_transcription(
         "started_at": started_at,
         "completed_at": completed_at,
         "elapsed_seconds": elapsed_seconds,
+        "worker_subprocess_elapsed_seconds": worker_subprocess_elapsed_seconds,
         "backend": backend,
         "backend_manifest": asdict(AI_MODEL_MANIFESTS[backend]),
         "runtime": collect_ai_diagnostics(executable),

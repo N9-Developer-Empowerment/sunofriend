@@ -6,8 +6,11 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+import time
+import types
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import numpy as np
 import soundfile
@@ -26,7 +29,13 @@ from sunofriend.ai_expression import (
     recover_source_expression,
 )
 from sunofriend.ai_quality import AI_QUALITY_SCHEMA, assess_candidate_quality
-from sunofriend.ai_worker import _game_notes, _rmvpe_frames_to_notes
+from sunofriend.ai_worker import (
+    MUSCRIPTOR_PERFORMANCE_SCHEMA,
+    _game_notes,
+    _normalise_peak_rss_bytes,
+    _rmvpe_frames_to_notes,
+    _transcribe_muscriptor,
+)
 from sunofriend.ai_runtime import (
     AI_CANDIDATE_SCHEMA,
     AI_REQUEST_SCHEMA,
@@ -64,6 +73,31 @@ candidate = {
         "checkpoint_sha256": request["options"]["model_sha256"],
     },
 }
+if request["backend"] == "muscriptor":
+    performance_path = __import__("pathlib").Path(args.output).with_name(
+        "muscriptor.performance.json"
+    )
+    performance = {
+        "schema": "sunofriend.muscriptor-performance.v1",
+        "measurement_mode": "fresh-process",
+        "device": "cpu",
+        "timings_seconds": {
+            "audio_preparation": 0.01,
+            "model_load": 0.02,
+            "transcription": 0.03,
+            "worker_total": 0.06,
+            "time_to_first_note_start": 0.04,
+            "time_to_first_completed_note": 0.05,
+            "time_to_first_completed_chunk": 0.03,
+        },
+        "chunks": {"seconds": 5.0, "planned": 1, "reported": 1},
+        "note_count": 1,
+        "peak_process_rss_bytes": 123456,
+        "memory_scope": "process RSS high-water; accelerator allocation excluded",
+        "clock": "time.perf_counter",
+    }
+    json.dump(performance, open(performance_path, "w", encoding="utf-8"))
+    candidate["raw_artifacts"].append("muscriptor.performance.json")
 if request["backend"] == "rmvpe":
     frames = open(
         __import__("pathlib").Path(args.output).with_name("rmvpe.frames.json"),
@@ -144,6 +178,205 @@ class AIBakeoffTests(unittest.TestCase):
             (bundle / name).write_bytes(f"synthetic {name}".encode())
         return bundle
 
+    def _run_fake_muscriptor_worker(
+        self,
+        directory: str,
+        *,
+        include_note: bool,
+        overlapping_completion_order: bool = False,
+    ) -> tuple[dict[str, object], dict[str, object]]:
+        audio, checkpoint, _worker = self._fixture(directory, SUCCESS_WORKER)
+        config = checkpoint.with_name("config.json")
+
+        class FakeNoteStartEvent:
+            def __init__(
+                self,
+                index: int = 7,
+                start_time: float = 0.1,
+                pitch: float = 64.25,
+            ) -> None:
+                self.index = index
+                self.start_time = start_time
+                self.pitch = pitch
+                self.instrument = "electric_piano"
+
+        class FakeNoteEndEvent:
+            def __init__(
+                self, start: FakeNoteStartEvent, end_time: float = 0.5
+            ) -> None:
+                self.start_event_index = start.index
+                self.start_event = start
+                self.end_time = end_time
+
+        class FakeProgressEvent:
+            def __init__(self) -> None:
+                self.completed = 1
+                self.total = 1
+
+        start = FakeNoteStartEvent()
+        if overlapping_completion_order:
+            later_short_note = FakeNoteStartEvent(8, 0.2, 67.0)
+            events = [
+                start,
+                later_short_note,
+                FakeNoteEndEvent(later_short_note, 0.3),
+                FakeProgressEvent(),
+                FakeNoteEndEvent(start, 0.8),
+            ]
+        elif include_note:
+            events = [start, FakeProgressEvent(), FakeNoteEndEvent(start)]
+        else:
+            events = [FakeProgressEvent()]
+
+        class FakeModel:
+            @classmethod
+            def load_model(cls, _path: str, *, device: str) -> FakeModel:
+                self.assertEqual(device, "cpu")
+                return cls()
+
+            def transcribe(self, _audio: object, **_options: object):
+                for index, event in enumerate(events):
+                    if overlapping_completion_order and index == 1:
+                        time.sleep(0.01)
+                    yield event
+
+        torch_module = types.ModuleType("torch")
+        muscriptor_module = types.ModuleType("muscriptor")
+        muscriptor_module.TranscriptionModel = FakeModel
+        events_module = types.ModuleType("muscriptor.events")
+        events_module.NoteStartEvent = FakeNoteStartEvent
+        events_module.NoteEndEvent = FakeNoteEndEvent
+        events_module.ProgressEvent = FakeProgressEvent
+        performance_path = Path(directory) / "muscriptor.performance.json"
+        request = {
+            "audio_path": str(audio),
+            "roles": ["electric_piano"],
+            "start_seconds": 0.0,
+            "end_seconds": None,
+            "options": {
+                "model_path": str(checkpoint),
+                "model_sha256": hashlib.sha256(checkpoint.read_bytes()).hexdigest(),
+                "model_config_path": str(config),
+                "model_config_sha256": hashlib.sha256(
+                    config.read_bytes()
+                ).hexdigest(),
+                "model_size": "small",
+                "device": "cpu",
+                "prelude_forcing": False,
+                "prelude_forcing_supported": False,
+            },
+        }
+        with (
+            mock.patch.dict(
+                sys.modules,
+                {
+                    "torch": torch_module,
+                    "muscriptor": muscriptor_module,
+                    "muscriptor.events": events_module,
+                },
+            ),
+            mock.patch(
+                "sunofriend.ai_worker.importlib.metadata.version",
+                return_value="0.2.1",
+            ),
+            mock.patch(
+                "sunofriend.ai_worker._peak_process_rss_bytes", return_value=123456
+            ),
+        ):
+            candidate = _transcribe_muscriptor(
+                request,
+                performance_path=performance_path,
+                worker_started_at=time.perf_counter() - 0.001,
+            )
+        performance = json.loads(performance_path.read_text(encoding="utf-8"))
+        return candidate, performance
+
+    def test_peak_rss_units_are_normalised_for_macos_and_linux(self) -> None:
+        self.assertEqual(_normalise_peak_rss_bytes(4096, "darwin"), 4096)
+        self.assertEqual(_normalise_peak_rss_bytes(4096, "linux"), 4_194_304)
+        with self.assertRaisesRegex(ValueError, "non-negative"):
+            _normalise_peak_rss_bytes(-1, "linux")
+
+    def test_real_muscriptor_worker_writes_fresh_process_performance(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            candidate, performance = self._run_fake_muscriptor_worker(
+                directory, include_note=True
+            )
+
+            self.assertEqual(
+                candidate["raw_artifacts"], ["muscriptor.performance.json"]
+            )
+            self.assertNotIn("timings_seconds", candidate["metadata"])
+            self.assertEqual(performance["schema"], MUSCRIPTOR_PERFORMANCE_SCHEMA)
+            self.assertEqual(performance["measurement_mode"], "fresh-process")
+            self.assertEqual(performance["device"], "cpu")
+            self.assertEqual(
+                set(performance["timings_seconds"]),
+                {
+                    "audio_preparation",
+                    "model_load",
+                    "transcription",
+                    "worker_total",
+                    "time_to_first_note_start",
+                    "time_to_first_completed_note",
+                    "time_to_first_completed_chunk",
+                },
+            )
+            self.assertIsNotNone(
+                performance["timings_seconds"]["time_to_first_note_start"]
+            )
+            self.assertIsNotNone(
+                performance["timings_seconds"]["time_to_first_completed_note"]
+            )
+            self.assertIsNotNone(
+                performance["timings_seconds"]["time_to_first_completed_chunk"]
+            )
+            self.assertEqual(
+                performance["chunks"],
+                {"seconds": 5.0, "planned": 1, "reported": 1},
+            )
+            self.assertEqual(performance["note_count"], 1)
+            self.assertEqual(performance["peak_process_rss_bytes"], 123456)
+            self.assertEqual(
+                performance["memory_scope"],
+                "process RSS high-water; accelerator allocation excluded",
+            )
+            self.assertEqual(performance["clock"], "time.perf_counter")
+
+    def test_zero_note_performance_has_null_first_note_timings(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            candidate, performance = self._run_fake_muscriptor_worker(
+                directory, include_note=False
+            )
+
+            self.assertEqual(candidate["notes"], [])
+            self.assertEqual(performance["note_count"], 0)
+            self.assertIsNone(
+                performance["timings_seconds"]["time_to_first_note_start"]
+            )
+            self.assertIsNone(
+                performance["timings_seconds"]["time_to_first_completed_note"]
+            )
+            self.assertIsNotNone(
+                performance["timings_seconds"]["time_to_first_completed_chunk"]
+            )
+
+    def test_first_note_start_is_earliest_valid_start_not_first_completed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            candidate, performance = self._run_fake_muscriptor_worker(
+                directory,
+                include_note=True,
+                overlapping_completion_order=True,
+            )
+
+            self.assertEqual(len(candidate["notes"]), 2)
+            timings = performance["timings_seconds"]
+            self.assertGreater(
+                timings["time_to_first_completed_note"]
+                - timings["time_to_first_note_start"],
+                0.005,
+            )
+
     def test_success_preserves_raw_normalized_midi_logs_and_hashes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             audio, checkpoint, worker = self._fixture(directory, SUCCESS_WORKER)
@@ -170,6 +403,10 @@ class AIBakeoffTests(unittest.TestCase):
             self.assertEqual(result["schema"], AI_RUN_SCHEMA)
             self.assertEqual(saved["status"], "complete")
             self.assertEqual(saved["note_count"], 1)
+            self.assertGreater(saved["worker_subprocess_elapsed_seconds"], 0.0)
+            self.assertLessEqual(
+                saved["worker_subprocess_elapsed_seconds"], saved["elapsed_seconds"]
+            )
             self.assertEqual(request["schema"], AI_REQUEST_SCHEMA)
             self.assertEqual(request["roles"], ["lead vocal"])
             self.assertEqual(request["options"]["model_size"], "small")
@@ -199,6 +436,17 @@ class AIBakeoffTests(unittest.TestCase):
                 hashlib.sha256(checkpoint.read_bytes()).hexdigest(),
             )
             self.assertTrue((run_dir / "candidate.raw.json").is_file())
+            performance_path = run_dir / "muscriptor.performance.json"
+            self.assertTrue(performance_path.is_file())
+            self.assertEqual(
+                candidate["raw_artifacts"], ["muscriptor.performance.json"]
+            )
+            self.assertNotIn("timings_seconds", candidate["metadata"])
+            self.assertIn("muscriptor.performance.json", saved["artifacts"])
+            self.assertEqual(
+                saved["artifacts"]["muscriptor.performance.json"]["sha256"],
+                hashlib.sha256(performance_path.read_bytes()).hexdigest(),
+            )
             self.assertEqual((run_dir / "candidate.mid").read_bytes()[:4], b"MThd")
             programs = json.loads(
                 (run_dir / "candidate.programs.json").read_text(encoding="utf-8")
@@ -649,6 +897,7 @@ class AIBakeoffTests(unittest.TestCase):
             )
             self.assertEqual(manifest["status"], "failed")
             self.assertEqual(manifest["exit_code"], 7)
+            self.assertGreater(manifest["worker_subprocess_elapsed_seconds"], 0.0)
             self.assertIn(
                 "synthetic model failure",
                 (run_dir / "worker.stderr.log").read_text(encoding="utf-8"),
@@ -675,6 +924,7 @@ class AIBakeoffTests(unittest.TestCase):
             )
             self.assertEqual(manifest["status"], "failed")
             self.assertIsNone(manifest["exit_code"])
+            self.assertGreater(manifest["worker_subprocess_elapsed_seconds"], 0.0)
             self.assertIn("timed out", manifest["error"])
 
     def test_real_worker_rejects_model_alias_before_import_or_download(self) -> None:

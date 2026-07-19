@@ -113,6 +113,22 @@ beam 1 and CFG 1.0 with independent five-second chunks. Because that runtime
 does not expose prelude forcing, the manifest records it as unsupported and a
 true request is rejected.
 
+Fresh MuScriptor workers keep nondeterministic execution measurements in the
+separate hash-pinned `muscriptor.performance.json` raw artifact rather than in
+the candidate JSON. `ai_benchmark.py` reuses the matrix verifier, then compares
+only runs with equal source, requested and actual excerpt, BPM, roles, effective
+device, execution identity and path-free platform/Python/PyTorch/MuScriptor
+runtime identity. Its atomic path-free report separates parent pipeline wall
+time, worker subprocess time and inclusive transcription time; records
+first-note/chunk, chunk count and process-RSS evidence; and checks exact
+candidate/MIDI repeatability. Candidate duration must match the request clipped
+to the verified source frames, pipeline/subprocess/worker times must nest, and
+timezone-aware repetition windows must not overlap. Inclusive transcription is
+iteration of MuScriptor's lazy transcription generator and therefore includes
+its preprocessing, condition construction and decoding. Current workers are
+fresh per repetition and reload the model, so the report declares the OS cache
+uncontrolled and cannot claim a warm model or promote a candidate.
+
 When a Workbench candidate is adjacent to a completed AI run,
 `workbench_catalog.py` attaches the same path-free diagnostics. Severe decoder
 codes and zero-note results are diagnostic-only and cannot be rendered or

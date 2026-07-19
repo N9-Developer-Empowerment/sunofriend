@@ -35,6 +35,7 @@ clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 | Store and version reusable parts | `clip-import`, `clip-transform`, `clip-export` | Immutable Clip v1 assets with explicit musical or stem-locked timing |
 | Preview or route MIDI to an instrument | `preview`, `play` | FluidSynth WAV preview or CoreMIDI/IAC playback |
 | Run an optional local AI transcription challenger | `ai-transcribe` | Isolated worker, explicit local checkpoint, raw candidate, MIDI, hashes and immutable logs |
+| Benchmark repeated local AI runs | `ai-benchmark` | Verified path-free timing, memory, chunk and exact-output repeatability report over completed immutable runs |
 | Compare immutable AI transcription lanes | `ai-matrix` | Path-free per-role quality, label stability, chunk-boundary and cross-lane overlap diagnostics without changing raw MIDI |
 | Partition one AI result by its reported label | `ai-label-split` | Exact source-event partition plus deterministic requested/complement MIDI auditions and a byte-identical full-candidate control |
 | Test one MIDI-defined layer inside a mixed stem | `midi-mask` | Short, local harmonic target plus residual with persisted reconstruction evidence and no automatic promotion |
@@ -546,7 +547,15 @@ writes:
   model evidence;
 - `candidate.expression.json`, containing note-local source-energy evidence;
 - `candidate.expression.mid`, with relative source-derived velocities when
-  the model supplies none.
+  the model supplies none; and
+- for MuScriptor, `muscriptor.performance.json`, containing fresh-process
+  audio-preparation, model-load, inclusive-transcription, first-note,
+  first-completed-chunk, chunk-count and process-RSS evidence. Inclusive
+  transcription is iteration of MuScriptor's lazy `model.transcribe` result,
+  so it includes the backend's preprocessing, condition construction and
+  decoding; it is not a model-forward-only timer. Timing stays outside
+  `candidate.json`, so repeated deterministic note output can still be compared
+  byte for byte.
 
 Frame-producing backends may declare additional immutable evidence. RMVPE adds
 `rmvpe.frames.json`; PESTO adds `pesto.frames.json` and
@@ -560,6 +569,42 @@ deliberately rejected so inference cannot trigger an unrecorded checkpoint
 download. Neither MIDI has undergone Sunofriend melody repair. Do not promote
 or audition a candidate whose quality status is `review-required` until its
 warnings have been understood; extreme polyphony can overload a synth.
+
+Compare two or more completed, exactly comparable MuScriptor repetitions
+without launching a model:
+
+```bash
+.venv/bin/sunofriend ai-benchmark \
+  --run "/absolute/path/to/repetition-01/RUN_DIR" \
+  --run "/absolute/path/to/repetition-02/RUN_DIR" \
+  --out "/absolute/fresh/path/small-cpu-fresh.json"
+```
+
+`ai-benchmark` reuses the strict immutable-run verifier and requires the same
+source hash, requested and actually processed excerpt, BPM, requested roles,
+device, checkpoint, model config, worker, execution profile, platform/
+architecture, Python, PyTorch and MuScriptor versions. It reports pipeline,
+worker and inclusive-transcription real-time factors; model-load and first-note
+times; chunks; process peak RSS; five-second-boundary diagnostics; and exact
+candidate/MIDI repeatability. Every real-time factor uses actual processed
+audio duration verified from the pinned source frames, including an excerpt
+clipped at end-of-file. Repetition timestamps must be timezone-aware and their
+execution windows must not overlap, so a contended concurrent run cannot be
+presented as a first-versus-later comparison. The output is
+path-free, written only to a fresh path and cannot promote a musical candidate.
+Legacy runs remain comparable with performance marked unavailable.
+
+Current runs are one fresh worker process and one model load per repetition.
+The operating-system file cache is uncontrolled, so a second run is **not** a
+warm-model benchmark. On the first 15-second Lidl small-model CPU baseline,
+two repetitions produced byte-identical 107-note MIDI. Median pipeline time
+was `5.189 s` (RTF `0.346`), worker subprocess time `5.115 s`, model load
+`0.291 s`, inclusive transcription `3.655 s` (RTF `0.244`), first completed
+note `1.580 s`, first completed five-second chunk `2.541 s`, and process peak
+RSS about `1.06 GiB`. The first/later wall ratio was `1.117`; that difference
+is evidence under an uncontrolled OS cache, not a claimed warm-start gain. The
+five reviewed Phase 5.1 selections and GarageBand handoff hashes remained
+unchanged.
 
 After a short bake-off has shown that MuScriptor is useful for the material,
 MuScriptor and GAME can also be requested directly from the normal vocal

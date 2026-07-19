@@ -1,6 +1,6 @@
 # Phase 5: MuScriptor Full-Mix and Community Learning
 
-Status: **Phase 5.0 complete; Phase 5.1 private M4 and M1/M2/M3 listening complete; no public service or new checkpoint download is authorised**
+Status: **Phase 5.0 and 5.1 complete; Phase 5.2 fresh-process small-CPU baseline complete; no public service or new checkpoint download is authorised**
 Drafted: 19 July 2026
 Scope: accurate stem/full-mix MIDI, faster local inference, GarageBand-ready
 instrument choices, a primary local web workbench and consented feedback
@@ -543,11 +543,23 @@ Optimisations must be introduced one at a time:
 8. **Selective beam search:** use it only on high-disagreement phrases after it
    proves a gain; never pay the full-song cost by default.
 
-Initial targets are relative, because hardware and model-size baselines are not
-yet measured: cut warm repeated-work wall time by at least 50%, avoid re-running
-unchanged roles, and make the small preview available before the full-quality
-pass. A real-time-factor target should be set only after the first complete
-hardware matrix.
+Initial targets remain relative, because the complete hardware and model-size
+matrices are not yet measured: cut warm repeated-work wall time by at least
+50%, avoid re-running unchanged roles, and make the small preview available
+before the full-quality pass. A cross-device real-time-factor target should be
+set only after the first complete hardware matrix.
+
+The first measurable baseline is now implemented without adding a checkpoint.
+Each fresh MuScriptor process writes a separate hash-pinned
+`muscriptor.performance.json` so nondeterministic timing never enters the raw or
+normalised candidate JSON. `sunofriend ai-benchmark` verifies comparable
+completed runs and records pipeline/subprocess/inclusive-transcription RTF,
+model load, first-note and first-chunk latency, chunk counts, process peak RSS,
+boundary diagnostics and exact candidate/MIDI repeatability. Its cache
+declaration is deliberately conservative: the worker and model are fresh per
+repetition,
+there is no application cache, the operating-system file cache is uncontrolled
+and no cold-start or warm-model claim is made.
 
 ## Community feedback system
 
@@ -838,12 +850,40 @@ server.
 
 ### 5.2 — Model-size and performance bake-off
 
-- After explicit checkpoint acceptance, pin medium and large separately.
-- Benchmark CPU/MPS (and CUDA only on contributed hardware), cold/warm,
-  persistent/fresh, greedy/beam and safe/fast chunk settings.
-- Success: choose `preview`, `balanced` and `best` presets from measured
-  Pareto results; do not make large the default merely because its paper score
-  is higher.
+- [x] Add a hash-pinned fresh-process performance artifact with separate audio
+  preparation, model load, inclusive transcription, first-note, first-chunk,
+  chunk-count and process-RSS evidence; keep it outside deterministic candidate
+  JSON. Inclusive transcription covers iteration of MuScriptor's lazy result,
+  including backend preprocessing, condition construction and decoding.
+- [x] Add `ai-benchmark` as a read-only, path-free comparator over at least two
+  immutable runs with strict source/requested-and-actual-excerpt/BPM/roles/
+  device/checkpoint/config/worker/execution/runtime equality and exact
+  candidate/MIDI repeatability. Require source-frame-derived duration, nested
+  pipeline/subprocess/worker timing and non-overlapping repetition windows.
+- [x] Run the existing small MuScriptor 0.2.1 CPU M2 golden twice. Both runs
+  produced byte-identical 107-note MIDI. Median pipeline time was `5.189 s`
+  (RTF `0.346`), worker subprocess time `5.115 s`, inclusive transcription
+  `3.655 s` (RTF `0.244`), model load `0.291 s`, first completed note `1.580 s`,
+  first completed chunk `2.541 s`, and median peak process RSS
+  `1,142,669,312` bytes (about `1.06 GiB`). The first/later wall ratio was
+  `1.117` under an uncontrolled OS file cache.
+- [x] Reverify that the five Phase 5.1 selection hash
+  `1dce19ce7595a72b8417225b8d23679e0fc92e53581807ccf9db6ea929d7709c`
+  and handoff ZIP hash
+  `7824e25850037821287fd77337ae9e8ad2d61cea2cbd2ea57e3b2f92e0c532f8`
+  remain unchanged; the new full-candidate MIDI also matches the earlier M2
+  byte for byte.
+- [ ] Add a persistent worker before claiming any warm-model result, then add
+  a content-addressed application cache and measure each change separately.
+- [ ] Benchmark MPS only when the installed runtime exposes it, and CPU/CUDA on
+  separately identified contributed hardware.
+- [ ] After separate explicit checkpoint acceptance, pin medium and large one
+  at a time; neither is authorised by this baseline.
+- [ ] Test greedy/beam, safe/fast chunk settings and any later batch change one
+  variable at a time without replacing the five reviewed musical controls.
+- Success: choose `preview`, `balanced` and `best` presets from measured Pareto
+  results; do not make large the default merely because its paper score is
+  higher.
 
 ### 5.3 — Hybrid phrase consensus
 
@@ -922,9 +962,11 @@ or zero-note candidates from becoming main/optional choices.
 The private M4 bass/pluck gate, Workbench overlap/archive follow-through and
 three-row M1/M2/M3 bass/keys/vocal review are complete. The evidence supports
 role-specific routing and retained alternatives, not a universal model winner.
-Phase 5.2 can now benchmark the existing small model and cache path; medium or
-large checkpoints, decoding-speed challengers and any public contribution
-remain later, separately authorised work.
+The Phase 5.2 fresh-process small-CPU baseline is now complete. A persistent
+worker is the next speed increment; an application content cache follows only
+after that worker has a verified unchanged-output control. Medium or large
+checkpoints, other devices, decoding-speed challengers and any public
+contribution remain later, separately authorised work.
 
 Keep sample-accurate level-matched short-loop review as a requirement before a
 public listening beta. The current media-element switching is deliberately

@@ -170,6 +170,62 @@ class AIMatrixTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 write_ai_candidate_matrix(lanes, output)
 
+    def test_matrix_uses_actual_worker_excerpt_duration_for_rtf(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            audio, checkpoint, worker, runs = self._fixture(root)
+            sample_rate = 8_000
+            soundfile.write(
+                audio,
+                np.zeros(sample_rate * 9, dtype=np.float32),
+                sample_rate,
+            )
+            m0 = self._run(
+                audio=audio,
+                checkpoint=checkpoint,
+                worker=worker,
+                runs=runs,
+                run_id="m0-eof-clipped",
+                end_seconds=15.0,
+            )
+            candidate_path = m0 / "candidate.json"
+            candidate = json.loads(candidate_path.read_text(encoding="utf-8"))
+            candidate["metadata"]["excerpt"]["duration_seconds"] = 9.0
+            candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+            run_path = m0 / "run.json"
+            run = json.loads(run_path.read_text(encoding="utf-8"))
+            run["artifacts"]["candidate.json"] = _relative_record(candidate_path)
+            run_path.write_text(json.dumps(run), encoding="utf-8")
+
+            report = build_ai_candidate_matrix([("M0", m0)])
+            row = report["lanes"][0]
+
+            self.assertEqual(row["duration_seconds"], 9.0)
+            self.assertEqual(
+                row["real_time_factor"],
+                round(float(run["elapsed_seconds"]) / 9.0, 6),
+            )
+
+    def test_matrix_rejects_invalid_or_source_inconsistent_excerpt_duration(self) -> None:
+        for value, message in (
+            (True, "duration is invalid"),
+            (9.0, "disagrees with verified source frames"),
+        ):
+            with self.subTest(value=value), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                m0, _m3 = self._runs(root)
+                candidate_path = m0 / "candidate.json"
+                candidate = json.loads(candidate_path.read_text(encoding="utf-8"))
+                candidate["metadata"]["excerpt"]["duration_seconds"] = value
+                candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+                run_path = m0 / "run.json"
+                run = json.loads(run_path.read_text(encoding="utf-8"))
+                run["artifacts"]["candidate.json"] = _relative_record(candidate_path)
+                run_path.write_text(json.dumps(run), encoding="utf-8")
+
+                with self.assertRaisesRegex(ValueError, message):
+                    build_ai_candidate_matrix([("M0", m0)])
+
     def test_m4_role_overlap_compares_genuine_one_role_passes_without_a_winner(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
