@@ -152,6 +152,12 @@ def _load_lane(
     run = _read_json(run_dir / "run.json")
     if run.get("schema") != _RUN_SCHEMA or run.get("status") != "complete":
         raise ValueError(f"AI matrix lane {lane} is not a completed immutable run")
+    if run.get("worker_execution_mode") == "application-cache-hit":
+        raise ValueError(
+            f"AI matrix lane {lane} is an application-cache hit; use the original "
+            "fresh inference for musical matrices and ai-cache-benchmark for cache "
+            "timing evidence"
+        )
     artifacts = run.get("artifacts")
     if not isinstance(artifacts, Mapping):
         raise ValueError(f"AI matrix lane {lane} has no artifact manifest")

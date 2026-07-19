@@ -369,6 +369,8 @@ class AIRuntimeTests(unittest.TestCase):
                         "1.25",
                         "--model-size",
                         "small",
+                        "--application-cache-dir",
+                        str(root / "private-cache"),
                     ]
                 )
 
@@ -379,6 +381,10 @@ class AIRuntimeTests(unittest.TestCase):
             self.assertEqual(options["cfg_coef"], 1.25)
             self.assertEqual(options["model_size"], "small")
             self.assertFalse(options["prelude_forcing"])
+            self.assertEqual(
+                run_transcription.call_args.kwargs["application_cache_dir"],
+                str(root / "private-cache"),
+            )
 
     @patch("sunofriend.ai_bakeoff.run_ai_transcription")
     @patch("sunofriend.ai_runtime.resolve_game_model")

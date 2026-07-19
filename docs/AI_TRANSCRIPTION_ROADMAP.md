@@ -2,7 +2,10 @@
 
 Status: Phase 1 and Phase 2 engineering complete; Phase 3 complete; Phase 4
 fixed-MIDI review complete; Phase 5.1 private listening and the Phase 5.2
-fresh-process small-CPU baseline complete
+fresh-process and bounded reused-model small-CPU golden measurements complete;
+the opt-in exact-result application-cache implementation and private golden are
+complete, while broader production integration remains
+
 Started: 15 July 2026  
 Scope: local-first AI assistance for transcription, review, instrument matching
 and source-derived instruments
@@ -70,7 +73,7 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
-| 5. MuScriptor Full-Mix and Community Learning | **In progress: Phase 5.0/5.1 complete; Phase 5.2 fresh-process small-CPU baseline complete** | Local Workbench, immutable MuScriptor evidence, M0–M4 matrices, exact label partitions and a verified repeated-run performance report are implemented; persistent worker, cache, other devices and model-size comparisons remain |
+| 5. MuScriptor Full-Mix and Community Learning | **In progress: Phase 5.0/5.1 complete; Phase 5.2 application-cache gate passed** | Local Workbench, immutable MuScriptor evidence, M0–M4 matrices, exact label partitions, fresh-process and bounded reused-model CPU baselines, explicit exact-result caching and the private cache golden are complete; workflow integration, other devices and model-size comparisons remain |
 
 ## Phase 1: AI Transcription Bake-off v1
 
@@ -517,6 +520,101 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-07-19 — Exact MuScriptor raw-result application cache
+
+- Goal: avoid rerunning one byte-identical deterministic MuScriptor request
+  without calling a stored result resident-model reuse or inference.
+- Change or experiment: added explicit
+  `ai-transcribe --application-cache-dir`, a private content-addressed
+  raw-result cache, fail-closed verification, fresh-run materialisation with
+  current post-processing, Workbench cache provenance, and read-only
+  `ai-cache-benchmark` over one stored miss plus at least two verified hits.
+- Inputs: deterministic synthetic source/checkpoint/worker regression fixtures,
+  then the existing private 15-second Lidl M2 full-mix golden at 119 BPM as one
+  fresh miss followed by two exact hits.
+- Model/runtime/checkpoint: MuScriptor 0.2.1 small on CPU, Python 3.12.10,
+  PyTorch 2.13.0, greedy decoding, batch 1, beam 1, CFG 1.0 and three
+  independent five-second chunks. Stochastic sampling is rejected; no model
+  was downloaded and no checkpoint licence changed.
+- Evidence and metrics: the private gate produced one `miss-stored` run and two
+  `verified-hit` runs under cache key
+  `ea405ee021800e1fb980d39cab8c274e888a45c74b838f29b13ead8f0eb4b3a9`.
+  Both hits started no worker, loaded no model and executed no inference. All
+  runs produced 107 notes with candidate JSON hash
+  `fba42cf43cbcacf614e25936ff1457be44a4f68f37f9e257d291c843df53c552`
+  and MIDI hash
+  `9bc1ede96cf8be5704573456753f7892748c14ecbe1b1c294249afb0c45d4e05`;
+  raw candidate, expression JSON/MIDI, quality and program mapping were also
+  identical. Miss pipeline time was `6.295317 s`; verified-hit median was
+  `1.077984 s` (RTF `0.071866`), an observed hit/miss pipeline ratio of
+  `0.171236`. The path-free benchmark SHA-256 is
+  `6f0cb17c9a63f45dbf7be5c3886a2a977f79881dc805a14b5b0e691f54187d86`.
+- Listening result: not applicable. Cache evidence cannot promote, select or
+  repair a musical candidate.
+- Decision: the private exact-repeat gate passes. Keep the cache explicit and
+  disabled by default, cache only raw model evidence, rebuild derived MIDI with
+  current Sunofriend, and do not silently integrate it into Workbench
+  processing. The five reviewed selection hash and GarageBand handoff ZIP
+  remain `1dce19ce7595a72b8417225b8d23679e0fc92e53581807ccf9db6ea929d7709c`
+  and `7824e25850037821287fd77337ae9e8ad2d61cea2cbd2ea57e3b2f92e0c532f8`.
+- Problems/risks: cache roots and immutable runs are private; content hashes
+  and runtime identity can still identify material or a machine. Disk eviction
+  is not implemented, the operating-system file cache remains uncontrolled,
+  and exact reuse proves neither independent model agreement nor accuracy.
+- Next smallest step: retain this as an opt-in execution primitive while Phase
+  5 proceeds to measured model/preset comparisons and hybrid phrase consensus;
+  add eviction or broader Workbench processing only behind a separate design
+  and privacy gate.
+
+### 2026-07-19 — Bounded reused-model session harness
+
+- Goal: isolate the cost and output effects of reusing one loaded MuScriptor
+  model without conflating that change with application caching or a production
+  multi-song service.
+- Change or experiment: added `ai-transcribe-session` for 2–20 exact serial
+  copies of one fixed source/roles/excerpt/request through one parent-owned
+  inherited Unix socket pair, plus read-only `ai-session-benchmark` evidence.
+- Inputs: the private 15-second Lidl M2 full-mix golden at 119 BPM, repeated
+  three times in one session, plus two new final-worker fresh-process controls.
+- Model/runtime/checkpoint: MuScriptor 0.2.1 small on CPU, Python 3.12.10,
+  PyTorch 2.13.0, greedy decoding, batch 1, beam 1, CFG 1.0 and three
+  independent five-second chunks. Checkpoint, config and worker hashes were
+  pinned; no model was downloaded.
+- Evidence and metrics: startup/model load is separate; request 1 has a resident
+  model but no prior transcription and is not warm/cold evidence; requests 2+
+  are reused-model warm. All five runs produced the same 107-note candidate
+  JSON hash
+  `fba42cf43cbcacf614e25936ff1457be44a4f68f37f9e257d291c843df53c552`
+  and MIDI hash
+  `9bc1ede96cf8be5704573456753f7892748c14ecbe1b1c294249afb0c45d4e05`.
+  Model load was `0.279094 s`; request-1 pipeline was `3.983435 s`; warm
+  pipeline median was `3.680823 s` (RTF `0.245388`); warm worker-request median
+  was `3.651402 s`; and warm inclusive-transcription median was `3.641215 s`.
+  The new fresh controls had median pipeline `5.193385 s` and inclusive
+  transcription `3.731320 s`, yielding observed warm/fresh ratios `0.708752`
+  and `0.975852` respectively. Parent-observed session total was `16.189478 s`
+  (`5.396493 s` amortised per request). Startup, first-request, request-2,
+  request-3 and final process-RSS high-water values were `1,062,928,384`,
+  `1,122,189,312`, `1,145,618,432`, `1,157,349,376` and `1,157,365,760` bytes.
+- Listening result: not applicable; this increment cannot promote, select or
+  mutate a musical candidate.
+- Decision: the exact-repeat CPU gate passes and justifies retaining the
+  bounded worker for controlled reuse experiments. Keep it a diagnostic
+  harness; do not describe it as a background service, multi-song role worker
+  or content cache. The warm/fresh ratios are observed end-to-end differences,
+  not proof that model reuse alone caused the gain.
+- Problems/risks: the private session tree contains paths. Its separate report
+  is path-free, but hashes and runtime identity can still be identifying and do
+  not provide publication consent. The operating-system file cache is
+  uncontrolled. RSS is cumulative process high-water evidence, excludes
+  accelerator allocation and is not a standalone leak measurement. The five
+  reviewed Phase 5.1 selection hash and handoff ZIP hash remain
+  `1dce19ce7595a72b8417225b8d23679e0fc92e53581807ccf9db6ea929d7709c`
+  and `7824e25850037821287fd77337ae9e8ad2d61cea2cbd2ea57e3b2f92e0c532f8`.
+- Next smallest step: completed by the separate exact-result application-cache
+  increment and private golden above. Broader Workbench processing remains a
+  later, separately reviewed gate.
+
 ### 2026-07-19 — Phase 5.2 fresh-process small-model baseline
 
 - Goal: establish an honest, reproducible speed baseline before adding a
@@ -565,8 +663,9 @@ Each working day should aim for one narrow vertical improvement:
 - Problems/risks: process RSS excludes accelerator allocation; pipeline time
   includes local post-processing but ends before the final runtime snapshot and
   manifest write; two repetitions are a baseline, not a hardware distribution.
-- Next smallest step: implement one persistent local small-model worker and
-  compare true reused-model repetitions with this exact fresh-process control.
+- Next smallest step: completed by the bounded resident-model gate plus the
+  separate application-cache implementation and private golden above. Broader
+  integration remains later work.
 
 ### 2026-07-19 — Safe-lane bass, keys and vocal review completed
 

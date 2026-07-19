@@ -898,6 +898,9 @@ class AIBakeoffTests(unittest.TestCase):
             self.assertEqual(manifest["status"], "failed")
             self.assertEqual(manifest["exit_code"], 7)
             self.assertGreater(manifest["worker_subprocess_elapsed_seconds"], 0.0)
+            self.assertTrue(manifest["worker_process_started_for_run"])
+            self.assertFalse(manifest["inference_executed_for_run"])
+            self.assertFalse(manifest["model_loaded_for_run"])
             self.assertIn(
                 "synthetic model failure",
                 (run_dir / "worker.stderr.log").read_text(encoding="utf-8"),

@@ -120,7 +120,7 @@ evidence including:
 - requested and detected broad instrument labels;
 - note count, density, polyphony, short/duplicate-note ratios and warnings;
 - activity around local five-second boundaries; and
-- elapsed time and real-time factor.
+- execution mode/cache status and pipeline elapsed time and real-time factor.
 
 These values explain how a result was made; they do not select the most musical
 one. Ordinary label leakage stays auditionable because a useful line may be in
@@ -128,6 +128,14 @@ the wrong broad family. Severe decoder bursts and zero-note results are marked
 diagnostic-only: their original files remain available, but preview rendering
 and **Use as main**/**Keep optional** are disabled. **Needs correction** and
 **Reject** remain available so the failure can still be recorded.
+
+For a verified application-cache hit, the card explicitly says that no AI
+worker, model load or inference ran for this output. Its elapsed time and
+real-time factor describe the current parent pipeline—verified lookup, copying
+and post-processing—not inference. The copied
+`muscriptor.performance.json` still belongs to the original fresh miss. A hit
+remains subject to the same quality and zero-note gates and is never promoted
+automatically.
 
 Use `sunofriend ai-matrix` before the Workbench when several completed lanes
 need one reproducible comparison. The report adds per-instrument quality,
@@ -171,6 +179,19 @@ requested label is blocked, while a non-empty safe split remains
 review-required and has no automatic-promotion path.
 
 ## Compare with one consistent renderer
+
+Do not confuse the Workbench neutral-preview cache with the opt-in MuScriptor
+application cache. The preview cache stores only deterministic FluidSynth
+audition proxies for already discovered MIDI. Workbench does not run
+MuScriptor or look up/populate its raw-result cache; it only verifies and
+displays cache provenance from a completed adjacent `ai-transcribe` run. The
+operating-system file cache is uncontrolled and is neither of these mechanisms.
+On a verified hit the card says that no model ran and treats elapsed time as
+pipeline timing. `miss-stored` is the single published fresh control expected
+by `ai-cache-benchmark`. A concurrent losing producer can instead be
+`miss-verified-existing`: it ran inference and verified the winner's raw
+candidate as identical, but it is not a benchmark control and Workbench does
+not interpret it as a cache hit.
 
 Set a short recognisable loop and use the source/Candidate A/B/C buttons. Each
 button resumes at the shared position in seconds; pressing a browser player's

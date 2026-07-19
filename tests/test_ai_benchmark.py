@@ -221,6 +221,17 @@ class AIPerformanceBenchmarkTests(unittest.TestCase):
         mutate(run)
         run_path.write_text(json.dumps(run), encoding="utf-8")
 
+    def _strip_current_execution_fields(self, run: dict[str, object]) -> None:
+        for field in (
+            "worker_execution_mode",
+            "worker_process_started_for_run",
+            "inference_executed_for_run",
+            "model_loaded_for_run",
+            "application_cache",
+            "worker_transport",
+        ):
+            run.pop(field, None)
+
     def test_report_is_deterministic_path_free_and_aggregates_repetitions(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -264,6 +275,18 @@ class AIPerformanceBenchmarkTests(unittest.TestCase):
                 },
             )
             self.assertEqual(report["first_vs_later_median_wall_ratio"], 2.0)
+            self.assertEqual(
+                report["execution_evidence"],
+                {
+                    "explicit_current_count": 2,
+                    "legacy_v1_count": 0,
+                    "legacy_policy": (
+                        "A legacy v1 run is accepted only with a successful "
+                        "non-empty subprocess command and no session or "
+                        "application-cache evidence."
+                    ),
+                },
+            )
             elapsed = report["aggregates"]["pipeline_elapsed_seconds"]
             self.assertEqual(elapsed, {"count": 2, "min": 5.0, "median": 7.5, "max": 10.0})
             model_load = report["aggregates"]["performance_model_load_seconds"]
@@ -294,6 +317,12 @@ class AIPerformanceBenchmarkTests(unittest.TestCase):
             self.assertTrue(
                 all(row["performance_status"] == "verified" for row in report["repetitions"])
             )
+            self.assertTrue(
+                all(
+                    row["execution_evidence"] == "explicit-current-fields"
+                    for row in report["repetitions"]
+                )
+            )
 
             output = root / "reports" / "benchmark.json"
             written = write_ai_performance_benchmark([first, second], output)
@@ -301,6 +330,55 @@ class AIPerformanceBenchmarkTests(unittest.TestCase):
             self.assertEqual(json.loads(output.read_text(encoding="utf-8")), report)
             with self.assertRaises(FileExistsError):
                 write_ai_performance_benchmark([first, second], output)
+
+    def test_accepts_tightly_guarded_legacy_v1_fresh_execution_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = self._fixture(Path(temporary))
+            first = self._run(fixture, "benchmark-001")
+            second = self._run(fixture, "benchmark-002")
+            self._rewrite_run(first, self._strip_current_execution_fields)
+            self._rewrite_run(second, self._strip_current_execution_fields)
+
+            report = build_ai_performance_benchmark([first, second])
+
+            self.assertEqual(report["execution_evidence"]["legacy_v1_count"], 2)
+            self.assertEqual(
+                {row["execution_evidence"] for row in report["repetitions"]},
+                {"legacy-v1-fresh-subprocess"},
+            )
+
+    def test_rejects_partial_or_cache_like_legacy_execution_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = self._fixture(Path(temporary))
+            first = self._run(fixture, "benchmark-001")
+            partial = self._run(fixture, "benchmark-002")
+            self._rewrite_run(
+                partial,
+                lambda run: run.pop("inference_executed_for_run"),
+            )
+            with self.assertRaisesRegex(ValueError, "incomplete execution fields"):
+                build_ai_performance_benchmark([first, partial])
+
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = self._fixture(Path(temporary))
+            first = self._run(fixture, "benchmark-001")
+            cache_like = self._run(fixture, "benchmark-002")
+
+            def make_cache_like(run: dict[str, object]) -> None:
+                self._strip_current_execution_fields(run)
+                run["command"] = []
+                run["exit_code"] = None
+                artifacts = run["artifacts"]
+                assert isinstance(artifacts, dict)
+                artifacts["cache.performance.json"] = {
+                    "path": "cache.performance.json",
+                    "bytes": 1,
+                    "sha256": "0" * 64,
+                }
+
+            self._rewrite_run(cache_like, make_cache_like)
+            with self.assertRaisesRegex(ValueError, "cache-disabled fresh-process"):
+                build_ai_performance_benchmark([first, cache_like])
 
     def test_rejects_fewer_or_duplicate_runs_and_duplicate_run_ids(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

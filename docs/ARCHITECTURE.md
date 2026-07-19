@@ -24,6 +24,12 @@ CLI parsing (`cli.py`)
         +--> isolated learned cleanup challenger (`ai_cleanup.py`,
         |                                         `ai_cleanup_worker.py`)
         +--> immutable AI lane comparison (`ai_matrix.py`)
+        +--> fresh-process AI timing comparison (`ai_benchmark.py`)
+        +--> bounded exact-repeat MuScriptor session (`ai_session.py`,
+        |                                             `ai_worker_session.py`)
+        +--> reused-model session verification (`ai_session_benchmark.py`)
+        +--> exact MuScriptor raw-result reuse (`ai_cache.py`)
+        +--> application-cache verification (`ai_cache_benchmark.py`)
         +--> reviewed multi-role MIDI challenger (`midi_role_split.py`)
         +--> fixed-MIDI timbre baseline (`timbre_resynthesis.py`)
         +--> local decision workbench (`workbench_catalog.py`,
@@ -128,11 +134,98 @@ iteration of MuScriptor's lazy transcription generator and therefore includes
 its preprocessing, condition construction and decoding. Current workers are
 fresh per repetition and reload the model, so the report declares the OS cache
 uncontrolled and cannot claim a warm model or promote a candidate.
+Pre-session/cache v1 manifests without the newer execution fields remain
+readable only while all hash-pinned external evidence still matches and under
+a narrow legacy contract: successful non-empty subprocess command, null worker
+transport and no cache artifacts. In particular, a historical run pointing at
+a worker file that has since changed cannot be re-verified. The report counts
+and labels accepted legacy rows instead of silently treating them as current
+evidence.
+
+The bounded MuScriptor session is a distinct diagnostic execution boundary.
+`ai_session.py` prepares one immutable request template and starts one
+parent-owned worker for 2–20 exact serial repetitions. `ai_worker_session.py`
+creates an inherited Unix socket pair rather than a listening socket, pins the
+worker/template/source/checkpoint/config identities, enforces contiguous
+request sequence and exact template equality, and reaps the process on close,
+failure or interruption. `ai_worker.py` loads the model before its ready
+message, handles no more than the declared request count and exits. It is not a
+daemon, production role queue, multi-song API or application content cache.
+
+Each repetition still passes through `ai_bakeoff.py`, producing the normal
+immutable candidate, MIDI, quality, expression, provenance and run manifest.
+Only the transport and performance schema differ. Startup and model-load
+timing live in session-level evidence; each request records its own inclusive
+transcription and parent round-trip evidence. Request 1 has an already resident
+model but no prior transcription to reuse, so it is neither a warm-request
+measurement nor a cold-start claim. Requests 2 and later are the only
+reused-model warm measurements. Application cache hits are always zero and the
+operating-system file cache remains uncontrolled.
+
+The session root is a private, path-bearing evidence tree containing the fixed
+request template, started/ready/closed lifecycle records, worker logs and one
+normal run directory per repetition. Successful close re-hashes the source,
+checkpoint and adjacent model config. Each request is byte-matched to the
+startup template, while the read-only verifier rechecks the pinned worker and
+template. The session
+cannot select, promote or mutate a candidate and does not alter the Workbench.
+`ai_benchmark.py` deliberately rejects these repetitions because its schema is
+fresh-process-only.
+
+`ai_session_benchmark.py` performs the read-only publication boundary. It
+re-verifies the full session tree, exact output repeatability, serial timing,
+single model instance/load and warm-request flags, then publishes only
+whitelisted path-free fields. With `--fresh-run`, it requires at least two
+strictly comparable, repeatable fresh-process controls before calculating
+warm-to-fresh ratios. Path-free is a structural privacy property, not consent:
+content hashes and platform/Python/PyTorch/MuScriptor identity can still be
+identifying. No session or benchmark action downloads a checkpoint or changes
+its licence terms.
+
+The application cache is a third, mutually exclusive execution regime.
+`ai_cache.py` builds a canonical path-free key from source content and audio
+layout, the exact ordered request (including excerpt and BPM), deterministic
+MuScriptor options, checkpoint/config/worker hashes and runtime/device
+identity. It stores only the verified raw candidate and the original
+fresh-process `muscriptor.performance.json` under a private content-addressed
+namespace. Source audio, checkpoints and derived MIDI are not cache payloads.
+The cache root is owner-only: a missing root is created with mode `0700`, while
+an existing root with any group or other permissions is rejected.
+Every verified hit is copied into a fresh immutable run without hard links;
+`ai_bakeoff.py` then repeats current quality assessment, GM mapping,
+source-expression recovery and MIDI derivation. A hit has an empty worker
+command and explicit false worker/model/inference flags. Invalid, linked or
+inconsistent entries fail closed without an inference fallback.
+Concurrent identical misses publish exactly one entry. A losing producer is
+recorded as `miss-verified-existing`: inference ran, the winning raw candidate
+was verified identical and the producer keeps its own timing, but that status
+is not the `miss-stored` control required by `ai-cache-benchmark`.
+
+`ai_cache_benchmark.py` re-verifies one `miss-stored` run and at least two
+serial `verified-hit` runs against one immutable entry. It separates current
+lookup, materialisation, post-processing and pipeline timing from the copied
+origin-inference timing and writes a fresh report without paths or
+caller-supplied run IDs. Hashes, timestamps and runtime identity remain
+potentially identifying. It cannot promote or mutate a result. Fresh
+`ai_benchmark.py` rejects every cache-enabled run;
+`ai_matrix.py` rejects cache hits so the original fresh miss remains the
+musical evidence lane.
+
+The four caching/reuse terms are deliberately distinct:
+
+| Mechanism | What is reused | Does inference run? | Evidence meaning |
+| --- | --- | --- | --- |
+| Bounded MuScriptor session | One resident model inside one bounded worker | Yes, for every request | Requests 2+ are reused-model warm; no application-cache hit |
+| AI application cache | One prior verified raw MuScriptor result | No, on a verified hit | Current cache/pipeline timing plus separate original inference evidence |
+| Workbench preview cache | A deterministic FluidSynth audition proxy for existing MIDI | No transcription is requested | Rendering reuse only; it does not avoid or claim AI inference |
+| Operating-system file cache | Uncontrolled filesystem pages | Unknown and uncontrolled | Never sufficient for a cold-, warm-model- or application-cache claim |
 
 When a Workbench candidate is adjacent to a completed AI run,
 `workbench_catalog.py` attaches the same path-free diagnostics. Severe decoder
 codes and zero-note results are diagnostic-only and cannot be rendered or
 selected as main/optional; ordinary label leakage remains reviewable.
+For an application-cache hit it labels elapsed time and real-time factor as
+pipeline-not-inference and states that no worker, model load or inference ran.
 `workbench_server.py` and `workbench_artifacts.py` reverify hashes at each
 serve, render, arrangement and handoff boundary so catalog discovery cannot be
 invalidated silently by a later file change. The pinned SoundFont is rechecked

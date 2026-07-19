@@ -14,9 +14,13 @@ import importlib.metadata
 import json
 import math
 import os
+import re
 import resource
+import secrets
+import socket
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +28,14 @@ from typing import Any
 REQUEST_SCHEMA = "sunofriend.ai-transcription-request.v1"
 CANDIDATE_SCHEMA = "sunofriend.ai-transcription-candidate.v1"
 MUSCRIPTOR_PERFORMANCE_SCHEMA = "sunofriend.muscriptor-performance.v1"
+MUSCRIPTOR_SESSION_REQUEST_PERFORMANCE_SCHEMA = (
+    "sunofriend.muscriptor-session-request-performance.v1"
+)
+MUSCRIPTOR_SESSION_COMMAND_SCHEMA = "sunofriend.muscriptor-session-command.v1"
+MUSCRIPTOR_SESSION_RESPONSE_SCHEMA = "sunofriend.muscriptor-session-response.v1"
+MUSCRIPTOR_SESSION_TRANSPORT = "inherited-unix-socketpair-json-lines-v1"
+MUSCRIPTOR_SESSION_PROTOCOL_PREFIX = "SUNOFRIEND_SESSION_RESPONSE "
+_SAFE_SESSION_VALUE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 GAME_MODEL_FILENAMES = (
     "config.json",
     "encoder.onnx",
@@ -228,21 +240,83 @@ def _sha256_game_bundle(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _transcribe_muscriptor(
-    document: dict[str, Any],
-    *,
-    performance_path: Path,
-    worker_started_at: float,
-) -> dict[str, Any]:
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _load_muscriptor_model_state(document: dict[str, Any]) -> dict[str, Any]:
+    """Load one hash-pinned MuScriptor model for a bounded worker session."""
+
     options = document.get("options", {})
     if not isinstance(options, dict):
         raise ValueError("request options must be an object")
     checkpoint = _local_checkpoint(options)
     checkpoint_sha256 = _sha256(checkpoint)
     expected_sha256 = options.get("model_sha256")
-    if expected_sha256 and expected_sha256 != checkpoint_sha256:
-        raise ValueError("MuScriptor checkpoint changed after the run was prepared")
+    if not isinstance(expected_sha256, str) or expected_sha256 != checkpoint_sha256:
+        raise ValueError("MuScriptor checkpoint changed before session model load")
     config_path, model_config = _muscriptor_config(checkpoint, options)
+
+    import torch
+    from muscriptor import TranscriptionModel
+
+    device = _device(options.get("device"), torch)
+    started = time.perf_counter()
+    model = TranscriptionModel.load_model(str(checkpoint), device=device)
+    model_load_seconds = time.perf_counter() - started
+    if _sha256(checkpoint) != checkpoint_sha256:
+        raise ValueError("MuScriptor checkpoint changed during session model load")
+    config_sha256 = _sha256(config_path)
+    if config_sha256 != options.get("model_config_sha256"):
+        raise ValueError("MuScriptor config changed during session model load")
+    return {
+        "model": model,
+        "checkpoint_path": checkpoint,
+        "checkpoint_sha256": checkpoint_sha256,
+        "config_path": config_path,
+        "config_sha256": config_sha256,
+        "model_config": model_config,
+        "model_size": model_config["variant"],
+        "device": device,
+        "model_load_seconds": model_load_seconds,
+        "model_version": importlib.metadata.version("muscriptor"),
+        "model_instance_token": secrets.token_hex(16),
+    }
+
+
+def _transcribe_muscriptor(
+    document: dict[str, Any],
+    *,
+    performance_path: Path,
+    worker_started_at: float,
+    model_state: dict[str, Any] | None = None,
+    session_request: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    options = document.get("options", {})
+    if not isinstance(options, dict):
+        raise ValueError("request options must be an object")
+    if model_state is None:
+        checkpoint = _local_checkpoint(options)
+        checkpoint_sha256 = _sha256(checkpoint)
+        expected_sha256 = options.get("model_sha256")
+        if expected_sha256 and expected_sha256 != checkpoint_sha256:
+            raise ValueError("MuScriptor checkpoint changed after the run was prepared")
+        config_path, model_config = _muscriptor_config(checkpoint, options)
+        config_sha256 = _sha256(config_path)
+    else:
+        checkpoint = Path(model_state["checkpoint_path"])
+        checkpoint_sha256 = str(model_state["checkpoint_sha256"])
+        config_path = Path(model_state["config_path"])
+        config_sha256 = str(model_state["config_sha256"])
+        model_config = dict(model_state["model_config"])
+        if options.get("model_path") != str(checkpoint):
+            raise ValueError("MuScriptor request checkpoint differs from loaded model")
+        if options.get("model_sha256") != checkpoint_sha256:
+            raise ValueError("MuScriptor request checkpoint hash differs from loaded model")
+        if options.get("model_config_path") != str(config_path):
+            raise ValueError("MuScriptor request config differs from loaded model")
+        if options.get("model_config_sha256") != config_sha256:
+            raise ValueError("MuScriptor request config hash differs from loaded model")
 
     import torch
     from muscriptor import TranscriptionModel
@@ -298,7 +372,7 @@ def _transcribe_muscriptor(
     execution = {
         "schema": "sunofriend.muscriptor-execution.v1",
         "model_size": model_config["variant"],
-        "model_config_sha256": _sha256(config_path),
+        "model_config_sha256": config_sha256,
         "decoding": {
             "strategy": (
                 "sampling"
@@ -320,9 +394,28 @@ def _transcribe_muscriptor(
         },
     }
 
-    model_load_started_at = time.perf_counter()
-    model = TranscriptionModel.load_model(str(checkpoint), device=device)
-    model_load_seconds = time.perf_counter() - model_load_started_at
+    if model_state is None:
+        model_load_started_at = time.perf_counter()
+        model = TranscriptionModel.load_model(str(checkpoint), device=device)
+        model_load_seconds = time.perf_counter() - model_load_started_at
+    else:
+        expected_identity = {
+            "checkpoint_sha256": checkpoint_sha256,
+            "config_sha256": config_sha256,
+            "model_size": model_config["variant"],
+            "device": device,
+        }
+        actual_identity = {
+            key: model_state.get(key) for key in expected_identity
+        }
+        if actual_identity != expected_identity:
+            raise ValueError(
+                "MuScriptor request does not match the model loaded for this session"
+            )
+        if session_request is None:
+            raise ValueError("persistent MuScriptor inference requires session evidence")
+        model = model_state["model"]
+        model_load_seconds = None
     starts: dict[int, NoteStartEvent] = {}
     notes: list[dict[str, Any]] = []
     warnings: list[str] = []
@@ -434,29 +527,59 @@ def _transcribe_muscriptor(
             "velocity_policy": "not supplied by MuScriptor; preserved as null",
         },
     }
-    performance = {
-        "schema": MUSCRIPTOR_PERFORMANCE_SCHEMA,
-        "measurement_mode": "fresh-process",
-        "device": device,
-        "timings_seconds": {
-            "audio_preparation": audio_preparation_seconds,
-            "model_load": model_load_seconds,
-            "transcription": transcription_seconds,
-            "worker_total": time.perf_counter() - worker_started_at,
-            "time_to_first_note_start": first_note_start_seconds,
-            "time_to_first_completed_note": first_completed_note_seconds,
-            "time_to_first_completed_chunk": first_completed_chunk_seconds,
-        },
-        "chunks": {
-            "seconds": 5.0,
-            "planned": math.ceil(excerpt_duration / 5.0),
-            "reported": reported_chunks,
-        },
-        "note_count": len(notes),
-        "peak_process_rss_bytes": _peak_process_rss_bytes(),
-        "memory_scope": "process RSS high-water; accelerator allocation excluded",
-        "clock": "time.perf_counter",
-    }
+    if model_state is None:
+        performance = {
+            "schema": MUSCRIPTOR_PERFORMANCE_SCHEMA,
+            "measurement_mode": "fresh-process",
+            "device": device,
+            "timings_seconds": {
+                "audio_preparation": audio_preparation_seconds,
+                "model_load": model_load_seconds,
+                "transcription": transcription_seconds,
+                "worker_total": time.perf_counter() - worker_started_at,
+                "time_to_first_note_start": first_note_start_seconds,
+                "time_to_first_completed_note": first_completed_note_seconds,
+                "time_to_first_completed_chunk": first_completed_chunk_seconds,
+            },
+            "chunks": {
+                "seconds": 5.0,
+                "planned": math.ceil(excerpt_duration / 5.0),
+                "reported": reported_chunks,
+            },
+            "note_count": len(notes),
+            "peak_process_rss_bytes": _peak_process_rss_bytes(),
+            "memory_scope": (
+                "process RSS high-water; accelerator allocation excluded"
+            ),
+            "clock": "time.perf_counter",
+        }
+    else:
+        performance = {
+            "schema": MUSCRIPTOR_SESSION_REQUEST_PERFORMANCE_SCHEMA,
+            "measurement_mode": "persistent-session-request",
+            "session": dict(session_request or {}),
+            "device": device,
+            "timings_seconds": {
+                "audio_preparation": audio_preparation_seconds,
+                "transcription": transcription_seconds,
+                "request_total": time.perf_counter() - worker_started_at,
+                "time_to_first_note_start": first_note_start_seconds,
+                "time_to_first_completed_note": first_completed_note_seconds,
+                "time_to_first_completed_chunk": first_completed_chunk_seconds,
+            },
+            "chunks": {
+                "seconds": 5.0,
+                "planned": math.ceil(excerpt_duration / 5.0),
+                "reported": reported_chunks,
+            },
+            "note_count": len(notes),
+            "peak_process_rss_bytes": _peak_process_rss_bytes(),
+            "memory_scope": (
+                "persistent process RSS high-water including model load and prior "
+                "requests; accelerator allocation excluded"
+            ),
+            "clock": "time.perf_counter",
+        }
     _atomic_json(performance_path, performance)
     return candidate
 
@@ -1257,13 +1380,288 @@ def _atomic_json(path: Path, document: dict[str, Any]) -> None:
     os.replace(temporary, path)
 
 
+def _send_session_response(handle: Any, document: dict[str, Any]) -> None:
+    handle.write(json.dumps(document, sort_keys=True, separators=(",", ":")) + "\n")
+    handle.flush()
+
+
+def _serve_muscriptor_session(
+    *,
+    control_fd: int,
+    session_id: str,
+    session_root: Path,
+    template_path: Path,
+    maximum_requests: int,
+) -> int:
+    """Serve one bounded, serial MuScriptor session over an inherited socket."""
+
+    if not _SAFE_SESSION_VALUE.fullmatch(session_id):
+        raise ValueError("session_id contains unsafe characters")
+    if maximum_requests < 2 or maximum_requests > 20:
+        raise ValueError("maximum_requests must be between 2 and 20")
+    root = session_root.expanduser().absolute()
+    if not root.is_dir() or root.is_symlink():
+        raise ValueError("session_root must be an existing non-symlink directory")
+    root = root.resolve()
+    expected_template = root / "session.request-template.json"
+    template = template_path.expanduser().absolute()
+    if template.is_symlink() or template.resolve() != expected_template:
+        raise ValueError("session template must be the fixed file below session_root")
+    template_document = _load_request(template)
+    if template_document["backend"] != "muscriptor":
+        raise ValueError("persistent sessions currently support only MuScriptor")
+    template_sha256 = _sha256(template)
+    source_sha256 = _sha256(Path(template_document["audio_path"]))
+    session_started_at = _utc_now()
+    session_started_clock = time.perf_counter()
+    model_state = _load_muscriptor_model_state(template_document)
+    model_loaded_at = _utc_now()
+
+    control = socket.socket(fileno=control_fd)
+    reader = control.makefile("r", encoding="utf-8", newline="\n")
+    writer = control.makefile("w", encoding="utf-8", newline="\n")
+    completed_requests = 0
+    command_count = 0
+    seen_run_ids: set[str] = set()
+    try:
+        _send_session_response(
+            writer,
+            {
+                "schema": MUSCRIPTOR_SESSION_RESPONSE_SCHEMA,
+                "kind": "ready",
+                "status": "ready",
+                "session_id": session_id,
+                "transport": MUSCRIPTOR_SESSION_TRANSPORT,
+                "worker_instance_id": model_state["model_instance_token"],
+                "model_load_count": 1,
+                "model_load_seconds": model_state["model_load_seconds"],
+                "session_started_at": session_started_at,
+                "model_loaded_at": model_loaded_at,
+                "startup_total_seconds": time.perf_counter() - session_started_clock,
+                "checkpoint_sha256": model_state["checkpoint_sha256"],
+                "config_sha256": model_state["config_sha256"],
+                "model_size": model_state["model_size"],
+                "model_version": model_state["model_version"],
+                "device": model_state["device"],
+                "request_template_sha256": template_sha256,
+                "source_sha256": source_sha256,
+                "maximum_requests": maximum_requests,
+                "peak_process_rss_bytes": _peak_process_rss_bytes(),
+            },
+        )
+        while True:
+            line = reader.readline(65_537)
+            if not line:
+                break
+            if len(line.encode("utf-8")) > 65_536 or not line.endswith("\n"):
+                raise ValueError("session command exceeds the 64 KiB line limit")
+            command = json.loads(line)
+            if not isinstance(command, dict):
+                raise ValueError("session command must be a JSON object")
+            if command.get("schema") != MUSCRIPTOR_SESSION_COMMAND_SCHEMA:
+                raise ValueError("session command schema is invalid")
+            if command.get("session_id") != session_id:
+                raise ValueError("session command has the wrong session_id")
+            operation = command.get("operation")
+            if operation == "shutdown":
+                changed: list[str] = []
+                if _sha256(Path(model_state["checkpoint_path"])) != model_state[
+                    "checkpoint_sha256"
+                ]:
+                    changed.append("checkpoint")
+                if _sha256(Path(model_state["config_path"])) != model_state[
+                    "config_sha256"
+                ]:
+                    changed.append("config")
+                if _sha256(Path(template_document["audio_path"])) != source_sha256:
+                    changed.append("source audio")
+                status = "complete" if not changed else "failed"
+                _send_session_response(
+                    writer,
+                    {
+                        "schema": MUSCRIPTOR_SESSION_RESPONSE_SCHEMA,
+                        "kind": "closed",
+                        "status": status,
+                        "session_id": session_id,
+                        "worker_instance_id": model_state["model_instance_token"],
+                        "model_load_count": 1,
+                        "request_count": command_count,
+                        "completed_request_count": completed_requests,
+                        "session_started_at": session_started_at,
+                        "completed_at": _utc_now(),
+                        "session_total_seconds": (
+                            time.perf_counter() - session_started_clock
+                        ),
+                        "peak_process_rss_bytes": _peak_process_rss_bytes(),
+                        "integrity_status": (
+                            "verified-unchanged" if not changed else "changed"
+                        ),
+                        "changed_inputs": changed,
+                    },
+                )
+                return 0 if not changed else 2
+            if operation != "transcribe":
+                raise ValueError("session operation must be transcribe or shutdown")
+            if command_count >= maximum_requests:
+                raise ValueError("session request limit reached; shutdown is required")
+
+            command_count += 1
+            sequence = command.get("sequence")
+            if sequence != command_count:
+                raise ValueError("session command sequence is not contiguous")
+            run_id = command.get("run_id")
+            if not isinstance(run_id, str) or not _SAFE_SESSION_VALUE.fullmatch(run_id):
+                raise ValueError("session run_id contains unsafe characters")
+            if run_id in seen_run_ids:
+                raise ValueError("session run_id was already used")
+            seen_run_ids.add(run_id)
+            run_dir = root / run_id
+            if (
+                not run_dir.is_dir()
+                or run_dir.is_symlink()
+                or run_dir.resolve().parent != root
+            ):
+                raise ValueError("session run directory escaped session_root")
+            request_path = run_dir / "request.json"
+            output_path = run_dir / "candidate.raw.json"
+            performance_path = run_dir / "muscriptor.performance.json"
+            if request_path.is_symlink() or request_path.resolve().parent != run_dir.resolve():
+                raise ValueError("session request path escaped its run directory")
+            if output_path.exists() or performance_path.exists():
+                raise FileExistsError("session worker output already exists")
+            request_sha256 = _sha256(request_path)
+            if command.get("request_sha256") != request_sha256:
+                raise ValueError("session request hash changed after publication")
+            if request_sha256 != template_sha256:
+                raise ValueError("session request differs from the fixed template")
+            document = _load_request(request_path)
+            if document != template_document:
+                raise ValueError("session request semantics differ from the template")
+            if command.get("source_sha256") != source_sha256:
+                raise ValueError("session command source hash is invalid")
+            if _sha256(Path(document["audio_path"])) != source_sha256:
+                raise ValueError("session source audio changed after publication")
+
+            request_started_at = _utc_now()
+            request_started_clock = time.perf_counter()
+            prior_completed = completed_requests
+            session_request = {
+                "session_id": session_id,
+                "worker_instance_id": model_state["model_instance_token"],
+                "sequence": command_count,
+                "prior_completed_requests": prior_completed,
+                "warm_model_request": prior_completed > 0,
+                "model_reused_from_prior_request": prior_completed > 0,
+                "model_load_count": 1,
+                "request_started_at": request_started_at,
+            }
+            try:
+                candidate = _transcribe_muscriptor(
+                    document,
+                    performance_path=performance_path,
+                    worker_started_at=request_started_clock,
+                    model_state=model_state,
+                    session_request=session_request,
+                )
+                _atomic_json(output_path, candidate)
+                completed_requests += 1
+                response = {
+                    "schema": MUSCRIPTOR_SESSION_RESPONSE_SCHEMA,
+                    "kind": "result",
+                    "status": "complete",
+                    "session_id": session_id,
+                    "worker_instance_id": model_state["model_instance_token"],
+                    "sequence": command_count,
+                    "run_id": run_id,
+                    "request_sha256": request_sha256,
+                    "source_sha256": source_sha256,
+                    "candidate_sha256": _sha256(output_path),
+                    "performance_sha256": _sha256(performance_path),
+                    "note_count": len(candidate["notes"]),
+                    "prior_completed_requests": prior_completed,
+                    "warm_model_request": prior_completed > 0,
+                    "model_reused_from_prior_request": prior_completed > 0,
+                    "model_load_count": 1,
+                    "request_started_at": request_started_at,
+                    "completed_at": _utc_now(),
+                    "request_elapsed_seconds": (
+                        time.perf_counter() - request_started_clock
+                    ),
+                }
+                _send_session_response(writer, response)
+            except Exception as exc:
+                print(
+                    f"sunofriend-ai-worker session request {command_count}: "
+                    f"{type(exc).__name__}: {exc}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                _send_session_response(
+                    writer,
+                    {
+                        "schema": MUSCRIPTOR_SESSION_RESPONSE_SCHEMA,
+                        "kind": "result",
+                        "status": "failed",
+                        "session_id": session_id,
+                        "worker_instance_id": model_state["model_instance_token"],
+                        "sequence": command_count,
+                        "run_id": run_id,
+                        "request_sha256": request_sha256,
+                        "source_sha256": source_sha256,
+                        "prior_completed_requests": prior_completed,
+                        "warm_model_request": prior_completed > 0,
+                        "model_reused_from_prior_request": prior_completed > 0,
+                        "model_load_count": 1,
+                        "request_started_at": request_started_at,
+                        "completed_at": _utc_now(),
+                        "request_elapsed_seconds": (
+                            time.perf_counter() - request_started_clock
+                        ),
+                        "error_type": type(exc).__name__,
+                        "error": str(exc),
+                    },
+                )
+                return 2
+    finally:
+        writer.close()
+        reader.close()
+        control.close()
+
+
 def main(argv: list[str] | None = None) -> int:
     worker_started_at = time.perf_counter()
     parser = argparse.ArgumentParser(prog="sunofriend-ai-worker")
-    parser.add_argument("--request", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--request", type=Path)
+    mode.add_argument("--session-template", type=Path)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--control-fd", type=int)
+    parser.add_argument("--session-id")
+    parser.add_argument("--session-root", type=Path)
+    parser.add_argument("--maximum-requests", type=int)
     args = parser.parse_args(argv)
     try:
+        if args.session_template is not None:
+            required = {
+                "control_fd": args.control_fd,
+                "session_id": args.session_id,
+                "session_root": args.session_root,
+                "maximum_requests": args.maximum_requests,
+            }
+            missing = [name for name, value in required.items() if value is None]
+            if missing:
+                raise ValueError(
+                    "session mode is missing: " + ", ".join(sorted(missing))
+                )
+            return _serve_muscriptor_session(
+                control_fd=int(args.control_fd),
+                session_id=str(args.session_id),
+                session_root=args.session_root,
+                template_path=args.session_template,
+                maximum_requests=int(args.maximum_requests),
+            )
+        if args.output is None:
+            raise ValueError("one-shot mode requires --output")
         request = _load_request(args.request)
         candidate = _transcribe(
             request,

@@ -40,12 +40,8 @@ GAME_MODEL_FILENAMES = (
     "dur2bd.onnx",
     "bd2dur.onnx",
 )
-RMVPE_MODEL_SHA256 = (
-    "5370e71ac80af8b4b7c793d27efd51fd8bf962de3a7ede0766dac0befa3660fd"
-)
-PESTO_MODEL_SHA256 = (
-    "16c32e06ddd950e3e4866dfa3c7f8a87c4988f8adf43e57977b189f031f26f3e"
-)
+RMVPE_MODEL_SHA256 = "5370e71ac80af8b4b7c793d27efd51fd8bf962de3a7ede0766dac0befa3660fd"
+PESTO_MODEL_SHA256 = "16c32e06ddd950e3e4866dfa3c7f8a87c4988f8adf43e57977b189f031f26f3e"
 DEMUCS_HTDEMUCS_SHA256 = (
     "8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4"
 )
@@ -99,9 +95,7 @@ AI_MODEL_MANIFESTS: dict[str, AIModelManifest] = {
         backend="rmvpe",
         name="RMVPE",
         tasks=("vocal-f0", "polyphonic-bleed"),
-        code_license=(
-            "MIT (rmvpe-onnx adapter); Apache-2.0 (authors' reference code)"
-        ),
+        code_license=("MIT (rmvpe-onnx adapter); Apache-2.0 (authors' reference code)"),
         weights_license=(
             "MIT-labelled lj1995/VoiceConversionWebUI rmvpe.onnx at "
             "b2c8cae96e3b05de46d36c5ef9970ef6cbccafba"
@@ -278,9 +272,7 @@ class AITranscriptionNote:
                 else str(document["instrument"])
             ),
             velocity=(
-                None
-                if document.get("velocity") is None
-                else int(document["velocity"])
+                None if document.get("velocity") is None else int(document["velocity"])
             ),
             source_event_id=(
                 None
@@ -418,7 +410,9 @@ def resolve_muscriptor_checkpoint(value: str | Path | None = None) -> Path:
 
     configured = value or os.environ.get("SUNOFRIEND_MUSCRIPTOR_MODEL")
     candidate = (
-        Path(configured).expanduser() if configured else _default_muscriptor_checkpoint()
+        Path(configured).expanduser()
+        if configured
+        else _default_muscriptor_checkpoint()
     )
     if not candidate.is_file():
         source = "SUNOFRIEND_MUSCRIPTOR_MODEL" if configured else "default path"
@@ -431,14 +425,7 @@ def resolve_muscriptor_checkpoint(value: str | Path | None = None) -> Path:
 
 
 def _default_game_home() -> Path:
-    return (
-        Path.home()
-        / ".local"
-        / "share"
-        / "sunofriend"
-        / "checkouts"
-        / "GAME-v1.0.3"
-    )
+    return Path.home() / ".local" / "share" / "sunofriend" / "checkouts" / "GAME-v1.0.3"
 
 
 def _default_game_model() -> Path:
@@ -460,8 +447,12 @@ def resolve_game_model(value: str | Path | None = None) -> Path:
     candidate = Path(configured).expanduser() if configured else _default_game_model()
     if not candidate.is_dir():
         source = "SUNOFRIEND_GAME_MODEL" if configured else "default path"
-        raise FileNotFoundError(f"GAME model bundle was not found via {source}: {candidate}")
-    missing = [name for name in GAME_MODEL_FILENAMES if not (candidate / name).is_file()]
+        raise FileNotFoundError(
+            f"GAME model bundle was not found via {source}: {candidate}"
+        )
+    missing = [
+        name for name in GAME_MODEL_FILENAMES if not (candidate / name).is_file()
+    ]
     if missing:
         raise ValueError(
             "GAME model bundle is incomplete; missing: " + ", ".join(missing)
@@ -790,6 +781,10 @@ packages = {}
 for distribution in (
     "torch",
     "muscriptor",
+    "einops",
+    "numpy",
+    "soundfile",
+    "safetensors",
     "onnxruntime",
     "rmvpe-onnx",
     "soxr",
@@ -940,6 +935,58 @@ def collect_ai_diagnostics(
     }
 
 
+def collect_ai_runtime_fingerprint(
+    python: str | Path | None = None,
+) -> dict[str, Any]:
+    """Collect path-free cache identity without inventorying model files.
+
+    The full doctor report hashes configured checkpoints and is appropriate for
+    setup diagnostics.  Cache lookup has already hash-pinned the explicitly
+    requested checkpoint, so repeating the global model inventory would add a
+    large unrelated file read to every verified hit.
+    """
+
+    executable = resolve_ai_python(python)
+    try:
+        completed = subprocess.run(
+            [str(executable), "-c", _RUNTIME_PROBE],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        worker = json.loads(completed.stdout)
+    except (subprocess.SubprocessError, json.JSONDecodeError) as exc:
+        raise ValueError(
+            f"AI runtime fingerprint failed: {type(exc).__name__}: {exc}"
+        ) from exc
+    packages = worker.get("packages")
+    torch = worker.get("torch")
+    if not isinstance(packages, Mapping) or not isinstance(torch, Mapping):
+        raise ValueError("AI runtime fingerprint is incomplete")
+    version_info = tuple(worker.get("python_info", (0, 0, 0)))
+    return {
+        "schema": AI_RUNTIME_SCHEMA,
+        "python": worker.get("python"),
+        "platform": worker.get("platform"),
+        "runtime_ready": version_info >= (3, 12),
+        "packages": dict(packages),
+        "torch": dict(torch),
+        "torch_ready": bool(torch.get("importable")),
+        "preferred_device": "mps" if torch.get("mps_available") else "cpu",
+        "backends": {
+            "muscriptor": {
+                "software_ready": bool(packages.get("muscriptor"))
+                and bool(torch.get("importable")),
+                "version": packages.get("muscriptor"),
+                "manifest": asdict(AI_MODEL_MANIFESTS["muscriptor"]),
+            }
+        },
+        "scope": "path-free-runtime-version-and-device-fingerprint",
+        "checkpoint_inventory_performed": False,
+    }
+
+
 def ai_requirement_ready(report: Mapping[str, Any], requirement: str) -> bool:
     """Evaluate one `ai-doctor --require` capability."""
 
@@ -1027,6 +1074,7 @@ __all__ = [
     "collect_pesto_model",
     "collect_demucs_model",
     "collect_ai_diagnostics",
+    "collect_ai_runtime_fingerprint",
     "resolve_ai_python",
     "resolve_muscriptor_checkpoint",
     "resolve_game_model",

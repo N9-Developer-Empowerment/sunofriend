@@ -36,6 +36,8 @@ clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 | Preview or route MIDI to an instrument | `preview`, `play` | FluidSynth WAV preview or CoreMIDI/IAC playback |
 | Run an optional local AI transcription challenger | `ai-transcribe` | Isolated worker, explicit local checkpoint, raw candidate, MIDI, hashes and immutable logs |
 | Benchmark repeated local AI runs | `ai-benchmark` | Verified path-free timing, memory, chunk and exact-output repeatability report over completed immutable runs |
+| Measure exact repeats through one loaded model | `ai-transcribe-session`, `ai-session-benchmark` | Bounded 2–20-request diagnostic session, reused-model warm evidence for requests 2+, and optional two-run fresh-process control; no production cache or promotion |
+| Reuse one exact prior MuScriptor result | `ai-transcribe --application-cache-dir`, `ai-cache-benchmark` | Explicit private content-addressed raw-result cache; verified hits start no worker, load no model and run no inference, while current MIDI is rebuilt and cache timing remains separate |
 | Compare immutable AI transcription lanes | `ai-matrix` | Path-free per-role quality, label stability, chunk-boundary and cross-lane overlap diagnostics without changing raw MIDI |
 | Partition one AI result by its reported label | `ai-label-split` | Exact source-event partition plus deterministic requested/complement MIDI auditions and a byte-identical full-candidate control |
 | Test one MIDI-defined layer inside a mixed stem | `midi-mask` | Short, local harmonic target plus residual with persisted reconstruction evidence and no automatic promotion |
@@ -84,7 +86,8 @@ and promotion rules are in the
 compares those executions with the original goals and records the gate before
 another model experiment begins. The current Phase 5 programme—including the
 completed full-mix/conditioned comparison and local Workbench, followed by
-faster local inference and a future opt-in feedback loop—is in the
+faster local inference, an explicit exact-result application-cache experiment
+and a future opt-in feedback loop—is in the
 **[Phase 5 MuScriptor and Community Learning plan](docs/PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md)**.
 
 For combining songs, first use `midi-transform` to choose a common key, BPM
@@ -592,7 +595,14 @@ clipped at end-of-file. Repetition timestamps must be timezone-aware and their
 execution windows must not overlap, so a contended concurrent run cannot be
 presented as a first-versus-later comparison. The output is
 path-free, written only to a fresh path and cannot promote a musical candidate.
-Legacy runs remain comparable with performance marked unavailable.
+Legacy runs remain comparable only while every hash-pinned external source,
+checkpoint, config and worker file is still unchanged; older historical
+goldens whose external worker has since changed cannot be re-verified. A pre-
+session/cache v1 manifest that lacks the newer execution fields is accepted
+only when it records a successful non-empty subprocess command and contains no
+session or application-cache evidence; the report labels that legacy evidence
+explicitly. A legacy run without performance evidence is reported as
+unavailable rather than guessed.
 
 Current runs are one fresh worker process and one model load per repetition.
 The operating-system file cache is uncontrolled, so a second run is **not** a
@@ -605,6 +615,265 @@ RSS about `1.06 GiB`. The first/later wall ratio was `1.117`; that difference
 is evidence under an uncontrolled OS cache, not a claimed warm-start gain. The
 five reviewed Phase 5.1 selections and GarageBand handoff hashes remained
 unchanged.
+
+#### Measure exact repeats through one loaded MuScriptor model
+
+`ai-transcribe-session` measures the next, deliberately narrow speed question:
+what changes when one accepted local MuScriptor checkpoint is loaded once and
+the **same** transcription request is executed serially several times? It is a
+bounded diagnostic harness, not a multi-song worker, role queue, background
+service or content cache. One parent command owns one worker over an inherited
+Unix socket pair, opens no listening port, accepts 2–20 copies of one fixed
+source/roles/excerpt/request, then exits.
+
+Run the normal checkpoint preflight, then use a fresh output directory:
+
+```bash
+.venv/bin/sunofriend --version
+.venv/bin/sunofriend ai-transcribe-session --help
+.venv/bin/sunofriend ai-session-benchmark --help
+.venv/bin/sunofriend ai-doctor --require muscriptor-checkpoint
+
+.venv/bin/sunofriend ai-transcribe-session \
+  "/absolute/path/to/fixed-source.wav" \
+  --checkpoint "/absolute/path/to/accepted/model.safetensors" \
+  --out-dir "/absolute/fresh/path/small-cpu-session" \
+  --bpm 119 \
+  --instrument electric_bass \
+  --instrument acoustic_piano \
+  --start-seconds 30 \
+  --end-seconds 45 \
+  --device cpu \
+  --beam-size 1 \
+  --batch-size 1 \
+  --cfg-coef 1.0 \
+  --model-size small \
+  --repetitions 3
+
+.venv/bin/sunofriend ai-session-benchmark \
+  "/absolute/fresh/path/small-cpu-session" \
+  --out "/absolute/fresh/path/small-cpu-session-report.json"
+```
+
+Model loading and worker startup are measured separately. Request 1 already
+has a resident model, but it has no prior transcription to reuse, so it is
+neither a warm-request result nor a cold-start claim. Only requests 2 and later
+are reused-model warm requests. There is no application content cache:
+`cache_hits` remains zero and the operating-system file cache remains
+uncontrolled.
+
+For a direct fresh-process control, run the exact same source, excerpt, BPM,
+roles, checkpoint and decode options through `ai-transcribe` at least twice.
+Use the completed run directories printed by those commands—not merely their
+parent output directories—as `--fresh-run` values:
+
+```bash
+.venv/bin/sunofriend ai-transcribe \
+  "/absolute/path/to/fixed-source.wav" \
+  --backend muscriptor \
+  --checkpoint "/absolute/path/to/accepted/model.safetensors" \
+  --out-dir "/absolute/fresh/path/fresh-control-1" \
+  --bpm 119 \
+  --instrument electric_bass \
+  --instrument acoustic_piano \
+  --start-seconds 30 \
+  --end-seconds 45 \
+  --device cpu --beam-size 1 --batch-size 1 --cfg-coef 1.0 \
+  --model-size small
+
+.venv/bin/sunofriend ai-transcribe \
+  "/absolute/path/to/fixed-source.wav" \
+  --backend muscriptor \
+  --checkpoint "/absolute/path/to/accepted/model.safetensors" \
+  --out-dir "/absolute/fresh/path/fresh-control-2" \
+  --bpm 119 \
+  --instrument electric_bass \
+  --instrument acoustic_piano \
+  --start-seconds 30 \
+  --end-seconds 45 \
+  --device cpu --beam-size 1 --batch-size 1 --cfg-coef 1.0 \
+  --model-size small
+
+.venv/bin/sunofriend ai-session-benchmark \
+  "/absolute/fresh/path/small-cpu-session" \
+  --fresh-run "/absolute/path/printed/by/fresh-control-1" \
+  --fresh-run "/absolute/path/printed/by/fresh-control-2" \
+  --out "/absolute/fresh/path/small-cpu-session-vs-fresh.json"
+```
+
+Fresh controls are optional, but supplying them requires at least two exact,
+comparable fresh-process runs. The verifier requires exact candidate JSON,
+MIDI and note-count repeatability before reporting warm-to-fresh timing ratios.
+The ordinary `ai-benchmark` intentionally rejects session repetitions because
+its contract is fresh-process-only.
+
+The private session tree is path-bearing and should stay local:
+
+```text
+small-cpu-session/
+├── session.request-template.json
+├── session.started.json
+├── session.ready.json
+├── worker.stdout.log
+├── worker.stderr.log
+├── repetition-001/
+│   ├── request.json
+│   ├── worker.response.json
+│   ├── candidate.raw.json
+│   ├── candidate.json
+│   ├── candidate.mid
+│   ├── muscriptor.performance.json
+│   └── run.json
+├── repetition-002/
+├── repetition-003/
+├── session.closed.json
+└── session.json
+```
+
+Each repetition remains a normal immutable MuScriptor run. Before successful
+close, the worker re-hashes the fixed source, checkpoint and adjacent model
+config. Every request is byte-matched to the startup template, and the separate
+verifier rechecks the pinned worker and template. Its report JSON contains
+no local paths, but its content hashes and detailed runtime/hardware identity
+can still identify private material or a machine; path-free does not mean
+anonymous or publication-approved. Neither command downloads a model, changes
+checkpoint terms, mutates MIDI, promotes a candidate or changes a saved
+Workbench decision.
+
+The real 15-second Lidl small-CPU gate now passes. Three session requests and
+two new final-worker fresh controls each produced the same 107-note candidate
+JSON and byte-identical MIDI
+(`9bc1ede96cf8be5704573456753f7892748c14ecbe1b1c294249afb0c45d4e05`).
+Model load was `0.279 s`; request 1 pipeline time was `3.983 s`; and the two
+true reused-model warm requests had a `3.681 s` median pipeline time (RTF
+`0.245`). The fresh controls had a `5.193 s` median pipeline time, giving an
+observed warm/fresh pipeline ratio of `0.709`. Inclusive transcription changed
+far less (`0.976` warm/fresh ratio), so the result is an end-to-end observation
+under an uncontrolled OS file cache, not proof that model reuse alone caused
+the difference. Session RSS is cumulative process high-water evidence: it rose
+from `1,062,928,384` bytes after startup to `1,157,365,760` bytes at close and
+is not a per-request allocation or standalone leak measurement.
+
+#### Reuse an exact MuScriptor result without running the model again
+
+The application cache answers a different question from the bounded session:
+can an exact deterministic request reuse verified raw model output from an
+earlier run? It is explicit, private and disabled unless
+`--application-cache-dir` is supplied. It is not resident-model reuse, a
+background service, the Workbench neutral-preview cache or the uncontrolled
+operating-system file cache.
+
+Run one miss followed by two exact hits. Keep the source, ordered instruments,
+excerpt, BPM, checkpoint, device and decode options identical, use the same
+private cache directory, and let every invocation create a fresh immutable run:
+
+```bash
+PRIVATE_CACHE="/absolute/private/path/muscriptor-cache"
+install -d -m 700 "$PRIVATE_CACHE"
+
+.venv/bin/sunofriend ai-transcribe \
+  "/absolute/path/to/fixed-source.wav" \
+  --backend muscriptor \
+  --checkpoint "/absolute/path/to/accepted/model.safetensors" \
+  --out-dir "/absolute/fresh/path/cache-miss" \
+  --application-cache-dir "$PRIVATE_CACHE" \
+  --bpm 119 \
+  --instrument electric_bass \
+  --instrument acoustic_piano \
+  --start-seconds 30 \
+  --end-seconds 45 \
+  --device cpu --beam-size 1 --batch-size 1 --cfg-coef 1.0 \
+  --model-size small
+
+.venv/bin/sunofriend ai-transcribe \
+  "/absolute/path/to/fixed-source.wav" \
+  --backend muscriptor \
+  --checkpoint "/absolute/path/to/accepted/model.safetensors" \
+  --out-dir "/absolute/fresh/path/cache-hit-1" \
+  --application-cache-dir "$PRIVATE_CACHE" \
+  --bpm 119 \
+  --instrument electric_bass \
+  --instrument acoustic_piano \
+  --start-seconds 30 \
+  --end-seconds 45 \
+  --device cpu --beam-size 1 --batch-size 1 --cfg-coef 1.0 \
+  --model-size small
+
+.venv/bin/sunofriend ai-transcribe \
+  "/absolute/path/to/fixed-source.wav" \
+  --backend muscriptor \
+  --checkpoint "/absolute/path/to/accepted/model.safetensors" \
+  --out-dir "/absolute/fresh/path/cache-hit-2" \
+  --application-cache-dir "$PRIVATE_CACHE" \
+  --bpm 119 \
+  --instrument electric_bass \
+  --instrument acoustic_piano \
+  --start-seconds 30 \
+  --end-seconds 45 \
+  --device cpu --beam-size 1 --batch-size 1 --cfg-coef 1.0 \
+  --model-size small
+```
+
+The first exact request is a cache miss. It starts one fresh worker and stores
+an entry only after successful verification. The entry contains only
+`candidate.raw.json` and the original `muscriptor.performance.json`; source
+audio, the checkpoint and derived MIDI are not cache payloads. A verified hit
+copies those two artifacts into a new run without hard links, starts no worker,
+loads no model and executes no inference. Sunofriend then repeats its current
+quality checks, GM mapping, source-expression recovery and MIDI writing.
+Sunofriend creates a missing cache root with owner-only permissions and rejects
+an existing root that grants any group or other access; `install -d -m 700`
+makes that privacy boundary explicit. Keep the cache root outside every
+immutable run-output tree: the cache and output roots may not contain one
+another.
+
+The path-free key binds source content and audio layout, ordered roles, excerpt,
+BPM, decode options, checkpoint/config/worker content, runtime/package identity
+and effective device. Moving identical bytes to another path can still hit;
+changing BPM or role order deliberately creates another key. Stochastic
+MuScriptor sampling is not accepted. A corrupt, linked or inconsistent entry
+fails closed instead of silently falling back to inference.
+
+Every successful stored miss, concurrent equivalent miss and verified hit adds
+both `cache.entry.json` and `cache.performance.json`. A failed cache-enabled
+run can have `cache.performance.json` without a verified entry manifest. On a
+hit, the copied
+`muscriptor.performance.json` still describes the original fresh inference;
+it is never current hit timing. Current lookup, copy, post-processing and
+pipeline times live in `cache.performance.json`. Verify one stored miss and at
+least two ordered hits without launching a model:
+
+```bash
+.venv/bin/sunofriend ai-cache-benchmark \
+  --miss-run "/absolute/path/to/completed/cache-miss/RUN_DIR" \
+  --hit-run "/absolute/path/to/completed/cache-hit-1/RUN_DIR" \
+  --hit-run "/absolute/path/to/completed/cache-hit-2/RUN_DIR" \
+  --out "/absolute/fresh/path/cache-benchmark.json"
+```
+
+Use the completed run directories, not merely their parent output directories.
+`ai-cache-benchmark` requires one `miss-stored` run, at least two
+`verified-hit` runs and exact raw-candidate, candidate-JSON, base/expression
+MIDI, expression-JSON, quality, program-mapping and note-count repeatability.
+Its report omits filesystem paths and caller-supplied run IDs, but its content
+hashes, timestamps and runtime identity may still identify private material or
+a machine; this is not publication consent. The fresh-process `ai-benchmark`
+rejects every cache-enabled run. `ai-matrix` rejects cache hits: use the
+original fresh miss
+as musical evidence and the cache benchmark only for reuse timing. No cache
+operation promotes a musical candidate or changes a saved Workbench decision.
+
+If two identical misses race, exactly one publishes the entry. The other is
+recorded as `miss-verified-existing`: it did run inference, verified the
+winner's raw candidate as identical and retained its own performance evidence,
+but it is not the required `miss-stored` control for `ai-cache-benchmark`.
+
+The private 15-second Lidl M2 gate passed with one `6.295 s` fresh miss and a
+`1.078 s` median across two verified hits (observed hit/miss pipeline ratio
+`0.171`). Both hits started no worker and ran no inference. All 107-note raw,
+normalized, base-MIDI, expression-MIDI, quality and program-mapping controls
+matched exactly. This is one-machine end-to-end evidence under an uncontrolled
+OS file cache, not a general speed guarantee or an accuracy improvement.
 
 After a short bake-off has shown that MuScriptor is useful for the material,
 MuScriptor and GAME can also be requested directly from the normal vocal

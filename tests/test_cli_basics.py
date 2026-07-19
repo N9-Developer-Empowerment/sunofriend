@@ -63,6 +63,112 @@ class CliBasicsTests(unittest.TestCase):
         self.assertEqual(args.run, ["repetition-01", "repetition-02"])
         self.assertEqual(args.out, "benchmark.json")
 
+    def test_ai_transcribe_session_is_bounded_and_muscriptor_only(self) -> None:
+        args = build_parser().parse_args(
+            [
+                "ai-transcribe-session",
+                "source.wav",
+                "--checkpoint",
+                "model.safetensors",
+                "--out-dir",
+                "session",
+                "--bpm",
+                "119",
+                "--instrument",
+                "electric_piano",
+                "--repetitions",
+                "3",
+                "--device",
+                "cpu",
+            ]
+        )
+
+        self.assertEqual(args.audio, "source.wav")
+        self.assertEqual(args.repetitions, 3)
+        self.assertEqual(args.instrument, ["electric_piano"])
+        self.assertEqual(args.device, "cpu")
+
+    def test_ai_session_benchmark_accepts_separate_fresh_controls(self) -> None:
+        args = build_parser().parse_args(
+            [
+                "ai-session-benchmark",
+                "session",
+                "--fresh-run",
+                "fresh-001",
+                "--fresh-run",
+                "fresh-002",
+                "--out",
+                "session-benchmark.json",
+            ]
+        )
+
+        self.assertEqual(args.session, "session")
+        self.assertEqual(args.fresh_run, ["fresh-001", "fresh-002"])
+        self.assertEqual(args.out, "session-benchmark.json")
+
+    def test_ai_cache_options_are_explicit_and_separately_benchmarked(self) -> None:
+        transcribe = build_parser().parse_args(
+            [
+                "ai-transcribe",
+                "source.wav",
+                "--out-dir",
+                "runs",
+                "--bpm",
+                "119",
+                "--application-cache-dir",
+                "private-cache",
+            ]
+        )
+        benchmark = build_parser().parse_args(
+            [
+                "ai-cache-benchmark",
+                "--miss-run",
+                "miss",
+                "--hit-run",
+                "hit-1",
+                "--hit-run",
+                "hit-2",
+                "--out",
+                "cache-benchmark.json",
+            ]
+        )
+
+        self.assertEqual(transcribe.application_cache_dir, "private-cache")
+        self.assertEqual(benchmark.miss_run, "miss")
+        self.assertEqual(benchmark.hit_run, ["hit-1", "hit-2"])
+
+    @patch("sunofriend.ai_cache_benchmark.write_ai_cache_benchmark")
+    def test_ai_cache_benchmark_routes_without_inference(self, write) -> None:
+        write.return_value = {
+            "schema": "sunofriend.ai-cache-benchmark.v1",
+            "hit_count": 2,
+        }
+        stdout = io.StringIO()
+
+        with redirect_stdout(stdout):
+            result = main(
+                [
+                    "ai-cache-benchmark",
+                    "--miss-run",
+                    "miss",
+                    "--hit-run",
+                    "hit-1",
+                    "--hit-run",
+                    "hit-2",
+                    "--out",
+                    "cache-benchmark.json",
+                ]
+            )
+
+        self.assertEqual(result, 0)
+        write.assert_called_once_with(
+            "miss", ["hit-1", "hit-2"], "cache-benchmark.json"
+        )
+        document = json.loads(stdout.getvalue())
+        self.assertTrue(document["application_cache_hit"])
+        self.assertFalse(document["model_reused"])
+        self.assertFalse(document["promotion_allowed"])
+
     @patch("sunofriend.ai_benchmark.write_ai_performance_benchmark")
     def test_ai_benchmark_routes_completed_runs_without_inference(self, write) -> None:
         write.return_value = {
@@ -96,6 +202,81 @@ class CliBasicsTests(unittest.TestCase):
                 "schema": "sunofriend.ai-performance-benchmark.v1",
                 "status": "complete",
             },
+        )
+
+    @patch("sunofriend.ai_session.run_muscriptor_session")
+    @patch("sunofriend.ai_runtime.resolve_muscriptor_checkpoint")
+    def test_ai_transcribe_session_routes_one_bounded_operation(
+        self, resolve_checkpoint, run_session
+    ) -> None:
+        resolve_checkpoint.return_value = Path("/models/model.safetensors")
+        run_session.return_value = {
+            "schema": "sunofriend.muscriptor-transcription-session.v1",
+            "session_id": "session-test",
+            "status": "complete",
+            "repetitions_completed": 3,
+            "cache_regime": {"model_loaded_once": True},
+        }
+        stdout = io.StringIO()
+
+        with redirect_stdout(stdout):
+            result = main(
+                [
+                    "ai-transcribe-session",
+                    "source.wav",
+                    "--checkpoint",
+                    "model.safetensors",
+                    "--out-dir",
+                    "session",
+                    "--bpm",
+                    "119",
+                    "--instrument",
+                    "electric_piano",
+                    "--repetitions",
+                    "3",
+                    "--device",
+                    "cpu",
+                ]
+            )
+
+        self.assertEqual(result, 0)
+        self.assertEqual(run_session.call_count, 1)
+        call = run_session.call_args.kwargs
+        self.assertEqual(call["repetitions"], 3)
+        self.assertEqual(call["roles"], ["electric_piano"])
+        self.assertEqual(call["options"]["device"], "cpu")
+        self.assertFalse(json.loads(stdout.getvalue())["promotion_allowed"])
+
+    @patch("sunofriend.ai_session_benchmark.write_ai_session_benchmark")
+    def test_ai_session_benchmark_routes_without_inference(self, write) -> None:
+        write.return_value = {
+            "schema": "sunofriend.ai-session-performance-benchmark.v1",
+            "request_count": 3,
+            "warm_request_count": 2,
+            "fresh_control": {"status": "verified"},
+        }
+        stdout = io.StringIO()
+
+        with redirect_stdout(stdout):
+            result = main(
+                [
+                    "ai-session-benchmark",
+                    "session",
+                    "--fresh-run",
+                    "fresh-001",
+                    "--fresh-run",
+                    "fresh-002",
+                    "--out",
+                    "benchmark.json",
+                ]
+            )
+
+        self.assertEqual(result, 0)
+        write.assert_called_once_with(
+            "session", ["fresh-001", "fresh-002"], "benchmark.json"
+        )
+        self.assertEqual(
+            json.loads(stdout.getvalue())["fresh_control_status"], "verified"
         )
 
     def test_instrument_commands_accept_an_explicit_embedding_model(self) -> None:

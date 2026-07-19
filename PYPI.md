@@ -58,6 +58,44 @@ non-overlapping completed runs with the same runtime identity and source-frame-
 derived actual processed duration, then writes a
 path-free timing and exact-output repeatability report without launching a
 model; fresh-process repeats are not mislabelled as warm-model runs.
+`sunofriend ai-transcribe-session` provides the separate bounded exact-repeat
+test: one parent-owned worker loads one existing local MuScriptor checkpoint,
+executes 2–20 serial copies of one fixed source/roles/excerpt/request over an
+inherited Unix socket pair, then exits. It is a diagnostic benchmark harness,
+not a multi-song service or content cache. Startup/model load is reported
+separately; request 1 has a resident model but no prior transcription and is
+not labelled warm or cold, while requests 2 and later are reused-model warm.
+`sunofriend ai-session-benchmark` verifies the private path-bearing session
+tree and writes a path-free report. Optional fresh-process comparison requires
+at least two exact comparable `ai-transcribe` runs; ordinary `ai-benchmark`
+rejects session repetitions. A path-free report can still contain identifying
+content hashes and runtime details. The session commands download nothing,
+change no checkpoint licence, mutate no MIDI and promote no candidate.
+On the verified 15-second small-CPU golden, three session requests and two
+fresh controls reproduced the same 107-note MIDI byte for byte; warm pipeline
+median was `3.681 s` versus `5.193 s` fresh (observed ratio `0.709`). This is
+end-to-end evidence under an uncontrolled OS file cache, not a causal claim or
+a general hardware benchmark.
+For exact unchanged MuScriptor requests,
+`ai-transcribe --application-cache-dir PRIVATE_DIR` enables a separate opt-in
+private content cache. A miss performs one fresh inference and stores only the
+verified raw model candidate plus its original performance evidence. A
+verified hit creates a fresh immutable run, starts no worker, loads no model,
+executes no inference, and rebuilds current Sunofriend quality, expression and
+MIDI artifacts. A missing cache root is created owner-only; an existing root
+must grant no group or other permissions, and it must remain outside every run
+output tree. `ai-cache-benchmark` verifies one `miss-stored` run and at least
+two `verified-hit` runs without launching a model. Copied origin timing
+is never current hit inference timing. The report omits paths and
+caller-supplied run IDs, although hashes, timestamps and runtime identity can
+still identify private material or a machine. This cache is neither
+resident-model reuse nor the Workbench neutral-preview cache; the
+operating-system file cache remains uncontrolled. Cache evidence cannot
+promote a musical result.
+The private 15-second Lidl M2 validation produced one `6.295 s` miss and a
+`1.078 s` median across two verified no-worker/no-inference hits, with all 107
+raw and derived note controls identical. Treat that as a local end-to-end
+observation, not a general performance or accuracy claim.
 `ai-label-split` can
 then create an exact raw-event label partition plus deterministic requested and
 complement MIDI auditions while retaining a byte-identical full-candidate

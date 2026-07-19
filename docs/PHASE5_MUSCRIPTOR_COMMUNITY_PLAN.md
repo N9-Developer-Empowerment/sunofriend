@@ -1,6 +1,7 @@
 # Phase 5: MuScriptor Full-Mix and Community Learning
 
-Status: **Phase 5.0 and 5.1 complete; Phase 5.2 fresh-process small-CPU baseline complete; no public service or new checkpoint download is authorised**
+Status: **Phase 5.0 and 5.1 complete; Phase 5.2 remains in progress, with its small-CPU fresh-process, bounded reused-model and application-cache slice plus private cache golden complete; no public service or new checkpoint download is authorised**
+
 Drafted: 19 July 2026
 Scope: accurate stem/full-mix MIDI, faster local inference, GarageBand-ready
 instrument choices, a primary local web workbench and consented feedback
@@ -522,9 +523,12 @@ Optimisations must be introduced one at a time:
 
 1. **Persistent local worker:** load one checkpoint once instead of starting a
    new Python process and rebuilding the model for every role.
-2. **Content-addressed cache:** key resampled audio, model output and converted
-   MIDI by audio hash, checkpoint hash, model config, instrument set and decode
-   options.
+2. **Content-addressed application cache:** key exact deterministic MuScriptor
+   raw output by source content/audio layout, ordered roles, excerpt, BPM,
+   decode settings, checkpoint/config/worker hashes and runtime/device identity.
+   Cache only the raw candidate and its original inference-performance evidence;
+   rebuild converted MIDI and every current Sunofriend post-processing artifact
+   on each run.
 3. **Preview/full cascade:** run small first; send only disputed roles or
    phrases to medium/large. Never call the preview the final result.
 4. **Shared preprocessing:** investigate a small upstream adapter/fork that
@@ -560,6 +564,55 @@ declaration is deliberately conservative: the worker and model are fresh per
 repetition,
 there is no application cache, the operating-system file cache is uncontrolled
 and no cold-start or warm-model claim is made.
+
+The first reuse boundary is now implemented separately. The
+`sunofriend ai-transcribe-session` command owns one bounded worker over an
+inherited Unix socket pair, loads one existing local checkpoint, executes 2–20
+serial copies of one fixed source/roles/excerpt/request and exits. It opens no
+listening port and is not a multi-song service, role queue, daemon or content
+cache. Startup/model load is session-level evidence. Request 1 already has a
+resident model but no prior transcription to reuse, so it is not labelled warm
+or cold; only requests 2 and later are reused-model warm. Application cache
+hits remain zero and the OS file cache remains uncontrolled.
+
+`sunofriend ai-session-benchmark` re-verifies the private path-bearing session
+tree and writes a path-free diagnostic report. A direct fresh-process comparison
+is optional, but requires at least two exact comparable, repeatable fresh runs;
+the existing `ai-benchmark` rejects session repetitions so the two timing
+contracts cannot be mixed. Final worker shutdown re-hashes the fixed source,
+checkpoint and model config; each request is byte-matched to the startup
+template, and the read-only verifier rechecks the pinned worker and template.
+Neither command runs a
+selection, promotion, mutation, download or licence-acceptance step. The report
+still exposes content hashes and detailed runtime identity, so path-free does
+not imply anonymous or cleared for publication.
+
+The bounded-session golden now passes and remains separate from application
+caching. The next execution boundary is also implemented explicitly:
+`ai-transcribe --application-cache-dir PRIVATE_DIR` performs a read-through
+lookup for one deterministic MuScriptor request. A miss runs a fresh subprocess
+and atomically stores only the verified raw candidate and its original
+fresh-process performance artifact. A verified hit creates a new immutable
+run, copies those artifacts without hard links, starts no worker, loads no
+model, executes no inference and reruns current Sunofriend quality, expression
+and MIDI derivation. A corrupt or inconsistent entry fails closed; it never
+silently falls back to inference. The dedicated cache root is owner-only mode
+`0700` and must sit outside every immutable run-output tree. Concurrent
+identical misses publish one winner; a loser is `miss-verified-existing`, which
+retains its own inference timing but is not the `miss-stored` benchmark control.
+
+`sunofriend ai-cache-benchmark` verifies one `miss-stored` run and at least two
+serial `verified-hit` runs without launching a model. Its path-free report
+keeps current lookup/materialisation/post-processing/pipeline timing separate
+from the copied origin-inference timing. This is neither resident-model reuse
+nor the Workbench FluidSynth preview cache, and the operating-system file cache
+remains uncontrolled. The private 15-second Lidl M2 gate now passes: one
+`miss-stored` run took `6.295317 s`, while two true no-worker/no-model/
+no-inference hits had a `1.077984 s` median pipeline time (RTF `0.071866`) and
+an observed hit/miss ratio of `0.171236`. All 107-note raw, normalized, base
+MIDI, expression, quality and program artifacts were identical. These are
+end-to-end observations on one machine under an uncontrolled OS cache, not an
+accuracy improvement or a general speed guarantee.
 
 ## Community feedback system
 
@@ -873,8 +926,40 @@ server.
   `7824e25850037821287fd77337ae9e8ad2d61cea2cbd2ea57e3b2f92e0c532f8`
   remain unchanged; the new full-candidate MIDI also matches the earlier M2
   byte for byte.
-- [ ] Add a persistent worker before claiming any warm-model result, then add
-  a content-addressed application cache and measure each change separately.
+- [x] Add a bounded parent-owned exact-repeat worker and
+  `ai-transcribe-session`. It permits only one fixed
+  source/roles/excerpt/request, 2–20 serial requests, one inherited Unix socket
+  pair and one model load before exit; it is not a production multi-song
+  service or content cache.
+- [x] Add `ai-session-benchmark` to reverify session lifecycle, hashes,
+  one-model reuse, serial timings, cumulative RSS and exact candidate/MIDI
+  repeatability. Request 1 is resident-model but not warm/cold evidence; only
+  requests 2+ are reused-model warm. Optional comparison requires at least two
+  exact comparable fresh-process controls. `ai-benchmark` remains
+  fresh-process-only and rejects session repetitions.
+- [x] Run the existing 15-second small-CPU M2 golden through three bounded
+  requests and two new final-worker fresh controls. All five produced the same
+  107-note candidate JSON and byte-identical MIDI. Model load was `0.279 s`,
+  request-1 pipeline `3.983 s`, warm pipeline median `3.681 s` (RTF `0.245`),
+  warm request median `3.651 s`, and warm inclusive-transcription median
+  `3.641 s`. Fresh pipeline and transcription medians were `5.193 s` and
+  `3.731 s`, for observed warm/fresh ratios `0.709` and `0.976`. Final process
+  RSS high-water was `1,157,365,760` bytes. These are end-to-end observations
+  under an uncontrolled OS cache, not proof that model reuse alone caused the
+  difference; cumulative RSS is not per-request allocation or leak proof.
+- [x] Add an explicit content-addressed MuScriptor application cache after the
+  reuse golden passes. One deterministic miss runs fresh and stores only the
+  verified raw candidate plus origin performance; hits run no worker/model/
+  inference and rebuild current MIDI. Invalid entries fail closed. Cache timing
+  is separate from model reuse, Workbench preview rendering and the OS cache.
+- [x] Run the existing private 15-second M2 golden as one `miss-stored` run and
+  at least two `verified-hit` runs, write a path-free `ai-cache-benchmark`, and
+  reverify the five reviewed selections and GarageBand handoff before broader
+  integration. The miss was `6.295317 s`; hit median was `1.077984 s` (RTF
+  `0.071866`; hit/miss ratio `0.171236`). All 107-note raw and derived controls
+  matched. Selection and handoff hashes remain
+  `1dce19ce7595a72b8417225b8d23679e0fc92e53581807ccf9db6ea929d7709c`
+  and `7824e25850037821287fd77337ae9e8ad2d61cea2cbd2ea57e3b2f92e0c532f8`.
 - [ ] Benchmark MPS only when the installed runtime exposes it, and CPU/CUDA on
   separately identified contributed hardware.
 - [ ] After separate explicit checkpoint acceptance, pin medium and large one
@@ -896,7 +981,13 @@ server.
 
 ### 5.4 — Fast local review application
 
-- Add a persistent worker, content cache and progressive review UI.
+- If the bounded exact-repeat golden supports reuse, adapt that proven worker
+  boundary to one fixed production job without turning it into an unbounded
+  daemon. The exact-result cache now exists as a separate explicit one-shot
+  option; its private golden passed, but it remains disabled by default until
+  the later workflow-integration gate is reviewed.
+  Workbench may display completed cache provenance; it must not silently enable
+  either optimisation. Add progressive review UI as another separate change.
 - Add piano-roll note correction and export a minimal MIDI edit diff.
 - Keep every review local by default.
 - Success: unchanged reruns reuse verified artifacts; a user can correct a
@@ -962,11 +1053,17 @@ or zero-note candidates from becoming main/optional choices.
 The private M4 bass/pluck gate, Workbench overlap/archive follow-through and
 three-row M1/M2/M3 bass/keys/vocal review are complete. The evidence supports
 role-specific routing and retained alternatives, not a universal model winner.
-The Phase 5.2 fresh-process small-CPU baseline is now complete. A persistent
-worker is the next speed increment; an application content cache follows only
-after that worker has a verified unchanged-output control. Medium or large
-checkpoints, other devices, decoding-speed challengers and any public
-contribution remain later, separately authorised work.
+The Phase 5.2 fresh-process and bounded exact-repeat small-CPU gates are
+complete. Three resident-model requests and two new fresh controls reproduced
+the same candidate JSON, 107-note count and MIDI byte for byte; only requests
+2+ are true reused-model warm requests. The measured warm/fresh ratios are
+observations rather than causal proof, and the harness is still not a
+production multi-song service. The separate opt-in application content cache
+and its private golden are complete; broader integration remains pending. The
+cache must not be conflated with resident-model reuse, the Workbench
+preview cache or the uncontrolled OS cache. Medium or large checkpoints, other
+devices, decoding-speed challengers and any public contribution remain later,
+separately authorised work.
 
 Keep sample-accurate level-matched short-loop review as a requirement before a
 public listening beta. The current media-element switching is deliberately

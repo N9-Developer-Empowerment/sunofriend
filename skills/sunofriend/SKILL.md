@@ -1,6 +1,6 @@
 ---
 name: sunofriend
-description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes, benchmark verified repeated local AI runs, partition model-reported labels exactly, and review existing source/MIDI alternatives; render cached neutral previews, save explicit solo/full-mix choices, hear the selected arrangement and export unchanged choices in a GarageBand handoff through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
+description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes, benchmark verified fresh-process or bounded exact-repeat local AI runs, reuse and benchmark an explicit exact MuScriptor raw-result cache, partition model-reported labels exactly, and review existing source/MIDI alternatives; render cached neutral previews, save explicit solo/full-mix choices, hear the selected arrangement and export unchanged choices in a GarageBand handoff through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
 ---
 
 # Sunofriend
@@ -28,6 +28,28 @@ scripts.
      completed comparable MuScriptor runs, verifies their immutable evidence
      and starts no worker. Run the MuScriptor checkpoint check only when making
      new repetitions first.
+   - `sunofriend ai-transcribe-session` needs
+     `sunofriend ai-doctor --require muscriptor-checkpoint`. Read both
+     `ai-transcribe-session --help` and `ai-session-benchmark --help`. It runs
+     2–20 exact serial copies of one fixed MuScriptor request through one
+     loaded local model; use it only as a bounded diagnostic benchmark.
+   - `sunofriend ai-session-benchmark` itself needs no model capability and
+     starts no worker. It verifies one completed session. If direct
+     fresh-process comparison is requested, require at least two completed
+     exact comparable `ai-transcribe` runs through repeated `--fresh-run`.
+   - `sunofriend ai-transcribe --application-cache-dir PRIVATE_DIR` needs the
+     normal `sunofriend ai-doctor --require muscriptor-checkpoint` preflight.
+     Read `ai-transcribe --help`; the cache is explicit, local, MuScriptor-only
+     and disabled when the option is omitted. A verified hit still needs the
+     existing checkpoint, worker and runtime so their identities can be
+     rechecked, even though it starts no worker or model.
+     Use a dedicated owner-only cache root (mode `0700`); the command rejects
+     an existing root with any group or other permissions. Keep it outside
+     every immutable run-output tree; the cache and output roots may not
+     contain one another.
+   - `sunofriend ai-cache-benchmark` needs no model capability and starts no
+     worker. Read its help and supply one completed `miss-stored` run plus at
+     least two completed `verified-hit` runs for the same immutable entry.
    - `sunofriend ai-label-split` needs no audio, model or preview capability.
      It verifies and partitions one completed immutable AI run.
    - `sunofriend ai-doctor --require game` before a standalone GAME vocal
@@ -109,7 +131,11 @@ scripts.
   existing WAV is absent or uses a different sound. Its shared browser
   position is synchronized in seconds, not claimed sample-accurate. Completed
   AI runs expose path-free model/config, label, density, boundary and runtime
-  diagnostics. Treat severe decoder or zero-note candidates as
+  diagnostics. For an application-cache hit, require the card to state that no
+  AI model ran and interpret elapsed time/RTF as pipeline-not-inference. Do not
+  confuse that raw-result cache with the role-neutral FluidSynth preview cache:
+  Workbench populates only the latter and merely displays completed AI-cache
+  provenance. Treat severe decoder or zero-note candidates as
   diagnostic-only; ordinary role leakage remains auditionable. The
   selected arrangement and handoff include only the latest active main and
   explicit optional choices; numbered MIDI files in the ZIP must remain exact
@@ -157,6 +183,45 @@ scripts.
   reloads the model; the OS file cache is uncontrolled, so never call a later
   repetition warm-model evidence. The report is diagnostic and cannot promote
   a musical candidate.
+  A pre-session/cache v1 manifest without the newer execution fields is valid
+  only while all hash-pinned external evidence remains unchanged and when it
+  has a successful non-empty subprocess command with no session or
+  application-cache evidence; report its explicit legacy-evidence label. A
+  historical run whose external worker changed cannot be re-verified.
+- Bounded exact-repeat MuScriptor timing: use `ai-transcribe-session` only to
+  repeat one byte-identical request template serially 2–20 times with one
+  parent-owned loaded model. Keep source, ordered roles, excerpt, BPM,
+  checkpoint, model config, device and decode options fixed. The inherited Unix
+  socket pair opens no listening port and the worker exits at the declared
+  bound. Do not present it as a multi-song/role service, daemon, production
+  worker or content cache. Request 1 has a resident model but no earlier
+  transcription and is not warm/cold evidence; only requests 2+ are
+  reused-model warm. Startup/model load is separate, application cache hits
+  are zero and the OS file cache is uncontrolled.
+- Completed bounded session: use `ai-session-benchmark SESSION --out FRESH`
+  for the path-free read-only report. To compare with fresh processes, provide
+  at least two exact comparable completed runs using repeated `--fresh-run`.
+  Require exact candidate JSON, MIDI and note-count repeatability. Do not feed
+  session repetitions to fresh-only `ai-benchmark`; it must reject them. Keep
+  the session tree private because it contains paths. Treat the path-free
+  report as still potentially identifying through hashes and runtime identity,
+  not as publication consent.
+- Exact unchanged MuScriptor rerun: add
+  `--application-cache-dir PRIVATE_DIR` to `ai-transcribe` only when reusing a
+  byte-identical deterministic request is intended. Keep source content,
+  ordered roles, excerpt, BPM, decode options, checkpoint/config/worker and
+  runtime/device identity fixed. The first request is a fresh miss; a verified
+  hit must record an empty worker command and no worker, model load or
+  inference. Every hit still creates a fresh immutable run and rebuilds current
+  quality, expression and MIDI from the cached raw result. Never combine this
+  regime with a bounded session or call a cache hit warm-model evidence. Use
+  `ai-cache-benchmark --miss-run MISS --hit-run HIT1 --hit-run HIT2 --out FRESH`
+  to verify timing and exact output without launching a model. Keep the cache
+  private. The report omits paths and caller-supplied run IDs, but hashes,
+  timestamps and runtime identity can still identify content or a machine.
+  A concurrent losing producer is `miss-verified-existing`: it ran inference,
+  verified the winning raw candidate as identical and kept its own timing, but
+  it is not the required `miss-stored` benchmark control.
 - Mixed-role M4 matrix: require every M4 lane to use the same source audio,
   excerpt and positive BPM, request exactly one role and use a distinct role
   from every other M4 lane. Inspect `m4_role_overlap` for possible duplicated
@@ -623,6 +688,18 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   Demucs code is MIT, but its official repository does not state separate
   pretrained-checkpoint terms; keep the model and outputs private, do not
   vendor or redistribute them, and retain failed-run request/log evidence.
+- `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
+  only. They must use the already accepted local MuScriptor checkpoint and must
+  not download weights, accept or change licence terms, create a content cache,
+  mutate raw candidates/MIDI, promote a lane or alter Workbench choices. Keep
+  their measured output separate from musical evaluation.
+- The MuScriptor application cache is also execution evidence, not musical
+  consensus. Cache only `candidate.raw.json` and the original fresh-process
+  performance artifact; rebuild current quality, GM mapping, expression and
+  MIDI in every new run. A hit proves exact prior-result reuse, not independent
+  model agreement, accuracy or a warm resident model. Invalid, linked or
+  inconsistent entries must fail closed without an inference fallback. Never
+  promote, rank or repair a candidate from cache status or speed.
 - `midi-role-split` is an arrangement challenger, not source separation or
   instrument identification. Its strict partition must preserve the complete
   primary note multiset and must retain cluster outliers. Its independent
@@ -715,6 +792,65 @@ sunofriend ai-benchmark \
   --run "$SMALL_CPU_REPEAT_2" \
   --out "$FRESH_PERFORMANCE_JSON"
 
+sunofriend ai-transcribe-session "$FIXED_SOURCE_WAV" \
+  --checkpoint "$LOCAL_MUSCRIPTOR_CHECKPOINT" \
+  --out-dir "$FRESH_SESSION_DIR" \
+  --bpm "$BPM" \
+  --instrument "$EXACT_ROLE_1" \
+  --instrument "$EXACT_ROLE_2" \
+  --start-seconds "$START" \
+  --end-seconds "$END" \
+  --device cpu \
+  --beam-size 1 \
+  --batch-size 1 \
+  --cfg-coef 1.0 \
+  --model-size small \
+  --repetitions 3
+
+sunofriend ai-session-benchmark "$FRESH_SESSION_DIR" \
+  --fresh-run "$EXACT_FRESH_RUN_1" \
+  --fresh-run "$EXACT_FRESH_RUN_2" \
+  --out "$FRESH_SESSION_BENCHMARK_JSON"
+
+sunofriend ai-transcribe "$FIXED_SOURCE_WAV" \
+  --checkpoint "$LOCAL_MUSCRIPTOR_CHECKPOINT" \
+  --out-dir "$FRESH_CACHE_MISS_PARENT" \
+  --application-cache-dir "$PRIVATE_AI_CACHE" \
+  --bpm "$BPM" \
+  --instrument "$EXACT_ROLE_1" \
+  --instrument "$EXACT_ROLE_2" \
+  --start-seconds "$START" --end-seconds "$END" \
+  --device cpu --beam-size 1 --batch-size 1 --cfg-coef 1.0 \
+  --model-size small
+
+sunofriend ai-transcribe "$FIXED_SOURCE_WAV" \
+  --checkpoint "$LOCAL_MUSCRIPTOR_CHECKPOINT" \
+  --out-dir "$FRESH_CACHE_HIT_1_PARENT" \
+  --application-cache-dir "$PRIVATE_AI_CACHE" \
+  --bpm "$BPM" \
+  --instrument "$EXACT_ROLE_1" \
+  --instrument "$EXACT_ROLE_2" \
+  --start-seconds "$START" --end-seconds "$END" \
+  --device cpu --beam-size 1 --batch-size 1 --cfg-coef 1.0 \
+  --model-size small
+
+sunofriend ai-transcribe "$FIXED_SOURCE_WAV" \
+  --checkpoint "$LOCAL_MUSCRIPTOR_CHECKPOINT" \
+  --out-dir "$FRESH_CACHE_HIT_2_PARENT" \
+  --application-cache-dir "$PRIVATE_AI_CACHE" \
+  --bpm "$BPM" \
+  --instrument "$EXACT_ROLE_1" \
+  --instrument "$EXACT_ROLE_2" \
+  --start-seconds "$START" --end-seconds "$END" \
+  --device cpu --beam-size 1 --batch-size 1 --cfg-coef 1.0 \
+  --model-size small
+
+sunofriend ai-cache-benchmark \
+  --miss-run "$COMPLETED_CACHE_MISS_RUN" \
+  --hit-run "$COMPLETED_CACHE_HIT_1_RUN" \
+  --hit-run "$COMPLETED_CACHE_HIT_2_RUN" \
+  --out "$FRESH_CACHE_BENCHMARK_JSON"
+
 sunofriend ai-label-split "$COMPLETED_M4_RUN" \
   --label clean_electric_guitar \
   --out-dir "$FRESH_LABEL_SPLIT"
@@ -747,6 +883,41 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
    windows across repetitions. Process RSS excludes
    accelerator allocation. Do not infer a warm-model speedup or a musical
    promotion from the timing report.
+   For `ai-transcribe-session`, confirm the private root was fresh and contains
+   `session.request-template.json`, started/ready/closed lifecycle records,
+   worker logs, `session.json` and exactly the declared contiguous
+   `repetition-NNN` run directories. Verify one worker instance/model load, one
+   exact source/ordered-role/excerpt/request template, serial non-overlapping
+   requests, zero application-cache hits and uncontrolled OS-cache status.
+   Confirm request 1 is explicitly not warm and requests 2+ are explicitly
+   reused-model warm. Confirm final source, checkpoint, model-config, worker and
+   template hashes and all zero promotion/selection/raw/MIDI mutation effects.
+   Do not publish the tree: it contains absolute paths and logs.
+   For `ai-session-benchmark`, confirm the report is path-free, request count
+   is 2–20, warm count is request count minus one, startup/model-load evidence
+   is separate, every request performance window nests correctly, RSS is
+   cumulative process high-water evidence and exact candidate JSON/MIDI/note
+   repeatability passed. When fresh controls are present, require status
+   `verified`, at least two exact comparable fresh-process repetitions and
+   unchanged candidate/MIDI hashes before reporting warm-to-fresh ratios. State
+   that content hashes and runtime identity may still identify material or a
+   machine. Do not claim anonymity, a cold start, a production cache/service,
+   a causal speed-up from the observed warm/fresh ratio, or musical promotion.
+   For the application cache, confirm the ordered status sequence is one
+   `miss-stored` followed by at least two `verified-hit` runs and that every
+   run uses one cache key and entry-manifest hash. On hits require an empty
+   command, null exit status and explicit false worker-process, model-load,
+   inference and resident-model-reuse fields. Confirm
+   `cache.performance.json` contains current lookup/materialisation/
+   post-processing/pipeline timing while copied `muscriptor.performance.json`
+   is labelled original fresh-inference evidence only. Require exact raw
+   candidate, normalised candidate, base/expression MIDI, expression JSON,
+   quality, program mapping and note-count repeatability and zero
+   promotion/raw/MIDI mutation claims. Treat the report as path-free but not
+   anonymous or publication consent. Use the original fresh miss, never a hit,
+   for `ai-matrix`; never feed any cache-enabled run to fresh-only
+   `ai-benchmark`. Keep this separate from resident-model reuse, Workbench
+   preview caching and the uncontrolled OS file cache.
    For `ai-label-split`, additionally confirm the source run and artifact
    hashes, exact requested label, detected-label counts, selected/complement
    source indices, disjoint/exhaustive raw-event partition and all-zero source

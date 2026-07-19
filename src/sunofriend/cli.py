@@ -27,7 +27,10 @@ _COMMANDS = {
     "doctor",
     "ai-doctor",
     "ai-transcribe",
+    "ai-transcribe-session",
     "ai-benchmark",
+    "ai-cache-benchmark",
+    "ai-session-benchmark",
     "ai-matrix",
     "ai-label-split",
     "ai-cleanup",
@@ -782,6 +785,100 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="AI interpreter (default: SUNOFRIEND_AI_PYTHON or .venv-ai)",
     )
+    ai_transcribe.add_argument(
+        "--application-cache-dir",
+        default=None,
+        help=(
+            "Explicit private MuScriptor raw-result cache. A verified hit starts "
+            "no worker; disabled when omitted"
+        ),
+    )
+
+    ai_transcribe_session = sub.add_parser(
+        "ai-transcribe-session",
+        help=(
+            "Run bounded sequential MuScriptor repetitions through one loaded "
+            "local model, then exit"
+        ),
+    )
+    ai_transcribe_session.add_argument(
+        "audio", help="Source WAV or other local audio file"
+    )
+    ai_transcribe_session.add_argument(
+        "--checkpoint",
+        default=None,
+        help=(
+            "Existing local MuScriptor .safetensors checkpoint (default: "
+            "SUNOFRIEND_MUSCRIPTOR_MODEL or standard local model)"
+        ),
+    )
+    ai_transcribe_session.add_argument(
+        "--out-dir", required=True, help="Fresh bounded-session output directory"
+    )
+    ai_transcribe_session.add_argument(
+        "--bpm", required=True, type=float, help="Tempo written into every candidate.mid"
+    )
+    ai_transcribe_session.add_argument(
+        "--instrument",
+        action="append",
+        default=[],
+        help="Exact MuScriptor role/instrument name; repeat as needed",
+    )
+    ai_transcribe_session.add_argument(
+        "--start-seconds", type=float, default=0.0, help="Optional excerpt start"
+    )
+    ai_transcribe_session.add_argument(
+        "--end-seconds", type=float, default=None, help="Optional excerpt end"
+    )
+    ai_transcribe_session.add_argument(
+        "--device",
+        choices=("auto", "cpu", "mps"),
+        default="auto",
+        help="Inference device (default: MPS when available, otherwise CPU)",
+    )
+    ai_transcribe_session.add_argument(
+        "--beam-size", type=int, default=1, help="MuScriptor decoding beam size"
+    )
+    ai_transcribe_session.add_argument(
+        "--batch-size", type=int, default=1, help="MuScriptor batch size (default: 1)"
+    )
+    ai_transcribe_session.add_argument(
+        "--cfg-coef", type=float, default=1.0, help="MuScriptor CFG coefficient"
+    )
+    ai_transcribe_session.add_argument(
+        "--model-size",
+        choices=("auto", "small", "medium", "large"),
+        default="auto",
+        help="Validate the local checkpoint variant",
+    )
+    ai_transcribe_session.add_argument(
+        "--prelude-forcing",
+        action="store_true",
+        help="Rejected by the pinned MuScriptor 0.2.1 runtime",
+    )
+    ai_transcribe_session.add_argument(
+        "--repetitions",
+        type=int,
+        default=3,
+        help="Sequential requests through one loaded model, 2–20 (default: 3)",
+    )
+    ai_transcribe_session.add_argument(
+        "--startup-timeout-seconds",
+        type=float,
+        default=180.0,
+        help="Maximum model-load/startup wait (default: 180)",
+    )
+    ai_transcribe_session.add_argument(
+        "--request-timeout-seconds",
+        type=float,
+        default=1800.0,
+        help="Maximum wait for each serial request (default: 1800)",
+    )
+    ai_transcribe_session.add_argument(
+        "--python",
+        default=None,
+        help="AI interpreter (default: SUNOFRIEND_AI_PYTHON or .venv-ai)",
+    )
 
     ai_cleanup = sub.add_parser(
         "ai-cleanup",
@@ -853,6 +950,48 @@ def build_parser() -> argparse.ArgumentParser:
         "--out",
         required=True,
         help="Fresh path for the path-free performance benchmark JSON report",
+    )
+    ai_cache_benchmark = sub.add_parser(
+        "ai-cache-benchmark",
+        help=(
+            "Verify one cache miss and repeated cache hits without running a model"
+        ),
+    )
+    ai_cache_benchmark.add_argument(
+        "--miss-run",
+        required=True,
+        metavar="RUN_DIR",
+        help="Completed cache-enabled miss that ran and stored a fresh result",
+    )
+    ai_cache_benchmark.add_argument(
+        "--hit-run",
+        action="append",
+        required=True,
+        metavar="RUN_DIR",
+        help="Completed verified cache-hit run; repeat at least twice",
+    )
+    ai_cache_benchmark.add_argument(
+        "--out", required=True, help="Fresh path-free cache benchmark JSON"
+    )
+    ai_session_benchmark = sub.add_parser(
+        "ai-session-benchmark",
+        help=(
+            "Verify a bounded reused-model session and compare optional "
+            "independent comparable fresh-process controls without running a model"
+        ),
+    )
+    ai_session_benchmark.add_argument(
+        "session", help="Completed ai-transcribe-session output directory"
+    )
+    ai_session_benchmark.add_argument(
+        "--fresh-run",
+        action="append",
+        default=[],
+        metavar="RUN_DIR",
+        help="Comparable completed fresh-process run; provide at least two",
+    )
+    ai_session_benchmark.add_argument(
+        "--out", required=True, help="Fresh path-free session benchmark JSON"
     )
     ai_label_split = sub.add_parser(
         "ai-label-split",
@@ -1946,8 +2085,14 @@ def main(argv: list[str] | None = None) -> int:
             return _run_ai_doctor(args)
         if args.command == "ai-transcribe":
             return _run_ai_transcribe(args)
+        if args.command == "ai-transcribe-session":
+            return _run_ai_transcribe_session(args)
         if args.command == "ai-benchmark":
             return _run_ai_benchmark(args)
+        if args.command == "ai-cache-benchmark":
+            return _run_ai_cache_benchmark(args)
+        if args.command == "ai-session-benchmark":
+            return _run_ai_session_benchmark(args)
         if args.command == "ai-matrix":
             return _run_ai_matrix(args)
         if args.command == "ai-label-split":
@@ -3235,8 +3380,54 @@ def _run_ai_transcribe(args) -> int:
         options=options,
         python=args.python,
         timeout_seconds=args.timeout_seconds,
+        application_cache_dir=args.application_cache_dir,
     )
     print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_ai_transcribe_session(args) -> int:
+    from .ai_runtime import resolve_muscriptor_checkpoint
+    from .ai_session import run_muscriptor_session
+
+    checkpoint = resolve_muscriptor_checkpoint(args.checkpoint)
+    result = run_muscriptor_session(
+        audio_path=args.audio,
+        out_dir=args.out_dir,
+        checkpoint_path=checkpoint,
+        bpm=args.bpm,
+        repetitions=args.repetitions,
+        roles=args.instrument,
+        start_seconds=args.start_seconds,
+        end_seconds=args.end_seconds,
+        options={
+            "device": args.device,
+            "beam_size": args.beam_size,
+            "batch_size": args.batch_size,
+            "cfg_coef": args.cfg_coef,
+            "model_size": args.model_size,
+            "prelude_forcing": args.prelude_forcing,
+        },
+        python=args.python,
+        startup_timeout_seconds=args.startup_timeout_seconds,
+        request_timeout_seconds=args.request_timeout_seconds,
+    )
+    print(
+        json.dumps(
+            {
+                "status": result["status"],
+                "schema": result["schema"],
+                "session_id": result["session_id"],
+                "output": str(Path(args.out_dir).expanduser().absolute()),
+                "repetitions_completed": result["repetitions_completed"],
+                "model_loaded_once": result["cache_regime"]["model_loaded_once"],
+                "application_content_cache": False,
+                "promotion_allowed": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
     return 0
 
 
@@ -3251,6 +3442,54 @@ def _run_ai_benchmark(args) -> int:
                 "output": str(Path(args.out).expanduser().absolute()),
                 "schema": report["schema"],
                 "repetition_count": report["repetition_count"],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _run_ai_cache_benchmark(args) -> int:
+    from .ai_cache_benchmark import write_ai_cache_benchmark
+
+    report = write_ai_cache_benchmark(args.miss_run, args.hit_run, args.out)
+    print(
+        json.dumps(
+            {
+                "status": "complete",
+                "output": str(Path(args.out).expanduser().absolute()),
+                "schema": report["schema"],
+                "hit_count": report["hit_count"],
+                "application_cache_hit": True,
+                "model_reused": False,
+                "promotion_allowed": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _run_ai_session_benchmark(args) -> int:
+    from .ai_session_benchmark import write_ai_session_benchmark
+
+    report = write_ai_session_benchmark(args.session, args.fresh_run, args.out)
+    print(
+        json.dumps(
+            {
+                "status": "complete",
+                "output": str(Path(args.out).expanduser().absolute()),
+                "schema": report["schema"],
+                "request_count": report["request_count"],
+                "warm_request_count": report["warm_request_count"],
+                "fresh_control_status": (
+                    None
+                    if report["fresh_control"] is None
+                    else report["fresh_control"]["status"]
+                ),
+                "promotion_allowed": False,
             },
             indent=2,
             sort_keys=True,

@@ -423,10 +423,12 @@ def _ai_candidate_diagnostics(
     ):
         if not isinstance(artifacts.get(required), Mapping):
             raise ValueError(f"adjacent AI run does not pin {required}")
+    verified_artifacts: dict[str, Path] = {}
     for name, record in artifacts.items():
         if not isinstance(name, str) or not isinstance(record, Mapping):
             raise ValueError("adjacent AI run has an invalid artifact record")
         artifact_path = _verify_ai_record(record, root=midi.parent, label=name)
+        verified_artifacts[name] = artifact_path
         if (
             name
             in {
@@ -434,6 +436,9 @@ def _ai_candidate_diagnostics(
                 "candidate.raw.json",
                 "candidate.json",
                 "candidate.quality.json",
+                "cache.entry.json",
+                "cache.performance.json",
+                "muscriptor.performance.json",
                 midi.name,
             }
             and artifact_path != (midi.parent / name).resolve()
@@ -516,6 +521,13 @@ def _ai_candidate_diagnostics(
     severe_codes = severe_quality_codes(metrics)
     duration = _ai_candidate_duration(candidate, request, metrics)
     elapsed = float(run.get("elapsed_seconds") or 0.0)
+    cache = _validated_ai_application_cache(
+        run,
+        artifacts=artifacts,
+        verified_artifacts=verified_artifacts,
+        run_root=midi.parent,
+        elapsed_seconds=elapsed,
+    )
     detected = sorted(
         {note.instrument or "unlabelled" for note in candidate.notes}
     )
@@ -545,6 +557,15 @@ def _ai_candidate_diagnostics(
         "real_time_factor": (
             round(elapsed / duration, 6) if duration > 0 else None
         ),
+        "runtime_semantics": (
+            "pipeline-not-inference" if cache["hit"] else "pipeline"
+        ),
+        "worker_execution_mode": cache["worker_execution_mode"],
+        "application_cache_status": cache["status"],
+        "application_cache_hit": cache["hit"],
+        "worker_process_started_for_run": cache["worker_process_started_for_run"],
+        "inference_executed_for_run": cache["inference_executed_for_run"],
+        "model_loaded_for_run": cache["model_loaded_for_run"],
         "quality_status": quality.get("status"),
         "quality_metrics": metrics,
         "warnings": list(dict.fromkeys(str(value) for value in warnings)),
@@ -557,6 +578,274 @@ def _ai_candidate_diagnostics(
         ),
         "raw_candidate_mutated": False,
     }
+
+
+def _validated_ai_application_cache(
+    run: Mapping[str, Any],
+    *,
+    artifacts: Mapping[str, Any],
+    verified_artifacts: Mapping[str, Path],
+    run_root: Path,
+    elapsed_seconds: float,
+) -> dict[str, Any]:
+    """Return cache semantics only after all independent evidence agrees."""
+
+    summary = run.get("application_cache")
+    mode = run.get("worker_execution_mode")
+    cache_evidence_names = ("cache.entry.json", "cache.performance.json")
+    if summary is None:
+        has_cache_evidence = any(
+            name in artifacts or (run_root / name).is_file()
+            for name in cache_evidence_names
+        )
+        if has_cache_evidence or (
+            isinstance(mode, str) and mode.startswith("application-cache")
+        ):
+            raise ValueError(
+                "adjacent AI application-cache evidence has no run summary"
+            )
+        return {
+            "status": "disabled",
+            "hit": False,
+            "worker_execution_mode": mode,
+            "worker_process_started_for_run": run.get(
+                "worker_process_started_for_run"
+            ),
+            "inference_executed_for_run": run.get(
+                "inference_executed_for_run"
+            ),
+            "model_loaded_for_run": run.get("model_loaded_for_run"),
+        }
+    if not isinstance(summary, Mapping):
+        raise ValueError("adjacent AI application-cache summary is invalid")
+
+    required_artifacts = (
+        "cache.entry.json",
+        "cache.performance.json",
+        "muscriptor.performance.json",
+    )
+    for name in required_artifacts:
+        if not isinstance(artifacts.get(name), Mapping) or name not in verified_artifacts:
+            raise ValueError(f"adjacent AI application-cache run does not pin {name}")
+
+    event = _read_json(verified_artifacts["cache.performance.json"])
+    entry = _read_json(verified_artifacts["cache.entry.json"])
+    if event.get("schema") != "sunofriend.ai-transcription-cache-event.v1":
+        raise ValueError("adjacent AI application-cache event schema is invalid")
+    if event.get("status") != "complete" or event.get("error") is not None:
+        raise ValueError("adjacent AI application-cache event is not complete")
+    if entry.get("schema") != "sunofriend.ai-transcription-cache-entry.v1":
+        raise ValueError("adjacent AI application-cache entry schema is invalid")
+    if entry.get("status") != "complete":
+        raise ValueError("adjacent AI application-cache entry is not complete")
+
+    summary_fields = (
+        "schema",
+        "application_cache_status",
+        "scope",
+        "key_sha256",
+        "entry_manifest_sha256",
+        "application_cache_hit",
+        "entry_published_by_run",
+        "fallback_to_inference_on_invalid_entry",
+        "muscriptor_performance_is_current_run_inference",
+        "run_origin_performance_matches_entry",
+    )
+    for name in summary_fields:
+        if name not in summary or name not in event or summary[name] != event[name]:
+            raise ValueError(
+                f"adjacent AI application-cache summary and event disagree: {name}"
+            )
+
+    if entry.get("scope") != event.get("scope"):
+        raise ValueError("adjacent AI application-cache entry scope disagrees")
+    if entry.get("key_sha256") != event.get("key_sha256"):
+        raise ValueError("adjacent AI application-cache entry key disagrees")
+    entry_record = artifacts["cache.entry.json"]
+    if (
+        event.get("entry_manifest_sha256") != entry_record.get("sha256")
+        or event.get("entry_manifest_bytes") != entry_record.get("bytes")
+    ):
+        raise ValueError(
+            "adjacent AI application-cache event entry manifest disagrees"
+        )
+
+    entry_artifacts = entry.get("artifacts")
+    if not isinstance(entry_artifacts, Mapping):
+        raise ValueError("adjacent AI application-cache entry artifacts are invalid")
+    raw_entry_record = entry_artifacts.get("candidate.raw.json")
+    performance_entry_record = entry_artifacts.get("muscriptor.performance.json")
+    if not _ai_cache_records_equal(raw_entry_record, artifacts["candidate.raw.json"]):
+        raise ValueError(
+            "adjacent AI application-cache raw candidate differs from its entry"
+        )
+    performance_matches_entry = _ai_cache_records_equal(
+        performance_entry_record, artifacts["muscriptor.performance.json"]
+    )
+    if performance_matches_entry is not event.get(
+        "run_origin_performance_matches_entry"
+    ):
+        raise ValueError(
+            "adjacent AI application-cache performance-match flag disagrees"
+        )
+
+    flag_names = (
+        "worker_process_started_for_run",
+        "inference_executed_for_run",
+        "model_loaded_for_run",
+        "model_reused_from_prior_request",
+    )
+    for name in flag_names:
+        if (
+            not isinstance(event.get(name), bool)
+            or not isinstance(run.get(name), bool)
+            or event[name] is not run[name]
+        ):
+            raise ValueError(
+                f"adjacent AI application-cache event and run disagree: {name}"
+            )
+    if (
+        event.get("fallback_to_inference_on_invalid_entry") is not False
+        or run.get("worker_transport") is not None
+        or run.get("model_reused_from_prior_request") is not False
+    ):
+        raise ValueError("adjacent AI application-cache execution regime is invalid")
+
+    timings = event.get("timings_seconds")
+    if not isinstance(timings, Mapping):
+        raise ValueError("adjacent AI application-cache timings are invalid")
+    preflight = _ai_cache_seconds(
+        timings.get("identity_and_preflight"), label="identity_and_preflight"
+    )
+    lookup = _ai_cache_seconds(timings.get("lookup"), label="lookup")
+    postprocess = _ai_cache_seconds(
+        timings.get("postprocess"), label="postprocess"
+    )
+    pipeline = _ai_cache_seconds(
+        timings.get("pipeline_before_final_evidence"),
+        label="pipeline_before_final_evidence",
+        positive=True,
+    )
+    if (
+        not math.isfinite(elapsed_seconds)
+        or elapsed_seconds <= 0
+        or pipeline > elapsed_seconds + 0.05
+    ):
+        raise ValueError(
+            "adjacent AI application-cache pipeline timing exceeds run elapsed time"
+        )
+
+    status = event.get("application_cache_status")
+    hit = event.get("application_cache_hit")
+    published = event.get("entry_published_by_run")
+    current_performance = event.get(
+        "muscriptor_performance_is_current_run_inference"
+    )
+    if not all(
+        isinstance(value, bool)
+        for value in (hit, published, current_performance)
+    ):
+        raise ValueError("adjacent AI application-cache result flags are invalid")
+    command = run.get("command")
+    if not isinstance(command, list) or any(
+        not isinstance(value, str) or not value for value in command
+    ):
+        raise ValueError("adjacent AI application-cache command is invalid")
+
+    if hit:
+        materialise = _ai_cache_seconds(
+            timings.get("materialise"), label="materialise"
+        )
+        if (
+            status != "verified-hit"
+            or published
+            or mode != "application-cache-hit"
+            or command
+            or run.get("exit_code") is not None
+            or run.get("worker_subprocess_elapsed_seconds") is not None
+            or run.get("worker_request_elapsed_seconds") is not None
+            or timings.get("worker_subprocess") is not None
+            or timings.get("store") is not None
+            or run.get("worker_process_started_for_run") is not False
+            or run.get("inference_executed_for_run") is not False
+            or run.get("model_loaded_for_run") is not False
+            or current_performance
+            or not performance_matches_entry
+        ):
+            raise ValueError(
+                "adjacent AI application-cache hit execution evidence is inconsistent"
+            )
+        serial_seconds = preflight + lookup + materialise + postprocess
+    else:
+        worker_seconds = _ai_cache_seconds(
+            timings.get("worker_subprocess"),
+            label="worker_subprocess",
+            positive=True,
+        )
+        store = _ai_cache_seconds(timings.get("store"), label="store")
+        run_worker_seconds = _ai_cache_seconds(
+            run.get("worker_subprocess_elapsed_seconds"),
+            label="run worker_subprocess_elapsed_seconds",
+            positive=True,
+        )
+        exit_code = run.get("exit_code")
+        if (
+            status not in {"miss-stored", "miss-verified-existing"}
+            or published is not (status == "miss-stored")
+            or mode != "fresh-subprocess"
+            or not command
+            or isinstance(exit_code, bool)
+            or not isinstance(exit_code, int)
+            or exit_code != 0
+            or run.get("worker_request_elapsed_seconds") is not None
+            or timings.get("materialise") is not None
+            or run.get("worker_process_started_for_run") is not True
+            or run.get("inference_executed_for_run") is not True
+            or run.get("model_loaded_for_run") is not True
+            or not current_performance
+            or not math.isclose(
+                worker_seconds, run_worker_seconds, rel_tol=0.0, abs_tol=1e-9
+            )
+            or (status == "miss-stored" and not performance_matches_entry)
+        ):
+            raise ValueError(
+                "adjacent AI application-cache miss execution evidence is inconsistent"
+            )
+        serial_seconds = preflight + lookup + worker_seconds + store + postprocess
+    if serial_seconds > pipeline + 0.05:
+        raise ValueError(
+            "adjacent AI application-cache serial stages exceed pipeline timing"
+        )
+
+    return {
+        "status": status,
+        "hit": hit,
+        "worker_execution_mode": mode,
+        "worker_process_started_for_run": run["worker_process_started_for_run"],
+        "inference_executed_for_run": run["inference_executed_for_run"],
+        "model_loaded_for_run": run["model_loaded_for_run"],
+    }
+
+
+def _ai_cache_records_equal(left: Any, right: Any) -> bool:
+    return bool(
+        isinstance(left, Mapping)
+        and isinstance(right, Mapping)
+        and isinstance(left.get("bytes"), int)
+        and not isinstance(left.get("bytes"), bool)
+        and isinstance(left.get("sha256"), str)
+        and left.get("bytes") == right.get("bytes")
+        and left.get("sha256") == right.get("sha256")
+    )
+
+
+def _ai_cache_seconds(value: Any, *, label: str, positive: bool = False) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"adjacent AI application-cache {label} timing is invalid")
+    seconds = float(value)
+    if not math.isfinite(seconds) or seconds < 0 or (positive and seconds <= 0):
+        raise ValueError(f"adjacent AI application-cache {label} timing is invalid")
+    return seconds
 
 
 def _ai_label_split_diagnostics(

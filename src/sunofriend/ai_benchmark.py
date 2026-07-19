@@ -39,6 +39,18 @@ _MEMORY_SCOPE = "process RSS high-water; accelerator allocation excluded"
 _CLOCK = "time.perf_counter"
 _TIMING_TOLERANCE_SECONDS = 0.05
 _DURATION_TOLERANCE_SECONDS = 1e-9
+_EXPLICIT_EXECUTION_FIELDS = frozenset(
+    {
+        "worker_execution_mode",
+        "worker_process_started_for_run",
+        "inference_executed_for_run",
+        "model_loaded_for_run",
+        "application_cache",
+    }
+)
+_CACHE_EVIDENCE_ARTIFACTS = frozenset(
+    {"cache.entry.json", "cache.performance.json"}
+)
 
 
 def write_ai_performance_benchmark(
@@ -92,6 +104,7 @@ def build_ai_performance_benchmark(
     preliminaries: list[tuple[datetime, datetime, str, str, str, Path]] = []
     for path in resolved:
         document = _read_json(path / "run.json", "run manifest")
+        _fresh_execution_evidence(document, label="run manifest")
         run_id = document.get("run_id")
         if not isinstance(run_id, str) or not run_id.strip():
             raise ValueError("AI performance benchmark run has no stable run_id")
@@ -205,6 +218,7 @@ def build_ai_performance_benchmark(
         repetition: dict[str, Any] = {
             "repetition": index,
             "run_id": item["run_id"],
+            "execution_evidence": item["execution_evidence"],
             "started_at": item["started_at"],
             "completed_at": item["completed_at"],
             "actual_duration_seconds": _rounded(duration),
@@ -296,6 +310,20 @@ def build_ai_performance_benchmark(
             "operating_system_file_cache": "uncontrolled",
             "cold_start_claimed": False,
         },
+        "execution_evidence": {
+            "explicit_current_count": sum(
+                item["execution_evidence"] == "explicit-current-fields"
+                for item in loaded
+            ),
+            "legacy_v1_count": sum(
+                item["execution_evidence"] == "legacy-v1-fresh-subprocess"
+                for item in loaded
+            ),
+            "legacy_policy": (
+                "A legacy v1 run is accepted only with a successful non-empty "
+                "subprocess command and no session or application-cache evidence."
+            ),
+        },
         "timing_definitions": {
             "pipeline_elapsed_seconds": (
                 "Parent-process timer from request publication through the worker "
@@ -355,6 +383,53 @@ def build_ai_performance_benchmark(
     return report
 
 
+def _fresh_execution_evidence(run: Mapping[str, Any], *, label: str) -> str:
+    """Validate current fields or the tightly bounded pre-field v1 contract."""
+
+    rejection = (
+        "AI performance benchmark accepts only cache-disabled fresh-process runs; "
+        "use ai-session-benchmark for persistent sessions or ai-cache-benchmark "
+        "for application-cache runs"
+    )
+    if run.get("worker_transport") is not None:
+        raise ValueError(rejection)
+
+    present = {field for field in _EXPLICIT_EXECUTION_FIELDS if field in run}
+    if present:
+        if present != _EXPLICIT_EXECUTION_FIELDS:
+            raise ValueError(
+                f"AI performance benchmark {label} has incomplete execution fields"
+            )
+        if (
+            run.get("worker_execution_mode") != "fresh-subprocess"
+            or run.get("worker_process_started_for_run") is not True
+            or run.get("inference_executed_for_run") is not True
+            or run.get("model_loaded_for_run") is not True
+            or run.get("application_cache") is not None
+        ):
+            raise ValueError(rejection)
+        evidence = "explicit-current-fields"
+    else:
+        artifacts = run.get("artifacts")
+        if not isinstance(artifacts, Mapping):
+            raise ValueError(f"AI performance benchmark {label} has no artifacts")
+        if _CACHE_EVIDENCE_ARTIFACTS.intersection(artifacts):
+            raise ValueError(rejection)
+        evidence = "legacy-v1-fresh-subprocess"
+
+    command = run.get("command")
+    exit_code = run.get("exit_code")
+    if (
+        not isinstance(command, list)
+        or not command
+        or not all(isinstance(part, str) and part for part in command)
+        or isinstance(exit_code, bool)
+        or exit_code != 0
+    ):
+        raise ValueError(rejection)
+    return evidence
+
+
 def _load_repetition(
     lane: str,
     run_id: str,
@@ -364,6 +439,7 @@ def _load_repetition(
     matrix_row: Mapping[str, Any],
 ) -> dict[str, Any]:
     run = _read_json(run_dir / "run.json", f"{lane} run manifest")
+    execution_evidence = _fresh_execution_evidence(run, label=f"{lane} run")
     manifest_run_id = run.get("run_id")
     if manifest_run_id != run_id:
         raise ValueError(f"AI performance benchmark {lane} run_id changed")
@@ -466,6 +542,7 @@ def _load_repetition(
         "run_id": run_id,
         "started_at": started_at,
         "completed_at": completed_at,
+        "execution_evidence": execution_evidence,
         "run": run,
         "request": request,
         "candidate": candidate,

@@ -845,6 +845,86 @@ class WorkbenchCatalogTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "does not pin candidate.json"):
                 build_workbench_catalog(project, candidate_roots=[run_dir.parent])
 
+    def test_catalog_reports_only_verified_application_cache_miss_and_hit(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "Cache Song-B minor-120bpm-440hz"
+            candidates = root / "candidate-runs"
+            project.mkdir()
+            candidates.mkdir()
+            (project / "Cache Song-bass-B minor-120bpm-440hz.wav").write_bytes(
+                b"RIFF-project-source"
+            )
+            miss_dir = candidates / "bass-cache-miss"
+            hit_dir = candidates / "bass-cache-hit"
+            _write_workbench_ai_run(
+                miss_dir, source_payload=b"RIFF-cache-source", velocity=70
+            )
+            _add_workbench_cache_evidence(miss_dir, hit=False)
+            _write_workbench_ai_run(
+                hit_dir, source_payload=b"RIFF-cache-source", velocity=71
+            )
+            _add_workbench_cache_evidence(hit_dir, hit=True)
+
+            catalog = build_workbench_catalog(project, candidate_roots=[candidates])
+            diagnostics = {
+                candidate["ai_diagnostics"]["run_id"]: candidate["ai_diagnostics"]
+                for candidate in catalog["stems"][0]["candidates"]
+            }
+            miss = diagnostics["origin-fixture-70"]
+            self.assertEqual(miss["application_cache_status"], "miss-stored")
+            self.assertFalse(miss["application_cache_hit"])
+            self.assertEqual(miss["runtime_semantics"], "pipeline")
+            self.assertEqual(miss["worker_execution_mode"], "fresh-subprocess")
+            self.assertTrue(miss["worker_process_started_for_run"])
+            self.assertTrue(miss["inference_executed_for_run"])
+            self.assertTrue(miss["model_loaded_for_run"])
+
+            hit = diagnostics["origin-fixture-71"]
+            self.assertEqual(hit["application_cache_status"], "verified-hit")
+            self.assertTrue(hit["application_cache_hit"])
+            self.assertEqual(hit["runtime_semantics"], "pipeline-not-inference")
+            self.assertEqual(
+                hit["worker_execution_mode"], "application-cache-hit"
+            )
+            self.assertFalse(hit["worker_process_started_for_run"])
+            self.assertFalse(hit["inference_executed_for_run"])
+            self.assertFalse(hit["model_loaded_for_run"])
+
+    def test_catalog_rejects_tampered_application_cache_hit_evidence(self) -> None:
+        for tamper in ("summary-hit-flag", "event-inference-flag"):
+            with self.subTest(tamper=tamper), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                project = root / "Cache Song-B minor-120bpm-440hz"
+                candidates = root / "candidate-runs"
+                project.mkdir()
+                candidates.mkdir()
+                (project / "Cache Song-bass-B minor-120bpm-440hz.wav").write_bytes(
+                    b"RIFF-project-source"
+                )
+                run_dir = candidates / "bass-cache-hit"
+                _write_workbench_ai_run(
+                    run_dir, source_payload=b"RIFF-cache-source", velocity=72
+                )
+                _add_workbench_cache_evidence(run_dir, hit=True)
+
+                if tamper == "summary-hit-flag":
+                    run_path = run_dir / "run.json"
+                    run = json.loads(run_path.read_text(encoding="utf-8"))
+                    run["application_cache"]["application_cache_hit"] = False
+                    run_path.write_text(json.dumps(run), encoding="utf-8")
+                else:
+                    event_path = run_dir / "cache.performance.json"
+                    event = json.loads(event_path.read_text(encoding="utf-8"))
+                    event["inference_executed_for_run"] = True
+                    event_path.write_text(json.dumps(event), encoding="utf-8")
+                    _refresh_workbench_run_artifact(
+                        run_dir, "cache.performance.json"
+                    )
+
+                with self.assertRaisesRegex(ValueError, "application-cache"):
+                    build_workbench_catalog(project, candidate_roots=[candidates])
+
 
 class WorkbenchStoreTests(unittest.TestCase):
     def test_events_are_append_only_restore_state_and_redact_contribution(self) -> None:
@@ -2241,6 +2321,137 @@ def _write_workbench_ai_run(
         encoding="utf-8",
     )
     return midi, _record(source)["sha256"]
+
+
+def _add_workbench_cache_evidence(run_dir: Path, *, hit: bool) -> None:
+    for name in ("candidate.json", "candidate.raw.json"):
+        path = run_dir / name
+        candidate = json.loads(path.read_text(encoding="utf-8"))
+        candidate["raw_artifacts"] = ["muscriptor.performance.json"]
+        path.write_text(json.dumps(candidate), encoding="utf-8")
+
+    performance_path = run_dir / "muscriptor.performance.json"
+    performance_path.write_text(
+        json.dumps(
+            {
+                "schema": "sunofriend.muscriptor-performance.v1",
+                "measurement_mode": "fresh-process",
+                "timings_seconds": {"worker_total": 0.4},
+            }
+        ),
+        encoding="utf-8",
+    )
+    key_sha256 = hashlib.sha256(b"workbench-cache-key").hexdigest()
+    scope = "exact-muscriptor-raw-worker-result-v1"
+    entry_path = run_dir / "cache.entry.json"
+    entry_path.write_text(
+        json.dumps(
+            {
+                "schema": "sunofriend.ai-transcription-cache-entry.v1",
+                "status": "complete",
+                "scope": scope,
+                "key_sha256": key_sha256,
+                "artifacts": {
+                    "candidate.raw.json": _record(
+                        run_dir / "candidate.raw.json", relative=True
+                    ),
+                    "muscriptor.performance.json": _record(
+                        performance_path, relative=True
+                    ),
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    status = "verified-hit" if hit else "miss-stored"
+    published = not hit
+    worker_ran = not hit
+    timings = {
+        "identity_and_preflight": 0.05,
+        "lookup": 0.02,
+        "materialise": 0.03 if hit else None,
+        "worker_subprocess": None if hit else 0.4,
+        "store": None if hit else 0.03,
+        "postprocess": 0.1,
+        "pipeline_before_final_evidence": 0.3 if hit else 0.75,
+    }
+    entry_record = _record(entry_path, relative=True)
+    event = {
+        "schema": "sunofriend.ai-transcription-cache-event.v1",
+        "status": "complete",
+        "application_cache_status": status,
+        "scope": scope,
+        "key_sha256": key_sha256,
+        "entry_manifest_sha256": entry_record["sha256"],
+        "entry_manifest_bytes": entry_record["bytes"],
+        "application_cache_hit": hit,
+        "entry_published_by_run": published,
+        "inference_executed_for_run": worker_ran,
+        "worker_process_started_for_run": worker_ran,
+        "model_loaded_for_run": worker_ran,
+        "model_reused_from_prior_request": False,
+        "fallback_to_inference_on_invalid_entry": False,
+        "timings_seconds": timings,
+        "run_origin_performance_matches_entry": True,
+        "muscriptor_performance_is_current_run_inference": worker_ran,
+        "error": None,
+    }
+    event_path = run_dir / "cache.performance.json"
+    event_path.write_text(json.dumps(event), encoding="utf-8")
+
+    run_path = run_dir / "run.json"
+    run = json.loads(run_path.read_text(encoding="utf-8"))
+    run.update(
+        {
+            "command": [] if hit else ["fixture-python", "worker.py"],
+            "worker_execution_mode": (
+                "application-cache-hit" if hit else "fresh-subprocess"
+            ),
+            "worker_process_started_for_run": worker_ran,
+            "inference_executed_for_run": worker_ran,
+            "model_loaded_for_run": worker_ran,
+            "model_reused_from_prior_request": False,
+            "worker_transport": None,
+            "exit_code": None if hit else 0,
+            "worker_subprocess_elapsed_seconds": None if hit else 0.4,
+            "worker_request_elapsed_seconds": None,
+            "application_cache": {
+                name: event[name]
+                for name in (
+                    "schema",
+                    "application_cache_status",
+                    "scope",
+                    "key_sha256",
+                    "entry_manifest_sha256",
+                    "application_cache_hit",
+                    "entry_published_by_run",
+                    "fallback_to_inference_on_invalid_entry",
+                    "muscriptor_performance_is_current_run_inference",
+                    "run_origin_performance_matches_entry",
+                )
+            },
+        }
+    )
+    artifact_names = (
+        "request.json",
+        "candidate.raw.json",
+        "candidate.json",
+        "candidate.mid",
+        "muscriptor.performance.json",
+        "cache.entry.json",
+        "cache.performance.json",
+    )
+    run["artifacts"] = {
+        name: _record(run_dir / name, relative=True) for name in artifact_names
+    }
+    run_path.write_text(json.dumps(run), encoding="utf-8")
+
+
+def _refresh_workbench_run_artifact(run_dir: Path, name: str) -> None:
+    run_path = run_dir / "run.json"
+    run = json.loads(run_path.read_text(encoding="utf-8"))
+    run["artifacts"][name] = _record(run_dir / name, relative=True)
+    run_path.write_text(json.dumps(run), encoding="utf-8")
 
 
 def _fake_render(midi_path, wav_path, **_kwargs):
