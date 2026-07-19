@@ -1731,7 +1731,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     workbench = sub.add_parser(
         "workbench",
-        help="Open the local, offline MIDI candidate decision workbench",
+        help="Open, inspect, or privately export the local MIDI decision workbench",
     )
     workbench.add_argument(
         "project", help="Directory containing top-level source audio stems"
@@ -1772,10 +1772,20 @@ def build_parser() -> argparse.ArgumentParser:
             "auditions (default: SUNOFRIEND_SF2 or installed GeneralUser-GS)"
         ),
     )
-    workbench.add_argument(
+    workbench_mode = workbench.add_mutually_exclusive_group()
+    workbench_mode.add_argument(
         "--inspect",
         action="store_true",
         help="Print the discovered path-free project catalog without starting a server",
+    )
+    workbench_mode.add_argument(
+        "--export-review",
+        default=None,
+        metavar="OUT.json",
+        help=(
+            "Write the current exact private review JSON to a fresh path and exit "
+            "without a server; the artifact may contain local paths and private notes"
+        ),
     )
 
     clip_import = sub.add_parser(
@@ -3116,7 +3126,7 @@ def _library_path(value: str | None) -> Path:
 def _run_doctor(args) -> int:
     from .diagnostics import capability_ready, collect_diagnostics
 
-    result = collect_diagnostics()
+    result = collect_diagnostics(check_playback=args.require in {"all", "playback"})
     result["required_capability"] = args.require
     result["requirement_ready"] = capability_ready(result, args.require)
     print(json.dumps(result, indent=2, sort_keys=True))
@@ -3747,9 +3757,10 @@ def _run_workbench(args) -> int:
         port=args.port,
         open_browser=args.open,
         inspect_only=args.inspect,
+        export_review_path=args.export_review,
         soundfont_path=args.soundfont,
     )
-    if args.inspect:
+    if args.inspect or args.export_review:
         print(json.dumps(report, indent=2, sort_keys=True))
     return 0
 

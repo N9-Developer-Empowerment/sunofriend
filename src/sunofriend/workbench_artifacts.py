@@ -25,7 +25,11 @@ from .render import find_soundfont, render_midi_to_wav
 NEUTRAL_PREVIEW_SCHEMA = "sunofriend.workbench-neutral-preview.v1"
 ARRANGEMENT_SCHEMA = "sunofriend.workbench-arrangement.v1"
 GARAGEBAND_HANDOFF_SCHEMA = "sunofriend.workbench-garageband-handoff.v1"
+SELECTED_MIDI_OVERLAP_SCHEMA = "sunofriend.workbench-selected-midi-overlap.v1"
 _RENDER_POLICY = "role-neutral-general-midi-v1"
+_OVERLAP_ONSET_TOLERANCE_SECONDS = 0.080
+_SUBSTANTIAL_OVERLAP_MINIMUM_MATCHED_NOTES = 8
+_SUBSTANTIAL_OVERLAP_MINIMUM_RATIO = 0.80
 _DRUM_ROLES = {"kick", "snare", "hat", "cymbals", "toms", "other_kit", "drums"}
 _MELODIC_CHANNELS = tuple(channel for channel in range(16) if channel != 9)
 _ROLE_PROGRAMS = {
@@ -165,8 +169,10 @@ class WorkbenchArtifacts:
             self._verify_selection(selection)
         except ValueError:
             return None
+        overlap = _selected_midi_overlap(selection)
         expected = {
             "selection_sha256": _selection_hash(catalog, selection),
+            "selected_midi_overlap_sha256": _document_hash(overlap),
             "bpm": _project_bpm(catalog),
             "policy": _RENDER_POLICY,
         }
@@ -174,6 +180,17 @@ class WorkbenchArtifacts:
         if soundfont_sha256:
             expected["soundfont_sha256"] = soundfont_sha256
         return self._find_cached("arrangements", ARRANGEMENT_SCHEMA, expected)
+
+    def selected_midi_overlap(
+        self,
+        catalog: Mapping[str, Any],
+        current: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Return path-free overlap evidence for the active explicit selection."""
+
+        selection = selected_candidates(catalog, current)
+        self._verify_selection(selection)
+        return _selected_midi_overlap(selection)
 
     def render_arrangement(
         self,
@@ -189,9 +206,11 @@ class WorkbenchArtifacts:
         bpm = _project_bpm(catalog)
         soundfont = self._soundfont()
         selection_sha256 = _selection_hash(catalog, selection)
+        overlap = _selected_midi_overlap(selection)
         key_payload = {
             "schema": ARRANGEMENT_SCHEMA,
             "selection_sha256": selection_sha256,
+            "selected_midi_overlap_sha256": _document_hash(overlap),
             "bpm": bpm,
             "policy": _RENDER_POLICY,
             "soundfont_sha256": soundfont["sha256"],
@@ -220,6 +239,7 @@ class WorkbenchArtifacts:
                     "cache_key": cache_key,
                     "soundfont": _without_path(soundfont),
                     "selection": _public_selection(selection),
+                    "selected_midi_overlap": overlap,
                     "track_count": len(tracks),
                     "midi": _relative_file_record(midi_path, work),
                     "preview": _relative_file_record(wav_path, work),
@@ -253,11 +273,26 @@ class WorkbenchArtifacts:
                 "choose at least one candidate as main or optional before exporting"
             )
         self._verify_selection(selection)
+        overlap = _selected_midi_overlap(selection)
+        unresolved_overlap = [
+            pair
+            for pair in overlap["pairs"]
+            if pair["substantial_overlap"]
+            and not pair["both_decisions_confirmed_in_full_mix"]
+        ]
+        if unresolved_overlap:
+            raise ValueError(
+                "GarageBand handoff is blocked because selected candidates derived "
+                "from the same candidate-origin source audio have substantial "
+                "exact-pitch/onset overlap; review and save both choices in full_mix "
+                "context before exporting"
+            )
         arrangement = self.render_arrangement(catalog, current)
         selection_sha256 = _selection_hash(catalog, selection)
         key_payload = {
             "schema": GARAGEBAND_HANDOFF_SCHEMA,
             "selection_sha256": selection_sha256,
+            "selected_midi_overlap_sha256": _document_hash(overlap),
             "arrangement_sha256": arrangement["midi"]["sha256"],
             "arrangement_preview_sha256": arrangement["preview"]["sha256"],
         }
@@ -288,6 +323,7 @@ class WorkbenchArtifacts:
                         "downbeat": catalog.get("setup", {}).get("downbeat"),
                     },
                     "selection": _public_selection(selection),
+                    "selected_midi_overlap": overlap,
                     "selection_policy": (
                         "only the latest explicit main choice and explicit optional "
                         "choices are included"
@@ -523,6 +559,13 @@ def selected_candidates(
                 (value == "main" and candidate_id == main_id) or value == "optional"
             ):
                 continue
+            ai_diagnostics = candidate.get("ai_diagnostics") or {}
+            candidate_origin_sha256 = ai_diagnostics.get("source_audio_sha256")
+            if candidate_origin_sha256:
+                candidate_origin_basis = "verified-ai-source"
+            else:
+                candidate_origin_sha256 = stem["source"]["sha256"]
+                candidate_origin_basis = "review-stem-source-fallback"
             selected.append(
                 {
                     "stem_id": stem_id,
@@ -532,6 +575,13 @@ def selected_candidates(
                     "process": candidate.get("process"),
                     "role": role,
                     "decision": value,
+                    "decision_context": decision.get("context"),
+                    "candidate_origin_source_audio_sha256": (
+                        candidate_origin_sha256
+                    ),
+                    "candidate_origin_source_audio_sha256_basis": (
+                        candidate_origin_basis
+                    ),
                     "audition_blocked": bool(candidate.get("audition_blocked")),
                     "block_reasons": list(
                         (candidate.get("ai_diagnostics") or {}).get(
@@ -640,9 +690,160 @@ def _selection_hash(
         {
             "project_id": catalog.get("project_id"),
             "bpm": catalog.get("setup", {}).get("bpm"),
-            "selection": _public_selection(selection),
+            "selection": [
+                {
+                    **row,
+                    "decision_context": item.get("decision_context"),
+                }
+                for item, row in zip(selection, _public_selection(selection))
+            ],
         }
     )
+
+
+def _selected_midi_overlap(
+    selection: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Compare same-origin selected MIDI as bounded listening diagnostics only."""
+
+    note_cache: dict[str, list[NoteEvent]] = {}
+
+    def notes_for(item: Mapping[str, Any]) -> list[NoteEvent]:
+        midi_sha256 = str(item["midi"]["sha256"])
+        if midi_sha256 not in note_cache:
+            clips = read_midi_clips(item["midi_path"], role=str(item["role"]))
+            note_cache[midi_sha256] = _clips_to_notes(clips)
+        return note_cache[midi_sha256]
+
+    pairs: list[dict[str, Any]] = []
+    for left_index, left in enumerate(selection):
+        for right in selection[left_index + 1 :]:
+            candidate_origin_sha256 = str(
+                left.get("candidate_origin_source_audio_sha256") or ""
+            )
+            if (
+                not candidate_origin_sha256
+                or candidate_origin_sha256
+                != right.get("candidate_origin_source_audio_sha256")
+            ):
+                continue
+            left_notes = notes_for(left)
+            right_notes = notes_for(right)
+            matched_note_count = _greedy_exact_pitch_onset_matches(
+                left_notes,
+                right_notes,
+                tolerance_seconds=_OVERLAP_ONSET_TOLERANCE_SECONDS,
+            )
+            left_ratio = (
+                matched_note_count / len(left_notes) if left_notes else 0.0
+            )
+            right_ratio = (
+                matched_note_count / len(right_notes) if right_notes else 0.0
+            )
+            substantial = (
+                matched_note_count >= _SUBSTANTIAL_OVERLAP_MINIMUM_MATCHED_NOTES
+                and left_ratio >= _SUBSTANTIAL_OVERLAP_MINIMUM_RATIO
+                and right_ratio >= _SUBSTANTIAL_OVERLAP_MINIMUM_RATIO
+            )
+            left_context = left.get("decision_context")
+            right_context = right.get("decision_context")
+            pairs.append(
+                {
+                    "candidate_origin_source_audio_sha256": (
+                        candidate_origin_sha256
+                    ),
+                    "left": {
+                        "stem_id": left["stem_id"],
+                        "candidate_id": left["candidate_id"],
+                        "midi_sha256": left["midi"]["sha256"],
+                        "decision_context": left_context,
+                        "candidate_origin_source_audio_sha256_basis": left.get(
+                            "candidate_origin_source_audio_sha256_basis"
+                        ),
+                    },
+                    "right": {
+                        "stem_id": right["stem_id"],
+                        "candidate_id": right["candidate_id"],
+                        "midi_sha256": right["midi"]["sha256"],
+                        "decision_context": right_context,
+                        "candidate_origin_source_audio_sha256_basis": right.get(
+                            "candidate_origin_source_audio_sha256_basis"
+                        ),
+                    },
+                    "left_note_count": len(left_notes),
+                    "right_note_count": len(right_notes),
+                    "matched_note_count": matched_note_count,
+                    "left_overlap_ratio": round(left_ratio, 6),
+                    "right_overlap_ratio": round(right_ratio, 6),
+                    "substantial_overlap": substantial,
+                    "both_decisions_confirmed_in_full_mix": (
+                        left_context == "full_mix" and right_context == "full_mix"
+                    ),
+                }
+            )
+    return {
+        "schema": SELECTED_MIDI_OVERLAP_SCHEMA,
+        "heuristic": {
+            "policy": "greedy-earliest-compatible-exact-pitch-onset-v1",
+            "onset_tolerance_ms": 80,
+            "minimum_matched_notes_for_substantial": (
+                _SUBSTANTIAL_OVERLAP_MINIMUM_MATCHED_NOTES
+            ),
+            "minimum_overlap_ratio_for_each_candidate": (
+                _SUBSTANTIAL_OVERLAP_MINIMUM_RATIO
+            ),
+        },
+        "same_candidate_origin_pair_count": len(pairs),
+        "substantial_overlap_pair_count": sum(
+            1 for pair in pairs if pair["substantial_overlap"]
+        ),
+        "unconfirmed_substantial_overlap_pair_count": sum(
+            1
+            for pair in pairs
+            if pair["substantial_overlap"]
+            and not pair["both_decisions_confirmed_in_full_mix"]
+        ),
+        "pairs": pairs,
+        "interpretation": (
+            "diagnostic only: candidates are grouped by verified AI source audio, "
+            "or by review-stem source for non-AI fallback; overlap does not establish "
+            "accuracy, role separation, or preference and never changes a selection"
+        ),
+    }
+
+
+def _greedy_exact_pitch_onset_matches(
+    left: Sequence[NoteEvent],
+    right: Sequence[NoteEvent],
+    *,
+    tolerance_seconds: float,
+) -> int:
+    """Count deterministic earliest-compatible matches within each exact pitch."""
+
+    left_by_pitch: dict[int, list[float]] = {}
+    right_by_pitch: dict[int, list[float]] = {}
+    for note in left:
+        left_by_pitch.setdefault(int(note.pitch), []).append(float(note.start))
+    for note in right:
+        right_by_pitch.setdefault(int(note.pitch), []).append(float(note.start))
+    matches = 0
+    for pitch in sorted(set(left_by_pitch) & set(right_by_pitch)):
+        left_onsets = sorted(left_by_pitch[pitch])
+        right_onsets = sorted(right_by_pitch[pitch])
+        left_index = 0
+        right_index = 0
+        while left_index < len(left_onsets) and right_index < len(right_onsets):
+            left_onset = left_onsets[left_index]
+            right_onset = right_onsets[right_index]
+            if abs(left_onset - right_onset) <= tolerance_seconds:
+                matches += 1
+                left_index += 1
+                right_index += 1
+            elif left_onset < right_onset:
+                left_index += 1
+            else:
+                right_index += 1
+    return matches
 
 
 def _public_selection(selection: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
@@ -655,6 +856,12 @@ def _public_selection(selection: Sequence[Mapping[str, Any]]) -> list[dict[str, 
             "process": item.get("process"),
             "midi_sha256": item["midi"]["sha256"],
             "midi_bytes": item["midi"]["bytes"],
+            "candidate_origin_source_audio_sha256": item.get(
+                "candidate_origin_source_audio_sha256"
+            ),
+            "candidate_origin_source_audio_sha256_basis": item.get(
+                "candidate_origin_source_audio_sha256_basis"
+            ),
         }
         for item in selection
     ]
@@ -750,6 +957,7 @@ __all__ = [
     "ARRANGEMENT_SCHEMA",
     "GARAGEBAND_HANDOFF_SCHEMA",
     "NEUTRAL_PREVIEW_SCHEMA",
+    "SELECTED_MIDI_OVERLAP_SCHEMA",
     "WorkbenchArtifacts",
     "selected_candidates",
 ]

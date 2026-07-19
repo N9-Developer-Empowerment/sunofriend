@@ -41,7 +41,7 @@ clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 | Test learned local source cleanup | `ai-cleanup` | Pinned Demucs target plus waveform residual, hard checkpoint verification, deterministic short excerpts and an explicit listening gate |
 | Split one reviewed MIDI into audible roles | `midi-role-split`, `midi-role-split-resolve` | Explicit source-event cluster choice, exact primary-note partition, optional independently transcribed residual layer, local A/B review and a hash-verified user-selected recommendation |
 | Compare consistent sounds on one fixed MIDI | `timbre-resynthesis` | Level-matched complete-patch, extracted-sampler and source-fitted harmonic-plus-noise auditions with note-by-note silence checks and no MIDI changes |
-| Review and hand off MIDI alternatives in one local site | `workbench` | Loopback-only synchronized source/candidate listening, cached neutral previews, explicit full arrangement, append-only decisions, GarageBand ZIP and a path-free contribution preview |
+| Review and hand off MIDI alternatives in one local site | `workbench` | Loopback-only synchronized listening, overlap-aware full arrangement, append-only decisions, private offline review export, GarageBand ZIP and a path-free contribution preview |
 
 Development has started on a local-first ensemble of optional transcription
 models, phrase-level melody review and learned instrument matching. See the
@@ -60,10 +60,16 @@ GarageBand handoff ZIP. AI candidates carry verified execution/checkpoint
 diagnostics; severe decoder failures and zero-note results remain downloadable
 evidence but cannot become main or optional choices. The first small-model
 M0–M3 matrix also shows that label conditioning can prevent one known full-mix
-burst. A subsequent M4 mixed-role bass experiment can now compare strict
-one-role passes, report role collapse and partition one pass by its exact
-model-reported label; its private listening review is still pending and no
-candidate has been promoted. Phase 4 has an
+burst. The private M4 mixed-role review found that two differently conditioned
+passes mostly reproduced one line, so Sunofriend now reports candidate-origin
+overlap and requires explicit full-mix confirmation for substantially
+overlapping selected pairs before handoff. A second private bass/keys/vocal
+review found no universal winning lane: the exact
+34-note `electric_bass` partition from the metadata-conditioned full-mix pass
+was the clear bass choice, while isolated-stem MIDI was the clear keys choice.
+The vocal row was marked equivalent, with isolated M3 kept as main and the
+38-note M1 sax-labelled partition as optional. These are role-specific golden
+results, not an automatic model promotion. Phase 4 has an
 evidence-first bass/keys golden, a reviewed pinned Demucs
 bass-cleanup challenger, a resolved multi-role MIDI split and a completed
 fixed-MIDI timbre comparison. The role review kept the unchanged primary bass
@@ -75,9 +81,9 @@ and promotion rules are in the
 **[Cleanup and Neural Timbre Lab](docs/PHASE4_CLEANUP_TIMBRE_LAB.md)**. The
 **[Phase 4 stabilization review](docs/PHASE4_STABILIZATION_REVIEW.md)**
 compares those executions with the original goals and records the gate before
-another model experiment begins. The proposed next programme—full-mix and
-conditioned MuScriptor comparison, a primary local web workbench, faster local
-inference and an opt-in public feedback loop—is in the
+another model experiment begins. The current Phase 5 programme—including the
+completed full-mix/conditioned comparison and local Workbench, followed by
+faster local inference and a future opt-in feedback loop—is in the
 **[Phase 5 MuScriptor and Community Learning plan](docs/PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md)**.
 
 For combining songs, first use `midi-transform` to choose a common key, BPM
@@ -226,9 +232,9 @@ existing MIDI and optional WAV previews:
 ```
 
 The command prints a `127.0.0.1` URL with a per-launch token. The page shows
-the inferred key, BPM and tuning, then gives each stem no more than three main
-candidates. Low-confidence `possible` and `uncertain` files remain under
-advanced diagnostics. Choices such as **Use as main**, **Keep optional**,
+the inferred key, BPM and tuning, then gives each stem no more than three
+normal-view candidates. Low-confidence `possible` and `uncertain` files remain
+under advanced diagnostics. Choices such as **Use as main**, **Keep optional**,
 **Needs correction** and **Reject** are appended to a local SQLite database at
 `~/.local/share/sunofriend/workbench/PROJECT_ID/` and restored on the next
 launch. Use the shared loop and source/A/B/C buttons to resume each player at
@@ -238,7 +244,19 @@ but deliberately does not peak-normalise away MIDI expression.
 
 The **Hear selected arrangement** page includes only the active explicit main
 choice and explicit optional choices. Full-mix confirmation is stored with a
-`full_mix` listening context. The **GarageBand handoff** ZIP contains
+`full_mix` listening context. The arrangement also reports every selected MIDI
+pair with the same candidate-origin source audio. It flags a
+substantial-overlap warning when at least eight exact-pitch attacks match within
+80 ms and those
+matches cover at least 80% of each candidate. AI MIDI uses its verified run
+source SHA-256; non-AI MIDI without that provenance falls back to the
+review-stem source SHA-256. This is a
+conservative doubled-line review heuristic, not an accuracy, separation or
+preference score. It never removes duplicate notes, merges tracks or changes a
+selection, and the arrangement remains available for listening. Before the
+**GarageBand handoff** can include a substantially overlapping pair, use the
+arrangement page to save the latest decision for **both** candidates in
+`full_mix` context. The ZIP contains
 byte-for-byte copies of those selected MIDI files, a clearly labelled
 role-neutral arrangement proxy, its WAV preview and path-free setup
 instructions. Rejected, needs-correction and unreviewed candidates, private
@@ -259,6 +277,25 @@ Inspect discovery without starting the site:
   --candidate-root "/absolute/path/to/results" \
   --inspect
 ```
+
+Export the exact current private review without launching the local server:
+
+```bash
+.venv/bin/sunofriend workbench "/absolute/path/to/stems" \
+  --candidate-root "/absolute/path/to/results" \
+  --catalog "/absolute/path/to/the-reviewed-catalog.json" \
+  --state-dir "/absolute/path/to/workbench-state" \
+  --export-review "/absolute/fresh/path/workbench-review.json"
+```
+
+Reuse the same project, every candidate root, optional `--catalog` and
+`--state-dir` used for the reviewed session; changing a catalog prompt or
+listening focus creates a different review identity. Omit `--catalog` only when
+the reviewed session also used automatic discovery. The output path must not
+already exist. This command reads the same append-only SQLite decisions, writes
+atomically and exits without opening a browser or starting an HTTP server. The
+JSON is a private archive: unlike the separate contribution preview, it may
+contain absolute local paths and free-text notes.
 
 Automatic discovery is intentionally conservative. If filenames do not make
 the source/candidate role clear, provide an explicit
@@ -1837,7 +1874,10 @@ supplied; the Clip commands themselves also honour `SUNOFRIEND_LIBRARY`.
 
 - If `doctor` reports `render_ready: false`, check FluidSynth and the SoundFont
   path or checksum.
-- If `doctor` reports `midi_ready: false`, enable an IAC Driver bus in Audio
+- If `doctor` reports `midi_ready: false` with `midi_check_skipped: true`, the
+  selected offline check intentionally did not initialise CoreMIDI; run
+  `doctor --require playback` (or the default/all check) before troubleshooting
+  live MIDI. If `midi_check_skipped: false`, enable an IAC Driver bus in Audio
   MIDI Setup, or open GarageBand so that it exposes its virtual destination.
 - If `doctor` reports `version_consistent: false`, reinstall the editable/tool
   package so the command and source checkout use the same release.

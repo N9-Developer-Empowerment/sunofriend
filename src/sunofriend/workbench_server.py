@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import hmac
 import json
 import mimetypes
+import os
 import secrets
 import webbrowser
 from http import HTTPStatus
@@ -91,9 +93,15 @@ def run_workbench(
     port: int = 0,
     open_browser: bool = False,
     inspect_only: bool = False,
+    export_review_path: str | Path | None = None,
     soundfont_path: str | Path | None = None,
 ) -> dict[str, Any]:
-    """Build a catalogue and either inspect it or serve the local workbench."""
+    """Build a catalogue and inspect, export, or serve the local workbench."""
+
+    if export_review_path is not None and (inspect_only or open_browser):
+        raise ValueError(
+            "--export-review cannot be combined with --inspect or --open"
+        )
 
     catalog = build_workbench_catalog(
         project_root,
@@ -106,6 +114,12 @@ def run_workbench(
             "catalog": public_catalog(catalog),
             "server_started": False,
         }
+    if export_review_path is not None:
+        return export_workbench_review(
+            catalog,
+            state_dir=state_dir,
+            output_path=export_review_path,
+        )
     server = create_workbench_server(
         catalog,
         state_dir=state_dir,
@@ -130,6 +144,118 @@ def run_workbench(
         "database": str(server.store.path),
         "server_started": True,
     }
+
+
+def export_workbench_review(
+    catalog: Mapping[str, Any],
+    *,
+    state_dir: str | Path | None = None,
+    output_path: str | Path,
+) -> dict[str, Any]:
+    """Export the current private review state without creating an HTTP server."""
+
+    state = (
+        Path(state_dir).expanduser().resolve()
+        if state_dir is not None
+        else default_workbench_state_dir(catalog)
+    )
+    store = WorkbenchStore(state / "workbench.sqlite3")
+    review = store.export_review(catalog)
+    # Match the existing /api/review representation byte-for-byte for the
+    # document returned by WorkbenchStore.export_review.
+    payload = json.dumps(review, indent=2, sort_keys=True).encode("utf-8")
+    destination = _write_fresh_atomic(output_path, payload)
+    return {
+        "status": "exported",
+        "review_status": review["status"],
+        "event_count": len(review["events"]),
+        "applied_event_count": review["current"]["event_count"],
+        "output": {
+            "path": str(destination),
+            "bytes": len(payload),
+            "sha256": hashlib.sha256(payload).hexdigest(),
+        },
+        "private_artifact": True,
+        "privacy_notice": (
+            "Keep private: this exact local review archive may contain absolute "
+            "paths and free-text notes."
+        ),
+        "server_started": False,
+    }
+
+
+def _write_fresh_atomic(output_path: str | Path, payload: bytes) -> Path:
+    """Publish complete bytes atomically while refusing to replace a path."""
+
+    expanded = Path(output_path).expanduser()
+    absolute = Path(os.path.abspath(os.fspath(expanded)))
+    # Resolve only the parent: resolving the final component would follow an
+    # existing broken symlink and could create its target instead of rejecting
+    # the already-occupied requested path.
+    destination = absolute.parent.resolve() / absolute.name
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if os.path.lexists(destination):
+        raise FileExistsError(f"review export already exists: {destination}")
+    temporary = destination.with_name(
+        f".{destination.name}.{secrets.token_hex(12)}.tmp"
+    )
+    published = False
+    try:
+        descriptor: int | None = os.open(
+            temporary,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+            0o600,
+        )
+        try:
+            if hasattr(os, "fchmod"):
+                os.fchmod(descriptor, 0o600)
+            else:  # pragma: no cover - Windows compatibility
+                os.chmod(temporary, 0o600)
+            handle = os.fdopen(descriptor, "wb")
+            descriptor = None
+            with handle:
+                handle.write(payload)
+                handle.flush()
+                os.fsync(handle.fileno())
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
+        try:
+            os.link(temporary, destination)
+            published = True
+        except FileExistsError as exc:
+            raise FileExistsError(
+                f"review export already exists: {destination}"
+            ) from exc
+    finally:
+        temporary.unlink(missing_ok=True)
+    if published:
+        _fsync_directory(destination.parent)
+    return destination
+
+
+def _fsync_directory(directory: Path) -> None:
+    """Durably record a published directory entry when the platform permits."""
+
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    try:
+        descriptor = os.open(directory, flags)
+    except OSError as exc:
+        if exc.errno in {errno.EACCES, errno.EPERM, errno.EINVAL, errno.ENOTSUP}:
+            return
+        raise
+    try:
+        try:
+            os.fsync(descriptor)
+        except OSError as exc:
+            if exc.errno not in {
+                errno.EBADF,
+                errno.EINVAL,
+                errno.ENOTSUP,
+            }:
+                raise
+    finally:
+        os.close(descriptor)
 
 
 class _WorkbenchHandler(BaseHTTPRequestHandler):
@@ -261,6 +387,12 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         payload["contribution_preview"] = review["contribution_preview"]
         payload["review_status"] = review["status"]
         payload["review_url"] = f"/api/review?token={self.server.token}"
+        payload["selected_midi_overlap"] = (
+            self.server.artifacts.selected_midi_overlap(
+                self.server.catalog,
+                state,
+            )
+        )
         arrangement = self.server.artifacts.cached_arrangement(
             self.server.catalog, state
         )

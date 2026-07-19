@@ -340,6 +340,10 @@ class WorkbenchCatalogTests(unittest.TestCase):
             self.assertEqual(
                 selected["ai_diagnostics"]["requested_labels"], ["synth_bass"]
             )
+            expected_origin = hashlib.sha256(b"fixture-source-audio").hexdigest()
+            self.assertEqual(
+                selected["ai_diagnostics"]["source_audio_sha256"], expected_origin
+            )
             self.assertEqual(
                 selected["ai_diagnostics"]["derivative"]["partition"],
                 "selected",
@@ -351,6 +355,10 @@ class WorkbenchCatalogTests(unittest.TestCase):
             self.assertEqual(
                 complement["ai_diagnostics"]["detected_labels"],
                 ["clean_electric_guitar"],
+            )
+            self.assertEqual(
+                complement["ai_diagnostics"]["source_audio_sha256"],
+                expected_origin,
             )
             self.assertEqual(
                 complement["ai_diagnostics"]["derivative"]["partition"],
@@ -772,6 +780,10 @@ class WorkbenchCatalogTests(unittest.TestCase):
                 "extreme-onset-burst", discovered["ai_diagnostics"]["severe_codes"]
             )
             self.assertFalse(discovered["ai_diagnostics"]["audition_safe"])
+            self.assertEqual(
+                discovered["ai_diagnostics"]["source_audio_sha256"],
+                _record(source)["sha256"],
+            )
             rendered = json.dumps(public_catalog(catalog))
             self.assertNotIn(str(root), rendered)
             self.assertNotIn("cwd", rendered)
@@ -1006,6 +1018,21 @@ class WorkbenchStoreTests(unittest.TestCase):
 
 
 class WorkbenchServerTests(unittest.TestCase):
+    def test_static_ui_explains_overlap_confirmation_and_export_gate(self) -> None:
+        page = Path("src/sunofriend/workbench.html").read_text(encoding="utf-8")
+
+        self.assertIn("Possible doubled musical line", page)
+        self.assertIn("intentional layering, thickening or flamming", page)
+        self.assertIn("Confirm intentional layer", page)
+        self.assertIn(
+            "Handoff is blocked until every substantially overlapping selected part",
+            page,
+        )
+        self.assertIn("function handoffOverlapBlocked()", page)
+        self.assertIn("project.selected_midi_overlap?.pairs||[]", page)
+        self.assertIn("No reviewable stems found.", page)
+        self.assertIn("No parts are selected yet.", page)
+
     def test_loopback_token_range_and_decision_api(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -1043,6 +1070,13 @@ class WorkbenchServerTests(unittest.TestCase):
                 response = connection.getresponse()
                 self.assertEqual(response.status, 200)
                 payload = json.loads(response.read())
+                overlap = payload["selected_midi_overlap"]
+                self.assertEqual(
+                    overlap["schema"],
+                    "sunofriend.workbench-selected-midi-overlap.v1",
+                )
+                self.assertEqual(overlap["same_candidate_origin_pair_count"], 0)
+                self.assertEqual(overlap["pairs"], [])
                 stem = payload["stems"][0]
                 candidate = stem["candidates"][0]
                 connection.close()
@@ -1108,6 +1142,94 @@ class WorkbenchServerTests(unittest.TestCase):
 
 
 class WorkbenchArtifactTests(unittest.TestCase):
+    def test_different_verified_ai_origins_in_one_review_row_do_not_pair(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "Origin Song-D minor-120bpm-440hz"
+            runs = root / "runs"
+            project.mkdir()
+            runs.mkdir()
+            review_source = project / "Origin Song-bass-D minor-120bpm-440hz.wav"
+            review_source.write_bytes(b"RIFF-review-row-source")
+            first_midi, first_origin = _write_workbench_ai_run(
+                runs / "first-run",
+                source_payload=b"RIFF-first-ai-source",
+                velocity=80,
+            )
+            second_midi, second_origin = _write_workbench_ai_run(
+                runs / "second-run",
+                source_payload=b"RIFF-second-ai-source",
+                velocity=81,
+            )
+            document = root / "catalog.json"
+            document.write_text(
+                json.dumps(
+                    {
+                        "schema": "sunofriend.workbench-catalog.v1",
+                        "stems": [
+                            {
+                                "source": str(review_source),
+                                "role": "bass",
+                                "candidates": [
+                                    {"midi": str(first_midi)},
+                                    {"midi": str(second_midi)},
+                                ],
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            catalog = build_workbench_catalog(
+                project,
+                candidate_roots=[runs],
+                catalog_path=document,
+            )
+            stem = catalog["stems"][0]
+            first, second = stem["candidates"]
+            self.assertEqual(
+                first["ai_diagnostics"]["source_audio_sha256"], first_origin
+            )
+            self.assertEqual(
+                second["ai_diagnostics"]["source_audio_sha256"], second_origin
+            )
+            self.assertNotEqual(first_origin, second_origin)
+            store = WorkbenchStore(root / "state" / "workbench.sqlite3")
+            for candidate, decision in ((first, "main"), (second, "optional")):
+                store.append(
+                    catalog,
+                    {
+                        "event_type": "candidate_decision",
+                        "stem_id": stem["stem_id"],
+                        "candidate_id": candidate["candidate_id"],
+                        "decision": decision,
+                        "context": "solo",
+                        "problem_tags": [],
+                    },
+                )
+            current = store.current_state(catalog)
+            selected = selected_candidates(catalog, current)
+
+            self.assertEqual(
+                {
+                    item["candidate_origin_source_audio_sha256"]
+                    for item in selected
+                },
+                {first_origin, second_origin},
+            )
+            self.assertEqual(
+                {
+                    item["candidate_origin_source_audio_sha256_basis"]
+                    for item in selected
+                },
+                {"verified-ai-source"},
+            )
+            overlap = WorkbenchArtifacts(
+                root / "state" / "artifacts"
+            ).selected_midi_overlap(catalog, current)
+            self.assertEqual(overlap["same_candidate_origin_pair_count"], 0)
+            self.assertEqual(overlap["pairs"], [])
+
     def test_catalogued_midi_drift_blocks_preview_and_handoff(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -1272,6 +1394,18 @@ class WorkbenchArtifactTests(unittest.TestCase):
             self.assertEqual(renderer.call_count, 1)
             self.assertEqual(arrangement["track_count"], 2)
             self.assertEqual(len(arrangement["selection"]), 2)
+            self.assertEqual(
+                arrangement["selected_midi_overlap"][
+                    "same_candidate_origin_pair_count"
+                ],
+                0,
+            )
+            self.assertEqual(
+                handoff["selected_midi_overlap"][
+                    "same_candidate_origin_pair_count"
+                ],
+                0,
+            )
             self.assertTrue(repeated["cache_hit"])
             with zipfile.ZipFile(handoff["zip"]["path"]) as archive:
                 names = set(archive.namelist())
@@ -1293,6 +1427,191 @@ class WorkbenchArtifactTests(unittest.TestCase):
                 self.assertNotIn("private bass note", manifest)
                 self.assertNotIn("private rejected note", manifest)
                 self.assertIn('"original_midi_mutated": false', manifest)
+
+    def test_same_source_high_overlap_is_diagnostic_and_keeps_arrangement(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            catalog = _same_source_overlap_catalog(root)
+            soundfont = root / "test.sf2"
+            soundfont.write_bytes(b"test-soundfont")
+            store = WorkbenchStore(root / "state" / "workbench.sqlite3")
+            stems = catalog["stems"]
+            for stem in stems:
+                candidate = stem["candidates"][0]
+                store.append(
+                    catalog,
+                    {
+                        "event_type": "candidate_decision",
+                        "stem_id": stem["stem_id"],
+                        "candidate_id": candidate["candidate_id"],
+                        "decision": "main",
+                        "context": "solo",
+                        "problem_tags": [],
+                        "notes": "private overlap review note",
+                    },
+                )
+            current = store.current_state(catalog)
+            artifacts = WorkbenchArtifacts(
+                root / "state" / "artifacts", soundfont_path=soundfont
+            )
+
+            with patch(
+                "sunofriend.workbench_artifacts.render_midi_to_wav",
+                side_effect=_fake_render,
+            ):
+                arrangement = artifacts.render_arrangement(catalog, current)
+
+            diagnostic = arrangement["selected_midi_overlap"]
+            self.assertEqual(
+                diagnostic["schema"],
+                "sunofriend.workbench-selected-midi-overlap.v1",
+            )
+            self.assertEqual(
+                diagnostic["heuristic"]["policy"],
+                "greedy-earliest-compatible-exact-pitch-onset-v1",
+            )
+            self.assertEqual(diagnostic["heuristic"]["onset_tolerance_ms"], 80)
+            self.assertEqual(diagnostic["same_candidate_origin_pair_count"], 1)
+            self.assertEqual(diagnostic["substantial_overlap_pair_count"], 1)
+            pair = diagnostic["pairs"][0]
+            self.assertEqual(pair["left_note_count"], 10)
+            self.assertEqual(pair["right_note_count"], 10)
+            self.assertEqual(pair["matched_note_count"], 10)
+            self.assertEqual(pair["left_overlap_ratio"], 1.0)
+            self.assertEqual(pair["right_overlap_ratio"], 1.0)
+            self.assertTrue(pair["substantial_overlap"])
+            self.assertFalse(pair["both_decisions_confirmed_in_full_mix"])
+            self.assertEqual(pair["left"]["decision_context"], "solo")
+            self.assertEqual(pair["right"]["decision_context"], "solo")
+            self.assertEqual(
+                pair["candidate_origin_source_audio_sha256"],
+                stems[0]["source"]["sha256"],
+            )
+            selected = selected_candidates(catalog, current)
+            self.assertEqual(len(selected), 2)
+            self.assertEqual(
+                {
+                    item["candidate_origin_source_audio_sha256"]
+                    for item in selected
+                },
+                {stems[0]["source"]["sha256"]},
+            )
+            self.assertEqual(
+                {
+                    item["candidate_origin_source_audio_sha256_basis"]
+                    for item in selected
+                },
+                {"review-stem-source-fallback"},
+            )
+            self.assertEqual(
+                {
+                    item["candidate_origin_source_audio_sha256_basis"]
+                    for item in arrangement["selection"]
+                },
+                {"review-stem-source-fallback"},
+            )
+            manifest_path = Path(arrangement["midi"]["path"]).parent / "manifest.json"
+            manifest = manifest_path.read_text(encoding="utf-8")
+            self.assertNotIn(str(root), manifest)
+            self.assertNotIn("private overlap review note", manifest)
+            self.assertNotIn("overlap-source.wav", manifest)
+
+    def test_handoff_overlap_gate_requires_both_latest_full_mix_decisions(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            catalog = _same_source_overlap_catalog(root)
+            soundfont = root / "test.sf2"
+            soundfont.write_bytes(b"test-soundfont")
+            store = WorkbenchStore(root / "state" / "workbench.sqlite3")
+            first_stem, second_stem = catalog["stems"]
+            first_candidate = first_stem["candidates"][0]
+            second_candidate = second_stem["candidates"][0]
+            for stem, candidate, context in (
+                (first_stem, first_candidate, "solo"),
+                (second_stem, second_candidate, "full_mix"),
+            ):
+                store.append(
+                    catalog,
+                    {
+                        "event_type": "candidate_decision",
+                        "stem_id": stem["stem_id"],
+                        "candidate_id": candidate["candidate_id"],
+                        "decision": "main",
+                        "context": context,
+                        "problem_tags": [],
+                    },
+                )
+            artifacts = WorkbenchArtifacts(
+                root / "state" / "artifacts", soundfont_path=soundfont
+            )
+
+            with patch(
+                "sunofriend.workbench_artifacts.render_midi_to_wav",
+                side_effect=_fake_render,
+            ):
+                solo_arrangement = artifacts.render_arrangement(
+                    catalog, store.current_state(catalog)
+                )
+                with self.assertRaisesRegex(
+                    ValueError, "review and save both choices in full_mix context"
+                ):
+                    artifacts.build_garageband_handoff(
+                        catalog, store.current_state(catalog)
+                    )
+
+                store.append(
+                    catalog,
+                    {
+                        "event_type": "candidate_decision",
+                        "stem_id": first_stem["stem_id"],
+                        "candidate_id": first_candidate["candidate_id"],
+                        "decision": "main",
+                        "context": "full_mix",
+                        "problem_tags": [],
+                    },
+                )
+                full_mix_state = store.current_state(catalog)
+                full_mix_arrangement = artifacts.render_arrangement(
+                    catalog, full_mix_state
+                )
+                handoff = artifacts.build_garageband_handoff(
+                    catalog, full_mix_state
+                )
+                manifest_path = Path(handoff["zip"]["path"]).parent / "manifest.json"
+                first_manifest = manifest_path.read_bytes()
+                repeated_arrangement = artifacts.render_arrangement(
+                    catalog, full_mix_state
+                )
+                repeated_handoff = artifacts.build_garageband_handoff(
+                    catalog, full_mix_state
+                )
+
+            self.assertNotEqual(
+                solo_arrangement["cache_key"], full_mix_arrangement["cache_key"]
+            )
+            self.assertTrue(repeated_arrangement["cache_hit"])
+            self.assertTrue(repeated_handoff["cache_hit"])
+            self.assertEqual(
+                repeated_arrangement["cache_key"], full_mix_arrangement["cache_key"]
+            )
+            self.assertEqual(repeated_handoff["cache_key"], handoff["cache_key"])
+            self.assertEqual(manifest_path.read_bytes(), first_manifest)
+            diagnostic = handoff["selected_midi_overlap"]
+            self.assertEqual(
+                diagnostic["unconfirmed_substantial_overlap_pair_count"], 0
+            )
+            self.assertTrue(
+                diagnostic["pairs"][0]["both_decisions_confirmed_in_full_mix"]
+            )
+            with zipfile.ZipFile(handoff["zip"]["path"]) as archive:
+                portable_manifest = archive.read(
+                    "sunofriend-garageband-handoff.json"
+                ).decode("utf-8")
+                self.assertNotIn(str(root), portable_manifest)
+                self.assertIn(
+                    '"both_decisions_confirmed_in_full_mix": true',
+                    portable_manifest,
+                )
 
 
 def _write_explicit_split_catalog(
@@ -1756,6 +2075,172 @@ def _multi_stem_catalog(root: Path) -> dict:
     _write_midi(candidates / "keys_listened.mid", pitch=60)
     _write_midi(candidates / "keys_cleanup.mid", pitch=64)
     return build_workbench_catalog(project, candidate_roots=[candidates])
+
+
+def _same_source_overlap_catalog(root: Path) -> dict:
+    project = root / "Overlap Song-D minor-120bpm-440hz"
+    candidates = root / "overlap-candidates"
+    project.mkdir()
+    candidates.mkdir()
+    source = project / "overlap-source.wav"
+    source.write_bytes(b"RIFF-one-shared-source")
+    body_midi = candidates / "bass-body.mid"
+    pluck_midi = candidates / "pluck-line.mid"
+    _write_overlap_midi(body_midi, onset_shift=0.0)
+    _write_overlap_midi(pluck_midi, onset_shift=0.04)
+    catalog_path = root / "overlap-catalog.json"
+    catalog_path.write_text(
+        json.dumps(
+            {
+                "schema": "sunofriend.workbench-catalog.v1",
+                "stems": [
+                    {
+                        "source": str(source),
+                        "role": "bass body",
+                        "candidates": [{"midi": str(body_midi)}],
+                    },
+                    {
+                        "source": str(source),
+                        "role": "pluck",
+                        "candidates": [{"midi": str(pluck_midi)}],
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return build_workbench_catalog(
+        project,
+        candidate_roots=[candidates],
+        catalog_path=catalog_path,
+    )
+
+
+def _write_overlap_midi(path: Path, *, onset_shift: float) -> None:
+    notes = []
+    for index in range(10):
+        start = 0.2 + index * 0.25 + onset_shift
+        notes.append(
+            NoteEvent(
+                start=start,
+                end=start + 0.12,
+                pitch=38 + index % 3,
+                velocity=80 + index,
+            )
+        )
+    write_midi_file(
+        path,
+        [MidiTrack(name="Overlap fixture", channel=0, program=38, notes=notes)],
+        bpm=120.0,
+    )
+
+
+def _write_workbench_ai_run(
+    run_dir: Path,
+    *,
+    source_payload: bytes,
+    velocity: int,
+) -> tuple[Path, str]:
+    run_dir.mkdir()
+    source = run_dir / "origin-source.wav"
+    source.write_bytes(source_payload)
+    checkpoint = run_dir / "model.safetensors"
+    checkpoint.write_bytes(b"fixture-checkpoint")
+    config = run_dir / "config.json"
+    config.write_text(
+        '{"model_type":"muscriptor","variant":"small"}', encoding="utf-8"
+    )
+    worker = run_dir / "worker.py"
+    worker.write_text("# fixture worker\n", encoding="utf-8")
+    checkpoint_hash = _record(checkpoint)["sha256"]
+    config_hash = _record(config)["sha256"]
+    midi = run_dir / "candidate.mid"
+    notes = [
+        NoteEvent(
+            start=0.2 + index * 0.25,
+            end=0.32 + index * 0.25,
+            pitch=38 + index % 3,
+            velocity=velocity,
+        )
+        for index in range(10)
+    ]
+    write_midi_file(
+        midi,
+        [MidiTrack(name="AI origin fixture", channel=0, program=38, notes=notes)],
+        bpm=120.0,
+    )
+    request = {
+        "schema": "sunofriend.ai-transcription-request.v1",
+        "audio_path": str(source.resolve()),
+        "backend": "muscriptor",
+        "roles": ["electric_bass"],
+        "start_seconds": 0.0,
+        "end_seconds": 3.0,
+        "options": {
+            "model_sha256": checkpoint_hash,
+            "model_config_sha256": config_hash,
+        },
+    }
+    candidate = {
+        "schema": "sunofriend.ai-transcription-candidate.v1",
+        "backend": "muscriptor",
+        "model_version": "muscriptor-test-small",
+        "notes": [
+            {
+                "start_seconds": note.start,
+                "end_seconds": note.end,
+                "pitch": float(note.pitch),
+                "confidence": None,
+                "instrument": "electric_bass",
+                "velocity": None,
+                "source_event_id": str(index),
+            }
+            for index, note in enumerate(notes)
+        ],
+        "warnings": [],
+        "raw_artifacts": [],
+        "metadata": {
+            "checkpoint_sha256": checkpoint_hash,
+            "excerpt": {"duration_seconds": 3.0},
+        },
+    }
+    (run_dir / "request.json").write_text(
+        json.dumps(request), encoding="utf-8"
+    )
+    for name in ("candidate.json", "candidate.raw.json"):
+        (run_dir / name).write_text(json.dumps(candidate), encoding="utf-8")
+    artifact_names = (
+        "request.json",
+        "candidate.raw.json",
+        "candidate.json",
+        "candidate.mid",
+    )
+    (run_dir / "run.json").write_text(
+        json.dumps(
+            {
+                "schema": "sunofriend.ai-bakeoff-run.v1",
+                "status": "complete",
+                "run_id": f"origin-fixture-{velocity}",
+                "backend": "muscriptor",
+                "elapsed_seconds": 1.0,
+                "note_count": len(notes),
+                "source": _record(source),
+                "worker": _record(worker),
+                "request": request,
+                "checkpoint": {
+                    **_record(checkpoint),
+                    "variant": "small",
+                    "config": _record(config),
+                },
+                "artifacts": {
+                    name: _record(run_dir / name, relative=True)
+                    for name in artifact_names
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    return midi, _record(source)["sha256"]
 
 
 def _fake_render(midi_path, wav_path, **_kwargs):

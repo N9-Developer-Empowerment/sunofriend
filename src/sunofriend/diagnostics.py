@@ -27,15 +27,15 @@ _OPTIONAL_PACKAGES = (
 _CONVERT_PACKAGES = ("numpy", "librosa", "soundfile", "basic-pitch", "onnxruntime")
 
 
-def collect_diagnostics() -> dict[str, Any]:
+def collect_diagnostics(*, check_playback: bool = True) -> dict[str, Any]:
     """Inspect conversion, preview, and live-playback readiness.
 
     The report deliberately keeps each capability separate. A missing CoreMIDI
     destination must not make an otherwise usable file-conversion installation
-    look broken to an automation client.
+    look broken to an automation client. ``check_playback=False`` avoids loading
+    the live MIDI backend when a caller only needs an offline capability check.
     """
 
-    from .playback import PlaybackError, list_output_ports
     from .render import RenderError, find_fluidsynth, find_soundfont
 
     result: dict[str, Any] = {
@@ -98,17 +98,29 @@ def collect_diagnostics() -> dict[str, Any]:
     )
     result["listen_ready"] = result["convert_ready"]
 
-    try:
-        result["midi_outputs"] = list_output_ports()
-        result["midi_ready"] = bool(result["midi_outputs"])
-        if not result["midi_ready"]:
-            result["midi_error"] = (
-                "No CoreMIDI outputs found. Enable an IAC Driver bus in Audio MIDI Setup."
-            )
-    except PlaybackError as exc:
+    result["midi_check_skipped"] = not check_playback
+    if check_playback:
+        from .playback import PlaybackError, list_output_ports
+
+        try:
+            result["midi_outputs"] = list_output_ports()
+            result["midi_ready"] = bool(result["midi_outputs"])
+            if not result["midi_ready"]:
+                result["midi_error"] = (
+                    "No CoreMIDI outputs found. Enable an IAC Driver bus in "
+                    "Audio MIDI Setup."
+                )
+        except PlaybackError as exc:
+            result["midi_outputs"] = []
+            result["midi_ready"] = False
+            result["midi_error"] = str(exc)
+    else:
         result["midi_outputs"] = []
         result["midi_ready"] = False
-        result["midi_error"] = str(exc)
+        result["midi_error"] = (
+            "CoreMIDI check skipped because this offline capability does not "
+            "require live MIDI playback."
+        )
 
     result["preview_ready"] = result["render_ready"]
     result["playback_ready"] = result["midi_ready"]

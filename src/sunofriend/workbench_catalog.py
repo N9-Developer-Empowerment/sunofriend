@@ -445,7 +445,7 @@ def _ai_candidate_diagnostics(
     source_record = run.get("source")
     checkpoint_record = run.get("checkpoint")
     worker_record = run.get("worker")
-    _verify_ai_record(source_record, label="source")
+    source_path = _verify_ai_record(source_record, label="source")
     _verify_ai_record(checkpoint_record, label="checkpoint")
     _verify_ai_record(worker_record, label="worker")
     if isinstance(checkpoint_record, Mapping) and isinstance(
@@ -460,6 +460,8 @@ def _ai_candidate_diagnostics(
     if isinstance(run.get("request"), Mapping) and run["request"] != request_document:
         raise ValueError("adjacent AI request.json differs from run.json")
     request = AITranscriptionRequest.from_dict(request_document, require_audio=False)
+    if Path(request.audio_path).expanduser().resolve() != source_path:
+        raise ValueError("adjacent AI request source differs from run source")
     candidate = AITranscriptionCandidate.from_dict(_read_json(candidate_path))
     if candidate.backend != request.backend or candidate.backend != run.get("backend"):
         raise ValueError("adjacent AI run backend records disagree")
@@ -532,6 +534,7 @@ def _ai_candidate_diagnostics(
             else run.get("checkpoint", {}).get("variant")
         ),
         "checkpoint_sha256": run.get("checkpoint", {}).get("sha256"),
+        "source_audio_sha256": source_record.get("sha256"),
         "execution": _path_free_value(execution),
         "requested_labels": list(request.roles),
         "detected_labels": detected,
@@ -881,6 +884,7 @@ def _ai_label_split_diagnostics(
         "checkpoint_sha256": report.get("source_run", {})
         .get("checkpoint", {})
         .get("sha256"),
+        "source_audio_sha256": source_sha,
         "execution": _path_free_value(execution),
         "requested_labels": [label] if is_selected else [],
         "detected_labels": detected,

@@ -1,6 +1,6 @@
 # Phase 5: MuScriptor Full-Mix and Community Learning
 
-Status: **Phase 5.0 complete; Phase 5.1 M4 engineering complete and private listening pending; no public service or new checkpoint download is authorised**
+Status: **Phase 5.0 complete; Phase 5.1 private M4 and M1/M2/M3 listening complete; no public service or new checkpoint download is authorised**
 Drafted: 19 July 2026
 Scope: accurate stem/full-mix MIDI, faster local inference, GarageBand-ready
 instrument choices, a primary local web workbench and consented feedback
@@ -336,9 +336,11 @@ model/version and how many listeners selected `equivalent` or `neither`.
 - The optional AI worker stays isolated and reports progress through server-sent
   events; a persistent model process can be added after the initial UX is
   stable.
-- A bundled browser client uses Web Audio for sample-aligned A/B loops and a
-  canvas piano roll. Node is a development/build dependency only; end users
-  receive compiled static assets in the Python package.
+- A bundled browser client uses media elements with a shared-second position
+  for time-synchronised A/B loops and a canvas piano roll. Node is a
+  development/build dependency only; end users receive compiled static assets
+  in the Python package. Decoded, level-matched, sample-accurate switching is a
+  deferred pre-public-beta gate.
 - Every operation is content-addressed and resumable. Closing the browser does
   not lose a completed transcription or review.
 - The server uses a per-launch token, accepts local files only through explicit
@@ -683,9 +685,9 @@ remain the mandatory controls for later work.
 
 - Add `sunofriend workbench PROJECT --open`, bound to loopback and offline by
   default.
-- Build one project home, one stem workspace, sample-aligned source/candidate
-  loops and explicit main/optional/correct/reject choices using existing
-  artifacts only.
+- Build one project home, one stem workspace, time-synchronised
+  source/candidate loops and explicit main/optional/correct/reject choices
+  using existing artifacts only.
 - Store decisions in append-only local SQLite and export the existing reviewed
   JSON contract; display exactly what an optional contribution would contain.
 - Pin the current upstream MuScriptor behaviour and extend the shared manifest
@@ -716,9 +718,13 @@ Started 19 July 2026:
   discovered candidates and block no-evidence or severe decoder failures from
   selection while retaining their raw evidence;
 - [x] reverify source, MIDI, generated media and SoundFont hashes at the point
-  of serving, rendering and handoff rather than trusting startup discovery;
+  of serving, rendering and handoff rather than trusting startup discovery.
+
+Deferred pre-public-beta gate, targeted for Phase 5.5 rather than the completed
+Phase 5.0 slice:
+
 - [ ] upgrade short-loop blind review from media-element time synchronization
-  to decoded, level-matched, sample-accurate switching before a public beta.
+  to decoded, level-matched, sample-accurate switching.
 
 ### 5.1 — Full-mix/conditioned bake-off
 
@@ -731,8 +737,12 @@ Started 19 July 2026:
   diagnostics for a reviewed mixed-role bass excerpt.
 - [x] Add an exact model-label partition with an exhaustive complement and
   unchanged full-candidate control.
-- [ ] Complete the private M4 listening gate; no engineering result is a
+- [x] Complete the private M4 listening gate; no engineering result is a
   promotion.
+- [x] Prepare the private bass/keys/vocal safe-lane page with three candidates
+  per role, zero-based 15-second timing and one neutral renderer per row.
+- [x] Complete the private safe-lane listening gate and record explicit
+  role-by-role decisions; `none usable` remains a valid result.
 - Success: the review explains whether full-mix discovery provides useful
   labels even when raw notes are rejected.
 
@@ -761,6 +771,31 @@ First matrix, 19 July 2026:
 This establishes that conditioning can rescue this excerpt from a decoder
 burst, not that M1 is musically correct. Promotion still requires listening.
 
+Private safe-lane listening result, 19 July 2026:
+
+- bass: M2 metadata-conditioned `electric_bass` (34 notes) is main; isolated
+  M3 (19) needs correction and M1 `electric_bass` (13) is rejected;
+- keys: isolated M3 (181) is main and M1 `acoustic_piano` (106) is optional;
+  the M2 `clean_electric_guitar` subset (14) needs correction;
+- vocal melody: the row outcome is `equivalent`, with isolated M3 (39) main
+  and M1 sax-labelled melody (38) optional in the arrangement; the saved data
+  does not identify a narrower equivalence claim, and the M2 flute-labelled
+  line (44) needs correction;
+- every selected candidate was explicitly confirmed in full-mix context. The
+  three selected same-AI-origin comparisons have 21, 0 and 11 exact-pitch
+  onset matches, but zero pair covers at least 80% of both tracks, so none is a
+  substantial doubled-line warning; and
+- the five-track GarageBand handoff preserves every selected MIDI byte and
+  excludes source audio, review notes and rejected/correction candidates.
+
+The saved routing is role-specific: the M2 bass partition is main, isolated M3
+is main for keys and vocals, and M1 remains optional for keys and vocals. The
+vocal row outcome is `equivalent`, but the saved data does not identify a
+pair. No single M1/M2/M3 route becomes a global default. Carry these five
+saved selections into Phase 5.2 and 5.3 as controls, not defaults: runtime,
+cache or later checkpoint results cannot replace them without the same
+role-stratified listening gate.
+
 First M4 mixed-role matrix, 19 July 2026:
 
 - source: the private 16-second Slayyyter bass/pluck learned target retained
@@ -776,8 +811,30 @@ First M4 mixed-role matrix, 19 July 2026:
   largely relabelled or reproduced one line rather than demonstrating two
   isolated roles; and
 - the exact guitar-label derivative retains 14 notes and an exhaustive 29-note
-  complement. The unchanged 43-note pass remains the full control. Private
-  exploratory listening is pending and nothing was promoted automatically.
+  complement. The unchanged 43-note pass remains the full control;
+- private listening selected the complete 41-note bass-conditioned pass as the
+  bass main and the complete 43-note clean-guitar-conditioned pass as the
+  rhythm/pluck main, and confirmed both together in the dry full-mix proxy;
+- the earlier 30-note Phase 4 body partition was marked needs-correction, while
+  the 11-note Phase 4 pluck partition and 14-note label derivative were
+  rejected. The advanced 29-note complement was retained without a decision;
+- the two selected mains still match on 40 notes. The review therefore says
+  the complete conditioned contours are musically useful with contrasting
+  sounds, not that MuScriptor separated bass body and pluck. The rejected
+  14-note label derivative occupied roughly the final five-second chunk, so
+  model labels must not be treated as role-isolation evidence; and
+- the verified GarageBand handoff contains exact copies of the two selected
+  MIDI files plus a dry GM proxy. It is a private 16-second golden handoff, not
+  a full-song or complete-instrument deliverable.
+
+The immediate product consequence is now implemented as an overlap-aware
+finalisation check. When two selected tracks from one source substantially
+share pitch/onset events, the Workbench shows the counts and requires both
+choices to be confirmed in full-mix context before handoff. It preserves both
+files and allows intentional layering; overlap remains a warning, never an
+accuracy score or an automatic deduplication rule. The same increment adds a
+fresh-path, browser-free private review archive without starting an HTTP
+server.
 
 ### 5.2 — Model-size and performance bake-off
 
@@ -862,11 +919,12 @@ complement.
 Workbench discovery attaches the same path-free evidence and prevents severe
 or zero-note candidates from becoming main/optional choices.
 
-The next Phase 5.1 increment is the private M4 bass/pluck listening gate plus a
-listening review of the safe M1/M2/M3 lanes; keys remain a later generalisation.
-Medium/large checkpoints, decoding-speed
-challengers and any public contribution remain later, separately authorised
-work.
+The private M4 bass/pluck gate, Workbench overlap/archive follow-through and
+three-row M1/M2/M3 bass/keys/vocal review are complete. The evidence supports
+role-specific routing and retained alternatives, not a universal model winner.
+Phase 5.2 can now benchmark the existing small model and cache path; medium or
+large checkpoints, decoding-speed challengers and any public contribution
+remain later, separately authorised work.
 
 Keep sample-accurate level-matched short-loop review as a requirement before a
 public listening beta. The current media-element switching is deliberately

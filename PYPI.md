@@ -35,8 +35,16 @@ The loopback-only Workbench presents existing source/MIDI alternatives in a
 normal browser, saves append-only solo/full-mix choices, renders missing MIDI
 through a verified local neutral-preview cache, auditions only explicit
 main/optional parts together, and packages unchanged selected MIDI plus a
-clearly labelled proxy arrangement for GarageBand. It loads no remote scripts
-and has no upload or submission endpoint. Completed AI runs add path-free
+clearly labelled proxy arrangement for GarageBand. Selected candidates with
+the same candidate-origin source receive a diagnostic doubled-line warning
+when exact-pitch attacks substantially overlap. AI candidates use the verified
+run source hash; non-AI MIDI falls back to the review-stem source hash. The
+arrangement remains audible, no MIDI is deduplicated, and GarageBand handoff
+waits for explicit full-mix confirmation only when a selected same-origin pair
+reaches that substantial-overlap threshold.
+The exact private review can also be archived atomically from the CLI without
+starting a server. The Workbench loads no remote scripts and has no upload or
+submission endpoint. Completed AI runs add path-free
 model/config, label, boundary and safety diagnostics; severe or zero-note
 results remain diagnostic-only. `sunofriend ai-matrix` compares controlled
 immutable lanes without changing raw candidates or MIDI. Its M4 contract

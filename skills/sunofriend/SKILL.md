@@ -76,10 +76,13 @@ scripts.
      `--no-preview` is used.
    - `sunofriend sample-pack-boundary-review` needs `preview` for its velocity
      ramps and constant-velocity repeated-beat comparison.
-   - `sunofriend workbench --inspect` and a Workbench using only existing
-     preview WAVs need no audio, ML or playback capability. The site starts no
-     model. Run `sunofriend doctor --require preview` before using its explicit
-     neutral-preview, selected-arrangement or GarageBand-handoff render actions.
+   - `sunofriend workbench PROJECT --inspect`,
+     `sunofriend workbench PROJECT --export-review FRESH.json` and a Workbench
+     using only existing preview WAVs need no audio, ML or playback capability.
+     Inspect and private review export start no server or model. Run
+     `sunofriend doctor --require preview` before using the site's
+     explicit neutral-preview, selected-arrangement or GarageBand-handoff
+     render actions.
 5. Inventory the input directory read-only. Confirm files exist and identify
    stem roles, chord PDF, metronome, key, BPM, and tuning.
 6. Use absolute, quoted paths and a fresh output outside the source folder.
@@ -110,7 +113,21 @@ scripts.
   absent in v1; the contribution preview is only an exact redacted-data
   disclosure. An explicit catalog may add one `review_question` and a short
   `listening_focus` list per stem; these prompts guide listening only and must
-  not rank, preselect or promote a candidate.
+  not rank, preselect or promote a candidate. For selected pairs with the same
+  candidate-origin source audio, inspect the exact-pitch/onset overlap
+  diagnostic. AI MIDI uses the verified run source SHA-256; non-AI MIDI
+  without that provenance falls back to the review-stem source SHA-256. Its
+  fixed substantial-warning policy is at least eight greedy one-to-one matches
+  within 80 ms and at least 80% coverage of each candidate. This is not an
+  accuracy or separation score and must never deduplicate, merge, rank or alter
+  MIDI. Keep the arrangement available for listening; a GarageBand handoff
+  containing such a pair requires the latest decision for both candidates to
+  be saved in `full_mix` context. Use
+  `workbench PROJECT --export-review FRESH.json` to write the exact private
+  review without a server. Reuse the original project, every candidate root,
+  optional catalog and state directory so the command targets the same review
+  identity; never overwrite an existing path and warn that the result may
+  contain absolute paths and private notes.
 - Several completed immutable MuScriptor lanes: use `ai-matrix` with explicit
   repeated `LANE=RUN_DIR` values and a fresh `--out` JSON. Include M0
   unconditioned full mix, M1 discovered-label conditioning, M2 known-label
@@ -383,6 +400,12 @@ sunofriend listen-all "$INPUT" \
 sunofriend workbench "$INPUT" \
   --candidate-root "$OUTPUT" \
   --open
+
+sunofriend workbench "$INPUT" \
+  --candidate-root "$OUTPUT" \
+  --catalog "$WORKBENCH_CATALOG" \
+  --state-dir "$WORKBENCH_STATE" \
+  --export-review "$FRESH_PRIVATE_REVIEW"
 
 sunofriend vocal-melody "$VOCAL_STEM" \
   --role lead \
@@ -897,6 +920,19 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     role-neutral policy, SoundFont identity/hash, cache hit/miss and that the
     original MIDI was not mutated. For an arrangement/handoff, report exact
     selected main/optional counts, proxy track count, BPM policy and ZIP path;
+    report every selected same-candidate-origin overlap pair, including whether
+    its source SHA-256 came from verified AI provenance or the non-AI
+    review-stem fallback, plus the 80 ms exact-pitch greedy-match policy,
+    matched count and both coverage ratios. Treat the
+    eight-match/80%-each warning only as a doubled-line listening diagnostic,
+    not accuracy, separation or preference. Confirm it changed no selection or
+    MIDI and that arrangement listening remained available. Before handing off
+    a substantial pair, confirm the latest saved decision for both candidates
+    has `full_mix` context; do not deduplicate or merge them automatically.
+    When using `--export-review`, confirm the destination was fresh, the write
+    completed without starting a server and the artifact is private because it
+    can contain absolute paths and notes.
+    For every handoff,
     confirm rejected/needs-correction/unreviewed files, source audio, private
     notes and absolute paths are excluded, and numbered selected MIDI bytes are
     unchanged. Exported local JSON may contain absolute paths and private

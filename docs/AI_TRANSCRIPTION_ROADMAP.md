@@ -1,7 +1,7 @@
 # Sunofriend AI roadmap
 
 Status: Phase 1 and Phase 2 engineering complete; Phase 3 complete; Phase 4
-fixed-MIDI review complete; Phase 5.1 M4 engineering complete, listening pending
+fixed-MIDI review complete; Phase 5.1 private listening complete
 Started: 15 July 2026  
 Scope: local-first AI assistance for transcription, review, instrument matching
 and source-derived instruments
@@ -69,7 +69,7 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
-| 5. MuScriptor Full-Mix and Community Learning | **In progress: Phase 5.0 complete, M4 engineering complete, private listening pending** | Local Workbench, immutable MuScriptor execution manifest, path-free quality diagnostics, M0–M4 matrices and exact label partitions implemented; listening and instrument view remain |
+| 5. MuScriptor Full-Mix and Community Learning | **In progress: Phase 5.0 and Phase 5.1 private listening complete** | Local Workbench, immutable MuScriptor execution manifest, path-free quality diagnostics, M0–M4 matrices and exact label partitions implemented; role-specific M1/M2/M3 choices are reviewed and model-size/performance comparison remains |
 
 ## Phase 1: AI Transcription Bake-off v1
 
@@ -515,6 +515,83 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-19 — Safe-lane bass, keys and vocal review completed
+
+- Goal: compare the decoder-safe small-model routes on musical usefulness
+  without letting different preview patches or absolute timelines bias the
+  result.
+- Change or experiment: built a three-row private Workbench catalog for bass,
+  keys and vocal melody. Each row compares the isolated-stem M3 result with
+  two exact M1/M2 full-mix label partitions. M3 review copies were shifted
+  from song seconds 30–45 to review seconds 0–15 without changing pitches,
+  durations, velocities or note counts.
+- Controls: all nine candidates are rendered locally through one fixed
+  role-appropriate General MIDI program per row (bass 33, keys 4, vocal 73),
+  using the same SoundFont and preview policy. Original candidate MIDI remains
+  unchanged.
+- Review question: choose by recognisable bass contour, useful keys theme or
+  accompaniment, and recognisable sung contour. Model labels such as sax,
+  flute or guitar are hypotheses, not physical source-instrument identities;
+  `none usable` remains a valid outcome.
+- Listening result: bass had a clear choice: the 34-note M2 metadata-
+  conditioned full-mix partition is main; the 19-note isolated M3 result needs
+  correction and the 13-note M1 full-mix partition is rejected. Keys also had
+  a clear choice: the 181-note isolated M3 result is main and the 106-note M1
+  piano-labelled partition is optional; the 14-note M2 clean-guitar-labelled
+  subset needs correction. Vocal outcome was `equivalent`: the 39-note
+  isolated M3 line is the arrangement main and the 38-note M1 sax-labelled
+  line remains optional; the 44-note M2 flute-labelled line needs correction.
+  No problem tags or written reasons were supplied, so none are inferred.
+- Full-mix check: all five selected main/optional tracks were explicitly saved
+  in `full_mix` context. Three selected pairs share the verified full-mix AI
+  origin, but none meets the substantial-overlap threshold. Their exact-
+  pitch/onset match counts are 21, 0 and 11; the corresponding coverage pairs
+  are 61.8%/19.8%, 0%/0% and 10.4%/28.9%.
+- Decision: there is no universal lane winner. For this private golden, M2 is
+  the reviewed bass route and isolated M3 is the reviewed keys route. The
+  vocal row has an `equivalent` outcome, with M3 main and M1 optional; the
+  saved data does not state a more specific equivalence claim. Keep raw lanes
+  and role-labelled partitions; use the result as role-specific routing
+  evidence, not automatic promotion across songs. The zero-note M3 drum lane
+  and severe M0 decoder burst remain diagnostic-only.
+- Handoff: a five-track, 119 BPM, B-major GarageBand ZIP contains exact copies
+  of the reviewed main/optional MIDI and a dry neutral proxy. Source audio,
+  private notes and every rejected/needs-correction candidate are excluded.
+- Next smallest step: begin Phase 5.2 with a reproducible small-model runtime
+  and cache benchmark; require separate authorisation before acquiring any
+  medium or large checkpoint.
+
+### 2026-07-19 — M4 listening rejects label isolation but keeps both full contours
+
+- Goal: decide whether the bass-conditioned pass, clean-guitar-conditioned
+  pass or exact label partition gives useful separate body/pluck MIDI.
+- Listening result: the 41-note bass-conditioned full candidate and 43-note
+  clean-guitar-conditioned full candidate were both chosen as main and
+  confirmed together in full-mix context. The earlier 30-note body control was
+  marked needs-correction; the earlier 11-note pluck and 14-note exact
+  clean-guitar label derivative were rejected. No written problem tags or
+  private notes were supplied, so no more specific reason is inferred.
+- Evidence: the two accepted full candidates match on 40 notes at the declared
+  80 ms exact-pitch/onset tolerance. The label derivative is concentrated in
+  roughly the final five-second chunk and all 14 of its notes overlap the bass
+  pass. The result supports useful contrasting performances or timbral layers,
+  not successful source-role separation.
+- Decision: retain both unchanged full candidates as the user's private
+  arrangement choices; do not promote the model-label partition and do not
+  deduplicate the two mains automatically. Add an overlap-aware full-mix
+  finalisation warning before using this pattern in broader reviews.
+- Handoff: a verified two-track GarageBand ZIP was built at 113 BPM in B minor;
+  its numbered MIDI files are exact selected copies and its dry GM proxy is
+  only an audition aid. Private media and review state remain ignored.
+- Product follow-through: the Workbench now reports substantial overlap for
+  selected candidates with the same candidate-origin source audio (verified AI
+  run source, with review-stem fallback for non-AI MIDI), leaves the
+  arrangement audible, requires the latest `full_mix` confirmation on both
+  members before GarageBand handoff, and can export an exact private review to
+  a fresh path without starting a server.
+- Next smallest step: present the safe M1/M2/M3 Lidl lanes for explicit
+  listening.
 
 ### 2026-07-19 — Strict M4 mixed-role evidence and label partition
 

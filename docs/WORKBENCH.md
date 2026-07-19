@@ -210,7 +210,31 @@ BPM. It is an audition aid, not a replacement for the selected originals. A
 proxy supports at most 15 simultaneously selected pitched parts; reduce
 optional alternatives if that limit is reached.
 
+### Review possible doubled lines
+
+The arrangement remains playable when two selected candidates with the same
+candidate-origin source audio appear to contain substantially the same line.
+For AI MIDI, candidate origin is the verified run source SHA-256. Non-AI MIDI
+without that provenance falls back to the review-stem source SHA-256.
+Workbench compares such pairs with a deterministic greedy exact-pitch/onset
+heuristic: an onset may match at most once, must have the same MIDI pitch and
+must fall within 80 ms. The warning is substantial only when there are at
+least eight matches and they cover at least 80% of **each** candidate.
+
+This is deliberately a review diagnostic, not an accuracy score, proof of role
+separation or candidate preference. Legitimate doubling, thickening and flams
+can trigger it. Workbench never deduplicates or merges the MIDI, changes a
+decision or suppresses the arrangement. Listen to the arrangement, then use
+its confirmation buttons to save the latest decision for both members of a
+substantially overlapping pair in `full_mix` context. A later solo decision on
+either candidate means the pair needs full-mix confirmation again.
+
 ## Export a GarageBand handoff
+
+For overlap finalisation, an otherwise valid GarageBand handoff is blocked
+while a substantially overlapping selected pair lacks that latest `full_mix`
+confirmation on both candidates. Arrangement rendering stays available so the
+decision can be made by listening. This gate does not alter either MIDI file.
 
 The ZIP is content-addressed and contains:
 
@@ -224,6 +248,28 @@ and unreviewed defaults. Import the numbered MIDI files onto separate Software
 Instrument tracks and choose the final patches in GarageBand; those originals
 are authoritative.
 
+## Export the private review without a server
+
+The browser download remains available, but an agent or terminal workflow can
+write the same current private review without opening a browser or binding a
+loopback port:
+
+```bash
+sunofriend workbench "/absolute/path/to/stems" \
+  --candidate-root "/absolute/path/to/results" \
+  --catalog "/absolute/path/to/workbench-catalog.json" \
+  --state-dir "/absolute/path/to/workbench-state" \
+  --export-review "/absolute/fresh/path/workbench-review.json"
+```
+
+Use the same project, candidate roots, optional catalog and state directory as
+the reviewed session. `--export-review` is mutually exclusive with `--inspect`
+and `--open`; it starts no HTTP server. The destination must be fresh, is
+written atomically and is never silently replaced. The JSON is private because
+it may contain absolute paths, the full append-only event history and free-text
+listening notes. The separate contribution preview remains the path- and
+note-free disclosure boundary.
+
 ## Current limits
 
 - Existing preview WAVs remain labelled unnormalised; use the neutral renderer
@@ -232,8 +278,8 @@ are authoritative.
   short-loop Web Audio buffers for sample-accurate blind tests.
 - The arrangement is a dry GM proxy. Complete-instrument checks and installed
   GarageBand patch choice remain a later view.
-- Phrase piano-roll correction, the M4 private listening decision, model-size
-  comparison and opt-in contribution remain later increments. The Workbench
+- Phrase piano-roll correction, model-size comparison and opt-in contribution
+  remain later increments. The Workbench
   still consumes completed AI runs rather than launching a model itself.
 
 These limits are shown in the interface so an incomplete feature is not
