@@ -36,6 +36,7 @@ clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 | Preview or route MIDI to an instrument | `preview`, `play` | FluidSynth WAV preview or CoreMIDI/IAC playback |
 | Run an optional local AI transcription challenger | `ai-transcribe` | Isolated worker, explicit local checkpoint, raw candidate, MIDI, hashes and immutable logs |
 | Benchmark repeated local AI runs | `ai-benchmark` | Verified path-free timing, memory, chunk and exact-output repeatability report over completed immutable runs |
+| Compare one MuScriptor decoding setting | `ai-setting-compare` | Read-only fresh-process beam-1/beam-2 diagnostic; exactly one semantic setting may change, no MIDI is edited and no winner is selected |
 | Measure exact repeats through one loaded model | `ai-transcribe-session`, `ai-session-benchmark` | Bounded 2–20-request diagnostic session, reused-model warm evidence for requests 2+, and optional two-run fresh-process control; no production cache or promotion |
 | Reuse one exact prior MuScriptor result | `ai-transcribe --application-cache-dir`, `ai-cache-benchmark` | Explicit private content-addressed raw-result cache; verified hits start no worker, load no model and run no inference, while current MIDI is rebuilt and cache timing remains separate |
 | Compare immutable AI transcription lanes | `ai-matrix` | Path-free per-role quality, label stability, chunk-boundary and cross-lane overlap diagnostics without changing raw MIDI |
@@ -86,8 +87,9 @@ and promotion rules are in the
 compares those executions with the original goals and records the gate before
 another model experiment begins. The current Phase 5 programme—including the
 completed full-mix/conditioned comparison and local Workbench, followed by
-faster local inference, an explicit exact-result application-cache experiment
-and a future opt-in feedback loop—is in the
+fresh-process and reused-model measurements, an explicit exact-result
+application-cache experiment, a completed one-variable beam measurement with
+its listening gate still pending, and a future opt-in feedback loop—is in the
 **[Phase 5 MuScriptor and Community Learning plan](docs/PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md)**.
 
 For combining songs, first use `midi-transform` to choose a common key, BPM
@@ -615,6 +617,103 @@ RSS about `1.06 GiB`. The first/later wall ratio was `1.117`; that difference
 is evidence under an uncontrolled OS cache, not a claimed warm-start gain. The
 five reviewed Phase 5.1 selections and GarageBand handoff hashes remained
 unchanged.
+
+#### Compare beam 1 with beam 2
+
+`ai-setting-compare` answers one narrow question at a time without launching a
+model. First create at least two independent fresh-process controls with
+`--beam-size 1` and at least two challengers with `--beam-size 2`. Keep the
+source bytes, actual excerpt, BPM, ordered roles, checkpoint, model config,
+worker, runtime, device, model size, batch size, CFG, temperature, sampling/EOS
+policy and five-second chunk policy identical. Then pass the completed run
+directories printed by `ai-transcribe`:
+
+```bash
+SOURCE="/absolute/path/to/fixed-15-second-source.wav"
+CHECKPOINT="/absolute/path/to/accepted/model.safetensors"
+RUN_ROOT="/absolute/path/to/fresh/beam-runs"
+
+for REPETITION in 01 02; do
+  .venv/bin/sunofriend ai-transcribe "$SOURCE" \
+    --checkpoint "$CHECKPOINT" \
+    --out-dir "$RUN_ROOT/beam1-repeat-$REPETITION" \
+    --bpm 119 \
+    --instrument voice \
+    --instrument drums \
+    --instrument electric_bass \
+    --start-seconds 0 --end-seconds 15 \
+    --device cpu --model-size small \
+    --beam-size 1 --batch-size 1 --cfg-coef 1.0
+done
+
+for REPETITION in 01 02; do
+  .venv/bin/sunofriend ai-transcribe "$SOURCE" \
+    --checkpoint "$CHECKPOINT" \
+    --out-dir "$RUN_ROOT/beam2-repeat-$REPETITION" \
+    --bpm 119 \
+    --instrument voice \
+    --instrument drums \
+    --instrument electric_bass \
+    --start-seconds 0 --end-seconds 15 \
+    --device cpu --model-size small \
+    --beam-size 2 --batch-size 1 --cfg-coef 1.0
+done
+
+.venv/bin/sunofriend ai-setting-compare \
+  --control-run "$RUN_ROOT/beam1-repeat-01/RUN_DIR" \
+  --control-run "$RUN_ROOT/beam1-repeat-02/RUN_DIR" \
+  --challenger-run "$RUN_ROOT/beam2-repeat-01/RUN_DIR" \
+  --challenger-run "$RUN_ROOT/beam2-repeat-02/RUN_DIR" \
+  --out "/absolute/fresh/path/beam1-vs-beam2.json"
+```
+
+Replace each `RUN_DIR` placeholder with the immutable child directory printed
+by that invocation. Use the complete ordered role list needed by the real test;
+the three roles above keep the example short. Run all four serially and do not
+add `--application-cache-dir`.
+
+The v1 verifier accepts only current, cache-disabled `fresh-subprocess` runs
+that each loaded the model, executed inference and contain verified performance
+evidence. It requires exact raw candidate, normalized candidate, note payload,
+MIDI, derived-artifact and note-count repeatability within each arm. Session
+runs, every application-cache-enabled run, overlapping execution windows,
+legacy manifests, a non-repeatable arm, no beam change, beam values other than
+1→2 and every second request/execution difference are rejected.
+
+Candidate JSON and raw-candidate hashes normally differ between arms because
+they record beam/strategy provenance. The report therefore compares a separate
+canonical note-payload hash and the MIDI hash before saying whether musical
+output changed. Labels, automated quality, chunk-boundary activity, timing and
+memory remain diagnostics; none proves which result is more accurate. Runs are
+sequential, but their order is not randomized and the operating-system file
+cache remains uncontrolled, so timing ratios are observations rather than a
+causal speed claim.
+
+The report copies no audio or MIDI, omits local paths, commands, timestamps and
+caller-supplied run IDs, and changes no candidate, Workbench decision, preset or
+default. Hashes and runtime identity may still identify private material or a
+machine, so path-free does not mean anonymous or approved for publication. If
+the note payload or any auditionable MIDI differs, a same-patch,
+same-render-policy preview is a useful preliminary check, but it does not
+satisfy the promotion gate. Before
+considering any default change, compare the same source-aligned loop with the
+same renderer and patch and separately verify the candidates are level-matched.
+Beam 1 remains the conservative baseline until that explicit listening gate
+prefers beam 2 without an unacceptable stability or resource regression.
+
+On the private 15-second Lidl M2 small-CPU golden, both repetitions within each
+arm were exact. Beam 1 produced 107 notes; beam 2 produced 124, including a new
+12-note `voice` label, 14 more `electric_bass` notes and 11 fewer `flutes`
+notes. Ninety same-pitch/same-label onsets matched within 80 ms (84.1% of beam
+1 and 72.6% of beam 2). Both arms remain `review-required` because restricted
+label leakage was present, so these differences do not establish accuracy.
+The ordered golden observed a beam-2 median pipeline time of `32.787 s` versus
+`5.282 s` for beam 1 (`6.207×`), inclusive transcription was `31.177 s`
+versus `3.824 s` (`8.152×`), first completed note was `10.909 s` versus
+`1.554 s`, and peak RSS
+was about `1.49 GB` versus `1.17 GB`. The musical outputs differ, so the
+preliminary same-patch Workbench pair cannot close the separately verified
+level-matched listening gate; beam 1 remains the default.
 
 #### Measure exact repeats through one loaded MuScriptor model
 

@@ -2,9 +2,9 @@
 
 Status: Phase 1 and Phase 2 engineering complete; Phase 3 complete; Phase 4
 fixed-MIDI review complete; Phase 5.1 private listening and the Phase 5.2
-fresh-process and bounded reused-model small-CPU golden measurements complete;
-the opt-in exact-result application-cache implementation and private golden are
-complete, while broader production integration remains
+fresh-process, bounded reused-model, exact-result cache and beam-1/beam-2
+small-CPU golden measurements complete; beam listening and broader production
+integration remain
 
 Started: 15 July 2026  
 Scope: local-first AI assistance for transcription, review, instrument matching
@@ -73,7 +73,7 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
-| 5. MuScriptor Full-Mix and Community Learning | **In progress: Phase 5.0/5.1 complete; Phase 5.2 application-cache gate passed** | Local Workbench, immutable MuScriptor evidence, M0–M4 matrices, exact label partitions, fresh-process and bounded reused-model CPU baselines, explicit exact-result caching and the private cache golden are complete; workflow integration, other devices and model-size comparisons remain |
+| 5. MuScriptor Full-Mix and Community Learning | **In progress: Phase 5.0/5.1 complete; Phase 5.2 beam measurement complete, listening pending** | Local Workbench, immutable MuScriptor evidence, M0–M4 matrices, exact label partitions, fresh-process and bounded reused-model CPU baselines, explicit exact-result caching and a strict one-variable beam comparison are complete; beam listening, workflow integration, other devices and model-size comparisons remain |
 
 ## Phase 1: AI Transcription Bake-off v1
 
@@ -519,6 +519,73 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-19 — Strict beam-1 versus beam-2 small-CPU comparison
+
+- Goal: test whether MuScriptor beam search changes the useful MIDI enough to
+  justify its additional local CPU cost, changing one semantic setting only.
+- Change or experiment: added read-only `ai-setting-compare`. It consumes at
+  least two current fresh-process runs per arm, re-verifies every immutable
+  input, requires exact within-arm output repeatability and permits only
+  `beam_size` 1→2 with the derived strategy change `greedy`→`beam-search`.
+  Legacy, session, application-cache, overlapping, non-repeatable and
+  multi-setting evidence fail closed. Candidate-provenance JSON and canonical
+  note-payload equality are reported separately.
+- Inputs: two beam-1 controls followed by two beam-2 challengers on the private
+  15-second Lidl M2 full-mix golden at 119 BPM, with the same seven ordered
+  roles and three independent five-second chunks.
+- Model/runtime/checkpoint: MuScriptor 0.2.1 small on CPU, macOS
+  26.5.1 arm64, Python 3.12.10 and PyTorch 2.13.0; checkpoint
+  `bbd482c786b895cf7d8f44185073d951adae2ebb8a66f82ca84cd1f84569549c`,
+  config `3008fc481e4a1cd978e337eb3759260c270892204db5039235ac939e1f42aeb2`
+  and worker
+  `65553b60c4bc0d51533fc56c56e359eab2cac18e49f23f31c6d585ddb346d4dd`.
+  Batch 1, CFG 1.0, temperature 1.0, no sampling and every other setting were
+  identical. No checkpoint was downloaded.
+- Evidence and metrics: both repetitions inside each arm produced exact raw,
+  normalized, note-payload, base/expression MIDI, quality and program-mapping
+  hashes. Beam 1 produced 107 notes; beam 2 produced 124. Beam 2 added a
+  12-note `voice` label, changed `electric_bass` 34→48, `flutes` 44→33 and
+  `clean_electric_guitar` 14→16 while `drums` stayed 15. Ninety greedy
+  one-to-one same-pitch/same-label onsets matched within 80 ms: 84.1% of beam 1
+  and 72.6% of beam 2. Both arms remain `review-required` because restricted
+  label leakage was present. In the ordered golden, observed beam-2 median
+  pipeline was `32.787408 s` versus `5.282282 s` (`6.207054×`); inclusive
+  transcription `31.177499 s` versus `3.824411 s` (`8.152235×`); first
+  completed note `10.908671 s` versus
+  `1.554210 s`; and peak RSS `1,489,354,752` versus `1,173,610,496` bytes
+  (`1.269037×`). The hardened v2 path-free report also treats expression MIDI
+  as auditionable output; its SHA-256 is
+  `8177d3245856d97a26d0c1e5c289a0bb5eddbb257579fdb414456cd9f0db2fb0`.
+- Listening result: pending. The note payload and MIDI differ, so automated
+  quality, label, overlap and resource metrics cannot select a winner. A
+  preliminary private same-patch Workbench pair is ready under ignored `work/`
+  evidence. Both neutral previews use GeneralUser-GS SHA-256
+  `9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe`,
+  program 4, channel 1 in human numbering and one Workbench role-neutral render
+  policy/configured gain. Their WAV hashes are
+  `21afa60f863a8a3d9de6083ea0095d727eeec4100c55c8d35e2723a4d18114ab`
+  (beam 1) and
+  `0847e16b0cea533a94752a9a699e930c4fa6d6f16e328c76db361cc8e0fa0566`
+  (beam 2). This controls the Workbench patch and configured render gain, but
+  it is not perceptually loudness-normalized and cannot close the final
+  listening gate.
+- Decision: retain beam 1 as the default. Beam 2 is a listening challenger only;
+  it cannot become a preset unless an explicit same-renderer, same-patch review
+  on a source-aligned loop with separately verified level matching prefers it
+  on a predeclared musical question without an unacceptable stability/resource
+  regression. The five reviewed selection hash
+  and GarageBand handoff ZIP remain
+  `1dce19ce7595a72b8417225b8d23679e0fc92e53581807ccf9db6ea929d7709c`
+  and `7824e25850037821287fd77337ae9e8ad2d61cea2cbd2ea57e3b2f92e0c532f8`.
+- Problems/risks: controls ran before challengers; order was not randomized and
+  the operating-system file cache was uncontrolled. Two repeats establish this
+  golden's determinism, not a hardware distribution or musical accuracy.
+- Next smallest step: use the preliminary pair to find the useful comparison
+  passages, then prepare source-aligned, separately verified level-matched short
+  loops for the actual gate. If the full-note piano proxy is too dense to judge,
+  split the changed bass, flute, voice and guitar-labelled layers into short
+  fixed-patch phrase comparisons; keep the default unchanged until that review.
 
 ### 2026-07-19 — Exact MuScriptor raw-result application cache
 

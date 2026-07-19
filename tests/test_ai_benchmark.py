@@ -227,6 +227,7 @@ class AIPerformanceBenchmarkTests(unittest.TestCase):
             "worker_process_started_for_run",
             "inference_executed_for_run",
             "model_loaded_for_run",
+            "model_reused_from_prior_request",
             "application_cache",
             "worker_transport",
         ):
@@ -379,6 +380,47 @@ class AIPerformanceBenchmarkTests(unittest.TestCase):
             self._rewrite_run(cache_like, make_cache_like)
             with self.assertRaisesRegex(ValueError, "cache-disabled fresh-process"):
                 build_ai_performance_benchmark([first, cache_like])
+
+    def test_rejects_explicit_model_reuse_or_cache_artifact_evidence(self) -> None:
+        for reused_value in (True, None):
+            with self.subTest(model_reused_from_prior_request=reused_value):
+                with tempfile.TemporaryDirectory() as temporary:
+                    fixture = self._fixture(Path(temporary))
+                    first = self._run(fixture, "benchmark-001")
+                    contradictory = self._run(fixture, "benchmark-002")
+                    self._rewrite_run(
+                        contradictory,
+                        lambda run: run.__setitem__(
+                            "model_reused_from_prior_request", reused_value
+                        ),
+                    )
+
+                    with self.assertRaisesRegex(
+                        ValueError, "cache-disabled fresh-process"
+                    ):
+                        build_ai_performance_benchmark([first, contradictory])
+
+        for artifact_name in ("cache.entry.json", "cache.performance.json"):
+            with self.subTest(cache_artifact=artifact_name):
+                with tempfile.TemporaryDirectory() as temporary:
+                    fixture = self._fixture(Path(temporary))
+                    first = self._run(fixture, "benchmark-001")
+                    contradictory = self._run(fixture, "benchmark-002")
+
+                    def declare_cache_artifact(run: dict[str, object]) -> None:
+                        artifacts = run["artifacts"]
+                        assert isinstance(artifacts, dict)
+                        artifacts[artifact_name] = {
+                            "path": artifact_name,
+                            "bytes": 1,
+                            "sha256": "0" * 64,
+                        }
+
+                    self._rewrite_run(contradictory, declare_cache_artifact)
+                    with self.assertRaisesRegex(
+                        ValueError, "cache-disabled fresh-process"
+                    ):
+                        build_ai_performance_benchmark([first, contradictory])
 
     def test_rejects_fewer_or_duplicate_runs_and_duplicate_run_ids(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -28,6 +28,11 @@ scripts.
      completed comparable MuScriptor runs, verifies their immutable evidence
      and starts no worker. Run the MuScriptor checkpoint check only when making
      new repetitions first.
+   - `sunofriend ai-setting-compare` needs no model capability and starts no
+     worker. It reads at least two completed fresh beam-1 controls and two
+     completed fresh beam-2 challengers. Run
+     `sunofriend ai-doctor --require muscriptor-checkpoint` only when creating
+     those runs first.
    - `sunofriend ai-transcribe-session` needs
      `sunofriend ai-doctor --require muscriptor-checkpoint`. Read both
      `ai-transcribe-session --help` and `ai-session-benchmark --help`. It runs
@@ -188,6 +193,23 @@ scripts.
   has a successful non-empty subprocess command with no session or
   application-cache evidence; report its explicit legacy-evidence label. A
   historical run whose external worker changed cannot be re-verified.
+- One-variable MuScriptor decoding diagnostic: use `ai-setting-compare` with at
+  least two repeated `--control-run RUN_DIR` values and two repeated
+  `--challenger-run RUN_DIR` values. V1 requires current, sequential,
+  cache-disabled fresh-process runs and exactly `beam_size` 1→2 with the derived
+  strategy `greedy`→`beam-search`; source, actual excerpt, BPM, ordered roles,
+  checkpoint/config/worker/runtime/device and every other request and execution
+  field must match. Each arm must be exactly repeatable in raw/normalized
+  candidates, note payload, MIDI, tracked derived artifacts and note count.
+  Reject legacy, session, cache, overlapping, non-repeatable or multi-setting
+  evidence. Treat candidate-JSON differences as execution provenance unless
+  note-payload or any auditionable MIDI hashes also differ. The path-free
+  report remains potentially identifying through hashes/runtime identity and
+  cannot rank, select, mutate or promote either arm. Timing is observed under an
+  uncontrolled OS cache and non-randomized order. A same-patch preview at one
+  configured gain is preliminary only. Require a source-aligned loop,
+  same-renderer, same-patch and separately verified level-matched listening
+  decision before changing a preset or default when musical output differs.
 - Bounded exact-repeat MuScriptor timing: use `ai-transcribe-session` only to
   repeat one byte-identical request template serially 2–20 times with one
   parent-owned loaded model. Keep source, ordered roles, excerpt, BPM,
@@ -792,6 +814,13 @@ sunofriend ai-benchmark \
   --run "$SMALL_CPU_REPEAT_2" \
   --out "$FRESH_PERFORMANCE_JSON"
 
+sunofriend ai-setting-compare \
+  --control-run "$BEAM1_REPEAT_1" \
+  --control-run "$BEAM1_REPEAT_2" \
+  --challenger-run "$BEAM2_REPEAT_1" \
+  --challenger-run "$BEAM2_REPEAT_2" \
+  --out "$FRESH_BEAM_COMPARISON_JSON"
+
 sunofriend ai-transcribe-session "$FIXED_SOURCE_WAV" \
   --checkpoint "$LOCAL_MUSCRIPTOR_CHECKPOINT" \
   --out-dir "$FRESH_SESSION_DIR" \
@@ -883,6 +912,18 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
    windows across repetitions. Process RSS excludes
    accelerator allocation. Do not infer a warm-model speedup or a musical
    promotion from the timing report.
+   For `ai-setting-compare`, confirm both arms contain at least two current
+   explicit fresh-inference runs, all combined execution windows are sequential
+   and non-overlapping, and the only semantic change is beam size 1→2 (strategy
+   is derived). Require exact within-arm raw/normalized candidate, note-payload,
+   MIDI, derived-artifact and note-count repeatability. Keep candidate-provenance
+   equality separate from musical-output equality. Report label, automated
+   quality, boundary, timing and memory differences without calling either arm
+   more accurate or faster because of them. Confirm selection/promotion/raw/MIDI
+   effects are zero, state that the OS cache and order are uncontrolled, and
+   require an explicit source-aligned, same-renderer, same-patch, separately
+   verified level-matched listening decision before changing a preset or
+   default when note payload or MIDI differs.
    For `ai-transcribe-session`, confirm the private root was fresh and contains
    `session.request-template.json`, started/ready/closed lifecycle records,
    worker logs, `session.json` and exactly the declared contiguous

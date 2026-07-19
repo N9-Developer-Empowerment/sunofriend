@@ -63,6 +63,27 @@ class CliBasicsTests(unittest.TestCase):
         self.assertEqual(args.run, ["repetition-01", "repetition-02"])
         self.assertEqual(args.out, "benchmark.json")
 
+    def test_ai_setting_compare_requires_two_explicit_arms(self) -> None:
+        args = build_parser().parse_args(
+            [
+                "ai-setting-compare",
+                "--control-run",
+                "beam1-01",
+                "--control-run",
+                "beam1-02",
+                "--challenger-run",
+                "beam2-01",
+                "--challenger-run",
+                "beam2-02",
+                "--out",
+                "setting-comparison.json",
+            ]
+        )
+
+        self.assertEqual(args.control_run, ["beam1-01", "beam1-02"])
+        self.assertEqual(args.challenger_run, ["beam2-01", "beam2-02"])
+        self.assertEqual(args.out, "setting-comparison.json")
+
     def test_ai_transcribe_session_is_bounded_and_muscriptor_only(self) -> None:
         args = build_parser().parse_args(
             [
@@ -203,6 +224,54 @@ class CliBasicsTests(unittest.TestCase):
                 "status": "complete",
             },
         )
+
+    @patch("sunofriend.ai_setting_compare.write_ai_setting_comparison")
+    def test_ai_setting_compare_routes_completed_runs_without_inference(
+        self, write
+    ) -> None:
+        write.return_value = {
+            "schema": "sunofriend.ai-setting-comparison.v1",
+            "arms": {
+                "control": {"repetition_count": 2},
+                "challenger": {"repetition_count": 2},
+            },
+            "comparison": {
+                "outputs": {
+                    "musical_output_identical": False,
+                }
+            },
+            "effects": {
+                "listening_review_required_before_default_change": True,
+            },
+        }
+        stdout = io.StringIO()
+
+        with redirect_stdout(stdout):
+            result = main(
+                [
+                    "ai-setting-compare",
+                    "--control-run",
+                    "beam1-01",
+                    "--control-run",
+                    "beam1-02",
+                    "--challenger-run",
+                    "beam2-01",
+                    "--challenger-run",
+                    "beam2-02",
+                    "--out",
+                    "setting-comparison.json",
+                ]
+            )
+
+        self.assertEqual(result, 0)
+        write.assert_called_once_with(
+            ["beam1-01", "beam1-02"],
+            ["beam2-01", "beam2-02"],
+            "setting-comparison.json",
+        )
+        document = json.loads(stdout.getvalue())
+        self.assertTrue(document["listening_review_required"])
+        self.assertFalse(document["promotion_allowed"])
 
     @patch("sunofriend.ai_session.run_muscriptor_session")
     @patch("sunofriend.ai_runtime.resolve_muscriptor_checkpoint")

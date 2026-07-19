@@ -25,6 +25,7 @@ CLI parsing (`cli.py`)
         |                                         `ai_cleanup_worker.py`)
         +--> immutable AI lane comparison (`ai_matrix.py`)
         +--> fresh-process AI timing comparison (`ai_benchmark.py`)
+        +--> one-variable MuScriptor comparison (`ai_setting_compare.py`)
         +--> bounded exact-repeat MuScriptor session (`ai_session.py`,
         |                                             `ai_worker_session.py`)
         +--> reused-model session verification (`ai_session_benchmark.py`)
@@ -141,6 +142,20 @@ transport and no cache artifacts. In particular, a historical run pointing at
 a worker file that has since changed cannot be re-verified. The report counts
 and labels accepted legacy rows instead of silently treating them as current
 evidence.
+
+`ai_setting_compare.py` is a stricter read-only two-arm verifier layered on the
+same immutable matrix and fresh-process benchmark checks. Its v1 contract
+accepts at least two exactly repeatable current runs per arm and permits one
+semantic difference only: control `beam_size=1`/derived `greedy` strategy versus
+challenger `beam_size=2`/derived `beam-search`. It rejects legacy, session,
+application-cache, overlapping, non-repeatable and multi-setting evidence. A
+candidate JSON change is treated as provenance until the canonical note payload
+or MIDI also changes. The atomic report whitelists path-free hashes, quality,
+label, boundary and performance diagnostics, mutates nothing, selects no winner
+and cannot promote a preset. Run order and the operating-system file cache are
+uncontrolled, so its timing ratios are not causal speed evidence; changed music
+requires an explicit same-renderer, same-patch and separately verified
+level-matched listening review.
 
 The bounded MuScriptor session is a distinct diagnostic execution boundary.
 `ai_session.py` prepares one immutable request template and starts one

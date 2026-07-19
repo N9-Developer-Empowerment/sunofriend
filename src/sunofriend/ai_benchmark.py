@@ -394,6 +394,12 @@ def _fresh_execution_evidence(run: Mapping[str, Any], *, label: str) -> str:
     if run.get("worker_transport") is not None:
         raise ValueError(rejection)
 
+    artifacts = run.get("artifacts")
+    if isinstance(artifacts, Mapping) and _CACHE_EVIDENCE_ARTIFACTS.intersection(
+        artifacts
+    ):
+        raise ValueError(rejection)
+
     present = {field for field in _EXPLICIT_EXECUTION_FIELDS if field in run}
     if present:
         if present != _EXPLICIT_EXECUTION_FIELDS:
@@ -405,16 +411,14 @@ def _fresh_execution_evidence(run: Mapping[str, Any], *, label: str) -> str:
             or run.get("worker_process_started_for_run") is not True
             or run.get("inference_executed_for_run") is not True
             or run.get("model_loaded_for_run") is not True
+            or run.get("model_reused_from_prior_request") is not False
             or run.get("application_cache") is not None
         ):
             raise ValueError(rejection)
         evidence = "explicit-current-fields"
     else:
-        artifacts = run.get("artifacts")
         if not isinstance(artifacts, Mapping):
             raise ValueError(f"AI performance benchmark {label} has no artifacts")
-        if _CACHE_EVIDENCE_ARTIFACTS.intersection(artifacts):
-            raise ValueError(rejection)
         evidence = "legacy-v1-fresh-subprocess"
 
     command = run.get("command")

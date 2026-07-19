@@ -1,6 +1,6 @@
 # Phase 5: MuScriptor Full-Mix and Community Learning
 
-Status: **Phase 5.0 and 5.1 complete; Phase 5.2 remains in progress, with its small-CPU fresh-process, bounded reused-model and application-cache slice plus private cache golden complete; no public service or new checkpoint download is authorised**
+Status: **Phase 5.0 and 5.1 complete; Phase 5.2 remains in progress, with its small-CPU fresh-process, bounded reused-model, application-cache and beam-1/beam-2 measurement slices complete; beam listening remains pending and no public service or new checkpoint download is authorised**
 
 Drafted: 19 July 2026
 Scope: accurate stem/full-mix MIDI, faster local inference, GarageBand-ready
@@ -964,8 +964,31 @@ server.
   separately identified contributed hardware.
 - [ ] After separate explicit checkpoint acceptance, pin medium and large one
   at a time; neither is authorised by this baseline.
-- [ ] Test greedy/beam, safe/fast chunk settings and any later batch change one
-  variable at a time without replacing the five reviewed musical controls.
+- [x] Add `ai-setting-compare` as a read-only, fresh-process-only one-variable
+  diagnostic. V1 accepts only repeatable current beam-1 controls versus beam-2
+  challengers and rejects session/cache/legacy evidence, overlapping windows,
+  every extra setting difference and every automatic promotion.
+- [x] Run beam 1 and beam 2 sequentially on the same private small-CPU golden,
+  retaining exact timing, memory, chunk, boundary, label, note-payload, MIDI and
+  derived-artifact evidence under an uncontrolled operating-system file cache.
+  Both two-run arms were exact. Beam 1 produced 107 notes; beam 2 produced 124,
+  with 90 same-pitch/same-label onset matches within 80 ms. The ordered runs
+  observed a beam-2 pipeline median of `32.787408 s` versus `5.282282 s`
+  (`6.207054×`), inclusive transcription of `31.177499 s` versus `3.824411 s`
+  (`8.152235×`) and peak RSS of `1,489,354,752` versus `1,173,610,496` bytes
+  (`1.269037×`). Both candidates remain `review-required`; performance and
+  overlap do not select a winner. The hardened v2 path-free report also treats
+  expression MIDI as auditionable output; its SHA-256 is
+  `8177d3245856d97a26d0c1e5c289a0bb5eddbb257579fdb414456cd9f0db2fb0`.
+- [ ] Complete a same-renderer, same-patch, level-matched listening review before
+  selecting any preset. A preliminary private Workbench pair is prepared with
+  both outputs rendered at the same configured gain through GeneralUser-GS
+  program 4; it controls the patch and render policy but is not perceptually
+  loudness-normalized. Use it to choose short comparison passages, then prepare
+  source-aligned loops with separately verified level matching for the actual
+  gate. Automated metrics and observed timing must not promote beam 2.
+- [ ] Test safe/fast chunk settings and any later batch change one variable at a
+  time without replacing the five reviewed musical controls.
 - Success: choose `preview`, `balanced` and `best` presets from measured Pareto
   results; do not make large the default merely because its paper score is
   higher.
@@ -1053,17 +1076,21 @@ or zero-note candidates from becoming main/optional choices.
 The private M4 bass/pluck gate, Workbench overlap/archive follow-through and
 three-row M1/M2/M3 bass/keys/vocal review are complete. The evidence supports
 role-specific routing and retained alternatives, not a universal model winner.
-The Phase 5.2 fresh-process and bounded exact-repeat small-CPU gates are
-complete. Three resident-model requests and two new fresh controls reproduced
-the same candidate JSON, 107-note count and MIDI byte for byte; only requests
-2+ are true reused-model warm requests. The measured warm/fresh ratios are
+The Phase 5.2 fresh-process, bounded exact-repeat and one-variable beam
+measurement gates are complete. Three resident-model requests and two new fresh
+controls reproduced the same candidate JSON, 107-note count and MIDI byte for
+byte; only requests 2+ are true reused-model warm requests. The measured
+warm/fresh ratios are
 observations rather than causal proof, and the harness is still not a
 production multi-song service. The separate opt-in application content cache
 and its private golden are complete; broader integration remains pending. The
 cache must not be conflated with resident-model reuse, the Workbench
 preview cache or the uncontrolled OS cache. Medium or large checkpoints, other
-devices, decoding-speed challengers and any public contribution remain later,
-separately authorised work.
+devices and any public contribution remain later, separately authorised work.
+Beam 2 changed the private golden's musical output. In these ordered runs it had
+substantially longer observed timings and a higher observed peak RSS; its
+same-renderer, same-patch, separately verified level-matched listening gate
+remains pending, so beam 1 stays the conservative default.
 
 Keep sample-accurate level-matched short-loop review as a requirement before a
 public listening beta. The current media-element switching is deliberately

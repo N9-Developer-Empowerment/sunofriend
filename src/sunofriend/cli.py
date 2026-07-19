@@ -29,6 +29,7 @@ _COMMANDS = {
     "ai-transcribe",
     "ai-transcribe-session",
     "ai-benchmark",
+    "ai-setting-compare",
     "ai-cache-benchmark",
     "ai-session-benchmark",
     "ai-matrix",
@@ -950,6 +951,32 @@ def build_parser() -> argparse.ArgumentParser:
         "--out",
         required=True,
         help="Fresh path for the path-free performance benchmark JSON report",
+    )
+    ai_setting_compare = sub.add_parser(
+        "ai-setting-compare",
+        help=(
+            "Compare repeatable fresh MuScriptor beam-1 controls with beam-2 "
+            "challengers without running a model"
+        ),
+    )
+    ai_setting_compare.add_argument(
+        "--control-run",
+        action="append",
+        required=True,
+        metavar="RUN_DIR",
+        help="Completed fresh-process beam-1 run; repeat at least twice",
+    )
+    ai_setting_compare.add_argument(
+        "--challenger-run",
+        action="append",
+        required=True,
+        metavar="RUN_DIR",
+        help="Completed fresh-process beam-2 run; repeat at least twice",
+    )
+    ai_setting_compare.add_argument(
+        "--out",
+        required=True,
+        help="Fresh path for the path-free one-variable comparison JSON",
     )
     ai_cache_benchmark = sub.add_parser(
         "ai-cache-benchmark",
@@ -2089,6 +2116,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_ai_transcribe_session(args)
         if args.command == "ai-benchmark":
             return _run_ai_benchmark(args)
+        if args.command == "ai-setting-compare":
+            return _run_ai_setting_compare(args)
         if args.command == "ai-cache-benchmark":
             return _run_ai_cache_benchmark(args)
         if args.command == "ai-session-benchmark":
@@ -3442,6 +3471,40 @@ def _run_ai_benchmark(args) -> int:
                 "output": str(Path(args.out).expanduser().absolute()),
                 "schema": report["schema"],
                 "repetition_count": report["repetition_count"],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _run_ai_setting_compare(args) -> int:
+    from .ai_setting_compare import write_ai_setting_comparison
+
+    report = write_ai_setting_comparison(
+        args.control_run,
+        args.challenger_run,
+        args.out,
+    )
+    outputs = report["comparison"]["outputs"]
+    print(
+        json.dumps(
+            {
+                "status": "complete",
+                "output": str(Path(args.out).expanduser().absolute()),
+                "schema": report["schema"],
+                "control_repetitions": report["arms"]["control"][
+                    "repetition_count"
+                ],
+                "challenger_repetitions": report["arms"]["challenger"][
+                    "repetition_count"
+                ],
+                "musical_output_identical": outputs["musical_output_identical"],
+                "listening_review_required": report["effects"][
+                    "listening_review_required_before_default_change"
+                ],
+                "promotion_allowed": False,
             },
             indent=2,
             sort_keys=True,
