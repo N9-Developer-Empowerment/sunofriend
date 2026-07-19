@@ -76,6 +76,7 @@ def render_midi_to_wav(
     gain: float = 0.7,
     timeout_seconds: float = 120.0,
     soundfont_path: str | Path | None = None,
+    fluidsynth_path: str | Path | None = None,
 ) -> Path:
     """Render a MIDI file to a WAV file. Returns the output path."""
     midi_path = Path(midi_path)
@@ -88,9 +89,18 @@ def render_midi_to_wav(
     )
     if not soundfont.is_file():
         raise RenderError(f"SoundFont file not found: {soundfont}")
+    fluidsynth = (
+        Path(fluidsynth_path).expanduser()
+        if fluidsynth_path is not None
+        else Path(find_fluidsynth())
+    )
+    if not fluidsynth.is_file() or not os.access(fluidsynth, os.X_OK):
+        raise RenderError(
+            f"FluidSynth executable not found or not executable: {fluidsynth}"
+        )
 
     command = [
-        find_fluidsynth(),
+        str(fluidsynth),
         "-ni",  # no shell, no MIDI-in
         "-R",
         "0",  # dry proxy: reverb masks note endings

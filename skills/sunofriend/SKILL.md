@@ -1,6 +1,6 @@
 ---
 name: sunofriend
-description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes, benchmark verified fresh-process or bounded exact-repeat local AI runs, reuse and benchmark an explicit exact MuScriptor raw-result cache, partition model-reported labels exactly, and review existing source/MIDI alternatives; render cached neutral previews, save explicit solo/full-mix choices, hear the selected arrangement and export unchanged choices in a GarageBand handoff through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
+description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes, benchmark verified fresh-process or bounded exact-repeat local AI runs, reuse and benchmark an explicit exact MuScriptor raw-result cache, partition model-reported labels exactly, and review existing source/MIDI alternatives; build blind exact-source-window, fixed-window sample-RMS-matched MIDI A/B reviews with explicit heard and choice evidence; render cached neutral previews, save explicit solo/full-mix choices, hear the selected arrangement and export unchanged choices in a GarageBand handoff through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
 ---
 
 # Sunofriend
@@ -83,6 +83,11 @@ scripts.
    - `sunofriend doctor --require preview` for `timbre-resynthesis`. Its
      complete-patch and optional source-SF2 controls require FluidSynth; the
      fitted harmonic-plus-noise candidate itself uses the normal audio runtime.
+   - `sunofriend doctor --require preview` for `midi-ab-review`; it renders
+     both unchanged MIDI candidates through one pinned dry FluidSynth/SF2/
+     program/gain contract. `midi-ab-resolve` itself needs no audio, ML or
+     preview capability: it verifies one explicitly exported reviewed JSON
+     against the separately supplied original unchanged package directory.
    - `sunofriend doctor --require preview` for offline rendering, including
      `melody-review` and `melody-guide` MIDI-only and source-overlay
      alternatives.
@@ -210,6 +215,42 @@ scripts.
   configured gain is preliminary only. Require a source-aligned loop,
   same-renderer, same-patch and separately verified level-matched listening
   decision before changing a preset or default when musical output differs.
+- Blind comparison of two completed MIDI candidates: use
+  `midi-ab-review SOURCE FIRST.mid SECOND.mid` with a positive `--bpm`, a fresh
+  `--out-dir`, required `--midi-time-at-source-start SECONDS` and one or more
+  repeated `--interval START END "FOCUS"` values. Interpret bounds as exact
+  reference-source seconds. Each interval must be non-overlapping, inside the
+  source and 0.5–15 seconds long. The MIDI-time value pins the common candidate
+  time that corresponds to source time zero and must land on a source sample
+  frame. Use `0` only when the source WAV and both MIDI files share their excerpt origin;
+  never infer alignment. Pin `--soundfont` when reproducibility matters;
+  `--gm-program` is zero-based and defaults to 4. Both candidates use the same
+  dry FluidSynth executable, SF2, program, gain and source sample rate. Only
+  the louder candidate is attenuated to the quieter fixed-window sample RMS;
+  both candidate windows must reach at least -60 dBFS RMS, and the source
+  remains an unlevelled reference. Do not call this LUFS, true-peak or
+  perceived-loudness matching. A secret random nonce assigns A/B per unit; only
+  its public commitment may appear outside the answer key. Do not open the
+  separate answer key before review. Audio auto-loops and the shared playhead
+  is scoped to each unit. Require the reviewer to hear source/A/B, tick all
+  three heard boxes, choose A/B/equivalent/neither/cannot tell for every loop,
+  mark the review complete and export `midi_ab_review.reviewed.json`. Then use
+  `midi-ab-resolve REVIEWED.json` with
+  `--package-dir ORIGINAL_UNCHANGED_REVIEW_DIR` and `--out FRESH.json` to reveal
+  the verified identity mapping. The resolver must allow only review
+  status/count, heard, choice and notes changes and reject swapped A/B or
+  cross-unit slots and changed timing, focus or geometry. Treat the result as
+  listening evidence only: neither command edits MIDI, selects a Workbench candidate,
+  promotes a preset or changes a default. Exact common source-frame windows do
+  not imply decoded, sample-accurate browser switching; Workbench still
+  switches at a shared position in seconds.
+  The complete command shapes are:
+  `sunofriend midi-ab-review SOURCE FIRST.mid SECOND.mid --interval START END
+  "FOCUS" [--interval START END "FOCUS" ...] --bpm N
+  --midi-time-at-source-start SECONDS [--gm-program 4] [--soundfont FILE]
+  [--question TEXT] --out-dir FRESH` and
+  `sunofriend midi-ab-resolve REVIEWED.json --package-dir
+  ORIGINAL_UNCHANGED_REVIEW_DIR --out FRESH.json`.
 - Bounded exact-repeat MuScriptor timing: use `ai-transcribe-session` only to
   repeat one byte-identical request template serially 2–20 times with one
   parent-owned loaded model. Keep source, ordered roles, excerpt, BPM,
@@ -924,6 +965,26 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
    require an explicit source-aligned, same-renderer, same-patch, separately
    verified level-matched listening decision before changing a preset or
    default when note payload or MIDI differs.
+   For `midi-ab-review`, report the source/MIDI/SoundFont/FluidSynth hashes,
+   zero-based program, sample rate, gain, required MIDI-time-at-source-start,
+   its exact source-frame offset, exact seconds/frame bounds and that every
+   interval is non-overlapping and 0.5–15 seconds. Confirm the common alignment
+   was explicit rather than inferred; source/A/B frame geometry matches; both
+   candidate windows meet the -60 dBFS RMS floor; only the louder candidate was
+   attenuated to the quieter fixed-window sample RMS; and the source stayed
+   unlevelled. Confirm a secret random per-unit nonce is present only in the
+   answer key, its commitment is public, the key is absent from HTML, audio is
+   auto-looped with one shared playhead per unit, and all heard flags plus
+   choices begin incomplete. State explicitly that this is not LUFS, true-peak
+   or perceived-loudness matching and that MIDI edits, selection, promotion and
+   default changes are zero. Hand off the HTML without opening the answer key
+   or manufacturing a reviewed export. For `midi-ab-resolve`, require a
+   user-exported complete review and the separately named original unchanged
+   `--package-dir`; reverify the seed, audio manifest, answer key and original
+   inputs. Confirm only status/reviewed count, heard, choice and notes changed,
+   while A/B slots, unit membership, timing, focus and geometry stayed fixed.
+   Report per-loop resolved identities and preference counts and retain all zero
+   effects. Do not turn the listening result into an automatic preset change.
    For `ai-transcribe-session`, confirm the private root was fresh and contains
    `session.request-template.json`, started/ready/closed lifecycle records,
    worker logs, `session.json` and exactly the declared contiguous

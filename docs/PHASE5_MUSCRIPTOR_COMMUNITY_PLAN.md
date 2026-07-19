@@ -1,6 +1,6 @@
 # Phase 5: MuScriptor Full-Mix and Community Learning
 
-Status: **Phase 5.0 and 5.1 complete; Phase 5.2 remains in progress, with its small-CPU fresh-process, bounded reused-model, application-cache and beam-1/beam-2 measurement slices complete; beam listening remains pending and no public service or new checkpoint download is authorised**
+Status: **Phase 5.0 and 5.1 complete; Phase 5.2 remains in progress, with its small-CPU fresh-process, bounded reused-model, application-cache, beam-1/beam-2 measurement and hardened blind short-loop package slices complete; the private human review/export/resolved result remains pending and no public service or new checkpoint download is authorised**
 
 Drafted: 19 July 2026
 Scope: accurate stem/full-mix MIDI, faster local inference, GarageBand-ready
@@ -340,8 +340,12 @@ model/version and how many listeners selected `equivalent` or `neither`.
 - A bundled browser client uses media elements with a shared-second position
   for time-synchronised A/B loops and a canvas piano roll. Node is a
   development/build dependency only; end users receive compiled static assets
-  in the Python package. Decoded, level-matched, sample-accurate switching is a
-  deferred pre-public-beta gate.
+  in the Python package. The standalone `midi-ab-review` package now supplies
+  blind, explicitly aligned exact-source-time, fixed-window sample-RMS-matched
+  comparison files. Its audio auto-loops and its shared playhead is scoped per
+  review unit, but it still uses browser media elements. Decoded,
+  sample-accurate switching inside the Workbench remains a deferred
+  pre-public-beta gate.
 - Every operation is content-addressed and resumable. Closing the browser does
   not lose a completed transcription or review.
 - The server uses a per-launch token, accepts local files only through explicit
@@ -788,8 +792,11 @@ Started 19 July 2026:
 Deferred pre-public-beta gate, targeted for Phase 5.5 rather than the completed
 Phase 5.0 slice:
 
-- [ ] upgrade short-loop blind review from media-element time synchronization
-  to decoded, level-matched, sample-accurate switching.
+- [ ] upgrade Workbench playback from media-element time synchronization to
+  decoded, sample-accurate switching. Generic blind exact-window,
+  fixed-window sample-RMS-matched packages now exist through
+  `midi-ab-review`; this deferred item is specifically the Workbench playback
+  engine.
 
 ### 5.1 — Full-mix/conditioned bake-off
 
@@ -980,13 +987,34 @@ server.
   overlap do not select a winner. The hardened v2 path-free report also treats
   expression MIDI as auditionable output; its SHA-256 is
   `8177d3245856d97a26d0c1e5c289a0bb5eddbb257579fdb414456cd9f0db2fb0`.
-- [ ] Complete a same-renderer, same-patch, level-matched listening review before
-  selecting any preset. A preliminary private Workbench pair is prepared with
-  both outputs rendered at the same configured gain through GeneralUser-GS
-  program 4; it controls the patch and render policy but is not perceptually
-  loudness-normalized. Use it to choose short comparison passages, then prepare
-  source-aligned loops with separately verified level matching for the actual
-  gate. Automated metrics and observed timing must not promote beam 2.
+- [x] Add generic `midi-ab-review`/`midi-ab-resolve` tooling for one or more
+  exact source-time, non-overlapping 0.5–15 second loops. Both candidates use
+  the same hash-pinned dry FluidSynth executable, SF2, zero-based GM program,
+  sample rate and gain. The required `--midi-time-at-source-start` pins the
+  common candidate-to-source origin on a source sample frame; no alignment is
+  inferred. Only the louder candidate is attenuated to the quieter fixed-window
+  sample RMS, both windows must reach -60 dBFS RMS, and the source stays
+  unlevelled. A secret random per-loop nonce remains only in the answer key,
+  with a public commitment in the seed. The auto-looping page scopes its shared
+  playhead per unit and requires source/A/B heard checkboxes plus an explicit
+  outcome. Resolution requires the original unchanged package and accepts only
+  review status/count, heard, choice and notes changes, rejecting swapped slots
+  or altered timing/focus/geometry. Neither command edits MIDI, selects a
+  winner, promotes a preset or changes a default. This is sample RMS, not LUFS,
+  true peak or perceived loudness.
+- [x] Generate and verify the private beam-1/beam-2 package under ignored
+  `work/ai-bakeoff/lidl-phase5-beam-rms-review-v4/`. Commitment
+  `b5e3556f70560c86cbe79fbcc4bb7d9a8362c67824beed203bffa0675162dd10`
+  covers three exact 48 kHz windows: 0.20–3.50, 3.50–7.50 and 11.60–15.00
+  seconds, with explicit origin `0`, GeneralUser-GS program 4/SF2 hash
+  `9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe`
+  and FluidSynth 2.5.6 hash
+  `93589cfaf73a5aaaaf37dd313be4d815fb2ced8f0e8ae641b0e1d0026e546911`.
+  All final A/B PCM RMS pairs match to six decimals and are unclipped.
+- [ ] Run and resolve the private beam-1/beam-2 listening review before
+  selecting any preset. The package is complete, but its human heard/choice
+  review, browser export and resolved result are pending. Automated metrics,
+  level equality and observed timing must not promote beam 2.
 - [ ] Test safe/fast chunk settings and any later batch change one variable at a
   time without replacing the five reviewed musical controls.
 - Success: choose `preview`, `balanced` and `best` presets from measured Pareto
@@ -1089,12 +1117,18 @@ preview cache or the uncontrolled OS cache. Medium or large checkpoints, other
 devices and any public contribution remain later, separately authorised work.
 Beam 2 changed the private golden's musical output. In these ordered runs it had
 substantially longer observed timings and a higher observed peak RSS; its
-same-renderer, same-patch, separately verified level-matched listening gate
-remains pending, so beam 1 stays the conservative default.
+generic same-renderer, same-patch, fixed-window sample-RMS-matched review
+builder and resolver are now complete. The hardened three-window private
+package is generated and verified, but the human review/export and resolved
+result remain pending, so beam 1 stays the conservative default. This review
+policy does not claim LUFS, true-peak or perceived-loudness equality and leaves
+the source reference unlevelled.
 
 Keep sample-accurate level-matched short-loop review as a requirement before a
 public listening beta. The current media-element switching is deliberately
-described as time-synchronised, not sample-accurate.
+described as time-synchronised, not sample-accurate. The standalone blind A/B
+package uses exact common source-frame windows, but does not yet replace
+Workbench media elements with decoded sample-accurate switching.
 
 ## Primary sources
 

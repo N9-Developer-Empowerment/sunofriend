@@ -3,8 +3,9 @@
 Status: Phase 1 and Phase 2 engineering complete; Phase 3 complete; Phase 4
 fixed-MIDI review complete; Phase 5.1 private listening and the Phase 5.2
 fresh-process, bounded reused-model, exact-result cache and beam-1/beam-2
-small-CPU golden measurements complete; beam listening and broader production
-integration remain
+small-CPU golden measurements plus the hardened private blind short-loop
+package complete; its human review/export/resolved result and broader
+production integration remain
 
 Started: 15 July 2026  
 Scope: local-first AI assistance for transcription, review, instrument matching
@@ -73,7 +74,7 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
-| 5. MuScriptor Full-Mix and Community Learning | **In progress: Phase 5.0/5.1 complete; Phase 5.2 beam measurement complete, listening pending** | Local Workbench, immutable MuScriptor evidence, M0–M4 matrices, exact label partitions, fresh-process and bounded reused-model CPU baselines, explicit exact-result caching and a strict one-variable beam comparison are complete; beam listening, workflow integration, other devices and model-size comparisons remain |
+| 5. MuScriptor Full-Mix and Community Learning | **In progress: Phase 5.0/5.1 complete; Phase 5.2 beam measurement and hardened private review package complete, human result pending** | Local Workbench, immutable MuScriptor evidence, M0–M4 matrices, exact label partitions, fresh-process and bounded reused-model CPU baselines, explicit exact-result caching, a strict one-variable beam comparison and generic explicitly aligned blind A/B tooling are complete; the private heard/choice export and resolved result, workflow integration, other devices and model-size comparisons remain |
 
 ## Phase 1: AI Transcription Bake-off v1
 
@@ -519,6 +520,60 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-19 — Phase 5.2 blind source-aligned MIDI review tooling
+
+- Goal: make the outstanding beam-1/beam-2 musical decision possible without
+  revealing candidate identity or letting louder playback become a hidden
+  preference.
+- Change or experiment: added generic `midi-ab-review` and
+  `midi-ab-resolve`. The builder accepts a reference WAV, two unchanged MIDI
+  files, a BPM, required `--midi-time-at-source-start SECONDS` and repeated
+  `--interval START END "FOCUS"` values. The explicit common MIDI origin must
+  land on a source sample frame; `0` is valid when the WAV and both MIDIs share
+  their excerpt origin. No alignment offset is inferred. Each interval is an
+  exact source-time, non-overlapping 0.5–15 second window inside the WAV. The
+  builder renders private neutral proxies through the same hash-pinned dry
+  FluidSynth executable, SF2, zero-based GM program, sample rate and gain, then
+  crops source/A/B at the corresponding exact rounded frame indices.
+- Level and blind contract: only the louder candidate is attenuated to the
+  quieter candidate's fixed-window sample RMS. The source reference remains
+  unlevelled; no candidate is amplified and no limiter, compression, EQ, time
+  shift or stretch is applied. Each candidate window must be at least -60 dBFS
+  RMS. This is sample RMS, not LUFS, true peak or perceived loudness. A secret
+  random nonce assigns A/B independently per loop and stays only in the
+  hash-pinned answer key; the public seed exposes only its commitment. The HTML
+  auto-loops audio, scopes the shared playhead per review unit and requires
+  heard checkboxes for source, A and B plus one explicit
+  A/B/equivalent/neither/cannot-tell outcome before reviewed JSON can be
+  exported.
+- Resolution and effects: `midi-ab-resolve REVIEWED.json` with
+  `--package-dir ORIGINAL_UNCHANGED_REVIEW_DIR` and `--out FRESH.json` compares
+  the user export with the original seed, key, manifest, audio and inputs. Only
+  status/reviewed count, heard, choice and notes changes are permitted. Swapped
+  A/B or cross-unit slots and changed timing, focus or geometry fail closed
+  before identities are revealed. Both commands report zero MIDI edits,
+  selection, promotion and default-change effects.
+- Private package: generated under ignored
+  `work/ai-bakeoff/lidl-phase5-beam-rms-review-v4/`, with package commitment
+  `b5e3556f70560c86cbe79fbcc4bb7d9a8362c67824beed203bffa0675162dd10`.
+  Its exact 48 kHz windows are 0.20–3.50, 3.50–7.50 and 11.60–15.00 seconds,
+  using explicit common origin `0`, GeneralUser-GS program 4/SF2 hash
+  `9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe`
+  and FluidSynth 2.5.6 hash
+  `93589cfaf73a5aaaaf37dd313be4d815fb2ced8f0e8ae641b0e1d0026e546911`.
+  Every final A/B PCM RMS pair matches to six decimals and is unclipped.
+- Listening result: pending. The package is unreviewed; no browser export or
+  resolved result exists yet. Beam 1 remains the conservative default.
+- Problems/risks: exact common frame windows do not make browser media-element
+  switching sample-accurate. The standalone page and Workbench coordinate a
+  shared position in seconds; decoded sample-accurate Workbench switching
+  remains deferred. Fixed-window sample RMS also cannot guarantee equal
+  perceived loudness.
+- Next smallest step: open the generated package review HTML without reading
+  its answer key, hear source/A/B and record a choice for all three loops,
+  export reviewed JSON, then resolve it against the original unchanged package
+  directory without changing a preset automatically.
 
 ### 2026-07-19 — Strict beam-1 versus beam-2 small-CPU comparison
 

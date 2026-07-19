@@ -38,6 +38,8 @@ _COMMANDS = {
     "midi-mask",
     "midi-role-split",
     "midi-role-split-resolve",
+    "midi-ab-review",
+    "midi-ab-resolve",
     "timbre-resynthesis",
     "preview",
     "midi-ports",
@@ -817,7 +819,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--out-dir", required=True, help="Fresh bounded-session output directory"
     )
     ai_transcribe_session.add_argument(
-        "--bpm", required=True, type=float, help="Tempo written into every candidate.mid"
+        "--bpm",
+        required=True,
+        type=float,
+        help="Tempo written into every candidate.mid",
     )
     ai_transcribe_session.add_argument(
         "--instrument",
@@ -980,9 +985,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     ai_cache_benchmark = sub.add_parser(
         "ai-cache-benchmark",
-        help=(
-            "Verify one cache miss and repeated cache hits without running a model"
-        ),
+        help=("Verify one cache miss and repeated cache hits without running a model"),
     )
     ai_cache_benchmark.add_argument(
         "--miss-run",
@@ -1145,7 +1148,9 @@ def build_parser() -> argparse.ArgumentParser:
         "midi-role-split",
         help="Build reviewable body/pluck MIDI tracks from explicit event-cluster evidence",
     )
-    midi_role_split.add_argument("primary_midi", help="Accepted primary note-bearing MIDI")
+    midi_role_split.add_argument(
+        "primary_midi", help="Accepted primary note-bearing MIDI"
+    )
     midi_role_split.add_argument(
         "clusters", help="Matching source_event_clusters.json from instrument-match"
     )
@@ -1259,6 +1264,76 @@ def build_parser() -> argparse.ArgumentParser:
     )
     timbre_resynthesis.add_argument(
         "--out-dir", required=True, help="Fresh review directory; never overwritten"
+    )
+
+    midi_ab_review = sub.add_parser(
+        "midi-ab-review",
+        help="Build blind, source-aligned, level-matched short-loop MIDI A/B review",
+    )
+    midi_ab_review.add_argument(
+        "source_audio", help="Unchanged source/reference WAV containing every window"
+    )
+    midi_ab_review.add_argument("first_midi", help="First unchanged MIDI candidate")
+    midi_ab_review.add_argument("second_midi", help="Second unchanged MIDI candidate")
+    midi_ab_review.add_argument(
+        "--interval",
+        action="append",
+        nargs=3,
+        required=True,
+        metavar=("START", "END", "FOCUS"),
+        help=(
+            "Source-time start/end seconds and a listening prompt; repeat for "
+            "each non-overlapping 0.5–15 second loop"
+        ),
+    )
+    midi_ab_review.add_argument(
+        "--bpm", type=float, required=True, help="Tempo used to render both candidates"
+    )
+    midi_ab_review.add_argument(
+        "--midi-time-at-source-start",
+        type=float,
+        required=True,
+        help=(
+            "Candidate MIDI time aligned with source WAV time zero; use 0 when "
+            "both files begin at the same excerpt origin"
+        ),
+    )
+    midi_ab_review.add_argument(
+        "--gm-program",
+        type=int,
+        default=4,
+        help="Zero-based GM program used for both candidates (default: 4)",
+    )
+    midi_ab_review.add_argument(
+        "--soundfont",
+        default=None,
+        help="Optional pinned SoundFont used for both candidates",
+    )
+    midi_ab_review.add_argument(
+        "--question",
+        default=None,
+        help="Optional common musical-usefulness question shown above every loop",
+    )
+    midi_ab_review.add_argument(
+        "--out-dir",
+        required=True,
+        help="Fresh blinded review directory; never overwritten",
+    )
+
+    midi_ab_resolve = sub.add_parser(
+        "midi-ab-resolve",
+        help="Resolve an explicitly reviewed blind MIDI A/B export",
+    )
+    midi_ab_resolve.add_argument(
+        "review", help="Reviewed JSON exported by midi-ab-review"
+    )
+    midi_ab_resolve.add_argument(
+        "--package-dir",
+        required=True,
+        help="Original unchanged midi-ab-review package directory",
+    )
+    midi_ab_resolve.add_argument(
+        "--out", required=True, help="Fresh resolved listening-evidence JSON"
     )
 
     preview = sub.add_parser(
@@ -2134,6 +2209,10 @@ def main(argv: list[str] | None = None) -> int:
             return _run_midi_role_split(args)
         if args.command == "midi-role-split-resolve":
             return _run_midi_role_split_resolve(args)
+        if args.command == "midi-ab-review":
+            return _run_midi_ab_review(args)
+        if args.command == "midi-ab-resolve":
+            return _run_midi_ab_resolve(args)
         if args.command == "timbre-resynthesis":
             return _run_timbre_resynthesis(args)
         if args.command == "preview":
@@ -3494,9 +3573,7 @@ def _run_ai_setting_compare(args) -> int:
                 "status": "complete",
                 "output": str(Path(args.out).expanduser().absolute()),
                 "schema": report["schema"],
-                "control_repetitions": report["arms"]["control"][
-                    "repetition_count"
-                ],
+                "control_repetitions": report["arms"]["control"]["repetition_count"],
                 "challenger_repetitions": report["arms"]["challenger"][
                     "repetition_count"
                 ],
@@ -3696,6 +3773,51 @@ def _run_timbre_resynthesis(args) -> int:
     )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result["status"] == "review-required" else 1
+
+
+def _run_midi_ab_review(args) -> int:
+    from .midi_ab_review import create_midi_ab_review
+
+    intervals = []
+    for start, end, focus in args.interval:
+        try:
+            start_seconds = float(start)
+            end_seconds = float(end)
+        except ValueError as exc:
+            raise ValueError(
+                f"MIDI A/B interval boundaries must be seconds: {start!r}, {end!r}"
+            ) from exc
+        intervals.append((start_seconds, end_seconds, focus))
+    options = {
+        "bpm": args.bpm,
+        "midi_time_at_source_start_seconds": args.midi_time_at_source_start,
+        "gm_program": args.gm_program,
+        "soundfont_path": args.soundfont,
+    }
+    if args.question is not None:
+        options["question"] = args.question
+    result = create_midi_ab_review(
+        args.source_audio,
+        args.first_midi,
+        args.second_midi,
+        intervals,
+        args.out_dir,
+        **options,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_midi_ab_resolve(args) -> int:
+    from .midi_ab_review import resolve_midi_ab_review
+
+    result = resolve_midi_ab_review(
+        args.review,
+        args.out,
+        package_dir=args.package_dir,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
 
 
 def _run_preview(args) -> int:
@@ -4001,9 +4123,7 @@ def _run_sample_pack_apply(args) -> int:
 def _run_sample_pack_boundary_review(args) -> int:
     from .sample_review import create_sample_boundary_review
 
-    report = create_sample_boundary_review(
-        args.sample_pack_v3, out_dir=args.out_dir
-    )
+    report = create_sample_boundary_review(args.sample_pack_v3, out_dir=args.out_dir)
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0
 

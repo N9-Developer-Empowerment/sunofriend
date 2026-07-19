@@ -37,6 +37,7 @@ clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 | Run an optional local AI transcription challenger | `ai-transcribe` | Isolated worker, explicit local checkpoint, raw candidate, MIDI, hashes and immutable logs |
 | Benchmark repeated local AI runs | `ai-benchmark` | Verified path-free timing, memory, chunk and exact-output repeatability report over completed immutable runs |
 | Compare one MuScriptor decoding setting | `ai-setting-compare` | Read-only fresh-process beam-1/beam-2 diagnostic; exactly one semantic setting may change, no MIDI is edited and no winner is selected |
+| Blind-test two MIDI candidates on exact source-time loops | `midi-ab-review`, `midi-ab-resolve` | Explicit common time origin, hash-pinned dry same-patch renders, candidate-only fixed-window sample-RMS matching, random hidden per-loop identities, strict reviewed-export verification and no MIDI or default changes |
 | Measure exact repeats through one loaded model | `ai-transcribe-session`, `ai-session-benchmark` | Bounded 2–20-request diagnostic session, reused-model warm evidence for requests 2+, and optional two-run fresh-process control; no production cache or promotion |
 | Reuse one exact prior MuScriptor result | `ai-transcribe --application-cache-dir`, `ai-cache-benchmark` | Explicit private content-addressed raw-result cache; verified hits start no worker, load no model and run no inference, while current MIDI is rebuilt and cache timing remains separate |
 | Compare immutable AI transcription lanes | `ai-matrix` | Path-free per-role quality, label stability, chunk-boundary and cross-lane overlap diagnostics without changing raw MIDI |
@@ -88,8 +89,9 @@ compares those executions with the original goals and records the gate before
 another model experiment begins. The current Phase 5 programme—including the
 completed full-mix/conditioned comparison and local Workbench, followed by
 fresh-process and reused-model measurements, an explicit exact-result
-application-cache experiment, a completed one-variable beam measurement with
-its listening gate still pending, and a future opt-in feedback loop—is in the
+application-cache experiment, a completed one-variable beam measurement and
+completed blind short-loop review tooling with the private beam listening
+result still pending, followed by a future opt-in feedback loop—is in the
 **[Phase 5 MuScriptor and Community Learning plan](docs/PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md)**.
 
 For combining songs, first use `midi-transform` to choose a common key, BPM
@@ -714,6 +716,94 @@ versus `3.824 s` (`8.152×`), first completed note was `10.909 s` versus
 was about `1.49 GB` versus `1.17 GB`. The musical outputs differ, so the
 preliminary same-patch Workbench pair cannot close the separately verified
 level-matched listening gate; beam 1 remains the default.
+
+#### Blind-review two MIDI candidates on exact source-time loops
+
+Use `midi-ab-review` when two different MIDI files need a stricter musical
+comparison than the normal Workbench audition. Supply one or more
+non-overlapping source-time intervals. Each interval must last from 0.5 to 15
+seconds, stay inside the reference WAV and include a short statement of what to
+listen for:
+
+```bash
+.venv/bin/sunofriend doctor --require preview
+
+.venv/bin/sunofriend midi-ab-review \
+  "/absolute/path/to/source.wav" \
+  "/absolute/path/to/beam-1.mid" \
+  "/absolute/path/to/beam-2.mid" \
+  --interval 0.0 5.0 "opening attacks and missing bass notes" \
+  --interval 10.0 15.0 "recognisable contour and distracting extra notes" \
+  --bpm 119 \
+  --midi-time-at-source-start 0 \
+  --gm-program 4 \
+  --soundfont "/absolute/path/to/pinned-bank.sf2" \
+  --question "Which candidate is more musically useful?" \
+  --out-dir "/absolute/fresh/path/beam-listening-review"
+```
+
+`--midi-time-at-source-start` is required. It declares the candidate MIDI time
+that corresponds to reference-WAV time zero and must land exactly on a source
+sample frame. Use `0` only when the WAV and both MIDI files share the same
+excerpt origin; Sunofriend applies the supplied origin to both candidates and
+never infers an alignment offset. `--gm-program` is zero-based and defaults to
+4. `--soundfont` and `--question` are optional; normal SoundFont discovery is
+used when no bank is supplied. The output directory must be fresh. The builder
+preserves both input MIDI files, rewrites only private neutral audition proxies
+and renders A and B with the same pinned dry FluidSynth executable, SF2, GM
+program, sample rate and gain. Each source and candidate file is cut at the
+corresponding exact rounded frame bounds under that explicit alignment.
+
+Within each loop, only the two candidate renders are level-matched: the louder
+candidate is attenuated to the quieter candidate's fixed-window sample RMS.
+The reference source is intentionally left at its original level. No candidate
+is amplified and no limiter, compression, EQ, time shift or time stretch is
+used. Both candidate windows must reach at least -60 dBFS RMS or the package is
+rejected. This is sample-RMS matching, **not** LUFS, true-peak or
+perceived-loudness matching; judge notes, pitch, timing, contour and clutter
+rather than loudness alone.
+
+Open `midi_ab_review.html` without opening the separate
+`midi_ab_answer_key.json`. For every loop, listen to the source, Candidate A
+and Candidate B, tick all three **I heard...** boxes, choose A, B,
+**Equivalent**, **Neither** or **I cannot tell**, and optionally add a private
+note. Mark all choices reviewed, then export `midi_ab_review.reviewed.json`.
+If an embedded browser blocks downloads from a local `file://` page, open the
+same HTML in Safari, Chrome or Firefox; the package remains entirely local.
+Audio automatically loops, and source/A/B share a playhead only inside their
+own review unit. A secret random nonce assigns A/B separately per loop; only a
+public nonce commitment appears in the seed and page, while the nonce and
+identity mapping remain in the answer key. Resolve the hidden identities only
+after export, supplying the original unchanged package directory as a separate
+trust anchor:
+
+```bash
+.venv/bin/sunofriend midi-ab-resolve \
+  "/absolute/path/to/midi_ab_review.reviewed.json" \
+  --package-dir "/absolute/fresh/path/beam-listening-review" \
+  --out "/absolute/fresh/path/beam-listening-result.json"
+```
+
+The resolver compares the reviewed export with the original seed, key,
+manifest, audio and inputs. Only review status/count, the heard flags, choice
+and notes may change. It rejects changed timing/focus/geometry, swapped A/B
+slots or candidates moved across units before reporting per-loop identities
+and preference counts. Neither command edits MIDI, selects a Workbench
+candidate, promotes a preset or changes a default.
+
+The Phase 5.2 private package now exists under ignored
+`work/ai-bakeoff/lidl-phase5-beam-rms-review-v4/`, commitment
+`b5e3556f70560c86cbe79fbcc4bb7d9a8362c67824beed203bffa0675162dd10`.
+It contains exact 0.20–3.50, 3.50–7.50 and 11.60–15.00 second windows at 48
+kHz, explicit common origin `0`, GeneralUser-GS program 4 and SoundFont hash
+`9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe`.
+FluidSynth 2.5.6 is pinned by hash
+`93589cfaf73a5aaaaf37dd313be4d815fb2ced8f0e8ae641b0e1d0026e546911`;
+every final A/B PCM RMS pair is equal to six decimal places and unclipped. The
+human listening/export and resolved result remain pending, so beam 1 remains
+the conservative default. The standalone page still switches browser media at
+a shared position per unit rather than decoded sample accuracy; decoded,
+sample-accurate switching inside the Workbench is also deferred.
 
 #### Measure exact repeats through one loaded MuScriptor model
 

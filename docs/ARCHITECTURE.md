@@ -33,6 +33,7 @@ CLI parsing (`cli.py`)
         +--> application-cache verification (`ai_cache_benchmark.py`)
         +--> reviewed multi-role MIDI challenger (`midi_role_split.py`)
         +--> fixed-MIDI timbre baseline (`timbre_resynthesis.py`)
+        +--> blind source-aligned MIDI comparison (`midi_ab_review.py`)
         +--> local decision workbench (`workbench_catalog.py`,
         |                              `workbench_store.py`,
         |                              `workbench_server.py`)
@@ -88,6 +89,40 @@ and checked note by note for functional silence before an unreviewed listening
 page is published. The module trains no model, changes no MIDI and does not
 claim that the resulting WAV is a GarageBand instrument.
 
+`midi_ab_review.py` is the generic blind listening-evidence boundary for two
+already completed MIDI candidates. It accepts one reference WAV, a positive
+BPM, an explicit common MIDI time corresponding to reference-source time zero,
+and one or more non-overlapping 0.5–15 second source-time intervals. The origin
+must land on a source sample frame and is applied to both candidates; alignment
+is never inferred. The builder hash-pins the source, both unchanged MIDI files,
+FluidSynth executable and SF2; writes private neutral proxies that use the same
+zero-based GM program, dry renderer, gain and sample rate; and crops source/A/B
+at the corresponding exact rounded frame indices.
+
+Candidate identity is assigned separately per loop from a secret random nonce.
+Only its cryptographic commitment is public; the nonce and mappings are stored
+only in the separate hash-pinned answer key and never embedded in the seed or
+HTML. This is intentionally non-deterministic package blinding, although the
+public package contract and media remain independently hash-pinned.
+
+Level policy is intentionally narrow and auditable. Within each interval, the
+louder candidate render is attenuated to the quieter candidate's fixed-window
+channel-energy sample RMS. The source reference is unlevelled, no candidate is
+amplified and no limiter, compression, EQ, time shift or stretch is applied.
+Each candidate window must reach at least -60 dBFS RMS. This is not a LUFS,
+true-peak or perceived-loudness claim. The browser auto-loops audio and keeps a
+separate shared playhead for each review unit. It requires heard checkboxes for
+source/A/B plus one explicit A, B, equivalent, neither or cannot-tell choice
+before it can export a reviewed JSON.
+
+Resolution requires both that reviewed export and the original unchanged
+package directory. The resolver re-verifies its seed, audio manifest, answer
+key and original inputs. It allows only status/reviewed-count, heard, choice
+and notes fields to differ, and rejects swapped A/B or cross-unit slots and any
+changed timing, focus or geometry before revealing per-loop identities as
+listening evidence. Neither operation edits MIDI, selects a Workbench
+candidate, promotes a preset or changes a default.
+
 The Phase 5 Workbench is a presentation and explicit-decision boundary, not a
 new transcription engine. `workbench_catalog.py` hash-pins existing source,
 MIDI and preview artifacts and limits the normal result space to three
@@ -105,6 +140,12 @@ ranges for media seeking and loads no remote scripts. Its packaged HTML uses a
 shared position for source/candidate switching and records explicit solo or
 full-mix context. Its contribution preview excludes audio, MIDI, paths,
 free-text notes, dwell time and play counts; there is no submission endpoint.
+The standalone MIDI A/B package completes the Phase 5.2 beam-listening tooling,
+but it does not change Workbench playback: both interfaces still coordinate
+browser media elements in seconds, with the standalone playhead scoped per
+unit. Decoded, sample-accurate Workbench switching remains deferred. The
+private three-window package has been generated and verified, while its human
+export and resolved listening result remain pending.
 
 `ai_matrix.py` applies a model-neutral quality/report schema to already
 completed immutable runs from one controlled backend, checkpoint, model config

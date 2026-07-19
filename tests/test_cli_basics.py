@@ -84,6 +84,63 @@ class CliBasicsTests(unittest.TestCase):
         self.assertEqual(args.challenger_run, ["beam2-01", "beam2-02"])
         self.assertEqual(args.out, "setting-comparison.json")
 
+    def test_midi_ab_review_accepts_explicit_short_windows(self) -> None:
+        parser = build_parser()
+        review = parser.parse_args(
+            [
+                "midi-ab-review",
+                "source.wav",
+                "beam1.mid",
+                "beam2.mid",
+                "--interval",
+                "0.2",
+                "3.5",
+                "Judge chord fullness without clutter.",
+                "--interval",
+                "11.6",
+                "15.0",
+                "Judge bass timing and octave.",
+                "--bpm",
+                "119",
+                "--midi-time-at-source-start",
+                "0.0",
+                "--gm-program",
+                "4",
+                "--soundfont",
+                "neutral.sf2",
+                "--out-dir",
+                "blind-review",
+            ]
+        )
+        resolve = parser.parse_args(
+            [
+                "midi-ab-resolve",
+                "midi-ab.reviewed.json",
+                "--package-dir",
+                "blind-review",
+                "--out",
+                "midi-ab.result.json",
+            ]
+        )
+
+        self.assertEqual(review.source_audio, "source.wav")
+        self.assertEqual(review.first_midi, "beam1.mid")
+        self.assertEqual(review.second_midi, "beam2.mid")
+        self.assertEqual(
+            review.interval,
+            [
+                ["0.2", "3.5", "Judge chord fullness without clutter."],
+                ["11.6", "15.0", "Judge bass timing and octave."],
+            ],
+        )
+        self.assertEqual(review.bpm, 119.0)
+        self.assertEqual(review.midi_time_at_source_start, 0.0)
+        self.assertEqual(review.gm_program, 4)
+        self.assertEqual(review.soundfont, "neutral.sf2")
+        self.assertEqual(resolve.review, "midi-ab.reviewed.json")
+        self.assertEqual(resolve.package_dir, "blind-review")
+        self.assertEqual(resolve.out, "midi-ab.result.json")
+
     def test_ai_transcribe_session_is_bounded_and_muscriptor_only(self) -> None:
         args = build_parser().parse_args(
             [
@@ -272,6 +329,83 @@ class CliBasicsTests(unittest.TestCase):
         document = json.loads(stdout.getvalue())
         self.assertTrue(document["listening_review_required"])
         self.assertFalse(document["promotion_allowed"])
+
+    @patch("sunofriend.midi_ab_review.create_midi_ab_review")
+    def test_midi_ab_review_routes_without_selecting_a_winner(self, create) -> None:
+        create.return_value = {
+            "schema": "sunofriend.midi-ab-review.v1",
+            "status": "complete",
+            "out_dir": "/tmp/blind-review",
+            "effects": {"promotion_allowed": False},
+        }
+        stdout = io.StringIO()
+
+        with redirect_stdout(stdout):
+            result = main(
+                [
+                    "midi-ab-review",
+                    "source.wav",
+                    "beam1.mid",
+                    "beam2.mid",
+                    "--interval",
+                    "0.2",
+                    "3.5",
+                    "Judge useful musical detail.",
+                    "--bpm",
+                    "119",
+                    "--midi-time-at-source-start",
+                    "0.0",
+                    "--gm-program",
+                    "4",
+                    "--soundfont",
+                    "neutral.sf2",
+                    "--out-dir",
+                    "blind-review",
+                ]
+            )
+
+        self.assertEqual(result, 0)
+        create.assert_called_once_with(
+            "source.wav",
+            "beam1.mid",
+            "beam2.mid",
+            [(0.2, 3.5, "Judge useful musical detail.")],
+            "blind-review",
+            bpm=119.0,
+            midi_time_at_source_start_seconds=0.0,
+            gm_program=4,
+            soundfont_path="neutral.sf2",
+        )
+        self.assertFalse(json.loads(stdout.getvalue())["effects"]["promotion_allowed"])
+
+    @patch("sunofriend.midi_ab_review.resolve_midi_ab_review")
+    def test_midi_ab_resolve_routes_explicit_review(self, resolve) -> None:
+        resolve.return_value = {
+            "schema": "sunofriend.midi-ab-result.v1",
+            "status": "complete",
+            "promotion_allowed": False,
+        }
+        stdout = io.StringIO()
+
+        with redirect_stdout(stdout):
+            result = main(
+                [
+                    "midi-ab-resolve",
+                    "midi-ab.reviewed.json",
+                    "--package-dir",
+                    "blind-review",
+                    "--out",
+                    "midi-ab.result.json",
+                ]
+            )
+
+        self.assertEqual(result, 0)
+        resolve.assert_called_once_with(
+            "midi-ab.reviewed.json",
+            "midi-ab.result.json",
+            package_dir="blind-review",
+        )
+        self.assertFalse(json.loads(stdout.getvalue())["promotion_allowed"])
 
     @patch("sunofriend.ai_session.run_muscriptor_session")
     @patch("sunofriend.ai_runtime.resolve_muscriptor_checkpoint")

@@ -207,6 +207,93 @@ The original MIDI hash does not change. Neutral means renderer-consistent, not
 peak-normalised: note velocity and density remain audible. Browser media
 switching is time-synchronised but is not claimed to be sample-accurate.
 
+## Build a stricter blind MIDI A/B outside the Workbench
+
+Use the standalone `midi-ab-review` package when a candidate decision needs
+hidden identities, exact source-time short loops and verified candidate-level
+matching. It does not read or change Workbench state:
+
+```bash
+sunofriend doctor --require preview
+
+sunofriend midi-ab-review \
+  "/absolute/path/to/source.wav" \
+  "/absolute/path/to/first.mid" \
+  "/absolute/path/to/second.mid" \
+  --interval 0.0 5.0 "opening attacks and missing notes" \
+  --interval 10.0 15.0 "recognisable contour and extra notes" \
+  --bpm 119 \
+  --midi-time-at-source-start 0 \
+  --gm-program 4 \
+  --soundfont "/absolute/path/to/pinned-bank.sf2" \
+  --question "Which candidate is more musically useful?" \
+  --out-dir "/absolute/fresh/path/midi-ab-review"
+```
+
+Repeat `--interval START END "FOCUS"` for each comparison passage. Intervals
+are interpreted in reference-source seconds, must not overlap, must stay
+inside the WAV and must each last 0.5–15 seconds. `--gm-program` is zero-based
+and defaults to 4. `--midi-time-at-source-start` is required and pins the one
+candidate-MIDI time corresponding to reference-WAV time zero. It must land on
+a source sample frame; use `0` only when the WAV and both MIDI files have the
+same excerpt origin. Both candidates use the supplied origin and no alignment
+offset is inferred. The SoundFont and question are optional; normal local
+SoundFont discovery is used when no SF2 is supplied. The output directory must
+not already exist.
+
+Both original MIDI files remain unchanged. Private neutral proxies preserve
+their note pitch, velocity and source-time placement within one MIDI tick, then
+use the same pinned dry FluidSynth executable, SF2, zero-based GM program,
+sample rate and render gain. Every source/A/B excerpt uses the same rounded
+source-frame bounds under the explicit common origin. For each interval, the
+louder candidate alone is attenuated to the quieter candidate's fixed-window
+sample RMS. The source
+reference is not a candidate and is not level-matched. No amplification,
+limiting, compression, EQ, time shifting or stretching is applied. Both
+candidate windows must be at least -60 dBFS RMS. This is not LUFS, true-peak or
+perceived-loudness matching.
+
+Open `midi_ab_review.html`, but leave the separate
+`midi_ab_answer_key.json` closed until the blind review is exported. Listen to
+the source, Candidate A and Candidate B for every loop, tick all three heard
+checkboxes, select A, B, equivalent, neither or cannot tell, add an optional
+private note, mark all choices reviewed and export
+`midi_ab_review.reviewed.json`. If an embedded browser blocks a local `file://`
+download, use Safari, Chrome or Firefox for this page; no server or upload is
+required. The audio elements auto-loop, and their shared playhead is scoped to
+one review unit rather than leaking between passages. A
+secret random nonce assigns A/B per loop; the public seed contains only its
+commitment and the private nonce/mappings stay in the answer key. Then reveal
+and verify the hidden mapping with a fresh result path and the original
+unchanged package directory:
+
+```bash
+sunofriend midi-ab-resolve \
+  "/absolute/path/to/midi_ab_review.reviewed.json" \
+  --package-dir "/absolute/fresh/path/midi-ab-review" \
+  --out "/absolute/fresh/path/midi-ab-result.json"
+```
+
+The resolver compares the reviewed export with the original seed, answer key,
+manifest, audio and inputs. Only status/reviewed count, heard flags, choices and
+notes may differ. Changed timing, focus or geometry, swapped A/B slots and
+cross-unit candidate moves are rejected. The result is listening evidence
+only: it does not edit either MIDI, save a Workbench choice, promote a preset
+or change a default.
+
+The Phase 5.2 private beam package has now been generated under ignored
+`work/ai-bakeoff/lidl-phase5-beam-rms-review-v4/`, with commitment
+`b5e3556f70560c86cbe79fbcc4bb7d9a8362c67824beed203bffa0675162dd10`.
+Its three exact 48 kHz windows are 0.20–3.50, 3.50–7.50 and 11.60–15.00
+seconds, using common origin `0`, GeneralUser-GS program 4, SoundFont hash
+`9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe`
+and FluidSynth 2.5.6 hash
+`93589cfaf73a5aaaaf37dd313be4d815fb2ced8f0e8ae641b0e1d0026e546911`.
+All final A/B PCM RMS pairs match to six decimals and are unclipped. The human
+review/export and resolved result remain pending. The standalone page still
+uses per-unit shared-second media-element switching; decoded sample-accurate
+Workbench switching remains a later gate.
+
 Catalog hashes are not trusted only at startup. Source, MIDI and generated
 media are checked again before serving, rendering, arranging or copying into a
 handoff; the pinned SoundFont is also rechecked before reuse. If any file
@@ -296,7 +383,10 @@ note-free disclosure boundary.
 - Existing preview WAVs remain labelled unnormalised; use the neutral renderer
   when comparing MIDI rather than embedded instruments.
 - Browser switching shares time in seconds but does not yet use decoded
-  short-loop Web Audio buffers for sample-accurate blind tests.
+  short-loop Web Audio buffers for sample-accurate switching. The standalone
+  `midi-ab-review` command now supplies blind, exact-source-window,
+  fixed-window sample-RMS-matched review packages, but does not change that
+  Workbench playback limit.
 - The arrangement is a dry GM proxy. Complete-instrument checks and installed
   GarageBand patch choice remain a later view.
 - Phrase piano-roll correction, model-size comparison and opt-in contribution
