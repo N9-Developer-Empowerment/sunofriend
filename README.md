@@ -35,23 +35,46 @@ clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 | Store and version reusable parts | `clip-import`, `clip-transform`, `clip-export` | Immutable Clip v1 assets with explicit musical or stem-locked timing |
 | Preview or route MIDI to an instrument | `preview`, `play` | FluidSynth WAV preview or CoreMIDI/IAC playback |
 | Run an optional local AI transcription challenger | `ai-transcribe` | Isolated worker, explicit local checkpoint, raw candidate, MIDI, hashes and immutable logs |
+| Compare immutable AI transcription lanes | `ai-matrix` | Path-free per-role quality, label stability, chunk-boundary and cross-lane overlap diagnostics without changing raw MIDI |
 | Test one MIDI-defined layer inside a mixed stem | `midi-mask` | Short, local harmonic target plus residual with persisted reconstruction evidence and no automatic promotion |
+| Test learned local source cleanup | `ai-cleanup` | Pinned Demucs target plus waveform residual, hard checkpoint verification, deterministic short excerpts and an explicit listening gate |
+| Split one reviewed MIDI into audible roles | `midi-role-split`, `midi-role-split-resolve` | Explicit source-event cluster choice, exact primary-note partition, optional independently transcribed residual layer, local A/B review and a hash-verified user-selected recommendation |
+| Compare consistent sounds on one fixed MIDI | `timbre-resynthesis` | Level-matched complete-patch, extracted-sampler and source-fitted harmonic-plus-noise auditions with note-by-note silence checks and no MIDI changes |
+| Review and hand off MIDI alternatives in one local site | `workbench` | Loopback-only synchronized source/candidate listening, cached neutral previews, explicit full arrangement, append-only decisions, GarageBand ZIP and a path-free contribution preview |
 
 Development has started on a local-first ensemble of optional transcription
 models, phrase-level melody review and learned instrument matching. See the
 multi-week **[AI transcription and instrument roadmap](docs/AI_TRANSCRIPTION_ROADMAP.md)**
-for Phase 1–4 goals, licence boundaries, success criteria, current checklist
+for Phase 1–5 goals, licence boundaries, success criteria, current checklist
 and daily progress log. The measured backend decisions and final listening
 gate are in the **[Phase 1 bake-off close-out report](docs/PHASE1_TRANSCRIPTION_BAKEOFF.md)**.
 Phase 3 is complete; its implemented instrument features, reproducible golden
 evidence and final GarageBand/loop decisions are recorded in the
 **[Instrument Intelligence v2 close-out report](docs/PHASE3_INSTRUMENT_INTELLIGENCE.md)**.
-Phase 4 has started with an evidence-first bass/keys golden. The current
-experiments, listening order and promotion rules are in the
+Phase 5 now has a useful local Workbench path: existing source and MIDI
+artifacts can be reviewed through one loopback-only site, missing comparisons
+can be rendered through a consistent cached GM proxy, explicit choices survive
+browser/process restarts, and only those choices enter the arrangement and
+GarageBand handoff ZIP. AI candidates carry verified execution/checkpoint
+diagnostics; severe decoder failures and zero-note results remain downloadable
+evidence but cannot become main or optional choices. The first small-model
+M0–M3 matrix also shows that label conditioning can prevent one known full-mix
+burst, although listening is still required before promotion. Phase 4 has an
+evidence-first bass/keys golden, a reviewed pinned Demucs
+bass-cleanup challenger, a resolved multi-role MIDI split and a completed
+fixed-MIDI timbre comparison. The role review kept the unchanged primary bass
+MIDI while retaining the body/pluck split as optional material. The timbre
+review preferred the complete General MIDI Synth Bass 2 control; the
+source-fitted resynthesis remained a useful consistent alternative, while the
+earlier source sampler was rejected. The current experiments, listening order
+and promotion rules are in the
 **[Cleanup and Neural Timbre Lab](docs/PHASE4_CLEANUP_TIMBRE_LAB.md)**. The
 **[Phase 4 stabilization review](docs/PHASE4_STABILIZATION_REVIEW.md)**
 compares those executions with the original goals and records the gate before
-another model experiment begins.
+another model experiment begins. The proposed next programme—full-mix and
+conditioned MuScriptor comparison, a primary local web workbench, faster local
+inference and an opt-in public feedback loop—is in the
+**[Phase 5 MuScriptor and Community Learning plan](docs/PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md)**.
 
 For combining songs, first use `midi-transform` to choose a common key, BPM
 and tuning, then use `midi-anchor` to place confirmed downbeats on the same
@@ -182,6 +205,71 @@ CoreMIDI destination for `play`. The standard Basic Pitch path uses ONNX
 Runtime, so TensorFlow/TFLite warnings are harmless when the transcription or
 conversion checks pass.
 
+### 3. Review existing MIDI choices in the local Workbench
+
+The Workbench is the Phase 5 local interface. It does not upload audio, load
+third-party scripts or start AI inference. It can explicitly run the existing
+FluidSynth preview engine, but every generated file goes into a
+content-addressed local cache and discovered MIDI is never changed. Point it
+at the original stem folder and one or more narrow directories containing
+existing MIDI and optional WAV previews:
+
+```bash
+.venv/bin/sunofriend workbench \
+  "/absolute/path/to/Song-B minor-113bpm-440hz" \
+  --candidate-root "/absolute/path/to/song-midi-output" \
+  --open
+```
+
+The command prints a `127.0.0.1` URL with a per-launch token. The page shows
+the inferred key, BPM and tuning, then gives each stem no more than three main
+candidates. Low-confidence `possible` and `uncertain` files remain under
+advanced diagnostics. Choices such as **Use as main**, **Keep optional**,
+**Needs correction** and **Reject** are appended to a local SQLite database at
+`~/.local/share/sunofriend/workbench/PROJECT_ID/` and restored on the next
+launch. Use the shared loop and source/A/B/C buttons to resume each player at
+the same second. **Render neutral preview** gives candidates for one stem the
+same local SoundFont, gain and role-based GM program; it is renderer-consistent
+but deliberately does not peak-normalise away MIDI expression.
+
+The **Hear selected arrangement** page includes only the active explicit main
+choice and explicit optional choices. Full-mix confirmation is stored with a
+`full_mix` listening context. The **GarageBand handoff** ZIP contains
+byte-for-byte copies of those selected MIDI files, a clearly labelled
+role-neutral arrangement proxy, its WAV preview and path-free setup
+instructions. Rejected, needs-correction and unreviewed candidates, private
+notes and source audio are excluded.
+
+When a discovered candidate belongs to a completed `ai-transcribe` run, its
+card also shows the verified model/config, requested and detected labels, note
+density, five-second boundary summary, warnings and real-time factor. A severe
+decoder burst or a zero-note result is diagnostic-only: the Workbench leaves
+its original files available for investigation but disables preview and
+main/optional selection. Ordinary label leakage remains auditionable because
+the useful musical line may have been assigned the wrong broad family.
+
+Inspect discovery without starting the site:
+
+```bash
+.venv/bin/sunofriend workbench "/absolute/path/to/stems" \
+  --candidate-root "/absolute/path/to/results" \
+  --inspect
+```
+
+Automatic discovery is intentionally conservative. If filenames do not make
+the source/candidate role clear, provide an explicit
+`sunofriend.workbench-catalog.v1` JSON through `--catalog`; candidate files
+must still be inside the project or an explicitly named `--candidate-root`.
+The browser can export the complete local review JSON and separately previews
+the metadata-only fields that a future opt-in contribution could contain.
+Submission is not implemented or enabled in this slice. Existing preview WAVs
+are not assumed to be comparable, so prefer the cached neutral previews before
+treating sound differences as a MIDI preference. An optional `--soundfont`
+pins a specific local GM bank; otherwise the normal
+`SUNOFRIEND_SF2`/installed GeneralUser-GS lookup is used.
+See the [Workbench guide](docs/WORKBENCH.md) for the catalog schema, decision
+semantics, handoff contents, privacy boundary and current Phase 5 limits.
+
 ### Optional: run a Phase 1 AI transcription challenger
 
 The experimental AI runtime is isolated from the stable Python 3.9 CLI. Set
@@ -217,8 +305,39 @@ exists, verify both code and weights with:
 .venv/bin/sunofriend ai-doctor --require muscriptor-checkpoint
 ```
 
-At that location `--checkpoint` may be omitted. For another accepted local
-checkpoint, pass `--checkpoint` or set `SUNOFRIEND_MUSCRIPTOR_MODEL`.
+At that location `--checkpoint` may be omitted. Another accepted local
+checkpoint must have an adjacent valid `config.json` whose `model_type` is
+`muscriptor` and whose `variant` is `small`, `medium` or `large`; pass the
+checkpoint through `--checkpoint` or `SUNOFRIEND_MUSCRIPTOR_MODEL`.
+
+Every MuScriptor run records the adjacent model `config.json` hash and the
+effective batch, beam, CFG, sampling and model-size settings. The pinned 0.2.1
+runtime processes independent five-second chunks and does not expose prelude
+forcing; `--prelude-forcing` therefore fails clearly instead of recording a
+feature that did not run. The conservative baseline is batch 1, beam 1 and CFG
+1.0.
+
+After producing fresh immutable lanes from the same backend, checkpoint, model
+config, worker, model/runtime version and execution settings, build one report
+using the model-neutral quality schema. Each lane value is a completed run
+directory and the report path must not exist:
+
+```bash
+.venv/bin/sunofriend ai-matrix \
+  --lane "M0=/absolute/path/to/full mix unconditioned/RUN" \
+  --lane "M1=/absolute/path/to/full mix discovered labels/RUN" \
+  --lane "M2=/absolute/path/to/full mix known labels/RUN" \
+  --lane "M3-bass=/absolute/path/to/isolated bass/RUN" \
+  --lane "M3-keys=/absolute/path/to/isolated keys/RUN" \
+  --out /absolute/path/to/reports/small-model-matrix.json
+```
+
+`ai-matrix` rechecks source, worker, checkpoint, model config, request, all raw
+artifacts, candidate and MIDI hashes. It reports quality per instrument,
+requested/detected-label
+differences, five-second-boundary activity and same-pitch/onset overlap between
+full-mix and isolated-role lanes. These are diagnostics, not an automatic
+accuracy score or winner; audition safe candidates in the Workbench.
 
 For an independent vocal-specific result, install GAME's pinned official
 v1.0.3 small ONNX release explicitly, then run the same authorised excerpt:
@@ -319,6 +438,24 @@ in `pesto.activations.npy`. Use `--pesto-step-ms`, `--pesto-reduction`,
 `--pesto-chunks` and the shared frame-to-note controls only for deliberate
 bake-offs. Phase 1 retains PESTO as a vocal F0 oracle and rejects its decoded
 MIDI for the current bass golden; it is not part of automatic consensus.
+
+Demucs is the optional Phase 4 learned-cleanup challenger. Its code is MIT,
+but the official repository does not state separate terms for the pretrained
+checkpoint. Sunofriend therefore keeps the checkpoint external, uses it only
+for private local evaluation, and never vendors or redistributes it. After
+reading that notice, install the exact official `htdemucs` checkpoint and
+verify both code and weights explicitly:
+
+```bash
+SUNOFRIEND_ACCEPT_DEMUCS_PRIVATE_EVALUATION=1 \
+  scripts/setup-demucs-model.sh
+.venv/bin/sunofriend ai-doctor --require demucs
+```
+
+This pins `demucs==4.0.1`, model signature `955717e8` and checkpoint SHA-256
+`8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4`.
+The normal AI runtime setup installs code only; model setup is a separate,
+deliberate action.
 
 Add a repeated `--instrument "exact MuScriptor name"` to restrict the model.
 Every invocation creates a new run directory and refuses to overwrite an old
@@ -1032,6 +1169,118 @@ challenger rather than altering the first result:
 Compare source, target and residual by ear, then transcribe them separately.
 Shared harmonics and simultaneous attacks can enter the target; a cleaner
 numeric pitch score does not justify replacing the original stem or MIDI.
+
+### Test pinned learned cleanup against the DSP baseline
+
+`ai-cleanup` is the learned Phase 4 challenger. It accepts a mono or stereo
+44.1 kHz excerpt of at most 60 seconds, verifies the complete checkpoint hash
+before permitting PyTorch checkpoint deserialisation, and runs `htdemucs` on
+CPU with zero random shifts. It never downloads a model during inference:
+
+```bash
+.venv/bin/sunofriend ai-doctor --require demucs
+
+.venv/bin/sunofriend ai-cleanup \
+  path/to/bass.wav \
+  --target bass \
+  --start-seconds 192 \
+  --end-seconds 208 \
+  --out-dir work/bass-demucs-cleanup
+```
+
+The fresh output contains the deterministic PCM24 source excerpt, learned
+`target.wav`, waveform-defined `residual.wav`, untouched float32 model array,
+worker request/result and logs, and `ai_cleanup.json`. The report records
+source/checkpoint hashes, runtime, model version, energy, clipping, persisted
+target-plus-residual error and every zero-mutation effect. A failed worker also
+retains its run record rather than deleting evidence.
+
+Treat all four Demucs roles (`bass`, `drums`, `other`, `vocals`) as broad
+source families, not proof of an original patch. Re-transcribe the unchanged
+source, target and residual with the same transcriber, compare them with the
+MIDI-mask baseline, and require listening before promotion. On the private
+Slayyyter bass golden, Demucs was perfectly repeatable and improved some
+MuScriptor support/octave metrics, but did not win every metric; it remains a
+listening challenger rather than the default.
+
+### Split a reviewed stem into separate MIDI roles
+
+`midi-role-split` addresses a different problem from source cleanup: one
+separator stem can contain two audible musical roles. It consumes the
+hash-pinned `source_event_clusters.json` produced by `instrument-match` and an
+explicit cluster chosen from listening. It never guesses which cluster is the
+main role.
+
+An optional secondary MIDI can come from separately transcribing a musical
+target/residual. This is useful when the second role overlaps the first and a
+single monophonic transcription can only alternate between them:
+
+```bash
+.venv/bin/sunofriend midi-role-split \
+  work/bass-target-ai/candidate.mid \
+  work/bass-target-match/source_event_clusters.json \
+  --body-cluster I1 \
+  --secondary-midi work/bass-residual-ai/candidate.expression.mid \
+  --secondary-audio work/bass-cleanup/residual.wav \
+  --cleanup-review ~/Downloads/ai_cleanup_review.reviewed.json \
+  --body-name "Synth Bass Body" \
+  --body-program 39 \
+  --pluck-name "Synth Pluck Challenger" \
+  --pluck-program 28 \
+  --out-dir work/bass-two-role-review
+```
+
+The output retains the unchanged primary MIDI, body-only and complement-only
+tracks, a strict two-track partition that preserves every primary pitch,
+onset, duration and velocity, and—when supplied—a second two-track challenger
+using the independent residual transcription. General MIDI Synth Bass 2 and
+Muted Guitar are deliberately contrasting audition proxies, not identifications
+of the original patches. Open `midi_role_split_review.html`, judge recognition
+and usefulness, and export the reviewed JSON before choosing a result for the
+arrangement.
+
+Resolve the completed export against the unchanged source directory:
+
+```bash
+.venv/bin/sunofriend midi-role-split-resolve \
+  ~/Downloads/midi_role_split_review.reviewed.json \
+  work/bass-two-role-review \
+  --out-dir work/bass-two-role-resolution
+```
+
+The resolver requires every sound to be explicitly reviewed, validates the
+review seed, source report, input and artifact hashes, and then follows the
+overall decision. For `keep_primary`, `strict_partition` or
+`independent_pluck`, it copies the exact selected source MIDI to
+`recommended.mid`; it does not re-transcribe or edit it. `none` produces no
+recommended MIDI. Individual body or pluck auditions can still be marked
+useful without overriding the overall arrangement decision.
+
+### Compare timbre without changing the MIDI
+
+`timbre-resynthesis` fits one consistent harmonic-plus-noise profile to a
+monophonic source excerpt and renders the accepted MIDI through it. The same
+notes are also rendered through a dependable complete General MIDI patch and,
+optionally, an earlier source-derived SF2:
+
+```bash
+.venv/bin/sunofriend timbre-resynthesis \
+  work/bass-target.wav \
+  work/bass-resolution/recommended.mid \
+  --gm-program 39 \
+  --source-soundfont work/bass-samples/sunofriend-instrument.sf2 \
+  --source-soundfont-program 0 \
+  --out-dir work/bass-fixed-midi-timbre-review
+```
+
+Every candidate is level-matched against the same source activity and checked
+across every MIDI note for functional silence. Open
+`timbre_resynthesis_review.html` and judge tone, consistency and musical use.
+This is a deterministic 44.1-kHz harmonic-plus-noise baseline inspired by the
+interpretable synthesis structure used by DDSP. It is not a neural model, does
+not identify the source instrument and does not yet create a GarageBand plug-in
+or sampler. A later model must beat this baseline and a normal complete patch
+using the identical MIDI.
 
 ### Preview or play MIDI through GarageBand
 

@@ -1,6 +1,6 @@
 ---
 name: sunofriend
-description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance, explicit reviewed choices and local advisory review-history profiles; create short experimental MIDI-guided target/residual cleanup pairs; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
+description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes and existing source/MIDI alternatives, render cached neutral previews, save explicit solo/full-mix choices, hear the selected arrangement and export unchanged choices in a GarageBand handoff through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
 ---
 
 # Sunofriend
@@ -21,6 +21,9 @@ scripts.
      short `melody-guide` pitch/contour guides.
    - `sunofriend ai-doctor --require muscriptor-checkpoint` before explicitly
      requesting the optional `vocal-melody --muscriptor` challenger.
+   - `sunofriend ai-doctor --require muscriptor-checkpoint` before producing
+     MuScriptor lanes for `ai-matrix`. The matrix command itself uses completed
+     local runs and needs no model inference capability.
    - `sunofriend ai-doctor --require game` before a standalone GAME vocal
      boundary/pitch bake-off. Its explicit setup command is
      `scripts/setup-game-model.sh`; inference itself must remain offline.
@@ -30,9 +33,23 @@ scripts.
    - `sunofriend ai-doctor --require pesto` before a standalone PESTO F0
      bake-off. Its explicit setup command is `scripts/setup-pesto-model.sh`;
      inference must use the hash-checked local `.ckpt` file and remain offline.
+   - `sunofriend ai-doctor --require demucs` before the experimental learned
+     `ai-cleanup` workflow. The explicit setup action is
+     `SUNOFRIEND_ACCEPT_DEMUCS_PRIVATE_EVALUATION=1 scripts/setup-demucs-model.sh`;
+     keep the checkpoint external/private, verify its full hash and never
+     download or select a model during inference.
    - `sunofriend doctor --require convert` for instrumental stem conversion.
    - `sunofriend doctor --require convert` for the short experimental
      `midi-mask` target/residual workflow.
+   - `sunofriend doctor --require convert` and `preview` for the experimental
+     `midi-role-split` listening package. `--no-preview` removes the preview
+     requirement but still requires the hash-pinned cluster evidence.
+   - `sunofriend midi-role-split-resolve` needs no audio, ML or preview
+     capability check. It reads one explicit reviewed export and verifies the
+     unchanged role-split evidence tree before copying a selected MIDI.
+   - `sunofriend doctor --require preview` for `timbre-resynthesis`. Its
+     complete-patch and optional source-SF2 controls require FluidSynth; the
+     fitted harmonic-plus-noise candidate itself uses the normal audio runtime.
    - `sunofriend doctor --require preview` for offline rendering, including
      `melody-review` and `melody-guide` MIDI-only and source-overlay
      alternatives.
@@ -57,6 +74,10 @@ scripts.
      `--no-preview` is used.
    - `sunofriend sample-pack-boundary-review` needs `preview` for its velocity
      ramps and constant-velocity repeated-beat comparison.
+   - `sunofriend workbench --inspect` and a Workbench using only existing
+     preview WAVs need no audio, ML or playback capability. The site starts no
+     model. Run `sunofriend doctor --require preview` before using its explicit
+     neutral-preview, selected-arrangement or GarageBand-handoff render actions.
 5. Inventory the input directory read-only. Confirm files exist and identify
    stem roles, chord PDF, metronome, key, BPM, and tuning.
 6. Use absolute, quoted paths and a fresh output outside the source folder.
@@ -68,6 +89,35 @@ scripts.
 
 - Whole instrumental stem folder: use `listen-all`; default to
   `--conversion-mode repair` and leave evaluation enabled.
+- Existing source/MIDI/preview result space: use `workbench` with the original
+  stem directory and only the narrow candidate roots intended for that song.
+  It is a loopback-only presentation and explicit-decision boundary, not a
+  transcriber. Prefer an explicit `sunofriend.workbench-catalog.v1` document
+  when filenames cannot distinguish songs or audible roles. Treat at most
+  three primary candidates as the normal result space, keep diagnostic files
+  advanced, and do not infer preference from audition events, dwell time or
+  unclicked defaults. Prefer the content-addressed role-neutral preview when an
+  existing WAV is absent or uses a different sound. Its shared browser
+  position is synchronized in seconds, not claimed sample-accurate. Completed
+  AI runs expose path-free model/config, label, density, boundary and runtime
+  diagnostics. Treat severe decoder or zero-note candidates as
+  diagnostic-only; ordinary role leakage remains auditionable. The
+  selected arrangement and handoff include only the latest active main and
+  explicit optional choices; numbered MIDI files in the ZIP must remain exact
+  copies, while the combined GM arrangement is only a proxy. Submission is
+  absent in v1; the contribution preview is only an exact redacted-data
+  disclosure.
+- Several completed immutable MuScriptor lanes: use `ai-matrix` with explicit
+  repeated `LANE=RUN_DIR` values and a fresh `--out` JSON. Include M0
+  unconditioned full mix, M1 discovered-label conditioning, M2 known-label
+  conditioning and M3/M4 role lanes only when each run actually exists. The
+  command verifies source, checkpoint, model-config, candidate and MIDI hashes
+  and reports per-instrument quality, label stability, five-second-boundary
+  activity and cross-lane same-pitch/onset overlap. Never infer a winner from
+  overlap or automated quality, and never omit a failed/no-evidence lane from
+  the audit. The pinned MuScriptor 0.2.1 baseline is greedy, batch 1, beam 1,
+  CFG 1.0 and independent five-second chunks; it does not support prelude
+  forcing, so do not request or claim it.
 - One instrumental stem: use `listen` with an explicit supported `--kind`.
 - One proposed role inside a mixed pitched stem: use `midi-mask` only on a
   short excerpt with an aligned note-bearing MIDI track. Treat its harmonic
@@ -76,6 +126,32 @@ scripts.
   multi-track MIDI, preserve both outputs and never promote from reconstruction
   accuracy or metrics alone. A separately requested broadband transient window
   may improve attacks but can admit simultaneous instruments.
+- Learned cleanup challenger: use `ai-cleanup` only on a focused mono/stereo
+  44.1 kHz excerpt of at most 60 seconds and an existing pinned htdemucs
+  checkpoint. Treat `bass`, `drums`, `other` and `vocals` as broad model source
+  families, not instrument identities. Preserve the unchanged source, learned
+  target, waveform residual and float32 model array. Re-transcribe all audio
+  alternatives with the same strongest available transcriber and compare with
+  `midi-mask`; never promote from energy, reconstruction or metrics alone.
+- Two roles inside one reviewed pitched stem: use `midi-role-split` only after
+  a listener identifies the roles and `instrument-match` publishes matching
+  `source_event_clusters.json`. Require the body cluster explicitly. Preserve
+  the unchanged primary, its exact body/complement partition and every outlier.
+  An independently transcribed target/residual may be supplied as a separate
+  overlapping challenger, but do not deduplicate, merge or promote it from
+  cluster scores. Treat GM programs as contrasting audition proxies, never
+  physical-instrument recognition.
+- Completed two-role review: use `midi-role-split-resolve` with the user-exported
+  reviewed JSON and the unchanged role-split directory. Require every choice
+  to be reviewed. Follow the overall decision even when several components are
+  useful; never infer a winner from the usefulness fields.
+- Stable monophonic MIDI, sound question only: use `timbre-resynthesis` on one
+  aligned excerpt of at most 60 seconds. Keep a complete GM patch as the
+  mandatory control and supply the earlier source-derived SF2 when available.
+  Require identical note signatures, level-match the candidates and treat the
+  per-note silence threshold as a functional check only. The harmonic-plus-
+  noise result is deterministic DSP, not a trained DDSP model or a playable
+  GarageBand instrument. Hand off its review before packaging or promotion.
 - Lead or backing vocals: use `vocal-melody` separately. It defaults to
   pYIN/Basic Pitch consensus, conservative repeated-phrase repair and a local
   correction HTML/JSON report. `listen-all` does not include vocals.
@@ -284,6 +360,10 @@ sunofriend listen-all "$INPUT" \
   --out-dir "$OUTPUT" \
   --conversion-mode repair
 
+sunofriend workbench "$INPUT" \
+  --candidate-root "$OUTPUT" \
+  --open
+
 sunofriend vocal-melody "$VOCAL_STEM" \
   --role lead \
   --out-dir "$OUTPUT"
@@ -309,6 +389,30 @@ sunofriend midi-mask "$MIXED_PITCHED_STEM" "$ALIGNED_MULTI_TRACK_MIDI" \
   --start-seconds "$START" \
   --end-seconds "$END" \
   --out-dir "$FRESH_OUTPUT"
+
+sunofriend ai-cleanup "$STEM" \
+  --target bass \
+  --start-seconds "$START" \
+  --end-seconds "$END" \
+  --out-dir "$FRESH_LEARNED_OUTPUT"
+
+sunofriend midi-role-split "$PRIMARY_MIDI" "$SOURCE_EVENT_CLUSTERS" \
+  --body-cluster "$EXPLICIT_CLUSTER" \
+  --secondary-midi "$INDEPENDENT_RESIDUAL_MIDI" \
+  --secondary-audio "$RESIDUAL_WAV" \
+  --cleanup-review "$USER_EXPORTED_CLEANUP_REVIEW" \
+  --out-dir "$FRESH_ROLE_SPLIT_REVIEW"
+
+sunofriend midi-role-split-resolve \
+  "$USER_EXPORTED_ROLE_SPLIT_REVIEW" \
+  "$UNCHANGED_ROLE_SPLIT_DIRECTORY" \
+  --out-dir "$FRESH_ROLE_SPLIT_RESOLUTION"
+
+sunofriend timbre-resynthesis "$ALIGNED_SOURCE_EXCERPT" "$FIXED_MONO_MIDI" \
+  --gm-program 39 \
+  --source-soundfont "$EARLIER_SOURCE_SF2" \
+  --source-soundfont-program 0 \
+  --out-dir "$FRESH_TIMBRE_REVIEW"
 
 sunofriend ai-transcribe "$VOCAL_STEM" \
   --backend pesto \
@@ -451,6 +555,30 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   target and residual together, and require persisted reconstruction plus
   listening. Shared harmonics can enter the target; attacks can stay in the
   residual. Use `--transient-ms` only as a separate labelled challenger.
+- `ai-cleanup` is also an experimental challenger, not generic stem separation
+  or `exact` evidence. Require the pinned external checkpoint SHA-256 before
+  PyTorch deserialisation, CPU inference with zero random shifts, a fresh
+  immutable directory and persisted target-plus-residual reconstruction.
+  Demucs code is MIT, but its official repository does not state separate
+  pretrained-checkpoint terms; keep the model and outputs private, do not
+  vendor or redistribute them, and retain failed-run request/log evidence.
+- `midi-role-split` is an arrangement challenger, not source separation or
+  instrument identification. Its strict partition must preserve the complete
+  primary note multiset and must retain cluster outliers. Its independent
+  secondary track may add simultaneous notes, but it remains a separate
+  alternative because residual bleed and octave errors are possible. Never
+  infer the body cluster from duration, pitch or silhouette alone, and never
+  edit the unreviewed export seed on the user's behalf.
+- `midi-role-split-resolve` must verify the review seed, report, source inputs
+  and all reported artifacts. The overall decision is authoritative. Copy the
+  selected MIDI exactly; do not merge retained components, re-transcribe, edit
+  the source tree or delete alternatives.
+- `timbre-resynthesis` is a fixed-performance sound experiment. It must reject
+  polyphonic or variable-tempo MIDI in v1, preserve source hashes and publish
+  zero note/pitch/onset/duration/velocity changes. Do not call the fitted WAV
+  AI, a physical-instrument match or a GarageBand instrument. All-notes-audible
+  is not proof of realism or musical usefulness; only the explicit listening
+  export can choose among complete patch, source sampler and resynthesis.
 - Do not describe a major-to-minor or minor-to-major change as simple
   transposition. Same-mode key changes are mechanical semitone shifts, but
   register and instrument range still require auditioning.
@@ -509,6 +637,19 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   not calibrated probabilities. Preserve its input/profile hashes and never
   let it change candidate order, default selection or review state.
 
+### Controlled Phase 5 matrix example
+
+Use quoted lane values because song paths commonly contain spaces:
+
+```bash
+sunofriend ai-matrix \
+  --lane "M0=$M0_RUN" \
+  --lane "M1=$M1_RUN" \
+  --lane "M2=$M2_RUN" \
+  --lane "M3-bass=$M3_BASS_RUN" \
+  --out "$FRESH_MATRIX_JSON"
+```
+
 ## Validate and hand off
 
 1. Check the exit status and generated JSON summary. Treat partial or no-output
@@ -518,12 +659,45 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
    recall or F1, timing p95 and drift, pitch or octave evidence, and observed,
    repaired, inferred, possible, or uncertain counts where available. Do not
    invent universal pass thresholds.
+   For `ai-matrix`, additionally confirm one backend/checkpoint/config/worker/
+   runtime/execution profile across all lanes; report M0/M1 label stability,
+   every lane's requested and
+   detected labels, note count, severe/no-evidence block reasons,
+   per-instrument quality, five-second boundaries, real-time factor and
+   cross-lane overlap. Confirm all source, worker, raw artifact, candidate,
+   MIDI, checkpoint and config hashes verified and both mutation totals are
+   zero. Retain failed lanes and never turn overlap or quality into a winner.
    For `midi-mask`, additionally report source/MIDI hashes, selected track and
    role, excerpt bounds, intersecting notes/pitches, mask parameters, source/
    target/residual RMS, persisted PCM24 reconstruction error and threshold,
    repeat artifact hashes and all zero input-mutation effects. Re-transcribe
    source, target and residual separately. A target that improves pitch support
    but loses attacks is not a cleanup success.
+   For `ai-cleanup`, additionally report source/checkpoint hashes, backend
+   version/signature, excerpt bounds, fixed inference settings, source/target/
+   residual RMS, clipping counts, persisted PCM24 reconstruction, repeat
+   artifact hashes, zero input-mutation effects and the private-checkpoint
+   notice. Compare unchanged, learned-target and residual MIDI against the same
+   source using the same transcriber. Improvements in supported notes or octave
+   accuracy do not override worse contour/onsets or the listening gate.
+   For `midi-role-split`, additionally report the reviewed-cleanup hash when
+   supplied, source-cluster/OpenL3 summary, explicit body cluster, body,
+   complement, outlier and secondary note counts, secondary maximum polyphony,
+   unchanged-primary hash, exact strict-partition zero-change effects and every
+   MIDI/WAV review artifact. State that the secondary is independently
+   transcribed and can overlap, while both cluster roles and GM programs remain
+   hypotheses. Hand off `midi_role_split_review.html`; do not select an overall
+   decision or mark any sound reviewed.
+   For `midi-role-split-resolve`, report every reviewed role/usefulness choice,
+   overall decision, review and selected-MIDI hashes, source artifact selected,
+   and all zero-mutation effects. State explicitly when useful split components
+   were retained but did not replace the primary.
+   For `timbre-resynthesis`, report source and fixed-MIDI hashes, BPM, note and
+   pitch counts, harmonic/noise/envelope parameters, candidate level matching,
+   every per-candidate audible/silent note count, SoundFont hashes, repeat
+   determinism and all zero MIDI effects. Hand off
+   `timbre_resynthesis_review.html`; do not fill its fields or infer a winner
+   from functional audibility.
 4. For vocals, inspect contour coverage, pitch-error statistics, monophony, and
    the published variants. Also report tracker sources, consensus frame count,
    repeated-phrase promotions, guide alignment/transpose and the correction
@@ -672,3 +846,15 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
     decision counts/weights, deterministic repeat output and that automatic
     selection, match reordering, default change and playability bypass are all
     false.
+12. For `workbench`, report the inferred BPM/key/tuning, stem and candidate
+    counts, primary-versus-diagnostic split, SQLite path and loopback URL.
+    Confirm the server binds to `127.0.0.1`, uses a per-launch token, serves
+    only catalogued or content-addressed local files, restores choices after
+    restart and has no upload/submission endpoint. When rendering, report the
+    role-neutral policy, SoundFont identity/hash, cache hit/miss and that the
+    original MIDI was not mutated. For an arrangement/handoff, report exact
+    selected main/optional counts, proxy track count, BPM policy and ZIP path;
+    confirm rejected/needs-correction/unreviewed files, source audio, private
+    notes and absolute paths are excluded, and numbered selected MIDI bytes are
+    unchanged. Exported local JSON may contain absolute paths and private
+    notes; the separate contribution preview must contain neither.

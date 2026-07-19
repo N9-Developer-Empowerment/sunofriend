@@ -62,6 +62,28 @@ def _local_checkpoint(options: dict[str, Any]) -> Path:
     return path
 
 
+def _muscriptor_config(
+    checkpoint: Path, options: dict[str, Any]
+) -> tuple[Path, dict[str, Any]]:
+    value = options.get("model_config_path")
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("options.model_config_path must pin adjacent config.json")
+    path = Path(value).expanduser()
+    expected_path = checkpoint.with_name("config.json")
+    if path != expected_path or not path.is_absolute() or not path.is_file():
+        raise ValueError("MuScriptor config must be the adjacent existing config.json")
+    expected_hash = options.get("model_config_sha256")
+    actual_hash = _sha256(path)
+    if not isinstance(expected_hash, str) or expected_hash != actual_hash:
+        raise ValueError("MuScriptor config changed after the run was prepared")
+    document = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(document, dict) or document.get("model_type") != "muscriptor":
+        raise ValueError("MuScriptor config must declare model_type=muscriptor")
+    if document.get("variant") != options.get("model_size"):
+        raise ValueError("MuScriptor config variant does not match requested model_size")
+    return path, document
+
+
 def _local_game_bundle(options: dict[str, Any]) -> Path:
     value = options.get("model_path")
     if not isinstance(value, str) or not value.strip():
@@ -192,6 +214,7 @@ def _transcribe_muscriptor(document: dict[str, Any]) -> dict[str, Any]:
     expected_sha256 = options.get("model_sha256")
     if expected_sha256 and expected_sha256 != checkpoint_sha256:
         raise ValueError("MuScriptor checkpoint changed after the run was prepared")
+    config_path, model_config = _muscriptor_config(checkpoint, options)
 
     import torch
     from muscriptor import TranscriptionModel
@@ -219,14 +242,53 @@ def _transcribe_muscriptor(document: dict[str, Any]) -> dict[str, Any]:
         isinstance(instrument, str) for instrument in instruments
     ):
         raise ValueError("roles must contain exact MuScriptor instrument names")
-    batch_size = options.get("batch_size")
-    if batch_size is not None:
-        batch_size = int(batch_size)
-        if batch_size < 1:
-            raise ValueError("batch_size must be positive")
+    batch_size = int(options.get("batch_size", 1))
+    if batch_size < 1:
+        raise ValueError("batch_size must be positive")
     beam_size = int(options.get("beam_size", 1))
     if beam_size < 1:
         raise ValueError("beam_size must be positive")
+    cfg_coef = float(options.get("cfg_coef", 1.0))
+    temperature = float(options.get("temperature", 1.0))
+    use_sampling = options.get("use_sampling", False)
+    no_eos_is_ok = options.get("no_eos_is_ok", True)
+    if not math.isfinite(cfg_coef) or cfg_coef < 0:
+        raise ValueError("cfg_coef must be finite and non-negative")
+    if not math.isfinite(temperature) or temperature <= 0:
+        raise ValueError("temperature must be finite and positive")
+    if not isinstance(use_sampling, bool) or not isinstance(no_eos_is_ok, bool):
+        raise ValueError("sampling and EOS controls must be booleans")
+    if options.get("prelude_forcing") is not False:
+        raise ValueError("MuScriptor 0.2.1 does not support prelude forcing")
+    if options.get("prelude_forcing_supported") is not False:
+        raise ValueError("MuScriptor prelude support must be recorded as false")
+    if use_sampling and beam_size > 1:
+        raise ValueError("sampling and beam search cannot be combined")
+
+    execution = {
+        "schema": "sunofriend.muscriptor-execution.v1",
+        "model_size": model_config["variant"],
+        "model_config_sha256": _sha256(config_path),
+        "decoding": {
+            "strategy": (
+                "sampling"
+                if use_sampling
+                else ("beam-search" if beam_size > 1 else "greedy")
+            ),
+            "beam_size": beam_size,
+            "batch_size": batch_size,
+            "cfg_coef": cfg_coef,
+            "temperature": temperature,
+            "use_sampling": use_sampling,
+            "no_eos_is_ok": no_eos_is_ok,
+        },
+        "chunking": {
+            "seconds": 5.0,
+            "policy": "independent-five-second-chunks",
+            "prelude_forcing": False,
+            "prelude_forcing_supported": False,
+        },
+    }
 
     model = TranscriptionModel.load_model(str(checkpoint), device=device)
     starts: dict[int, NoteStartEvent] = {}
@@ -236,12 +298,12 @@ def _transcribe_muscriptor(document: dict[str, Any]) -> dict[str, Any]:
     events_after_excerpt = 0
     events = model.transcribe(
         audio,
-        use_sampling=bool(options.get("use_sampling", False)),
-        temperature=float(options.get("temperature", 1.0)),
-        cfg_coef=float(options.get("cfg_coef", 1.0)),
+        use_sampling=use_sampling,
+        temperature=temperature,
+        cfg_coef=cfg_coef,
         instruments=list(instruments) if instruments else None,
         batch_size=batch_size,
-        no_eos_is_ok=bool(options.get("no_eos_is_ok", True)),
+        no_eos_is_ok=no_eos_is_ok,
         beam_size=beam_size,
     )
     for event in events:
@@ -305,6 +367,7 @@ def _transcribe_muscriptor(document: dict[str, Any]) -> dict[str, Any]:
             "source_sample_rate": source_sample_rate,
             "instruments": list(instruments) if instruments else [],
             "progress": progress,
+            "execution": execution,
             "velocity_policy": "not supplied by MuScriptor; preserved as null",
         },
     }

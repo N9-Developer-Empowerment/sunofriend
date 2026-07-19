@@ -27,7 +27,12 @@ _COMMANDS = {
     "doctor",
     "ai-doctor",
     "ai-transcribe",
+    "ai-matrix",
+    "ai-cleanup",
     "midi-mask",
+    "midi-role-split",
+    "midi-role-split-resolve",
+    "timbre-resynthesis",
     "preview",
     "midi-ports",
     "play",
@@ -48,6 +53,7 @@ _COMMANDS = {
     "instrument-feedback",
     "instrument-profile",
     "instrument-bundle",
+    "workbench",
     "clip-import",
     "clip-list",
     "clip-show",
@@ -595,7 +601,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     ai_doctor = sub.add_parser(
         "ai-doctor",
-        help="Check the isolated Python/PyTorch AI transcription environment",
+        help="Check the isolated Python/PyTorch AI transcription and cleanup environment",
     )
     ai_doctor.add_argument(
         "--python",
@@ -660,7 +666,30 @@ def build_parser() -> argparse.ArgumentParser:
         "--beam-size", type=int, default=1, help="MuScriptor decoding beam size"
     )
     ai_transcribe.add_argument(
-        "--batch-size", type=int, default=None, help="Optional inference batch size"
+        "--batch-size",
+        type=int,
+        default=1,
+        help="MuScriptor inference batch size (default: pinned safe value 1)",
+    )
+    ai_transcribe.add_argument(
+        "--cfg-coef",
+        type=float,
+        default=1.0,
+        help="MuScriptor classifier-free guidance coefficient (default: 1.0)",
+    )
+    ai_transcribe.add_argument(
+        "--model-size",
+        choices=("auto", "small", "medium", "large"),
+        default="auto",
+        help="Validate the MuScriptor checkpoint variant (default: infer from config)",
+    )
+    ai_transcribe.add_argument(
+        "--prelude-forcing",
+        action="store_true",
+        help=(
+            "Request cross-chunk prelude forcing; rejected by the pinned "
+            "MuScriptor 0.2.1 runtime, which does not support it"
+        ),
     )
     ai_transcribe.add_argument(
         "--language",
@@ -752,6 +781,85 @@ def build_parser() -> argparse.ArgumentParser:
         help="AI interpreter (default: SUNOFRIEND_AI_PYTHON or .venv-ai)",
     )
 
+    ai_cleanup = sub.add_parser(
+        "ai-cleanup",
+        help="Run a pinned local learned target/residual cleanup challenger",
+    )
+    ai_cleanup.add_argument("audio", help="Unchanged source stem WAV")
+    ai_cleanup.add_argument(
+        "--target",
+        choices=("bass", "drums", "other", "vocals"),
+        required=True,
+        help="Broad htdemucs source family to isolate",
+    )
+    ai_cleanup.add_argument(
+        "--checkpoint",
+        default=None,
+        help=(
+            "Existing pinned htdemucs .th checkpoint (default: "
+            "SUNOFRIEND_DEMUCS_MODEL or standard local model)"
+        ),
+    )
+
+    ai_matrix = sub.add_parser(
+        "ai-matrix",
+        help="Build a deterministic Phase 5 report from immutable AI run directories",
+    )
+    ai_matrix.add_argument(
+        "--lane",
+        action="append",
+        required=True,
+        metavar="LANE=RUN_DIR",
+        help=(
+            "Explicit matrix lane and completed immutable run; repeat for M0, "
+            "M1, M2, M3-role and other planned lanes"
+        ),
+    )
+    ai_matrix.add_argument(
+        "--out", required=True, help="Fresh path for the path-free matrix JSON report"
+    )
+    ai_matrix.add_argument(
+        "--boundary-tolerance-ms",
+        type=float,
+        default=80.0,
+        help="Window around each local five-second chunk boundary (default: 80ms)",
+    )
+    ai_matrix.add_argument(
+        "--overlap-tolerance-ms",
+        type=float,
+        default=80.0,
+        help="Onset tolerance for cross-lane same-pitch diagnostics (default: 80ms)",
+    )
+    ai_cleanup.add_argument(
+        "--out-dir", required=True, help="Fresh immutable experiment directory"
+    )
+    ai_cleanup.add_argument(
+        "--start-seconds", type=float, default=0.0, help="Excerpt start in source time"
+    )
+    ai_cleanup.add_argument(
+        "--end-seconds",
+        type=float,
+        default=None,
+        help="Excerpt end in source time; excerpts are limited to 60 seconds",
+    )
+    ai_cleanup.add_argument(
+        "--overlap",
+        type=float,
+        default=0.25,
+        help="Demucs split overlap from 0 up to (not including) 1 (default: 0.25)",
+    )
+    ai_cleanup.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=1800.0,
+        help="Kill the isolated worker after this many seconds (default: 1800)",
+    )
+    ai_cleanup.add_argument(
+        "--python",
+        default=None,
+        help="AI interpreter (default: SUNOFRIEND_AI_PYTHON or .venv-ai)",
+    )
+
     midi_mask = sub.add_parser(
         "midi-mask",
         help="Build an experimental MIDI-guided target/residual audio excerpt",
@@ -823,6 +931,126 @@ def build_parser() -> argparse.ArgumentParser:
     )
     midi_mask.add_argument(
         "--out-dir", required=True, help="Fresh output directory; never overwritten"
+    )
+
+    midi_role_split = sub.add_parser(
+        "midi-role-split",
+        help="Build reviewable body/pluck MIDI tracks from explicit event-cluster evidence",
+    )
+    midi_role_split.add_argument("primary_midi", help="Accepted primary note-bearing MIDI")
+    midi_role_split.add_argument(
+        "clusters", help="Matching source_event_clusters.json from instrument-match"
+    )
+    midi_role_split.add_argument(
+        "--body-cluster",
+        required=True,
+        help="Explicit retained body cluster, e.g. I1; never selected automatically",
+    )
+    midi_role_split.add_argument(
+        "--secondary-midi",
+        default=None,
+        help="Optional independently transcribed residual/pluck MIDI",
+    )
+    midi_role_split.add_argument(
+        "--secondary-audio",
+        default=None,
+        help="Optional secondary audio copied into the local listening review",
+    )
+    midi_role_split.add_argument(
+        "--cleanup-review",
+        default=None,
+        help="Optional explicitly reviewed ai-cleanup JSON to pin as provenance",
+    )
+    midi_role_split.add_argument(
+        "--body-name", default="Synth Bass Body", help="Body MIDI track name"
+    )
+    midi_role_split.add_argument(
+        "--body-program",
+        type=int,
+        default=39,
+        help="Zero-based GM body audition program (default: 39, Synth Bass 2)",
+    )
+    midi_role_split.add_argument(
+        "--pluck-name",
+        default="Plucked Bass Challenger",
+        help="Pluck MIDI track name",
+    )
+    midi_role_split.add_argument(
+        "--pluck-program",
+        type=int,
+        default=28,
+        help="Zero-based GM pluck audition program (default: 28, Muted Guitar)",
+    )
+    midi_role_split.add_argument(
+        "--no-preview",
+        action="store_true",
+        help="Skip FluidSynth WAV rendering; MIDI and review evidence are still written",
+    )
+    midi_role_split.add_argument(
+        "--out-dir", required=True, help="Fresh output directory; never overwritten"
+    )
+
+    midi_role_split_resolve = sub.add_parser(
+        "midi-role-split-resolve",
+        help="Resolve a complete user-exported role-split review",
+    )
+    midi_role_split_resolve.add_argument(
+        "review", help="Reviewed midi_role_split_review JSON exported by the page"
+    )
+    midi_role_split_resolve.add_argument(
+        "role_split_dir", help="Unchanged source midi-role-split directory"
+    )
+    midi_role_split_resolve.add_argument(
+        "--out-dir", required=True, help="Fresh resolution directory"
+    )
+
+    timbre_resynthesis = sub.add_parser(
+        "timbre-resynthesis",
+        help="Compare one fixed monophonic MIDI through consistent timbres",
+    )
+    timbre_resynthesis.add_argument(
+        "source_audio", help="Aligned source/reference WAV excerpt"
+    )
+    timbre_resynthesis.add_argument(
+        "midi", help="Accepted fixed monophonic MIDI for every candidate"
+    )
+    timbre_resynthesis.add_argument(
+        "--gm-program",
+        type=int,
+        default=39,
+        help="Zero-based complete GM control program (default: 39, Synth Bass 2)",
+    )
+    timbre_resynthesis.add_argument(
+        "--source-soundfont",
+        default=None,
+        help="Optional earlier source-derived SF2 comparison",
+    )
+    timbre_resynthesis.add_argument(
+        "--source-soundfont-program",
+        type=int,
+        default=0,
+        help="Zero-based preset in the source-derived SF2 (default: 0)",
+    )
+    timbre_resynthesis.add_argument(
+        "--harmonics",
+        type=int,
+        default=16,
+        help="Fitted harmonic count from 1 to 64 (default: 16)",
+    )
+    timbre_resynthesis.add_argument(
+        "--attack-ms",
+        type=float,
+        default=8.0,
+        help="Consistent synthesized attack in milliseconds (default: 8)",
+    )
+    timbre_resynthesis.add_argument(
+        "--release-ms",
+        type=float,
+        default=45.0,
+        help="Consistent synthesized release in milliseconds (default: 45)",
+    )
+    timbre_resynthesis.add_argument(
+        "--out-dir", required=True, help="Fresh review directory; never overwritten"
     )
 
     preview = sub.add_parser(
@@ -1482,6 +1710,55 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    workbench = sub.add_parser(
+        "workbench",
+        help="Open the local, offline MIDI candidate decision workbench",
+    )
+    workbench.add_argument(
+        "project", help="Directory containing top-level source audio stems"
+    )
+    workbench.add_argument(
+        "--candidate-root",
+        action="append",
+        default=[],
+        help=(
+            "Narrow local directory containing existing MIDI/preview alternatives; "
+            "repeat as needed"
+        ),
+    )
+    workbench.add_argument(
+        "--catalog",
+        default=None,
+        help="Optional explicit sunofriend.workbench-catalog.v1 JSON",
+    )
+    workbench.add_argument(
+        "--state-dir",
+        default=None,
+        help=(
+            "Local SQLite state directory (default: "
+            "~/.local/share/sunofriend/workbench/PROJECT_ID)"
+        ),
+    )
+    workbench.add_argument(
+        "--port", type=int, default=0, help="Loopback port; 0 chooses a free port"
+    )
+    workbench.add_argument(
+        "--open", action="store_true", help="Open the workbench in the default browser"
+    )
+    workbench.add_argument(
+        "--soundfont",
+        default=None,
+        help=(
+            "Optional GM SoundFont for cached neutral previews and arrangement "
+            "auditions (default: SUNOFRIEND_SF2 or installed GeneralUser-GS)"
+        ),
+    )
+    workbench.add_argument(
+        "--inspect",
+        action="store_true",
+        help="Print the discovered path-free project catalog without starting a server",
+    )
+
     clip_import = sub.add_parser(
         "clip-import", help="Import MIDI tracks into a Clip v1 library"
     )
@@ -1617,8 +1894,18 @@ def main(argv: list[str] | None = None) -> int:
             return _run_ai_doctor(args)
         if args.command == "ai-transcribe":
             return _run_ai_transcribe(args)
+        if args.command == "ai-matrix":
+            return _run_ai_matrix(args)
+        if args.command == "ai-cleanup":
+            return _run_ai_cleanup(args)
         if args.command == "midi-mask":
             return _run_midi_mask(args)
+        if args.command == "midi-role-split":
+            return _run_midi_role_split(args)
+        if args.command == "midi-role-split-resolve":
+            return _run_midi_role_split_resolve(args)
+        if args.command == "timbre-resynthesis":
+            return _run_timbre_resynthesis(args)
         if args.command == "preview":
             return _run_preview(args)
         if args.command == "midi-ports":
@@ -1659,6 +1946,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_instrument_profile(args)
         if args.command == "instrument-bundle":
             return _run_instrument_bundle(args)
+        if args.command == "workbench":
+            return _run_workbench(args)
         if args.command == "clip-import":
             return _run_clip_import(args)
         if args.command == "clip-list":
@@ -2873,9 +3162,11 @@ def _run_ai_transcribe(args) -> int:
         options = {
             "device": args.device,
             "beam_size": args.beam_size,
+            "batch_size": args.batch_size,
+            "cfg_coef": args.cfg_coef,
+            "model_size": args.model_size,
+            "prelude_forcing": args.prelude_forcing,
         }
-        if args.batch_size is not None:
-            options["batch_size"] = args.batch_size
     result = run_ai_transcription(
         audio_path=args.audio,
         out_dir=args.out_dir,
@@ -2891,6 +3182,57 @@ def _run_ai_transcribe(args) -> int:
     )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0
+
+
+def _run_ai_matrix(args) -> int:
+    from .ai_matrix import write_ai_candidate_matrix
+
+    lanes = []
+    for value in args.lane:
+        if "=" not in value:
+            raise ValueError("--lane must use LANE=RUN_DIR")
+        lane, run_dir = value.split("=", 1)
+        if not lane or not run_dir:
+            raise ValueError("--lane must use non-empty LANE=RUN_DIR values")
+        lanes.append((lane, run_dir))
+    report = write_ai_candidate_matrix(
+        lanes,
+        args.out,
+        boundary_tolerance_ms=args.boundary_tolerance_ms,
+        overlap_tolerance_ms=args.overlap_tolerance_ms,
+    )
+    print(
+        json.dumps(
+            {
+                "status": "complete",
+                "output": str(Path(args.out).expanduser().absolute()),
+                "schema": report["schema"],
+                "lane_count": report["lane_count"],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _run_ai_cleanup(args) -> int:
+    from .ai_cleanup import run_ai_cleanup
+    from .ai_runtime import resolve_demucs_model
+
+    result = run_ai_cleanup(
+        args.audio,
+        out_dir=args.out_dir,
+        checkpoint_path=resolve_demucs_model(args.checkpoint),
+        target=args.target,
+        start_seconds=args.start_seconds,
+        end_seconds=args.end_seconds,
+        overlap=args.overlap,
+        python=args.python,
+        timeout_seconds=args.timeout_seconds,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0 if result["status"] == "complete" else 1
 
 
 def _run_midi_mask(args) -> int:
@@ -2914,6 +3256,57 @@ def _run_midi_mask(args) -> int:
     )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result["status"] == "complete" else 1
+
+
+def _run_midi_role_split(args) -> int:
+    from .midi_role_split import create_midi_role_split
+
+    result = create_midi_role_split(
+        args.primary_midi,
+        args.clusters,
+        out_dir=args.out_dir,
+        body_cluster=args.body_cluster,
+        secondary_midi_path=args.secondary_midi,
+        secondary_audio_path=args.secondary_audio,
+        cleanup_review_path=args.cleanup_review,
+        body_name=args.body_name,
+        body_program=args.body_program,
+        pluck_name=args.pluck_name,
+        pluck_program=args.pluck_program,
+        render_preview=not args.no_preview,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0 if result["status"] == "review-required" else 1
+
+
+def _run_midi_role_split_resolve(args) -> int:
+    from .midi_role_split import resolve_midi_role_split
+
+    result = resolve_midi_role_split(
+        args.review,
+        args.role_split_dir,
+        out_dir=args.out_dir,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_timbre_resynthesis(args) -> int:
+    from .timbre_resynthesis import create_timbre_resynthesis
+
+    result = create_timbre_resynthesis(
+        args.source_audio,
+        args.midi,
+        out_dir=args.out_dir,
+        gm_program=args.gm_program,
+        source_soundfont_path=args.source_soundfont,
+        source_soundfont_program=args.source_soundfont_program,
+        harmonics=args.harmonics,
+        attack_seconds=args.attack_ms / 1000.0,
+        release_seconds=args.release_ms / 1000.0,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0 if result["status"] == "review-required" else 1
 
 
 def _run_preview(args) -> int:
@@ -3307,6 +3700,24 @@ def _run_instrument_profile(args) -> int:
 
     report = build_personal_instrument_profile(args.feedback, out_path=args.out)
     print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_workbench(args) -> int:
+    from .workbench_server import run_workbench
+
+    report = run_workbench(
+        args.project,
+        candidate_roots=args.candidate_root,
+        catalog_path=args.catalog,
+        state_dir=args.state_dir,
+        port=args.port,
+        open_browser=args.open,
+        inspect_only=args.inspect,
+        soundfont_path=args.soundfont,
+    )
+    if args.inspect:
+        print(json.dumps(report, indent=2, sort_keys=True))
     return 0
 
 

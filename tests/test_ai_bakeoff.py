@@ -16,6 +16,7 @@ from sunofriend.ai_bakeoff import (
     AI_GM_PROGRAM_MAPPING_SCHEMA,
     AI_RUN_SCHEMA,
     AIWorkerRunError,
+    MUSCRIPTOR_EXECUTION_SCHEMA,
     _candidate_tracks,
     run_ai_transcription,
 )
@@ -113,6 +114,16 @@ class AIBakeoffTests(unittest.TestCase):
         soundfile.write(audio, signal, sample_rate)
         checkpoint = root / "model.safetensors"
         checkpoint.write_bytes(b"synthetic checkpoint evidence")
+        (root / "config.json").write_text(
+            json.dumps(
+                {
+                    "model_type": "muscriptor",
+                    "variant": "small",
+                    "dim": 768,
+                }
+            ),
+            encoding="utf-8",
+        )
         worker = root / "worker.py"
         worker.write_text(textwrap.dedent(worker_source), encoding="utf-8")
         return audio, checkpoint, worker
@@ -161,6 +172,21 @@ class AIBakeoffTests(unittest.TestCase):
             self.assertEqual(saved["note_count"], 1)
             self.assertEqual(request["schema"], AI_REQUEST_SCHEMA)
             self.assertEqual(request["roles"], ["lead vocal"])
+            self.assertEqual(request["options"]["model_size"], "small")
+            self.assertEqual(request["options"]["batch_size"], 1)
+            self.assertEqual(request["options"]["beam_size"], 1)
+            self.assertEqual(request["options"]["cfg_coef"], 1.0)
+            self.assertFalse(request["options"]["prelude_forcing"])
+            self.assertFalse(request["options"]["prelude_forcing_supported"])
+            self.assertEqual(saved["execution"]["schema"], MUSCRIPTOR_EXECUTION_SCHEMA)
+            self.assertEqual(saved["execution"]["model_size"], "small")
+            self.assertEqual(
+                saved["execution"]["chunking"]["policy"],
+                "independent-five-second-chunks",
+            )
+            self.assertEqual(saved["request"], request)
+            self.assertEqual(saved["checkpoint"]["variant"], "small")
+            self.assertIn("config", saved["checkpoint"])
             self.assertEqual(candidate["schema"], AI_CANDIDATE_SCHEMA)
             self.assertEqual(
                 candidate["manifest"]["weights_license"], "CC-BY-NC-4.0"
@@ -178,6 +204,7 @@ class AIBakeoffTests(unittest.TestCase):
                 (run_dir / "candidate.programs.json").read_text(encoding="utf-8")
             )
             self.assertEqual(programs["schema"], AI_GM_PROGRAM_MAPPING_SCHEMA)
+
             self.assertEqual(programs["tracks"][0]["instrument"], "lead vocal")
             self.assertEqual(programs["tracks"][0]["program"], 52)
             self.assertEqual(programs["notes_mutated"], 0)
@@ -216,6 +243,36 @@ class AIBakeoffTests(unittest.TestCase):
                 "synthetic worker complete",
                 (run_dir / "worker.stdout.log").read_text(encoding="utf-8"),
             )
+
+    def test_muscriptor_execution_rejects_unsupported_or_mismatched_settings(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            audio, checkpoint, worker = self._fixture(directory, SUCCESS_WORKER)
+            common = {
+                "audio_path": audio,
+                "out_dir": Path(directory) / "runs",
+                "checkpoint_path": checkpoint,
+                "bpm": 119,
+                "python": sys.executable,
+                "worker_path": worker,
+            }
+            with self.assertRaisesRegex(ValueError, "does not support prelude"):
+                run_ai_transcription(
+                    **common,
+                    options={"prelude_forcing": True},
+                    run_id="unsupported-prelude",
+                )
+            with self.assertRaisesRegex(ValueError, "config.json is small"):
+                run_ai_transcription(
+                    **common,
+                    options={"model_size": "medium"},
+                    run_id="wrong-size",
+                )
+            with self.assertRaisesRegex(ValueError, "cfg_coef"):
+                run_ai_transcription(
+                    **common,
+                    options={"cfg_coef": float("nan")},
+                    run_id="bad-cfg",
+                )
 
     def test_game_bundle_is_recorded_by_component_and_runs_model_neutrally(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

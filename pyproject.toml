@@ -101,6 +101,9 @@ version = { attr = "sunofriend.__version__" }
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+sunofriend = ["workbench.html"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 

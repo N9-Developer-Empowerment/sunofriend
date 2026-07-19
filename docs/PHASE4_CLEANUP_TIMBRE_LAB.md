@@ -317,3 +317,209 @@ and Small Time Piano remains better than the source-derived keys bank. The
 [Phase 4 stabilization review](PHASE4_STABILIZATION_REVIEW.md) compares every
 planned goal with actual execution, records the code cleanup and defines the
 gate for the next learned-separation or timbre experiment.
+
+## Increment 5: pinned learned bass cleanup challenger
+
+The first post-stabilization experiment deliberately moved away from layered
+keys. Seconds 192–208 of the private Slayyyter bass stem contain a clear,
+high-energy bass line and give cleanup a fairer monophonic target. The success
+test was declared before implementation: learned cleanup must be reproducible,
+reconstruct the input with its residual, improve the strongest available MIDI
+transcriber rather than only the Basic Pitch baseline, and then win by ear.
+
+`sunofriend ai-cleanup` now provides the isolated learned boundary. It uses
+`demucs==4.0.1`, official `htdemucs` signature `955717e8`, CPU inference,
+zero random shifts and split overlap `0.25`. The external checkpoint is accepted
+only at full SHA-256
+`8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4`.
+The worker opts into PyTorch pickle deserialisation only after that exact hash
+passes. Code is MIT; no separate pretrained-weight licence was identified in
+the official repository, so the checkpoint and outputs remain private and are
+never vendored or redistributed.
+
+### Reconstruction and repeatability
+
+- Source excerpt RMS: `0.249457120792`.
+- Learned bass target RMS: `0.243379136914` (`-0.214 dB` from source).
+- Residual RMS: `0.045995822551` (`-14.686 dB` from source).
+- Persisted PCM24 target-plus-residual maximum error: `0.0` against threshold
+  `1e-6`.
+- Clipped target samples: `0`.
+- Two independent runs produced identical source-excerpt, float32 target-array,
+  target-WAV and residual-WAV hashes.
+- The source and checkpoint hashes were unchanged after both runs; automatic
+  promotion remained false.
+
+### Same-source transcription comparison
+
+Every metric below evaluates the candidate MIDI against the same unchanged
+16-second source excerpt. Full-song MuScriptor has surrounding context, while
+the other MuScriptor candidates receive only the excerpt.
+
+| Candidate | Notes | Chroma | Pitch support | Supported | Octave | Contour | Strong onset F1 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| MuScriptor unchanged source, full context | 44 | 0.826 | 0.659 | 0.795 | 0.545 | 0.814 | 0.170 |
+| MuScriptor unchanged 16-second source | 39 | 0.821 | 0.656 | 0.744 | 0.564 | 0.868 | 0.122 |
+| MuScriptor learned target | 41 | 0.818 | 0.656 | 0.805 | 0.585 | 0.700 | 0.121 |
+| MuScriptor MIDI-mask DSP target | 8 | 0.705 | 0.518 | 0.500 | 0.625 | 0.167 | 0.024 |
+| Basic Pitch unchanged source | 25 | 0.816 | 0.506 | 0.640 | 0.400 | 0.708 | 0.121 |
+| Basic Pitch learned target | 24 | 0.812 | 0.549 | 0.708 | 0.417 | 0.652 | 0.137 |
+| Basic Pitch MIDI-mask DSP target | 22 | 0.827 | 0.581 | 0.727 | 0.500 | 0.619 | 0.123 |
+
+Demucs is a credible challenger, not a metric winner. It improves MuScriptor's
+short-input supported-note ratio and octave accuracy, while slightly reducing
+chroma, contour direction and onset F1. The DSP target helps several Basic
+Pitch metrics but collapses MuScriptor to eight notes. The full-context
+unchanged-source MuScriptor guide remains the technical leader overall.
+
+The listening page is:
+
+`work/ai-bakeoff/slayyyter-dance-phase4-demucs-bass-review-v1/ai_cleanup_review.html`
+
+It explains the goal, compares source/target/residual audio, gives the decisive
+MuScriptor and supporting Basic Pitch MIDI A/Bs, and exports an explicit
+12-sound review. The in-app browser blocks new local `file://` navigation, so
+open it in a normal browser. Static validation confirms all 12 audio links,
+feedback controls and export JavaScript are present. No Phase 4 primary changes
+until that listening review is complete.
+
+## Increment 6: one bass stem, two audible roles
+
+The completed cleanup review resolved the first listening gate. The listener
+selected the learned target as the main cleanup and described the same musical
+structure throughout the useful alternatives: a deep synth-bass/keyboard body
+and a shorter plucked synth/guitar-like line. The learned target retained both
+but softened the pluck; the learned residual was still musical and exposed the
+pluck more clearly. This is stronger evidence than a model family label, but it
+still does not prove the original physical instruments.
+
+### Note-level evidence
+
+`instrument-match` profiled the 41-note learned-target MuScriptor candidate
+against the accepted target audio with the pinned OpenL3 model plus the existing
+explainable timbre features. On this focused excerpt it found two candidate
+timbre groups:
+
+- body candidate `I1`: 30 notes, median duration `0.504478` seconds, pitch
+  range 28–40;
+- transient candidate `I2`: nine notes, median duration `0.134487` seconds,
+  pitch range 33–54; and
+- two retained transient outliers.
+
+Those groups are consistent with the listening description. They are not an
+automatic role decision: cluster `I1` is supplied explicitly to the new command
+and the complement retains `I2`, both outliers and any unprofiled notes.
+
+MuScriptor was also run independently on the learned residual. It produced 13
+notes and passed the existing candidate-quality gate. Several onsets contain
+two simultaneous pitches an octave apart. This matters because the main target
+candidate is effectively monophonic; dividing it can assign different sounds
+but cannot recover genuinely overlapping lines.
+
+### Reviewable outputs
+
+`sunofriend midi-role-split` now writes two different hypotheses:
+
+1. a strict 30+11 partition of the 41-note primary. Its union preserves every
+   pitch, onset, duration and velocity exactly;
+2. a 30+13 body-plus-independent-residual challenger that can express overlap
+   but may contain bleed or octave errors.
+
+It also preserves the unchanged primary, body-only, both pluck-only candidates,
+source audio references, a hash-pinned report and a local review export. The
+rendered programs—Synth Bass 2 for the body and Muted Guitar for the
+pluck—are deliberately contrasting proxies. They are not claimed patch matches,
+and the user should choose normal complete GarageBand patches after deciding
+which notes belong to each role.
+
+The listening page was:
+
+`work/ai-bakeoff/slayyyter-dance-phase4-bass-two-role-review-v3/midi_role_split_review.html`
+
+The completed review heard both roles in the original target, marked the
+body-only, primary complement and strict partition as useful main evidence,
+and kept the learned residual audio as secondary evidence. The independently
+transcribed residual MIDI and its combined challenger were diagnostic only.
+The overall decision was therefore `keep_primary`: component separation was
+informative, but it did not improve the arrangement enough to replace the
+unchanged 41-note MuScriptor line.
+
+`midi-role-split-resolve` verified every reviewed choice and every pinned input
+and artifact, then copied `primary-unchanged.mid` byte-for-byte to:
+
+`work/ai-bakeoff/slayyyter-dance-phase4-bass-two-role-resolution-v1/recommended.mid`
+
+Both files have SHA-256
+`540634d7578c1941a7dd8dd6eedb5ddd1f8ab0bcfcfa453f5c535c0cc48f1b14`.
+The resolution changes no notes and deletes no alternatives. This increment
+changes Phase 4's framing: broad learned cleanup, intra-stem role analysis and
+the final arrangement choice are separate tasks. With the bass MIDI fixed, the
+next experiment can compare timbre or resynthesis on identical notes instead
+of confounding sound quality with another transcription.
+
+## Increment 7: fixed-MIDI harmonic-plus-noise baseline
+
+The reviewed role decision satisfies the timbre gate: the performance is now
+the unchanged 41-note MuScriptor primary at `113.000096` BPM, SHA-256
+`540634d7578c1941a7dd8dd6eedb5ddd1f8ab0bcfcfa453f5c535c0cc48f1b14`.
+`timbre-resynthesis` changes no pitch, onset, duration or velocity and compares
+three sound-generation strategies on that exact performance:
+
+1. General MIDI Synth Bass 2 as a dependable complete-patch control;
+2. the earlier nine-zone source-derived bass SF2; and
+3. one source-fitted harmonic-plus-noise resynthesis profile.
+
+The third candidate is deliberately a transparent DSP baseline, not a neural
+claim. It follows the interpretable harmonic-plus-filtered-noise structure used
+by [DDSP](https://github.com/magenta/ddsp), but works at the source's native
+44.1 kHz in the existing lightweight runtime. The official Apache-2.0
+[MIDI-DDSP](https://github.com/magenta/midi-ddsp) project is relevant future
+evidence: it accepts monophonic MIDI and includes a double-bass model. Direct
+integration is not the next safe step because its repository is archived, targets
+TensorFlow 2.7/Python 3.8 and explicitly reports that installation on an M1 Mac
+does not work. A current local neural adapter must therefore be evaluated
+separately rather than silently introducing that legacy stack.
+
+### Slayyyter bass result and listening decision
+
+The fitted profile used all 41 notes across MIDI pitches 28–54. Its 16-harmonic
+distribution is dominated by the first two partials (`0.319829`, `0.331503`),
+with harmonic brightness `3.010815`, noise mix `0.040092` and fitted sustain
+ratio `1.0`. These are synthesis parameters, not instrument-identity scores.
+
+All three candidates passed the explicit `-60 dBFS` functional silence check
+on all 41 notes:
+
+| Candidate | Audible notes | Minimum note RMS | Level-match caveat |
+| --- | ---: | ---: | --- |
+| Synth Bass 2 complete patch | 41/41 | -16.203 dBFS | Peak-limited; active RMS remains below source |
+| Earlier source sampler | 41/41 | -15.788 dBFS | Peak-limited; active RMS remains below source |
+| Harmonic-plus-noise resynthesis | 41/41 | -12.445 dBFS | Exact active-RMS match; no peak limiting |
+
+This functional test established playability and a fair listening level, but
+did not show that any candidate sounded realistic or musically better. The
+local review page was:
+
+`work/ai-bakeoff/slayyyter-dance-phase4-fixed-midi-timbre-review-v2/timbre_resynthesis_review.html`
+
+The completed, hash-consistent review export has SHA-256
+`8c9d388e13bbbe1740890a5d6fb73046cb856e609309a126ef609a09b30374ac`.
+It recorded:
+
+| Candidate | Tone | Consistency | Use | Listener note |
+| --- | --- | --- | --- | --- |
+| Synth Bass 2 complete patch | ballpark | uneven | main | Slightly different melody impression and tone |
+| Earlier source sampler | far | missing | reject | Very different |
+| Harmonic-plus-noise resynthesis | ballpark | complete | main | Different, but consistently different |
+
+The overall decision was `prefer_gm`: Synth Bass 2 had the nearest tone and was
+consistent enough to remain the main control. Harmonic-plus-noise resynthesis
+is retained as a useful alternative/layer, but it did not beat the complete
+patch and is not promoted to a generated GarageBand instrument. The earlier
+source sampler is rejected as a main instrument for this performance.
+
+This result exposes why the two gates must stay separate: all three renders
+passed the numeric 41/41 audibility check, yet the listener still perceived the
+GM response as uneven and the sampler as missing/inconsistent. A later neural
+method must beat the same fixed-MIDI complete patch in listening, not merely
+cross a silence threshold.

@@ -19,6 +19,33 @@ class CliBasicsTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, 0)
         self.assertEqual(stdout.getvalue().strip(), f"sunofriend {__version__}")
 
+    def test_workbench_command_is_loopback_local_and_inspectable(self) -> None:
+        parser = build_parser()
+
+        args = parser.parse_args(
+            [
+                "workbench",
+                "song-stems",
+                "--candidate-root",
+                "candidate-a",
+                "--candidate-root",
+                "candidate-b",
+                "--state-dir",
+                "state",
+                "--port",
+                "8123",
+                "--open",
+                "--inspect",
+            ]
+        )
+
+        self.assertEqual(args.project, "song-stems")
+        self.assertEqual(args.candidate_root, ["candidate-a", "candidate-b"])
+        self.assertEqual(args.state_dir, "state")
+        self.assertEqual(args.port, 8123)
+        self.assertTrue(args.open)
+        self.assertTrue(args.inspect)
+
     def test_instrument_commands_accept_an_explicit_embedding_model(self) -> None:
         parser = build_parser()
         match = parser.parse_args(
@@ -152,6 +179,73 @@ class CliBasicsTests(unittest.TestCase):
             soundfont_path="sunofriend-instrument.sf2",
         )
         self.assertEqual(stdout.getvalue().strip(), "performance.wav")
+
+    def test_midi_role_split_requires_an_explicit_body_cluster(self) -> None:
+        parser = build_parser()
+
+        split = parser.parse_args(
+            [
+                "midi-role-split",
+                "primary.mid",
+                "source_event_clusters.json",
+                "--body-cluster",
+                "I1",
+                "--secondary-midi",
+                "residual.mid",
+                "--out-dir",
+                "role-split",
+            ]
+        )
+
+        self.assertEqual(split.body_cluster, "I1")
+        self.assertEqual(split.secondary_midi, "residual.mid")
+        self.assertEqual(split.body_program, 39)
+        self.assertEqual(split.pluck_program, 28)
+
+        resolve = parser.parse_args(
+            [
+                "midi-role-split-resolve",
+                "reviewed.json",
+                "role-split",
+                "--out-dir",
+                "resolved",
+            ]
+        )
+        self.assertEqual(resolve.review, "reviewed.json")
+        self.assertEqual(resolve.role_split_dir, "role-split")
+
+    def test_timbre_resynthesis_keeps_sound_controls_explicit(self) -> None:
+        parser = build_parser()
+
+        args = parser.parse_args(
+            [
+                "timbre-resynthesis",
+                "source.wav",
+                "fixed.mid",
+                "--gm-program",
+                "39",
+                "--source-soundfont",
+                "source.sf2",
+                "--source-soundfont-program",
+                "0",
+                "--harmonics",
+                "20",
+                "--attack-ms",
+                "9",
+                "--release-ms",
+                "50",
+                "--out-dir",
+                "review",
+            ]
+        )
+
+        self.assertEqual(args.source_audio, "source.wav")
+        self.assertEqual(args.midi, "fixed.mid")
+        self.assertEqual(args.gm_program, 39)
+        self.assertEqual(args.source_soundfont, "source.sf2")
+        self.assertEqual(args.harmonics, 20)
+        self.assertEqual(args.attack_ms, 9.0)
+        self.assertEqual(args.release_ms, 50.0)
 
     def test_sample_pack_review_commands_keep_review_and_apply_separate(self) -> None:
         parser = build_parser()

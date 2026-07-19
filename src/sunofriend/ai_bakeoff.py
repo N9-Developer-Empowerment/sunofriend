@@ -29,7 +29,9 @@ from .models import NoteEvent
 
 AI_RUN_SCHEMA = "sunofriend.ai-bakeoff-run.v1"
 AI_GM_PROGRAM_MAPPING_SCHEMA = "sunofriend.ai-gm-program-mapping.v1"
+MUSCRIPTOR_EXECUTION_SCHEMA = "sunofriend.muscriptor-execution.v1"
 _SAFE_RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+_MUSCRIPTOR_MODEL_SIZES = {"small", "medium", "large"}
 
 # Zero-based General MIDI programs used only for an immediately intelligible
 # audition.  The model's instrument label and raw notes remain authoritative
@@ -162,6 +164,7 @@ def _validate_checkpoint(path: Path, backend: str) -> None:
             raise ValueError("MuScriptor checkpoint must be an existing local file")
         if path.suffix.lower() != ".safetensors":
             raise ValueError("MuScriptor checkpoint must be a .safetensors file")
+        _muscriptor_model_config(path)
     elif backend == "game":
         if not path.is_dir():
             raise ValueError("GAME checkpoint must be an existing local ONNX directory")
@@ -180,6 +183,127 @@ def _validate_checkpoint(path: Path, backend: str) -> None:
             raise ValueError("PESTO checkpoint must be a .ckpt file")
     else:
         raise ValueError(f"the current worker does not support backend: {backend}")
+
+
+def _muscriptor_model_config(checkpoint: Path) -> tuple[Path, dict[str, Any]]:
+    """Read the architecture config which MuScriptor loads beside its weights."""
+
+    config = checkpoint.with_name("config.json")
+    if not config.is_file():
+        raise ValueError(
+            "MuScriptor checkpoint requires an adjacent config.json so the "
+            "model architecture and size can be pinned"
+        )
+    try:
+        document = json.loads(config.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"invalid MuScriptor config.json: {exc}") from exc
+    if not isinstance(document, dict) or document.get("model_type") != "muscriptor":
+        raise ValueError("MuScriptor config.json must declare model_type=muscriptor")
+    variant = document.get("variant")
+    if variant not in _MUSCRIPTOR_MODEL_SIZES:
+        raise ValueError(
+            "MuScriptor config.json variant must be small, medium or large"
+        )
+    return config, document
+
+
+def _muscriptor_checkpoint_record(checkpoint: Path) -> dict[str, Any]:
+    config_path, config = _muscriptor_model_config(checkpoint)
+    return {
+        **_file_record(checkpoint),
+        "kind": "file",
+        "variant": config["variant"],
+        "model_config": config,
+        "config": _file_record(config_path),
+    }
+
+
+def _normalise_muscriptor_options(
+    options: Mapping[str, Any], checkpoint_record: Mapping[str, Any]
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Pin every effective MuScriptor 0.2.1 decoding control.
+
+    The released runtime has independent five-second chunks and no prelude
+    forcing API.  That absence is explicit evidence: requesting the newer
+    behaviour is rejected instead of silently accepting a no-op flag.
+    """
+
+    normalised = dict(options)
+    model_size = str(normalised.get("model_size", "auto"))
+    actual_size = str(checkpoint_record["variant"])
+    if model_size not in {*_MUSCRIPTOR_MODEL_SIZES, "auto"}:
+        raise ValueError("MuScriptor model_size must be auto, small, medium or large")
+    if model_size != "auto" and model_size != actual_size:
+        raise ValueError(
+            f"requested MuScriptor model_size={model_size}, but config.json is {actual_size}"
+        )
+
+    beam_size = int(normalised.get("beam_size", 1))
+    batch_size = int(normalised.get("batch_size", 1))
+    cfg_coef = float(normalised.get("cfg_coef", 1.0))
+    temperature = float(normalised.get("temperature", 1.0))
+    use_sampling = normalised.get("use_sampling", False)
+    no_eos_is_ok = normalised.get("no_eos_is_ok", True)
+    prelude_forcing = normalised.get("prelude_forcing", False)
+    if beam_size < 1:
+        raise ValueError("MuScriptor beam_size must be positive")
+    if batch_size < 1:
+        raise ValueError("MuScriptor batch_size must be positive")
+    if not math.isfinite(cfg_coef) or cfg_coef < 0:
+        raise ValueError("MuScriptor cfg_coef must be finite and non-negative")
+    if not math.isfinite(temperature) or temperature <= 0:
+        raise ValueError("MuScriptor temperature must be finite and positive")
+    if not isinstance(use_sampling, bool) or not isinstance(no_eos_is_ok, bool):
+        raise ValueError("MuScriptor sampling and EOS controls must be booleans")
+    if not isinstance(prelude_forcing, bool):
+        raise ValueError("MuScriptor prelude_forcing must be a boolean")
+    if prelude_forcing:
+        raise ValueError(
+            "MuScriptor 0.2.1 does not support prelude forcing; use false until "
+            "a separately pinned supporting runtime is installed"
+        )
+    if use_sampling and beam_size > 1:
+        raise ValueError("MuScriptor sampling and beam search cannot be combined")
+
+    normalised.update(
+        {
+            "model_size": actual_size,
+            "beam_size": beam_size,
+            "batch_size": batch_size,
+            "cfg_coef": cfg_coef,
+            "temperature": temperature,
+            "use_sampling": use_sampling,
+            "no_eos_is_ok": no_eos_is_ok,
+            "prelude_forcing": False,
+            "prelude_forcing_supported": False,
+            "chunk_seconds": 5.0,
+        }
+    )
+    execution = {
+        "schema": MUSCRIPTOR_EXECUTION_SCHEMA,
+        "model_size": actual_size,
+        "decoding": {
+            "strategy": (
+                "sampling"
+                if use_sampling
+                else ("beam-search" if beam_size > 1 else "greedy")
+            ),
+            "beam_size": beam_size,
+            "batch_size": batch_size,
+            "cfg_coef": cfg_coef,
+            "temperature": temperature,
+            "use_sampling": use_sampling,
+            "no_eos_is_ok": no_eos_is_ok,
+        },
+        "chunking": {
+            "seconds": 5.0,
+            "policy": "independent-five-second-chunks",
+            "prelude_forcing": False,
+            "prelude_forcing_supported": False,
+        },
+    }
+    return normalised, execution
 
 
 def _raw_artifact_paths(
@@ -333,14 +457,24 @@ def run_ai_transcription(
         raise FileNotFoundError(f"AI worker was not found: {worker}")
 
     audio_record = _file_record(audio)
-    checkpoint_record = (
-        _game_bundle_record(checkpoint)
-        if backend == "game"
-        else {**_file_record(checkpoint), "kind": "file"}
-    )
+    if backend == "game":
+        checkpoint_record = _game_bundle_record(checkpoint)
+    elif backend == "muscriptor":
+        checkpoint_record = _muscriptor_checkpoint_record(checkpoint)
+    else:
+        checkpoint_record = {**_file_record(checkpoint), "kind": "file"}
     request_options = dict(options or {})
+    execution: dict[str, Any] | None = None
+    if backend == "muscriptor":
+        request_options, execution = _normalise_muscriptor_options(
+            request_options, checkpoint_record
+        )
     request_options["model_path"] = str(checkpoint)
     request_options["model_sha256"] = checkpoint_record["sha256"]
+    if backend == "muscriptor":
+        config_record = checkpoint_record["config"]
+        request_options["model_config_path"] = config_record["path"]
+        request_options["model_config_sha256"] = config_record["sha256"]
     request = AITranscriptionRequest(
         audio_path=str(audio),
         backend=backend,
@@ -396,6 +530,8 @@ def run_ai_transcription(
             "source": audio_record,
             "checkpoint": checkpoint_record,
             "backend_manifest": asdict(AI_MODEL_MANIFESTS[backend]),
+            "request": request.to_dict(),
+            "execution": execution,
         },
     )
 
@@ -568,6 +704,10 @@ def run_ai_transcription(
         "exit_code": exit_code,
         "source": audio_record,
         "checkpoint": checkpoint_record,
+        "request": request.to_dict(),
+        "execution": (
+            candidate.metadata.get("execution", execution) if candidate else execution
+        ),
         "bpm": bpm,
         "note_count": len(candidate.notes) if candidate else 0,
         "candidate_quality": quality_record,
@@ -587,6 +727,7 @@ def run_ai_transcription(
 __all__ = [
     "AI_GM_PROGRAM_MAPPING_SCHEMA",
     "AI_RUN_SCHEMA",
+    "MUSCRIPTOR_EXECUTION_SCHEMA",
     "AIWorkerRunError",
     "run_ai_transcription",
 ]

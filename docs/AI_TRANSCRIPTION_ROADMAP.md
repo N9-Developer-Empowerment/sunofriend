@@ -1,6 +1,7 @@
 # Sunofriend AI roadmap
 
-Status: Phase 1 and Phase 2 engineering complete; Phase 3 complete
+Status: Phase 1 and Phase 2 engineering complete; Phase 3 complete; Phase 4
+fixed-MIDI review complete; Phase 5 started
 Started: 15 July 2026  
 Scope: local-first AI assistance for transcription, review, instrument matching
 and source-derived instruments
@@ -67,7 +68,8 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 1. AI Transcription Bake-off v1 | **Engineering complete; listening gate pending** | Independent local model candidates, common JSON, repeatable metrics and selection evidence; see the close-out report |
 | 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
-| 4. Cleanup and Neural Timbre Lab | **In progress; stabilized foundations** | Bass/keys private golden, role-aware auditions, reproducible MIDI-mask target/residual baseline and a cleanup listening gate; see the Phase 4 lab and stabilization review |
+| 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
+| 5. MuScriptor Full-Mix and Community Learning | **In progress: Phase 5.0 complete, first small-model matrix complete** | Local Workbench, immutable MuScriptor execution manifest, path-free quality diagnostics and M0–M3 golden comparison implemented; M4, listening and instrument view remain |
 
 ## Phase 1: AI Transcription Bake-off v1
 
@@ -442,13 +444,46 @@ Implemented foundations:
   gate before timbre matching; and
 - [x] retain explicit full-mix/solo patch choices in a deterministic local
   advisory profile without changing rankings, defaults or playability.
+- [x] add a hash-pinned, isolated Demucs target/residual challenger with
+  deterministic short excerpts, failed-run preservation and no automatic
+  promotion.
+- [x] resolve an explicit multi-role listening review against its complete
+  hash-pinned evidence tree without regenerating or silently merging MIDI.
+- [x] add a native-44.1-kHz fixed-MIDI harmonic-plus-noise baseline, mandatory
+  complete-patch control, optional source sampler and explicit listening page.
 
 Phase 4 succeeds only if an experiment beats the simpler sample/DSP path in
 listening tests and remains reproducible, attributable and safe to distribute.
-The current foundations meet the reproducibility and safety requirements, but
-no cleanup or neural-timbre challenger has yet beaten the simpler path. See the
+The current foundations meet the reproducibility and safety requirements. The
+first fixed-MIDI review found harmonic-plus-noise resynthesis useful but still
+preferred the complete GM patch, while rejecting the source sampler; no cleanup
+or neural-timbre challenger has yet beaten the simpler path. See the
 [Phase 4 stabilization review](PHASE4_STABILIZATION_REVIEW.md) for the
 goals-versus-execution matrix and the gate before the next experiment.
+
+## Phase 5: MuScriptor Full-Mix and Community Learning
+
+The converter identified from Mirelo's Audio-to-MIDI workflow is MuScriptor,
+the same optional model already evaluated in Phase 1. Phase 5 therefore does
+not begin with another installation. It asks whether unrestricted instrument
+discovery, role-conditioned full-mix/stem passes, medium/large checkpoints and
+Sunofriend's source-aware repair can outperform the current role-specific
+workflow.
+
+The phase also proposes a local-first web feedback contract. Private audio
+stays local by default; a contributor may separately opt into submitting only
+review JSON/MIDI edit diffs or donating a short rights-cleared golden excerpt.
+Community feedback first improves scorecards, regression gates, candidate
+ordering and instrument suggestions. It is not model-training data by default.
+The website is primarily the product UI: project setup, per-stem source/MIDI
+comparison, phrase correction, arrangement audition, instrument choice and
+GarageBand export. Feedback is the durable record of decisions made during
+normal work, not a survey that users must understand separately.
+
+The complete research findings, licence boundary, benchmark matrix,
+performance strategy, feedback schema, privacy design, increments and
+promotion gates are in the
+[Phase 5 MuScriptor and Community Learning plan](PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md).
 
 ## Daily progress routine
 
@@ -480,6 +515,274 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-19 — Explicit MuScriptor manifests and first small-model matrix
+
+- Goal: make Phase 5 AI alternatives reproducible and keep demonstrably broken
+  output out of normal Workbench decisions.
+- Change or experiment: pinned the installed MuScriptor 0.2.1 execution
+  contract, added `sunofriend ai-matrix`, attached its path-free quality/runtime
+  evidence to Workbench candidates and reverified every served or handed-off
+  artifact at the point of use.
+- Inputs: the existing private 15-second reconstructed Lidl golden, its matching
+  bass, keys, voice and mixed-percussion stems, and fresh immutable M0–M3 runs.
+- Model/runtime/checkpoint: MuScriptor 0.2.1 small; checkpoint
+  `bbd482c786b895cf7d8f44185073d951adae2ebb8a66f82ca84cd1f84569549c`;
+  adjacent model config
+  `3008fc481e4a1cd978e337eb3759260c270892204db5039235ac939e1f42aeb2`;
+  greedy, batch 1, beam 1, CFG 1.0, independent five-second chunks. The pinned
+  runtime does not expose prelude forcing, which is now recorded explicitly.
+- Evidence and metrics: M0 reproduced the rejected 1,912-note result with 1,818
+  drum-labelled notes and severe duplicate/onset/polyphony burst metrics.
+  Conditioning on its discovered labels (M1)
+  produced 169 notes without a severe decoder gate; metadata-conditioned M2
+  produced 107 but substituted an unrequested clean-guitar label. Isolated M3
+  bass/keys/voice produced 19/181/39 notes; M3 mixed percussion produced no
+  notes. M0 is blocked, no-evidence is diagnostic-only, and raw candidate/MIDI
+  mutation counts remain zero.
+- Listening result: none yet. Cross-lane overlap supplies role-allocation clues,
+  not correctness; no M1/M2/M3 lane has been promoted.
+- Decision: Phase 5.0 is complete. Keep severe/no-evidence artifacts available
+  for diagnosis and download but prevent main/optional selection. Ordinary role
+  leakage remains auditionable because the listener may recognise the line.
+- Problems/risks: label conditioning is not an output guarantee; the M3
+  percussion lane needs a role/input review; browser switching is still
+  second-synchronised rather than sample-accurate.
+- Next smallest step: add M4 one-role-per-pass bass/keys lanes and a focused
+  listening review of safe M1/M2/M3 alternatives before any medium/large model
+  download or speed preset.
+
+### 2026-07-19 — Cached comparisons, selected arrangement and GarageBand handoff
+
+- Goal: make the Phase 5 Workbench useful when candidates do not already have
+  preview WAVs and carry explicit choices into a listenable/exportable result.
+- Change or experiment: added content-addressed neutral candidate rendering,
+  shared-second source/A/B/C switching, an arrangement made only from active
+  main/optional decisions, explicit `full_mix` confirmation and a deterministic
+  GarageBand handoff ZIP containing unchanged selected MIDI.
+- Inputs: synthetic cache/exclusion fixtures and the private Slayyyter Phase 4
+  keys, kick, snare and bass artifacts.
+- Model/runtime/checkpoint: no model. Existing FluidSynth and GeneralUser-GS
+  render the role-neutral audition proxies.
+- Evidence and metrics: repeated renders reuse verified SHA-256 caches; tests
+  prove rejected/unreviewed MIDI is absent, private notes/paths are absent from
+  the ZIP manifest and numbered selected MIDI bytes are unchanged. A real keys
+  proxy rendered to `40,525,868` bytes; a four-choice real arrangement produced
+  three proxy tracks (combined drums, bass and keys), and the verified handoff
+  ZIP was `24,666,200` bytes.
+- Listening result: implementation/packaging exercise only; no candidate was
+  promoted from the render.
+- Decision: keep neutral previews and the arrangement clearly labelled GM
+  audition proxies. The selected numbered MIDI remains the authoritative DAW
+  handoff.
+- Problems/risks: HTML media elements synchronize by seconds, not samples;
+  existing previews are not comparable; the instrument-choice view is still
+  pending. A public blind review still needs decoded, level-matched short-loop
+  switching.
+- Next smallest step: completed by the explicit-manifest/matrix increment above.
+
+### 2026-07-19 — Phase 5 local Workbench vertical slice started
+
+- Goal: make existing source/MIDI comparisons understandable in one useful
+  local site and retain genuine user decisions across launches.
+- Change or experiment: added `sunofriend workbench PROJECT`, deterministic
+  automatic or explicit cataloguing, a token-protected loopback HTTP server,
+  project/stem pages, shared loop positions, bounded A/B/C candidate cards,
+  role/outcome/problem decisions, append-only SQLite storage, JSON export and
+  a metadata-only contribution preview with no submission endpoint.
+- Inputs: synthetic test fixtures plus a read-only discovery run over the
+  private Slayyyter source folder and its Phase 4 specialist MIDI directory.
+- Model/runtime/checkpoint: none; the first slice consumes existing immutable
+  artifacts and starts no AI worker.
+- Evidence and metrics: the real project correctly inferred `113 BPM`,
+  `B minor`, `440 Hz` and the chord PDF. Normal candidates are capped at three;
+  `possible` and `uncertain` variants are diagnostic-only. Focused catalog,
+  persistence, redaction, HTTP token, range-serving and CLI tests pass.
+- Listening result: not yet a musical comparison. Many Phase 4 MIDI files do
+  not carry a neutral preview WAV, and existing previews are explicitly not
+  claimed to be level-matched.
+- Decision: keep this UI as a presentation/decision boundary over the existing
+  CLI. Do not interpret audition events, dwell time or defaults as preference;
+  do not enable public submission.
+- Problems/risks: automatic filename discovery can only infer roles, not user
+  intent. Use an explicit catalog for ambiguous multi-role material. On-demand
+  neutral rendering and whole-arrangement playback remain necessary before the
+  site becomes the primary end-to-end workflow.
+- Next smallest step: completed by the subsequent cached-preview/arrangement
+  and explicit-manifest/matrix increments above.
+
+### 2026-07-19 — MuScriptor full-mix research and Phase 5 draft
+
+- Goal: investigate Mirelo's newly presented Audio-to-MIDI method and plan a
+  fair comparison, faster local workflow and contributor feedback loop.
+- Change or experiment: identified the converter as the already integrated
+  MuScriptor model; inspected the current paper, model cards, official runtime
+  and web client; drafted the separate Phase 5 plan.
+- Inputs: existing Phase 1 MuScriptor small evidence, official upstream sources
+  and the completed fixed-MIDI bass timbre review.
+- Model/runtime/checkpoint: no new download or inference. Current local
+  `muscriptor-small` 0.2.1 remains optional, hash-pinned and CC-BY-NC-4.0.
+- Evidence and metrics: the published method uses a five-second mel-spectrogram
+  prefix and a decoder-only Transformer trained with 1.45M synthetic MIDIs,
+  more than 11,000 hours of aligned real music and reinforcement-learning
+  post-training on 300 verified pieces. The official open UI records consented
+  usage analytics, but its source contains no correctness rating or note-edit
+  feedback path.
+- Listening result: the completed timbre export preferred General MIDI Synth
+  Bass 2 overall. GM and harmonic-plus-noise resynthesis were both marked
+  ballpark/main; the source sampler was marked far/reject with missing
+  consistency.
+- Decision: use Phase 5 to compare full-mix discovery with conditioned stem and
+  specialist candidates. Keep public feedback opt-in and metadata-first; do not
+  host non-commercial model inference or upload arbitrary songs.
+- Problems/risks: Mirelo Studio uses a separately trained larger-data model, so
+  hosted results are not reproducible evidence for the released checkpoints.
+  MuScriptor still lacks velocity and same-pitch overlapping-note support.
+- Next smallest step: implement the Phase 5.0 local Workbench vertical slice on
+  existing artifacts, then record prelude/batch/beam settings and build one
+  immutable full-mix/conditioned/stem review matrix before accepting larger
+  checkpoints or enabling public submission.
+
+### 2026-07-19 — Fixed-MIDI timbre review completed
+
+- Goal: decide whether the source sampler or fitted harmonic-plus-noise sound
+  beats a complete patch while every candidate plays the identical bass MIDI.
+- Change or experiment: validated the user's reviewed export against the
+  unchanged seed and all five pinned source/MIDI/candidate hashes.
+- Inputs: private Slayyyter bass source excerpt and unchanged 41-note MuScriptor
+  performance at `113.000096` BPM.
+- Model/runtime/checkpoint: no model; deterministic resynthesis and FluidSynth
+  controls only.
+- Evidence and metrics: reviewed JSON SHA-256
+  `8c9d388e13bbbe1740890a5d6fb73046cb856e609309a126ef609a09b30374ac`;
+  source SHA-256 `2bda5f30ac164bf93ec27829a8c740364fe8562b720a46ee006e6d0157f85a1b`;
+  fixed MIDI SHA-256
+  `540634d7578c1941a7dd8dd6eedb5ddd1f8ab0bcfcfa453f5c535c0cc48f1b14`.
+- Listening result: GM Synth Bass 2 was ballpark/main but somewhat uneven; the
+  source sampler was far/rejected and missing notes or consistency; fitted
+  resynthesis was ballpark/main and complete, with a consistently different
+  tone. Overall decision: `prefer_gm`, nearest tone and consistent.
+- Decision: retain resynthesis as an optional listening layer, do not package
+  it as the recommended generated instrument, and keep the complete GM patch as
+  the next model's control.
+- Problems/risks: passing the automated 41/41 audibility test did not guarantee
+  perceived note-to-note consistency. Functional and musical gates must remain
+  separate.
+- Next smallest step: use the outcome in the Phase 5 instrument policy and do
+  not invest further in the rejected source-sampler primary for this song.
+
+### 2026-07-18 — Fixed-MIDI timbre baseline
+
+- Goal: test sound generation separately from transcription now that the bass
+  MIDI is stable.
+- Change or experiment: added `timbre-resynthesis`. It fits one shared harmonic
+  distribution, sustain ratio and deterministic attack-noise amount from an
+  aligned monophonic reference, while rendering the exact same notes through a
+  complete GM patch and an optional earlier source SF2.
+- Inputs: accepted 16-second learned bass target; unchanged 41-note MuScriptor
+  primary at `113.000096` BPM; earlier nine-zone source-derived bass SF2.
+- Model/runtime/checkpoint: no model or checkpoint. Native NumPy/soundfile DSP
+  at 44.1 kHz. Magenta DDSP and MIDI-DDSP code are Apache-2.0, but direct
+  MIDI-DDSP use was deferred because the official repository is archived and
+  documents an incompatible TensorFlow 2.7/Python 3.8/M1 installation path.
+- Evidence and metrics: fixed MIDI SHA-256
+  `540634d7578c1941a7dd8dd6eedb5ddd1f8ab0bcfcfa453f5c535c0cc48f1b14`;
+  41 fitted notes; 16 harmonics; noise mix `0.040092`; sustain ratio `1.0`;
+  all three candidates functionally audible on 41/41 notes; all MIDI-change
+  and automatic-promotion effects zero.
+- Listening result: pending in
+  `work/ai-bakeoff/slayyyter-dance-phase4-fixed-midi-timbre-review-v2/timbre_resynthesis_review.html`.
+- Decision: no candidate promoted. Functional audibility is necessary but is
+  not a tone, realism or full-mix musical-quality verdict.
+- Next smallest step: complete the timbre review. Package the synthesized
+  profile as a playable generated instrument only if listening justifies it;
+  otherwise retain the preferred complete patch as the control for a later
+  local neural challenger.
+
+### 2026-07-18 — Bass role review resolved without changing the MIDI
+
+- Goal: turn the completed body/pluck listening review into one reproducible
+  arrangement choice while retaining all useful alternatives.
+- Listening result: the source and unchanged primary contained both roles.
+  The strict body/complement split was useful, but the independently
+  transcribed residual MIDI was diagnostic rather than an improvement.
+- Change or experiment: added `midi-role-split-resolve`. It requires a complete
+  user export, verifies the seed, source report, inputs and every artifact, and
+  follows the overall decision rather than inferring a winner from component
+  usefulness.
+- Evidence and metrics: decision `keep_primary`; review SHA-256
+  `e0fc94ad9b6236c194ffcc11d4235feb6ee4071d265c28595244015501166833`;
+  recommended MIDI SHA-256
+  `540634d7578c1941a7dd8dd6eedb5ddd1f8ab0bcfcfa453f5c535c0cc48f1b14`;
+  zero notes changed, zero source mutations and zero alternatives deleted.
+- Decision: use the unchanged 41-note primary bass MIDI. Retain the body and
+  primary-pluck tracks as optional creative resources and the independent
+  residual challenger as diagnostic evidence.
+- Next smallest step: completed by the fixed-MIDI timbre entry above.
+
+### 2026-07-18 — Reviewed bass cleanup and two-role MIDI challenger
+
+- Goal: act on the listener's consistent observation that the bass stem carries
+  both a deep synth-bass line and a shorter plucked synth/guitar-like line.
+- Listening result: the completed 12-sound cleanup review selected the learned
+  target as the main cleanup and described two roles throughout. The learned
+  target was convincing overall but slightly weakened the pluck; the learned
+  residual remained musical and retained it. The reviewed JSON SHA-256 is
+  `442d242f825bf921cbd7ae328d791ad30495dddca8715cf487c5f70ab414bb45`.
+- Evidence: note-aligned OpenL3 plus explainable features found a 30-note body
+  cluster with median duration `0.504478` seconds and pitch range 28–40, and a
+  nine-note transient cluster with median duration `0.134487` seconds and pitch
+  range 33–54; two further transient events remained explicit outliers.
+- Change or experiment: added `midi-role-split`. It requires an explicit body
+  cluster, preserves every primary note in a strict two-track partition and can
+  add a separately transcribed residual MIDI as an overlapping pluck challenger.
+  It writes contrasting GM auditions and an unreviewed local export page.
+- Independent evidence: MuScriptor found 13 notes in the learned residual,
+  including octave pairs at common onsets, so the independent challenger can
+  represent overlap that the 41-note monophonic target candidate cannot.
+- Decision: keep body cluster `I1` as an explicit listening-backed hypothesis,
+  not instrument identification. Compare the exact 30+11 partition with the
+  30+13 residual challenger; neither is promoted automatically.
+- Next smallest step: completed by the role-resolution entry above. Do not
+  generalise multi-role splitting yet; use the unchanged primary for the next
+  controlled timbre experiment.
+
+### 2026-07-18 — Phase 4 pinned learned bass cleanup
+
+- Goal: determine whether a local learned separator improves a clearly audible
+  bass passage and downstream MIDI more than the unchanged source or transparent
+  MIDI-mask baseline.
+- Change or experiment: added `ai-cleanup`, an isolated Demucs worker, hard
+  checkpoint verification, deterministic PCM24 source/target/residual evidence,
+  external model setup, diagnostics, failure records and focused tests. Ran a
+  predeclared 192–208 second bass golden and built an explicit 12-sound review.
+- Inputs: private Slayyyter bass stem; existing 44-note full-song MuScriptor
+  excerpt guide; existing MIDI-mask bass target/residual; fresh same-input
+  Basic Pitch and MuScriptor transcriptions.
+- Model/runtime/checkpoint: `demucs==4.0.1`, `htdemucs` signature `955717e8`,
+  CPU, shifts `0`, overlap `0.25`; external checkpoint SHA-256
+  `8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4`.
+  Code is MIT; checkpoint terms are not separately stated, so private local
+  evaluation only and no vendoring or redistribution.
+- Evidence and metrics: two runs produced identical source, target-array,
+  target and residual hashes. Target RMS was `-0.214 dB` and residual RMS
+  `-14.686 dB` relative to source; persisted reconstruction error was `0.0`.
+  Against the same source, short-input MuScriptor learned cleanup improved
+  supported notes from `0.744` to `0.805` and octave accuracy from `0.564` to
+  `0.585`, but reduced chroma `0.821` to `0.818`, contour direction `0.868` to
+  `0.700` and strong onset F1 `0.122` to `0.121`. The DSP target yielded only
+  eight MuScriptor notes. Full-context unchanged MuScriptor remained strongest.
+- Listening result: completed. The listener selected the learned target as the
+  main cleanup, called it convincing overall, and consistently heard a deep
+  bass role plus a separate plucked role across the useful alternatives.
+- Decision: Demucs is the preferred broad cleanup for this excerpt, but it does
+  not solve intra-stem role separation. Preserve the full-context source MIDI,
+  target, residual and every cleanup alternative.
+- Problems/risks: PyTorch checkpoint deserialisation requires trusted pickle;
+  the worker permits it only after exact hash verification. Model source roles
+  are broad families. The in-app browser blocks new local `file://` navigation.
+- Next smallest step: test an explicit two-role MIDI challenger without
+  rewriting or discarding the accepted cleanup evidence.
 
 ### 2026-07-18 — Phase 4 stabilization review
 

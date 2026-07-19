@@ -1,4 +1,4 @@
-# Isolated Phase 1 AI bake-off runtime for Apple Silicon.
+# Isolated Phase 1 transcription and Phase 4 cleanup runtime for Apple Silicon.
 #
 # Keep this environment separate from Sunofriend's Python 3.9-3.11 Basic Pitch
 # environment. Model checkpoints are deliberately not downloaded here: their
@@ -12,3 +12,4 @@ onnxruntime==1.27.0
 rmvpe-onnx==0.2.3
 soxr==1.1.0
 pesto-pitch==2.0.1
+demucs==4.0.1

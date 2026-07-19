@@ -19,6 +19,27 @@ reordering.
 Vocal melody extraction adds pYIN/Basic Pitch consensus, conservative repeated
 phrase repair, an optional hummed guide, and a local visual correction report
 whose reviewed JSON can be converted back into tuned MIDI.
+An optional isolated AI runtime can also test pinned local learned cleanup on
+short stem excerpts. Its target/residual evidence is reconstructable and never
+replaces the normal MIDI path without an explicit listening decision.
+Reviewed event-cluster evidence can then produce non-destructive multi-role
+MIDI A/Bs, including a separately transcribed residual layer for overlapping
+parts, without claiming automatic instrument recognition.
+A completed role review can be resolved into an exact hash-verified copy of
+the user-selected MIDI; component usefulness never silently overrides the
+overall arrangement decision.
+That fixed monophonic MIDI can then drive a level-matched timbre review that
+compares complete, extracted-sample and deterministic harmonic-plus-noise
+sounds while checking every note for functional audibility.
+The loopback-only Workbench presents existing source/MIDI alternatives in a
+normal browser, saves append-only solo/full-mix choices, renders missing MIDI
+through a verified local neutral-preview cache, auditions only explicit
+main/optional parts together, and packages unchanged selected MIDI plus a
+clearly labelled proxy arrangement for GarageBand. It loads no remote scripts
+and has no upload or submission endpoint. Completed AI runs add path-free
+model/config, label, boundary and safety diagnostics; severe or zero-note
+results remain diagnostic-only. `sunofriend ai-matrix` compares controlled
+immutable lanes without changing raw candidates or MIDI.
 
 Sunofriend complements AI music generators, stem separators, and DAWs rather
 than replacing them. The current supported production workflow is macOS-first,

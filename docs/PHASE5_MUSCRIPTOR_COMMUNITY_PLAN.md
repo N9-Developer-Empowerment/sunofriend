@@ -1,0 +1,838 @@
+# Phase 5: MuScriptor Full-Mix and Community Learning
+
+Status: **Phase 5.0 complete; Phase 5.1 small-model matrix in progress; no public service or new checkpoint download is authorised**
+Drafted: 19 July 2026
+Scope: accurate stem/full-mix MIDI, faster local inference, GarageBand-ready
+instrument choices, a primary local web workbench and consented feedback
+
+## Decision summary
+
+The converter in the supplied video is **MuScriptor**, developed by Kyutai and
+Mirelo. It is not a new model family for Sunofriend: the `muscriptor-small`
+checkpoint is already installed as an optional, isolated Phase 1 challenger.
+The upstream implementation used for this research was package `0.2.1` at
+commit `302343e8992bdfc619f77f1988168374ed5d675d`.
+What is new is the way the model is being presented and used:
+
+- Mirelo Studio treats the complete mix as one instrument-labelled
+  transcription problem;
+- the current open-source runtime streams separate tracks and can either detect
+  instruments or hard-condition decoding on a known instrument list;
+- medium and large checkpoints provide a model-size comparison that Sunofriend
+  has not yet run; and
+- the simple browser workflow makes it possible to collect structured musical
+  feedback at a much larger scale than a CLI-only workflow.
+
+The next programme should therefore **not replace Sunofriend with MuScriptor**.
+It should compare full-mix, stem-conditioned and specialist candidates on the
+same source; keep MuScriptor's raw instrument-labelled evidence; use
+Sunofriend's timing, expression, chord, source-support and review machinery to
+repair it; and learn only from explicit listening or note edits.
+
+The intended end state is:
+
+```text
+authorised mix and/or separated stems
+       |
+       +--> Sunofriend specialist stem transcribers
+       +--> MuScriptor discovery pass on the mix
+       +--> MuScriptor conditioned passes on known stems/roles
+       |
+       v
+immutable, aligned candidate tracks
+       |
+       +--> source support, chords, repetition, octave and timing checks
+       +--> expression/velocity recovered from the source
+       |
+       v
+blind phrase and full-mix reviews
+       |
+       +--> local correction and GarageBand handoff
+       +--> optional consented feedback JSON or MIDI edit diff
+       |
+       v
+role-specific candidate selection, repair rules and instrument suggestions
+```
+
+## What MuScriptor actually does
+
+The official [MuScriptor paper](https://arxiv.org/pdf/2607.08168) describes a
+decoder-only Transformer that receives a 16 kHz mono mel spectrogram for each
+five-second audio segment and autoregressively emits MT3-like timing, pitch and
+instrument tokens. The 128 General MIDI programs are collapsed into 36
+`MT3_FULL_PLUS` instrument groups. The model can work without an instrument
+list or can be conditioned on the expected groups.
+
+The published training recipe is more important than a novel architecture:
+
+1. pre-train on roughly 1.45 million MIDI files, rendered on the fly with
+   symbolic augmentation, more than 250 SoundFonts and random detuning;
+2. fine-tune on an internal set of 170,000 real recordings (more than 11,000
+   hours) aligned to symbolic notes; and
+3. reinforcement-learning post-train on 300 manually verified, high-quality
+   transcriptions using onset, frame and offset F1 as the reward.
+
+On the authors' 372-track held-out set, their fully trained 1.3B model reports
+onset/frame/offset/drum/multi-instrument F1 of
+`60.4/73.3/49.0/50.2/48.2`. These results are useful evidence, not a promise for
+Suno or Moises stems: the paper also shows substantial variation by dataset,
+and some onset scores are worse than the YourMT3+ baseline even where frame
+activity is much better.
+
+The current [official repository](https://github.com/muscriptor/muscriptor)
+publishes three checkpoints:
+
+| Variant | Parameters | Approximate F32 weights | Intended use |
+| --- | ---: | ---: | --- |
+| small | 103M | 0.4 GB | CPU/lower-resource preview |
+| medium | 307M | 1.2 GB | default speed/quality balance |
+| large | 1.3–1.4B | 5.5 GB | best published quality; GPU strongly preferred |
+
+All three use the same representation and therefore share important limits:
+
+- no velocity or dynamics;
+- drum hits have onsets but no meaningful duration;
+- two overlapping notes with the same pitch and instrument cannot be
+  represented;
+- labels stop at 36 broad groups rather than identifying an exact patch;
+- unusual timbres, dense mixes and heavily processed audio remain difficult;
+  and
+- five-second chunking creates a quality/throughput trade-off at boundaries.
+
+The paper and later upstream designs describe sustained-note preludes between
+sequential chunks, but Sunofriend's pinned `muscriptor==0.2.1` runtime exposes
+no prelude/teacher-forcing control and transcribes independent five-second
+chunks. Sunofriend therefore records `prelude_forcing: false` and
+`prelude_forcing_supported: false` and rejects a request to enable it rather
+than pretending the protection ran. The pinned API does expose beam size,
+batch size and classifier-free guidance. Those controls must be benchmarked
+rather than assumed to help.
+
+### Open model versus Mirelo Studio
+
+The [Mirelo Audio-to-MIDI page](https://mirelo.ai/models/audio-to-midi) states
+that its hosted Studio uses a separately trained version with a larger dataset.
+Its results are therefore an external comparator, not a reproducible score for
+the published checkpoints. Sunofriend may import a Studio-generated MIDI for a
+manual, authorised A/B, but it must label the service, version/date and upload
+boundary and must never send audio there automatically.
+
+At the inspected upstream commit, the open web client has consent-gated Google
+Analytics for transcription start/completion/error, instrument/note counts,
+timing and downloads. Local/self-hosted builds disable it. The source contains
+no musical-correctness rating, piano-roll correction submission or training
+feedback endpoint. That is an inference from the published client, not a claim
+about Mirelo's private Studio systems. It means Sunofriend's proposed review
+loop is a complementary feature rather than something that can simply be
+copied from MuScriptor.
+
+### Licensing boundary
+
+MuScriptor code is MIT, but its model weights are gated under CC-BY-NC-4.0.
+The [model conditions](https://huggingface.co/MuScriptor/muscriptor-medium)
+also require users to have the necessary rights for input music and its
+transcription. Consequently:
+
+- MuScriptor remains an optional personal/research worker, never an Apache-2.0
+  dependency or bundled checkpoint;
+- a hosted public MuScriptor inference service is out of scope until the
+  licence and operating model receive a separate review or permission;
+- medium or large checkpoints require an explicit setup decision and their own
+  pinned manifests before use; and
+- public benchmark audio must be owned, commissioned, public-domain or supplied
+  under a compatible explicit licence.
+
+## What the existing Sunofriend evidence says
+
+Sunofriend already has a stronger starting position than the video suggests:
+
+- `muscriptor-small` 0.2.1 is installed in the isolated Python 3.12/PyTorch
+  runtime and its local checkpoint is hash-pinned;
+- the adapter already retains separate instrument-labelled tracks and accepts
+  repeated instrument constraints;
+- a 15-second lead-vocal test produced byte-identical CPU and MPS MIDI, with
+  CPU faster on this Apple Silicon machine (`3.30 s` versus `5.37 s`);
+- the user judged MuScriptor's lead-vocal MIDI substantially better than the
+  original Sunofriend baseline;
+- conditioned bass and keys candidates have been useful, while specialist
+  Sunofriend kick and strings candidates won their current goldens; and
+- an unrestricted 15-second Lidl full-mix pass took `50.22 s` and produced a
+  rejected 1,912-note burst, including 1,818 drum notes and vocal-to-wind label
+  leakage.
+
+This does not disprove MuScriptor's full-mix method. It shows that model size,
+conditioning, current chunk decoding and role-specific quality gates matter,
+and that one global winner would be unsafe.
+
+The latest fixed-MIDI timbre review reinforces a second boundary. General MIDI
+Synth Bass 2 and source-fitted harmonic-plus-noise resynthesis were both useful
+main sounds, but the complete GM patch won overall as the nearest consistent
+tone. The earlier source sampler was rejected as missing/inconsistent and far
+from the source. Accurate notes and a usable complete instrument must remain
+separate goals.
+
+## Questions Phase 5 must answer
+
+1. Does medium or large improve bass, keys, vocals and full-mix instrument
+   allocation enough to justify its runtime and memory?
+2. Is an unrestricted discovery pass useful when it is followed by
+   instrument-conditioned passes, even if its raw MIDI is not usable?
+3. Is the best input the complete mix, the separated stem, or consensus between
+   both?
+4. Can multiple conditioned passes recover the two audible roles in a single
+   bass or keys stem without producing duplicate or unsupported notes?
+5. Which corrections can be safely automated from source evidence, chords and
+   repeated phrases, and which require recognition by a listener?
+6. Can a fast preview/full-quality cascade reduce waiting without changing the
+   final musical decision?
+7. Which feedback improves Sunofriend selection and repair immediately, and
+   which is sufficiently licensed and precise to support later model training?
+8. Can instrument feedback recommend a complete, playable GarageBand patch in
+   the right family without trying to clone an inconsistent stem sample?
+
+## The primary product: a local Sunofriend Workbench
+
+The web page should not be designed as a survey wrapped around model output.
+It should be the most understandable way to use Sunofriend. The CLI remains the
+reproducible engine and the agent skill remains the conversational entry point,
+but both should be able to launch or prepare the same local workbench:
+
+```bash
+sunofriend workbench "/path/to/song-stems" --open
+```
+
+It binds to `127.0.0.1`, opens the normal browser, loads no third-party scripts
+and sends nothing to a server by default. A prominent **Local — nothing is
+being uploaded** indicator should remain visible.
+
+### Organise the site around musical decisions
+
+The user should never have to understand model names before hearing useful
+results. The primary navigation is:
+
+```text
+Project
+  1. Check song setup      BPM, key, tuning, downbeat, stem inventory
+  2. Choose MIDI parts     one understandable workspace per stem/role
+  3. Hear the arrangement  all current choices together
+  4. Choose instruments    complete/playable sounds first, similarity second
+  5. Export                GarageBand pack, alternatives and decision report
+```
+
+The project home page shows every stem as one status row:
+
+| Stem | Heard role | Candidates | Current choice | Needs attention |
+| --- | --- | ---: | --- | --- |
+| Bass | body + pluck | 3 | not chosen | two audible roles |
+| Keys | melody + accompaniment | 3 | melody-focused | low source support in bars 17–20 |
+| Kick | kick family | 2 | specialist repair | three disputed hits |
+
+This makes progress and unresolved decisions visible without exposing a wall
+of metrics.
+
+### One stem workspace
+
+Each workspace answers four questions in order:
+
+1. **What does the source sound like?** A loopable source player with waveform,
+   bars/beats and optional source spectrogram.
+2. **What musical parts are audible?** Plain-language role tags such as
+   `bass body`, `pluck`, `melody`, `accompaniment` or `mixed percussion`, which
+   the user can correct.
+3. **Which MIDI result is useful?** At most three primary candidates, using the
+   same neutral instrument and loudness for fair switching.
+4. **What should the project use?** `Use as main`, `Keep as optional layer`,
+   `Needs correction` or `Reject`.
+
+Candidate cards lead with musical descriptions rather than processes:
+
+- **Closest to the detected notes** — conservative specialist transcription;
+- **Clearer attacks** — learned conditioned candidate;
+- **Melody-focused combination** — source-supported hybrid; and
+- **Show technical details** — model, checkpoint, metrics, provenance and
+  warnings for users who want them.
+
+During the first blind listen, candidates can be called A/B/C to avoid model
+bias. Reveal the descriptive and technical labels after the user records an
+initial judgement. Always offer `equivalent`, `none are usable` and `I cannot
+tell`. Never preselect the highest-scoring candidate.
+
+### Keep the result space useful rather than huge
+
+“Explore the result space” should not mean exposing every model parameter or
+the Cartesian product of all processes. The normal view contains a deliberately
+small candidate family:
+
+1. current specialist baseline;
+2. strongest role-conditioned learned candidate;
+3. source-supported hybrid only when it is genuinely different; and
+4. an **Advanced alternatives** drawer for other models/settings and rejected
+   diagnostic evidence.
+
+Candidates that are byte-identical or musically equivalent should be grouped.
+Candidates that fail silence, duplicate-burst, timing or playability gates stay
+under diagnostics rather than competing as normal choices. A user can request
+another candidate for a specific problem—`missing attacks`, `wrong octave`,
+`too many accompaniment notes`—instead of generating every variation in
+advance.
+
+### Phrase correction without music-theory expertise
+
+When a whole stem is not good enough, jump directly to the weakest or disputed
+phrase. Show source, current MIDI and two alternatives in a short loop. Provide
+plain actions:
+
+- missing note;
+- extra note;
+- wrong pitch or octave;
+- starts too early/late;
+- ends too early/late;
+- melody and accompaniment are mixed; and
+- none sound like what I hear.
+
+The user may drag notes in a piano roll, upload a MIDI edited in GarageBand, or
+record a short hum/tap guide. Sunofriend stores a minimal edit diff and keeps
+the untouched model candidate. Musical terms and note names are optional
+details, not prerequisites.
+
+### Arrangement and instrument views
+
+The arrangement page plays all current per-stem choices together and makes it
+easy to solo the source, MIDI, or both. A choice that sounded good alone may be
+changed after full-mix listening; both decisions and contexts are retained.
+
+Instrument selection comes after MIDI selection. Each role begins with one
+complete portable control and a few installed GarageBand family suggestions.
+The page first checks that every required pitch is audible and sustained, then
+asks about tone and full-mix fit. Source samplers and resynthesis appear as
+optional textures unless they pass the complete-instrument and listening gates.
+
+### Feedback is a by-product of normal work
+
+Every explicit local action creates an append-only decision event:
+
+- candidate heard;
+- primary/optional/reject choice;
+- problem tags;
+- phrase edit diff;
+- solo versus full-mix context;
+- chosen GarageBand patch; and
+- export actually used.
+
+This immediately improves the user's own project history and future local
+candidate order. A separate **Contribute this review** step previews the exact
+fields that would leave the machine and requires opt-in. No dwell time, play
+count or unclicked default is treated as a musical preference.
+
+“Most popular” must be contextual, for example: “12 of 18 reviewed bass-body
+passages preferred this process for attacks.” It must never be presented as a
+universal accuracy percentage. Show the number of reviews, role, source type,
+model/version and how many listeners selected `equivalent` or `neither`.
+
+### Local technical shape
+
+- A small Python HTTP API owns project discovery, immutable artifacts, SQLite
+  decisions and the existing CLI operations.
+- The optional AI worker stays isolated and reports progress through server-sent
+  events; a persistent model process can be added after the initial UX is
+  stable.
+- A bundled browser client uses Web Audio for sample-aligned A/B loops and a
+  canvas piano roll. Node is a development/build dependency only; end users
+  receive compiled static assets in the Python package.
+- Every operation is content-addressed and resumable. Closing the browser does
+  not lose a completed transcription or review.
+- The server uses a per-launch token, accepts local files only through explicit
+  project roots and binds to loopback unless a future, separately secured
+  collaboration mode is deliberately enabled.
+- The existing static review JSON remains exportable so CLI, skill and web
+  workflows share one contract rather than creating a hidden web-only store.
+
+The first workbench slice should consume existing outputs. It does not need a
+new model, public account system, cloud database or arbitrary upload endpoint
+to prove that this interaction is clearer than today's separate HTML pages.
+
+## Benchmark design
+
+### Golden material
+
+Maintain two strictly separated sets:
+
+- **Private personal goldens:** the existing Lidl, Slayyyter and other
+  authorised local songs. Audio and full review artifacts stay under ignored
+  `work/`; only aggregate findings may be documented.
+- **Public contributor goldens:** short owned, commissioned, public-domain or
+  explicitly licensed excerpts with aligned reference MIDI and permission for
+  web listening and evaluation.
+
+Every golden must record role, genre, BPM, key/tuning, source type, stem
+separator, audible bleed/artifacts, polyphony, expected instruments, rights
+status and the exact reference/candidate hashes.
+
+Start with 10–20 second passages. Include at least:
+
+- monophonic and two-role bass;
+- melody plus accompaniment keys;
+- lead and backing vocals;
+- kick/snare/hats plus mixed `other_kit` percussion;
+- sustained strings/pads;
+- one clean full mix and one separator-damaged full mix; and
+- silence/near-silence, repeated notes and a five-second-boundary stress case.
+
+### Candidate matrix
+
+Run the same excerpt through the following lanes without overwriting any raw
+candidate:
+
+| Lane | Input | MuScriptor condition | Purpose |
+| --- | --- | --- | --- |
+| S0 | isolated stem | none | current Sunofriend specialist baseline |
+| M0 | full mix | none | discover instrument labels; never auto-promote |
+| M1 | full mix | discovered labels | test stable multi-track reconstruction |
+| M2 | full mix | known chord/stem metadata labels | test informed conditioning |
+| M3 | each isolated stem | expected role only | compare learned and specialist stem transcription |
+| M4 | mixed-role stem | one role per pass | expose bass-body/pluck or keys-melody/accompaniment alternatives |
+| H1 | mix plus stems | consensus/repair after all raw passes | Sunofriend hybrid candidate |
+| E1 | hosted Mirelo Studio export | user-initiated only | labelled external comparator when authorised |
+
+The current `ai-matrix` command implements the shared quality/report schema for
+completed M0–M4 AI bake-off runs from one backend, checkpoint, model config,
+worker, model/runtime version and execution profile at a time. S0/H1/E1 and
+cross-model-size comparison require a later outer comparison layer; they are
+not silently treated as MuScriptor runs.
+
+For M0–M4, compare small, medium and large only after their checkpoints are
+explicitly accepted and pinned. For the installed 0.2.1 runtime, use the
+truthfully recorded safe baseline of greedy decoding, batch size 1, beam size
+1, CFG 1.0 and independent five-second chunks. Test beam search, batching and
+other CFG values only as separate labelled challengers. A future runtime with
+verified prelude support must use a new manifest value and separate lane.
+
+### Evaluation dimensions
+
+Objective evidence:
+
+- onset, frame and offset precision/recall/F1;
+- drum onset F1 and role/instrument-label correctness;
+- pitch-class/chroma, absolute pitch and octave accuracy;
+- contour direction, mean source support and chord-tone/non-chord-tone
+  preservation;
+- duplicate bursts, same-pitch overlaps, note density and maximum polyphony;
+- timing p50/p95, whole-song drift and five-second-boundary errors;
+- detected versus expected instruments; and
+- note/pitch mutations introduced by every repair stage.
+
+Listening evidence must be separated by question:
+
+- **transcription:** recognisable line, missing notes, extra notes, pitch,
+  octave, onset, duration, groove and phrase continuity;
+- **role allocation:** correct instrument family, mixed roles kept separate,
+  accompaniment versus melody and bleed/phantom notes;
+- **instrument:** every note audible, consistent tone, useful register,
+  ballpark source character and fit in the full mix; and
+- **GarageBand handoff:** exact BPM/downbeat, no drift, correct drum routing,
+  editable tracks and a named installed patch that works in context.
+
+Automated scores are diagnostic. A candidate is promoted only after a blind
+listening win on the declared question and a GarageBand check where relevant.
+
+## Hybrid improvement strategy
+
+### 1. Use MuScriptor as semantic evidence, not a final authority
+
+An unrestricted pass may say that a passage contains voice, synth pad and
+electric bass even when its raw notes are too dense. Retain those labels as a
+proposal, then re-run only plausible groups and compare each result with its
+stem and source support.
+
+### 2. Recover the information MuScriptor cannot encode
+
+Sunofriend should add, without altering the raw model candidate:
+
+- source-derived velocity/expression;
+- known BPM, downbeat, tuning and GarageBand tempo metadata;
+- repeated-phrase evidence;
+- chord/key evidence that flags rather than deletes expressive non-chord tones;
+- octave/range checks by musical role; and
+- specialist drum-family and stem-artifact handling.
+
+### 3. Build role-specific consensus
+
+Do not average all notes. Align candidates into short phrases and classify
+events as:
+
+- agreed and source-supported;
+- model-only but source-supported;
+- specialist-only but source-supported;
+- disputed pitch/octave/boundary;
+- unsupported/duplicate; or
+- unresolved intended role.
+
+The review page should show the smallest disputed musical unit first. A bass
+policy may favour MuScriptor attacks while retaining Sunofriend durations; a
+kick policy may do the reverse. Learn these policies per role and context, not
+as a universal model ranking.
+
+### 4. Separate sound selection from note selection
+
+MuScriptor supplies a broad instrument family, not a GarageBand patch match.
+For the selected MIDI, Sunofriend should offer:
+
+1. one complete, dependable portable/GM control;
+2. two or three installed GarageBand family candidates informed by explicit
+   local full-mix history;
+3. an authorised source sampler only if every performance pitch and duration
+   passes the playability gate; and
+4. source-fitted resynthesis as an optional layer until it beats a complete
+   patch in blind listening.
+
+No public server will copy or render Apple factory samples. Users report exact
+patch names, GarageBand version, role, register and full-mix decision from their
+own installation.
+
+## Performance and speed plan
+
+Measure cold and warm runs separately on every supported device. Record model
+load time, time to first notes, total wall time, real-time factor, peak memory,
+chunk count, note count and boundary warnings.
+
+Optimisations must be introduced one at a time:
+
+1. **Persistent local worker:** load one checkpoint once instead of starting a
+   new Python process and rebuilding the model for every role.
+2. **Content-addressed cache:** key resampled audio, model output and converted
+   MIDI by audio hash, checkpoint hash, model config, instrument set and decode
+   options.
+3. **Preview/full cascade:** run small first; send only disputed roles or
+   phrases to medium/large. Never call the preview the final result.
+4. **Shared preprocessing:** investigate a small upstream adapter/fork that
+   reuses 16 kHz audio and mel features across conditioned passes. Keep this
+   behind equivalence tests because the public API does not currently expose a
+   feature cache.
+5. **Safe stem scheduling:** process independent stems concurrently only up to
+   a measured memory limit; preserve deterministic ordering in the report.
+6. **Progressive results:** stream each five-second chunk into a reviewable
+   piano roll while the rest continues.
+7. **Boundary-aware batching:** retain batch size 1 for the pinned 0.2.1
+   baseline and report five-second boundaries explicitly. Test `batch_size=4`
+   only on a dedicated boundary golden and accept it only if the speed gain
+   outweighs measured/listened errors. Re-evaluate this policy if a later
+   pinned runtime genuinely exposes prelude forcing.
+8. **Selective beam search:** use it only on high-disagreement phrases after it
+   proves a gain; never pay the full-song cost by default.
+
+Initial targets are relative, because hardware and model-size baselines are not
+yet measured: cut warm repeated-work wall time by at least 50%, avoid re-running
+unchanged roles, and make the small preview available before the full-quality
+pass. A real-time-factor target should be set only after the first complete
+hardware matrix.
+
+## Community feedback system
+
+“Feedback from all web users” must mean **feedback from every user who freely
+chooses to contribute**, not silent collection from every visitor.
+
+### Three contribution levels
+
+| Level | Sent to Sunofriend | Default | Use |
+| --- | --- | --- | --- |
+| Local only | nothing | yes | private songs, personal profile and corrections |
+| Review telemetry | candidate/artifact hashes, blind choices, error tags, edit diff, timing and optional DAW/hardware metadata | explicit opt-in per submission | aggregate comparison and regression gates |
+| Golden donation | approved 10–15 s audio/MIDI excerpt, rights/licence declaration and the same review data | separate explicit consent | public benchmark or later training after moderation |
+
+Raw filenames, paths, account email, lyrics and full songs are excluded from
+ordinary review telemetry. A hash is not automatically anonymous: rare content
+or a linked account may still make a record identifiable. Pseudonymous records
+must therefore be treated as personal data and kept separately from account
+details, following the ICO's current
+[pseudonymisation](https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/data-sharing/anonymisation/pseudonymisation/)
+and [data-minimisation](https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/data-protection-principles/a-guide-to-the-data-protection-principles/data-minimisation/)
+guidance.
+
+Before a public beta, publish a plain-language privacy notice, purposes,
+retention periods, deletion/export route, processor list and contact. Complete
+a DPIA/security review when the concrete hosting design is known. This plan is
+an engineering boundary, not legal advice.
+
+### Review experience
+
+Use one clear task per page and randomise candidate identities. The source is a
+reference, not a candidate. Include a dependable hidden control and, where
+appropriate, a deliberately weak anchor. This follows the useful structure of
+the ITU's [MUSHRA subjective-audio method](https://www.itu.int/dms_pubrec/itu-r/rec/bs/R-REC-BS.1534-1-200301-S%21%21PDF-E.pdf),
+adapted for musical correctness rather than codec quality.
+
+Required controls:
+
+- sample-accurate, level-matched switching and looped 5–15 second excerpts;
+- repeated-beat audition for drums and a role-appropriate phrase for pitched
+  instruments;
+- source-only, candidate-only and full-mix views;
+- plain explanations of what the listener should judge;
+- explicit `equivalent`, `neither`, `cannot tell` and `not my expertise`
+  choices;
+- free text plus structured error tags;
+- a final review summary before submission; and
+- a downloadable signed JSON copy for the contributor.
+
+The browser can ask for optional experience level, listening device, DAW and
+software version, but it should not require unnecessary identity or demographic
+data. Repeat a small number of controls to estimate within-listener consistency.
+Do not discard novice feedback: report cohorts separately when expertise makes
+a material difference.
+
+### Minimum feedback schema
+
+Each append-only review event should contain:
+
+- schema, review ID, created time and consent version;
+- public golden ID or local content-derived candidate IDs;
+- source/candidate/model/checkpoint/config hashes and licence lane;
+- task type, role, excerpt duration, BPM/key/tuning and source quality tags;
+- randomised presentation order and control/anchor policy;
+- all candidate ratings, pairwise choice, confidence and error tags;
+- optional corrected MIDI hash and note-level add/delete/move/resize/velocity
+  diff;
+- optional GarageBand/DAW, patch, OS, hardware and listening context;
+- processing timings and warning counts; and
+- an immutable zero-effects section proving that submission changed no local
+  audio, MIDI or model artifacts.
+
+### Storage and service boundary
+
+- Keep local personal profiles in SQLite/JSON under an explicit user-selected
+  directory.
+- Use a small authenticated append-only API and relational database for public
+  review events; relational queries suit candidates, roles, users/consent and
+  repeated ratings better than DynamoDB at this stage.
+- Use S3-compatible object storage only for separately consented golden audio,
+  MIDI and rendered controls; encrypt it, use short-lived signed URLs and keep
+  licences/retention beside each object.
+- Store public benchmark assets separately from private/pending donations.
+- Never accept a browser path, arbitrary server-side URL or executable sampler
+  preset as a feedback upload.
+
+Start with GitHub-hosted static cleared reviews plus a narrow review-ingestion
+API. Do not start with arbitrary public song upload or hosted model inference.
+
+### How feedback changes the product
+
+Feedback is not training data by default. Apply it in this order:
+
+1. publish aggregate, role-stratified scorecards and failure examples;
+2. detect regressions between Sunofriend versions and model/config variants;
+3. rank which candidate a user should audition first, while retaining all raw
+   alternatives;
+4. learn local/global role-specific patch and repair preferences from explicit
+   choices;
+5. use disagreement and low confidence for active selection of the next review
+   excerpt; and
+6. only after rights, quality and consent checks, build a versioned correction
+   dataset for a small selector/error-correction model.
+
+Because the published MuScriptor training dataset and training pipeline are not
+released and its weights are non-commercial, the first learned Sunofriend
+component should be a small independent candidate selector or note-error
+classifier trained on rights-cleared corrections—not an untracked fine-tune of
+MuScriptor. Any trained artifact needs its own data card, licence, held-out
+goldens and no-participant leakage test.
+
+## Phase 4 carry-forward register
+
+Phase 4's negative listening results are evidence, not unfinished bugs. Its
+remaining ideas are carried forward only where Phase 5 can give them a narrow
+question and a human listening gate:
+
+| Phase 4 item | Phase 5 home | Gate before work |
+| --- | --- | --- |
+| Query/learned isolation for mixed stems | 5.1 discovery and 5.3 hybrid consensus | One clearly audible 10–20 second role target; unchanged source and specialist MIDI remain controls |
+| Neural denoise or de-reverb | Optional 5.3 challenger | Must improve downstream pitch/boundary evidence and blind musical recognition, not just source energy |
+| Neural/DDSP timbre | 5.6 instrument feedback, then 5.7 only if justified | MIDI fixed first; complete playable patch mandatory; identical performance and full-mix listening |
+| Audio Unit model hosting | Optional 5.6 cross-DAW work | Only after a distributable sound wins; it is not required for model research |
+| Generated missing samples | 5.6/5.7 instrument experiment | Generated zones labelled separately, rights/licence recorded and every required pitch audibly checked |
+| `pkg_resources`/resampy warning | 5.2 controlled runtime benchmark | Resolve through a measured dependency update; never hide the warning |
+| Oversized CLI/match/bundle orchestrators | Incremental maintenance across 5.0–5.6 | Characterization tests first; typed workbench operation now starts the separation, shared role registry comes before 5.1, bundle/match stages before 5.6 |
+
+The rejected source sampler is not scheduled for more automatic refinement on
+the same performance. The preferred complete patch and unchanged-source MIDI
+remain the mandatory controls for later work.
+
+## Delivery increments
+
+### 5.0 — Local Workbench vertical slice and shared contract
+
+- Add `sunofriend workbench PROJECT --open`, bound to loopback and offline by
+  default.
+- Build one project home, one stem workspace, sample-aligned source/candidate
+  loops and explicit main/optional/correct/reject choices using existing
+  artifacts only.
+- Store decisions in append-only local SQLite and export the existing reviewed
+  JSON contract; display exactly what an optional contribution would contain.
+- Pin the current upstream MuScriptor behaviour and extend the shared manifest
+  with prelude-forcing, batch, beam, CFG and model-size fields.
+- Success: a user can understand and select one stem result without model
+  knowledge, file-URL restrictions or network access; a second launch restores
+  the complete project state.
+
+Started 19 July 2026:
+
+- [x] add the loopback-only `workbench` command, per-launch token and visible
+  local/no-upload state;
+- [x] discover hash-pinned existing artifacts or accept an explicit catalog,
+  cap the normal view at three and demote `possible`/`uncertain` variants;
+- [x] add project setup, one workspace per stem, shared loop positions,
+  candidate/outcome/problem choices and MIDI download;
+- [x] append decisions to local SQLite, restore them after restart and export a
+  complete local review plus an exact path/audio/MIDI/note-free contribution
+  preview with submission disabled;
+- [x] validate the first slice against the real private Slayyyter Phase 4
+  artifact layout without copying private media; and
+- [x] add content-addressed role-neutral preview rendering, synchronized
+  source/A/B/C switching at a shared second position, explicit-selection
+  whole-arrangement audition and a selected-MIDI GarageBand handoff ZIP;
+- [x] extend the shared AI manifest with validated batch, beam, CFG, model-size,
+  model-config hash and explicit unsupported-prelude fields;
+- [x] attach path-free AI quality, label, boundary and runtime diagnostics to
+  discovered candidates and block no-evidence or severe decoder failures from
+  selection while retaining their raw evidence;
+- [x] reverify source, MIDI, generated media and SoundFont hashes at the point
+  of serving, rendering and handoff rather than trusting startup discovery;
+- [ ] upgrade short-loop blind review from media-element time synchronization
+  to decoded, level-matched, sample-accurate switching before a public beta.
+
+### 5.1 — Full-mix/conditioned bake-off
+
+- [x] Add a model-neutral quality/report schema for one controlled
+  backend/checkpoint matrix and a per-track gate through `sunofriend ai-matrix`.
+- [x] Run M0–M3 with the current small model on one immutable private golden.
+- [x] Compare discovery labels with stem names and role-conditioned stem lanes.
+- [x] Add duplicate-burst, instrument-leakage and five-second-boundary reports.
+- [ ] Add M4 one-role-per-pass lanes for a reviewed mixed-role bass or keys
+  excerpt, then complete the listening gate.
+- Success: the review explains whether full-mix discovery provides useful
+  labels even when raw notes are rejected.
+
+First matrix, 19 July 2026:
+
+- source: private, reconstructed 15-second Lidl full-mix golden already used in
+  Phase 1; all generated evidence remains under ignored `work/` paths;
+- runtime: `muscriptor-small` 0.2.1, checkpoint
+  `bbd482c786b895cf7d8f44185073d951adae2ebb8a66f82ca84cd1f84569549c`,
+  config `3008fc481e4a1cd978e337eb3759260c270892204db5039235ac939e1f42aeb2`;
+- M0 repeated the known 1,912-note failure, including 1,818 drum-labelled notes
+  plus severe duplicate/onset/polyphony burst metrics, and is correctly blocked
+  from audition/selection;
+- M1, conditioned on discovered labels, reduced the result to 169 notes with
+  no severe decoder code; four of five discovered label families remained;
+- M2 produced 107 notes but substituted clean electric guitar for expected
+  labels, so label conditioning is guidance rather than a guaranteed output
+  schema;
+- isolated M3 bass, keys and voice lanes produced 19, 181 and 39 notes without
+  a severe gate; the `other_kit`/drums lane produced zero notes and is retained
+  as diagnostic no-evidence; and
+- same-pitch/onset overlap offers useful role-allocation clues—for example M1
+  piano overlaps 61/106 notes with M3 keys and M1 sax overlaps 28/38 with M3
+  voice—but is explicitly not an accuracy score or automatic winner.
+
+This establishes that conditioning can rescue this excerpt from a decoder
+burst, not that M1 is musically correct. Promotion still requires listening.
+
+### 5.2 — Model-size and performance bake-off
+
+- After explicit checkpoint acceptance, pin medium and large separately.
+- Benchmark CPU/MPS (and CUDA only on contributed hardware), cold/warm,
+  persistent/fresh, greedy/beam and safe/fast chunk settings.
+- Success: choose `preview`, `balanced` and `best` presets from measured
+  Pareto results; do not make large the default merely because its paper score
+  is higher.
+
+### 5.3 — Hybrid phrase consensus
+
+- Align specialist, full-mix and conditioned stem candidates.
+- Add source-support, role, chord, octave and repetition disagreements.
+- Build blind phrase reviews and apply only explicit choices.
+- Success: bass, keys and vocal hybrid candidates beat their current primary
+  on predeclared listening questions without worse timing drift or duplicate
+  leakage.
+
+### 5.4 — Fast local review application
+
+- Add a persistent worker, content cache and progressive review UI.
+- Add piano-roll note correction and export a minimal MIDI edit diff.
+- Keep every review local by default.
+- Success: unchanged reruns reuse verified artifacts; a user can correct a
+  phrase without editing raw JSON or uploading audio.
+
+### 5.5 — Cleared public listening beta
+
+- Publish owned/licensed goldens only.
+- Add randomised blind reviews, controls/anchors, consented JSON submission,
+  deletion/export and a transparent public scorecard.
+- Success: at least 20 complete independent reviews per promoted comparison,
+  acceptable control-repeat consistency and no private audio in telemetry.
+
+### 5.6 — GarageBand and cross-DAW instrument feedback
+
+- Present complete portable controls and role-appropriate local DAW patches.
+- Collect exact patch/version/full-mix decisions and functional failures.
+- Invite contributors to test Logic, Ableton, FL Studio, Reaper and other DAWs
+  without pretending patch names are portable identities.
+- Success: every recommended main instrument is complete across the MIDI
+  performance, and recommendations improve in blind/full-mix use rather than
+  source-similarity score alone.
+
+### 5.7 — Learned ranking/correction experiment
+
+- Build a rights/consent-qualified dataset snapshot and immutable train/test
+  split.
+- Train the smallest independent selector or error classifier that can answer
+  one role-specific question.
+- Compare it with deterministic and personal-history baselines.
+- Success: a held-out listening and note-edit win, a distributable licence and
+  no hidden automatic promotion.
+
+## Promotion gates
+
+A new MIDI path may become recommended for one role only when:
+
+1. its raw candidate, model/config and inputs are hash-pinned;
+2. silence, density, duplicate, role-leakage and timing checks pass;
+3. it wins the declared blind recognition/usefulness comparison, with
+   `equivalent` and `neither` retained as valid outcomes;
+4. a GarageBand import preserves BPM, downbeat and full-song timing;
+5. the recommended instrument plays every required note consistently; and
+6. licence and rights permit the intended private, public or commercial lane.
+
+Community majority never overrides a user's personal composition choice.
+Public results should show sample counts, uncertainty and cohort/context rather
+than a single unexplained percentage.
+
+## Current implementation boundary
+
+The usable 5.0 Workbench slice now covers project/stem decisions, cached neutral
+previews, full-mix confirmation and a selected GarageBand handoff. It keeps
+original MIDI unchanged and still has no upload or submission endpoint.
+MuScriptor execution settings and checkpoint/config hashes are now explicit,
+and the first immutable M0–M3 small-model matrix publishes per-role quality,
+five-second-boundary, label-stability and cross-lane overlap diagnostics.
+Workbench discovery attaches the same path-free evidence and prevents severe
+or zero-note candidates from becoming main/optional choices.
+
+The next Phase 5.1 increment is an M4 mixed-role bass/keys test plus a listening
+review of the safe M1/M2/M3 lanes. Medium/large checkpoints, decoding-speed
+challengers and any public contribution remain later, separately authorised
+work.
+
+Keep sample-accurate level-matched short-loop review as a requirement before a
+public listening beta. The current media-element switching is deliberately
+described as time-synchronised, not sample-accurate.
+
+## Primary sources
+
+- [MuScriptor paper](https://arxiv.org/pdf/2607.08168)
+- [Official MuScriptor code and runtime](https://github.com/muscriptor/muscriptor)
+- [MuScriptor medium model card, terms and limitations](https://huggingface.co/MuScriptor/muscriptor-medium)
+- [Mirelo Audio-to-MIDI product description](https://mirelo.ai/models/audio-to-midi)
+- [MuScriptor's consent-gated analytics implementation](https://github.com/muscriptor/muscriptor/blob/302343e8992bdfc619f77f1988168374ed5d675d/web/src/analytics.ts)
+- [ITU-R BS.1534 MUSHRA recommendation](https://www.itu.int/dms_pubrec/itu-r/rec/bs/R-REC-BS.1534-1-200301-S%21%21PDF-E.pdf)
+- [ICO pseudonymisation guidance](https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/data-sharing/anonymisation/pseudonymisation/)
+- [ICO data-minimisation guidance](https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/data-protection-principles/a-guide-to-the-data-protection-principles/data-minimisation/)

@@ -1,10 +1,9 @@
-"""Licence-aware boundary for optional AI transcription workers.
+"""Licence-aware boundary for optional AI transcription and cleanup workers.
 
 The main Sunofriend environment deliberately does not import PyTorch. Heavy or
 licence-restricted models run in a separate Python 3.12 process and exchange
-versioned JSON with the deterministic core. Phase 1 initially exposes runtime
-diagnostics and the candidate schema; individual model adapters can then be
-added and evaluated without making them required dependencies.
+versioned JSON with the deterministic core. Transcription and cleanup adapters
+remain optional and can be evaluated without becoming core dependencies.
 """
 
 from __future__ import annotations
@@ -30,6 +29,7 @@ AI_REQUIREMENTS = (
     "game",
     "rmvpe",
     "pesto",
+    "demucs",
     "all",
 )
 GAME_MODEL_FILENAMES = (
@@ -45,6 +45,9 @@ RMVPE_MODEL_SHA256 = (
 )
 PESTO_MODEL_SHA256 = (
     "16c32e06ddd950e3e4866dfa3c7f8a87c4988f8adf43e57977b189f031f26f3e"
+)
+DEMUCS_HTDEMUCS_SHA256 = (
+    "8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4"
 )
 
 
@@ -127,6 +130,35 @@ AI_MODEL_MANIFESTS: dict[str, AIModelManifest] = {
         ),
     ),
 }
+
+
+# Cleanup models have a different worker contract from transcription models.
+# Keeping their manifests separate prevents an unsupported backend from being
+# accepted by AITranscriptionRequest while still making it visible to
+# `ai-doctor`.
+AI_CLEANUP_MODEL_MANIFESTS: dict[str, AIModelManifest] = {
+    "demucs": AIModelManifest(
+        backend="demucs",
+        name="Demucs htdemucs",
+        tasks=("local-source-separation", "target-residual-cleanup"),
+        code_license="MIT",
+        weights_license=(
+            "No separate pretrained-checkpoint licence identified in the "
+            "official repository; private local evaluation only"
+        ),
+        package="demucs",
+        homepage="https://github.com/facebookresearch/demucs",
+        distribution_policy=(
+            "Keep the exact official checkpoint external, hash-verify before "
+            "deserialisation, never vendor or redistribute it, and do not "
+            "promote its output without a listening review."
+        ),
+    ),
+}
+
+
+def _all_model_manifests() -> dict[str, AIModelManifest]:
+    return {**AI_MODEL_MANIFESTS, **AI_CLEANUP_MODEL_MANIFESTS}
 
 
 @dataclass(frozen=True)
@@ -493,6 +525,34 @@ def resolve_pesto_model(value: str | Path | None = None) -> Path:
     return candidate.absolute()
 
 
+def _default_demucs_model() -> Path:
+    return (
+        Path.home()
+        / ".local"
+        / "share"
+        / "sunofriend"
+        / "models"
+        / "demucs-4.0.1-htdemucs"
+        / "955717e8-8726e21a.th"
+    )
+
+
+def resolve_demucs_model(value: str | Path | None = None) -> Path:
+    """Resolve the pinned official htdemucs checkpoint without networking."""
+
+    configured = value or os.environ.get("SUNOFRIEND_DEMUCS_MODEL")
+    candidate = Path(configured).expanduser() if configured else _default_demucs_model()
+    if not candidate.is_file():
+        source = "SUNOFRIEND_DEMUCS_MODEL" if configured else "default path"
+        raise FileNotFoundError(
+            f"Demucs htdemucs checkpoint was not found via {source}: {candidate}; "
+            "run scripts/setup-demucs-model.sh after accepting its private-use notice"
+        )
+    if candidate.suffix.lower() != ".th":
+        raise ValueError("Demucs checkpoint must be a .th file")
+    return candidate.absolute()
+
+
 def _sha256_file(path: Path) -> str:
     import hashlib
 
@@ -549,9 +609,20 @@ def collect_muscriptor_checkpoint() -> dict[str, Any]:
         report["config_sha256"] = _sha256_file(config)
         try:
             document = json.loads(config.read_text(encoding="utf-8"))
-            report["variant"] = document.get("variant")
+            if not isinstance(document, dict):
+                raise ValueError("MuScriptor config must be a JSON object")
+            model_type = document.get("model_type")
+            variant = document.get("variant")
+            if model_type != "muscriptor":
+                raise ValueError("MuScriptor config model_type must be 'muscriptor'")
+            if variant not in {"small", "medium", "large"}:
+                raise ValueError(
+                    "MuScriptor config variant must be small, medium or large"
+                )
+            report["variant"] = variant
             report["model_config"] = document
-        except (OSError, json.JSONDecodeError) as exc:
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
+            report["config_ready"] = False
             report["config_error"] = f"{type(exc).__name__}: {exc}"
     return report
 
@@ -673,6 +744,42 @@ def collect_pesto_model() -> dict[str, Any]:
     }
 
 
+def collect_demucs_model() -> dict[str, Any]:
+    """Report the exact local htdemucs checkpoint; never download it."""
+
+    configured = os.environ.get("SUNOFRIEND_DEMUCS_MODEL")
+    try:
+        model = resolve_demucs_model(configured)
+    except (FileNotFoundError, ValueError) as exc:
+        return {
+            "checkpoint_ready": False,
+            "checkpoint_error": str(exc),
+            "configuration": {
+                "model_env": "SUNOFRIEND_DEMUCS_MODEL",
+                "default_path": str(_default_demucs_model()),
+            },
+        }
+
+    sha256 = _sha256_file(model)
+    return {
+        "checkpoint_ready": sha256 == DEMUCS_HTDEMUCS_SHA256,
+        "checkpoint": str(model),
+        "checkpoint_bytes": model.stat().st_size,
+        "checkpoint_sha256": sha256,
+        "expected_checkpoint_sha256": DEMUCS_HTDEMUCS_SHA256,
+        "checkpoint_error": (
+            None
+            if sha256 == DEMUCS_HTDEMUCS_SHA256
+            else "Demucs checkpoint hash does not match the pinned official htdemucs model"
+        ),
+        "variant": "demucs-4.0.1/htdemucs/955717e8",
+        "configuration": {
+            "model_env": "SUNOFRIEND_DEMUCS_MODEL",
+            "default_path": str(_default_demucs_model()),
+        },
+    }
+
+
 _RUNTIME_PROBE = r"""
 import importlib.metadata
 import json
@@ -688,6 +795,7 @@ for distribution in (
     "soxr",
     "pesto-pitch",
     "torchaudio",
+    "demucs",
 ):
     try:
         packages[distribution] = importlib.metadata.version(distribution)
@@ -739,7 +847,7 @@ def collect_ai_diagnostics(
             "runtime_error": str(exc),
             "backends": {
                 name: {"software_ready": False, "manifest": asdict(manifest)}
-                for name, manifest in AI_MODEL_MANIFESTS.items()
+                for name, manifest in _all_model_manifests().items()
             },
         }
 
@@ -760,7 +868,7 @@ def collect_ai_diagnostics(
             "runtime_error": f"{type(exc).__name__}: {exc}",
             "backends": {
                 name: {"software_ready": False, "manifest": asdict(manifest)}
-                for name, manifest in AI_MODEL_MANIFESTS.items()
+                for name, manifest in _all_model_manifests().items()
             },
         }
 
@@ -809,6 +917,13 @@ def collect_ai_diagnostics(
             "torchaudio_version": worker["packages"].get("torchaudio"),
             "manifest": asdict(AI_MODEL_MANIFESTS["pesto"]),
             **collect_pesto_model(),
+        },
+        "demucs": {
+            "software_ready": bool(worker["packages"].get("demucs"))
+            and bool(torch_report.get("importable")),
+            "version": worker["packages"].get("demucs"),
+            "manifest": asdict(AI_CLEANUP_MODEL_MANIFESTS["demucs"]),
+            **collect_demucs_model(),
         },
     }
     return {
@@ -865,10 +980,24 @@ def ai_requirement_ready(report: Mapping[str, Any], requirement: str) -> bool:
             and pesto.get("software_ready")
             and pesto.get("checkpoint_ready")
         )
+    if requirement == "demucs":
+        demucs = backends.get("demucs", {})
+        return bool(
+            report.get("runtime_ready")
+            and demucs.get("software_ready")
+            and demucs.get("checkpoint_ready")
+        )
     if requirement == "all":
-        return bool(report.get("runtime_ready") and report.get("torch_ready")) and all(
-            bool(backends.get(name, {}).get("software_ready"))
-            for name in AI_MODEL_MANIFESTS
+        return all(
+            ai_requirement_ready(report, capability)
+            for capability in (
+                "torch",
+                "muscriptor-checkpoint",
+                "game",
+                "rmvpe",
+                "pesto",
+                "demucs",
+            )
         )
     return bool(report.get("runtime_ready")) and bool(
         backends.get(requirement, {}).get("software_ready")
@@ -877,6 +1006,7 @@ def ai_requirement_ready(report: Mapping[str, Any], requirement: str) -> bool:
 
 __all__ = [
     "AI_CANDIDATE_SCHEMA",
+    "AI_CLEANUP_MODEL_MANIFESTS",
     "AI_MODEL_MANIFESTS",
     "AI_REQUEST_SCHEMA",
     "AI_REQUIREMENTS",
@@ -884,6 +1014,7 @@ __all__ = [
     "GAME_MODEL_FILENAMES",
     "RMVPE_MODEL_SHA256",
     "PESTO_MODEL_SHA256",
+    "DEMUCS_HTDEMUCS_SHA256",
     "AIModelManifest",
     "AITranscriptionBackend",
     "AITranscriptionCandidate",
@@ -894,10 +1025,12 @@ __all__ = [
     "collect_game_model",
     "collect_rmvpe_model",
     "collect_pesto_model",
+    "collect_demucs_model",
     "collect_ai_diagnostics",
     "resolve_ai_python",
     "resolve_muscriptor_checkpoint",
     "resolve_game_model",
     "resolve_rmvpe_model",
     "resolve_pesto_model",
+    "resolve_demucs_model",
 ]

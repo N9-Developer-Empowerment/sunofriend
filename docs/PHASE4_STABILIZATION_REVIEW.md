@@ -1,6 +1,6 @@
 # Phase 4 stabilization review
 
-Reviewed: 18 July 2026
+Reviewed: 18 July 2026; fixed-MIDI listening addendum: 19 July 2026
 Decision: **the Phase 4 foundations are stable enough to checkpoint, but the
 Phase 4 musical outcome has not yet been achieved.**
 
@@ -23,11 +23,11 @@ goal.
 | Target plus residual reconstruction | Persisted PCM24 source, target and residual for a 16-second keys excerpt | **Achieved for the DSP baseline.** Maximum reconstruction error is `1.19209e-7` against a `1e-6` limit, with zero input mutations. |
 | Cleanup that improves downstream transcription | Source, harmonic target/residual and transient target/residual were transcribed and reviewed | **Not achieved.** The unchanged-source MIDI carried the clearest tune. Harmonic-target MIDI was only a possible accompaniment; the other derivatives were rejected as musically unhelpful. |
 | Neural denoise or de-reverb | No model has been integrated or promoted | **Not started.** This remains conditional on a measurable transcription and listening improvement. |
-| Monophonic DDSP-style timbre model | No generated or resynthesized instrument has been produced | **Not started.** Bass MIDI should be chosen first so timbre is compared using one fixed performance. |
+| Monophonic DDSP-style timbre model | A deterministic harmonic-plus-noise resynthesis baseline was compared with complete GM and source-sampler controls on identical MIDI | **Transparent baseline complete; neural model not started.** Resynthesis was useful and consistent but did not beat the preferred complete GM patch. |
 | Optional Audio Unit model hosting | GarageBand/AUSampler handoff exists, but no neural Audio Unit bridge | **Not started.** It is not required for the next experiment. |
 | Generated missing samples marked separately | The policy is documented; all current samples are extracted source derivatives | **Policy ready; implementation not started.** |
 | Never promote generated output as exact evidence | AI candidates, masks, OpenL3 rankings and personal history remain challengers or advisory evidence | **Achieved as a guardrail.** |
-| Beat the simpler DSP/sample path in listening | Small Time Piano beat the source-derived keys sampler; unchanged-source MIDI beat the cleanup derivatives | **Phase 4 success criterion not met.** No neural cleanup or timbre result has yet beaten the simpler path. |
+| Beat the simpler DSP/sample path in listening | Small Time Piano beat the source-derived keys sampler; unchanged-source MIDI beat the keys cleanup derivatives; Synth Bass 2 beat both the source sampler and fitted resynthesis overall | **Phase 4 success criterion not met.** No neural cleanup or timbre result has yet beaten the simpler complete-patch path. |
 
 ## What the current execution proved
 
@@ -60,6 +60,14 @@ goal.
   source-similarity score.
 - OpenL3 remains useful as a separate shortlist, but it did not discover the
   user's chosen patch. It must stay advisory.
+- The fixed 41-note bass performance made sound quality independently testable.
+  Synth Bass 2 and fitted harmonic-plus-noise resynthesis were both rated
+  ballpark/main, but the complete patch won overall. The source sampler was
+  far/rejected and perceived as missing/inconsistent.
+- Passing an automated every-note audibility threshold is necessary but not
+  sufficient. All three renders passed 41/41, yet the listener still heard
+  inconsistent or missing musical response. Functional and perceptual
+  consistency must remain separate gates.
 
 ### Reproducibility and safety
 
@@ -74,6 +82,9 @@ goal.
   portable program hint, no MIDI and no playability result.
 - All private source audio, models and generated instruments remain under the
   ignored `work/` tree.
+- The fixed-MIDI review export SHA-256 is
+  `8c9d388e13bbbe1740890a5d6fb73046cb856e609309a126ef609a09b30374ac`;
+  its source, MIDI and three candidate hashes match the unchanged review seed.
 
 ## Code review and cleanup
 
@@ -150,3 +161,17 @@ The best next research increment is a learned separation challenger on a
 clearly melody-carrying short passage. If no such keys passage exists, use the
 more promising monophonic bass line instead. Neural timbre or DDSP work should
 follow only after the MIDI choice is stable.
+
+## 19 July listening addendum and handoff
+
+The fixed-MIDI experiment satisfied the gate above and produced a clear
+negative/partial result. A consistent source-fitted timbre can be musically
+useful, but it did not justify replacing or packaging the preferred complete
+patch. Phase 4 should keep the resynthesis artifact as an optional control and
+avoid further work on the rejected source sampler for this performance.
+
+The next programme is now documented separately in the
+[Phase 5 MuScriptor and Community Learning plan](PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md).
+It compares full-mix discovery with conditioned stem/specialist candidates and
+adds an opt-in, metadata-first web feedback design. It does not relax any Phase
+4 listening, playability, rights or provenance gate.

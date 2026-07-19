@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from collections import Counter
 from statistics import median
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 from .ai_runtime import AITranscriptionCandidate
 
@@ -113,6 +113,21 @@ def assess_candidate_quality(
     }
 
 
+def severe_quality_codes(metrics: Mapping[str, Any]) -> list[str]:
+    """Return synth-safety failures, excluding ordinary role-label cautions."""
+
+    codes = []
+    if float(metrics.get("notes_per_second") or 0.0) > 40.0:
+        codes.append("extreme-note-density")
+    if int(metrics.get("max_onsets_in_20ms") or 0) > 64:
+        codes.append("extreme-onset-burst")
+    if float(metrics.get("duplicate_signature_ratio") or 0.0) > 0.2:
+        codes.append("duplicate-note-burst")
+    if int(metrics.get("maximum_simultaneous_notes") or 0) > 64:
+        codes.append("extreme-polyphony")
+    return codes
+
+
 def _candidate_duration(candidate: AITranscriptionCandidate) -> float:
     excerpt = candidate.metadata.get("excerpt")
     if isinstance(excerpt, dict):
@@ -152,4 +167,4 @@ def _empty_metrics() -> dict[str, int | float | None]:
     }
 
 
-__all__ = ["AI_QUALITY_SCHEMA", "assess_candidate_quality"]
+__all__ = ["AI_QUALITY_SCHEMA", "assess_candidate_quality", "severe_quality_codes"]

@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 from sunofriend.ai_runtime import (
     AI_CANDIDATE_SCHEMA,
+    AI_CLEANUP_MODEL_MANIFESTS,
     AI_MODEL_MANIFESTS,
     AI_REQUEST_SCHEMA,
     AI_RUNTIME_SCHEMA,
@@ -20,11 +21,13 @@ from sunofriend.ai_runtime import (
     AITranscriptionRequest,
     ai_requirement_ready,
     collect_ai_diagnostics,
+    collect_demucs_model,
     collect_game_model,
     collect_muscriptor_checkpoint,
     collect_pesto_model,
     collect_rmvpe_model,
     resolve_ai_python,
+    resolve_demucs_model,
     resolve_game_model,
     resolve_muscriptor_checkpoint,
     resolve_pesto_model,
@@ -45,6 +48,10 @@ class AIProtocolTests(unittest.TestCase):
         pesto = AI_MODEL_MANIFESTS["pesto"]
         self.assertEqual(pesto.code_license, "LGPL-3.0")
         self.assertIn("pinned commit", pesto.weights_license)
+        demucs = AI_CLEANUP_MODEL_MANIFESTS["demucs"]
+        self.assertEqual(demucs.code_license, "MIT")
+        self.assertIn("private local evaluation", demucs.weights_license)
+        self.assertIn("never vendor", demucs.distribution_policy)
 
     def test_request_requires_absolute_existing_audio(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -142,7 +149,10 @@ class AIRuntimeTests(unittest.TestCase):
             checkpoint = Path(directory) / "model.safetensors"
             checkpoint.write_bytes(b"checkpoint fixture")
             config = checkpoint.with_name("config.json")
-            config.write_text('{"variant":"small"}', encoding="utf-8")
+            config.write_text(
+                '{"model_type":"muscriptor","variant":"small"}',
+                encoding="utf-8",
+            )
             with patch.dict(
                 os.environ,
                 {"SUNOFRIEND_MUSCRIPTOR_MODEL": str(checkpoint)},
@@ -153,6 +163,22 @@ class AIRuntimeTests(unittest.TestCase):
             self.assertTrue(report["config_ready"])
             self.assertEqual(report["variant"], "small")
             self.assertEqual(len(report["checkpoint_sha256"]), 64)
+
+    def test_muscriptor_checkpoint_rejects_invalid_adjacent_config(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            checkpoint = Path(directory) / "model.safetensors"
+            checkpoint.write_bytes(b"checkpoint fixture")
+            checkpoint.with_name("config.json").write_text(
+                '{"model_type":"other","variant":"small"}', encoding="utf-8"
+            )
+            with patch.dict(
+                os.environ,
+                {"SUNOFRIEND_MUSCRIPTOR_MODEL": str(checkpoint)},
+            ):
+                report = collect_muscriptor_checkpoint()
+            self.assertTrue(report["checkpoint_ready"])
+            self.assertFalse(report["config_ready"])
+            self.assertIn("model_type", report["config_error"])
 
     def test_explicit_missing_muscriptor_checkpoint_does_not_fall_back(self) -> None:
         with self.assertRaisesRegex(FileNotFoundError, "was not found"):
@@ -218,6 +244,25 @@ class AIRuntimeTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "ckpt"):
                 resolve_pesto_model(model)
 
+    def test_demucs_model_resolves_and_requires_the_pinned_hash(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            model = Path(directory) / "955717e8-8726e21a.th"
+            model.write_bytes(b"not the canonical checkpoint")
+            with patch.dict(os.environ, {"SUNOFRIEND_DEMUCS_MODEL": str(model)}):
+                self.assertEqual(resolve_demucs_model(), model)
+                report = collect_demucs_model()
+
+            self.assertFalse(report["checkpoint_ready"])
+            self.assertEqual(len(report["checkpoint_sha256"]), 64)
+            self.assertIn("official htdemucs", report["checkpoint_error"])
+
+    def test_demucs_rejects_non_th_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            model = Path(directory) / "htdemucs.pt"
+            model.write_bytes(b"checkpoint")
+            with self.assertRaisesRegex(ValueError, r"\.th"):
+                resolve_demucs_model(model)
+
     def test_missing_runtime_is_machine_readable(self) -> None:
         report = collect_ai_diagnostics("/definitely/missing/sunofriend-ai-python")
         self.assertEqual(report["schema"], AI_RUNTIME_SCHEMA)
@@ -242,6 +287,7 @@ class AIRuntimeTests(unittest.TestCase):
                 },
                 "rmvpe": {"software_ready": False},
                 "pesto": {"software_ready": False},
+                "demucs": {"software_ready": False},
             },
         }
         self.assertTrue(ai_requirement_ready(report, "torch"))
@@ -259,7 +305,15 @@ class AIRuntimeTests(unittest.TestCase):
             "checkpoint_ready": True,
         }
         self.assertTrue(ai_requirement_ready(report, "pesto"))
+        report["backends"]["demucs"] = {
+            "software_ready": True,
+            "checkpoint_ready": True,
+        }
+        self.assertTrue(ai_requirement_ready(report, "demucs"))
         self.assertTrue(ai_requirement_ready(report, "all"))
+        report["backends"]["muscriptor"]["config_ready"] = False
+        self.assertFalse(ai_requirement_ready(report, "muscriptor-checkpoint"))
+        self.assertFalse(ai_requirement_ready(report, "all"))
 
     @patch("sunofriend.ai_runtime.collect_ai_diagnostics")
     def test_ai_doctor_prints_json_and_honours_requirement(self, mocked) -> None:
@@ -272,6 +326,7 @@ class AIRuntimeTests(unittest.TestCase):
                 "game": {"software_ready": False},
                 "rmvpe": {"software_ready": False},
                 "pesto": {"software_ready": False},
+                "demucs": {"software_ready": False},
             },
         }
         stdout = io.StringIO()
@@ -281,6 +336,49 @@ class AIRuntimeTests(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertEqual(document["required_capability"], "torch")
         self.assertTrue(document["requirement_ready"])
+
+    @patch("sunofriend.ai_bakeoff.run_ai_transcription")
+    @patch("sunofriend.ai_runtime.resolve_muscriptor_checkpoint")
+    def test_ai_transcribe_routes_explicit_muscriptor_execution_controls(
+        self, resolve_model, run_transcription
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            audio = root / "mix.wav"
+            audio.touch()
+            model = root / "model.safetensors"
+            model.touch()
+            resolve_model.return_value = model
+            run_transcription.return_value = {"status": "complete"}
+
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = main(
+                    [
+                        "ai-transcribe",
+                        str(audio),
+                        "--out-dir",
+                        str(root / "runs"),
+                        "--bpm",
+                        "119",
+                        "--batch-size",
+                        "2",
+                        "--beam-size",
+                        "3",
+                        "--cfg-coef",
+                        "1.25",
+                        "--model-size",
+                        "small",
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            options = run_transcription.call_args.kwargs["options"]
+            self.assertEqual(options["batch_size"], 2)
+            self.assertEqual(options["beam_size"], 3)
+            self.assertEqual(options["cfg_coef"], 1.25)
+            self.assertEqual(options["model_size"], "small")
+            self.assertFalse(options["prelude_forcing"])
 
     @patch("sunofriend.ai_bakeoff.run_ai_transcription")
     @patch("sunofriend.ai_runtime.resolve_game_model")
