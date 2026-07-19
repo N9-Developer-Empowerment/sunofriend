@@ -36,6 +36,7 @@ clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 | Preview or route MIDI to an instrument | `preview`, `play` | FluidSynth WAV preview or CoreMIDI/IAC playback |
 | Run an optional local AI transcription challenger | `ai-transcribe` | Isolated worker, explicit local checkpoint, raw candidate, MIDI, hashes and immutable logs |
 | Compare immutable AI transcription lanes | `ai-matrix` | Path-free per-role quality, label stability, chunk-boundary and cross-lane overlap diagnostics without changing raw MIDI |
+| Partition one AI result by its reported label | `ai-label-split` | Exact source-event partition plus deterministic requested/complement MIDI auditions and a byte-identical full-candidate control |
 | Test one MIDI-defined layer inside a mixed stem | `midi-mask` | Short, local harmonic target plus residual with persisted reconstruction evidence and no automatic promotion |
 | Test learned local source cleanup | `ai-cleanup` | Pinned Demucs target plus waveform residual, hard checkpoint verification, deterministic short excerpts and an explicit listening gate |
 | Split one reviewed MIDI into audible roles | `midi-role-split`, `midi-role-split-resolve` | Explicit source-event cluster choice, exact primary-note partition, optional independently transcribed residual layer, local A/B review and a hash-verified user-selected recommendation |
@@ -59,7 +60,10 @@ GarageBand handoff ZIP. AI candidates carry verified execution/checkpoint
 diagnostics; severe decoder failures and zero-note results remain downloadable
 evidence but cannot become main or optional choices. The first small-model
 M0–M3 matrix also shows that label conditioning can prevent one known full-mix
-burst, although listening is still required before promotion. Phase 4 has an
+burst. A subsequent M4 mixed-role bass experiment can now compare strict
+one-role passes, report role collapse and partition one pass by its exact
+model-reported label; its private listening review is still pending and no
+candidate has been promoted. Phase 4 has an
 evidence-first bass/keys golden, a reviewed pinned Demucs
 bass-cleanup challenger, a resolved multi-role MIDI split and a completed
 fixed-MIDI timbre comparison. The role review kept the unchanged primary bass
@@ -260,6 +264,12 @@ Automatic discovery is intentionally conservative. If filenames do not make
 the source/candidate role clear, provide an explicit
 `sunofriend.workbench-catalog.v1` JSON through `--catalog`; candidate files
 must still be inside the project or an explicitly named `--candidate-root`.
+For a focused experiment, each catalog stem may also supply a plain-language
+`review_question` and a `listening_focus` list. The page shows these prompts
+without preselecting a candidate or turning them into scoring criteria. Their
+hash is part of the local review identity, so changing the question starts a
+fresh decision row instead of reusing an answer to an older task. Full prompt
+text stays in the private export and is excluded from contribution preview.
 The browser can export the complete local review JSON and separately previews
 the metadata-only fields that a future opt-in contribution could contain.
 Submission is not implemented or enabled in this slice. Existing preview WAVs
@@ -337,7 +347,36 @@ artifacts, candidate and MIDI hashes. It reports quality per instrument,
 requested/detected-label
 differences, five-second-boundary activity and same-pitch/onset overlap between
 full-mix and isolated-role lanes. These are diagnostics, not an automatic
-accuracy score or winner; audition safe candidates in the Workbench.
+accuracy score or winner; audition safe candidates in the Workbench. Every M4
+lane must use the same source audio, excerpt and positive BPM, request exactly
+one distinct role, and share the matrix's normal execution/checkpoint controls.
+The additional M4 overlap report shows possible duplicated or relabelled notes,
+not correct separation.
+
+When one M4 pass contains both its requested label and off-role labels, create
+an auditable listening derivative without re-running the model:
+
+```bash
+.venv/bin/sunofriend ai-label-split \
+  "/absolute/path/to/completed/M4-run" \
+  --label clean_electric_guitar \
+  --out-dir "/absolute/path/to/fresh-label-split"
+```
+
+This writes `requested-label.mid`, `unexpected-label-complement.mid`, a
+byte-identical `unchanged-full-candidate.mid` and an exact source-index JSON
+partition. Byte-identical `source-request.json` and `source-candidate.json`
+controls let Workbench prove that the partition still matches the verified raw
+candidate; they are private provenance and can contain local paths, so do not
+publish them. It is a partition of model-reported labels, not audio/source
+separation or proof of a physical instrument. The JSON accounts for every raw
+event exactly. Its audition MIDI uses integer pitch and a 1/480-beat tick grid;
+the report records pitch/time quantisation, duplicate-onset collapse and
+same-pitch overlap truncation instead of claiming those renders are lossless.
+Keep the full candidate as the mandatory control and retain the complement. A
+requested label with zero events is no-evidence and the Workbench blocks it
+from audition and main/optional use; a non-empty derivative remains
+review-required and is never promoted automatically.
 
 For an independent vocal-specific result, install GAME's pinned official
 v1.0.3 small ONNX release explicitly, then run the same authorised excerpt:

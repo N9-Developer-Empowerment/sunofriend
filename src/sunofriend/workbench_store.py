@@ -96,22 +96,28 @@ class WorkbenchStore:
         for stem in project.get("stems", []):
             states[str(stem["stem_id"])] = {
                 "role": stem.get("role"),
+                "review_context_sha256": stem.get("review_context_sha256"),
                 "outcome": None,
                 "candidates": {},
                 "main_candidate_id": None,
                 "auditioned_candidates": [],
             }
+        applied_event_count = 0
         for event in self.events(str(project["project_id"])):
             stem = states.get(event["stem_id"])
             if stem is None:
                 continue
+            applied_event_count += 1
             payload = event["payload"]
+            review_context = payload.get("review_context", {})
+            review_context_sha256 = review_context.get("sha256")
             if event["event_type"] == "candidate_decision":
                 stem["candidates"][event["candidate_id"]] = {
                     "decision": payload["decision"],
                     "context": payload["context"],
                     "problem_tags": list(payload.get("problem_tags", [])),
                     "notes": payload.get("notes"),
+                    "review_context_sha256": review_context_sha256,
                     "event_id": event["event_id"],
                     "created_at": event["created_at"],
                 }
@@ -123,6 +129,7 @@ class WorkbenchStore:
                 stem["outcome"] = {
                     "value": payload["outcome"],
                     "context": payload["context"],
+                    "review_context_sha256": review_context_sha256,
                     "event_id": event["event_id"],
                     "created_at": event["created_at"],
                 }
@@ -132,7 +139,7 @@ class WorkbenchStore:
                 candidate_id = event.get("candidate_id")
                 if candidate_id and candidate_id not in stem["auditioned_candidates"]:
                     stem["auditioned_candidates"].append(candidate_id)
-        return {"stems": states, "event_count": sum(1 for _ in self.events(str(project["project_id"])))}
+        return {"stems": states, "event_count": applied_event_count}
 
     def export_review(self, project: Mapping[str, Any]) -> dict[str, Any]:
         project_id = str(project["project_id"])
@@ -144,6 +151,15 @@ class WorkbenchStore:
             "root": project.get("root"),
             "setup": project.get("setup"),
             "catalog_source": project.get("catalog_source"),
+            "review_contexts": [
+                {
+                    "stem_id": stem.get("stem_id"),
+                    "review_context_sha256": stem.get("review_context_sha256"),
+                    "review_question": stem.get("review_question"),
+                    "listening_focus": list(stem.get("listening_focus", [])),
+                }
+                for stem in project.get("stems", [])
+            ],
         }
         review = {
             "schema": WORKBENCH_REVIEW_SCHEMA,
@@ -205,6 +221,9 @@ def contribution_preview(
 
     stems = []
     current_stems = current.get("stems", {})
+    current_stem_ids = {
+        str(stem["stem_id"]) for stem in project.get("stems", [])
+    }
     for stem in project.get("stems", []):
         stem_id = str(stem["stem_id"])
         state = current_stems.get(stem_id, {})
@@ -249,13 +268,16 @@ def contribution_preview(
         },
         "stems": stems,
         "decision_event_count": sum(
-            event.get("event_type") != "candidate_auditioned" for event in events
+            event.get("event_type") != "candidate_auditioned"
+            and event.get("stem_id") in current_stem_ids
+            for event in events
         ),
         "excluded": [
             "audio",
             "midi files",
             "absolute paths",
             "free-text notes",
+            "review questions and listening-focus text",
             "play counts and dwell time",
         ],
         "submission_enabled": False,
@@ -327,6 +349,19 @@ def _validated_event(project: Mapping[str, Any], request: Mapping[str, Any]) -> 
         if context not in _LISTENING_CONTEXTS:
             raise ValueError("unsupported listening context")
         payload = {"context": context}
+
+    review_context_sha256 = stem.get("review_context_sha256")
+    if (
+        not isinstance(review_context_sha256, str)
+        or len(review_context_sha256) != 64
+        or any(character not in "0123456789abcdef" for character in review_context_sha256)
+    ):
+        raise ValueError("workbench stem has no valid review context hash")
+    payload["review_context"] = {
+        "sha256": review_context_sha256,
+        "review_question": stem.get("review_question"),
+        "listening_focus": list(stem.get("listening_focus", [])),
+    }
 
     return {
         "event_id": str(uuid.uuid4()),

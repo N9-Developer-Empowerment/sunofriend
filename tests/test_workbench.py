@@ -13,7 +13,7 @@ from unittest.mock import patch
 from sunofriend.midi import MidiTrack, write_midi_file
 from sunofriend.models import NoteEvent
 from sunofriend.workbench_catalog import build_workbench_catalog, public_catalog
-from sunofriend.workbench_artifacts import WorkbenchArtifacts
+from sunofriend.workbench_artifacts import WorkbenchArtifacts, selected_candidates
 from sunofriend.workbench_server import create_workbench_server
 from sunofriend.workbench_store import WorkbenchStore
 
@@ -158,6 +158,487 @@ class WorkbenchCatalogTests(unittest.TestCase):
                 "Neutral keys candidate",
             )
 
+    def test_explicit_review_guidance_is_preserved_in_public_catalog(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "Guided Song-B minor-113bpm-440hz"
+            candidate_root = root / "outputs"
+            project.mkdir()
+            candidate_root.mkdir()
+            source = project / "Guided Song-bass-B minor-113bpm-440hz.wav"
+            source.write_bytes(b"RIFF-private-mixed-bass")
+            midi = candidate_root / "requested-label.mid"
+            _write_midi(midi, pitch=38)
+            document = root / "catalog.json"
+            document.write_text(
+                json.dumps(
+                    {
+                        "schema": "sunofriend.workbench-catalog.v1",
+                        "stems": [
+                            {
+                                "source": str(source),
+                                "label": "Bass body review",
+                                "role": "bass body",
+                                "review_question": (
+                                    "Does this MIDI follow the deep bass body?"
+                                ),
+                                "listening_focus": [
+                                    "recognisable bass line",
+                                    "pluck leakage",
+                                    "missing or extra notes",
+                                ],
+                                "candidates": [{"midi": str(midi)}],
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            catalog = build_workbench_catalog(
+                project,
+                candidate_roots=[candidate_root],
+                catalog_path=document,
+            )
+            public = public_catalog(catalog)
+            stem = public["stems"][0]
+            self.assertEqual(
+                stem["review_question"],
+                "Does this MIDI follow the deep bass body?",
+            )
+            self.assertEqual(
+                stem["listening_focus"],
+                [
+                    "recognisable bass line",
+                    "pluck leakage",
+                    "missing or extra notes",
+                ],
+            )
+            expected_context = {
+                "review_question": "Does this MIDI follow the deep bass body?",
+                "listening_focus": [
+                    "recognisable bass line",
+                    "pluck leakage",
+                    "missing or extra notes",
+                ],
+            }
+            self.assertEqual(
+                stem["review_context_sha256"],
+                hashlib.sha256(
+                    json.dumps(
+                        expected_context,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ).encode("utf-8")
+                ).hexdigest(),
+            )
+            self.assertNotIn(str(root), json.dumps(public))
+
+    def test_review_prompt_changes_stem_identity_without_changing_legacy_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "Prompt Song-B minor-113bpm-440hz"
+            candidates = root / "outputs"
+            project.mkdir()
+            candidates.mkdir()
+            source = project / "Prompt Song-bass-B minor-113bpm-440hz.wav"
+            source.write_bytes(b"RIFF-prompt-source")
+            midi = candidates / "bass.mid"
+            _write_midi(midi, pitch=38)
+
+            legacy = build_workbench_catalog(project, candidate_roots=[candidates])
+            legacy_stem = legacy["stems"][0]
+            legacy_identity = "\0".join(
+                [
+                    legacy_stem["source"]["sha256"],
+                    "bass",
+                    source.name.casefold(),
+                ]
+            ).encode("utf-8")
+            self.assertEqual(
+                legacy_stem["stem_id"],
+                "stem-" + hashlib.sha256(legacy_identity).hexdigest()[:20],
+            )
+
+            document = root / "catalog.json"
+            base_document = {
+                "schema": "sunofriend.workbench-catalog.v1",
+                "stems": [
+                    {
+                        "source": str(source),
+                        "role": "bass",
+                        "review_question": "Does this preserve the bass body?",
+                        "listening_focus": ["body", "missing notes"],
+                        "candidates": [{"midi": str(midi)}],
+                    }
+                ],
+            }
+            document.write_text(json.dumps(base_document), encoding="utf-8")
+            first = build_workbench_catalog(
+                project,
+                candidate_roots=[candidates],
+                catalog_path=document,
+            )
+            first_stem = first["stems"][0]
+            self.assertNotEqual(first_stem["stem_id"], legacy_stem["stem_id"])
+
+            base_document["stems"][0]["review_question"] = (
+                "Does this preserve the plucked line?"
+            )
+            document.write_text(json.dumps(base_document), encoding="utf-8")
+            second = build_workbench_catalog(
+                project,
+                candidate_roots=[candidates],
+                catalog_path=document,
+            )
+            second_stem = second["stems"][0]
+            self.assertNotEqual(first_stem["stem_id"], second_stem["stem_id"])
+            self.assertNotEqual(
+                first_stem["review_context_sha256"],
+                second_stem["review_context_sha256"],
+            )
+
+    def test_verified_ai_label_split_keeps_complement_advanced(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "Split Song-B minor-113bpm-440hz"
+            candidate_root = root / "label-split"
+            project.mkdir()
+            source = project / "Split Song-bass-B minor-113bpm-440hz.wav"
+            source.write_bytes(b"RIFF-private-mixed-bass")
+            _write_ai_label_split_fixture(
+                candidate_root,
+                label="synth_bass",
+                selected_pitches=(35, 38),
+                complement_pitches=(59,),
+            )
+            document = _write_explicit_split_catalog(
+                root / "catalog.json",
+                source=source,
+                candidate_root=candidate_root,
+                role="bass body",
+            )
+
+            catalog = build_workbench_catalog(
+                project,
+                candidate_roots=[candidate_root],
+                catalog_path=document,
+            )
+            stem = catalog["stems"][0]
+            by_name = {
+                candidate["midi"]["name"]: candidate
+                for candidate in stem["candidates"]
+            }
+            selected = by_name["requested-label.mid"]
+            complement = by_name["unexpected-label-complement.mid"]
+
+            self.assertTrue(selected["primary"])
+            self.assertFalse(selected["diagnostic_only"])
+            self.assertFalse(selected["audition_blocked"])
+            self.assertEqual(selected["ai_diagnostics"]["note_count"], 2)
+            self.assertEqual(selected["ai_diagnostics"]["model_size"], "small")
+            self.assertEqual(
+                selected["ai_diagnostics"]["requested_labels"], ["synth_bass"]
+            )
+            self.assertEqual(
+                selected["ai_diagnostics"]["derivative"]["partition"],
+                "selected",
+            )
+            self.assertFalse(complement["primary"])
+            self.assertTrue(complement["diagnostic_only"])
+            self.assertFalse(complement["audition_blocked"])
+            self.assertEqual(complement["ai_diagnostics"]["note_count"], 1)
+            self.assertEqual(
+                complement["ai_diagnostics"]["detected_labels"],
+                ["clean_electric_guitar"],
+            )
+            self.assertEqual(
+                complement["ai_diagnostics"]["derivative"]["partition"],
+                "complement",
+            )
+            self.assertEqual(stem["primary_candidate_count"], 1)
+
+    def test_zero_note_ai_label_split_target_cannot_be_selected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "Missing Role Song-B minor-113bpm-440hz"
+            candidate_root = root / "label-split"
+            project.mkdir()
+            source = project / "Missing Role Song-bass-B minor-113bpm-440hz.wav"
+            source.write_bytes(b"RIFF-private-mixed-bass")
+            _write_ai_label_split_fixture(
+                candidate_root,
+                label="synth_bass",
+                selected_pitches=(),
+                complement_pitches=(59, 62),
+            )
+            document = _write_explicit_split_catalog(
+                root / "catalog.json",
+                source=source,
+                candidate_root=candidate_root,
+                role="bass body",
+            )
+
+            catalog = build_workbench_catalog(
+                project,
+                candidate_roots=[candidate_root],
+                catalog_path=document,
+            )
+            stem = catalog["stems"][0]
+            target = next(
+                candidate
+                for candidate in stem["candidates"]
+                if candidate["midi"]["name"] == "requested-label.mid"
+            )
+            self.assertTrue(target["audition_blocked"])
+            self.assertTrue(target["diagnostic_only"])
+            self.assertFalse(target["primary"])
+            self.assertEqual(target["ai_diagnostics"]["note_count"], 0)
+            self.assertIn(
+                "no-note-evidence", target["ai_diagnostics"]["block_reasons"]
+            )
+
+            store = WorkbenchStore(root / "state" / "workbench.sqlite3")
+            for decision in ("main", "optional"):
+                with self.subTest(decision=decision), self.assertRaisesRegex(
+                    ValueError, "diagnostic-only"
+                ):
+                    store.append(
+                        catalog,
+                        {
+                            "event_type": "candidate_decision",
+                            "stem_id": stem["stem_id"],
+                            "candidate_id": target["candidate_id"],
+                            "decision": decision,
+                            "context": "solo",
+                            "problem_tags": [],
+                        },
+                    )
+
+    def test_ai_label_split_cross_artifact_tampering_is_rejected(self) -> None:
+        cases = (
+            "partition-label",
+            "partition-note",
+            "source-candidate-sha",
+            "evidence-indices",
+            "partition-flags",
+            "effects",
+            "bpm",
+        )
+        for case in cases:
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                project = root / "Tampered Split-B minor-113bpm-440hz"
+                candidate_root = root / "label-split"
+                project.mkdir()
+                source = project / "Tampered Split-bass-B minor-113bpm-440hz.wav"
+                source.write_bytes(b"RIFF-private-mixed-bass")
+                _write_ai_label_split_fixture(
+                    candidate_root,
+                    label="synth_bass",
+                    selected_pitches=(35, 38),
+                    complement_pitches=(59,),
+                )
+                report = _read_split_report(candidate_root)
+                partition = _read_split_partition(candidate_root)
+                if case == "partition-label":
+                    partition["label"] = "electric_bass"
+                elif case == "partition-note":
+                    partition["selected"][0]["note"]["pitch"] += 12.0
+                elif case == "source-candidate-sha":
+                    partition["source_candidate_sha256"] = "0" * 64
+                elif case == "evidence-indices":
+                    report["evidence"]["selected_source_indices"] = [1, 0]
+                elif case == "partition-flags":
+                    partition["partition"]["exhaustive"] = False
+                elif case == "effects":
+                    report["effects"]["automatic_promotion"] = True
+                elif case == "bpm":
+                    report["bpm"] = 114.0
+                _rewrite_split_documents(
+                    candidate_root,
+                    report=report,
+                    partition=partition,
+                )
+                document = _write_explicit_split_catalog(
+                    root / "catalog.json",
+                    source=source,
+                    candidate_root=candidate_root,
+                    role="bass body",
+                )
+
+                with self.assertRaisesRegex(ValueError, "adjacent AI label"):
+                    build_workbench_catalog(
+                        project,
+                        candidate_roots=[candidate_root],
+                        catalog_path=document,
+                    )
+
+    def test_ai_label_split_same_count_different_midi_note_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "Wrong Notes-B minor-113bpm-440hz"
+            candidate_root = root / "label-split"
+            project.mkdir()
+            source = project / "Wrong Notes-bass-B minor-113bpm-440hz.wav"
+            source.write_bytes(b"RIFF-private-mixed-bass")
+            _write_ai_label_split_fixture(
+                candidate_root,
+                label="synth_bass",
+                selected_pitches=(35, 38),
+                complement_pitches=(59,),
+            )
+            partition = _read_split_partition(candidate_root)
+            changed_rows = json.loads(json.dumps(partition["selected"]))
+            for row in changed_rows:
+                row["note"]["pitch"] += 12.0
+            selected_midi = candidate_root / "requested-label.mid"
+            _write_partition_midi(selected_midi, changed_rows)
+            report = _read_split_report(candidate_root)
+            report["artifacts"][selected_midi.name] = _record(
+                selected_midi, relative=True
+            )
+            _rewrite_split_documents(
+                candidate_root,
+                report=report,
+                partition=partition,
+            )
+            document = _write_explicit_split_catalog(
+                root / "catalog.json",
+                source=source,
+                candidate_root=candidate_root,
+                role="bass body",
+            )
+
+            with self.assertRaisesRegex(ValueError, "MIDI notes disagree"):
+                build_workbench_catalog(
+                    project,
+                    candidate_roots=[candidate_root],
+                    catalog_path=document,
+                )
+
+    def test_ai_label_split_severe_burst_remains_audition_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "Burst Split-B minor-113bpm-440hz"
+            candidate_root = root / "label-split"
+            project.mkdir()
+            source = project / "Burst Split-bass-B minor-113bpm-440hz.wav"
+            source.write_bytes(b"RIFF-private-mixed-bass")
+            _write_ai_label_split_fixture(
+                candidate_root,
+                label="synth_bass",
+                selected_pitches=tuple(range(20, 100)),
+                complement_pitches=(),
+                simultaneous=True,
+            )
+            document = _write_explicit_split_catalog(
+                root / "catalog.json",
+                source=source,
+                candidate_root=candidate_root,
+                role="bass body",
+            )
+
+            catalog = build_workbench_catalog(
+                project,
+                candidate_roots=[candidate_root],
+                catalog_path=document,
+            )
+            target = next(
+                candidate
+                for candidate in catalog["stems"][0]["candidates"]
+                if candidate["midi"]["name"] == "requested-label.mid"
+            )
+            self.assertEqual(target["ai_diagnostics"]["note_count"], 80)
+            self.assertTrue(target["audition_blocked"])
+            self.assertTrue(target["diagnostic_only"])
+            self.assertFalse(target["primary"])
+            self.assertIn(
+                "extreme-onset-burst",
+                target["ai_diagnostics"]["severe_codes"],
+            )
+            self.assertIn(
+                "extreme-polyphony",
+                target["ai_diagnostics"]["block_reasons"],
+            )
+
+    def test_one_source_can_hold_two_independently_selected_role_rows(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "Two Role Song-B minor-113bpm-440hz"
+            candidate_root = root / "outputs"
+            project.mkdir()
+            candidate_root.mkdir()
+            source = project / "Two Role Song-bass-B minor-113bpm-440hz.wav"
+            source.write_bytes(b"RIFF-one-mixed-role-source")
+            body_midi = candidate_root / "bass-body.mid"
+            pluck_midi = candidate_root / "bass-pluck.mid"
+            _write_midi(body_midi, pitch=35)
+            _write_midi(pluck_midi, pitch=59)
+            document = root / "catalog.json"
+            document.write_text(
+                json.dumps(
+                    {
+                        "schema": "sunofriend.workbench-catalog.v1",
+                        "stems": [
+                            {
+                                "source": str(source),
+                                "role": "bass body",
+                                "review_question": "Does this follow the bass body?",
+                                "candidates": [{"midi": str(body_midi)}],
+                            },
+                            {
+                                "source": str(source),
+                                "role": "pluck",
+                                "review_question": "Does this follow the plucked line?",
+                                "candidates": [{"midi": str(pluck_midi)}],
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            catalog = build_workbench_catalog(
+                project,
+                candidate_roots=[candidate_root],
+                catalog_path=document,
+            )
+
+            self.assertEqual(len(catalog["stems"]), 2)
+            self.assertEqual(
+                len({stem["stem_id"] for stem in catalog["stems"]}), 2
+            )
+            self.assertEqual(
+                len({stem["source"]["sha256"] for stem in catalog["stems"]}), 1
+            )
+            store = WorkbenchStore(root / "state" / "workbench.sqlite3")
+            for stem in catalog["stems"]:
+                candidate = stem["candidates"][0]
+                store.append(
+                    catalog,
+                    {
+                        "event_type": "candidate_decision",
+                        "stem_id": stem["stem_id"],
+                        "candidate_id": candidate["candidate_id"],
+                        "decision": "main",
+                        "context": "solo",
+                        "problem_tags": [],
+                    },
+                )
+
+            state = store.current_state(catalog)
+            for stem in catalog["stems"]:
+                stem_state = state["stems"][stem["stem_id"]]
+                self.assertEqual(
+                    stem_state["main_candidate_id"],
+                    stem["candidates"][0]["candidate_id"],
+                )
+            selected = selected_candidates(catalog, state)
+            self.assertEqual(len(selected), 2)
+            self.assertEqual(
+                {row["role"] for row in selected}, {"bass body", "pluck"}
+            )
+
     def test_ai_run_diagnostics_are_path_free_and_block_only_severe_bursts(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -249,7 +730,16 @@ class WorkbenchCatalogTests(unittest.TestCase):
                     "candidate.mid",
                 )
             }
-            execution = {"model_config_sha256": config_hash, "model_size": "small"}
+            execution = {
+                "model_config_sha256": config_hash,
+                "model_size": "small",
+                "diagnostic": {
+                    "cwd": str(root / "private-working-directory"),
+                    "safe_value": "retained",
+                    "cache": str(root / "model-cache" / "weights.safetensors"),
+                },
+                "command": [str(root / "private-python"), "worker.py"],
+            }
             (run_dir / "run.json").write_text(
                 json.dumps(
                     {
@@ -284,6 +774,12 @@ class WorkbenchCatalogTests(unittest.TestCase):
             self.assertFalse(discovered["ai_diagnostics"]["audition_safe"])
             rendered = json.dumps(public_catalog(catalog))
             self.assertNotIn(str(root), rendered)
+            self.assertNotIn("cwd", rendered)
+            self.assertNotIn("private-python", rendered)
+            self.assertEqual(
+                discovered["ai_diagnostics"]["execution"]["diagnostic"],
+                {"safe_value": "retained"},
+            )
             self.assertIn(
                 "AI transcription diagnostics",
                 Path("src/sunofriend/workbench.html").read_text(encoding="utf-8"),
@@ -320,6 +816,18 @@ class WorkbenchCatalogTests(unittest.TestCase):
 
             run_path = run_dir / "run.json"
             run_document = json.loads(run_path.read_text(encoding="utf-8"))
+            decoy_candidate = run_dir / "candidate-decoy.json"
+            decoy_candidate.write_bytes((run_dir / "candidate.json").read_bytes())
+            run_document["artifacts"]["candidate.json"] = _record(
+                decoy_candidate, relative=True
+            )
+            run_path.write_text(json.dumps(run_document), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "artifact path disagrees"):
+                build_workbench_catalog(project, candidate_roots=[run_dir.parent])
+
+            run_document["artifacts"]["candidate.json"] = _record(
+                run_dir / "candidate.json", relative=True
+            )
             del run_document["artifacts"]["candidate.json"]
             run_path.write_text(json.dumps(run_document), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "does not pin candidate.json"):
@@ -390,6 +898,110 @@ class WorkbenchStoreTests(unittest.TestCase):
             self.assertFalse(review["contribution_preview"]["submission_enabled"])
             self.assertEqual(
                 review["contribution_preview"]["decision_event_count"], 2
+            )
+
+    def test_review_context_is_private_pinned_and_prompt_change_hides_old_choices(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "Context Song-B minor-113bpm-440hz"
+            candidates = root / "outputs"
+            project.mkdir()
+            candidates.mkdir()
+            source = project / "Context Song-bass-B minor-113bpm-440hz.wav"
+            source.write_bytes(b"RIFF-context-source")
+            midi = candidates / "bass.mid"
+            _write_midi(midi, pitch=38)
+            document = root / "catalog.json"
+
+            def catalog_for(question: str) -> dict:
+                document.write_text(
+                    json.dumps(
+                        {
+                            "schema": "sunofriend.workbench-catalog.v1",
+                            "stems": [
+                                {
+                                    "source": str(source),
+                                    "role": "bass",
+                                    "review_question": question,
+                                    "listening_focus": [
+                                        "recognisable bass line",
+                                        "pluck leakage",
+                                    ],
+                                    "candidates": [{"midi": str(midi)}],
+                                }
+                            ],
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                return build_workbench_catalog(
+                    project,
+                    candidate_roots=[candidates],
+                    catalog_path=document,
+                )
+
+            first = catalog_for("Does this preserve the bass body?")
+            first_stem = first["stems"][0]
+            candidate = first_stem["candidates"][0]
+            store = WorkbenchStore(root / "state" / "workbench.sqlite3")
+            event = store.append(
+                first,
+                {
+                    "event_type": "candidate_decision",
+                    "stem_id": first_stem["stem_id"],
+                    "candidate_id": candidate["candidate_id"],
+                    "decision": "main",
+                    "context": "solo",
+                    "problem_tags": [],
+                },
+            )
+            self.assertEqual(
+                event["payload"]["review_context"],
+                {
+                    "sha256": first_stem["review_context_sha256"],
+                    "review_question": "Does this preserve the bass body?",
+                    "listening_focus": [
+                        "recognisable bass line",
+                        "pluck leakage",
+                    ],
+                },
+            )
+            private = store.export_review(first)
+            self.assertEqual(
+                private["project"]["review_contexts"],
+                [
+                    {
+                        "stem_id": first_stem["stem_id"],
+                        "review_context_sha256": first_stem[
+                            "review_context_sha256"
+                        ],
+                        "review_question": "Does this preserve the bass body?",
+                        "listening_focus": [
+                            "recognisable bass line",
+                            "pluck leakage",
+                        ],
+                    }
+                ],
+            )
+            contribution = json.dumps(private["contribution_preview"])
+            self.assertNotIn("Does this preserve", contribution)
+            self.assertNotIn("recognisable bass line", contribution)
+            self.assertNotIn("pluck leakage", contribution)
+
+            changed = catalog_for("Does this preserve the plucked line?")
+            changed_stem = changed["stems"][0]
+            self.assertNotEqual(first_stem["stem_id"], changed_stem["stem_id"])
+            changed_state = store.current_state(changed)
+            self.assertEqual(changed_state["event_count"], 0)
+            self.assertEqual(
+                changed_state["stems"][changed_stem["stem_id"]]["candidates"],
+                {},
+            )
+            changed_review = store.export_review(changed)
+            self.assertEqual(changed_review["status"], "in_progress")
+            self.assertEqual(
+                changed_review["contribution_preview"]["decision_event_count"],
+                0,
             )
 
 
@@ -681,6 +1293,423 @@ class WorkbenchArtifactTests(unittest.TestCase):
                 self.assertNotIn("private bass note", manifest)
                 self.assertNotIn("private rejected note", manifest)
                 self.assertIn('"original_midi_mutated": false', manifest)
+
+
+def _write_explicit_split_catalog(
+    path: Path,
+    *,
+    source: Path,
+    candidate_root: Path,
+    role: str,
+) -> Path:
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "sunofriend.workbench-catalog.v1",
+                "stems": [
+                    {
+                        "source": str(source),
+                        "role": role,
+                        "review_question": f"Does this MIDI isolate the {role}?",
+                        "listening_focus": [
+                            "recognisable line",
+                            "leakage from the other role",
+                        ],
+                        "candidates": [
+                            {"midi": str(candidate_root / "requested-label.mid")},
+                            {
+                                "midi": str(
+                                    candidate_root
+                                    / "unexpected-label-complement.mid"
+                                )
+                            },
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _write_ai_label_split_fixture(
+    root: Path,
+    *,
+    label: str,
+    selected_pitches: tuple[int, ...],
+    complement_pitches: tuple[int, ...],
+    simultaneous: bool = False,
+) -> None:
+    root.mkdir()
+    selected_rows = _partition_rows(
+        selected_pitches,
+        instrument=label,
+        first_source_index=0,
+    )
+    complement_rows = _partition_rows(
+        complement_pitches,
+        instrument="clean_electric_guitar",
+        first_source_index=len(selected_rows),
+    )
+    if simultaneous:
+        for row in [*selected_rows, *complement_rows]:
+            row["note"]["start_seconds"] = 0.1
+            row["note"]["end_seconds"] = 0.11
+    selected_midi = root / "requested-label.mid"
+    complement_midi = root / "unexpected-label-complement.mid"
+    control_midi = root / "unchanged-full-candidate.mid"
+    _write_partition_midi(selected_midi, selected_rows)
+    _write_partition_midi(complement_midi, complement_rows)
+    _write_partition_midi(control_midi, [*selected_rows, *complement_rows])
+    source_request = root / "source-request.json"
+    source_request.write_text(
+        json.dumps(
+            {
+                "schema": "sunofriend.ai-transcription-request.v1",
+                "audio_path": "/private/fixture-source.wav",
+                "backend": "muscriptor",
+                "roles": [label],
+                "start_seconds": 0.0,
+                "end_seconds": 2.0,
+                "options": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    source_candidate = root / "source-candidate.json"
+    source_candidate.write_text(
+        json.dumps(
+            {
+                "schema": "sunofriend.ai-transcription-candidate.v1",
+                "backend": "muscriptor",
+                "model_version": "muscriptor-test-small",
+                "notes": [
+                    row["note"] for row in [*selected_rows, *complement_rows]
+                ],
+                "warnings": [],
+                "raw_artifacts": [],
+                "metadata": {"excerpt": {"duration_seconds": 2.0}},
+            }
+        ),
+        encoding="utf-8",
+    )
+    request_record = _record(source_request, relative=True)
+    candidate_record = _record(source_candidate, relative=True)
+    source_sha = hashlib.sha256(b"fixture-source-audio").hexdigest()
+    candidate_midi_record = _record(control_midi, relative=True)
+    embedded_bpm = 60_000_000.0 / round(60_000_000.0 / 113.0)
+    render_contract = {
+        "policy": "deterministic-midi-audition-v1",
+        "purpose": "audition-only; label-partition.json is the exact event record",
+        "ticks_per_beat": 480,
+        "tempo_input_bpm": 113.0,
+        "embedded_bpm": embedded_bpm,
+        "pitch_quantization": (
+            "nearest integer via Python round (ties to even), clamped 0..127"
+        ),
+        "time_quantization": (
+            "nearest 1/480 quarter-note tick via Python round (ties to even)"
+        ),
+        "minimum_duration_ticks": 1,
+        "duplicate_onset_policy": (
+            "same track/channel/pitch/tick collapses to longest end and greatest velocity"
+        ),
+        "same_pitch_overlap_policy": (
+            "an earlier note ends at the next onset on the same track/channel/pitch"
+        ),
+        "velocity_policy": "fixed-fixture-velocity",
+    }
+    partition = {
+        "schema": "sunofriend.ai-label-partition.v1",
+        "source_request_sha256": request_record["sha256"],
+        "source_candidate_sha256": candidate_record["sha256"],
+        "source_candidate_midi_sha256": candidate_midi_record["sha256"],
+        "source_audio_sha256": source_sha,
+        "label": label,
+        "velocity_policy": "fixed-fixture-velocity",
+        "render_contract": render_contract,
+        "source_note_count": len(selected_rows) + len(complement_rows),
+        "selected": selected_rows,
+        "complement": complement_rows,
+        "partition": {
+            "disjoint": True,
+            "exhaustive": True,
+            "source_indices_changed": 0,
+            "source_events_deleted": 0,
+            "source_events_duplicated": 0,
+        },
+    }
+    partition_path = root / "label-partition.json"
+    partition_path.write_text(json.dumps(partition), encoding="utf-8")
+    detected_counts = {
+        name: count
+        for name, count in (
+            (label, len(selected_rows)),
+            ("clean_electric_guitar", len(complement_rows)),
+        )
+        if count
+    }
+    report = {
+        "schema": "sunofriend.ai-label-split.v1",
+        "status": "review-required" if selected_rows else "no-evidence",
+        "operation": "ai-label-split",
+        "label": label,
+        "bpm": 113.0,
+        "source_run": {
+            "run_id": "verified-label-split-fixture",
+            "backend": "muscriptor",
+            "model_version": "muscriptor-test-small",
+            "source": {"bytes": 20, "sha256": source_sha},
+            "checkpoint": {"sha256": "fixture-checkpoint-sha256"},
+            "execution": {"model_size": "small", "beam_size": 1},
+            "request": {
+                "roles": [label],
+                "start_seconds": 0.0,
+                "end_seconds": 2.0,
+                "sha256": request_record["sha256"],
+            },
+            "candidate": {
+                "bytes": candidate_record["bytes"],
+                "sha256": candidate_record["sha256"],
+            },
+            "candidate_midi": {
+                "bytes": candidate_midi_record["bytes"],
+                "sha256": candidate_midi_record["sha256"],
+            },
+            "duration_seconds": 2.0,
+        },
+        "evidence": {
+            "detected_label_counts": detected_counts,
+            "selected_note_count": len(selected_rows),
+            "complement_note_count": len(complement_rows),
+            "selected_source_indices": [
+                row["source_index"] for row in selected_rows
+            ],
+            "complement_source_indices": [
+                row["source_index"] for row in complement_rows
+            ],
+            "selection_policy": "exact-model-reported-instrument-label",
+            "physical_instrument_identified": False,
+        },
+        "artifacts": {
+            control_midi.name: candidate_midi_record,
+            source_candidate.name: candidate_record,
+            source_request.name: request_record,
+            selected_midi.name: _record(selected_midi, relative=True),
+            complement_midi.name: _record(complement_midi, relative=True),
+            partition_path.name: _record(partition_path, relative=True),
+        },
+        "effects": {
+            "automatic_promotion": False,
+            "model_rerun": False,
+            "source_run_mutated": False,
+            "raw_candidate_mutated": False,
+            "source_midi_mutated": False,
+            "source_partition_events_deleted": 0,
+            "source_partition_events_duplicated": 0,
+            "source_request_control_byte_identical": True,
+            "source_candidate_control_byte_identical": True,
+            "unchanged_control_byte_identical": True,
+            "selected_audition_velocities_written": len(selected_rows),
+            "midi_rendering": {
+                selected_midi.name: _fixture_render_summary(
+                    selected_midi, selected_rows, bpm=113.0
+                ),
+                complement_midi.name: _fixture_render_summary(
+                    complement_midi, complement_rows, bpm=113.0
+                ),
+            },
+        },
+        "warnings": [
+            "The split follows model-reported labels only and requires listening."
+        ],
+    }
+    report["report_sha256"] = hashlib.sha256(
+        json.dumps(report, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    (root / "ai_label_split.json").write_text(
+        json.dumps(report), encoding="utf-8"
+    )
+
+
+def _fixture_render_summary(path: Path, rows: list[dict], *, bpm: float) -> dict:
+    from sunofriend.clip import read_midi_clips
+
+    seconds_per_tick = 60.0 / (bpm * 480.0)
+    onset_quantized = end_quantized = duration_quantized = 0
+    for row in rows:
+        note = row["note"]
+        start_tick = round(float(note["start_seconds"]) * bpm * 480.0 / 60.0)
+        end_tick = round(float(note["end_seconds"]) * bpm * 480.0 / 60.0)
+        if abs(start_tick * seconds_per_tick - note["start_seconds"]) > 1e-12:
+            onset_quantized += 1
+        if abs(end_tick * seconds_per_tick - note["end_seconds"]) > 1e-12:
+            end_quantized += 1
+        if (
+            abs(
+                (end_tick - start_tick) * seconds_per_tick
+                - (note["end_seconds"] - note["start_seconds"])
+            )
+            > 1e-12
+        ):
+            duration_quantized += 1
+    clips = read_midi_clips(path)
+    rendered_signatures = [
+        {
+            "track_index": owner,
+            "channel": clip.instrument.channel,
+            "start_tick": round(note.start_beat * 480),
+            "end_tick": round(note.end_beat * 480),
+            "pitch": note.pitch,
+            "velocity": note.velocity,
+        }
+        for owner, clip in enumerate(clips)
+        for note in clip.notes
+    ]
+    rendered_count = len(rendered_signatures)
+    pitch_quantized = sum(
+        float(round(row["note"]["pitch"])) != row["note"]["pitch"]
+        for row in rows
+    )
+    minimum_extended = sum(
+        round(row["note"]["end_seconds"] * bpm * 480.0 / 60.0)
+        <= round(row["note"]["start_seconds"] * bpm * 480.0 / 60.0)
+        for row in rows
+    )
+    keys = [
+        (
+            round(row["note"]["pitch"]),
+            round(row["note"]["start_seconds"] * bpm * 480.0 / 60.0),
+        )
+        for row in rows
+    ]
+    duplicate_collapsed = len(keys) - len(set(keys))
+    overlap_truncated = 0
+    by_pitch: dict[int, list[tuple[int, int]]] = {}
+    for row in rows:
+        note = row["note"]
+        pitch = round(note["pitch"])
+        by_pitch.setdefault(pitch, []).append(
+            (
+                round(note["start_seconds"] * bpm * 480.0 / 60.0),
+                max(
+                    round(note["end_seconds"] * bpm * 480.0 / 60.0),
+                    round(note["start_seconds"] * bpm * 480.0 / 60.0) + 1,
+                ),
+            )
+        )
+    for events in by_pitch.values():
+        unique = {}
+        for start, end in events:
+            unique[start] = max(unique.get(start, end), end)
+        ordered = sorted(unique.items())
+        overlap_truncated += sum(
+            left_end > right_start
+            for (_, left_end), (right_start, _) in zip(ordered, ordered[1:])
+        )
+    changed = any(
+        (
+            pitch_quantized,
+            onset_quantized,
+            end_quantized,
+            duration_quantized,
+            minimum_extended,
+            duplicate_collapsed,
+            overlap_truncated,
+        )
+    )
+    return {
+        "source_event_count": len(rows),
+        "rendered_midi_note_count": rendered_count,
+        "rendered_midi_note_signatures": rendered_signatures,
+        "integer_pitch_quantized_event_count": pitch_quantized,
+        "onset_tick_quantized_event_count": onset_quantized,
+        "end_tick_quantized_event_count": end_quantized,
+        "duration_tick_quantized_event_count": duration_quantized,
+        "minimum_duration_extended_event_count": minimum_extended,
+        "duplicate_same_pitch_tick_onset_collapsed_event_count": duplicate_collapsed,
+        "same_pitch_overlap_truncated_event_count": overlap_truncated,
+        "source_event_to_midi_note_count_delta": rendered_count - len(rows),
+        "lossless_event_render": not changed,
+    }
+
+
+def _read_split_report(root: Path) -> dict:
+    return json.loads((root / "ai_label_split.json").read_text(encoding="utf-8"))
+
+
+def _read_split_partition(root: Path) -> dict:
+    return json.loads((root / "label-partition.json").read_text(encoding="utf-8"))
+
+
+def _rewrite_split_documents(
+    root: Path, *, report: dict, partition: dict
+) -> None:
+    partition_path = root / "label-partition.json"
+    partition_path.write_text(json.dumps(partition), encoding="utf-8")
+    report["artifacts"][partition_path.name] = _record(
+        partition_path, relative=True
+    )
+    report.pop("report_sha256", None)
+    report["report_sha256"] = hashlib.sha256(
+        json.dumps(report, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    (root / "ai_label_split.json").write_text(
+        json.dumps(report), encoding="utf-8"
+    )
+
+
+def _partition_rows(
+    pitches: tuple[int, ...],
+    *,
+    instrument: str,
+    first_source_index: int,
+) -> list[dict]:
+    rows = []
+    for offset, pitch in enumerate(pitches):
+        source_index = first_source_index + offset
+        start = 0.1 + source_index * 0.35
+        rows.append(
+            {
+                "source_index": source_index,
+                "source_event_id": f"fixture-{source_index}",
+                "note": {
+                    "start_seconds": start,
+                    "end_seconds": start + 0.25,
+                    "pitch": float(pitch),
+                    "confidence": None,
+                    "instrument": instrument,
+                    "velocity": None,
+                    "source_event_id": f"fixture-{source_index}",
+                },
+                "audition_velocity": 90,
+            }
+        )
+    return rows
+
+
+def _write_partition_midi(path: Path, rows: list[dict]) -> None:
+    write_midi_file(
+        path,
+        [
+            MidiTrack(
+                name="Label split fixture",
+                channel=0,
+                program=38,
+                notes=[
+                    NoteEvent(
+                        start=float(row["note"]["start_seconds"]),
+                        end=float(row["note"]["end_seconds"]),
+                        pitch=int(row["note"]["pitch"]),
+                        velocity=int(row["audition_velocity"]),
+                    )
+                    for row in rows
+                ],
+            )
+        ],
+        bpm=113.0,
+    )
 
 
 def _small_catalog(root: Path) -> dict:

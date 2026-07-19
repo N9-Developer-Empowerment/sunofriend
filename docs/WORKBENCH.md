@@ -48,6 +48,13 @@ the project or one of the explicitly supplied candidate roots.
       "source": "private-stems/Song-keys-B minor-113bpm-440hz.wav",
       "label": "Keys",
       "role": "melody + accompaniment",
+      "review_question": "Which MIDI preserves the recognisable theme without mixing in the accompaniment?",
+      "listening_focus": [
+        "recognisable melody",
+        "missing or extra notes",
+        "accompaniment leakage",
+        "timing and note duration"
+      ],
       "candidates": [
         {
           "midi": "results/baseline/keys_listened.mid",
@@ -76,6 +83,16 @@ sunofriend workbench "/absolute/path/to/private-stems" \
   --catalog "/absolute/path/to/workbench-catalog.json" \
   --open
 ```
+
+`review_question` and `listening_focus` are optional plain-language prompts for
+one declared listening task. They are shown above the synchronized players but
+do not preselect, promote, rank or score a candidate. Use separate catalog stem
+rows when the same source excerpt needs distinct questions such as bass body
+and pluck. Their canonical hash is part of that row's review identity and every
+saved event. Editing the question or focus therefore starts a fresh row instead
+of silently restoring choices made under a different task. The complete local
+export retains the declared context for audit; the contribution preview omits
+the prompt text.
 
 ## What a decision means
 
@@ -131,6 +148,27 @@ All lanes in one report must share the backend, checkpoint, model config,
 worker hash, model/runtime version and execution settings. The current
 Workbench does not import `matrix.json`; it reads each adjacent completed run
 directly, while the matrix is the durable audit and cross-lane comparison.
+M4 lanes have a stricter contract: every lane uses the same source audio,
+excerpt and positive BPM and requests exactly one distinct role. The matrix's
+M4 overlap section reports same-pitch/onset matches and requested/off-role note
+counts. High overlap can expose role collapse or relabelling, but is not an
+accuracy score and does not prove that either pass isolated a source.
+
+If a completed pass contains a useful reported label plus off-role labels,
+`sunofriend ai-label-split RUN --label LABEL --out-dir FRESH_OUTPUT` writes an
+exact source-index JSON partition, deterministic requested/complement MIDI
+auditions and a byte-identical full-candidate control. The operation does not
+run a model. Private byte-identical source-request/source-candidate controls
+let Workbench bind every partition row back to the verified raw candidate; keep
+those local because the request can contain absolute model/audio paths. The
+JSON accounts for each raw event exactly; MIDI necessarily uses integer pitches
+and ticks and may collapse duplicate onsets or truncate an ambiguous same-pitch
+overlap. Those effects are measured in the report rather than hidden. This is
+model-label partitioning, not audio separation or instrument identification.
+Workbench cross-checks the report, partition, private provenance controls, full
+MIDI control, render contract and decoded MIDI; a severe decoder burst or zero-note
+requested label is blocked, while a non-empty safe split remains
+review-required and has no automatic-promotion path.
 
 ## Compare with one consistent renderer
 
@@ -194,7 +232,7 @@ are authoritative.
   short-loop Web Audio buffers for sample-accurate blind tests.
 - The arrangement is a dry GM proxy. Complete-instrument checks and installed
   GarageBand patch choice remain a later view.
-- Phrase piano-roll correction, M4 mixed-role candidate generation, model-size
+- Phrase piano-roll correction, the M4 private listening decision, model-size
   comparison and opt-in contribution remain later increments. The Workbench
   still consumes completed AI runs rather than launching a model itself.
 

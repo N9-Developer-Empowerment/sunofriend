@@ -1,7 +1,7 @@
 # Sunofriend AI roadmap
 
 Status: Phase 1 and Phase 2 engineering complete; Phase 3 complete; Phase 4
-fixed-MIDI review complete; Phase 5 started
+fixed-MIDI review complete; Phase 5.1 M4 engineering complete, listening pending
 Started: 15 July 2026  
 Scope: local-first AI assistance for transcription, review, instrument matching
 and source-derived instruments
@@ -69,7 +69,7 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
-| 5. MuScriptor Full-Mix and Community Learning | **In progress: Phase 5.0 complete, first small-model matrix complete** | Local Workbench, immutable MuScriptor execution manifest, path-free quality diagnostics and M0–M3 golden comparison implemented; M4, listening and instrument view remain |
+| 5. MuScriptor Full-Mix and Community Learning | **In progress: Phase 5.0 complete, M4 engineering complete, private listening pending** | Local Workbench, immutable MuScriptor execution manifest, path-free quality diagnostics, M0–M4 matrices and exact label partitions implemented; listening and instrument view remain |
 
 ## Phase 1: AI Transcription Bake-off v1
 
@@ -516,6 +516,44 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-07-19 — Strict M4 mixed-role evidence and label partition
+
+- Goal: test whether one-role conditioning can separate the reviewed deep-body
+  and plucked lines in one private mixed-role bass excerpt.
+- Change or experiment: made M4 matrices require one distinct role per lane on
+  the same source, excerpt and BPM; added M4 peer-overlap diagnostics,
+  `ai-label-split`, and optional Workbench `review_question`/`listening_focus`
+  prompts. Focused prompt hashes are pinned to review identity and private
+  events, while prompt text is excluded from contribution preview. Label
+  splitting preserves the unchanged full candidate and exact complement; it is
+  not audio separation or instrument identification.
+- Inputs: the private reviewed 16-second Slayyyter learned bass target at
+  `113.000096` BPM and its earlier body/pluck listening controls. Audio and
+  complete artifacts remain under ignored `work/` paths.
+- Model/runtime/checkpoint: MuScriptor 0.2.1 small with the already accepted
+  checkpoint/config; CPU, greedy, batch 1, beam 1, CFG 1.0 and independent
+  five-second chunks.
+- Evidence and metrics: the body pass produced 41 `electric_bass` notes. The
+  clean-guitar-requested pluck pass produced 43 notes—14 requested
+  `clean_electric_guitar` plus 29 off-role `electric_bass`. Forty notes matched,
+  covering 40/41 of the body pass and 40/43 of the pluck pass. The exact label
+  derivative contains 14 notes and its exhaustive complement contains 29;
+  the raw-event partition deletes and duplicates nothing. Its deterministic
+  MIDI auditions record integer-pitch/tick quantisation and same-pitch lifetime
+  normalisation separately instead of claiming a lossless MIDI encoding.
+- Listening result: pending. The private Workbench asks separate body and
+  pluck questions and names leakage, missing/extra notes, octave, timing and
+  duration as listening focuses; prompts make no selection.
+- Decision: engineering evidence suggests substantial role collapse or
+  relabelling, not successful two-source separation. Keep both full passes,
+  the exact label partition, complement and earlier controls; promote nothing
+  automatically.
+- Problems/risks: model labels are broad semantic evidence. High overlap is
+  not an accuracy score, and a 14-note label partition may still follow the
+  wrong audible line.
+- Next smallest step: complete the private bass/pluck listening review, then
+  decide whether a separate keys melody/accompaniment M4 golden is warranted.
+
 ### 2026-07-19 — Explicit MuScriptor manifests and first small-model matrix
 
 - Goal: make Phase 5 AI alternatives reproducible and keep demonstrably broken
@@ -548,8 +586,8 @@ Each working day should aim for one narrow vertical improvement:
 - Problems/risks: label conditioning is not an output guarantee; the M3
   percussion lane needs a role/input review; browser switching is still
   second-synchronised rather than sample-accurate.
-- Next smallest step: add M4 one-role-per-pass bass/keys lanes and a focused
-  listening review of safe M1/M2/M3 alternatives before any medium/large model
+- Next smallest step: completed by the strict M4 entry above; listening of M4
+  and the safe M1/M2/M3 alternatives remains before any medium/large model
   download or speed preset.
 
 ### 2026-07-19 — Cached comparisons, selected arrangement and GarageBand handoff

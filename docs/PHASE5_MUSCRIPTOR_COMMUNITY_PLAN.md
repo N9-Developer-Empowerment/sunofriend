@@ -1,6 +1,6 @@
 # Phase 5: MuScriptor Full-Mix and Community Learning
 
-Status: **Phase 5.0 complete; Phase 5.1 small-model matrix in progress; no public service or new checkpoint download is authorised**
+Status: **Phase 5.0 complete; Phase 5.1 M4 engineering complete and private listening pending; no public service or new checkpoint download is authorised**
 Drafted: 19 July 2026
 Scope: accurate stem/full-mix MIDI, faster local inference, GarageBand-ready
 instrument choices, a primary local web workbench and consented feedback
@@ -400,6 +400,27 @@ worker, model/runtime version and execution profile at a time. S0/H1/E1 and
 cross-model-size comparison require a later outer comparison layer; they are
 not silently treated as MuScriptor runs.
 
+M4 additionally requires the same source hash, excerpt bounds and positive BPM
+for every lane, exactly one requested role per pass and distinct requested
+roles. Its peer-overlap report records same-pitch/onset matches and requested
+versus off-role counts. This can expose role collapse or relabelling but cannot
+identify a correct line or prove source separation.
+
+`ai-label-split` may partition one completed run into the exact raw source
+events carrying one model-reported label and the exhaustive complement. Its
+deterministic MIDI auditions declare integer-pitch/tick quantisation and
+same-pitch lifetime normalisation separately. Both derivatives and the
+byte-identical full-candidate control must be retained. It is reversible label
+evidence, not a new transcription, audio separation or physical-instrument
+result; a zero-note requested label is blocked as no-evidence and every
+non-empty split still requires listening.
+
+The split directory also retains byte-identical request/candidate JSON controls
+so Workbench can verify raw-event provenance without relying on a mutable
+manifest. These controls remain private because the request can name absolute
+local audio, model and configuration paths; only redacted diagnostics belong in
+the browser catalog or any future contribution preview.
+
 For M0–M4, compare small, medium and large only after their checkpoints are
 explicitly accepted and pinned. For the installed 0.2.1 runtime, use the
 truthfully recorded safe baseline of greedy decoding, batch size 1, beam size
@@ -706,8 +727,12 @@ Started 19 July 2026:
 - [x] Run M0–M3 with the current small model on one immutable private golden.
 - [x] Compare discovery labels with stem names and role-conditioned stem lanes.
 - [x] Add duplicate-burst, instrument-leakage and five-second-boundary reports.
-- [ ] Add M4 one-role-per-pass lanes for a reviewed mixed-role bass or keys
-  excerpt, then complete the listening gate.
+- [x] Add strict M4 one-role-per-pass lanes and same-source role-overlap
+  diagnostics for a reviewed mixed-role bass excerpt.
+- [x] Add an exact model-label partition with an exhaustive complement and
+  unchanged full-candidate control.
+- [ ] Complete the private M4 listening gate; no engineering result is a
+  promotion.
 - Success: the review explains whether full-mix discovery provides useful
   labels even when raw notes are rejected.
 
@@ -735,6 +760,24 @@ First matrix, 19 July 2026:
 
 This establishes that conditioning can rescue this excerpt from a decoder
 burst, not that M1 is musically correct. Promotion still requires listening.
+
+First M4 mixed-role matrix, 19 July 2026:
+
+- source: the private 16-second Slayyyter bass/pluck learned target retained
+  from the reviewed Phase 4 cleanup; audio and full artifacts remain ignored;
+- controls: small MuScriptor 0.2.1 with the same checkpoint/config, worker,
+  greedy batch-1/beam-1/CFG-1 execution, source, excerpt and `113.000096` BPM;
+- the `electric_bass` body pass produced 41 requested-label notes and no
+  off-role label;
+- the clean-guitar-requested pluck pass produced 43 notes: 14 requested
+  `clean_electric_guitar` and 29 off-role `electric_bass` notes;
+- the two complete passes matched 40 notes within the 80 ms same-pitch/onset
+  tolerance—40/41 of the body pass and 40/43 of the pluck pass—so conditioning
+  largely relabelled or reproduced one line rather than demonstrating two
+  isolated roles; and
+- the exact guitar-label derivative retains 14 notes and an exhaustive 29-note
+  complement. The unchanged 43-note pass remains the full control. Private
+  exploratory listening is pending and nothing was promoted automatically.
 
 ### 5.2 — Model-size and performance bake-off
 
@@ -812,13 +855,16 @@ The usable 5.0 Workbench slice now covers project/stem decisions, cached neutral
 previews, full-mix confirmation and a selected GarageBand handoff. It keeps
 original MIDI unchanged and still has no upload or submission endpoint.
 MuScriptor execution settings and checkpoint/config hashes are now explicit,
-and the first immutable M0–M3 small-model matrix publishes per-role quality,
-five-second-boundary, label-stability and cross-lane overlap diagnostics.
+and immutable M0–M4 small-model matrices publish per-role quality,
+five-second-boundary, label-stability, cross-lane and strict M4 peer-overlap
+diagnostics. Exact model-label partitions retain their unchanged control and
+complement.
 Workbench discovery attaches the same path-free evidence and prevents severe
 or zero-note candidates from becoming main/optional choices.
 
-The next Phase 5.1 increment is an M4 mixed-role bass/keys test plus a listening
-review of the safe M1/M2/M3 lanes. Medium/large checkpoints, decoding-speed
+The next Phase 5.1 increment is the private M4 bass/pluck listening gate plus a
+listening review of the safe M1/M2/M3 lanes; keys remain a later generalisation.
+Medium/large checkpoints, decoding-speed
 challengers and any public contribution remain later, separately authorised
 work.
 

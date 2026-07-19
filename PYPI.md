@@ -39,7 +39,15 @@ clearly labelled proxy arrangement for GarageBand. It loads no remote scripts
 and has no upload or submission endpoint. Completed AI runs add path-free
 model/config, label, boundary and safety diagnostics; severe or zero-note
 results remain diagnostic-only. `sunofriend ai-matrix` compares controlled
-immutable lanes without changing raw candidates or MIDI.
+immutable lanes without changing raw candidates or MIDI. Its M4 contract
+compares distinct one-role passes only when source, excerpt and BPM match and
+reports possible role collapse as diagnostic overlap. `ai-label-split` can
+then create an exact raw-event label partition plus deterministic requested and
+complement MIDI auditions while retaining a byte-identical full-candidate
+control. MIDI quantisation/normalisation effects are reported explicitly; this
+is not source separation and never promotes a result automatically. Explicit
+Workbench catalogs may add a focused
+listening question and checklist without turning either into a score or choice.
 
 Sunofriend complements AI music generators, stem separators, and DAWs rather
 than replacing them. The current supported production workflow is macOS-first,

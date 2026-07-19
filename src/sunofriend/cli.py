@@ -28,6 +28,7 @@ _COMMANDS = {
     "ai-doctor",
     "ai-transcribe",
     "ai-matrix",
+    "ai-label-split",
     "ai-cleanup",
     "midi-mask",
     "midi-role-split",
@@ -829,6 +830,24 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=80.0,
         help="Onset tolerance for cross-lane same-pitch diagnostics (default: 80ms)",
+    )
+    ai_label_split = sub.add_parser(
+        "ai-label-split",
+        help=(
+            "Partition one immutable AI candidate by exact source-event label "
+            "and render requested/complement MIDI auditions"
+        ),
+    )
+    ai_label_split.add_argument(
+        "run", help="Completed immutable AI transcription run directory"
+    )
+    ai_label_split.add_argument(
+        "--label",
+        required=True,
+        help="Exact model-reported instrument label to retain",
+    )
+    ai_label_split.add_argument(
+        "--out-dir", required=True, help="Fresh label-partition output directory"
     )
     ai_cleanup.add_argument(
         "--out-dir", required=True, help="Fresh immutable experiment directory"
@@ -1896,6 +1915,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_ai_transcribe(args)
         if args.command == "ai-matrix":
             return _run_ai_matrix(args)
+        if args.command == "ai-label-split":
+            return _run_ai_label_split(args)
         if args.command == "ai-cleanup":
             return _run_ai_cleanup(args)
         if args.command == "midi-mask":
@@ -3213,6 +3234,18 @@ def _run_ai_matrix(args) -> int:
             sort_keys=True,
         )
     )
+    return 0
+
+
+def _run_ai_label_split(args) -> int:
+    from .ai_label_split import split_ai_candidate_label
+
+    report = split_ai_candidate_label(
+        args.run,
+        label=args.label,
+        out_dir=args.out_dir,
+    )
+    print(json.dumps(report, indent=2, sort_keys=True))
     return 0
 
 

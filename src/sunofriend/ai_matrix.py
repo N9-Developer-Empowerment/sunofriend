@@ -7,6 +7,7 @@ import json
 import math
 import re
 from collections import Counter
+from itertools import combinations
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -19,6 +20,7 @@ from .ai_runtime import (
     AITranscriptionCandidate,
     AITranscriptionRequest,
 )
+from .midi_tempo import MICROSECONDS_PER_MINUTE, _scan_midi
 
 
 AI_MATRIX_SCHEMA = "sunofriend.ai-candidate-matrix.v1"
@@ -99,6 +101,7 @@ def build_ai_candidate_matrix(
     }
     if len(execution_profiles) != 1:
         raise ValueError("AI matrix lanes must use the same execution settings")
+    _validate_m4_lanes(loaded)
 
     rows = [
         _lane_report(
@@ -122,6 +125,9 @@ def build_ai_candidate_matrix(
         "lanes": rows,
         "label_stability": _label_stability(rows),
         "cross_lane_note_overlap": _cross_lane_overlap(
+            loaded, tolerance_seconds=overlap_tolerance_ms / 1000.0
+        ),
+        "m4_role_overlap": _m4_role_overlap(
             loaded, tolerance_seconds=overlap_tolerance_ms / 1000.0
         ),
         "raw_candidates_mutated": False,
@@ -156,12 +162,31 @@ def _load_lane(
         record = artifacts.get(required)
         if not isinstance(record, Mapping):
             raise ValueError(f"AI matrix lane {lane} is missing {required}")
+    verified_artifacts: dict[str, Path] = {}
     for name, record in artifacts.items():
         if not isinstance(name, str) or not isinstance(record, Mapping):
             raise ValueError(f"AI matrix lane {lane} has an invalid artifact record")
-        _verify_record(record, run_dir, cache, label=f"{lane} {name}")
+        verified_artifacts[name] = _verify_record(
+            record, run_dir, cache, label=f"{lane} {name}"
+        )
+        if (
+            name
+            in {
+                "request.json",
+                "candidate.raw.json",
+                "candidate.json",
+                "candidate.mid",
+                "candidate.quality.json",
+            }
+            and verified_artifacts[name] != (run_dir / name).resolve()
+        ):
+            raise ValueError(
+                f"AI matrix lane {lane} {name} artifact path disagrees"
+            )
 
-    _verify_record(run.get("source"), None, cache, label=f"{lane} source")
+    source_path = _verify_record(
+        run.get("source"), None, cache, label=f"{lane} source"
+    )
     worker = run.get("worker")
     _verify_record(worker, None, cache, label=f"{lane} worker")
     checkpoint = run.get("checkpoint")
@@ -173,6 +198,8 @@ def _load_lane(
 
     request_document = _read_json(run_dir / "request.json")
     request = AITranscriptionRequest.from_dict(request_document, require_audio=False)
+    if Path(request.audio_path).expanduser().resolve() != source_path:
+        raise ValueError(f"AI matrix lane {lane} request source differs from run source")
     if isinstance(run.get("request"), Mapping) and run["request"] != request_document:
         raise ValueError(f"AI matrix lane {lane} request.json differs from run.json")
     candidate_document = _read_json(run_dir / "candidate.json")
@@ -205,7 +232,16 @@ def _load_lane(
     )
     if candidate.backend == "muscriptor" and not config_hash:
         raise ValueError(f"AI matrix lane {lane} has no pinned MuScriptor config")
-    execution = run.get("execution") or candidate.metadata.get("execution")
+    candidate_execution = candidate.metadata.get("execution")
+    if (
+        isinstance(candidate_execution, Mapping)
+        and run.get("execution") != candidate_execution
+    ):
+        raise ValueError(
+            f"AI matrix lane {lane} execution differs from pinned candidate metadata"
+        )
+    execution = run.get("execution") or candidate_execution
+    _verify_execution_against_request(execution, request, lane=lane)
     if isinstance(execution, Mapping):
         execution_config_hash = execution.get("model_config_sha256")
         if execution_config_hash is not None and execution_config_hash != config_hash:
@@ -224,6 +260,9 @@ def _load_lane(
         if recorded_quality.get("schema") != AI_QUALITY_SCHEMA:
             raise ValueError(f"AI matrix lane {lane} has an invalid quality report")
     quality = assess_candidate_quality(candidate, requested_roles=request.roles)
+    bpm = _verified_candidate_bpm(
+        verified_artifacts["candidate.mid"], run.get("bpm"), lane=lane
+    )
 
     return {
         "lane": lane,
@@ -237,6 +276,7 @@ def _load_lane(
         "execution": execution,
         "candidate_midi_sha256": artifacts["candidate.mid"]["sha256"],
         "candidate_json_sha256": artifacts["candidate.json"]["sha256"],
+        "bpm": bpm,
     }
 
 
@@ -264,6 +304,7 @@ def _lane_report(
         "source_sha256": run.get("source", {}).get("sha256"),
         "candidate_json_sha256": item["candidate_json_sha256"],
         "candidate_midi_sha256": item["candidate_midi_sha256"],
+        "bpm": round(float(item["bpm"]), 6),
         "model_version": candidate.model_version,
         "model_size": (
             execution.get("model_size") if isinstance(execution, Mapping) else None
@@ -431,6 +472,133 @@ def _cross_lane_overlap(
     return rows
 
 
+def _validate_m4_lanes(loaded: Sequence[Mapping[str, Any]]) -> None:
+    """Require every M4 lane to be one comparable role-conditioned pass."""
+
+    lanes = [item for item in loaded if item["lane"].split("-", 1)[0] == "M4"]
+    if not lanes:
+        return
+    roles = []
+    for item in lanes:
+        request: AITranscriptionRequest = item["request"]
+        if len(request.roles) != 1:
+            raise ValueError("each M4 lane must request exactly one role")
+        role = re.sub(r"[^a-z0-9]+", "_", request.roles[0].casefold()).strip("_")
+        if not role:
+            raise ValueError("each M4 lane must request one nonblank canonical role")
+        roles.append(role)
+    if len(roles) != len(set(roles)):
+        raise ValueError("M4 lanes must request distinct roles")
+
+    sources = {str(item["run"].get("source", {}).get("sha256", "")) for item in lanes}
+    if len(sources) != 1 or not next(iter(sources)):
+        raise ValueError("M4 lanes must use the same source audio")
+    excerpts = {
+        (item["request"].start_seconds, item["request"].end_seconds)
+        for item in lanes
+    }
+    if len(excerpts) != 1:
+        raise ValueError("M4 lanes must use the same source excerpt")
+    bpms = {float(item["bpm"]) for item in lanes}
+    if len(bpms) != 1 or next(iter(bpms)) <= 0:
+        raise ValueError("M4 lanes must use the same positive BPM")
+
+
+def _m4_role_overlap(
+    loaded: Sequence[Mapping[str, Any]], *, tolerance_seconds: float
+) -> list[dict[str, Any]]:
+    """Compare same-source M4 passes without treating overlap as correctness."""
+
+    lanes = sorted(
+        (
+            item
+            for item in loaded
+            if item["lane"].split("-", 1)[0] == "M4"
+        ),
+        key=lambda item: item["lane"],
+    )
+    rows: list[dict[str, Any]] = []
+    for left, right in combinations(lanes, 2):
+        left_candidate: AITranscriptionCandidate = left["candidate"]
+        right_candidate: AITranscriptionCandidate = right["candidate"]
+        left_notes = list(left_candidate.notes)
+        right_notes = list(right_candidate.notes)
+        matched = _greedy_note_overlap(
+            left_notes,
+            right_notes,
+            source_offset=float(left["request"].start_seconds),
+            reference_offset=float(right["request"].start_seconds),
+            tolerance_seconds=tolerance_seconds,
+        )
+        left_role = left["request"].roles[0]
+        right_role = right["request"].roles[0]
+        label_pairs = []
+        left_labels = sorted({note.instrument or "unlabelled" for note in left_notes})
+        right_labels = sorted({note.instrument or "unlabelled" for note in right_notes})
+        for left_label in left_labels:
+            left_group = [
+                note
+                for note in left_notes
+                if (note.instrument or "unlabelled") == left_label
+            ]
+            for right_label in right_labels:
+                right_group = [
+                    note
+                    for note in right_notes
+                    if (note.instrument or "unlabelled") == right_label
+                ]
+                pair_matches = _greedy_note_overlap(
+                    left_group,
+                    right_group,
+                    source_offset=float(left["request"].start_seconds),
+                    reference_offset=float(right["request"].start_seconds),
+                    tolerance_seconds=tolerance_seconds,
+                )
+                label_pairs.append(
+                    {
+                        "left_label": left_label,
+                        "right_label": right_label,
+                        "matched_notes": pair_matches,
+                        "left_note_count": len(left_group),
+                        "right_note_count": len(right_group),
+                    }
+                )
+        left_requested_count = sum(
+            (note.instrument or "unlabelled") == left_role for note in left_notes
+        )
+        right_requested_count = sum(
+            (note.instrument or "unlabelled") == right_role for note in right_notes
+        )
+        rows.append(
+            {
+                "left_lane": left["lane"],
+                "left_requested_label": left_role,
+                "right_lane": right["lane"],
+                "right_requested_label": right_role,
+                "matched_notes": matched,
+                "left_note_count": len(left_notes),
+                "right_note_count": len(right_notes),
+                "left_overlap_ratio": round(matched / len(left_notes), 6)
+                if left_notes
+                else 0.0,
+                "right_overlap_ratio": round(matched / len(right_notes), 6)
+                if right_notes
+                else 0.0,
+                "left_requested_label_count": left_requested_count,
+                "left_off_role_count": len(left_notes) - left_requested_count,
+                "right_requested_label_count": right_requested_count,
+                "right_off_role_count": len(right_notes) - right_requested_count,
+                "label_pairs": label_pairs,
+                "possible_role_collapse": matched > 0,
+                "interpretation": (
+                    "Same-pitch/onset overlap can reveal duplicated or relabelled "
+                    "events, but it is not an accuracy score or a winner."
+                ),
+            }
+        )
+    return rows
+
+
 def _greedy_note_overlap(
     source,
     reference,
@@ -483,11 +651,117 @@ def _duration_seconds(
 def _path_free_execution(value: Any) -> dict[str, Any] | None:
     if not isinstance(value, Mapping):
         return None
-    return {
-        key: item
-        for key, item in value.items()
-        if key not in {"path", "model_path", "model_config_path"}
+    result = {
+        key: value[key]
+        for key in ("schema", "model_size", "model_config_sha256")
+        if key in value and isinstance(value[key], (str, int, float, bool))
     }
+    nested_fields = {
+        "decoding": (
+            "strategy",
+            "beam_size",
+            "batch_size",
+            "cfg_coef",
+            "temperature",
+            "use_sampling",
+            "no_eos_is_ok",
+        ),
+        "chunking": (
+            "seconds",
+            "policy",
+            "prelude_forcing",
+            "prelude_forcing_supported",
+        ),
+    }
+    for section, names in nested_fields.items():
+        source = value.get(section)
+        if not isinstance(source, Mapping):
+            continue
+        result[section] = {
+            name: source[name]
+            for name in names
+            if name in source
+            and isinstance(source[name], (str, int, float, bool))
+        }
+    return result
+
+
+def _verify_execution_against_request(
+    value: Any, request: AITranscriptionRequest, *, lane: str
+) -> None:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"AI matrix lane {lane} has no execution settings")
+    options = request.options
+    expected = {
+        "model_size": options.get("model_size"),
+        "decoding": {
+            "beam_size": options.get("beam_size"),
+            "batch_size": options.get("batch_size"),
+            "cfg_coef": options.get("cfg_coef"),
+            "temperature": options.get("temperature"),
+            "use_sampling": options.get("use_sampling"),
+            "no_eos_is_ok": options.get("no_eos_is_ok"),
+        },
+        "chunking": {
+            "seconds": options.get("chunk_seconds"),
+            "prelude_forcing": options.get("prelude_forcing"),
+            "prelude_forcing_supported": options.get(
+                "prelude_forcing_supported"
+            ),
+        },
+    }
+    actual = _path_free_execution(value) or {}
+    for name, expected_value in expected.items():
+        if isinstance(expected_value, Mapping):
+            actual_section = actual.get(name)
+            if not isinstance(actual_section, Mapping):
+                raise ValueError(
+                    "AI matrix lanes must use the same execution settings pinned "
+                    f"in request ({lane} has no {name})"
+                )
+            for field, field_value in expected_value.items():
+                if field_value is not None and actual_section.get(field) != field_value:
+                    raise ValueError(
+                        "AI matrix lanes must use the same execution settings pinned "
+                        f"in request ({lane} {name}.{field} differs)"
+                    )
+        elif expected_value is not None and actual.get(name) != expected_value:
+            raise ValueError(
+                "AI matrix lanes must use the same execution settings pinned in "
+                f"request ({lane} {name} differs)"
+            )
+    requested_config = options.get("model_config_sha256")
+    recorded_config = actual.get("model_config_sha256")
+    if recorded_config is not None and recorded_config != requested_config:
+        raise ValueError(
+            f"AI matrix lane {lane} execution config hash differs from request"
+        )
+
+
+def _verified_candidate_bpm(path: Path, declared: Any, *, lane: str) -> float:
+    try:
+        declared_bpm = float(declared)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"AI matrix lane {lane} has no valid BPM") from exc
+    if not math.isfinite(declared_bpm) or declared_bpm <= 0:
+        raise ValueError(f"AI matrix lane {lane} has no valid BPM")
+    layout = _scan_midi(path.read_bytes())
+    if len(layout.tempo_events) != 1:
+        raise ValueError(
+            f"AI matrix lane {lane} candidate MIDI must have one tempo event"
+        )
+    tick_zero = [event for event in layout.tempo_events if event.tick == 0]
+    tempos = {event.microseconds_per_quarter for event in tick_zero}
+    if len(tempos) != 1:
+        raise ValueError(
+            f"AI matrix lane {lane} candidate MIDI has no unambiguous tick-zero tempo"
+        )
+    encoded = MICROSECONDS_PER_MINUTE / next(iter(tempos))
+    if abs(encoded - declared_bpm) > 0.001:
+        raise ValueError(
+            f"AI matrix lane {lane} BPM differs from its pinned candidate MIDI"
+        )
+    return encoded
 
 
 def _verify_record(

@@ -1,6 +1,6 @@
 ---
 name: sunofriend
-description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes and existing source/MIDI alternatives, render cached neutral previews, save explicit solo/full-mix choices, hear the selected arrangement and export unchanged choices in a GarageBand handoff through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
+description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes, partition model-reported labels exactly, and review existing source/MIDI alternatives; render cached neutral previews, save explicit solo/full-mix choices, hear the selected arrangement and export unchanged choices in a GarageBand handoff through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
 ---
 
 # Sunofriend
@@ -24,6 +24,8 @@ scripts.
    - `sunofriend ai-doctor --require muscriptor-checkpoint` before producing
      MuScriptor lanes for `ai-matrix`. The matrix command itself uses completed
      local runs and needs no model inference capability.
+   - `sunofriend ai-label-split` needs no audio, model or preview capability.
+     It verifies and partitions one completed immutable AI run.
    - `sunofriend ai-doctor --require game` before a standalone GAME vocal
      boundary/pitch bake-off. Its explicit setup command is
      `scripts/setup-game-model.sh`; inference itself must remain offline.
@@ -106,7 +108,9 @@ scripts.
   explicit optional choices; numbered MIDI files in the ZIP must remain exact
   copies, while the combined GM arrangement is only a proxy. Submission is
   absent in v1; the contribution preview is only an exact redacted-data
-  disclosure.
+  disclosure. An explicit catalog may add one `review_question` and a short
+  `listening_focus` list per stem; these prompts guide listening only and must
+  not rank, preselect or promote a candidate.
 - Several completed immutable MuScriptor lanes: use `ai-matrix` with explicit
   repeated `LANE=RUN_DIR` values and a fresh `--out` JSON. Include M0
   unconditioned full mix, M1 discovered-label conditioning, M2 known-label
@@ -118,6 +122,22 @@ scripts.
   the audit. The pinned MuScriptor 0.2.1 baseline is greedy, batch 1, beam 1,
   CFG 1.0 and independent five-second chunks; it does not support prelude
   forcing, so do not request or claim it.
+- Mixed-role M4 matrix: require every M4 lane to use the same source audio,
+  excerpt and positive BPM, request exactly one role and use a distinct role
+  from every other M4 lane. Inspect `m4_role_overlap` for possible duplicated
+  or relabelled notes. Never call overlap accuracy, isolation or a winner.
+- Exact AI label derivative: use `ai-label-split` only when one completed run
+  reports both a wanted label and off-role labels. It writes an exact raw-event
+  source-index partition plus deterministic requested/complement MIDI auditions
+  without re-running the model. Keep both, retain the byte-identical full
+  candidate as the mandatory control and report any MIDI pitch/tick
+  quantisation, duplicate collapse or same-pitch truncation. Treat all outputs
+  as listening evidence. Keep the byte-identical source-request/source-candidate
+  JSON controls private: Workbench uses them to verify raw-event provenance,
+  and the request may contain local paths. This is not source separation or
+  physical-instrument identification. A zero-note
+  requested label is blocked no-evidence; a non-empty split remains
+  review-required and must never be promoted automatically.
 - One instrumental stem: use `listen` with an explicit supported `--kind`.
 - One proposed role inside a mixed pitched stem: use `midi-mask` only on a
   short excerpt with an aligned note-bearing MIDI track. Treat its harmonic
@@ -648,6 +668,10 @@ sunofriend ai-matrix \
   --lane "M2=$M2_RUN" \
   --lane "M3-bass=$M3_BASS_RUN" \
   --out "$FRESH_MATRIX_JSON"
+
+sunofriend ai-label-split "$COMPLETED_M4_RUN" \
+  --label clean_electric_guitar \
+  --out-dir "$FRESH_LABEL_SPLIT"
 ```
 
 ## Validate and hand off
@@ -664,9 +688,23 @@ sunofriend ai-matrix \
    every lane's requested and
    detected labels, note count, severe/no-evidence block reasons,
    per-instrument quality, five-second boundaries, real-time factor and
-   cross-lane overlap. Confirm all source, worker, raw artifact, candidate,
+   cross-lane overlap. For M4 also confirm same source/excerpt/BPM, one
+   distinct requested role per lane, requested/off-role counts and every peer
+   overlap ratio. Confirm all source, worker, raw artifact, candidate,
    MIDI, checkpoint and config hashes verified and both mutation totals are
    zero. Retain failed lanes and never turn overlap or quality into a winner.
+   For `ai-label-split`, additionally confirm the source run and artifact
+   hashes, exact requested label, detected-label counts, selected/complement
+   source indices, disjoint/exhaustive raw-event partition and all-zero source
+   event deletion/duplication. Confirm the full-candidate control is
+   byte-identical; verify the private request/candidate controls and confirm
+   every partition row equals the pinned candidate note at that source index.
+   Then report each audition MIDI's rendered note count,
+   pitch/tick quantisation, duplicate collapse and same-pitch truncation; do not
+   claim that MIDI encoding is lossless. Hand off the unchanged full candidate,
+   requested-label MIDI and complement together.
+   Report zero-note selected output as blocked no-evidence; do not infer
+   separation or promote a non-empty derivative without listening.
    For `midi-mask`, additionally report source/MIDI hashes, selected track and
    role, excerpt bounds, intersecting notes/pitches, mask parameters, source/
    target/residual RMS, persisted PCM24 reconstruction error and threshold,
@@ -848,6 +886,11 @@ sunofriend ai-matrix \
     false.
 12. For `workbench`, report the inferred BPM/key/tuning, stem and candidate
     counts, primary-versus-diagnostic split, SQLite path and loopback URL.
+    When an explicit catalog supplies `review_question` or `listening_focus`,
+    report the displayed prompt, confirm its hash is pinned to the review row
+    and saved events, and confirm that it caused no selection or ranking
+    effect. A changed prompt must create a fresh row rather than restore an old
+    choice; prompt text must stay out of the contribution preview.
     Confirm the server binds to `127.0.0.1`, uses a per-launch token, serves
     only catalogued or content-addressed local files, restores choices after
     restart and has no upload/submission endpoint. When rendering, report the
