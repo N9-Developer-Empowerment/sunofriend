@@ -1333,7 +1333,7 @@ class WorkbenchServerTests(unittest.TestCase):
         self.assertIn("Alignment boundary:", page)
         self.assertIn("not proof that a candidate is aligned", page)
         self.assertIn("Selected arrangement explorer", page)
-        self.assertIn("Audition controls only.", page)
+        self.assertIn("Visual and temporary audition controls only.", page)
         self.assertIn("/api/arrangement-timeline", page)
         self.assertIn("function drawArrangementTimeline(timeline)", page)
         self.assertIn("function arrangementSelectionMatches(timeline)", page)

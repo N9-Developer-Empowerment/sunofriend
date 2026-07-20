@@ -54,7 +54,7 @@ choice; scores and model labels never create an automatic global winner.
 | Test learned local source cleanup | `ai-cleanup` | Pinned Demucs target plus waveform residual, hard checkpoint verification, deterministic short excerpts and an explicit listening gate |
 | Split one reviewed MIDI into audible roles | `midi-role-split`, `midi-role-split-resolve` | Explicit source-event cluster choice, exact primary-note partition, optional independently transcribed residual layer, local A/B review and a hash-verified user-selected recommendation |
 | Compare consistent sounds on one fixed MIDI | `timbre-resynthesis` | Level-matched complete-patch, extracted-sampler and source-fitted harmonic-plus-noise auditions with note-by-note silence checks and no MIDI changes |
-| Review and hand off multi-process MIDI alternatives in one local site | `workbench` | Loopback-only Project Overview, precise decoded 0.5–15 second per-stem comparison, full-song selected-arrangement timeline and temporary source/MIDI mixer, at most three primary candidates per role, append-only decisions, private offline review export and an exact-selected-MIDI GarageBand ZIP; no automatic winner or submission endpoint |
+| Review and hand off multi-process MIDI alternatives in one local site | `workbench` | Loopback-only Project Overview, precise decoded 0.5–15 second per-stem and canonical selected-arrangement loops, full-song timeline/coarse custom mixer, at most three primary candidates per role, append-only decisions, private offline review export and an exact-selected-MIDI GarageBand ZIP; no automatic winner or submission endpoint |
 
 Development has started on a local-first ensemble of optional transcription
 models, phrase-level melody review and learned instrument matching. See the
@@ -79,7 +79,11 @@ leaving older MIDI choices active. Its per-stem workspace can also prepare a
 precise 0.5–15 second source-versus-MIDI comparison on one decoded Web Audio
 clock. Primary candidates are included by default, advanced candidates require
 an explicit opt-in, and no play, switch or seek changes a decision or records
-an audition event. AI candidates carry verified execution/checkpoint
+an audition event. The arrangement page can prepare the same bounded window for
+all deduplicated source stems and current explicit main/optional MIDI, then
+switch source-only, selected-MIDI, hybrid and main-only groups on one scheduled
+clock. Its server-owned manifest prevents the browser from adding arbitrary
+tracks. AI candidates carry verified execution/checkpoint
 diagnostics; severe decoder failures and zero-note results remain downloadable
 evidence but cannot become main or optional choices. The first small-model
 M0–M3 matrix also shows that label conditioning can prevent one known full-mix
@@ -339,6 +343,13 @@ or 256 MiB, so an older prepared loop may be evicted and prepared again. One
 request is also capped at 2 GiB across source audio, candidate MIDI, the
 SoundFont and neutral previews, with oversized declared inputs rejected before
 preview rendering. Generated loop audio is capped at 64 MiB.
+Decoded arrangement excerpts use the same window, input and output bounds and
+allow at most 24 total source/MIDI tracks. Stem and arrangement excerpts share
+the 32-entry/256 MiB private rebuildable-cache quota; no lane is silently
+omitted when a request is too large. Shorten the window if decoded output would
+exceed 64 MiB; reduce active optional MIDI lanes if the arrangement exceeds 24
+tracks. A project with more than 24 unique source files cannot use this bounded
+precise path, but its coarse full-song mixer remains available.
 
 The **Visual result explorer** above those players is evidence, not an editor
 or recommendation. Click its common elapsed-seconds axis to move the playhead.
@@ -376,10 +387,25 @@ choice and explicit optional choices. Full-mix confirmation is stored with a
 selected MIDI as separate lanes with one playhead, loop and fit/2×/4× views.
 Use **Prepare selected MIDI sounds locally** when a selected lane has no neutral
 preview; an existing unnormalised preview is not silently substituted. Source
-and MIDI levels are not matched, and the selected-arrangement mixer still uses
-coarsely synchronised HTML media elements rather than the per-stem decoded
-transport. It is therefore a creative audition rather than precise comparison
-evidence. Reloading resets its temporary mixer. Only buttons under
+and MIDI levels are not matched. For a recognisable 0.5–15 second section, use
+**Prepare precise arrangement loop**. The server re-derives a path-free,
+context-neutral manifest from the current saved state, deduplicates byte-identical
+source stems, keeps each selected MIDI lane distinct and supplies the exact
+source-only, selected-MIDI, hybrid and main-only groups. All tracks start at
+recorded zero; no offset or downbeat is inferred. Group switches are scheduled
+on one decoded Web Audio clock, but unity-gain tracks are not level matched and
+a dense hybrid can clip. This is not a blind or loudness-matched preference
+test.
+
+The full-song mute, solo and level mixer remains the explicitly coarse custom
+audition path. Its separate HTML media elements share elapsed seconds rather
+than sample-accurate scheduling. Pressing coarse Play or changing its audio
+preset, mute, solo or gain stops any prepared precise arrangement loop so the
+two playback contracts cannot be confused. Timeline visibility is display-only
+and does not take over playback.
+Precise preparation accepts only the current manifest hash, checks again after
+rendering before media URLs are registered, and returns a conflict if another
+tab changed the selection. Reloading resets all temporary audition state. Only buttons under
 **Save after listening** append a decision.
 
 The arrangement also reports every selected MIDI
@@ -1038,9 +1064,10 @@ preferred beam 1 on the 3.50–7.50 second loop. Beam 2 won no loop. Resolution
 reported zero MIDI edits, source mutations, selection changes, promotions and
 default changes, so beam 1 remains the conservative default. The standalone
 page still switches browser media at a shared position per unit rather than
-decoded sample accuracy. Workbench now has a separate one-clock decoded
-transport for bounded per-stem comparisons; extending that approach to
-long-song selected-arrangement playback remains deferred.
+decoded sample accuracy. Workbench now has separate one-clock decoded
+transports for bounded per-stem comparisons and canonical selected-arrangement
+excerpts. Full-song decoded streaming and arbitrary precise custom mixes remain
+deferred; the existing full-song mixer is explicitly coarse.
 
 #### Compare batch size 1 with batch size 2
 

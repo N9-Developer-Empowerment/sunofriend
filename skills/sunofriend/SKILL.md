@@ -159,6 +159,19 @@ scripts.
   and one absolute playhead. They all begin at recorded zero; do not infer an
   alignment offset. Preparing, playing, switching, seeking, pausing or stopping
   must not append an event, change a selection, rank a process or mutate MIDI.
+  For a precise selected arrangement, prepare a separate 0.5–15 second decoded
+  loop from the server-derived `sunofriend.workbench-arrangement-selection.v1`
+  manifest. Byte-identical sources are one lane, current main/optional MIDI
+  remains distinct, and only its source-only, selected-MIDI, hybrid and
+  main-only groups may play. Never accept browser-supplied track IDs, roles,
+  gains or arbitrary groups. Recheck the manifest after rendering before
+  registering media, use one shared start/stop time for the whole group and
+  leave the old group playing if a replacement cannot be scheduled. Allow at
+  most 24 total tracks. Treat unity-gain playback as unlevelled and potentially
+  clipping, not blind preference evidence. Invalidate an older pending preset
+  resume when the user clicks a newer preset, Pause, Stop, changes the loop or
+  leaves the view; abort and stale-guard preparation rather than publishing a
+  partial browser transport.
   The explicitly labelled compatibility fallback is synchronized in seconds,
   not sample-accurate, but its controls must also remain feedback- and
   event-free. Require every included preview to use the current SoundFont hash
@@ -168,8 +181,8 @@ scripts.
   before publication. Neutral preview rendering itself is limited to 20-minute
   MIDI. If the API reports `silence_padded_frames`, retain a visible warning,
   tell the user which track received generated end silence and never interpret
-  it as a missing MIDI note. Treat decoded loops as rebuildable cache data: at
-  most 32 recent entries or 256 MiB are retained, and an evicted loop may be
+  it as a missing MIDI note. Treat decoded stem and arrangement loops as one
+  rebuildable cache budget: at most 32 recent entries or 256 MiB are retained, and an evicted loop may be
   prepared again. Reject a request above 2 GiB across source audio, candidate
   MIDI, SoundFont and preview input before expensive rendering when declared
   sizes already exceed the cap, or above 64 MiB generated output. Completed
@@ -225,7 +238,8 @@ scripts.
   in a cache key or imply that they change the handoff. Missing MIDI mixer sound
   must be prepared with the neutral renderer; never silently use an existing
   unnormalised preview. Both views start every artifact at recorded zero and
-  infer no offset. The per-stem precise loop uses the decoded transport; the
+  infer no offset. Per-stem comparison and bounded canonical arrangement
+  presets use separate decoded transports. The full-song/custom
   selected-arrangement mixer still uses coarse HTML media elements that share
   seconds but are not sample-accurate. Source/MIDI levels are not normalised.
   The GarageBand Pack Composer has a
@@ -1402,9 +1416,14 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     prepare it again
     without treating eviction as lost project work. If the compatibility
     fallback was needed, describe it as second-synchronised, not
-    sample-accurate, and feedback/event-free. Do not imply that the coarse
-    selected-arrangement mixer has inherited the decoded transport. For an
-    arrangement/handoff, report exact selected main/optional counts, proxy
+    sample-accurate, and feedback/event-free. For a precise decoded arrangement
+    loop, report its context-neutral manifest hash, deduplicated source and
+    distinct selected-MIDI counts, 24-track maximum, exact canonical group
+    membership, pre/post-render stale-selection check and atomic one-clock
+    switching. State that it is unity-gain, unlevelled/unlimited, recorded-zero
+    and feedback-free. Do not imply that its four canonical presets make the
+    coarse full-song/custom mixer sample-accurate. For an arrangement/handoff,
+    report exact selected main/optional counts, proxy
     track count, BPM policy and ZIP path;
     report every selected same-candidate-origin overlap pair, including whether
     its source SHA-256 came from verified AI provenance or the non-AI

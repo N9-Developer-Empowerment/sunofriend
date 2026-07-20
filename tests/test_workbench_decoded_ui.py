@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 import unittest
@@ -19,6 +20,70 @@ class WorkbenchDecodedComparisonUITests(unittest.TestCase):
         cls.switch_audio = cls.page.split("async function switchAudio", 1)[1].split(
             "function wireStem", 1
         )[0]
+        cls.decoded_arrangement = cls.page.split(
+            "const decodedArrangementPresetLabels", 1
+        )[1].split("function toggleDecodedExtra", 1)[0]
+
+    def run_ui_node(self, body: str) -> dict[str, object]:
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is not installed")
+        harness = r"""
+const fs = require("fs");
+const vm = require("vm");
+const html = fs.readFileSync("src/sunofriend/workbench.html", "utf8");
+let source = html.split("<script>", 2)[1].split("</script>", 1)[0];
+source = source.split("document.querySelector('#project-nav').onclick", 1)[0];
+const status = {
+  textContent: "",
+  classList: {
+    values: new Set(),
+    add(...names) { for (const name of names) this.values.add(name); },
+    remove(...names) { for (const name of names) this.values.delete(name); },
+    toggle(name, force) {
+      if (force === undefined ? !this.values.has(name) : force) this.values.add(name);
+      else this.values.delete(name);
+    },
+  },
+};
+const document = {
+  querySelector(selector) {
+    return selector === "#decoded-arrangement-status" ? status : null;
+  },
+  querySelectorAll() { return []; },
+};
+let frame = 0;
+const context = {
+  AbortController,
+  AbortSignal,
+  Blob,
+  URL,
+  URLSearchParams,
+  console,
+  document,
+  fetch,
+  location: {search: ""},
+  requestAnimationFrame() { frame += 1; return frame; },
+  cancelAnimationFrame() {},
+  window: {SunofriendWorkbenchTransport: {}},
+  __status: status,
+};
+vm.createContext(context);
+vm.runInContext(source, context);
+const body = BODY_SOURCE;
+Promise.resolve(vm.runInContext(`(async()=>{${body}})()`, context)).then(
+  result => console.log(JSON.stringify(result)),
+  error => { console.error(error.stack || error); process.exitCode = 1; }
+);
+""".replace("BODY_SOURCE", json.dumps(body))
+        completed = subprocess.run(
+            [node, "-e", harness],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        return json.loads(completed.stdout)
 
     def test_precise_loop_is_primary_and_compatibility_fallback_is_explicit(self) -> None:
         self.assertIn("Precise short-loop comparison", self.page)
@@ -144,6 +209,219 @@ class WorkbenchDecodedComparisonUITests(unittest.TestCase):
         external = '<script src="/workbench-transport.js"></script>'
         self.assertIn(external, self.page)
         self.assertLess(self.page.index(external), self.page.index("const token="))
+
+    def test_precise_arrangement_uses_only_server_owned_canonical_groups(self) -> None:
+        self.assertIn("Precise short arrangement loop", self.page)
+        self.assertIn("One decoded audio clock", self.page)
+        self.assertIn("/api/decoded-arrangement-loop", self.decoded_arrangement)
+        self.assertIn("selection_manifest_sha256:manifestSha", self.decoded_arrangement)
+        self.assertNotIn("candidate_ids", self.decoded_arrangement)
+        self.assertNotIn("track_ids", self.decoded_arrangement)
+        self.assertNotIn("gain:", self.decoded_arrangement)
+        for preset in ("source-only", "selected-midi", "hybrid", "main-only"):
+            self.assertIn(f"'{preset}'", self.decoded_arrangement)
+        self.assertIn(
+            "new window.SunofriendWorkbenchTransport.DecodedGroupLoopTransport",
+            self.decoded_arrangement,
+        )
+        self.assertIn("transport.switchTo(group)", self.decoded_arrangement)
+        self.assertIn("transport.play(group)", self.decoded_arrangement)
+
+    def test_precise_arrangement_discloses_scope_and_keeps_coarse_custom_fallback(self) -> None:
+        self.assertIn("every track starts at recorded zero", self.page)
+        self.assertIn("No source/MIDI offset or downbeat is inferred", self.page)
+        self.assertIn("fixed unity gain and are not level-matched", self.page)
+        self.assertIn("a dense hybrid can clip", self.page)
+        self.assertIn("not a blind or loudness-matched preference test", self.page)
+        self.assertIn("full-song mixer below remains the coarse compatibility/custom path", self.page)
+        self.assertIn("Coarse full-song/custom mixer", self.page)
+        self.assertIn("Play coarse full-song mix", self.page)
+        self.assertIn("second-synchronised, not sample-accurate", self.page)
+        self.assertIn('role="group" aria-label="Precise decoded arrangement presets"', self.page)
+        self.assertIn("silence_padded_frames", self.decoded_arrangement)
+        self.assertIn("Do not judge that silence as a missing transcription", self.decoded_arrangement)
+
+    def test_precise_arrangement_is_feedback_free_cancelled_and_stale_guarded(self) -> None:
+        self.assertNotIn("/api/events", self.decoded_arrangement)
+        self.assertNotIn("candidate_decision", self.decoded_arrangement)
+        self.assertNotIn("garageband-pack", self.decoded_arrangement)
+        self.assertNotIn("save(", self.decoded_arrangement)
+        self.assertIn("AbortController", self.decoded_arrangement)
+        self.assertIn("decodedArrangementAbortController?.abort()", self.decoded_arrangement)
+        self.assertIn("decodedArrangementIsCurrent(requestId,manifestSha)", self.decoded_arrangement)
+        self.assertGreaterEqual(
+            self.decoded_arrangement.count(
+                "if(!decodedArrangementIsCurrent(requestId,manifestSha))return"
+            ),
+            3,
+        )
+        self.assertIn("clearDecodedArrangement();", self.page.split("function stopAudio", 1)[1].split("function stopFallbackAudio", 1)[0])
+        self.assertIn("nothing was saved", self.decoded_arrangement.lower())
+
+    def test_failed_precise_preset_switch_keeps_previous_group_playing(self) -> None:
+        result = self.run_ui_node(
+            """
+view='arrangement';
+project={stems:[],state:{stems:{}}};
+decodedArrangementLoop={groups:{hybrid:['new-a','new-b']}};
+let stopCount=0,apiCalls=0;
+const transport={
+  playing:true,
+  activeKeys:['old-a','old-b'],
+  loopStartSeconds:0,
+  loopEndSeconds:1,
+  switchTo(){throw new Error('replacement start failed')},
+  play(){throw new Error('unexpected play')},
+  stop(){stopCount+=1;return 0},
+};
+decodedArrangementTransport=transport;
+decodedAudioContext={resume:()=>Promise.resolve(),currentTime:0};
+api=async()=>{apiCalls+=1;return {}};
+playhead=.25;
+await playDecodedArrangementPreset('hybrid');
+return {
+  sameTransport:decodedArrangementTransport===transport,
+  sameLoop:decodedArrangementLoop.groups.hybrid.length===2,
+  playing:transport.playing,
+  activeKeys:transport.activeKeys,
+  stopCount,
+  apiCalls,
+  status:__status.textContent,
+};
+"""
+        )
+
+        self.assertTrue(result["sameTransport"])
+        self.assertTrue(result["sameLoop"])
+        self.assertTrue(result["playing"])
+        self.assertEqual(result["activeKeys"], ["old-a", "old-b"])
+        self.assertEqual(result["stopCount"], 0)
+        self.assertEqual(result["apiCalls"], 0)
+        self.assertIn("previous preset keeps playing", result["status"])
+        self.assertIn("Nothing was saved", result["status"])
+
+    def test_pending_precise_play_cannot_override_a_later_pause(self) -> None:
+        result = self.run_ui_node(
+            """
+view='arrangement';
+project={stems:[],state:{stems:{}}};
+decodedArrangementLoop={groups:{hybrid:['next']}};
+let releaseResume,playCount=0,switchCount=0,pauseCount=0;
+const waiting=new Promise(resolve=>{releaseResume=resolve});
+const transport={
+  playing:false,
+  activeKeys:['old'],
+  loopStartSeconds:0,
+  loopEndSeconds:1,
+  seek(){},
+  switchTo(){switchCount+=1},
+  play(){playCount+=1},
+  pause(){pauseCount+=1;this.playing=false;return .4},
+};
+decodedArrangementTransport=transport;
+decodedAudioContext={resume:()=>waiting,currentTime:0};
+playhead=.4;
+const pending=playDecodedArrangementPreset('hybrid');
+pauseDecodedArrangement(false);
+releaseResume();
+await pending;
+return {playCount,switchCount,pauseCount,playing:transport.playing};
+"""
+        )
+
+        self.assertEqual(result["playCount"], 0)
+        self.assertEqual(result["switchCount"], 0)
+        self.assertEqual(result["pauseCount"], 1)
+        self.assertFalse(result["playing"])
+
+    def test_precise_prepare_passes_and_invalidates_the_abort_signal(self) -> None:
+        result = self.run_ui_node(
+            """
+view='arrangement';
+project={decoded_arrangement_selection:{selection_manifest_sha256:'a'.repeat(64)}};
+selectedRows=()=>[{candidate:{},stem:{}}];
+arrangementTracks=()=>[{kind:'midi',url:'ready'}];
+loopBounds=()=>({start:0,end:1});
+stopOrdinaryAudioForDecoded=()=>{};
+let captured=null;
+api=(path,options)=>new Promise((resolve,reject)=>{
+  captured={path,options};
+  options.signal.addEventListener('abort',()=>{
+    const error=new Error('cancelled');error.name='AbortError';reject(error);
+  },{once:true});
+});
+const button={disabled:false,textContent:'Prepare'};
+const pending=prepareDecodedArrangement(button);
+await Promise.resolve();
+const signal=captured.options.signal;
+clearDecodedArrangement();
+await pending;
+return {
+  path:captured.path,
+  signalWasPassed:signal instanceof AbortSignal,
+  aborted:signal.aborted,
+  transportCleared:decodedArrangementTransport===null,
+};
+"""
+        )
+
+        self.assertEqual(result["path"], "/api/decoded-arrangement-loop")
+        self.assertTrue(result["signalWasPassed"])
+        self.assertTrue(result["aborted"])
+        self.assertTrue(result["transportCleared"])
+
+    def test_ordinary_audio_takeover_pauses_and_announces_precise_transport(self) -> None:
+        result = self.run_ui_node(
+            """
+view='arrangement';
+project={stems:[],state:{stems:{}}};
+let pauses=0;
+decodedArrangementTransport={
+  playing:true,
+  activeKeys:['source'],
+  pause(){pauses+=1;this.playing=false;return .3},
+};
+const audio={
+  id:'proxy',currentTime:0,
+  addEventListener(){},pause(){},
+};
+bindSharedAudio(audio);
+audio.onplay();
+return {pauses,playing:decodedArrangementTransport.playing,status:__status.textContent};
+"""
+        )
+
+        self.assertEqual(result["pauses"], 1)
+        self.assertFalse(result["playing"])
+        self.assertIn("paused because another audio player took control", result["status"])
+
+    def test_padding_labels_disambiguate_duplicate_roles(self) -> None:
+        result = self.run_ui_node(
+            """
+project={stems:[
+  {stem_id:'keys-a',candidates:[{candidate_id:'one',label:'Tracker one'}]},
+  {stem_id:'keys-b',candidates:[{candidate_id:'two',label:'Tracker two'}]},
+]};
+return {
+  firstSource:decodedArrangementTrackLabel({kind:'source',roles:['keys'],labels:['Bright keys stem'],stem_ids:['keys-a']}),
+  secondSource:decodedArrangementTrackLabel({kind:'source',roles:['keys'],labels:['Dark keys stem'],stem_ids:['keys-b']}),
+  firstMidi:decodedArrangementTrackLabel({kind:'selected_midi',role:'keys',decision:'optional',stem_id:'keys-a',candidate_id:'one'}),
+  secondMidi:decodedArrangementTrackLabel({kind:'selected_midi',role:'keys',decision:'optional',stem_id:'keys-b',candidate_id:'two'}),
+};
+"""
+        )
+
+        self.assertNotEqual(result["firstSource"], result["secondSource"])
+        self.assertNotEqual(result["firstMidi"], result["secondMidi"])
+        self.assertIn("Bright keys stem", result["firstSource"])
+        self.assertIn("Tracker one", result["firstMidi"])
+
+    def test_generated_silence_warning_is_announced(self) -> None:
+        self.assertIn(
+            'id="decoded-arrangement-padding" class="notice" role="status" '
+            'aria-live="polite" hidden',
+            self.page,
+        )
 
     def test_embedded_application_javascript_remains_valid(self) -> None:
         node = shutil.which("node")

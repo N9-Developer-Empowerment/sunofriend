@@ -29,6 +29,8 @@ from .workbench_semantics import terminal_no_selection_outcome
 
 NEUTRAL_PREVIEW_SCHEMA = "sunofriend.workbench-neutral-preview.v1"
 DECODED_STEM_LOOP_SCHEMA = "sunofriend.workbench-decoded-stem-loop.v1"
+ARRANGEMENT_SELECTION_SCHEMA = "sunofriend.workbench-arrangement-selection.v1"
+DECODED_ARRANGEMENT_LOOP_SCHEMA = "sunofriend.workbench-decoded-arrangement-loop.v1"
 ARRANGEMENT_SCHEMA = "sunofriend.workbench-arrangement.v1"
 GARAGEBAND_HANDOFF_SCHEMA = "sunofriend.workbench-garageband-handoff.v1"
 GARAGEBAND_PACK_PLAN_SCHEMA = "sunofriend.workbench-garageband-pack-plan.v1"
@@ -37,9 +39,11 @@ GARAGEBAND_PACK_SCHEMA = "sunofriend.workbench-garageband-pack.v1"
 SELECTED_MIDI_OVERLAP_SCHEMA = "sunofriend.workbench-selected-midi-overlap.v1"
 _RENDER_POLICY = "role-neutral-general-midi-v1"
 _DECODED_LOOP_POLICY = "recorded-zero-source-frame-window-v1"
+_DECODED_ARRANGEMENT_LOOP_POLICY = "recorded-zero-selected-arrangement-window-v1"
 _DECODED_LOOP_MINIMUM_SECONDS = 0.5
 _DECODED_LOOP_MAXIMUM_SECONDS = 15.0
 _DECODED_LOOP_MAXIMUM_CANDIDATES = 6
+_DECODED_ARRANGEMENT_MAXIMUM_TRACKS = 24
 _DECODED_LOOP_MAXIMUM_OUTPUT_BYTES = 64 * 1024 * 1024
 _DECODED_LOOP_MAXIMUM_INPUT_BYTES = 2 * 1024 * 1024 * 1024
 _DECODED_LOOP_CACHE_MAXIMUM_BYTES = 256 * 1024 * 1024
@@ -48,6 +52,7 @@ _DECODED_LOOP_BUILDING_MAXIMUM_AGE_SECONDS = 6 * 60 * 60
 _DECODED_LOOP_MAXIMUM_START_SECONDS = 24 * 60 * 60
 _DECODED_LOOP_MINIMUM_SAMPLE_RATE = 8_000
 _DECODED_LOOP_MAXIMUM_SAMPLE_RATE = 96_000
+_DECODED_PCM16_WAV_HEADER_BUDGET_BYTES = 4 * 1024
 _NEUTRAL_PREVIEW_MAXIMUM_SECONDS = 20 * 60
 _OVERLAP_ONSET_TOLERANCE_SECONDS = 0.080
 _SUBSTANTIAL_OVERLAP_MINIMUM_MATCHED_NOTES = 8
@@ -96,29 +101,34 @@ class WorkbenchArtifacts:
         catalog: Mapping[str, Any],
         stem_id: str,
         candidate_id: str,
+        *,
+        role_override: str | None = None,
     ) -> dict[str, Any] | None:
-        stem, candidate = _candidate(catalog, stem_id, candidate_id)
-        try:
-            self._verify_catalog_record(candidate["midi"], label="candidate MIDI")
-        except ValueError:
-            return None
-        expected = {
-            "source_midi_sha256": candidate["midi"]["sha256"],
-            "role": path_free_role(stem.get("role"))[0],
-            "bpm": _project_bpm(catalog),
-            "policy": _RENDER_POLICY,
-        }
-        soundfont_sha256 = self._available_soundfont_sha256()
-        if not soundfont_sha256:
-            return None
-        expected["soundfont_sha256"] = soundfont_sha256
-        return self._find_cached("previews", NEUTRAL_PREVIEW_SCHEMA, expected)
+        with self._lock:
+            stem, candidate = _candidate(catalog, stem_id, candidate_id)
+            try:
+                self._verify_catalog_record(candidate["midi"], label="candidate MIDI")
+            except ValueError:
+                return None
+            expected = {
+                "source_midi_sha256": candidate["midi"]["sha256"],
+                "role": _preview_role(stem, role_override),
+                "bpm": _project_bpm(catalog),
+                "policy": _RENDER_POLICY,
+            }
+            soundfont_sha256 = self._available_soundfont_sha256()
+            if not soundfont_sha256:
+                return None
+            expected["soundfont_sha256"] = soundfont_sha256
+            return self._find_cached("previews", NEUTRAL_PREVIEW_SCHEMA, expected)
 
     def render_candidate_preview(
         self,
         catalog: Mapping[str, Any],
         stem_id: str,
         candidate_id: str,
+        *,
+        role_override: str | None = None,
     ) -> dict[str, Any]:
         stem, candidate = _candidate(catalog, stem_id, candidate_id)
         if candidate.get("audition_blocked"):
@@ -128,7 +138,7 @@ class WorkbenchArtifacts:
             )
         self._verify_catalog_record(candidate["midi"], label="candidate MIDI")
         bpm = _project_bpm(catalog)
-        role = path_free_role(stem.get("role"))[0]
+        role = _preview_role(stem, role_override)
         soundfont = self._soundfont()
         key_payload = {
             "schema": NEUTRAL_PREVIEW_SCHEMA,
@@ -164,7 +174,9 @@ class WorkbenchArtifacts:
                 clips = read_midi_clips(source_midi, role=role)
                 notes = _clips_to_notes(clips)
                 if not notes:
-                    raise ValueError("selected candidate MIDI contains no playable notes")
+                    raise ValueError(
+                        "selected candidate MIDI contains no playable notes"
+                    )
                 if max(note.end for note in notes) > _NEUTRAL_PREVIEW_MAXIMUM_SECONDS:
                     raise ValueError(
                         "selected candidate MIDI exceeds the 20 minute neutral-preview "
@@ -251,9 +263,7 @@ class WorkbenchArtifacts:
                     [("SoundFont", self._soundfont_cache)]
                 )
             else:
-                soundfont_path = self.soundfont_path or Path(
-                    find_soundfont()
-                ).resolve()
+                soundfont_path = self.soundfont_path or Path(find_soundfont()).resolve()
                 try:
                     soundfont_size = soundfont_path.stat().st_size
                 except OSError as exc:
@@ -266,9 +276,7 @@ class WorkbenchArtifacts:
                 source_record, label="source audio"
             )
             for candidate in candidates:
-                self._verify_catalog_record(
-                    candidate["midi"], label="candidate MIDI"
-                )
+                self._verify_catalog_record(candidate["midi"], label="candidate MIDI")
             soundfont_record = self._soundfont()
             pre_render_input_bytes = _decoded_declared_input_bytes(
                 [("source audio", source_record), ("SoundFont", soundfont_record)]
@@ -283,9 +291,7 @@ class WorkbenchArtifacts:
 
             previews: list[dict[str, Any]] = []
             for candidate_id in requested_ids:
-                preview = self.cached_candidate_preview(
-                    catalog, stem_id, candidate_id
-                )
+                preview = self.cached_candidate_preview(catalog, stem_id, candidate_id)
                 if preview is None:
                     preview = self.render_candidate_preview(
                         catalog, stem_id, candidate_id
@@ -302,9 +308,7 @@ class WorkbenchArtifacts:
                 source_record, label="source audio"
             )
             for candidate in candidates:
-                self._verify_catalog_record(
-                    candidate["midi"], label="candidate MIDI"
-                )
+                self._verify_catalog_record(candidate["midi"], label="candidate MIDI")
             preview_paths = [
                 self._verify_catalog_record(
                     preview["preview"], label="neutral candidate preview"
@@ -319,12 +323,8 @@ class WorkbenchArtifacts:
             source_info = _decoded_audio_info(
                 soundfile, source_path, label="source audio"
             )
-            source_start_frame = _nearest_audio_frame(
-                start, source_info["sample_rate"]
-            )
-            source_end_frame = _nearest_audio_frame(
-                end, source_info["sample_rate"]
-            )
+            source_start_frame = _nearest_audio_frame(start, source_info["sample_rate"])
+            source_end_frame = _nearest_audio_frame(end, source_info["sample_rate"])
             if source_end_frame <= source_start_frame:
                 raise ValueError("decoded loop window contains no source audio frames")
             quantized_start = source_start_frame / source_info["sample_rate"]
@@ -356,9 +356,7 @@ class WorkbenchArtifacts:
                 candidate_start = _nearest_audio_frame(
                     quantized_start, info["sample_rate"]
                 )
-                candidate_end = _nearest_audio_frame(
-                    quantized_end, info["sample_rate"]
-                )
+                candidate_end = _nearest_audio_frame(quantized_end, info["sample_rate"])
                 if candidate_end <= candidate_start:
                     raise ValueError(
                         "decoded loop window contains no candidate preview frames"
@@ -384,11 +382,7 @@ class WorkbenchArtifacts:
                 )
 
             input_fingerprints = [
-                {
-                    key: value
-                    for key, value in item.items()
-                    if key != "input_path"
-                }
+                {key: value for key, value in item.items() if key != "input_path"}
                 for item in inputs
             ]
             key_payload = {
@@ -451,9 +445,7 @@ class WorkbenchArtifacts:
                     )
                     for index, item in enumerate(inputs)
                 ]
-                for index, (item, decode_path) in enumerate(
-                    zip(inputs, decode_paths)
-                ):
+                for index, (item, decode_path) in enumerate(zip(inputs, decode_paths)):
                     snapshot_info = _decoded_audio_info(
                         soundfile,
                         decode_path,
@@ -474,9 +466,7 @@ class WorkbenchArtifacts:
                 tracks: list[dict[str, Any]] = []
                 for index, item in enumerate(inputs):
                     output_path = work / f"{index:02d}-{item['kind']}.wav"
-                    output_frames = int(item["end_frame"]) - int(
-                        item["start_frame"]
-                    )
+                    output_frames = int(item["end_frame"]) - int(item["start_frame"])
                     samples = _read_padded_audio_window(
                         np,
                         soundfile,
@@ -529,9 +519,7 @@ class WorkbenchArtifacts:
                         track["candidate_id"] = item["candidate_id"]
                     tracks.append(track)
 
-                aggregate_bytes = sum(
-                    int(track["audio"]["bytes"]) for track in tracks
-                )
+                aggregate_bytes = sum(int(track["audio"]["bytes"]) for track in tracks)
                 if aggregate_bytes > _DECODED_LOOP_MAXIMUM_OUTPUT_BYTES:
                     raise ValueError(
                         "decoded loop aggregate output exceeds the 64 MiB limit"
@@ -577,29 +565,455 @@ class WorkbenchArtifacts:
             result["cache_hit"] = False
             return result
 
+    def decoded_arrangement_selection_manifest(
+        self,
+        catalog: Mapping[str, Any],
+        current: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Return the canonical path-free tracks and preset groups for audition."""
+
+        return decoded_arrangement_selection_manifest(catalog, current)
+
+    def prepare_decoded_arrangement_loop(
+        self,
+        catalog: Mapping[str, Any],
+        current: Mapping[str, Any],
+        selection_manifest_sha256: str,
+        start_seconds: float,
+        end_seconds: float,
+    ) -> dict[str, Any]:
+        """Build one private short-loop bundle for the selected arrangement."""
+
+        start, end = _decoded_loop_window(start_seconds, end_seconds)
+        (
+            selection_manifest,
+            source_groups,
+            selection,
+        ) = _decoded_arrangement_selection(catalog, current)
+        if (
+            not _is_sha256(selection_manifest_sha256)
+            or selection_manifest_sha256
+            != selection_manifest["selection_manifest_sha256"]
+        ):
+            raise ValueError(
+                "the decoded arrangement selection changed; reload the current "
+                "arrangement before preparing it"
+            )
+        if not selection:
+            raise ValueError(
+                "choose at least one candidate as main or optional before preparing "
+                "a decoded arrangement"
+            )
+        if len(source_groups) + len(selection) > _DECODED_ARRANGEMENT_MAXIMUM_TRACKS:
+            raise ValueError(
+                "decoded arrangement comparison supports at most 24 source and "
+                "selected MIDI tracks"
+            )
+
+        with self._lock:
+            source_records = [group["records"][0] for group in source_groups]
+            declared_input_bytes = _decoded_declared_input_bytes(
+                [("source audio", record) for record in source_records]
+                + [("selected candidate MIDI", item.get("midi")) for item in selection]
+            )
+            _require_decoded_input_limit(declared_input_bytes)
+            if self._soundfont_cache is not None:
+                soundfont_size = _decoded_declared_input_bytes(
+                    [("SoundFont", self._soundfont_cache)]
+                )
+            else:
+                soundfont_path = self.soundfont_path or Path(find_soundfont()).resolve()
+                try:
+                    soundfont_size = soundfont_path.stat().st_size
+                except OSError as exc:
+                    raise ValueError(
+                        f"SoundFont file does not exist: {soundfont_path}"
+                    ) from exc
+            _require_decoded_input_limit(declared_input_bytes + soundfont_size)
+
+            for group in source_groups:
+                for record in group["records"]:
+                    self._verify_catalog_record(record, label="source audio")
+            self._verify_selection(selection)
+            soundfont_record = self._soundfont()
+            pre_render_input_bytes = _decoded_declared_input_bytes(
+                [("source audio", record) for record in source_records]
+                + [("selected candidate MIDI", item.get("midi")) for item in selection]
+                + [("SoundFont", soundfont_record)]
+            )
+            _require_decoded_input_limit(pre_render_input_bytes)
+
+            previews: list[dict[str, Any]] = []
+            aggregate_input_bytes = pre_render_input_bytes
+            for item in selection:
+                preview = self.cached_candidate_preview(
+                    catalog,
+                    str(item["stem_id"]),
+                    str(item["candidate_id"]),
+                    role_override=str(item["role"]),
+                )
+                if preview is None:
+                    preview = self.render_candidate_preview(
+                        catalog,
+                        str(item["stem_id"]),
+                        str(item["candidate_id"]),
+                        role_override=str(item["role"]),
+                    )
+                preview_bytes = _decoded_declared_input_bytes(
+                    [("neutral selected MIDI preview", preview.get("preview"))]
+                )
+                try:
+                    _require_decoded_input_limit(
+                        aggregate_input_bytes + preview_bytes
+                    )
+                except ValueError:
+                    if preview.get("cache_hit") is False:
+                        self._discard_new_preview(preview)
+                    raise
+                aggregate_input_bytes += preview_bytes
+                previews.append(preview)
+            required_soundfont_sha256 = str(soundfont_record["sha256"])
+            self._require_preview_renderer_consistency(
+                previews,
+                expected_soundfont_sha256=required_soundfont_sha256,
+            )
+
+            self._verify_decoded_arrangement_inputs(
+                source_groups=source_groups,
+                selection=selection,
+                previews=previews,
+                expected_soundfont_sha256=required_soundfont_sha256,
+            )
+            source_paths = [
+                self._verify_catalog_record(record, label="source audio")
+                for record in source_records
+            ]
+            preview_paths = [
+                self._verify_catalog_record(
+                    preview["preview"], label="neutral selected MIDI preview"
+                )
+                for preview in previews
+            ]
+            np, soundfile = _decoded_audio_modules()
+            source_infos = [
+                _decoded_audio_info(soundfile, path, label="source audio")
+                for path in source_paths
+            ]
+            if not source_infos:
+                raise ValueError("decoded arrangement requires source audio")
+            anchor_sample_rate = int(source_infos[0]["sample_rate"])
+            anchor_start_frame = _nearest_audio_frame(start, anchor_sample_rate)
+            anchor_end_frame = _nearest_audio_frame(end, anchor_sample_rate)
+            if anchor_end_frame <= anchor_start_frame:
+                raise ValueError(
+                    "decoded arrangement window contains no source audio frames"
+                )
+            quantized_start = anchor_start_frame / anchor_sample_rate
+            quantized_end = anchor_end_frame / anchor_sample_rate
+
+            inputs: list[dict[str, Any]] = []
+            for group, record, path, info in zip(
+                source_groups, source_records, source_paths, source_infos
+            ):
+                input_start = _nearest_audio_frame(
+                    quantized_start, int(info["sample_rate"])
+                )
+                input_end = _nearest_audio_frame(
+                    quantized_end, int(info["sample_rate"])
+                )
+                inputs.append(
+                    {
+                        "track_id": group["track_id"],
+                        "kind": "source",
+                        "stem_ids": list(group["stem_ids"]),
+                        "roles": list(group["roles"]),
+                        "source_sha256": str(record["sha256"]),
+                        "input_path": path,
+                        "expected_record": record,
+                        "input_sha256": str(record["sha256"]),
+                        "input_bytes": int(record["bytes"]),
+                        "sample_rate": int(info["sample_rate"]),
+                        "channels": int(info["channels"]),
+                        "input_frames": int(info["frames"]),
+                        "start_frame": input_start,
+                        "end_frame": input_end,
+                    }
+                )
+
+            for item, preview, path in zip(selection, previews, preview_paths):
+                info = _decoded_audio_info(
+                    soundfile,
+                    path,
+                    label="neutral selected MIDI preview",
+                )
+                input_start = _nearest_audio_frame(
+                    quantized_start, int(info["sample_rate"])
+                )
+                input_end = _nearest_audio_frame(
+                    quantized_end, int(info["sample_rate"])
+                )
+                inputs.append(
+                    {
+                        "track_id": item["track_id"],
+                        "kind": "selected_midi",
+                        "stem_id": item["stem_id"],
+                        "candidate_id": item["candidate_id"],
+                        "role": item["role"],
+                        "decision": item["decision"],
+                        "source_midi_sha256": str(item["midi"]["sha256"]),
+                        "neutral_preview_cache_key": str(preview["cache_key"]),
+                        "neutral_preview_policy": str(preview["policy"]),
+                        "soundfont_sha256": str(preview["soundfont_sha256"]),
+                        "input_path": path,
+                        "expected_record": preview["preview"],
+                        "input_sha256": str(preview["preview"]["sha256"]),
+                        "input_bytes": int(preview["preview"]["bytes"]),
+                        "sample_rate": int(info["sample_rate"]),
+                        "channels": int(info["channels"]),
+                        "input_frames": int(info["frames"]),
+                        "start_frame": input_start,
+                        "end_frame": input_end,
+                    }
+                )
+
+            pcm16_output_upper_bound_bytes = _decoded_pcm16_output_upper_bound(
+                inputs
+            )
+            if pcm16_output_upper_bound_bytes > _DECODED_LOOP_MAXIMUM_OUTPUT_BYTES:
+                raise ValueError(
+                    "decoded arrangement aggregate output exceeds the 64 MiB limit"
+                )
+
+            input_fingerprints = [
+                {
+                    key: value
+                    for key, value in item.items()
+                    if key not in {"input_path", "expected_record"}
+                }
+                for item in inputs
+            ]
+            key_payload = {
+                "schema": DECODED_ARRANGEMENT_LOOP_SCHEMA,
+                "project_id": catalog.get("project_id"),
+                "selection_manifest_sha256": selection_manifest_sha256,
+                "sources": selection_manifest["sources"],
+                "selected_midi": selection_manifest["selected_midi"],
+                "groups": selection_manifest["groups"],
+                "window": {
+                    "anchor_sample_rate": anchor_sample_rate,
+                    "anchor_start_frame": anchor_start_frame,
+                    "anchor_end_frame": anchor_end_frame,
+                    "quantized_start_seconds": quantized_start,
+                    "quantized_end_seconds": quantized_end,
+                    "logical_duration_seconds": quantized_end - quantized_start,
+                },
+                "input_fingerprints": input_fingerprints,
+                "policy": _DECODED_ARRANGEMENT_LOOP_POLICY,
+                "renderer": {
+                    "policy": _RENDER_POLICY,
+                    "soundfont_sha256": required_soundfont_sha256,
+                },
+                "encoding": {
+                    "container": "WAV",
+                    "subtype": "PCM_16",
+                    "sample_rate_policy": "preserve each decoded input rate",
+                    "channel_policy": "preserve mono or stereo",
+                },
+                "resource_limits": {
+                    "track_count": len(inputs),
+                    "maximum_track_count": _DECODED_ARRANGEMENT_MAXIMUM_TRACKS,
+                    "aggregate_input_bytes": aggregate_input_bytes,
+                    "maximum_input_bytes": _DECODED_LOOP_MAXIMUM_INPUT_BYTES,
+                    "pcm16_output_upper_bound_bytes": (
+                        pcm16_output_upper_bound_bytes
+                    ),
+                    "maximum_output_bytes": _DECODED_LOOP_MAXIMUM_OUTPUT_BYTES,
+                },
+            }
+            cache_key = _document_hash(key_payload)
+            cached = self._load_decoded_arrangement_loop(cache_key, key_payload)
+            if cached is not None:
+                self._verify_decoded_arrangement_inputs(
+                    source_groups=source_groups,
+                    selection=selection,
+                    previews=previews,
+                    expected_soundfont_sha256=required_soundfont_sha256,
+                )
+                self._touch_and_prune_decoded_cache(
+                    "decoded-arrangement-loops", cache_key
+                )
+                cached["cache_hit"] = True
+                return cached
+
+            work, final = self._private_building_directory(
+                "decoded-arrangement-loops", cache_key
+            )
+            try:
+                tracks: list[dict[str, Any]] = []
+                for index, item in enumerate(inputs):
+                    snapshot_path = work / f".verified-input-{index:02d}"
+                    snapshot = _write_verified_private_snapshot(
+                        Path(item["input_path"]),
+                        item["expected_record"],
+                        snapshot_path,
+                        label=(
+                            "source audio"
+                            if item["kind"] == "source"
+                            else "neutral selected MIDI preview"
+                        ),
+                    )
+                    try:
+                        snapshot_info = _decoded_audio_info(
+                            soundfile,
+                            snapshot,
+                            label="verified decoded arrangement audio snapshot",
+                        )
+                        if (
+                            snapshot_info["sample_rate"] != item["sample_rate"]
+                            or snapshot_info["channels"] != item["channels"]
+                            or snapshot_info["frames"] != item["input_frames"]
+                        ):
+                            raise ValueError(
+                                "verified decoded arrangement snapshot metadata changed"
+                            )
+                        output_frames = int(item["end_frame"]) - int(
+                            item["start_frame"]
+                        )
+                        if output_frames <= 0:
+                            raise ValueError(
+                                "decoded arrangement track has no output frames"
+                            )
+                        samples = _read_padded_audio_window(
+                            np,
+                            soundfile,
+                            snapshot,
+                            start_frame=int(item["start_frame"]),
+                            frames=output_frames,
+                            channels=int(item["channels"]),
+                        )
+                        output_path = work / f"{index:02d}-{item['kind']}.wav"
+                        soundfile.write(
+                            str(output_path),
+                            samples,
+                            int(item["sample_rate"]),
+                            format="WAV",
+                            subtype="PCM_16",
+                        )
+                        _restrict_private_permissions(output_path, 0o600)
+                        written = soundfile.info(str(output_path))
+                        if (
+                            written.format != "WAV"
+                            or written.subtype != "PCM_16"
+                            or int(written.samplerate) != int(item["sample_rate"])
+                            or int(written.channels) != int(item["channels"])
+                            or int(written.frames) != output_frames
+                        ):
+                            raise RuntimeError(
+                                "decoded arrangement PCM16 output verification failed"
+                            )
+                    finally:
+                        snapshot.unlink(missing_ok=True)
+
+                    track = {
+                        key: item[key]
+                        for key in (
+                            "track_id",
+                            "kind",
+                            "stem_ids",
+                            "roles",
+                            "source_sha256",
+                            "stem_id",
+                            "candidate_id",
+                            "role",
+                            "decision",
+                            "source_midi_sha256",
+                        )
+                        if key in item
+                    }
+                    track.update(
+                        {
+                            "audio": _relative_file_record(output_path, work),
+                            "sample_rate": int(written.samplerate),
+                            "channels": int(written.channels),
+                            "frames": int(written.frames),
+                            "start_frame": int(item["start_frame"]),
+                            "silence_padded_frames": max(
+                                0,
+                                int(item["end_frame"])
+                                - max(
+                                    int(item["start_frame"]),
+                                    min(
+                                        int(item["end_frame"]),
+                                        int(item["input_frames"]),
+                                    ),
+                                ),
+                            ),
+                        }
+                    )
+                    tracks.append(track)
+
+                aggregate_bytes = sum(int(track["audio"]["bytes"]) for track in tracks)
+                if aggregate_bytes > _DECODED_LOOP_MAXIMUM_OUTPUT_BYTES:
+                    raise ValueError(
+                        "decoded arrangement aggregate output exceeds the 64 MiB limit"
+                    )
+                self._verify_decoded_arrangement_inputs(
+                    source_groups=source_groups,
+                    selection=selection,
+                    previews=previews,
+                    expected_soundfont_sha256=required_soundfont_sha256,
+                )
+                manifest = {
+                    **key_payload,
+                    "cache_key": cache_key,
+                    "start_seconds": quantized_start,
+                    "end_seconds": quantized_end,
+                    "duration_seconds": quantized_end - quantized_start,
+                    "tracks": tracks,
+                    "aggregate_output_bytes": aggregate_bytes,
+                    "maximum_output_bytes": _DECODED_LOOP_MAXIMUM_OUTPUT_BYTES,
+                    "path_free_manifest": True,
+                    "private_audio": True,
+                    "effects": _decoded_arrangement_effects(),
+                }
+                manifest_path = work / "manifest.json"
+                _write_json(manifest_path, manifest)
+                _restrict_private_permissions(manifest_path, 0o600)
+                work.replace(final)
+            except Exception:
+                shutil.rmtree(work, ignore_errors=True)
+                raise
+            result = self._load_decoded_arrangement_loop(cache_key, key_payload)
+            if result is None:
+                raise RuntimeError("decoded arrangement loop cache verification failed")
+            self._touch_and_prune_decoded_cache("decoded-arrangement-loops", cache_key)
+            result["cache_hit"] = False
+            return result
+
     def cached_arrangement(
         self,
         catalog: Mapping[str, Any],
         current: Mapping[str, Any],
     ) -> dict[str, Any] | None:
-        selection = selected_candidates(catalog, current)
-        if not selection:
-            return None
-        try:
-            self._verify_selection(selection)
-        except ValueError:
-            return None
-        overlap = _selected_midi_overlap(selection)
-        expected = {
-            "selection_sha256": _selection_hash(catalog, selection),
-            "selected_midi_overlap_sha256": _document_hash(overlap),
-            "bpm": _project_bpm(catalog),
-            "policy": _RENDER_POLICY,
-        }
-        soundfont_sha256 = self._available_soundfont_sha256()
-        if soundfont_sha256:
-            expected["soundfont_sha256"] = soundfont_sha256
-        return self._find_cached("arrangements", ARRANGEMENT_SCHEMA, expected)
+        with self._lock:
+            selection = selected_candidates(catalog, current)
+            if not selection:
+                return None
+            try:
+                self._verify_selection(selection)
+            except ValueError:
+                return None
+            overlap = _selected_midi_overlap(selection)
+            expected = {
+                "selection_sha256": _selection_hash(catalog, selection),
+                "selected_midi_overlap_sha256": _document_hash(overlap),
+                "bpm": _project_bpm(catalog),
+                "policy": _RENDER_POLICY,
+            }
+            soundfont_sha256 = self._available_soundfont_sha256()
+            if soundfont_sha256:
+                expected["soundfont_sha256"] = soundfont_sha256
+            return self._find_cached("arrangements", ARRANGEMENT_SCHEMA, expected)
 
     def selected_midi_overlap(
         self,
@@ -861,9 +1275,7 @@ class WorkbenchArtifacts:
             },
         }
         default_ids = [
-            str(item["item_id"])
-            for item in items
-            if item.get("default_included")
+            str(item["item_id"]) for item in items if item.get("default_included")
         ]
         if default_ids:
             plan["default_basket"] = canonical_garageband_pack_basket(
@@ -960,7 +1372,9 @@ class WorkbenchArtifacts:
         include_proxy = any(
             item["kind"] == "arrangement_proxy" for item in included_items
         )
-        arrangement = self.render_arrangement(catalog, current) if include_proxy else None
+        arrangement = (
+            self.render_arrangement(catalog, current) if include_proxy else None
+        )
 
         key_payload: dict[str, Any] = {
             "schema": GARAGEBAND_PACK_SCHEMA,
@@ -1168,6 +1582,18 @@ class WorkbenchArtifacts:
         work.mkdir(parents=True, exist_ok=False)
         return work, final
 
+    def _discard_new_preview(self, preview: Mapping[str, Any]) -> None:
+        """Remove only a preview created by the current bounded operation."""
+
+        cache_key = preview.get("cache_key")
+        if preview.get("cache_hit") is not False or not _is_sha256(cache_key):
+            return
+        path = self.root / "previews" / str(cache_key)
+        if path.is_symlink() or path.is_file():
+            path.unlink(missing_ok=True)
+        elif path.is_dir():
+            shutil.rmtree(path)
+
     def _find_cached(
         self,
         family: str,
@@ -1177,12 +1603,17 @@ class WorkbenchArtifacts:
         parent = self.root / family
         if not parent.is_dir():
             return None
-        manifests = sorted(
-            parent.glob("*/manifest.json"),
-            key=lambda path: path.stat().st_mtime_ns,
-            reverse=True,
-        )
-        for path in manifests:
+        manifests: list[tuple[int, Path]] = []
+        for path in parent.glob("*/manifest.json"):
+            if not _is_sha256(path.parent.name):
+                continue
+            try:
+                modified = path.stat().st_mtime_ns
+            except OSError:
+                continue
+            manifests.append((modified, path))
+        manifests.sort(key=lambda item: item[0], reverse=True)
+        for _modified, path in manifests:
             try:
                 document = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, json.JSONDecodeError):
@@ -1245,6 +1676,28 @@ class WorkbenchArtifacts:
                 raise ValueError("neutral candidate preview record is invalid")
             self._verify_catalog_record(record, label="neutral candidate preview")
 
+    def _verify_decoded_arrangement_inputs(
+        self,
+        *,
+        source_groups: Sequence[Mapping[str, Any]],
+        selection: Sequence[Mapping[str, Any]],
+        previews: Sequence[Mapping[str, Any]],
+        expected_soundfont_sha256: str,
+    ) -> None:
+        for group in source_groups:
+            for record in group["records"]:
+                self._verify_catalog_record(record, label="source audio")
+        self._verify_selection(selection)
+        self._require_preview_renderer_consistency(
+            previews,
+            expected_soundfont_sha256=expected_soundfont_sha256,
+        )
+        for preview in previews:
+            record = preview.get("preview")
+            if not isinstance(record, Mapping):
+                raise ValueError("neutral selected MIDI preview record is invalid")
+            self._verify_catalog_record(record, label="neutral selected MIDI preview")
+
     def _require_preview_renderer_consistency(
         self,
         previews: Sequence[Mapping[str, Any]],
@@ -1257,8 +1710,7 @@ class WorkbenchArtifacts:
             if (
                 preview.get("schema") != NEUTRAL_PREVIEW_SCHEMA
                 or preview.get("policy") != _RENDER_POLICY
-                or preview.get("soundfont_sha256")
-                != expected_soundfont_sha256
+                or preview.get("soundfont_sha256") != expected_soundfont_sha256
             ):
                 raise ValueError(
                     "decoded comparison requires every MIDI preview to use the "
@@ -1266,32 +1718,41 @@ class WorkbenchArtifacts:
                 )
 
     def _touch_and_prune_decoded_loop_cache(self, keep_cache_key: str) -> None:
-        parent = self.root / "decoded-stem-loops"
-        if not parent.is_dir():
-            return
-        current = parent / keep_cache_key
+        self._touch_and_prune_decoded_cache("decoded-stem-loops", keep_cache_key)
+
+    def _touch_and_prune_decoded_cache(
+        self, keep_family: str, keep_cache_key: str
+    ) -> None:
+        families = ("decoded-stem-loops", "decoded-arrangement-loops")
+        if keep_family not in families:
+            raise ValueError("unknown decoded cache family")
+        current = self.root / keep_family / keep_cache_key
         if current.is_dir() and not current.is_symlink():
             current.touch(exist_ok=True)
-        entries = [
-            path
-            for path in parent.iterdir()
-            if path.is_dir()
-            and not path.is_symlink()
-            and len(path.name) == 64
-            and all(character in "0123456789abcdef" for character in path.name)
-        ]
+        entries: list[Path] = []
+        for family in families:
+            parent = self.root / family
+            if not parent.is_dir():
+                continue
+            entries.extend(
+                path
+                for path in parent.iterdir()
+                if path.is_dir()
+                and not path.is_symlink()
+                and len(path.name) == 64
+                and all(character in "0123456789abcdef" for character in path.name)
+            )
         entries.sort(
-            key=lambda path: (path.name == keep_cache_key, path.stat().st_mtime_ns),
+            key=lambda path: (path == current, path.stat().st_mtime_ns),
             reverse=True,
         )
         retained_entries = 0
         retained_bytes = 0
         for entry in entries:
             entry_bytes = _directory_regular_file_bytes(entry)
-            keep = entry.name == keep_cache_key or (
+            keep = entry == current or (
                 retained_entries < _DECODED_LOOP_CACHE_MAXIMUM_ENTRIES
-                and retained_bytes + entry_bytes
-                <= _DECODED_LOOP_CACHE_MAXIMUM_BYTES
+                and retained_bytes + entry_bytes <= _DECODED_LOOP_CACHE_MAXIMUM_BYTES
             )
             if keep:
                 retained_entries += 1
@@ -1305,7 +1766,7 @@ class WorkbenchArtifacts:
         parent = self.root / family
         parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         _restrict_private_permissions(parent, 0o700)
-        if family == "decoded-stem-loops":
+        if family in {"decoded-stem-loops", "decoded-arrangement-loops"}:
             _prune_stale_private_builds(parent)
         final = parent / cache_key
         _remove_generated_path(final)
@@ -1396,9 +1857,11 @@ class WorkbenchArtifacts:
                 - int(fingerprint.get("start_frame", 0))
             ):
                 return None
-            if index > 0 and record.get("candidate_id") != expected_key_payload.get(
-                "candidate_ids", []
-            )[index - 1]:
+            if (
+                index > 0
+                and record.get("candidate_id")
+                != expected_key_payload.get("candidate_ids", [])[index - 1]
+            ):
                 return None
             materialized_audio = self._materialize_file_record(audio, root)
             if materialized_audio is None:
@@ -1411,6 +1874,123 @@ class WorkbenchArtifacts:
             aggregate_bytes != document.get("aggregate_output_bytes")
             or aggregate_bytes > _DECODED_LOOP_MAXIMUM_OUTPUT_BYTES
         ):
+            return None
+        _restrict_private_permissions(root, 0o700)
+        _restrict_private_permissions(manifest_path, 0o600)
+        for track in materialized_tracks:
+            _restrict_private_permissions(Path(track["audio"]["path"]), 0o600)
+        result = dict(document)
+        result["tracks"] = materialized_tracks
+        return result
+
+    def _load_decoded_arrangement_loop(
+        self,
+        cache_key: str,
+        expected_key_payload: Mapping[str, Any],
+    ) -> dict[str, Any] | None:
+        root = self.root / "decoded-arrangement-loops" / cache_key
+        manifest_path = root / "manifest.json"
+        try:
+            document = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        if (
+            document.get("schema") != DECODED_ARRANGEMENT_LOOP_SCHEMA
+            or document.get("cache_key") != cache_key
+            or root.name != cache_key
+            or any(
+                document.get(key) != value
+                for key, value in expected_key_payload.items()
+            )
+        ):
+            return None
+        expected_window = expected_key_payload.get("window")
+        if not isinstance(expected_window, Mapping) or (
+            document.get("start_seconds")
+            != expected_window.get("quantized_start_seconds")
+            or document.get("end_seconds")
+            != expected_window.get("quantized_end_seconds")
+            or document.get("duration_seconds")
+            != expected_window.get("logical_duration_seconds")
+            or document.get("maximum_output_bytes")
+            != _DECODED_LOOP_MAXIMUM_OUTPUT_BYTES
+            or document.get("path_free_manifest") is not True
+            or document.get("private_audio") is not True
+            or document.get("effects") != _decoded_arrangement_effects()
+        ):
+            return None
+        records = document.get("tracks")
+        fingerprints = expected_key_payload.get("input_fingerprints")
+        if (
+            not isinstance(records, list)
+            or not isinstance(fingerprints, list)
+            or len(records) != len(fingerprints)
+            or len(records) < 2
+            or len(records) > _DECODED_ARRANGEMENT_MAXIMUM_TRACKS
+        ):
+            return None
+        identity_keys = (
+            "track_id",
+            "kind",
+            "stem_ids",
+            "roles",
+            "source_sha256",
+            "stem_id",
+            "candidate_id",
+            "role",
+            "decision",
+            "source_midi_sha256",
+        )
+        materialized_tracks: list[dict[str, Any]] = []
+        aggregate_bytes = 0
+        for record, fingerprint in zip(records, fingerprints):
+            if not isinstance(record, Mapping) or not isinstance(fingerprint, Mapping):
+                return None
+            audio = record.get("audio")
+            if not isinstance(audio, Mapping):
+                return None
+            relative_path = Path(str(audio.get("path", "")))
+            expected_frames = int(fingerprint.get("end_frame", 0)) - int(
+                fingerprint.get("start_frame", 0)
+            )
+            silence_padded = record.get("silence_padded_frames")
+            if (
+                relative_path.is_absolute()
+                or len(relative_path.parts) != 1
+                or record.get("kind") not in {"source", "selected_midi"}
+                or any(
+                    record.get(key) != fingerprint.get(key)
+                    for key in identity_keys
+                    if key in fingerprint
+                )
+                or record.get("sample_rate") != fingerprint.get("sample_rate")
+                or record.get("channels") != fingerprint.get("channels")
+                or record.get("start_frame") != fingerprint.get("start_frame")
+                or record.get("frames") != expected_frames
+                or not isinstance(silence_padded, int)
+                or isinstance(silence_padded, bool)
+                or silence_padded < 0
+                or silence_padded > expected_frames
+            ):
+                return None
+            materialized_audio = self._materialize_file_record(audio, root)
+            if materialized_audio is None:
+                return None
+            aggregate_bytes += int(materialized_audio["bytes"])
+            materialized_track = dict(record)
+            materialized_track["audio"] = materialized_audio
+            materialized_tracks.append(materialized_track)
+        if (
+            aggregate_bytes != document.get("aggregate_output_bytes")
+            or aggregate_bytes > _DECODED_LOOP_MAXIMUM_OUTPUT_BYTES
+        ):
+            return None
+        expected_ids = {
+            str(track_id)
+            for group in expected_key_payload.get("groups", {}).values()
+            for track_id in group
+        }
+        if expected_ids != {str(track["track_id"]) for track in materialized_tracks}:
             return None
         _restrict_private_permissions(root, 0o700)
         _restrict_private_permissions(manifest_path, 0o600)
@@ -1490,6 +2070,17 @@ class WorkbenchArtifacts:
         return result
 
 
+def decoded_arrangement_selection_manifest(
+    catalog: Mapping[str, Any], current: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Return the canonical, path-free selected-arrangement audition manifest."""
+
+    manifest, _source_groups, _selection = _decoded_arrangement_selection(
+        catalog, current
+    )
+    return manifest
+
+
 def selected_candidates(
     catalog: Mapping[str, Any], current: Mapping[str, Any]
 ) -> list[dict[str, Any]]:
@@ -1552,6 +2143,148 @@ def selected_candidates(
     return selected
 
 
+def _decoded_arrangement_selection(
+    catalog: Mapping[str, Any], current: Mapping[str, Any]
+) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
+    source_groups = _decoded_arrangement_source_groups(catalog, current)
+    selection = selected_candidates(catalog, current)
+    selected_rows: list[dict[str, Any]] = []
+    decorated_selection: list[dict[str, Any]] = []
+    track_ids = {str(group["track_id"]) for group in source_groups}
+    for item in selection:
+        midi = _decoded_record_identity(item.get("midi"), label="candidate MIDI")
+        track_id = (
+            "midi-"
+            + _document_hash(
+                {
+                    "stem_id": item.get("stem_id"),
+                    "candidate_id": item.get("candidate_id"),
+                    "midi_sha256": midi["sha256"],
+                }
+            )[:24]
+        )
+        if track_id in track_ids:
+            raise ValueError("decoded arrangement track identities are not unique")
+        track_ids.add(track_id)
+        selected_rows.append(
+            {
+                "track_id": track_id,
+                "stem_id": str(item["stem_id"]),
+                "candidate_id": str(item["candidate_id"]),
+                "role": path_free_role(item.get("role"))[0],
+                "decision": str(item["decision"]),
+                "midi_sha256": midi["sha256"],
+                "midi_bytes": midi["bytes"],
+            }
+        )
+        decorated_selection.append({**item, "track_id": track_id})
+
+    public_sources = [
+        {
+            "track_id": group["track_id"],
+            "source_sha256": group["source_sha256"],
+            "source_bytes": group["source_bytes"],
+            "stem_ids": list(group["stem_ids"]),
+            "roles": list(group["roles"]),
+        }
+        for group in source_groups
+    ]
+    source_ids = [str(source["track_id"]) for source in public_sources]
+    midi_ids = [str(item["track_id"]) for item in selected_rows]
+    groups = {
+        "source-only": source_ids,
+        "selected-midi": midi_ids,
+        "hybrid": source_ids + midi_ids,
+        "main-only": [
+            str(item["track_id"])
+            for item in selected_rows
+            if item["decision"] == "main"
+        ],
+    }
+    manifest: dict[str, Any] = {
+        "schema": ARRANGEMENT_SELECTION_SCHEMA,
+        "project_id": catalog.get("project_id"),
+        "bpm": _project_bpm(catalog),
+        "sources": public_sources,
+        "selected_midi": selected_rows,
+        "groups": groups,
+    }
+    manifest["selection_manifest_sha256"] = _document_hash(manifest)
+    return manifest, source_groups, decorated_selection
+
+
+def _decoded_arrangement_source_groups(
+    catalog: Mapping[str, Any], current: Mapping[str, Any]
+) -> list[dict[str, Any]]:
+    states = current.get("stems", {})
+    if not isinstance(states, Mapping):
+        states = {}
+    groups: dict[str, dict[str, Any]] = {}
+    order: list[str] = []
+    for stem in catalog.get("stems", []):
+        if not isinstance(stem, Mapping):
+            raise ValueError("decoded arrangement contains an invalid stem")
+        stem_id = str(stem.get("stem_id", ""))
+        if not stem_id:
+            raise ValueError("decoded arrangement stem has no identity")
+        record = stem.get("source")
+        identity = _decoded_record_identity(record, label="source audio")
+        digest = str(identity["sha256"])
+        state = states.get(stem_id, {})
+        if not isinstance(state, Mapping):
+            state = {}
+        role = path_free_role(state.get("role") or stem.get("role"))[0]
+        if digest not in groups:
+            order.append(digest)
+            groups[digest] = {
+                "track_id": f"source-{digest[:24]}",
+                "source_sha256": digest,
+                "source_bytes": identity["bytes"],
+                "stem_ids": [],
+                "roles": [],
+                "records": [],
+            }
+        group = groups[digest]
+        if group["source_bytes"] != identity["bytes"]:
+            raise ValueError("duplicate source hash has inconsistent byte counts")
+        group["stem_ids"].append(stem_id)
+        if role not in group["roles"]:
+            group["roles"].append(role)
+        group["records"].append(record)
+    if not order:
+        raise ValueError("decoded arrangement requires at least one source stem")
+    return [groups[digest] for digest in order]
+
+
+def _decoded_record_identity(record: Any, *, label: str) -> dict[str, Any]:
+    if not isinstance(record, Mapping):
+        raise ValueError(f"{label} record is invalid")
+    digest = record.get("sha256")
+    byte_count = record.get("bytes")
+    if not _is_sha256(digest):
+        raise ValueError(f"{label} has no valid content hash")
+    if (
+        isinstance(byte_count, bool)
+        or not isinstance(byte_count, int)
+        or byte_count < 0
+    ):
+        raise ValueError(f"{label} byte count is invalid")
+    return {"sha256": str(digest), "bytes": byte_count}
+
+
+def _decoded_arrangement_effects() -> dict[str, bool]:
+    return {
+        "source_audio_mutated": False,
+        "midi_mutated": False,
+        "selection_changed": False,
+        "feedback_recorded": False,
+        "event_appended": False,
+        "automatic_selection": False,
+        "automatic_ranking": False,
+        "default_selection_changed": False,
+    }
+
+
 def canonical_garageband_pack_basket(
     plan: Mapping[str, Any],
     included_item_ids: Sequence[str] | Any,
@@ -1599,19 +2332,15 @@ def canonical_garageband_pack_basket(
         str(item["item_id"]) for item in items if item["item_id"] in included
     ]
     selected_midi_count = sum(
-        inventory[item_id].get("kind") == "selected_midi"
-        for item_id in canonical_ids
+        inventory[item_id].get("kind") == "selected_midi" for item_id in canonical_ids
     )
     if selected_midi_count < 1:
         raise ValueError("GarageBand basket must include at least one selected MIDI")
     source_audio_count = sum(
-        inventory[item_id].get("kind") == "source_audio"
-        for item_id in canonical_ids
+        inventory[item_id].get("kind") == "source_audio" for item_id in canonical_ids
     )
     if source_audio_count and not source_audio_opt_in:
-        raise ValueError(
-            "source audio requires a separate explicit local pack opt-in"
-        )
+        raise ValueError("source audio requires a separate explicit local pack opt-in")
     basket = {
         "schema": GARAGEBAND_PACK_BASKET_SCHEMA,
         "project_id": project_id,
@@ -1876,9 +2605,33 @@ def _decoded_declared_input_bytes(records: Sequence[tuple[str, Any]]) -> int:
 
 def _require_decoded_input_limit(total_bytes: int) -> None:
     if total_bytes > _DECODED_LOOP_MAXIMUM_INPUT_BYTES:
-        raise ValueError(
-            "decoded loop inputs exceed the 2 GiB aggregate safety limit"
+        raise ValueError("decoded loop inputs exceed the 2 GiB aggregate safety limit")
+
+
+def _decoded_pcm16_output_upper_bound(inputs: Sequence[Mapping[str, Any]]) -> int:
+    """Return a conservative pre-write bound for separate PCM16 WAV tracks."""
+
+    total = 0
+    for item in inputs:
+        start_frame = item.get("start_frame")
+        end_frame = item.get("end_frame")
+        channels = item.get("channels")
+        if (
+            isinstance(start_frame, bool)
+            or not isinstance(start_frame, int)
+            or isinstance(end_frame, bool)
+            or not isinstance(end_frame, int)
+            or end_frame <= start_frame
+            or isinstance(channels, bool)
+            or not isinstance(channels, int)
+            or channels not in {1, 2}
+        ):
+            raise ValueError("decoded arrangement output geometry is invalid")
+        total += (
+            (end_frame - start_frame) * channels * 2
+            + _DECODED_PCM16_WAV_HEADER_BUDGET_BYTES
         )
+    return total
 
 
 def _decoded_loop_candidate_ids(candidate_ids: Any) -> tuple[str, ...]:
@@ -1918,8 +2671,10 @@ def _decoded_audio_info(soundfile: Any, path: Path, *, label: str) -> dict[str, 
     sample_rate = int(info.samplerate)
     channels = int(info.channels)
     frames = int(info.frames)
-    if not _DECODED_LOOP_MINIMUM_SAMPLE_RATE <= sample_rate <= (
-        _DECODED_LOOP_MAXIMUM_SAMPLE_RATE
+    if (
+        not _DECODED_LOOP_MINIMUM_SAMPLE_RATE
+        <= sample_rate
+        <= (_DECODED_LOOP_MAXIMUM_SAMPLE_RATE)
     ):
         raise ValueError(f"{label} sample rate must be between 8 and 96 kHz")
     if channels not in {1, 2}:
@@ -2069,6 +2824,12 @@ def _project_bpm(catalog: Mapping[str, Any]) -> float:
     if not 1.0 <= bpm <= 1000.0:
         raise ValueError("project BPM must be between 1 and 1000")
     return bpm
+
+
+def _preview_role(stem: Mapping[str, Any], role_override: str | None) -> str:
+    return path_free_role(stem.get("role") if role_override is None else role_override)[
+        0
+    ]
 
 
 def _program_for_role(role: str) -> int:
@@ -2342,9 +3103,9 @@ def _verified_record_bytes(record: Mapping[str, Any], *, label: str) -> bytes:
         data = path.read_bytes()
     except OSError as exc:
         raise ValueError(f"{label} no longer exists: {path}") from exc
-    if len(data) != record.get("bytes") or hashlib.sha256(data).hexdigest() != record.get(
-        "sha256"
-    ):
+    if len(data) != record.get("bytes") or hashlib.sha256(
+        data
+    ).hexdigest() != record.get("sha256"):
         raise ValueError(f"{label} changed after it was catalogued")
     return data
 

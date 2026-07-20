@@ -23,7 +23,9 @@ a safe restart/retry path and explicit decision/privacy barriers that keep an
 inconclusive review or legacy path-like role out of a GarageBand export. It
 also adds Decoded Stem Comparison v1: a precise 0.5–15 second per-stem source
 versus requested candidate-preview loop scheduled on one decoded Web Audio
-clock.
+clock. Its next hardening slice adds a bounded decoded selected-arrangement
+loop with four canonical, server-derived groups; full-song custom playback
+remains the coarse compatibility path.
 The arrangement explorer shows every unique project source stem beside only
 the active explicit main and optional MIDI choices, with temporary visibility,
 mute, solo and level controls. It does not infer an offset: every source and
@@ -432,6 +434,32 @@ players share a position in seconds but are not sample-accurate. Their audition
 controls are also feedback- and event-free; use the decoded panel for a precise
 comparison and the fallback only when required.
 
+On **Hear selected arrangement**, set the same kind of 0.5–15 second range and
+choose **Prepare precise arrangement loop**. Workbench builds
+`sunofriend.workbench-arrangement-selection.v1` from current saved state. It
+deduplicates byte-identical project sources in catalog order, retains every
+active main/optional MIDI lane separately and defines the exact source-only,
+selected-MIDI, hybrid and main-only groups. The POST request carries only that
+manifest hash and the time bounds; the browser cannot supply candidate IDs,
+roles, gains or arbitrary track membership.
+
+Missing MIDI sounds use the current saved path-free role and the same pinned
+SoundFont/neutral-render policy. The server checks the manifest before work,
+builds without holding the decision-state lock, then checks the manifest again
+before registering private media URLs. A choice changed in another tab returns
+a conflict instead of publishing an obsolete mix. Every group source is
+started and every outgoing source is stopped at one shared Web Audio time. A
+failed switch leaves the previous group playing. Empty groups are disabled.
+Preset clicks, Pause, Stop and navigation invalidate older pending audio-clock
+resumes, so a delayed click cannot restart or replace a newer action. Preparing
+uses an abortable request and stale manifest/DOM guards; cancelling it creates
+no partial browser transport. Starting any ordinary audio player pauses the
+precise transport and announces that ownership change. If precise preparation
+created a previously missing neutral MIDI sound, re-open the arrangement view
+before using the already-rendered coarse panel so it can refresh that lane.
+The tracks retain unity gain and are not level matched or limited, so a dense
+hybrid can clip and this panel is not the standalone blind promotion test.
+
 ## Build a stricter blind MIDI A/B outside the Workbench
 
 Use the standalone `midi-ab-review` package when a candidate decision needs
@@ -577,9 +605,16 @@ Live MIDI layers use renderer-consistent neutral previews. When one is absent,
 use **Prepare selected MIDI sounds locally**; Workbench does not silently
 substitute an existing unnormalised preview. The source stems and neutral MIDI
 previews are not level matched, so the hybrid mix is a creative listening aid,
-not fair comparison evidence. Multiple browser media elements share displayed
-seconds but are not sample-accurate. The separately prepared dry GM proxy
-remains the reproducible control and downloadable convenience render.
+not fair comparison evidence. **Prepare precise arrangement loop** decodes a
+bounded section and schedules its canonical presets on one clock. It appears
+after the visual timeline and before the explicitly labelled **Coarse
+full-song/custom mixer**. That coarse mixer still uses multiple browser media
+elements that share displayed seconds but are not sample-accurate. Pressing its
+Play button or changing a coarse audio preset, mute, solo or gain stops the
+precise transport rather than pretending that those settings were applied
+there. Timeline visibility remains display-only and does not take over audio.
+The separately prepared dry GM proxy remains the reproducible control and
+downloadable convenience render.
 
 Only the buttons under **Save after listening** append `full_mix` decisions.
 Playback and mixer activity never counts as preference, including when the
@@ -708,16 +743,17 @@ note-free disclosure boundary.
   custom mixer renders and eligible Instrument Bundles remain later additions.
 - Existing preview WAVs remain labelled unnormalised; use the neutral renderer
   when comparing MIDI rather than embedded instruments.
-- Precise decoded comparison is currently per stem, bounded to 0.5–15 seconds
-  and at most six MIDI candidates. It starts every source and render at
-  recorded zero and therefore does not prove alignment. The compatibility
-  fallback and selected-arrangement mixer remain second-synchronised HTML
-  media elements rather than sample-accurate playback.
+- Precise decoded comparison is bounded to 0.5–15 seconds. A per-stem request
+  accepts at most six MIDI candidates; a canonical arrangement request accepts
+  at most 24 total deduplicated-source and selected-MIDI tracks. Both start at
+  recorded zero and therefore do not prove alignment. Full-song and arbitrary
+  custom arrangement playback remain second-synchronised HTML media rather
+  than sample-accurate playback.
 - A decoded-loop request accepts at most 2 GiB across source audio, candidate
   MIDI, the SoundFont and neutral previews; oversized declared inputs fail
   before preview rendering. It accepts at most 64 MiB of generated PCM output.
-  Its owner-only cache retains at most 32
-  recent windows or 256 MiB. Cached loops are rebuildable audition data, not
+  The owner-only stem/arrangement cache shares a limit of at most 32 recent
+  windows or 256 MiB. Cached loops are rebuildable audition data, not
   durable project state: an older window can be evicted and prepared again.
 - A requested window can extend beyond one input. That track is silence-padded
   at the end and the interface reports the duration; the padded section is not
@@ -728,8 +764,9 @@ note-free disclosure boundary.
 - The arrangement is a dry GM proxy. Complete-instrument checks and installed
   GarageBand patch choice remain a later view.
 - Phrase piano-roll correction and creative recombination remain a later phase.
-  Long-song decoded transport/virtualisation is the next playback hardening
-  step. Model-size comparison and any opt-in public contribution are also
+  Full-song decoded chunk streaming/virtualisation and precise arbitrary
+  custom mixes are the next playback hardening steps. Model-size comparison
+  and any opt-in public contribution are also
   later, separately authorised work. The Workbench still consumes completed AI
   runs rather than launching a model itself.
 

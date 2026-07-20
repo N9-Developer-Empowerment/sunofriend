@@ -256,6 +256,366 @@ class WorkbenchDecodedLoopServerTests(unittest.TestCase):
             event_count,
         )
 
+    def test_decoded_arrangement_request_validation_fails_without_effects(self) -> None:
+        stem = self.catalog["stems"][0]
+        candidate = stem["candidates"][0]
+        self.server.store.append(
+            self.catalog,
+            {
+                "event_type": "candidate_decision",
+                "stem_id": stem["stem_id"],
+                "candidate_id": candidate["candidate_id"],
+                "decision": "main",
+                "context": "solo",
+                "problem_tags": [],
+            },
+        )
+        state = self.server.store.current_state(self.catalog)
+        manifest = self.server.artifacts.decoded_arrangement_selection_manifest(
+            self.catalog, state
+        )
+        valid = {
+            "selection_manifest_sha256": manifest["selection_manifest_sha256"],
+            "start_seconds": 0.0,
+            "end_seconds": 1.0,
+        }
+        pack_plan = self.server.artifacts.garageband_pack_plan(
+            self.catalog, state
+        )
+        pack_scope = pack_plan["basket_scope_sha256"]
+        pack_selection = self.server.store.current_pack_selection(
+            self.catalog["project_id"], pack_scope
+        )
+        event_count = state["event_count"]
+        existing_media = dict(self.server.media)
+
+        status, _, payload = self._json_request(
+            "POST",
+            "/api/decoded-arrangement-loop?token=wrong",
+            valid,
+        )
+        self.assertEqual(status, 403)
+        self.assertIn("token", payload["error"])
+
+        invalid_requests = (
+            ({**valid, "track_ids": []}, "unexpected track_ids"),
+            ({**valid, "roles": ["keys"]}, "unexpected roles"),
+            ({**valid, "gains": {"source": 0.5}}, "unexpected gains"),
+            ({**valid, "groups": {"custom": []}}, "unexpected groups"),
+            ({**valid, "preset": "hybrid"}, "unexpected preset"),
+            (
+                {
+                    key: value
+                    for key, value in valid.items()
+                    if key != "selection_manifest_sha256"
+                },
+                "missing selection_manifest_sha256",
+            ),
+            (
+                {**valid, "selection_manifest_sha256": True},
+                "lowercase SHA-256",
+            ),
+            (
+                {**valid, "selection_manifest_sha256": int("1" * 64)},
+                "lowercase SHA-256",
+            ),
+            (
+                {**valid, "selection_manifest_sha256": "0" * 63},
+                "lowercase SHA-256",
+            ),
+            (
+                {**valid, "selection_manifest_sha256": "A" * 64},
+                "lowercase SHA-256",
+            ),
+            ({**valid, "start_seconds": True}, "finite numbers"),
+            ({**valid, "end_seconds": float("nan")}, "finite numbers"),
+            ({**valid, "start_seconds": float("inf")}, "finite numbers"),
+        )
+        for request, message in invalid_requests:
+            with self.subTest(message=message):
+                status, _, payload = self._json_request(
+                    "POST",
+                    f"/api/decoded-arrangement-loop?token={self.token}",
+                    request,
+                )
+                self.assertEqual(status, 400)
+                self.assertIn(message, payload["error"])
+
+        self.renderer.assert_not_called()
+        self.assertEqual(self.server.media, existing_media)
+        self.assertEqual(
+            self.server.store.current_state(self.catalog)["event_count"],
+            event_count,
+        )
+        self.assertEqual(
+            self.server.store.current_pack_selection(
+                self.catalog["project_id"], pack_scope
+            ),
+            pack_selection,
+        )
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("numpy") and importlib.util.find_spec("soundfile"),
+        "decoded arrangement integration requires optional numpy and soundfile",
+    )
+    def test_decoded_arrangement_is_canonical_path_free_and_state_neutral(self) -> None:
+        stem = self.catalog["stems"][0]
+        candidate = stem["candidates"][0]
+        self.server.store.append(
+            self.catalog,
+            {
+                "event_type": "candidate_decision",
+                "stem_id": stem["stem_id"],
+                "candidate_id": candidate["candidate_id"],
+                "decision": "main",
+                "context": "solo",
+                "problem_tags": [],
+            },
+        )
+        before_state = self.server.store.current_state(self.catalog)
+        before_review = self.server.store.export_review(self.catalog)
+        pack_plan = self.server.artifacts.garageband_pack_plan(
+            self.catalog, before_state
+        )
+        before_pack = self.server.store.current_pack_selection(
+            self.catalog["project_id"], pack_plan["basket_scope_sha256"]
+        )
+
+        status, _, project = self._request(
+            "GET", f"/api/project?token={self.token}"
+        )
+        self.assertEqual(status, 200)
+        manifest = json.loads(project)["decoded_arrangement_selection"]
+        manifest_sha256 = manifest["selection_manifest_sha256"]
+
+        status, _, payload = self._json_request(
+            "POST",
+            f"/api/decoded-arrangement-loop?token={self.token}",
+            {
+                "selection_manifest_sha256": manifest_sha256,
+                "start_seconds": 0.25,
+                "end_seconds": 1.25,
+            },
+        )
+        self.assertEqual(status, 200)
+        loop = payload["loop"]
+        self.assertEqual(
+            loop["schema"],
+            "sunofriend.workbench-decoded-arrangement-loop.v1",
+        )
+        self.assertEqual(loop["selection_manifest_sha256"], manifest_sha256)
+        self.assertEqual(
+            [track["kind"] for track in loop["tracks"]],
+            ["source", "selected_midi"],
+        )
+        source_id, midi_id = [track["track_id"] for track in loop["tracks"]]
+        self.assertEqual(loop["groups"]["source-only"], [source_id])
+        self.assertEqual(loop["groups"]["selected-midi"], [midi_id])
+        self.assertEqual(loop["groups"]["hybrid"], [source_id, midi_id])
+        self.assertEqual(loop["groups"]["main-only"], [midi_id])
+        self.assertEqual(
+            loop["effects"],
+            {
+                "automatic_ranking": False,
+                "automatic_selection": False,
+                "default_selection_changed": False,
+                "event_appended": False,
+                "feedback_recorded": False,
+                "midi_mutated": False,
+                "selection_changed": False,
+                "source_audio_mutated": False,
+            },
+        )
+        serialized = json.dumps(loop)
+        self.assertNotIn(str(self.root), serialized)
+        self.assertNotIn('"path"', serialized)
+        for track in loop["tracks"]:
+            self.assertIn("audio_url", track)
+            status, headers, body = self._request("GET", track["audio_url"])
+            self.assertEqual(status, 200)
+            self.assertEqual(headers["accept-ranges"], "bytes")
+            self.assertEqual(hashlib.sha256(body).hexdigest(), track["audio"]["sha256"])
+
+        range_url = loop["tracks"][0]["audio_url"]
+        status, headers, body = self._request(
+            "GET",
+            range_url,
+            headers={"Range": "bytes=0-3"},
+        )
+        self.assertEqual(status, 206)
+        self.assertEqual(body, b"RIFF")
+        self.assertEqual(
+            headers["content-range"],
+            f"bytes 0-3/{loop['tracks'][0]['audio']['bytes']}",
+        )
+
+        tampered_url = loop["tracks"][-1]["audio_url"]
+        tampered_record = self.server.media[_media_id(tampered_url)]
+        tampered_path = Path(str(tampered_record["path"]))
+        tampered_path.write_bytes(tampered_path.read_bytes() + b"tampered")
+        status, _, body = self._request("GET", tampered_url)
+        self.assertEqual(status, 409)
+        self.assertIn(b"changed after it was catalogued", body)
+
+        self.assertEqual(self.server.store.current_state(self.catalog), before_state)
+        after_review = self.server.store.export_review(self.catalog)
+        for key in ("schema", "status", "project", "current", "events", "contribution_preview"):
+            self.assertEqual(after_review[key], before_review[key])
+        self.assertEqual(
+            self.server.store.current_pack_selection(
+                self.catalog["project_id"], pack_plan["basket_scope_sha256"]
+            ),
+            before_pack,
+        )
+
+        self.server.store.append(
+            self.catalog,
+            {
+                "event_type": "candidate_decision",
+                "stem_id": stem["stem_id"],
+                "candidate_id": stem["candidates"][1]["candidate_id"],
+                "decision": "optional",
+                "context": "solo",
+                "problem_tags": [],
+            },
+        )
+        self.renderer.reset_mock()
+        status, _, stale = self._json_request(
+            "POST",
+            f"/api/decoded-arrangement-loop?token={self.token}",
+            {
+                "selection_manifest_sha256": manifest_sha256,
+                "start_seconds": 0.25,
+                "end_seconds": 1.25,
+            },
+        )
+        self.assertEqual(status, 409)
+        self.assertIn("changed", stale["error"])
+        self.renderer.assert_not_called()
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("numpy") and importlib.util.find_spec("soundfile"),
+        "decoded arrangement integration requires optional numpy and soundfile",
+    )
+    def test_selection_change_during_arrangement_render_registers_no_media(self) -> None:
+        stem = self.catalog["stems"][0]
+        first, second = stem["candidates"]
+        self.server.store.append(
+            self.catalog,
+            {
+                "event_type": "candidate_decision",
+                "stem_id": stem["stem_id"],
+                "candidate_id": first["candidate_id"],
+                "decision": "main",
+                "context": "solo",
+                "problem_tags": [],
+            },
+        )
+        manifest = self.server.artifacts.decoded_arrangement_selection_manifest(
+            self.catalog,
+            self.server.store.current_state(self.catalog),
+        )
+        existing_media = set(self.server.media)
+        changed = False
+
+        def render_then_change(midi_path, wav_path, **kwargs):
+            nonlocal changed
+            result = _render_valid_neutral_preview(midi_path, wav_path, **kwargs)
+            if not changed:
+                changed = True
+                self.server.store.append(
+                    self.catalog,
+                    {
+                        "event_type": "candidate_decision",
+                        "stem_id": stem["stem_id"],
+                        "candidate_id": second["candidate_id"],
+                        "decision": "optional",
+                        "context": "solo",
+                        "problem_tags": [],
+                    },
+                )
+            return result
+
+        self.renderer.side_effect = render_then_change
+        status, _, payload = self._json_request(
+            "POST",
+            f"/api/decoded-arrangement-loop?token={self.token}",
+            {
+                "selection_manifest_sha256": manifest["selection_manifest_sha256"],
+                "start_seconds": 0.0,
+                "end_seconds": 1.0,
+            },
+        )
+        self.assertEqual(status, 409)
+        self.assertIn("changed while", payload["error"])
+        self.assertEqual(set(self.server.media), existing_media)
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("numpy") and importlib.util.find_spec("soundfile"),
+        "decoded arrangement integration requires optional numpy and soundfile",
+    )
+    def test_cache_hit_role_change_registers_no_stale_media(self) -> None:
+        stem = self.catalog["stems"][0]
+        candidate = stem["candidates"][0]
+        self.server.store.append(
+            self.catalog,
+            {
+                "event_type": "candidate_decision",
+                "stem_id": stem["stem_id"],
+                "candidate_id": candidate["candidate_id"],
+                "decision": "main",
+                "context": "solo",
+                "problem_tags": [],
+            },
+        )
+        manifest = self.server.artifacts.decoded_arrangement_selection_manifest(
+            self.catalog,
+            self.server.store.current_state(self.catalog),
+        )
+        request = {
+            "selection_manifest_sha256": manifest["selection_manifest_sha256"],
+            "start_seconds": 0.0,
+            "end_seconds": 1.0,
+        }
+        status, _, first = self._json_request(
+            "POST",
+            f"/api/decoded-arrangement-loop?token={self.token}",
+            request,
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(first["loop"]["cache_hit"])
+        self.server.media.clear()
+        self.renderer.reset_mock()
+        original_prepare = self.server.artifacts.prepare_decoded_arrangement_loop
+
+        def cache_then_change_role(*args, **kwargs):
+            result = original_prepare(*args, **kwargs)
+            self.assertTrue(result["cache_hit"])
+            self.server.store.append(
+                self.catalog,
+                {
+                    "event_type": "role_tag",
+                    "stem_id": stem["stem_id"],
+                    "role": "synth bass",
+                },
+            )
+            return result
+
+        with patch.object(
+            self.server.artifacts,
+            "prepare_decoded_arrangement_loop",
+            side_effect=cache_then_change_role,
+        ):
+            status, _, payload = self._json_request(
+                "POST",
+                f"/api/decoded-arrangement-loop?token={self.token}",
+                request,
+            )
+        self.assertEqual(status, 409)
+        self.assertIn("changed while", payload["error"])
+        self.assertEqual(self.server.media, {})
+        self.renderer.assert_not_called()
+
     def _json_request(
         self,
         method: str,

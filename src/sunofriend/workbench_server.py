@@ -34,7 +34,7 @@ from .workbench_store import (
     default_workbench_state_dir,
 )
 from .workbench_home import build_workbench_home
-from .workbench_privacy import path_free_browser_state
+from .workbench_privacy import path_free_browser_state, path_free_role
 from .workbench_timeline import (
     TimelineArtifactChangedError,
     build_arrangement_timeline,
@@ -43,6 +43,10 @@ from .workbench_timeline import (
 
 
 _MAX_REQUEST_BYTES = 64 * 1024
+
+
+class WorkbenchSelectionConflictError(ValueError):
+    """The requested artifact no longer matches saved Workbench choices."""
 
 
 def _read_verified_immutable_bytes(handle: Any, record: Mapping[str, Any]) -> bytes:
@@ -72,6 +76,27 @@ def _require_exact_request_keys(
         if unexpected:
             details.append("unexpected " + ", ".join(unexpected))
         raise ValueError(f"invalid {label} request: " + "; ".join(details))
+
+
+def _current_stem_role(
+    catalog: Mapping[str, Any], current: Mapping[str, Any], stem_id: str
+) -> str:
+    """Resolve one server-owned path-free role from a saved-state snapshot."""
+
+    catalog_stem = next(
+        (
+            stem
+            for stem in catalog.get("stems", [])
+            if isinstance(stem, Mapping) and str(stem.get("stem_id")) == stem_id
+        ),
+        None,
+    )
+    if catalog_stem is None:
+        raise ValueError("unknown workbench stem_id")
+    states = current.get("stems", {})
+    state = states.get(stem_id, {}) if isinstance(states, Mapping) else {}
+    saved_role = state.get("role") if isinstance(state, Mapping) else None
+    return path_free_role(saved_role or catalog_stem.get("role"))[0]
 
 
 def _display_candidates(
@@ -473,6 +498,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             "/api/events",
             "/api/render-preview",
             "/api/decoded-loop",
+            "/api/decoded-arrangement-loop",
             "/api/arrangement",
             "/api/garageband-export",
             "/api/garageband-pack-basket",
@@ -496,14 +522,35 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 )
                 return
             if parsed.path == "/api/render-preview":
+                stem_id = str(request.get("stem_id", ""))
+                candidate_id = str(request.get("candidate_id", ""))
+                with self.server.state_lock:
+                    initial_state = self.server.store.current_state(
+                        self.server.catalog
+                    )
+                    initial_role = _current_stem_role(
+                        self.server.catalog, initial_state, stem_id
+                    )
                 artifact = self.server.artifacts.render_candidate_preview(
                     self.server.catalog,
-                    str(request.get("stem_id", "")),
-                    str(request.get("candidate_id", "")),
+                    stem_id,
+                    candidate_id,
+                    role_override=initial_role,
                 )
+                with self.server.state_lock:
+                    final_state = self.server.store.current_state(self.server.catalog)
+                    final_role = _current_stem_role(
+                        self.server.catalog, final_state, stem_id
+                    )
+                    if final_role != initial_role:
+                        raise WorkbenchSelectionConflictError(
+                            "the stem role changed while its neutral preview was "
+                            "being prepared; reload and retry"
+                        )
+                    public_preview = self._public_artifact(artifact)
                 self._json(
                     HTTPStatus.OK,
-                    {"preview": self._public_artifact(artifact)},
+                    {"preview": public_preview},
                 )
                 return
             if parsed.path == "/api/decoded-loop":
@@ -528,6 +575,81 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     HTTPStatus.OK,
                     {"loop": self._public_decoded_loop(artifact)},
                 )
+                return
+            if parsed.path == "/api/decoded-arrangement-loop":
+                _require_exact_request_keys(
+                    request,
+                    {
+                        "selection_manifest_sha256",
+                        "start_seconds",
+                        "end_seconds",
+                    },
+                    label="decoded arrangement loop",
+                )
+                requested_manifest_value = request.get(
+                    "selection_manifest_sha256", ""
+                )
+                if (
+                    not isinstance(requested_manifest_value, str)
+                    or isinstance(requested_manifest_value, bool)
+                    or len(requested_manifest_value) != 64
+                    or any(
+                        character not in "0123456789abcdef"
+                        for character in requested_manifest_value
+                    )
+                ):
+                    raise ValueError(
+                        "decoded arrangement selection_manifest_sha256 must be a "
+                        "lowercase SHA-256 value"
+                    )
+                requested_manifest_sha256 = requested_manifest_value
+                with self.server.state_lock:
+                    initial_state = self.server.store.current_state(
+                        self.server.catalog
+                    )
+                    initial_manifest = (
+                        self.server.artifacts.decoded_arrangement_selection_manifest(
+                            self.server.catalog,
+                            initial_state,
+                        )
+                    )
+                    if (
+                        requested_manifest_sha256
+                        != initial_manifest["selection_manifest_sha256"]
+                    ):
+                        raise WorkbenchSelectionConflictError(
+                            "the selected arrangement changed; reload it before "
+                            "preparing a precise loop"
+                        )
+                artifact = self.server.artifacts.prepare_decoded_arrangement_loop(
+                    self.server.catalog,
+                    initial_state,
+                    requested_manifest_sha256,
+                    request.get("start_seconds"),
+                    request.get("end_seconds"),
+                )
+                # Rendering missing neutral sounds can take long enough for another
+                # local tab to save a new decision. Register no stale media tokens.
+                with self.server.state_lock:
+                    final_state = self.server.store.current_state(self.server.catalog)
+                    final_manifest = (
+                        self.server.artifacts.decoded_arrangement_selection_manifest(
+                            self.server.catalog,
+                            final_state,
+                        )
+                    )
+                    if (
+                        requested_manifest_sha256
+                        != final_manifest["selection_manifest_sha256"]
+                        or artifact.get("selection_manifest_sha256")
+                        != requested_manifest_sha256
+                    ):
+                        raise WorkbenchSelectionConflictError(
+                            "the selected arrangement changed while its precise loop "
+                            "was being prepared; reload and retry"
+                        )
+                    public_loop = self._public_decoded_arrangement_loop(artifact)
+                self._json(HTTPStatus.OK, {"loop": public_loop})
                 return
             if parsed.path == "/api/garageband-pack-basket":
                 _require_exact_request_keys(
@@ -619,7 +741,11 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 HTTPStatus.OK,
                 {"handoff": self._public_artifact(artifact)},
             )
-        except (WorkbenchPackConflictError, WorkbenchPackStateConflictError) as exc:
+        except (
+            WorkbenchPackConflictError,
+            WorkbenchPackStateConflictError,
+            WorkbenchSelectionConflictError,
+        ) as exc:
             self._error(HTTPStatus.CONFLICT, str(exc))
         except (
             UnicodeDecodeError,
@@ -688,6 +814,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
 
     def _project_payload(self) -> dict[str, Any]:
         payload = public_catalog(self.server.catalog)
+        state = self.server.store.current_state(self.server.catalog)
         for stem in payload["stems"]:
             phrase_capability = self.server.phrase_review_capability_by_stem.get(
                 str(stem["stem_id"])
@@ -716,11 +843,17 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     self.server.catalog,
                     str(stem["stem_id"]),
                     str(candidate["candidate_id"]),
+                    role_override=str(
+                        state.get("stems", {})
+                        .get(str(stem["stem_id"]), {})
+                        .get("role")
+                        or stem.get("role")
+                        or "unclassified"
+                    ),
                 )
                 candidate["neutral_preview"] = (
                     self._public_artifact(cached) if cached else None
                 )
-        state = self.server.store.current_state(self.server.catalog)
         review = self.server.store.export_review(self.server.catalog)
         payload["state"] = path_free_browser_state(state)
         payload["home"] = build_workbench_home(self.server.catalog, state)
@@ -730,6 +863,12 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         payload["selected_midi_overlap"] = self.server.artifacts.selected_midi_overlap(
             self.server.catalog,
             state,
+        )
+        payload["decoded_arrangement_selection"] = (
+            self.server.artifacts.decoded_arrangement_selection_manifest(
+                self.server.catalog,
+                state,
+            )
         )
         arrangement = self.server.artifacts.cached_arrangement(
             self.server.catalog, state
@@ -810,6 +949,66 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     "track_id",
                     "kind",
                     "candidate_id",
+                    "sample_rate",
+                    "channels",
+                    "frames",
+                    "start_frame",
+                    "silence_padded_frames",
+                )
+                if key in track
+            }
+            public_track["audio"] = {
+                key: record[key]
+                for key in ("name", "bytes", "sha256")
+                if key in record
+            }
+            public_track["audio_url"] = self._media_url(media_id)
+            tracks.append(public_track)
+        public["tracks"] = tracks
+        return public
+
+    def _public_decoded_arrangement_loop(
+        self, artifact: Mapping[str, Any]
+    ) -> dict[str, Any]:
+        """Register one bounded private arrangement excerpt without paths."""
+
+        public = {
+            key: artifact[key]
+            for key in (
+                "schema",
+                "selection_manifest_sha256",
+                "start_seconds",
+                "end_seconds",
+                "duration_seconds",
+                "cache_hit",
+                "groups",
+                "effects",
+            )
+            if key in artifact
+        }
+        tracks = []
+        for track in artifact.get("tracks", []):
+            if not isinstance(track, Mapping):
+                raise ValueError("decoded arrangement track is invalid")
+            record = track.get("audio")
+            if not isinstance(record, Mapping):
+                raise ValueError("decoded arrangement track audio is invalid")
+            media_id = f"decoded-arrangement-{str(record['sha256'])[:24]}"
+            private_record = dict(record)
+            private_record["_freeze_on_serve"] = True
+            self.server.media[media_id] = private_record
+            public_track = {
+                key: track[key]
+                for key in (
+                    "track_id",
+                    "kind",
+                    "stem_ids",
+                    "roles",
+                    "labels",
+                    "stem_id",
+                    "candidate_id",
+                    "role",
+                    "decision",
                     "sample_rate",
                     "channels",
                     "frames",

@@ -155,7 +155,7 @@ and projects legacy roles as `custom role` before they reach browser state,
 public catalogs, contribution previews, timelines, archive names or proxy MIDI
 metadata; private raw history is not rewritten.
 `workbench_artifacts.py` owns content-addressed role-neutral previews, private
-decoded-comparison clips, selected-arrangement proxies and deterministic
+decoded per-stem/selected-arrangement clips, selected-arrangement proxies and deterministic
 GarageBand handoff ZIPs. It reads notes through Clip v1 and renders through the
 existing MIDI/FluidSynth boundaries; discovered MIDI is never rewritten, and
 numbered handoff tracks are exact copies of explicit main/optional choices.
@@ -171,8 +171,8 @@ submission endpoint.
 The standalone MIDI A/B package completes the Phase 5.2 beam-listening tooling
 and remains a separate blind, fixed-window level-matched promotion gate. Its
 page still coordinates browser media elements in seconds, with the playhead
-scoped per unit. Workbench now has a separate decoded, sample-scheduled
-per-stem comparison path, described below. The private three-window package
+scoped per unit. Workbench now has separate decoded, sample-scheduled per-stem
+and bounded selected-arrangement paths, described below. The private three-window package
 has been generated and verified, while its human
 export and resolved result are now complete. Two loops were equivalent and the
 3.50–7.50 second loop marginally preferred beam 1; beam 2 won no loop. All
@@ -204,9 +204,9 @@ most six unique candidate IDs. The normal UI includes the at-most-three primary
 candidates; an advanced candidate is admitted only by an explicit visual
 opt-in. Aggregate source audio, candidate MIDI, SoundFont and preview input is
 capped at 2 GiB, with oversized declared inputs rejected before rendering;
-generated PCM is capped at 64 MiB per request. The owner-only decoded-loop
-cache retains at most 32 recent
-entries or 256 MiB; older content-addressed windows are evicted and rebuilt on
+generated PCM is capped at 64 MiB per request. The owner-only stem and
+arrangement decoded caches share at most 32 recent entries or 256 MiB; older
+content-addressed windows are evicted and rebuilt on
 demand rather than treated as durable state.
 
 Every included candidate preview must match the neutral-preview schema,
@@ -239,6 +239,31 @@ ranking and MIDI-mutation effects. The explicit compatibility fallback retains
 second-synchronised HTML media elements and is not sample-accurate, but its
 transport controls are likewise feedback- and event-free.
 
+The bounded selected-arrangement extension adds
+`sunofriend.workbench-arrangement-selection.v1` and
+`sunofriend.workbench-decoded-arrangement-loop.v1`. The selection manifest is
+derived only from catalog plus current saved state: every byte-identical source
+is represented once, active main/optional MIDI remains distinct, and ordered
+source-only, selected-MIDI, hybrid and main-only track-ID groups are hashed
+with project/BPM/role/decision/content identity. Review context is excluded, so
+an unchanged solo-to-full-mix confirmation does not rebuild audio. Browser
+requests contain only the manifest hash and 0.5–15 second bounds; arbitrary
+track lists, roles, gains and presets are not accepted. A request has at most
+24 total decoded tracks and otherwise shares the 2 GiB input and 64 MiB output
+limits.
+
+The server derives and checks the manifest under the state lock, releases it
+while rendering, then re-derives it before registering frozen media. A change
+from another local tab returns 409 and publishes no stale URLs. Saved path-free
+role tags are used as internal neutral-preview role overrides and participate
+in the preview cache key; they are never supplied by the browser. The separate
+`DecodedGroupLoopTransport` validates a whole preset before creating playback,
+starts each incoming node and retires each outgoing node at one shared future
+time, and rolls back a partial start without stopping the previous group.
+The Workbench preserves that rollback instead of clearing the transport,
+serialises async preset ownership across delayed `AudioContext.resume()` calls,
+and aborts/stale-guards preparation when its view or loop is invalidated.
+
 The compare-role canvas consumes that contract with a shared playhead; it does
 not edit notes or treat visibility as preference. The second slice adds
 `sunofriend.workbench-arrangement-timeline.v1` through the read-only
@@ -257,9 +282,10 @@ mixer is browser-memory state only: visibility, mute, solo, attenuation,
 preset, loop and playhead never enter SQLite, selection hashes, overlap
 evidence, arrangement caches or handoff bytes. Source-stem, selected-MIDI,
 hybrid and main-MIDI presets use lazily loaded source media plus explicitly
-prepared neutral MIDI previews. These independent media elements share seconds
-but are not sample-accurate, and source/MIDI levels are not normalised. The
-per-stem decoded transport does not yet replace this full-song mixer. The
+prepared neutral MIDI previews. Bounded canonical presets can now use the
+decoded group transport. The independent full-song/custom media elements share
+seconds but are not sample-accurate, and source/MIDI levels are not normalised.
+Precise custom mute/solo/gain and full-song decoded streaming remain deferred. The
 content-addressed prepared dry proxy remains the reproducible control.
 
 The GarageBand Pack Composer translates explicit checkboxes into a versioned,

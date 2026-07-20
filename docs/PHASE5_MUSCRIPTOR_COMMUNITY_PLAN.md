@@ -1,6 +1,6 @@
 # Phase 5: Multi-Process MIDI Comparison and Local Result Explorer
 
-Status: **Phase 5.0–5.2 are complete; the Phase 5.3 lead-only S0/M1/M3 diagnostic slice and Phase 5.4 explorer slice are complete, including hash-pinned comparison, full-song audition, GarageBand Pack Composer v1 and the explicit disputed-range phrase-review bridge; Phase 5.3 blind choice, lineage and role expansion remain open while Phase 5.5 local Studio hardening now includes Project Overview/Resume v1, decision-safety/path-free-role/restart verification and Decoded Stem Comparison v1; beam 1 and batch 1 remain the defaults and no public service or new checkpoint download is authorised**
+Status: **Phase 5.0–5.2 are complete; the Phase 5.3 lead-only S0/M1/M3 diagnostic slice and Phase 5.4 explorer slice are complete, including hash-pinned comparison, full-song audition, GarageBand Pack Composer v1 and the explicit disputed-range phrase-review bridge; Phase 5.3 blind choice, lineage and role expansion remain open while Phase 5.5 local Studio hardening now includes Project Overview/Resume v1, decision-safety/path-free-role/restart verification, Decoded Stem Comparison v1 and bounded decoded selected-arrangement presets; beam 1 and batch 1 remain the defaults and no public service or new checkpoint download is authorised**
 
 Drafted: 19 July 2026
 Scope: accurate stem/full-mix MIDI, several analytical and AI processes kept as
@@ -1269,9 +1269,11 @@ After the 5.4 vertical slice is musically useful:
   event, ranking or MIDI-mutation effects; require the current SoundFont and
   renderer policy, use verified owner-only input snapshots, disclose end
   padding, bound the rebuildable cache and keep fallback playback feedback-free;
-- extend decoded transport and rendering hardening to the selected arrangement
-  and long-song paths, while keeping the exact standalone blind A/B contract
-  for promoted comparisons;
+- [x] extend decoded transport/rendering hardening to a canonical 0.5–15 second
+  selected-arrangement window with server-owned source-only, selected-MIDI,
+  hybrid and main-only groups, stale-selection rejection and atomic one-clock
+  switching; keep full-song/custom decoded paths open and the exact standalone
+  blind A/B contract for promoted comparisons;
 - harden long-song rendering, waveform/piano-roll virtualization, keyboard and
   accessibility controls, browser restart recovery and progress/error states;
 - verify stem-only, MIDI-only, hybrid and custom mixes against one canonical
@@ -1282,9 +1284,9 @@ After the 5.4 vertical slice is musically useful:
   silently enabling either optimisation; and
 - conduct a small private, local-only usability beta using authorised projects.
 
-The checked Project Overview, decision-safety and decoded per-stem comparison
-items are the first three hardening increments. They do not complete decoded
-long-song arrangement playback, virtualization, canonical custom mixes,
+The checked Project Overview, decision-safety, decoded per-stem comparison and
+bounded canonical arrangement items are the first four hardening increments.
+They do not complete decoded full-song arrangement playback, virtualization, canonical custom mixes,
 GarageBand/Instrument Bundle checks, cache-provenance display or the private
 beta.
 
@@ -1386,6 +1388,19 @@ is also feedback- and event-free. The decoded cache is rebuildable and evicts
 older windows after 32 entries or 256 MiB; each request is bounded to 2 GiB
 across source, candidate MIDI, SoundFont and preview input, with early
 pre-render rejection, and 64 MiB of output.
+The fourth Phase 5.5 slice adds
+`sunofriend.workbench-arrangement-selection.v1` and
+`sunofriend.workbench-decoded-arrangement-loop.v1`. The server derives one
+context-neutral manifest from deduplicated project sources and every current
+explicit main/optional MIDI lane, and supplies only four canonical groups.
+The browser sends its hash plus a 0.5–15 second window—not track IDs, roles,
+gains or a chosen process. The server rechecks current state before and after
+rendering, registers no stale media after a concurrent decision, uses current
+path-free roles for neutral previews and schedules whole groups atomically on
+one decoded clock. It shares the existing decoded cache/input/output limits,
+adds a 24-track cap and remains unity-gain, non-level-matched and unblinded.
+Full-song decoded streaming, precise arbitrary custom mixes and visual
+virtualisation remain open.
 Phase 5.4 now adds canonical, path-free per-stem and selected-arrangement
 timelines with zero automatic selection/ranking effects. The arrangement view
 shows every unique source stem and only current explicit main/optional MIDI,
@@ -1454,8 +1469,9 @@ Comparison v1 are the first completed local-Studio slices. A private Slayyyter
 fixture correctly failed closed when its adjacent AI worker no longer matched
 the completed run, so the restart contract was verified with a portable
 two-server fixture rather than
-weakening provenance. The immediate next engineering work is long-song decoded
-arrangement/virtualisation hardening and the next authorised private usability
+weakening provenance. Bounded canonical arrangement presets now use the decoded
+group transport; the immediate next engineering work is full-song chunked
+playback/virtualisation hardening and the next authorised private usability
 pass. The
 explicit disputed-range bridge now
 opens the exact existing short phrase review without selecting or editing MIDI.
