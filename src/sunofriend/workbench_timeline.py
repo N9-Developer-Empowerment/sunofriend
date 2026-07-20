@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from .clip import MidiNoteLimitError, read_midi_clips
+from .workbench_privacy import path_free_role
 
 
 WORKBENCH_TIMELINE_SCHEMA = "sunofriend.workbench-timeline.v1"
@@ -106,7 +107,7 @@ def build_stem_timeline(
         "schema": WORKBENCH_TIMELINE_SCHEMA,
         "project_id": str(catalog.get("project_id", "")),
         "stem_id": str(stem.get("stem_id", "")),
-        "role": str(stem.get("role") or "unclassified"),
+        "role": path_free_role(stem.get("role"))[0],
         "duration_seconds": round(duration, 9),
         "source": source,
         "candidates": candidates,
@@ -206,7 +207,7 @@ def build_arrangement_timeline(
         decision = str(item.get("decision", ""))
         if decision not in {"main", "optional"}:
             raise ValueError("arrangement timeline accepts only main or optional choices")
-        role = str(item.get("role") or stem.get("role") or "unclassified")
+        role = path_free_role(item.get("role") or stem.get("role"))[0]
         resolved.append((stem, candidate, item))
         selection_identity.append(
             {
@@ -257,7 +258,7 @@ def build_arrangement_timeline(
             {
                 **lane,
                 "stem_id": str(stem["stem_id"]),
-                "role": str(item.get("role") or stem.get("role") or "unclassified"),
+                "role": path_free_role(item.get("role") or stem.get("role"))[0],
                 "decision": str(item["decision"]),
                 "source_sha256": str(stem["source"]["sha256"]),
             }
@@ -784,7 +785,7 @@ def _arrangement_source_groups(
             }
         group = groups[digest]
         group["stem_ids"].append(str(stem.get("stem_id", "")))
-        role = str(stem.get("role") or "unclassified")
+        role = path_free_role(stem.get("role"))[0]
         label = str(stem.get("label") or role)
         if role not in group["roles"]:
             group["roles"].append(role)

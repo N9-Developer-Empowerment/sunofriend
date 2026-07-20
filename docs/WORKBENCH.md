@@ -18,8 +18,9 @@ decisions, neutral preview rendering, selected-arrangement audition and an
 explicit GarageBand pack composer. Phase 5.4 now supplies both a read-only
 per-stem source/MIDI comparison timeline and a full-song selected-arrangement
 explorer, plus an explicit bridge from verified disputed lead-vocal ranges to
-the existing phrase-review page. The first Phase 5.5 hardening increment adds
-a default Project Overview and safe restart/retry path.
+the existing phrase-review page. Phase 5.5 now adds a default Project Overview,
+a safe restart/retry path and explicit decision/privacy barriers that keep an
+inconclusive review or legacy path-like role out of a GarageBand export.
 The arrangement explorer shows every unique project source stem beside only
 the active explicit main and optional MIDI choices, with temporary visibility,
 mute, solo and level controls. It does not infer an offset: every source and
@@ -44,7 +45,12 @@ stem that still has no active main/optional part; then hear selected parts that
 lack `full_mix` context; otherwise compose the pack. When no active
 main/optional part remains, explicit **None are usable** and **I cannot tell**
 outcomes are terminal for resume routing, so they do not create an endless
-revisit loop. If they are the only results, Overview
+revisit loop. They are also no-selection barriers: older main/optional events
+remain in the private history but become inactive and cannot enter the selected
+arrangement, pack plan, ZIP or proxy MIDI. A later explicit main or optional
+choice clears the barrier and activates only that candidate; it does not revive
+older optional selections. Reject and needs-correction decisions do not clear a
+terminal barrier. If they are the only results, Overview
 truthfully reports that no MIDI part was selected. If pack composition is next,
 the page lazily checks the current plan and offers **Resume saved pack** only
 when the saved basket still matches it.
@@ -59,14 +65,21 @@ announced with a retry that changes no musical or export state.
 The home projection excludes paths, private notes, process labels, quality
 metrics and problem tags. Initial project-load and lazy pack-status failures
 are retryable; both keep the current decisions intact and append no event.
-If a free-form heard-role value looks like an absolute local path, Overview
-shows **custom role (local path hidden)**; the private SQLite history remains
-authoritative and is not rewritten.
+New free-form role tags and explicit-catalog roles must be one-line musical
+descriptions of at most 80 characters and cannot contain a local path. Legacy
+POSIX, home-relative, relative, Windows-drive or UNC path-like roles are not
+rewritten in private SQLite history, but path-free browser/public/handoff
+projections use **custom role**. That shared boundary covers Project Overview,
+browser state, contribution preview, public catalog inspection, timelines,
+pack labels and archive names, and generated proxy-MIDI track names. The full
+private review export deliberately retains the raw role and remains private.
 
 SQLite decisions and the separate GarageBand basket survive browser and server
 restarts. Audition state does not: playhead, loop, visibility, mute, solo and
 level start fresh on reload and remain outside review history, cache identity
-and export selection. Primary candidate audio preloads metadata; advanced
+and export selection. A two-launch loopback regression verifies that the same
+decisions and non-default basket return under a new launch token without any
+GET request appending feedback or changing the basket revision. Primary candidate audio preloads metadata; advanced
 alternatives use `preload="none"` until the listener asks for them.
 
 ## Result Explorer direction
@@ -174,6 +187,9 @@ Unselected alternatives and Instrument Bundles remain deferred until the
 catalog has an explicit reviewed eligibility contract for them. Direct note
 editing, phrase recombination and Clip-library composition belong to the later
 creative arrangement phase.
+When the active selection is empty, the composer explains why no MIDI is
+eligible and provides a direct return to Project Overview; it cannot build an
+empty ZIP.
 
 ## Start with automatic discovery
 
@@ -271,13 +287,17 @@ the prompt text.
 - **Keep optional** retains a useful layer without making it the main part.
 - **Needs correction** records problem tags and an optional private note.
 - **Reject** records that this candidate should not be used for the project.
-- **Equivalent**, **None are usable** and **I cannot tell** remain valid
-  stem-level outcomes.
+- **Equivalent** can coexist with an active selection.
+- **None are usable** and **I cannot tell** retain the audit history but
+  deactivate all earlier main/optional choices for that stem. Only a later
+  explicit main/optional decision reopens selection; it activates that one
+  candidate and does not resurrect choices from before the barrier.
 
 The complete local export contains paths, event history and private listening
 notes. Treat it as private project data. The separately displayed contribution
 preview excludes audio, MIDI files, absolute paths, notes, dwell time and play
-counts. Phase 5.0 has no contribution or upload endpoint.
+counts. Path-like legacy roles are projected as **custom role** there as well.
+Phase 5.0 has no contribution or upload endpoint.
 
 ## Understand AI transcription diagnostics
 
@@ -567,10 +587,13 @@ The ZIP is content-addressed and contains:
 - a path-free selection/setup manifest; and
 - concise GarageBand import instructions, including the exact BPM to set.
 
-It excludes source audio, private notes, absolute paths, rejected candidates
-and unreviewed defaults. Import the numbered MIDI files onto separate Software
-Instrument tracks and choose the final patches in GarageBand; those originals
-are authoritative.
+It excludes source-audio files, rejected candidates and unreviewed defaults.
+Workbench-generated names, the manifest and the instructions contain no local
+paths or private review notes. The authoritative numbered MIDI payloads remain
+byte-for-byte unchanged and are not metadata-scrubbed, so they may retain
+embedded producer metadata; inspect the ZIP before sharing it. Import the MIDI
+files onto separate Software Instrument tracks and choose the final patches in
+GarageBand.
 
 ## Compose an exact GarageBand pack
 
@@ -604,6 +627,8 @@ verifying the exact bytes written into the deterministic ZIP. Source audio
 cannot be included without the separate opt-in. The path-free receipt records
 BPM, key, tuning, downbeat, checked archive paths and hashes; it excludes local
 paths and private notes.
+Exact copied MIDI and explicitly opted-in source audio are not metadata-scrubbed
+and may retain embedded producer metadata; inspect the ZIP before sharing it.
 
 Pack Composer v1 intentionally excludes rejected, needs-correction,
 superseded and unreviewed MIDI. It also does not search the filesystem for SF2,

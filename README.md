@@ -71,9 +71,11 @@ can be rendered through a consistent cached GM proxy, explicit choices survive
 browser/process restarts, and only explicit main/optional decisions become
 selected MIDI. GarageBand pack inclusion is a separate saved choice: selected
 MIDI and the dry proxy are the safe default, while source audio requires an
-explicit opt-in. The Phase 5.5 Project Overview resumes into one
-state-derived next state/action and shows truthful per-stem progress without ranking
-models or exposing technical scores. AI candidates carry verified execution/checkpoint
+explicit opt-in. Phase 5.5 now combines the Project Overview with restart-tested
+decision safety: it resumes into one state-derived next state/action, shows
+truthful per-stem progress without ranking models or exposing technical scores,
+and prevents a later **None are usable** or **I cannot tell** outcome from
+leaving older MIDI choices active. AI candidates carry verified execution/checkpoint
 diagnostics; severe decoder failures and zero-note results remain downloadable
 evidence but cannot become main or optional choices. The first small-model
 M0–M3 matrix also shows that label conditioning can prevent one known full-mix
@@ -294,7 +296,11 @@ normal-view candidates. Low-confidence `possible` and `uncertain` files remain
 under advanced diagnostics. Choices such as **Use as main**, **Keep optional**,
 **Needs correction** and **Reject** are appended to a local SQLite database at
 `~/.local/share/sunofriend/workbench/PROJECT_ID/` and restored on the next
-launch. Use the shared loop and source/A/B/C buttons to resume each player at
+launch. **None are usable** and **I cannot tell** are explicit no-selection
+barriers: they retain the earlier listening history but deactivate every older
+main/optional choice for that stem. A later **Use as main** or **Keep optional**
+choice reopens the stem without silently reviving older optional parts; a later
+reject/correction does not. Use the shared loop and source/A/B/C buttons to resume each player at
 the same second. **Render neutral preview** gives candidates for one stem the
 same local SoundFont, gain and role-based GM program; it is renderer-consistent
 but deliberately does not peak-normalise away MIDI expression. Primary
@@ -364,10 +370,14 @@ The checked basket is saved locally in its own append-only state and does not
 change musical decisions, review completion or contribution data. **Build this
 exact pack** saves the displayed basket, rechecks its selection/plan hashes and
 copies the checked MIDI and source bytes without modification. The generated
-ZIP contains deterministic names, a path-free receipt and setup instructions;
-private notes, local paths, rejected, needs-correction, superseded and
-unreviewed candidates remain excluded. The earlier source-free
+ZIP uses deterministic Workbench-generated names, a path-free receipt and
+path-free setup instructions. Rejected, needs-correction, superseded and
+unreviewed candidates remain excluded. Exact copied MIDI and explicitly opted-in
+source audio are not metadata-scrubbed and may retain embedded producer
+metadata, so inspect the ZIP before sharing it. The earlier source-free
 `sunofriend.workbench-garageband-handoff.v1` endpoint remains compatible.
+If no active MIDI remains, Pack Composer explains that no parts are ready and
+links back to Project Overview instead of presenting an unusable empty build.
 
 When a discovered candidate belongs to a completed `ai-transcribe` run, its
 card also shows the verified model/config, requested and detected labels, note
@@ -408,6 +418,12 @@ Automatic discovery is intentionally conservative. If filenames do not make
 the source/candidate role clear, provide an explicit
 `sunofriend.workbench-catalog.v1` JSON through `--catalog`; candidate files
 must still be inside the project or an explicitly named `--candidate-root`.
+Role tags are one-line musical descriptions of at most 80 characters, not file
+references. New path-like roles are rejected. A legacy saved role
+that contains a POSIX, home-relative, Windows, UNC or relative local path is
+kept in private history and the full private review, while path-free browser,
+timeline and pack surfaces use **custom role**, including ZIP names and
+generated proxy-MIDI track names.
 For a focused experiment, each catalog stem may also supply a plain-language
 `review_question` and a `listening_focus` list. The page shows these prompts
 without preselecting a candidate or turning them into scoring criteria. Their

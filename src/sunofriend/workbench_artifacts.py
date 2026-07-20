@@ -21,6 +21,8 @@ from .midi import MidiTrack, write_midi_file
 from .models import NoteEvent
 from .note_alignment import AlignmentEvent, align_events
 from .render import find_soundfont, render_midi_to_wav
+from .workbench_privacy import path_free_role
+from .workbench_semantics import terminal_no_selection_outcome
 
 
 NEUTRAL_PREVIEW_SCHEMA = "sunofriend.workbench-neutral-preview.v1"
@@ -86,7 +88,7 @@ class WorkbenchArtifacts:
             return None
         expected = {
             "source_midi_sha256": candidate["midi"]["sha256"],
-            "role": stem.get("role"),
+            "role": path_free_role(stem.get("role"))[0],
             "bpm": _project_bpm(catalog),
             "policy": _RENDER_POLICY,
         }
@@ -109,7 +111,7 @@ class WorkbenchArtifacts:
             )
         self._verify_catalog_record(candidate["midi"], label="candidate MIDI")
         bpm = _project_bpm(catalog)
-        role = str(stem.get("role") or "unclassified")
+        role = path_free_role(stem.get("role"))[0]
         soundfont = self._soundfont()
         key_payload = {
             "schema": NEUTRAL_PREVIEW_SCHEMA,
@@ -892,13 +894,22 @@ def selected_candidates(
     for stem in catalog.get("stems", []):
         stem_id = str(stem["stem_id"])
         state = states.get(stem_id, {})
+        outcome = state.get("outcome")
+        if isinstance(outcome, Mapping) and terminal_no_selection_outcome(
+            outcome.get("value")
+        ):
+            continue
         main_id = state.get("main_candidate_id")
         decisions = state.get("candidates", {})
-        role = str(state.get("role") or stem.get("role") or "unclassified")
+        role, _ = path_free_role(
+            state.get("role") or stem.get("role") or "unclassified"
+        )
         for candidate in stem.get("candidates", []):
             candidate_id = str(candidate["candidate_id"])
             decision = decisions.get(candidate_id, {})
             value = decision.get("decision")
+            if decision.get("selection_active") is False:
+                continue
             if not (
                 (value == "main" and candidate_id == main_id) or value == "optional"
             ):
@@ -1110,7 +1121,7 @@ def _garageband_pack_inventory(
                 "stem_ids": [],
             },
         )
-        role = str(stem.get("role") or "unclassified")
+        role = path_free_role(stem.get("role"))[0]
         label = str(stem.get("label") or role.replace("_", " ").title())
         if role not in group["roles"]:
             group["roles"].append(role)

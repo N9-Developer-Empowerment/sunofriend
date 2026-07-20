@@ -992,6 +992,182 @@ class WorkbenchStoreTests(unittest.TestCase):
                 review["contribution_preview"]["decision_event_count"], 2
             )
 
+    def test_terminal_outcome_suppresses_prior_selection_without_deleting_history(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            catalog = _two_candidate_catalog(root)
+            store = WorkbenchStore(root / "state" / "workbench.sqlite3")
+            stem = catalog["stems"][0]
+            first, second = stem["candidates"]
+
+            store.append(
+                catalog,
+                {
+                    "event_type": "candidate_decision",
+                    "stem_id": stem["stem_id"],
+                    "candidate_id": first["candidate_id"],
+                    "decision": "main",
+                    "context": "full_mix",
+                    "problem_tags": [],
+                },
+            )
+            store.append(
+                catalog,
+                {
+                    "event_type": "candidate_decision",
+                    "stem_id": stem["stem_id"],
+                    "candidate_id": second["candidate_id"],
+                    "decision": "optional",
+                    "context": "full_mix",
+                    "problem_tags": [],
+                },
+            )
+            store.append(
+                catalog,
+                {
+                    "event_type": "stem_outcome",
+                    "stem_id": stem["stem_id"],
+                    "outcome": "none_usable",
+                    "context": "solo",
+                },
+            )
+
+            current = store.current_state(catalog)
+            stem_state = current["stems"][stem["stem_id"]]
+
+            self.assertEqual(len(store.events(catalog["project_id"])), 3)
+            self.assertEqual(stem_state["outcome"]["value"], "none_usable")
+            self.assertIsNone(stem_state["main_candidate_id"])
+            self.assertFalse(
+                stem_state["candidates"][first["candidate_id"]]["selection_active"]
+            )
+            self.assertFalse(
+                stem_state["candidates"][second["candidate_id"]]["selection_active"]
+            )
+            self.assertEqual(selected_candidates(catalog, current), [])
+            plan = WorkbenchArtifacts(root / "state" / "artifacts").garageband_pack_plan(
+                catalog, current
+            )
+            self.assertEqual(plan["block_reasons"], ["no-selected-midi"])
+
+    def test_only_later_explicit_selection_crosses_terminal_outcome_barrier(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            catalog = _two_candidate_catalog(root)
+            store = WorkbenchStore(root / "state" / "workbench.sqlite3")
+            stem = catalog["stems"][0]
+            first, second = stem["candidates"]
+
+            for request in (
+                {
+                    "event_type": "candidate_decision",
+                    "stem_id": stem["stem_id"],
+                    "candidate_id": second["candidate_id"],
+                    "decision": "optional",
+                    "context": "solo",
+                    "problem_tags": [],
+                },
+                {
+                    "event_type": "stem_outcome",
+                    "stem_id": stem["stem_id"],
+                    "outcome": "cannot_tell",
+                    "context": "solo",
+                },
+                {
+                    "event_type": "candidate_decision",
+                    "stem_id": stem["stem_id"],
+                    "candidate_id": first["candidate_id"],
+                    "decision": "main",
+                    "context": "solo",
+                    "problem_tags": [],
+                },
+            ):
+                store.append(catalog, request)
+
+            current = store.current_state(catalog)
+            state = current["stems"][stem["stem_id"]]
+            selected = selected_candidates(catalog, current)
+
+            self.assertIsNone(state["outcome"])
+            self.assertTrue(
+                state["candidates"][first["candidate_id"]]["selection_active"]
+            )
+            self.assertFalse(
+                state["candidates"][second["candidate_id"]]["selection_active"]
+            )
+            self.assertEqual(
+                [(row["candidate_id"], row["decision"]) for row in selected],
+                [(first["candidate_id"], "main")],
+            )
+
+    def test_reject_does_not_clear_terminal_outcome_but_equivalent_keeps_selection(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            catalog = _two_candidate_catalog(root)
+            store = WorkbenchStore(root / "state" / "workbench.sqlite3")
+            stem = catalog["stems"][0]
+            first, second = stem["candidates"]
+
+            store.append(
+                catalog,
+                {
+                    "event_type": "stem_outcome",
+                    "stem_id": stem["stem_id"],
+                    "outcome": "none_usable",
+                    "context": "solo",
+                },
+            )
+            store.append(
+                catalog,
+                {
+                    "event_type": "candidate_decision",
+                    "stem_id": stem["stem_id"],
+                    "candidate_id": second["candidate_id"],
+                    "decision": "reject",
+                    "context": "solo",
+                    "problem_tags": ["none_match"],
+                },
+            )
+            rejected = store.current_state(catalog)
+            self.assertEqual(
+                rejected["stems"][stem["stem_id"]]["outcome"]["value"],
+                "none_usable",
+            )
+            self.assertEqual(selected_candidates(catalog, rejected), [])
+
+            store.append(
+                catalog,
+                {
+                    "event_type": "candidate_decision",
+                    "stem_id": stem["stem_id"],
+                    "candidate_id": first["candidate_id"],
+                    "decision": "main",
+                    "context": "solo",
+                    "problem_tags": [],
+                },
+            )
+            store.append(
+                catalog,
+                {
+                    "event_type": "stem_outcome",
+                    "stem_id": stem["stem_id"],
+                    "outcome": "equivalent",
+                    "context": "solo",
+                },
+            )
+            equivalent = store.current_state(catalog)
+            self.assertEqual(
+                equivalent["stems"][stem["stem_id"]]["outcome"]["value"],
+                "equivalent",
+            )
+            self.assertEqual(len(selected_candidates(catalog, equivalent)), 1)
+
     def test_review_context_is_private_pinned_and_prompt_change_hides_old_choices(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -2373,6 +2549,43 @@ def _small_catalog(root: Path) -> dict:
     _write_midi(midi, pitch=38)
     midi.with_suffix(".preview.wav").write_bytes(b"RIFF-preview-audio")
     return build_workbench_catalog(project, candidate_roots=[candidates])
+
+
+def _two_candidate_catalog(root: Path) -> dict:
+    project = root / "Barrier Song-D minor-120bpm-440hz"
+    candidates = root / "barrier-candidates"
+    project.mkdir()
+    candidates.mkdir()
+    source = project / "Barrier Song-bass-D minor-120bpm-440hz.wav"
+    source.write_bytes(b"RIFF-barrier-source")
+    first = candidates / "bass-first.mid"
+    second = candidates / "bass-second.mid"
+    _write_midi(first, pitch=38)
+    _write_midi(second, pitch=41)
+    document = root / "barrier-catalog.json"
+    document.write_text(
+        json.dumps(
+            {
+                "schema": "sunofriend.workbench-catalog.v1",
+                "stems": [
+                    {
+                        "source": str(source),
+                        "role": "bass",
+                        "candidates": [
+                            {"midi": str(first)},
+                            {"midi": str(second)},
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return build_workbench_catalog(
+        project,
+        candidate_roots=[candidates],
+        catalog_path=document,
+    )
 
 
 def _write_midi(path: Path, *, pitch: int) -> None:

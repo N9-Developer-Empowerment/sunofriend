@@ -34,6 +34,7 @@ from .workbench_store import (
     default_workbench_state_dir,
 )
 from .workbench_home import build_workbench_home
+from .workbench_privacy import path_free_browser_state
 from .workbench_timeline import (
     TimelineArtifactChangedError,
     build_arrangement_timeline,
@@ -476,7 +477,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     HTTPStatus.CREATED,
                     {
                         "event": event,
-                        "state": state,
+                        "state": path_free_browser_state(state),
                         "home": build_workbench_home(self.server.catalog, state),
                     },
                 )
@@ -685,7 +686,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 )
         state = self.server.store.current_state(self.server.catalog)
         review = self.server.store.export_review(self.server.catalog)
-        payload["state"] = state
+        payload["state"] = path_free_browser_state(state)
         payload["home"] = build_workbench_home(self.server.catalog, state)
         payload["contribution_preview"] = review["contribution_preview"]
         payload["review_status"] = review["status"]

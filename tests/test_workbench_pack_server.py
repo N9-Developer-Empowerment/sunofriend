@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from sunofriend.workbench_catalog import build_workbench_catalog
 from sunofriend.workbench_server import create_workbench_server
 
 from tests.test_workbench_pack_artifacts import (
@@ -199,6 +200,337 @@ class WorkbenchPackServerTests(unittest.TestCase):
                 server.shutdown()
                 server.server_close()
                 thread.join(timeout=5)
+
+    def test_restart_restores_decisions_home_and_non_default_pack_without_get_effects(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            first_catalog = _pack_catalog(root)
+            state_dir = root / "restart-state"
+            first_server = create_workbench_server(
+                first_catalog,
+                state_dir=state_dir,
+                token="restart-old-token",
+            )
+            first_stem, second_stem = first_catalog["stems"]
+            first_candidate = first_stem["candidates"][0]
+            second_candidate = second_stem["candidates"][0]
+            for request in (
+                {
+                    "event_type": "role_tag",
+                    "stem_id": first_stem["stem_id"],
+                    "role": "deep synth bass",
+                },
+                {
+                    "event_type": "candidate_decision",
+                    "stem_id": first_stem["stem_id"],
+                    "candidate_id": first_candidate["candidate_id"],
+                    "decision": "main",
+                    "context": "full_mix",
+                    "problem_tags": [],
+                },
+                {
+                    "event_type": "candidate_decision",
+                    "stem_id": second_stem["stem_id"],
+                    "candidate_id": second_candidate["candidate_id"],
+                    "decision": "optional",
+                    "context": "full_mix",
+                    "problem_tags": [],
+                },
+            ):
+                first_server.store.append(first_catalog, request)
+            first_thread = threading.Thread(
+                target=first_server.serve_forever,
+                daemon=True,
+            )
+            first_thread.start()
+            try:
+                status, first_project = _json_request(
+                    first_server.server_port,
+                    "GET",
+                    "/api/project?token=restart-old-token",
+                )
+                self.assertEqual(status, 200)
+                status, plan_response = _json_request(
+                    first_server.server_port,
+                    "GET",
+                    "/api/garageband-pack-plan?token=restart-old-token",
+                )
+                self.assertEqual(status, 200)
+                plan = plan_response["plan"]
+                midi_items = [
+                    item for item in plan["items"] if item["kind"] == "selected_midi"
+                ]
+                self.assertEqual(len(midi_items), 2)
+                deliberately_small_basket = [midi_items[1]["item_id"]]
+                status, saved_response = _json_request(
+                    first_server.server_port,
+                    "POST",
+                    "/api/garageband-pack-basket?token=restart-old-token",
+                    {
+                        "plan_sha256": plan["plan_sha256"],
+                        "basket_scope_sha256": plan["basket_scope_sha256"],
+                        "expected_revision": 0,
+                        "included_item_ids": deliberately_small_basket,
+                        "source_audio_opt_in": False,
+                    },
+                )
+                self.assertEqual(status, 200)
+                saved = saved_response["basket"]
+            finally:
+                first_server.shutdown()
+                first_server.server_close()
+                first_thread.join(timeout=5)
+
+            rebuilt_catalog = build_workbench_catalog(
+                root / "Pack Song-D minor-120bpm-440hz",
+                candidate_roots=[root / "candidates"],
+                catalog_path=root / "catalog.json",
+            )
+            self.assertEqual(
+                rebuilt_catalog["project_id"], first_catalog["project_id"]
+            )
+            self.assertEqual(
+                [stem["stem_id"] for stem in rebuilt_catalog["stems"]],
+                [stem["stem_id"] for stem in first_catalog["stems"]],
+            )
+            self.assertEqual(
+                [
+                    candidate["candidate_id"]
+                    for stem in rebuilt_catalog["stems"]
+                    for candidate in stem["candidates"]
+                ],
+                [
+                    candidate["candidate_id"]
+                    for stem in first_catalog["stems"]
+                    for candidate in stem["candidates"]
+                ],
+            )
+
+            second_server = create_workbench_server(
+                rebuilt_catalog,
+                state_dir=state_dir,
+                token="restart-new-token",
+            )
+            second_thread = threading.Thread(
+                target=second_server.serve_forever,
+                daemon=True,
+            )
+            second_thread.start()
+            try:
+                before_review = second_server.store.export_review(rebuilt_catalog)
+                status, forbidden = _json_request(
+                    second_server.server_port,
+                    "GET",
+                    "/api/project?token=restart-old-token",
+                )
+                self.assertEqual(status, 403)
+                self.assertIn("invalid workbench session token", forbidden["error"])
+
+                status, restored = _json_request(
+                    second_server.server_port,
+                    "GET",
+                    "/api/project?token=restart-new-token",
+                )
+                self.assertEqual(status, 200)
+                self.assertEqual(restored["project_id"], first_project["project_id"])
+                restored_first = restored["state"]["stems"][first_stem["stem_id"]]
+                restored_second = restored["state"]["stems"][second_stem["stem_id"]]
+                self.assertEqual(restored_first["role"], "deep synth bass")
+                self.assertEqual(restored_first["main_candidate_id"], first_candidate["candidate_id"])
+                self.assertEqual(
+                    restored_first["candidates"][first_candidate["candidate_id"]][
+                        "context"
+                    ],
+                    "full_mix",
+                )
+                self.assertEqual(
+                    restored_second["candidates"][second_candidate["candidate_id"]][
+                        "decision"
+                    ],
+                    "optional",
+                )
+                self.assertEqual(restored["state"]["event_count"], 3)
+                home = restored["home"]
+                self.assertEqual(home["counts"]["decision_recorded_stem_count"], 2)
+                self.assertEqual(home["counts"]["selected_part_count"], 2)
+                self.assertEqual(
+                    home["counts"]["selected_needing_full_mix_count"], 0
+                )
+                self.assertEqual(home["next_step"]["action"], "compose-pack")
+                self.assertFalse(home["temporary_state_restored"])
+                self.assertEqual(
+                    home["temporary_state_not_restored"],
+                    [
+                        "playhead",
+                        "loop",
+                        "mixer visibility",
+                        "mute",
+                        "solo",
+                        "level",
+                    ],
+                )
+                self.assertEqual(set(home["effects"].values()), {False})
+
+                status, restored_plan_response = _json_request(
+                    second_server.server_port,
+                    "GET",
+                    "/api/garageband-pack-plan?token=restart-new-token",
+                )
+                self.assertEqual(status, 200)
+                restored_plan = restored_plan_response["plan"]
+                restored_basket = restored_plan["basket"]
+                self.assertEqual(
+                    restored_plan["basket_restore_status"], "saved-current-plan"
+                )
+                self.assertTrue(restored_basket["saved"])
+                self.assertTrue(restored_basket["plan_current"])
+                for key in (
+                    "revision",
+                    "basket_sha256",
+                    "included_item_ids",
+                    "source_audio_opt_in",
+                ):
+                    self.assertEqual(restored_basket[key], saved[key])
+
+                status, timeline = _json_request(
+                    second_server.server_port,
+                    "GET",
+                    "/api/arrangement-timeline?token=restart-new-token",
+                )
+                self.assertEqual(status, 200)
+                self.assertEqual(len(timeline["midi_lanes"]), 2)
+
+                after_review = second_server.store.export_review(rebuilt_catalog)
+                self.assertEqual(
+                    after_review["current"]["event_count"],
+                    before_review["current"]["event_count"],
+                )
+                self.assertEqual(after_review["events"], before_review["events"])
+                status, final_plan_response = _json_request(
+                    second_server.server_port,
+                    "GET",
+                    "/api/garageband-pack-plan?token=restart-new-token",
+                )
+                self.assertEqual(status, 200)
+                self.assertEqual(
+                    final_plan_response["plan"]["basket"]["revision"],
+                    saved["revision"],
+                )
+            finally:
+                second_server.shutdown()
+                second_server.server_close()
+                second_thread.join(timeout=5)
+
+    def test_restart_keeps_terminal_outcome_as_no_selection_barrier(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            catalog = _pack_catalog(root)
+            state_dir = root / "terminal-restart-state"
+            stem = catalog["stems"][0]
+            candidate = stem["candidates"][0]
+            first_server = create_workbench_server(
+                catalog,
+                state_dir=state_dir,
+                token="terminal-old-token",
+            )
+            first_server.store.append(
+                catalog,
+                {
+                    "event_type": "candidate_decision",
+                    "stem_id": stem["stem_id"],
+                    "candidate_id": candidate["candidate_id"],
+                    "decision": "main",
+                    "context": "full_mix",
+                    "problem_tags": [],
+                },
+            )
+            first_server.store.append(
+                catalog,
+                {
+                    "event_type": "stem_outcome",
+                    "stem_id": stem["stem_id"],
+                    "outcome": "none_usable",
+                    "context": "full_mix",
+                },
+            )
+            first_thread = threading.Thread(
+                target=first_server.serve_forever,
+                daemon=True,
+            )
+            first_thread.start()
+            try:
+                status, first_plan_response = _json_request(
+                    first_server.server_port,
+                    "GET",
+                    "/api/garageband-pack-plan?token=terminal-old-token",
+                )
+                self.assertEqual(status, 200)
+                self.assertEqual(
+                    first_plan_response["plan"]["block_reasons"],
+                    ["no-selected-midi"],
+                )
+            finally:
+                first_server.shutdown()
+                first_server.server_close()
+                first_thread.join(timeout=5)
+
+            rebuilt_catalog = build_workbench_catalog(
+                root / "Pack Song-D minor-120bpm-440hz",
+                candidate_roots=[root / "candidates"],
+                catalog_path=root / "catalog.json",
+            )
+            second_server = create_workbench_server(
+                rebuilt_catalog,
+                state_dir=state_dir,
+                token="terminal-new-token",
+            )
+            second_thread = threading.Thread(
+                target=second_server.serve_forever,
+                daemon=True,
+            )
+            second_thread.start()
+            try:
+                before = second_server.store.export_review(rebuilt_catalog)
+                status, project = _json_request(
+                    second_server.server_port,
+                    "GET",
+                    "/api/project?token=terminal-new-token",
+                )
+                self.assertEqual(status, 200)
+                state = project["state"]["stems"][stem["stem_id"]]
+                decision = state["candidates"][candidate["candidate_id"]]
+                self.assertEqual(state["outcome"]["value"], "none_usable")
+                self.assertIsNone(state["main_candidate_id"])
+                self.assertEqual(decision["decision"], "main")
+                self.assertFalse(decision["selection_active"])
+                self.assertEqual(project["home"]["counts"]["selected_part_count"], 0)
+
+                status, timeline = _json_request(
+                    second_server.server_port,
+                    "GET",
+                    "/api/arrangement-timeline?token=terminal-new-token",
+                )
+                self.assertEqual(status, 200)
+                self.assertEqual(timeline["midi_lanes"], [])
+                status, plan_response = _json_request(
+                    second_server.server_port,
+                    "GET",
+                    "/api/garageband-pack-plan?token=terminal-new-token",
+                )
+                self.assertEqual(status, 200)
+                self.assertEqual(
+                    plan_response["plan"]["block_reasons"],
+                    ["no-selected-midi"],
+                )
+                after = second_server.store.export_review(rebuilt_catalog)
+                self.assertEqual(after["events"], before["events"])
+                self.assertEqual(after["current"]["event_count"], 2)
+            finally:
+                second_server.shutdown()
+                second_server.server_close()
+                second_thread.join(timeout=5)
 
 
 def _json_request(

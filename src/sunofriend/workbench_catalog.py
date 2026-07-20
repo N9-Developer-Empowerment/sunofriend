@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
 from .metadata import infer_project_metadata
+from .workbench_privacy import path_free_role, validated_role
 from .workbench_phrase_links import build_workbench_phrase_review_link
 
 
@@ -138,6 +139,10 @@ def public_catalog(catalog: Mapping[str, Any]) -> dict[str, Any]:
                     public_candidate[record_name] = {
                         key: value for key, value in record.items() if key != "path"
                     }
+            if "role" in public_candidate:
+                public_candidate["role"], _ = path_free_role(
+                    public_candidate.get("role")
+                )
             candidates.append(public_candidate)
         public_stem = {
             key: value
@@ -157,6 +162,7 @@ def public_catalog(catalog: Mapping[str, Any]) -> dict[str, Any]:
             public_stem["source"] = {
                 key: value for key, value in source.items() if key != "path"
             }
+        public_stem["role"], _ = path_free_role(public_stem.get("role"))
         public_stem["candidates"] = candidates
         stems.append(public_stem)
     return {
@@ -248,7 +254,12 @@ def _stems_from_document(
         _require_within(source, (project_root,), label=f"stem {index} source")
         if source.suffix.lower() not in _AUDIO_SUFFIXES:
             raise ValueError(f"stem {index} source is not a supported audio file")
-        role = str(row.get("role") or infer_role(source.stem) or "unclassified")
+        configured_role = row.get("role")
+        if configured_role is not None and not isinstance(configured_role, str):
+            raise ValueError(f"workbench stem {index} role must be text")
+        role = validated_role(
+            str(configured_role or infer_role(source.stem) or "unclassified")
+        )
         candidate_rows = row.get("candidates", [])
         if not isinstance(candidate_rows, list):
             raise ValueError(f"stem {index} candidates must be a list")

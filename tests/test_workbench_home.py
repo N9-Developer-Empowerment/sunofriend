@@ -253,6 +253,37 @@ class WorkbenchHomeTests(unittest.TestCase):
             },
         )
 
+    def test_terminal_outcome_defensively_suppresses_legacy_active_selection(
+        self,
+    ) -> None:
+        catalog = {
+            "project_id": "project-terminal-barrier",
+            "stems": [_stem("lead", "lead", [_candidate("lead-a")])],
+        }
+        current = _state(
+            _stem_state(
+                "lead",
+                role="lead",
+                candidates={
+                    "lead-a": {
+                        "decision": "main",
+                        "context": "full_mix",
+                    }
+                },
+                main_candidate_id="lead-a",
+                outcome="none_usable",
+            )
+        )
+
+        home = build_workbench_home(catalog, current)
+        row = home["stems"][0]
+
+        self.assertEqual(home["counts"]["selected_part_count"], 0)
+        self.assertIsNone(row["main"])
+        self.assertEqual(row["inactive_selected_count"], 1)
+        self.assertEqual(row["attention_code"], "no-usable-selection")
+        self.assertEqual(home["next_step"]["action"], "no-results")
+
     def test_unresolved_empty_selection_precedes_a_ready_pack(self) -> None:
         catalog = {
             "project_id": "project-7",

@@ -1,6 +1,6 @@
 # Phase 5: Multi-Process MIDI Comparison and Local Result Explorer
 
-Status: **Phase 5.0–5.2 are complete; the Phase 5.3 lead-only S0/M1/M3 diagnostic slice and Phase 5.4 explorer slice are complete, including hash-pinned comparison, full-song audition, GarageBand Pack Composer v1 and the explicit disputed-range phrase-review bridge; Phase 5.3 blind choice, lineage and role expansion remain open while Phase 5.5 local Studio hardening has started with Project Overview/Resume v1; beam 1 and batch 1 remain the defaults and no public service or new checkpoint download is authorised**
+Status: **Phase 5.0–5.2 are complete; the Phase 5.3 lead-only S0/M1/M3 diagnostic slice and Phase 5.4 explorer slice are complete, including hash-pinned comparison, full-song audition, GarageBand Pack Composer v1 and the explicit disputed-range phrase-review bridge; Phase 5.3 blind choice, lineage and role expansion remain open while Phase 5.5 local Studio hardening now includes Project Overview/Resume v1 plus decision-safety, path-free-role and restart verification; beam 1 and batch 1 remain the defaults and no public service or new checkpoint download is authorised**
 
 Drafted: 19 July 2026
 Scope: accurate stem/full-mix MIDI, several analytical and AI processes kept as
@@ -1231,6 +1231,10 @@ After the 5.4 vertical slice is musically useful:
 - [x] add Project Overview/Resume v1 with path-free per-stem progress, one
   explicit-state-derived next action, restart-state boundaries, focus recovery,
   retryable connection/pack-status errors and lazy advanced audio metadata;
+- [x] make `none usable`/`cannot tell` deterministic no-selection barriers,
+  centralise path-free role projection across browser, timeline and pack
+  surfaces, add an empty-pack recovery path, and verify decisions plus a
+  non-default basket across two real loopback server launches;
 
 - replace shared-second media switching with decoded Web Audio buffers for the
   review paths that require tighter changes, while keeping the exact standalone
@@ -1245,10 +1249,10 @@ After the 5.4 vertical slice is musically useful:
   silently enabling either optimisation; and
 - conduct a small private, local-only usability beta using authorised projects.
 
-The checked Project Overview item is only the first hardening increment. It
-does not complete decoded Web Audio, long-song virtualization, canonical custom
-mixes, GarageBand/Instrument Bundle checks, cache-provenance display or the
-private beta.
+The checked Project Overview and decision-safety items are the first two
+hardening increments. They do not complete decoded Web Audio, long-song
+virtualization, canonical custom mixes, GarageBand/Instrument Bundle checks,
+cache-provenance display or the private beta.
 
 Success means a non-expert can complete source comparison, candidate choice,
 arrangement audition and GarageBand export without editing JSON or losing work.
@@ -1312,7 +1316,7 @@ than a single unexplained percentage.
 The usable 5.0 Workbench slice now covers project/stem decisions, cached neutral
 previews, full-mix confirmation and a selected GarageBand handoff. It keeps
 original MIDI unchanged and still has no upload or submission endpoint.
-Phase 5.5's first slice adds the path-free
+Phase 5.5 adds the path-free
 `sunofriend.workbench-home.v1` Project Overview as the default resume surface.
 Its progress, attention codes and one next workflow step come only from catalogued
 candidates and explicit saved decisions/outcomes. It excludes paths, private
@@ -1320,6 +1324,15 @@ notes and process metrics; navigation/retry changes no selection, pack, MIDI,
 audio or feedback. Decisions and the separate current pack basket survive a
 restart, while playhead, loop, visibility, mute, solo and level deliberately
 reset.
+Its second slice makes terminal `none_usable`/`cannot_tell` outcomes selection
+barriers while retaining append-only history; only a later main/optional event
+reactivates exportable selection for that stem, without resurrecting older
+options. A shared privacy guard
+rejects new path-like role tags and substitutes `custom role` for legacy values
+before browser state, contribution preview, timelines, archive names and proxy
+MIDI metadata are produced. A two-launch loopback test verifies that decisions
+and a non-default pack basket survive a new token while GET requests remain
+effect-free. An empty composer now routes back to Overview.
 Phase 5.4 now adds canonical, path-free per-stem and selected-arrangement
 timelines with zero automatic selection/ranking effects. The arrangement view
 shows every unique source stem and only current explicit main/optional MIDI,
@@ -1381,9 +1394,12 @@ described as time-synchronised, not sample-accurate. The standalone blind A/B
 package uses exact common source-frame windows, but does not yet replace
 Workbench media elements with decoded sample-accurate switching.
 
-Project Overview/Resume v1 is the first completed local-Studio hardening slice.
-The immediate next engineering work is an authorised private end-to-end
-usability pass followed by the first measured friction it exposes. The
+Project Overview/Resume v1 and decision/restart/privacy hardening are the first
+completed local-Studio slices. A private Slayyyter fixture correctly failed
+closed when its adjacent AI worker no longer matched the completed run, so the
+restart contract was verified with a portable two-server fixture rather than
+weakening provenance. The immediate next engineering work is tighter decoded
+playback and the next authorised private usability pass. The
 explicit disputed-range bridge now
 opens the exact existing short phrase review without selecting or editing MIDI.
 Pack Composer v1 keeps checked file contents

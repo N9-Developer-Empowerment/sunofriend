@@ -136,6 +136,74 @@ class WorkbenchPackPlanTests(unittest.TestCase):
 
 
 class WorkbenchPackBuildTests(unittest.TestCase):
+    def test_legacy_path_role_is_redacted_before_pack_names_and_proxy_midi(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            catalog = _pack_catalog(root)
+            current = _current_state(catalog, contexts=("full_mix", "full_mix"))
+            first_stem = catalog["stems"][0]
+            current["stems"][first_stem["stem_id"]]["role"] = (
+                "Users/alice/ROLE_SENTINEL/private/song.wav"
+            )
+            soundfont = root / "test.sf2"
+            soundfont.write_bytes(b"test-soundfont")
+            artifacts = WorkbenchArtifacts(
+                root / "state" / "artifacts", soundfont_path=soundfont
+            )
+
+            plan = artifacts.garageband_pack_plan(catalog, current)
+            selected = [
+                item for item in plan["items"] if item["kind"] == "selected_midi"
+            ]
+
+            self.assertEqual(selected[0]["role"], "custom role")
+            self.assertEqual(selected[0]["label"], "Custom Role — main")
+            self.assertEqual(
+                selected[0]["archive_paths"], ["MIDI/01-custom-role-main.mid"]
+            )
+            public_plan = json.dumps(plan)
+            for leaked in (
+                "ROLE_SENTINEL",
+                "usersalice",
+                "Users/alice",
+                "privatesong",
+                "private-song",
+            ):
+                self.assertNotIn(leaked, public_plan)
+
+            with patch(
+                "sunofriend.workbench_artifacts.render_midi_to_wav",
+                side_effect=_fake_render,
+            ):
+                pack = artifacts.build_garageband_pack(
+                    catalog,
+                    current,
+                    plan["plan_sha256"],
+                    plan["default_basket"],
+                )
+
+            with zipfile.ZipFile(pack["zip"]["path"]) as archive:
+                names = archive.namelist()
+                self.assertIn("MIDI/01-custom-role-main.mid", names)
+                serialized_names = json.dumps(names)
+                manifest = archive.read(
+                    "sunofriend-garageband-pack.json"
+                ).decode("utf-8")
+                proxy = archive.read("MIDI/selected-arrangement-proxy.mid")
+                self.assertIn(b"Neutral Custom Role (main)", proxy)
+                for leaked in (
+                    "ROLE_SENTINEL",
+                    "usersalice",
+                    "Users/alice",
+                    "privatesong",
+                    "private-song",
+                ):
+                    self.assertNotIn(leaked, serialized_names)
+                    self.assertNotIn(leaked, manifest)
+                    self.assertNotIn(leaked.encode("utf-8"), proxy)
+
     def test_cache_rejects_a_different_valid_pack_copied_into_its_directory(
         self,
     ) -> None:

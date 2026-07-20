@@ -45,6 +45,11 @@ CLI parsing (`cli.py`)
         +--> blind source-aligned MIDI comparison (`midi_ab_review.py`)
         +--> local decision workbench (`workbench_catalog.py`,
         |                              `workbench_store.py`,
+        |                              `workbench_semantics.py`,
+        |                              `workbench_privacy.py`,
+        |                              `workbench_home.py`,
+        |                              `workbench_timeline.py`,
+        |                              `workbench_artifacts.py`,
         |                              `workbench_server.py`)
         +--> instrument discovery (`instrument_catalog.py`)
         +--> timbre matching/sample packs (`instrument_match.py`)
@@ -141,6 +146,13 @@ new transcription engine. `workbench_catalog.py` hash-pins existing source,
 MIDI and preview artifacts and limits the normal result space to three
 non-diagnostic candidates. `workbench_store.py` records immutable events in a
 local SQLite database and derives current state without updating old choices.
+`workbench_semantics.py` defines terminal no-selection outcomes: replay keeps
+the old main/optional evidence but marks it inactive until a later explicit
+selection reopens that stem. Every arrangement/export consumer repeats that
+barrier defensively. `workbench_privacy.py` rejects new path-like musical roles
+and projects legacy roles as `custom role` before they reach browser state,
+public catalogs, contribution previews, timelines, archive names or proxy MIDI
+metadata; private raw history is not rewritten.
 `workbench_artifacts.py` owns content-addressed role-neutral previews, selected
 arrangement proxies and deterministic GarageBand handoff ZIPs. It reads notes
 through Clip v1 and renders through the existing MIDI/FluidSynth boundaries;
@@ -213,6 +225,11 @@ rechecks the exact input bytes before copying them. Basket revisions live in a
 dedicated append-only `pack_selection_events` table, separate from musical
 decisions, private reviews and contribution previews. The original
 source-audio-free handoff route remains unchanged for compatibility.
+No active selection produces a blocked, inspectable empty plan; the browser
+routes back to Project Overview instead of offering an empty build. A
+two-launch loopback integration test verifies restoration of decisions and a
+non-default basket under a fresh capability token while GET routes remain
+effect-free.
 
 Alternative MIDI, Instrument Bundles, persistent mixer projects, custom-mix
 rendering and sample-accurate Web Audio are not implemented in Pack Composer

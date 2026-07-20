@@ -10,7 +10,8 @@ complete with explicit verified/unverified lineage boundaries; blind phrase
 choice remains; Phase 5.4 is complete with its per-stem comparison, full-song
 selected-arrangement explorer/mixer, GarageBand Pack Composer and explicit
 disputed-range phrase-review bridge; Phase 5.5 local Studio hardening has
-started with Project Overview/Resume v1
+started with Project Overview/Resume v1 plus decision-safety, path-free-role
+and two-launch restart verification
 
 Started: 15 July 2026  
 Scope: local-first AI assistance for transcription, review, instrument matching
@@ -87,7 +88,7 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
-| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.3 listening/lineage/role work remains while Phase 5.5 hardening has started** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench now has hash-pinned per-stem and full-song timelines, an audition-only source/MIDI mixer, a separate persistent exact GarageBand pack basket, an explicit disputed-range phrase-review bridge and a path-free Project Overview that resumes from explicit saved state without selecting a winner |
+| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.3 listening/lineage/role work remains while Phase 5.5 hardening has started** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench now has hash-pinned per-stem and full-song timelines, an audition-only source/MIDI mixer, a separate persistent exact GarageBand pack basket, an explicit disputed-range phrase-review bridge and a path-free Project Overview. Terminal no-selection outcomes cannot leak older choices into export, path-like roles cannot leak into public/pack/MIDI metadata, and decisions plus a non-default basket are verified across two server launches |
 | 6. Creative Arrangement and Reusable MIDI | **Planned after the local Studio is stable** | Reversible note/phrase correction, explicit hybrids, transforms, Clip v1 browsing and reuse, mashup preparation and instrument attachment without becoming a full DAW |
 | 7. Cross-DAW and Opt-in Community Learning | **Deferred** | Compatibility testing, cleared public goldens and consented contextual feedback only after the local workflow is useful, private and stable |
 
@@ -508,7 +509,7 @@ explicit, hash-pinned bridge from diagnostic S0/M1/M3 disagreement ranges to
 the exact existing phrase-review anchors. It changes only temporary loop and
 navigation state and creates no choice, MIDI or feedback.
 
-Phase 5.5 now starts with a default Project Overview backed by the path-free
+Phase 5.5 starts with a default Project Overview backed by the path-free
 `sunofriend.workbench-home.v1` projection. It reports explicit decisions,
 selected parts, full-mix work and one deterministic resume state/action without
 using candidate scores or process names; the terminal state deliberately has
@@ -517,6 +518,10 @@ basket survive restart; audition controls reset. Initial connection and lazy
 pack-status failures are retryable and have zero feedback, selection, pack or
 artifact effects. This makes the multi-process space easier to enter; it does
 not replace per-stem comparison or promote a model.
+The second hardening slice now makes `none_usable` and `cannot_tell` selection
+barriers, applies one path-free role guard to browser/timeline/pack/MIDI
+surfaces and verifies both positive selections and terminal outcomes across
+real server restarts. The raw private history remains append-only.
 
 This direction borrows the approachability of a visual transcription tool—one
 transport, visible notes, understandable track controls and direct export—not
@@ -582,6 +587,37 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-20 — Phase 5.5 decision safety, path-free roles and restart proof
+
+- Goal: make saved review outcomes unambiguous at export time and prove that a
+  real restart restores durable state without restoring temporary audition
+  controls or causing GET-side effects.
+- Change or experiment: defined `none_usable` and `cannot_tell` as deterministic
+  no-selection barriers in event replay and every selection consumer. Earlier
+  events remain auditable but inactive; a later main/optional decision clears
+  the barrier and activates only that candidate. Added one shared role-privacy
+  boundary for new-event/catalog validation and legacy browser, contribution,
+  timeline, pack, ZIP-name and proxy-MIDI projections. Empty Pack Composer now
+  explains that no MIDI is ready and returns to Project Overview.
+- Evidence: focused store/home/UI/privacy/timeline/pack tests include malformed
+  legacy state, relative/POSIX/home/Windows/UNC role forms, pack manifests and
+  generated MIDI track metadata. A two-server loopback integration test saves
+  decisions plus a non-default basket, stops the first server, starts a second
+  with a new token and verifies restoration with no GET mutation.
+- Private integrity boundary: the planned Slayyyter usability fixture failed
+  closed because an adjacent completed AI run's worker hash had changed. No
+  provenance check was relaxed; portable fixtures supplied the restart proof.
+- Decision: retain append-only history but make active export eligibility
+  explicit. Keep raw private review exports unchanged; reject path-like roles
+  on new writes and redact only legacy browser/public/handoff projections.
+- Problems/risks: media-element playback is still shared-second rather than
+  decoded/sample-accurate; direct browser controls can bypass the common seek;
+  long-song virtualization, keyboard/save affordances and a controlled
+  audition-family choice for free-form roles remain open.
+- Next smallest step: implement the first decoded playback/synchronisation
+  increment without changing the multi-process evidence or explicit-choice
+  contract.
 
 ### 2026-07-20 — Phase 5.5 Project Overview/Resume v1
 

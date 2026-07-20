@@ -135,6 +135,24 @@ class WorkbenchHomeUITests(unittest.TestCase):
         self.assertIn("former selection", self.home)
         self.assertIn("now blocked", self.home)
 
+    def test_terminal_no_selection_outcome_is_a_browser_selection_barrier(self) -> None:
+        self.assertIn("function terminalNoSelection(state)", self.page)
+        self.assertIn("if(terminalNoSelection(state))continue", self.page)
+        self.assertIn("saved?.selection_active!==false", self.page)
+        self.assertIn("inactive after later no-selection outcome", self.page)
+        self.assertIn("row.inactive_selected_count", self.home)
+
+    def test_empty_pack_is_an_understandable_recoverable_state(self) -> None:
+        self.assertIn("No MIDI parts are ready for export yet", self.page)
+        self.assertIn('id="empty-pack-overview"', self.page)
+        self.assertIn("Return to Project Overview", self.page)
+        self.assertIn("function packBlockReasonText(reason)", self.page)
+        self.assertIn(
+            "Choose at least one main or optional MIDI part before building",
+            self.page,
+        )
+        self.assertIn("overview.onclick=()=>navigate('home')", self.page)
+
     def test_embedded_javascript_is_valid(self) -> None:
         node = shutil.which("node")
         if not node:

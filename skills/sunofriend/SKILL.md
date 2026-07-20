@@ -1343,6 +1343,16 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     decisions and pack choices from intentionally fresh playhead, loop, show,
     mute, solo and level controls; all must have zero musical, feedback and
     export effects.
+    Treat `none_usable` and `cannot_tell` as terminal no-selection barriers:
+    retain their earlier candidate events as private history, but report zero
+    active/exportable MIDI until a later explicit main or optional decision.
+    That later decision must not resurrect optional choices from before the
+    barrier. Reject or needs-correction alone must not clear the barrier.
+    Musical role tags must be one-line path-free descriptions of at most 80
+    characters. Reject a new path-like role; for legacy history confirm that
+    browser state, contribution preview, timelines, pack names and generated
+    proxy-MIDI track metadata use `custom role` while the private raw review is
+    unchanged.
     Confirm every declared `effects` field is false, initial connection and
     lazy pack-status failures are retryable, and opening/following the home
     action calls no event, transform or render endpoint.
@@ -1369,8 +1379,11 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     When using `--export-review`, confirm the destination was fresh, the write
     completed without starting a server and the artifact is private because it
     can contain absolute paths and notes.
-    For every handoff,
-    confirm rejected/needs-correction/unreviewed files, source audio, private
-    notes and absolute paths are excluded, and numbered selected MIDI bytes are
-    unchanged. Exported local JSON may contain absolute paths and private
-    notes; the separate contribution preview must contain neither.
+    For every handoff, confirm rejected/needs-correction/unreviewed files are
+    excluded, Workbench-generated names/manifests contain no private review
+    notes or absolute paths, and numbered selected MIDI bytes are unchanged.
+    State whether source audio stayed excluded through the safe default or was
+    separately opted into a custom pack. Exact copied MIDI/source payloads are
+    not metadata-scrubbed and may retain embedded producer metadata. Exported
+    local JSON may contain absolute paths and private notes; the separate
+    contribution preview must contain neither.

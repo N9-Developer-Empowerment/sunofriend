@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-import re
 from typing import Any, Mapping, Sequence
+
+from .workbench_privacy import path_free_role
+from .workbench_semantics import (
+    TERMINAL_NO_SELECTION_OUTCOMES,
+    terminal_no_selection_outcome,
+)
 
 
 WORKBENCH_HOME_SCHEMA = "sunofriend.workbench-home.v1"
-_TERMINAL_NO_SELECTION_OUTCOMES = frozenset({"none_usable", "cannot_tell"})
-_LOCAL_PATH_PATTERN = re.compile(
-    r"(?i)(?:file://|~[/\\]|(?<![A-Za-z0-9])/(?!\s)[^\s]*|[a-z]:[/\\][^\s]+|\\\\[^\s]+)"
-)
 
 
 def build_workbench_home(
@@ -97,6 +98,9 @@ def _stem_row(stem: Mapping[str, Any], state: Mapping[str, Any]) -> dict[str, An
     if not isinstance(saved_candidates, Mapping):
         saved_candidates = {}
 
+    outcome = state.get("outcome")
+    outcome_value = outcome.get("value") if isinstance(outcome, Mapping) else None
+    terminal_outcome = terminal_no_selection_outcome(outcome_value)
     main_candidate_id = state.get("main_candidate_id")
     main: dict[str, str] | None = None
     optional: list[dict[str, str]] = []
@@ -109,6 +113,7 @@ def _stem_row(stem: Mapping[str, Any], state: Mapping[str, Any]) -> dict[str, An
     selected_contexts: list[str] = []
     matching_decision_recorded = False
     blocked_selected_count = 0
+    inactive_selected_count = 0
     for candidate in candidates:
         candidate_id = str(candidate.get("candidate_id", ""))
         saved = saved_candidates.get(candidate_id)
@@ -122,19 +127,29 @@ def _stem_row(stem: Mapping[str, Any], state: Mapping[str, Any]) -> dict[str, An
             "candidate_id": candidate_id,
             "display_letter": display_letters[candidate_id],
         }
+        selected_decision = decision in {"main", "optional"}
+        selection_active = (
+            selected_decision
+            and not terminal_outcome
+            and saved.get("selection_active") is not False
+        )
+        if selected_decision and not selection_active:
+            inactive_selected_count += 1
         if candidate.get("audition_blocked"):
-            if decision in {"main", "optional"}:
+            if selected_decision:
                 blocked_selected_count += 1
             continue
-        if decision == "main" and candidate_id == main_candidate_id:
+        if (
+            selection_active
+            and decision == "main"
+            and candidate_id == main_candidate_id
+        ):
             main = summary
             selected_contexts.append(str(saved.get("context") or "solo"))
-        elif decision == "optional":
+        elif selection_active and decision == "optional":
             optional.append(summary)
             selected_contexts.append(str(saved.get("context") or "solo"))
 
-    outcome = state.get("outcome")
-    outcome_value = outcome.get("value") if isinstance(outcome, Mapping) else None
     decision_recorded = matching_decision_recorded or outcome_value is not None
     selected_part_count = int(main is not None) + len(optional)
     needs_full_mix = sum(context != "full_mix" for context in selected_contexts)
@@ -146,7 +161,7 @@ def _stem_row(stem: Mapping[str, Any], state: Mapping[str, Any]) -> dict[str, An
         outcome=outcome_value,
     )
 
-    heard_role, heard_role_redacted = _path_free_heard_role(
+    heard_role, heard_role_redacted = path_free_role(
         state.get("role") or stem.get("role") or "unclassified"
     )
     return {
@@ -164,6 +179,7 @@ def _stem_row(stem: Mapping[str, Any], state: Mapping[str, Any]) -> dict[str, An
         "selected_part_count": selected_part_count,
         "selected_needing_full_mix_count": needs_full_mix,
         "blocked_selected_count": blocked_selected_count,
+        "inactive_selected_count": inactive_selected_count,
         "attention_code": attention_code,
     }
 
@@ -219,7 +235,7 @@ def _next_step(
         }
     if selected_part_count <= 0:
         has_terminal_outcome = any(
-            row.get("outcome") in _TERMINAL_NO_SELECTION_OUTCOMES for row in rows
+            row.get("outcome") in TERMINAL_NO_SELECTION_OUTCOMES for row in rows
         )
         return {
             "action": "no-results",
@@ -258,10 +274,3 @@ def _display_letter(index: int) -> str:
         value, remainder = divmod(value - 1, 26)
         letters = chr(65 + remainder) + letters
     return letters
-
-
-def _path_free_heard_role(value: Any) -> tuple[str, bool]:
-    text = str(value or "unclassified")
-    if _LOCAL_PATH_PATTERN.search(text):
-        return "custom role", True
-    return text, False

@@ -10,6 +10,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
+from .workbench_privacy import path_free_role, validated_role
+from .workbench_semantics import terminal_no_selection_outcome
+
 
 WORKBENCH_EVENT_SCHEMA = "sunofriend.workbench-event.v1"
 WORKBENCH_REVIEW_SCHEMA = "sunofriend.workbench-review.v1"
@@ -140,16 +143,27 @@ class WorkbenchStore:
             review_context = payload.get("review_context", {})
             review_context_sha256 = review_context.get("sha256")
             if event["event_type"] == "candidate_decision":
+                decision_value = payload["decision"]
+                previous_main = stem["main_candidate_id"]
                 stem["candidates"][event["candidate_id"]] = {
-                    "decision": payload["decision"],
+                    "decision": decision_value,
                     "context": payload["context"],
                     "problem_tags": list(payload.get("problem_tags", [])),
                     "notes": payload.get("notes"),
                     "review_context_sha256": review_context_sha256,
                     "event_id": event["event_id"],
                     "created_at": event["created_at"],
+                    "selection_active": decision_value in {"main", "optional"},
                 }
-                if payload["decision"] == "main":
+                if decision_value in {"main", "optional"} and isinstance(
+                    stem.get("outcome"), Mapping
+                ) and terminal_no_selection_outcome(stem["outcome"].get("value")):
+                    stem["outcome"] = None
+                if decision_value == "main":
+                    if previous_main and previous_main != event["candidate_id"]:
+                        previous = stem["candidates"].get(previous_main)
+                        if isinstance(previous, dict):
+                            previous["selection_active"] = False
                     stem["main_candidate_id"] = event["candidate_id"]
                 elif stem["main_candidate_id"] == event["candidate_id"]:
                     stem["main_candidate_id"] = None
@@ -161,6 +175,11 @@ class WorkbenchStore:
                     "event_id": event["event_id"],
                     "created_at": event["created_at"],
                 }
+                if terminal_no_selection_outcome(payload["outcome"]):
+                    stem["main_candidate_id"] = None
+                    for decision in stem["candidates"].values():
+                        if decision.get("decision") in {"main", "optional"}:
+                            decision["selection_active"] = False
             elif event["event_type"] == "role_tag":
                 stem["role"] = payload["role"]
             elif event["event_type"] == "candidate_auditioned":
@@ -396,6 +415,10 @@ def contribution_preview(
     for stem in project.get("stems", []):
         stem_id = str(stem["stem_id"])
         state = current_stems.get(stem_id, {})
+        outcome = state.get("outcome")
+        terminal_outcome = isinstance(outcome, Mapping) and terminal_no_selection_outcome(
+            outcome.get("value")
+        )
         candidates = []
         for candidate in stem.get("candidates", []):
             candidate_id = str(candidate["candidate_id"])
@@ -415,14 +438,20 @@ def contribution_preview(
                     "decision": decision.get("decision"),
                     "context": decision.get("context"),
                     "problem_tags": list(decision.get("problem_tags", [])),
+                    "selection_active": (
+                        decision.get("decision") in {"main", "optional"}
+                        and not terminal_outcome
+                        and decision.get("selection_active") is not False
+                    ),
                 }
             )
         if candidates or state.get("outcome"):
+            role, _ = path_free_role(state.get("role") or stem.get("role"))
             stems.append(
                 {
                     "stem_id": stem_id,
                     "source_sha256": stem["source"]["sha256"],
-                    "role": state.get("role") or stem.get("role"),
+                    "role": role,
                     "outcome": state.get("outcome"),
                     "candidates": candidates,
                 }
@@ -520,7 +549,8 @@ def _validated_event(
             raise ValueError("unsupported listening context")
         payload = {"outcome": outcome, "context": context}
     elif event_type == "role_tag":
-        payload = {"role": _bounded_text(request.get("role"), label="role", maximum=80)}
+        role = _bounded_text(request.get("role"), label="role", maximum=80)
+        payload = {"role": validated_role(role)}
         candidate_id = None
     else:
         context = request.get("context", "solo")
