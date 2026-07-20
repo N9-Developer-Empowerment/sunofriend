@@ -141,7 +141,12 @@ scripts.
 - Existing source/MIDI/preview result space: use `workbench` with the original
   stem directory and only the narrow candidate roots intended for that song.
   It is a loopback-only presentation and explicit-decision boundary, not a
-  transcriber. Prefer an explicit `sunofriend.workbench-catalog.v1` document
+  transcriber. Preserve Sunofriend's multi-process identity: specialist,
+  analytical, tracker-consensus, conditioned-AI and reviewed repair candidates
+  are separate evidence, and a different process may be useful for each role
+  or phrase. Never collapse them into one automatic winner or imply that a
+  model label, score, preview count or visible default is preference. Prefer an
+  explicit `sunofriend.workbench-catalog.v1` document
   when filenames cannot distinguish songs or audible roles. Treat at most
   three primary candidates as the normal result space, keep diagnostic files
   advanced, and do not infer preference from audition events, dwell time or
@@ -175,7 +180,23 @@ scripts.
   review without a server. Reuse the original project, every candidate root,
   optional catalog and state directory so the command targets the same review
   identity; never overwrite an existing path and warn that the result may
-  contain absolute paths and private notes.
+  contain absolute paths and private notes. The current Workbench has per-stem
+  source/candidate switching, selected-arrangement listening and a
+  source-audio-free exact-MIDI handoff. Its read-only visual Result Explorer
+  has two linked views: a hash-pinned per-stem source waveform with up to three
+  primary MIDI lanes (advanced lanes load only on explicit request), and a
+  hash-pinned full-song arrangement containing every unique project source
+  plus only current explicit main/optional MIDI. The arrangement has temporary
+  source-only, selected-MIDI, hybrid and main-MIDI presets plus show, mute, solo,
+  attenuation, loop and zoom controls. These are browser-tab audition state:
+  never treat them as preference, append a decision, persist them, include them
+  in a cache key or imply that they change the handoff. Missing MIDI mixer sound
+  must be prepared with the neutral renderer; never silently use an existing
+  unnormalised preview. Both views start every artifact at recorded zero and
+  infer no offset; browser media shares seconds but is not sample-accurate, and
+  source/MIDI levels are not normalised. The user-composed GarageBand basket,
+  persistent/custom mix rendering and phrase-range links remain planned; do
+  not claim or attempt those later features yet.
 - Several completed immutable MuScriptor lanes: use `ai-matrix` with explicit
   repeated `LANE=RUN_DIR` values and a fresh `--out` JSON. Include M0
   unconditioned full mix, M1 discovered-label conditioning, M2 known-label

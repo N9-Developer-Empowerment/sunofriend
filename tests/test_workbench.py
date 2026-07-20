@@ -14,7 +14,7 @@ from sunofriend.midi import MidiTrack, write_midi_file
 from sunofriend.models import NoteEvent
 from sunofriend.workbench_catalog import build_workbench_catalog, public_catalog
 from sunofriend.workbench_artifacts import WorkbenchArtifacts, selected_candidates
-from sunofriend.workbench_server import create_workbench_server
+from sunofriend.workbench_server import _display_candidates, create_workbench_server
 from sunofriend.workbench_store import WorkbenchStore
 
 
@@ -1098,6 +1098,32 @@ class WorkbenchStoreTests(unittest.TestCase):
 
 
 class WorkbenchServerTests(unittest.TestCase):
+    def test_candidate_display_identity_is_primary_first_and_never_reused(self) -> None:
+        candidates = [
+            {"candidate_id": "diagnostic", "primary": False},
+            {"candidate_id": "primary-1", "primary": True},
+            {"candidate_id": "primary-2", "primary": True},
+            {"candidate_id": "primary-3", "primary": True},
+            *(
+                {"candidate_id": f"advanced-{index}", "primary": False}
+                for index in range(23)
+            ),
+        ]
+
+        displayed = _display_candidates(candidates)
+
+        self.assertEqual(
+            [candidate["candidate_id"] for candidate in displayed[:4]],
+            ["primary-1", "primary-2", "primary-3", "diagnostic"],
+        )
+        self.assertEqual(
+            [candidate["display_letter"] for candidate in displayed[:4]],
+            ["A", "B", "C", "D"],
+        )
+        self.assertEqual(displayed[25]["display_letter"], "Z")
+        self.assertEqual(displayed[26]["display_letter"], "AA")
+        self.assertNotIn("display_letter", candidates[0])
+
     def test_static_ui_explains_overlap_confirmation_and_export_gate(self) -> None:
         page = Path("src/sunofriend/workbench.html").read_text(encoding="utf-8")
 
@@ -1112,6 +1138,63 @@ class WorkbenchServerTests(unittest.TestCase):
         self.assertIn("project.selected_midi_overlap?.pairs||[]", page)
         self.assertIn("No reviewable stems found.", page)
         self.assertIn("No parts are selected yet.", page)
+        self.assertIn("Multiple methods, one musical decision.", page)
+        self.assertIn("Visual result explorer", page)
+        self.assertIn("never ranks, selects, merges or repairs", page)
+        self.assertIn("/api/timeline?", page)
+        self.assertIn("candidate_id=${encodeURIComponent(id)}", page)
+        self.assertIn("Array.isArray(source.tracks)", page)
+        self.assertIn("Displaying a lane is not recorded as feedback.", page)
+        self.assertIn("function drawTimeline(stem,timeline)", page)
+        self.assertIn("function seekTimeline(canvas,clientX)", page)
+        self.assertIn("function updateTimelinePlayhead()", page)
+        self.assertIn("function timelineNoteCountLabel(candidate)", page)
+        self.assertIn("note count unavailable", page)
+        self.assertIn("candidate?.display_letter", page)
+        self.assertIn("candidateCard(stem,candidate,state)", page)
+        self.assertIn("playhead=start}updateTimelinePlayhead()", page)
+        self.assertNotIn("playhead=start}drawActiveTimeline()", page)
+        self.assertIn("Alignment boundary:", page)
+        self.assertIn("not proof that a candidate is aligned", page)
+        self.assertIn("Selected arrangement explorer", page)
+        self.assertIn("Audition controls only.", page)
+        self.assertIn("/api/arrangement-timeline", page)
+        self.assertIn("function drawArrangementTimeline(timeline)", page)
+        self.assertIn("function arrangementSelectionMatches(timeline)", page)
+        self.assertIn("requestId!==arrangementTimelineRequest", page)
+        self.assertIn("arrangementTimeline=null;clearArrangementTimeline", page)
+        self.assertIn("changed in another Workbench tab", page)
+        self.assertIn("function mixerEffectiveTracks()", page)
+        self.assertIn("mixerFailedTracks.has(track.key)", page)
+        self.assertIn("function mixerTrackFailed(track,error)", page)
+        self.assertIn("Playback failed; press Play or reapply a preset", page)
+        self.assertIn(
+            "function applyMixerPreset(name){mixerFailedTracks.clear()",
+            page,
+        )
+        self.assertIn(
+            "function playMixer(){mixerFailedTracks.clear();updateMixerControls()",
+            page,
+        )
+        self.assertIn(
+            "find(audio=>audio&&!audio.paused&&!audio.ended)",
+            page,
+        )
+        self.assertIn("function applyMixerPreset(name)", page)
+        self.assertIn("function prepareMixerTracks(button)", page)
+        self.assertIn("Source stems", page)
+        self.assertIn("Selected MIDI", page)
+        self.assertIn("Hybrid", page)
+        self.assertIn("Main MIDI only", page)
+        self.assertIn("are not sample-accurate", page)
+        self.assertIn("Save after listening", page)
+        self.assertIn("Compare methods", page)
+        mixer_code = page.split("function arrangementExplorerPanel", 1)[1].split(
+            "function renderArrangement()", 1
+        )[0]
+        self.assertNotIn("/api/events", mixer_code)
+        self.assertNotIn("save(", mixer_code)
+        self.assertIn("context:'full_mix'", page)
 
     def test_loopback_token_range_and_decision_api(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -1159,6 +1242,123 @@ class WorkbenchServerTests(unittest.TestCase):
                 self.assertEqual(overlap["pairs"], [])
                 stem = payload["stems"][0]
                 candidate = stem["candidates"][0]
+                self.assertEqual(candidate["display_letter"], "A")
+                connection.close()
+
+                connection = http.client.HTTPConnection(
+                    "127.0.0.1", server.server_port, timeout=5
+                )
+                connection.request(
+                    "GET", "/api/arrangement-timeline?token=test-token"
+                )
+                response = connection.getresponse()
+                self.assertEqual(response.status, 200)
+                empty_arrangement_timeline = json.loads(response.read())
+                self.assertEqual(
+                    empty_arrangement_timeline["schema"],
+                    "sunofriend.workbench-arrangement-timeline.v1",
+                )
+                self.assertEqual(
+                    empty_arrangement_timeline["selected_midi_lane_count"], 0
+                )
+                self.assertEqual(empty_arrangement_timeline["source_lane_count"], 1)
+                connection.close()
+
+                connection = http.client.HTTPConnection(
+                    "127.0.0.1", server.server_port, timeout=5
+                )
+                connection.request(
+                    "GET",
+                    "/api/timeline?stem_id="
+                    + stem["stem_id"]
+                    + "&token=test-token",
+                )
+                response = connection.getresponse()
+                self.assertEqual(response.status, 200)
+                timeline = json.loads(response.read())
+                self.assertEqual(
+                    timeline["schema"], "sunofriend.workbench-timeline.v1"
+                )
+                self.assertEqual(timeline["stem_id"], stem["stem_id"])
+                self.assertEqual(timeline["source"]["status"], "unavailable")
+                self.assertEqual(timeline["candidates"][0]["note_count"], 1)
+                self.assertEqual(
+                    timeline["candidate_scope"]["mode"], "primary-default"
+                )
+                self.assertNotIn(str(root), json.dumps(timeline))
+                connection.close()
+
+                connection = http.client.HTTPConnection(
+                    "127.0.0.1", server.server_port, timeout=5
+                )
+                connection.request(
+                    "GET",
+                    "/api/timeline?stem_id="
+                    + stem["stem_id"]
+                    + "&candidate_id="
+                    + candidate["candidate_id"]
+                    + "&token=test-token",
+                )
+                response = connection.getresponse()
+                self.assertEqual(response.status, 200)
+                explicit_timeline = json.loads(response.read())
+                self.assertEqual(
+                    explicit_timeline["candidate_scope"]["mode"], "explicit"
+                )
+                self.assertEqual(
+                    explicit_timeline["candidate_scope"]["source_projection"],
+                    "reference-only",
+                )
+                self.assertEqual(
+                    explicit_timeline["source"]["status"], "reference-only"
+                )
+                self.assertEqual(
+                    explicit_timeline["candidates"][0]["candidate_id"],
+                    candidate["candidate_id"],
+                )
+                connection.close()
+
+                selection_body = json.dumps(
+                    {
+                        "event_type": "candidate_decision",
+                        "stem_id": stem["stem_id"],
+                        "candidate_id": candidate["candidate_id"],
+                        "decision": "optional",
+                        "context": "solo",
+                        "problem_tags": [],
+                    }
+                )
+                connection = http.client.HTTPConnection(
+                    "127.0.0.1", server.server_port, timeout=5
+                )
+                connection.request(
+                    "POST",
+                    "/api/events?token=test-token",
+                    body=selection_body,
+                    headers={"Content-Type": "application/json"},
+                )
+                response = connection.getresponse()
+                self.assertEqual(response.status, 201)
+                response.read()
+                connection.close()
+
+                event_count = server.store.current_state(catalog)["event_count"]
+                connection = http.client.HTTPConnection(
+                    "127.0.0.1", server.server_port, timeout=5
+                )
+                connection.request(
+                    "GET", "/api/arrangement-timeline?token=test-token"
+                )
+                response = connection.getresponse()
+                self.assertEqual(response.status, 200)
+                arrangement_timeline = json.loads(response.read())
+                self.assertEqual(arrangement_timeline["selected_midi_lane_count"], 1)
+                self.assertEqual(arrangement_timeline["midi_lanes"][0]["note_count"], 1)
+                self.assertFalse(arrangement_timeline["effects"]["feedback_recorded"])
+                self.assertNotIn(str(root), json.dumps(arrangement_timeline))
+                self.assertEqual(
+                    server.store.current_state(catalog)["event_count"], event_count
+                )
                 connection.close()
 
                 connection = http.client.HTTPConnection(
@@ -1181,6 +1381,20 @@ class WorkbenchServerTests(unittest.TestCase):
                     "127.0.0.1", server.server_port, timeout=5
                 )
                 connection.request("GET", stem["source_url"])
+                response = connection.getresponse()
+                self.assertEqual(response.status, 409)
+                self.assertIn("changed after it was catalogued", response.read().decode())
+                connection.close()
+
+                connection = http.client.HTTPConnection(
+                    "127.0.0.1", server.server_port, timeout=5
+                )
+                connection.request(
+                    "GET",
+                    "/api/timeline?stem_id="
+                    + stem["stem_id"]
+                    + "&token=test-token",
+                )
                 response = connection.getresponse()
                 self.assertEqual(response.status, 409)
                 self.assertIn("changed after it was catalogued", response.read().decode())

@@ -21,11 +21,42 @@ from .workbench_catalog import (
     media_files,
     public_catalog,
 )
-from .workbench_artifacts import WorkbenchArtifacts
+from .workbench_artifacts import WorkbenchArtifacts, selected_candidates
 from .workbench_store import WorkbenchStore, default_workbench_state_dir
+from .workbench_timeline import (
+    TimelineArtifactChangedError,
+    build_arrangement_timeline,
+    build_stem_timeline,
+)
 
 
 _MAX_REQUEST_BYTES = 64 * 1024
+
+
+def _display_candidates(candidates: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Return one stable primary-first display identity for every UI surface."""
+
+    ordered = [candidate for candidate in candidates if candidate.get("primary")]
+    ordered.extend(
+        candidate for candidate in candidates if not candidate.get("primary")
+    )
+    return [
+        {**candidate, "display_letter": _display_letter(index)}
+        for index, candidate in enumerate(ordered)
+    ]
+
+
+def _display_letter(index: int) -> str:
+    """Return A..Z, AA..AZ and so on without reusing a visible identity."""
+
+    value = int(index) + 1
+    if value <= 0:
+        raise ValueError("candidate display index must not be negative")
+    letters = ""
+    while value:
+        value, remainder = divmod(value - 1, 26)
+        letters = chr(65 + remainder) + letters
+    return letters
 
 
 class WorkbenchHTTPServer(ThreadingHTTPServer):
@@ -278,6 +309,40 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/project":
             self._json(HTTPStatus.OK, self._project_payload())
             return
+        if parsed.path == "/api/timeline":
+            timeline_query = parse_qs(parsed.query, keep_blank_values=True)
+            stem_id = timeline_query.get("stem_id", [""])[0]
+            candidate_ids = timeline_query.get("candidate_id")
+            try:
+                timeline = build_stem_timeline(
+                    self.server.catalog,
+                    stem_id,
+                    candidate_ids=candidate_ids,
+                    include_source=candidate_ids is None,
+                )
+            except TimelineArtifactChangedError as exc:
+                self._error(HTTPStatus.CONFLICT, str(exc))
+                return
+            except (OSError, RuntimeError, ValueError) as exc:
+                self._error(HTTPStatus.BAD_REQUEST, str(exc))
+                return
+            self._json(HTTPStatus.OK, timeline)
+            return
+        if parsed.path == "/api/arrangement-timeline":
+            try:
+                current = self.server.store.current_state(self.server.catalog)
+                timeline = build_arrangement_timeline(
+                    self.server.catalog,
+                    selected_candidates(self.server.catalog, current),
+                )
+            except TimelineArtifactChangedError as exc:
+                self._error(HTTPStatus.CONFLICT, str(exc))
+                return
+            except (OSError, RuntimeError, ValueError) as exc:
+                self._error(HTTPStatus.BAD_REQUEST, str(exc))
+                return
+            self._json(HTTPStatus.OK, timeline)
+            return
         if parsed.path == "/api/review":
             self._json(
                 HTTPStatus.OK,
@@ -358,6 +423,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
     def _project_payload(self) -> dict[str, Any]:
         payload = public_catalog(self.server.catalog)
         for stem in payload["stems"]:
+            stem["candidates"] = _display_candidates(stem["candidates"])
             stem["source_url"] = self._media_url(stem["source_media_id"])
             source = stem.get("source")
             if isinstance(source, dict):

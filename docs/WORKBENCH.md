@@ -5,6 +5,88 @@ musically useful. It does not run a model or upload a song. Its explicit
 preview/arrangement actions create content-addressed local audition proxies;
 discovered MIDI remains byte-for-byte unchanged.
 
+Sunofriend's distinctive purpose is to compare a small, understandable family
+of results from different analytical and AI processes. It does not present one
+transcription model as the answer. Specialist conversion, tracker consensus,
+conditioned AI, source-supported repair and reviewed alternatives may each be
+useful for a different role or phrase. Workbench keeps that provenance and
+uncertainty visible, records an explicit human choice and never infers a winner
+from a score, label, audition count or displayed default.
+
+The current interface supplies per-stem source/candidate playback, persistent
+decisions, neutral preview rendering, selected-arrangement audition and a safe
+exact-MIDI GarageBand handoff. Phase 5.4 now supplies both a read-only per-stem
+source/MIDI comparison timeline and a full-song selected-arrangement explorer.
+The arrangement explorer shows every unique project source stem beside only
+the active explicit main and optional MIDI choices, with temporary visibility,
+mute, solo and level controls. It does not infer an offset: every source and
+MIDI file begins at its recorded zero, so equal displayed seconds do not by
+themselves prove source/MIDI alignment. The user-composed GarageBand basket
+remains the next planned increment.
+
+## Result Explorer direction
+
+The next interface is an evolution of this Workbench, not a Mirelo clone and
+not a replacement for GarageBand. It adopts approachable interaction ideas—a
+single transport, visible source and MIDI events, clear track controls and a
+direct export path—while preserving Sunofriend's multi-process evidence model.
+
+The implemented explorer is deliberately smaller than the eventual Studio:
+
+- `sunofriend.workbench-timeline.v1` is a path-free, canonical-hash-pinned
+  projection of already catalogued artifacts;
+- the ordinary request loads only the at-most-three primary candidates, while
+  an advanced lane is decoded only after an explicit visual opt-in;
+- classic and WAVE_EXTENSIBLE integer-PCM WAV sources provide a bounded min/max
+  waveform, including common 24-bit stems; unsupported or invalid containers
+  remain audible through their existing player and show an explicit
+  unavailable waveform state;
+- each MIDI candidate retains separate track title, channel, program, pitch,
+  velocity, beat and embedded-tempo seconds evidence;
+- note rectangles represent note-on/off only—sustain, controllers, pitch bend
+  and later program changes are not rendered;
+- candidates above 20,000 notes or 8 MiB remain available as original MIDI but
+  use an explicit unavailable visual-lane state, while the moving playhead is
+  kept separate from the static note drawing;
+- advanced candidate requests return a verified source reference and reuse the
+  base waveform already in the page rather than rebuilding it for every lane;
+  and
+- visibility and click-to-seek actions do not create audition, preference,
+  selection, ranking, repair or edit events.
+
+The full-song view uses
+`sunofriend.workbench-arrangement-timeline.v1`, another path-free,
+canonical-hash-pinned projection. It is derived server-side from the current
+explicit selection rather than a browser-supplied candidate list. Byte-identical
+source audio shares one visibly labelled lane, but selected MIDI is never
+deduplicated. The projection is capped at 24 distinct source lanes, 24 selected
+MIDI lanes and 40,000 rendered MIDI notes in total; a lane that exceeds the
+remaining visual budget stays visible as unavailable evidence rather than
+silently disappearing.
+
+The interface continues to call candidates A/B/C until technical details are
+opened. The visual lanes make differences easier to locate; they do not say
+which process is musically correct.
+
+Two linked views avoid confusing alternatives with simultaneous parts:
+
+- **Arrangement view** shows every unique source stem plus one explicit main
+  choice per role and chosen optional layers on a shared full-song
+  waveform/piano-roll timeline. Visibility, mute, solo and level affect this
+  browser-tab audition only. Source-stems, selected-MIDI, hybrid and main-MIDI
+  presets are temporary starting points; manual changes become an unsaved
+  custom audition.
+- **Compare-role view** keeps one source stem visible while the user
+  switches among at most three primary process candidates and opens additional
+  diagnostic alternatives only when needed.
+
+The planned pack composer will be separate from the main/optional musical
+decision. It will show exactly which unchanged MIDI, explicitly requested
+stems, preview mixes and eligible Instrument Bundles will enter a GarageBand
+ZIP. The existing source-audio-free exact-MIDI handoff remains the current safe
+default. Direct note editing, phrase recombination and Clip-library composition
+belong to the later creative arrangement phase.
+
 ## Start with automatic discovery
 
 The project directory contains the original top-level stems. Keep candidate
@@ -337,6 +419,27 @@ drum proxy; pitched selections receive separate tracks and role-neutral GM
 programs. Confirming or changing a row after listening records a `full_mix`
 decision context.
 
+The **Selected arrangement explorer** above that proxy has a different job. It
+draws the project's unique source waveforms and each unchanged selected MIDI
+as separate lanes. Candidate letters remain the same as in the corresponding
+compare-role page. **Source stems**, **Selected MIDI**, **Hybrid** and **Main
+MIDI only** presets change audition state only; show, mute, solo, level, loop,
+zoom and playhead changes are held in JavaScript memory and reset when the page
+reloads or the audible selection changes. They do not append a Workbench event,
+change a choice, alter the overlap gate or enter the GarageBand handoff.
+
+Live MIDI layers use renderer-consistent neutral previews. When one is absent,
+use **Prepare selected MIDI sounds locally**; Workbench does not silently
+substitute an existing unnormalised preview. The source stems and neutral MIDI
+previews are not level matched, so the hybrid mix is a creative listening aid,
+not fair comparison evidence. Multiple browser media elements share displayed
+seconds but are not sample-accurate. The separately prepared dry GM proxy
+remains the reproducible control and downloadable convenience render.
+
+Only the buttons under **Save after listening** append `full_mix` decisions.
+Playback and mixer activity never counts as preference, including when the
+source-only view is useful before any MIDI has been selected.
+
 The proxy keeps imported note times in seconds and writes the inferred project
 BPM. It is an audition aid, not a replacement for the selected originals. A
 proxy supports at most 15 simultaneously selected pitched parts; reduce
@@ -404,6 +507,15 @@ note-free disclosure boundary.
 
 ## Current limits
 
+- The live mixer contains project source stems and current explicit selected
+  MIDI only. It cannot audition an unselected candidate; use that stem's
+  compare-role page first.
+- Mixer settings, custom auditions, loops and play position are intentionally
+  browser-tab state. They are not restored, rendered into a custom WAV or
+  included in a handoff.
+- The current GarageBand handoff contains explicit selected MIDI and a dry
+  proxy. It is not yet a user-composed basket for optional source stems,
+  alternative MIDI, preview mixes or eligible Instrument Bundles.
 - Existing preview WAVs remain labelled unnormalised; use the neutral renderer
   when comparing MIDI rather than embedded instruments.
 - Browser switching shares time in seconds but does not yet use decoded
@@ -413,9 +525,10 @@ note-free disclosure boundary.
   Workbench playback limit.
 - The arrangement is a dry GM proxy. Complete-instrument checks and installed
   GarageBand patch choice remain a later view.
-- Phrase piano-roll correction, model-size comparison and opt-in contribution
-  remain later increments. The Workbench
-  still consumes completed AI runs rather than launching a model itself.
+- Phrase piano-roll correction and creative recombination remain a later phase.
+  Model-size comparison and any opt-in public contribution are also later,
+  separately authorised work. The Workbench still consumes completed AI runs
+  rather than launching a model itself.
 
 These limits are shown in the interface so an incomplete feature is not
 mistaken for a musical judgement.

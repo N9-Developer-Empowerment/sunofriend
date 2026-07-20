@@ -1,10 +1,17 @@
 # Sunofriend architecture
 
-Sunofriend has two user-facing layers:
+Sunofriend has three user-facing layers:
 
 1. The Python package and `sunofriend` command are the deterministic engine.
-2. The portable Agent Skill selects commands, checks prerequisites and
+2. The loopback-only Workbench presents completed source/MIDI alternatives,
+   records explicit decisions and prepares the GarageBand handoff.
+3. The portable Agent Skill selects commands, checks prerequisites and
    interprets reports. It must not duplicate audio or MIDI algorithms.
+
+These layers preserve Sunofriend's core separation: several analytical and AI
+processes may produce immutable candidates, the Workbench makes their evidence
+approachable, and a human chooses what becomes part of an arrangement. No
+shared score or model label is an automatic winner.
 
 ## Current execution flow
 
@@ -155,6 +162,51 @@ export and resolved result are now complete. Two loops were equivalent and the
 3.50–7.50 second loop marginally preferred beam 1; beam 2 won no loop. All
 reported mutation, selection, promotion and default-change effects are zero,
 so beam 1 remains the execution default.
+
+Phase 5.4 is an interaction-layer extension over these existing boundaries,
+not a second transcription engine or a Mirelo clone. Its compare-role slice is
+a versioned, hash-pinned per-stem timeline derived from the current catalog:
+bounded classic/WAVE_EXTENSIBLE integer-PCM WAV display data beside per-track
+MIDI note geometry on the embedded-tempo clock. `/api/timeline` loads the
+at-most-three primary candidates by default and accepts explicit candidate IDs
+for lazy advanced lanes. It rechecks selected source/MIDI hashes before and
+after projection, returns no paths and records zero mutation, ranking,
+selection and default effects. Unsupported waveforms and malformed or
+oversized MIDI lanes remain explicitly unavailable rather than being silently
+omitted.
+
+The primary request includes the source projection. An explicit advanced-lane
+request verifies the source identity once but returns only its path-free
+reference, then verifies the selected MIDI before and after decoding. The page
+keeps the already loaded base waveform, which avoids rebuilding a large source
+for every checkbox without treating a stale or different source as equivalent.
+
+The compare-role canvas consumes that contract with a shared playhead; it does
+not edit notes or treat visibility as preference. The second slice adds
+`sunofriend.workbench-arrangement-timeline.v1` through the read-only
+`/api/arrangement-timeline` route. The server derives its rows from
+`selected_candidates()` and therefore exposes only current explicit main and
+optional MIDI. It groups byte-identical source audio once while retaining all
+stem/role labels, never deduplicates selected MIDI, rechecks hashes before and
+after projection and returns no paths. Aggregate caps bound it to 24 distinct
+sources, 24 selected MIDI lanes and 40,000 rendered notes; an over-budget lane
+is explicit unavailable evidence.
+
+The arrangement selection SHA covers audible candidate identity, role,
+decision, MIDI hash and BPM but deliberately excludes review context, so a
+solo-to-full-mix reconfirmation does not reset an unchanged audition. The live
+mixer is browser-memory state only: visibility, mute, solo, attenuation,
+preset, loop and playhead never enter SQLite, selection hashes, overlap
+evidence, arrangement caches or handoff bytes. Source-stem, selected-MIDI,
+hybrid and main-MIDI presets use lazily loaded source media plus explicitly
+prepared neutral MIDI previews. These independent media elements share seconds
+but are not sample-accurate, and source/MIDI levels are not normalised. The
+content-addressed prepared dry proxy remains the reproducible control.
+
+The planned GarageBand pack composer will translate explicit checkboxes into a
+manifest and ZIP while retaining the existing source-audio-free, exact-MIDI
+handoff as its safe default. Persistent mixer projects, custom-mix rendering,
+sample-accurate Web Audio and the pack composer are not implemented yet.
 
 `ai_matrix.py` applies a model-neutral quality/report schema to already
 completed immutable runs from one controlled backend, checkpoint, model config
@@ -381,15 +433,18 @@ third-party integrations.
 
 The safest next boundaries are:
 
-1. Add typed application operations for folder conversion, one-stem conversion,
+1. Build the GarageBand pack composer on the existing per-stem and selected-
+   arrangement timelines while keeping waveform display data, temporary mixer
+   state, musical decisions and export-basket choices as separate contracts.
+2. Add typed application operations for folder conversion, one-stem conversion,
    vocal extraction and MIDI transformation; keep CLI handlers as adapters.
-2. Centralize instrument roles, aliases, channels, GM programs and GarageBand
+3. Centralize instrument roles, aliases, channels, GM programs and GarageBand
    suggestions in one immutable registry.
-3. Introduce a lossless Standard MIDI File codec and shared batch/path-safety
+4. Introduce a lossless Standard MIDI File codec and shared batch/path-safety
    utilities, then migrate one command at a time against a common fixture set.
-4. Share phase-safe audio loading and an explicit beat-grid to `TempoMap`
+5. Share phase-safe audio loading and an explicit beat-grid to `TempoMap`
    adapter.
-5. Split the large Clip and vocal modules only after compatibility re-exports
+6. Split the large Clip and vocal modules only after compatibility re-exports
    and characterization tests exist.
 
 Do not combine those moves into a single rewrite. The existing golden songs

@@ -952,16 +952,29 @@ class _ParsedTrack:
     chords: list[tuple[int, str]]
 
 
+class MidiNoteLimitError(ValueError):
+    """Raised before MIDI import materializes more note-ons than allowed."""
+
+    def __init__(self, limit: int) -> None:
+        self.limit = int(limit)
+        self.minimum_count = self.limit + 1
+        super().__init__(f"MIDI contains more than {self.limit} note-on events")
+
+
 def read_midi_clips(
     path: str | Path,
     *,
     key: KeySignature | str | None = None,
     role: str | None = None,
     suggestions: Iterable[str] = (),
+    max_notes: int | None = None,
 ) -> tuple[MidiClip, ...]:
     """Read every note-bearing track/channel from a format-0 or format-1 file."""
 
     path = Path(path)
+    if max_notes is not None:
+        if isinstance(max_notes, bool) or not isinstance(max_notes, int) or max_notes < 1:
+            raise ValueError("max_notes must be a positive integer")
     raw = path.read_bytes()
     if len(raw) < 14 or raw[:4] != b"MThd":
         raise ValueError(f"Not a Standard MIDI File: {path}")
@@ -980,6 +993,7 @@ def read_midi_clips(
     signatures: list[tuple[int, TimeSignature]] = []
     keys: list[tuple[int, KeySignature]] = []
     global_chords: list[tuple[int, str]] = []
+    note_on_count = 0
     for _ in range(track_count):
         if raw[position:position + 4] != b"MTrk" or position + 8 > len(raw):
             raise ValueError("Missing or truncated MIDI track")
@@ -988,7 +1002,16 @@ def read_midi_clips(
         end = start + length
         if end > len(raw):
             raise ValueError("Truncated MIDI track")
-        parsed, metadata = _parse_track(raw[start:end])
+        try:
+            parsed, metadata = _parse_track(
+                raw[start:end],
+                max_note_ons=(
+                    None if max_notes is None else max_notes - note_on_count
+                ),
+            )
+        except MidiNoteLimitError as exc:
+            raise MidiNoteLimitError(max_notes) from exc
+        note_on_count += int(metadata["note_on_count"])
         tracks.append(parsed)
         tempos.extend(metadata["tempos"])
         signatures.extend(metadata["signatures"])
@@ -1088,7 +1111,9 @@ def read_midi_clip(
         raise IndexError(f"MIDI contains {len(clips)} note-bearing tracks/channels") from exc
 
 
-def _parse_track(data: bytes) -> tuple[_ParsedTrack, dict[str, Any]]:
+def _parse_track(
+    data: bytes, *, max_note_ons: int | None = None
+) -> tuple[_ParsedTrack, dict[str, Any]]:
     position = 0
     tick = 0
     running_status: int | None = None
@@ -1100,6 +1125,7 @@ def _parse_track(data: bytes) -> tuple[_ParsedTrack, dict[str, Any]]:
     tempos: list[tuple[int, float]] = []
     signatures: list[tuple[int, TimeSignature]] = []
     keys: list[tuple[int, KeySignature]] = []
+    note_on_count = 0
 
     while position < len(data):
         delta, position = _read_varlen(data, position)
@@ -1166,6 +1192,9 @@ def _parse_track(data: bytes) -> tuple[_ParsedTrack, dict[str, Any]]:
         if event_type == 0xC0:
             programs.setdefault(channel, payload[0])
         elif event_type == 0x90 and payload[1] > 0:
+            note_on_count += 1
+            if max_note_ons is not None and note_on_count > max_note_ons:
+                raise MidiNoteLimitError(max(0, max_note_ons))
             active.setdefault((channel, payload[0]), []).append((tick, payload[1]))
         elif event_type == 0x80 or (event_type == 0x90 and payload[1] == 0):
             stack = active.get((channel, payload[0]))
@@ -1179,6 +1208,7 @@ def _parse_track(data: bytes) -> tuple[_ParsedTrack, dict[str, Any]]:
         "tempos": tempos,
         "signatures": signatures,
         "keys": keys,
+        "note_on_count": note_on_count,
     }
 
 
@@ -1247,6 +1277,7 @@ __all__ = [
     "ClipNote",
     "Instrument",
     "KeySignature",
+    "MidiNoteLimitError",
     "MidiClip",
     "Provenance",
     "TempoMap",

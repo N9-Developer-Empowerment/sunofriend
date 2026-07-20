@@ -171,7 +171,8 @@ patch. Phase 4 should keep the resynthesis artifact as an optional control and
 avoid further work on the rejected source sampler for this performance.
 
 The next programme is now documented separately in the
-[Phase 5 MuScriptor and Community Learning plan](PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md).
+[Phase 5 multi-process comparison and Result Explorer plan](PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md).
 It compares full-mix discovery with conditioned stem/specialist candidates and
-adds an opt-in, metadata-first web feedback design. It does not relax any Phase
-4 listening, playability, rights or provenance gate.
+turns those alternatives into an approachable local decision and GarageBand
+handoff workflow. Public feedback is deferred to a later phase. None of this
+relaxes a Phase 4 listening, playability, rights or provenance gate.

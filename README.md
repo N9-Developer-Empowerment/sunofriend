@@ -11,6 +11,13 @@ It complements Suno, Moises and GarageBand rather than replacing them: use
 Suno to generate a song, Moises to export stems and chords, Sunofriend to make
 clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 
+Sunofriend's main difference is not one transcription model. It preserves and
+compares a small set of results from several analytical and AI processes—such
+as specialist stem conversion, tracker consensus, conditioned AI and
+source-supported repair—because a different method may work best for each
+instrument or phrase. The user hears the alternatives and makes the musical
+choice; scores and model labels never create an automatic global winner.
+
 ## What Sunofriend can do
 
 | Goal | Command | Timing and data contract |
@@ -47,12 +54,12 @@ clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 | Test learned local source cleanup | `ai-cleanup` | Pinned Demucs target plus waveform residual, hard checkpoint verification, deterministic short excerpts and an explicit listening gate |
 | Split one reviewed MIDI into audible roles | `midi-role-split`, `midi-role-split-resolve` | Explicit source-event cluster choice, exact primary-note partition, optional independently transcribed residual layer, local A/B review and a hash-verified user-selected recommendation |
 | Compare consistent sounds on one fixed MIDI | `timbre-resynthesis` | Level-matched complete-patch, extracted-sampler and source-fitted harmonic-plus-noise auditions with note-by-note silence checks and no MIDI changes |
-| Review and hand off MIDI alternatives in one local site | `workbench` | Loopback-only synchronized listening, overlap-aware full arrangement, append-only decisions, private offline review export, GarageBand ZIP and a path-free contribution preview |
+| Review and hand off multi-process MIDI alternatives in one local site | `workbench` | Loopback-only per-role comparison plus a full-song selected-arrangement timeline and temporary source/MIDI mixer, at most three primary candidates per role, append-only decisions, private offline review export and an exact-selected-MIDI GarageBand ZIP; no automatic winner or submission endpoint |
 
 Development has started on a local-first ensemble of optional transcription
 models, phrase-level melody review and learned instrument matching. See the
 multi-week **[AI transcription and instrument roadmap](docs/AI_TRANSCRIPTION_ROADMAP.md)**
-for Phase 1–5 goals, licence boundaries, success criteria, current checklist
+for Phase 1–7 goals, licence boundaries, success criteria, current checklist
 and daily progress log. The measured backend decisions and final listening
 gate are in the **[Phase 1 bake-off close-out report](docs/PHASE1_TRANSCRIPTION_BAKEOFF.md)**.
 Phase 3 is complete; its implemented instrument features, reproducible golden
@@ -92,10 +99,14 @@ completed full-mix/conditioned comparison and local Workbench, followed by
 fresh-process and reused-model measurements, an explicit exact-result
 application-cache experiment, a completed one-variable beam measurement and
 completed blind short-loop review with a resolved private listening result,
-plus a completed batch-size 1→2 CPU comparison and the first read-only Phase
-5.3 phrase-consensus diagnostic, followed by a future opt-in feedback loop—is
+plus a completed batch-size 1→2 CPU comparison, the first read-only Phase 5.3
+phrase-consensus diagnostic and the in-progress multi-process Result Explorer
+(per-role comparison and full-song selected-arrangement views implemented),
+followed by the planned GarageBand Pack Composer—is
 in the
-**[Phase 5 MuScriptor and Community Learning plan](docs/PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md)**.
+**[Phase 5 multi-process comparison and Result Explorer plan](docs/PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md)**.
+Creative note/phrase arrangement and Clip reuse remain a later Phase 6, while
+cross-DAW and explicitly consented community work is deferred to Phase 7.
 
 For combining songs, first use `midi-transform` to choose a common key, BPM
 and tuning, then use `midi-anchor` to place confirmed downbeats on the same
@@ -235,6 +246,22 @@ content-addressed local cache and discovered MIDI is never changed. Point it
 at the original stem folder and one or more narrow directories containing
 existing MIDI and optional WAV previews:
 
+Its purpose is to compare results from several processes, not present one
+model's transcription as the answer. The current interface provides per-stem
+source/candidate playback, explicit main/optional/correction/reject choices,
+selected-arrangement audition and an exact-MIDI GarageBand handoff. Phase 5.4
+adds two read-only visual views: a current-stem source waveform with coloured
+MIDI lanes for comparing processes, and a full-song selected-arrangement
+timeline containing every unique source stem plus only the explicit main and
+optional MIDI choices. The compare view shows three primary candidates by
+default and loads advanced alternatives only when requested; neither view
+ranks or changes them. The arrangement view adds temporary show, mute, solo and
+level controls plus source-stem, selected-MIDI, hybrid and main-MIDI presets.
+Those controls live only in the browser tab and never save feedback or alter
+the handoff. Both displays use each file's recorded zero and infer no alignment
+offset, so equal displayed seconds are not proof of source/MIDI alignment. The
+GarageBand pack composer remains the next planned increment.
+
 ```bash
 .venv/bin/sunofriend workbench \
   "/absolute/path/to/Song-B minor-113bpm-440hz" \
@@ -253,9 +280,36 @@ the same second. **Render neutral preview** gives candidates for one stem the
 same local SoundFont, gain and role-based GM program; it is renderer-consistent
 but deliberately does not peak-normalise away MIDI expression.
 
+The **Visual result explorer** above those players is evidence, not an editor
+or recommendation. Click its common elapsed-seconds axis to move the playhead.
+The source lane is a bounded integer-PCM WAV min/max envelope, including the 24-bit
+WAVE_EXTENSIBLE files commonly produced by FFmpeg/Moises; unsupported audio
+containers remain available to the existing audio player while the visual
+explorer says that their waveform is unavailable. MIDI rectangles come from
+each file's embedded tempo map and retain per-track titles, channels, programs,
+pitches and velocities. They represent note-on/off events only, so sustain,
+controller and pitch-bend expression is not drawn. All displayed source and
+MIDI inputs are rechecked against their catalogued hashes.
+
+MIDI files above 8 MiB or candidates above 20,000 notes remain downloadable
+and auditable but are shown as explicitly unavailable visual lanes. The moving
+playhead is a lightweight overlay, so ordinary playback does not redraw every
+note on every audio progress event. Opening an advanced lane verifies the
+source identity once and reuses the already loaded source projection instead
+of rebuilding the full waveform.
+
 The **Hear selected arrangement** page includes only the active explicit main
 choice and explicit optional choices. Full-mix confirmation is stored with a
-`full_mix` listening context. The arrangement also reports every selected MIDI
+`full_mix` listening context. Its full-song explorer shows the source stems and
+selected MIDI as separate lanes with one playhead, loop and fit/2×/4× views.
+Use **Prepare selected MIDI sounds locally** when a selected lane has no neutral
+preview; an existing unnormalised preview is not silently substituted. Source
+and MIDI levels are not matched, and simultaneous browser media elements are
+not sample-accurate, so the live hybrid is a creative audition rather than
+comparison evidence. Reloading resets its temporary mixer. Only buttons under
+**Save after listening** append a decision.
+
+The arrangement also reports every selected MIDI
 pair with the same candidate-origin source audio. It flags a
 substantial-overlap warning when at least eight exact-pitch attacks match within
 80 ms and those

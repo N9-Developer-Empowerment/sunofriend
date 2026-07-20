@@ -1,10 +1,12 @@
-# Phase 5: MuScriptor Full-Mix and Community Learning
+# Phase 5: Multi-Process MIDI Comparison and Local Result Explorer
 
-Status: **Phase 5.0 and 5.1 complete; the locally actionable Phase 5.2 small-CPU fresh-process, bounded reused-model, application-cache, beam-1/beam-2 and batch-size slices are complete; Phase 5.3 has a hardened read-only, lead-only S0/M1/M3 vocal phrase-disagreement report and now moves to explicit phrase listening; beam 1 and batch 1 remain the defaults and no public service or new checkpoint download is authorised**
+Status: **Phase 5.0 and 5.1 complete; the locally actionable Phase 5.2 small-CPU fresh-process, bounded reused-model, application-cache, beam-1/beam-2 and batch-size slices are complete; Phase 5.3 has a hardened read-only, lead-only S0/M1/M3 vocal phrase-disagreement report and now moves to explicit phrase listening; Phase 5.4 is in progress with hash-pinned per-stem comparison plus full-song selected-arrangement timeline/audition mixer implemented, while the GarageBand pack composer and phrase-range links remain; beam 1 and batch 1 remain the defaults and no public service or new checkpoint download is authorised**
 
 Drafted: 19 July 2026
-Scope: accurate stem/full-mix MIDI, faster local inference, GarageBand-ready
-instrument choices, a primary local web workbench and consented feedback
+Scope: accurate stem/full-mix MIDI, several analytical and AI processes kept as
+auditionable evidence, faster local inference, GarageBand-ready instrument
+choices and an approachable local web workbench. Public feedback is deferred
+to a later phase.
 
 ## Decision summary
 
@@ -25,10 +27,13 @@ What is new is the way the model is being presented and used:
   feedback at a much larger scale than a CLI-only workflow.
 
 The next programme should therefore **not replace Sunofriend with MuScriptor**.
-It should compare full-mix, stem-conditioned and specialist candidates on the
-same source; keep MuScriptor's raw instrument-labelled evidence; use
-Sunofriend's timing, expression, chord, source-support and review machinery to
-repair it; and learn only from explicit listening or note edits.
+MuScriptor is one useful challenger among several analytical and AI processes.
+Sunofriend should compare full-mix, stem-conditioned, specialist, consensus
+and repair candidates on the same source; preserve each candidate and its
+provenance; use timing, expression, chord, source-support and review evidence
+to explain their differences; and learn only from explicit listening or note
+edits. Different processes may be best for different roles or phrases. There
+is no required global winner.
 
 The intended end state is:
 
@@ -40,7 +45,7 @@ authorised mix and/or separated stems
        +--> MuScriptor conditioned passes on known stems/roles
        |
        v
-immutable, aligned candidate tracks
+immutable candidate tracks with explicit alignment status
        |
        +--> source support, chords, repetition, octave and timing checks
        +--> expression/velocity recovered from the source
@@ -52,8 +57,32 @@ blind phrase and full-mix reviews
        +--> optional consented feedback JSON or MIDI edit diff
        |
        v
-role-specific candidate selection, repair rules and instrument suggestions
+explicit role-specific choices, repair rules and instrument suggestions
 ```
+
+## Product identity and non-clone boundary
+
+Sunofriend is not intended to clone Mirelo Studio or become a general-purpose
+DAW. Mirelo demonstrates that audio-to-MIDI output can be made approachable
+through a shared transport, a visual note overview, understandable track
+controls and a direct export path. Those interaction principles are useful,
+but Sunofriend's product is different:
+
+- it compares several analytical and AI transcription processes rather than
+  presenting one model output as the answer;
+- it preserves untouched candidates, their process lineage, quality warnings
+  and source evidence;
+- it asks the listener to choose separately for each role and, where needed,
+  each phrase;
+- it retains `equivalent`, `neither`, `needs correction` and intentional
+  layering as first-class outcomes; and
+- it packages explicit choices for GarageBand while leaving final performance,
+  patch design and mixing to the DAW.
+
+The interface must make this evidence-led result space easier to understand,
+not hide it behind a simplified automatic winner. Process names and metrics
+belong in progressive technical detail; audible differences, musical roles and
+the user's current choices belong in the primary view.
 
 ## What MuScriptor actually does
 
@@ -206,6 +235,14 @@ It binds to `127.0.0.1`, opens the normal browser, loads no third-party scripts
 and sends nothing to a server by default. A prominent **Local — nothing is
 being uploaded** indicator should remain visible.
 
+The existing Workbench already supplies per-stem source/candidate listening,
+explicit decisions, a selected-arrangement proxy and an exact-MIDI GarageBand
+handoff. Phase 5.4 builds on those contracts. Its first per-stem visual
+waveform/MIDI-note compare timeline and its full-song selected-arrangement
+timeline are now implemented. The latter adds an audition-only live source/MIDI
+mixer while preserving the same explicit choices. The user-composed export
+basket described below remains planned work.
+
 ### Organise the site around musical decisions
 
 The user should never have to understand model names before hearing useful
@@ -214,10 +251,10 @@ results. The primary navigation is:
 ```text
 Project
   1. Check song setup      BPM, key, tuning, downbeat, stem inventory
-  2. Choose MIDI parts     one understandable workspace per stem/role
-  3. Hear the arrangement  all current choices together
+  2. Explore MIDI results  compare analytical and AI evidence per stem/role
+  3. Hear the arrangement  audition stems, choices and useful combinations
   4. Choose instruments    complete/playable sounds first, similarity second
-  5. Export                GarageBand pack, alternatives and decision report
+  5. Compose export pack   explicit GarageBand contents and decision report
 ```
 
 The project home page shows every stem as one status row:
@@ -230,6 +267,28 @@ The project home page shows every stem as one status row:
 
 This makes progress and unresolved decisions visible without exposing a wall
 of metrics.
+
+### Two complementary explorer views
+
+A single piano roll containing every candidate would hide the distinction
+between alternative processes and intentional simultaneous parts. Phase 5.4
+therefore uses two linked views:
+
+1. **Arrangement view** shows one current main choice per musical role plus
+   explicit optional layers. A single transport controls the selected stems,
+   MIDI and prepared mix previews. Waveform and piano-roll lanes share the same
+   time axis, while visibility, mute, solo and gain affect audition only.
+2. **Compare-role view** focuses on one stem or heard role. It keeps the source
+   waveform visible and presents the small primary family of specialist,
+   conditioned AI and genuinely distinct consensus/repair candidates as
+   alternatives. The listener can switch between source-only, candidate-only
+   and source-plus-candidate playback and inspect why the processes differ.
+
+The two views share one append-only decision state, but they do not collapse
+several candidates into an unexplained recommendation. A main result may come
+from one process for bass and another for keys; a later phrase choice may use a
+third. The interface should explain that diversity as the normal Sunofriend
+workflow.
 
 ### One stem workspace
 
@@ -291,10 +350,11 @@ plain actions:
 - melody and accompaniment are mixed; and
 - none sound like what I hear.
 
-The user may drag notes in a piano roll, upload a MIDI edited in GarageBand, or
-record a short hum/tap guide. Sunofriend stores a minimal edit diff and keeps
-the untouched model candidate. Musical terms and note names are optional
-details, not prerequisites.
+Phase 5.4 should link a disputed timeline range to the existing short phrase
+review and hum/tap guide workflow. Direct piano-roll note editing, GarageBand
+edit-diff import and phrase recombination belong to the later creative
+arrangement/reuse phase. Every route must keep the untouched model candidate.
+Musical terms and note names remain optional details, not prerequisites.
 
 ### Arrangement and instrument views
 
@@ -308,44 +368,74 @@ The page first checks that every required pitch is audible and sustained, then
 asks about tone and full-mix fit. Source samplers and resynthesis appear as
 optional textures unless they pass the complete-instrument and listening gates.
 
-### Feedback is a by-product of normal work
+### GarageBand pack composer
 
-Every explicit local action creates an append-only decision event:
+Musical choice and file export are related but separate decisions. **Use as
+main** and **Keep optional** say what belongs in the current arrangement. The
+planned pack composer then shows exactly what will be copied into the ZIP and
+lets the user include only explicit, eligible artifacts:
 
-- candidate heard;
-- primary/optional/reject choice;
-- problem tags;
-- phrase edit diff;
-- solo versus full-mix context;
-- chosen GarageBand patch; and
-- export actually used.
+- unchanged selected MIDI tracks, which remain authoritative;
+- explicitly requested alternative MIDI tracks;
+- selected source stems only after a separate local opt-in;
+- prepared stem-only, MIDI-only, hybrid or current custom-mix auditions;
+- eligible Instrument Bundles, SF2 banks and `.aupreset` wrappers; and
+- a path-free manifest with BPM, key, tuning, downbeat and GarageBand import
+  instructions.
 
-This immediately improves the user's own project history and future local
-candidate order. A separate **Contribute this review** step previews the exact
-fields that would leave the machine and requires opt-in. No dwell time, play
-count or unclicked default is treated as a musical preference.
+The current v1 handoff remains the safe foundation: selected MIDI plus its dry
+proxy, with source audio excluded. Phase 5.4 must preserve that default and
+must never infer ZIP inclusion from a play, a visible track or an unclicked
+candidate card.
 
-“Most popular” must be contextual, for example: “12 of 18 reviewed bass-body
-passages preferred this process for attacks.” It must never be presented as a
-universal accuracy percentage. Show the number of reviews, role, source type,
-model/version and how many listeners selected `equivalent` or `neither`.
+### Local evidence is a by-product of normal work
+
+The current Workbench appends explicit main/optional/reject/correction choices,
+problem tags, private notes and solo/full-mix context. It does not treat
+playback, dwell time, play count or an unclicked default as a preference.
+Later phases may add equally explicit heard confirmations, phrase edit diffs,
+chosen GarageBand patches and an “export actually used” event, but those are
+not inferred from current browser activity and do not yet reorder candidates.
+
+This durable state already lets the user resume a project and audit changed
+choices. Public contribution is not part of Phase 5.4 or 5.5; a later,
+separately authorised phase may add a **Contribute this review** step that
+previews the exact fields that would leave the machine and requires opt-in.
+
+If later Phase 7 aggregate data is shown, “most popular” must be contextual,
+for example: “12 of 18 reviewed bass-body passages preferred this process for
+attacks.” It must never be presented as a universal accuracy percentage. Show
+the number of reviews, role, source type, model/version and how many listeners
+selected `equivalent` or `neither`.
 
 ### Local technical shape
 
-- A small Python HTTP API owns project discovery, immutable artifacts, SQLite
-  decisions and the existing CLI operations.
-- The optional AI worker stays isolated and reports progress through server-sent
-  events; a persistent model process can be added after the initial UX is
-  stable.
-- A bundled browser client uses media elements with a shared-second position
-  for time-synchronised A/B loops and a canvas piano roll. Node is a
-  development/build dependency only; end users receive compiled static assets
-  in the Python package. The standalone `midi-ab-review` package now supplies
-  blind, explicitly aligned exact-source-time, fixed-window sample-RMS-matched
-  comparison files. Its audio auto-loops and its shared playhead is scoped per
-  review unit, but it still uses browser media elements. Decoded,
-  sample-accurate switching inside the Workbench remains a deferred
-  pre-public-beta gate.
+- The current small Python HTTP API owns project discovery, immutable artifacts,
+  SQLite decisions and the existing preview/arrangement/handoff operations.
+- The current bundled browser page uses media elements with a shared-second
+  position for time-synchronised A/B loops and loads no remote scripts.
+- Phase 5.4 now has local static waveform/piano-roll rendering over the
+  versioned `sunofriend.workbench-timeline.v1` contract for one stem. Primary
+  candidates load by default and advanced lanes load explicitly. It consumes
+  completed outputs and requires no persistent model process. Any later
+  inference worker remains isolated and separately enabled.
+- The authenticated read-only `/api/arrangement-timeline` route returns
+  `sunofriend.workbench-arrangement-timeline.v1`. The server derives its current
+  main/optional selection rather than accepting browser candidate IDs, groups
+  byte-identical source audio while retaining all role labels, never
+  deduplicates selected MIDI and exposes no local paths. It caps the projection
+  at 24 distinct sources, 24 selected MIDI lanes and 40,000 rendered notes.
+- Arrangement visibility, mute, solo, 0–100 attenuation, presets, loop and
+  playhead live only in browser memory. They never append a review event or
+  change selection, overlap evidence, cache identity or handoff bytes. Missing
+  MIDI sound is prepared explicitly through the neutral renderer; source/MIDI
+  levels are not normalised and the shared-second media players are not
+  sample-accurate.
+- The standalone `midi-ab-review` package supplies blind, explicitly aligned
+  exact-source-time, fixed-window sample-RMS-matched comparison files. Its audio
+  auto-loops and its shared playhead is scoped per review unit, but it still
+  uses browser media elements. Decoded, sample-accurate switching inside the
+  Workbench remains a deferred Phase 5.5 gate.
 - Every operation is content-addressed and resumable. Closing the browser does
   not lose a completed transcription or review.
 - The server uses a per-launch token, accepts local files only through explicit
@@ -354,9 +444,10 @@ model/version and how many listeners selected `equivalent` or `neither`.
 - The existing static review JSON remains exportable so CLI, skill and web
   workflows share one contract rather than creating a hidden web-only store.
 
-The first workbench slice should consume existing outputs. It does not need a
-new model, public account system, cloud database or arbitrary upload endpoint
-to prove that this interaction is clearer than today's separate HTML pages.
+The current and remaining Phase 5.4 Workbench slices consume existing outputs.
+They do not need a new model, public account system, cloud database or arbitrary
+upload endpoint to prove that this interaction is clearer than today's separate
+HTML pages.
 
 ## Benchmark design
 
@@ -620,10 +711,15 @@ MIDI, expression, quality and program artifacts were identical. These are
 end-to-end observations on one machine under an uncontrolled OS cache, not an
 accuracy improvement or a general speed guarantee.
 
-## Community feedback system
+## Deferred Phase 7 community feedback system
 
 “Feedback from all web users” must mean **feedback from every user who freely
 chooses to contribute**, not silent collection from every visitor.
+
+This section remains the design boundary for a later opt-in phase. Phase 5.4
+and 5.5 are local-only and add no account, public upload, review-ingestion or
+telemetry endpoint. Building an interface that is useful for the individual
+musician comes before collecting community data.
 
 ### Three contribution levels
 
@@ -733,18 +829,18 @@ goldens and no-participant leakage test.
 ## Phase 4 carry-forward register
 
 Phase 4's negative listening results are evidence, not unfinished bugs. Its
-remaining ideas are carried forward only where Phase 5 can give them a narrow
-question and a human listening gate:
+remaining ideas are carried forward only where a later increment can give them
+a narrow question and a human listening gate:
 
-| Phase 4 item | Phase 5 home | Gate before work |
+| Phase 4 item | Later home | Gate before work |
 | --- | --- | --- |
 | Query/learned isolation for mixed stems | 5.1 discovery and 5.3 hybrid consensus | One clearly audible 10–20 second role target; unchanged source and specialist MIDI remain controls |
 | Neural denoise or de-reverb | Optional 5.3 challenger | Must improve downstream pitch/boundary evidence and blind musical recognition, not just source energy |
-| Neural/DDSP timbre | 5.6 instrument feedback, then 5.7 only if justified | MIDI fixed first; complete playable patch mandatory; identical performance and full-mix listening |
-| Audio Unit model hosting | Optional 5.6 cross-DAW work | Only after a distributable sound wins; it is not required for model research |
-| Generated missing samples | 5.6/5.7 instrument experiment | Generated zones labelled separately, rights/licence recorded and every required pitch audibly checked |
+| Neural/DDSP timbre | Phase 6 creative arrangement, then Phase 7 only if justified | MIDI fixed first; complete playable patch mandatory; identical performance and full-mix listening |
+| Audio Unit model hosting | Optional Phase 7 cross-DAW work | Only after a distributable sound wins; it is not required for model research |
+| Generated missing samples | Phase 6/7 instrument experiment | Generated zones labelled separately, rights/licence recorded and every required pitch audibly checked |
 | `pkg_resources`/resampy warning | 5.2 controlled runtime benchmark | Resolve through a measured dependency update; never hide the warning |
-| Oversized CLI/match/bundle orchestrators | Incremental maintenance across 5.0–5.6 | Characterization tests first; typed workbench operation now starts the separation, shared role registry comes before 5.1, bundle/match stages before 5.6 |
+| Oversized CLI/match/bundle orchestrators | Incremental maintenance across Phases 5–7 | Characterization tests first; typed workbench operation now starts the separation, shared role registry comes before 5.1, bundle/match stages precede cross-DAW work |
 
 The rejected source sampler is not scheduled for more automatic refinement on
 the same performance. The preferred complete patch and unchanged-source MIDI
@@ -791,8 +887,8 @@ Started 19 July 2026:
 - [x] reverify source, MIDI, generated media and SoundFont hashes at the point
   of serving, rendering and handoff rather than trusting startup discovery.
 
-Deferred pre-public-beta gate, targeted for Phase 5.5 rather than the completed
-Phase 5.0 slice:
+Deferred local-Studio quality gate, targeted for Phase 5.5 rather than the
+completed Phase 5.0 slice:
 
 - [ ] upgrade Workbench playback from media-element time synchronization to
   decoded, sample-accurate switching. Generic blind exact-window,
@@ -1070,47 +1166,104 @@ server.
   on predeclared listening questions without worse timing drift or duplicate
   leakage.
 
-### 5.4 — Fast local review application
+### 5.4 — Interactive Result Explorer and GarageBand Pack Composer
 
-- If the bounded exact-repeat golden supports reuse, adapt that proven worker
-  boundary to one fixed production job without turning it into an unbounded
-  daemon. The exact-result cache now exists as a separate explicit one-shot
-  option; its private golden passed, but it remains disabled by default until
-  the later workflow-integration gate is reviewed.
-  Workbench may display completed cache provenance; it must not silently enable
-  either optimisation. Add progressive review UI as another separate change.
-- Add piano-roll note correction and export a minimal MIDI edit diff.
-- Keep every review local by default.
-- Success: unchanged reruns reuse verified artifacts; a user can correct a
-  phrase without editing raw JSON or uploading audio.
+Status: **in progress; the per-stem compare timeline and full-song
+selected-arrangement explorer/mixer are implemented, while the pack composer
+and phrase-range links remain**.
 
-### 5.5 — Cleared public listening beta
+Build this as an evolution of the completed 5.0 Workbench rather than a second
+application:
 
-- Publish owned/licensed goldens only.
-- Add randomised blind reviews, controls/anchors, consented JSON submission,
-  deletion/export and a transparent public scorecard.
-- Success: at least 20 complete independent reviews per promoted comparison,
-  acceptable control-repeat consistency and no private audio in telemetry.
+1. [x] define a versioned, hash-pinned per-stem timeline projection derived
+   from existing source and candidate artifacts, including source duration,
+   explicit alignment limits, bounded waveform display data and per-track MIDI
+   note geometry; project-level BPM, key, tuning and downbeat remain in the
+   existing project payload;
+2. [x] add the first read-only compare-role view with one shared playhead,
+   source waveform, coloured MIDI lanes, loop shading and progressive
+   provenance detail;
+3. [x] add a read-only selected-arrangement timeline, then zoom and arrangement
+   navigation without changing the selected source or MIDI artifacts;
+4. [x] add audition-only visibility, mute, solo and gain plus source-only,
+   selected-MIDI, hybrid and main-MIDI presets; manual changes form an unsaved
+   custom audition rather than a persisted custom-mix preset;
+5. [x] preserve the existing explicit main/optional/correct/reject decision state
+   and make clear that no metric, process or visible default selects a winner;
+6. add a persistent GarageBand basket whose checked contents are separate from
+   the musical decision, keeping the existing source-audio-free exact-MIDI ZIP
+   as the safe default; and
+7. link disputed timeline ranges to the existing phrase-review pages without
+   adding direct MIDI editing in this increment.
 
-### 5.6 — GarageBand and cross-DAW instrument feedback
+The first vertical slice uses one private golden plus portable synthetic
+fixtures. It consumes already completed outputs and does not require a new
+checkpoint, persistent inference daemon or public account.
 
-- Present complete portable controls and role-appropriate local DAW patches.
-- Collect exact patch/version/full-mix decisions and functional failures.
-- Invite contributors to test Logic, Ableton, FL Studio, Reaper and other DAWs
-  without pretending patch names are portable identities.
-- Success: every recommended main instrument is complete across the MIDI
-  performance, and recommendations improve in blind/full-mix use rather than
-  source-similarity score alone.
+Success means a user can hear every displayed source and MIDI candidate through
+one understandable timeline, compare several processes for one role, assemble
+and audition an explicit arrangement, see exactly what will enter the ZIP and
+import the unchanged selected MIDI into GarageBand. Reloading restores choices;
+source audio remains excluded unless separately requested; no automatic winner
+or network operation is introduced.
 
-### 5.7 — Learned ranking/correction experiment
+### 5.5 — Local Studio hardening and private beta
 
-- Build a rights/consent-qualified dataset snapshot and immutable train/test
-  split.
-- Train the smallest independent selector or error classifier that can answer
-  one role-specific question.
-- Compare it with deterministic and personal-history baselines.
-- Success: a held-out listening and note-edit win, a distributable licence and
-  no hidden automatic promotion.
+After the 5.4 vertical slice is musically useful:
+
+- replace shared-second media switching with decoded Web Audio buffers for the
+  review paths that require tighter changes, while keeping the exact standalone
+  blind A/B contract for promoted comparisons;
+- harden long-song rendering, waveform/piano-roll virtualization, keyboard and
+  accessibility controls, browser restart recovery and progress/error states;
+- verify stem-only, MIDI-only, hybrid and custom mixes against one canonical
+  selection manifest;
+- test the pack composer repeatedly in GarageBand, including BPM, downbeat,
+  selected-file hashes and optional eligible Instrument Bundles;
+- display completed exact-result-cache and reused-model provenance without
+  silently enabling either optimisation; and
+- conduct a small private, local-only usability beta using authorised projects.
+
+Success means a non-expert can complete source comparison, candidate choice,
+arrangement audition and GarageBand export without editing JSON or losing work.
+Phase 5.5 still has no public upload, telemetry, account or community ranking.
+
+## Later phases
+
+### Phase 6 — Creative arrangement and reusable MIDI
+
+Build on the trusted explorer rather than turning Phase 5 into a DAW rewrite:
+
+- direct piano-roll correction with a minimal, reversible edit diff;
+- phrase alternatives, explicit hybrid construction and repeated-phrase reuse;
+- key, BPM, tuning and downbeat transformations with alignment warnings;
+- Clip v1 browsing, tagging, audition and reuse across projects;
+- stem/MIDI combinations and mashup preparation; and
+- instrument-choice and eligible Instrument Bundle attachment to reusable
+  parts.
+
+Success means a user can make a new arrangement from reviewed parts while the
+original sources and every process candidate remain reproducible. GarageBand
+continues to own final performance, patch editing and mixing.
+
+### Phase 7 — Cross-DAW and opt-in community learning
+
+Only after the local workflow is useful and stable:
+
+- present complete portable controls and role-appropriate local DAW patches;
+- invite compatibility testing in Logic, Ableton, FL Studio, Reaper and other
+  DAWs without treating patch names as portable identities;
+- publish owned/licensed goldens and randomised blind reviews with appropriate
+  controls;
+- add separately consented review JSON or rights-cleared excerpt submission,
+  privacy/export/deletion controls and contextual public scorecards; and
+- after a rights-qualified immutable dataset exists, test the smallest
+  independent role-specific selector or error classifier against deterministic
+  and personal-history baselines.
+
+Success requires complete playable instrument recommendations, useful
+cross-DAW imports, adequate independent reviews for each declared comparison,
+no private audio in ordinary telemetry and no hidden automatic promotion.
 
 ## Promotion gates
 
@@ -1133,6 +1286,14 @@ than a single unexplained percentage.
 The usable 5.0 Workbench slice now covers project/stem decisions, cached neutral
 previews, full-mix confirmation and a selected GarageBand handoff. It keeps
 original MIDI unchanged and still has no upload or submission endpoint.
+Phase 5.4 now adds canonical, path-free per-stem and selected-arrangement
+timelines with zero automatic selection/ranking effects. The arrangement view
+shows every unique source stem and only current explicit main/optional MIDI,
+with temporary source-only, selected-MIDI, hybrid and main-MIDI audition
+presets. Its visibility, mute, solo, attenuation, loop and playhead state is not
+persisted and never changes review events, overlap evidence, cache identity or
+handoff bytes. The existing selection ZIP remains the current supported
+handoff; the explicit GarageBand pack composer is not implemented yet.
 MuScriptor execution settings and checkpoint/config hashes are now explicit,
 and immutable M0–M4 small-model matrices publish per-role quality,
 five-second-boundary, label-stability, cross-lane and strict M4 peer-overlap
@@ -1174,10 +1335,17 @@ The installed runtime exposes no MPS device, fixed five-second chunks remain
 unchanged, and batch 1 stays the default.
 
 Keep sample-accurate level-matched short-loop review as a requirement before a
-public listening beta. The current media-element switching is deliberately
+promoted comparison. The current media-element switching is deliberately
 described as time-synchronised, not sample-accurate. The standalone blind A/B
 package uses exact common source-frame windows, but does not yet replace
 Workbench media elements with decoded sample-accurate switching.
+
+The immediate next engineering slice is the GarageBand pack composer. Its
+checked file contents must be a separate explicit contract from musical
+main/optional choices, with the existing source-audio-free exact-MIDI ZIP as
+the safe default. It must preserve the core Sunofriend result-space contract:
+several analytical and AI candidates, no automatic winner, immutable
+provenance, explicit human choices and exact selected-MIDI export.
 
 ## Primary sources
 
