@@ -17,7 +17,8 @@ The current interface supplies per-stem source/candidate playback, persistent
 decisions, neutral preview rendering, selected-arrangement audition and an
 explicit GarageBand pack composer. Phase 5.4 now supplies both a read-only
 per-stem source/MIDI comparison timeline and a full-song selected-arrangement
-explorer.
+explorer, plus an explicit bridge from verified disputed lead-vocal ranges to
+the existing phrase-review page.
 The arrangement explorer shows every unique project source stem beside only
 the active explicit main and optional MIDI choices, with temporary visibility,
 mute, solo and level controls. It does not infer an offset: every source and
@@ -69,6 +70,47 @@ silently disappearing.
 The interface continues to call candidates A/B/C until technical details are
 opened. The visual lanes make differences easier to locate; they do not say
 which process is musically correct.
+
+### Link a disputed lead-vocal range to an existing phrase review
+
+The completed lead-only S0/M1/M3 hybrid report can guide listening without
+becoming a new transcription or score. This link is explicit-only; Workbench
+does not search the filesystem or guess which report belongs to a lead-vocal
+stem. Add all three exact report MIDI files to one explicit catalog stem, then
+add:
+
+```json
+"phrase_review_link": {
+  "hybrid_report": "/absolute/path/to/hybrid-report.json",
+  "phrase_review_manifest": "/absolute/path/to/phrase_review.json"
+}
+```
+
+Supply roots containing those files through `--candidate-root`. Catalog
+creation fails closed unless the report is diagnostic-only, its source matches
+the stem, S0/M1/M3 map uniquely to the catalogued MIDI bytes, its ranked counts
+and phrase geometry agree, and the phrase-review manifest plus referenced page
+audio still match their hashes. The public project projection contains no
+paths.
+
+When valid, **Disputed phrase ranges** appears directly under the role
+timeline. The count is a listening locator, not an accuracy or preference
+score. **Set compare loop** changes only the temporary loop and playhead; it
+does not start audio. **Open existing phrase review** opens the matching
+zero-based `#phrase-N` anchor on the already generated
+Basic Pitch/GAME-boundary/combined page, with guide-assisted included only when
+present. That page does not compare S0/M1/M3 directly and cannot choose a
+Workbench candidate or create hybrid MIDI.
+
+The private review page may embed local paths. It is therefore served only on
+loopback behind a random per-launch capability URL. Browser policy blocks
+connection APIs, forms, automatic playback, popups and top-level navigation;
+the page retains only the scripts, alert dialogs and user-triggered reviewed-
+JSON download needed by its existing workflow. Only its hash-pinned HTML and
+semantically allow-listed source, MIDI-only and overlay WAV auditions are
+reachable; its manifest, correction JSON, MIDI, evaluations and unrelated
+sibling files are not served. Opening, looping and following the link create no
+SQLite event, contribution data or pack item.
 
 Two linked views avoid confusing alternatives with simultaneous parts:
 
@@ -393,16 +435,17 @@ no musical A/B to review. Its read-only comparator reports zero mutations,
 selections and promotions; batch 1 remains the execution default after the
 batch-2 arm was slower and used more memory in the bounded CPU observation.
 
-The first Phase 5.3 `hybrid-report` is also upstream of the Workbench. It
+The first Phase 5.3 `hybrid-report` remains diagnostic upstream evidence. It
 checks the exact lead source, unresolved phrase geometry and existing S0/M1/M3
 evidence, then records phrase-level and cross-phrase matches, boundary and
 octave disputes, lane-only notes, duplicates and raw source support. Its report
 also states that M1's same-song derivation and M3's unsupplied original-MIDI
-payload are not verified by this v1 command. It creates no candidate MIDI and
-the Workbench does not import, rank or apply the report yet. The next UI slice
-must present selected disagreement phrases as a listening task and record
-explicit choices before any hybrid challenger can enter the normal result
-space.
+payload are not verified by this v1 command. With a verified explicit
+`phrase_review_link`, Workbench now imports only a path-free disputed-range
+projection for loop and navigation shortcuts. It still does not rank or apply
+the report or create candidate MIDI. Blind S0/M1/M3 phrase choice and explicit
+hybrid construction remain future work before a challenger can enter the
+normal result space.
 
 Catalog hashes are not trusted only at startup. Source, MIDI and generated
 media are checked again before serving, rendering, arranging or copying into a

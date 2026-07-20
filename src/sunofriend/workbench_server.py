@@ -15,7 +15,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Mapping, Sequence
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from .workbench_catalog import (
     build_workbench_catalog,
@@ -43,9 +43,18 @@ from .workbench_timeline import (
 _MAX_REQUEST_BYTES = 64 * 1024
 
 
-def _require_exact_request_keys(
-    request: Mapping[str, Any], expected: set[str]
-) -> None:
+def _read_verified_immutable_bytes(handle: Any, record: Mapping[str, Any]) -> bytes:
+    """Read one pinned response into bytes that cannot drift while served."""
+
+    payload = handle.read()
+    if len(payload) != record.get("bytes") or hashlib.sha256(
+        payload
+    ).hexdigest() != str(record.get("sha256", "")):
+        raise ValueError("pinned file bytes changed")
+    return payload
+
+
+def _require_exact_request_keys(request: Mapping[str, Any], expected: set[str]) -> None:
     actual = set(request)
     if actual != expected:
         missing = sorted(expected - actual)
@@ -58,7 +67,9 @@ def _require_exact_request_keys(
         raise ValueError("invalid GarageBand pack request: " + "; ".join(details))
 
 
-def _display_candidates(candidates: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+def _display_candidates(
+    candidates: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
     """Return one stable primary-first display identity for every UI surface."""
 
     ordered = [candidate for candidate in candidates if candidate.get("primary")]
@@ -84,6 +95,44 @@ def _display_letter(index: int) -> str:
     return letters
 
 
+def _phrase_review_capabilities(
+    catalog: Mapping[str, Any],
+) -> tuple[dict[str, dict[str, Any]], dict[str, tuple[str, str]]]:
+    """Register only validated phrase-review files behind per-launch secrets."""
+
+    capabilities: dict[str, dict[str, Any]] = {}
+    by_stem: dict[str, tuple[str, str]] = {}
+    for stem in catalog.get("stems", []):
+        link = stem.get("_phrase_review_link")
+        if link is None:
+            continue
+        if not isinstance(link, Mapping):
+            raise ValueError("Workbench phrase-review link is invalid")
+        entrypoint = link.get("entrypoint")
+        files = link.get("files")
+        if (
+            not isinstance(entrypoint, str)
+            or not entrypoint
+            or not isinstance(files, Mapping)
+            or entrypoint not in files
+        ):
+            raise ValueError("Workbench phrase-review package is incomplete")
+        copied_files: dict[str, dict[str, Any]] = {}
+        for relative_path, record in files.items():
+            if not isinstance(relative_path, str) or not isinstance(record, Mapping):
+                raise ValueError("Workbench phrase-review file record is invalid")
+            copied_files[relative_path] = dict(record)
+        capability = secrets.token_urlsafe(32)
+        while capability in capabilities:  # pragma: no cover - cryptographic collision
+            capability = secrets.token_urlsafe(32)
+        stem_id = str(stem["stem_id"])
+        if stem_id in by_stem:
+            raise ValueError("Workbench phrase-review stem ids must be unique")
+        capabilities[capability] = {"files": copied_files}
+        by_stem[stem_id] = (capability, entrypoint)
+    return capabilities, by_stem
+
+
 class WorkbenchHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
 
@@ -101,6 +150,10 @@ class WorkbenchHTTPServer(ThreadingHTTPServer):
         self.artifacts = artifacts
         self.token = token
         self.media = media_files(catalog)
+        (
+            self.phrase_review_capabilities,
+            self.phrase_review_capability_by_stem,
+        ) = _phrase_review_capabilities(catalog)
         self.state_lock = threading.RLock()
         super().__init__(address, _WorkbenchHandler)
 
@@ -156,9 +209,7 @@ def run_workbench(
     """Build a catalogue and inspect, export, or serve the local workbench."""
 
     if export_review_path is not None and (inspect_only or open_browser):
-        raise ValueError(
-            "--export-review cannot be combined with --inspect or --open"
-        )
+        raise ValueError("--export-review cannot be combined with --inspect or --open")
 
     catalog = build_workbench_catalog(
         project_root,
@@ -322,6 +373,9 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         if not self._valid_local_request():
             return
         parsed = urlparse(self.path)
+        if parsed.path.startswith("/phrase-review/"):
+            self._serve_phrase_review(parsed.path)
+            return
         if not self._authorised(parsed):
             self._error(HTTPStatus.FORBIDDEN, "invalid workbench session token")
             return
@@ -456,9 +510,10 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                         raise WorkbenchPackConflictError(
                             "the GarageBand pack plan changed; reload its contents"
                         )
-                    if request.get("basket_scope_sha256") != plan[
-                        "basket_scope_sha256"
-                    ]:
+                    if (
+                        request.get("basket_scope_sha256")
+                        != plan["basket_scope_sha256"]
+                    ):
                         raise WorkbenchPackConflictError(
                             "the GarageBand pack selection changed; reload its contents"
                         )
@@ -538,9 +593,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
 
     def _garageband_pack_plan_payload(self) -> dict[str, Any]:
         current = self.server.store.current_state(self.server.catalog)
-        plan = self.server.artifacts.garageband_pack_plan(
-            self.server.catalog, current
-        )
+        plan = self.server.artifacts.garageband_pack_plan(self.server.catalog, current)
         default = dict(plan["default_basket"])
         saved = self.server.store.current_pack_selection(
             str(self.server.catalog["project_id"]),
@@ -597,6 +650,13 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
     def _project_payload(self) -> dict[str, Any]:
         payload = public_catalog(self.server.catalog)
         for stem in payload["stems"]:
+            phrase_capability = self.server.phrase_review_capability_by_stem.get(
+                str(stem["stem_id"])
+            )
+            phrase_link = stem.get("phrase_review_link")
+            if phrase_capability and isinstance(phrase_link, dict):
+                capability, entrypoint = phrase_capability
+                phrase_link["review_url"] = f"/phrase-review/{capability}/{entrypoint}"
             stem["candidates"] = _display_candidates(stem["candidates"])
             stem["source_url"] = self._media_url(stem["source_media_id"])
             source = stem.get("source")
@@ -627,11 +687,9 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         payload["contribution_preview"] = review["contribution_preview"]
         payload["review_status"] = review["status"]
         payload["review_url"] = f"/api/review?token={self.server.token}"
-        payload["selected_midi_overlap"] = (
-            self.server.artifacts.selected_midi_overlap(
-                self.server.catalog,
-                state,
-            )
+        payload["selected_midi_overlap"] = self.server.artifacts.selected_midi_overlap(
+            self.server.catalog,
+            state,
         )
         arrangement = self.server.artifacts.cached_arrangement(
             self.server.catalog, state
@@ -683,6 +741,36 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         if not isinstance(record, Mapping):
             self._error(HTTPStatus.NOT_FOUND, "workbench media not found")
             return
+        self._serve_file_record(record)
+
+    def _serve_phrase_review(self, request_path: str) -> None:
+        parts = request_path.split("/", 3)
+        if len(parts) != 4 or parts[:2] != ["", "phrase-review"]:
+            self._error(HTTPStatus.NOT_FOUND, "phrase review file not found")
+            return
+        capability = parts[2]
+        try:
+            relative_path = unquote(parts[3], errors="strict")
+        except UnicodeDecodeError:
+            self._error(HTTPStatus.NOT_FOUND, "phrase review file not found")
+            return
+        package = self.server.phrase_review_capabilities.get(capability)
+        if not isinstance(package, Mapping):
+            self._error(HTTPStatus.NOT_FOUND, "phrase review file not found")
+            return
+        files = package.get("files")
+        record = files.get(relative_path) if isinstance(files, Mapping) else None
+        if not isinstance(record, Mapping):
+            self._error(HTTPStatus.NOT_FOUND, "phrase review file not found")
+            return
+        self._serve_file_record(record, phrase_review=True)
+
+    def _serve_file_record(
+        self,
+        record: Mapping[str, Any],
+        *,
+        phrase_review: bool = False,
+    ) -> None:
         path = Path(str(record.get("path", "")))
         try:
             handle = path.open("rb")
@@ -690,16 +778,29 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             self._error(HTTPStatus.NOT_FOUND, "workbench media not found")
             return
         with handle:
-            handle.seek(0, 2)
-            size = handle.tell()
-            handle.seek(0)
-            digest = hashlib.sha256()
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-            verified = (
-                size == record.get("bytes")
-                and digest.hexdigest() == str(record.get("sha256", ""))
-            )
+            frozen_payload: bytes | None = None
+            if phrase_review:
+                try:
+                    frozen_payload = _read_verified_immutable_bytes(handle, record)
+                except ValueError:
+                    self._error(
+                        HTTPStatus.CONFLICT,
+                        "workbench media changed after it was catalogued; restart the Workbench",
+                    )
+                    return
+                size = len(frozen_payload)
+                verified = True
+            else:
+                handle.seek(0, 2)
+                size = handle.tell()
+                handle.seek(0)
+                digest = hashlib.sha256()
+                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                    digest.update(chunk)
+                actual_sha256 = digest.hexdigest()
+                verified = size == record.get("bytes") and actual_sha256 == str(
+                    record.get("sha256", "")
+                )
             if not verified:
                 self._error(
                     HTTPStatus.CONFLICT,
@@ -715,7 +816,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 except ValueError as exc:
                     self.send_response(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
                     self.send_header("Content-Range", f"bytes */{size}")
-                    self._security_headers()
+                    self._security_headers(phrase_review=phrase_review)
                     payload = str(exc).encode("utf-8")
                     self.send_header("Content-Type", "text/plain; charset=utf-8")
                     self.send_header("Content-Length", str(len(payload)))
@@ -727,11 +828,15 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 mimetypes.guess_type(path.name)[0] or "application/octet-stream"
             )
             self.send_response(status)
-            self._security_headers()
+            self._security_headers(phrase_review=phrase_review)
             self.send_header("Content-Type", content_type)
             self.send_header("Accept-Ranges", "bytes")
             self.send_header("Content-Length", str(max(0, end - start + 1)))
-            disposition = "attachment" if path.suffix.lower() == ".zip" else "inline"
+            disposition = (
+                "attachment"
+                if path.suffix.lower() == ".zip" and not phrase_review
+                else "inline"
+            )
             self.send_header(
                 "Content-Disposition",
                 f'{disposition}; filename="{_safe_filename(path.name)}"',
@@ -740,6 +845,9 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
             self.end_headers()
             try:
+                if frozen_payload is not None:
+                    self.wfile.write(frozen_payload[start : end + 1])
+                    return
                 handle.seek(start)
                 remaining = max(0, end - start + 1)
                 while remaining:
@@ -764,7 +872,9 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
     def _valid_local_request(self) -> bool:
         host = (self.headers.get("Host") or "").split(":", 1)[0].lower()
         if host not in {"127.0.0.1", "localhost"}:
-            self._error(HTTPStatus.FORBIDDEN, "workbench accepts loopback requests only")
+            self._error(
+                HTTPStatus.FORBIDDEN, "workbench accepts loopback requests only"
+            )
             return False
         client = self.client_address[0]
         if client not in {"127.0.0.1", "::1"}:
@@ -805,16 +915,27 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload)
 
-    def _security_headers(self) -> None:
+    def _security_headers(self, *, phrase_review: bool = False) -> None:
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("Cross-Origin-Resource-Policy", "same-origin")
+        if phrase_review:
+            self.send_header("Permissions-Policy", "autoplay=()")
+        connect_source = "'none'" if phrase_review else "'self'"
+        # The existing review uses alert() for incomplete exports, so retain
+        # modals while withholding forms, popups and top-level navigation.
+        sandbox = (
+            "; sandbox allow-scripts allow-same-origin allow-downloads allow-modals; "
+            "form-action 'none'"
+            if phrase_review
+            else ""
+        )
         self.send_header(
             "Content-Security-Policy",
             "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; "
-            "media-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; "
-            "base-uri 'none'; frame-ancestors 'none'",
+            f"media-src 'self'; connect-src {connect_source}; img-src 'self' data:; "
+            f"object-src 'none'; base-uri 'none'; frame-ancestors 'none'{sandbox}",
         )
 
     def log_message(self, format: str, *args: object) -> None:

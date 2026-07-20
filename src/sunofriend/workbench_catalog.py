@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
 from .metadata import infer_project_metadata
+from .workbench_phrase_links import build_workbench_phrase_review_link
 
 
 WORKBENCH_CATALOG_SCHEMA = "sunofriend.workbench-catalog.v1"
@@ -127,10 +128,10 @@ def public_catalog(catalog: Mapping[str, Any]) -> dict[str, Any]:
         candidates = []
         for candidate in stem.get("candidates", []):
             public_candidate = {
-                    key: value
-                    for key, value in candidate.items()
-                    if key not in {"midi_path", "preview_path"}
-                }
+                key: value
+                for key, value in candidate.items()
+                if key not in {"midi_path", "preview_path"}
+            }
             for record_name in ("midi", "preview"):
                 record = public_candidate.get(record_name)
                 if isinstance(record, Mapping):
@@ -139,10 +140,18 @@ def public_catalog(catalog: Mapping[str, Any]) -> dict[str, Any]:
                     }
             candidates.append(public_candidate)
         public_stem = {
-                key: value
-                for key, value in stem.items()
-                if key not in {"source_path", "candidates"}
-            }
+            key: value
+            for key, value in stem.items()
+            if key not in {"source_path", "candidates", "_phrase_review_link"}
+        }
+        phrase_review_link = stem.get("_phrase_review_link")
+        if isinstance(phrase_review_link, Mapping):
+            public_link = phrase_review_link.get("public")
+            if not isinstance(public_link, Mapping):
+                raise ValueError(
+                    "Workbench phrase-review link has no public projection"
+                )
+            public_stem["phrase_review_link"] = dict(public_link)
         source = public_stem.get("source")
         if isinstance(source, Mapping):
             public_stem["source"] = {
@@ -175,7 +184,9 @@ def media_files(catalog: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
     return result
 
 
-def _discover_stems(project: Path, candidate_roots: Sequence[Path]) -> list[dict[str, Any]]:
+def _discover_stems(
+    project: Path, candidate_roots: Sequence[Path]
+) -> list[dict[str, Any]]:
     source_files = []
     for path in sorted(project.iterdir(), key=lambda item: item.name.lower()):
         if not path.is_file() or path.suffix.lower() not in _AUDIO_SUFFIXES:
@@ -196,11 +207,11 @@ def _discover_stems(project: Path, candidate_roots: Sequence[Path]) -> list[dict
         role = infer_role(" ".join(midi.parts[-5:]))
         if role is None or midi.name.lower().startswith("full_arrangement"):
             continue
-        candidate = _candidate_record(
-            midi, role=role, candidate_roots=candidate_roots
-        )
+        candidate = _candidate_record(midi, role=role, candidate_roots=candidate_roots)
         bucket = candidates_by_role.setdefault(role, [])
-        if not any(item["midi"]["sha256"] == candidate["midi"]["sha256"] for item in bucket):
+        if not any(
+            item["midi"]["sha256"] == candidate["midi"]["sha256"] for item in bucket
+        ):
             bucket.append(candidate)
 
     stems = []
@@ -247,14 +258,18 @@ def _stems_from_document(
                 raise ValueError(
                     f"stem {index} candidate {candidate_index} must be an object"
                 )
-            midi = _resolve_document_path(candidate_row.get("midi"), document_path.parent)
+            midi = _resolve_document_path(
+                candidate_row.get("midi"), document_path.parent
+            )
             _require_within(
                 midi,
                 allowed_candidates,
                 label=f"stem {index} candidate {candidate_index} MIDI",
             )
             if midi.suffix.lower() not in _MIDI_SUFFIXES:
-                raise ValueError(f"stem {index} candidate {candidate_index} is not MIDI")
+                raise ValueError(
+                    f"stem {index} candidate {candidate_index} is not MIDI"
+                )
             preview_value = candidate_row.get("preview")
             preview = None
             if preview_value:
@@ -279,16 +294,47 @@ def _stems_from_document(
                 warnings=_string_list(candidate_row.get("warnings", [])),
             )
             candidates.append(candidate)
-        stems.append(
-            _stem_record(
-                source,
-                role=role,
-                label=_optional_text(row.get("label")),
-                review_question=_optional_text(row.get("review_question")),
-                listening_focus=_string_list(row.get("listening_focus", [])),
-                candidates=_deduplicate_candidates(candidates),
-            )
+        stem = _stem_record(
+            source,
+            role=role,
+            label=_optional_text(row.get("label")),
+            review_question=_optional_text(row.get("review_question")),
+            listening_focus=_string_list(row.get("listening_focus", [])),
+            candidates=_deduplicate_candidates(candidates),
         )
+        phrase_link = row.get("phrase_review_link")
+        if phrase_link is not None:
+            if not isinstance(phrase_link, Mapping) or set(phrase_link) != {
+                "hybrid_report",
+                "phrase_review_manifest",
+            }:
+                raise ValueError(
+                    f"stem {index} phrase_review_link must contain exactly "
+                    "hybrid_report and phrase_review_manifest"
+                )
+            hybrid_report = _resolve_document_path(
+                phrase_link["hybrid_report"], document_path.parent
+            )
+            phrase_review_manifest = _resolve_document_path(
+                phrase_link["phrase_review_manifest"], document_path.parent
+            )
+            _require_within(
+                hybrid_report,
+                allowed_candidates,
+                label=f"stem {index} phrase-review hybrid report",
+            )
+            _require_within(
+                phrase_review_manifest,
+                allowed_candidates,
+                label=f"stem {index} phrase-review manifest",
+            )
+            stem["_phrase_review_link"] = build_workbench_phrase_review_link(
+                stem,
+                hybrid_report,
+                phrase_review_manifest,
+                allowed_candidate_roots=allowed_candidates,
+            )
+        stems.append(stem)
     return stems
 
 
@@ -508,10 +554,9 @@ def _ai_candidate_diagnostics(
     quality_record = artifacts.get("candidate.quality.json")
     if quality_path.is_file() and isinstance(quality_record, Mapping):
         actual_quality = _file_record(quality_path)
-        if (
-            actual_quality["bytes"] != quality_record.get("bytes")
-            or actual_quality["sha256"] != quality_record.get("sha256")
-        ):
+        if actual_quality["bytes"] != quality_record.get("bytes") or actual_quality[
+            "sha256"
+        ] != quality_record.get("sha256"):
             raise ValueError("adjacent AI quality report changed after completion")
         recorded_quality = _read_json(quality_path)
         if recorded_quality.get("schema") != "sunofriend.ai-candidate-quality.v1":
@@ -528,9 +573,7 @@ def _ai_candidate_diagnostics(
         run_root=midi.parent,
         elapsed_seconds=elapsed,
     )
-    detected = sorted(
-        {note.instrument or "unlabelled" for note in candidate.notes}
-    )
+    detected = sorted({note.instrument or "unlabelled" for note in candidate.notes})
     warnings = [*candidate.warnings, *quality.get("warnings", [])]
     block_reasons = list(severe_codes)
     if not candidate.notes:
@@ -554,12 +597,8 @@ def _ai_candidate_diagnostics(
         "note_count": len(candidate.notes),
         "duration_seconds": duration,
         "elapsed_seconds": round(elapsed, 6),
-        "real_time_factor": (
-            round(elapsed / duration, 6) if duration > 0 else None
-        ),
-        "runtime_semantics": (
-            "pipeline-not-inference" if cache["hit"] else "pipeline"
-        ),
+        "real_time_factor": (round(elapsed / duration, 6) if duration > 0 else None),
+        "runtime_semantics": ("pipeline-not-inference" if cache["hit"] else "pipeline"),
         "worker_execution_mode": cache["worker_execution_mode"],
         "application_cache_status": cache["status"],
         "application_cache_hit": cache["hit"],
@@ -608,12 +647,8 @@ def _validated_ai_application_cache(
             "status": "disabled",
             "hit": False,
             "worker_execution_mode": mode,
-            "worker_process_started_for_run": run.get(
-                "worker_process_started_for_run"
-            ),
-            "inference_executed_for_run": run.get(
-                "inference_executed_for_run"
-            ),
+            "worker_process_started_for_run": run.get("worker_process_started_for_run"),
+            "inference_executed_for_run": run.get("inference_executed_for_run"),
             "model_loaded_for_run": run.get("model_loaded_for_run"),
         }
     if not isinstance(summary, Mapping):
@@ -625,7 +660,10 @@ def _validated_ai_application_cache(
         "muscriptor.performance.json",
     )
     for name in required_artifacts:
-        if not isinstance(artifacts.get(name), Mapping) or name not in verified_artifacts:
+        if (
+            not isinstance(artifacts.get(name), Mapping)
+            or name not in verified_artifacts
+        ):
             raise ValueError(f"adjacent AI application-cache run does not pin {name}")
 
     event = _read_json(verified_artifacts["cache.performance.json"])
@@ -662,13 +700,10 @@ def _validated_ai_application_cache(
     if entry.get("key_sha256") != event.get("key_sha256"):
         raise ValueError("adjacent AI application-cache entry key disagrees")
     entry_record = artifacts["cache.entry.json"]
-    if (
-        event.get("entry_manifest_sha256") != entry_record.get("sha256")
-        or event.get("entry_manifest_bytes") != entry_record.get("bytes")
-    ):
-        raise ValueError(
-            "adjacent AI application-cache event entry manifest disagrees"
-        )
+    if event.get("entry_manifest_sha256") != entry_record.get("sha256") or event.get(
+        "entry_manifest_bytes"
+    ) != entry_record.get("bytes"):
+        raise ValueError("adjacent AI application-cache event entry manifest disagrees")
 
     entry_artifacts = entry.get("artifacts")
     if not isinstance(entry_artifacts, Mapping):
@@ -718,9 +753,7 @@ def _validated_ai_application_cache(
         timings.get("identity_and_preflight"), label="identity_and_preflight"
     )
     lookup = _ai_cache_seconds(timings.get("lookup"), label="lookup")
-    postprocess = _ai_cache_seconds(
-        timings.get("postprocess"), label="postprocess"
-    )
+    postprocess = _ai_cache_seconds(timings.get("postprocess"), label="postprocess")
     pipeline = _ai_cache_seconds(
         timings.get("pipeline_before_final_evidence"),
         label="pipeline_before_final_evidence",
@@ -738,12 +771,9 @@ def _validated_ai_application_cache(
     status = event.get("application_cache_status")
     hit = event.get("application_cache_hit")
     published = event.get("entry_published_by_run")
-    current_performance = event.get(
-        "muscriptor_performance_is_current_run_inference"
-    )
+    current_performance = event.get("muscriptor_performance_is_current_run_inference")
     if not all(
-        isinstance(value, bool)
-        for value in (hit, published, current_performance)
+        isinstance(value, bool) for value in (hit, published, current_performance)
     ):
         raise ValueError("adjacent AI application-cache result flags are invalid")
     command = run.get("command")
@@ -753,9 +783,7 @@ def _validated_ai_application_cache(
         raise ValueError("adjacent AI application-cache command is invalid")
 
     if hit:
-        materialise = _ai_cache_seconds(
-            timings.get("materialise"), label="materialise"
-        )
+        materialise = _ai_cache_seconds(timings.get("materialise"), label="materialise")
         if (
             status != "verified-hit"
             or published
@@ -923,11 +951,11 @@ def _ai_label_split_diagnostics(
         raise ValueError("adjacent AI label-split source MIDI SHA-256 disagrees")
     control_record = artifacts["unchanged-full-candidate.mid"]
     if control_record.get("sha256") != source_candidate_midi_sha:
-        raise ValueError("adjacent AI label-split control is not the source candidate MIDI")
+        raise ValueError(
+            "adjacent AI label-split control is not the source candidate MIDI"
+        )
     request_record = source_run.get("request")
-    request_sha = _label_split_record_sha256(
-        request_record, label="source request"
-    )
+    request_sha = _label_split_record_sha256(request_record, label="source request")
     if partition.get("source_request_sha256") != request_sha:
         raise ValueError("adjacent AI label-split source request SHA-256 disagrees")
     if artifacts["source-request.json"].get("sha256") != request_sha:
@@ -967,8 +995,7 @@ def _ai_label_split_diagnostics(
         partition.get("source_note_count"), label="source note count"
     )
     selected_notes = [
-        _label_split_partition_note(row, label=label, selected=True)
-        for row in selected
+        _label_split_partition_note(row, label=label, selected=True) for row in selected
     ]
     complement_notes = [
         _label_split_partition_note(row, label=label, selected=False)
@@ -984,10 +1011,14 @@ def _ai_label_split_diagnostics(
         raise ValueError("adjacent AI label-split source candidate count disagrees")
     for index, note in zip(selected_indices, selected_notes):
         if note != source_candidate.notes[index]:
-            raise ValueError("adjacent AI label partition changed a source candidate note")
+            raise ValueError(
+                "adjacent AI label partition changed a source candidate note"
+            )
     for index, note in zip(complement_indices, complement_notes):
         if note != source_candidate.notes[index]:
-            raise ValueError("adjacent AI label partition changed a source candidate note")
+            raise ValueError(
+                "adjacent AI label partition changed a source candidate note"
+            )
     partition_flags = partition.get("partition")
     if not isinstance(partition_flags, Mapping):
         raise ValueError("adjacent AI label split has invalid partition flags")
@@ -1121,6 +1152,7 @@ def _ai_label_split_diagnostics(
         )
     )
     from .ai_quality import assess_candidate_quality, severe_quality_codes
+
     candidate = AITranscriptionCandidate(
         backend=str(source_run.get("backend", "")),
         model_version=str(source_run.get("model_version", "")),
@@ -1276,9 +1308,13 @@ def _label_split_partition_note(value: Any, *, label: str, selected: bool):
         raise ValueError("adjacent AI label partition has an invalid audition velocity")
     actual_label = note.instrument or "unlabelled"
     if selected and actual_label != label:
-        raise ValueError("adjacent AI label partition selected note has the wrong label")
+        raise ValueError(
+            "adjacent AI label partition selected note has the wrong label"
+        )
     if not selected and actual_label == label:
-        raise ValueError("adjacent AI label partition complement contains the target label")
+        raise ValueError(
+            "adjacent AI label partition complement contains the target label"
+        )
     return note
 
 
@@ -1348,7 +1384,9 @@ def _label_split_render_contract(
         ),
     }
     if any(value.get(key) != expected for key, expected in expected_text.items()):
-        raise ValueError("adjacent AI label split has an unsupported MIDI-render contract")
+        raise ValueError(
+            "adjacent AI label split has an unsupported MIDI-render contract"
+        )
     if value.get("ticks_per_beat") != 480 or value.get("minimum_duration_ticks") != 1:
         raise ValueError("adjacent AI label split has an unsupported MIDI time grid")
     input_bpm = _label_split_positive_float(
@@ -1420,7 +1458,9 @@ def _verify_label_split_midi(
         for note in clip.notes
     )
     if actual_signatures != expected_signatures:
-        raise ValueError("adjacent AI label-split MIDI notes disagree with its partition")
+        raise ValueError(
+            "adjacent AI label-split MIDI notes disagree with its partition"
+        )
     return len(actual_signatures)
 
 
@@ -1511,8 +1551,7 @@ def _label_split_expected_render(
     for voice in voices.values():
         voice.sort(key=lambda item: (item.start_tick, item.end_tick))
         overlap_truncated += sum(
-            left.end_tick > right.start_tick
-            for left, right in zip(voice, voice[1:])
+            left.end_tick > right.start_tick for left, right in zip(voice, voice[1:])
         )
     changed = any(
         (
@@ -1612,7 +1651,9 @@ def _partition_boundary_summary(
     }
 
 
-def _workbench_boundary_summary(candidate, request, *, duration: float) -> dict[str, Any]:
+def _workbench_boundary_summary(
+    candidate, request, *, duration: float
+) -> dict[str, Any]:
     rows = []
     boundary_count = max(0, int((max(0.0, duration) - 1e-9) // 5.0))
     for index in range(1, boundary_count + 1):
@@ -1622,7 +1663,8 @@ def _workbench_boundary_summary(candidate, request, *, duration: float) -> dict[
             for note in candidate.notes
         )
         crossings = sum(
-            (note.start_seconds - request.start_seconds) < boundary
+            (note.start_seconds - request.start_seconds)
+            < boundary
             < (note.end_seconds - request.start_seconds)
             for note in candidate.notes
         )
@@ -1832,7 +1874,9 @@ def _candidate_sort_key(candidate: Mapping[str, Any]) -> tuple[int, int, int, st
     )
 
 
-def _deduplicate_candidates(candidates: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
+def _deduplicate_candidates(
+    candidates: Iterable[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
     result: list[dict[str, Any]] = []
     hashes: set[str] = set()
     for candidate in candidates:
@@ -1901,9 +1945,7 @@ def _file_record(path: Path) -> dict[str, Any]:
     }
 
 
-def _verify_ai_record(
-    record: Any, *, label: str, root: Path | None = None
-) -> Path:
+def _verify_ai_record(record: Any, *, label: str, root: Path | None = None) -> Path:
     if not isinstance(record, Mapping):
         raise ValueError(f"adjacent AI run does not pin {label}")
     path = Path(str(record.get("path", ""))).expanduser()
@@ -1918,9 +1960,8 @@ def _verify_ai_record(
     if not path.is_file():
         raise ValueError(f"adjacent AI run file is missing: {label}")
     actual = _file_record(path)
-    if (
-        actual["bytes"] != record.get("bytes")
-        or actual["sha256"] != record.get("sha256")
+    if actual["bytes"] != record.get("bytes") or actual["sha256"] != record.get(
+        "sha256"
     ):
         raise ValueError(f"adjacent AI run artifact changed after completion: {label}")
     return path
@@ -1938,7 +1979,10 @@ def _ai_candidate_duration(candidate, request, metrics: Mapping[str, Any]) -> fl
     if isinstance(value, (int, float)) and math.isfinite(value) and value > 0:
         return float(value)
     if candidate.notes:
-        return max(0.0, max(note.end_seconds for note in candidate.notes) - request.start_seconds)
+        return max(
+            0.0,
+            max(note.end_seconds for note in candidate.notes) - request.start_seconds,
+        )
     return 0.0
 
 

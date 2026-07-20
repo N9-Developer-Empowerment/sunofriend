@@ -199,9 +199,18 @@ scripts.
   arrangement proxy and source audio behind an explicit opt-in. It must never
   infer inclusion from playback or mixer state, and its revisions must not
   become decisions, reviews or contribution data. Rejected, needs-correction,
-  unreviewed and superseded candidates are ineligible. Alternative MIDI,
-  Instrument Bundles, persistent/custom mix rendering and phrase-range links
-  remain planned; do not claim or attempt those later features yet.
+  unreviewed and superseded candidates are ineligible. An explicit catalog may
+  also link a lead-vocal S0/M1/M3 hybrid report to its exact existing
+  phrase-review manifest. Require exact source, candidate, manifest,
+  phrase-geometry and served-audio hashes; never auto-discover the link. Treat
+  its ranked ranges only as places to listen. Setting a loop or opening
+  `#phrase-N` must not play automatically, append a Workbench event, choose a
+  candidate, create hybrid MIDI or enter a pack. The private phrase page may
+  contain local paths, so serve only its pinned HTML and semantically
+  allow-listed source, MIDI-only and overlay WAVs behind a per-launch loopback
+  capability; do not expose its manifest, MIDI, correction seed, evaluations or
+  sibling files. Alternative MIDI, Instrument Bundles and persistent/custom mix
+  rendering remain planned; do not claim or attempt those later features yet.
 - Several completed immutable MuScriptor lanes: use `ai-matrix` with explicit
   repeated `LANE=RUN_DIR` values and a fresh `--out` JSON. Include M0
   unconditioned full mix, M1 discovered-label conditioning, M2 known-label

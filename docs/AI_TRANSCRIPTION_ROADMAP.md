@@ -7,9 +7,9 @@ small-CPU golden measurements plus the hardened private blind short-loop
 package, resolved listening result and batch-size 1→2 CPU comparison complete;
 the first hardened, lead-only Phase 5.3 S0/M1/M3 phrase-disagreement report is
 complete with explicit verified/unverified lineage boundaries; blind phrase
-choice remains; Phase 5.4 is in progress with its per-stem comparison,
-full-song selected-arrangement explorer/mixer and initial GarageBand Pack
-Composer implemented; phrase-range links and local Studio hardening remain
+choice remains; Phase 5.4 is complete with its per-stem comparison, full-song
+selected-arrangement explorer/mixer, GarageBand Pack Composer and explicit
+disputed-range phrase-review bridge; Phase 5.5 local Studio hardening is next
 
 Started: 15 July 2026  
 Scope: local-first AI assistance for transcription, review, instrument matching
@@ -86,7 +86,7 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
-| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0/5.1 complete; Phase 5.2 local CPU decisions resolved; Phase 5.3 diagnostic slice complete; Phase 5.4 comparison, arrangement and initial pack composition implemented** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench now has hash-pinned per-stem and full-song timelines, an audition-only source/MIDI mixer and a separate persistent exact GarageBand pack basket without selecting a winner |
+| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.3 listening/lineage/role work remains while Phase 5.5 hardening starts** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench now has hash-pinned per-stem and full-song timelines, an audition-only source/MIDI mixer, a separate persistent exact GarageBand pack basket and an explicit bridge from disputed ranges to the existing phrase review without selecting a winner |
 | 6. Creative Arrangement and Reusable MIDI | **Planned after the local Studio is stable** | Reversible note/phrase correction, explicit hybrids, transforms, Clip v1 browsing and reuse, mashup preparation and instrument attachment without becoming a full DAW |
 | 7. Cross-DAW and Opt-in Community Learning | **Deferred** | Compatibility testing, cleared public goldens and consented contextual feedback only after the local workflow is useful, private and stable |
 
@@ -502,7 +502,10 @@ not record feedback. Its initial GarageBand Pack Composer now presents a
 separate persistent basket containing active selected MIDI, an optional dry
 arrangement proxy and source audio behind explicit opt-in. Hash-pinned plans
 and baskets make the ZIP contents inspectable and reject stale builds; plays,
-visibility and mixer state never imply inclusion.
+visibility and mixer state never imply inclusion. The final 5.4 slice adds an
+explicit, hash-pinned bridge from diagnostic S0/M1/M3 disagreement ranges to
+the exact existing phrase-review anchors. It changes only temporary loop and
+navigation state and creates no choice, MIDI or feedback.
 
 This direction borrows the approachability of a visual transcription tool—one
 transport, visible notes, understandable track controls and direct export—not
@@ -569,6 +572,36 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-07-20 — Phase 5.4 disputed-range phrase-review bridge
+
+- Goal: turn the existing S0/M1/M3 disagreement ranges into understandable
+  listening shortcuts without claiming that disagreement proves accuracy.
+- Change or experiment: added an explicit-catalog, path-free
+  `sunofriend.workbench-phrase-review-link.v1` projection; range cards below
+  the role timeline; temporary loop shortcuts; and links to the exact existing
+  phrase-review anchors.
+- Safety contract: report, source, manifest, S0/M1/M3 candidate, geometry,
+  diagnostic-count and served-file hashes fail closed. No report is discovered
+  automatically. The link does not run AI, mutate MIDI, choose/promote a
+  candidate, append feedback or enter a GarageBand pack.
+- Privacy and serving: the private page gets a random per-launch loopback
+  capability. Only its pinned HTML and referenced source/MIDI/overlay WAVs are
+  served, each rehashed; manifest, correction seed, MIDI, evaluation JSON and
+  arbitrary siblings remain inaccessible. Browser policy blocks connection
+  APIs, forms, autoplay, popups and top-level navigation while preserving the
+  existing reviewed-JSON download and alert dialogs.
+- Evidence: portable validator, path-escape/tamper, catalog, capability,
+  byte-range, drift, UI and zero-state-effect tests, plus the authorised Lidl
+  15-second vocal golden with three ranked review units.
+- Decision: Phase 5.4's read-only Result Explorer vertical slice is complete.
+- Problems/risks: the destination phrase page compares its own Basic
+  Pitch/GAME-boundary/combined alternatives, plus guide-assisted only when
+  present, not S0/M1/M3 directly; the UI states that boundary. Long-song
+  rendering, accessibility and browser recovery remain Phase 5.5 work.
+- Next smallest step: begin local Studio hardening with one private end-to-end
+  usability pass and address the first observed friction rather than adding a
+  new model.
+
 ### 2026-07-20 — Phase 5.4 GarageBand Pack Composer v1
 
 - Goal: make GarageBand ZIP contents visible and intentional without turning
@@ -592,10 +625,10 @@ Each working day should aim for one narrow vertical improvement:
   packages only explicit eligible artifacts after musical review.
 - Decision: retain Pack Composer v1 as the supported explicit export path and
   retain the original handoff as the smallest compatibility path.
-- Problems/risks: alternative MIDI, Instrument Bundles, custom rendered mixes,
-  phrase links and long-song/browser hardening still need their own contracts.
-- Next smallest step: connect disputed timeline ranges to the existing phrase
-  review flow, then begin Phase 5.5 local Studio usability hardening.
+- Problems/risks: alternative MIDI, Instrument Bundles, custom rendered mixes
+  and long-song/browser hardening still need their own contracts.
+- Next smallest step: the disputed-range bridge recorded above completed the
+  remaining Phase 5.4 slice; begin Phase 5.5 local Studio usability hardening.
 
 ### 2026-07-20 — Phase 5.4 selected-arrangement explorer
 

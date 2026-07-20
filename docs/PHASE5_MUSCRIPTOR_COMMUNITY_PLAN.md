@@ -1,6 +1,6 @@
 # Phase 5: Multi-Process MIDI Comparison and Local Result Explorer
 
-Status: **Phase 5.0 and 5.1 complete; the locally actionable Phase 5.2 small-CPU fresh-process, bounded reused-model, application-cache, beam-1/beam-2 and batch-size slices are complete; Phase 5.3 has a hardened read-only, lead-only S0/M1/M3 vocal phrase-disagreement report and now moves to explicit phrase listening; Phase 5.4 is in progress with hash-pinned per-stem comparison, full-song selected-arrangement audition and GarageBand Pack Composer v1 implemented, while phrase-range links and local Studio hardening remain; beam 1 and batch 1 remain the defaults and no public service or new checkpoint download is authorised**
+Status: **Phase 5.0–5.2 are complete; the Phase 5.3 lead-only S0/M1/M3 diagnostic slice and Phase 5.4 explorer slice are complete, including hash-pinned comparison, full-song audition, GarageBand Pack Composer v1 and the explicit disputed-range phrase-review bridge; Phase 5.3 blind choice, lineage and role expansion remain open while Phase 5.5 local Studio hardening starts; beam 1 and batch 1 remain the defaults and no public service or new checkpoint download is authorised**
 
 Drafted: 19 July 2026
 Scope: accurate stem/full-mix MIDI, several analytical and AI processes kept as
@@ -350,9 +350,9 @@ plain actions:
 - melody and accompaniment are mixed; and
 - none sound like what I hear.
 
-Phase 5.4 should link a disputed timeline range to the existing short phrase
-review and hum/tap guide workflow. Direct piano-roll note editing, GarageBand
-edit-diff import and phrase recombination belong to the later creative
+Phase 5.4 now links a disputed timeline range to the exact existing short
+phrase review. That page retains its hum/tap guide workflow. Direct piano-roll
+note editing, GarageBand edit-diff import and phrase recombination belong to the later creative
 arrangement/reuse phase. Every route must keep the untouched model candidate.
 Musical terms and note names remain optional details, not prerequisites.
 
@@ -457,10 +457,9 @@ selected `equivalent` or `neither`.
 - The existing static review JSON remains exportable so CLI, skill and web
   workflows share one contract rather than creating a hidden web-only store.
 
-The current and remaining Phase 5.4 Workbench slices consume existing outputs.
-They do not need a new model, public account system, cloud database or arbitrary
-upload endpoint to prove that this interaction is clearer than today's separate
-HTML pages.
+The completed Phase 5.4 Workbench slices consume existing outputs. They did not
+need a new model, public account system, cloud database or arbitrary upload
+endpoint to prove that this interaction is clearer than separate HTML pages.
 
 ## Benchmark design
 
@@ -1181,9 +1180,9 @@ server.
 
 ### 5.4 — Interactive Result Explorer and GarageBand Pack Composer
 
-Status: **in progress; the per-stem compare timeline, full-song
-selected-arrangement explorer/mixer and GarageBand Pack Composer v1 are
-implemented, while phrase-range links and local Studio hardening remain**.
+Status: **complete; the per-stem compare timeline, full-song
+selected-arrangement explorer/mixer, GarageBand Pack Composer v1 and explicit
+disputed-range phrase-review bridge are implemented**.
 
 Build this as an evolution of the completed 5.0 Workbench rather than a second
 application:
@@ -1206,7 +1205,7 @@ application:
 6. [x] add a persistent GarageBand basket whose checked contents are separate
    from the musical decision, keeping the existing source-audio-free exact-MIDI
    ZIP as the safe default; and
-7. link disputed timeline ranges to the existing phrase-review pages without
+7. [x] link disputed timeline ranges to the existing phrase-review pages without
    adding direct MIDI editing in this increment.
 
 The first vertical slice uses one private golden plus portable synthetic
@@ -1309,6 +1308,11 @@ handoff bytes. Pack Composer v1 adds a separate persistent, revision-guarded
 basket for unchanged current selected MIDI, the dry arrangement proxy and
 explicitly opted-in source audio. It uses path-free hash-pinned contracts,
 rejects stale builds and leaves the original selection ZIP compatible.
+The explicit phrase-review bridge separately verifies the lead S0/M1/M3
+diagnostic, source, candidates, review package and ranked geometry, then offers
+temporary loop shortcuts and a private capability-scoped link to the matching
+review unit. It creates no decision, candidate ranking, hybrid MIDI, pack item
+or contribution field.
 MuScriptor execution settings and checkpoint/config hashes are now explicit,
 and immutable M0–M4 small-model matrices publish per-role quality,
 five-second-boundary, label-stability, cross-lane and strict M4 peer-overlap
@@ -1355,9 +1359,10 @@ described as time-synchronised, not sample-accurate. The standalone blind A/B
 package uses exact common source-frame windows, but does not yet replace
 Workbench media elements with decoded sample-accurate switching.
 
-The immediate next engineering slice is to link a disputed timeline range to
-the existing short phrase-review flow, then harden the local Studio for a
-private usability pass. Pack Composer v1 already keeps checked file contents
+The immediate next engineering slice is to harden the local Studio through a
+private end-to-end usability pass. The explicit disputed-range bridge now
+opens the exact existing short phrase review without selecting or editing MIDI.
+Pack Composer v1 keeps checked file contents
 separate from musical main/optional choices and preserves the source-audio-free
 safe default. The next slice must keep the core Sunofriend result-space
 contract: several analytical and AI candidates, no automatic winner, immutable

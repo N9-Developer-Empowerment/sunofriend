@@ -100,8 +100,8 @@ fresh-process and reused-model measurements, an explicit exact-result
 application-cache experiment, a completed one-variable beam measurement and
 completed blind short-loop review with a resolved private listening result,
 plus a completed batch-size 1→2 CPU comparison, the first read-only Phase 5.3
-phrase-consensus diagnostic, the multi-process Result Explorer and the initial
-GarageBand Pack Composer—is
+phrase-consensus diagnostic, the multi-process Result Explorer, GarageBand
+Pack Composer v1 and the explicit disputed-range phrase-review bridge—is
 in the
 **[Phase 5 multi-process comparison and Result Explorer plan](docs/PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md)**.
 Creative note/phrase arrangement and Clip reuse remain a later Phase 6, while
@@ -291,6 +291,18 @@ pitches and velocities. They represent note-on/off events only, so sustain,
 controller and pitch-bend expression is not drawn. All displayed source and
 MIDI inputs are rechecked against their catalogued hashes.
 
+For an explicitly linked lead-vocal experiment, **Disputed phrase ranges**
+connects the existing S0/M1/M3 diagnostic report to its exact pre-built phrase
+review. **Set compare loop** moves the shared playhead to that range without
+playing or saving anything; **Open existing phrase review** opens the matching
+Basic Pitch/GAME-boundary/combined review unit, with guide-assisted included
+only when that review supplies it. The disagreement count identifies
+where to listen, not which process is accurate. The bridge itself never chooses
+a Workbench candidate, creates hybrid MIDI, appends a Workbench event or changes
+a GarageBand pack. Choices made in the separate phrase-review page remain in
+its existing reviewed-JSON/export workflow and are not imported or applied
+automatically.
+
 MIDI files above 8 MiB or candidates above 20,000 notes remain downloadable
 and auditable but are shown as explicitly unavailable visual lanes. The moving
 playhead is a lightweight overlay, so ordinary playback does not redraw every
@@ -388,6 +400,30 @@ are not assumed to be comparable, so prefer the cached neutral previews before
 treating sound differences as a MIDI preference. An optional `--soundfont`
 pins a specific local GM bank; otherwise the normal
 `SUNOFRIEND_SF2`/installed GeneralUser-GS lookup is used.
+
+An existing Phase 5 lead-vocal disagreement report can be linked only through
+an explicit catalog stem. Include all exact S0/M1/M3 MIDI files as candidates
+and add:
+
+```json
+{
+  "phrase_review_link": {
+    "hybrid_report": "/absolute/path/to/hybrid-report.json",
+    "phrase_review_manifest": "/absolute/path/to/phrase_review.json"
+  }
+}
+```
+
+Both JSON files, the three MIDI files and the review package must stay inside
+the project or an explicitly named `--candidate-root`. Sunofriend verifies the
+report, source, candidate, review-manifest, phrase geometry and exposed audio
+hashes before the site starts. It does not search for or guess a phrase review.
+The existing review page is private and may contain local paths; the loopback
+server gives it a fresh per-launch capability URL and serves only its pinned
+HTML and semantically allow-listed source, MIDI-only and overlay WAV
+auditions—never the manifest, MIDI, correction seed or arbitrary neighbouring
+files.
+
 See the [Workbench guide](docs/WORKBENCH.md) for the catalog schema, decision
 semantics, handoff contents, privacy boundary and current Phase 5 limits.
 

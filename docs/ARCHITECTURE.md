@@ -215,8 +215,23 @@ decisions, private reviews and contribution previews. The original
 source-audio-free handoff route remains unchanged for compatibility.
 
 Alternative MIDI, Instrument Bundles, persistent mixer projects, custom-mix
-rendering, phrase-range links and sample-accurate Web Audio are not implemented
-in Pack Composer v1.
+rendering and sample-accurate Web Audio are not implemented in Pack Composer
+v1.
+
+An optional explicit-catalog phrase link validates one existing diagnostic
+S0/M1/M3 hybrid report against its exact stem, three current candidate MIDI
+files and the pinned unresolved melody phrase-review package. The public
+`sunofriend.workbench-phrase-review-link.v1` projection contains ranked ranges,
+candidate IDs, limited-lineage statuses and hashes but no paths. It does not
+change `sunofriend.workbench-timeline.v1`, run a model, rank candidates or
+append state. The HTTP server registers only the pinned phrase page and its
+semantically allow-listed source, MIDI-only and overlay WAVs behind a random
+per-launch capability path; it rehashes every response, supports audio byte
+ranges and denies the manifest, MIDI, correction seed, evaluation JSON and
+arbitrary siblings. The private page uses a stricter `connect-src 'none'`
+policy, disables autoplay and runs under a sandbox that permits its existing
+scripts, alert dialogs and reviewed-JSON download but not forms, popups or
+top-level navigation.
 
 `ai_matrix.py` applies a model-neutral quality/report schema to already
 completed immutable runs from one controlled backend, checkpoint, model config
