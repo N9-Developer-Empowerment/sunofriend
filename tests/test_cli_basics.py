@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 import json
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -103,6 +103,48 @@ class CliBasicsTests(unittest.TestCase):
             ]
         )
         self.assertEqual(batch.setting, "batch-size")
+
+    def test_hybrid_report_requires_named_candidates_and_evidence(self) -> None:
+        args = build_parser().parse_args(
+            [
+                "hybrid-report",
+                "source.wav",
+                "--role",
+                "lead",
+                "--bpm",
+                "119",
+                "--candidate",
+                "S0=specialist.mid",
+                "--candidate",
+                "M1=full-mix.mid",
+                "--candidate",
+                "M3=conditioned.mid",
+                "--evidence",
+                "S0=provenance.json",
+                "--evidence",
+                "M1=label-split.json",
+                "--evidence",
+                "M3=projection.json",
+                "--phrase-review",
+                "phrase-review.json",
+                "--out",
+                "hybrid-report.json",
+            ]
+        )
+
+        self.assertEqual(args.source_wav, "source.wav")
+        self.assertEqual(args.role, "lead")
+        self.assertEqual(args.bpm, 119.0)
+        self.assertEqual(
+            args.candidate,
+            ["S0=specialist.mid", "M1=full-mix.mid", "M3=conditioned.mid"],
+        )
+        self.assertEqual(
+            args.evidence,
+            ["S0=provenance.json", "M1=label-split.json", "M3=projection.json"],
+        )
+        self.assertEqual(args.phrase_review, "phrase-review.json")
+        self.assertEqual(args.out, "hybrid-report.json")
 
     def test_midi_ab_review_accepts_explicit_short_windows(self) -> None:
         parser = build_parser()
@@ -353,6 +395,124 @@ class CliBasicsTests(unittest.TestCase):
         document = json.loads(stdout.getvalue())
         self.assertTrue(document["listening_review_required"])
         self.assertFalse(document["promotion_allowed"])
+
+    @patch("sunofriend.hybrid_report.write_hybrid_report")
+    def test_hybrid_report_routes_named_evidence_without_creating_midi(
+        self, write
+    ) -> None:
+        write.return_value = {
+            "schema": "sunofriend.hybrid-candidate-report.v1",
+            "status": "diagnostic-only",
+            "role": "lead",
+            "candidates": [
+                {"lane": "S0", "note_count": 23},
+                {"lane": "M1", "note_count": 38},
+                {"lane": "M3", "note_count": 39},
+            ],
+            "phrases": [{"phrase_index": 1}, {"phrase_index": 2}],
+            "lineage": {
+                "M1_full_mix_association": {
+                    "status": "caller-supplied-derivation-unverified"
+                },
+                "M3_original_source_midi": {
+                    "status": "manifest-claimed-payload-unverified"
+                },
+            },
+            "effects": {
+                "midi_files_created": 0,
+                "automatic_selection": False,
+            },
+        }
+        stdout = io.StringIO()
+
+        with redirect_stdout(stdout):
+            result = main(
+                [
+                    "hybrid-report",
+                    "source.wav",
+                    "--role",
+                    "lead",
+                    "--bpm",
+                    "119",
+                    "--candidate",
+                    "S0=specialist.mid",
+                    "--candidate",
+                    "M1=full=mix.mid",
+                    "--candidate",
+                    "M3=conditioned.mid",
+                    "--evidence",
+                    "S0=provenance.json",
+                    "--evidence",
+                    "M1=label-split.json",
+                    "--evidence",
+                    "M3=projection.json",
+                    "--phrase-review",
+                    "phrase-review.json",
+                    "--out",
+                    "hybrid-report.json",
+                ]
+            )
+
+        self.assertEqual(result, 0)
+        write.assert_called_once_with(
+            "source.wav",
+            role="lead",
+            bpm=119.0,
+            candidates={
+                "S0": "specialist.mid",
+                "M1": "full=mix.mid",
+                "M3": "conditioned.mid",
+            },
+            evidence={
+                "S0": "provenance.json",
+                "M1": "label-split.json",
+                "M3": "projection.json",
+            },
+            phrase_review="phrase-review.json",
+            output_path="hybrid-report.json",
+        )
+        document = json.loads(stdout.getvalue())
+        self.assertEqual(
+            document["candidate_note_counts"], {"S0": 23, "M1": 38, "M3": 39}
+        )
+        self.assertEqual(document["phrase_count"], 2)
+        self.assertEqual(
+            document["lineage_status"],
+            {
+                "M1_full_mix_association": ("caller-supplied-derivation-unverified"),
+                "M3_original_source_midi": ("manifest-claimed-payload-unverified"),
+            },
+        )
+        self.assertEqual(document["midi_files_created"], 0)
+        self.assertFalse(document["automatic_selection"])
+
+    def test_hybrid_report_rejects_duplicate_named_lanes(self) -> None:
+        stderr = io.StringIO()
+        with redirect_stdout(io.StringIO()), redirect_stderr(stderr):
+            with self.assertRaises(SystemExit) as raised:
+                main(
+                    [
+                        "hybrid-report",
+                        "source.wav",
+                        "--role",
+                        "lead",
+                        "--bpm",
+                        "119",
+                        "--candidate",
+                        "S0=first.mid",
+                        "--candidate",
+                        "S0=second.mid",
+                        "--evidence",
+                        "S0=provenance.json",
+                        "--phrase-review",
+                        "phrase-review.json",
+                        "--out",
+                        "hybrid-report.json",
+                    ]
+                )
+
+        self.assertEqual(raised.exception.code, 2)
+        self.assertIn("--candidate repeats lane S0", stderr.getvalue())
 
     @patch("sunofriend.midi_ab_review.create_midi_ab_review")
     def test_midi_ab_review_routes_without_selecting_a_winner(self, create) -> None:

@@ -307,6 +307,17 @@ no musical A/B to review. Its read-only comparator reports zero mutations,
 selections and promotions; batch 1 remains the execution default after the
 batch-2 arm was slower and used more memory in the bounded CPU observation.
 
+The first Phase 5.3 `hybrid-report` is also upstream of the Workbench. It
+checks the exact lead source, unresolved phrase geometry and existing S0/M1/M3
+evidence, then records phrase-level and cross-phrase matches, boundary and
+octave disputes, lane-only notes, duplicates and raw source support. Its report
+also states that M1's same-song derivation and M3's unsupplied original-MIDI
+payload are not verified by this v1 command. It creates no candidate MIDI and
+the Workbench does not import, rank or apply the report yet. The next UI slice
+must present selected disagreement phrases as a listening task and record
+explicit choices before any hybrid challenger can enter the normal result
+space.
+
 Catalog hashes are not trusted only at startup. Source, MIDI and generated
 media are checked again before serving, rendering, arranging or copying into a
 handoff; the pinned SoundFont is also rechecked before reuse. If any file

@@ -23,6 +23,7 @@ from .ai_runtime import (
     AITranscriptionRequest,
 )
 from .midi_tempo import MICROSECONDS_PER_MINUTE, _scan_midi
+from .note_alignment import AlignmentEvent, align_events
 
 
 AI_MATRIX_SCHEMA = "sunofriend.ai-candidate-matrix.v1"
@@ -188,26 +189,24 @@ def _load_lane(
             }
             and verified_artifacts[name] != (run_dir / name).resolve()
         ):
-            raise ValueError(
-                f"AI matrix lane {lane} {name} artifact path disagrees"
-            )
+            raise ValueError(f"AI matrix lane {lane} {name} artifact path disagrees")
 
-    source_path = _verify_record(
-        run.get("source"), None, cache, label=f"{lane} source"
-    )
+    source_path = _verify_record(run.get("source"), None, cache, label=f"{lane} source")
     worker = run.get("worker")
     _verify_record(worker, None, cache, label=f"{lane} worker")
     checkpoint = run.get("checkpoint")
     _verify_record(checkpoint, None, cache, label=f"{lane} checkpoint")
-    if isinstance(checkpoint, Mapping) and isinstance(checkpoint.get("config"), Mapping):
-        _verify_record(
-            checkpoint["config"], None, cache, label=f"{lane} model config"
-        )
+    if isinstance(checkpoint, Mapping) and isinstance(
+        checkpoint.get("config"), Mapping
+    ):
+        _verify_record(checkpoint["config"], None, cache, label=f"{lane} model config")
 
     request_document = _read_json(run_dir / "request.json")
     request = AITranscriptionRequest.from_dict(request_document, require_audio=False)
     if Path(request.audio_path).expanduser().resolve() != source_path:
-        raise ValueError(f"AI matrix lane {lane} request source differs from run source")
+        raise ValueError(
+            f"AI matrix lane {lane} request source differs from run source"
+        )
     source_duration, duration_tolerance = _source_excerpt_duration(
         source_path, request, lane=lane
     )
@@ -241,7 +240,9 @@ def _load_lane(
                 f"AI matrix lane {lane} does not pin raw artifact {raw_name}"
             )
 
-    config_record = checkpoint.get("config") if isinstance(checkpoint, Mapping) else None
+    config_record = (
+        checkpoint.get("config") if isinstance(checkpoint, Mapping) else None
+    )
     config_hash = (
         str(config_record.get("sha256", ""))
         if isinstance(config_record, Mapping)
@@ -331,7 +332,9 @@ def _lane_report(
         "requested_labels": requested,
         "detected_labels": detected,
         "missing_requested_labels": sorted(set(requested) - set(detected)),
-        "unexpected_labels": sorted(set(detected) - set(requested)) if requested else [],
+        "unexpected_labels": sorted(set(detected) - set(requested))
+        if requested
+        else [],
         "instrument_counts": dict(sorted(counts.items())),
         "note_count": len(candidate.notes),
         "duration_seconds": round(duration, 6),
@@ -447,16 +450,16 @@ def _label_stability(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any] | None
 def _cross_lane_overlap(
     loaded: Sequence[Mapping[str, Any]], *, tolerance_seconds: float
 ) -> list[dict[str, Any]]:
-    discovery = [item for item in loaded if item["lane"].split("-", 1)[0] in {"M0", "M1", "M2"}]
-    stems = [
-        item
-        for item in loaded
-        if item["lane"].split("-", 1)[0] in {"M3", "M4"}
+    discovery = [
+        item for item in loaded if item["lane"].split("-", 1)[0] in {"M0", "M1", "M2"}
     ]
+    stems = [item for item in loaded if item["lane"].split("-", 1)[0] in {"M3", "M4"}]
     rows = []
     for source in sorted(discovery, key=lambda item: item["lane"]):
         source_candidate: AITranscriptionCandidate = source["candidate"]
-        labels = sorted({note.instrument or "unlabelled" for note in source_candidate.notes})
+        labels = sorted(
+            {note.instrument or "unlabelled" for note in source_candidate.notes}
+        )
         for label in labels:
             source_notes = [
                 note
@@ -512,8 +515,7 @@ def _validate_m4_lanes(loaded: Sequence[Mapping[str, Any]]) -> None:
     if len(sources) != 1 or not next(iter(sources)):
         raise ValueError("M4 lanes must use the same source audio")
     excerpts = {
-        (item["request"].start_seconds, item["request"].end_seconds)
-        for item in lanes
+        (item["request"].start_seconds, item["request"].end_seconds) for item in lanes
     }
     if len(excerpts) != 1:
         raise ValueError("M4 lanes must use the same source excerpt")
@@ -528,11 +530,7 @@ def _m4_role_overlap(
     """Compare same-source M4 passes without treating overlap as correctness."""
 
     lanes = sorted(
-        (
-            item
-            for item in loaded
-            if item["lane"].split("-", 1)[0] == "M4"
-        ),
+        (item for item in loaded if item["lane"].split("-", 1)[0] == "M4"),
         key=lambda item: item["lane"],
     )
     rows: list[dict[str, Any]] = []
@@ -625,25 +623,33 @@ def _greedy_note_overlap(
     reference_offset: float,
     tolerance_seconds: float,
 ) -> int:
-    used: set[int] = set()
-    matches = 0
-    for note in sorted(source, key=lambda value: value.start_seconds):
-        best_index = None
-        best_distance = tolerance_seconds + 1.0
-        for index, other in enumerate(reference):
-            if index in used or round(note.pitch) != round(other.pitch):
-                continue
-            distance = abs(
-                (note.start_seconds - source_offset)
-                - (other.start_seconds - reference_offset)
+    result = align_events(
+        [
+            AlignmentEvent(
+                source_index=index,
+                onset=note.start_seconds,
+                pitch=note.pitch,
             )
-            if distance <= tolerance_seconds and distance < best_distance:
-                best_index = index
-                best_distance = distance
-        if best_index is not None:
-            used.add(best_index)
-            matches += 1
-    return matches
+            for index, note in enumerate(
+                sorted(source, key=lambda value: value.start_seconds)
+            )
+        ],
+        [
+            AlignmentEvent(
+                source_index=index,
+                onset=note.start_seconds,
+                pitch=note.pitch,
+            )
+            for index, note in enumerate(reference)
+        ],
+        left_offset=source_offset,
+        right_offset=reference_offset,
+        tolerance=tolerance_seconds,
+        pitch_policy="rounded",
+        require_exact_label=False,
+        matching_policy="left_greedy_closest",
+    )
+    return len(result.matches)
 
 
 def _source_excerpt_duration(
@@ -694,9 +700,7 @@ def _validate_candidate_excerpt_duration(
         or not math.isfinite(value)
         or value <= 0
     ):
-        raise ValueError(
-            f"AI matrix lane {lane} candidate excerpt duration is invalid"
-        )
+        raise ValueError(f"AI matrix lane {lane} candidate excerpt duration is invalid")
     if not math.isclose(
         float(value), source_duration, rel_tol=0.0, abs_tol=tolerance_seconds
     ):
@@ -738,8 +742,7 @@ def _path_free_execution(value: Any) -> dict[str, Any] | None:
         result[section] = {
             name: source[name]
             for name in names
-            if name in source
-            and isinstance(source[name], (str, int, float, bool))
+            if name in source and isinstance(source[name], (str, int, float, bool))
         }
     return result
 
@@ -763,9 +766,7 @@ def _verify_execution_against_request(
         "chunking": {
             "seconds": options.get("chunk_seconds"),
             "prelude_forcing": options.get("prelude_forcing"),
-            "prelude_forcing_supported": options.get(
-                "prelude_forcing_supported"
-            ),
+            "prelude_forcing_supported": options.get("prelude_forcing_supported"),
         },
     }
     actual = _path_free_execution(value) or {}

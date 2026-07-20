@@ -1,6 +1,6 @@
 ---
 name: sunofriend
-description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes, benchmark verified fresh-process or bounded exact-repeat local AI runs, reuse and benchmark an explicit exact MuScriptor raw-result cache, partition model-reported labels exactly, and review existing source/MIDI alternatives; build blind exact-source-window, fixed-window sample-RMS-matched MIDI A/B reviews with explicit heard and choice evidence; render cached neutral previews, save explicit solo/full-mix choices, hear the selected arrangement and export unchanged choices in a GarageBand handoff through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
+description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes, compare evidence-pinned specialist/full-mix/conditioned lead MIDI by phrase with explicit lineage limits and without creating a hybrid, benchmark verified fresh-process or bounded exact-repeat local AI runs, reuse and benchmark an explicit exact MuScriptor raw-result cache, partition model-reported labels exactly, and review existing source/MIDI alternatives; build blind exact-source-window, fixed-window sample-RMS-matched MIDI A/B reviews with explicit heard and choice evidence; render cached neutral previews, save explicit solo/full-mix choices, hear the selected arrangement and export unchanged choices in a GarageBand handoff through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
 ---
 
 # Sunofriend
@@ -57,6 +57,14 @@ scripts.
      least two completed `verified-hit` runs for the same immutable entry.
    - `sunofriend ai-label-split` needs no audio, model or preview capability.
      It verifies and partitions one completed immutable AI run.
+   - `sunofriend hybrid-report` starts no model and needs
+     `sunofriend doctor --require convert` for its local `StemSpectrum`
+     evidence. Read `hybrid-report --help`; supply the exact source excerpt,
+     matching lead phrase review, BPM and separately named S0/M1/M3 MIDI plus
+     evidence. Version 1 accepts only `--role lead`. The output is diagnostic
+     only and creates no MIDI. Its verifier cannot prove that M1's full mix was
+     derived from the comparison song, nor verify M3's unsupplied original
+     pre-projection MIDI; require both unverified statuses in the result.
    - `sunofriend ai-doctor --require game` before a standalone GAME vocal
      boundary/pitch bake-off. Its explicit setup command is
      `scripts/setup-game-model.sh`; inference itself must remain offline.
@@ -179,6 +187,20 @@ scripts.
   the audit. The pinned MuScriptor 0.2.1 baseline is greedy, batch 1, beam 1,
   CFG 1.0 and independent five-second chunks; it does not support prelude
   forcing, so do not request or claim it.
+- One specialist/full-mix/conditioned phrase comparison: use `hybrid-report`
+  with exact uppercase S0, M1 and M3 names. S0 must use the matching
+  Sunofriend provenance whose `source_stem` resolves to the exact supplied
+  source WAV, M1 its `ai-label-split.json`, and M3 its
+  `phase5-review-projection.v1` record. The source, BPM, role and phrase
+  geometry must describe the same zero-based lead excerpt. Treat 80 ms
+  exact-pitch and cross-phrase matches, raw spectrum support, boundary/length
+  disputes, octave-equivalent disputes, lane-only notes and duplicates as
+  review evidence only. Cross-boundary matches contribute one reference to
+  every phrase or review gap touched by an endpoint. Require the command's
+  `lineage_status` to say M1's same-song derivation and M3's original MIDI
+  payload are unverified; the supplied v1 artifacts cannot establish those
+  relationships. Never use agreement as correctness, infer missing chord
+  timing, create an H1 MIDI or update a Workbench choice from this report.
 - Repeated comparable MuScriptor runs: use `ai-benchmark` with at least two
   repeated `--run RUN_DIR` values and a fresh `--out`. Require identical source,
   excerpt, BPM, requested roles, effective device, checkpoint, config, worker
@@ -859,6 +881,18 @@ sunofriend ai-matrix \
   --lane "M3-bass=$M3_BASS_RUN" \
   --out "$FRESH_MATRIX_JSON"
 
+sunofriend hybrid-report "$EXACT_SOURCE_EXCERPT" \
+  --role lead \
+  --bpm "$BPM" \
+  --candidate "S0=$SPECIALIST_MIDI" \
+  --evidence "S0=$SPECIALIST_PROVENANCE" \
+  --candidate "M1=$FULL_MIX_LABEL_MIDI" \
+  --evidence "M1=$LABEL_SPLIT_JSON" \
+  --candidate "M3=$CONDITIONED_STEM_MIDI" \
+  --evidence "M3=$REVIEW_PROJECTION_JSON" \
+  --phrase-review "$PHRASE_REVIEW_JSON" \
+  --out "$FRESH_HYBRID_REPORT_JSON"
+
 sunofriend ai-benchmark \
   --run "$SMALL_CPU_REPEAT_1" \
   --run "$SMALL_CPU_REPEAT_2" \
@@ -955,6 +989,21 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
    overlap ratio. Confirm all source, worker, raw artifact, candidate,
    MIDI, checkpoint and config hashes verified and both mutation totals are
    zero. Retain failed lanes and never turn overlap or quality into a winner.
+   For `hybrid-report`, confirm exactly three distinct MIDI contents named S0,
+   M1 and M3; matching lead-review/evidence schemas and every payload hash the
+   supplied contracts can verify; one exact source/phrase review/BPM/timeline;
+   and valid projected-stem geometry. Require the path-free report and visible
+   lineage statuses `caller-supplied-derivation-unverified` for M1 and
+   `manifest-claimed-payload-unverified` for M3—do not claim their missing
+   source relationships were verified. Report per-lane note counts, every
+   pair's exact/cross-phrase/boundary/octave/lane-only counts, duplicate
+   evidence, outside-phrase counts and ranked disagreement phrases. State that
+   cross-boundary rows are represented in each touched phrase or gap, source
+   support, agreement and ranking are not accuracy or preference, octave
+   equivalence remains a dispute, and chords are unavailable when no exact
+   timeline is pinned. Confirm zero inference, MIDI creation/mutation,
+   selection, promotion and default-change effects. Do not manufacture a
+   review, H1 candidate or Workbench choice.
    For `ai-benchmark`, confirm the cache regime says fresh process, no reused
    model, no application cache, uncontrolled OS cache and no cold-start claim.
    Report exact-output repeatability and keep pipeline, subprocess and

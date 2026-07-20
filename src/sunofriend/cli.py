@@ -33,6 +33,7 @@ _COMMANDS = {
     "ai-cache-benchmark",
     "ai-session-benchmark",
     "ai-matrix",
+    "hybrid-report",
     "ai-label-split",
     "ai-cleanup",
     "midi-mask",
@@ -934,6 +935,46 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=80.0,
         help="Onset tolerance for cross-lane same-pitch diagnostics (default: 80ms)",
+    )
+    hybrid_report = sub.add_parser(
+        "hybrid-report",
+        help=(
+            "Compare hash-pinned S0, M1 and M3 MIDI by phrase without selecting "
+            "or creating MIDI"
+        ),
+    )
+    hybrid_report.add_argument(
+        "source_wav", help="Exact source excerpt WAV pinned by the phrase review"
+    )
+    hybrid_report.add_argument(
+        "--role",
+        required=True,
+        help="Role exactly as recorded by the phrase review (v1 requires lead)",
+    )
+    hybrid_report.add_argument(
+        "--bpm", required=True, type=float, help="Exact excerpt and MIDI tempo"
+    )
+    hybrid_report.add_argument(
+        "--candidate",
+        action="append",
+        required=True,
+        metavar="LANE=MIDI",
+        help="Candidate MIDI named S0, M1 or M3; repeat once for each lane",
+    )
+    hybrid_report.add_argument(
+        "--evidence",
+        action="append",
+        required=True,
+        metavar="LANE=JSON",
+        help="Evidence JSON named S0, M1 or M3; repeat once for each lane",
+    )
+    hybrid_report.add_argument(
+        "--phrase-review",
+        required=True,
+        help="Matching melody phrase-review v1 JSON",
+    )
+    hybrid_report.add_argument(
+        "--out", required=True, help="Fresh path for the diagnostic JSON report"
     )
     ai_benchmark = sub.add_parser(
         "ai-benchmark",
@@ -2208,6 +2249,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_ai_session_benchmark(args)
         if args.command == "ai-matrix":
             return _run_ai_matrix(args)
+        if args.command == "hybrid-report":
+            return _run_hybrid_report(args)
         if args.command == "ai-label-split":
             return _run_ai_label_split(args)
         if args.command == "ai-cleanup":
@@ -3682,6 +3725,63 @@ def _run_ai_matrix(args) -> int:
         )
     )
     return 0
+
+
+def _run_hybrid_report(args) -> int:
+    from .hybrid_report import write_hybrid_report
+
+    candidates = _parse_named_paths(args.candidate, "--candidate")
+    evidence = _parse_named_paths(args.evidence, "--evidence")
+    report = write_hybrid_report(
+        args.source_wav,
+        role=args.role,
+        bpm=args.bpm,
+        candidates=candidates,
+        evidence=evidence,
+        phrase_review=args.phrase_review,
+        output_path=args.out,
+    )
+    print(
+        json.dumps(
+            {
+                "status": report["status"],
+                "output": str(Path(args.out).expanduser().absolute()),
+                "schema": report["schema"],
+                "role": report["role"],
+                "candidate_note_counts": {
+                    row["lane"]: row["note_count"] for row in report["candidates"]
+                },
+                "phrase_count": len(report["phrases"]),
+                "lineage_status": {
+                    "M1_full_mix_association": report["lineage"][
+                        "M1_full_mix_association"
+                    ]["status"],
+                    "M3_original_source_midi": report["lineage"][
+                        "M3_original_source_midi"
+                    ]["status"],
+                },
+                "midi_files_created": report["effects"]["midi_files_created"],
+                "automatic_selection": report["effects"]["automatic_selection"],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _parse_named_paths(values: list[str], flag: str) -> dict[str, str]:
+    parsed: dict[str, str] = {}
+    for value in values:
+        if "=" not in value:
+            raise ValueError(f"{flag} must use LANE=PATH")
+        name, path = value.split("=", 1)
+        if not name or not path:
+            raise ValueError(f"{flag} must use non-empty LANE=PATH values")
+        if name in parsed:
+            raise ValueError(f"{flag} repeats lane {name}")
+        parsed[name] = path
+    return parsed
 
 
 def _run_ai_label_split(args) -> int:

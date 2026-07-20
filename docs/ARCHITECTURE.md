@@ -24,6 +24,8 @@ CLI parsing (`cli.py`)
         +--> isolated learned cleanup challenger (`ai_cleanup.py`,
         |                                         `ai_cleanup_worker.py`)
         +--> immutable AI lane comparison (`ai_matrix.py`)
+        +--> read-only phrase consensus evidence (`hybrid_report.py`,
+        |                                         `note_alignment.py`)
         +--> fresh-process AI timing comparison (`ai_benchmark.py`)
         +--> one-variable MuScriptor comparison (`ai_setting_compare.py`)
         +--> bounded exact-repeat MuScriptor session (`ai_session.py`,
@@ -167,6 +169,32 @@ MuScriptor execution contract: the pinned 0.2.1 baseline is greedy, batch 1,
 beam 1 and CFG 1.0 with independent five-second chunks. Because that runtime
 does not expose prelude forcing, the manifest records it as unsupported and a
 true request is rejected.
+
+`hybrid_report.py` is the first Phase 5.3 boundary outside that model-only
+matrix. Its v1 contract is lead-melody only. It verifies one exact excerpt WAV,
+its unresolved melody phrase-review geometry, and the existing S0 specialist,
+M1 full-mix-label and M3 conditioned-stem MIDI plus their distinct evidence
+schemas. MIDI is interpreted in source seconds
+and compared through `note_alignment.py`, the shared deterministic one-to-one
+onset matcher also used by the matrix, setting comparator and Workbench overlap
+diagnostic. Its explicit legacy nearest-unused policy preserves existing v1
+matrix/setting metrics, while the hybrid and Workbench use chronological
+maximum-cardinality matching. The path-free report projects only validated,
+schema-owned phrase/repetition fields, preserves source phrase indices and
+every candidate note, then publishes per-phrase exact-pitch/onset matches,
+cross-phrase boundary references, boundary/duration disputes,
+octave-equivalent disputes, lane-only notes, duplicate evidence and raw
+`StemSpectrum` support. Gaps outside phrase units are counted rather than
+discarded. S0 provenance must resolve to the same supplied source file, not a
+separate equal-content copy. Chords remain unavailable until an exact excerpt timeline is
+hash-pinned. S0 and the projected M3 excerpt are checked against the supplied
+source bytes; M1's requested-label MIDI is checked against its report and
+tick-level render signatures. The M1 full-mix-to-song relationship remains a
+caller-supplied, derivation-unverified association because no reproducible mix
+manifest exists. M3's original pre-projection MIDI hash is recorded but its
+unsupplied payload is not verified. This layer rechecks every input after
+analysis, starts no model, emits no MIDI, performs no automatic selection or
+repair and is not yet imported by the Workbench.
 
 Fresh MuScriptor workers keep nondeterministic execution measurements in the
 separate hash-pinned `muscriptor.performance.json` raw artifact rather than in

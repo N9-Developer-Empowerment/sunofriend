@@ -104,6 +104,14 @@ is not source separation and never promotes a result automatically. Explicit
 Workbench catalogs may add a focused
 listening question and checklist without turning either into a score or choice.
 
+`hybrid-report` provides a separate lead-melody-only S0/M1/M3 phrase
+diagnostic over existing specialist, full-mix-label and conditioned-stem MIDI.
+It reports path-free agreement and disagreement evidence but creates no MIDI,
+selects no winner and runs no model. The v1 evidence can verify the supplied
+S0/M3 comparison source and rendered candidate payloads; it explicitly cannot
+prove that M1's pinned full mix was derived from the same song or verify M3's
+unsupplied original pre-projection MIDI.
+
 Sunofriend complements AI music generators, stem separators, and DAWs rather
 than replacing them. The current supported production workflow is macOS-first,
 using Python 3.9–3.11, FluidSynth for offline preview, and CoreMIDI for optional

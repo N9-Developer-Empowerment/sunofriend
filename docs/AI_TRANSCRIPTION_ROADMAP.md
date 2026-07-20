@@ -5,7 +5,9 @@ fixed-MIDI review complete; Phase 5.1 private listening and the Phase 5.2
 fresh-process, bounded reused-model, exact-result cache and beam-1/beam-2
 small-CPU golden measurements plus the hardened private blind short-loop
 package, resolved listening result and batch-size 1→2 CPU comparison complete;
-broader production integration remains
+the first hardened, lead-only Phase 5.3 S0/M1/M3 phrase-disagreement report is
+complete with explicit verified/unverified lineage boundaries; blind phrase
+choice and broader production integration remain
 
 Started: 15 July 2026  
 Scope: local-first AI assistance for transcription, review, instrument matching
@@ -74,7 +76,7 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
-| 5. MuScriptor Full-Mix and Community Learning | **In progress: Phase 5.0/5.1 complete; Phase 5.2 beam review and batch comparison resolved** | Local Workbench, immutable MuScriptor evidence, M0–M4 matrices, exact label partitions, fresh-process and bounded reused-model CPU baselines, exact-result caching, strict one-variable beam/batch comparisons and generic blind A/B tooling are complete; the review retained beam 1, while identical MIDI and slower observed CPU execution retained batch 1; workflow integration, other devices and model-size comparisons remain |
+| 5. MuScriptor Full-Mix and Community Learning | **In progress: Phase 5.0/5.1 complete; Phase 5.2 local CPU decisions resolved; Phase 5.3 diagnostic slice complete** | Local Workbench, immutable MuScriptor evidence, M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free, lead-only report now aligns S0/M1/M3 by musical phrase without creating MIDI and states which source relationships it cannot verify; explicit phrase review, role-specific H1 challengers, other devices and model sizes remain |
 
 ## Phase 1: AI Transcription Bake-off v1
 
@@ -520,6 +522,58 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-20 — Phase 5.3 vocal phrase-disagreement evidence
+
+- Goal: locate the most useful S0 specialist, M1 full-mix-label and M3
+  conditioned-stem disagreements before attempting another automatic
+  consensus or producing a hybrid MIDI.
+- Change or experiment: added a shared deterministic, one-to-one note-onset
+  alignment primitive and migrated the matrix, setting comparator and
+  Workbench overlap counters to it while retaining the legacy nearest-unused
+  policy for existing v1 matrix/setting metrics. Added the lead-only
+  `hybrid-report`, which strictly verifies an exact source WAV, matching melody
+  phrase review, distinct S0/M1/M3 MIDI and their three provenance schemas.
+  It validates M1 label/render bookkeeping and M3 projection/media/mutation
+  claims, recomputes phrase segmentation and repetition geometry, requires S0
+  provenance to resolve to the supplied WAV, rechecks every input after
+  analysis, and projects only schema-owned, path-free phrase evidence. It
+  reports per-note raw source support and
+  per-phrase exact, cross-boundary, boundary/duration, octave, lane-only and
+  duplicate evidence; each cross-boundary endpoint is represented in every
+  phrase or review-unit gap it touches. Chords remain unavailable/unpinned.
+- Inputs: private 15-second Lidl vocal excerpt at 119 BPM, source SHA-256
+  `a52b874719af8468e087ba62dec628cca142e6c649f79a718bbe9f880475a488`;
+  the existing three-unit lead phrase review; S0 repaired specialist MIDI,
+  M1 `soprano_and_alto_sax` label partition and projected M3 vocal MIDI.
+- Model/runtime/checkpoint: no inference, worker or checkpoint access. The
+  command reads completed artifacts and uses the normal local audio runtime
+  only for `StemSpectrum` evidence.
+- Evidence and metrics: S0/M1/M3 contain 23/38/39 notes. Within 80 ms,
+  S0↔M1 matched 6 exact-pitch onsets, S0↔M3 matched 8 and M1↔M3 matched 28.
+  Their same-pitch boundary/duration dispute counts were 4/6/6; this clip had
+  no octave-equivalent onset disputes. S0↔M3 had one exact match crossing a
+  phrase boundary; the other pairs had none. Phrase IDs 0, 1 and 2 ranked at
+  47, 36 and 36 disagreement references respectively. Two fresh report writes
+  were byte-identical at SHA-256
+  `8e476e89d17cfed50a8c4d7f15557e8d0997c734210a56091fe9596b9b3ba995`.
+  Existing beam and batch comparator goldens remained byte-identical after the
+  shared-alignment migration.
+- Listening result: not yet applicable. The report ranks disagreement evidence,
+  not musical preference, and creates no audition or MIDI.
+- Decision and effects: retain all three raw candidates. Agreement is not
+  accuracy, raw spectrum support is not selection and octave equivalence is a
+  dispute. The report records zero inference runs, MIDI creation/mutation,
+  automatic selection, promotion and default changes.
+- Problems/risks: dense vocal syllables and harmonics can inflate both source
+  support and pairwise agreement. M1 is a model label rather than a confirmed
+  physical instrument. Its pinned full mix is caller-associated with this song
+  but has no supplied reproducible derivation manifest; M3's original
+  pre-projection MIDI is named by its manifest but was not supplied for payload
+  checking. The exact excerpt also has no hash-pinned chord timeline.
+- Next smallest step: turn the highest-ranked disagreements into a blind,
+  recognition-first phrase review. Build an H1 challenger only from explicit
+  reviewed choices, then compare it with the current M3 control.
 
 ### 2026-07-20 — Strict batch-size 1 versus 2 comparison
 

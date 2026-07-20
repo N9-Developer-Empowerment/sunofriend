@@ -20,6 +20,7 @@ from typing import Any, Mapping, Sequence
 
 from .ai_benchmark import build_ai_performance_benchmark
 from .ai_matrix import build_ai_candidate_matrix
+from .note_alignment import AlignmentEvent, align_events
 
 
 AI_SETTING_COMPARISON_SCHEMA = "sunofriend.ai-setting-comparison.v1"
@@ -337,9 +338,7 @@ def _build_arm(
             "AI setting comparison accepts only explicit current fresh-process runs; "
             "legacy evidence is not accepted"
         )
-    if not _strict_json_equal(
-        benchmark.get("cache_regime"), _REQUIRED_CACHE_REGIME
-    ):
+    if not _strict_json_equal(benchmark.get("cache_regime"), _REQUIRED_CACHE_REGIME):
         raise ValueError(
             "AI setting comparison accepts only independent cache-disabled fresh runs"
         )
@@ -391,9 +390,7 @@ def _build_arm(
         or not _positive_json_integer(decoding.get("batch_size"))
         or (
             expected_batch_size is not None
-            and not _exact_json_integer(
-                decoding.get("batch_size"), expected_batch_size
-            )
+            and not _exact_json_integer(decoding.get("batch_size"), expected_batch_size)
         )
         or decoding.get("use_sampling") is not False
     ):
@@ -662,20 +659,18 @@ def _require_request_contract(
                 f"AI setting comparison {arm} request beam_size and batch_size "
                 "must be positive JSON integers"
             )
-    control_expected = _CONTROL_BEAM_SIZE if setting == _BEAM_SETTING else _CONTROL_BATCH_SIZE
+    control_expected = (
+        _CONTROL_BEAM_SIZE if setting == _BEAM_SETTING else _CONTROL_BATCH_SIZE
+    )
     challenger_expected = (
-        _CHALLENGER_BEAM_SIZE
-        if setting == _BEAM_SETTING
-        else _CHALLENGER_BATCH_SIZE
+        _CHALLENGER_BEAM_SIZE if setting == _BEAM_SETTING else _CHALLENGER_BATCH_SIZE
     )
     if not _exact_json_integer(left_options.pop(setting, None), control_expected):
         raise ValueError(
             f"AI setting comparison control request must use {setting} "
             f"{control_expected}"
         )
-    if not _exact_json_integer(
-        right_options.pop(setting, None), challenger_expected
-    ):
+    if not _exact_json_integer(right_options.pop(setting, None), challenger_expected):
         raise ValueError(
             f"AI setting comparison challenger request must use {setting} "
             f"{challenger_expected}"
@@ -789,28 +784,33 @@ def _representative_note_overlap(
     tolerance_ms: float,
 ) -> dict[str, Any]:
     tolerance = tolerance_ms / 1000.0
-    used: set[int] = set()
-    matched = 0
-    for note in control_notes:
-        pitch = round(float(note["pitch"]))
-        label = note.get("instrument") or "unlabelled"
-        onset = float(note["start_seconds"])
-        best_index = None
-        best_distance = tolerance + 1.0
-        for index, other in enumerate(challenger_notes):
-            if index in used:
-                continue
-            if round(float(other["pitch"])) != pitch:
-                continue
-            if (other.get("instrument") or "unlabelled") != label:
-                continue
-            distance = abs(float(other["start_seconds"]) - onset)
-            if distance <= tolerance and distance < best_distance:
-                best_index = index
-                best_distance = distance
-        if best_index is not None:
-            used.add(best_index)
-            matched += 1
+    result = align_events(
+        [
+            AlignmentEvent(
+                source_index=index,
+                onset=note["start_seconds"],
+                pitch=note["pitch"],
+                label=note.get("instrument") or "unlabelled",
+            )
+            for index, note in enumerate(control_notes)
+        ],
+        [
+            AlignmentEvent(
+                source_index=index,
+                onset=note["start_seconds"],
+                pitch=note["pitch"],
+                label=note.get("instrument") or "unlabelled",
+            )
+            for index, note in enumerate(challenger_notes)
+        ],
+        left_offset=0.0,
+        right_offset=0.0,
+        tolerance=tolerance,
+        pitch_policy="rounded",
+        require_exact_label=True,
+        matching_policy="left_greedy_closest",
+    )
+    matched = len(result.matches)
     left_count = len(control_notes)
     right_count = len(challenger_notes)
     return {
@@ -1115,9 +1115,10 @@ def _verify_execution_matches_request(
             "AI setting comparison request chunk_seconds must use the current finite "
             "five-second policy"
         )
-    if options["prelude_forcing"] is not False or options[
-        "prelude_forcing_supported"
-    ] is not False:
+    if (
+        options["prelude_forcing"] is not False
+        or options["prelude_forcing_supported"] is not False
+    ):
         raise ValueError(
             "AI setting comparison request must use the current unsupported, disabled "
             "prelude-forcing policy"
@@ -1139,11 +1140,7 @@ def _verify_execution_matches_request(
         )
 
     expected_strategy = (
-        "sampling"
-        if use_sampling
-        else "beam-search"
-        if beam_size > 1
-        else "greedy"
+        "sampling" if use_sampling else "beam-search" if beam_size > 1 else "greedy"
     )
     expected = {
         "model_size": options["model_size"],

@@ -1,6 +1,6 @@
 # Phase 5: MuScriptor Full-Mix and Community Learning
 
-Status: **Phase 5.0 and 5.1 complete; Phase 5.2 remains in progress, with its small-CPU fresh-process, bounded reused-model, application-cache, beam-1/beam-2 measurement, resolved blind short-loop review and batch-size 1→2 CPU comparison slices complete; beam 1 and batch 1 remain the defaults and no public service or new checkpoint download is authorised**
+Status: **Phase 5.0 and 5.1 complete; the locally actionable Phase 5.2 small-CPU fresh-process, bounded reused-model, application-cache, beam-1/beam-2 and batch-size slices are complete; Phase 5.3 has a hardened read-only, lead-only S0/M1/M3 vocal phrase-disagreement report and now moves to explicit phrase listening; beam 1 and batch 1 remain the defaults and no public service or new checkpoint download is authorised**
 
 Drafted: 19 July 2026
 Scope: accurate stem/full-mix MIDI, faster local inference, GarageBand-ready
@@ -1044,9 +1044,28 @@ server.
 
 ### 5.3 — Hybrid phrase consensus
 
-- Align specialist, full-mix and conditioned stem candidates.
-- Add source-support, role, chord, octave and repetition disagreements.
-- Build blind phrase reviews and apply only explicit choices.
+- [x] Share one deterministic one-to-one note-alignment primitive across the
+  matrix, setting comparator, Workbench overlap diagnostic and hybrid report.
+- [x] Align distinct S0 specialist, M1 full-mix-label and M3 conditioned-stem
+  vocal candidates on the exact 15-second Lidl excerpt. Hash-check every
+  supplied payload and state the missing lineage explicitly: M1's full mix is
+  caller-associated with the song but its derivation is unverified; M3's
+  original pre-projection MIDI is named but not supplied for payload checking.
+- [x] Publish raw source support, role, boundary/duration, octave, repetition,
+  cross-phrase, lane-only and duplicate evidence without creating or selecting
+  MIDI. Project only schema-owned path-free phrase evidence, reject contradictory
+  mutation/status/policy records, recompute segmentation/repetition geometry,
+  and record chord evidence as unavailable rather than inferring an unpinned
+  timeline.
+- [ ] Build blind phrase reviews from ranked disagreements and apply only
+  explicit choices.
+- [ ] Define a reproducible source-lineage manifest that pins all mix inputs,
+  excerpt geometry, filter graph, gain, codec and output before upgrading M1's
+  same-song relationship from caller-supplied to verified.
+- [ ] Add an exact hash-pinned chord timeline when one is available for the
+  same excerpt; do not derive it from the full-song PDF by assumption.
+- [ ] Repeat the evidence/report slice for bass and keys before constructing
+  a role-specific H1 challenger.
 - Success: bass, keys and vocal hybrid candidates beat their current primary
   on predeclared listening questions without worse timing drift or duplicate
   leakage.

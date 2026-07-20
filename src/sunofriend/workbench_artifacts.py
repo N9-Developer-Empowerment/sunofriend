@@ -19,6 +19,7 @@ from typing import Any, Mapping, Sequence
 from .clip import read_midi_clips
 from .midi import MidiTrack, write_midi_file
 from .models import NoteEvent
+from .note_alignment import AlignmentEvent, align_events
 from .render import find_soundfont, render_midi_to_wav
 
 
@@ -217,9 +218,7 @@ class WorkbenchArtifacts:
         }
         cache_key = _document_hash(key_payload)
         with self._lock:
-            cached = self._load_cached(
-                "arrangements", cache_key, ARRANGEMENT_SCHEMA
-            )
+            cached = self._load_cached("arrangements", cache_key, ARRANGEMENT_SCHEMA)
             if cached is not None:
                 cached["cache_hit"] = True
                 return cached
@@ -254,9 +253,7 @@ class WorkbenchArtifacts:
             except Exception:
                 shutil.rmtree(work, ignore_errors=True)
                 raise
-            result = self._load_cached(
-                "arrangements", cache_key, ARRANGEMENT_SCHEMA
-            )
+            result = self._load_cached("arrangements", cache_key, ARRANGEMENT_SCHEMA)
             if result is None:
                 raise RuntimeError("arrangement cache verification failed")
             result["cache_hit"] = False
@@ -305,9 +302,7 @@ class WorkbenchArtifacts:
             if cached is not None:
                 cached["cache_hit"] = True
                 return cached
-            work = pack_dir.with_name(
-                f".{pack_dir.name}.building-{uuid.uuid4().hex}"
-            )
+            work = pack_dir.with_name(f".{pack_dir.name}.building-{uuid.uuid4().hex}")
             _remove_generated_path(pack_dir)
             work.mkdir(parents=True, exist_ok=False)
             try:
@@ -399,7 +394,9 @@ class WorkbenchArtifacts:
     def _verify_selection(self, selection: Sequence[Mapping[str, Any]]) -> None:
         for item in selection:
             if item.get("audition_blocked"):
-                reasons = ", ".join(str(value) for value in item.get("block_reasons", []))
+                reasons = ", ".join(
+                    str(value) for value in item.get("block_reasons", [])
+                )
                 raise ValueError(
                     "a previously selected AI candidate is now diagnostic-only"
                     + (f": {reasons}" if reasons else "")
@@ -421,7 +418,9 @@ class WorkbenchArtifacts:
         expected_sha256 = str(record.get("sha256", ""))
         verified = stat.st_size == expected_bytes and _sha256(path) == expected_sha256
         if not verified:
-            suffix = "; restart the Workbench to catalog it again" if restart_hint else ""
+            suffix = (
+                "; restart the Workbench to catalog it again" if restart_hint else ""
+            )
             raise ValueError(f"{label} changed after it was catalogued{suffix}")
         return path
 
@@ -576,17 +575,13 @@ def selected_candidates(
                     "role": role,
                     "decision": value,
                     "decision_context": decision.get("context"),
-                    "candidate_origin_source_audio_sha256": (
-                        candidate_origin_sha256
-                    ),
+                    "candidate_origin_source_audio_sha256": (candidate_origin_sha256),
                     "candidate_origin_source_audio_sha256_basis": (
                         candidate_origin_basis
                     ),
                     "audition_blocked": bool(candidate.get("audition_blocked")),
                     "block_reasons": list(
-                        (candidate.get("ai_diagnostics") or {}).get(
-                            "block_reasons", []
-                        )
+                        (candidate.get("ai_diagnostics") or {}).get("block_reasons", [])
                     ),
                     "midi_path": candidate["midi_path"],
                     "midi": dict(candidate["midi"]),
@@ -721,10 +716,8 @@ def _selected_midi_overlap(
             candidate_origin_sha256 = str(
                 left.get("candidate_origin_source_audio_sha256") or ""
             )
-            if (
-                not candidate_origin_sha256
-                or candidate_origin_sha256
-                != right.get("candidate_origin_source_audio_sha256")
+            if not candidate_origin_sha256 or candidate_origin_sha256 != right.get(
+                "candidate_origin_source_audio_sha256"
             ):
                 continue
             left_notes = notes_for(left)
@@ -734,12 +727,8 @@ def _selected_midi_overlap(
                 right_notes,
                 tolerance_seconds=_OVERLAP_ONSET_TOLERANCE_SECONDS,
             )
-            left_ratio = (
-                matched_note_count / len(left_notes) if left_notes else 0.0
-            )
-            right_ratio = (
-                matched_note_count / len(right_notes) if right_notes else 0.0
-            )
+            left_ratio = matched_note_count / len(left_notes) if left_notes else 0.0
+            right_ratio = matched_note_count / len(right_notes) if right_notes else 0.0
             substantial = (
                 matched_note_count >= _SUBSTANTIAL_OVERLAP_MINIMUM_MATCHED_NOTES
                 and left_ratio >= _SUBSTANTIAL_OVERLAP_MINIMUM_RATIO
@@ -749,9 +738,7 @@ def _selected_midi_overlap(
             right_context = right.get("decision_context")
             pairs.append(
                 {
-                    "candidate_origin_source_audio_sha256": (
-                        candidate_origin_sha256
-                    ),
+                    "candidate_origin_source_audio_sha256": (candidate_origin_sha256),
                     "left": {
                         "stem_id": left["stem_id"],
                         "candidate_id": left["candidate_id"],
@@ -820,30 +807,30 @@ def _greedy_exact_pitch_onset_matches(
 ) -> int:
     """Count deterministic earliest-compatible matches within each exact pitch."""
 
-    left_by_pitch: dict[int, list[float]] = {}
-    right_by_pitch: dict[int, list[float]] = {}
-    for note in left:
-        left_by_pitch.setdefault(int(note.pitch), []).append(float(note.start))
-    for note in right:
-        right_by_pitch.setdefault(int(note.pitch), []).append(float(note.start))
-    matches = 0
-    for pitch in sorted(set(left_by_pitch) & set(right_by_pitch)):
-        left_onsets = sorted(left_by_pitch[pitch])
-        right_onsets = sorted(right_by_pitch[pitch])
-        left_index = 0
-        right_index = 0
-        while left_index < len(left_onsets) and right_index < len(right_onsets):
-            left_onset = left_onsets[left_index]
-            right_onset = right_onsets[right_index]
-            if abs(left_onset - right_onset) <= tolerance_seconds:
-                matches += 1
-                left_index += 1
-                right_index += 1
-            elif left_onset < right_onset:
-                left_index += 1
-            else:
-                right_index += 1
-    return matches
+    result = align_events(
+        [
+            AlignmentEvent(
+                source_index=index,
+                onset=note.start,
+                pitch=note.pitch,
+            )
+            for index, note in enumerate(left)
+        ],
+        [
+            AlignmentEvent(
+                source_index=index,
+                onset=note.start,
+                pitch=note.pitch,
+            )
+            for index, note in enumerate(right)
+        ],
+        left_offset=0.0,
+        right_offset=0.0,
+        tolerance=tolerance_seconds,
+        pitch_policy="exact_integer",
+        require_exact_label=False,
+    )
+    return len(result.matches)
 
 
 def _public_selection(selection: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
@@ -923,7 +910,9 @@ def _document_hash(document: Mapping[str, Any]) -> str:
 
 
 def _write_json(path: Path, value: Mapping[str, Any]) -> None:
-    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 def _remove_generated_path(path: Path) -> None:

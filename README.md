@@ -41,6 +41,7 @@ clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 | Measure exact repeats through one loaded model | `ai-transcribe-session`, `ai-session-benchmark` | Bounded 2–20-request diagnostic session, reused-model warm evidence for requests 2+, and optional two-run fresh-process control; no production cache or promotion |
 | Reuse one exact prior MuScriptor result | `ai-transcribe --application-cache-dir`, `ai-cache-benchmark` | Explicit private content-addressed raw-result cache; verified hits start no worker, load no model and run no inference, while current MIDI is rebuilt and cache timing remains separate |
 | Compare immutable AI transcription lanes | `ai-matrix` | Path-free per-role quality, label stability, chunk-boundary and cross-lane overlap diagnostics without changing raw MIDI |
+| Compare specialist, full-mix and conditioned MIDI by phrase | `hybrid-report` | Read-only S0/M1/M3 agreement and disagreement evidence with explicit verified/unverified lineage boundaries; no MIDI or winner is created |
 | Partition one AI result by its reported label | `ai-label-split` | Exact source-event partition plus deterministic requested/complement MIDI auditions and a byte-identical full-candidate control |
 | Test one MIDI-defined layer inside a mixed stem | `midi-mask` | Short, local harmonic target plus residual with persisted reconstruction evidence and no automatic promotion |
 | Test learned local source cleanup | `ai-cleanup` | Pinned Demucs target plus waveform residual, hard checkpoint verification, deterministic short excerpts and an explicit listening gate |
@@ -91,8 +92,9 @@ completed full-mix/conditioned comparison and local Workbench, followed by
 fresh-process and reused-model measurements, an explicit exact-result
 application-cache experiment, a completed one-variable beam measurement and
 completed blind short-loop review with a resolved private listening result,
-plus a completed batch-size 1→2 CPU comparison, followed by a future opt-in
-feedback loop—is in the
+plus a completed batch-size 1→2 CPU comparison and the first read-only Phase
+5.3 phrase-consensus diagnostic, followed by a future opt-in feedback loop—is
+in the
 **[Phase 5 MuScriptor and Community Learning plan](docs/PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md)**.
 
 For combining songs, first use `midi-transform` to choose a common key, BPM
@@ -423,6 +425,62 @@ Keep the full candidate as the mandatory control and retain the complement. A
 requested label with zero events is no-evidence and the Workbench blocks it
 from audition and main/optional use; a non-empty derivative remains
 review-required and is never promoted automatically.
+
+#### Compare S0, M1 and M3 by musical phrase
+
+Use `hybrid-report` after the three existing MIDI candidates have been put on
+the same excerpt timeline and each has its matching evidence. It starts no AI
+model and emits no MIDI:
+
+```bash
+.venv/bin/sunofriend doctor --require convert
+
+.venv/bin/sunofriend hybrid-report \
+  "/absolute/path/to/exact-source-excerpt.wav" \
+  --role lead \
+  --bpm 119 \
+  --candidate "S0=/absolute/path/to/specialist.mid" \
+  --evidence "S0=/absolute/path/to/specialist-provenance.json" \
+  --candidate "M1=/absolute/path/to/full-mix-label.mid" \
+  --evidence "M1=/absolute/path/to/ai_label_split.json" \
+  --candidate "M3=/absolute/path/to/conditioned-stem.mid" \
+  --evidence "M3=/absolute/path/to/review-projection.json" \
+  --phrase-review "/absolute/path/to/phrase_review.json" \
+  --out "/absolute/fresh/path/hybrid-report.json"
+```
+
+Lane names are exact and case-sensitive. Version 1 is lead-melody only, so
+`--role` must be `lead`. S0 is the specialist Sunofriend MIDI plus provenance
+v1, whose `source_stem` must resolve to the exact WAV passed to this command;
+M1 is an exact model-label audition derivative from a MuScriptor full-mix
+run; M3 is the timeline-projected conditioned-stem MIDI. The source WAV, BPM
+and phrase review must describe the same zero-based excerpt timeline. The
+output is path-free through schema-owned field projection and records exact
+pitch/onset matches within 80 ms, cross-phrase matches, same-note
+boundary/duration disputes, octave-equivalent disputes, lane-only notes,
+duplicates, raw source support, validated repetition evidence and the phrases
+with most disagreement. Segmentation length states/warnings and repetition
+lag/duration ratios are recomputed from the phrase geometry before publication.
+Notes in phrase-review gaps are counted explicitly.
+
+The verifier can hash-check S0 and M3 against the supplied source bytes and can
+check M1's rendered MIDI hash and tick-level note signatures. It also validates
+the no-mutation claims and exact-label bookkeeping recorded by the supplied
+manifests. It cannot prove that M1's pinned full mix was derived from this song,
+because the current artifacts do not contain a reproducible mix-lineage
+manifest. It likewise cannot compare M3 with its original pre-projection MIDI,
+because that payload is not an input. Both limitations are written into the
+report and printed as `lineage_status` by the command; do not describe either
+relationship as verified. A later lineage manifest must pin the input stems,
+time window, mix graph/gain/codec and output before that claim can be upgraded.
+
+This is diagnostic evidence, not a majority vote. Agreement does not prove a
+note is correct; raw spectrum support can reward harmonics or bleed; octave
+equivalence remains a disagreement; and chord evidence is marked unavailable
+until an exact excerpt timeline is hash-pinned. The v1 command never changes a
+candidate, chooses a winner, writes a hybrid MIDI, updates the Workbench or
+changes a default. A later increment will turn the highest-value disagreement
+phrases into an explicit listening review before any H1 challenger is built.
 
 For an independent vocal-specific result, install GAME's pinned official
 v1.0.3 small ONNX release explicitly, then run the same authorised excerpt:
