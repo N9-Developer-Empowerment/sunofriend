@@ -18,7 +18,8 @@ decisions, neutral preview rendering, selected-arrangement audition and an
 explicit GarageBand pack composer. Phase 5.4 now supplies both a read-only
 per-stem source/MIDI comparison timeline and a full-song selected-arrangement
 explorer, plus an explicit bridge from verified disputed lead-vocal ranges to
-the existing phrase-review page.
+the existing phrase-review page. The first Phase 5.5 hardening increment adds
+a default Project Overview and safe restart/retry path.
 The arrangement explorer shows every unique project source stem beside only
 the active explicit main and optional MIDI choices, with temporary visibility,
 mute, solo and level controls. It does not infer an offset: every source and
@@ -26,6 +27,47 @@ MIDI file begins at its recorded zero, so equal displayed seconds do not by
 themselves prove source/MIDI alignment. The user-composed GarageBand basket is
 persistent local export state, separate from both musical decisions and the
 temporary audition mixer.
+
+## Project overview and restart boundary
+
+Workbench now opens on a path-free `sunofriend.workbench-home.v1` projection.
+It derives its counts, stem statuses and one recommended next workflow step only from
+the current catalog plus explicit saved state. It can direct the listener to an
+undecided stem, a stem with no active selection, the full arrangement or the
+pack composer, or truthfully report that no MIDI part is selected. It never
+uses model scores, process labels, preview activity or
+technical metrics to rank a candidate, and navigation records no feedback.
+
+Routing is deterministic: first visit the first candidate-bearing stem with no
+candidate decision or explicit outcome; then revisit any non-terminal decided
+stem that still has no active main/optional part; then hear selected parts that
+lack `full_mix` context; otherwise compose the pack. When no active
+main/optional part remains, explicit **None are usable** and **I cannot tell**
+outcomes are terminal for resume routing, so they do not create an endless
+revisit loop. If they are the only results, Overview
+truthfully reports that no MIDI part was selected. If pack composition is next,
+the page lazily checks the current plan and offers **Resume saved pack** only
+when the saved basket still matches it.
+
+Each stem row distinguishes **compare candidates**, **no active selection**,
+**no usable result recorded**, **listening inconclusive**, **hear in
+arrangement**, **ready for pack** and **no candidates**. The sidebar
+uses the more precise phrase **decisions recorded** rather than treating every
+event as a completed review. Keyboard focus follows a resume action to the
+actual workflow heading, and connection or saved-pack-status failures are
+announced with a retry that changes no musical or export state.
+The home projection excludes paths, private notes, process labels, quality
+metrics and problem tags. Initial project-load and lazy pack-status failures
+are retryable; both keep the current decisions intact and append no event.
+If a free-form heard-role value looks like an absolute local path, Overview
+shows **custom role (local path hidden)**; the private SQLite history remains
+authoritative and is not rewritten.
+
+SQLite decisions and the separate GarageBand basket survive browser and server
+restarts. Audition state does not: playhead, loop, visibility, mute, solo and
+level start fresh on reload and remain outside review history, cache identity
+and export selection. Primary candidate audio preloads metadata; advanced
+alternatives use `preload="none"` until the listener asks for them.
 
 ## Result Explorer direction
 

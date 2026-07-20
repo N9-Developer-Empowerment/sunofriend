@@ -1,6 +1,6 @@
 # Phase 5: Multi-Process MIDI Comparison and Local Result Explorer
 
-Status: **Phase 5.0–5.2 are complete; the Phase 5.3 lead-only S0/M1/M3 diagnostic slice and Phase 5.4 explorer slice are complete, including hash-pinned comparison, full-song audition, GarageBand Pack Composer v1 and the explicit disputed-range phrase-review bridge; Phase 5.3 blind choice, lineage and role expansion remain open while Phase 5.5 local Studio hardening starts; beam 1 and batch 1 remain the defaults and no public service or new checkpoint download is authorised**
+Status: **Phase 5.0–5.2 are complete; the Phase 5.3 lead-only S0/M1/M3 diagnostic slice and Phase 5.4 explorer slice are complete, including hash-pinned comparison, full-song audition, GarageBand Pack Composer v1 and the explicit disputed-range phrase-review bridge; Phase 5.3 blind choice, lineage and role expansion remain open while Phase 5.5 local Studio hardening has started with Project Overview/Resume v1; beam 1 and batch 1 remain the defaults and no public service or new checkpoint download is authorised**
 
 Drafted: 19 July 2026
 Scope: accurate stem/full-mix MIDI, several analytical and AI processes kept as
@@ -241,7 +241,8 @@ handoff. Phase 5.4 builds on those contracts. Its first per-stem visual
 waveform/MIDI-note compare timeline and its full-song selected-arrangement
 timeline are now implemented. The latter adds an audition-only live source/MIDI
 mixer while preserving the same explicit choices. The user-composed export
-basket described below remains planned work.
+basket and its exact local ZIP builder are implemented. Phase 5.5 now adds a
+default Project Overview derived only from explicit saved state.
 
 ### Organise the site around musical decisions
 
@@ -257,16 +258,20 @@ Project
   5. Compose export pack   explicit GarageBand contents and decision report
 ```
 
-The project home page shows every stem as one status row:
+The implemented Project Overview shows every stem as one status row:
 
-| Stem | Heard role | Candidates | Current choice | Needs attention |
-| --- | --- | ---: | --- | --- |
-| Bass | body + pluck | 3 | not chosen | two audible roles |
-| Keys | melody + accompaniment | 3 | melody-focused | low source support in bars 17–20 |
-| Kick | kick family | 2 | specialist repair | three disputed hits |
+| Heard role | Candidates | Current choice | Needs attention | Open |
+| --- | ---: | --- | --- | --- |
+| body + pluck | 3 | no decision recorded | compare candidates | compare |
+| melody + accompaniment | 3 | main A · one needs correction | hear in arrangement | compare |
+| kick family | 0 | not applicable | no MIDI result yet | no result |
 
 This makes progress and unresolved decisions visible without exposing a wall
-of metrics.
+of metrics. Its one recommended workflow step comes deterministically from
+saved state; any offered action is navigation, never an inferred musical
+preference. The home hides process complexity
+only for navigation; the per-stem view retains each separate analytical and AI
+candidate, provenance and explicit human decision.
 
 ### Two complementary explorer views
 
@@ -1223,6 +1228,10 @@ or network operation is introduced.
 
 After the 5.4 vertical slice is musically useful:
 
+- [x] add Project Overview/Resume v1 with path-free per-stem progress, one
+  explicit-state-derived next action, restart-state boundaries, focus recovery,
+  retryable connection/pack-status errors and lazy advanced audio metadata;
+
 - replace shared-second media switching with decoded Web Audio buffers for the
   review paths that require tighter changes, while keeping the exact standalone
   blind A/B contract for promoted comparisons;
@@ -1235,6 +1244,11 @@ After the 5.4 vertical slice is musically useful:
 - display completed exact-result-cache and reused-model provenance without
   silently enabling either optimisation; and
 - conduct a small private, local-only usability beta using authorised projects.
+
+The checked Project Overview item is only the first hardening increment. It
+does not complete decoded Web Audio, long-song virtualization, canonical custom
+mixes, GarageBand/Instrument Bundle checks, cache-provenance display or the
+private beta.
 
 Success means a non-expert can complete source comparison, candidate choice,
 arrangement audition and GarageBand export without editing JSON or losing work.
@@ -1298,6 +1312,14 @@ than a single unexplained percentage.
 The usable 5.0 Workbench slice now covers project/stem decisions, cached neutral
 previews, full-mix confirmation and a selected GarageBand handoff. It keeps
 original MIDI unchanged and still has no upload or submission endpoint.
+Phase 5.5's first slice adds the path-free
+`sunofriend.workbench-home.v1` Project Overview as the default resume surface.
+Its progress, attention codes and one next workflow step come only from catalogued
+candidates and explicit saved decisions/outcomes. It excludes paths, private
+notes and process metrics; navigation/retry changes no selection, pack, MIDI,
+audio or feedback. Decisions and the separate current pack basket survive a
+restart, while playhead, loop, visibility, mute, solo and level deliberately
+reset.
 Phase 5.4 now adds canonical, path-free per-stem and selected-arrangement
 timelines with zero automatic selection/ranking effects. The arrangement view
 shows every unique source stem and only current explicit main/optional MIDI,
@@ -1359,8 +1381,10 @@ described as time-synchronised, not sample-accurate. The standalone blind A/B
 package uses exact common source-frame windows, but does not yet replace
 Workbench media elements with decoded sample-accurate switching.
 
-The immediate next engineering slice is to harden the local Studio through a
-private end-to-end usability pass. The explicit disputed-range bridge now
+Project Overview/Resume v1 is the first completed local-Studio hardening slice.
+The immediate next engineering work is an authorised private end-to-end
+usability pass followed by the first measured friction it exposes. The
+explicit disputed-range bridge now
 opens the exact existing short phrase review without selecting or editing MIDI.
 Pack Composer v1 keeps checked file contents
 separate from musical main/optional choices and preserves the source-audio-free

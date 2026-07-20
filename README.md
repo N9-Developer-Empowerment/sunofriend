@@ -54,7 +54,7 @@ choice; scores and model labels never create an automatic global winner.
 | Test learned local source cleanup | `ai-cleanup` | Pinned Demucs target plus waveform residual, hard checkpoint verification, deterministic short excerpts and an explicit listening gate |
 | Split one reviewed MIDI into audible roles | `midi-role-split`, `midi-role-split-resolve` | Explicit source-event cluster choice, exact primary-note partition, optional independently transcribed residual layer, local A/B review and a hash-verified user-selected recommendation |
 | Compare consistent sounds on one fixed MIDI | `timbre-resynthesis` | Level-matched complete-patch, extracted-sampler and source-fitted harmonic-plus-noise auditions with note-by-note silence checks and no MIDI changes |
-| Review and hand off multi-process MIDI alternatives in one local site | `workbench` | Loopback-only per-role comparison plus a full-song selected-arrangement timeline and temporary source/MIDI mixer, at most three primary candidates per role, append-only decisions, private offline review export and an exact-selected-MIDI GarageBand ZIP; no automatic winner or submission endpoint |
+| Review and hand off multi-process MIDI alternatives in one local site | `workbench` | Loopback-only Project Overview, per-role comparison, full-song selected-arrangement timeline and temporary source/MIDI mixer, at most three primary candidates per role, append-only decisions, private offline review export and an exact-selected-MIDI GarageBand ZIP; no automatic winner or submission endpoint |
 
 Development has started on a local-first ensemble of optional transcription
 models, phrase-level melody review and learned instrument matching. See the
@@ -68,8 +68,12 @@ evidence and final GarageBand/loop decisions are recorded in the
 Phase 5 now has a useful local Workbench path: existing source and MIDI
 artifacts can be reviewed through one loopback-only site, missing comparisons
 can be rendered through a consistent cached GM proxy, explicit choices survive
-browser/process restarts, and only those choices enter the arrangement and
-GarageBand handoff ZIP. AI candidates carry verified execution/checkpoint
+browser/process restarts, and only explicit main/optional decisions become
+selected MIDI. GarageBand pack inclusion is a separate saved choice: selected
+MIDI and the dry proxy are the safe default, while source audio requires an
+explicit opt-in. The Phase 5.5 Project Overview resumes into one
+state-derived next state/action and shows truthful per-stem progress without ranking
+models or exposing technical scores. AI candidates carry verified execution/checkpoint
 diagnostics; severe decoder failures and zero-note results remain downloadable
 evidence but cannot become main or optional choices. The first small-model
 M0–M3 matrix also shows that label conditioning can prevent one known full-mix
@@ -101,7 +105,8 @@ application-cache experiment, a completed one-variable beam measurement and
 completed blind short-loop review with a resolved private listening result,
 plus a completed batch-size 1→2 CPU comparison, the first read-only Phase 5.3
 phrase-consensus diagnostic, the multi-process Result Explorer, GarageBand
-Pack Composer v1 and the explicit disputed-range phrase-review bridge—is
+Pack Composer v1, the explicit disputed-range phrase-review bridge and Project
+Overview/Resume v1—is
 in the
 **[Phase 5 multi-process comparison and Result Explorer plan](docs/PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md)**.
 Creative note/phrase arrangement and Clip reuse remain a later Phase 6, while
@@ -262,6 +267,17 @@ offset, so equal displayed seconds are not proof of source/MIDI alignment. The
 GarageBand pack composer now makes ZIP inclusion a separate, persistent local
 choice instead of inferring it from the arrangement or mixer.
 
+The default **Project overview** is the restart/resume surface. It summarizes
+only explicit saved decisions, shows one status row per stem and presents one
+next workflow state: compare an undecided stem, revisit a non-terminal decision
+with no active part, hear selected parts, compose or resume the pack, or
+truthfully stop with no selected MIDI. Any offered action is navigation, not a
+score or automatic choice. Reloading restores the SQLite
+decisions and saved pack basket; temporary playhead, loop, show, mute, solo and
+level controls intentionally start fresh. Connection failures keep navigation
+disabled and offer a safe retry with a reminder to use the newest per-launch
+URL; nothing is changed by retrying.
+
 ```bash
 .venv/bin/sunofriend workbench \
   "/absolute/path/to/Song-B minor-113bpm-440hz" \
@@ -270,7 +286,10 @@ choice instead of inferring it from the arrangement or mixer.
 ```
 
 The command prints a `127.0.0.1` URL with a per-launch token. The page shows
-the inferred key, BPM and tuning, then gives each stem no more than three
+the Project Overview first, including inferred key, BPM and tuning, explicit
+decisions recorded, selected parts and parts still needing full-mix listening.
+A recorded decision means a candidate decision or stem outcome exists; it is
+not an accuracy or completion claim. The page then gives each stem no more than three
 normal-view candidates. Low-confidence `possible` and `uncertain` files remain
 under advanced diagnostics. Choices such as **Use as main**, **Keep optional**,
 **Needs correction** and **Reject** are appended to a local SQLite database at
@@ -278,7 +297,9 @@ under advanced diagnostics. Choices such as **Use as main**, **Keep optional**,
 launch. Use the shared loop and source/A/B/C buttons to resume each player at
 the same second. **Render neutral preview** gives candidates for one stem the
 same local SoundFont, gain and role-based GM program; it is renderer-consistent
-but deliberately does not peak-normalise away MIDI expression.
+but deliberately does not peak-normalise away MIDI expression. Primary
+candidate audio preloads metadata for quick comparison; advanced alternatives
+do not preload audio until used, which keeps larger result spaces responsive.
 
 The **Visual result explorer** above those players is evidence, not an editor
 or recommendation. Click its common elapsed-seconds axis to move the playhead.

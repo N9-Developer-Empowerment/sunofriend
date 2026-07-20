@@ -1233,6 +1233,14 @@ class WorkbenchServerTests(unittest.TestCase):
                 response = connection.getresponse()
                 self.assertEqual(response.status, 200)
                 payload = json.loads(response.read())
+                self.assertEqual(
+                    payload["home"]["schema"], "sunofriend.workbench-home.v1"
+                )
+                self.assertEqual(
+                    payload["home"]["next_step"]["action"], "compare-stem"
+                )
+                self.assertFalse(payload["home"]["effects"]["feedback_recorded"])
+                self.assertNotIn(str(root), json.dumps(payload["home"]))
                 overlap = payload["selected_midi_overlap"]
                 self.assertEqual(
                     overlap["schema"],
@@ -1361,6 +1369,32 @@ class WorkbenchServerTests(unittest.TestCase):
                 )
                 connection.close()
 
+                role_body = json.dumps(
+                    {
+                        "event_type": "role_tag",
+                        "stem_id": stem["stem_id"],
+                        "role": "synth bass body",
+                    }
+                )
+                connection = http.client.HTTPConnection(
+                    "127.0.0.1", server.server_port, timeout=5
+                )
+                connection.request(
+                    "POST",
+                    "/api/events?token=test-token",
+                    body=role_body,
+                    headers={"Content-Type": "application/json"},
+                )
+                response = connection.getresponse()
+                self.assertEqual(response.status, 201)
+                role_saved = json.loads(response.read())
+                self.assertEqual(
+                    role_saved["home"]["stems"][0]["heard_role"],
+                    "synth bass body",
+                )
+                self.assertNotIn(str(root), json.dumps(role_saved["home"]))
+                connection.close()
+
                 connection = http.client.HTTPConnection(
                     "127.0.0.1", server.server_port, timeout=5
                 )
@@ -1406,7 +1440,7 @@ class WorkbenchServerTests(unittest.TestCase):
                         "stem_id": stem["stem_id"],
                         "candidate_id": candidate["candidate_id"],
                         "decision": "optional",
-                        "context": "solo",
+                        "context": "full_mix",
                         "problem_tags": [],
                     }
                 )
@@ -1422,6 +1456,8 @@ class WorkbenchServerTests(unittest.TestCase):
                 response = connection.getresponse()
                 self.assertEqual(response.status, 201)
                 saved = json.loads(response.read())
+                self.assertEqual(saved["home"]["next_step"]["action"], "compose-pack")
+                self.assertEqual(saved["home"]["counts"]["selected_part_count"], 1)
                 self.assertEqual(
                     saved["state"]["stems"][stem["stem_id"]]["candidates"][
                         candidate["candidate_id"]

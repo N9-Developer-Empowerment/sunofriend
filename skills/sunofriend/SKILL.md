@@ -180,9 +180,21 @@ scripts.
   review without a server. Reuse the original project, every candidate root,
   optional catalog and state directory so the command targets the same review
   identity; never overwrite an existing path and warn that the result may
-  contain absolute paths and private notes. The current Workbench has per-stem
-  source/candidate switching, selected-arrangement listening and a
-  source-audio-free exact-MIDI handoff. Its read-only visual Result Explorer
+    contain absolute paths and private notes. The current Workbench has per-stem
+    source/candidate switching, selected-arrangement listening and a
+    source-audio-free exact-MIDI handoff. It opens through a default path-free
+    Project Overview. Report its stem, decision-recorded, selected-part and
+    arrangement-needed counts plus its one next step/action. That step must be
+    derived only from explicit saved state; any offered action remains
+    navigation. Never infer preference from the suggested destination.
+    Interpret "decision recorded"
+    as a current catalog candidate decision or an explicit stem outcome, never
+    as accuracy or review completion. A saved pack may be called resumable only
+    when its basket matches the current plan. Saved decisions and the
+    separate pack basket may survive a restart; playhead, loop, show, mute,
+    solo and level must reset and remain zero-effect audition state.
+    Retry/reconnect actions must not append feedback or change MIDI, audio or
+    export state. Its read-only visual Result Explorer
   has two linked views: a hash-pinned per-stem source waveform with up to three
   primary MIDI lanes (advanced lanes load only on explicit request), and a
   hash-pinned full-song arrangement containing every unique project source
@@ -1324,6 +1336,16 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     false.
 12. For `workbench`, report the inferred BPM/key/tuning, stem and candidate
     counts, primary-versus-diagnostic split, SQLite path and loopback URL.
+    Also report the Project Overview counts and next state/action, confirm the home
+    projection contains no paths, private notes or process metrics and confirm
+    any offered action is navigation from explicit saved state rather than a
+    rank or automatic choice. On a restart/retry check, distinguish restored
+    decisions and pack choices from intentionally fresh playhead, loop, show,
+    mute, solo and level controls; all must have zero musical, feedback and
+    export effects.
+    Confirm every declared `effects` field is false, initial connection and
+    lazy pack-status failures are retryable, and opening/following the home
+    action calls no event, transform or render endpoint.
     When an explicit catalog supplies `review_question` or `listening_focus`,
     report the displayed prompt, confirm its hash is pinned to the review row
     and saved events, and confirm that it caused no selection or ranking

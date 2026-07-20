@@ -9,7 +9,8 @@ the first hardened, lead-only Phase 5.3 S0/M1/M3 phrase-disagreement report is
 complete with explicit verified/unverified lineage boundaries; blind phrase
 choice remains; Phase 5.4 is complete with its per-stem comparison, full-song
 selected-arrangement explorer/mixer, GarageBand Pack Composer and explicit
-disputed-range phrase-review bridge; Phase 5.5 local Studio hardening is next
+disputed-range phrase-review bridge; Phase 5.5 local Studio hardening has
+started with Project Overview/Resume v1
 
 Started: 15 July 2026  
 Scope: local-first AI assistance for transcription, review, instrument matching
@@ -86,7 +87,7 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
-| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.3 listening/lineage/role work remains while Phase 5.5 hardening starts** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench now has hash-pinned per-stem and full-song timelines, an audition-only source/MIDI mixer, a separate persistent exact GarageBand pack basket and an explicit bridge from disputed ranges to the existing phrase review without selecting a winner |
+| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.3 listening/lineage/role work remains while Phase 5.5 hardening has started** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench now has hash-pinned per-stem and full-song timelines, an audition-only source/MIDI mixer, a separate persistent exact GarageBand pack basket, an explicit disputed-range phrase-review bridge and a path-free Project Overview that resumes from explicit saved state without selecting a winner |
 | 6. Creative Arrangement and Reusable MIDI | **Planned after the local Studio is stable** | Reversible note/phrase correction, explicit hybrids, transforms, Clip v1 browsing and reuse, mashup preparation and instrument attachment without becoming a full DAW |
 | 7. Cross-DAW and Opt-in Community Learning | **Deferred** | Compatibility testing, cleared public goldens and consented contextual feedback only after the local workflow is useful, private and stable |
 
@@ -507,6 +508,16 @@ explicit, hash-pinned bridge from diagnostic S0/M1/M3 disagreement ranges to
 the exact existing phrase-review anchors. It changes only temporary loop and
 navigation state and creates no choice, MIDI or feedback.
 
+Phase 5.5 now starts with a default Project Overview backed by the path-free
+`sunofriend.workbench-home.v1` projection. It reports explicit decisions,
+selected parts, full-mix work and one deterministic resume state/action without
+using candidate scores or process names; the terminal state deliberately has
+no navigation action. Saved decisions and a current pack
+basket survive restart; audition controls reset. Initial connection and lazy
+pack-status failures are retryable and have zero feedback, selection, pack or
+artifact effects. This makes the multi-process space easier to enter; it does
+not replace per-stem comparison or promote a model.
+
 This direction borrows the approachability of a visual transcription tool—one
 transport, visible notes, understandable track controls and direct export—not
 its product identity. Sunofriend's differentiator is the transparent result
@@ -571,6 +582,35 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-20 — Phase 5.5 Project Overview/Resume v1
+
+- Goal: let a non-expert reopen a local project, understand its truthful state
+  and continue with one useful action without reading model names or JSON.
+- Change or experiment: added the path-free
+  `sunofriend.workbench-home.v1` server projection, a default project home with
+  per-stem statuses and one deterministic next state/action, view-specific focus,
+  retryable connection/pack-status failures and lazy advanced-candidate audio.
+- Safety contract: counts and routing use only the catalog and explicit SQLite
+  state. Navigation, reload and retry do not rank/select MIDI, append feedback,
+  alter audio, run AI or change the pack. Private paths, notes, process labels
+  and quality metrics are absent from the home projection; path-like free-form
+  role text is represented as a redacted custom role.
+- Restart boundary: saved musical decisions and the separate pack basket are
+  restored; playhead, loop, visibility, mute, solo and level intentionally
+  reset and remain outside review history and export selection.
+- Evidence: focused projection/UI/API tests, the full Workbench suite and a
+  real loopback-browser smoke test against the private Lidl catalog. The smoke
+  test confirmed that **Compare this stem** opens the intended stem and focuses
+  **2. Choose a MIDI part**.
+- Decision: retain Project Overview as the default Phase 5.5 resume surface;
+  keep it an explainable router over multi-process results, not a dashboard
+  that chooses a process.
+- Problems/risks: decoded Web Audio switching, long-song visual
+  virtualization, broader keyboard/save focus, canonical custom mixes and
+  repeated GarageBand beta verification remain open.
+- Next smallest step: harden comparison playback and long-project interaction
+  without weakening explicit-choice or byte-identity boundaries.
 
 ### 2026-07-20 — Phase 5.4 disputed-range phrase-review bridge
 
