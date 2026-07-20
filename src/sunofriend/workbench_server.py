@@ -56,7 +56,12 @@ def _read_verified_immutable_bytes(handle: Any, record: Mapping[str, Any]) -> by
     return payload
 
 
-def _require_exact_request_keys(request: Mapping[str, Any], expected: set[str]) -> None:
+def _require_exact_request_keys(
+    request: Mapping[str, Any],
+    expected: set[str],
+    *,
+    label: str = "GarageBand pack",
+) -> None:
     actual = set(request)
     if actual != expected:
         missing = sorted(expected - actual)
@@ -66,7 +71,7 @@ def _require_exact_request_keys(request: Mapping[str, Any], expected: set[str]) 
             details.append("missing " + ", ".join(missing))
         if unexpected:
             details.append("unexpected " + ", ".join(unexpected))
-        raise ValueError("invalid GarageBand pack request: " + "; ".join(details))
+        raise ValueError(f"invalid {label} request: " + "; ".join(details))
 
 
 def _display_candidates(
@@ -375,6 +380,13 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         if not self._valid_local_request():
             return
         parsed = urlparse(self.path)
+        if parsed.path == "/workbench-transport.js":
+            self._bytes(
+                HTTPStatus.OK,
+                _workbench_transport_bytes(),
+                "text/javascript; charset=utf-8",
+            )
+            return
         if parsed.path.startswith("/phrase-review/"):
             self._serve_phrase_review(parsed.path)
             return
@@ -460,6 +472,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         if parsed.path not in {
             "/api/events",
             "/api/render-preview",
+            "/api/decoded-loop",
             "/api/arrangement",
             "/api/garageband-export",
             "/api/garageband-pack-basket",
@@ -491,6 +504,29 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 self._json(
                     HTTPStatus.OK,
                     {"preview": self._public_artifact(artifact)},
+                )
+                return
+            if parsed.path == "/api/decoded-loop":
+                _require_exact_request_keys(
+                    request,
+                    {
+                        "stem_id",
+                        "candidate_ids",
+                        "start_seconds",
+                        "end_seconds",
+                    },
+                    label="decoded loop",
+                )
+                artifact = self.server.artifacts.prepare_decoded_stem_loop(
+                    self.server.catalog,
+                    str(request.get("stem_id", "")),
+                    request.get("candidate_ids"),
+                    request.get("start_seconds"),
+                    request.get("end_seconds"),
+                )
+                self._json(
+                    HTTPStatus.OK,
+                    {"loop": self._public_decoded_loop(artifact)},
                 )
                 return
             if parsed.path == "/api/garageband-pack-basket":
@@ -740,12 +776,67 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             public[f"{key}_url"] = self._media_url(media_id)
         return public
 
+    def _public_decoded_loop(self, artifact: Mapping[str, Any]) -> dict[str, Any]:
+        """Register bounded private loop WAVs and return no local paths."""
+
+        public = {
+            key: artifact[key]
+            for key in (
+                "schema",
+                "stem_id",
+                "candidate_ids",
+                "start_seconds",
+                "end_seconds",
+                "duration_seconds",
+                "cache_hit",
+                "effects",
+            )
+            if key in artifact
+        }
+        tracks = []
+        for track in artifact.get("tracks", []):
+            if not isinstance(track, Mapping):
+                raise ValueError("decoded loop track is invalid")
+            record = track.get("audio")
+            if not isinstance(record, Mapping):
+                raise ValueError("decoded loop track audio is invalid")
+            media_id = f"decoded-loop-{str(record['sha256'])[:24]}"
+            private_record = dict(record)
+            private_record["_freeze_on_serve"] = True
+            self.server.media[media_id] = private_record
+            public_track = {
+                key: track[key]
+                for key in (
+                    "track_id",
+                    "kind",
+                    "candidate_id",
+                    "sample_rate",
+                    "channels",
+                    "frames",
+                    "start_frame",
+                    "silence_padded_frames",
+                )
+                if key in track
+            }
+            public_track["audio"] = {
+                key: record[key]
+                for key in ("name", "bytes", "sha256")
+                if key in record
+            }
+            public_track["audio_url"] = self._media_url(media_id)
+            tracks.append(public_track)
+        public["tracks"] = tracks
+        return public
+
     def _serve_media(self, media_id: str) -> None:
         record = self.server.media.get(media_id)
         if not isinstance(record, Mapping):
             self._error(HTTPStatus.NOT_FOUND, "workbench media not found")
             return
-        self._serve_file_record(record)
+        self._serve_file_record(
+            record,
+            freeze_verified=bool(record.get("_freeze_on_serve")),
+        )
 
     def _serve_phrase_review(self, request_path: str) -> None:
         parts = request_path.split("/", 3)
@@ -774,6 +865,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         record: Mapping[str, Any],
         *,
         phrase_review: bool = False,
+        freeze_verified: bool = False,
     ) -> None:
         path = Path(str(record.get("path", "")))
         try:
@@ -783,7 +875,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             return
         with handle:
             frozen_payload: bytes | None = None
-            if phrase_review:
+            if phrase_review or freeze_verified:
                 try:
                     frozen_payload = _read_verified_immutable_bytes(handle, record)
                 except ValueError:
@@ -937,7 +1029,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         )
         self.send_header(
             "Content-Security-Policy",
-            "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; "
+            "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; "
             f"media-src 'self'; connect-src {connect_source}; img-src 'self' data:; "
             f"object-src 'none'; base-uri 'none'; frame-ancestors 'none'{sandbox}",
         )
@@ -984,6 +1076,18 @@ def _workbench_html_bytes() -> bytes:
         return path.read_bytes()
     except OSError as exc:
         raise RuntimeError(f"packaged Workbench UI is unavailable: {path}") from exc
+
+
+def _workbench_transport_bytes() -> bytes:
+    """Load the non-sensitive shared transport used by the local Workbench."""
+
+    path = Path(__file__).with_name("workbench_transport.js")
+    try:
+        return path.read_bytes()
+    except OSError as exc:
+        raise RuntimeError(
+            f"packaged Workbench transport is unavailable: {path}"
+        ) from exc
 
 
 _REMOVED_EMBEDDED_WORKBENCH_HTML = r"""<!doctype html>

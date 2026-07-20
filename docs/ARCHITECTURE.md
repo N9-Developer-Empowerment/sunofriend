@@ -50,7 +50,8 @@ CLI parsing (`cli.py`)
         |                              `workbench_home.py`,
         |                              `workbench_timeline.py`,
         |                              `workbench_artifacts.py`,
-        |                              `workbench_server.py`)
+        |                              `workbench_server.py`,
+        |                              `workbench_transport.js`)
         +--> instrument discovery (`instrument_catalog.py`)
         +--> timbre matching/sample packs (`instrument_match.py`)
         +--> arrangement-aware sampler gate (`instrument_usability.py`)
@@ -153,23 +154,26 @@ barrier defensively. `workbench_privacy.py` rejects new path-like musical roles
 and projects legacy roles as `custom role` before they reach browser state,
 public catalogs, contribution previews, timelines, archive names or proxy MIDI
 metadata; private raw history is not rewritten.
-`workbench_artifacts.py` owns content-addressed role-neutral previews, selected
-arrangement proxies and deterministic GarageBand handoff ZIPs. It reads notes
-through Clip v1 and renders through the existing MIDI/FluidSynth boundaries;
-discovered MIDI is never rewritten, and numbered handoff tracks are exact
-copies of explicit main/optional choices. Rejected, needs-correction,
-superseded and unreviewed candidates never enter the arrangement or ZIP.
+`workbench_artifacts.py` owns content-addressed role-neutral previews, private
+decoded-comparison clips, selected-arrangement proxies and deterministic
+GarageBand handoff ZIPs. It reads notes through Clip v1 and renders through the
+existing MIDI/FluidSynth boundaries; discovered MIDI is never rewritten, and
+numbered handoff tracks are exact copies of explicit main/optional choices.
+Rejected, needs-correction, superseded and unreviewed candidates never enter
+the arrangement or ZIP.
 `workbench_server.py` binds only to `127.0.0.1`, requires a per-launch token,
 serves only catalogued or locally generated verified-cache files, supports byte
 ranges for media seeking and loads no remote scripts. Its packaged HTML uses a
-shared position for source/candidate switching and records explicit solo or
-full-mix context. Its contribution preview excludes audio, MIDI, paths,
-free-text notes, dwell time and play counts; there is no submission endpoint.
-The standalone MIDI A/B package completes the Phase 5.2 beam-listening tooling,
-but it does not change Workbench playback: both interfaces still coordinate
-browser media elements in seconds, with the standalone playhead scoped per
-unit. Decoded, sample-accurate Workbench switching remains deferred. The
-private three-window package has been generated and verified, while its human
+shared position for playback and records explicit solo or full-mix context only
+when the listener presses a save action. Its contribution preview excludes
+audio, MIDI, paths, free-text notes, dwell time and play counts; there is no
+submission endpoint.
+The standalone MIDI A/B package completes the Phase 5.2 beam-listening tooling
+and remains a separate blind, fixed-window level-matched promotion gate. Its
+page still coordinates browser media elements in seconds, with the playhead
+scoped per unit. Workbench now has a separate decoded, sample-scheduled
+per-stem comparison path, described below. The private three-window package
+has been generated and verified, while its human
 export and resolved result are now complete. Two loops were equivalent and the
 3.50–7.50 second loop marginally preferred beam 1; beam 2 won no loop. All
 reported mutation, selection, promotion and default-change effects are zero,
@@ -193,6 +197,48 @@ reference, then verifies the selected MIDI before and after decoding. The page
 keeps the already loaded base waveform, which avoids rebuilding a large source
 for every checkbox without treating a stale or different source as equivalent.
 
+Phase 5.5 Decoded Stem Comparison v1 is a bounded audition boundary over those
+already catalogued artifacts. `POST /api/decoded-loop` accepts one stem, a
+0.5–15 second recorded-time window beginning within the first 24 hours and at
+most six unique candidate IDs. The normal UI includes the at-most-three primary
+candidates; an advanced candidate is admitted only by an explicit visual
+opt-in. Aggregate source audio, candidate MIDI, SoundFont and preview input is
+capped at 2 GiB, with oversized declared inputs rejected before rendering;
+generated PCM is capped at 64 MiB per request. The owner-only decoded-loop
+cache retains at most 32 recent
+entries or 256 MiB; older content-addressed windows are evicted and rebuilt on
+demand rather than treated as durable state.
+
+Every included candidate preview must match the neutral-preview schema,
+current renderer policy and current SoundFont SHA-256 or preparation fails
+closed. A missing preview is rendered without changing MIDI. Renderer input
+does not rely on a path that can be replaced between verification and use:
+candidate MIDI and SoundFont bytes are copied from single open handles into
+owner-only hash-and-size-verified snapshots, rendering uses those snapshots,
+the originals are rechecked and the snapshots are deleted before publication.
+Neutral preview MIDI is capped at 20 minutes.
+
+The same boundary applies to decoding. Source and preview audio are copied to
+owner-only verified snapshots and only those snapshots are inspected and
+cropped, preventing a replace/restore race from substituting different bytes.
+The snapshots are deleted before private content-addressed PCM clips with
+path-free public metadata are published. Generated media is verified and
+frozen before serving. A short input is padded with zeros to the requested end;
+`silence_padded_frames` exposes this per track so the UI can warn that the
+silence is generated rather than missing transcription evidence. The warning
+uses a separate persistent element so transport-status updates do not erase it.
+
+`workbench_transport.js` decodes those bounded clips, normalises their decoded
+frame lengths on one `AudioContext`, and creates fresh source nodes for every
+scheduled start or switch. The outgoing stop and incoming start share one
+future clock time, while an absolute loop playhead survives the switch. This is
+sample-scheduled browser playback, not inferred alignment: source and MIDI
+still begin at their recorded zero and no offset is estimated. Preparing,
+playing, switching, seeking, pausing and stopping have zero selection, event,
+ranking and MIDI-mutation effects. The explicit compatibility fallback retains
+second-synchronised HTML media elements and is not sample-accurate, but its
+transport controls are likewise feedback- and event-free.
+
 The compare-role canvas consumes that contract with a shared playhead; it does
 not edit notes or treat visibility as preference. The second slice adds
 `sunofriend.workbench-arrangement-timeline.v1` through the read-only
@@ -213,6 +259,7 @@ evidence, arrangement caches or handoff bytes. Source-stem, selected-MIDI,
 hybrid and main-MIDI presets use lazily loaded source media plus explicitly
 prepared neutral MIDI previews. These independent media elements share seconds
 but are not sample-accurate, and source/MIDI levels are not normalised. The
+per-stem decoded transport does not yet replace this full-song mixer. The
 content-addressed prepared dry proxy remains the reproducible control.
 
 The GarageBand Pack Composer translates explicit checkboxes into a versioned,
@@ -231,9 +278,10 @@ two-launch loopback integration test verifies restoration of decisions and a
 non-default basket under a fresh capability token while GET routes remain
 effect-free.
 
-Alternative MIDI, Instrument Bundles, persistent mixer projects, custom-mix
-rendering and sample-accurate Web Audio are not implemented in Pack Composer
-v1.
+Alternative MIDI, Instrument Bundles, persistent mixer projects and custom-mix
+rendering are not implemented in Pack Composer v1. Its selected-arrangement
+audition also remains on the coarse HTML-media transport; decoded long-song
+hardening is separate from ZIP composition.
 
 An optional explicit-catalog phrase link validates one existing diagnostic
 S0/M1/M3 hybrid report against its exact stem, three current candidate MIDI

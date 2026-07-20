@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import shutil
 import threading
+import time
 import uuid
 import zipfile
 from pathlib import Path
@@ -26,6 +28,7 @@ from .workbench_semantics import terminal_no_selection_outcome
 
 
 NEUTRAL_PREVIEW_SCHEMA = "sunofriend.workbench-neutral-preview.v1"
+DECODED_STEM_LOOP_SCHEMA = "sunofriend.workbench-decoded-stem-loop.v1"
 ARRANGEMENT_SCHEMA = "sunofriend.workbench-arrangement.v1"
 GARAGEBAND_HANDOFF_SCHEMA = "sunofriend.workbench-garageband-handoff.v1"
 GARAGEBAND_PACK_PLAN_SCHEMA = "sunofriend.workbench-garageband-pack-plan.v1"
@@ -33,6 +36,19 @@ GARAGEBAND_PACK_BASKET_SCHEMA = "sunofriend.workbench-garageband-pack-basket.v1"
 GARAGEBAND_PACK_SCHEMA = "sunofriend.workbench-garageband-pack.v1"
 SELECTED_MIDI_OVERLAP_SCHEMA = "sunofriend.workbench-selected-midi-overlap.v1"
 _RENDER_POLICY = "role-neutral-general-midi-v1"
+_DECODED_LOOP_POLICY = "recorded-zero-source-frame-window-v1"
+_DECODED_LOOP_MINIMUM_SECONDS = 0.5
+_DECODED_LOOP_MAXIMUM_SECONDS = 15.0
+_DECODED_LOOP_MAXIMUM_CANDIDATES = 6
+_DECODED_LOOP_MAXIMUM_OUTPUT_BYTES = 64 * 1024 * 1024
+_DECODED_LOOP_MAXIMUM_INPUT_BYTES = 2 * 1024 * 1024 * 1024
+_DECODED_LOOP_CACHE_MAXIMUM_BYTES = 256 * 1024 * 1024
+_DECODED_LOOP_CACHE_MAXIMUM_ENTRIES = 32
+_DECODED_LOOP_BUILDING_MAXIMUM_AGE_SECONDS = 6 * 60 * 60
+_DECODED_LOOP_MAXIMUM_START_SECONDS = 24 * 60 * 60
+_DECODED_LOOP_MINIMUM_SAMPLE_RATE = 8_000
+_DECODED_LOOP_MAXIMUM_SAMPLE_RATE = 96_000
+_NEUTRAL_PREVIEW_MAXIMUM_SECONDS = 20 * 60
 _OVERLAP_ONSET_TOLERANCE_SECONDS = 0.080
 _SUBSTANTIAL_OVERLAP_MINIMUM_MATCHED_NOTES = 8
 _SUBSTANTIAL_OVERLAP_MINIMUM_RATIO = 0.80
@@ -93,8 +109,9 @@ class WorkbenchArtifacts:
             "policy": _RENDER_POLICY,
         }
         soundfont_sha256 = self._available_soundfont_sha256()
-        if soundfont_sha256:
-            expected["soundfont_sha256"] = soundfont_sha256
+        if not soundfont_sha256:
+            return None
+        expected["soundfont_sha256"] = soundfont_sha256
         return self._find_cached("previews", NEUTRAL_PREVIEW_SCHEMA, expected)
 
     def render_candidate_preview(
@@ -127,23 +144,49 @@ class WorkbenchArtifacts:
             if cached is not None:
                 cached["cache_hit"] = True
                 return cached
-            clips = read_midi_clips(candidate["midi_path"], role=role)
-            notes = _clips_to_notes(clips)
-            if not notes:
-                raise ValueError("selected candidate MIDI contains no playable notes")
             channel = 9 if _is_drum_role(role) else 0
             program = 0 if channel == 9 else _program_for_role(role)
-            tracks = [MidiTrack(_track_name(role), channel, program, notes)]
             work, final = self._building_directory("previews", cache_key)
+            _restrict_private_permissions(work, 0o700)
             try:
+                source_midi = _write_verified_private_snapshot(
+                    Path(str(candidate["midi_path"])),
+                    candidate["midi"],
+                    work / ".verified-source.mid",
+                    label="candidate MIDI",
+                )
+                source_soundfont = _write_verified_private_snapshot(
+                    Path(str(soundfont["path"])),
+                    soundfont,
+                    work / ".verified-soundfont.sf2",
+                    label="SoundFont",
+                )
+                clips = read_midi_clips(source_midi, role=role)
+                notes = _clips_to_notes(clips)
+                if not notes:
+                    raise ValueError("selected candidate MIDI contains no playable notes")
+                if max(note.end for note in notes) > _NEUTRAL_PREVIEW_MAXIMUM_SECONDS:
+                    raise ValueError(
+                        "selected candidate MIDI exceeds the 20 minute neutral-preview "
+                        "rendering limit"
+                    )
+                tracks = [MidiTrack(_track_name(role), channel, program, notes)]
                 midi_path = work / "neutral-preview.mid"
                 wav_path = work / "neutral-preview.wav"
                 write_midi_file(midi_path, tracks, bpm=bpm)
                 render_midi_to_wav(
                     midi_path,
                     wav_path,
-                    soundfont_path=soundfont["path"],
+                    soundfont_path=source_soundfont,
                 )
+                self._verify_catalog_record(candidate["midi"], label="candidate MIDI")
+                self._verify_catalog_record(
+                    soundfont,
+                    label="SoundFont",
+                    restart_hint=True,
+                )
+                source_midi.unlink()
+                source_soundfont.unlink()
                 manifest = {
                     **key_payload,
                     "cache_key": cache_key,
@@ -164,6 +207,373 @@ class WorkbenchArtifacts:
             result = self._load_cached("previews", cache_key, NEUTRAL_PREVIEW_SCHEMA)
             if result is None:
                 raise RuntimeError("neutral preview cache verification failed")
+            result["cache_hit"] = False
+            return result
+
+    def prepare_decoded_stem_loop(
+        self,
+        catalog: Mapping[str, Any],
+        stem_id: str,
+        candidate_ids: Sequence[str],
+        start_seconds: float,
+        end_seconds: float,
+    ) -> dict[str, Any]:
+        """Build private PCM16 source/candidate windows for decoded switching."""
+
+        start, end = _decoded_loop_window(start_seconds, end_seconds)
+        requested_ids = _decoded_loop_candidate_ids(candidate_ids)
+        stem = _stem(catalog, stem_id)
+        source_record = stem.get("source")
+        if not isinstance(source_record, Mapping):
+            raise ValueError("selected stem has no catalogued source audio")
+
+        candidates: list[Mapping[str, Any]] = []
+        for candidate_id in requested_ids:
+            _, candidate = _candidate(catalog, stem_id, candidate_id)
+            if candidate.get("audition_blocked"):
+                raise ValueError(
+                    "candidate audition is blocked because AI diagnostics found no "
+                    "playable evidence or an extreme decoder burst"
+                )
+            candidates.append(candidate)
+
+        with self._lock:
+            declared_input_bytes = _decoded_declared_input_bytes(
+                [("source audio", source_record)]
+                + [
+                    ("candidate MIDI", candidate.get("midi"))
+                    for candidate in candidates
+                ]
+            )
+            _require_decoded_input_limit(declared_input_bytes)
+            if self._soundfont_cache is not None:
+                soundfont_size = _decoded_declared_input_bytes(
+                    [("SoundFont", self._soundfont_cache)]
+                )
+            else:
+                soundfont_path = self.soundfont_path or Path(
+                    find_soundfont()
+                ).resolve()
+                try:
+                    soundfont_size = soundfont_path.stat().st_size
+                except OSError as exc:
+                    raise ValueError(
+                        f"SoundFont file does not exist: {soundfont_path}"
+                    ) from exc
+            _require_decoded_input_limit(declared_input_bytes + soundfont_size)
+
+            source_path = self._verify_catalog_record(
+                source_record, label="source audio"
+            )
+            for candidate in candidates:
+                self._verify_catalog_record(
+                    candidate["midi"], label="candidate MIDI"
+                )
+            soundfont_record = self._soundfont()
+            pre_render_input_bytes = _decoded_declared_input_bytes(
+                [("source audio", source_record), ("SoundFont", soundfont_record)]
+                + [
+                    ("candidate MIDI", candidate.get("midi"))
+                    for candidate in candidates
+                ]
+            )
+            _require_decoded_input_limit(pre_render_input_bytes)
+            np, soundfile = _decoded_audio_modules()
+            required_soundfont_sha256 = str(soundfont_record["sha256"])
+
+            previews: list[dict[str, Any]] = []
+            for candidate_id in requested_ids:
+                preview = self.cached_candidate_preview(
+                    catalog, stem_id, candidate_id
+                )
+                if preview is None:
+                    preview = self.render_candidate_preview(
+                        catalog, stem_id, candidate_id
+                    )
+                previews.append(preview)
+            self._require_preview_renderer_consistency(
+                previews,
+                expected_soundfont_sha256=required_soundfont_sha256,
+            )
+
+            # Rendering a missing neutral preview can take long enough for an input
+            # to change. Recheck all original inputs before reading any audio.
+            source_path = self._verify_catalog_record(
+                source_record, label="source audio"
+            )
+            for candidate in candidates:
+                self._verify_catalog_record(
+                    candidate["midi"], label="candidate MIDI"
+                )
+            preview_paths = [
+                self._verify_catalog_record(
+                    preview["preview"], label="neutral candidate preview"
+                )
+                for preview in previews
+            ]
+            aggregate_input_bytes = pre_render_input_bytes + sum(
+                int(preview["preview"]["bytes"]) for preview in previews
+            )
+            _require_decoded_input_limit(aggregate_input_bytes)
+
+            source_info = _decoded_audio_info(
+                soundfile, source_path, label="source audio"
+            )
+            source_start_frame = _nearest_audio_frame(
+                start, source_info["sample_rate"]
+            )
+            source_end_frame = _nearest_audio_frame(
+                end, source_info["sample_rate"]
+            )
+            if source_end_frame <= source_start_frame:
+                raise ValueError("decoded loop window contains no source audio frames")
+            quantized_start = source_start_frame / source_info["sample_rate"]
+            quantized_end = source_end_frame / source_info["sample_rate"]
+
+            inputs: list[dict[str, Any]] = [
+                {
+                    "track_id": "source",
+                    "kind": "source",
+                    "input_path": source_path,
+                    "input_sha256": str(source_record["sha256"]),
+                    "input_bytes": int(source_record["bytes"]),
+                    "sample_rate": source_info["sample_rate"],
+                    "channels": source_info["channels"],
+                    "input_frames": source_info["frames"],
+                    "start_frame": source_start_frame,
+                    "end_frame": source_end_frame,
+                }
+            ]
+            for index, (candidate_id, candidate, preview, preview_path) in enumerate(
+                zip(requested_ids, candidates, previews, preview_paths),
+                start=1,
+            ):
+                info = _decoded_audio_info(
+                    soundfile,
+                    preview_path,
+                    label=f"neutral candidate preview {index}",
+                )
+                candidate_start = _nearest_audio_frame(
+                    quantized_start, info["sample_rate"]
+                )
+                candidate_end = _nearest_audio_frame(
+                    quantized_end, info["sample_rate"]
+                )
+                if candidate_end <= candidate_start:
+                    raise ValueError(
+                        "decoded loop window contains no candidate preview frames"
+                    )
+                inputs.append(
+                    {
+                        "track_id": f"candidate-{index}",
+                        "kind": "candidate",
+                        "candidate_id": candidate_id,
+                        "input_path": preview_path,
+                        "input_sha256": str(preview["preview"]["sha256"]),
+                        "input_bytes": int(preview["preview"]["bytes"]),
+                        "source_midi_sha256": str(candidate["midi"]["sha256"]),
+                        "neutral_preview_cache_key": str(preview["cache_key"]),
+                        "neutral_preview_policy": str(preview["policy"]),
+                        "soundfont_sha256": str(preview["soundfont_sha256"]),
+                        "sample_rate": info["sample_rate"],
+                        "channels": info["channels"],
+                        "input_frames": info["frames"],
+                        "start_frame": candidate_start,
+                        "end_frame": candidate_end,
+                    }
+                )
+
+            input_fingerprints = [
+                {
+                    key: value
+                    for key, value in item.items()
+                    if key != "input_path"
+                }
+                for item in inputs
+            ]
+            key_payload = {
+                "schema": DECODED_STEM_LOOP_SCHEMA,
+                "project_id": catalog.get("project_id"),
+                "stem_id": stem_id,
+                "candidate_ids": list(requested_ids),
+                "window": {
+                    "source_start_frame": source_start_frame,
+                    "source_end_frame": source_end_frame,
+                    "quantized_start_seconds": quantized_start,
+                    "quantized_end_seconds": quantized_end,
+                    "logical_duration_seconds": quantized_end - quantized_start,
+                },
+                "input_fingerprints": input_fingerprints,
+                "policy": _DECODED_LOOP_POLICY,
+                "renderer": {
+                    "policy": _RENDER_POLICY,
+                    "soundfont_sha256": required_soundfont_sha256,
+                },
+                "encoding": {
+                    "container": "WAV",
+                    "subtype": "PCM_16",
+                    "sample_rate_policy": "preserve each decoded input rate",
+                    "channel_policy": "preserve mono or stereo",
+                },
+                "resource_limits": {
+                    "aggregate_input_bytes": aggregate_input_bytes,
+                    "maximum_input_bytes": _DECODED_LOOP_MAXIMUM_INPUT_BYTES,
+                    "maximum_output_bytes": _DECODED_LOOP_MAXIMUM_OUTPUT_BYTES,
+                },
+            }
+            cache_key = _document_hash(key_payload)
+            cached = self._load_decoded_stem_loop(cache_key, key_payload)
+            if cached is not None:
+                self._verify_decoded_loop_inputs(
+                    source_record=source_record,
+                    candidates=candidates,
+                    previews=previews,
+                    expected_soundfont_sha256=required_soundfont_sha256,
+                )
+                self._touch_and_prune_decoded_loop_cache(cache_key)
+                cached["cache_hit"] = True
+                return cached
+
+            work, final = self._private_building_directory(
+                "decoded-stem-loops", cache_key
+            )
+            try:
+                decode_paths = [
+                    _write_verified_private_snapshot(
+                        Path(item["input_path"]),
+                        source_record if index == 0 else previews[index - 1]["preview"],
+                        work / f".verified-input-{index:02d}",
+                        label=(
+                            "source audio"
+                            if index == 0
+                            else f"neutral candidate preview {index}"
+                        ),
+                    )
+                    for index, item in enumerate(inputs)
+                ]
+                for index, (item, decode_path) in enumerate(
+                    zip(inputs, decode_paths)
+                ):
+                    snapshot_info = _decoded_audio_info(
+                        soundfile,
+                        decode_path,
+                        label=(
+                            "source audio snapshot"
+                            if index == 0
+                            else f"neutral candidate preview snapshot {index}"
+                        ),
+                    )
+                    if (
+                        snapshot_info["sample_rate"] != item["sample_rate"]
+                        or snapshot_info["channels"] != item["channels"]
+                        or snapshot_info["frames"] != item["input_frames"]
+                    ):
+                        raise ValueError(
+                            "verified decoded audio snapshot metadata changed"
+                        )
+                tracks: list[dict[str, Any]] = []
+                for index, item in enumerate(inputs):
+                    output_path = work / f"{index:02d}-{item['kind']}.wav"
+                    output_frames = int(item["end_frame"]) - int(
+                        item["start_frame"]
+                    )
+                    samples = _read_padded_audio_window(
+                        np,
+                        soundfile,
+                        decode_paths[index],
+                        start_frame=int(item["start_frame"]),
+                        frames=output_frames,
+                        channels=int(item["channels"]),
+                    )
+                    soundfile.write(
+                        str(output_path),
+                        samples,
+                        int(item["sample_rate"]),
+                        format="WAV",
+                        subtype="PCM_16",
+                    )
+                    _restrict_private_permissions(output_path, 0o600)
+                    written = soundfile.info(str(output_path))
+                    if (
+                        written.format != "WAV"
+                        or written.subtype != "PCM_16"
+                        or int(written.samplerate) != int(item["sample_rate"])
+                        or int(written.channels) != int(item["channels"])
+                        or int(written.frames) != output_frames
+                    ):
+                        raise RuntimeError(
+                            "decoded loop PCM16 output verification failed"
+                        )
+                    audio_record = _relative_file_record(output_path, work)
+                    track = {
+                        "track_id": item["track_id"],
+                        "kind": item["kind"],
+                        "audio": audio_record,
+                        "sample_rate": int(written.samplerate),
+                        "channels": int(written.channels),
+                        "frames": int(written.frames),
+                        "start_frame": int(item["start_frame"]),
+                        "silence_padded_frames": max(
+                            0,
+                            int(item["end_frame"])
+                            - max(
+                                int(item["start_frame"]),
+                                min(
+                                    int(item["end_frame"]),
+                                    int(item["input_frames"]),
+                                ),
+                            ),
+                        ),
+                    }
+                    if item["kind"] == "candidate":
+                        track["candidate_id"] = item["candidate_id"]
+                    tracks.append(track)
+
+                aggregate_bytes = sum(
+                    int(track["audio"]["bytes"]) for track in tracks
+                )
+                if aggregate_bytes > _DECODED_LOOP_MAXIMUM_OUTPUT_BYTES:
+                    raise ValueError(
+                        "decoded loop aggregate output exceeds the 64 MiB limit"
+                    )
+
+                self._verify_decoded_loop_inputs(
+                    source_record=source_record,
+                    candidates=candidates,
+                    previews=previews,
+                    expected_soundfont_sha256=required_soundfont_sha256,
+                )
+                for decode_path in decode_paths:
+                    decode_path.unlink()
+                manifest = {
+                    **key_payload,
+                    "cache_key": cache_key,
+                    "start_seconds": quantized_start,
+                    "end_seconds": quantized_end,
+                    "duration_seconds": quantized_end - quantized_start,
+                    "tracks": tracks,
+                    "aggregate_output_bytes": aggregate_bytes,
+                    "maximum_output_bytes": _DECODED_LOOP_MAXIMUM_OUTPUT_BYTES,
+                    "path_free_manifest": True,
+                    "private_audio": True,
+                    "effects": {
+                        "midi_mutated": False,
+                        "selection_changed": False,
+                        "feedback_recorded": False,
+                        "event_appended": False,
+                    },
+                }
+                manifest_path = work / "manifest.json"
+                _write_json(manifest_path, manifest)
+                _restrict_private_permissions(manifest_path, 0o600)
+                work.replace(final)
+            except Exception:
+                shutil.rmtree(work, ignore_errors=True)
+                raise
+            result = self._load_decoded_stem_loop(cache_key, key_payload)
+            if result is None:
+                raise RuntimeError("decoded stem loop cache verification failed")
+            self._touch_and_prune_decoded_loop_cache(cache_key)
             result["cache_hit"] = False
             return result
 
@@ -814,6 +1224,202 @@ class WorkbenchArtifacts:
             result[key] = materialized
         return result
 
+    def _verify_decoded_loop_inputs(
+        self,
+        *,
+        source_record: Mapping[str, Any],
+        candidates: Sequence[Mapping[str, Any]],
+        previews: Sequence[Mapping[str, Any]],
+        expected_soundfont_sha256: str,
+    ) -> None:
+        self._verify_catalog_record(source_record, label="source audio")
+        for candidate in candidates:
+            self._verify_catalog_record(candidate["midi"], label="candidate MIDI")
+        self._require_preview_renderer_consistency(
+            previews,
+            expected_soundfont_sha256=expected_soundfont_sha256,
+        )
+        for preview in previews:
+            record = preview.get("preview")
+            if not isinstance(record, Mapping):
+                raise ValueError("neutral candidate preview record is invalid")
+            self._verify_catalog_record(record, label="neutral candidate preview")
+
+    def _require_preview_renderer_consistency(
+        self,
+        previews: Sequence[Mapping[str, Any]],
+        *,
+        expected_soundfont_sha256: str,
+    ) -> None:
+        if not previews:
+            raise ValueError("decoded comparison requires at least one preview")
+        for preview in previews:
+            if (
+                preview.get("schema") != NEUTRAL_PREVIEW_SCHEMA
+                or preview.get("policy") != _RENDER_POLICY
+                or preview.get("soundfont_sha256")
+                != expected_soundfont_sha256
+            ):
+                raise ValueError(
+                    "decoded comparison requires every MIDI preview to use the "
+                    "same current SoundFont and neutral renderer policy"
+                )
+
+    def _touch_and_prune_decoded_loop_cache(self, keep_cache_key: str) -> None:
+        parent = self.root / "decoded-stem-loops"
+        if not parent.is_dir():
+            return
+        current = parent / keep_cache_key
+        if current.is_dir() and not current.is_symlink():
+            current.touch(exist_ok=True)
+        entries = [
+            path
+            for path in parent.iterdir()
+            if path.is_dir()
+            and not path.is_symlink()
+            and len(path.name) == 64
+            and all(character in "0123456789abcdef" for character in path.name)
+        ]
+        entries.sort(
+            key=lambda path: (path.name == keep_cache_key, path.stat().st_mtime_ns),
+            reverse=True,
+        )
+        retained_entries = 0
+        retained_bytes = 0
+        for entry in entries:
+            entry_bytes = _directory_regular_file_bytes(entry)
+            keep = entry.name == keep_cache_key or (
+                retained_entries < _DECODED_LOOP_CACHE_MAXIMUM_ENTRIES
+                and retained_bytes + entry_bytes
+                <= _DECODED_LOOP_CACHE_MAXIMUM_BYTES
+            )
+            if keep:
+                retained_entries += 1
+                retained_bytes += entry_bytes
+                continue
+            _remove_generated_path(entry)
+
+    def _private_building_directory(
+        self, family: str, cache_key: str
+    ) -> tuple[Path, Path]:
+        parent = self.root / family
+        parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        _restrict_private_permissions(parent, 0o700)
+        if family == "decoded-stem-loops":
+            _prune_stale_private_builds(parent)
+        final = parent / cache_key
+        _remove_generated_path(final)
+        work = parent / f".{cache_key}.building-{uuid.uuid4().hex}"
+        work.mkdir(mode=0o700, parents=False, exist_ok=False)
+        _restrict_private_permissions(work, 0o700)
+        return work, final
+
+    def _load_decoded_stem_loop(
+        self,
+        cache_key: str,
+        expected_key_payload: Mapping[str, Any],
+    ) -> dict[str, Any] | None:
+        root = self.root / "decoded-stem-loops" / cache_key
+        manifest_path = root / "manifest.json"
+        try:
+            document = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        if (
+            document.get("schema") != DECODED_STEM_LOOP_SCHEMA
+            or document.get("cache_key") != cache_key
+            or root.name != cache_key
+            or any(
+                document.get(key) != value
+                for key, value in expected_key_payload.items()
+            )
+        ):
+            return None
+        expected_window = expected_key_payload.get("window")
+        if not isinstance(expected_window, Mapping) or (
+            document.get("start_seconds")
+            != expected_window.get("quantized_start_seconds")
+            or document.get("end_seconds")
+            != expected_window.get("quantized_end_seconds")
+            or document.get("duration_seconds")
+            != expected_window.get("logical_duration_seconds")
+            or document.get("maximum_output_bytes")
+            != _DECODED_LOOP_MAXIMUM_OUTPUT_BYTES
+            or document.get("path_free_manifest") is not True
+            or document.get("private_audio") is not True
+            or document.get("effects")
+            != {
+                "midi_mutated": False,
+                "selection_changed": False,
+                "feedback_recorded": False,
+                "event_appended": False,
+            }
+        ):
+            return None
+        records = document.get("tracks")
+        fingerprints = expected_key_payload.get("input_fingerprints")
+        if (
+            not isinstance(records, list)
+            or not isinstance(fingerprints, list)
+            or len(records) != 1 + len(expected_key_payload.get("candidate_ids", []))
+            or len(records) != len(fingerprints)
+        ):
+            return None
+        materialized_tracks: list[dict[str, Any]] = []
+        aggregate_bytes = 0
+        for index, record in enumerate(records):
+            if not isinstance(record, Mapping):
+                return None
+            fingerprint = fingerprints[index]
+            if not isinstance(fingerprint, Mapping):
+                return None
+            audio = record.get("audio")
+            if not isinstance(audio, Mapping):
+                return None
+            relative_path = Path(str(audio.get("path", "")))
+            if relative_path.is_absolute() or len(relative_path.parts) != 1:
+                return None
+            expected_kind = "source" if index == 0 else "candidate"
+            if (
+                record.get("kind") != expected_kind
+                or record.get("track_id")
+                != ("source" if index == 0 else f"candidate-{index}")
+                or not isinstance(record.get("sample_rate"), int)
+                or not isinstance(record.get("channels"), int)
+                or not isinstance(record.get("frames"), int)
+                or int(record["frames"]) <= 0
+                or record.get("sample_rate") != fingerprint.get("sample_rate")
+                or record.get("channels") != fingerprint.get("channels")
+                or record.get("start_frame") != fingerprint.get("start_frame")
+                or record.get("frames")
+                != int(fingerprint.get("end_frame", 0))
+                - int(fingerprint.get("start_frame", 0))
+            ):
+                return None
+            if index > 0 and record.get("candidate_id") != expected_key_payload.get(
+                "candidate_ids", []
+            )[index - 1]:
+                return None
+            materialized_audio = self._materialize_file_record(audio, root)
+            if materialized_audio is None:
+                return None
+            aggregate_bytes += int(materialized_audio["bytes"])
+            materialized_track = dict(record)
+            materialized_track["audio"] = materialized_audio
+            materialized_tracks.append(materialized_track)
+        if (
+            aggregate_bytes != document.get("aggregate_output_bytes")
+            or aggregate_bytes > _DECODED_LOOP_MAXIMUM_OUTPUT_BYTES
+        ):
+            return None
+        _restrict_private_permissions(root, 0o700)
+        _restrict_private_permissions(manifest_path, 0o600)
+        for track in materialized_tracks:
+            _restrict_private_permissions(Path(track["audio"]["path"]), 0o600)
+        result = dict(document)
+        result["tracks"] = materialized_tracks
+        return result
+
     def _load_handoff(
         self, zip_path: Path, manifest_path: Path
     ) -> dict[str, Any] | None:
@@ -1234,6 +1840,212 @@ def _clips_to_notes(clips: Sequence[Any]) -> list[NoteEvent]:
     return sorted(notes, key=lambda note: (note.start, note.pitch, note.end))
 
 
+def _decoded_loop_window(start_seconds: Any, end_seconds: Any) -> tuple[float, float]:
+    if isinstance(start_seconds, bool) or isinstance(end_seconds, bool):
+        raise ValueError("decoded loop bounds must be finite numbers")
+    try:
+        start = float(start_seconds)
+        end = float(end_seconds)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("decoded loop bounds must be finite numbers") from exc
+    if not math.isfinite(start) or not math.isfinite(end):
+        raise ValueError("decoded loop bounds must be finite numbers")
+    if start < 0.0:
+        raise ValueError("decoded loop start must be zero or greater")
+    if start > _DECODED_LOOP_MAXIMUM_START_SECONDS:
+        raise ValueError("decoded loop start must be within the first 24 hours")
+    duration = end - start
+    if not _DECODED_LOOP_MINIMUM_SECONDS <= duration <= _DECODED_LOOP_MAXIMUM_SECONDS:
+        raise ValueError("decoded loop duration must be between 0.5 and 15.0 seconds")
+    return start, end
+
+
+def _decoded_declared_input_bytes(records: Sequence[tuple[str, Any]]) -> int:
+    """Validate and sum catalogued input sizes before expensive rendering."""
+
+    total = 0
+    for label, record in records:
+        if not isinstance(record, Mapping):
+            raise ValueError(f"{label} record is invalid")
+        value = record.get("bytes")
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError(f"{label} byte count is invalid")
+        total += value
+    return total
+
+
+def _require_decoded_input_limit(total_bytes: int) -> None:
+    if total_bytes > _DECODED_LOOP_MAXIMUM_INPUT_BYTES:
+        raise ValueError(
+            "decoded loop inputs exceed the 2 GiB aggregate safety limit"
+        )
+
+
+def _decoded_loop_candidate_ids(candidate_ids: Any) -> tuple[str, ...]:
+    if isinstance(candidate_ids, (str, bytes)) or not isinstance(
+        candidate_ids, Sequence
+    ):
+        raise ValueError("candidate_ids must be a sequence of catalog candidate IDs")
+    values = tuple(candidate_ids)
+    if not values:
+        raise ValueError("choose at least one candidate for decoded comparison")
+    if len(values) > _DECODED_LOOP_MAXIMUM_CANDIDATES:
+        raise ValueError("decoded comparison supports at most 6 candidates")
+    if any(not isinstance(value, str) or not value for value in values):
+        raise ValueError("candidate_ids must contain non-empty strings")
+    if len(set(values)) != len(values):
+        raise ValueError("decoded comparison candidate IDs must be unique")
+    return values
+
+
+def _decoded_audio_modules() -> tuple[Any, Any]:
+    try:
+        import numpy as np
+        import soundfile
+    except (ImportError, OSError) as exc:
+        raise RuntimeError(
+            "decoded stem comparison requires the optional audio dependencies "
+            "numpy and soundfile; install Sunofriend with the convert extra"
+        ) from exc
+    return np, soundfile
+
+
+def _decoded_audio_info(soundfile: Any, path: Path, *, label: str) -> dict[str, int]:
+    try:
+        info = soundfile.info(str(path))
+    except Exception as exc:
+        raise ValueError(f"{label} is not a readable local audio file") from exc
+    sample_rate = int(info.samplerate)
+    channels = int(info.channels)
+    frames = int(info.frames)
+    if not _DECODED_LOOP_MINIMUM_SAMPLE_RATE <= sample_rate <= (
+        _DECODED_LOOP_MAXIMUM_SAMPLE_RATE
+    ):
+        raise ValueError(f"{label} sample rate must be between 8 and 96 kHz")
+    if channels not in {1, 2}:
+        raise ValueError(f"{label} must be mono or stereo")
+    if frames < 0:
+        raise ValueError(f"{label} has an invalid frame count")
+    return {
+        "sample_rate": sample_rate,
+        "channels": channels,
+        "frames": frames,
+    }
+
+
+def _nearest_audio_frame(seconds: float, sample_rate: int) -> int:
+    """Quantise seconds to the nearest frame using Python's ties-to-even rule."""
+
+    return int(round(seconds * sample_rate))
+
+
+def _read_padded_audio_window(
+    np: Any,
+    soundfile: Any,
+    path: Path,
+    *,
+    start_frame: int,
+    frames: int,
+    channels: int,
+) -> Any:
+    output = np.zeros((frames, channels), dtype=np.float32)
+    try:
+        with soundfile.SoundFile(str(path), mode="r") as source:
+            if int(source.channels) != channels:
+                raise ValueError("audio channel count changed while decoding")
+            available = max(0, int(len(source)) - start_frame)
+            readable = min(frames, available)
+            if readable:
+                source.seek(start_frame)
+                samples = source.read(
+                    frames=readable,
+                    dtype="float32",
+                    always_2d=True,
+                )
+                if samples.shape != (readable, channels):
+                    raise ValueError("decoded audio window has unexpected geometry")
+                output[:readable, :] = samples
+    except ValueError:
+        raise
+    except Exception as exc:
+        raise ValueError("audio changed or became unreadable while decoding") from exc
+    return output
+
+
+def _restrict_private_permissions(path: Path, mode: int) -> None:
+    """Set owner-only permissions for private decoded excerpts where supported."""
+
+    try:
+        path.chmod(mode)
+    except NotImplementedError:  # pragma: no cover - platform-specific fallback
+        pass
+
+
+def _write_verified_private_snapshot(
+    source_path: Path,
+    expected_record: Mapping[str, Any],
+    destination: Path,
+    *,
+    label: str,
+) -> Path:
+    """Copy one open input handle and verify the bytes used for decoding."""
+
+    expected_bytes = expected_record.get("bytes")
+    expected_sha256 = str(expected_record.get("sha256", ""))
+    digest = hashlib.sha256()
+    written = 0
+    try:
+        with source_path.open("rb") as source, destination.open("xb") as target:
+            for block in iter(lambda: source.read(1024 * 1024), b""):
+                target.write(block)
+                digest.update(block)
+                written += len(block)
+        _restrict_private_permissions(destination, 0o600)
+        if written != expected_bytes or digest.hexdigest() != expected_sha256:
+            raise ValueError(f"{label} changed while creating a verified snapshot")
+        return destination
+    except Exception:
+        destination.unlink(missing_ok=True)
+        raise
+
+
+def _directory_regular_file_bytes(root: Path) -> int:
+    total = 0
+    for path in root.rglob("*"):
+        if path.is_symlink():
+            continue
+        try:
+            if path.is_file():
+                total += path.stat().st_size
+        except OSError:
+            continue
+    return total
+
+
+def _prune_stale_private_builds(parent: Path) -> None:
+    cutoff = time.time() - _DECODED_LOOP_BUILDING_MAXIMUM_AGE_SECONDS
+    for path in parent.iterdir():
+        if (
+            not path.name.startswith(".")
+            or ".building-" not in path.name
+            or path.is_symlink()
+        ):
+            continue
+        try:
+            stale = path.is_dir() and path.stat().st_mtime < cutoff
+        except OSError:
+            continue
+        if stale:
+            _remove_generated_path(path)
+
+
+def _stem(catalog: Mapping[str, Any], stem_id: str) -> Mapping[str, Any]:
+    for stem in catalog.get("stems", []):
+        if stem.get("stem_id") == stem_id:
+            return stem
+    raise ValueError("unknown workbench stem_id")
+
+
 def _candidate(
     catalog: Mapping[str, Any], stem_id: str, candidate_id: str
 ) -> tuple[Mapping[str, Any], Mapping[str, Any]]:
@@ -1620,6 +2432,7 @@ def _zip_bytes(archive: zipfile.ZipFile, name: str, value: bytes) -> None:
 
 __all__ = [
     "ARRANGEMENT_SCHEMA",
+    "DECODED_STEM_LOOP_SCHEMA",
     "GARAGEBAND_HANDOFF_SCHEMA",
     "GARAGEBAND_PACK_BASKET_SCHEMA",
     "GARAGEBAND_PACK_PLAN_SCHEMA",

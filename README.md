@@ -54,7 +54,7 @@ choice; scores and model labels never create an automatic global winner.
 | Test learned local source cleanup | `ai-cleanup` | Pinned Demucs target plus waveform residual, hard checkpoint verification, deterministic short excerpts and an explicit listening gate |
 | Split one reviewed MIDI into audible roles | `midi-role-split`, `midi-role-split-resolve` | Explicit source-event cluster choice, exact primary-note partition, optional independently transcribed residual layer, local A/B review and a hash-verified user-selected recommendation |
 | Compare consistent sounds on one fixed MIDI | `timbre-resynthesis` | Level-matched complete-patch, extracted-sampler and source-fitted harmonic-plus-noise auditions with note-by-note silence checks and no MIDI changes |
-| Review and hand off multi-process MIDI alternatives in one local site | `workbench` | Loopback-only Project Overview, per-role comparison, full-song selected-arrangement timeline and temporary source/MIDI mixer, at most three primary candidates per role, append-only decisions, private offline review export and an exact-selected-MIDI GarageBand ZIP; no automatic winner or submission endpoint |
+| Review and hand off multi-process MIDI alternatives in one local site | `workbench` | Loopback-only Project Overview, precise decoded 0.5–15 second per-stem comparison, full-song selected-arrangement timeline and temporary source/MIDI mixer, at most three primary candidates per role, append-only decisions, private offline review export and an exact-selected-MIDI GarageBand ZIP; no automatic winner or submission endpoint |
 
 Development has started on a local-first ensemble of optional transcription
 models, phrase-level melody review and learned instrument matching. See the
@@ -75,7 +75,11 @@ explicit opt-in. Phase 5.5 now combines the Project Overview with restart-tested
 decision safety: it resumes into one state-derived next state/action, shows
 truthful per-stem progress without ranking models or exposing technical scores,
 and prevents a later **None are usable** or **I cannot tell** outcome from
-leaving older MIDI choices active. AI candidates carry verified execution/checkpoint
+leaving older MIDI choices active. Its per-stem workspace can also prepare a
+precise 0.5–15 second source-versus-MIDI comparison on one decoded Web Audio
+clock. Primary candidates are included by default, advanced candidates require
+an explicit opt-in, and no play, switch or seek changes a decision or records
+an audition event. AI candidates carry verified execution/checkpoint
 diagnostics; severe decoder failures and zero-note results remain downloadable
 evidence but cannot become main or optional choices. The first small-model
 M0–M3 matrix also shows that label conditioning can prevent one known full-mix
@@ -108,7 +112,7 @@ completed blind short-loop review with a resolved private listening result,
 plus a completed batch-size 1→2 CPU comparison, the first read-only Phase 5.3
 phrase-consensus diagnostic, the multi-process Result Explorer, GarageBand
 Pack Composer v1, the explicit disputed-range phrase-review bridge and Project
-Overview/Resume v1—is
+Overview/Resume v1 plus Decoded Stem Comparison v1—is
 in the
 **[Phase 5 multi-process comparison and Result Explorer plan](docs/PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md)**.
 Creative note/phrase arrangement and Clip reuse remain a later Phase 6, while
@@ -300,12 +304,41 @@ launch. **None are usable** and **I cannot tell** are explicit no-selection
 barriers: they retain the earlier listening history but deactivate every older
 main/optional choice for that stem. A later **Use as main** or **Keep optional**
 choice reopens the stem without silently reviving older optional parts; a later
-reject/correction does not. Use the shared loop and source/A/B/C buttons to resume each player at
-the same second. **Render neutral preview** gives candidates for one stem the
-same local SoundFont, gain and role-based GM program; it is renderer-consistent
-but deliberately does not peak-normalise away MIDI expression. Primary
-candidate audio preloads metadata for quick comparison; advanced alternatives
-do not preload audio until used, which keeps larger result spaces responsive.
+reject/correction does not. Use **Precise short-loop comparison** for the
+closest browser A/B. Choose a 0.5–15 second range and prepare the source plus up
+to six MIDI candidates. The three primary candidates are included by default;
+an advanced candidate joins only after **Include in precise loop** is selected.
+Workbench verifies the inputs, renders missing role-neutral MIDI previews and
+creates private, content-addressed, verified clips. The source and every
+included candidate switch on one decoded Web Audio clock, so they keep one
+shared loop and playhead. Every artifact still starts at recorded zero and
+Workbench infers no alignment
+offset. Preparing, playing, switching, seeking, pausing or stopping this
+comparison neither saves a selection nor appends an audition event.
+
+The disclosed **Compatibility fallback** keeps the older browser-media players
+for environments where decoded audio cannot be prepared. It is synchronised in
+seconds, not sample-accurate, and its controls are also feedback- and
+event-free. **Render neutral preview** gives candidates for one stem the same
+local SoundFont, gain and role-based GM program; it is renderer-consistent but
+deliberately does not peak-normalise away MIDI expression. Precise preparation
+fails closed unless every candidate preview uses the current SoundFont and
+neutral-renderer policy. The renderer copies verified MIDI and SoundFont bytes
+to owner-only temporary snapshots, while decoded cropping does the same for the
+source and preview audio; those snapshots are removed before results are
+published. Primary candidate audio preloads metadata for quick comparison;
+advanced alternatives do not preload audio until used, which keeps larger
+result spaces responsive.
+
+If a requested loop extends beyond available source or preview audio,
+Workbench pads that track's end with generated silence and identifies its
+duration in a warning that remains visible while the prepared loop is current.
+Do not judge that disclosed padding as a missing transcription. The
+private decoded-loop cache is rebuildable: it retains at most 32 recent windows
+or 256 MiB, so an older prepared loop may be evicted and prepared again. One
+request is also capped at 2 GiB across source audio, candidate MIDI, the
+SoundFont and neutral previews, with oversized declared inputs rejected before
+preview rendering. Generated loop audio is capped at 64 MiB.
 
 The **Visual result explorer** above those players is evidence, not an editor
 or recommendation. Click its common elapsed-seconds axis to move the playhead.
@@ -343,9 +376,10 @@ choice and explicit optional choices. Full-mix confirmation is stored with a
 selected MIDI as separate lanes with one playhead, loop and fit/2×/4× views.
 Use **Prepare selected MIDI sounds locally** when a selected lane has no neutral
 preview; an existing unnormalised preview is not silently substituted. Source
-and MIDI levels are not matched, and simultaneous browser media elements are
-not sample-accurate, so the live hybrid is a creative audition rather than
-comparison evidence. Reloading resets its temporary mixer. Only buttons under
+and MIDI levels are not matched, and the selected-arrangement mixer still uses
+coarsely synchronised HTML media elements rather than the per-stem decoded
+transport. It is therefore a creative audition rather than precise comparison
+evidence. Reloading resets its temporary mixer. Only buttons under
 **Save after listening** append a decision.
 
 The arrangement also reports every selected MIDI
@@ -1004,8 +1038,9 @@ preferred beam 1 on the 3.50–7.50 second loop. Beam 2 won no loop. Resolution
 reported zero MIDI edits, source mutations, selection changes, promotions and
 default changes, so beam 1 remains the conservative default. The standalone
 page still switches browser media at a shared position per unit rather than
-decoded sample accuracy; decoded, sample-accurate switching inside the
-Workbench is also deferred.
+decoded sample accuracy. Workbench now has a separate one-clock decoded
+transport for bounded per-stem comparisons; extending that approach to
+long-song selected-arrangement playback remains deferred.
 
 #### Compare batch size 1 with batch size 2
 

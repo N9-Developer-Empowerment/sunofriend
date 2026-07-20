@@ -10,8 +10,8 @@ complete with explicit verified/unverified lineage boundaries; blind phrase
 choice remains; Phase 5.4 is complete with its per-stem comparison, full-song
 selected-arrangement explorer/mixer, GarageBand Pack Composer and explicit
 disputed-range phrase-review bridge; Phase 5.5 local Studio hardening has
-started with Project Overview/Resume v1 plus decision-safety, path-free-role
-and two-launch restart verification
+started with Project Overview/Resume v1, decision-safety, path-free-role and
+two-launch restart verification plus Decoded Stem Comparison v1
 
 Started: 15 July 2026  
 Scope: local-first AI assistance for transcription, review, instrument matching
@@ -88,7 +88,7 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
-| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.3 listening/lineage/role work remains while Phase 5.5 hardening has started** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench now has hash-pinned per-stem and full-song timelines, an audition-only source/MIDI mixer, a separate persistent exact GarageBand pack basket, an explicit disputed-range phrase-review bridge and a path-free Project Overview. Terminal no-selection outcomes cannot leak older choices into export, path-like roles cannot leak into public/pack/MIDI metadata, and decisions plus a non-default basket are verified across two server launches |
+| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.3 listening/lineage/role work remains while Phase 5.5 hardening has started** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench now has hash-pinned per-stem and full-song timelines, a precise decoded 0.5–15 second per-stem source/candidate loop, an audition-only coarse source/MIDI arrangement mixer, a separate persistent exact GarageBand pack basket, an explicit disputed-range phrase-review bridge and a path-free Project Overview. Terminal no-selection outcomes cannot leak older choices into export, path-like roles cannot leak into public/pack/MIDI metadata, and decisions plus a non-default basket are verified across two server launches |
 | 6. Creative Arrangement and Reusable MIDI | **Planned after the local Studio is stable** | Reversible note/phrase correction, explicit hybrids, transforms, Clip v1 browsing and reuse, mashup preparation and instrument attachment without becoming a full DAW |
 | 7. Cross-DAW and Opt-in Community Learning | **Deferred** | Compatibility testing, cleared public goldens and consented contextual feedback only after the local workflow is useful, private and stable |
 
@@ -522,6 +522,15 @@ The second hardening slice now makes `none_usable` and `cannot_tell` selection
 barriers, applies one path-free role guard to browser/timeline/pack/MIDI
 surfaces and verifies both positive selections and terminal outcomes across
 real server restarts. The raw private history remains append-only.
+The third slice adds Decoded Stem Comparison v1. It prepares a 0.5–15 second
+recorded-time source loop with the primary candidates and only explicitly
+opted-in advanced candidates, capped at six. Source, MIDI and neutral-preview
+hashes are verified before private content-addressed clips are served. One
+decoded Web Audio clock schedules switches without saving an event or choice,
+ranking a process or changing MIDI. It infers no offset: source and MIDI begin
+at recorded zero. The disclosed compatibility fallback and full-song selected
+arrangement remain second-synchronised HTML-media playback rather than
+sample-accurate transport.
 
 This direction borrows the approachability of a visual transcription tool—one
 transport, visible notes, understandable track controls and direct export—not
@@ -587,6 +596,53 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-20 — Phase 5.5 Decoded Stem Comparison v1
+
+- Goal: make short source-versus-MIDI changes precise enough to judge several
+  analytical and AI candidates without turning playback activity into a vote.
+- Change or experiment: added a bounded decoded-loop artifact/API, a packaged
+  one-clock Web Audio transport and a per-stem **Precise short-loop
+  comparison** panel. A request covers 0.5–15 seconds, includes primary
+  candidates by default, requires explicit opt-in for advanced candidates and
+  is capped at six MIDI candidates.
+- Integrity and privacy: the builder verifies source, MIDI and neutral-preview
+  hashes, renders a missing neutral proxy without rewriting MIDI, crops private
+  content-addressed PCM clips and exposes path-free metadata. Every included
+  preview must use the current SoundFont hash and neutral-renderer policy or the
+  request fails closed. Renderer MIDI/SoundFont and decoder source/preview
+  inputs are copied through single open handles into owner-only hash-and-size-
+  verified snapshots; work uses only those bytes and deletes the snapshots
+  before publication. This closes the verified-path replace/restore race.
+  Generated media is verified and frozen before serving.
+- Timing/effects: decoded buffers share one browser clock and equal frame
+  extent; source/candidate switches use a common scheduled time and retain one
+  absolute loop playhead. Every artifact starts at recorded zero and no
+  alignment offset is inferred. Prepare, play, switch, seek, pause and stop have
+  zero selection, review-event, ranking and MIDI-mutation effects.
+- Evidence: focused artifact, API, transport and static-UI tests cover bounds,
+  hash/corruption handling, private cache permissions, range serving, frame
+  normalisation, same-renderer enforcement, verified input snapshots,
+  replace/restore resistance, scheduled switching, invalidation, silence-
+  padding disclosure and the zero-event UI contract. Each request is capped at
+  2 GiB across source, candidate MIDI, SoundFont and preview input, rejecting
+  oversized declared inputs before rendering, and 64 MiB of generated output;
+  the rebuildable cache retains
+  at most 32 recent windows or 256 MiB and evicts older entries.
+- Decision: retain this as the normal precise per-stem comparison. Keep the
+  explicitly labelled second-synchronised compatibility fallback for browser
+  recovery; its controls also record no feedback or event. Retain the
+  standalone blinded, level-matched `midi-ab-review` package as the stricter
+  promotion gate. When a source or preview ends early, expose its generated
+  end-silence duration in a persistent warning and tell the listener not to
+  interpret it as missing transcription.
+- Problems/risks: the selected-arrangement mixer still uses coarsely
+  synchronised HTML media elements; source and neutral MIDI are not level
+  matched; long songs still need decoded transport and rendering
+  virtualization hardening.
+- Next smallest step: extend the safe one-clock approach to long-song selected
+  arrangement audition without weakening Sunofriend's immutable multi-process
+  evidence or explicit-choice boundaries.
 
 ### 2026-07-20 — Phase 5.5 decision safety, path-free roles and restart proof
 
@@ -922,10 +978,10 @@ Each working day should aim for one narrow vertical improvement:
   resolved result records zero MIDI edits, source mutations, selection changes,
   promotions and default changes.
 - Problems/risks: exact common frame windows do not make browser media-element
-  switching sample-accurate. The standalone page and Workbench coordinate a
-  shared position in seconds; decoded sample-accurate Workbench switching
-  remains deferred. Fixed-window sample RMS also cannot guarantee equal
-  perceived loudness.
+  switching sample-accurate. The standalone page remains shared-second media;
+  the later Phase 5.5 slice now gives Workbench a separate decoded per-stem
+  path, while its selected-arrangement mixer remains coarse. Fixed-window
+  sample RMS also cannot guarantee equal perceived loudness.
 - Decision: retain beam 1 as the default. Equivalent loops provide no
   directional evidence, and the marginal beam-1 preference does not authorize
   merging or changing either candidate. Continue with one-variable performance
@@ -1301,7 +1357,7 @@ Each working day should aim for one narrow vertical improvement:
 - Goal: make the Phase 5 Workbench useful when candidates do not already have
   preview WAVs and carry explicit choices into a listenable/exportable result.
 - Change or experiment: added content-addressed neutral candidate rendering,
-  shared-second source/A/B/C switching, an arrangement made only from active
+  shared-second source/candidate switching, an arrangement made only from active
   main/optional decisions, explicit `full_mix` confirmation and a deterministic
   GarageBand handoff ZIP containing unchanged selected MIDI.
 - Inputs: synthetic cache/exclusion fixtures and the private Slayyyter Phase 4

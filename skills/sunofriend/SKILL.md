@@ -151,8 +151,28 @@ scripts.
   three primary candidates as the normal result space, keep diagnostic files
   advanced, and do not infer preference from audition events, dwell time or
   unclicked defaults. Prefer the content-addressed role-neutral preview when an
-  existing WAV is absent or uses a different sound. Its shared browser
-  position is synchronized in seconds, not claimed sample-accurate. Completed
+  existing WAV is absent or uses a different sound. For precise per-stem
+  listening, prepare a 0.5–15 second decoded loop: primary candidates are
+  included by default, an advanced candidate requires explicit **Include in
+  precise loop**, and no more than six candidates may be requested. Source and
+  neutral MIDI clips share one decoded Web Audio clock with scheduled switches
+  and one absolute playhead. They all begin at recorded zero; do not infer an
+  alignment offset. Preparing, playing, switching, seeking, pausing or stopping
+  must not append an event, change a selection, rank a process or mutate MIDI.
+  The explicitly labelled compatibility fallback is synchronized in seconds,
+  not sample-accurate, but its controls must also remain feedback- and
+  event-free. Require every included preview to use the current SoundFont hash
+  and neutral-renderer policy; a mismatch must fail closed. Renderer MIDI/
+  SoundFont and decoder source/preview inputs must be read from owner-only,
+  hash-and-size-verified snapshots created through one open handle and deleted
+  before publication. Neutral preview rendering itself is limited to 20-minute
+  MIDI. If the API reports `silence_padded_frames`, retain a visible warning,
+  tell the user which track received generated end silence and never interpret
+  it as a missing MIDI note. Treat decoded loops as rebuildable cache data: at
+  most 32 recent entries or 256 MiB are retained, and an evicted loop may be
+  prepared again. Reject a request above 2 GiB across source audio, candidate
+  MIDI, SoundFont and preview input before expensive rendering when declared
+  sizes already exceed the cap, or above 64 MiB generated output. Completed
   AI runs expose path-free model/config, label, density, boundary and runtime
   diagnostics. For an application-cache hit, require the card to state that no
   AI model ran and interpret elapsed time/RTF as pipeline-not-inference. Do not
@@ -205,8 +225,10 @@ scripts.
   in a cache key or imply that they change the handoff. Missing MIDI mixer sound
   must be prepared with the neutral renderer; never silently use an existing
   unnormalised preview. Both views start every artifact at recorded zero and
-  infer no offset; browser media shares seconds but is not sample-accurate, and
-  source/MIDI levels are not normalised. The GarageBand Pack Composer has a
+  infer no offset. The per-stem precise loop uses the decoded transport; the
+  selected-arrangement mixer still uses coarse HTML media elements that share
+  seconds but are not sample-accurate. Source/MIDI levels are not normalised.
+  The GarageBand Pack Composer has a
   separate persistent basket for exact current main/optional MIDI, the dry
   arrangement proxy and source audio behind an explicit opt-in. It must never
   infer inclusion from playback or mixer state, and its revisions must not
@@ -320,8 +342,9 @@ scripts.
   cross-unit slots and changed timing, focus or geometry. Treat the result as
   listening evidence only: neither command edits MIDI, selects a Workbench candidate,
   promotes a preset or changes a default. Exact common source-frame windows do
-  not imply decoded, sample-accurate browser switching; Workbench still
-  switches at a shared position in seconds.
+  not imply decoded, sample-accurate playback in that standalone page. The
+  Workbench has a separate decoded, sample-scheduled per-stem path, but its
+  selected-arrangement mixer remains shared-second HTML media.
   The complete command shapes are:
   `sunofriend midi-ab-review SOURCE FIRST.mid SECOND.mid --interval START END
   "FOCUS" [--interval START END "FOCUS" ...] --bpm N
@@ -1365,8 +1388,24 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     only catalogued or content-addressed local files, restores choices after
     restart and has no upload/submission endpoint. When rendering, report the
     role-neutral policy, SoundFont identity/hash, cache hit/miss and that the
-    original MIDI was not mutated. For an arrangement/handoff, report exact
-    selected main/optional counts, proxy track count, BPM policy and ZIP path;
+    original MIDI was not mutated. For a precise decoded stem loop, report the
+    0.5–15 second recorded-zero range, primary and explicitly opted-in advanced
+    candidate counts (six maximum), verified private content-addressed clips,
+    one-clock scheduled switching and all false selection/event/ranking/MIDI
+    mutation effects. State that no alignment was inferred, that renderer
+    previews matched the current SoundFont/policy and that owner-only verified
+    renderer/decode snapshots were deleted before publication. Report any
+    `silence_padded_frames` as generated end silence, not missing transcription,
+    plus the 2 GiB all-input (source, candidate MIDI, SoundFont and preview)
+    bound with early pre-render rejection, the 64 MiB output bound and the
+    32-entry/256 MiB rebuildable-cache policy. If an old loop was evicted,
+    prepare it again
+    without treating eviction as lost project work. If the compatibility
+    fallback was needed, describe it as second-synchronised, not
+    sample-accurate, and feedback/event-free. Do not imply that the coarse
+    selected-arrangement mixer has inherited the decoded transport. For an
+    arrangement/handoff, report exact selected main/optional counts, proxy
+    track count, BPM policy and ZIP path;
     report every selected same-candidate-origin overlap pair, including whether
     its source SHA-256 came from verified AI provenance or the non-AI
     review-stem fallback, plus the 80 ms exact-pitch greedy-match policy,

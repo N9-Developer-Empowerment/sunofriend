@@ -65,7 +65,10 @@ class WorkbenchHomeUITests(unittest.TestCase):
         self.assertIn("function hydrateAudio(audio)", self.page)
         self.assertIn("delete audio.dataset.src", self.page)
         self.assertIn("function waitForAudioMetadata(audio)", self.page)
-        self.assertIn("played=await switchAudio(audio,button)", self.page)
+        self.assertIn(
+            "button.onclick=()=>switchAudio(document.getElementById(button.dataset.switch),button)",
+            self.page,
+        )
 
     def test_deferred_audio_cannot_restart_after_stop_or_navigation(self) -> None:
         self.assertIn("audioSwitchRequest+=1", self.page)

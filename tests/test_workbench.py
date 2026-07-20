@@ -1398,7 +1398,7 @@ class WorkbenchServerTests(unittest.TestCase):
                 response = connection.getresponse()
                 self.assertEqual(response.status, 200)
                 page = response.read().decode("utf-8")
-                self.assertIn("Synchronized source / candidate switcher", page)
+                self.assertIn("Precise short-loop comparison", page)
                 self.assertIn("Build GarageBand handoff", page)
                 connection.close()
 

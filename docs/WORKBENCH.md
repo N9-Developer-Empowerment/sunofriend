@@ -20,7 +20,10 @@ per-stem source/MIDI comparison timeline and a full-song selected-arrangement
 explorer, plus an explicit bridge from verified disputed lead-vocal ranges to
 the existing phrase-review page. Phase 5.5 now adds a default Project Overview,
 a safe restart/retry path and explicit decision/privacy barriers that keep an
-inconclusive review or legacy path-like role out of a GarageBand export.
+inconclusive review or legacy path-like role out of a GarageBand export. It
+also adds Decoded Stem Comparison v1: a precise 0.5–15 second per-stem source
+versus requested candidate-preview loop scheduled on one decoded Web Audio
+clock.
 The arrangement explorer shows every unique project source stem beside only
 the active explicit main and optional MIDI choices, with temporary visibility,
 mute, solo and level controls. It does not infer an offset: every source and
@@ -383,10 +386,13 @@ by `ai-cache-benchmark`. A concurrent losing producer can instead be
 candidate as identical, but it is not a benchmark control and Workbench does
 not interpret it as a cache hit.
 
-Set a short recognisable loop and use the source/Candidate A/B/C buttons. Each
-button resumes at the shared position in seconds; pressing a browser player's
-normal controls also updates that position. If a card has only an old preview
-or none, choose **Render neutral preview**. The cached proxy uses:
+Set a short recognisable 0.5–15 second range and choose **Prepare precise
+loop**. The normal request includes the source and up to three primary MIDI
+candidates. An advanced alternative is included only after its explicit
+**Include in precise loop** opt-in, and no more than six candidates can enter
+one comparison. If a card has only an old preview or none, Workbench prepares
+the same role-neutral render used by **Render neutral preview**. The cached
+proxy uses:
 
 - the same local SoundFont and FluidSynth settings;
 - one stable GM program for the stem's role;
@@ -394,8 +400,37 @@ or none, choose **Render neutral preview**. The cached proxy uses:
 - the project BPM in the proxy file.
 
 The original MIDI hash does not change. Neutral means renderer-consistent, not
-peak-normalised: note velocity and density remain audible. Browser media
-switching is time-synchronised but is not claimed to be sample-accurate.
+peak-normalised: note velocity and density remain audible. Every included
+candidate must use the current SoundFont hash and neutral-renderer policy; a
+mixed or stale renderer set fails closed rather than becoming an unfair
+comparison. When a preview must be rendered, Workbench copies the verified
+candidate MIDI and SoundFont through single open handles into owner-only
+temporary snapshots and renders only from those bytes. It rechecks the
+originals and deletes the snapshots before publishing the preview. Neutral
+preview rendering is limited to MIDI no longer than 20 minutes.
+
+Workbench then verifies the source and neutral-preview hashes and copies each
+through a single open handle into an owner-only, hash-and-size-verified audio
+snapshot. Cropping reads only those snapshots, which prevents a file
+replace/restore race from changing the decoded bytes; the snapshots are deleted
+before the content-addressed PCM clips are published. The source and every
+included candidate switch on one Web Audio clock and retain one absolute loop
+playhead. Every input starts at recorded zero; no offset or source/MIDI
+alignment is inferred. Preparing, playing, switching, seeking, pausing and
+stopping do not append an audition event, change a selection, rank a process or
+mutate MIDI.
+
+When a requested end is later than the available source or preview audio,
+Workbench adds generated silence to that track's end and reports the padded
+duration in a separate warning that remains visible while that prepared loop
+is current. Do not judge disclosed padding as missing MIDI or a failed
+transcription.
+
+The explicitly labelled **Compatibility fallback** retains the older media
+players for a browser or file that cannot complete the decoded path. Those
+players share a position in seconds but are not sample-accurate. Their audition
+controls are also feedback- and event-free; use the decoded panel for a precise
+comparison and the fallback only when required.
 
 ## Build a stricter blind MIDI A/B outside the Workbench
 
@@ -488,7 +523,8 @@ and marginally preferred beam 1 on 3.50–7.50 seconds. Beam 2 won no loop. The
 result reports zero MIDI edits, source mutations, selection changes,
 promotions and default changes; beam 1 therefore remains the default. The
 standalone page still uses per-unit shared-second media-element switching;
-decoded sample-accurate Workbench switching remains a later gate.
+Workbench now supplies a separate decoded, sample-scheduled per-stem path. The
+standalone blind package remains the stricter level-matched promotion gate.
 
 The separate Phase 5.2 batch-size comparison does not add a Workbench choice.
 Batch 1 and batch 2 produced identical canonical note payload, base MIDI,
@@ -672,17 +708,30 @@ note-free disclosure boundary.
   custom mixer renders and eligible Instrument Bundles remain later additions.
 - Existing preview WAVs remain labelled unnormalised; use the neutral renderer
   when comparing MIDI rather than embedded instruments.
-- Browser switching shares time in seconds but does not yet use decoded
-  short-loop Web Audio buffers for sample-accurate switching. The standalone
-  `midi-ab-review` command now supplies blind, exact-source-window,
-  fixed-window sample-RMS-matched review packages, but does not change that
-  Workbench playback limit.
+- Precise decoded comparison is currently per stem, bounded to 0.5–15 seconds
+  and at most six MIDI candidates. It starts every source and render at
+  recorded zero and therefore does not prove alignment. The compatibility
+  fallback and selected-arrangement mixer remain second-synchronised HTML
+  media elements rather than sample-accurate playback.
+- A decoded-loop request accepts at most 2 GiB across source audio, candidate
+  MIDI, the SoundFont and neutral previews; oversized declared inputs fail
+  before preview rendering. It accepts at most 64 MiB of generated PCM output.
+  Its owner-only cache retains at most 32
+  recent windows or 256 MiB. Cached loops are rebuildable audition data, not
+  durable project state: an older window can be evicted and prepared again.
+- A requested window can extend beyond one input. That track is silence-padded
+  at the end and the interface reports the duration; the padded section is not
+  evidence that the transcription omitted music.
+- The standalone `midi-ab-review` command remains the blind,
+  exact-source-window, fixed-window sample-RMS-matched promotion gate; the
+  Workbench decoded loop is not level matched or blinded.
 - The arrangement is a dry GM proxy. Complete-instrument checks and installed
   GarageBand patch choice remain a later view.
 - Phrase piano-roll correction and creative recombination remain a later phase.
-  Model-size comparison and any opt-in public contribution are also later,
-  separately authorised work. The Workbench still consumes completed AI runs
-  rather than launching a model itself.
+  Long-song decoded transport/virtualisation is the next playback hardening
+  step. Model-size comparison and any opt-in public contribution are also
+  later, separately authorised work. The Workbench still consumes completed AI
+  runs rather than launching a model itself.
 
 These limits are shown in the interface so an incomplete feature is not
 mistaken for a musical judgement.
