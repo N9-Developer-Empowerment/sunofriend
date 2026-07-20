@@ -100,9 +100,8 @@ fresh-process and reused-model measurements, an explicit exact-result
 application-cache experiment, a completed one-variable beam measurement and
 completed blind short-loop review with a resolved private listening result,
 plus a completed batch-size 1→2 CPU comparison, the first read-only Phase 5.3
-phrase-consensus diagnostic and the in-progress multi-process Result Explorer
-(per-role comparison and full-song selected-arrangement views implemented),
-followed by the planned GarageBand Pack Composer—is
+phrase-consensus diagnostic, the multi-process Result Explorer and the initial
+GarageBand Pack Composer—is
 in the
 **[Phase 5 multi-process comparison and Result Explorer plan](docs/PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md)**.
 Creative note/phrase arrangement and Clip reuse remain a later Phase 6, while
@@ -260,7 +259,8 @@ level controls plus source-stem, selected-MIDI, hybrid and main-MIDI presets.
 Those controls live only in the browser tab and never save feedback or alter
 the handoff. Both displays use each file's recorded zero and infer no alignment
 offset, so equal displayed seconds are not proof of source/MIDI alignment. The
-GarageBand pack composer remains the next planned increment.
+GarageBand pack composer now makes ZIP inclusion a separate, persistent local
+choice instead of inferring it from the arrangement or mixer.
 
 ```bash
 .venv/bin/sunofriend workbench \
@@ -319,13 +319,22 @@ review-stem source SHA-256. This is a
 conservative doubled-line review heuristic, not an accuracy, separation or
 preference score. It never removes duplicate notes, merges tracks or changes a
 selection, and the arrangement remains available for listening. Before the
-**GarageBand handoff** can include a substantially overlapping pair, use the
+**GarageBand pack** can include a substantially overlapping pair, use the
 arrangement page to save the latest decision for **both** candidates in
-`full_mix` context. The ZIP contains
-byte-for-byte copies of those selected MIDI files, a clearly labelled
-role-neutral arrangement proxy, its WAV preview and path-free setup
-instructions. Rejected, needs-correction and unreviewed candidates, private
-notes and source audio are excluded.
+`full_mix` context.
+
+Open **Compose GarageBand pack** after selecting MIDI. Its safe default checks
+every active main/optional MIDI file plus the clearly labelled dry proxy pair,
+while leaving every source stem unchecked. You may export a smaller MIDI
+subset, omit the proxy, or separately opt in and check particular source stems.
+The checked basket is saved locally in its own append-only state and does not
+change musical decisions, review completion or contribution data. **Build this
+exact pack** saves the displayed basket, rechecks its selection/plan hashes and
+copies the checked MIDI and source bytes without modification. The generated
+ZIP contains deterministic names, a path-free receipt and setup instructions;
+private notes, local paths, rejected, needs-correction, superseded and
+unreviewed candidates remain excluded. The earlier source-free
+`sunofriend.workbench-garageband-handoff.v1` endpoint remains compatible.
 
 When a discovered candidate belongs to a completed `ai-transcribe` run, its
 card also shows the verified model/config, requested and detected labels, note

@@ -9,6 +9,7 @@ import json
 import mimetypes
 import os
 import secrets
+import threading
 import webbrowser
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -21,8 +22,17 @@ from .workbench_catalog import (
     media_files,
     public_catalog,
 )
-from .workbench_artifacts import WorkbenchArtifacts, selected_candidates
-from .workbench_store import WorkbenchStore, default_workbench_state_dir
+from .workbench_artifacts import (
+    WorkbenchArtifacts,
+    WorkbenchPackConflictError,
+    canonical_garageband_pack_basket,
+    selected_candidates,
+)
+from .workbench_store import (
+    WorkbenchPackStateConflictError,
+    WorkbenchStore,
+    default_workbench_state_dir,
+)
 from .workbench_timeline import (
     TimelineArtifactChangedError,
     build_arrangement_timeline,
@@ -31,6 +41,21 @@ from .workbench_timeline import (
 
 
 _MAX_REQUEST_BYTES = 64 * 1024
+
+
+def _require_exact_request_keys(
+    request: Mapping[str, Any], expected: set[str]
+) -> None:
+    actual = set(request)
+    if actual != expected:
+        missing = sorted(expected - actual)
+        unexpected = sorted(actual - expected)
+        details = []
+        if missing:
+            details.append("missing " + ", ".join(missing))
+        if unexpected:
+            details.append("unexpected " + ", ".join(unexpected))
+        raise ValueError("invalid GarageBand pack request: " + "; ".join(details))
 
 
 def _display_candidates(candidates: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
@@ -76,6 +101,7 @@ class WorkbenchHTTPServer(ThreadingHTTPServer):
         self.artifacts = artifacts
         self.token = token
         self.media = media_files(catalog)
+        self.state_lock = threading.RLock()
         super().__init__(address, _WorkbenchHandler)
 
     @property
@@ -343,6 +369,18 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 return
             self._json(HTTPStatus.OK, timeline)
             return
+        if parsed.path == "/api/garageband-pack-plan":
+            try:
+                with self.server.state_lock:
+                    plan = self._garageband_pack_plan_payload()
+            except WorkbenchPackConflictError as exc:
+                self._error(HTTPStatus.CONFLICT, str(exc))
+                return
+            except (OSError, RuntimeError, ValueError) as exc:
+                self._error(HTTPStatus.BAD_REQUEST, str(exc))
+                return
+            self._json(HTTPStatus.OK, {"plan": plan})
+            return
         if parsed.path == "/api/review":
             self._json(
                 HTTPStatus.OK,
@@ -368,18 +406,22 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             "/api/render-preview",
             "/api/arrangement",
             "/api/garageband-export",
+            "/api/garageband-pack-basket",
+            "/api/garageband-pack",
         }:
             self._error(HTTPStatus.NOT_FOUND, "workbench route not found")
             return
         try:
             request = self._request_json()
             if parsed.path == "/api/events":
-                event = self.server.store.append(self.server.catalog, request)
+                with self.server.state_lock:
+                    event = self.server.store.append(self.server.catalog, request)
+                    state = self.server.store.current_state(self.server.catalog)
                 self._json(
                     HTTPStatus.CREATED,
                     {
                         "event": event,
-                        "state": self.server.store.current_state(self.server.catalog),
+                        "state": state,
                     },
                 )
                 return
@@ -392,6 +434,78 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 self._json(
                     HTTPStatus.OK,
                     {"preview": self._public_artifact(artifact)},
+                )
+                return
+            if parsed.path == "/api/garageband-pack-basket":
+                _require_exact_request_keys(
+                    request,
+                    {
+                        "plan_sha256",
+                        "basket_scope_sha256",
+                        "expected_revision",
+                        "included_item_ids",
+                        "source_audio_opt_in",
+                    },
+                )
+                with self.server.state_lock:
+                    current = self.server.store.current_state(self.server.catalog)
+                    plan = self.server.artifacts.garageband_pack_plan(
+                        self.server.catalog, current
+                    )
+                    if request.get("plan_sha256") != plan["plan_sha256"]:
+                        raise WorkbenchPackConflictError(
+                            "the GarageBand pack plan changed; reload its contents"
+                        )
+                    if request.get("basket_scope_sha256") != plan[
+                        "basket_scope_sha256"
+                    ]:
+                        raise WorkbenchPackConflictError(
+                            "the GarageBand pack selection changed; reload its contents"
+                        )
+                    basket = canonical_garageband_pack_basket(
+                        plan,
+                        request.get("included_item_ids"),
+                        request.get("source_audio_opt_in"),
+                    )
+                    saved = self.server.store.save_pack_selection(
+                        str(self.server.catalog["project_id"]),
+                        basket,
+                        plan_sha256=str(plan["plan_sha256"]),
+                        expected_revision=request.get("expected_revision"),
+                    )
+                    saved["plan_current"] = True
+                self._json(HTTPStatus.OK, {"basket": saved})
+                return
+            if parsed.path == "/api/garageband-pack":
+                _require_exact_request_keys(
+                    request,
+                    {"plan_sha256", "basket_sha256"},
+                )
+                with self.server.state_lock:
+                    plan = self._garageband_pack_plan_payload()
+                    if request.get("plan_sha256") != plan["plan_sha256"]:
+                        raise WorkbenchPackConflictError(
+                            "the GarageBand pack plan changed; reload its contents"
+                        )
+                    basket = plan["basket"]
+                    if not basket.get("saved") or not basket.get("plan_current"):
+                        raise WorkbenchPackConflictError(
+                            "save the GarageBand pack contents for the current plan before building"
+                        )
+                    if request.get("basket_sha256") != basket.get("basket_sha256"):
+                        raise WorkbenchPackConflictError(
+                            "the saved GarageBand pack contents changed; reload them"
+                        )
+                    current = self.server.store.current_state(self.server.catalog)
+                    artifact = self.server.artifacts.build_garageband_pack(
+                        self.server.catalog,
+                        current,
+                        plan_sha256=str(plan["plan_sha256"]),
+                        basket=basket,
+                    )
+                self._json(
+                    HTTPStatus.OK,
+                    {"pack": self._public_artifact(artifact)},
                 )
                 return
             current = self.server.store.current_state(self.server.catalog)
@@ -411,6 +525,8 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 HTTPStatus.OK,
                 {"handoff": self._public_artifact(artifact)},
             )
+        except (WorkbenchPackConflictError, WorkbenchPackStateConflictError) as exc:
+            self._error(HTTPStatus.CONFLICT, str(exc))
         except (
             UnicodeDecodeError,
             json.JSONDecodeError,
@@ -419,6 +535,64 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             ValueError,
         ) as exc:
             self._error(HTTPStatus.BAD_REQUEST, str(exc))
+
+    def _garageband_pack_plan_payload(self) -> dict[str, Any]:
+        current = self.server.store.current_state(self.server.catalog)
+        plan = self.server.artifacts.garageband_pack_plan(
+            self.server.catalog, current
+        )
+        default = dict(plan["default_basket"])
+        saved = self.server.store.current_pack_selection(
+            str(self.server.catalog["project_id"]),
+            str(plan["basket_scope_sha256"]),
+        )
+        if saved is None:
+            basket = {
+                **default,
+                "revision": 0,
+                "saved": False,
+                "saved_at": None,
+                "saved_plan_sha256": None,
+                "plan_current": True,
+            }
+            plan["basket_restore_status"] = "safe-default"
+        else:
+            try:
+                canonical = canonical_garageband_pack_basket(
+                    plan,
+                    saved.get("included_item_ids"),
+                    saved.get("source_audio_opt_in"),
+                )
+                if canonical["basket_sha256"] != saved.get("basket_sha256"):
+                    raise ValueError("saved basket hash disagrees")
+            except (TypeError, ValueError):
+                basket = {
+                    **default,
+                    "revision": saved["revision"],
+                    "saved": False,
+                    "saved_at": saved.get("saved_at"),
+                    "saved_plan_sha256": saved.get("saved_plan_sha256"),
+                    "plan_current": False,
+                }
+                plan["basket_restore_status"] = "invalid-saved-state-defaulted"
+            else:
+                basket = {
+                    **canonical,
+                    "revision": saved["revision"],
+                    "saved": True,
+                    "saved_at": saved.get("saved_at"),
+                    "saved_plan_sha256": saved.get("saved_plan_sha256"),
+                    "plan_current": (
+                        saved.get("saved_plan_sha256") == plan["plan_sha256"]
+                    ),
+                }
+                plan["basket_restore_status"] = (
+                    "saved-current-plan"
+                    if basket["plan_current"]
+                    else "saved-choices-current-plan-not-confirmed"
+                )
+        plan["basket"] = basket
+        return plan
 
     def _project_payload(self) -> dict[str, Any]:
         payload = public_catalog(self.server.catalog)

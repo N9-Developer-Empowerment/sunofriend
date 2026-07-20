@@ -194,9 +194,14 @@ scripts.
   must be prepared with the neutral renderer; never silently use an existing
   unnormalised preview. Both views start every artifact at recorded zero and
   infer no offset; browser media shares seconds but is not sample-accurate, and
-  source/MIDI levels are not normalised. The user-composed GarageBand basket,
-  persistent/custom mix rendering and phrase-range links remain planned; do
-  not claim or attempt those later features yet.
+  source/MIDI levels are not normalised. The GarageBand Pack Composer has a
+  separate persistent basket for exact current main/optional MIDI, the dry
+  arrangement proxy and source audio behind an explicit opt-in. It must never
+  infer inclusion from playback or mixer state, and its revisions must not
+  become decisions, reviews or contribution data. Rejected, needs-correction,
+  unreviewed and superseded candidates are ineligible. Alternative MIDI,
+  Instrument Bundles, persistent/custom mix rendering and phrase-range links
+  remain planned; do not claim or attempt those later features yet.
 - Several completed immutable MuScriptor lanes: use `ai-matrix` with explicit
   repeated `LANE=RUN_DIR` values and a fresh `--out` JSON. Include M0
   unconditioned full mix, M1 discovered-label conditioning, M2 known-label

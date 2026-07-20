@@ -26,6 +26,9 @@ from .render import find_soundfont, render_midi_to_wav
 NEUTRAL_PREVIEW_SCHEMA = "sunofriend.workbench-neutral-preview.v1"
 ARRANGEMENT_SCHEMA = "sunofriend.workbench-arrangement.v1"
 GARAGEBAND_HANDOFF_SCHEMA = "sunofriend.workbench-garageband-handoff.v1"
+GARAGEBAND_PACK_PLAN_SCHEMA = "sunofriend.workbench-garageband-pack-plan.v1"
+GARAGEBAND_PACK_BASKET_SCHEMA = "sunofriend.workbench-garageband-pack-basket.v1"
+GARAGEBAND_PACK_SCHEMA = "sunofriend.workbench-garageband-pack.v1"
 SELECTED_MIDI_OVERLAP_SCHEMA = "sunofriend.workbench-selected-midi-overlap.v1"
 _RENDER_POLICY = "role-neutral-general-midi-v1"
 _OVERLAP_ONSET_TOLERANCE_SECONDS = 0.080
@@ -47,6 +50,10 @@ _ROLE_PROGRAMS = {
     "rhythm": 27,
     "wind": 71,
 }
+
+
+class WorkbenchPackConflictError(ValueError):
+    """The requested pack no longer describes the current Workbench state."""
 
 
 class WorkbenchArtifacts:
@@ -379,6 +386,311 @@ class WorkbenchArtifacts:
             result["cache_hit"] = False
             return result
 
+    def garageband_pack_plan(
+        self,
+        catalog: Mapping[str, Any],
+        current: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Return the path-free, hash-pinned inventory for a custom DAW pack."""
+
+        selection = selected_candidates(catalog, current)
+        self._verify_selection(selection)
+        overlap = _selected_midi_overlap(selection)
+        selection_sha256 = _selection_hash(catalog, selection)
+        basket_scope_sha256 = _pack_basket_scope_hash(catalog, selection)
+        items, _ = _garageband_pack_inventory(
+            catalog,
+            selection,
+            basket_scope_sha256=basket_scope_sha256,
+        )
+        block_reasons: list[str] = []
+        if not selection:
+            block_reasons.append("no-selected-midi")
+        if overlap["unconfirmed_substantial_overlap_pair_count"]:
+            block_reasons.append("selected-midi-overlap-needs-full-mix-confirmation")
+        setup = catalog.get("setup", {})
+        plan: dict[str, Any] = {
+            "schema": GARAGEBAND_PACK_PLAN_SCHEMA,
+            "project_id": catalog.get("project_id"),
+            "selection_sha256": selection_sha256,
+            "basket_scope_sha256": basket_scope_sha256,
+            "items": items,
+            "build_blocked": bool(block_reasons),
+            "block_reasons": block_reasons,
+            "selected_midi_overlap": overlap,
+            "setup": {
+                "bpm": setup.get("bpm"),
+                "key": setup.get("key"),
+                "tuning_hz": setup.get("tuning_hz"),
+                "downbeat": setup.get("downbeat"),
+            },
+            "policies": {
+                "musical_selection": (
+                    "current explicit main and optional decisions define the result "
+                    "space; the basket independently chooses copied files"
+                ),
+                "selected_midi": (
+                    "checked MIDI files are copied byte-for-byte and remain "
+                    "authoritative"
+                ),
+                "source_audio": (
+                    "excluded by default and allowed only with explicit local opt-in"
+                ),
+                "arrangement_proxy": (
+                    "one generated dry MIDI/WAV audition pair; not an authoritative "
+                    "GarageBand instrument choice"
+                ),
+            },
+            "effects": {
+                "musical_selection_changed": False,
+                "midi_mutated": False,
+                "feedback_recorded": False,
+                "mixer_state_used": False,
+            },
+        }
+        default_ids = [
+            str(item["item_id"])
+            for item in items
+            if item.get("default_included")
+        ]
+        if default_ids:
+            plan["default_basket"] = canonical_garageband_pack_basket(
+                plan,
+                default_ids,
+                source_audio_opt_in=False,
+            )
+        else:
+            empty_basket = {
+                "schema": GARAGEBAND_PACK_BASKET_SCHEMA,
+                "project_id": catalog.get("project_id"),
+                "basket_scope_sha256": basket_scope_sha256,
+                "included_item_ids": [],
+                "source_audio_opt_in": False,
+            }
+            empty_basket["basket_sha256"] = _document_hash(empty_basket)
+            plan["default_basket"] = empty_basket
+        plan["plan_sha256"] = _pack_plan_hash(plan)
+        return plan
+
+    def build_garageband_pack(
+        self,
+        catalog: Mapping[str, Any],
+        current: Mapping[str, Any],
+        plan_sha256: str,
+        basket: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Build one deterministic ZIP from a previously displayed pack basket."""
+
+        plan = self.garageband_pack_plan(catalog, current)
+        if plan_sha256 != plan["plan_sha256"]:
+            raise WorkbenchPackConflictError(
+                "GarageBand pack plan changed; review the current basket before building"
+            )
+        if basket.get("basket_scope_sha256") != plan["basket_scope_sha256"]:
+            raise WorkbenchPackConflictError(
+                "GarageBand basket no longer describes the current musical selection"
+            )
+        included_item_ids = basket.get("included_item_ids")
+        source_audio_opt_in = basket.get("source_audio_opt_in")
+        canonical = canonical_garageband_pack_basket(
+            plan,
+            included_item_ids,
+            source_audio_opt_in=source_audio_opt_in,
+        )
+        for key in (
+            "schema",
+            "project_id",
+            "basket_scope_sha256",
+            "included_item_ids",
+            "source_audio_opt_in",
+            "basket_sha256",
+        ):
+            if basket.get(key) != canonical[key]:
+                raise ValueError("GarageBand basket changed after it was canonicalised")
+        if plan["build_blocked"]:
+            reasons = ", ".join(str(value) for value in plan["block_reasons"])
+            raise ValueError(f"GarageBand pack build is blocked: {reasons}")
+
+        selection = selected_candidates(catalog, current)
+        self._verify_selection(selection)
+        public_items, internal_items = _garageband_pack_inventory(
+            catalog,
+            selection,
+            basket_scope_sha256=str(plan["basket_scope_sha256"]),
+        )
+        if public_items != plan["items"]:
+            raise WorkbenchPackConflictError(
+                "GarageBand pack inventory changed; reload the current plan"
+            )
+        included_ids = set(canonical["included_item_ids"])
+        included_items = [
+            item for item in public_items if item["item_id"] in included_ids
+        ]
+        verified_input_payloads: dict[str, bytes] = {}
+        for item in included_items:
+            if item["kind"] == "arrangement_proxy":
+                continue
+            item_id = str(item["item_id"])
+            internal = internal_items.get(item_id)
+            if internal is None:
+                raise WorkbenchPackConflictError(
+                    "GarageBand pack item is no longer available"
+                )
+            kind = str(item["kind"])
+            verified_input_payloads[item_id] = _verified_record_bytes(
+                internal["record"],
+                label=(
+                    "selected candidate MIDI"
+                    if kind == "selected_midi"
+                    else "source audio"
+                ),
+            )
+        include_proxy = any(
+            item["kind"] == "arrangement_proxy" for item in included_items
+        )
+        arrangement = self.render_arrangement(catalog, current) if include_proxy else None
+
+        key_payload: dict[str, Any] = {
+            "schema": GARAGEBAND_PACK_SCHEMA,
+            "project_id": catalog.get("project_id"),
+            "selection_sha256": plan["selection_sha256"],
+            "basket_scope_sha256": plan["basket_scope_sha256"],
+            "plan_sha256": plan["plan_sha256"],
+            "basket_sha256": canonical["basket_sha256"],
+            "included_item_ids": list(canonical["included_item_ids"]),
+        }
+        if arrangement is not None:
+            key_payload["arrangement_proxy"] = {
+                "midi_sha256": arrangement["midi"]["sha256"],
+                "preview_sha256": arrangement["preview"]["sha256"],
+            }
+        cache_key = _document_hash(key_payload)
+        pack_dir = self.root / "packs" / cache_key
+        zip_path = pack_dir / "sunofriend-garageband-pack.zip"
+        manifest_path = pack_dir / "manifest.json"
+        with self._lock:
+            cached = self._load_pack(
+                zip_path,
+                manifest_path,
+                expected_key_payload=key_payload,
+            )
+            if cached is not None:
+                cached["cache_hit"] = True
+                return cached
+            work = pack_dir.with_name(f".{pack_dir.name}.building-{uuid.uuid4().hex}")
+            _remove_generated_path(pack_dir)
+            work.mkdir(parents=True, exist_ok=False)
+            try:
+                copied: list[dict[str, Any]] = []
+                payloads: list[tuple[str, bytes]] = []
+                for item in included_items:
+                    item_id = str(item["item_id"])
+                    kind = str(item["kind"])
+                    if kind == "arrangement_proxy":
+                        if arrangement is None:  # pragma: no cover - guarded above
+                            raise RuntimeError("arrangement proxy was not prepared")
+                        proxy_records = (
+                            (
+                                "MIDI/selected-arrangement-proxy.mid",
+                                arrangement["midi"],
+                                "arrangement proxy MIDI",
+                            ),
+                            (
+                                "PREVIEW/selected-arrangement-proxy.wav",
+                                arrangement["preview"],
+                                "arrangement proxy preview",
+                            ),
+                        )
+                        for archive_path, record, label in proxy_records:
+                            data = _verified_record_bytes(record, label=label)
+                            payloads.append((archive_path, data))
+                            copied.append(
+                                _pack_manifest_item(
+                                    item_id=item_id,
+                                    kind=kind,
+                                    archive_path=archive_path,
+                                    data=data,
+                                )
+                            )
+                        continue
+                    data = verified_input_payloads[item_id]
+                    archive_path = str(item["archive_paths"][0])
+                    payloads.append((archive_path, data))
+                    copied.append(
+                        _pack_manifest_item(
+                            item_id=item_id,
+                            kind=kind,
+                            archive_path=archive_path,
+                            data=data,
+                        )
+                    )
+
+                source_count = sum(
+                    item["kind"] == "source_audio" for item in included_items
+                )
+                midi_count = sum(
+                    item["kind"] == "selected_midi" for item in included_items
+                )
+                pack_manifest = {
+                    **key_payload,
+                    "cache_key": cache_key,
+                    "schema": GARAGEBAND_PACK_SCHEMA,
+                    "setup": dict(plan["setup"]),
+                    "included_items": copied,
+                    "selected_midi_count": midi_count,
+                    "source_audio_count": source_count,
+                    "source_audio_included": source_count > 0,
+                    "source_audio_opt_in": canonical["source_audio_opt_in"],
+                    "arrangement_proxy_included": include_proxy,
+                    "selected_midi_overlap": plan["selected_midi_overlap"],
+                    "selection_policy": (
+                        "the basket is explicit and separate from current musical "
+                        "main/optional decisions"
+                    ),
+                    "private_notes_included": False,
+                    "absolute_paths_included": False,
+                    "original_midi_mutated": False,
+                }
+                zip_build = work / zip_path.name
+                with zipfile.ZipFile(
+                    zip_build, "w", compression=zipfile.ZIP_DEFLATED
+                ) as archive:
+                    _zip_text(
+                        archive,
+                        "README.txt",
+                        _garageband_pack_readme(
+                            catalog,
+                            selected_midi_count=midi_count,
+                            source_audio_count=source_count,
+                            arrangement_proxy_included=include_proxy,
+                        ),
+                    )
+                    _zip_text(
+                        archive,
+                        "sunofriend-garageband-pack.json",
+                        json.dumps(pack_manifest, indent=2, sort_keys=True) + "\n",
+                    )
+                    for archive_path, data in payloads:
+                        _zip_bytes(archive, archive_path, data)
+                manifest = {
+                    **pack_manifest,
+                    "zip": _relative_file_record(zip_build, work),
+                }
+                _write_json(work / "manifest.json", manifest)
+                work.replace(pack_dir)
+            except Exception:
+                shutil.rmtree(work, ignore_errors=True)
+                raise
+            result = self._load_pack(
+                zip_path,
+                manifest_path,
+                expected_key_payload=key_payload,
+            )
+            if result is None:
+                raise RuntimeError("GarageBand pack cache verification failed")
+            result["cache_hit"] = False
+            return result
+
     def _soundfont(self) -> dict[str, Any]:
         if self._soundfont_cache is not None:
             self._verify_catalog_record(
@@ -519,6 +831,39 @@ class WorkbenchArtifacts:
         result["zip"] = materialized
         return result
 
+    def _load_pack(
+        self,
+        zip_path: Path,
+        manifest_path: Path,
+        *,
+        expected_key_payload: Mapping[str, Any],
+    ) -> dict[str, Any] | None:
+        try:
+            document = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        if document.get("schema") != GARAGEBAND_PACK_SCHEMA:
+            return None
+        expected_cache_key = _document_hash(expected_key_payload)
+        if (
+            document.get("cache_key") != expected_cache_key
+            or zip_path.parent.name != expected_cache_key
+            or any(
+                document.get(key) != value
+                for key, value in expected_key_payload.items()
+            )
+        ):
+            return None
+        record = document.get("zip")
+        if not isinstance(record, Mapping):
+            return None
+        materialized = self._materialize_file_record(record, manifest_path.parent)
+        if materialized is None or materialized["path"] != str(zip_path):
+            return None
+        result = dict(document)
+        result["zip"] = materialized
+        return result
+
     def _materialize_file_record(
         self, record: Mapping[str, Any], root: Path
     ) -> dict[str, Any] | None:
@@ -588,6 +933,243 @@ def selected_candidates(
                 }
             )
     return selected
+
+
+def canonical_garageband_pack_basket(
+    plan: Mapping[str, Any],
+    included_item_ids: Sequence[str] | Any,
+    source_audio_opt_in: bool,
+) -> dict[str, Any]:
+    """Validate and canonicalise one explicit basket in server plan order."""
+
+    if plan.get("schema") != GARAGEBAND_PACK_PLAN_SCHEMA:
+        raise ValueError("unsupported GarageBand pack plan schema")
+    recorded_plan_hash = plan.get("plan_sha256")
+    if recorded_plan_hash is not None and recorded_plan_hash != _pack_plan_hash(plan):
+        raise ValueError("GarageBand pack plan hash is invalid")
+    project_id = plan.get("project_id")
+    basket_scope_sha256 = plan.get("basket_scope_sha256")
+    if not isinstance(project_id, str) or not project_id:
+        raise ValueError("GarageBand pack plan has no project identity")
+    if not _is_sha256(basket_scope_sha256):
+        raise ValueError("GarageBand pack plan has no valid basket scope")
+    if not isinstance(source_audio_opt_in, bool):
+        raise ValueError("source_audio_opt_in must be true or false")
+    if not isinstance(included_item_ids, (list, tuple)):
+        raise ValueError("included_item_ids must be a list")
+    if len(included_item_ids) > 512:
+        raise ValueError("GarageBand basket contains too many items")
+    if any(not isinstance(item_id, str) for item_id in included_item_ids):
+        raise ValueError("GarageBand basket item IDs must be text")
+    if len(set(included_item_ids)) != len(included_item_ids):
+        raise ValueError("GarageBand basket item IDs must not be repeated")
+    items = plan.get("items")
+    if not isinstance(items, list):
+        raise ValueError("GarageBand pack plan has no item inventory")
+    inventory: dict[str, Mapping[str, Any]] = {}
+    for item in items:
+        if not isinstance(item, Mapping):
+            raise ValueError("GarageBand pack plan contains an invalid item")
+        item_id = item.get("item_id")
+        if not isinstance(item_id, str) or item_id in inventory:
+            raise ValueError("GarageBand pack plan contains an invalid item ID")
+        inventory[item_id] = item
+    unknown = [item_id for item_id in included_item_ids if item_id not in inventory]
+    if unknown:
+        raise ValueError("GarageBand basket contains an unknown item ID")
+    included = set(included_item_ids)
+    canonical_ids = [
+        str(item["item_id"]) for item in items if item["item_id"] in included
+    ]
+    selected_midi_count = sum(
+        inventory[item_id].get("kind") == "selected_midi"
+        for item_id in canonical_ids
+    )
+    if selected_midi_count < 1:
+        raise ValueError("GarageBand basket must include at least one selected MIDI")
+    source_audio_count = sum(
+        inventory[item_id].get("kind") == "source_audio"
+        for item_id in canonical_ids
+    )
+    if source_audio_count and not source_audio_opt_in:
+        raise ValueError(
+            "source audio requires a separate explicit local pack opt-in"
+        )
+    basket = {
+        "schema": GARAGEBAND_PACK_BASKET_SCHEMA,
+        "project_id": project_id,
+        "basket_scope_sha256": basket_scope_sha256,
+        "included_item_ids": canonical_ids,
+        "source_audio_opt_in": source_audio_opt_in,
+    }
+    basket["basket_sha256"] = _document_hash(basket)
+    return basket
+
+
+def _pack_basket_scope_hash(
+    catalog: Mapping[str, Any], selection: Sequence[Mapping[str, Any]]
+) -> str:
+    """Hash export eligibility while deliberately ignoring listening context."""
+
+    setup = catalog.get("setup", {})
+    return _document_hash(
+        {
+            "schema": GARAGEBAND_PACK_BASKET_SCHEMA,
+            "project_id": catalog.get("project_id"),
+            "setup": {
+                "bpm": setup.get("bpm"),
+                "key": setup.get("key"),
+                "tuning_hz": setup.get("tuning_hz"),
+                "downbeat": setup.get("downbeat"),
+            },
+            "selection": _public_selection(selection),
+        }
+    )
+
+
+def _garageband_pack_inventory(
+    catalog: Mapping[str, Any],
+    selection: Sequence[Mapping[str, Any]],
+    *,
+    basket_scope_sha256: str,
+) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
+    """Return a public inventory plus server-only records for copied inputs."""
+
+    items: list[dict[str, Any]] = []
+    internal: dict[str, dict[str, Any]] = {}
+    for index, selected in enumerate(selection, start=1):
+        role = str(selected["role"])
+        decision = str(selected["decision"])
+        item_id = _pack_item_id(
+            {
+                "kind": "selected_midi",
+                "stem_id": selected["stem_id"],
+                "candidate_id": selected["candidate_id"],
+                "midi_sha256": selected["midi"]["sha256"],
+                "basket_scope_sha256": basket_scope_sha256,
+            }
+        )
+        archive_path = (
+            f"MIDI/{index:02d}-{_safe_token(role)}-{_safe_token(decision)}.mid"
+        )
+        item = {
+            "item_id": item_id,
+            "kind": "selected_midi",
+            "label": f"{role.replace('_', ' ').title()} — {decision}",
+            "stem_id": selected["stem_id"],
+            "candidate_id": selected["candidate_id"],
+            "candidate_label": selected.get("candidate_label"),
+            "process": selected.get("process"),
+            "role": role,
+            "decision": decision,
+            "selection_index": index,
+            "default_included": True,
+            "generated": False,
+            "archive_paths": [archive_path],
+            "bytes": selected["midi"]["bytes"],
+            "content_sha256": selected["midi"]["sha256"],
+        }
+        items.append(item)
+        internal[item_id] = {"record": dict(selected["midi"])}
+
+    if selection:
+        proxy_id = _pack_item_id(
+            {
+                "kind": "arrangement_proxy",
+                "basket_scope_sha256": basket_scope_sha256,
+            }
+        )
+        items.append(
+            {
+                "item_id": proxy_id,
+                "kind": "arrangement_proxy",
+                "label": "Dry selected-arrangement proxy MIDI and WAV",
+                "default_included": True,
+                "generated": True,
+                "archive_paths": [
+                    "MIDI/selected-arrangement-proxy.mid",
+                    "PREVIEW/selected-arrangement-proxy.wav",
+                ],
+            }
+        )
+
+    source_groups: dict[str, dict[str, Any]] = {}
+    for stem in catalog.get("stems", []):
+        record = stem.get("source")
+        if not isinstance(record, Mapping):
+            continue
+        sha256 = str(record.get("sha256", ""))
+        if not _is_sha256(sha256):
+            raise ValueError("Workbench source audio has no valid content hash")
+        group = source_groups.setdefault(
+            sha256,
+            {
+                "record": dict(record),
+                "roles": [],
+                "labels": [],
+                "stem_ids": [],
+            },
+        )
+        role = str(stem.get("role") or "unclassified")
+        label = str(stem.get("label") or role.replace("_", " ").title())
+        if role not in group["roles"]:
+            group["roles"].append(role)
+        if label not in group["labels"]:
+            group["labels"].append(label)
+        stem_id = str(stem.get("stem_id") or "")
+        if stem_id and stem_id not in group["stem_ids"]:
+            group["stem_ids"].append(stem_id)
+    for source_index, (sha256, group) in enumerate(source_groups.items(), start=1):
+        roles = list(group["roles"])
+        record = group["record"]
+        suffix = Path(str(record.get("name") or record.get("path") or ".wav")).suffix
+        suffix = suffix.lower() if suffix else ".wav"
+        if not suffix.startswith(".") or not suffix[1:].isalnum():
+            suffix = ".wav"
+        role_token = _safe_token(roles[0] if len(roles) == 1 else "shared-source")
+        archive_path = f"STEMS/{source_index:02d}-{role_token}-source{suffix}"
+        item_id = _pack_item_id(
+            {
+                "kind": "source_audio",
+                "source_sha256": sha256,
+                "basket_scope_sha256": basket_scope_sha256,
+            }
+        )
+        items.append(
+            {
+                "item_id": item_id,
+                "kind": "source_audio",
+                "label": " / ".join(group["labels"]),
+                "roles": roles,
+                "stem_ids": list(group["stem_ids"]),
+                "source_index": source_index,
+                "default_included": False,
+                "generated": False,
+                "archive_paths": [archive_path],
+                "bytes": record.get("bytes"),
+                "content_sha256": sha256,
+            }
+        )
+        internal[item_id] = {"record": record}
+    return items, internal
+
+
+def _pack_item_id(payload: Mapping[str, Any]) -> str:
+    return "pack-item-" + _document_hash(payload)
+
+
+def _pack_plan_hash(plan: Mapping[str, Any]) -> str:
+    return _document_hash(
+        {key: value for key, value in plan.items() if key != "plan_sha256"}
+    )
+
+
+def _is_sha256(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
 
 
 def _arrangement_tracks(selection: Sequence[Mapping[str, Any]]) -> list[MidiTrack]:
@@ -877,6 +1459,89 @@ def _garageband_readme(catalog: Mapping[str, Any], count: int) -> str:
     )
 
 
+def _garageband_pack_readme(
+    catalog: Mapping[str, Any],
+    *,
+    selected_midi_count: int,
+    source_audio_count: int,
+    arrangement_proxy_included: bool,
+) -> str:
+    setup = catalog.get("setup", {})
+    lines = [
+        "Sunofriend GarageBand pack",
+        "============================",
+        "",
+        f"Project: {catalog.get('name')}",
+        f"Selected MIDI files: {selected_midi_count}",
+        f"Opted-in source stems: {source_audio_count}",
+        f"Set GarageBand tempo to: {setup.get('bpm')} BPM",
+        f"Project key: {setup.get('key') or 'not inferred'}",
+        f"Source tuning: {setup.get('tuning_hz') or 'not inferred'} Hz",
+        (
+            f"Downbeat: {setup.get('downbeat')}"
+            if setup.get("downbeat") is not None
+            else "Downbeat: not confirmed"
+        ),
+        "",
+        "1. Set the GarageBand tempo above before importing files.",
+        "2. Drag each checked file in MIDI/ onto its own Software Instrument track.",
+        "3. Choose a playable GarageBand patch for every MIDI track.",
+    ]
+    if source_audio_count:
+        lines.append(
+            "4. Source audio in STEMS/ was included only by your explicit local opt-in."
+        )
+    else:
+        lines.append("4. No source audio is included in this pack.")
+    if arrangement_proxy_included:
+        lines.append(
+            "5. The selected-arrangement proxy is a dry convenience audition only."
+        )
+    else:
+        lines.append("5. No generated arrangement proxy was requested.")
+    lines.extend(
+        [
+            "",
+            "The numbered MIDI files are byte-for-byte copies of the checked explicit",
+            "choices. They are authoritative; the basket does not alter musical choices,",
+            "MIDI notes, timing, velocities or GarageBand instruments.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _verified_record_bytes(record: Mapping[str, Any], *, label: str) -> bytes:
+    """Read once, then verify the exact bytes which will enter an archive."""
+
+    path = Path(str(record.get("path", ""))).resolve()
+    try:
+        data = path.read_bytes()
+    except OSError as exc:
+        raise ValueError(f"{label} no longer exists: {path}") from exc
+    if len(data) != record.get("bytes") or hashlib.sha256(data).hexdigest() != record.get(
+        "sha256"
+    ):
+        raise ValueError(f"{label} changed after it was catalogued")
+    return data
+
+
+def _pack_manifest_item(
+    *,
+    item_id: str,
+    kind: str,
+    archive_path: str,
+    data: bytes,
+) -> dict[str, Any]:
+    return {
+        "item_id": item_id,
+        "kind": kind,
+        "archive_path": archive_path,
+        "bytes": len(data),
+        "sha256": hashlib.sha256(data).hexdigest(),
+    }
+
+
 def _file_record(path: Path) -> dict[str, Any]:
     return {
         "path": str(path.resolve()),
@@ -945,8 +1610,13 @@ def _zip_bytes(archive: zipfile.ZipFile, name: str, value: bytes) -> None:
 __all__ = [
     "ARRANGEMENT_SCHEMA",
     "GARAGEBAND_HANDOFF_SCHEMA",
+    "GARAGEBAND_PACK_BASKET_SCHEMA",
+    "GARAGEBAND_PACK_PLAN_SCHEMA",
+    "GARAGEBAND_PACK_SCHEMA",
     "NEUTRAL_PREVIEW_SCHEMA",
     "SELECTED_MIDI_OVERLAP_SCHEMA",
     "WorkbenchArtifacts",
+    "WorkbenchPackConflictError",
+    "canonical_garageband_pack_basket",
     "selected_candidates",
 ]

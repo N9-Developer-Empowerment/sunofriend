@@ -14,15 +14,17 @@ uncertainty visible, records an explicit human choice and never infers a winner
 from a score, label, audition count or displayed default.
 
 The current interface supplies per-stem source/candidate playback, persistent
-decisions, neutral preview rendering, selected-arrangement audition and a safe
-exact-MIDI GarageBand handoff. Phase 5.4 now supplies both a read-only per-stem
-source/MIDI comparison timeline and a full-song selected-arrangement explorer.
+decisions, neutral preview rendering, selected-arrangement audition and an
+explicit GarageBand pack composer. Phase 5.4 now supplies both a read-only
+per-stem source/MIDI comparison timeline and a full-song selected-arrangement
+explorer.
 The arrangement explorer shows every unique project source stem beside only
 the active explicit main and optional MIDI choices, with temporary visibility,
 mute, solo and level controls. It does not infer an offset: every source and
 MIDI file begins at its recorded zero, so equal displayed seconds do not by
-themselves prove source/MIDI alignment. The user-composed GarageBand basket
-remains the next planned increment.
+themselves prove source/MIDI alignment. The user-composed GarageBand basket is
+persistent local export state, separate from both musical decisions and the
+temporary audition mixer.
 
 ## Result Explorer direction
 
@@ -80,12 +82,14 @@ Two linked views avoid confusing alternatives with simultaneous parts:
   switches among at most three primary process candidates and opens additional
   diagnostic alternatives only when needed.
 
-The planned pack composer will be separate from the main/optional musical
-decision. It will show exactly which unchanged MIDI, explicitly requested
-stems, preview mixes and eligible Instrument Bundles will enter a GarageBand
-ZIP. The existing source-audio-free exact-MIDI handoff remains the current safe
-default. Direct note editing, phrase recombination and Clip-library composition
-belong to the later creative arrangement phase.
+The implemented Pack Composer is separate from the main/optional musical
+decision. It shows exactly which unchanged selected MIDI, dry proxy pair and
+explicitly opted-in source stems will enter a GarageBand ZIP. The existing
+source-audio-free exact-MIDI-plus-proxy handoff remains its safe default.
+Unselected alternatives and Instrument Bundles remain deferred until the
+catalog has an explicit reviewed eligibility contract for them. Direct note
+editing, phrase recombination and Clip-library composition belong to the later
+creative arrangement phase.
 
 ## Start with automatic discovery
 
@@ -483,6 +487,46 @@ and unreviewed defaults. Import the numbered MIDI files onto separate Software
 Instrument tracks and choose the final patches in GarageBand; those originals
 are authoritative.
 
+## Compose an exact GarageBand pack
+
+Open **Compose GarageBand pack** after making the musical main/optional
+choices. The page has three deliberately separate groups:
+
+- **Authoritative selected MIDI** lists only current active main/optional
+  choices. Every item is checked by the safe default, but a smaller export
+  subset can be chosen without changing the arrangement.
+- **Convenience audition** is one checked dry arrangement-proxy MIDI/WAV pair.
+  Uncheck it when only the original selected MIDI is needed or when no local
+  SoundFont renderer is available.
+- **Original source stems** is closed and unchecked by default. Enable the
+  separate local source-audio opt-in, then check only stems that may be copied
+  into this private pack. Duplicate source bytes appear once with their roles
+  retained.
+
+**Reset to safe default** restores all active selected MIDI and the proxy while
+removing source audio. **Save pack choices** persists only opaque item IDs and
+the explicit source opt-in in a dedicated append-only SQLite table. It does not
+append a review decision, alter review completion, enter contribution data or
+remember mixer/playback activity. A changed musical selection opens a new safe
+basket scope; a solo-to-full-mix reconfirmation can restore the same checked
+items but must be saved against the refreshed plan before build.
+
+**Build this exact pack** first saves the visible basket, then sends only its
+plan and basket hashes to the loopback server. The server re-derives every
+eligible item, rejects stale tabs and unknown or duplicate IDs, retains the
+substantial-overlap gate, and reads each included catalog file once before
+verifying the exact bytes written into the deterministic ZIP. Source audio
+cannot be included without the separate opt-in. The path-free receipt records
+BPM, key, tuning, downbeat, checked archive paths and hashes; it excludes local
+paths and private notes.
+
+Pack Composer v1 intentionally excludes rejected, needs-correction,
+superseded and unreviewed MIDI. It also does not search the filesystem for SF2,
+`.aupreset` or Instrument Bundle files. Those will become eligible only through
+a later explicit, hash-pinned catalog contract. The legacy
+`sunofriend.workbench-garageband-handoff.v1` endpoint remains unchanged for
+existing clients.
+
 ## Export the private review without a server
 
 The browser download remains available, but an agent or terminal workflow can
@@ -513,9 +557,9 @@ note-free disclosure boundary.
 - Mixer settings, custom auditions, loops and play position are intentionally
   browser-tab state. They are not restored, rendered into a custom WAV or
   included in a handoff.
-- The current GarageBand handoff contains explicit selected MIDI and a dry
-  proxy. It is not yet a user-composed basket for optional source stems,
-  alternative MIDI, preview mixes or eligible Instrument Bundles.
+- Pack Composer v1 contains checked active selected MIDI, an optional dry proxy
+  pair and separately opted-in source stems. Unselected alternative MIDI,
+  custom mixer renders and eligible Instrument Bundles remain later additions.
 - Existing preview WAVs remain labelled unnormalised; use the neutral renderer
   when comparing MIDI rather than embedded instruments.
 - Browser switching shares time in seconds but does not yet use decoded

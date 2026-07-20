@@ -13,12 +13,38 @@ from typing import Any, Mapping
 
 WORKBENCH_EVENT_SCHEMA = "sunofriend.workbench-event.v1"
 WORKBENCH_REVIEW_SCHEMA = "sunofriend.workbench-review.v1"
+WORKBENCH_PACK_SELECTION_SCHEMA = "sunofriend.workbench-pack-selection.v1"
+WORKBENCH_PACK_BASKET_SCHEMA = "sunofriend.workbench-garageband-pack-basket.v1"
+_PACK_BASKET_FIELDS = frozenset(
+    {
+        "schema",
+        "project_id",
+        "basket_scope_sha256",
+        "included_item_ids",
+        "source_audio_opt_in",
+        "basket_sha256",
+    }
+)
 _EVENT_TYPES = {
     "candidate_decision",
     "stem_outcome",
     "role_tag",
     "candidate_auditioned",
 }
+
+
+class WorkbenchPackStateConflictError(RuntimeError):
+    """Raised when a Pack Composer save uses a stale basket revision."""
+
+    def __init__(self, *, expected_revision: int, current_revision: int) -> None:
+        self.expected_revision = expected_revision
+        self.current_revision = current_revision
+        super().__init__(
+            "Pack Composer basket revision conflict: "
+            f"expected {expected_revision}, current revision is {current_revision}"
+        )
+
+
 _CANDIDATE_DECISIONS = {"main", "optional", "needs_correction", "reject"}
 _STEM_OUTCOMES = {"equivalent", "none_usable", "cannot_tell", "clear_choice"}
 _LISTENING_CONTEXTS = {"solo", "full_mix"}
@@ -42,7 +68,9 @@ class WorkbenchStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._initialize()
 
-    def append(self, project: Mapping[str, Any], request: Mapping[str, Any]) -> dict[str, Any]:
+    def append(
+        self, project: Mapping[str, Any], request: Mapping[str, Any]
+    ) -> dict[str, Any]:
         event = _validated_event(project, request)
         with self._connect() as connection:
             connection.execute(
@@ -163,7 +191,9 @@ class WorkbenchStore:
         }
         review = {
             "schema": WORKBENCH_REVIEW_SCHEMA,
-            "status": "reviewed" if _review_complete(project, current) else "in_progress",
+            "status": "reviewed"
+            if _review_complete(project, current)
+            else "in_progress",
             "exported_at": _utc_now(),
             "project": local_project,
             "current": current,
@@ -172,6 +202,119 @@ class WorkbenchStore:
         review["contribution_preview"] = contribution_preview(project, current, events)
         review["review_sha256"] = _document_hash(review)
         return review
+
+    def save_pack_selection(
+        self,
+        project_id: str,
+        basket: Mapping[str, Any],
+        plan_sha256: str,
+        expected_revision: int,
+    ) -> dict[str, Any]:
+        """Append one explicit Pack Composer basket revision.
+
+        Pack selections are deliberately isolated from musical decision events.
+        The caller supplies the revision it last observed; a stale save fails
+        rather than overwriting or merging another browser's basket.
+        """
+
+        validated_project_id = _pack_identifier(project_id, label="project_id")
+        validated_basket = _validated_pack_basket(validated_project_id, basket)
+        validated_plan_sha256 = _sha256_text(plan_sha256, label="plan_sha256")
+        if (
+            isinstance(expected_revision, bool)
+            or not isinstance(expected_revision, int)
+            or expected_revision < 0
+        ):
+            raise ValueError("expected_revision must be a non-negative integer")
+
+        basket_scope_sha256 = str(validated_basket["basket_scope_sha256"])
+        event_id = str(uuid.uuid4())
+        saved_at = _utc_now()
+        basket_json = json.dumps(
+            validated_basket, sort_keys=True, separators=(",", ":")
+        )
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                """
+                SELECT revision
+                FROM pack_selection_events
+                WHERE project_id = ? AND basket_scope_sha256 = ?
+                ORDER BY revision DESC, sequence DESC
+                LIMIT 1
+                """,
+                (validated_project_id, basket_scope_sha256),
+            ).fetchone()
+            current_revision = int(row[0]) if row is not None else 0
+            if current_revision != expected_revision:
+                raise WorkbenchPackStateConflictError(
+                    expected_revision=expected_revision,
+                    current_revision=current_revision,
+                )
+            revision = current_revision + 1
+            connection.execute(
+                """
+                INSERT INTO pack_selection_events (
+                    event_id, schema_name, saved_at, project_id,
+                    basket_scope_sha256, revision, saved_plan_sha256,
+                    basket_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    event_id,
+                    WORKBENCH_PACK_SELECTION_SCHEMA,
+                    saved_at,
+                    validated_project_id,
+                    basket_scope_sha256,
+                    revision,
+                    validated_plan_sha256,
+                    basket_json,
+                ),
+            )
+
+        return {
+            **validated_basket,
+            "revision": revision,
+            "event_id": event_id,
+            "saved_at": saved_at,
+            "saved_plan_sha256": validated_plan_sha256,
+            "saved": True,
+        }
+
+    def current_pack_selection(
+        self, project_id: str, basket_scope_sha256: str
+    ) -> dict[str, Any] | None:
+        """Return the latest saved basket for one project/scope, if any."""
+
+        validated_project_id = _pack_identifier(project_id, label="project_id")
+        validated_scope_sha256 = _sha256_text(
+            basket_scope_sha256, label="basket_scope_sha256"
+        )
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT event_id, saved_at, revision, saved_plan_sha256,
+                       basket_json
+                FROM pack_selection_events
+                WHERE project_id = ? AND basket_scope_sha256 = ?
+                ORDER BY revision DESC, sequence DESC
+                LIMIT 1
+                """,
+                (validated_project_id, validated_scope_sha256),
+            ).fetchone()
+        if row is None:
+            return None
+        basket = json.loads(row[4])
+        if not isinstance(basket, dict):
+            raise RuntimeError("saved Pack Composer basket is invalid")
+        return {
+            **basket,
+            "revision": int(row[2]),
+            "event_id": str(row[0]),
+            "saved_at": str(row[1]),
+            "saved_plan_sha256": str(row[3]),
+            "saved": True,
+        }
 
     def _initialize(self) -> None:
         with self._connect() as connection:
@@ -196,6 +339,30 @@ class WorkbenchStore:
                 ON decision_events (project_id, sequence)
                 """
             )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS pack_selection_events (
+                    sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+                    event_id TEXT NOT NULL UNIQUE,
+                    schema_name TEXT NOT NULL,
+                    saved_at TEXT NOT NULL,
+                    project_id TEXT NOT NULL,
+                    basket_scope_sha256 TEXT NOT NULL,
+                    revision INTEGER NOT NULL CHECK (revision > 0),
+                    saved_plan_sha256 TEXT NOT NULL,
+                    basket_json TEXT NOT NULL,
+                    UNIQUE (project_id, basket_scope_sha256, revision)
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS pack_selection_events_project_scope
+                ON pack_selection_events (
+                    project_id, basket_scope_sha256, revision
+                )
+                """
+            )
 
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(str(self.path), timeout=10.0)
@@ -208,7 +375,11 @@ def default_workbench_state_dir(project: Mapping[str, Any]) -> Path:
     import os
 
     configured = os.environ.get("SUNOFRIEND_WORKBENCH_HOME")
-    base = Path(configured).expanduser() if configured else Path.home() / ".local" / "share" / "sunofriend" / "workbench"
+    base = (
+        Path(configured).expanduser()
+        if configured
+        else Path.home() / ".local" / "share" / "sunofriend" / "workbench"
+    )
     return (base / str(project["project_id"])).resolve()
 
 
@@ -221,9 +392,7 @@ def contribution_preview(
 
     stems = []
     current_stems = current.get("stems", {})
-    current_stem_ids = {
-        str(stem["stem_id"]) for stem in project.get("stems", [])
-    }
+    current_stem_ids = {str(stem["stem_id"]) for stem in project.get("stems", [])}
     for stem in project.get("stems", []):
         stem_id = str(stem["stem_id"])
         state = current_stems.get(stem_id, {})
@@ -284,7 +453,9 @@ def contribution_preview(
     }
 
 
-def _validated_event(project: Mapping[str, Any], request: Mapping[str, Any]) -> dict[str, Any]:
+def _validated_event(
+    project: Mapping[str, Any], request: Mapping[str, Any]
+) -> dict[str, Any]:
     event_type = request.get("event_type")
     if event_type not in _EVENT_TYPES:
         raise ValueError("unsupported workbench event type")
@@ -303,16 +474,18 @@ def _validated_event(project: Mapping[str, Any], request: Mapping[str, Any]) -> 
         if candidate_id not in candidates:
             raise ValueError("candidate_id does not belong to the selected stem")
 
-    if event_type in {"candidate_decision", "candidate_auditioned"} and not candidate_id:
+    if (
+        event_type in {"candidate_decision", "candidate_auditioned"}
+        and not candidate_id
+    ):
         raise ValueError(f"{event_type} requires candidate_id")
     payload: dict[str, Any]
     if event_type == "candidate_decision":
         decision = request.get("decision")
         if decision not in _CANDIDATE_DECISIONS:
             raise ValueError("unsupported candidate decision")
-        if (
-            decision in {"main", "optional"}
-            and candidates[str(candidate_id)].get("audition_blocked")
+        if decision in {"main", "optional"} and candidates[str(candidate_id)].get(
+            "audition_blocked"
         ):
             raise ValueError(
                 "this candidate is diagnostic-only because it contains no playable "
@@ -322,11 +495,16 @@ def _validated_event(project: Mapping[str, Any], request: Mapping[str, Any]) -> 
         if context not in _LISTENING_CONTEXTS:
             raise ValueError("unsupported listening context")
         problem_tags = request.get("problem_tags", [])
-        if not isinstance(problem_tags, list) or any(tag not in _PROBLEM_TAGS for tag in problem_tags):
+        if not isinstance(problem_tags, list) or any(
+            tag not in _PROBLEM_TAGS for tag in problem_tags
+        ):
             raise ValueError("unsupported problem tag")
         notes = request.get("notes")
         if notes is not None:
-            notes = _bounded_text(notes, label="notes", maximum=2000, allow_empty=True) or None
+            notes = (
+                _bounded_text(notes, label="notes", maximum=2000, allow_empty=True)
+                or None
+            )
         payload = {
             "decision": decision,
             "context": context,
@@ -354,7 +532,9 @@ def _validated_event(project: Mapping[str, Any], request: Mapping[str, Any]) -> 
     if (
         not isinstance(review_context_sha256, str)
         or len(review_context_sha256) != 64
-        or any(character not in "0123456789abcdef" for character in review_context_sha256)
+        or any(
+            character not in "0123456789abcdef" for character in review_context_sha256
+        )
     ):
         raise ValueError("workbench stem has no valid review context hash")
     payload["review_context"] = {
@@ -386,7 +566,9 @@ def _review_complete(project: Mapping[str, Any], current: Mapping[str, Any]) -> 
     return True
 
 
-def _bounded_text(value: Any, *, label: str, maximum: int, allow_empty: bool = False) -> str:
+def _bounded_text(
+    value: Any, *, label: str, maximum: int, allow_empty: bool = False
+) -> str:
     if not isinstance(value, str):
         raise ValueError(f"{label} must be text")
     text = value.strip()
@@ -397,10 +579,81 @@ def _bounded_text(value: Any, *, label: str, maximum: int, allow_empty: bool = F
     return text
 
 
+def _validated_pack_basket(
+    project_id: str, basket: Mapping[str, Any]
+) -> dict[str, Any]:
+    if not isinstance(basket, Mapping):
+        raise ValueError("Pack Composer basket must be an object")
+    if set(basket) != _PACK_BASKET_FIELDS:
+        raise ValueError(
+            "Pack Composer basket must contain exactly schema, project_id, "
+            "basket_scope_sha256, included_item_ids, source_audio_opt_in and "
+            "basket_sha256"
+        )
+    if basket.get("schema") != WORKBENCH_PACK_BASKET_SCHEMA:
+        raise ValueError("unsupported Pack Composer basket schema")
+    basket_project_id = _pack_identifier(
+        basket.get("project_id"), label="basket project_id"
+    )
+    if basket_project_id != project_id:
+        raise ValueError("Pack Composer basket project_id does not match")
+    basket_scope_sha256 = _sha256_text(
+        basket.get("basket_scope_sha256"), label="basket_scope_sha256"
+    )
+    basket_sha256 = _sha256_text(basket.get("basket_sha256"), label="basket_sha256")
+    included_item_ids = basket.get("included_item_ids")
+    if not isinstance(included_item_ids, list):
+        raise ValueError("included_item_ids must be a list")
+    validated_item_ids = [
+        _pack_identifier(value, label="included_item_ids entry", maximum=512)
+        for value in included_item_ids
+    ]
+    if len(set(validated_item_ids)) != len(validated_item_ids):
+        raise ValueError("included_item_ids must not contain duplicates")
+    source_audio_opt_in = basket.get("source_audio_opt_in")
+    if not isinstance(source_audio_opt_in, bool):
+        raise ValueError("source_audio_opt_in must be boolean")
+
+    # Preserve the canonical basket fields and the caller's item order exactly.
+    # In particular, the store does not sort, deduplicate, add, or remove items.
+    return {
+        "schema": WORKBENCH_PACK_BASKET_SCHEMA,
+        "project_id": basket_project_id,
+        "basket_scope_sha256": basket_scope_sha256,
+        "included_item_ids": list(validated_item_ids),
+        "source_audio_opt_in": source_audio_opt_in,
+        "basket_sha256": basket_sha256,
+    }
+
+
+def _pack_identifier(value: Any, *, label: str, maximum: int = 256) -> str:
+    if not isinstance(value, str):
+        raise ValueError(f"{label} must be text")
+    if not value or not value.strip():
+        raise ValueError(f"{label} must not be empty")
+    if value != value.strip():
+        raise ValueError(f"{label} must not have surrounding whitespace")
+    if len(value) > maximum:
+        raise ValueError(f"{label} must be at most {maximum} characters")
+    return value
+
+
+def _sha256_text(value: Any, *, label: str) -> str:
+    if (
+        not isinstance(value, str)
+        or len(value) != 64
+        or any(character not in "0123456789abcdef" for character in value)
+    ):
+        raise ValueError(f"{label} must be a lowercase SHA-256")
+    return value
+
+
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _document_hash(document: Mapping[str, Any]) -> str:
-    payload = json.dumps(document, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    payload = json.dumps(document, sort_keys=True, separators=(",", ":")).encode(
+        "utf-8"
+    )
     return hashlib.sha256(payload).hexdigest()

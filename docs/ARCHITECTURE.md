@@ -203,10 +203,20 @@ prepared neutral MIDI previews. These independent media elements share seconds
 but are not sample-accurate, and source/MIDI levels are not normalised. The
 content-addressed prepared dry proxy remains the reproducible control.
 
-The planned GarageBand pack composer will translate explicit checkboxes into a
-manifest and ZIP while retaining the existing source-audio-free, exact-MIDI
-handoff as its safe default. Persistent mixer projects, custom-mix rendering,
-sample-accurate Web Audio and the pack composer are not implemented yet.
+The GarageBand Pack Composer translates explicit checkboxes into a versioned,
+path-free plan, canonical basket and deterministic ZIP. Its v1 inventory
+contains each current main/optional MIDI track unchanged, one optional dry
+arrangement proxy and deduplicated source audio behind a separate explicit
+opt-in. Selected MIDI and the proxy are checked by default; source audio is
+not. Plan, scope and basket hashes reject stale builds, and the builder
+rechecks the exact input bytes before copying them. Basket revisions live in a
+dedicated append-only `pack_selection_events` table, separate from musical
+decisions, private reviews and contribution previews. The original
+source-audio-free handoff route remains unchanged for compatibility.
+
+Alternative MIDI, Instrument Bundles, persistent mixer projects, custom-mix
+rendering, phrase-range links and sample-accurate Web Audio are not implemented
+in Pack Composer v1.
 
 `ai_matrix.py` applies a model-neutral quality/report schema to already
 completed immutable runs from one controlled backend, checkpoint, model config
@@ -433,9 +443,10 @@ third-party integrations.
 
 The safest next boundaries are:
 
-1. Build the GarageBand pack composer on the existing per-stem and selected-
-   arrangement timelines while keeping waveform display data, temporary mixer
-   state, musical decisions and export-basket choices as separate contracts.
+1. Harden the completed GarageBand Pack Composer and add another artifact kind
+   only after it has an explicit eligibility and rights contract. Keep
+   waveform display data, temporary mixer state, musical decisions and
+   export-basket choices separate.
 2. Add typed application operations for folder conversion, one-stem conversion,
    vocal extraction and MIDI transformation; keep CLI handlers as adapters.
 3. Centralize instrument roles, aliases, channels, GM programs and GarageBand

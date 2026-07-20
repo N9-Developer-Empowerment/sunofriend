@@ -7,9 +7,9 @@ small-CPU golden measurements plus the hardened private blind short-loop
 package, resolved listening result and batch-size 1→2 CPU comparison complete;
 the first hardened, lead-only Phase 5.3 S0/M1/M3 phrase-disagreement report is
 complete with explicit verified/unverified lineage boundaries; blind phrase
-choice remains; Phase 5.4 is in progress with its per-stem comparison and
-full-song selected-arrangement explorer/mixer implemented; GarageBand Pack
-Composer and phrase-range links remain
+choice remains; Phase 5.4 is in progress with its per-stem comparison,
+full-song selected-arrangement explorer/mixer and initial GarageBand Pack
+Composer implemented; phrase-range links and local Studio hardening remain
 
 Started: 15 July 2026  
 Scope: local-first AI assistance for transcription, review, instrument matching
@@ -86,7 +86,7 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
-| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0/5.1 complete; Phase 5.2 local CPU decisions resolved; Phase 5.3 diagnostic slice complete; Phase 5.4 comparison and selected-arrangement views implemented** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench now has hash-pinned per-stem comparison and full-song selected-arrangement timelines plus an audition-only source/MIDI mixer; explicit GarageBand pack contents remain without selecting a winner |
+| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0/5.1 complete; Phase 5.2 local CPU decisions resolved; Phase 5.3 diagnostic slice complete; Phase 5.4 comparison, arrangement and initial pack composition implemented** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench now has hash-pinned per-stem and full-song timelines, an audition-only source/MIDI mixer and a separate persistent exact GarageBand pack basket without selecting a winner |
 | 6. Creative Arrangement and Reusable MIDI | **Planned after the local Studio is stable** | Reversible note/phrase correction, explicit hybrids, transforms, Clip v1 browsing and reuse, mashup preparation and instrument attachment without becoming a full DAW |
 | 7. Cross-DAW and Opt-in Community Learning | **Deferred** | Compatibility testing, cleared public goldens and consented contextual feedback only after the local workflow is useful, private and stable |
 
@@ -494,12 +494,15 @@ The website is primarily the local product UI: project setup, per-role
 source/MIDI comparison, arrangement audition, instrument choice and explicit
 GarageBand export. The current Workbench already provides synchronized
 per-stem comparison, append-only choices, a selected-arrangement proxy and a
-safe exact-MIDI handoff. Phase 5.4's first visual slice now adds the compare-role
+safe exact-MIDI handoff. Phase 5.4's first visual slice adds the compare-role
 timeline for the small family of analytical and AI alternatives. Its second
 slice adds a full-song view of unique project sources and current explicit
 main/optional MIDI, with temporary source/MIDI/hybrid audition controls that do
-not record feedback. The planned GarageBand basket will show exactly what
-enters the ZIP and will remain separate from musical main/optional decisions.
+not record feedback. Its initial GarageBand Pack Composer now presents a
+separate persistent basket containing active selected MIDI, an optional dry
+arrangement proxy and source audio behind explicit opt-in. Hash-pinned plans
+and baskets make the ZIP contents inspectable and reject stale builds; plays,
+visibility and mixer state never imply inclusion.
 
 This direction borrows the approachability of a visual transcription tool—one
 transport, visible notes, understandable track controls and direct export—not
@@ -565,6 +568,34 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-20 — Phase 5.4 GarageBand Pack Composer v1
+
+- Goal: make GarageBand ZIP contents visible and intentional without turning
+  export choices into musical feedback or changing the selected MIDI bytes.
+- Change or experiment: added versioned path-free plan, basket and pack
+  contracts; a dedicated append-only basket store; authenticated local
+  plan/save/build routes; and a Workbench composer grouped into selected MIDI,
+  dry arrangement proxy and source-audio sections.
+- Safety contract: only current explicit main/optional MIDI is eligible. MIDI
+  and the proxy default on; sources default off and require a separate opt-in.
+  Rejected, needs-correction, unreviewed and superseded candidates are absent.
+  Playback, visibility, mute, solo and gain do not affect inclusion or review
+  history. The legacy exact-MIDI handoff remains unchanged.
+- Evidence and metrics: plan, basket and selection-scope hashes reject stale
+  saves/builds; optimistic revisions prevent concurrent lost updates; exact
+  input bytes are hash-verified before deterministic ZIP construction; source
+  audio is deduplicated by content without deduplicating selected MIDI.
+  Artifact, store, HTTP and UI tests cover safe defaults, source opt-in,
+  isolation, stale conflicts, drift and compatibility.
+- Listening result: no listening verdict is claimed by the composer. It
+  packages only explicit eligible artifacts after musical review.
+- Decision: retain Pack Composer v1 as the supported explicit export path and
+  retain the original handoff as the smallest compatibility path.
+- Problems/risks: alternative MIDI, Instrument Bundles, custom rendered mixes,
+  phrase links and long-song/browser hardening still need their own contracts.
+- Next smallest step: connect disputed timeline ranges to the existing phrase
+  review flow, then begin Phase 5.5 local Studio usability hardening.
 
 ### 2026-07-20 — Phase 5.4 selected-arrangement explorer
 

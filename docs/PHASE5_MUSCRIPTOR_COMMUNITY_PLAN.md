@@ -1,6 +1,6 @@
 # Phase 5: Multi-Process MIDI Comparison and Local Result Explorer
 
-Status: **Phase 5.0 and 5.1 complete; the locally actionable Phase 5.2 small-CPU fresh-process, bounded reused-model, application-cache, beam-1/beam-2 and batch-size slices are complete; Phase 5.3 has a hardened read-only, lead-only S0/M1/M3 vocal phrase-disagreement report and now moves to explicit phrase listening; Phase 5.4 is in progress with hash-pinned per-stem comparison plus full-song selected-arrangement timeline/audition mixer implemented, while the GarageBand pack composer and phrase-range links remain; beam 1 and batch 1 remain the defaults and no public service or new checkpoint download is authorised**
+Status: **Phase 5.0 and 5.1 complete; the locally actionable Phase 5.2 small-CPU fresh-process, bounded reused-model, application-cache, beam-1/beam-2 and batch-size slices are complete; Phase 5.3 has a hardened read-only, lead-only S0/M1/M3 vocal phrase-disagreement report and now moves to explicit phrase listening; Phase 5.4 is in progress with hash-pinned per-stem comparison, full-song selected-arrangement audition and GarageBand Pack Composer v1 implemented, while phrase-range links and local Studio hardening remain; beam 1 and batch 1 remain the defaults and no public service or new checkpoint download is authorised**
 
 Drafted: 19 July 2026
 Scope: accurate stem/full-mix MIDI, several analytical and AI processes kept as
@@ -372,21 +372,34 @@ optional textures unless they pass the complete-instrument and listening gates.
 
 Musical choice and file export are related but separate decisions. **Use as
 main** and **Keep optional** say what belongs in the current arrangement. The
-planned pack composer then shows exactly what will be copied into the ZIP and
-lets the user include only explicit, eligible artifacts:
+implemented v1 Pack Composer now shows exactly what will be copied into the ZIP
+and lets the user include only explicit, eligible artifacts:
 
 - unchanged selected MIDI tracks, which remain authoritative;
-- explicitly requested alternative MIDI tracks;
-- selected source stems only after a separate local opt-in;
-- prepared stem-only, MIDI-only, hybrid or current custom-mix auditions;
-- eligible Instrument Bundles, SF2 banks and `.aupreset` wrappers; and
+- the prepared dry arrangement proxy;
+- selected source stems only after a separate local opt-in, deduplicated by
+  exact content hash; and
 - a path-free manifest with BPM, key, tuning, downbeat and GarageBand import
   instructions.
 
-The current v1 handoff remains the safe foundation: selected MIDI plus its dry
-proxy, with source audio excluded. Phase 5.4 must preserve that default and
-must never infer ZIP inclusion from a play, a visible track or an unclicked
-candidate card.
+The basket is append-only, project-local state with its own optimistic revision
+and scope hash. It does not enter musical decisions, private review events or
+contribution previews. Plan and basket hashes reject stale builds, and exact
+input bytes are checked before deterministic ZIP construction. Rejected,
+needs-correction, unreviewed and superseded candidates are ineligible.
+
+Later explicitly gated composer increments may add:
+
+- explicitly requested alternative MIDI tracks;
+- prepared stem-only, MIDI-only, hybrid or current custom-mix auditions;
+- eligible Instrument Bundles, SF2 banks and `.aupreset` wrappers; and
+- a path-free manifest with BPM, key, tuning, downbeat and GarageBand import
+  instructions for those new artifact kinds.
+
+The original handoff remains the smallest safe compatibility path: selected
+MIDI plus its dry proxy, with source audio excluded. Pack Composer v1 preserves
+that default and never infers ZIP inclusion from a play, a visible track or an
+unclicked candidate card.
 
 ### Local evidence is a by-product of normal work
 
@@ -1168,9 +1181,9 @@ server.
 
 ### 5.4 — Interactive Result Explorer and GarageBand Pack Composer
 
-Status: **in progress; the per-stem compare timeline and full-song
-selected-arrangement explorer/mixer are implemented, while the pack composer
-and phrase-range links remain**.
+Status: **in progress; the per-stem compare timeline, full-song
+selected-arrangement explorer/mixer and GarageBand Pack Composer v1 are
+implemented, while phrase-range links and local Studio hardening remain**.
 
 Build this as an evolution of the completed 5.0 Workbench rather than a second
 application:
@@ -1190,9 +1203,9 @@ application:
    custom audition rather than a persisted custom-mix preset;
 5. [x] preserve the existing explicit main/optional/correct/reject decision state
    and make clear that no metric, process or visible default selects a winner;
-6. add a persistent GarageBand basket whose checked contents are separate from
-   the musical decision, keeping the existing source-audio-free exact-MIDI ZIP
-   as the safe default; and
+6. [x] add a persistent GarageBand basket whose checked contents are separate
+   from the musical decision, keeping the existing source-audio-free exact-MIDI
+   ZIP as the safe default; and
 7. link disputed timeline ranges to the existing phrase-review pages without
    adding direct MIDI editing in this increment.
 
@@ -1292,8 +1305,10 @@ shows every unique source stem and only current explicit main/optional MIDI,
 with temporary source-only, selected-MIDI, hybrid and main-MIDI audition
 presets. Its visibility, mute, solo, attenuation, loop and playhead state is not
 persisted and never changes review events, overlap evidence, cache identity or
-handoff bytes. The existing selection ZIP remains the current supported
-handoff; the explicit GarageBand pack composer is not implemented yet.
+handoff bytes. Pack Composer v1 adds a separate persistent, revision-guarded
+basket for unchanged current selected MIDI, the dry arrangement proxy and
+explicitly opted-in source audio. It uses path-free hash-pinned contracts,
+rejects stale builds and leaves the original selection ZIP compatible.
 MuScriptor execution settings and checkpoint/config hashes are now explicit,
 and immutable M0–M4 small-model matrices publish per-role quality,
 five-second-boundary, label-stability, cross-lane and strict M4 peer-overlap
@@ -1340,11 +1355,12 @@ described as time-synchronised, not sample-accurate. The standalone blind A/B
 package uses exact common source-frame windows, but does not yet replace
 Workbench media elements with decoded sample-accurate switching.
 
-The immediate next engineering slice is the GarageBand pack composer. Its
-checked file contents must be a separate explicit contract from musical
-main/optional choices, with the existing source-audio-free exact-MIDI ZIP as
-the safe default. It must preserve the core Sunofriend result-space contract:
-several analytical and AI candidates, no automatic winner, immutable
+The immediate next engineering slice is to link a disputed timeline range to
+the existing short phrase-review flow, then harden the local Studio for a
+private usability pass. Pack Composer v1 already keeps checked file contents
+separate from musical main/optional choices and preserves the source-audio-free
+safe default. The next slice must keep the core Sunofriend result-space
+contract: several analytical and AI candidates, no automatic winner, immutable
 provenance, explicit human choices and exact selected-MIDI export.
 
 ## Primary sources
