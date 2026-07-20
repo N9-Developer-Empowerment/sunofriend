@@ -1,6 +1,6 @@
 # Phase 5: MuScriptor Full-Mix and Community Learning
 
-Status: **Phase 5.0 and 5.1 complete; Phase 5.2 remains in progress, with its small-CPU fresh-process, bounded reused-model, application-cache, beam-1/beam-2 measurement and hardened blind short-loop package slices complete; the private human review/export/resolved result remains pending and no public service or new checkpoint download is authorised**
+Status: **Phase 5.0 and 5.1 complete; Phase 5.2 remains in progress, with its small-CPU fresh-process, bounded reused-model, application-cache, beam-1/beam-2 measurement, resolved blind short-loop review and batch-size 1→2 CPU comparison slices complete; beam 1 and batch 1 remain the defaults and no public service or new checkpoint download is authorised**
 
 Drafted: 19 July 2026
 Scope: accurate stem/full-mix MIDI, faster local inference, GarageBand-ready
@@ -544,9 +544,11 @@ Optimisations must be introduced one at a time:
 6. **Progressive results:** stream each five-second chunk into a reviewable
    piano roll while the rest continues.
 7. **Boundary-aware batching:** retain batch size 1 for the pinned 0.2.1
-   baseline and report five-second boundaries explicitly. Test `batch_size=4`
-   only on a dedicated boundary golden and accept it only if the speed gain
-   outweighs measured/listened errors. Re-evaluate this policy if a later
+   baseline and report five-second boundaries explicitly. The controlled
+   `batch_size=2` CPU golden preserved every auditionable MIDI but was slower
+   and used more memory, so do not advance to a larger batch without a new
+   separately justified experiment. Fixed five-second chunks are not a
+   supported setting-comparison variable. Re-evaluate this policy if a later
    pinned runtime genuinely exposes prelude forcing.
 8. **Selective beam search:** use it only on high-disagreement phrases after it
    proves a gain; never pay the full-song cost by default.
@@ -972,9 +974,10 @@ server.
 - [ ] After separate explicit checkpoint acceptance, pin medium and large one
   at a time; neither is authorised by this baseline.
 - [x] Add `ai-setting-compare` as a read-only, fresh-process-only one-variable
-  diagnostic. V1 accepts only repeatable current beam-1 controls versus beam-2
-  challengers and rejects session/cache/legacy evidence, overlapping windows,
-  every extra setting difference and every automatic promotion.
+  diagnostic. V1 accepts repeatable current beam-size 1→2 or batch-size 1→2
+  arms under their explicit contracts and rejects session/cache/legacy
+  evidence, overlapping windows, every extra setting difference and every
+  automatic promotion.
 - [x] Run beam 1 and beam 2 sequentially on the same private small-CPU golden,
   retaining exact timing, memory, chunk, boundary, label, note-payload, MIDI and
   derived-artifact evidence under an uncontrolled operating-system file cache.
@@ -1011,12 +1014,30 @@ server.
   and FluidSynth 2.5.6 hash
   `93589cfaf73a5aaaaf37dd313be4d815fb2ced8f0e8ae641b0e1d0026e546911`.
   All final A/B PCM RMS pairs match to six decimals and are unclipped.
-- [ ] Run and resolve the private beam-1/beam-2 listening review before
-  selecting any preset. The package is complete, but its human heard/choice
-  review, browser export and resolved result are pending. Automated metrics,
-  level equality and observed timing must not promote beam 2.
-- [ ] Test safe/fast chunk settings and any later batch change one variable at a
-  time without replacing the five reviewed musical controls.
+- [x] Run and resolve the private beam-1/beam-2 listening review before
+  selecting any preset. The 0.20–3.50 and 11.60–15.00 second loops were judged
+  equivalent; 3.50–7.50 seconds marginally preferred beam 1. Beam 2 won zero
+  loops. The resolver reported zero MIDI edits, source mutations, selection
+  changes, promotions and default changes. Beam 1 therefore remains the
+  conservative default.
+- [x] Add and run `ai-setting-compare --setting batch-size` as a strict batch
+  1→2 fresh-process comparison with beam fixed at 1/greedy, sampling disabled
+  and the independent five-second chunk policy fixed. Both repetitions in each
+  arm were exact. Both settings produced the same 107-note payload, base MIDI,
+  expression MIDI and every auditionable MIDI, with 107/107 onset overlap;
+  candidate JSON/raw changes were execution/progress provenance only. No
+  listening review is required because the musical output is identical. The
+  ignored private comparator report has SHA-256
+  `ef221cf6908ecf49f08c69286e4eaf0808f589daf35d869b34c84267a8639483`.
+- [x] Record the batch experiment's bounded CPU resource evidence. In the
+  ordered runs, batch 2 pipeline median was `8.792904 s` versus `5.282282 s`
+  (`1.664603×`), inclusive transcription `7.058380 s` versus `3.824411 s`
+  (`1.845612×`) and peak RSS `1,566,097,408` versus `1,173,610,496` bytes
+  (`1.334427×`). The first progress event represents one completed chunk for
+  batch 1 and two for batch 2, so its timing is not directly compared. MPS is
+  unavailable in the installed runtime, and fixed five-second chunks are not a
+  supported comparison variable. The report records zero mutations,
+  selections and promotions; retain batch 1 as default.
 - Success: choose `preview`, `balanced` and `best` presets from measured Pareto
   results; do not make large the default merely because its paper score is
   higher.
@@ -1104,8 +1125,9 @@ or zero-note candidates from becoming main/optional choices.
 The private M4 bass/pluck gate, Workbench overlap/archive follow-through and
 three-row M1/M2/M3 bass/keys/vocal review are complete. The evidence supports
 role-specific routing and retained alternatives, not a universal model winner.
-The Phase 5.2 fresh-process, bounded exact-repeat and one-variable beam
-measurement gates are complete. Three resident-model requests and two new fresh
+The Phase 5.2 fresh-process, bounded exact-repeat, one-variable beam and
+one-variable batch measurement gates are complete. Three resident-model
+requests and two new fresh
 controls reproduced the same candidate JSON, 107-note count and MIDI byte for
 byte; only requests 2+ are true reused-model warm requests. The measured
 warm/fresh ratios are
@@ -1119,10 +1141,18 @@ Beam 2 changed the private golden's musical output. In these ordered runs it had
 substantially longer observed timings and a higher observed peak RSS; its
 generic same-renderer, same-patch, fixed-window sample-RMS-matched review
 builder and resolver are now complete. The hardened three-window private
-package is generated and verified, but the human review/export and resolved
-result remain pending, so beam 1 stays the conservative default. This review
-policy does not claim LUFS, true-peak or perceived-loudness equality and leaves
-the source reference unlevelled.
+package is generated, verified and resolved. Two loops were equivalent and the
+middle 3.50–7.50 second loop marginally preferred beam 1; beam 2 won no loop
+and the resolver reported no effects. Beam 1 stays the conservative default.
+This review policy does not claim LUFS, true-peak or perceived-loudness equality
+and leaves the source reference unlevelled.
+
+Batch size 2 did not change the private golden's canonical note payload or any
+auditionable MIDI, so it needs no listening review. It was slower and used more
+memory than batch 1 in the ordered CPU comparison. The first progress events
+represent different completed-chunk counts and are deliberately not compared.
+The installed runtime exposes no MPS device, fixed five-second chunks remain
+unchanged, and batch 1 stays the default.
 
 Keep sample-accurate level-matched short-loop review as a requirement before a
 public listening beta. The current media-element switching is deliberately

@@ -120,8 +120,12 @@ package directory. The resolver re-verifies its seed, audio manifest, answer
 key and original inputs. It allows only status/reviewed-count, heard, choice
 and notes fields to differ, and rejects swapped A/B or cross-unit slots and any
 changed timing, focus or geometry before revealing per-loop identities as
-listening evidence. Neither operation edits MIDI, selects a Workbench
-candidate, promotes a preset or changes a default.
+listening evidence. Immutable comparison is recursively type-strict except for
+equal finite JSON numbers, allowing browser canonicalization such as `0.0` to
+`0` while rejecting booleans, strings, changed numeric values and structural
+changes. Answer-key unit commitments are verified against the original pinned
+seed units after that comparison. Neither operation edits MIDI, selects a
+Workbench candidate, promotes a preset or changes a default.
 
 The Phase 5 Workbench is a presentation and explicit-decision boundary, not a
 new transcription engine. `workbench_catalog.py` hash-pins existing source,
@@ -145,7 +149,10 @@ but it does not change Workbench playback: both interfaces still coordinate
 browser media elements in seconds, with the standalone playhead scoped per
 unit. Decoded, sample-accurate Workbench switching remains deferred. The
 private three-window package has been generated and verified, while its human
-export and resolved listening result remain pending.
+export and resolved result are now complete. Two loops were equivalent and the
+3.50–7.50 second loop marginally preferred beam 1; beam 2 won no loop. All
+reported mutation, selection, promotion and default-change effects are zero,
+so beam 1 remains the execution default.
 
 `ai_matrix.py` applies a model-neutral quality/report schema to already
 completed immutable runs from one controlled backend, checkpoint, model config
@@ -187,16 +194,22 @@ evidence.
 `ai_setting_compare.py` is a stricter read-only two-arm verifier layered on the
 same immutable matrix and fresh-process benchmark checks. Its v1 contract
 accepts at least two exactly repeatable current runs per arm and permits one
-semantic difference only: control `beam_size=1`/derived `greedy` strategy versus
-challenger `beam_size=2`/derived `beam-search`. It rejects legacy, session,
+declared semantic difference. `--setting beam-size` compares control beam 1/
+greedy with challenger beam 2/beam-search. `--setting batch-size` compares
+batch 1 with batch 2 while requiring beam 1/greedy, sampling disabled and the
+same independent five-second chunks in both arms. It rejects legacy, session,
 application-cache, overlapping, non-repeatable and multi-setting evidence. A
 candidate JSON change is treated as provenance until the canonical note payload
-or MIDI also changes. The atomic report whitelists path-free hashes, quality,
-label, boundary and performance diagnostics, mutates nothing, selects no winner
-and cannot promote a preset. Run order and the operating-system file cache are
-uncontrolled, so its timing ratios are not causal speed evidence; changed music
-requires an explicit same-renderer, same-patch and separately verified
-level-matched listening review.
+or MIDI also changes. In batch mode, MuScriptor's first positive progress event
+represents one completed chunk in the control and two in the challenger;
+`time_to_first_completed_chunk` is omitted from direct comparison and the
+unlike completed-chunk counts are reported explicitly. The atomic report
+whitelists path-free hashes, quality, label, boundary and performance
+diagnostics, mutates nothing, selects no winner and cannot promote a preset.
+Run order and the operating-system file cache are uncontrolled, so its timing
+ratios are not causal speed evidence; changed music requires an explicit
+same-renderer, same-patch and separately verified level-matched listening
+review.
 
 The bounded MuScriptor session is a distinct diagnostic execution boundary.
 `ai_session.py` prepares one immutable request template and starts one

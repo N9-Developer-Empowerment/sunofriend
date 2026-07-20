@@ -82,7 +82,27 @@ class CliBasicsTests(unittest.TestCase):
 
         self.assertEqual(args.control_run, ["beam1-01", "beam1-02"])
         self.assertEqual(args.challenger_run, ["beam2-01", "beam2-02"])
+        self.assertEqual(args.setting, "beam-size")
         self.assertEqual(args.out, "setting-comparison.json")
+
+        batch = build_parser().parse_args(
+            [
+                "ai-setting-compare",
+                "--setting",
+                "batch-size",
+                "--control-run",
+                "batch1-01",
+                "--control-run",
+                "batch1-02",
+                "--challenger-run",
+                "batch2-01",
+                "--challenger-run",
+                "batch2-02",
+                "--out",
+                "batch-comparison.json",
+            ]
+        )
+        self.assertEqual(batch.setting, "batch-size")
 
     def test_midi_ab_review_accepts_explicit_short_windows(self) -> None:
         parser = build_parser()
@@ -288,6 +308,7 @@ class CliBasicsTests(unittest.TestCase):
     ) -> None:
         write.return_value = {
             "schema": "sunofriend.ai-setting-comparison.v1",
+            "setting_change": {"semantic_setting": "batch_size"},
             "arms": {
                 "control": {"repetition_count": 2},
                 "challenger": {"repetition_count": 2},
@@ -307,6 +328,8 @@ class CliBasicsTests(unittest.TestCase):
             result = main(
                 [
                     "ai-setting-compare",
+                    "--setting",
+                    "batch-size",
                     "--control-run",
                     "beam1-01",
                     "--control-run",
@@ -325,6 +348,7 @@ class CliBasicsTests(unittest.TestCase):
             ["beam1-01", "beam1-02"],
             ["beam2-01", "beam2-02"],
             "setting-comparison.json",
+            setting="batch_size",
         )
         document = json.loads(stdout.getvalue())
         self.assertTrue(document["listening_review_required"])

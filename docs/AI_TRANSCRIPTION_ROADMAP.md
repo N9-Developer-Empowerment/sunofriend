@@ -4,8 +4,8 @@ Status: Phase 1 and Phase 2 engineering complete; Phase 3 complete; Phase 4
 fixed-MIDI review complete; Phase 5.1 private listening and the Phase 5.2
 fresh-process, bounded reused-model, exact-result cache and beam-1/beam-2
 small-CPU golden measurements plus the hardened private blind short-loop
-package complete; its human review/export/resolved result and broader
-production integration remain
+package, resolved listening result and batch-size 1→2 CPU comparison complete;
+broader production integration remains
 
 Started: 15 July 2026  
 Scope: local-first AI assistance for transcription, review, instrument matching
@@ -74,7 +74,7 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
-| 5. MuScriptor Full-Mix and Community Learning | **In progress: Phase 5.0/5.1 complete; Phase 5.2 beam measurement and hardened private review package complete, human result pending** | Local Workbench, immutable MuScriptor evidence, M0–M4 matrices, exact label partitions, fresh-process and bounded reused-model CPU baselines, explicit exact-result caching, a strict one-variable beam comparison and generic explicitly aligned blind A/B tooling are complete; the private heard/choice export and resolved result, workflow integration, other devices and model-size comparisons remain |
+| 5. MuScriptor Full-Mix and Community Learning | **In progress: Phase 5.0/5.1 complete; Phase 5.2 beam review and batch comparison resolved** | Local Workbench, immutable MuScriptor evidence, M0–M4 matrices, exact label partitions, fresh-process and bounded reused-model CPU baselines, exact-result caching, strict one-variable beam/batch comparisons and generic blind A/B tooling are complete; the review retained beam 1, while identical MIDI and slower observed CPU execution retained batch 1; workflow integration, other devices and model-size comparisons remain |
 
 ## Phase 1: AI Transcription Bake-off v1
 
@@ -521,6 +521,47 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-07-20 — Strict batch-size 1 versus 2 comparison
+
+- Goal: test whether limited MuScriptor batching improves useful local CPU
+  throughput while changing only batch size and preserving musical output.
+- Change or experiment: extended `ai-setting-compare` with
+  `--setting batch-size`. It requires at least two repeatable current,
+  cache-disabled fresh-process runs per arm, batch size 1→2, beam fixed at
+  1/greedy, sampling disabled, non-overlapping execution windows and equality
+  of every other request, source, runtime and execution field. The existing
+  `--setting beam-size` contract remains available and is still the default.
+- Chunk/progress contract: both arms retain independent fixed five-second
+  chunks. MuScriptor's first positive progress event represents one completed
+  chunk at batch 1 and two completed chunks at batch 2, so the comparator
+  records those counts and excludes `time_to_first_completed_chunk` from its
+  direct performance fields rather than comparing unlike milestones. Fixed
+  five-second chunks are not a supported variable in this comparison.
+- Inputs and repeatability: two fresh CPU repetitions per arm on the same
+  15-second, three-chunk Lidl golden. Both arms were exact. Batch 1 and batch 2
+  each produced 107 notes; canonical note payload, base MIDI, expression MIDI
+  and every auditionable MIDI were identical. Greedy one-to-one overlap was
+  107/107. Candidate JSON and raw JSON differed only in execution/progress
+  provenance. The ignored private report is
+  `work/ai-bakeoff/lidl-phase5-batch-compare-v1/batch1-vs-batch2-v1.json`,
+  SHA-256
+  `ef221cf6908ecf49f08c69286e4eaf0808f589daf35d869b34c84267a8639483`.
+- Observed performance: batch-2 median pipeline was `8.792904 s` versus
+  `5.282282 s` for batch 1 (`1.664603×`); inclusive transcription was
+  `7.058380 s` versus `3.824411 s` (`1.845612×`); peak RSS was
+  `1,566,097,408` versus `1,173,610,496` bytes (`1.334427×`). Run order was
+  not randomized and the operating-system file cache was uncontrolled, so
+  these are bounded observations rather than causal speed claims.
+- Device boundary: MPS is unavailable in the installed runtime. This
+  experiment therefore remains CPU-only and makes no wider device claim.
+- Decision and effects: no listening review is required because all
+  auditionable MIDI is identical. The comparator reports zero raw or MIDI
+  mutations, selection changes and promotions. Batch 2 was slower and used
+  more memory in these ordered runs, so batch 1 remains the default.
+- Next smallest step: keep fixed five-second chunks and batch 1 while moving to
+  the next separately bounded Phase 5 question; do not infer a result for
+  another device, model size or source.
+
 ### 2026-07-19 — Phase 5.2 blind source-aligned MIDI review tooling
 
 - Goal: make the outstanding beam-1/beam-2 musical decision possible without
@@ -554,6 +595,10 @@ Each working day should aim for one narrow vertical improvement:
   A/B or cross-unit slots and changed timing, focus or geometry fail closed
   before identities are revealed. Both commands report zero MIDI edits,
   selection, promotion and default-change effects.
+- Browser-export regression: JavaScript may serialize an equal finite JSON
+  number differently, such as `0.0` to `0`. The resolver accepts that numeric
+  canonicalization but still rejects booleans, strings, changed numeric values,
+  keys, list order and every other immutable change.
 - Private package: generated under ignored
   `work/ai-bakeoff/lidl-phase5-beam-rms-review-v4/`, with package commitment
   `b5e3556f70560c86cbe79fbcc4bb7d9a8362c67824beed203bffa0675162dd10`.
@@ -563,17 +608,19 @@ Each working day should aim for one narrow vertical improvement:
   and FluidSynth 2.5.6 hash
   `93589cfaf73a5aaaaf37dd313be4d815fb2ced8f0e8ae641b0e1d0026e546911`.
   Every final A/B PCM RMS pair matches to six decimals and is unclipped.
-- Listening result: pending. The package is unreviewed; no browser export or
-  resolved result exists yet. Beam 1 remains the conservative default.
+- Listening result: the 0.20–3.50 and 11.60–15.00 second loops were equivalent;
+  3.50–7.50 seconds marginally preferred beam 1. Beam 2 won no loop. The
+  resolved result records zero MIDI edits, source mutations, selection changes,
+  promotions and default changes.
 - Problems/risks: exact common frame windows do not make browser media-element
   switching sample-accurate. The standalone page and Workbench coordinate a
   shared position in seconds; decoded sample-accurate Workbench switching
   remains deferred. Fixed-window sample RMS also cannot guarantee equal
   perceived loudness.
-- Next smallest step: open the generated package review HTML without reading
-  its answer key, hear source/A/B and record a choice for all three loops,
-  export reviewed JSON, then resolve it against the original unchanged package
-  directory without changing a preset automatically.
+- Decision: retain beam 1 as the default. Equivalent loops provide no
+  directional evidence, and the marginal beam-1 preference does not authorize
+  merging or changing either candidate. Continue with one-variable performance
+  experiments without reopening this resolved review or promoting beam 2.
 
 ### 2026-07-19 — Strict beam-1 versus beam-2 small-CPU comparison
 

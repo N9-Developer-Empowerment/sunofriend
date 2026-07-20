@@ -277,9 +277,12 @@ sunofriend midi-ab-resolve \
 The resolver compares the reviewed export with the original seed, answer key,
 manifest, audio and inputs. Only status/reviewed count, heard flags, choices and
 notes may differ. Changed timing, focus or geometry, swapped A/B slots and
-cross-unit candidate moves are rejected. The result is listening evidence
-only: it does not edit either MIDI, save a Workbench choice, promote a preset
-or change a default.
+cross-unit candidate moves are rejected. A normal browser JSON round trip can
+rewrite a finite number's representation—for example, `0.0` becomes `0`.
+Exactly equal numeric values remain valid; booleans, strings, different values
+and structural changes do not. The result is listening evidence only: it does
+not edit either MIDI, save a Workbench choice, promote a preset or change a
+default.
 
 The Phase 5.2 private beam package has now been generated under ignored
 `work/ai-bakeoff/lidl-phase5-beam-rms-review-v4/`, with commitment
@@ -289,10 +292,20 @@ seconds, using common origin `0`, GeneralUser-GS program 4, SoundFont hash
 `9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe`
 and FluidSynth 2.5.6 hash
 `93589cfaf73a5aaaaf37dd313be4d815fb2ced8f0e8ae641b0e1d0026e546911`.
-All final A/B PCM RMS pairs match to six decimals and are unclipped. The human
-review/export and resolved result remain pending. The standalone page still
-uses per-unit shared-second media-element switching; decoded sample-accurate
-Workbench switching remains a later gate.
+All final A/B PCM RMS pairs match to six decimals and are unclipped. The
+resolved review judged the 0.20–3.50 and 11.60–15.00 second loops equivalent
+and marginally preferred beam 1 on 3.50–7.50 seconds. Beam 2 won no loop. The
+result reports zero MIDI edits, source mutations, selection changes,
+promotions and default changes; beam 1 therefore remains the default. The
+standalone page still uses per-unit shared-second media-element switching;
+decoded sample-accurate Workbench switching remains a later gate.
+
+The separate Phase 5.2 batch-size comparison does not add a Workbench choice.
+Batch 1 and batch 2 produced identical canonical note payload, base MIDI,
+expression MIDI and every auditionable MIDI on the private golden, so there is
+no musical A/B to review. Its read-only comparator reports zero mutations,
+selections and promotions; batch 1 remains the execution default after the
+batch-2 arm was slower and used more memory in the bounded CPU observation.
 
 Catalog hashes are not trusted only at startup. Source, MIDI and generated
 media are checked again before serving, rendering, arranging or copying into a

@@ -36,7 +36,7 @@ clean MIDI resources, and GarageBand to choose instruments and finish the mix.
 | Preview or route MIDI to an instrument | `preview`, `play` | FluidSynth WAV preview or CoreMIDI/IAC playback |
 | Run an optional local AI transcription challenger | `ai-transcribe` | Isolated worker, explicit local checkpoint, raw candidate, MIDI, hashes and immutable logs |
 | Benchmark repeated local AI runs | `ai-benchmark` | Verified path-free timing, memory, chunk and exact-output repeatability report over completed immutable runs |
-| Compare one MuScriptor decoding setting | `ai-setting-compare` | Read-only fresh-process beam-1/beam-2 diagnostic; exactly one semantic setting may change, no MIDI is edited and no winner is selected |
+| Compare one MuScriptor decoding setting | `ai-setting-compare` | Read-only fresh-process beam-size or batch-size 1→2 diagnostic; exactly one semantic setting may change, no MIDI is edited and no winner is selected |
 | Blind-test two MIDI candidates on exact source-time loops | `midi-ab-review`, `midi-ab-resolve` | Explicit common time origin, hash-pinned dry same-patch renders, candidate-only fixed-window sample-RMS matching, random hidden per-loop identities, strict reviewed-export verification and no MIDI or default changes |
 | Measure exact repeats through one loaded model | `ai-transcribe-session`, `ai-session-benchmark` | Bounded 2–20-request diagnostic session, reused-model warm evidence for requests 2+, and optional two-run fresh-process control; no production cache or promotion |
 | Reuse one exact prior MuScriptor result | `ai-transcribe --application-cache-dir`, `ai-cache-benchmark` | Explicit private content-addressed raw-result cache; verified hits start no worker, load no model and run no inference, while current MIDI is rebuilt and cache timing remains separate |
@@ -90,8 +90,9 @@ another model experiment begins. The current Phase 5 programme—including the
 completed full-mix/conditioned comparison and local Workbench, followed by
 fresh-process and reused-model measurements, an explicit exact-result
 application-cache experiment, a completed one-variable beam measurement and
-completed blind short-loop review tooling with the private beam listening
-result still pending, followed by a future opt-in feedback loop—is in the
+completed blind short-loop review with a resolved private listening result,
+plus a completed batch-size 1→2 CPU comparison, followed by a future opt-in
+feedback loop—is in the
 **[Phase 5 MuScriptor and Community Learning plan](docs/PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md)**.
 
 For combining songs, first use `midi-transform` to choose a common key, BPM
@@ -662,6 +663,7 @@ for REPETITION in 01 02; do
 done
 
 .venv/bin/sunofriend ai-setting-compare \
+  --setting beam-size \
   --control-run "$RUN_ROOT/beam1-repeat-01/RUN_DIR" \
   --control-run "$RUN_ROOT/beam1-repeat-02/RUN_DIR" \
   --challenger-run "$RUN_ROOT/beam2-repeat-01/RUN_DIR" \
@@ -788,8 +790,11 @@ The resolver compares the reviewed export with the original seed, key,
 manifest, audio and inputs. Only review status/count, the heard flags, choice
 and notes may change. It rejects changed timing/focus/geometry, swapped A/B
 slots or candidates moved across units before reporting per-loop identities
-and preference counts. Neither command edits MIDI, selects a Workbench
-candidate, promotes a preset or changes a default.
+and preference counts. Normal browser JSON export may rewrite an equal finite
+number's spelling, such as `0.0` to `0`; this is accepted without accepting a
+boolean, string, different numeric value or structural change. Neither command
+edits MIDI, selects a Workbench candidate, promotes a preset or changes a
+default.
 
 The Phase 5.2 private package now exists under ignored
 `work/ai-bakeoff/lidl-phase5-beam-rms-review-v4/`, commitment
@@ -800,10 +805,54 @@ kHz, explicit common origin `0`, GeneralUser-GS program 4 and SoundFont hash
 FluidSynth 2.5.6 is pinned by hash
 `93589cfaf73a5aaaaf37dd313be4d815fb2ced8f0e8ae641b0e1d0026e546911`;
 every final A/B PCM RMS pair is equal to six decimal places and unclipped. The
-human listening/export and resolved result remain pending, so beam 1 remains
-the conservative default. The standalone page still switches browser media at
-a shared position per unit rather than decoded sample accuracy; decoded,
-sample-accurate switching inside the Workbench is also deferred.
+resolved review found the opening and final loops equivalent and marginally
+preferred beam 1 on the 3.50–7.50 second loop. Beam 2 won no loop. Resolution
+reported zero MIDI edits, source mutations, selection changes, promotions and
+default changes, so beam 1 remains the conservative default. The standalone
+page still switches browser media at a shared position per unit rather than
+decoded sample accuracy; decoded, sample-accurate switching inside the
+Workbench is also deferred.
+
+#### Compare batch size 1 with batch size 2
+
+The same comparator has an explicit `--setting batch-size` mode. Create at
+least two independent batch-1 controls and two batch-2 challengers with beam 1,
+greedy decoding, sampling disabled and every other input and setting unchanged.
+Keep the current independent five-second chunk policy fixed in both arms:
+
+```bash
+.venv/bin/sunofriend ai-setting-compare \
+  --setting batch-size \
+  --control-run "/absolute/path/to/batch1-repeat-01/RUN_DIR" \
+  --control-run "/absolute/path/to/batch1-repeat-02/RUN_DIR" \
+  --challenger-run "/absolute/path/to/batch2-repeat-01/RUN_DIR" \
+  --challenger-run "/absolute/path/to/batch2-repeat-02/RUN_DIR" \
+  --out "/absolute/fresh/path/batch1-vs-batch2.json"
+```
+
+Batch mode retains the same fresh-process, repeatability, non-overlap, cache
+and one-variable checks as beam mode. It additionally requires batch 1→2 with
+beam fixed at 1/greedy and rejects a changed chunk size or chunk policy.
+MuScriptor reports progress after a generation batch, so the first positive
+event means one completed five-second chunk for batch 1 but two for batch 2.
+The report records that progress geometry and omits
+`time_to_first_completed_chunk` from direct comparison instead of comparing
+unlike milestones.
+
+On the private 15-second, three-chunk CPU golden, both fresh repetitions in
+each arm were exact. Batch 1 and batch 2 both produced 107 notes; the canonical
+note payload, base MIDI, expression MIDI and every auditionable MIDI were
+identical, with 107/107 same-pitch/same-label onset matches. Raw and normalized
+candidate JSON differed only in execution/progress provenance, so no listening
+review is needed for this setting decision. In the ordered runs, batch 2 had a
+median pipeline time of `8.792904 s` versus `5.282282 s` (`1.664603×`),
+inclusive transcription of `7.058380 s` versus `3.824411 s` (`1.845612×`)
+and peak RSS of `1,566,097,408` versus `1,173,610,496` bytes (`1.334427×`).
+Run order was not randomized and the operating-system cache was uncontrolled,
+so these are observations rather than causal speed claims. The installed
+runtime does not expose MPS, and the fixed five-second chunk setting is not a
+supported comparison variable. The report made zero mutations, selections or
+promotions; batch 1 remains the default.
 
 #### Measure exact repeats through one loaded MuScriptor model
 

@@ -473,7 +473,10 @@ def resolve_midi_ab_review(
         or seed.get("blind") is not True
     ):
         raise ValueError("MIDI A/B package seed is invalid")
-    if _immutable_review_document(review) != _immutable_review_document(seed):
+    if not _browser_json_equal(
+        _immutable_review_document(review),
+        _immutable_review_document(seed),
+    ):
         raise ValueError("MIDI A/B reviewed export changed immutable package fields")
     if review.get("status") != "reviewed" or review.get("blind") is not True:
         raise ValueError("MIDI A/B review is not complete and blinded")
@@ -851,6 +854,49 @@ def _immutable_review_document(document: Mapping[str, Any]) -> dict[str, Any]:
     return immutable
 
 
+def _browser_json_equal(reviewed: Any, seed: Any) -> bool:
+    """Compare reviewed JSON with its seed after browser number serialisation.
+
+    JavaScript has one numeric type and serialises integer-valued JSON floats such
+    as ``0.0`` as ``0``.  Accept only that directional representation change;
+    in particular, booleans must not compare equal to integers as they normally
+    do in Python.
+    """
+
+    if isinstance(reviewed, Mapping) or isinstance(seed, Mapping):
+        if not isinstance(reviewed, Mapping) or not isinstance(seed, Mapping):
+            return False
+        if set(reviewed) != set(seed):
+            return False
+        return all(
+            _browser_json_equal(reviewed[key], seed[key]) for key in reviewed
+        )
+    if isinstance(reviewed, list) or isinstance(seed, list):
+        if not isinstance(reviewed, list) or not isinstance(seed, list):
+            return False
+        return len(reviewed) == len(seed) and all(
+            _browser_json_equal(reviewed_item, seed_item)
+            for reviewed_item, seed_item in zip(reviewed, seed)
+        )
+    if isinstance(reviewed, bool) or isinstance(seed, bool):
+        return (
+            type(reviewed) is bool and type(seed) is bool and reviewed is seed
+        )
+    if isinstance(reviewed, (int, float)) or isinstance(seed, (int, float)):
+        if not isinstance(reviewed, (int, float)) or not isinstance(
+            seed, (int, float)
+        ):
+            return False
+        if not math.isfinite(float(reviewed)) or not math.isfinite(float(seed)):
+            return False
+        if type(reviewed) is type(seed):
+            return reviewed == seed
+        if isinstance(reviewed, int) and isinstance(seed, float):
+            return seed.is_integer() and reviewed == int(seed)
+        return False
+    return type(reviewed) is type(seed) and reviewed == seed
+
+
 def _verify_package_contract(
     answer: Mapping[str, Any],
     seed: Mapping[str, Any],
@@ -921,6 +967,13 @@ def _verify_blind_assignments(
         for unit in answer.get("units", [])
         if isinstance(unit, Mapping)
     }
+    seed_units = {
+        str(unit.get("unit_id")): unit
+        for unit in seed.get("units", [])
+        if isinstance(unit, Mapping)
+    }
+    if set(seed_units) != {str(unit.get("unit_id")) for unit in units}:
+        raise ValueError("MIDI A/B package seed units do not match the review")
     package_commitment = str(seed["package_commitment"])
     for unit in units:
         unit_id = str(unit.get("unit_id"))
@@ -929,7 +982,7 @@ def _verify_blind_assignments(
         if any(key.get(name) != identity for name, identity in expected.items()):
             raise ValueError(f"MIDI A/B answer mapping is invalid for {unit_id}")
         if key.get("immutable_review_unit_sha256") != _document_hash(
-            _immutable_review_unit(unit)
+            _immutable_review_unit(seed_units[unit_id])
         ):
             raise ValueError(f"MIDI A/B immutable review unit changed: {unit_id}")
 

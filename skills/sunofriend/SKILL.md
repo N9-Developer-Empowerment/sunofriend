@@ -29,8 +29,8 @@ scripts.
      and starts no worker. Run the MuScriptor checkpoint check only when making
      new repetitions first.
    - `sunofriend ai-setting-compare` needs no model capability and starts no
-     worker. It reads at least two completed fresh beam-1 controls and two
-     completed fresh beam-2 challengers. Run
+     worker. It reads at least two completed fresh controls and challengers for
+     either the beam-size 1→2 or batch-size 1→2 contract. Run
      `sunofriend ai-doctor --require muscriptor-checkpoint` only when creating
      those runs first.
    - `sunofriend ai-transcribe-session` needs
@@ -200,11 +200,15 @@ scripts.
   historical run whose external worker changed cannot be re-verified.
 - One-variable MuScriptor decoding diagnostic: use `ai-setting-compare` with at
   least two repeated `--control-run RUN_DIR` values and two repeated
-  `--challenger-run RUN_DIR` values. V1 requires current, sequential,
-  cache-disabled fresh-process runs and exactly `beam_size` 1→2 with the derived
-  strategy `greedy`→`beam-search`; source, actual excerpt, BPM, ordered roles,
-  checkpoint/config/worker/runtime/device and every other request and execution
-  field must match. Each arm must be exactly repeatable in raw/normalized
+  `--challenger-run RUN_DIR` values. Select exactly one contract with
+  `--setting beam-size` or `--setting batch-size`; beam size is the default.
+  Beam mode requires `beam_size` 1→2 with derived strategy
+  `greedy`→`beam-search`. Batch mode requires `batch_size` 1→2 while beam
+  stays 1/greedy, sampling stays disabled and independent five-second chunks
+  stay fixed. V1 requires current, sequential, cache-disabled fresh-process
+  runs; source, actual excerpt, BPM, ordered roles, checkpoint/config/worker/
+  runtime/device and every other request and execution field must match. Each
+  arm must be exactly repeatable in raw/normalized
   candidates, note payload, MIDI, tracked derived artifacts and note count.
   Reject legacy, session, cache, overlapping, non-repeatable or multi-setting
   evidence. Treat candidate-JSON differences as execution provenance unless
@@ -215,6 +219,11 @@ scripts.
   configured gain is preliminary only. Require a source-aligned loop,
   same-renderer, same-patch and separately verified level-matched listening
   decision before changing a preset or default when musical output differs.
+  In batch mode, do not compare `time_to_first_completed_chunk`: the first
+  positive progress event represents one completed chunk for batch 1 but two
+  for batch 2. Report that geometry explicitly. If the installed runtime does
+  not expose MPS, keep the experiment CPU-only rather than claiming an MPS
+  result.
 - Blind comparison of two completed MIDI candidates: use
   `midi-ab-review SOURCE FIRST.mid SECOND.mid` with a positive `--bpm`, a fresh
   `--out-dir`, required `--midi-time-at-source-start SECONDS` and one or more
@@ -856,6 +865,7 @@ sunofriend ai-benchmark \
   --out "$FRESH_PERFORMANCE_JSON"
 
 sunofriend ai-setting-compare \
+  --setting beam-size \
   --control-run "$BEAM1_REPEAT_1" \
   --control-run "$BEAM1_REPEAT_2" \
   --challenger-run "$BEAM2_REPEAT_1" \
@@ -955,13 +965,17 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
    promotion from the timing report.
    For `ai-setting-compare`, confirm both arms contain at least two current
    explicit fresh-inference runs, all combined execution windows are sequential
-   and non-overlapping, and the only semantic change is beam size 1→2 (strategy
-   is derived). Require exact within-arm raw/normalized candidate, note-payload,
-   MIDI, derived-artifact and note-count repeatability. Keep candidate-provenance
-   equality separate from musical-output equality. Report label, automated
-   quality, boundary, timing and memory differences without calling either arm
-   more accurate or faster because of them. Confirm selection/promotion/raw/MIDI
-   effects are zero, state that the OS cache and order are uncontrolled, and
+   and non-overlapping, and the requested setting is the only semantic change.
+   In beam mode require beam 1→2 with its derived strategy change. In batch mode
+   require batch 1→2, beam 1/greedy and fixed independent five-second chunks;
+   do not directly compare the first progress timestamps because they represent
+   one versus two completed chunks. Require exact within-arm raw/normalized
+   candidate, note-payload, MIDI, derived-artifact and note-count repeatability.
+   Keep candidate-provenance equality separate from musical-output equality.
+   Report label, automated quality, boundary, timing and memory differences
+   without calling either arm more accurate or faster because of them. Confirm
+   selection/promotion/raw/MIDI effects are zero, state that the OS cache and
+   order are uncontrolled, and
    require an explicit source-aligned, same-renderer, same-patch, separately
    verified level-matched listening decision before changing a preset or
    default when note payload or MIDI differs.
@@ -983,8 +997,21 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
    `--package-dir`; reverify the seed, audio manifest, answer key and original
    inputs. Confirm only status/reviewed count, heard, choice and notes changed,
    while A/B slots, unit membership, timing, focus and geometry stayed fixed.
+   Treat an exactly equal finite JSON number rewritten by the browser, such as
+   `0.0` to `0`, as unchanged. Still reject boolean or string substitutions,
+   different numeric values, key/list changes and non-finite numbers.
    Report per-loop resolved identities and preference counts and retain all zero
    effects. Do not turn the listening result into an automatic preset change.
+   For the completed private Phase 5.2 beam review, record two equivalent loops,
+   a marginal beam-1 preference on 3.50–7.50 seconds, no beam-2 wins and zero
+   effects. Keep beam 1 as the default; an equivalent result is not directional
+   evidence and does not authorize a merge.
+   For the completed private Phase 5.2 batch comparison, record exact 107-note
+   and auditionable-MIDI equality across batch 1 and 2, observed batch-2
+   pipeline/transcription/RSS ratios of `1.664603×`, `1.845612×` and
+   `1.334427×`, unavailable MPS and fixed five-second chunks. No listening
+   review is required when musical output is identical. Keep batch 1 as the
+   default and preserve every zero effect.
    For `ai-transcribe-session`, confirm the private root was fresh and contains
    `session.request-template.json`, started/ready/closed lifecycle records,
    worker logs, `session.json` and exactly the declared contiguous

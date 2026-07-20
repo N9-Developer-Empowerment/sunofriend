@@ -960,8 +960,17 @@ def build_parser() -> argparse.ArgumentParser:
     ai_setting_compare = sub.add_parser(
         "ai-setting-compare",
         help=(
-            "Compare repeatable fresh MuScriptor beam-1 controls with beam-2 "
-            "challengers without running a model"
+            "Compare one supported MuScriptor setting across repeatable fresh runs "
+            "without running a model"
+        ),
+    )
+    ai_setting_compare.add_argument(
+        "--setting",
+        choices=("beam-size", "batch-size"),
+        default="beam-size",
+        help=(
+            "One-variable contract: beam size 1→2, or batch size 1→2 with "
+            "beam fixed at 1 (default: beam-size)"
         ),
     )
     ai_setting_compare.add_argument(
@@ -969,14 +978,14 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         required=True,
         metavar="RUN_DIR",
-        help="Completed fresh-process beam-1 run; repeat at least twice",
+        help="Completed fresh-process control run; repeat at least twice",
     )
     ai_setting_compare.add_argument(
         "--challenger-run",
         action="append",
         required=True,
         metavar="RUN_DIR",
-        help="Completed fresh-process beam-2 run; repeat at least twice",
+        help="Completed fresh-process challenger run; repeat at least twice",
     )
     ai_setting_compare.add_argument(
         "--out",
@@ -3561,10 +3570,14 @@ def _run_ai_benchmark(args) -> int:
 def _run_ai_setting_compare(args) -> int:
     from .ai_setting_compare import write_ai_setting_comparison
 
+    options = {}
+    if args.setting != "beam-size":
+        options["setting"] = args.setting.replace("-", "_")
     report = write_ai_setting_comparison(
         args.control_run,
         args.challenger_run,
         args.out,
+        **options,
     )
     outputs = report["comparison"]["outputs"]
     print(
@@ -3573,6 +3586,7 @@ def _run_ai_setting_compare(args) -> int:
                 "status": "complete",
                 "output": str(Path(args.out).expanduser().absolute()),
                 "schema": report["schema"],
+                "setting": report["setting_change"]["semantic_setting"],
                 "control_repetitions": report["arms"]["control"]["repetition_count"],
                 "challenger_repetitions": report["arms"]["challenger"][
                     "repetition_count"

@@ -456,6 +456,183 @@ class MidiAbReviewTests(unittest.TestCase):
                     review_path, output, package_dir=report["out_dir"]
                 )
 
+    def test_browser_integer_number_round_trip_preserves_immutable_meaning(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixtures = self._fixtures(root)
+            report = self._create(
+                fixtures,
+                root / "review",
+                [(0.0, 1.0, "Browser numeric round-trip fixture.")],
+                midi_time_at_source_start_seconds=0.0,
+            )
+            reviewed = _browser_number_round_trip(_read(Path(report["seed"])))
+            self.assertIsInstance(
+                reviewed["alignment_contract"][
+                    "midi_time_at_source_start_seconds"
+                ],
+                int,
+            )
+            self.assertEqual(
+                reviewed["alignment_contract"][
+                    "midi_time_at_source_start_seconds"
+                ],
+                0,
+            )
+            reviewed["status"] = "reviewed"
+            reviewed["summary"]["reviewed_unit_count"] = 1
+            reviewed["units"][0]["heard"] = {
+                "source": True,
+                "candidate_a": True,
+                "candidate_b": True,
+            }
+            reviewed["units"][0]["choice"] = "candidate_a"
+            reviewed["units"][0]["notes"] = "Legitimate browser export."
+            review_path = root / "browser.reviewed.json"
+            _write(review_path, reviewed)
+
+            result = resolve_midi_ab_review(
+                review_path,
+                root / "browser.result.json",
+                package_dir=report["out_dir"],
+            )
+
+            self.assertEqual(result["status"], "complete")
+            self.assertEqual(result["units"][0]["choice"], "candidate_a")
+
+    def test_browser_round_trip_does_not_hide_real_alignment_tampering(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixtures = self._fixtures(root)
+            report = self._create(
+                fixtures,
+                root / "review",
+                [(0.0, 1.0, "Tampered browser export fixture.")],
+                midi_time_at_source_start_seconds=0.0,
+            )
+            reviewed = _browser_number_round_trip(_read(Path(report["seed"])))
+            reviewed["status"] = "reviewed"
+            reviewed["summary"]["reviewed_unit_count"] = 1
+            reviewed["units"][0]["heard"] = {
+                "source": True,
+                "candidate_a": True,
+                "candidate_b": True,
+            }
+            reviewed["units"][0]["choice"] = "candidate_a"
+            reviewed["alignment_contract"][
+                "midi_time_at_source_start_seconds"
+            ] = 0.125
+            review_path = root / "tampered-browser.reviewed.json"
+            _write(review_path, reviewed)
+
+            with self.assertRaisesRegex(ValueError, "immutable package fields"):
+                resolve_midi_ab_review(
+                    review_path,
+                    root / "must-not-exist.json",
+                    package_dir=report["out_dir"],
+                )
+
+    def test_browser_number_equivalence_rejects_boolean_and_string_zero(self) -> None:
+        for value in (False, "0"):
+            with self.subTest(value=repr(value)), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                fixtures = self._fixtures(root)
+                report = self._create(
+                    fixtures,
+                    root / "review",
+                    [(0.0, 1.0, "Reject non-numeric zero substitutes.")],
+                    midi_time_at_source_start_seconds=0.0,
+                )
+                reviewed_path = self._reviewed_export(
+                    report, root / "reviewed.json"
+                )
+                reviewed = _read(reviewed_path)
+                reviewed["alignment_contract"][
+                    "midi_time_at_source_start_seconds"
+                ] = value
+                _write(reviewed_path, reviewed)
+
+                with self.assertRaisesRegex(
+                    ValueError, "immutable package fields"
+                ):
+                    resolve_midi_ab_review(
+                        reviewed_path,
+                        root / "must-not-exist.json",
+                        package_dir=report["out_dir"],
+                    )
+
+    def test_negative_zero_browser_round_trip_is_legitimate(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixtures = self._fixtures(root)
+            report = self._create(
+                fixtures,
+                root / "review",
+                [(0.5, 1.5, "Negative-zero browser fixture.")],
+                midi_time_at_source_start_seconds=-0.0,
+            )
+            seed = _read(Path(report["seed"]))
+            self.assertEqual(
+                math.copysign(
+                    1.0,
+                    seed["alignment_contract"][
+                        "midi_time_at_source_start_seconds"
+                    ],
+                ),
+                -1.0,
+            )
+            reviewed = _browser_number_round_trip(seed)
+            self.assertEqual(
+                reviewed["alignment_contract"][
+                    "midi_time_at_source_start_seconds"
+                ],
+                0,
+            )
+            reviewed["status"] = "reviewed"
+            reviewed["summary"]["reviewed_unit_count"] = 1
+            reviewed["units"][0]["heard"] = {
+                "source": True,
+                "candidate_a": True,
+                "candidate_b": True,
+            }
+            reviewed["units"][0]["choice"] = "candidate_b"
+            review_path = root / "negative-zero.reviewed.json"
+            _write(review_path, reviewed)
+
+            result = resolve_midi_ab_review(
+                review_path,
+                root / "negative-zero.result.json",
+                package_dir=report["out_dir"],
+            )
+
+            self.assertEqual(result["status"], "complete")
+
+    def test_numeric_equivalence_is_directional_from_seed_to_browser_export(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixtures = self._fixtures(root)
+            report = self._create(
+                fixtures,
+                root / "review",
+                [(0.5, 1.5, "Directional numeric-equivalence fixture.")],
+                midi_time_at_source_start_seconds=0.0,
+            )
+            reviewed_path = self._reviewed_export(
+                report, root / "reviewed.json"
+            )
+            reviewed = _read(reviewed_path)
+            seed_frame_start = reviewed["units"][0]["frame_start"]
+            self.assertIsInstance(seed_frame_start, int)
+            reviewed["units"][0]["frame_start"] = float(seed_frame_start)
+            _write(reviewed_path, reviewed)
+
+            with self.assertRaisesRegex(ValueError, "immutable package fields"):
+                resolve_midi_ab_review(
+                    reviewed_path,
+                    root / "must-not-exist.json",
+                    package_dir=report["out_dir"],
+                )
+
     def test_rejects_invalid_or_overlapping_intervals_and_existing_output(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -781,6 +958,20 @@ def _candidate_a_mapping(
         )
         for unit_id in unit_ids
     ]
+
+
+def _browser_number_round_trip(value):
+    """Model JSON.parse/JSON.stringify normalisation of integer-valued numbers."""
+
+    if isinstance(value, float) and math.isfinite(value) and value.is_integer():
+        return int(value)
+    if isinstance(value, dict):
+        return {
+            key: _browser_number_round_trip(item) for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_browser_number_round_trip(item) for item in value]
+    return value
 
 
 def _record_path(root: Path, record: dict) -> Path:

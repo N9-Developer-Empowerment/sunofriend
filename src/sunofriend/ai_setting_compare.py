@@ -1,9 +1,9 @@
 """Strict one-variable comparisons over immutable MuScriptor runs.
 
 The comparator never launches a worker and never edits a candidate.  It
-re-verifies two repeatable fresh-process arms, permits only the declared beam
-size change, and publishes path-free diagnostic evidence for a later listening
-decision.
+re-verifies two repeatable fresh-process arms, permits only one declared
+decoding-setting change, and publishes path-free diagnostic evidence for a
+later listening decision.
 """
 
 from __future__ import annotations
@@ -26,8 +26,13 @@ AI_SETTING_COMPARISON_SCHEMA = "sunofriend.ai-setting-comparison.v1"
 
 _CONTROL_BEAM_SIZE = 1
 _CHALLENGER_BEAM_SIZE = 2
+_CONTROL_BATCH_SIZE = 1
+_CHALLENGER_BATCH_SIZE = 2
 _CONTROL_STRATEGY = "greedy"
 _CHALLENGER_STRATEGY = "beam-search"
+_BEAM_SETTING = "beam_size"
+_BATCH_SETTING = "batch_size"
+_SETTINGS = frozenset({_BEAM_SETTING, _BATCH_SETTING})
 _BOUNDARY_TOLERANCE_MS = 80.0
 _PATH_REQUEST_FIELDS = frozenset(
     {
@@ -70,12 +75,46 @@ _PERFORMANCE_FIELDS = (
 )
 
 
+def _comparison_setting(value: Any) -> str:
+    if not isinstance(value, str) or value not in _SETTINGS:
+        raise ValueError(
+            "AI setting comparison setting must be beam_size or batch_size"
+        )
+    return value
+
+
+def _setting_change(setting: str) -> dict[str, Any]:
+    if setting == _BEAM_SETTING:
+        return {
+            "semantic_setting": _BEAM_SETTING,
+            "field": "execution.decoding.beam_size",
+            "control": _CONTROL_BEAM_SIZE,
+            "challenger": _CHALLENGER_BEAM_SIZE,
+            "derived_change": {
+                "field": "execution.decoding.strategy",
+                "control": _CONTROL_STRATEGY,
+                "challenger": _CHALLENGER_STRATEGY,
+            },
+            "changed_semantic_field_count": 1,
+            "all_other_execution_fields_equal": True,
+        }
+    return {
+        "semantic_setting": _BATCH_SETTING,
+        "field": "execution.decoding.batch_size",
+        "control": _CONTROL_BATCH_SIZE,
+        "challenger": _CHALLENGER_BATCH_SIZE,
+        "changed_semantic_field_count": 1,
+        "all_other_execution_fields_equal": True,
+    }
+
+
 def write_ai_setting_comparison(
     control_run_dirs: Sequence[str | Path],
     challenger_run_dirs: Sequence[str | Path],
     output_path: str | Path,
     *,
     boundary_tolerance_ms: float = _BOUNDARY_TOLERANCE_MS,
+    setting: str = _BEAM_SETTING,
 ) -> dict[str, Any]:
     """Build and atomically publish a report at a fresh, external path."""
 
@@ -98,6 +137,7 @@ def write_ai_setting_comparison(
         control,
         challenger,
         boundary_tolerance_ms=boundary_tolerance_ms,
+        setting=setting,
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(
@@ -132,10 +172,13 @@ def build_ai_setting_comparison(
     challenger_run_dirs: Sequence[str | Path],
     *,
     boundary_tolerance_ms: float = _BOUNDARY_TOLERANCE_MS,
+    setting: str = _BEAM_SETTING,
 ) -> dict[str, Any]:
-    """Compare repeatable beam-1 and beam-2 fresh-process MuScriptor arms."""
+    """Compare one supported setting across repeatable fresh MuScriptor arms."""
 
     tolerance = _positive_finite(boundary_tolerance_ms, "boundary_tolerance_ms")
+    comparison_setting = _comparison_setting(setting)
+    batch_comparison = comparison_setting == _BATCH_SETTING
     control_paths = _input_paths(control_run_dirs, arm="control")
     challenger_paths = _input_paths(challenger_run_dirs, arm="challenger")
     _require_globally_unique((*control_paths, *challenger_paths))
@@ -145,32 +188,42 @@ def build_ai_setting_comparison(
         control_paths,
         expected_beam_size=_CONTROL_BEAM_SIZE,
         expected_strategy=_CONTROL_STRATEGY,
+        expected_batch_size=_CONTROL_BATCH_SIZE if batch_comparison else None,
+        comparison_setting=comparison_setting,
         boundary_tolerance_ms=tolerance,
     )
     challenger = _build_arm(
         "challenger",
         challenger_paths,
-        expected_beam_size=_CHALLENGER_BEAM_SIZE,
-        expected_strategy=_CHALLENGER_STRATEGY,
+        expected_beam_size=(
+            _CONTROL_BEAM_SIZE if batch_comparison else _CHALLENGER_BEAM_SIZE
+        ),
+        expected_strategy=(
+            _CONTROL_STRATEGY if batch_comparison else _CHALLENGER_STRATEGY
+        ),
+        expected_batch_size=_CHALLENGER_BATCH_SIZE if batch_comparison else None,
+        comparison_setting=comparison_setting,
         boundary_tolerance_ms=tolerance,
     )
 
-    _require_shared_evidence(control, challenger)
-    shared_execution = _require_only_beam_change(
+    _require_shared_evidence(control, challenger, setting=comparison_setting)
+    shared_execution = _require_only_setting_change(
         control["full_execution"],
         challenger["full_execution"],
+        setting=comparison_setting,
     )
-    _require_request_contract(control, challenger)
+    _require_request_contract(control, challenger, setting=comparison_setting)
     execution_order = _global_execution_order(control, challenger)
 
-    control_public = _public_arm(control)
-    challenger_public = _public_arm(challenger)
+    control_public = _public_arm(control, setting=comparison_setting)
+    challenger_public = _public_arm(challenger, setting=comparison_setting)
     output_comparison = _compare_outputs(
         control_public,
         challenger_public,
         control_notes=control["representative_notes"],
         challenger_notes=challenger["representative_notes"],
         overlap_tolerance_ms=tolerance,
+        setting=comparison_setting,
     )
     output_changed = bool(output_comparison["output_changed"])
 
@@ -187,27 +240,18 @@ def build_ai_setting_comparison(
         "runtime_profile": control["benchmark"]["runtime_profile"],
         "model_size": shared_execution.get("model_size"),
         "cache_regime": deepcopy(_REQUIRED_CACHE_REGIME),
-        "request_options_without_paths_or_beam_sha256": control[
-            "request_contract_without_beam_sha256"
-        ],
+        (
+            "request_options_without_paths_or_batch_sha256"
+            if batch_comparison
+            else "request_options_without_paths_or_beam_sha256"
+        ): control["request_contract_without_setting_sha256"],
     }
+    setting_change = _setting_change(comparison_setting)
     report = {
         "schema": AI_SETTING_COMPARISON_SCHEMA,
         "status": "verified",
         "backend": "muscriptor",
-        "setting_change": {
-            "semantic_setting": "beam_size",
-            "field": "execution.decoding.beam_size",
-            "control": _CONTROL_BEAM_SIZE,
-            "challenger": _CHALLENGER_BEAM_SIZE,
-            "derived_change": {
-                "field": "execution.decoding.strategy",
-                "control": _CONTROL_STRATEGY,
-                "challenger": _CHALLENGER_STRATEGY,
-            },
-            "changed_semantic_field_count": 1,
-            "all_other_execution_fields_equal": True,
-        },
+        "setting_change": setting_change,
         "shared_evidence": shared,
         "execution_order": execution_order,
         "execution_order_caveat": (
@@ -249,6 +293,20 @@ def build_ai_setting_comparison(
             "review when the musical output differs."
         ),
     }
+    if batch_comparison:
+        report["comparison"]["performance"]["first_progress_event"] = {
+            "source_metric": "performance_time_to_first_completed_chunk_seconds",
+            "control_completed_chunks": control["first_progress"]["completed"],
+            "challenger_completed_chunks": challenger["first_progress"]["completed"],
+            "direct_timing_comparison_allowed": False,
+            "interpretation": (
+                "MuScriptor reports progress after a generation batch. With batch "
+                "size greater than one, the first positive event can represent "
+                "multiple completed five-second chunks. The legacy source timings "
+                "therefore measure different completion counts and are omitted from "
+                "the directly comparable performance fields."
+            ),
+        }
     # Prove the public document itself is strict JSON before returning it.
     json.dumps(report, sort_keys=True, allow_nan=False)
     return report
@@ -260,6 +318,8 @@ def _build_arm(
     *,
     expected_beam_size: int,
     expected_strategy: str,
+    expected_batch_size: int | None,
+    comparison_setting: str,
     boundary_tolerance_ms: float,
 ) -> dict[str, Any]:
     benchmark = build_ai_performance_benchmark(paths)
@@ -277,7 +337,9 @@ def _build_arm(
             "AI setting comparison accepts only explicit current fresh-process runs; "
             "legacy evidence is not accepted"
         )
-    if benchmark.get("cache_regime") != _REQUIRED_CACHE_REGIME:
+    if not _strict_json_equal(
+        benchmark.get("cache_regime"), _REQUIRED_CACHE_REGIME
+    ):
         raise ValueError(
             "AI setting comparison accepts only independent cache-disabled fresh runs"
         )
@@ -300,7 +362,12 @@ def _build_arm(
 
     ordered_paths = _paths_in_benchmark_order(paths, benchmark)
     full_executions = [_strict_current_execution(path) for path in ordered_paths]
-    if any(value != full_executions[0] for value in full_executions[1:]):
+    for path, full_execution in zip(ordered_paths, full_executions):
+        _verify_execution_matches_request(path, full_execution)
+    if any(
+        not _strict_json_equal(value, full_executions[0])
+        for value in full_executions[1:]
+    ):
         raise ValueError(
             f"AI setting comparison {arm} full execution settings are not "
             "exactly repeatable"
@@ -313,19 +380,31 @@ def _build_arm(
         lanes, boundary_tolerance_ms=boundary_tolerance_ms
     )
     execution = benchmark.get("execution")
-    if matrix.get("execution") != execution:
+    if not _strict_json_equal(matrix.get("execution"), execution):
         raise ValueError(
             f"AI setting comparison {arm} matrix and benchmark execution disagree"
         )
     decoding = execution.get("decoding") if isinstance(execution, Mapping) else None
     if not isinstance(decoding, Mapping) or (
-        decoding.get("beam_size") != expected_beam_size
+        not _exact_json_integer(decoding.get("beam_size"), expected_beam_size)
         or decoding.get("strategy") != expected_strategy
+        or not _positive_json_integer(decoding.get("batch_size"))
+        or (
+            expected_batch_size is not None
+            and not _exact_json_integer(
+                decoding.get("batch_size"), expected_batch_size
+            )
+        )
         or decoding.get("use_sampling") is not False
     ):
+        if comparison_setting == _BATCH_SETTING:
+            raise ValueError(
+                "AI setting comparison batch mode requires exact JSON integer batch "
+                "sizes 1 versus 2 with beam 1/greedy and sampling disabled"
+            )
         raise ValueError(
-            "AI setting comparison v1 requires control beam 1/greedy and "
-            "challenger beam 2/beam-search with sampling disabled"
+            "AI setting comparison beam mode requires exact JSON integer control beam "
+            "1/greedy and challenger beam 2/beam-search with sampling disabled"
         )
 
     matrix_rows = list(matrix.get("lanes", ()))
@@ -384,16 +463,33 @@ def _build_arm(
             f"AI setting comparison {arm} request options are not identical"
         )
     request_contract = request_documents[0]
-    request_contract_without_beam = deepcopy(request_contract)
-    request_contract_without_beam["options"].pop("beam_size", None)
+    request_contract_without_setting = deepcopy(request_contract)
+    request_contract_without_setting["options"].pop(comparison_setting, None)
+    first_progress = (
+        _first_positive_progress_event(ordered_paths[0])
+        if comparison_setting == _BATCH_SETTING
+        else None
+    )
+    if (
+        expected_batch_size is not None
+        and first_progress is not None
+        and (
+            first_progress["total"] < expected_batch_size
+            or first_progress["completed"] != expected_batch_size
+        )
+    ):
+        raise ValueError(
+            "AI setting comparison batch mode requires the first positive progress "
+            "event to represent the requested batch size"
+        )
 
     return {
         "arm": arm,
         "paths": ordered_paths,
         "benchmark": benchmark,
         # Kept internal: future execution fields may contain machine-local data.
-        # The full mapping is used to prove that beam size is the only effective
-        # cross-arm change, while the public report retains the path-free view.
+        # The full mapping is used to prove that the declared setting is the only
+        # effective cross-arm change, while the public report is path-free.
         "full_execution": full_executions[0],
         "matrix": matrix,
         "representative": matrix_rows[0],
@@ -401,18 +497,23 @@ def _build_arm(
         "note_payload_sha256": note_payload_hashes[0],
         "representative_notes": _candidate_notes(ordered_paths[0]),
         "request_contract": request_contract,
-        "request_contract_without_beam_sha256": _canonical_hash(
-            request_contract_without_beam
+        "request_contract_without_setting_sha256": _canonical_hash(
+            request_contract_without_setting
         ),
+        "first_progress": first_progress,
     }
 
 
-def _public_arm(arm: Mapping[str, Any]) -> dict[str, Any]:
+def _public_arm(arm: Mapping[str, Any], *, setting: str) -> dict[str, Any]:
     benchmark = arm["benchmark"]
     representative = arm["representative"]
     performance = {
         name: deepcopy(benchmark["aggregates"][name])
         for name in _PERFORMANCE_FIELDS
+        if not (
+            setting == _BATCH_SETTING
+            and name == "performance_time_to_first_completed_chunk_seconds"
+        )
         if name in benchmark["aggregates"]
     }
     return {
@@ -445,7 +546,10 @@ def _public_arm(arm: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _require_shared_evidence(
-    control: Mapping[str, Any], challenger: Mapping[str, Any]
+    control: Mapping[str, Any],
+    challenger: Mapping[str, Any],
+    *,
+    setting: str,
 ) -> None:
     left = control["benchmark"]
     right = challenger["benchmark"]
@@ -464,14 +568,17 @@ def _require_shared_evidence(
         "cache_regime",
     )
     for field in fields:
-        if left.get(field) != right.get(field):
+        if not _strict_json_equal(left.get(field), right.get(field)):
             raise ValueError(
-                "AI setting comparison arms differ outside beam_size: " + field
+                f"AI setting comparison arms differ outside {setting}: " + field
             )
 
 
-def _require_only_beam_change(
-    control_value: Any, challenger_value: Any
+def _require_only_setting_change(
+    control_value: Any,
+    challenger_value: Any,
+    *,
+    setting: str,
 ) -> dict[str, Any]:
     if not isinstance(control_value, Mapping) or not isinstance(
         challenger_value, Mapping
@@ -479,37 +586,67 @@ def _require_only_beam_change(
         raise ValueError("AI setting comparison requires pinned execution settings")
     control = deepcopy(dict(control_value))
     challenger = deepcopy(dict(challenger_value))
-    for value, beam, strategy, arm in (
-        (control, _CONTROL_BEAM_SIZE, _CONTROL_STRATEGY, "control"),
+    batch_mode = setting == _BATCH_SETTING
+    expectations = (
+        (
+            control,
+            _CONTROL_BEAM_SIZE,
+            _CONTROL_BATCH_SIZE if batch_mode else None,
+            _CONTROL_STRATEGY,
+            "control",
+        ),
         (
             challenger,
-            _CHALLENGER_BEAM_SIZE,
-            _CHALLENGER_STRATEGY,
+            _CONTROL_BEAM_SIZE if batch_mode else _CHALLENGER_BEAM_SIZE,
+            _CHALLENGER_BATCH_SIZE if batch_mode else None,
+            _CONTROL_STRATEGY if batch_mode else _CHALLENGER_STRATEGY,
             "challenger",
         ),
-    ):
+    )
+    for value, beam, batch, strategy, arm in expectations:
         decoding = value.get("decoding")
         if not isinstance(decoding, dict):
             raise ValueError(f"AI setting comparison {arm} has no decoding settings")
-        if decoding.get("beam_size") != beam or decoding.get("strategy") != strategy:
+        if (
+            not _exact_json_integer(decoding.get("beam_size"), beam)
+            or decoding.get("strategy") != strategy
+            or not _positive_json_integer(decoding.get("batch_size"))
+            or (
+                batch is not None
+                and not _exact_json_integer(decoding.get("batch_size"), batch)
+            )
+        ):
+            if batch_mode:
+                raise ValueError(
+                    "AI setting comparison batch mode requires exactly batch 1 "
+                    "versus batch 2 with beam 1/greedy"
+                )
             raise ValueError(
-                "AI setting comparison v1 requires exactly beam 1/greedy versus "
+                "AI setting comparison beam mode requires exactly beam 1/greedy versus "
                 "beam 2/beam-search"
             )
         if decoding.get("use_sampling") is not False:
-            raise ValueError("AI setting comparison v1 does not accept sampling")
-        decoding.pop("beam_size", None)
-        decoding.pop("strategy", None)
-    if control != challenger:
+            raise ValueError("AI setting comparison does not accept sampling")
+        decoding.pop(setting, None)
+        if setting == _BEAM_SETTING:
+            decoding.pop("strategy", None)
+    if not _strict_json_equal(control, challenger):
         raise ValueError(
             "AI setting comparison arms differ in an execution setting other than "
-            "beam_size and its derived strategy"
+            + (
+                "beam_size and its derived strategy"
+                if setting == _BEAM_SETTING
+                else "batch_size"
+            )
         )
     return control
 
 
 def _require_request_contract(
-    control: Mapping[str, Any], challenger: Mapping[str, Any]
+    control: Mapping[str, Any],
+    challenger: Mapping[str, Any],
+    *,
+    setting: str,
 ) -> None:
     left = deepcopy(control["request_contract"])
     right = deepcopy(challenger["request_contract"])
@@ -517,15 +654,35 @@ def _require_request_contract(
     right_options = right.get("options")
     if not isinstance(left_options, dict) or not isinstance(right_options, dict):
         raise ValueError("AI setting comparison request options are invalid")
-    if left_options.pop("beam_size", None) != _CONTROL_BEAM_SIZE:
-        raise ValueError("AI setting comparison control request must use beam_size 1")
-    if right_options.pop("beam_size", None) != _CHALLENGER_BEAM_SIZE:
+    for arm, options in (("control", left_options), ("challenger", right_options)):
+        if not _positive_json_integer(
+            options.get("beam_size")
+        ) or not _positive_json_integer(options.get("batch_size")):
+            raise ValueError(
+                f"AI setting comparison {arm} request beam_size and batch_size "
+                "must be positive JSON integers"
+            )
+    control_expected = _CONTROL_BEAM_SIZE if setting == _BEAM_SETTING else _CONTROL_BATCH_SIZE
+    challenger_expected = (
+        _CHALLENGER_BEAM_SIZE
+        if setting == _BEAM_SETTING
+        else _CHALLENGER_BATCH_SIZE
+    )
+    if not _exact_json_integer(left_options.pop(setting, None), control_expected):
         raise ValueError(
-            "AI setting comparison challenger request must use beam_size 2"
+            f"AI setting comparison control request must use {setting} "
+            f"{control_expected}"
         )
-    if left != right:
+    if not _exact_json_integer(
+        right_options.pop(setting, None), challenger_expected
+    ):
         raise ValueError(
-            "AI setting comparison request options differ outside beam_size"
+            f"AI setting comparison challenger request must use {setting} "
+            f"{challenger_expected}"
+        )
+    if not _strict_json_equal(left, right):
+        raise ValueError(
+            f"AI setting comparison request options differ outside {setting}"
         )
 
 
@@ -566,6 +723,7 @@ def _compare_outputs(
     control_notes: Sequence[Mapping[str, Any]],
     challenger_notes: Sequence[Mapping[str, Any]],
     overlap_tolerance_ms: float,
+    setting: str,
 ) -> dict[str, Any]:
     left = control["outputs"]
     right = challenger["outputs"]
@@ -606,8 +764,9 @@ def _compare_outputs(
         "candidate_raw_identical": candidate_raw_identical,
         "candidate_json_identical": candidate_json_identical,
         "candidate_json_interpretation": (
-            "Candidate JSON includes execution provenance, so a beam-only metadata "
-            "difference is not itself a musical-output difference."
+            "Candidate JSON includes execution provenance, so a "
+            + ("beam-only" if setting == _BEAM_SETTING else "batch_size-only")
+            + " metadata difference is not itself a musical-output difference."
         ),
         "note_payload_identical": note_payload_identical,
         "candidate_midi_identical": midi_identical,
@@ -884,6 +1043,158 @@ def _strict_current_execution(run_dir: Path) -> dict[str, Any]:
     return deepcopy(dict(execution))
 
 
+def _verify_execution_matches_request(
+    run_dir: Path, execution: Mapping[str, Any]
+) -> None:
+    """Prove the worker executed the type-exact settings that were requested."""
+
+    request = _read_json(run_dir / "request.json", "request")
+    options = request.get("options")
+    if request.get("backend") != "muscriptor" or not isinstance(options, Mapping):
+        raise ValueError(
+            "AI setting comparison requires MuScriptor request options for every run"
+        )
+
+    option_fields = (
+        "model_size",
+        "model_config_sha256",
+        "beam_size",
+        "batch_size",
+        "cfg_coef",
+        "temperature",
+        "use_sampling",
+        "no_eos_is_ok",
+        "chunk_seconds",
+        "prelude_forcing",
+        "prelude_forcing_supported",
+    )
+    missing_options = [name for name in option_fields if name not in options]
+    if missing_options:
+        raise ValueError(
+            "AI setting comparison request is missing execution option(s): "
+            + ", ".join(missing_options)
+        )
+
+    beam_size = options["beam_size"]
+    batch_size = options["batch_size"]
+    use_sampling = options["use_sampling"]
+    if not _positive_json_integer(beam_size) or not _positive_json_integer(batch_size):
+        raise ValueError(
+            "AI setting comparison request beam_size and batch_size must be positive "
+            "JSON integers"
+        )
+    if type(use_sampling) is not bool:
+        raise ValueError(
+            "AI setting comparison request use_sampling must be a JSON boolean"
+        )
+    boolean_fields = (
+        "no_eos_is_ok",
+        "prelude_forcing",
+        "prelude_forcing_supported",
+    )
+    if any(type(options[name]) is not bool for name in boolean_fields):
+        raise ValueError(
+            "AI setting comparison request EOS and prelude controls must be JSON "
+            "booleans"
+        )
+    cfg_coef = options["cfg_coef"]
+    temperature = options["temperature"]
+    chunk_seconds = options["chunk_seconds"]
+    if not _finite_json_number(cfg_coef) or cfg_coef < 0:
+        raise ValueError(
+            "AI setting comparison request cfg_coef must be a finite non-negative "
+            "JSON number"
+        )
+    if not _finite_json_number(temperature) or temperature <= 0:
+        raise ValueError(
+            "AI setting comparison request temperature must be a finite positive "
+            "JSON number"
+        )
+    if not _finite_json_number(chunk_seconds) or chunk_seconds != 5.0:
+        raise ValueError(
+            "AI setting comparison request chunk_seconds must use the current finite "
+            "five-second policy"
+        )
+    if options["prelude_forcing"] is not False or options[
+        "prelude_forcing_supported"
+    ] is not False:
+        raise ValueError(
+            "AI setting comparison request must use the current unsupported, disabled "
+            "prelude-forcing policy"
+        )
+    model_size = options["model_size"]
+    config_hash = options["model_config_sha256"]
+    if type(model_size) is not str or model_size not in {"small", "medium", "large"}:
+        raise ValueError(
+            "AI setting comparison request model_size must name a valid MuScriptor "
+            "model"
+        )
+    if (
+        type(config_hash) is not str
+        or len(config_hash) != 64
+        or any(character not in "0123456789abcdef" for character in config_hash)
+    ):
+        raise ValueError(
+            "AI setting comparison request model config hash must be a valid SHA-256"
+        )
+
+    expected_strategy = (
+        "sampling"
+        if use_sampling
+        else "beam-search"
+        if beam_size > 1
+        else "greedy"
+    )
+    expected = {
+        "model_size": options["model_size"],
+        "model_config_sha256": options["model_config_sha256"],
+        "decoding": {
+            "strategy": expected_strategy,
+            "beam_size": beam_size,
+            "batch_size": batch_size,
+            "cfg_coef": options["cfg_coef"],
+            "temperature": options["temperature"],
+            "use_sampling": use_sampling,
+            "no_eos_is_ok": options["no_eos_is_ok"],
+        },
+        "chunking": {
+            "seconds": options["chunk_seconds"],
+            "policy": "independent-five-second-chunks",
+            "prelude_forcing": options["prelude_forcing"],
+            "prelude_forcing_supported": options["prelude_forcing_supported"],
+        },
+    }
+    contract_fields = {
+        "model_size": None,
+        "model_config_sha256": None,
+        "decoding": tuple(expected["decoding"]),
+        "chunking": tuple(expected["chunking"]),
+    }
+    actual: dict[str, Any] = {}
+    for name, nested_fields in contract_fields.items():
+        if name not in execution:
+            raise ValueError(
+                f"AI setting comparison execution is missing request field {name}"
+            )
+        value = execution[name]
+        if nested_fields is None:
+            actual[name] = deepcopy(value)
+            continue
+        if not isinstance(value, Mapping) or any(
+            field not in value for field in nested_fields
+        ):
+            raise ValueError(
+                f"AI setting comparison execution is missing request fields in {name}"
+            )
+        actual[name] = {field: deepcopy(value[field]) for field in nested_fields}
+
+    if not _strict_json_equal(actual, expected):
+        raise ValueError(
+            "AI setting comparison request and execution settings differ in JSON type "
+            "or value"
+        )
+
+
 def _tracked_artifacts(run_dir: Path) -> dict[str, str]:
     run = _read_json(run_dir / "run.json", "run manifest")
     artifacts = run.get("artifacts")
@@ -928,6 +1239,45 @@ def _candidate_notes(run_dir: Path) -> list[dict[str, Any]]:
     if not isinstance(notes, list) or not all(isinstance(note, dict) for note in notes):
         raise ValueError("AI setting comparison candidate notes are invalid")
     return deepcopy(notes)
+
+
+def _first_positive_progress_event(run_dir: Path) -> dict[str, int]:
+    document = _read_json(run_dir / "candidate.raw.json", "raw candidate")
+    metadata = document.get("metadata")
+    progress = metadata.get("progress") if isinstance(metadata, Mapping) else None
+    if not isinstance(progress, list) or not progress:
+        raise ValueError(
+            "AI setting comparison batch mode requires MuScriptor progress evidence"
+        )
+    previous = -1
+    expected_total: int | None = None
+    first_positive: dict[str, int] | None = None
+    for row in progress:
+        if not isinstance(row, Mapping):
+            raise ValueError("AI setting comparison progress evidence is invalid")
+        completed = row.get("completed")
+        total = row.get("total")
+        if (
+            isinstance(completed, bool)
+            or not isinstance(completed, int)
+            or isinstance(total, bool)
+            or not isinstance(total, int)
+            or total < 1
+            or completed < 0
+            or completed > total
+            or completed < previous
+            or (expected_total is not None and total != expected_total)
+        ):
+            raise ValueError("AI setting comparison progress evidence is invalid")
+        previous = completed
+        expected_total = total
+        if completed > 0 and first_positive is None:
+            first_positive = {"completed": completed, "total": total}
+    if first_positive is None or previous != expected_total:
+        raise ValueError(
+            "AI setting comparison batch mode has incomplete progress evidence"
+        )
+    return first_positive
 
 
 def _request_contract(run_dir: Path) -> dict[str, Any]:
@@ -1021,6 +1371,43 @@ def _canonical_json(value: Any) -> str:
 
 def _canonical_hash(value: Any) -> str:
     return hashlib.sha256(_canonical_json(value).encode("utf-8")).hexdigest()
+
+
+def _exact_json_integer(value: Any, expected: int) -> bool:
+    return type(value) is int and value == expected
+
+
+def _positive_json_integer(value: Any) -> bool:
+    return type(value) is int and value > 0
+
+
+def _finite_json_number(value: Any) -> bool:
+    if type(value) is int:
+        return True
+    return type(value) is float and math.isfinite(value)
+
+
+def _strict_json_equal(left: Any, right: Any) -> bool:
+    """Compare JSON values without Python's bool/int or int/float coercion."""
+
+    if type(left) is not type(right):
+        return False
+    if isinstance(left, dict):
+        if set(left) != set(right) or not all(
+            isinstance(key, str) for key in (*left.keys(), *right.keys())
+        ):
+            return False
+        return all(_strict_json_equal(left[key], right[key]) for key in left)
+    if isinstance(left, list):
+        return len(left) == len(right) and all(
+            _strict_json_equal(left_item, right_item)
+            for left_item, right_item in zip(left, right)
+        )
+    if isinstance(left, float):
+        return math.isfinite(left) and math.isfinite(right) and left == right
+    if type(left) in {str, int, bool, type(None)}:
+        return left == right
+    return False
 
 
 def _positive_finite(value: Any, label: str) -> float:
