@@ -55,6 +55,7 @@ choice; scores and model labels never create an automatic global winner.
 | Split one reviewed MIDI into audible roles | `midi-role-split`, `midi-role-split-resolve` | Explicit source-event cluster choice, exact primary-note partition, optional independently transcribed residual layer, local A/B review and a hash-verified user-selected recommendation |
 | Compare consistent sounds on one fixed MIDI | `timbre-resynthesis` | Level-matched complete-patch, extracted-sampler and source-fitted harmonic-plus-noise auditions with note-by-note silence checks and no MIDI changes |
 | Review and hand off multi-process MIDI alternatives in one local site | `workbench` | Loopback-only Project Overview, precise decoded 0.5–15 second per-stem and canonical selected-arrangement loops, exact canonical full-song chunk playback, a bounded full-song timeline, a coarse arbitrary mixer, append-only decisions, private offline review export and an exact-selected-MIDI GarageBand ZIP; no automatic winner or submission endpoint |
+| Learn the workflow and verify one exact GarageBand handoff | `garageband-pack-review`, `garageband-pack-resolve` | Eight-screen interactive tutorial, 10 one-at-a-time comprehension questions, then the two explicit GarageBand and local-usability checks; the resolver re-verifies the downloaded ZIP and has no MIDI, selection, basket, upload or feedback effect |
 
 Development has started on a local-first ensemble of optional transcription
 models, phrase-level melody review and learned instrument matching. See the
@@ -128,14 +129,17 @@ plus a completed batch-size 1→2 CPU comparison, the first read-only Phase 5.3
 phrase-consensus diagnostic, the multi-process Result Explorer, GarageBand
 Pack Composer v1, the explicit disputed-range phrase-review bridge and Project
 Overview/Resume v1, Decoded Stem Comparison v1, bounded decoded arrangement
-presets, exact canonical full-song chunk transport and verified execution
-provenance—is
+presets, exact canonical full-song chunk transport, verified execution
+provenance and Phase 5.9 exact-pack guided acceptance tooling—is
 in the
 **[Phase 5 multi-process comparison and Result Explorer plan](docs/PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md)**.
 The technical entry gate for the first read-only Phase 6 Clip Library slice is
-complete. A GarageBand Pack Composer acceptance pass and a small authorised
-local usability pass remain before it starts; explicit hybrid construction
-also waits for the separate Phase 5.3 blind-choice and source-lineage gates.
+complete, and Phase 5.9 now places an eight-screen tutorial and a 10/10
+one-question-at-a-time quiz before the two remaining human checks. A reviewed
+GarageBand Pack Composer pass and the authorised local usability pass still
+remain before Phase 6 starts; explicit hybrid construction also waits for the
+separate Phase 5.3 blind-choice and source-lineage gates. See the
+**[Phase 5 local Studio learning and acceptance guide](docs/PHASE5_LOCAL_STUDIO_ACCEPTANCE.md)**.
 Creative note/phrase editing and Clip reuse remain Phase 6 work, while
 cross-DAW and explicitly consented community work is deferred to Phase 7.
 
@@ -526,6 +530,47 @@ metadata, so inspect the ZIP before sharing it. The earlier source-free
 `sunofriend.workbench-garageband-handoff.v1` endpoint remains compatible.
 If no active MIDI remains, Pack Composer explains that no parts are ready and
 links back to Project Overview instead of presenting an unusable empty build.
+
+After a pack is built, open **Guided tutorial, 10-question quiz and acceptance
+review**. The page follows one fixed sequence:
+
+1. Read all eight short tutorial screens explaining the multi-process result
+   space, decisions, audition state, exact pack, timing and instruments.
+2. Answer exactly 10 questions, one at a time. A checked answer includes an
+   explanation; all 10 must be correct before acceptance unlocks.
+3. Complete **Human check 1 of 2** while importing that exact ZIP into
+   GarageBand, setting the displayed BPM, confirming drum routing where
+   applicable and listening at the beginning, middle and end.
+4. Complete **Human check 2 of 2** by confirming the local project was
+   intentionally chosen and authorised, then exercising Workbench without
+   editing JSON.
+5. Export the private reviewed JSON, then resolve it against the exact ZIP you
+   downloaded:
+
+```bash
+.venv/bin/sunofriend garageband-pack-resolve \
+  "/absolute/path/to/garageband_pack_acceptance.reviewed.json" \
+  "/absolute/path/to/sunofriend-garageband-pack.zip" \
+  --out "/absolute/fresh/path/phase5-acceptance-result.json"
+```
+
+The resolver rebuilds the neutral review seed, stream-verifies the ZIP member
+set and hashes, recomputes the quiz and checks that each human outcome matches
+its answers. The path-free result is `passed`, `needs_changes` or `incomplete`.
+Free-text notes remain only in the private reviewed JSON. If a catalog did not
+pin a downbeat, a listening pass is labelled `reviewer-observation-only`; it
+does not invent downbeat metadata. This workflow records evidence only: it does
+not edit MIDI, promote a candidate, change decisions or pack choices, start
+Phase 6 automatically, upload audio or record telemetry.
+
+If you already have a downloaded pack but not the automatically generated
+page, create the same fresh local review explicitly:
+
+```bash
+.venv/bin/sunofriend garageband-pack-review \
+  "/absolute/path/to/sunofriend-garageband-pack.zip" \
+  --out-dir "/absolute/fresh/path/phase5-pack-review"
+```
 
 When a discovered candidate belongs to a completed `ai-transcribe` run, its
 card also shows the verified model/config, requested and detected labels, note

@@ -165,6 +165,30 @@ class WorkbenchPackServerTests(unittest.TestCase):
                     self.assertTrue(pack["source_audio_included"])
                     self.assertFalse(pack["arrangement_proxy_included"])
                     self.assertIn("zip_url", pack)
+                    self.assertIn("acceptance_review_url", pack)
+                    self.assertIn("acceptance_review", pack)
+                    self.assertIn("acceptance_seed", pack)
+                    self.assertNotIn("path", pack["acceptance_review"])
+                    self.assertNotIn("path", pack["acceptance_seed"])
+                    connection = http.client.HTTPConnection(
+                        "127.0.0.1", server.server_port, timeout=10
+                    )
+                    connection.request("GET", pack["acceptance_review_url"])
+                    acceptance_response = connection.getresponse()
+                    self.assertEqual(acceptance_response.status, 200)
+                    self.assertIn(
+                        "Understand Sunofriend, then test it",
+                        acceptance_response.read().decode("utf-8"),
+                    )
+                    policy = acceptance_response.getheader(
+                        "Content-Security-Policy"
+                    )
+                    self.assertIn("connect-src 'none'", policy)
+                    self.assertIn(
+                        "sandbox allow-scripts allow-same-origin allow-downloads allow-modals",
+                        policy,
+                    )
+                    connection.close()
                     renderer.assert_not_called()
 
                     status, legacy = _json_request(

@@ -63,6 +63,8 @@ _COMMANDS = {
     "instrument-profile",
     "instrument-bundle",
     "workbench",
+    "garageband-pack-review",
+    "garageband-pack-resolve",
     "clip-import",
     "clip-list",
     "clip-show",
@@ -2043,6 +2045,37 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    garageband_pack_review = sub.add_parser(
+        "garageband-pack-review",
+        help=(
+            "Create a guided tutorial, 10-question quiz, and local acceptance "
+            "review for one exact Workbench GarageBand pack"
+        ),
+    )
+    garageband_pack_review.add_argument(
+        "pack", help="Downloaded sunofriend-garageband-pack.zip"
+    )
+    garageband_pack_review.add_argument(
+        "--out-dir", required=True, help="Fresh local review directory"
+    )
+
+    garageband_pack_resolve = sub.add_parser(
+        "garageband-pack-resolve",
+        help=(
+            "Verify a reviewed guided acceptance export against the exact "
+            "GarageBand pack"
+        ),
+    )
+    garageband_pack_resolve.add_argument(
+        "review", help="Browser-exported garageband_pack_acceptance.reviewed.json"
+    )
+    garageband_pack_resolve.add_argument(
+        "pack", help="The exact downloaded GarageBand pack used in the review"
+    )
+    garageband_pack_resolve.add_argument(
+        "--out", required=True, help="Fresh path-free acceptance result JSON"
+    )
+
     workbench = sub.add_parser(
         "workbench",
         help="Open, inspect, or privately export the local MIDI decision workbench",
@@ -2307,6 +2340,10 @@ def main(argv: list[str] | None = None) -> int:
             return _run_instrument_profile(args)
         if args.command == "instrument-bundle":
             return _run_instrument_bundle(args)
+        if args.command == "garageband-pack-review":
+            return _run_garageband_pack_review(args)
+        if args.command == "garageband-pack-resolve":
+            return _run_garageband_pack_resolve(args)
         if args.command == "workbench":
             return _run_workbench(args)
         if args.command == "clip-import":
@@ -4322,6 +4359,30 @@ def _run_instrument_profile(args) -> int:
     from .instrument_preference import build_personal_instrument_profile
 
     report = build_personal_instrument_profile(args.feedback, out_path=args.out)
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_garageband_pack_review(args) -> int:
+    from .garageband_pack_acceptance import (
+        create_garageband_pack_acceptance_review,
+    )
+
+    report = create_garageband_pack_acceptance_review(args.pack, args.out_dir)
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_garageband_pack_resolve(args) -> int:
+    from .garageband_pack_acceptance import (
+        resolve_garageband_pack_acceptance_review,
+    )
+
+    report = resolve_garageband_pack_acceptance_review(
+        args.review,
+        args.pack,
+        args.out,
+    )
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0
 

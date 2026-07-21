@@ -28,6 +28,9 @@ canonical, server-derived groups. Phase 5.7 adds fixed-window long-song
 visualization with explicit recovery and a minimal exact full-song chunk
 transport for those same canonical groups. Arbitrary custom mute/solo/gain
 playback remains an explicitly coarse compatibility path.
+Phase 5.8 explains independently verified execution provenance. Phase 5.9 now
+adds the exact-pack interactive tutorial, required 10/10 comprehension quiz and
+two-check local acceptance resolver; its human review is still pending.
 The arrangement explorer shows every unique project source stem beside only
 the active explicit main and optional MIDI choices, with temporary visibility,
 mute, solo and level controls. It does not infer an offset: every source and
@@ -819,6 +822,69 @@ superseded and unreviewed MIDI. It also does not search the filesystem for SF2,
 a later explicit, hash-pinned catalog contract. The legacy
 `sunofriend.workbench-garageband-handoff.v1` endpoint remains unchanged for
 existing clients.
+
+## Learn first, then complete the two acceptance checks
+
+Every successfully built exact pack now has an adjacent, hash-pinned
+**Guided tutorial, 10-question quiz and acceptance review**. Workbench serves
+that page through a frozen loopback capability with `connect-src 'none'` and a
+review sandbox. It contains no request, upload, submission or telemetry path.
+
+The page must be completed in this order:
+
+1. Eight interactive tutorial screens explain Sunofriend's multi-process
+   result space, human decision boundary, temporary audition state, separate
+   export basket, BPM/downbeat distinction, MIDI/instrument distinction,
+   privacy policy and Phase 6 boundary.
+2. Exactly 10 questions are presented one at a time. Nothing is preselected.
+   **Check answer** explains the current answer, the whole quiz can be retried,
+   and a 10/10 result is required before the next section unlocks.
+3. **Human check 1 of 2 — GarageBand pack** asks for an exact-BPM import,
+   expected editable selected files, audible playable patches, correct
+   drum/percussion routing where applicable, a listened pickup/downbeat and a
+   beginning/middle/end drift check.
+4. **Human check 2 of 2 — local usability** begins with explicit confirmation
+   that the local project was intentionally chosen and authorised. It then
+   checks comparison/choice, understanding of the no-automatic-winner result
+   space, arrangement audition, separation of decisions/playback/export and
+   exact export plus restart behaviour without JSON editing.
+5. The user explicitly downloads the private reviewed JSON. Free-text notes
+   are allowed only there and are not copied into the resolved result.
+
+Resolve the reviewed export against the exact ZIP that was actually imported:
+
+```bash
+sunofriend garageband-pack-resolve \
+  "/absolute/path/to/garageband_pack_acceptance.reviewed.json" \
+  "/absolute/path/to/sunofriend-garageband-pack.zip" \
+  --out "/absolute/fresh/path/phase5-acceptance-result.json"
+```
+
+The resolver independently stream-verifies the ZIP, exact safe member set,
+embedded receipt, basket item identities and payload hashes. It rebuilds the
+neutral seed from those bytes, rejects changed tutorial/questions/evidence,
+recomputes the quiz and checks the two declared outcomes against their item
+answers. `passed` requires 10/10 and two all-pass checks; any issue produces
+`needs_changes`, even when another item is `cannot_tell`; otherwise
+`cannot_tell` produces `incomplete`. The resolver has
+zero MIDI, candidate, decision, basket, ranking, default or submission effect.
+
+When Workbench has no catalog-pinned downbeat, a listened downbeat pass is
+reported as `reviewer-observation-only`. It is sufficient for this private
+human acceptance gate but does not invent exact downbeat metadata. A future
+hash-pinned downbeat catalog contract can strengthen that evidence separately.
+
+For an older downloaded pack without the adjacent page, generate the same
+fresh package without starting a server:
+
+```bash
+sunofriend garageband-pack-review \
+  "/absolute/path/to/sunofriend-garageband-pack.zip" \
+  --out-dir "/absolute/fresh/path/phase5-pack-review"
+```
+
+See [Phase 5 local Studio learning and acceptance](PHASE5_LOCAL_STUDIO_ACCEPTANCE.md)
+for the close-out boundary and Phase 6 interpretation.
 
 ## Export the private review without a server
 

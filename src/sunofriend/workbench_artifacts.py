@@ -20,6 +20,11 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from .clip import read_midi_clips
+from .garageband_pack_acceptance import (
+    create_garageband_pack_acceptance_review,
+    verify_garageband_pack_acceptance_artifacts,
+    verify_garageband_pack_archive,
+)
 from .midi import MidiTrack, write_midi_file
 from .models import NoteEvent
 from .note_alignment import AlignmentEvent, align_events
@@ -2074,6 +2079,49 @@ class WorkbenchArtifacts:
         arrangement = (
             self.render_arrangement(catalog, current) if include_proxy else None
         )
+        copied: list[dict[str, Any]] = []
+        payloads: list[tuple[str, bytes]] = []
+        for item in included_items:
+            item_id = str(item["item_id"])
+            kind = str(item["kind"])
+            if kind == "arrangement_proxy":
+                if arrangement is None:  # pragma: no cover - guarded above
+                    raise RuntimeError("arrangement proxy was not prepared")
+                proxy_records = (
+                    (
+                        "MIDI/selected-arrangement-proxy.mid",
+                        arrangement["midi"],
+                        "arrangement proxy MIDI",
+                    ),
+                    (
+                        "PREVIEW/selected-arrangement-proxy.wav",
+                        arrangement["preview"],
+                        "arrangement proxy preview",
+                    ),
+                )
+                for archive_path, record, label in proxy_records:
+                    data = _verified_record_bytes(record, label=label)
+                    payloads.append((archive_path, data))
+                    copied.append(
+                        _pack_manifest_item(
+                            item_id=item_id,
+                            kind=kind,
+                            archive_path=archive_path,
+                            data=data,
+                        )
+                    )
+                continue
+            data = verified_input_payloads[item_id]
+            archive_path = str(item["archive_paths"][0])
+            payloads.append((archive_path, data))
+            copied.append(
+                _pack_manifest_item(
+                    item_id=item_id,
+                    kind=kind,
+                    archive_path=archive_path,
+                    data=data,
+                )
+            )
 
         key_payload: dict[str, Any] = {
             "schema": GARAGEBAND_PACK_SCHEMA,
@@ -2090,6 +2138,32 @@ class WorkbenchArtifacts:
                 "preview_sha256": arrangement["preview"]["sha256"],
             }
         cache_key = _document_hash(key_payload)
+        source_count = sum(
+            item["kind"] == "source_audio" for item in included_items
+        )
+        midi_count = sum(
+            item["kind"] == "selected_midi" for item in included_items
+        )
+        pack_manifest = {
+            **key_payload,
+            "cache_key": cache_key,
+            "schema": GARAGEBAND_PACK_SCHEMA,
+            "setup": dict(plan["setup"]),
+            "included_items": copied,
+            "selected_midi_count": midi_count,
+            "source_audio_count": source_count,
+            "source_audio_included": source_count > 0,
+            "source_audio_opt_in": canonical["source_audio_opt_in"],
+            "arrangement_proxy_included": include_proxy,
+            "selected_midi_overlap": plan["selected_midi_overlap"],
+            "selection_policy": (
+                "the basket is explicit and separate from current musical "
+                "main/optional decisions"
+            ),
+            "private_notes_included": False,
+            "absolute_paths_included": False,
+            "original_midi_mutated": False,
+        }
         pack_dir = self.root / "packs" / cache_key
         zip_path = pack_dir / "sunofriend-garageband-pack.zip"
         manifest_path = pack_dir / "manifest.json"
@@ -2098,6 +2172,7 @@ class WorkbenchArtifacts:
                 zip_path,
                 manifest_path,
                 expected_key_payload=key_payload,
+                expected_pack_manifest=pack_manifest,
             )
             if cached is not None:
                 cached["cache_hit"] = True
@@ -2106,76 +2181,6 @@ class WorkbenchArtifacts:
             _remove_generated_path(pack_dir)
             work.mkdir(parents=True, exist_ok=False)
             try:
-                copied: list[dict[str, Any]] = []
-                payloads: list[tuple[str, bytes]] = []
-                for item in included_items:
-                    item_id = str(item["item_id"])
-                    kind = str(item["kind"])
-                    if kind == "arrangement_proxy":
-                        if arrangement is None:  # pragma: no cover - guarded above
-                            raise RuntimeError("arrangement proxy was not prepared")
-                        proxy_records = (
-                            (
-                                "MIDI/selected-arrangement-proxy.mid",
-                                arrangement["midi"],
-                                "arrangement proxy MIDI",
-                            ),
-                            (
-                                "PREVIEW/selected-arrangement-proxy.wav",
-                                arrangement["preview"],
-                                "arrangement proxy preview",
-                            ),
-                        )
-                        for archive_path, record, label in proxy_records:
-                            data = _verified_record_bytes(record, label=label)
-                            payloads.append((archive_path, data))
-                            copied.append(
-                                _pack_manifest_item(
-                                    item_id=item_id,
-                                    kind=kind,
-                                    archive_path=archive_path,
-                                    data=data,
-                                )
-                            )
-                        continue
-                    data = verified_input_payloads[item_id]
-                    archive_path = str(item["archive_paths"][0])
-                    payloads.append((archive_path, data))
-                    copied.append(
-                        _pack_manifest_item(
-                            item_id=item_id,
-                            kind=kind,
-                            archive_path=archive_path,
-                            data=data,
-                        )
-                    )
-
-                source_count = sum(
-                    item["kind"] == "source_audio" for item in included_items
-                )
-                midi_count = sum(
-                    item["kind"] == "selected_midi" for item in included_items
-                )
-                pack_manifest = {
-                    **key_payload,
-                    "cache_key": cache_key,
-                    "schema": GARAGEBAND_PACK_SCHEMA,
-                    "setup": dict(plan["setup"]),
-                    "included_items": copied,
-                    "selected_midi_count": midi_count,
-                    "source_audio_count": source_count,
-                    "source_audio_included": source_count > 0,
-                    "source_audio_opt_in": canonical["source_audio_opt_in"],
-                    "arrangement_proxy_included": include_proxy,
-                    "selected_midi_overlap": plan["selected_midi_overlap"],
-                    "selection_policy": (
-                        "the basket is explicit and separate from current musical "
-                        "main/optional decisions"
-                    ),
-                    "private_notes_included": False,
-                    "absolute_paths_included": False,
-                    "original_midi_mutated": False,
-                }
                 zip_build = work / zip_path.name
                 with zipfile.ZipFile(
                     zip_build, "w", compression=zipfile.ZIP_DEFLATED
@@ -2197,9 +2202,20 @@ class WorkbenchArtifacts:
                     )
                     for archive_path, data in payloads:
                         _zip_bytes(archive, archive_path, data)
+                acceptance_dir = work / "acceptance-review"
+                acceptance = create_garageband_pack_acceptance_review(
+                    zip_build,
+                    acceptance_dir,
+                )
                 manifest = {
                     **pack_manifest,
                     "zip": _relative_file_record(zip_build, work),
+                    "acceptance_review": _relative_file_record(
+                        Path(acceptance["html"]), work
+                    ),
+                    "acceptance_seed": _relative_file_record(
+                        Path(acceptance["seed"]), work
+                    ),
                 }
                 _write_json(work / "manifest.json", manifest)
                 work.replace(pack_dir)
@@ -2210,6 +2226,7 @@ class WorkbenchArtifacts:
                 zip_path,
                 manifest_path,
                 expected_key_payload=key_payload,
+                expected_pack_manifest=pack_manifest,
             )
             if result is None:
                 raise RuntimeError("GarageBand pack cache verification failed")
@@ -3382,6 +3399,7 @@ class WorkbenchArtifacts:
         manifest_path: Path,
         *,
         expected_key_payload: Mapping[str, Any],
+        expected_pack_manifest: Mapping[str, Any],
     ) -> dict[str, Any] | None:
         try:
             document = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -3397,6 +3415,10 @@ class WorkbenchArtifacts:
                 document.get(key) != value
                 for key, value in expected_key_payload.items()
             )
+            or any(
+                document.get(key) != value
+                for key, value in expected_pack_manifest.items()
+            )
         ):
             return None
         record = document.get("zip")
@@ -3405,8 +3427,45 @@ class WorkbenchArtifacts:
         materialized = self._materialize_file_record(record, manifest_path.parent)
         if materialized is None or materialized["path"] != str(zip_path):
             return None
+        try:
+            verified_pack = verify_garageband_pack_archive(zip_path)
+        except ValueError:
+            return None
+        receipt = verified_pack.get("receipt")
+        if (
+            not isinstance(receipt, Mapping)
+            or dict(receipt) != dict(expected_pack_manifest)
+            or any(document.get(key) != value for key, value in receipt.items())
+        ):
+            return None
+        review_record = document.get("acceptance_review")
+        seed_record = document.get("acceptance_seed")
+        if not isinstance(review_record, Mapping) or not isinstance(
+            seed_record, Mapping
+        ):
+            return None
+        materialized_review = self._materialize_file_record(
+            review_record, manifest_path.parent
+        )
+        materialized_seed = self._materialize_file_record(
+            seed_record, manifest_path.parent
+        )
+        if materialized_review is None or materialized_seed is None:
+            return None
+        try:
+            verified_acceptance = verify_garageband_pack_acceptance_artifacts(
+                zip_path,
+                materialized_seed["path"],
+                materialized_review["path"],
+            )
+        except ValueError:
+            return None
+        if verified_acceptance.get("pack_sha256") != materialized.get("sha256"):
+            return None
         result = dict(document)
         result["zip"] = materialized
+        result["acceptance_review"] = materialized_review
+        result["acceptance_seed"] = materialized_seed
         return result
 
     def _materialize_file_record(

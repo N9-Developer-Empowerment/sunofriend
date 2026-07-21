@@ -85,6 +85,16 @@ class WorkbenchPackComposerUITests(unittest.TestCase):
         )
         self.assertIn("Download GarageBand pack ZIP", self.composer)
         self.assertIn("Download path-free pack receipt", self.composer)
+        self.assertIn(
+            "Open guided tutorial, 10-question quiz and acceptance review",
+            self.composer,
+        )
+        self.assertIn("All 10 quiz answers must be correct", self.composer)
+        self.assertIn("acceptance_review_url", self.composer)
+        self.assertIn(
+            "const {zip_url,receipt_url,manifest_url,acceptance_review_url,...receipt}",
+            self.composer,
+        )
         self.assertIn("Pack choices saved locally", self.composer)
         self.assertIn("No local path is accepted from this page.", self.composer)
         self.assertIn("packBasket?.plan_current===false", self.composer)

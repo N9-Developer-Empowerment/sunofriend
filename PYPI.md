@@ -44,7 +44,14 @@ waits for explicit full-mix confirmation only when a selected same-origin pair
 reaches that substantial-overlap threshold.
 The exact private review can also be archived atomically from the CLI without
 starting a server. The Workbench loads no remote scripts and has no upload or
-submission endpoint. Completed AI runs add path-free
+submission endpoint. Each completed exact pack now links to a local guided
+acceptance page: eight tutorial screens explain the result-space, timing,
+instrument and privacy contracts; a 10-question one-at-a-time quiz requires
+10/10 before the GarageBand and usability checks unlock. The reviewed export
+can be verified against the exact downloaded ZIP with
+`garageband-pack-resolve`; resolution recomputes the quiz, verifies every pack
+member and records evidence without changing MIDI, selections, the pack basket
+or any feedback state. Completed AI runs add path-free
 model/config, label, boundary and safety diagnostics; severe or zero-note
 results remain diagnostic-only. `sunofriend ai-matrix` compares controlled
 immutable lanes without changing raw candidates or MIDI. Its M4 contract

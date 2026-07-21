@@ -1,6 +1,6 @@
 # Phase 5: Multi-Process MIDI Comparison and Local Result Explorer
 
-Status: **Phase 5.0–5.2 are complete; the Phase 5.3 lead-only S0/M1/M3 diagnostic slice and Phase 5.4 explorer slice are complete, including hash-pinned comparison, GarageBand Pack Composer v1 and the disputed-range phrase-review bridge; Phase 5.5 completes Project Overview/restart/decision safety plus Decoded Stem Comparison v1, Phase 5.6 completes bounded decoded short arrangement presets, Phase 5.7 implements long-song visualization/recovery plus minimal exact canonical full-song chunk transport, and Phase 5.8 completes verified cache/reused-model execution-provenance display; Phase 5.3 blind choice, lineage and role expansion plus the GarageBand/private-beta acceptance gates remain open, beam 1 and batch 1 remain the defaults, and no public service or new checkpoint download is authorised**
+Status: **Phase 5.0–5.2 are complete; the Phase 5.3 lead-only S0/M1/M3 diagnostic slice and Phase 5.4 explorer slice are complete, including hash-pinned comparison, GarageBand Pack Composer v1 and the disputed-range phrase-review bridge; Phase 5.5 completes Project Overview/restart/decision safety plus Decoded Stem Comparison v1, Phase 5.6 completes bounded decoded short arrangement presets, Phase 5.7 implements long-song visualization/recovery plus minimal exact canonical full-song chunk transport, Phase 5.8 completes verified cache/reused-model execution-provenance display, and Phase 5.9 supplies an exact-pack tutorial, 10/10 quiz and two-check acceptance resolver; the Phase 5.9 human review, Phase 5.3 blind choice, lineage and role expansion remain open, beam 1 and batch 1 remain the defaults, and no public service or new checkpoint download is authorised**
 
 Drafted: 19 July 2026
 Scope: accurate stem/full-mix MIDI, several analytical and AI processes kept as
@@ -1364,19 +1364,47 @@ contribution data. A wheel-resource smoke test also verifies that the installed
 package contains the HTML and both Workbench JavaScript modules before CLI
 inspect is considered healthy.
 
-### Remaining Phase 5 hardening and private beta
+### 5.9 — Guided local learning and acceptance
 
-- test Pack Composer v1 repeatedly in GarageBand, including BPM, downbeat and
-  selected-file hashes. Eligible Instrument Bundle attachment is the explicit
-  later Phase 6 instrument-part contract rather than an implicit filesystem
-  search in Phase 5; and
-- conduct a small private, local-only usability beta using authorised projects.
+- [x] create a pack-pinned eight-screen interactive tutorial explaining the
+  multi-process result space, explicit decisions, temporary audition state,
+  separate export basket, timing, instrument, privacy and phase boundaries;
+- [x] present exactly 10 comprehension questions one at a time, with no
+  preselection, explanatory checked answers, whole-quiz retry and a 10/10 gate
+  before human acceptance unlocks;
+- [x] place the GarageBand pack check and the authorised local-usability check
+  after the quiz, with explicit pass/issue/cannot-tell evidence and outcomes;
+- [x] stream-verify the exact downloaded ZIP, strict receipt fields, canonical
+  member names, basket identity, opt-in/count consistency and payload hashes;
+- [x] reject and rebuild a stale or tampered cached ZIP/tutorial pair;
+- [x] serve the frozen page under a no-connect review CSP/sandbox and export
+  private reviewed JSON only after an explicit click;
+- [x] resolve to a fresh path-free result with all-zero effects, private note
+  text omitted and a reviewer-only downbeat label when no catalog downbeat was
+  pinned; and
+- [ ] complete the tutorial, 10/10 quiz and both human checks on one authorised
+  exact GarageBand pack, then resolve the exported review.
 
-The implemented 5.5–5.8 increments do not complete precise arbitrary custom
-mixes, server-paginated timeline payloads, GarageBand acceptance or the private
-beta. Phase 5.8 completes the execution-provenance display but does not enable
-either optimisation. None of these increments adds public upload, telemetry,
-an account or community ranking.
+Phase 5.9 tooling is ready, but the human evidence is deliberately pending.
+Generating a page or verifying ZIP integrity is not an acceptance pass. A
+resolver `passed` result opens only the first read-only Phase 6 Clip Library
+slice; explicit hybrids remain gated by Phase 5.3.
+
+### Remaining Phase 5 human acceptance
+
+- complete the Phase 5.9 guided review on the exact pack in GarageBand,
+  including BPM, listened downbeat, drum routing where applicable,
+  selected-file import/audibility and start/middle/end drift; and
+- complete the second authorised local-only usability check. Eligible
+  Instrument Bundle attachment is the explicit later Phase 6 instrument-part
+  contract rather than an implicit filesystem search in Phase 5.
+
+The implemented 5.5–5.9 increments do not complete precise arbitrary custom
+mixes, server-paginated timeline payloads or the pending human acceptance.
+Phase 5.8 completes the execution-provenance display but does not enable either
+optimisation. Phase 5.9 records learning and review evidence only. None of
+these increments adds public upload, telemetry, an account or community
+ranking.
 
 Success for the remaining Phase 5 work means a non-expert can complete source
 comparison, candidate choice, arrangement audition and GarageBand export
@@ -1401,10 +1429,10 @@ Success means a user can make a new arrangement from reviewed parts while the
 original sources and every process candidate remain reproducible. GarageBand
 continues to own final performance, patch editing and mixing.
 
-Entry status on 21 July 2026: the technical foundation and the Phase 5.8
-execution-provenance gate are ready. A first read-only Clip Library slice is
-one GarageBand pack acceptance pass plus one small authorised usability pass
-away under strict phase ordering. Phase 5.3 blind choice and source-lineage
+Entry status on 21 July 2026: the technical foundation, Phase 5.8 execution
+provenance and Phase 5.9 guided acceptance tooling are ready. A first read-only
+Clip Library slice is one completed 10/10 tutorial/quiz review plus its two
+resolved human checks away under strict phase ordering. Phase 5.3 blind choice and source-lineage
 work remain separate prerequisites for explicit hybrid construction; they do
 not block read-only Clip browsing, audition or exact export. Conditional
 medium/large-checkpoint and other-hardware measurements are not Phase 6 entry
@@ -1579,8 +1607,10 @@ the completed run, so the restart contract was verified with a portable
 two-server fixture rather than
 weakening provenance. Bounded canonical arrangement presets now use the decoded
 group transport, and Phase 5.7 completed full-song chunked playback plus
-visualisation hardening. The remaining local-Studio acceptance work is the
-GarageBand pack pass and the next authorised private usability pass. The
+visualisation hardening. Phase 5.9 now generates the exact-pack interactive
+tutorial, 10/10 quiz, two human checks and strict resolver. The remaining
+local-Studio acceptance work is to complete and resolve that review in
+GarageBand on the authorised project. The
 explicit disputed-range bridge now
 opens the exact existing short phrase review without selecting or editing MIDI.
 Pack Composer v1 keeps checked file contents

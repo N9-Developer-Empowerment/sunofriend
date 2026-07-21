@@ -15,7 +15,8 @@ two-launch restart verification plus Decoded Stem Comparison v1; Phase 5.6
 completes bounded decoded short arrangement presets; Phase 5.7 implements
 long-song visualization/recovery and minimal exact canonical full-song chunk
 transport; Phase 5.8 completes verified exact-result-cache and bounded
-reused-model execution-provenance display
+reused-model execution-provenance display; Phase 5.9 guided exact-pack
+learning and acceptance tooling is complete, with its human review pending
 
 Started: 15 July 2026  
 Scope: local-first AI assistance for transcription, review, instrument matching
@@ -92,8 +93,8 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
-| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.5–5.8 hardening increments implemented; Phase 5.3 listening/lineage/role work plus GarageBand/private-beta acceptance remain** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench now has hash-pinned per-stem and full-song timelines, fixed-window long-song rendering/recovery, precise decoded 0.5–15 second per-stem and canonical selected-arrangement loops, exact canonical full-song chunk playback, an explicitly coarse arbitrary full-song custom mixer, a separate persistent exact GarageBand pack basket, an explicit disputed-range phrase-review bridge, a path-free Project Overview and fail-closed execution provenance for cache/session results. Terminal no-selection outcomes cannot leak older choices into export, path-like roles cannot leak into public/pack/MIDI metadata, and decisions plus a non-default basket are verified across two server launches |
-| 6. Creative Arrangement and Reusable MIDI | **Entry preparation: technical gate complete; GarageBand pack acceptance and one small authorised usability pass remain** | Reversible note/phrase correction, explicit hybrids, transforms, Clip v1 browsing and reuse, mashup preparation and instrument attachment without becoming a full DAW. The first safe slice is read-only Clip browsing/audition/export; hybrid construction still waits for the Phase 5.3 blind-choice and lineage gates |
+| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.5–5.9 hardening/tooling increments implemented; Phase 5.9 human review plus Phase 5.3 listening/lineage/role work remain** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench now has hash-pinned per-stem and full-song timelines, fixed-window long-song rendering/recovery, precise decoded 0.5–15 second per-stem and canonical selected-arrangement loops, exact canonical full-song chunk playback, an explicitly coarse arbitrary full-song custom mixer, a separate persistent exact GarageBand pack basket, an explicit disputed-range phrase-review bridge, a path-free Project Overview, fail-closed execution provenance, and an exact-pack eight-screen tutorial plus 10/10 quiz before two human acceptance checks. The resolver re-verifies pack bytes and has zero project effects. Terminal no-selection outcomes cannot leak older choices into export, path-like roles cannot leak into public/pack/MIDI metadata, and decisions plus a non-default basket are verified across two server launches |
+| 6. Creative Arrangement and Reusable MIDI | **Entry preparation: technical and guided-review tooling complete; one resolved GarageBand plus authorised-usability review remains** | Reversible note/phrase correction, explicit hybrids, transforms, Clip v1 browsing and reuse, mashup preparation and instrument attachment without becoming a full DAW. The first safe slice is read-only Clip browsing/audition/export; hybrid construction still waits for the Phase 5.3 blind-choice and lineage gates |
 | 7. Cross-DAW and Opt-in Community Learning | **Deferred** | Compatibility testing, cleared public goldens and consented contextual feedback only after the local workflow is useful, private and stable |
 
 ## Phase 1: AI Transcription Bake-off v1
@@ -561,6 +562,17 @@ reused-model warm. Missing or changed parent/run/response/performance evidence
 fails closed. Workbench only displays these facts: it starts no model, worker,
 session or cache and never treats execution reuse as musical agreement.
 
+Phase 5.9 attaches one local learning and acceptance package to the exact
+GarageBand ZIP. Eight interactive tutorial screens precede a fixed
+one-question-at-a-time quiz; all 10 answers must be correct before the two
+human checks unlock. The first check covers exact-BPM GarageBand import,
+playable patches, drum routing where applicable, listened downbeat and
+full-song drift. The second confirms an authorised local project and the
+understandability of comparison, choice, arrangement, state separation, export
+and restart. A strict resolver re-verifies the downloaded ZIP and recomputes
+the review without changing project state. Tooling is complete; the user's
+human evidence is pending.
+
 Reload restores URL-hash view/stem and durable SQLite decisions, Overview state
 and the pack basket. Prepared audio/chunks, playhead, loop,
 viewport/zoom/visibility and mixer controls reset.
@@ -571,8 +583,8 @@ its product identity. Sunofriend's differentiator is the transparent result
 space: several methods, source evidence, provenance, role-specific choices,
 valid `equivalent`/`neither` outcomes and no automatic winner. Direct note
 editing and creative recombination are reserved for Phase 6. Public feedback,
-accounts, telemetry and hosted ingestion are deferred to Phase 7; Phase 5.4–5.8
-stay local-only.
+accounts, telemetry and hosted ingestion are deferred to Phase 7; Phase 5.4–5.9
+stay local-only, and Phase 5.9 adds no network submission path.
 
 The complete research findings, licence boundary, benchmark matrix,
 performance strategy, feedback schema, privacy design, increments and
@@ -588,9 +600,10 @@ preparation; and instrument/Bundle attachment to reviewed parts. Every edit
 must preserve its source candidate and a minimal audit diff. GarageBand remains
 the final performance, patch and mixing environment.
 
-The technical entry gate is now complete. Under strict phase ordering, the
-first read-only Clip Library slice starts after one GarageBand Pack Composer v1
-acceptance pass and one small authorised local usability pass. Explicit hybrid
+The technical and guided-review tooling gates are now complete. Under strict
+phase ordering, the first read-only Clip Library slice starts after the user
+completes and resolves one exact-pack 10/10 review with both GarageBand and
+authorised local-usability checks passed. Explicit hybrid
 construction remains separately gated by the open Phase 5.3 blind-choice and
 source-lineage work; those tasks do not block Clip browsing, neutral audition
 or exact export.
@@ -636,6 +649,37 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-21 — Phase 5.9 guided exact-pack learning and acceptance
+
+- Goal: ensure the user understands Sunofriend before completing the final two
+  Phase 5 local acceptance checks.
+- Learning flow: added eight interactive tutorial screens followed by exactly
+  10 one-at-a-time comprehension questions. Nothing starts selected; checked
+  answers explain the concept, the whole quiz can be retried and 10/10 is
+  required before the human checks unlock.
+- Human evidence: GarageBand acceptance now covers exact BPM, authoritative
+  selected MIDI import/editability, playable patches, drum routing where
+  applicable, listened downbeat and beginning/middle/end drift. Local usability
+  explicitly confirms an authorised project plus comparison, no-automatic-
+  winner understanding, arrangement audition, state separation, export and
+  restart.
+- Integrity: the resolver independently verifies the downloaded ZIP's strict
+  v1 receipt, canonical names, basket identities, member set and streamed
+  hashes, rebuilds the neutral seed and recomputes quiz/check outcomes. Cached
+  ZIP, seed and HTML substitution fail closed and rebuild from current
+  catalogued bytes.
+- Privacy/security: the served page is frozen under the no-connect review CSP
+  and sandbox. It has no POST, fetch, upload, telemetry or event action.
+  Private note text stays in the reviewed export and is omitted from the
+  path-free result.
+- Effects: tutorial, quiz, checks and resolution change no MIDI, candidate,
+  selection, basket, rank, default or contribution state and do not start
+  Phase 6 automatically.
+- Decision: Phase 5.9 tooling is ready; human evidence remains pending. A
+  resolver `passed` result opens the read-only Phase 6 Clip Library entry gate.
+  Hybrid construction remains separately gated by Phase 5.3 blind-choice and
+  source-lineage work.
 
 ### 2026-07-21 — Phase 5.8 verified execution provenance
 

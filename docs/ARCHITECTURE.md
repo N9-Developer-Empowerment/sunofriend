@@ -385,6 +385,38 @@ arrangements now have bounded and chunked decoded audition paths, while the
 arbitrary custom mixer remains coarse HTML media. All audition transports stay
 separate from ZIP composition.
 
+Phase 5.9 adds a report-only learning and local acceptance boundary beside the
+deterministic ZIP. The builder creates a neutral
+`sunofriend.workbench-garageband-pack-acceptance.v1` seed and a self-contained
+HTML page after the ZIP bytes exist; neither artifact is placed inside the
+pack. The loopback server exposes only the frozen HTML through a random
+capability URL with a no-connect review CSP and sandbox. The seed remains a
+private cache record and is never returned with a local path.
+
+The tutorial has eight fixed slides. The quiz has exactly 10 fixed questions,
+one visible at a time, and requires 10/10 before the two human checks unlock.
+Browser edits are limited to viewed slides, quiz answers, two check outcomes,
+item answers and private notes. Export is a user-initiated Blob download; there
+is no POST, event, upload or telemetry route.
+
+`garageband-pack-resolve` treats the exact downloaded ZIP as the source of
+truth. It independently enforces the canonical v1 receipt key set, safe
+generated archive-name forms, unique basket item identity, the intentional
+two-file/single-item proxy exception, count/opt-in consistency and streamed
+payload hashes without extraction. It rebuilds the neutral seed, recomputes
+the quiz and mechanically validates both human outcomes. The path-free
+`sunofriend.workbench-garageband-pack-acceptance-result.v1` omits private note
+text and the private review-file digest, binds only a canonical redacted copy
+of the resolved choices, and declares every project effect false. A stale or
+tampered cached ZIP, seed or HTML page is rejected and rebuilt from current
+catalogued bytes rather than served as a cache hit.
+
+A `passed` result can open only the first read-only Phase 6 Clip Library slice.
+It is not an automatic phase transition and does not satisfy the separate
+Phase 5.3 blind-choice/source-lineage prerequisites for hybrid construction.
+When no catalog downbeat is pinned, the result labels a listened pass as
+reviewer-observation-only rather than manufacturing exact downbeat evidence.
+
 An optional explicit-catalog phrase link validates one existing diagnostic
 S0/M1/M3 hybrid report against its exact stem, three current candidate MIDI
 files and the pinned unresolved melody phrase-review package. The public
@@ -634,10 +666,11 @@ third-party integrations.
 
 The safest next boundaries are:
 
-1. Harden the completed GarageBand Pack Composer and add another artifact kind
-   only after it has an explicit eligibility and rights contract. Keep
-   waveform display data, temporary mixer state, musical decisions and
-   export-basket choices separate.
+1. Complete and resolve the Phase 5.9 exact-pack human acceptance review. Only
+   then begin the read-only Phase 6 Clip Library slice. Add another pack
+   artifact kind only after it has an explicit eligibility and rights
+   contract. Keep waveform display data, temporary mixer state, musical
+   decisions and export-basket choices separate.
 2. Add typed application operations for folder conversion, one-stem conversion,
    vocal extraction and MIDI transformation; keep CLI handlers as adapters.
 3. Centralize instrument roles, aliases, channels, GM programs and GarageBand

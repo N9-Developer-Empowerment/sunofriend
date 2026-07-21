@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import tempfile
@@ -253,6 +254,128 @@ class WorkbenchPackBuildTests(unittest.TestCase):
             with zipfile.ZipFile(rebuilt["zip"]["path"]) as archive:
                 self.assertNotIn(source_item["archive_paths"][0], archive.namelist())
 
+    def test_cache_rejects_self_consistent_rewritten_payload_and_review(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            catalog = _pack_catalog(root)
+            current = _current_state(catalog)
+            artifacts = WorkbenchArtifacts(root / "state" / "artifacts")
+            plan = artifacts.garageband_pack_plan(catalog, current)
+            midi_item = next(
+                item for item in plan["items"] if item["kind"] == "selected_midi"
+            )
+            basket = canonical_garageband_pack_basket(
+                plan, [midi_item["item_id"]], False
+            )
+            pack = artifacts.build_garageband_pack(
+                catalog, current, plan["plan_sha256"], basket
+            )
+            pack_path = Path(pack["zip"]["path"])
+            pack_dir = pack_path.parent
+            with zipfile.ZipFile(pack_path) as archive:
+                members = {name: archive.read(name) for name in archive.namelist()}
+            receipt_name = "sunofriend-garageband-pack.json"
+            receipt = json.loads(members[receipt_name])
+            selected = next(
+                row for row in receipt["included_items"]
+                if row["kind"] == "selected_midi"
+            )
+            changed_payload = b"self-consistent but not catalogued MIDI"
+            members[selected["archive_path"]] = changed_payload
+            selected["bytes"] = len(changed_payload)
+            selected["sha256"] = hashlib.sha256(changed_payload).hexdigest()
+            members[receipt_name] = (
+                json.dumps(receipt, indent=2, sort_keys=True) + "\n"
+            ).encode("utf-8")
+            with zipfile.ZipFile(
+                pack_path, "w", compression=zipfile.ZIP_DEFLATED
+            ) as archive:
+                for name, data in members.items():
+                    archive.writestr(name, data)
+
+            outer_path = pack_dir / "manifest.json"
+            outer = json.loads(outer_path.read_text(encoding="utf-8"))
+            outer["included_items"] = receipt["included_items"]
+            outer["zip"]["bytes"] = pack_path.stat().st_size
+            outer["zip"]["sha256"] = hashlib.sha256(
+                pack_path.read_bytes()
+            ).hexdigest()
+            seed_path = pack_dir / outer["acceptance_seed"]["path"]
+            seed = json.loads(seed_path.read_text(encoding="utf-8"))
+            seed["pack"]["bytes"] = outer["zip"]["bytes"]
+            seed["pack"]["sha256"] = outer["zip"]["sha256"]
+            seed_path.write_text(
+                json.dumps(seed, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            outer["acceptance_seed"]["bytes"] = seed_path.stat().st_size
+            outer["acceptance_seed"]["sha256"] = hashlib.sha256(
+                seed_path.read_bytes()
+            ).hexdigest()
+            outer_path.write_text(
+                json.dumps(outer, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+
+            rebuilt = artifacts.build_garageband_pack(
+                catalog, current, plan["plan_sha256"], basket
+            )
+
+            self.assertFalse(rebuilt["cache_hit"])
+            with zipfile.ZipFile(rebuilt["zip"]["path"]) as archive:
+                self.assertEqual(
+                    archive.read(midi_item["archive_paths"][0]),
+                    _record_path(catalog, midi_item["content_sha256"]).read_bytes(),
+                )
+            rebuilt_seed = json.loads(
+                Path(rebuilt["acceptance_seed"]["path"]).read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                rebuilt_seed["pack"]["sha256"], rebuilt["zip"]["sha256"]
+            )
+
+    def test_cache_rejects_rewritten_acceptance_html(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            catalog = _pack_catalog(root)
+            current = _current_state(catalog)
+            artifacts = WorkbenchArtifacts(root / "state" / "artifacts")
+            plan = artifacts.garageband_pack_plan(catalog, current)
+            midi_item = next(
+                item for item in plan["items"] if item["kind"] == "selected_midi"
+            )
+            basket = canonical_garageband_pack_basket(
+                plan, [midi_item["item_id"]], False
+            )
+            pack = artifacts.build_garageband_pack(
+                catalog, current, plan["plan_sha256"], basket
+            )
+            pack_dir = Path(pack["zip"]["path"]).parent
+            outer_path = pack_dir / "manifest.json"
+            outer = json.loads(outer_path.read_text(encoding="utf-8"))
+            review_path = pack_dir / outer["acceptance_review"]["path"]
+            review_path.write_text("<html>changed</html>", encoding="utf-8")
+            outer["acceptance_review"]["bytes"] = review_path.stat().st_size
+            outer["acceptance_review"]["sha256"] = hashlib.sha256(
+                review_path.read_bytes()
+            ).hexdigest()
+            outer_path.write_text(
+                json.dumps(outer, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+
+            rebuilt = artifacts.build_garageband_pack(
+                catalog, current, plan["plan_sha256"], basket
+            )
+
+            self.assertFalse(rebuilt["cache_hit"])
+            self.assertIn(
+                "Understand Sunofriend, then test it",
+                Path(rebuilt["acceptance_review"]["path"]).read_text(
+                    encoding="utf-8"
+                ),
+            )
+
     def test_explicit_source_pack_uses_exact_bytes_without_rendering(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -346,6 +469,16 @@ class WorkbenchPackBuildTests(unittest.TestCase):
 
             self.assertEqual(renderer.call_count, 1)
             self.assertTrue(repeated["cache_hit"])
+            self.assertTrue(Path(pack["acceptance_review"]["path"]).is_file())
+            self.assertTrue(Path(pack["acceptance_seed"]["path"]).is_file())
+            acceptance_seed = json.loads(
+                Path(pack["acceptance_seed"]["path"]).read_text(encoding="utf-8")
+            )
+            self.assertEqual(acceptance_seed["status"], "unreviewed")
+            self.assertEqual(acceptance_seed["quiz"]["question_count"], 10)
+            self.assertEqual(
+                acceptance_seed["pack"]["sha256"], pack["zip"]["sha256"]
+            )
             with zipfile.ZipFile(pack["zip"]["path"]) as archive:
                 self.assertIn("MIDI/selected-arrangement-proxy.mid", archive.namelist())
                 self.assertIn(

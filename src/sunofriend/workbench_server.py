@@ -1093,24 +1093,41 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         public = {
             key: value
             for key, value in artifact.items()
-            if key not in {"midi", "preview", "zip"}
+            if key
+            not in {
+                "midi",
+                "preview",
+                "zip",
+                "acceptance_review",
+                "acceptance_seed",
+            }
         }
         for key, prefix in (
             ("midi", "artifact-midi"),
             ("preview", "artifact-preview"),
             ("zip", "artifact-zip"),
+            ("acceptance_review", "artifact-acceptance-review"),
         ):
             record = artifact.get(key)
             if not isinstance(record, Mapping):
                 continue
             media_id = f"{prefix}-{str(record['sha256'])[:24]}"
-            self._register_generated_media(media_id, dict(record))
+            private_record = dict(record)
+            if key == "acceptance_review":
+                private_record["_freeze_on_serve"] = True
+                private_record["_review_page"] = True
+            self._register_generated_media(media_id, private_record)
             public[key] = {
                 item_key: item_value
                 for item_key, item_value in record.items()
                 if item_key != "path"
             }
             public[f"{key}_url"] = self._media_url(media_id)
+        seed_record = artifact.get("acceptance_seed")
+        if isinstance(seed_record, Mapping):
+            public["acceptance_seed"] = {
+                key: value for key, value in seed_record.items() if key != "path"
+            }
         return public
 
     def _public_decoded_loop(self, artifact: Mapping[str, Any]) -> dict[str, Any]:
@@ -1385,6 +1402,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             return
         self._serve_file_record(
             record,
+            phrase_review=bool(record.get("_review_page")),
             freeze_verified=bool(record.get("_freeze_on_serve")),
         )
 
