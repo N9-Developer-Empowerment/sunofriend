@@ -584,6 +584,11 @@ def _ai_candidate_diagnostics(
         run_root=midi.parent,
         elapsed_seconds=elapsed,
     )
+    execution_provenance = _validated_ai_execution_provenance(
+        run,
+        run_root=midi.parent,
+        cache=cache,
+    )
     detected = sorted({note.instrument or "unlabelled" for note in candidate.notes})
     warnings = [*candidate.warnings, *quality.get("warnings", [])]
     block_reasons = list(severe_codes)
@@ -616,6 +621,7 @@ def _ai_candidate_diagnostics(
         "worker_process_started_for_run": cache["worker_process_started_for_run"],
         "inference_executed_for_run": cache["inference_executed_for_run"],
         "model_loaded_for_run": cache["model_loaded_for_run"],
+        "execution_provenance": execution_provenance,
         "quality_status": quality.get("status"),
         "quality_metrics": metrics,
         "warnings": list(dict.fromkeys(str(value) for value in warnings)),
@@ -627,6 +633,170 @@ def _ai_candidate_diagnostics(
             candidate, request, duration=duration
         ),
         "raw_candidate_mutated": False,
+    }
+
+
+def _validated_ai_execution_provenance(
+    run: Mapping[str, Any],
+    *,
+    run_root: Path,
+    cache: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Project one verified, path-free description of how a run executed.
+
+    Workbench consumes completed evidence only.  This helper must never turn a
+    cache or bounded worker session on, and repeated execution must never be
+    presented as an independent musical opinion.
+    """
+
+    mode = run.get("worker_execution_mode")
+    transport = run.get("worker_transport")
+    reused = run.get("model_reused_from_prior_request")
+    cache_status = cache.get("status")
+    cache_hit = cache.get("hit")
+    has_session_marker = (
+        mode == "persistent-session-request" or transport is not None or reused is True
+    )
+
+    if cache_status != "disabled":
+        if has_session_marker:
+            raise ValueError(
+                "adjacent AI run cannot combine application-cache and bounded-session evidence"
+            )
+        kind = "exact-result-cache-hit" if cache_hit else "exact-result-cache-miss"
+        return {
+            "schema": "sunofriend.workbench-ai-execution-provenance.v1",
+            "kind": kind,
+            "application_cache_status": cache_status,
+            "application_cache_hit": bool(cache_hit),
+            "bounded_session": None,
+            "worker_process_started_for_run": cache.get(
+                "worker_process_started_for_run"
+            ),
+            "inference_executed_for_run": cache.get("inference_executed_for_run"),
+            "model_loaded_for_run": cache.get("model_loaded_for_run"),
+            "optimisation_enabled_by_workbench": False,
+            "musical_agreement_claimed": False,
+        }
+
+    if has_session_marker:
+        return _validated_ai_bounded_session_provenance(run, run_root=run_root)
+
+    if reused not in {None, False}:
+        raise ValueError("adjacent AI run has invalid model-reuse evidence")
+    if mode == "fresh-subprocess" and (
+        run.get("application_cache") is not None
+        or transport is not None
+        or reused is not False
+        or run.get("worker_process_started_for_run") is not True
+        or run.get("inference_executed_for_run") is not True
+        or run.get("model_loaded_for_run") is not True
+        or isinstance(run.get("exit_code"), bool)
+        or run.get("exit_code") != 0
+        or not isinstance(run.get("command"), list)
+        or not run.get("command")
+    ):
+        raise ValueError("adjacent AI fresh-subprocess execution evidence is invalid")
+    return {
+        "schema": "sunofriend.workbench-ai-execution-provenance.v1",
+        "kind": "fresh-subprocess" if mode == "fresh-subprocess" else "not-recorded",
+        "application_cache_status": "disabled",
+        "application_cache_hit": False,
+        "bounded_session": None,
+        "worker_process_started_for_run": cache.get("worker_process_started_for_run"),
+        "inference_executed_for_run": cache.get("inference_executed_for_run"),
+        "model_loaded_for_run": cache.get("model_loaded_for_run"),
+        "optimisation_enabled_by_workbench": False,
+        "musical_agreement_claimed": False,
+    }
+
+
+def _validated_ai_bounded_session_provenance(
+    run: Mapping[str, Any], *, run_root: Path
+) -> dict[str, Any]:
+    """Verify one request against its completed parent bounded-session tree."""
+
+    transport = run.get("worker_transport")
+    if (
+        run.get("application_cache") is not None
+        or run.get("worker_execution_mode") != "persistent-session-request"
+        or not isinstance(transport, Mapping)
+        or transport.get("mode") != "bounded-persistent-session"
+        or run.get("worker_process_started_for_run") is not False
+        or run.get("inference_executed_for_run") is not True
+        or run.get("model_loaded_for_run") is not False
+    ):
+        raise ValueError("adjacent AI bounded-session execution evidence is invalid")
+
+    session_path = run_root.parent / "session.json"
+    if not session_path.is_file():
+        raise ValueError("adjacent AI bounded-session parent manifest is missing")
+
+    # The benchmark validator rechecks the complete closed session, including
+    # parent/run membership and hashes, one model load, exact request template,
+    # serial timing, worker responses, performance records and output identity.
+    from .ai_session_benchmark import build_ai_session_benchmark
+
+    report = build_ai_session_benchmark(run_root.parent)
+    run_id = run.get("run_id")
+    requests = report.get("requests")
+    if not isinstance(requests, list):
+        raise ValueError("adjacent AI bounded-session report has no requests")
+    matches = [row for row in requests if row.get("run_id") == run_id]
+    if len(matches) != 1:
+        raise ValueError("adjacent AI run is not a unique completed session request")
+    request = matches[0]
+    sequence = request.get("sequence")
+    request_count = report.get("request_count")
+    expected_warm = request.get("warm_model_request")
+    if (
+        isinstance(sequence, bool)
+        or not isinstance(sequence, int)
+        or isinstance(request_count, bool)
+        or not isinstance(request_count, int)
+        or sequence < 1
+        or sequence > request_count
+        or not isinstance(expected_warm, bool)
+        or expected_warm is not (sequence > 1)
+        or run.get("model_reused_from_prior_request") is not expected_warm
+        or transport.get("sequence") != sequence
+        or transport.get("prior_completed_requests") != sequence - 1
+        or transport.get("warm_model_request") is not expected_warm
+        or transport.get("model_reused_from_prior_request") is not expected_warm
+    ):
+        raise ValueError("adjacent AI bounded-session request provenance disagrees")
+
+    cache_regime = report.get("cache_regime")
+    if (
+        not isinstance(cache_regime, Mapping)
+        or cache_regime.get("model_loaded_once") is not True
+        or cache_regime.get("model_reused_across_requests") is not True
+        or cache_regime.get("application_content_cache") is not False
+        or cache_regime.get("cache_hits") != 0
+    ):
+        raise ValueError("adjacent AI bounded-session cache regime is invalid")
+
+    return {
+        "schema": "sunofriend.workbench-ai-execution-provenance.v1",
+        "kind": "bounded-session-reused-model"
+        if expected_warm
+        else "bounded-session-first-request",
+        "application_cache_status": "disabled",
+        "application_cache_hit": False,
+        "bounded_session": {
+            "request_sequence": sequence,
+            "request_count": request_count,
+            "prior_completed_requests": sequence - 1,
+            "warm_model_request": expected_warm,
+            "model_reused_from_prior_request": expected_warm,
+            "model_loaded_once": True,
+            "application_content_cache": False,
+        },
+        "worker_process_started_for_run": False,
+        "inference_executed_for_run": True,
+        "model_loaded_for_run": False,
+        "optimisation_enabled_by_workbench": False,
+        "musical_agreement_claimed": False,
     }
 
 

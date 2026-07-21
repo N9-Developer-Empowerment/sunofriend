@@ -1,6 +1,6 @@
 # Phase 5: Multi-Process MIDI Comparison and Local Result Explorer
 
-Status: **Phase 5.0–5.2 are complete; the Phase 5.3 lead-only S0/M1/M3 diagnostic slice and Phase 5.4 explorer slice are complete, including hash-pinned comparison, GarageBand Pack Composer v1 and the disputed-range phrase-review bridge; Phase 5.5 completes Project Overview/restart/decision safety plus Decoded Stem Comparison v1, Phase 5.6 completes bounded decoded short arrangement presets, and Phase 5.7 implements long-song visualization/recovery plus minimal exact canonical full-song chunk transport; Phase 5.3 blind choice, lineage and role expansion remain open, beam 1 and batch 1 remain the defaults, and no public service or new checkpoint download is authorised**
+Status: **Phase 5.0–5.2 are complete; the Phase 5.3 lead-only S0/M1/M3 diagnostic slice and Phase 5.4 explorer slice are complete, including hash-pinned comparison, GarageBand Pack Composer v1 and the disputed-range phrase-review bridge; Phase 5.5 completes Project Overview/restart/decision safety plus Decoded Stem Comparison v1, Phase 5.6 completes bounded decoded short arrangement presets, Phase 5.7 implements long-song visualization/recovery plus minimal exact canonical full-song chunk transport, and Phase 5.8 completes verified cache/reused-model execution-provenance display; Phase 5.3 blind choice, lineage and role expansion plus the GarageBand/private-beta acceptance gates remain open, beam 1 and batch 1 remain the defaults, and no public service or new checkpoint download is authorised**
 
 Drafted: 19 July 2026
 Scope: accurate stem/full-mix MIDI, several analytical and AI processes kept as
@@ -1216,9 +1216,11 @@ server.
   unavailable in the installed runtime, and fixed five-second chunks are not a
   supported comparison variable. The report records zero mutations,
   selections and promotions; retain batch 1 as default.
-- Success: choose `preview`, `balanced` and `best` presets from measured Pareto
-  results; do not make large the default merely because its paper score is
-  higher.
+- Success for the authorised small-model slice: keep the measured beam-1,
+  batch-1 CPU route and its explicit cache/session options. Named
+  `preview`/`balanced`/`best` model-size presets remain deferred until medium
+  or large checkpoints are separately accepted and measured; do not make a
+  larger model the default merely because its paper score is higher.
 
 ### 5.3 — Hybrid phrase consensus
 
@@ -1341,18 +1343,40 @@ The arbitrary visibility/mute/solo/gain full-song mixer remains the third,
 explicitly coarse HTML-media path. Exact custom mixes are not implied by the
 canonical full-song presets.
 
+### 5.8 — Verified execution provenance
+
+- [x] independently verify completed exact-result application-cache evidence
+  and completed bounded reused-model sessions before projecting either into a
+  candidate card;
+- [x] distinguish a fresh subprocess, cache miss, verified cache hit, first
+  resident-model request and genuinely reused-model warm request in plain
+  language. Request one is resident but not warm, while a verified cache hit
+  ran no worker, model load or inference;
+- [x] fail closed when the parent session, request membership, pinned run hash,
+  worker response, performance evidence, sequence or warm/reuse status changes;
+  and
+- [x] state on every card that this is execution provenance rather than
+  musical agreement and that Workbench did not enable either optimisation.
+
+Phase 5.8 consumes completed evidence only. It starts no worker, session,
+cache lookup or model and changes no selection, ranking, MIDI, pack basket or
+contribution data. A wheel-resource smoke test also verifies that the installed
+package contains the HTML and both Workbench JavaScript modules before CLI
+inspect is considered healthy.
+
 ### Remaining Phase 5 hardening and private beta
 
-- test the pack composer repeatedly in GarageBand, including BPM, downbeat,
-  selected-file hashes and optional eligible Instrument Bundles;
-- display completed exact-result-cache and reused-model provenance without
-  silently enabling either optimisation; and
+- test Pack Composer v1 repeatedly in GarageBand, including BPM, downbeat and
+  selected-file hashes. Eligible Instrument Bundle attachment is the explicit
+  later Phase 6 instrument-part contract rather than an implicit filesystem
+  search in Phase 5; and
 - conduct a small private, local-only usability beta using authorised projects.
 
-The implemented 5.5–5.7 increments do not complete precise arbitrary custom
-mixes, server-paginated timeline payloads, GarageBand/Instrument Bundle checks,
-cache-provenance display or the private beta. They add no public upload,
-telemetry, account or community ranking.
+The implemented 5.5–5.8 increments do not complete precise arbitrary custom
+mixes, server-paginated timeline payloads, GarageBand acceptance or the private
+beta. Phase 5.8 completes the execution-provenance display but does not enable
+either optimisation. None of these increments adds public upload, telemetry,
+an account or community ranking.
 
 Success for the remaining Phase 5 work means a non-expert can complete source
 comparison, candidate choice, arrangement audition and GarageBand export
@@ -1376,6 +1400,15 @@ Build on the trusted explorer rather than turning Phase 5 into a DAW rewrite:
 Success means a user can make a new arrangement from reviewed parts while the
 original sources and every process candidate remain reproducible. GarageBand
 continues to own final performance, patch editing and mixing.
+
+Entry status on 21 July 2026: the technical foundation and the Phase 5.8
+execution-provenance gate are ready. A first read-only Clip Library slice is
+one GarageBand pack acceptance pass plus one small authorised usability pass
+away under strict phase ordering. Phase 5.3 blind choice and source-lineage
+work remain separate prerequisites for explicit hybrid construction; they do
+not block read-only Clip browsing, audition or exact export. Conditional
+medium/large-checkpoint and other-hardware measurements are not Phase 6 entry
+gates.
 
 ### Phase 7 — Cross-DAW and opt-in community learning
 
@@ -1538,15 +1571,16 @@ zero is not evidence of source/MIDI alignment. Its compatibility fallback and
 selected-arrangement mixer are deliberately described as time-synchronised,
 not sample-accurate.
 
-Project Overview/Resume v1, decision/restart/privacy hardening and Decoded Stem
-Comparison v1 are the first completed local-Studio slices. A private Slayyyter
+Project Overview/Resume v1, decision/restart/privacy hardening, Decoded Stem
+Comparison v1, canonical full-song transport and verified execution-provenance
+display are completed local-Studio slices. A private Slayyyter
 fixture correctly failed closed when its adjacent AI worker no longer matched
 the completed run, so the restart contract was verified with a portable
 two-server fixture rather than
 weakening provenance. Bounded canonical arrangement presets now use the decoded
-group transport; the immediate next engineering work is full-song chunked
-playback/virtualisation hardening and the next authorised private usability
-pass. The
+group transport, and Phase 5.7 completed full-song chunked playback plus
+visualisation hardening. The remaining local-Studio acceptance work is the
+GarageBand pack pass and the next authorised private usability pass. The
 explicit disputed-range bridge now
 opens the exact existing short phrase review without selecting or editing MIDI.
 Pack Composer v1 keeps checked file contents

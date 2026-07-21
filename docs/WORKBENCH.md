@@ -362,6 +362,21 @@ and post-processing—not inference. The copied
 remains subject to the same quality and zero-note gates and is never promoted
 automatically.
 
+For a completed bounded reused-model session, automatic discovery revalidates
+the whole closed session before displaying it. That includes parent/run
+membership and hashes, the exact request template, one model load, serial
+sequence, worker response, performance evidence and candidate/MIDI identity.
+Request one is labelled **resident but not warm** because no earlier
+transcription exists. Only request two and later are labelled **reused-model
+warm**. The card also states that the application cache was disabled.
+
+All five displayed execution states—fresh subprocess, exact-result cache miss,
+verified cache hit, first session request and reused-model warm request—are
+provenance, not musical votes. Workbench consumes the completed evidence and
+does not enable a cache, start a session, launch a model or treat repeated
+execution as independent agreement. Missing or changed session evidence fails
+closed instead of falling back to an unverified execution label.
+
 Use `sunofriend ai-matrix` before the Workbench when several completed lanes
 need one reproducible comparison. The report adds per-instrument quality,
 requested/detected-label differences, label stability, chunk-boundary activity
@@ -871,7 +886,7 @@ note-free disclosure boundary.
   GarageBand patch choice remain a later view.
 - Phrase piano-roll correction and creative recombination remain a later phase.
   Precise arbitrary custom mixes, server-paginated timeline payloads,
-  model-size comparison and any opt-in public contribution are
+  medium/large checkpoint comparison and any opt-in public contribution are
   later, separately authorised work. The Workbench still consumes completed AI
   runs rather than launching a model itself.
 

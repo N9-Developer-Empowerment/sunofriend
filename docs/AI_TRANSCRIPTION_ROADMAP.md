@@ -14,7 +14,8 @@ completed Project Overview/Resume v1, decision-safety, path-free-role and
 two-launch restart verification plus Decoded Stem Comparison v1; Phase 5.6
 completes bounded decoded short arrangement presets; Phase 5.7 implements
 long-song visualization/recovery and minimal exact canonical full-song chunk
-transport
+transport; Phase 5.8 completes verified exact-result-cache and bounded
+reused-model execution-provenance display
 
 Started: 15 July 2026  
 Scope: local-first AI assistance for transcription, review, instrument matching
@@ -91,8 +92,8 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
-| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.5–5.7 hardening increments implemented; Phase 5.3 listening/lineage/role work and the private-beta gates remain** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench now has hash-pinned per-stem and full-song timelines, fixed-window long-song rendering/recovery, precise decoded 0.5–15 second per-stem and canonical selected-arrangement loops, exact canonical full-song chunk playback, an explicitly coarse arbitrary full-song custom mixer, a separate persistent exact GarageBand pack basket, an explicit disputed-range phrase-review bridge and a path-free Project Overview. Terminal no-selection outcomes cannot leak older choices into export, path-like roles cannot leak into public/pack/MIDI metadata, and decisions plus a non-default basket are verified across two server launches |
-| 6. Creative Arrangement and Reusable MIDI | **Planned after the local Studio is stable** | Reversible note/phrase correction, explicit hybrids, transforms, Clip v1 browsing and reuse, mashup preparation and instrument attachment without becoming a full DAW |
+| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.5–5.8 hardening increments implemented; Phase 5.3 listening/lineage/role work plus GarageBand/private-beta acceptance remain** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench now has hash-pinned per-stem and full-song timelines, fixed-window long-song rendering/recovery, precise decoded 0.5–15 second per-stem and canonical selected-arrangement loops, exact canonical full-song chunk playback, an explicitly coarse arbitrary full-song custom mixer, a separate persistent exact GarageBand pack basket, an explicit disputed-range phrase-review bridge, a path-free Project Overview and fail-closed execution provenance for cache/session results. Terminal no-selection outcomes cannot leak older choices into export, path-like roles cannot leak into public/pack/MIDI metadata, and decisions plus a non-default basket are verified across two server launches |
+| 6. Creative Arrangement and Reusable MIDI | **Entry preparation: technical gate complete; GarageBand pack acceptance and one small authorised usability pass remain** | Reversible note/phrase correction, explicit hybrids, transforms, Clip v1 browsing and reuse, mashup preparation and instrument attachment without becoming a full DAW. The first safe slice is read-only Clip browsing/audition/export; hybrid construction still waits for the Phase 5.3 blind-choice and lineage gates |
 | 7. Cross-DAW and Opt-in Community Learning | **Deferred** | Compatibility testing, cleared public goldens and consented contextual feedback only after the local workflow is useful, private and stable |
 
 ## Phase 1: AI Transcription Bake-off v1
@@ -552,6 +553,14 @@ at most five seconds/32 MiB PCM16, 192 MiB projected two-chunk decoded memory,
 16 active stream plans and 768 generated-media capabilities per launch. The
 arbitrary mute/solo/gain full-song mixer remains the third, coarse path.
 
+Phase 5.8 verifies how every completed AI candidate was executed before showing
+that provenance. Exact-result cache misses and hits remain distinct; a hit says
+that no model ran. A completed bounded session is revalidated as a whole before
+request one is described as resident-but-not-warm or request two and later as
+reused-model warm. Missing or changed parent/run/response/performance evidence
+fails closed. Workbench only displays these facts: it starts no model, worker,
+session or cache and never treats execution reuse as musical agreement.
+
 Reload restores URL-hash view/stem and durable SQLite decisions, Overview state
 and the pack basket. Prepared audio/chunks, playhead, loop,
 viewport/zoom/visibility and mixer controls reset.
@@ -562,7 +571,7 @@ its product identity. Sunofriend's differentiator is the transparent result
 space: several methods, source evidence, provenance, role-specific choices,
 valid `equivalent`/`neither` outcomes and no automatic winner. Direct note
 editing and creative recombination are reserved for Phase 6. Public feedback,
-accounts, telemetry and hosted ingestion are deferred to Phase 7; Phase 5.4–5.7
+accounts, telemetry and hosted ingestion are deferred to Phase 7; Phase 5.4–5.8
 stay local-only.
 
 The complete research findings, licence boundary, benchmark matrix,
@@ -578,6 +587,13 @@ BPM, tuning and downbeat transformation; Clip v1 browsing and reuse; mashup
 preparation; and instrument/Bundle attachment to reviewed parts. Every edit
 must preserve its source candidate and a minimal audit diff. GarageBand remains
 the final performance, patch and mixing environment.
+
+The technical entry gate is now complete. Under strict phase ordering, the
+first read-only Clip Library slice starts after one GarageBand Pack Composer v1
+acceptance pass and one small authorised local usability pass. Explicit hybrid
+construction remains separately gated by the open Phase 5.3 blind-choice and
+source-lineage work; those tasks do not block Clip browsing, neutral audition
+or exact export.
 
 ## Phase 7: Cross-DAW and Opt-in Community Learning
 
@@ -620,6 +636,29 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-21 — Phase 5.8 verified execution provenance
+
+- Goal: close the remaining purely engineering local-Studio trust gate before
+  the first Phase 6 Clip Library slice.
+- Change: Workbench now projects one path-free execution state for a fresh
+  subprocess, exact-result cache miss, verified cache hit, first bounded-session
+  request or genuinely reused-model warm request. Every state says that it is
+  execution provenance rather than musical agreement and that Workbench did
+  not enable an optimisation.
+- Integrity: bounded-session candidates are checked through the complete
+  closed-session verifier, including parent/run membership and hashes, one
+  model load, exact request template, sequence, worker response, performance
+  evidence and output identity. Changed or missing evidence fails closed.
+- Packaging: a fresh wheel is installed into an isolated target and its HTML,
+  transport JavaScript and visualization JavaScript are loaded through the
+  production resource functions; CLI `workbench --inspect` starts no server.
+- Effects: no model, worker, session or application-cache action is started;
+  no selection, rank, MIDI, pack basket or contribution field changes.
+- Decision: the technical Phase 6 entry gate is complete. One GarageBand pack
+  acceptance pass and one small authorised local usability pass remain before
+  the first read-only Clip Library increment. Hybrid construction still waits
+  for the Phase 5.3 blind-choice and source-lineage gates.
 
 ### 2026-07-20 — Phase 5.7 long-song recovery and exact chunk transport
 

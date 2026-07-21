@@ -567,6 +567,15 @@ codes and zero-note results are diagnostic-only and cannot be rendered or
 selected as main/optional; ordinary label leakage remains reviewable.
 For an application-cache hit it labels elapsed time and real-time factor as
 pipeline-not-inference and states that no worker, model load or inference ran.
+For a `persistent-session-request`, it calls the complete closed-session
+verifier before publishing
+`sunofriend.workbench-ai-execution-provenance.v1`. The projection contains only
+the request sequence/count, prior request count and the verified first-request
+or reused-model-warm state; it omits the session/worker identities and paths.
+A missing or changed parent manifest, run hash, worker response, performance
+record or sequence fails catalog discovery. Fresh subprocess and exact-result
+cache states use the same schema. Every state records false Workbench
+optimisation and musical-agreement effects.
 `workbench_server.py` and `workbench_artifacts.py` reverify hashes at each
 serve, render, arrangement and handoff boundary so catalog discovery cannot be
 invalidated silently by a later file change. The pinned SoundFont is rechecked

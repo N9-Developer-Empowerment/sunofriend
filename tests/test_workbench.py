@@ -879,6 +879,16 @@ class WorkbenchCatalogTests(unittest.TestCase):
             self.assertTrue(miss["worker_process_started_for_run"])
             self.assertTrue(miss["inference_executed_for_run"])
             self.assertTrue(miss["model_loaded_for_run"])
+            self.assertEqual(
+                miss["execution_provenance"]["kind"],
+                "exact-result-cache-miss",
+            )
+            self.assertFalse(
+                miss["execution_provenance"]["optimisation_enabled_by_workbench"]
+            )
+            self.assertFalse(
+                miss["execution_provenance"]["musical_agreement_claimed"]
+            )
 
             hit = diagnostics["origin-fixture-71"]
             self.assertEqual(hit["application_cache_status"], "verified-hit")
@@ -890,6 +900,14 @@ class WorkbenchCatalogTests(unittest.TestCase):
             self.assertFalse(hit["worker_process_started_for_run"])
             self.assertFalse(hit["inference_executed_for_run"])
             self.assertFalse(hit["model_loaded_for_run"])
+            self.assertEqual(
+                hit["execution_provenance"]["kind"],
+                "exact-result-cache-hit",
+            )
+            self.assertTrue(
+                hit["execution_provenance"]["application_cache_hit"]
+            )
+            self.assertIsNone(hit["execution_provenance"]["bounded_session"])
 
     def test_catalog_rejects_tampered_application_cache_hit_evidence(self) -> None:
         for tamper in ("summary-hit-flag", "event-inference-flag"):

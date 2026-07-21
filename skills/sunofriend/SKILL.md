@@ -226,7 +226,13 @@ scripts.
   AI model ran and interpret elapsed time/RTF as pipeline-not-inference. Do not
   confuse that raw-result cache with the role-neutral FluidSynth preview cache:
   Workbench populates only the latter and merely displays completed AI-cache
-  provenance. Treat severe decoder or zero-note candidates as
+  provenance. For a bounded reused-model session, require Workbench to verify
+  the complete closed parent session before display: request one is resident
+  but not warm, while only request two and later are reused-model warm. Every
+  execution state must say that it is provenance rather than musical agreement
+  and that Workbench enabled no optimisation. Missing or changed parent/run,
+  worker-response or performance evidence must fail closed. Treat severe
+  decoder or zero-note candidates as
   diagnostic-only; ordinary role leakage remains auditionable. The
   selected arrangement and handoff include only the latest active main and
   explicit optional choices; numbered MIDI files in the ZIP must remain exact
@@ -1456,7 +1462,13 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     only catalogued or content-addressed local files, restores choices after
     restart and has no upload/submission endpoint. When rendering, report the
     role-neutral policy, SoundFont identity/hash, cache hit/miss and that the
-    original MIDI was not mutated. For a precise decoded stem loop, report the
+    original MIDI was not mutated. For an adjacent completed AI run, report
+    whether execution was a fresh subprocess, exact-result cache miss, verified
+    cache hit, first bounded-session request or reused-model warm request.
+    Confirm the application-cache/session evidence was independently verified,
+    Workbench enabled neither mechanism, request one was not called warm, a
+    cache hit ran no model, and reuse was not interpreted as musical agreement.
+    For a precise decoded stem loop, report the
     0.5–15 second recorded-zero range, primary and explicitly opted-in advanced
     candidate counts (six maximum), verified private content-addressed clips,
     one-clock scheduled switching and all false selection/event/ranking/MIDI

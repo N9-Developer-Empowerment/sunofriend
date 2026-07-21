@@ -89,7 +89,12 @@ tracks. Phase 5.7 adds fixed-window full-song visualization with stale-result
 recovery and an exact, chunked full-song transport for those same four
 server-owned groups. The arbitrary mute/solo/gain mixer remains a deliberately
 coarse HTML-media path; Sunofriend never silently falls back to it when precise
-preparation or chunk delivery fails. AI candidates carry verified execution/checkpoint
+preparation or chunk delivery fails. Phase 5.8 now verifies and explains fresh
+subprocess, exact-result cache miss/hit and bounded reused-model-session
+provenance. Request one is resident but not warm; only later requests are
+reused-model warm, while a cache hit clearly says that no model ran. Workbench
+only displays completed evidence and never treats execution reuse as musical
+agreement or enables either optimisation. AI candidates carry verified execution/checkpoint
 diagnostics; severe decoder failures and zero-note results remain downloadable
 evidence but cannot become main or optional choices. The first small-model
 M0–M3 matrix also shows that label conditioning can prevent one known full-mix
@@ -123,10 +128,15 @@ plus a completed batch-size 1→2 CPU comparison, the first read-only Phase 5.3
 phrase-consensus diagnostic, the multi-process Result Explorer, GarageBand
 Pack Composer v1, the explicit disputed-range phrase-review bridge and Project
 Overview/Resume v1, Decoded Stem Comparison v1, bounded decoded arrangement
-presets and exact canonical full-song chunk transport—is
+presets, exact canonical full-song chunk transport and verified execution
+provenance—is
 in the
 **[Phase 5 multi-process comparison and Result Explorer plan](docs/PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md)**.
-Creative note/phrase arrangement and Clip reuse remain a later Phase 6, while
+The technical entry gate for the first read-only Phase 6 Clip Library slice is
+complete. A GarageBand Pack Composer acceptance pass and a small authorised
+local usability pass remain before it starts; explicit hybrid construction
+also waits for the separate Phase 5.3 blind-choice and source-lineage gates.
+Creative note/phrase editing and Clip reuse remain Phase 6 work, while
 cross-DAW and explicitly consented community work is deferred to Phase 7.
 
 For combining songs, first use `midi-transform` to choose a common key, BPM
@@ -524,6 +534,24 @@ decoder burst or a zero-note result is diagnostic-only: the Workbench leaves
 its original files available for investigation but disables preview and
 main/optional selection. Ordinary label leakage remains auditionable because
 the useful musical line may have been assigned the wrong broad family.
+
+The same card now explains five verified execution states without making them
+sound like musical scores:
+
+- **Fresh subprocess** ran its own worker, model load and inference.
+- **Exact-result cache miss** ran fresh inference and published or verified a
+  private cache entry.
+- **Exact-result cache hit** ran no worker, model load or inference; its time is
+  lookup/materialisation/post-processing pipeline time.
+- **Bounded session request 1** had a resident model but no prior transcription,
+  so it is not warm.
+- **Reused-model warm** applies only to request 2 and later in a fully verified
+  closed bounded session, with the application cache disabled.
+
+Workbench starts none of these mechanisms; it only revalidates and displays
+completed local evidence. Every card says that execution provenance is not
+musical agreement and that no optimisation was enabled by Workbench. Missing
+or changed session/run/worker-response/performance evidence fails closed.
 
 Inspect discovery without starting the site:
 
