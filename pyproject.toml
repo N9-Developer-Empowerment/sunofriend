@@ -102,7 +102,11 @@ version = { attr = "sunofriend.__version__" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-sunofriend = ["workbench.html", "workbench_transport.js"]
+sunofriend = [
+    "workbench.html",
+    "workbench_transport.js",
+    "workbench_visualization.js",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

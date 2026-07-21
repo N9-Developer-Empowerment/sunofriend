@@ -51,6 +51,7 @@ CLI parsing (`cli.py`)
         |                              `workbench_timeline.py`,
         |                              `workbench_artifacts.py`,
         |                              `workbench_server.py`,
+        |                              `workbench_visualization.js`,
         |                              `workbench_transport.js`)
         +--> instrument discovery (`instrument_catalog.py`)
         +--> timbre matching/sample packs (`instrument_match.py`)
@@ -155,7 +156,8 @@ and projects legacy roles as `custom role` before they reach browser state,
 public catalogs, contribution previews, timelines, archive names or proxy MIDI
 metadata; private raw history is not rewritten.
 `workbench_artifacts.py` owns content-addressed role-neutral previews, private
-decoded per-stem/selected-arrangement clips, selected-arrangement proxies and deterministic
+decoded per-stem/selected-arrangement clips, exact canonical full-song chunk
+streams, selected-arrangement proxies and deterministic
 GarageBand handoff ZIPs. It reads notes through Clip v1 and renders through the
 existing MIDI/FluidSynth boundaries; discovered MIDI is never rewritten, and
 numbered handoff tracks are exact copies of explicit main/optional choices.
@@ -171,8 +173,9 @@ submission endpoint.
 The standalone MIDI A/B package completes the Phase 5.2 beam-listening tooling
 and remains a separate blind, fixed-window level-matched promotion gate. Its
 page still coordinates browser media elements in seconds, with the playhead
-scoped per unit. Workbench now has separate decoded, sample-scheduled per-stem
-and bounded selected-arrangement paths, described below. The private three-window package
+scoped per unit. Workbench now has separate decoded, sample-scheduled per-stem,
+bounded selected-arrangement and canonical full-song paths, described below.
+The private three-window package
 has been generated and verified, while its human
 export and resolved result are now complete. Two loops were equivalent and the
 3.50–7.50 second loop marginally preferred beam 1; beam 2 won no loop. All
@@ -239,7 +242,7 @@ ranking and MIDI-mutation effects. The explicit compatibility fallback retains
 second-synchronised HTML media elements and is not sample-accurate, but its
 transport controls are likewise feedback- and event-free.
 
-The bounded selected-arrangement extension adds
+Phase 5.6's bounded selected-arrangement extension adds
 `sunofriend.workbench-arrangement-selection.v1` and
 `sunofriend.workbench-decoded-arrangement-loop.v1`. The selection manifest is
 derived only from catalog plus current saved state: every byte-identical source
@@ -275,6 +278,33 @@ after projection and returns no paths. Aggregate caps bound it to 24 distinct
 sources, 24 selected MIDI lanes and 40,000 rendered notes; an over-budget lane
 is explicit unavailable evidence.
 
+Phase 5.7 extracts fixed-window projection math into
+`workbench_visualization.js`. Fit-song, 4× and 16× viewports plus paging and
+playhead centring paint only intersecting waveform bins and MIDI notes. CSS
+canvas width, device-pixel ratio and the arrangement backing-pixel budget are
+bounded to 480–1,600 CSS pixels, DPR 2 and a 12,000,000-pixel arrangement
+target. Viewports are at least 0.5 seconds; the UI asks for 0.25 seconds of
+overscan and the helper rejects more than 5 seconds. Source projections default
+to 720 waveform bins per stem and 320 per arrangement source; the API accepts
+64–4,096. A four-document in-memory per-stem timeline cache has no
+local/session-storage backing. This reduces draw cost only: `/api/timeline` and
+`/api/arrangement-timeline` still return their complete server-bounded JSON and
+the browser parses and indexes the whole document. Per-candidate limits remain
+20,000 notes and 8 MiB, a timeline request accepts at most 12 candidates, and
+the arrangement remains capped at 24 distinct source lanes, 24 selected MIDI
+lanes and 40,000 rendered notes.
+
+Timeline fetch ownership is abortable and guarded by both request generation
+and selection identity. A failed refresh can retain only a previously verified
+projection that still matches the current selection; it is marked stale and
+gets an explicit retry. With no compatible result the visualization becomes
+explicitly unavailable without disabling audio, decisions or export. Canvas
+context loss/restoration follows the same visible recovery contract. The URL
+hash persists only the current view/stem. Timeline viewport/zoom/visibility,
+prepared audio, chunk state, playhead, loop and mixer controls are memory-only
+and reset on reload; SQLite decisions, Overview state and the saved pack basket
+survive browser and server restarts.
+
 The arrangement selection SHA covers audible candidate identity, role,
 decision, MIDI hash and BPM but deliberately excludes review context, so a
 solo-to-full-mix reconfirmation does not reset an unchanged audition. The live
@@ -283,10 +313,55 @@ preset, loop and playhead never enter SQLite, selection hashes, overlap
 evidence, arrangement caches or handoff bytes. Source-stem, selected-MIDI,
 hybrid and main-MIDI presets use lazily loaded source media plus explicitly
 prepared neutral MIDI previews. Bounded canonical presets can now use the
-decoded group transport. The independent full-song/custom media elements share
-seconds but are not sample-accurate, and source/MIDI levels are not normalised.
-Precise custom mute/solo/gain and full-song decoded streaming remain deferred. The
-content-addressed prepared dry proxy remains the reproducible control.
+Phase 5.6 decoded group transport. Phase 5.7 adds
+`sunofriend.workbench-decoded-arrangement-stream.v1` and
+`sunofriend.workbench-decoded-arrangement-chunk.v1`. The stream POST accepts
+exactly a current selection-manifest SHA and one of `source-only`,
+`selected-midi`, `hybrid` or `main-only`; the chunk POST accepts exactly the
+immutable stream SHA and chunk index. The browser cannot inject arbitrary
+track IDs, roles, groups or gains. The server rechecks current selection before
+and after planning and chunk work; drift returns 409 and registers no stale
+media capability.
+All HTTP POST bodies are capped at 64 KiB.
+
+The stream plan snapshots verified private source and neutral-preview bytes
+once. The first source defines the anchor rate, the longest source defines the
+end, and every track begins at recorded zero. Deterministic nearest-frame,
+ties-even scaling maps each input rate onto exact integer anchor-frame chunk
+boundaries. Tracks remain separate PCM16 and shorter inputs are padded with
+disclosed silence. `DecodedChunkSequenceTransport` uses one `AudioContext`,
+primes up to the first two chunks, retains only current plus next decoded chunks
+and schedules a ready successor at the exact non-looping boundary. Missing or late
+successor data stops truthfully at the verified boundary. A successor that
+finishes late enables explicit Play; missing or failed data requires Retry.
+Neither action auto-restarts. Seek also pauses while its required chunk is prepared.
+No error silently starts the coarse mixer.
+
+A precise stream is capped at 24 tracks, a 20-minute longest source and 2 GiB
+aggregate input across every catalog source required for the song clock plus
+relevant selected MIDI, SoundFont and neutral previews. Decoder geometry is
+mono/stereo at 8–96 kHz; there are five-second adaptive
+chunks, 480 chunks, 32 MiB aggregate PCM16 per chunk and 192 MiB projected
+two-decoded-chunk float memory. Chunk artifacts share the rebuildable
+32-entry/256 MiB cache with short loops. Per launch, at most 16 active stream
+plans and 768 generated-media capability records remain addressable; an
+evicted URL returns 404 and is recovered by preparing again. Tracks are unity
+gain without matching or limiting, so a dense hybrid can clip.
+
+Full-song immutable input snapshots use a separate owner-only disk LRU capped
+at eight streams and 2 GiB. The current stream remains even when oversized.
+Prepare/reprepare fully hashes canonical inputs and snapshots. A process-local
+eight-stream verified cache lets sequential chunk requests validate selection
+identity plus regular-file device/inode/size/mtime/ctime/mode signatures rather
+than repeatedly hashing every full-song input. Drift evicts the fast entry and
+falls back to complete verification; missing or tampered snapshots fail closed.
+Invalid chunk indices are rejected before expensive original-input hashing.
+
+The independent full-song/custom media elements remain the coarse third path:
+they share seconds but are not sample-accurate and permit arbitrary
+visibility/mute/solo/0–100 attenuation. Precise arbitrary custom mixes remain
+deferred. The content-addressed prepared dry proxy remains the reproducible
+control.
 
 The GarageBand Pack Composer translates explicit checkboxes into a versioned,
 path-free plan, canonical basket and deterministic ZIP. Its v1 inventory
@@ -305,9 +380,10 @@ non-default basket under a fresh capability token while GET routes remain
 effect-free.
 
 Alternative MIDI, Instrument Bundles, persistent mixer projects and custom-mix
-rendering are not implemented in Pack Composer v1. Its selected-arrangement
-audition also remains on the coarse HTML-media transport; decoded long-song
-hardening is separate from ZIP composition.
+rendering are not implemented in Pack Composer v1. Canonical selected
+arrangements now have bounded and chunked decoded audition paths, while the
+arbitrary custom mixer remains coarse HTML media. All audition transports stay
+separate from ZIP composition.
 
 An optional explicit-catalog phrase link validates one existing diagnostic
 S0/M1/M3 hybrid report against its exact stem, three current candidate MIDI

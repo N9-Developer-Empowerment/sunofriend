@@ -11,6 +11,7 @@ import os
 import secrets
 import threading
 import webbrowser
+from collections import OrderedDict
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -43,6 +44,8 @@ from .workbench_timeline import (
 
 
 _MAX_REQUEST_BYTES = 64 * 1024
+_MAX_GENERATED_MEDIA_RECORDS = 768
+_MAX_DECODED_STREAM_PLANS = 16
 
 
 class WorkbenchSelectionConflictError(ValueError):
@@ -76,6 +79,26 @@ def _require_exact_request_keys(
         if unexpected:
             details.append("unexpected " + ", ".join(unexpected))
         raise ValueError(f"invalid {label} request: " + "; ".join(details))
+
+
+def _require_lowercase_sha256(value: Any, *, label: str) -> str:
+    if (
+        not isinstance(value, str)
+        or len(value) != 64
+        or any(character not in "0123456789abcdef" for character in value)
+    ):
+        raise ValueError(f"{label} must be a lowercase SHA-256 value")
+    return value
+
+
+def _mapping_contains_key(value: Any, key: str) -> bool:
+    if isinstance(value, Mapping):
+        return key in value or any(
+            _mapping_contains_key(item, key) for item in value.values()
+        )
+    if isinstance(value, (list, tuple)):
+        return any(_mapping_contains_key(item, key) for item in value)
+    return False
 
 
 def _current_stem_role(
@@ -182,6 +205,9 @@ class WorkbenchHTTPServer(ThreadingHTTPServer):
         self.artifacts = artifacts
         self.token = token
         self.media = media_files(catalog)
+        self.catalog_media_ids = frozenset(self.media)
+        self.generated_media_ids: OrderedDict[str, None] = OrderedDict()
+        self.decoded_stream_plans: OrderedDict[str, dict[str, Any]] = OrderedDict()
         (
             self.phrase_review_capabilities,
             self.phrase_review_capability_by_stem,
@@ -405,6 +431,13 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         if not self._valid_local_request():
             return
         parsed = urlparse(self.path)
+        if parsed.path == "/workbench-visualization.js":
+            self._bytes(
+                HTTPStatus.OK,
+                _workbench_visualization_bytes(),
+                "text/javascript; charset=utf-8",
+            )
+            return
         if parsed.path == "/workbench-transport.js":
             self._bytes(
                 HTTPStatus.OK,
@@ -499,6 +532,8 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             "/api/render-preview",
             "/api/decoded-loop",
             "/api/decoded-arrangement-loop",
+            "/api/decoded-arrangement-stream",
+            "/api/decoded-arrangement-chunk",
             "/api/arrangement",
             "/api/garageband-export",
             "/api/garageband-pack-basket",
@@ -586,23 +621,10 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     },
                     label="decoded arrangement loop",
                 )
-                requested_manifest_value = request.get(
-                    "selection_manifest_sha256", ""
+                requested_manifest_sha256 = _require_lowercase_sha256(
+                    request.get("selection_manifest_sha256"),
+                    label="decoded arrangement selection_manifest_sha256",
                 )
-                if (
-                    not isinstance(requested_manifest_value, str)
-                    or isinstance(requested_manifest_value, bool)
-                    or len(requested_manifest_value) != 64
-                    or any(
-                        character not in "0123456789abcdef"
-                        for character in requested_manifest_value
-                    )
-                ):
-                    raise ValueError(
-                        "decoded arrangement selection_manifest_sha256 must be a "
-                        "lowercase SHA-256 value"
-                    )
-                requested_manifest_sha256 = requested_manifest_value
                 with self.server.state_lock:
                     initial_state = self.server.store.current_state(
                         self.server.catalog
@@ -650,6 +672,182 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                         )
                     public_loop = self._public_decoded_arrangement_loop(artifact)
                 self._json(HTTPStatus.OK, {"loop": public_loop})
+                return
+            if parsed.path == "/api/decoded-arrangement-stream":
+                _require_exact_request_keys(
+                    request,
+                    {"selection_manifest_sha256", "preset"},
+                    label="decoded arrangement stream",
+                )
+                requested_manifest_sha256 = _require_lowercase_sha256(
+                    request.get("selection_manifest_sha256"),
+                    label="decoded arrangement selection_manifest_sha256",
+                )
+                preset = request.get("preset")
+                if preset not in {
+                    "source-only",
+                    "selected-midi",
+                    "hybrid",
+                    "main-only",
+                }:
+                    raise ValueError(
+                        "decoded arrangement preset must be exactly source-only, "
+                        "selected-midi, hybrid, or main-only"
+                    )
+                with self.server.state_lock:
+                    initial_state = self.server.store.current_state(
+                        self.server.catalog
+                    )
+                    initial_manifest = (
+                        self.server.artifacts.decoded_arrangement_selection_manifest(
+                            self.server.catalog,
+                            initial_state,
+                        )
+                    )
+                    if (
+                        requested_manifest_sha256
+                        != initial_manifest["selection_manifest_sha256"]
+                    ):
+                        raise WorkbenchSelectionConflictError(
+                            "the selected arrangement changed; reload it before "
+                            "preparing full-song playback"
+                        )
+                try:
+                    artifact = (
+                        self.server.artifacts.prepare_decoded_arrangement_stream(
+                            self.server.catalog,
+                            initial_state,
+                            requested_manifest_sha256,
+                            str(preset),
+                        )
+                    )
+                except ValueError as exc:
+                    with self.server.state_lock:
+                        failed_state = self.server.store.current_state(
+                            self.server.catalog
+                        )
+                        failed_manifest = self.server.artifacts.decoded_arrangement_selection_manifest(  # noqa: E501
+                            self.server.catalog,
+                            failed_state,
+                        )
+                    if (
+                        requested_manifest_sha256
+                        != failed_manifest["selection_manifest_sha256"]
+                    ):
+                        raise WorkbenchSelectionConflictError(
+                            "the selected arrangement changed while full-song "
+                            "playback was being prepared; reload and retry"
+                        ) from exc
+                    raise
+                with self.server.state_lock:
+                    final_state = self.server.store.current_state(self.server.catalog)
+                    final_manifest = (
+                        self.server.artifacts.decoded_arrangement_selection_manifest(
+                            self.server.catalog,
+                            final_state,
+                        )
+                    )
+                    if (
+                        requested_manifest_sha256
+                        != final_manifest["selection_manifest_sha256"]
+                        or artifact.get("selection_manifest_sha256")
+                        != requested_manifest_sha256
+                    ):
+                        raise WorkbenchSelectionConflictError(
+                            "the selected arrangement changed while full-song "
+                            "playback was being prepared; reload and retry"
+                        )
+                    public_stream = self._public_decoded_arrangement_stream(artifact)
+                    self._register_decoded_stream_plan(public_stream)
+                self._json(HTTPStatus.OK, {"stream": public_stream})
+                return
+            if parsed.path == "/api/decoded-arrangement-chunk":
+                _require_exact_request_keys(
+                    request,
+                    {"stream_sha256", "chunk_index"},
+                    label="decoded arrangement chunk",
+                )
+                stream_sha256 = _require_lowercase_sha256(
+                    request.get("stream_sha256"),
+                    label="decoded arrangement stream_sha256",
+                )
+                chunk_index = request.get("chunk_index")
+                if isinstance(chunk_index, bool) or not isinstance(chunk_index, int):
+                    raise ValueError(
+                        "decoded arrangement chunk_index must be an integer"
+                    )
+                with self.server.state_lock:
+                    plan = self.server.decoded_stream_plans.get(stream_sha256)
+                    if not isinstance(plan, Mapping):
+                        raise ValueError(
+                            "decoded arrangement stream is not active; prepare its "
+                            "full-song preset again"
+                        )
+                    plan = dict(plan)
+                    initial_state = self.server.store.current_state(
+                        self.server.catalog
+                    )
+                    initial_manifest = (
+                        self.server.artifacts.decoded_arrangement_selection_manifest(
+                            self.server.catalog,
+                            initial_state,
+                        )
+                    )
+                    if (
+                        plan.get("selection_manifest_sha256")
+                        != initial_manifest["selection_manifest_sha256"]
+                    ):
+                        raise WorkbenchSelectionConflictError(
+                            "the selected arrangement changed; reload it before "
+                            "continuing full-song playback"
+                        )
+                try:
+                    artifact = (
+                        self.server.artifacts.prepare_decoded_arrangement_chunk(
+                            self.server.catalog,
+                            initial_state,
+                            stream_sha256,
+                            chunk_index,
+                        )
+                    )
+                except ValueError as exc:
+                    with self.server.state_lock:
+                        failed_state = self.server.store.current_state(
+                            self.server.catalog
+                        )
+                        failed_manifest = self.server.artifacts.decoded_arrangement_selection_manifest(  # noqa: E501
+                            self.server.catalog,
+                            failed_state,
+                        )
+                    if (
+                        plan.get("selection_manifest_sha256")
+                        != failed_manifest["selection_manifest_sha256"]
+                    ):
+                        raise WorkbenchSelectionConflictError(
+                            "the selected arrangement changed while the next "
+                            "full-song chunk was being prepared; reload and retry"
+                        ) from exc
+                    raise
+                with self.server.state_lock:
+                    final_state = self.server.store.current_state(self.server.catalog)
+                    final_manifest = (
+                        self.server.artifacts.decoded_arrangement_selection_manifest(
+                            self.server.catalog,
+                            final_state,
+                        )
+                    )
+                    if (
+                        plan.get("selection_manifest_sha256")
+                        != final_manifest["selection_manifest_sha256"]
+                        or artifact.get("stream_sha256") != stream_sha256
+                    ):
+                        raise WorkbenchSelectionConflictError(
+                            "the selected arrangement changed while the next "
+                            "full-song chunk was being prepared; reload and retry"
+                        )
+                    self._refresh_decoded_stream_plan(stream_sha256, plan)
+                    public_chunk = self._public_decoded_arrangement_chunk(artifact)
+                self._json(HTTPStatus.OK, {"chunk": public_chunk})
                 return
             if parsed.path == "/api/garageband-pack-basket":
                 _require_exact_request_keys(
@@ -906,7 +1104,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             if not isinstance(record, Mapping):
                 continue
             media_id = f"{prefix}-{str(record['sha256'])[:24]}"
-            self.server.media[media_id] = dict(record)
+            self._register_generated_media(media_id, dict(record))
             public[key] = {
                 item_key: item_value
                 for item_key, item_value in record.items()
@@ -942,7 +1140,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             media_id = f"decoded-loop-{str(record['sha256'])[:24]}"
             private_record = dict(record)
             private_record["_freeze_on_serve"] = True
-            self.server.media[media_id] = private_record
+            self._register_generated_media(media_id, private_record)
             public_track = {
                 key: track[key]
                 for key in (
@@ -996,7 +1194,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             media_id = f"decoded-arrangement-{str(record['sha256'])[:24]}"
             private_record = dict(record)
             private_record["_freeze_on_serve"] = True
-            self.server.media[media_id] = private_record
+            self._register_generated_media(media_id, private_record)
             public_track = {
                 key: track[key]
                 for key in (
@@ -1026,6 +1224,159 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             tracks.append(public_track)
         public["tracks"] = tracks
         return public
+
+    def _public_decoded_arrangement_stream(
+        self, artifact: Mapping[str, Any]
+    ) -> dict[str, Any]:
+        """Return the immutable full-song plan without private snapshot paths."""
+
+        public = {
+            key: json.loads(json.dumps(artifact[key]))
+            for key in (
+                "schema",
+                "stream_sha256",
+                "selection_manifest_sha256",
+                "preset",
+                "preset_track_ids",
+                "source_clock",
+                "tracks",
+                "anchor",
+                "chunking",
+                "policy",
+                "renderer",
+                "encoding",
+                "resource_limits",
+                "path_free_manifest",
+                "private_audio",
+                "effects",
+                "cache_hit",
+            )
+            if key in artifact
+        }
+        if _mapping_contains_key(public, "path"):
+            raise ValueError("decoded arrangement stream exposed a private path")
+        return public
+
+    def _register_decoded_stream_plan(self, plan: Mapping[str, Any]) -> None:
+        """Keep only a small set of per-launch full-song capabilities."""
+
+        stream_sha256 = str(plan.get("stream_sha256", ""))
+        _require_lowercase_sha256(
+            stream_sha256,
+            label="decoded arrangement stream_sha256",
+        )
+        with self.server.state_lock:
+            plans = self.server.decoded_stream_plans
+            plans.pop(stream_sha256, None)
+            plans[stream_sha256] = dict(plan)
+            while len(plans) > _MAX_DECODED_STREAM_PLANS:
+                plans.popitem(last=False)
+
+    def _refresh_decoded_stream_plan(
+        self, stream_sha256: str, expected: Mapping[str, Any]
+    ) -> None:
+        """Keep a successfully used stream active and fail closed after eviction."""
+
+        with self.server.state_lock:
+            plans = self.server.decoded_stream_plans
+            active = plans.get(stream_sha256)
+            if not isinstance(active, Mapping) or dict(active) != dict(expected):
+                raise ValueError(
+                    "decoded arrangement stream is not active; prepare its "
+                    "full-song preset again"
+                )
+            plans.move_to_end(stream_sha256)
+
+    def _public_decoded_arrangement_chunk(
+        self, artifact: Mapping[str, Any]
+    ) -> dict[str, Any]:
+        """Register one private chunk and return capability URLs only."""
+
+        public = {
+            key: json.loads(json.dumps(artifact[key]))
+            for key in (
+                "schema",
+                "chunk_sha256",
+                "stream_sha256",
+                "selection_manifest_sha256",
+                "preset",
+                "chunk_index",
+                "chunk_count",
+                "anchor",
+                "aggregate_output_bytes",
+                "resource_limits",
+                "effects",
+                "cache_hit",
+            )
+            if key in artifact
+        }
+        tracks = []
+        chunk_sha256 = str(artifact.get("chunk_sha256", ""))
+        for track in artifact.get("tracks", []):
+            if not isinstance(track, Mapping):
+                raise ValueError("decoded arrangement chunk track is invalid")
+            record = track.get("audio")
+            if not isinstance(record, Mapping):
+                raise ValueError("decoded arrangement chunk audio is invalid")
+            media_id = (
+                f"decoded-stream-{chunk_sha256[:20]}-"
+                f"{str(record.get('sha256', ''))[:20]}"
+            )
+            private_record = dict(record)
+            private_record["_freeze_on_serve"] = True
+            self._register_generated_media(media_id, private_record)
+            public_track = {
+                key: json.loads(json.dumps(track[key]))
+                for key in (
+                    "track_id",
+                    "kind",
+                    "stem_ids",
+                    "roles",
+                    "stem_id",
+                    "candidate_id",
+                    "role",
+                    "decision",
+                    "sample_rate",
+                    "channels",
+                    "frames",
+                    "start_frame",
+                    "end_frame",
+                    "silence_padded_frames",
+                )
+                if key in track
+            }
+            public_track["audio"] = {
+                key: record[key]
+                for key in ("name", "bytes", "sha256")
+                if key in record
+            }
+            public_track["audio_url"] = self._media_url(media_id)
+            tracks.append(public_track)
+        public["tracks"] = tracks
+        if _mapping_contains_key(public, "path"):
+            raise ValueError("decoded arrangement chunk exposed a private path")
+        return public
+
+    def _register_generated_media(
+        self, media_id: str, record: Mapping[str, Any]
+    ) -> None:
+        """Keep capability records bounded without deleting rebuildable files.
+
+        A long decoded traversal can prepare hundreds of private chunk files.
+        The filesystem cache owns their normal LRU lifecycle; this registry
+        only owns per-launch URLs.  Evicting an old URL therefore produces a
+        recoverable 404 and never removes project state or source evidence.
+        """
+
+        with self.server.state_lock:
+            self.server.media[media_id] = dict(record)
+            generated = self.server.generated_media_ids
+            generated.pop(media_id, None)
+            generated[media_id] = None
+            while len(generated) > _MAX_GENERATED_MEDIA_RECORDS:
+                expired_id, _ = generated.popitem(last=False)
+                if expired_id not in self.server.catalog_media_ids:
+                    self.server.media.pop(expired_id, None)
 
     def _serve_media(self, media_id: str) -> None:
         record = self.server.media.get(media_id)
@@ -1286,6 +1637,18 @@ def _workbench_transport_bytes() -> bytes:
     except OSError as exc:
         raise RuntimeError(
             f"packaged Workbench transport is unavailable: {path}"
+        ) from exc
+
+
+def _workbench_visualization_bytes() -> bytes:
+    """Load bounded viewport helpers used by the local Workbench."""
+
+    path = Path(__file__).with_name("workbench_visualization.js")
+    try:
+        return path.read_bytes()
+    except OSError as exc:
+        raise RuntimeError(
+            f"packaged Workbench visualization is unavailable: {path}"
         ) from exc
 
 

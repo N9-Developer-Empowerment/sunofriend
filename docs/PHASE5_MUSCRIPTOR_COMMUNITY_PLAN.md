@@ -1,6 +1,6 @@
 # Phase 5: Multi-Process MIDI Comparison and Local Result Explorer
 
-Status: **Phase 5.0–5.2 are complete; the Phase 5.3 lead-only S0/M1/M3 diagnostic slice and Phase 5.4 explorer slice are complete, including hash-pinned comparison, full-song audition, GarageBand Pack Composer v1 and the explicit disputed-range phrase-review bridge; Phase 5.3 blind choice, lineage and role expansion remain open while Phase 5.5 local Studio hardening now includes Project Overview/Resume v1, decision-safety/path-free-role/restart verification, Decoded Stem Comparison v1 and bounded decoded selected-arrangement presets; beam 1 and batch 1 remain the defaults and no public service or new checkpoint download is authorised**
+Status: **Phase 5.0–5.2 are complete; the Phase 5.3 lead-only S0/M1/M3 diagnostic slice and Phase 5.4 explorer slice are complete, including hash-pinned comparison, GarageBand Pack Composer v1 and the disputed-range phrase-review bridge; Phase 5.5 completes Project Overview/restart/decision safety plus Decoded Stem Comparison v1, Phase 5.6 completes bounded decoded short arrangement presets, and Phase 5.7 implements long-song visualization/recovery plus minimal exact canonical full-song chunk transport; Phase 5.3 blind choice, lineage and role expansion remain open, beam 1 and batch 1 remain the defaults, and no public service or new checkpoint download is authorised**
 
 Drafted: 19 July 2026
 Scope: accurate stem/full-mix MIDI, several analytical and AI processes kept as
@@ -243,7 +243,11 @@ timeline are now implemented. The latter adds an audition-only live source/MIDI
 mixer while preserving the same explicit choices. The user-composed export
 basket and its exact local ZIP builder are implemented. Phase 5.5 now adds a
 default Project Overview derived only from explicit saved state and a bounded
-per-stem decoded comparison for precise source/candidate switching. These are
+per-stem decoded comparison for precise source/candidate switching. Phase 5.6
+adds bounded canonical arrangement presets. Phase 5.7 adds fixed-window
+long-song visualization with explicit recovery and exact chunked full-song
+playback for those same canonical presets. Arbitrary custom full-song mixing
+remains a deliberately coarse path. These are
 interaction layers over Sunofriend's several analytical and AI results, not a
 move toward one-model output or a Mirelo clone.
 
@@ -283,10 +287,12 @@ between alternative processes and intentional simultaneous parts. Phase 5.4
 therefore uses two linked views:
 
 1. **Arrangement view** shows one current main choice per musical role plus
-   explicit optional layers. Its current HTML-media transport controls the
-   selected stems, MIDI and prepared mix previews at a shared coarse position.
-   Waveform and piano-roll lanes share the same time axis, while visibility,
-   mute, solo and gain affect audition only.
+   explicit optional layers. It has three clearly labelled playback paths: a
+   Phase 5.6 precise 0.5–15 second canonical loop, a Phase 5.7 exact chunked
+   full-song canonical preset and a coarse HTML-media full-song/custom mixer.
+   The precise paths offer server-owned source-only, selected-MIDI, hybrid and
+   main-only rosters; the coarse path alone offers arbitrary visibility, mute,
+   solo and gain. Waveform and piano-roll lanes share the same time axis.
 2. **Compare-role view** focuses on one stem or heard role. It keeps the source
    waveform visible and presents the small primary family of specialist,
    conditioned AI and genuinely distinct consensus/repair candidates as
@@ -465,6 +471,15 @@ selected `equivalent` or `neither`.
   candidates load by default and advanced lanes load explicitly. It consumes
   completed outputs and requires no persistent model process. Any later
   inference worker remains isolated and separately enabled.
+- Phase 5.7 renders long songs through a fixed-width Fit/4×/16× viewport with
+  paging, playhead centring, bounded canvas geometry and visible-note/bin
+  culling. This virtualizes painting only: the browser still downloads, parses
+  and indexes the complete server-bounded timeline JSON. Per-candidate evidence
+  is limited to 20,000 notes/8 MiB and one request to 12 candidates. Stale
+  requests are cancelled; a compatible last verified result can remain marked
+  stale with Retry, otherwise visualization becomes explicitly unavailable
+  without disabling audio, decisions or export. No silent coarse visual
+  fallback is allowed.
 - The authenticated read-only `/api/arrangement-timeline` route returns
   `sunofriend.workbench-arrangement-timeline.v1`. The server derives its current
   main/optional selection rather than accepting browser candidate IDs, groups
@@ -475,16 +490,36 @@ selected `equivalent` or `neither`.
   playhead live only in browser memory. They never append a review event or
   change selection, overlap evidence, cache identity or handoff bytes. Missing
   MIDI sound is prepared explicitly through the neutral renderer; source/MIDI
-  levels are not normalised and the shared-second media players are not
-  sample-accurate. The full-song arrangement has not yet moved to the decoded
-  per-stem transport.
+  levels are not normalised. Phase 5.6's bounded precise loop and Phase 5.7's
+  exact full-song stream accept only the four canonical server-owned rosters.
+  The independent shared-second custom mixer is not sample accurate.
+- The Phase 5.7 full-song stream accepts exactly the current selection-manifest
+  hash and one canonical preset; chunks accept exactly their immutable stream
+  hash and index. Exact integer anchor-frame boundaries, deterministic
+  ties-even input-rate scaling, disclosed silence padding and one Web Audio
+  clock keep the roster aligned. Only current plus next decoded chunks remain.
+  A not-ready chunk stops at the verified boundary. Late completion enables
+  explicit Play; absent or failed data requires Retry. Neither action
+  auto-restarts or silently starts coarse playback. Limits are 24 tracks, a
+  20-minute longest source, 2 GiB input, mono/stereo 8–96 kHz audio, at most
+  five seconds/32 MiB PCM16/192 MiB projected two-chunk memory, 480 chunks, 16
+  active stream plans and 768 generated-media capabilities per launch. Chunk
+  artifacts share the rebuildable 32-entry/256 MiB cache with short loops.
+  Owner-only immutable full-song snapshots have a separate eight-stream/2 GiB
+  disk LRU; the current stream survives even if oversized. Prepare/reprepare
+  fully verifies hashes, while an eight-stream process cache uses file
+  identity/stat signatures for unchanged sequential chunks. Drift returns to
+  full verification and missing or altered evidence fails closed.
 - The standalone `midi-ab-review` package supplies blind, explicitly aligned
   exact-source-time, fixed-window sample-RMS-matched comparison files. Its audio
   auto-loops and its shared playhead is scoped per review unit, but it still
   uses browser media elements. It remains the stricter blinded promotion gate;
   Workbench's decoded per-stem loop is neither blinded nor level matched.
 - Every operation is content-addressed and resumable. Closing the browser does
-  not lose a completed transcription or review.
+  not lose a completed transcription, SQLite decision, Overview state or saved
+  pack basket. The URL hash restores view/stem, while prepared Web Audio,
+  decoded chunks, playhead, loop, viewport/zoom/visibility and mixer controls
+  intentionally reset on reload.
 - The server uses a per-launch token, accepts local files only through explicit
   project roots and binds to loopback unless a future, separately secured
   collaboration mode is deliberately enabled.
@@ -933,13 +968,15 @@ Started 19 July 2026:
 - [x] reverify source, MIDI, generated media and SoundFont hashes at the point
   of serving, rendering and handoff rather than trusting startup discovery.
 
-Local-Studio quality gate completed in Phase 5.5 rather than the Phase 5.0
-slice:
+Local-Studio transport quality gates completed across Phase 5.5–5.7 rather
+than the Phase 5.0 slice:
 
 - [x] add a decoded, sample-scheduled Workbench transport for bounded per-stem
   0.5–15 second comparison. Generic blind exact-window, fixed-window
-  sample-RMS-matched packages remain separate through `midi-ab-review`;
-  selected-arrangement and long-song decoded playback remain open.
+  sample-RMS-matched packages remain separate through `midi-ab-review`.
+- [x] add Phase 5.6 bounded canonical selected-arrangement playback; and
+- [x] add Phase 5.7 fixed-window long-song recovery plus exact canonical
+  full-song chunk playback. Precise arbitrary custom mixes remain open.
 
 ### 5.1 — Full-mix/conditioned bake-off
 
@@ -1252,9 +1289,7 @@ import the unchanged selected MIDI into GarageBand. Reloading restores choices;
 source audio remains excluded unless separately requested; no automatic winner
 or network operation is introduced.
 
-### 5.5 — Local Studio hardening and private beta
-
-After the 5.4 vertical slice is musically useful:
+### 5.5 — Overview, restart/decision safety and decoded stem comparison
 
 - [x] add Project Overview/Resume v1 with path-free per-stem progress, one
   explicit-state-derived next action, restart-state boundaries, focus recovery,
@@ -1268,31 +1303,61 @@ After the 5.4 vertical slice is musically useful:
   candidates, and switch them on one decoded Web Audio clock with no decision,
   event, ranking or MIDI-mutation effects; require the current SoundFont and
   renderer policy, use verified owner-only input snapshots, disclose end
-  padding, bound the rebuildable cache and keep fallback playback feedback-free;
+  padding, bound the rebuildable cache and keep fallback playback feedback-free.
+
+Phase 5.5 restores the current view/stem through the URL hash and durable
+decisions, Overview state and pack basket through local state. Prepared audio,
+playhead, loop, visual viewport and mixer controls remain deliberately
+temporary.
+
+### 5.6 — Bounded decoded short arrangement presets
+
 - [x] extend decoded transport/rendering hardening to a canonical 0.5–15 second
   selected-arrangement window with server-owned source-only, selected-MIDI,
   hybrid and main-only groups, stale-selection rejection and atomic one-clock
-  switching; keep full-song/custom decoded paths open and the exact standalone
-  blind A/B contract for promoted comparisons;
-- harden long-song rendering, waveform/piano-roll virtualization, keyboard and
-  accessibility controls, browser restart recovery and progress/error states;
-- verify stem-only, MIDI-only, hybrid and custom mixes against one canonical
-  selection manifest;
+  switching. The exact standalone blind A/B contract remains the promotion
+  gate.
+
+Phase 5.6 is bounded to 0.5–15 seconds and 24 tracks. It does not grant the
+browser an arbitrary precise mixer.
+
+### 5.7 — Long-song visualization/recovery and canonical chunk transport
+
+- [x] harden long-song rendering with a fixed Fit/4×/16× viewport, visible
+  waveform/note culling, bounded canvases, paging/keyboard/playhead controls,
+  stale-request rejection, compatible-last-result recovery and explicit
+  error/context-loss states;
+- [x] document and test that visual culling limits paint work only: the browser
+  still parses the complete bounded timeline JSON, with no silent coarse
+  fallback;
+- [x] verify source-only, selected-MIDI, hybrid and main-only rosters against
+  one canonical selection manifest; and
+- [x] add a minimal exact full-song transport using immutable server-owned
+  stream plans, exact integer-frame chunks, current-plus-next decoded retention,
+  stale-selection rejection, bounded resources and truthful boundary stops
+  without auto-restart or silent fallback to coarse playback.
+
+The arbitrary visibility/mute/solo/gain full-song mixer remains the third,
+explicitly coarse HTML-media path. Exact custom mixes are not implied by the
+canonical full-song presets.
+
+### Remaining Phase 5 hardening and private beta
+
 - test the pack composer repeatedly in GarageBand, including BPM, downbeat,
   selected-file hashes and optional eligible Instrument Bundles;
 - display completed exact-result-cache and reused-model provenance without
   silently enabling either optimisation; and
 - conduct a small private, local-only usability beta using authorised projects.
 
-The checked Project Overview, decision-safety, decoded per-stem comparison and
-bounded canonical arrangement items are the first four hardening increments.
-They do not complete decoded full-song arrangement playback, virtualization, canonical custom mixes,
-GarageBand/Instrument Bundle checks, cache-provenance display or the private
-beta.
+The implemented 5.5–5.7 increments do not complete precise arbitrary custom
+mixes, server-paginated timeline payloads, GarageBand/Instrument Bundle checks,
+cache-provenance display or the private beta. They add no public upload,
+telemetry, account or community ranking.
 
-Success means a non-expert can complete source comparison, candidate choice,
-arrangement audition and GarageBand export without editing JSON or losing work.
-Phase 5.5 still has no public upload, telemetry, account or community ranking.
+Success for the remaining Phase 5 work means a non-expert can complete source
+comparison, candidate choice, arrangement audition and GarageBand export
+without editing JSON or losing durable work. Temporary transports and view
+controls are expected to reset on reload.
 
 ## Later phases
 
@@ -1388,7 +1453,7 @@ is also feedback- and event-free. The decoded cache is rebuildable and evicts
 older windows after 32 entries or 256 MiB; each request is bounded to 2 GiB
 across source, candidate MIDI, SoundFont and preview input, with early
 pre-render rejection, and 64 MiB of output.
-The fourth Phase 5.5 slice adds
+Phase 5.6 adds
 `sunofriend.workbench-arrangement-selection.v1` and
 `sunofriend.workbench-decoded-arrangement-loop.v1`. The server derives one
 context-neutral manifest from deduplicated project sources and every current
@@ -1399,8 +1464,17 @@ rendering, registers no stale media after a concurrent decision, uses current
 path-free roles for neutral previews and schedules whole groups atomically on
 one decoded clock. It shares the existing decoded cache/input/output limits,
 adds a 24-track cap and remains unity-gain, non-level-matched and unblinded.
-Full-song decoded streaming, precise arbitrary custom mixes and visual
-virtualisation remain open.
+Phase 5.7 adds fixed-window Fit/4×/16× long-song drawing and recovery. It culls
+off-viewport waveform/note painting but still downloads, parses and indexes the
+complete server-bounded JSON. Stale requests cannot replace current evidence;
+compatible last evidence is marked stale with Retry, otherwise the visual is
+explicitly unavailable. It also adds immutable exact full-song streams for the
+same four canonical rosters. Integer-frame chunks keep only current plus next
+decoded; a not-ready successor stops at a verified boundary. Late completion
+enables explicit Play, absent or failed data requires Retry, neither
+auto-restarts and no coarse playback begins silently. The bounded stream limits
+and capability/cache limits are documented above. Precise arbitrary custom
+mixes and server-paginated timeline payloads remain open.
 Phase 5.4 now adds canonical, path-free per-stem and selected-arrangement
 timelines with zero automatic selection/ranking effects. The arrangement view
 shows every unique source stem and only current explicit main/optional MIDI,

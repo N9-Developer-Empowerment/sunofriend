@@ -204,6 +204,12 @@ class WorkbenchDecodedLoopServerTests(unittest.TestCase):
         self.assertEqual(headers["cache-control"], "no-store")
         self.assertIn(b"SunofriendWorkbenchTransport", body)
 
+        status, headers, body = self._request("GET", "/workbench-visualization.js")
+        self.assertEqual(status, 200)
+        self.assertIn("javascript", headers["content-type"])
+        self.assertEqual(headers["cache-control"], "no-store")
+        self.assertIn(b"SunofriendWorkbenchVisualization", body)
+
         stem = self.catalog["stems"][0]
         candidate_ids = [
             candidate["candidate_id"] for candidate in stem["candidates"]

@@ -11,6 +11,7 @@ import hashlib
 import json
 import math
 import shutil
+import stat
 import threading
 import time
 import uuid
@@ -31,6 +32,8 @@ NEUTRAL_PREVIEW_SCHEMA = "sunofriend.workbench-neutral-preview.v1"
 DECODED_STEM_LOOP_SCHEMA = "sunofriend.workbench-decoded-stem-loop.v1"
 ARRANGEMENT_SELECTION_SCHEMA = "sunofriend.workbench-arrangement-selection.v1"
 DECODED_ARRANGEMENT_LOOP_SCHEMA = "sunofriend.workbench-decoded-arrangement-loop.v1"
+DECODED_ARRANGEMENT_STREAM_SCHEMA = "sunofriend.workbench-decoded-arrangement-stream.v1"
+DECODED_ARRANGEMENT_CHUNK_SCHEMA = "sunofriend.workbench-decoded-arrangement-chunk.v1"
 ARRANGEMENT_SCHEMA = "sunofriend.workbench-arrangement.v1"
 GARAGEBAND_HANDOFF_SCHEMA = "sunofriend.workbench-garageband-handoff.v1"
 GARAGEBAND_PACK_PLAN_SCHEMA = "sunofriend.workbench-garageband-pack-plan.v1"
@@ -40,10 +43,24 @@ SELECTED_MIDI_OVERLAP_SCHEMA = "sunofriend.workbench-selected-midi-overlap.v1"
 _RENDER_POLICY = "role-neutral-general-midi-v1"
 _DECODED_LOOP_POLICY = "recorded-zero-source-frame-window-v1"
 _DECODED_ARRANGEMENT_LOOP_POLICY = "recorded-zero-selected-arrangement-window-v1"
+_DECODED_ARRANGEMENT_STREAM_POLICY = (
+    "recorded-zero-selected-arrangement-chunk-stream-v1"
+)
 _DECODED_LOOP_MINIMUM_SECONDS = 0.5
 _DECODED_LOOP_MAXIMUM_SECONDS = 15.0
 _DECODED_LOOP_MAXIMUM_CANDIDATES = 6
 _DECODED_ARRANGEMENT_MAXIMUM_TRACKS = 24
+_DECODED_ARRANGEMENT_STREAM_PRESETS = frozenset(
+    {"source-only", "selected-midi", "hybrid", "main-only"}
+)
+_DECODED_STREAM_MAXIMUM_SECONDS = 20 * 60
+_DECODED_STREAM_MAXIMUM_CHUNK_SECONDS = 5
+_DECODED_STREAM_MAXIMUM_CHUNKS = 480
+_DECODED_STREAM_CHUNK_MAXIMUM_OUTPUT_BYTES = 32 * 1024 * 1024
+_DECODED_STREAM_TWO_CHUNK_FLOAT_MAXIMUM_BYTES = 192 * 1024 * 1024
+_DECODED_STREAM_CACHE_MAXIMUM_BYTES = 2 * 1024 * 1024 * 1024
+_DECODED_STREAM_CACHE_MAXIMUM_ENTRIES = 8
+_VERIFIED_STREAM_CACHE_MAXIMUM_ENTRIES = 8
 _DECODED_LOOP_MAXIMUM_OUTPUT_BYTES = 64 * 1024 * 1024
 _DECODED_LOOP_MAXIMUM_INPUT_BYTES = 2 * 1024 * 1024 * 1024
 _DECODED_LOOP_CACHE_MAXIMUM_BYTES = 256 * 1024 * 1024
@@ -94,6 +111,7 @@ class WorkbenchArtifacts:
             Path(soundfont_path).expanduser().resolve() if soundfont_path else None
         )
         self._soundfont_cache: dict[str, Any] | None = None
+        self._verified_stream_cache: dict[str, dict[str, Any]] = {}
         self._lock = threading.RLock()
 
     def cached_candidate_preview(
@@ -663,9 +681,7 @@ class WorkbenchArtifacts:
                     [("neutral selected MIDI preview", preview.get("preview"))]
                 )
                 try:
-                    _require_decoded_input_limit(
-                        aggregate_input_bytes + preview_bytes
-                    )
+                    _require_decoded_input_limit(aggregate_input_bytes + preview_bytes)
                 except ValueError:
                     if preview.get("cache_hit") is False:
                         self._discard_new_preview(preview)
@@ -776,9 +792,7 @@ class WorkbenchArtifacts:
                     }
                 )
 
-            pcm16_output_upper_bound_bytes = _decoded_pcm16_output_upper_bound(
-                inputs
-            )
+            pcm16_output_upper_bound_bytes = _decoded_pcm16_output_upper_bound(inputs)
             if pcm16_output_upper_bound_bytes > _DECODED_LOOP_MAXIMUM_OUTPUT_BYTES:
                 raise ValueError(
                     "decoded arrangement aggregate output exceeds the 64 MiB limit"
@@ -824,9 +838,7 @@ class WorkbenchArtifacts:
                     "maximum_track_count": _DECODED_ARRANGEMENT_MAXIMUM_TRACKS,
                     "aggregate_input_bytes": aggregate_input_bytes,
                     "maximum_input_bytes": _DECODED_LOOP_MAXIMUM_INPUT_BYTES,
-                    "pcm16_output_upper_bound_bytes": (
-                        pcm16_output_upper_bound_bytes
-                    ),
+                    "pcm16_output_upper_bound_bytes": (pcm16_output_upper_bound_bytes),
                     "maximum_output_bytes": _DECODED_LOOP_MAXIMUM_OUTPUT_BYTES,
                 },
             }
@@ -987,6 +999,693 @@ class WorkbenchArtifacts:
             if result is None:
                 raise RuntimeError("decoded arrangement loop cache verification failed")
             self._touch_and_prune_decoded_cache("decoded-arrangement-loops", cache_key)
+            result["cache_hit"] = False
+            return result
+
+    def prepare_decoded_arrangement_stream(
+        self,
+        catalog: Mapping[str, Any],
+        current: Mapping[str, Any],
+        selection_manifest_sha256: str,
+        preset: str,
+    ) -> dict[str, Any]:
+        """Prepare a bounded, immutable full-song decoded-stream plan.
+
+        The returned plan contains no local paths.  Source and rendered MIDI
+        audio used by later chunks is copied once into owner-only verified
+        snapshots stored with the private stream record.
+        """
+
+        selected_preset = _decoded_arrangement_stream_preset(preset)
+        (
+            selection_manifest,
+            source_groups,
+            selection,
+        ) = _decoded_arrangement_selection(catalog, current)
+        _require_decoded_arrangement_selection_hash(
+            selection_manifest, selection_manifest_sha256
+        )
+        preset_track_ids = tuple(selection_manifest["groups"][selected_preset])
+        if not preset_track_ids:
+            raise ValueError(
+                f"decoded arrangement preset {selected_preset!r} has no current tracks"
+            )
+        if len(preset_track_ids) > _DECODED_ARRANGEMENT_MAXIMUM_TRACKS:
+            raise ValueError("decoded arrangement streaming supports at most 24 tracks")
+
+        with self._lock:
+            selection_by_track_id = {str(item["track_id"]): item for item in selection}
+            source_group_by_track_id = {
+                str(group["track_id"]): group for group in source_groups
+            }
+            midi_track_ids = tuple(
+                track_id
+                for track_id in preset_track_ids
+                if track_id in selection_by_track_id
+            )
+            relevant_selection = [
+                selection_by_track_id[track_id] for track_id in midi_track_ids
+            ]
+            declared_records: list[tuple[str, Any]] = [
+                ("source audio", group["records"][0]) for group in source_groups
+            ]
+            declared_records.extend(
+                ("selected candidate MIDI", item.get("midi"))
+                for item in relevant_selection
+            )
+            declared_input_bytes = _decoded_declared_input_bytes(declared_records)
+            _require_decoded_input_limit(declared_input_bytes)
+            early_soundfont_size = 0
+            if midi_track_ids:
+                if self._soundfont_cache is not None:
+                    early_soundfont_size = _decoded_declared_input_bytes(
+                        [("SoundFont", self._soundfont_cache)]
+                    )
+                else:
+                    soundfont_path = (
+                        self.soundfont_path or Path(find_soundfont()).resolve()
+                    )
+                    try:
+                        early_soundfont_size = soundfont_path.stat().st_size
+                    except OSError as exc:
+                        raise ValueError(
+                            f"SoundFont file does not exist: {soundfont_path}"
+                        ) from exc
+                _require_decoded_input_limit(
+                    declared_input_bytes + int(early_soundfont_size)
+                )
+
+            np, soundfile = _decoded_audio_modules()
+            del np  # planning needs decoder metadata but does not allocate samples
+            source_clock: list[dict[str, Any]] = []
+            source_paths: dict[str, Path] = {}
+            source_records: dict[str, Mapping[str, Any]] = {}
+            for group in source_groups:
+                for record in group["records"]:
+                    self._verify_catalog_record(record, label="source audio")
+                record = group["records"][0]
+                path = self._verify_catalog_record(record, label="source audio")
+                info = _decoded_audio_info(soundfile, path, label="source audio")
+                track_id = str(group["track_id"])
+                source_paths[track_id] = path
+                source_records[track_id] = record
+                source_clock.append(
+                    {
+                        "track_id": track_id,
+                        "source_sha256": str(record["sha256"]),
+                        "source_bytes": int(record["bytes"]),
+                        "sample_rate": int(info["sample_rate"]),
+                        "channels": int(info["channels"]),
+                        "frames": int(info["frames"]),
+                    }
+                )
+            if not source_clock:
+                raise ValueError("decoded arrangement streaming requires source audio")
+
+            longest_source = _longest_decoded_source(source_clock)
+            if (
+                int(longest_source["frames"])
+                > int(longest_source["sample_rate"]) * _DECODED_STREAM_MAXIMUM_SECONDS
+            ):
+                raise ValueError(
+                    "decoded arrangement streaming supports songs up to 20 minutes"
+                )
+            anchor_sample_rate = int(source_clock[0]["sample_rate"])
+            anchor_song_end_frame = _ceil_scaled_frame(
+                int(longest_source["frames"]),
+                anchor_sample_rate,
+                int(longest_source["sample_rate"]),
+            )
+            if anchor_song_end_frame <= 0:
+                raise ValueError("decoded arrangement source audio has no frames")
+
+            previews_by_track_id: dict[str, dict[str, Any]] = {}
+            preview_paths: dict[str, Path] = {}
+            renderer: dict[str, Any] | None = None
+            aggregate_input_bytes = declared_input_bytes
+            if midi_track_ids:
+                self._verify_selection(relevant_selection)
+                soundfont_record = self._soundfont()
+                if int(soundfont_record["bytes"]) != int(early_soundfont_size):
+                    raise ValueError("SoundFont size changed while preparing stream")
+                aggregate_input_bytes += int(early_soundfont_size)
+                for track_id, item in zip(midi_track_ids, relevant_selection):
+                    preview = self.cached_candidate_preview(
+                        catalog,
+                        str(item["stem_id"]),
+                        str(item["candidate_id"]),
+                        role_override=str(item["role"]),
+                    )
+                    if preview is None:
+                        preview = self.render_candidate_preview(
+                            catalog,
+                            str(item["stem_id"]),
+                            str(item["candidate_id"]),
+                            role_override=str(item["role"]),
+                        )
+                    preview_bytes = _decoded_declared_input_bytes(
+                        [("neutral selected MIDI preview", preview.get("preview"))]
+                    )
+                    try:
+                        _require_decoded_input_limit(
+                            aggregate_input_bytes + preview_bytes
+                        )
+                    except ValueError:
+                        if preview.get("cache_hit") is False:
+                            self._discard_new_preview(preview)
+                        raise
+                    aggregate_input_bytes += preview_bytes
+                    previews_by_track_id[track_id] = preview
+                required_soundfont_sha256 = str(soundfont_record["sha256"])
+                self._require_preview_renderer_consistency(
+                    list(previews_by_track_id.values()),
+                    expected_soundfont_sha256=required_soundfont_sha256,
+                )
+                for track_id, preview in previews_by_track_id.items():
+                    preview_paths[track_id] = self._verify_catalog_record(
+                        preview["preview"],
+                        label="neutral selected MIDI preview",
+                    )
+                renderer = {
+                    "policy": _RENDER_POLICY,
+                    "soundfont_sha256": required_soundfont_sha256,
+                }
+
+            inputs: list[dict[str, Any]] = []
+            private_inputs: list[dict[str, Any]] = []
+            for track_id in preset_track_ids:
+                if track_id in source_group_by_track_id:
+                    group = source_group_by_track_id[track_id]
+                    record = source_records[track_id]
+                    path = source_paths[track_id]
+                    clock = next(
+                        row for row in source_clock if row["track_id"] == track_id
+                    )
+                    item = {
+                        "track_id": track_id,
+                        "kind": "source",
+                        "stem_ids": list(group["stem_ids"]),
+                        "roles": list(group["roles"]),
+                        "source_sha256": str(record["sha256"]),
+                        "input_sha256": str(record["sha256"]),
+                        "input_bytes": int(record["bytes"]),
+                        "sample_rate": int(clock["sample_rate"]),
+                        "channels": int(clock["channels"]),
+                        "input_frames": int(clock["frames"]),
+                    }
+                    inputs.append(item)
+                    private_inputs.append(
+                        {**item, "input_path": path, "expected_record": record}
+                    )
+                    continue
+                selected = selection_by_track_id.get(track_id)
+                preview = previews_by_track_id.get(track_id)
+                path = preview_paths.get(track_id)
+                if selected is None or preview is None or path is None:
+                    raise ValueError(
+                        "decoded arrangement preset does not match the canonical "
+                        "selection roster"
+                    )
+                info = _decoded_audio_info(
+                    soundfile, path, label="neutral selected MIDI preview"
+                )
+                item = {
+                    "track_id": track_id,
+                    "kind": "selected_midi",
+                    "stem_id": str(selected["stem_id"]),
+                    "candidate_id": str(selected["candidate_id"]),
+                    "role": str(selected["role"]),
+                    "decision": str(selected["decision"]),
+                    "source_midi_sha256": str(selected["midi"]["sha256"]),
+                    "neutral_preview_cache_key": str(preview["cache_key"]),
+                    "neutral_preview_policy": str(preview["policy"]),
+                    "soundfont_sha256": str(preview["soundfont_sha256"]),
+                    "input_sha256": str(preview["preview"]["sha256"]),
+                    "input_bytes": int(preview["preview"]["bytes"]),
+                    "sample_rate": int(info["sample_rate"]),
+                    "channels": int(info["channels"]),
+                    "input_frames": int(info["frames"]),
+                }
+                inputs.append(item)
+                private_inputs.append(
+                    {
+                        **item,
+                        "input_path": path,
+                        "expected_record": preview["preview"],
+                    }
+                )
+
+            chunk_plan = _decoded_stream_chunk_plan(
+                anchor_sample_rate=anchor_sample_rate,
+                anchor_song_end_frame=anchor_song_end_frame,
+                inputs=inputs,
+            )
+            key_payload: dict[str, Any] = {
+                "schema": DECODED_ARRANGEMENT_STREAM_SCHEMA,
+                "project_id": catalog.get("project_id"),
+                "selection_manifest_sha256": selection_manifest_sha256,
+                "preset": selected_preset,
+                "preset_track_ids": list(preset_track_ids),
+                "source_clock": source_clock,
+                "tracks": inputs,
+                "anchor": {
+                    "sample_rate": anchor_sample_rate,
+                    "song_end_frame": anchor_song_end_frame,
+                    "duration_seconds": (anchor_song_end_frame / anchor_sample_rate),
+                    "longest_source_track_id": longest_source["track_id"],
+                },
+                "chunking": chunk_plan,
+                "policy": _DECODED_ARRANGEMENT_STREAM_POLICY,
+                "renderer": renderer,
+                "encoding": {
+                    "container": "WAV",
+                    "subtype": "PCM_16",
+                    "sample_rate_policy": "preserve each decoded input rate",
+                    "channel_policy": "preserve mono or stereo",
+                },
+                "resource_limits": {
+                    "track_count": len(inputs),
+                    "maximum_track_count": _DECODED_ARRANGEMENT_MAXIMUM_TRACKS,
+                    "verified_input_bytes": aggregate_input_bytes,
+                    "maximum_input_bytes": _DECODED_LOOP_MAXIMUM_INPUT_BYTES,
+                    "maximum_song_seconds": _DECODED_STREAM_MAXIMUM_SECONDS,
+                    "maximum_chunk_seconds": (_DECODED_STREAM_MAXIMUM_CHUNK_SECONDS),
+                    "maximum_chunk_count": _DECODED_STREAM_MAXIMUM_CHUNKS,
+                    "maximum_chunk_pcm16_bytes": (
+                        _DECODED_STREAM_CHUNK_MAXIMUM_OUTPUT_BYTES
+                    ),
+                    "maximum_two_chunk_float_bytes": (
+                        _DECODED_STREAM_TWO_CHUNK_FLOAT_MAXIMUM_BYTES
+                    ),
+                },
+                "path_free_manifest": True,
+                "private_audio": True,
+                "effects": _decoded_arrangement_effects(),
+            }
+            stream_sha256 = _document_hash(key_payload)
+            key_payload["stream_sha256"] = stream_sha256
+            cached = self._load_decoded_arrangement_stream(
+                stream_sha256, expected_manifest=key_payload
+            )
+            if cached is not None:
+                self._verify_decoded_arrangement_stream_current(
+                    catalog=catalog,
+                    current=current,
+                    stream=cached[0],
+                )
+                self._remember_verified_decoded_arrangement_stream(
+                    catalog=catalog,
+                    current=current,
+                    stream=cached[0],
+                    snapshots=cached[1],
+                )
+                self._touch_and_prune_decoded_stream_cache(stream_sha256)
+                result = dict(cached[0])
+                result["cache_hit"] = True
+                return result
+
+            self._verify_decoded_arrangement_stream_current(
+                catalog=catalog,
+                current=current,
+                stream=key_payload,
+                prepared_previews=previews_by_track_id,
+            )
+            work, final = self._private_building_directory(
+                "decoded-arrangement-streams", stream_sha256
+            )
+            try:
+                input_directory = work / "inputs"
+                input_directory.mkdir(mode=0o700)
+                _restrict_private_permissions(input_directory, 0o700)
+                snapshots: dict[str, dict[str, Any]] = {}
+                private_records: list[dict[str, Any]] = []
+                for item in private_inputs:
+                    digest = str(item["input_sha256"])
+                    snapshot_record = snapshots.get(digest)
+                    if snapshot_record is None:
+                        snapshot = _write_verified_private_snapshot(
+                            Path(item["input_path"]),
+                            item["expected_record"],
+                            input_directory / f"{digest}.audio",
+                            label=(
+                                "source audio"
+                                if item["kind"] == "source"
+                                else "neutral selected MIDI preview"
+                            ),
+                        )
+                        snapshot_info = _decoded_audio_info(
+                            soundfile,
+                            snapshot,
+                            label="verified decoded stream audio snapshot",
+                        )
+                        if (
+                            snapshot_info["sample_rate"] != item["sample_rate"]
+                            or snapshot_info["channels"] != item["channels"]
+                            or snapshot_info["frames"] != item["input_frames"]
+                        ):
+                            raise ValueError(
+                                "verified decoded stream snapshot metadata changed"
+                            )
+                        snapshot_record = _relative_file_record(snapshot, work)
+                        snapshots[digest] = snapshot_record
+                    elif (
+                        snapshot_record["bytes"] != item["input_bytes"]
+                        or snapshot_record["sha256"] != digest
+                    ):
+                        raise ValueError(
+                            "decoded stream input hash has inconsistent content"
+                        )
+                    private_records.append(
+                        {
+                            "track_id": item["track_id"],
+                            "snapshot": snapshot_record,
+                        }
+                    )
+
+                self._verify_decoded_arrangement_stream_current(
+                    catalog=catalog,
+                    current=current,
+                    stream=key_payload,
+                    prepared_previews=previews_by_track_id,
+                )
+                _write_json(work / "manifest.json", key_payload)
+                private_record = {
+                    "schema": (
+                        "sunofriend.workbench-decoded-arrangement-stream-record.v1"
+                    ),
+                    "stream_sha256": stream_sha256,
+                    "manifest_sha256": _document_hash(key_payload),
+                    "inputs": private_records,
+                }
+                _write_json(work / "record.json", private_record)
+                _restrict_private_permissions(work / "manifest.json", 0o600)
+                _restrict_private_permissions(work / "record.json", 0o600)
+                work.replace(final)
+            except Exception:
+                shutil.rmtree(work, ignore_errors=True)
+                raise
+            loaded = self._load_decoded_arrangement_stream(
+                stream_sha256, expected_manifest=key_payload
+            )
+            if loaded is None:
+                raise RuntimeError("decoded arrangement stream verification failed")
+            self._remember_verified_decoded_arrangement_stream(
+                catalog=catalog,
+                current=current,
+                stream=loaded[0],
+                snapshots=loaded[1],
+            )
+            self._touch_and_prune_decoded_stream_cache(stream_sha256)
+            result = dict(loaded[0])
+            result["cache_hit"] = False
+            return result
+
+    def prepare_decoded_arrangement_chunk(
+        self,
+        catalog: Mapping[str, Any],
+        current: Mapping[str, Any],
+        stream_sha256: str,
+        chunk_index: int,
+    ) -> dict[str, Any]:
+        """Build one exact, contiguous PCM16 chunk from a prepared stream."""
+
+        if not _is_sha256(stream_sha256):
+            raise ValueError("decoded arrangement stream identity is invalid")
+        if isinstance(chunk_index, bool) or not isinstance(chunk_index, int):
+            raise ValueError("decoded arrangement chunk index must be an integer")
+        with self._lock:
+            loaded = self._cached_verified_decoded_arrangement_stream(
+                catalog=catalog,
+                current=current,
+                stream_sha256=stream_sha256,
+            )
+            fully_verified = loaded is not None
+            if loaded is None:
+                loaded = self._load_decoded_arrangement_stream(stream_sha256)
+            if loaded is None:
+                raise ValueError(
+                    "decoded arrangement stream is missing or changed; prepare it again"
+                )
+            stream, snapshots = loaded
+            chunks = stream.get("chunking", {}).get("chunks", [])
+            if not isinstance(chunks, list) or not 0 <= chunk_index < len(chunks):
+                raise ValueError("decoded arrangement chunk index is out of range")
+            boundary = chunks[chunk_index]
+            if not isinstance(boundary, Mapping):
+                raise ValueError("decoded arrangement chunk boundary is invalid")
+            if not fully_verified:
+                self._verify_decoded_arrangement_stream_current(
+                    catalog=catalog,
+                    current=current,
+                    stream=stream,
+                )
+                self._remember_verified_decoded_arrangement_stream(
+                    catalog=catalog,
+                    current=current,
+                    stream=stream,
+                    snapshots=snapshots,
+                )
+            self._touch_and_prune_decoded_stream_cache(stream_sha256)
+            anchor = stream.get("anchor")
+            tracks = stream.get("tracks")
+            if not isinstance(anchor, Mapping) or not isinstance(tracks, list):
+                raise ValueError("decoded arrangement stream plan is invalid")
+            anchor_sample_rate = int(anchor["sample_rate"])
+            anchor_start_frame = int(boundary["anchor_start_frame"])
+            anchor_end_frame = int(boundary["anchor_end_frame"])
+            input_fingerprints: list[dict[str, Any]] = []
+            for track in tracks:
+                if not isinstance(track, Mapping):
+                    raise ValueError("decoded arrangement stream track is invalid")
+                input_start_frame = _nearest_scaled_frame(
+                    anchor_start_frame,
+                    int(track["sample_rate"]),
+                    anchor_sample_rate,
+                )
+                input_end_frame = _nearest_scaled_frame(
+                    anchor_end_frame,
+                    int(track["sample_rate"]),
+                    anchor_sample_rate,
+                )
+                if input_end_frame <= input_start_frame:
+                    raise ValueError(
+                        "decoded arrangement chunk contains no input audio frames"
+                    )
+                input_fingerprints.append(
+                    {
+                        **dict(track),
+                        "start_frame": input_start_frame,
+                        "end_frame": input_end_frame,
+                    }
+                )
+
+            pcm16_upper_bound = _decoded_pcm16_output_upper_bound(input_fingerprints)
+            if pcm16_upper_bound > _DECODED_STREAM_CHUNK_MAXIMUM_OUTPUT_BYTES:
+                raise ValueError(
+                    "decoded arrangement chunk exceeds the 32 MiB PCM16 limit"
+                )
+            two_chunk_float_bytes = _decoded_browser_two_chunk_float_bytes(
+                anchor_end_frame - anchor_start_frame,
+                input_fingerprints,
+            )
+            if two_chunk_float_bytes > _DECODED_STREAM_TWO_CHUNK_FLOAT_MAXIMUM_BYTES:
+                raise ValueError(
+                    "decoded arrangement chunk exceeds the 192 MiB two-chunk "
+                    "float-memory limit"
+                )
+            key_payload = {
+                "schema": DECODED_ARRANGEMENT_CHUNK_SCHEMA,
+                "stream_sha256": stream_sha256,
+                "selection_manifest_sha256": stream["selection_manifest_sha256"],
+                "preset": stream["preset"],
+                "chunk_index": chunk_index,
+                "chunk_count": len(chunks),
+                "anchor": {
+                    "sample_rate": anchor_sample_rate,
+                    "start_frame": anchor_start_frame,
+                    "end_frame": anchor_end_frame,
+                    "song_end_frame": int(anchor["song_end_frame"]),
+                    "start_seconds": anchor_start_frame / anchor_sample_rate,
+                    "end_seconds": anchor_end_frame / anchor_sample_rate,
+                    "logical_end": chunk_index == len(chunks) - 1,
+                },
+                "input_fingerprints": input_fingerprints,
+                "policy": _DECODED_ARRANGEMENT_STREAM_POLICY,
+                "encoding": stream["encoding"],
+                "resource_limits": {
+                    "pcm16_output_upper_bound_bytes": pcm16_upper_bound,
+                    "maximum_chunk_pcm16_bytes": (
+                        _DECODED_STREAM_CHUNK_MAXIMUM_OUTPUT_BYTES
+                    ),
+                    "projected_two_chunk_float_bytes": two_chunk_float_bytes,
+                    "maximum_two_chunk_float_bytes": (
+                        _DECODED_STREAM_TWO_CHUNK_FLOAT_MAXIMUM_BYTES
+                    ),
+                },
+            }
+            chunk_sha256 = _document_hash(key_payload)
+            key_payload["chunk_sha256"] = chunk_sha256
+            cached = self._load_decoded_arrangement_chunk(
+                chunk_sha256, expected_manifest=key_payload
+            )
+            if cached is not None:
+                self._touch_and_prune_decoded_cache(
+                    "decoded-arrangement-chunks", chunk_sha256
+                )
+                cached["cache_hit"] = True
+                return cached
+
+            np, soundfile = _decoded_audio_modules()
+            work, final = self._private_building_directory(
+                "decoded-arrangement-chunks", chunk_sha256
+            )
+            try:
+                output_tracks: list[dict[str, Any]] = []
+                for index, item in enumerate(input_fingerprints):
+                    snapshot_record = snapshots.get(str(item["track_id"]))
+                    if snapshot_record is None:
+                        raise ValueError(
+                            "decoded arrangement stream snapshot roster changed"
+                        )
+                    snapshot = Path(str(snapshot_record.get("path", ""))).resolve()
+                    _regular_file_stat_signature(
+                        snapshot, int(snapshot_record["bytes"])
+                    )
+                    snapshot_info = _decoded_audio_info(
+                        soundfile,
+                        snapshot,
+                        label="decoded arrangement stream snapshot",
+                    )
+                    if (
+                        snapshot_info["sample_rate"] != item["sample_rate"]
+                        or snapshot_info["channels"] != item["channels"]
+                        or snapshot_info["frames"] != item["input_frames"]
+                    ):
+                        raise ValueError(
+                            "decoded arrangement stream snapshot metadata changed"
+                        )
+                    output_frames = int(item["end_frame"]) - int(item["start_frame"])
+                    samples = _read_padded_audio_window(
+                        np,
+                        soundfile,
+                        snapshot,
+                        start_frame=int(item["start_frame"]),
+                        frames=output_frames,
+                        channels=int(item["channels"]),
+                    )
+                    output_path = work / f"{index:02d}-{item['kind']}.wav"
+                    soundfile.write(
+                        str(output_path),
+                        samples,
+                        int(item["sample_rate"]),
+                        format="WAV",
+                        subtype="PCM_16",
+                    )
+                    _restrict_private_permissions(output_path, 0o600)
+                    written = soundfile.info(str(output_path))
+                    if (
+                        written.format != "WAV"
+                        or written.subtype != "PCM_16"
+                        or int(written.samplerate) != int(item["sample_rate"])
+                        or int(written.channels) != int(item["channels"])
+                        or int(written.frames) != output_frames
+                    ):
+                        raise RuntimeError(
+                            "decoded arrangement chunk PCM16 verification failed"
+                        )
+                    output_track = {
+                        key: item[key]
+                        for key in (
+                            "track_id",
+                            "kind",
+                            "stem_ids",
+                            "roles",
+                            "source_sha256",
+                            "stem_id",
+                            "candidate_id",
+                            "role",
+                            "decision",
+                            "source_midi_sha256",
+                        )
+                        if key in item
+                    }
+                    output_track.update(
+                        {
+                            "audio": _relative_file_record(output_path, work),
+                            "sample_rate": int(written.samplerate),
+                            "channels": int(written.channels),
+                            "frames": int(written.frames),
+                            "start_frame": int(item["start_frame"]),
+                            "end_frame": int(item["end_frame"]),
+                            "silence_padded_frames": max(
+                                0,
+                                int(item["end_frame"])
+                                - max(
+                                    int(item["start_frame"]),
+                                    min(
+                                        int(item["end_frame"]),
+                                        int(item["input_frames"]),
+                                    ),
+                                ),
+                            ),
+                        }
+                    )
+                    output_tracks.append(output_track)
+
+                aggregate_output_bytes = sum(
+                    int(track["audio"]["bytes"]) for track in output_tracks
+                )
+                if aggregate_output_bytes > _DECODED_STREAM_CHUNK_MAXIMUM_OUTPUT_BYTES:
+                    raise ValueError(
+                        "decoded arrangement chunk exceeds the 32 MiB PCM16 limit"
+                    )
+                reloaded_stream = self._cached_verified_decoded_arrangement_stream(
+                    catalog=catalog,
+                    current=current,
+                    stream_sha256=stream_sha256,
+                )
+                if reloaded_stream is None:
+                    reloaded_stream = self._load_decoded_arrangement_stream(
+                        stream_sha256
+                    )
+                    if reloaded_stream is not None:
+                        self._verify_decoded_arrangement_stream_current(
+                            catalog=catalog,
+                            current=current,
+                            stream=reloaded_stream[0],
+                        )
+                        self._remember_verified_decoded_arrangement_stream(
+                            catalog=catalog,
+                            current=current,
+                            stream=reloaded_stream[0],
+                            snapshots=reloaded_stream[1],
+                        )
+                if reloaded_stream is None or reloaded_stream[0] != stream:
+                    raise ValueError(
+                        "decoded arrangement stream changed while rendering a chunk"
+                    )
+                manifest = {
+                    **key_payload,
+                    "tracks": output_tracks,
+                    "aggregate_output_bytes": aggregate_output_bytes,
+                    "path_free_manifest": True,
+                    "private_audio": True,
+                    "effects": _decoded_arrangement_effects(),
+                }
+                _write_json(work / "manifest.json", manifest)
+                _restrict_private_permissions(work / "manifest.json", 0o600)
+                work.replace(final)
+            except Exception:
+                shutil.rmtree(work, ignore_errors=True)
+                raise
+            result = self._load_decoded_arrangement_chunk(
+                chunk_sha256, expected_manifest=key_payload
+            )
+            if result is None:
+                raise RuntimeError("decoded arrangement chunk verification failed")
+            self._touch_and_prune_decoded_cache(
+                "decoded-arrangement-chunks", chunk_sha256
+            )
             result["cache_hit"] = False
             return result
 
@@ -1698,6 +2397,188 @@ class WorkbenchArtifacts:
                 raise ValueError("neutral selected MIDI preview record is invalid")
             self._verify_catalog_record(record, label="neutral selected MIDI preview")
 
+    def _verify_decoded_arrangement_stream_current(
+        self,
+        *,
+        catalog: Mapping[str, Any],
+        current: Mapping[str, Any],
+        stream: Mapping[str, Any],
+        prepared_previews: Mapping[str, Mapping[str, Any]] | None = None,
+    ) -> None:
+        """Fail closed when the canonical selection or any stream input changed."""
+
+        (
+            selection_manifest,
+            source_groups,
+            selection,
+        ) = _decoded_arrangement_selection(catalog, current)
+        selection_manifest_sha256 = stream.get("selection_manifest_sha256")
+        _require_decoded_arrangement_selection_hash(
+            selection_manifest, selection_manifest_sha256
+        )
+        preset = _decoded_arrangement_stream_preset(stream.get("preset"))
+        expected_track_ids = list(selection_manifest["groups"][preset])
+        if stream.get("preset_track_ids") != expected_track_ids:
+            raise ValueError(
+                "decoded arrangement stream no longer matches the canonical preset"
+            )
+        tracks = stream.get("tracks")
+        source_clock = stream.get("source_clock")
+        if not isinstance(tracks, list) or not isinstance(source_clock, list):
+            raise ValueError("decoded arrangement stream plan is invalid")
+        if [track.get("track_id") for track in tracks] != expected_track_ids:
+            raise ValueError(
+                "decoded arrangement stream track roster is no longer canonical"
+            )
+
+        _np, soundfile = _decoded_audio_modules()
+        expected_source_clock: list[dict[str, Any]] = []
+        source_by_track_id: dict[str, Mapping[str, Any]] = {}
+        for group in source_groups:
+            for record in group["records"]:
+                self._verify_catalog_record(record, label="source audio")
+            record = group["records"][0]
+            path = self._verify_catalog_record(record, label="source audio")
+            info = _decoded_audio_info(soundfile, path, label="source audio")
+            track_id = str(group["track_id"])
+            source_by_track_id[track_id] = group
+            expected_source_clock.append(
+                {
+                    "track_id": track_id,
+                    "source_sha256": str(record["sha256"]),
+                    "source_bytes": int(record["bytes"]),
+                    "sample_rate": int(info["sample_rate"]),
+                    "channels": int(info["channels"]),
+                    "frames": int(info["frames"]),
+                }
+            )
+        if source_clock != expected_source_clock:
+            raise ValueError("decoded arrangement source duration evidence changed")
+        anchor = stream.get("anchor")
+        if not isinstance(anchor, Mapping) or not expected_source_clock:
+            raise ValueError("decoded arrangement stream anchor is invalid")
+        longest_source = _longest_decoded_source(expected_source_clock)
+        anchor_sample_rate = int(expected_source_clock[0]["sample_rate"])
+        anchor_song_end_frame = _ceil_scaled_frame(
+            int(longest_source["frames"]),
+            anchor_sample_rate,
+            int(longest_source["sample_rate"]),
+        )
+        expected_anchor = {
+            "sample_rate": anchor_sample_rate,
+            "song_end_frame": anchor_song_end_frame,
+            "duration_seconds": anchor_song_end_frame / anchor_sample_rate,
+            "longest_source_track_id": longest_source["track_id"],
+        }
+        if dict(anchor) != expected_anchor:
+            raise ValueError("decoded arrangement stream anchor evidence changed")
+
+        selection_by_track_id = {str(item["track_id"]): item for item in selection}
+        midi_tracks = [
+            track for track in tracks if track.get("kind") == "selected_midi"
+        ]
+        if not midi_tracks:
+            if preset != "source-only" or stream.get("renderer") is not None:
+                raise ValueError("decoded arrangement stream renderer plan is invalid")
+        else:
+            relevant_selection: list[Mapping[str, Any]] = []
+            for track in midi_tracks:
+                selected = selection_by_track_id.get(str(track.get("track_id")))
+                if selected is None:
+                    raise ValueError("decoded arrangement selected MIDI roster changed")
+                expected_identity = {
+                    "track_id": str(selected["track_id"]),
+                    "kind": "selected_midi",
+                    "stem_id": str(selected["stem_id"]),
+                    "candidate_id": str(selected["candidate_id"]),
+                    "role": str(selected["role"]),
+                    "decision": str(selected["decision"]),
+                    "source_midi_sha256": str(selected["midi"]["sha256"]),
+                }
+                if any(
+                    track.get(key) != value for key, value in expected_identity.items()
+                ):
+                    raise ValueError(
+                        "decoded arrangement selected MIDI identity changed"
+                    )
+                relevant_selection.append(selected)
+            self._verify_selection(relevant_selection)
+            soundfont = self._soundfont()
+            renderer = stream.get("renderer")
+            if renderer != {
+                "policy": _RENDER_POLICY,
+                "soundfont_sha256": str(soundfont["sha256"]),
+            }:
+                raise ValueError(
+                    "decoded arrangement stream requires the current SoundFont "
+                    "and neutral renderer policy"
+                )
+            for track, selected in zip(midi_tracks, relevant_selection):
+                track_id = str(track["track_id"])
+                preview = (
+                    prepared_previews.get(track_id)
+                    if prepared_previews is not None
+                    else self.cached_candidate_preview(
+                        catalog,
+                        str(selected["stem_id"]),
+                        str(selected["candidate_id"]),
+                        role_override=str(selected["role"]),
+                    )
+                )
+                if preview is None:
+                    raise ValueError(
+                        "decoded arrangement neutral MIDI preview is missing or changed"
+                    )
+                self._require_preview_renderer_consistency(
+                    [preview],
+                    expected_soundfont_sha256=str(soundfont["sha256"]),
+                )
+                preview_record = preview.get("preview")
+                if not isinstance(preview_record, Mapping):
+                    raise ValueError(
+                        "decoded arrangement neutral MIDI preview record is invalid"
+                    )
+                self._verify_catalog_record(
+                    preview_record, label="neutral selected MIDI preview"
+                )
+                expected_preview = {
+                    "neutral_preview_cache_key": str(preview["cache_key"]),
+                    "neutral_preview_policy": str(preview["policy"]),
+                    "soundfont_sha256": str(preview["soundfont_sha256"]),
+                    "input_sha256": str(preview_record["sha256"]),
+                    "input_bytes": int(preview_record["bytes"]),
+                }
+                if any(
+                    track.get(key) != value for key, value in expected_preview.items()
+                ):
+                    raise ValueError("decoded arrangement neutral MIDI preview changed")
+
+        for track in tracks:
+            if track.get("kind") != "source":
+                continue
+            group = source_by_track_id.get(str(track.get("track_id")))
+            if group is None:
+                raise ValueError("decoded arrangement source roster changed")
+            record = group["records"][0]
+            clock = next(
+                row
+                for row in expected_source_clock
+                if row["track_id"] == track["track_id"]
+            )
+            expected_source = {
+                "kind": "source",
+                "stem_ids": list(group["stem_ids"]),
+                "roles": list(group["roles"]),
+                "source_sha256": str(record["sha256"]),
+                "input_sha256": str(record["sha256"]),
+                "input_bytes": int(record["bytes"]),
+                "sample_rate": int(clock["sample_rate"]),
+                "channels": int(clock["channels"]),
+                "input_frames": int(clock["frames"]),
+            }
+            if any(track.get(key) != value for key, value in expected_source.items()):
+                raise ValueError("decoded arrangement source stream input changed")
+
     def _require_preview_renderer_consistency(
         self,
         previews: Sequence[Mapping[str, Any]],
@@ -1717,13 +2598,285 @@ class WorkbenchArtifacts:
                     "same current SoundFont and neutral renderer policy"
                 )
 
+    def _decoded_arrangement_stream_verification_evidence(
+        self,
+        *,
+        catalog: Mapping[str, Any],
+        current: Mapping[str, Any],
+        stream: Mapping[str, Any],
+        snapshots: Mapping[str, Mapping[str, Any]],
+    ) -> tuple[str, dict[Path, int | None]]:
+        """Describe cheap evidence for a stream which was fully hash-verified."""
+
+        selection_manifest, source_groups, selection = (
+            _decoded_arrangement_selection(catalog, current)
+        )
+        _require_decoded_arrangement_selection_hash(
+            selection_manifest, stream.get("selection_manifest_sha256")
+        )
+        preset = _decoded_arrangement_stream_preset(stream.get("preset"))
+        expected_track_ids = list(selection_manifest["groups"][preset])
+        tracks = stream.get("tracks")
+        if (
+            stream.get("preset_track_ids") != expected_track_ids
+            or not isinstance(tracks, list)
+            or [track.get("track_id") for track in tracks] != expected_track_ids
+        ):
+            raise ValueError("decoded arrangement stream roster changed")
+
+        files: dict[Path, int | None] = {}
+
+        def add_file(path: Path, expected_bytes: int | None = None) -> None:
+            resolved = path.expanduser().resolve()
+            existing = files.get(resolved)
+            if existing is not None and expected_bytes is not None:
+                if existing != expected_bytes:
+                    raise ValueError("decoded arrangement stream file size conflicts")
+            elif resolved not in files or expected_bytes is not None:
+                files[resolved] = expected_bytes
+
+        def record_identity(record: Mapping[str, Any]) -> dict[str, Any]:
+            path = Path(str(record.get("path", ""))).expanduser().resolve()
+            expected_bytes = record.get("bytes")
+            if isinstance(expected_bytes, bool) or not isinstance(expected_bytes, int):
+                raise ValueError("decoded arrangement stream record size is invalid")
+            add_file(path, expected_bytes)
+            return {
+                "path": str(path),
+                "bytes": expected_bytes,
+                "sha256": record.get("sha256"),
+            }
+
+        source_identity = [
+            {
+                "track_id": group.get("track_id"),
+                "records": [record_identity(record) for record in group["records"]],
+            }
+            for group in source_groups
+        ]
+        selection_by_track_id = {str(item["track_id"]): item for item in selection}
+        midi_identity: list[dict[str, Any]] = []
+        preview_identity: list[dict[str, Any]] = []
+        for track in tracks:
+            if track.get("kind") != "selected_midi":
+                continue
+            track_id = str(track.get("track_id"))
+            selected = selection_by_track_id.get(track_id)
+            if selected is None:
+                raise ValueError("decoded arrangement selected MIDI roster changed")
+            midi_identity.append(
+                {
+                    "track_id": track_id,
+                    "stem_id": selected.get("stem_id"),
+                    "candidate_id": selected.get("candidate_id"),
+                    "role": selected.get("role"),
+                    "decision": selected.get("decision"),
+                    "midi": record_identity(selected["midi"]),
+                }
+            )
+            preview_root = (
+                self.root
+                / "previews"
+                / str(track.get("neutral_preview_cache_key", ""))
+            )
+            add_file(preview_root / "manifest.json")
+            add_file(preview_root / "neutral-preview.mid")
+            add_file(preview_root / "neutral-preview.wav", int(track["input_bytes"]))
+            preview_identity.append(
+                {
+                    key: track.get(key)
+                    for key in (
+                        "track_id",
+                        "neutral_preview_cache_key",
+                        "neutral_preview_policy",
+                        "soundfont_sha256",
+                        "input_sha256",
+                        "input_bytes",
+                    )
+                }
+            )
+
+        soundfont_identity: dict[str, Any] | None = None
+        if midi_identity:
+            if self._soundfont_cache is None:
+                raise ValueError("decoded arrangement SoundFont is not verified")
+            soundfont_identity = record_identity(self._soundfont_cache)
+
+        stream_sha256 = str(stream.get("stream_sha256", ""))
+        stream_root = self.root / "decoded-arrangement-streams" / stream_sha256
+        if stream_root.is_symlink() or (stream_root / "inputs").is_symlink():
+            raise ValueError("decoded arrangement stream storage is unsafe")
+        add_file(stream_root / "manifest.json")
+        add_file(stream_root / "record.json")
+        snapshot_identity: list[dict[str, Any]] = []
+        for track_id in expected_track_ids:
+            snapshot = snapshots.get(str(track_id))
+            if not isinstance(snapshot, Mapping):
+                raise ValueError("decoded arrangement stream snapshot roster changed")
+            snapshot_identity.append(
+                {"track_id": track_id, "snapshot": record_identity(snapshot)}
+            )
+
+        identity = _document_hash(
+            {
+                "stream_sha256": stream_sha256,
+                "selection_manifest": selection_manifest,
+                "sources": source_identity,
+                "selected_midi": midi_identity,
+                "previews": preview_identity,
+                "soundfont": soundfont_identity,
+                "snapshots": snapshot_identity,
+            }
+        )
+        return identity, files
+
+    def _remember_verified_decoded_arrangement_stream(
+        self,
+        *,
+        catalog: Mapping[str, Any],
+        current: Mapping[str, Any],
+        stream: Mapping[str, Any],
+        snapshots: Mapping[str, Mapping[str, Any]],
+    ) -> None:
+        stream_sha256 = str(stream.get("stream_sha256", ""))
+        try:
+            identity, files = self._decoded_arrangement_stream_verification_evidence(
+                catalog=catalog,
+                current=current,
+                stream=stream,
+                snapshots=snapshots,
+            )
+            signatures = {
+                str(path): _regular_file_stat_signature(path, expected_bytes)
+                for path, expected_bytes in files.items()
+            }
+        except (OSError, TypeError, ValueError):
+            self._verified_stream_cache.pop(stream_sha256, None)
+            return
+        self._verified_stream_cache.pop(stream_sha256, None)
+        self._verified_stream_cache[stream_sha256] = {
+            "identity": identity,
+            "stream": json.loads(json.dumps(stream)),
+            "snapshots": json.loads(json.dumps(snapshots)),
+            "files": {str(path): expected for path, expected in files.items()},
+            "signatures": signatures,
+        }
+        while len(self._verified_stream_cache) > _VERIFIED_STREAM_CACHE_MAXIMUM_ENTRIES:
+            oldest = next(iter(self._verified_stream_cache))
+            self._verified_stream_cache.pop(oldest, None)
+
+    def _cached_verified_decoded_arrangement_stream(
+        self,
+        *,
+        catalog: Mapping[str, Any],
+        current: Mapping[str, Any],
+        stream_sha256: str,
+    ) -> tuple[dict[str, Any], dict[str, dict[str, Any]]] | None:
+        cached = self._verified_stream_cache.get(stream_sha256)
+        if cached is None:
+            return None
+        try:
+            stream = cached["stream"]
+            snapshots = cached["snapshots"]
+            identity, files = self._decoded_arrangement_stream_verification_evidence(
+                catalog=catalog,
+                current=current,
+                stream=stream,
+                snapshots=snapshots,
+            )
+            if identity != cached["identity"] or {
+                str(path): expected for path, expected in files.items()
+            } != cached["files"]:
+                raise ValueError("decoded arrangement stream identity changed")
+            signatures = {
+                str(path): _regular_file_stat_signature(path, expected_bytes)
+                for path, expected_bytes in files.items()
+            }
+            if signatures != cached["signatures"]:
+                raise ValueError("decoded arrangement stream file identity changed")
+        except (KeyError, OSError, TypeError, ValueError):
+            self._verified_stream_cache.pop(stream_sha256, None)
+            return None
+        self._verified_stream_cache.pop(stream_sha256, None)
+        self._verified_stream_cache[stream_sha256] = cached
+        return (
+            json.loads(json.dumps(stream)),
+            json.loads(json.dumps(snapshots)),
+        )
+
     def _touch_and_prune_decoded_loop_cache(self, keep_cache_key: str) -> None:
         self._touch_and_prune_decoded_cache("decoded-stem-loops", keep_cache_key)
+
+    def _touch_and_prune_decoded_stream_cache(
+        self, keep_stream_sha256: str
+    ) -> None:
+        """Bound private full-song snapshots independently from decoded chunks."""
+
+        parent = self.root / "decoded-arrangement-streams"
+        current = parent / keep_stream_sha256
+        try:
+            if current.is_dir() and not current.is_symlink():
+                current.touch(exist_ok=True)
+        except OSError:
+            pass
+
+        try:
+            children = list(parent.iterdir())
+        except OSError:
+            return
+
+        entries: list[tuple[Path, int, int]] = []
+        for path in children:
+            if not _is_sha256(path.name):
+                continue
+            try:
+                if path.is_symlink() or not path.is_dir():
+                    continue
+                modified_ns = path.stat().st_mtime_ns
+                entry_bytes = _directory_regular_file_bytes(path)
+            except OSError:
+                continue
+            entries.append((path, modified_ns, entry_bytes))
+
+        entries.sort(
+            key=lambda entry: (entry[0] == current, entry[1]),
+            reverse=True,
+        )
+        retained_entries = 0
+        retained_bytes = 0
+        for entry, _modified_ns, entry_bytes in entries:
+            keep = entry == current or (
+                retained_entries < _DECODED_STREAM_CACHE_MAXIMUM_ENTRIES
+                and retained_bytes + entry_bytes
+                <= _DECODED_STREAM_CACHE_MAXIMUM_BYTES
+            )
+            if keep:
+                retained_entries += 1
+                retained_bytes += entry_bytes
+                continue
+            try:
+                _remove_generated_path(entry)
+            except OSError:
+                # Another request or cleanup may have removed or changed it.
+                pass
+            self._verified_stream_cache.pop(entry.name, None)
+        for cached_sha256 in tuple(self._verified_stream_cache):
+            cached_root = parent / cached_sha256
+            try:
+                retained = cached_root.is_dir() and not cached_root.is_symlink()
+            except OSError:
+                retained = False
+            if not retained:
+                self._verified_stream_cache.pop(cached_sha256, None)
 
     def _touch_and_prune_decoded_cache(
         self, keep_family: str, keep_cache_key: str
     ) -> None:
-        families = ("decoded-stem-loops", "decoded-arrangement-loops")
+        families = (
+            "decoded-stem-loops",
+            "decoded-arrangement-loops",
+            "decoded-arrangement-chunks",
+        )
         if keep_family not in families:
             raise ValueError("unknown decoded cache family")
         current = self.root / keep_family / keep_cache_key
@@ -1766,9 +2919,16 @@ class WorkbenchArtifacts:
         parent = self.root / family
         parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         _restrict_private_permissions(parent, 0o700)
-        if family in {"decoded-stem-loops", "decoded-arrangement-loops"}:
+        if family in {
+            "decoded-stem-loops",
+            "decoded-arrangement-loops",
+            "decoded-arrangement-streams",
+            "decoded-arrangement-chunks",
+        }:
             _prune_stale_private_builds(parent)
         final = parent / cache_key
+        if family == "decoded-arrangement-streams":
+            self._verified_stream_cache.pop(cache_key, None)
         _remove_generated_path(final)
         work = parent / f".{cache_key}.building-{uuid.uuid4().hex}"
         work.mkdir(mode=0o700, parents=False, exist_ok=False)
@@ -1991,6 +3151,203 @@ class WorkbenchArtifacts:
             for track_id in group
         }
         if expected_ids != {str(track["track_id"]) for track in materialized_tracks}:
+            return None
+        _restrict_private_permissions(root, 0o700)
+        _restrict_private_permissions(manifest_path, 0o600)
+        for track in materialized_tracks:
+            _restrict_private_permissions(Path(track["audio"]["path"]), 0o600)
+        result = dict(document)
+        result["tracks"] = materialized_tracks
+        return result
+
+    def _load_decoded_arrangement_stream(
+        self,
+        stream_sha256: str,
+        *,
+        expected_manifest: Mapping[str, Any] | None = None,
+    ) -> tuple[dict[str, Any], dict[str, dict[str, Any]]] | None:
+        root = self.root / "decoded-arrangement-streams" / stream_sha256
+        manifest_path = root / "manifest.json"
+        record_path = root / "record.json"
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            private_record = json.loads(record_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        unhashed_manifest = {
+            key: value for key, value in manifest.items() if key != "stream_sha256"
+        }
+        if (
+            manifest.get("schema") != DECODED_ARRANGEMENT_STREAM_SCHEMA
+            or manifest.get("stream_sha256") != stream_sha256
+            or root.name != stream_sha256
+            or _document_hash(unhashed_manifest) != stream_sha256
+            or manifest.get("path_free_manifest") is not True
+            or manifest.get("private_audio") is not True
+            or manifest.get("effects") != _decoded_arrangement_effects()
+            or (
+                expected_manifest is not None
+                and dict(manifest) != dict(expected_manifest)
+            )
+        ):
+            return None
+        preset = manifest.get("preset")
+        try:
+            _decoded_arrangement_stream_preset(preset)
+        except ValueError:
+            return None
+        tracks = manifest.get("tracks")
+        preset_track_ids = manifest.get("preset_track_ids")
+        chunking = manifest.get("chunking")
+        anchor = manifest.get("anchor")
+        if (
+            not isinstance(tracks, list)
+            or not 1 <= len(tracks) <= _DECODED_ARRANGEMENT_MAXIMUM_TRACKS
+            or not isinstance(preset_track_ids, list)
+            or preset_track_ids != [track.get("track_id") for track in tracks]
+            or len(set(preset_track_ids)) != len(preset_track_ids)
+            or not isinstance(chunking, Mapping)
+            or not isinstance(anchor, Mapping)
+            or not _valid_decoded_stream_chunk_plan(chunking, anchor, tracks)
+        ):
+            return None
+        if private_record != {
+            "schema": "sunofriend.workbench-decoded-arrangement-stream-record.v1",
+            "stream_sha256": stream_sha256,
+            "manifest_sha256": _document_hash(manifest),
+            "inputs": private_record.get("inputs"),
+        }:
+            return None
+        records = private_record.get("inputs")
+        if not isinstance(records, list) or len(records) != len(tracks):
+            return None
+        snapshots: dict[str, dict[str, Any]] = {}
+        for track, record in zip(tracks, records):
+            if not isinstance(track, Mapping) or not isinstance(record, Mapping):
+                return None
+            track_id = track.get("track_id")
+            snapshot = record.get("snapshot")
+            if record.get("track_id") != track_id or not isinstance(snapshot, Mapping):
+                return None
+            relative_path = Path(str(snapshot.get("path", "")))
+            if (
+                relative_path.is_absolute()
+                or len(relative_path.parts) != 2
+                or relative_path.parts[0] != "inputs"
+                or relative_path.name != f"{track.get('input_sha256')}.audio"
+                or snapshot.get("sha256") != track.get("input_sha256")
+                or snapshot.get("bytes") != track.get("input_bytes")
+            ):
+                return None
+            materialized = self._materialize_file_record(snapshot, root)
+            if materialized is None:
+                return None
+            snapshots[str(track_id)] = materialized
+        if set(snapshots) != set(preset_track_ids):
+            return None
+        _restrict_private_permissions(root, 0o700)
+        _restrict_private_permissions(manifest_path, 0o600)
+        _restrict_private_permissions(record_path, 0o600)
+        input_root = root / "inputs"
+        if input_root.is_dir() and not input_root.is_symlink():
+            _restrict_private_permissions(input_root, 0o700)
+        for snapshot in snapshots.values():
+            _restrict_private_permissions(Path(snapshot["path"]), 0o600)
+        return dict(manifest), snapshots
+
+    def _load_decoded_arrangement_chunk(
+        self,
+        chunk_sha256: str,
+        *,
+        expected_manifest: Mapping[str, Any],
+    ) -> dict[str, Any] | None:
+        root = self.root / "decoded-arrangement-chunks" / chunk_sha256
+        manifest_path = root / "manifest.json"
+        unhashed_expected = {
+            key: value
+            for key, value in expected_manifest.items()
+            if key != "chunk_sha256"
+        }
+        try:
+            document = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        if (
+            document.get("schema") != DECODED_ARRANGEMENT_CHUNK_SCHEMA
+            or document.get("chunk_sha256") != chunk_sha256
+            or root.name != chunk_sha256
+            or _document_hash(unhashed_expected) != chunk_sha256
+            or any(
+                document.get(key) != value for key, value in expected_manifest.items()
+            )
+            or document.get("path_free_manifest") is not True
+            or document.get("private_audio") is not True
+            or document.get("effects") != _decoded_arrangement_effects()
+        ):
+            return None
+        tracks = document.get("tracks")
+        fingerprints = expected_manifest.get("input_fingerprints")
+        if (
+            not isinstance(tracks, list)
+            or not isinstance(fingerprints, list)
+            or len(tracks) != len(fingerprints)
+            or not 1 <= len(tracks) <= _DECODED_ARRANGEMENT_MAXIMUM_TRACKS
+        ):
+            return None
+        identity_keys = (
+            "track_id",
+            "kind",
+            "stem_ids",
+            "roles",
+            "source_sha256",
+            "stem_id",
+            "candidate_id",
+            "role",
+            "decision",
+            "source_midi_sha256",
+        )
+        materialized_tracks: list[dict[str, Any]] = []
+        aggregate_bytes = 0
+        for track, fingerprint in zip(tracks, fingerprints):
+            if not isinstance(track, Mapping) or not isinstance(fingerprint, Mapping):
+                return None
+            audio = track.get("audio")
+            if not isinstance(audio, Mapping):
+                return None
+            relative_path = Path(str(audio.get("path", "")))
+            expected_frames = int(fingerprint.get("end_frame", 0)) - int(
+                fingerprint.get("start_frame", 0)
+            )
+            silence_padded_frames = track.get("silence_padded_frames")
+            if (
+                relative_path.is_absolute()
+                or len(relative_path.parts) != 1
+                or any(
+                    track.get(key) != fingerprint.get(key)
+                    for key in identity_keys
+                    if key in fingerprint
+                )
+                or track.get("sample_rate") != fingerprint.get("sample_rate")
+                or track.get("channels") != fingerprint.get("channels")
+                or track.get("start_frame") != fingerprint.get("start_frame")
+                or track.get("end_frame") != fingerprint.get("end_frame")
+                or track.get("frames") != expected_frames
+                or isinstance(silence_padded_frames, bool)
+                or not isinstance(silence_padded_frames, int)
+                or not 0 <= silence_padded_frames <= expected_frames
+            ):
+                return None
+            materialized_audio = self._materialize_file_record(audio, root)
+            if materialized_audio is None:
+                return None
+            aggregate_bytes += int(materialized_audio["bytes"])
+            materialized_track = dict(track)
+            materialized_track["audio"] = materialized_audio
+            materialized_tracks.append(materialized_track)
+        if (
+            aggregate_bytes != document.get("aggregate_output_bytes")
+            or aggregate_bytes > _DECODED_STREAM_CHUNK_MAXIMUM_OUTPUT_BYTES
+        ):
             return None
         _restrict_private_permissions(root, 0o700)
         _restrict_private_permissions(manifest_path, 0o600)
@@ -2589,6 +3946,210 @@ def _decoded_loop_window(start_seconds: Any, end_seconds: Any) -> tuple[float, f
     return start, end
 
 
+def _decoded_arrangement_stream_preset(value: Any) -> str:
+    if not isinstance(value, str) or value not in _DECODED_ARRANGEMENT_STREAM_PRESETS:
+        raise ValueError(
+            "decoded arrangement preset must be exactly source-only, "
+            "selected-midi, hybrid, or main-only"
+        )
+    return value
+
+
+def _require_decoded_arrangement_selection_hash(
+    manifest: Mapping[str, Any], expected_sha256: Any
+) -> None:
+    if not _is_sha256(expected_sha256) or expected_sha256 != manifest.get(
+        "selection_manifest_sha256"
+    ):
+        raise ValueError(
+            "the decoded arrangement selection changed; reload the current "
+            "arrangement before preparing it"
+        )
+
+
+def _longest_decoded_source(
+    source_clock: Sequence[Mapping[str, Any]],
+) -> Mapping[str, Any]:
+    if not source_clock:
+        raise ValueError("decoded arrangement streaming requires source audio")
+    longest = source_clock[0]
+    for item in source_clock[1:]:
+        if int(item["frames"]) * int(longest["sample_rate"]) > int(
+            longest["frames"]
+        ) * int(item["sample_rate"]):
+            longest = item
+    return longest
+
+
+def _ceil_scaled_frame(frame: int, target_rate: int, source_rate: int) -> int:
+    if frame < 0 or target_rate <= 0 or source_rate <= 0:
+        raise ValueError("decoded arrangement frame scaling is invalid")
+    numerator = frame * target_rate
+    return (numerator + source_rate - 1) // source_rate
+
+
+def _nearest_scaled_frame(frame: int, target_rate: int, source_rate: int) -> int:
+    """Scale an integer frame exactly, retaining Python's ties-to-even rule."""
+
+    if frame < 0 or target_rate <= 0 or source_rate <= 0:
+        raise ValueError("decoded arrangement frame scaling is invalid")
+    quotient, remainder = divmod(frame * target_rate, source_rate)
+    doubled = remainder * 2
+    if doubled < source_rate:
+        return quotient
+    if doubled > source_rate:
+        return quotient + 1
+    return quotient + (quotient % 2)
+
+
+def _decoded_stream_chunk_plan(
+    *,
+    anchor_sample_rate: int,
+    anchor_song_end_frame: int,
+    inputs: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    if anchor_sample_rate <= 0 or anchor_song_end_frame <= 0 or not inputs:
+        raise ValueError("decoded arrangement stream geometry is invalid")
+    maximum_anchor_frames = min(
+        anchor_song_end_frame,
+        anchor_sample_rate * _DECODED_STREAM_MAXIMUM_CHUNK_SECONDS,
+    )
+
+    def projected(anchor_frames: int) -> tuple[int, int]:
+        conservative: list[dict[str, int]] = []
+        for item in inputs:
+            scaled_frames = (
+                _ceil_scaled_frame(
+                    anchor_frames,
+                    int(item["sample_rate"]),
+                    anchor_sample_rate,
+                )
+                + 1
+            )
+            conservative.append(
+                {
+                    "start_frame": 0,
+                    "end_frame": scaled_frames,
+                    "channels": int(item["channels"]),
+                }
+            )
+        return (
+            _decoded_pcm16_output_upper_bound(conservative),
+            _decoded_browser_two_chunk_float_bytes(anchor_frames, inputs),
+        )
+
+    low = 1
+    high = maximum_anchor_frames
+    selected_frames = 0
+    while low <= high:
+        candidate = (low + high) // 2
+        pcm16_bytes, float_bytes = projected(candidate)
+        if (
+            pcm16_bytes <= _DECODED_STREAM_CHUNK_MAXIMUM_OUTPUT_BYTES
+            and float_bytes <= _DECODED_STREAM_TWO_CHUNK_FLOAT_MAXIMUM_BYTES
+        ):
+            selected_frames = candidate
+            low = candidate + 1
+        else:
+            high = candidate - 1
+    if selected_frames <= 0:
+        raise ValueError(
+            "decoded arrangement tracks cannot fit one frame inside the chunk "
+            "resource limits"
+        )
+    chunk_count = (anchor_song_end_frame + selected_frames - 1) // selected_frames
+    if chunk_count > _DECODED_STREAM_MAXIMUM_CHUNKS:
+        raise ValueError(
+            "decoded arrangement needs more than 480 safe chunks; reduce the "
+            "selected preset track count"
+        )
+
+    chunks: list[dict[str, Any]] = []
+    maximum_pcm16_bytes = 0
+    maximum_two_chunk_float_bytes = 0
+    for index in range(chunk_count):
+        start_frame = index * selected_frames
+        end_frame = min(anchor_song_end_frame, start_frame + selected_frames)
+        exact_inputs: list[dict[str, int]] = []
+        for item in inputs:
+            exact_inputs.append(
+                {
+                    "start_frame": _nearest_scaled_frame(
+                        start_frame,
+                        int(item["sample_rate"]),
+                        anchor_sample_rate,
+                    ),
+                    "end_frame": _nearest_scaled_frame(
+                        end_frame,
+                        int(item["sample_rate"]),
+                        anchor_sample_rate,
+                    ),
+                    "channels": int(item["channels"]),
+                }
+            )
+        pcm16_bytes = _decoded_pcm16_output_upper_bound(exact_inputs)
+        two_chunk_float_bytes = _decoded_browser_two_chunk_float_bytes(
+            end_frame - start_frame,
+            inputs,
+        )
+        if pcm16_bytes > _DECODED_STREAM_CHUNK_MAXIMUM_OUTPUT_BYTES:
+            raise ValueError(
+                "decoded arrangement chunk plan exceeds the 32 MiB PCM16 limit"
+            )
+        if two_chunk_float_bytes > _DECODED_STREAM_TWO_CHUNK_FLOAT_MAXIMUM_BYTES:
+            raise ValueError(
+                "decoded arrangement chunk plan exceeds the 192 MiB two-chunk "
+                "float-memory limit"
+            )
+        maximum_pcm16_bytes = max(maximum_pcm16_bytes, pcm16_bytes)
+        maximum_two_chunk_float_bytes = max(
+            maximum_two_chunk_float_bytes, two_chunk_float_bytes
+        )
+        chunks.append(
+            {
+                "chunk_index": index,
+                "anchor_start_frame": start_frame,
+                "anchor_end_frame": end_frame,
+                "start_seconds": start_frame / anchor_sample_rate,
+                "end_seconds": end_frame / anchor_sample_rate,
+                "logical_end": index == chunk_count - 1,
+            }
+        )
+    return {
+        "chunk_anchor_frames": selected_frames,
+        "chunk_seconds": selected_frames / anchor_sample_rate,
+        "chunk_count": chunk_count,
+        "maximum_pcm16_output_bytes": maximum_pcm16_bytes,
+        "maximum_two_chunk_float_bytes": maximum_two_chunk_float_bytes,
+        "chunks": chunks,
+    }
+
+
+def _valid_decoded_stream_chunk_plan(
+    chunking: Mapping[str, Any],
+    anchor: Mapping[str, Any],
+    tracks: Sequence[Mapping[str, Any]],
+) -> bool:
+    try:
+        sample_rate = anchor.get("sample_rate")
+        song_end_frame = anchor.get("song_end_frame")
+        if (
+            isinstance(sample_rate, bool)
+            or not isinstance(sample_rate, int)
+            or isinstance(song_end_frame, bool)
+            or not isinstance(song_end_frame, int)
+        ):
+            return False
+        expected = _decoded_stream_chunk_plan(
+            anchor_sample_rate=sample_rate,
+            anchor_song_end_frame=song_end_frame,
+            inputs=tracks,
+        )
+    except (KeyError, TypeError, ValueError):
+        return False
+    return dict(chunking) == expected
+
+
 def _decoded_declared_input_bytes(records: Sequence[tuple[str, Any]]) -> int:
     """Validate and sum catalogued input sizes before expensive rendering."""
 
@@ -2628,9 +4189,38 @@ def _decoded_pcm16_output_upper_bound(inputs: Sequence[Mapping[str, Any]]) -> in
         ):
             raise ValueError("decoded arrangement output geometry is invalid")
         total += (
-            (end_frame - start_frame) * channels * 2
-            + _DECODED_PCM16_WAV_HEADER_BUDGET_BYTES
-        )
+            end_frame - start_frame
+        ) * channels * 2 + _DECODED_PCM16_WAV_HEADER_BUDGET_BYTES
+    return total
+
+
+def _decoded_browser_two_chunk_float_bytes(
+    anchor_frames: int,
+    inputs: Sequence[Mapping[str, Any]],
+) -> int:
+    """Project two Web Audio float32 chunks after anchor-rate decoding.
+
+    ``decodeAudioData`` resamples every WAV to the AudioContext rate.  Native
+    chunk frame counts therefore cannot safely estimate browser memory when the
+    anchor clock has a higher sample rate than one or more inputs.
+    """
+
+    if (
+        isinstance(anchor_frames, bool)
+        or not isinstance(anchor_frames, int)
+        or anchor_frames <= 0
+    ):
+        raise ValueError("decoded arrangement anchor geometry is invalid")
+    total = 0
+    for item in inputs:
+        channels = item.get("channels")
+        if (
+            isinstance(channels, bool)
+            or not isinstance(channels, int)
+            or channels not in {1, 2}
+        ):
+            raise ValueError("decoded arrangement float geometry is invalid")
+        total += anchor_frames * channels * 4 * 2
     return total
 
 
@@ -2775,6 +4365,26 @@ def _directory_regular_file_bytes(root: Path) -> int:
         except OSError:
             continue
     return total
+
+
+def _regular_file_stat_signature(
+    path: Path, expected_bytes: int | None = None
+) -> tuple[int, int, int, int, int, int]:
+    """Return a cheap identity for content which was hash-verified earlier."""
+
+    file_stat = path.lstat()
+    if not stat.S_ISREG(file_stat.st_mode):
+        raise ValueError("verified decoded stream input is no longer a regular file")
+    if expected_bytes is not None and file_stat.st_size != expected_bytes:
+        raise ValueError("verified decoded stream input size changed")
+    return (
+        file_stat.st_dev,
+        file_stat.st_ino,
+        file_stat.st_size,
+        file_stat.st_mtime_ns,
+        file_stat.st_ctime_ns,
+        file_stat.st_mode,
+    )
 
 
 def _prune_stale_private_builds(parent: Path) -> None:
@@ -3193,6 +4803,8 @@ def _zip_bytes(archive: zipfile.ZipFile, name: str, value: bytes) -> None:
 
 __all__ = [
     "ARRANGEMENT_SCHEMA",
+    "DECODED_ARRANGEMENT_CHUNK_SCHEMA",
+    "DECODED_ARRANGEMENT_STREAM_SCHEMA",
     "DECODED_STEM_LOOP_SCHEMA",
     "GARAGEBAND_HANDOFF_SCHEMA",
     "GARAGEBAND_PACK_BASKET_SCHEMA",

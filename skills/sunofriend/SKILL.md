@@ -1,6 +1,6 @@
 ---
 name: sunofriend
-description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes, compare evidence-pinned specialist/full-mix/conditioned lead MIDI by phrase with explicit lineage limits and without creating a hybrid, benchmark verified fresh-process or bounded exact-repeat local AI runs, reuse and benchmark an explicit exact MuScriptor raw-result cache, partition model-reported labels exactly, and review existing source/MIDI alternatives; build blind exact-source-window, fixed-window sample-RMS-matched MIDI A/B reviews with explicit heard and choice evidence; render cached neutral previews, save explicit solo/full-mix choices, hear the selected arrangement and export unchanged choices in a GarageBand handoff through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
+description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes, compare evidence-pinned specialist/full-mix/conditioned lead MIDI by phrase with explicit lineage limits and without creating a hybrid, benchmark verified fresh-process or bounded exact-repeat local AI runs, reuse and benchmark an explicit exact MuScriptor raw-result cache, partition model-reported labels exactly, and review existing source/MIDI alternatives; build blind exact-source-window, fixed-window sample-RMS-matched MIDI A/B reviews with explicit heard and choice evidence; render cached neutral previews, save explicit solo/full-mix choices, hear bounded or exact chunked canonical selected arrangements and export unchanged choices in a GarageBand handoff through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
 ---
 
 # Sunofriend
@@ -172,6 +172,41 @@ scripts.
   resume when the user clicks a newer preset, Pause, Stop, changes the loop or
   leaves the view; abort and stale-guard preparation rather than publishing a
   partial browser transport.
+  Keep the three arrangement playback contracts explicit: (1) the Phase 5.6
+  precise 0.5–15 second canonical loop, (2) the Phase 5.7 precise canonical
+  full-song preset, and (3) the coarse HTML-media full-song/custom mixer with
+  arbitrary visibility, mute, solo and 0–100 attenuation. The full-song precise
+  path accepts only the current selection-manifest hash plus `source-only`,
+  `selected-midi`, `hybrid` or `main-only`; its chunk request accepts only an
+  immutable stream hash and chunk index. Never accept browser-supplied track
+  IDs, roles, groups or gains. The first source is the anchor rate, the longest
+  source is the end, every track begins at recorded zero and input-rate scaling
+  uses deterministic nearest integer frames with ties-to-even. Keep tracks as
+  separate PCM16, disclose shorter-track silence padding and retain unity gain
+  without matching or limiting.
+  Prime up to the first two chunks and retain only current plus next decoded chunks
+  on one Web Audio clock. Schedule a ready successor at the exact non-looping
+  boundary and release old chunks. If the successor is not ready, stop
+  truthfully at the verified boundary. A late completion enables explicit
+  Play; missing or failed data requires Retry. Neither action auto-restarts,
+  and seek pauses while preparing its chunk. Never silently start the coarse
+  path. Changing preset creates a new immutable stream and resets its temporary
+  playhead. Enforce 24 tracks, a 20-minute longest source, 2 GiB aggregate
+  input across every catalog source needed for the song clock plus relevant
+  selected MIDI, SoundFont and neutral previews, mono/stereo 8–96 kHz audio,
+  chunks of at most five seconds, at most 480
+  chunks, 32 MiB aggregate PCM16 per chunk and 192 MiB projected two-chunk
+  decoded memory. Full-song chunks share the rebuildable 32-entry/256 MiB
+  cache; per launch allow at most 16 active stream plans and 768 generated-media
+  capabilities, and cap every POST body at 64 KiB. Treat an evicted 404 as
+  recoverable by preparing again, never
+  as lost durable work or permission for silent fallback.
+  Keep immutable full-song input snapshots in their separate owner-only
+  eight-stream/2 GiB disk LRU, retaining the current stream even if oversized.
+  Fully hash-verify prepare/reprepare. A bounded eight-stream process cache may
+  use regular-file identity/stat signatures for unchanged sequential chunks;
+  any drift must invalidate it, return to full verification and fail closed on
+  missing or altered evidence.
   The explicitly labelled compatibility fallback is synchronized in seconds,
   not sample-accurate, but its controls must also remain feedback- and
   event-free. Require every included preview to use the current SoundFont hash
@@ -224,8 +259,10 @@ scripts.
     as a current catalog candidate decision or an explicit stem outcome, never
     as accuracy or review completion. A saved pack may be called resumable only
     when its basket matches the current plan. Saved decisions and the
-    separate pack basket may survive a restart; playhead, loop, show, mute,
-    solo and level must reset and remain zero-effect audition state.
+    separate pack basket, Project Overview state and URL-hash view/stem may
+    survive a restart; prepared Web Audio, decoded chunks, playhead, loop,
+    viewport/zoom/visibility, show, mute, solo and level must reset and remain
+    zero-effect audition state.
     Retry/reconnect actions must not append feedback or change MIDI, audio or
     export state. Its read-only visual Result Explorer
   has two linked views: a hash-pinned per-stem source waveform with up to three
@@ -238,10 +275,25 @@ scripts.
   in a cache key or imply that they change the handoff. Missing MIDI mixer sound
   must be prepared with the neutral renderer; never silently use an existing
   unnormalised preview. Both views start every artifact at recorded zero and
-  infer no offset. Per-stem comparison and bounded canonical arrangement
-  presets use separate decoded transports. The full-song/custom
-  selected-arrangement mixer still uses coarse HTML media elements that share
-  seconds but are not sample-accurate. Source/MIDI levels are not normalised.
+  infer no offset. Long-song views use a fixed Fit/4×/16× viewport with paging
+  and playhead centring; paint only visible waveform bins/MIDI notes and bound
+  the canvas to 480–1,600 CSS pixels, DPR 2 and a 12,000,000-pixel arrangement
+  target. Enforce a 0.5-second minimum viewport, 0.25-second UI overscan with a
+  5-second helper maximum, 720/320 default per-stem/arrangement waveform bins
+  with an API range of 64–4,096 and a four-document memory-only per-stem cache,
+  but state plainly that the full server-bounded timeline JSON is still
+  downloaded, parsed and indexed. Enforce 20,000 notes/8 MiB per
+  candidate, at most 12 candidates per timeline request and 24 source lanes,
+  24 selected MIDI lanes/40,000 notes per arrangement. Abort stale requests.
+  Retain a failed refresh's last verified visual only when it still matches the
+  current selection, mark it stale and offer Retry; otherwise show explicit
+  unavailability while audio/decisions/export remain usable. Treat canvas
+  context loss/restoration similarly. Never silently substitute a coarse
+  visualization. Per-stem comparison, bounded canonical arrangement presets
+  and canonical exact full-song presets use separate decoded transports. Only
+  the arbitrary full-song/custom mixer uses coarse HTML media elements that
+  share seconds but are not sample-accurate. Source/MIDI levels are not
+  normalised.
   The GarageBand Pack Composer has a
   separate persistent basket for exact current main/optional MIDI, the dry
   arrangement proxy and source audio behind an explicit opt-in. It must never
@@ -357,8 +409,9 @@ scripts.
   listening evidence only: neither command edits MIDI, selects a Workbench candidate,
   promotes a preset or changes a default. Exact common source-frame windows do
   not imply decoded, sample-accurate playback in that standalone page. The
-  Workbench has a separate decoded, sample-scheduled per-stem path, but its
-  selected-arrangement mixer remains shared-second HTML media.
+  Workbench has separate decoded, sample-scheduled per-stem, bounded canonical
+  arrangement and exact chunked canonical full-song paths. Its arbitrary
+  full-song/custom mixer remains shared-second HTML media.
   The complete command shapes are:
   `sunofriend midi-ab-review SOURCE FIRST.mid SECOND.mid --interval START END
   "FOCUS" [--interval START END "FOCUS" ...] --bpm N
@@ -1377,9 +1430,10 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     projection contains no paths, private notes or process metrics and confirm
     any offered action is navigation from explicit saved state rather than a
     rank or automatic choice. On a restart/retry check, distinguish restored
-    decisions and pack choices from intentionally fresh playhead, loop, show,
-    mute, solo and level controls; all must have zero musical, feedback and
-    export effects.
+    decisions, Overview state, pack choices and URL-hash view/stem from
+    intentionally fresh prepared audio/chunks, playhead, loop,
+    viewport/zoom/visibility, show, mute, solo and level controls; all temporary
+    controls must have zero musical, feedback and export effects.
     Treat `none_usable` and `cannot_tell` as terminal no-selection barriers:
     retain their earlier candidate events as private history, but report zero
     active/exportable MIDI until a later explicit main or optional decision.
@@ -1422,7 +1476,24 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     membership, pre/post-render stale-selection check and atomic one-clock
     switching. State that it is unity-gain, unlevelled/unlimited, recorded-zero
     and feedback-free. Do not imply that its four canonical presets make the
-    coarse full-song/custom mixer sample-accurate. For an arrangement/handoff,
+    coarse full-song/custom mixer sample-accurate. For long-song visualization,
+    report Fit/4×/16× fixed-window culling and bounded canvases, but disclose
+    that the complete server-bounded JSON is still downloaded, parsed and
+    indexed. Report 20,000 notes/8 MiB per candidate, 12 candidates per request
+    and arrangement limits of 24 source lanes, 24 selected MIDI lanes and
+    40,000 notes. Confirm stale fetches cannot replace current evidence; a
+    compatible last verified visual is marked stale with Retry, otherwise the
+    visual is explicitly unavailable. Confirm no coarse visual fallback.
+    For an exact full-song canonical preset, report the immutable stream hash,
+    exact roster, anchor sample rate, longest-source end, recorded-zero start,
+    integer-frame/ties-even boundaries, separate PCM16 tracks, silence padding,
+    unity gain and current-plus-next decoded retention. Report that a not-ready
+    next chunk stops at the verified boundary, late completion enables explicit
+    Play, and absent or failed data requires Retry; neither auto-restarts;
+    confirm no coarse playback starts silently. Report the 24-track, 20-minute,
+    2 GiB, mono/stereo 8–96 kHz, five-second, 480-chunk, 32 MiB PCM16, 192 MiB
+    two-decoded-chunk, 16 active-plan, 768 media-capability and shared
+    32-entry/256 MiB cache bounds. For an arrangement/handoff,
     report exact selected main/optional counts, proxy
     track count, BPM policy and ZIP path;
     report every selected same-candidate-origin overlap pair, including whether

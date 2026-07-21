@@ -40,6 +40,7 @@ class FakeSource {{
     this.id = id;
     this.failStart = failStart;
     this.starts = [];
+    this.durations = [];
     this.stops = [];
     this.connections = [];
     this.disconnectCount = 0;
@@ -47,11 +48,13 @@ class FakeSource {{
   }}
   connect(destination) {{ this.connections.push(destination); }}
   disconnect() {{ this.disconnectCount += 1; }}
-  start(when, offset) {{
+  start(when, offset, duration) {{
     if (this.failStart) throw new Error(`start failed for source ${{this.id}}`);
     this.starts.push({{when, offset}});
+    this.durations.push(duration === undefined ? null : duration);
   }}
   stop(when) {{ this.stops.push(when); }}
+  finish() {{ if (typeof this.onended === "function") this.onended(); }}
 }}
 
 class FakeContext {{
@@ -79,6 +82,40 @@ function decodedBuffer(sampleRate, values) {{
 
 function close(left, right, tolerance = 1e-9) {{
   return Math.abs(left - right) <= tolerance;
+}}
+
+const STREAM_HASH = "a".repeat(64);
+
+function decodedChunk({{
+  streamHash = STREAM_HASH,
+  presetId = "hybrid",
+  roster = ["source", "midi"],
+  totalFrameCount = 25,
+  chunkFrameCount = 10,
+  chunkIndex = 0,
+  sampleRate = 10,
+  value = 1,
+}} = {{}}) {{
+  const startFrame = chunkIndex * chunkFrameCount;
+  const frameCount = Math.min(chunkFrameCount, totalFrameCount - startFrame);
+  const decodedBuffers = {{}};
+  for (const [offset, key] of roster.entries()) {{
+    decodedBuffers[key] = decodedBuffer(
+      sampleRate,
+      Array.from({{length: frameCount}}, () => value + offset)
+    );
+  }}
+  return {{
+    streamHash,
+    presetId,
+    roster: roster.slice(),
+    totalFrameCount,
+    chunkFrameCount,
+    chunkIndex,
+    startFrame,
+    frameCount,
+    decodedBuffers,
+  }};
 }}
 
 {body}
@@ -522,6 +559,559 @@ console.log(JSON.stringify({
         self.assertEqual(result["snapshot"]["playheadSeconds"], 10)
         self.assertEqual(result["sourceCount"], 6)
 
+    def test_exact_explicitly_immutable_buffer_can_skip_defensive_copy(self) -> None:
+        result = self.run_node(
+            """
+const context = new FakeContext(10);
+const reusable = decodedBuffer(10, [1, 2, 3, 4, 5]);
+const wrongExtent = decodedBuffer(10, [6, 7, 8]);
+transportModule.markDecodedBufferImmutable(reusable);
+transportModule.markDecodedBufferImmutable(wrongExtent);
+const normalised = transportModule.normaliseDecodedBuffers(
+  context,
+  {reusable, wrongExtent},
+  5
+);
+console.log(JSON.stringify({
+  reused: normalised.get("reusable") === reusable,
+  copiedWrongExtent: normalised.get("wrongExtent") !== wrongExtent,
+  copiedValues: Array.from(normalised.get("wrongExtent").getChannelData(0)),
+}));
+"""
+        )
+
+        self.assertTrue(result["reused"])
+        self.assertTrue(result["copiedWrongExtent"])
+        self.assertEqual(result["copiedValues"], [6, 7, 8, 0, 0])
+
+    def test_sequence_rejects_identity_geometry_and_noncontiguous_chunks(self) -> None:
+        result = self.run_node(
+            """
+const context = new FakeContext(10);
+const transport = new transportModule.DecodedChunkSequenceTransport({
+  audioContext: context,
+  streamHash: STREAM_HASH,
+  presetId: "hybrid",
+  roster: ["source", "midi"],
+  totalFrameCount: 25,
+  chunkFrameCount: 10,
+});
+const invalid = [
+  {...decodedChunk(), streamHash: "b".repeat(64)},
+  {...decodedChunk(), presetId: "source-only"},
+  {...decodedChunk(), roster: ["midi", "source"]},
+  {...decodedChunk(), startFrame: 1},
+  {...decodedChunk(), frameCount: 9},
+  decodedChunk({chunkIndex: 1}),
+];
+const errors = [];
+for (const item of invalid) {
+  try { transport.appendChunk(item); } catch (error) { errors.push(error.message); }
+}
+transport.appendChunk(decodedChunk({chunkIndex: 0}));
+try {
+  transport.appendChunk(decodedChunk({chunkIndex: 2}));
+} catch (error) {
+  errors.push(error.message);
+}
+const constructorErrors = [];
+for (const options of [
+  {streamHash: "A".repeat(64)},
+  {roster: ["source", "source"]},
+  {totalFrameCount: Number.MAX_SAFE_INTEGER + 1},
+]) {
+  try {
+    new transportModule.DecodedChunkSequenceTransport({
+      audioContext: context,
+      streamHash: STREAM_HASH,
+      presetId: "hybrid",
+      roster: ["source", "midi"],
+      totalFrameCount: 25,
+      chunkFrameCount: 10,
+      ...options,
+    });
+  } catch (error) {
+    constructorErrors.push(error.message);
+  }
+}
+console.log(JSON.stringify({
+  errors,
+  constructorErrors,
+  sourceCount: context.sources.length,
+  snapshot: transport.snapshot(),
+}));
+"""
+        )
+
+        self.assertEqual(len(result["errors"]), 7)
+        self.assertIn("stream hash", result["errors"][0])
+        self.assertIn("preset ID", result["errors"][1])
+        self.assertIn("roster", result["errors"][2])
+        self.assertIn("integer-derived", result["errors"][3])
+        self.assertIn("extent", result["errors"][4])
+        self.assertIn("needed index is 0", result["errors"][5])
+        self.assertIn("needed index is 1", result["errors"][6])
+        self.assertEqual(len(result["constructorErrors"]), 3)
+        self.assertEqual(result["sourceCount"], 0)
+        self.assertEqual(result["snapshot"]["retainedChunkIndices"], [0])
+        self.assertEqual(result["snapshot"]["neededChunkIndex"], None)
+
+    def test_sequence_schedules_each_roster_and_next_boundary_on_one_clock(self) -> None:
+        result = self.run_node(
+            """
+const context = new FakeContext(10);
+const transport = new transportModule.DecodedChunkSequenceTransport({
+  audioContext: context,
+  streamHash: STREAM_HASH,
+  presetId: "hybrid",
+  roster: ["source", "midi"],
+  totalFrameCount: 25,
+  chunkFrameCount: 10,
+  scheduleLeadSeconds: 0.1,
+});
+transport.appendChunk(decodedChunk({chunkIndex: 0}));
+transport.appendChunk(decodedChunk({chunkIndex: 1, value: 3}));
+context.currentTime = 2;
+const played = transport.play();
+const first = context.sources.slice(0, 2);
+const next = context.sources.slice(2, 4);
+console.log(JSON.stringify({
+  played,
+  firstStarts: first.map(source => source.starts[0]),
+  nextStarts: next.map(source => source.starts[0]),
+  loops: context.sources.map(source => source.loop),
+  buffers: context.sources.map(source => source.buffer.getChannelData(0)[0]),
+  snapshot: transport.snapshot(),
+}));
+"""
+        )
+
+        self.assertEqual(result["played"]["scheduledChunkIndices"], [0, 1])
+        self.assertTrue(
+            all(start == {"when": 2.1, "offset": 0} for start in result["firstStarts"])
+        )
+        self.assertTrue(
+            all(start == {"when": 3.1, "offset": 0} for start in result["nextStarts"])
+        )
+        self.assertEqual(result["loops"], [False, False, False, False])
+        self.assertEqual(result["buffers"], [1, 2, 3, 4])
+        self.assertEqual(result["snapshot"]["scheduledChunkIndices"], [0, 1])
+        self.assertIsNone(result["snapshot"]["neededChunkIndex"])
+
+    def test_sequence_has_no_drift_across_many_boundaries_and_final_tail(self) -> None:
+        result = self.run_node(
+            """
+const context = new FakeContext(10);
+const chunkFrameCount = 7;
+const totalFrameCount = 129 * chunkFrameCount + 3;
+const chunkCount = Math.ceil(totalFrameCount / chunkFrameCount);
+const roster = ["source", "midi"];
+const transport = new transportModule.DecodedChunkSequenceTransport({
+  audioContext: context,
+  streamHash: STREAM_HASH,
+  presetId: "hybrid",
+  roster,
+  totalFrameCount,
+  chunkFrameCount,
+  scheduleLeadSeconds: 0.05,
+  maxDecodedBytes: 1024,
+});
+transport.appendChunk(decodedChunk({
+  roster, totalFrameCount, chunkFrameCount, chunkIndex: 0,
+}));
+transport.appendChunk(decodedChunk({
+  roster, totalFrameCount, chunkFrameCount, chunkIndex: 1,
+}));
+transport.play();
+let maxRetained = transport.snapshot().retainedChunkIndices.length;
+let maxDecodedBytes = transport.decodedBytes;
+for (let completed = 0; completed < chunkCount - 1; completed += 1) {
+  context.currentTime = 0.05 + ((completed + 1) * chunkFrameCount) / 10;
+  transport.snapshot();
+  const appendIndex = completed + 2;
+  if (appendIndex < chunkCount) {
+    transport.appendChunk(decodedChunk({
+      roster, totalFrameCount, chunkFrameCount, chunkIndex: appendIndex,
+    }));
+  }
+  maxRetained = Math.max(
+    maxRetained,
+    transport.snapshot().retainedChunkIndices.length
+  );
+  maxDecodedBytes = Math.max(maxDecodedBytes, transport.decodedBytes);
+}
+const startErrors = [];
+for (let index = 0; index < chunkCount; index += 1) {
+  const actual = context.sources[index * roster.length].starts[0].when;
+  const expected = 0.05 + (index * chunkFrameCount) / 10;
+  startErrors.push(Math.abs(actual - expected));
+}
+context.currentTime = 0.05 + totalFrameCount / 10;
+const finalSnapshot = transport.snapshot();
+console.log(JSON.stringify({
+  chunkCount,
+  finalChunkLengths: context.sources
+    .slice(-roster.length)
+    .map(source => source.buffer.length),
+  finalSnapshot,
+  maxDecodedBytes,
+  maxDrift: Math.max(...startErrors),
+  maxRetained,
+  sourceCount: context.sources.length,
+}));
+"""
+        )
+
+        self.assertEqual(result["chunkCount"], 130)
+        self.assertEqual(result["sourceCount"], 260)
+        self.assertLessEqual(result["maxDrift"], 1e-12)
+        self.assertLessEqual(result["maxRetained"], 2)
+        self.assertLessEqual(result["maxDecodedBytes"], 112)
+        self.assertEqual(result["finalChunkLengths"], [3, 3])
+        self.assertFalse(result["finalSnapshot"]["playing"])
+        self.assertFalse(result["finalSnapshot"]["buffering"])
+        self.assertTrue(result["finalSnapshot"]["ended"])
+        self.assertEqual(result["finalSnapshot"]["playheadFrame"], 906)
+        self.assertEqual(result["finalSnapshot"]["playheadSeconds"], 90.6)
+        self.assertIsNone(result["finalSnapshot"]["neededChunkIndex"])
+
+    def test_late_next_chunk_stops_at_boundary_and_never_auto_restarts(self) -> None:
+        result = self.run_node(
+            """
+const context = new FakeContext(10);
+const roster = ["source"];
+const transport = new transportModule.DecodedChunkSequenceTransport({
+  audioContext: context,
+  streamHash: STREAM_HASH,
+  presetId: "source-only",
+  roster,
+  totalFrameCount: 20,
+  chunkFrameCount: 10,
+  scheduleLeadSeconds: 0.05,
+});
+transport.appendChunk(decodedChunk({
+  presetId: "source-only", roster, totalFrameCount: 20, chunkIndex: 0,
+}));
+context.currentTime = 1;
+transport.play();
+context.currentTime = 2.2;
+const stoppedAtBoundary = transport.snapshot();
+const appended = transport.appendChunk(decodedChunk({
+  presetId: "source-only", roster, totalFrameCount: 20, chunkIndex: 1,
+}));
+const afterAppend = transport.snapshot();
+const sourceCountBeforeExplicitPlay = context.sources.length;
+const resumed = transport.play();
+console.log(JSON.stringify({
+  stoppedAtBoundary,
+  appended,
+  afterAppend,
+  sourceCountBeforeExplicitPlay,
+  resumed,
+  resumedStart: context.sources[1].starts[0],
+}));
+"""
+        )
+
+        self.assertFalse(result["stoppedAtBoundary"]["playing"])
+        self.assertTrue(result["stoppedAtBoundary"]["buffering"])
+        self.assertEqual(result["stoppedAtBoundary"]["playheadFrame"], 10)
+        self.assertEqual(result["stoppedAtBoundary"]["neededChunkIndex"], 1)
+        self.assertFalse(result["appended"]["scheduled"])
+        self.assertFalse(result["afterAppend"]["playing"])
+        self.assertEqual(result["sourceCountBeforeExplicitPlay"], 1)
+        self.assertAlmostEqual(result["resumedStart"]["when"], 2.25)
+        self.assertAlmostEqual(result["resumedStart"]["offset"], 0)
+
+    def test_late_retained_chunk_stops_ready_for_explicit_play(self) -> None:
+        result = self.run_node(
+            """
+const context = new FakeContext(10);
+const roster = ["source"];
+const transport = new transportModule.DecodedChunkSequenceTransport({
+  audioContext: context,
+  streamHash: STREAM_HASH,
+  presetId: "source-only",
+  roster,
+  totalFrameCount: 20,
+  chunkFrameCount: 10,
+  scheduleLeadSeconds: 0.05,
+});
+transport.appendChunk(decodedChunk({
+  presetId: "source-only", roster, totalFrameCount: 20, chunkIndex: 0,
+}));
+transport.play();
+
+// The append begins just before the exact boundary, but the clock advances
+// beyond it before the successor can be scheduled. The chunk remains retained.
+const clockReads = [1.04, 1.06];
+Object.defineProperty(context, "currentTime", {
+  configurable: true,
+  get() { return clockReads.length ? clockReads.shift() : 1.06; },
+});
+const appended = transport.appendChunk(decodedChunk({
+  presetId: "source-only", roster, totalFrameCount: 20, chunkIndex: 1,
+}));
+const stoppedAtBoundary = transport.snapshot();
+const sourceCountBeforeExplicitPlay = context.sources.length;
+const resumed = transport.play();
+console.log(JSON.stringify({
+  appended,
+  stoppedAtBoundary,
+  sourceCountBeforeExplicitPlay,
+  resumed,
+  resumedStart: context.sources[1].starts[0],
+}));
+"""
+        )
+
+        self.assertFalse(result["appended"]["scheduled"])
+        self.assertEqual(result["appended"]["retainedChunkIndices"], [0, 1])
+        self.assertFalse(result["stoppedAtBoundary"]["playing"])
+        self.assertFalse(result["stoppedAtBoundary"]["buffering"])
+        self.assertFalse(result["stoppedAtBoundary"]["ended"])
+        self.assertEqual(result["stoppedAtBoundary"]["playheadFrame"], 10)
+        self.assertEqual(result["stoppedAtBoundary"]["retainedChunkIndices"], [1])
+        self.assertIsNone(result["stoppedAtBoundary"]["neededChunkIndex"])
+        self.assertEqual(result["sourceCountBeforeExplicitPlay"], 1)
+        self.assertEqual(result["resumed"]["chunkIndex"], 1)
+        self.assertAlmostEqual(result["resumedStart"]["when"], 1.11)
+        self.assertAlmostEqual(result["resumedStart"]["offset"], 0)
+
+    def test_sequence_pause_preserves_boundary_buffering_when_chunk_is_absent(
+        self,
+    ) -> None:
+        result = self.run_node(
+            """
+const context = new FakeContext(10);
+const roster = ["source"];
+const transport = new transportModule.DecodedChunkSequenceTransport({
+  audioContext: context,
+  streamHash: STREAM_HASH,
+  presetId: "source-only",
+  roster,
+  totalFrameCount: 20,
+  chunkFrameCount: 10,
+  scheduleLeadSeconds: 0.05,
+});
+transport.appendChunk(decodedChunk({
+  presetId: "source-only", roster, totalFrameCount: 20, chunkIndex: 0,
+}));
+transport.play();
+context.currentTime = 1.2;
+const stoppedAtBoundary = transport.snapshot();
+const pausedFrame = transport.pause();
+const afterPause = transport.snapshot();
+console.log(JSON.stringify({
+  stoppedAtBoundary,
+  pausedFrame,
+  afterPause,
+  sourceCount: context.sources.length,
+}));
+"""
+        )
+
+        self.assertFalse(result["stoppedAtBoundary"]["playing"])
+        self.assertTrue(result["stoppedAtBoundary"]["buffering"])
+        self.assertEqual(result["stoppedAtBoundary"]["neededChunkIndex"], 1)
+        self.assertEqual(result["pausedFrame"], 10)
+        self.assertFalse(result["afterPause"]["playing"])
+        self.assertTrue(result["afterPause"]["buffering"])
+        self.assertFalse(result["afterPause"]["ended"])
+        self.assertEqual(result["afterPause"]["playheadFrame"], 10)
+        self.assertEqual(result["afterPause"]["neededChunkIndex"], 1)
+        self.assertEqual(result["afterPause"]["retainedChunkIndices"], [])
+        self.assertEqual(result["sourceCount"], 1)
+
+    def test_sequence_seek_and_pause_cancel_current_and_future_nodes(self) -> None:
+        result = self.run_node(
+            """
+const context = new FakeContext(10);
+const transport = new transportModule.DecodedChunkSequenceTransport({
+  audioContext: context,
+  streamHash: STREAM_HASH,
+  presetId: "hybrid",
+  roster: ["source", "midi"],
+  totalFrameCount: 25,
+  chunkFrameCount: 10,
+  scheduleLeadSeconds: 0.05,
+});
+transport.appendChunk(decodedChunk({chunkIndex: 0}));
+transport.appendChunk(decodedChunk({chunkIndex: 1}));
+transport.play();
+context.currentTime = 0.2;
+const sought = transport.seekFrame(5);
+const replacement = context.sources.slice(4, 8);
+context.currentTime = 0.22;
+const pausedFrame = transport.pause();
+console.log(JSON.stringify({
+  sought,
+  replacementStarts: replacement.map(source => source.starts[0]),
+  replacementStops: replacement.map(source => source.stops),
+  oldStops: context.sources.slice(0, 4).map(source => source.stops),
+  loops: context.sources.map(source => source.loop),
+  pausedFrame,
+  snapshot: transport.snapshot(),
+}));
+"""
+        )
+
+        self.assertEqual(result["sought"]["offsetFrame"], 5)
+        self.assertEqual(result["sought"]["scheduledChunkIndices"], [0, 1])
+        self.assertTrue(
+            all(
+                abs(start["when"] - 0.25) < 1e-9
+                and abs(start["offset"] - 0.5) < 1e-9
+                for start in result["replacementStarts"][:2]
+            )
+        )
+        self.assertTrue(
+            all(
+                abs(start["when"] - 0.75) < 1e-9
+                and start["offset"] == 0
+                for start in result["replacementStarts"][2:]
+            )
+        )
+        self.assertTrue(
+            all(any(abs(stop - 0.22) < 1e-9 for stop in stops) for stops in result["replacementStops"])
+        )
+        self.assertTrue(
+            all(any(abs(stop - 0.22) < 1e-9 for stop in stops) for stops in result["oldStops"])
+        )
+        self.assertEqual(result["loops"], [False] * 8)
+        self.assertEqual(result["pausedFrame"], 5)
+        self.assertFalse(result["snapshot"]["playing"])
+        self.assertEqual(result["snapshot"]["scheduledChunkIndices"], [])
+        self.assertEqual(result["snapshot"]["playheadFrame"], 5)
+
+    def test_sequence_unloaded_seek_buffers_and_stop_returns_to_zero(self) -> None:
+        result = self.run_node(
+            """
+const context = new FakeContext(10);
+const roster = ["source"];
+const transport = new transportModule.DecodedChunkSequenceTransport({
+  audioContext: context,
+  streamHash: STREAM_HASH,
+  presetId: "source-only",
+  roster,
+  totalFrameCount: 25,
+  chunkFrameCount: 10,
+  scheduleLeadSeconds: 0.05,
+});
+transport.appendChunk(decodedChunk({
+  presetId: "source-only", roster, chunkIndex: 0,
+}));
+transport.appendChunk(decodedChunk({
+  presetId: "source-only", roster, chunkIndex: 1,
+}));
+transport.play();
+context.currentTime = 0.2;
+const sought = transport.seekFrame(22);
+const oldStops = context.sources.map(source => source.stops);
+const appended = transport.appendChunk(decodedChunk({
+  presetId: "source-only", roster, chunkIndex: 2,
+}));
+const resumed = transport.play();
+context.currentTime = 0.3;
+const stopped = transport.stop();
+console.log(JSON.stringify({
+  sought,
+  oldStops,
+  appended,
+  resumed,
+  stopped,
+  resumedStart: context.sources[2].starts[0],
+  resumedStops: context.sources[2].stops,
+  snapshot: transport.snapshot(),
+}));
+"""
+        )
+
+        self.assertFalse(result["sought"]["playing"])
+        self.assertTrue(result["sought"]["buffering"])
+        self.assertEqual(result["sought"]["neededChunkIndex"], 2)
+        self.assertEqual(result["sought"]["retainedChunkIndices"], [])
+        self.assertTrue(all(stops == [0.2] for stops in result["oldStops"]))
+        self.assertFalse(result["appended"]["scheduled"])
+        self.assertEqual(result["resumed"]["chunkIndex"], 2)
+        self.assertAlmostEqual(result["resumedStart"]["when"], 0.25)
+        self.assertAlmostEqual(result["resumedStart"]["offset"], 0.2)
+        self.assertEqual(result["stopped"], 0)
+        self.assertTrue(any(abs(stop - 0.3) < 1e-9 for stop in result["resumedStops"]))
+        self.assertFalse(result["snapshot"]["playing"])
+        self.assertTrue(result["snapshot"]["buffering"])
+        self.assertEqual(result["snapshot"]["neededChunkIndex"], 0)
+        self.assertEqual(result["snapshot"]["playheadFrame"], 0)
+        self.assertEqual(result["snapshot"]["retainedChunkIndices"], [])
+
+    def test_sequence_enforces_memory_window_and_rolls_back_failed_prefetch(self) -> None:
+        result = self.run_node(
+            """
+const memoryContext = new FakeContext(10);
+const memoryTransport = new transportModule.DecodedChunkSequenceTransport({
+  audioContext: memoryContext,
+  streamHash: STREAM_HASH,
+  presetId: "hybrid",
+  roster: ["source", "midi"],
+  totalFrameCount: 30,
+  chunkFrameCount: 10,
+  maxDecodedBytes: 159,
+});
+memoryTransport.appendChunk(decodedChunk({totalFrameCount: 30, chunkIndex: 0}));
+let memoryError = null;
+try {
+  memoryTransport.appendChunk(decodedChunk({totalFrameCount: 30, chunkIndex: 1}));
+} catch (error) {
+  memoryError = error.message;
+}
+
+const context = new FakeContext(10);
+const transport = new transportModule.DecodedChunkSequenceTransport({
+  audioContext: context,
+  streamHash: STREAM_HASH,
+  presetId: "hybrid",
+  roster: ["source", "midi"],
+  totalFrameCount: 30,
+  chunkFrameCount: 10,
+  maxDecodedBytes: 160,
+  scheduleLeadSeconds: 0.05,
+});
+transport.appendChunk(decodedChunk({totalFrameCount: 30, chunkIndex: 0}));
+transport.play();
+context.currentTime = 0.2;
+context.failStartIds.add(4);
+let scheduleError = null;
+try {
+  transport.appendChunk(decodedChunk({totalFrameCount: 30, chunkIndex: 1}));
+} catch (error) {
+  scheduleError = error.message;
+}
+const oldNodes = context.sources.slice(0, 2);
+const failedNodes = context.sources.slice(2, 4);
+console.log(JSON.stringify({
+  memoryError,
+  memorySnapshot: memoryTransport.snapshot(),
+  scheduleError,
+  snapshot: transport.snapshot(),
+  oldStops: oldNodes.map(source => source.stops),
+  failedStops: failedNodes.map(source => source.stops),
+  failedDisconnects: failedNodes.map(source => source.disconnectCount),
+}));
+"""
+        )
+
+        self.assertIn("memory cap", result["memoryError"])
+        self.assertEqual(result["memorySnapshot"]["decodedBytes"], 80)
+        self.assertEqual(result["memorySnapshot"]["retainedChunkIndices"], [0])
+        self.assertIn("start failed for source 4", result["scheduleError"])
+        self.assertTrue(result["snapshot"]["playing"])
+        self.assertEqual(result["snapshot"]["currentChunkIndex"], 0)
+        self.assertEqual(result["snapshot"]["retainedChunkIndices"], [0])
+        self.assertEqual(result["snapshot"]["neededChunkIndex"], 1)
+        self.assertEqual(result["oldStops"], [[], []])
+        self.assertTrue(all(len(stops) == 1 for stops in result["failedStops"]))
+        self.assertEqual(result["failedDisconnects"], [1, 1])
+
     def test_module_has_no_network_persistence_or_feedback_surface(self) -> None:
         source = TRANSPORT_PATH.read_text(encoding="utf-8")
 
@@ -552,6 +1142,8 @@ console.log(JSON.stringify({{
   browser: typeof page.SunofriendWorkbenchTransport.DecodedLoopTransport,
   groupCommonjs: typeof page.module.exports.DecodedGroupLoopTransport,
   groupBrowser: typeof page.SunofriendWorkbenchTransport.DecodedGroupLoopTransport,
+  sequenceCommonjs: typeof page.module.exports.DecodedChunkSequenceTransport,
+  sequenceBrowser: typeof page.SunofriendWorkbenchTransport.DecodedChunkSequenceTransport,
   same: page.module.exports === page.SunofriendWorkbenchTransport,
 }}));
 """
@@ -567,6 +1159,8 @@ console.log(JSON.stringify({{
         self.assertEqual(payload["browser"], "function")
         self.assertEqual(payload["groupCommonjs"], "function")
         self.assertEqual(payload["groupBrowser"], "function")
+        self.assertEqual(payload["sequenceCommonjs"], "function")
+        self.assertEqual(payload["sequenceBrowser"], "function")
         self.assertTrue(payload["same"])
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import unittest
@@ -22,7 +23,10 @@ class WorkbenchDecodedComparisonUITests(unittest.TestCase):
         )[0]
         cls.decoded_arrangement = cls.page.split(
             "const decodedArrangementPresetLabels", 1
-        )[1].split("function toggleDecodedExtra", 1)[0]
+        )[1].split("function decodedSequencePanel", 1)[0]
+        cls.decoded_sequence = cls.page.split("function decodedSequencePanel", 1)[
+            1
+        ].split("function toggleDecodedExtra", 1)[0]
 
     def run_ui_node(self, body: str) -> dict[str, object]:
         node = shutil.which("node")
@@ -206,9 +210,261 @@ Promise.resolve(vm.runInContext(`(async()=>{${body}})()`, context)).then(
         self.assertIn("Nothing was saved", self.switch_audio)
 
     def test_transport_is_packaged_before_the_inline_application(self) -> None:
+        visualization = '<script src="/workbench-visualization.js"></script>'
         external = '<script src="/workbench-transport.js"></script>'
+        self.assertIn(visualization, self.page)
         self.assertIn(external, self.page)
+        self.assertLess(self.page.index(visualization), self.page.index(external))
         self.assertLess(self.page.index(external), self.page.index("const token="))
+
+    def test_long_song_view_is_windowed_culled_and_recoverable(self) -> None:
+        stem_draw = self.page.rsplit("function drawTimeline(stem,timeline)", 1)[
+            1
+        ].split("function drawActiveTimeline", 1)[0]
+        arrangement_draw = self.page.rsplit(
+            "function drawArrangementTimeline(timeline)", 1
+        )[1].split("function wireArrangementExplorer", 1)[0]
+
+        for source in (stem_draw, arrangement_draw):
+            self.assertIn("timelineViewport(", source)
+            self.assertIn("timelineVisibleNotes(", source)
+            self.assertIn("sliceWaveformBins", source)
+            self.assertIn("buildViewportTicks", source)
+            self.assertIn("stage.style.width='100%'", source)
+            self.assertIn("Math.min(1600", source)
+            self.assertNotIn("*arrangementZoom", source)
+        self.assertIn("Math.sqrt(12000000", arrangement_draw)
+        self.assertIn("PageUp", self.page)
+        self.assertIn("PageDown", self.page)
+        self.assertIn("Earlier page", self.page)
+        self.assertIn("Centre on playhead", self.page)
+        self.assertIn("Later page", self.page)
+        self.assertIn("The last verified visual remains on screen", self.page)
+        self.assertIn("Retry visual evidence", self.page)
+        self.assertIn("arrangementTimelineAbortController?.abort()", self.page)
+        self.assertIn("timelineAbortController?.abort()", self.page)
+        self.assertIn("while(timelineCache.size>4)", self.page)
+        self.assertIn("function durableLocation()", self.page)
+        self.assertIn("function replaceDurableLocation()", self.page)
+        self.assertNotIn("localStorage", self.page)
+
+    def test_chunked_full_song_ui_uses_only_canonical_server_contracts(self) -> None:
+        sequence = self.decoded_sequence
+        self.assertIn("Precise full-song preset", sequence)
+        self.assertIn("current plus next chunk only", sequence)
+        self.assertIn("/api/decoded-arrangement-stream", sequence)
+        self.assertIn("/api/decoded-arrangement-chunk", sequence)
+        self.assertIn(
+            "body:JSON.stringify({selection_manifest_sha256:manifestSha,preset})",
+            sequence,
+        )
+        self.assertIn(
+            "body:JSON.stringify({stream_sha256:streamSha,chunk_index:index})",
+            sequence,
+        )
+        self.assertIn("new window.SunofriendWorkbenchTransport.DecodedChunkSequenceTransport", sequence)
+        self.assertIn("chunkFrameCount:Number(plan.chunking.chunk_anchor_frames)", sequence)
+        self.assertIn("totalFrameCount:Number(plan.anchor.song_end_frame)", sequence)
+        self.assertIn("await ensureDecodedSequenceChunk(0,requestId)", sequence)
+        self.assertIn("await ensureDecodedSequenceChunk(1,requestId)", sequence)
+        self.assertIn("retainedChunkIndices", sequence)
+        self.assertIn("did not restart automatically", sequence)
+        self.assertIn("no coarse fallback was started", sequence.lower())
+        self.assertNotIn("/api/events", sequence)
+        self.assertNotIn("candidate_decision", sequence)
+        self.assertNotIn("save(", sequence)
+
+    def test_chunked_full_song_defaults_to_the_first_available_preset(self) -> None:
+        result = self.run_ui_node(
+            """
+project = {
+  decoded_arrangement_selection: {
+    selection_manifest_sha256: "a".repeat(64),
+    groups: {
+      "source-only": ["source-1"],
+      "selected-midi": [],
+      hybrid: ["source-1"],
+      "main-only": [],
+    },
+  },
+};
+decodedSequencePreset = "selected-midi";
+const panel = decodedSequencePanel();
+return {
+  preset: decodedSequencePreset,
+  sourceSelected: panel.includes('value="source-only" selected'),
+  prepareDisabled: panel.includes('id="prepare-decoded-sequence" class="primary" disabled'),
+};
+"""
+        )
+
+        self.assertEqual(result["preset"], "source-only")
+        self.assertTrue(result["sourceSelected"])
+        self.assertFalse(result["prepareDisabled"])
+
+    def test_cancelled_chunk_decode_drains_before_only_the_newest_intent_starts(
+        self,
+    ) -> None:
+        result = self.run_ui_node(
+            """
+view='arrangement';
+const manifestSha='a'.repeat(64),streamSha='b'.repeat(64),roster=['source'];
+project={decoded_arrangement_selection:{selection_manifest_sha256:manifestSha}};
+decodedSequencePlan={
+  selection_manifest_sha256:manifestSha,
+  stream_sha256:streamSha,
+  preset:'source-only',
+  preset_track_ids:roster,
+  anchor:{song_end_frame:30},
+  chunking:{chunk_count:3,chunk_anchor_frames:10},
+};
+const retained=new Set(),requested=[],appended=[],decoders=[];
+let activeDecodes=0,maxActiveDecodes=0;
+decodedSequenceAudioContext={
+  sampleRate:10,
+  decodeAudioData(){
+    activeDecodes+=1;
+    maxActiveDecodes=Math.max(maxActiveDecodes,activeDecodes);
+    return new Promise(resolve=>decoders.push(buffer=>{
+      activeDecodes-=1;
+      resolve(buffer);
+    }));
+  },
+};
+decodedSequenceTransport={
+  snapshot(){return {retainedChunkIndices:[...retained]};},
+  appendChunk(chunk){
+    retained.add(chunk.chunkIndex);
+    appended.push(chunk.chunkIndex);
+    return {chunkIndex:chunk.chunkIndex};
+  },
+};
+window.SunofriendWorkbenchTransport={
+  markDecodedBufferImmutable(buffer){return buffer;},
+  normaliseDecodedBuffers(_context,buffers){return buffers;},
+};
+api=async(_path,options)=>{
+  const index=JSON.parse(options.body).chunk_index;
+  requested.push(index);
+  return {chunk:{
+    stream_sha256:streamSha,
+    preset:'source-only',
+    chunk_index:index,
+    anchor:{start_frame:index*10,end_frame:(index+1)*10},
+    tracks:[{track_id:'source',audio_url:`/chunk-${index}.wav`}],
+  }};
+};
+fetch=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});
+const requestId=decodedSequenceRequest;
+const first=ensureDecodedSequenceChunk(0,requestId,decodedSequenceChunkIntent);
+for(let turn=0;turn<20&&decoders.length<1;turn+=1)await Promise.resolve();
+const secondIntent=cancelDecodedSequenceChunkRequest();
+const second=ensureDecodedSequenceChunk(1,requestId,secondIntent);
+const thirdIntent=cancelDecodedSequenceChunkRequest();
+const third=ensureDecodedSequenceChunk(2,requestId,thirdIntent);
+for(let turn=0;turn<5;turn+=1)await Promise.resolve();
+const beforeDrain={requested:[...requested],decoderCount:decoders.length,maxActiveDecodes};
+decoders[0]({});
+await first;
+for(let turn=0;turn<20&&decoders.length<2;turn+=1)await Promise.resolve();
+const afterDrain={requested:[...requested],decoderCount:decoders.length,maxActiveDecodes};
+decoders[1]({});
+const [secondResult,thirdResult]=await Promise.all([second,third]);
+return {
+  beforeDrain,
+  afterDrain,
+  requested,
+  appended,
+  maxActiveDecodes,
+  secondResult,
+  thirdResult,
+  drainFinished:decodedSequenceChunkDrainPromise===null,
+};
+"""
+        )
+
+        self.assertEqual(result["beforeDrain"]["requested"], [0])
+        self.assertEqual(result["beforeDrain"]["decoderCount"], 1)
+        self.assertEqual(result["afterDrain"]["requested"], [0, 2])
+        self.assertEqual(result["afterDrain"]["decoderCount"], 2)
+        self.assertEqual(result["requested"], [0, 2])
+        self.assertEqual(result["appended"], [2])
+        self.assertEqual(result["maxActiveDecodes"], 1)
+        self.assertFalse(result["secondResult"])
+        self.assertEqual(result["thirdResult"]["chunkIndex"], 2)
+        self.assertTrue(result["drainFinished"])
+
+    def test_cached_timeline_redraw_failures_remain_recoverable(self) -> None:
+        result = self.run_ui_node(
+            """
+const recoveries=[],clears=[];
+showTimelineRecovery=(error,options={})=>recoveries.push({
+  message:error.message,
+  arrangement:!!options.arrangement,
+});
+clearTimelineRecovery=()=>clears.push(true);
+wireTimelineWindowControls=()=>{};
+renderTimelineLegend=()=>{};
+let stemDraws=0,arrangementDraws=0,apiCalls=0;
+drawTimeline=()=>{
+  stemDraws+=1;
+  if(stemDraws===1)throw new Error('cached stem draw failed');
+};
+drawArrangementTimeline=()=>{
+  arrangementDraws+=1;
+  if(arrangementDraws===1)throw new Error('cached arrangement draw failed');
+};
+const stem={stem_id:'stem-a',candidates:[]};
+project={stems:[stem],decoded_arrangement_selection:{selection_manifest_sha256:'a'.repeat(64)}};
+view='stem';
+activeStem='stem-a';
+timelineCache.set('stem-a',{source:{status:'available'},candidates:[],duration_seconds:10});
+api=async path=>{
+  apiCalls+=1;
+  if(path.startsWith('/api/timeline'))return {source:{status:'available'},candidates:[],duration_seconds:10};
+  return {selection:[],sources:[],midi_lanes:[],duration_seconds:10};
+};
+await loadTimeline(stem,{force:true});
+view='arrangement';
+wireDecodedSequencePanel=()=>{};
+arrangementSelectionMatches=()=>true;
+syncMixerSelection=()=>{};
+updateMixerControls=()=>{};
+arrangementTimeline={selection:[],sources:[],midi_lanes:[],duration_seconds:10};
+await loadArrangementTimeline({force:true});
+return {recoveries,clears:clears.length,stemDraws,arrangementDraws,apiCalls};
+"""
+        )
+
+        self.assertEqual(
+            result["recoveries"],
+            [
+                {"message": "cached stem draw failed", "arrangement": False},
+                {"message": "cached arrangement draw failed", "arrangement": True},
+            ],
+        )
+        self.assertEqual(result["clears"], 2)
+        self.assertEqual(result["stemDraws"], 2)
+        self.assertEqual(result["arrangementDraws"], 2)
+        self.assertEqual(result["apiCalls"], 2)
+
+    def test_sequence_seek_captures_its_playhead_and_intent(self) -> None:
+        seek = self.page.split("function setSharedPlayhead", 1)[1].split(
+            "function wireTimeline", 1
+        )[0]
+        self.assertIn("const intentId=cancelDecodedSequenceChunkRequest()", seek)
+        self.assertIn("const seekPlayhead=Math.min(playhead,transport.durationSeconds)", seek)
+        self.assertIn(
+            "ensureDecodedSequenceChunk(needed,requestId,intentId)", seek
+        )
+        self.assertIn("Chunk at ${seekPlayhead.toFixed(2)} seconds is ready", seek)
+
+    def test_page_has_no_duplicate_named_function_declarations(self) -> None:
+        names = re.findall(
+            r"\b(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(", self.page
+        )
+        duplicates = sorted({name for name in names if names.count(name) > 1})
+        self.assertEqual(duplicates, [])
 
     def test_precise_arrangement_uses_only_server_owned_canonical_groups(self) -> None:
         self.assertIn("Precise short arrangement loop", self.page)
