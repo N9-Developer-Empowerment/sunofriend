@@ -1,6 +1,6 @@
 ---
 name: sunofriend
-description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes, compare evidence-pinned specialist/full-mix/conditioned lead MIDI by phrase with explicit lineage limits and without creating a hybrid, benchmark verified fresh-process or bounded exact-repeat local AI runs, reuse and benchmark an explicit exact MuScriptor raw-result cache, partition model-reported labels exactly, and review existing source/MIDI alternatives; build blind exact-source-window, fixed-window sample-RMS-matched MIDI A/B reviews with explicit heard and choice evidence; render cached neutral previews, save explicit solo/full-mix choices, hear bounded or exact chunked canonical selected arrangements, export unchanged choices in a GarageBand handoff, and complete its guided tutorial, 10-question quiz and two human acceptance checks through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; and store or transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
+description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes, compare evidence-pinned specialist/full-mix/conditioned lead MIDI by phrase with explicit lineage limits and without creating a hybrid, benchmark verified fresh-process or bounded exact-repeat local AI runs, reuse and benchmark an explicit exact MuScriptor raw-result cache, partition model-reported labels exactly, and review existing source/MIDI alternatives; build blind exact-source-window, fixed-window sample-RMS-matched MIDI A/B reviews with explicit heard and choice evidence; render cached neutral previews, save explicit solo/full-mix choices, hear bounded or exact chunked canonical selected arrangements, export unchanged choices in a GarageBand handoff, and complete its guided tutorial, 10-question quiz and two human acceptance checks through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; browse a gated read-only Clip v1 library; explicitly propose immutable Clip placements; or store and transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, explicit Clip reuse proposals, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
 ---
 
 # Sunofriend
@@ -126,12 +126,30 @@ scripts.
      Inspect and private review export start no server or model. Run
      `sunofriend doctor --require preview` before using the site's
      explicit neutral-preview, selected-arrangement or GarageBand-handoff
-     render actions.
+     render actions. `--developer-inspector` is an optional read-only
+     application operation/state explorer in the same token-protected loopback
+     Workbench. It needs no extra dependency and must not be described as a
+     Python line debugger, evaluator, shell, SQL console or filesystem browser.
    - `sunofriend garageband-pack-review` and
      `sunofriend garageband-pack-resolve` need no audio, ML, preview or playback
      capability. They verify one existing exact downloaded ZIP locally. The
      generated tutorial/quiz page and reviewed JSON are private; resolution
      starts no server, model or project action.
+   - The completed Phase 6 Increment 6.0 read-only Clip entry uses
+     `sunofriend workbench PROJECT --clip-library LIBRARY
+     --phase6-acceptance RESULT --phase6-pack PACK`. All three flags are
+     required together. Browse, detail, lineage and deterministic MIDI
+     reconstruction need no audio/ML capability; require
+     `sunofriend doctor --require preview` only before requesting the optional
+     dry neutral audition. The supplied result must be `passed` and the pack
+     must exactly match it. Do not discover any of the three inputs.
+   - The completed Phase 6 Increment 6.1 proposal additionally requires
+     `--enable-clip-reuse-plan`; reject it unless all three Increment 6.0 flags
+     are present. It needs no audio, ML or preview capability. It adds only
+     explicit whole-beat place/remove actions in a separate local proposal and
+     has passed its focused/full and local restart/browser verification. Do
+     not describe it as arrangement playback, a transform, an export or a
+     completed wider Phase 6 feature.
 5. Inventory the input directory read-only. Confirm files exist and identify
    stem roles, chord PDF, metronome, key, BPM, and tuning.
 6. Use absolute, quoted paths and a fresh output outside the source folder.
@@ -324,9 +342,21 @@ scripts.
   rendering remain planned; do not claim or attempt those later features yet.
   After building one exact GarageBand pack, open its generated guided
   acceptance page before the two human checks. Require all eight tutorial
-  slides in order, exactly 10 one-question-at-a-time quiz answers and a 10/10
-  score. Do not reveal or auto-fill answers, manufacture a reviewed export or
-  infer understanding from clicks. The first human check must use the exact
+  slides in order. The slides must teach the installed code architecture,
+  execution paths, state planes, invariants, representative failures and code
+  review prompts, and the acceptance seed must bind that curriculum to its
+  packaged source manifest. Then require exactly 10 one-question-at-a-time quiz
+  answers and a 10/10 score. Do not reveal or auto-fill answers, manufacture a
+  reviewed export or infer understanding from clicks. The optional live
+  Developer Inspector belongs only in Workbench: keep the frozen acceptance
+  page offline. The Inspector may expose an allow-listed module/function map,
+  bounded operation checkpoints, path-free current state, separate pack state,
+  browser-only audition state and a replay through the production event reducer.
+  It must be off by default, read-only and memory-bounded; it must exclude
+  tokens, paths, URLs, request bodies, private notes, exception text and
+  arbitrary evaluation, and its refresh/clear/scrub actions must append no
+  event, save no basket, build no artifact and run no model. The first human
+  check must use the exact
   downloaded ZIP in GarageBand and cover exact BPM, selected MIDI import,
   playable patches, drum routing where applicable, listened downbeat and
   start/middle/end drift. The second must explicitly confirm an authorised
@@ -336,6 +366,34 @@ scripts.
   without catalog metadata is reviewer-observation-only, not a new hash-pinned
   downbeat. A `passed` result opens only read-only Phase 6 Clip entry and does
   not satisfy the separate Phase 5.3 hybrid gates.
+  The verified private 22 July 2026 close-out passed all eight tutorial
+  screens, scored 10/10 and passed both six-item human checks without an issue
+  or `cannot_tell` answer. It verified five selected MIDI payloads, the dry
+  proxy and no source audio with all project effects false; its downbeat
+  remains `reviewer-observation-only`. That result authorises only the first
+  read-only Clip entry, not a hybrid.
+  For that Phase 6 entry, require `--clip-library`, `--phase6-acceptance` and
+  `--phase6-pack` together. Open the existing Clip v1 catalog read-only and
+  expose only bounded browse/search, path-free detail and lineage, optional dry
+  neutral audition and deterministic Clip reconstruction. State that the
+  reconstructed MIDI is not an original-MIDI byte copy. Do not transform,
+  write, tag, version, place, piano-roll edit or hybridise a Clip, and do not
+  let browsing or audition alter project decisions or the pack basket. See
+  `docs/PHASE6_CREATIVE_ARRANGEMENT.md` for the completed Increment 6.0
+  contract and deferred wider Phase 6 work.
+  Add `--enable-clip-reuse-plan` only when the user explicitly wants Increment
+  6.1. Keep **Browse Clips** and **Proposed reuse plan** distinct. A placement
+  pins the exact `clip_id` and object hash and uses the fixed 4/4, 480-TPQ,
+  whole-beat grid at recorded zero; it does not infer or apply a project
+  downbeat or confirm a time signature. Existing project downbeat evidence must
+  be reported as present but not applied. Multiple uses require multiple
+  explicit placements. Changing a
+  target means explicit removal then placement, not a hidden move or repeat.
+  Treat compatibility warnings as facts, never a rank or transformation.
+  Proposal state is append-only and separate from decisions, current
+  arrangement and pack basket. On a conflict, reload once but never retry the
+  mutation automatically. Do not claim a transform, MIDI/render/play/export,
+  instrument, pack, feedback, submission or hybrid effect.
 - Several completed immutable MuScriptor lanes: use `ai-matrix` with explicit
   repeated `LANE=RUN_DIR` values and a fresh `--out` JSON. Include M0
   unconditioned full mix, M1 discovered-label conditioning, M2 known-label
@@ -752,6 +810,25 @@ sunofriend garageband-pack-review "$DOWNLOADED_PACK" \
 sunofriend garageband-pack-resolve "$REVIEWED_ACCEPTANCE_JSON" \
   "$DOWNLOADED_PACK" \
   --out "$FRESH_ACCEPTANCE_RESULT"
+
+sunofriend workbench "$INPUT" \
+  --candidate-root "$OUTPUT" \
+  --catalog "$WORKBENCH_CATALOG" \
+  --state-dir "$WORKBENCH_STATE" \
+  --clip-library "$EXISTING_CLIP_LIBRARY" \
+  --phase6-acceptance "$PASSED_ACCEPTANCE_RESULT" \
+  --phase6-pack "$EXACT_ACCEPTED_PACK" \
+  --open
+
+sunofriend workbench "$INPUT" \
+  --candidate-root "$OUTPUT" \
+  --catalog "$WORKBENCH_CATALOG" \
+  --state-dir "$WORKBENCH_STATE" \
+  --clip-library "$EXISTING_CLIP_LIBRARY" \
+  --phase6-acceptance "$PASSED_ACCEPTANCE_RESULT" \
+  --phase6-pack "$EXACT_ACCEPTED_PACK" \
+  --enable-clip-reuse-plan \
+  --open
 
 sunofriend vocal-melody "$VOCAL_STEM" \
   --role lead \
@@ -1555,9 +1632,13 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     local JSON may contain absolute paths and private notes; the separate
     contribution preview must contain neither.
     For the Phase 5.9 guided acceptance page, confirm that eight tutorial
-    slides precede exactly 10 one-at-a-time questions, a wrong answer leaves the
-    two checks locked, retry resets the full quiz, and only 10/10 enables the
-    explicit GarageBand then authorised-usability sequence. Report the exact
+    slides contain the technical code-map fields and a source-manifest/code-
+    binding hash before exactly 10 one-at-a-time questions. Confirm a wrong
+    answer leaves the two checks locked, retry resets the full quiz, and only
+    10/10 enables the explicit GarageBand then authorised-usability sequence.
+    When `--developer-inspector` is enabled, confirm its endpoint is GET-only,
+    token protected, absent by default, path/note/token free, replaying the same
+    production reducer, and zero-effect under refresh and scrubbing. Report the exact
     downloaded pack hash, quiz score, both check outcomes and whether downbeat
     evidence was catalog-and-reviewer or reviewer-observation-only. For
     `garageband-pack-resolve`, confirm the resolver reverified strict receipt
@@ -1566,3 +1647,35 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     `passed` may make only `phase6_read_only_clip_entry_ready` true;
     `explicit_hybrid_construction_ready` must remain false until the Phase 5.3
     gates close.
+    For Phase 6 Increment 6.0 Clip entry, confirm the server accepted all
+    three explicit inputs, reverified the passed result and exact pack before
+    opening the existing library, and exposed no Clip capability when the
+    flags were absent. Report Clip/library state hashes, bounded result counts,
+    path-free detail and lineage, reconstruction timing/BPM and optional dry
+    renderer identity. State that the MIDI is a deterministic Clip
+    reconstruction, not the original MIDI bytes. Confirm library/Clip/source/
+    project-decision/basket/feedback/submission effects are false and that no
+    transform, write, piano roll, placement or hybrid route exists.
+    The verified local completion exposed 73 Clips/51 lineages and exercised
+    browse/detail, deterministic MIDI, a dry FluidSynth proxy, a repeat cache
+    hit, path-free byte-range serving and Developer Inspector tracing with zero
+    musical/library mutations. Do not interpret that slice as completion of
+    broader Phase 6.
+    For Phase 6 Increment 6.1, confirm all four launch flags, the separate
+    proposal capability and the absence of proposal routes when its flag is
+    omitted. Confirm an empty read creates no database, the first explicit
+    action creates owner-only `STATE_DIR/phase6-reuse/reuse.sqlite3`, and an
+    exact restart restores only the same project/setup/source,
+    acceptance/pack, complete-library, policy and grid binding. Report each
+    pinned Clip/object hash and explicit whole-beat target. Confirm the fixed
+    4/4, 480-TPQ recorded-zero grid does not assert a musical downbeat or time
+    signature. Report the 64-active-placement, 512-event, 20,000-notes-per-Clip,
+    40,000-active-note-instance and 20-minute bounds. Treat key/BPM/timing,
+    overlap and instrument warnings as descriptive compatibility only. On a
+    stale plan, confirm one reload and no automatic POST retry. Confirm the
+    proposal changes no Clip/library, MIDI, transform, decision, current
+    arrangement, pack, render/play/export, instrument, feedback or submission
+    state. The verified completion exercise placed and removed one real Clip,
+    recovered both revisions across restarts and confirmed unchanged
+    decision/library/pack inputs. Describe Increment 6.1 as complete while
+    keeping broader Phase 6 in progress.

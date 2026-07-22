@@ -104,6 +104,8 @@ where = ["src"]
 [tool.setuptools.package-data]
 sunofriend = [
     "workbench.html",
+    "workbench_clips.js",
+    "workbench_developer.js",
     "workbench_transport.js",
     "workbench_visualization.js",
 ]

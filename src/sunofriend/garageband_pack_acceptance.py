@@ -19,12 +19,18 @@ from copy import deepcopy
 from pathlib import Path, PurePosixPath
 from typing import Any, Mapping, Sequence
 
+from . import __version__
+
 
 GARAGEBAND_PACK_SCHEMA = "sunofriend.workbench-garageband-pack.v1"
 GARAGEBAND_PACK_ACCEPTANCE_SCHEMA = "sunofriend.workbench-garageband-pack-acceptance.v1"
 GARAGEBAND_PACK_ACCEPTANCE_RESULT_SCHEMA = (
     "sunofriend.workbench-garageband-pack-acceptance-result.v1"
 )
+DEVELOPER_TUTORIAL_SCHEMA = "sunofriend.developer-acceptance-tutorial.v1"
+DEVELOPER_SOURCE_MANIFEST_SCHEMA = "sunofriend.developer-source-manifest.v1"
+DEVELOPER_EVIDENCE_SCHEMA = "sunofriend.developer-acceptance-evidence.v1"
+DEVELOPER_INSPECTOR_SCHEMA = "sunofriend.developer-inspector-explanation.v1"
 
 _MANIFEST_NAME = "sunofriend-garageband-pack.json"
 _README_NAME = "README.txt"
@@ -36,237 +42,710 @@ _MAX_REVIEW_ARTIFACT_BYTES = 4 * 1024 * 1024
 _QUIZ_PASS_SCORE = 10
 _CHECK_CHOICES = {"pass", "issue", "cannot_tell"}
 _CHECK_OUTCOMES = {"passed", "needs_changes", "incomplete"}
+_DEVELOPER_TUTORIAL_VERSION = 1
+
+
+_DEVELOPER_SOURCE_BINDINGS: tuple[dict[str, Any], ...] = (
+    {
+        "file_name": "cli.py",
+        "source_path": "src/sunofriend/cli.py",
+        "symbols": ("main", "_run_workbench"),
+        "slide_ids": ("architecture",),
+    },
+    {
+        "file_name": "listen_all.py",
+        "source_path": "src/sunofriend/listen_all.py",
+        "symbols": ("run_listen_all",),
+        "slide_ids": ("transcription-provenance",),
+    },
+    {
+        "file_name": "loop.py",
+        "source_path": "src/sunofriend/loop.py",
+        "symbols": ("refine_stem",),
+        "slide_ids": ("transcription-provenance",),
+    },
+    {
+        "file_name": "conversion.py",
+        "source_path": "src/sunofriend/conversion.py",
+        "symbols": ("ConversionMode", "NoteProvenance", "write_note_provenance"),
+        "slide_ids": ("transcription-provenance",),
+    },
+    {
+        "file_name": "ai_bakeoff.py",
+        "source_path": "src/sunofriend/ai_bakeoff.py",
+        "symbols": ("prepare_ai_transcription_request", "run_ai_transcription"),
+        "slide_ids": ("ai-evidence",),
+    },
+    {
+        "file_name": "ai_cache.py",
+        "source_path": "src/sunofriend/ai_cache.py",
+        "symbols": (
+            "build_muscriptor_cache_identity",
+            "find_muscriptor_cache_entry",
+            "materialise_muscriptor_cache_entry",
+        ),
+        "slide_ids": ("ai-evidence",),
+    },
+    {
+        "file_name": "ai_matrix.py",
+        "source_path": "src/sunofriend/ai_matrix.py",
+        "symbols": ("write_ai_candidate_matrix", "build_ai_candidate_matrix"),
+        "slide_ids": ("ai-evidence",),
+    },
+    {
+        "file_name": "workbench_catalog.py",
+        "source_path": "src/sunofriend/workbench_catalog.py",
+        "symbols": ("build_workbench_catalog", "public_catalog", "media_files"),
+        "slide_ids": ("catalog-trust",),
+    },
+    {
+        "file_name": "workbench_store.py",
+        "source_path": "src/sunofriend/workbench_store.py",
+        "symbols": (
+            "WorkbenchStore.append",
+            "WorkbenchStore.current_state",
+            "fold_workbench_events",
+        ),
+        "slide_ids": ("state-replay",),
+    },
+    {
+        "file_name": "workbench_semantics.py",
+        "source_path": "src/sunofriend/workbench_semantics.py",
+        "symbols": ("terminal_no_selection_outcome",),
+        "slide_ids": ("state-replay",),
+    },
+    {
+        "file_name": "workbench_server.py",
+        "source_path": "src/sunofriend/workbench_server.py",
+        "symbols": (
+            "run_workbench",
+            "create_workbench_server",
+            "_WorkbenchHandler._project_payload",
+        ),
+        "slide_ids": ("architecture", "http-inspector"),
+    },
+    {
+        "file_name": "workbench_developer.py",
+        "source_path": "src/sunofriend/workbench_developer.py",
+        "symbols": (
+            "WorkbenchDeveloperTrace",
+            "build_developer_snapshot",
+            "developer_operation_for_route",
+        ),
+        "slide_ids": ("http-inspector", "state-replay"),
+    },
+    {
+        "file_name": "workbench_developer.js",
+        "source_path": "src/sunofriend/workbench_developer.js",
+        "symbols": (
+            "createOperationJournal",
+            "createInspector",
+            "safeBrowserState",
+        ),
+        "slide_ids": ("http-inspector", "state-replay"),
+    },
+    {
+        "file_name": "workbench_timeline.py",
+        "source_path": "src/sunofriend/workbench_timeline.py",
+        "symbols": ("build_stem_timeline", "build_arrangement_timeline"),
+        "slide_ids": ("transport-cache",),
+    },
+    {
+        "file_name": "workbench_artifacts.py",
+        "source_path": "src/sunofriend/workbench_artifacts.py",
+        "symbols": (
+            "WorkbenchArtifacts",
+            "WorkbenchArtifacts.garageband_pack_plan",
+            "WorkbenchArtifacts.build_garageband_pack",
+        ),
+        "slide_ids": ("transport-cache", "pack-acceptance-tests"),
+    },
+    {
+        "file_name": "workbench.html",
+        "source_path": "src/sunofriend/workbench.html",
+        "symbols": ("api",),
+        "slide_ids": ("http-inspector",),
+    },
+    {
+        "file_name": "workbench_transport.js",
+        "source_path": "src/sunofriend/workbench_transport.js",
+        "symbols": (
+            "DecodedLoopTransport",
+            "DecodedGroupLoopTransport",
+            "DecodedChunkSequenceTransport",
+        ),
+        "slide_ids": ("transport-cache",),
+    },
+    {
+        "file_name": "garageband_pack_acceptance.py",
+        "source_path": "src/sunofriend/garageband_pack_acceptance.py",
+        "symbols": (
+            "create_garageband_pack_acceptance_review",
+            "resolve_garageband_pack_acceptance_review",
+            "verify_garageband_pack_archive",
+        ),
+        "slide_ids": ("pack-acceptance-tests",),
+    },
+)
+
+
+_DEVELOPER_INSPECTOR: dict[str, Any] = {
+    "schema": DEVELOPER_INSPECTOR_SCHEMA,
+    "mode": "optional-read-only-execution-and-state-inspector",
+    "purpose": (
+        "Explain which code path handled an action and show sanitized durable, pack "
+        "and temporary state without becoming a second control surface."
+    ),
+    "state_planes": (
+        {
+            "plane": "durable-decision-state",
+            "examples": (
+                "append-only decision event count",
+                "current main/optional outcome identifiers",
+                "review context hash",
+            ),
+        },
+        {
+            "plane": "durable-pack-state",
+            "examples": (
+                "basket revision",
+                "basket scope and basket hashes",
+                "included item count and source-audio opt-in",
+            ),
+        },
+        {
+            "plane": "temporary-browser-state",
+            "examples": (
+                "active view and stem",
+                "playhead, loop and zoom",
+                "transport and mixer status",
+            ),
+        },
+    ),
+    "trace_contract": (
+        "A bounded in-memory trace may show an allow-listed method, route, status, "
+        "duration and Python symbol chain. Opening or refreshing may read one sanitized "
+        "local snapshot; clearing is memory-only, and none of these actions saves state."
+    ),
+    "privacy_contract": (
+        "Never expose the launch token, private paths, media URLs, raw request bodies, "
+        "free-text notes, SQL, a shell or arbitrary code execution."
+    ),
+    "effects": {
+        "records_feedback": False,
+        "changes_selection": False,
+        "changes_pack_basket": False,
+        "mutates_midi": False,
+        "submits_data": False,
+    },
+}
 
 
 _TUTORIAL_SLIDES: tuple[dict[str, Any], ...] = (
     {
-        "slide_id": "purpose",
-        "title": "Sunofriend is a result-space tool",
-        "body": (
-            "Sunofriend turns isolated stems into several evidence-backed MIDI "
-            "alternatives. It helps you compare, choose and export; it is not a "
-            "replacement for Suno, stem separation or GarageBand, and it does not "
-            "choose the best melody automatically."
+        "slide_id": "architecture",
+        "title": "Architecture: engine, Workbench and orchestration",
+        "intuition": (
+            "Think of Sunofriend as a deterministic evidence engine with a local "
+            "decision UI, not as one opaque music model."
         ),
-        "takeaway": "The goal is a useful, editable musical decision—not one magic score.",
+        "body": (
+            "The CLI dispatches explicit operations. Conversion and evidence modules "
+            "create files and manifests. The loopback Workbench reads completed "
+            "candidates, records explicit decisions and builds a pack. The skill tells "
+            "an agent how to call those contracts, but it is not hidden application logic."
+        ),
+        "call_path": (
+            "sunofriend CLI → cli.main",
+            "workbench command → cli._run_workbench",
+            "workbench_server.run_workbench → create_workbench_server",
+            "browser receives a path-free project projection",
+        ),
+        "code_refs": (
+            "src/sunofriend/cli.py::main",
+            "src/sunofriend/cli.py::_run_workbench",
+            "src/sunofriend/workbench_server.py::run_workbench",
+            "src/sunofriend/workbench_server.py::create_workbench_server",
+        ),
+        "invariants": (
+            "Opening Workbench does not run transcription or start an AI model.",
+            "Completed candidates remain separate evidence lanes until a person decides.",
+            "The browser is a presentation client; the server owns canonical state.",
+        ),
+        "failure_mode": (
+            "If UI convenience code starts producing or silently choosing MIDI, the "
+            "evidence and decision boundaries have been broken."
+        ),
+        "review_prompt": (
+            "When adding a feature, identify its layer and ask whether it creates "
+            "evidence, records a decision or only presents state."
+        ),
+        "takeaway": "Trace a feature across layers before changing it.",
     },
     {
-        "slide_id": "workflow",
-        "title": "The workflow keeps evidence visible",
-        "body": (
-            "A source stem and optional chord evidence lead to analytical, specialist, "
-            "AI and reviewed-repair MIDI candidates. You compare each candidate with "
-            "the source, save an explicit main or optional choice, hear the selected "
-            "arrangement, then build an exact GarageBand pack."
+        "slide_id": "transcription-provenance",
+        "title": "Transcription modes and note provenance",
+        "intuition": (
+            "A MIDI note is more reviewable when the code says whether it was heard, "
+            "repaired or inferred."
         ),
-        "takeaway": "Different methods may be useful for different roles or phrases.",
+        "body": (
+            "run_listen_all selects role-specific transcription work. refine_stem seeds "
+            "a candidate, renders it, compares it with the source and applies bounded "
+            "edits until improvement stops. ConversionMode separates exact, repair and "
+            "reconstruct policies, while NoteProvenance writes observed, repaired and "
+            "inferred note evidence beside the MIDI."
+        ),
+        "call_path": (
+            "listen_all.run_listen_all chooses a role-specific lane",
+            "loop.refine_stem seeds → renders → evaluates → applies bounded edits",
+            "conversion.write_note_provenance records how each note arose",
+            "midi.write_midi_file writes the resulting candidate",
+        ),
+        "code_refs": (
+            "src/sunofriend/listen_all.py::run_listen_all",
+            "src/sunofriend/loop.py::refine_stem",
+            "src/sunofriend/conversion.py::ConversionMode",
+            "src/sunofriend/conversion.py::NoteProvenance",
+        ),
+        "invariants": (
+            "Exact mode uses observed evidence only.",
+            "Repair mode may make conservative corrections but must label them.",
+            "Reconstruct mode may infer musical material and must remain distinguishable.",
+            "A proxy evaluation score is evidence, not a universal musical winner.",
+        ),
+        "failure_mode": (
+            "Unlabelled inferred notes make a plausible reconstruction look like an "
+            "exact transcription and prevent an honest review."
+        ),
+        "review_prompt": (
+            "For a proposed pitch or timing repair, ask which observation justified it "
+            "and where that lineage is stored."
+        ),
+        "takeaway": "Code and UI must preserve the difference between heard and inferred.",
     },
     {
-        "slide_id": "comparison",
-        "title": "Several methods, no automatic winner",
-        "body": (
-            "Metrics, labels, overlap and visual alignment are listening evidence, not "
-            "proof of musical accuracy. Main, optional, needs-correction, reject, none "
-            "usable and cannot tell remain human decisions. Playing or looking at a "
-            "candidate never silently promotes it."
+        "slide_id": "ai-evidence",
+        "title": "Local AI runs are immutable evidence, not authority",
+        "intuition": (
+            "An AI result is reproducible only when its audio, checkpoint, settings and "
+            "worker implementation are all pinned."
         ),
-        "takeaway": "Recognition and usefulness in context outrank a single automated score.",
+        "body": (
+            "prepare_ai_transcription_request records the requested backend and inputs. "
+            "run_ai_transcription creates a fresh immutable run directory containing raw "
+            "output and hashes for source, checkpoint, configuration, worker and runtime. "
+            "Exact cache reuse and a warm worker session are separate execution regimes; "
+            "a cache hit is reuse, not independent model agreement."
+        ),
+        "call_path": (
+            "ai_bakeoff.prepare_ai_transcription_request pins the request",
+            "ai_bakeoff.run_ai_transcription launches a bounded worker",
+            "ai_worker writes raw backend output and runtime evidence",
+            "ai_matrix exposes separate raw/derived candidates for comparison",
+        ),
+        "code_refs": (
+            "src/sunofriend/ai_bakeoff.py::prepare_ai_transcription_request",
+            "src/sunofriend/ai_bakeoff.py::run_ai_transcription",
+            "src/sunofriend/ai_cache.py::build_muscriptor_cache_identity",
+            "src/sunofriend/ai_matrix.py::build_ai_candidate_matrix",
+        ),
+        "invariants": (
+            "Fresh runs never overwrite an earlier run directory.",
+            "Raw model output remains available when a derived cleanup candidate exists.",
+            "Cache and session labels must not imply independent evidence.",
+            "Workbench presents completed evidence and does not launch models.",
+        ),
+        "failure_mode": (
+            "Treating a cached repeat as a second vote exaggerates confidence without "
+            "adding new musical evidence."
+        ),
+        "review_prompt": (
+            "Before trusting an AI comparison, check which hashes and execution regime "
+            "prove that the compared lanes are genuinely different."
+        ),
+        "takeaway": "Pin the model path; keep the human decision separate.",
     },
     {
-        "slide_id": "state",
-        "title": "Decisions, audition and export are separate",
-        "body": (
-            "Main/optional decisions define the musical arrangement. Play, loop, zoom, "
-            "mute, solo, level and preset controls are temporary audition state. The "
-            "Pack Composer basket independently chooses which eligible files enter one "
-            "ZIP; changing a checkbox does not change the musical decision."
+        "slide_id": "catalog-trust",
+        "title": "Catalog identity and the privacy projection",
+        "intuition": (
+            "The browser should receive identities and evidence, not authority to name "
+            "arbitrary local files."
         ),
-        "takeaway": "Listening controls and pack contents have zero feedback or MIDI effect.",
+        "body": (
+            "build_workbench_catalog discovers files only beneath explicit roots, hashes "
+            "their bytes and creates deterministic stem/candidate identities. public_catalog "
+            "removes private paths before state crosses into the browser. media_files keeps "
+            "the server-owned mapping needed to serve an already pinned artifact."
+        ),
+        "call_path": (
+            "build_workbench_catalog validates roots and hashes artifacts",
+            "candidate and review-context identifiers are derived deterministically",
+            "public_catalog strips private filesystem fields",
+            "media_files retains a server-only capability map",
+        ),
+        "code_refs": (
+            "src/sunofriend/workbench_catalog.py::build_workbench_catalog",
+            "src/sunofriend/workbench_catalog.py::public_catalog",
+            "src/sunofriend/workbench_catalog.py::media_files",
+        ),
+        "invariants": (
+            "Only files beneath authorised roots enter the catalog.",
+            "A changed artifact hash invalidates its earlier identity.",
+            "Browser JSON is path-free.",
+            "Blocked or diagnostic lanes stay labelled rather than becoming primary silently.",
+        ),
+        "failure_mode": (
+            "Accepting a browser-supplied path or stale hash would let display state escape "
+            "the server's authorised catalog."
+        ),
+        "review_prompt": (
+            "For every new browser field, decide whether it is safe public evidence or a "
+            "server-only capability."
+        ),
+        "takeaway": "Hash first, project only safe fields, and fail closed on drift.",
     },
     {
-        "slide_id": "timing",
-        "title": "BPM, recorded zero and downbeat are different facts",
-        "body": (
-            "Set GarageBand to the exact pack BPM before importing MIDI. Every Workbench "
-            "lane begins at recorded zero, but recorded zero does not prove where the "
-            "musical downbeat is. Confirm any pickup or downbeat by ear and check the "
-            "beginning, middle and end for drift."
+        "slide_id": "state-replay",
+        "title": "Append-only decisions and three state planes",
+        "intuition": (
+            "A reviewer should be able to replay how a choice arose without mistaking "
+            "playback controls for saved musical intent."
         ),
-        "takeaway": "Correct tempo is necessary; musical alignment still needs listening.",
+        "body": (
+            "WorkbenchStore.append writes decision events without updating old rows. "
+            "current_state delegates to the pure fold_workbench_events reducer to derive "
+            "the active main/optional choice. "
+            "Pack Composer saves a separate revisioned basket. Playhead, loops, zoom, mute, "
+            "solo and levels exist only in browser memory and reset on restart."
+        ),
+        "call_path": (
+            "decision-event POST route → validated event → WorkbenchStore.append",
+            "WorkbenchStore.current_state calls fold_workbench_events",
+            "terminal_no_selection_outcome applies none-usable/cannot-tell barriers",
+            "Pack basket revisions and temporary browser state remain separate",
+        ),
+        "code_refs": (
+            "src/sunofriend/workbench_store.py::WorkbenchStore.append",
+            "src/sunofriend/workbench_store.py::WorkbenchStore.current_state",
+            "src/sunofriend/workbench_store.py::fold_workbench_events",
+            "src/sunofriend/workbench_semantics.py::terminal_no_selection_outcome",
+            "src/sunofriend/workbench_developer.py::build_developer_snapshot",
+        ),
+        "invariants": (
+            "Existing decision rows are never updated or deleted.",
+            "A terminal none-usable/cannot-tell event leaves history but no active selection.",
+            "A Pack checkbox never writes a candidate decision.",
+            "Audition state has zero feedback, MIDI and pack effect.",
+        ),
+        "failure_mode": (
+            "If a terminal outcome leaves an older candidate active, export can contradict "
+            "the reviewer's latest explicit statement."
+        ),
+        "review_prompt": (
+            "Classify every new state field as durable decision, durable pack or temporary "
+            "audition state before deciding where to store it."
+        ),
+        "takeaway": "Persist intent as events; derive views; keep audition ephemeral.",
     },
     {
-        "slide_id": "instruments",
-        "title": "MIDI performance and instrument sound are separate",
-        "body": (
-            "The numbered MIDI files contain editable notes, timing, duration and "
-            "expression. A neutral preview or dry arrangement proxy uses a consistent "
-            "local sound only for comparison. In GarageBand, choose a playable patch for "
-            "each Software Instrument track; the proxy is not the final instrument."
+        "slide_id": "http-inspector",
+        "title": "Loopback HTTP boundary and the optional Developer Inspector",
+        "intuition": (
+            "The Inspector should be a window into validated execution, never a hidden "
+            "admin console that can bypass the product contract."
         ),
-        "takeaway": "A good transcription can sound wrong through an unsuitable patch.",
+        "body": (
+            "The Workbench binds to loopback and requires a per-launch token. Its HTTP "
+            "handlers accept bounded exact-key requests, then derive canonical roster and "
+            "selection state on the server. The optional Developer Inspector explains the "
+            "route-to-symbol chain and sanitized state planes using a bounded in-memory "
+            "trace. Opening or refreshing reads a sanitized local snapshot; clearing is "
+            "memory-only, and none of those actions saves state."
+        ),
+        "call_path": (
+            "workbench.html::api sends one allow-listed local request",
+            "_WorkbenchHandler validates token, size and exact request keys",
+            "route handler calls catalog/store/timeline/artifact functions",
+            "response is reduced to a path-free browser projection",
+        ),
+        "code_refs": (
+            "src/sunofriend/workbench.html::api",
+            "src/sunofriend/workbench_server.py::_WorkbenchHandler",
+            "src/sunofriend/workbench_server.py::_require_exact_request_keys",
+            "src/sunofriend/workbench_server.py::_WorkbenchHandler._project_payload",
+            "src/sunofriend/workbench_developer.py::build_developer_snapshot",
+            "src/sunofriend/workbench_developer.js::createInspector",
+            "src/sunofriend/workbench.html::developerBrowserState",
+        ),
+        "invariants": (
+            "The server listens on 127.0.0.1 and checks a per-launch secret.",
+            "The server derives canonical selected IDs; it does not trust a browser roster.",
+            "Inspector traces omit tokens, paths, URLs, raw bodies and private notes.",
+            "Inspector read, close and clear actions change no durable revision.",
+        ),
+        "failure_mode": (
+            "An Inspector with a shell, SQL console, arbitrary evaluation or raw-body log "
+            "would create a new unsafe authority boundary."
+        ),
+        "review_prompt": (
+            "Use the Inspector to ask which validator and state projection handled an "
+            "action, then inspect those named symbols in source."
+        ),
+        "takeaway": "Observe execution through allow-listed facts, never by bypassing it.",
     },
     {
-        "slide_id": "pack",
-        "title": "The pack is exact and privacy-first",
-        "body": (
-            "Active checked MIDI is copied byte-for-byte. Rejected, needs-correction, "
-            "unreviewed and superseded MIDI stays out. Source audio is excluded by the "
-            "safe default and enters only after a separate explicit local opt-in. The "
-            "receipt is path-free, although copied source/MIDI may retain embedded metadata."
+        "slide_id": "transport-cache",
+        "title": "Timelines, exact transport and rebuildable caches",
+        "intuition": (
+            "One musical playhead can coordinate several decoded files only when every "
+            "lane uses the same time contract and verified bytes."
         ),
-        "takeaway": "Inspect a pack before sharing it; ordinary use and review stay local.",
+        "body": (
+            "Timeline builders map source and candidate artifacts onto recorded zero. Exact "
+            "short loops decode one bounded window; full-song playback uses canonical chunk "
+            "manifests and a shared Web Audio clock. Generated preview and decoded transport "
+            "files are content-addressed caches: each use rechecks identity, and a mismatch "
+            "causes a rebuild or a closed failure rather than silent reuse."
+        ),
+        "call_path": (
+            "build_stem_timeline/build_arrangement_timeline define canonical lane timing",
+            "WorkbenchArtifacts prepares an exact loop, stream or chunk manifest",
+            "Decoded transports schedule lanes from one Web Audio clock",
+            "hash verification accepts cached bytes or rebuilds them",
+        ),
+        "code_refs": (
+            "src/sunofriend/workbench_timeline.py::build_stem_timeline",
+            "src/sunofriend/workbench_timeline.py::build_arrangement_timeline",
+            "src/sunofriend/workbench_artifacts.py::WorkbenchArtifacts",
+            "src/sunofriend/workbench_transport.js::DecodedChunkSequenceTransport",
+        ),
+        "invariants": (
+            "BPM, recorded zero and musical downbeat remain separate facts.",
+            "Exact multi-lane playback uses one clock.",
+            "A cached artifact is trusted only after byte count and hash verification.",
+            "Transport actions never write a musical decision.",
+        ),
+        "failure_mode": (
+            "Serving a stale decoded chunk can make a correct MIDI candidate appear to "
+            "drift or can audition bytes from an earlier selection."
+        ),
+        "review_prompt": (
+            "When debugging timing, identify the timeline contract, clock, source hash and "
+            "cache key before changing note times."
+        ),
+        "takeaway": "Treat playback as verified evidence, not as an untracked convenience.",
     },
     {
-        "slide_id": "durability-and-phases",
-        "title": "What survives, and what comes next",
-        "body": (
-            "Saved decisions, Overview state and the pack basket survive a restart. "
-            "Prepared audio, playhead, loops, zoom and mixer controls reset. Passing this "
-            "review opens the first read-only Phase 6 Clip Library slice; explicit hybrid "
-            "construction still waits for separate Phase 5.3 lineage and blind-choice gates."
+        "slide_id": "pack-acceptance-tests",
+        "title": "Exact pack, offline resolver and tests as executable specification",
+        "intuition": (
+            "The browser records answers, but only the Python resolver decides whether "
+            "those answers still describe the exact code and ZIP under review."
         ),
-        "takeaway": "Phase 6 extends reviewed parts without erasing their sources or provenance.",
+        "body": (
+            "garageband_pack_plan derives eligible files from saved state, while "
+            "build_garageband_pack copies selected authoritative MIDI byte-for-byte and "
+            "generates only labelled proxies. This frozen page contains no HTTP client. "
+            "The resolver reopens the exact ZIP, verifies its manifest and hashes, rebuilds "
+            "the tutorial seed from the current source manifest, recomputes 10/10 and checks "
+            "both human outcomes. Focused tests encode every gate and tamper case."
+        ),
+        "call_path": (
+            "garageband_pack_plan derives the eligible basket",
+            "build_garageband_pack writes exact MIDI, labelled proxies and a receipt",
+            "create_garageband_pack_acceptance_review freezes code/pack evidence",
+            "resolve_garageband_pack_acceptance_review independently verifies the export",
+            "tests exercise offline runtime, tamper rejection and zero effects",
+        ),
+        "code_refs": (
+            "src/sunofriend/workbench_artifacts.py::WorkbenchArtifacts.garageband_pack_plan",
+            "src/sunofriend/workbench_artifacts.py::WorkbenchArtifacts.build_garageband_pack",
+            "src/sunofriend/garageband_pack_acceptance.py::resolve_garageband_pack_acceptance_review",
+            "tests/test_garageband_pack_acceptance.py::GarageBandPackAcceptanceTests",
+        ),
+        "invariants": (
+            "Selected authoritative MIDI bytes are unchanged in the ZIP.",
+            "Source audio enters only after separate explicit local opt-in.",
+            "This acceptance page performs no fetch, upload, event write or model run.",
+            "Passing opens only the read-only Phase 6 Clip entry; hybrid construction stays separately gated.",
+        ),
+        "failure_mode": (
+            "Trusting browser-edited scores or an unverified ZIP would turn a presentation "
+            "artifact into authority."
+        ),
+        "review_prompt": (
+            "Before changing a contract, find the test that proves its safe path and its "
+            "tampered or stale path; add both when the invariant is new."
+        ),
+        "takeaway": "Resolve against exact bytes and let tests explain what must never drift.",
     },
 )
 
 
 _QUIZ_BANK: tuple[dict[str, Any], ...] = (
     {
-        "question_id": "q01-purpose",
-        "prompt": "What is Sunofriend's main job?",
+        "question_id": "q01-workbench-boundary",
+        "prompt": "A developer runs `sunofriend workbench`. What should that command do?",
         "options": (
-            ("a", "Generate a finished song and choose every instrument automatically"),
+            ("a", "Launch every configured transcription model before drawing the UI"),
             (
                 "b",
-                "Present evidence-backed MIDI alternatives so a person can choose and export editable parts",
+                "Build a hash-pinned catalog of existing outputs and start a local decision server",
             ),
-            ("c", "Replace GarageBand's mixer and patch library"),
+            ("c", "Select the highest-scoring candidate for every stem"),
         ),
         "correct": "b",
-        "explanation": "Sunofriend supports comparison and explicit decisions; GarageBand remains the final instrument and mixing environment.",
-    },
-    {
-        "question_id": "q02-methods",
-        "prompt": "Two processes produce different MIDI for the same stem. What should happen?",
-        "options": (
-            ("a", "Keep only the candidate with the highest automated score"),
-            ("b", "Merge them automatically"),
-            (
-                "c",
-                "Keep both as evidence and choose by listening for that role or phrase",
-            ),
+        "explanation": "The Workbench presents completed candidates. Model execution and musical selection remain explicit separate operations.",
+        "code_refs": (
+            "src/sunofriend/cli.py::_run_workbench",
+            "src/sunofriend/workbench_server.py::run_workbench",
         ),
-        "correct": "c",
-        "explanation": "Scores and agreement guide listening but do not establish one universal winner.",
     },
     {
-        "question_id": "q03-audition-state",
-        "prompt": "What durable change is made by Play, loop, mute, solo, zoom or level controls?",
-        "options": (
-            ("a", "None; they are temporary audition/view state"),
-            ("b", "The loudest candidate becomes main"),
-            ("c", "The current mix is written into the MIDI"),
-        ),
-        "correct": "a",
-        "explanation": "Temporary transport and view controls never record feedback, select MIDI or alter export state.",
-    },
-    {
-        "question_id": "q04-selection-vs-basket",
-        "prompt": "How does a main/optional decision differ from a Pack Composer checkbox?",
-        "options": (
-            ("a", "There is no difference"),
-            (
-                "b",
-                "The decision defines the musical arrangement; the checkbox only controls files in one ZIP",
-            ),
-            ("c", "The checkbox retrains the transcription model"),
-        ),
-        "correct": "b",
-        "explanation": "Musical choice and file inclusion are intentionally separate contracts.",
-    },
-    {
-        "question_id": "q05-proxy",
-        "prompt": "What does the dry selected-arrangement proxy prove?",
-        "options": (
-            ("a", "It identifies the original physical instruments"),
-            ("b", "It is the final GarageBand production mix"),
-            (
-                "c",
-                "It is a consistent convenience audition, not an authoritative instrument choice",
-            ),
-        ),
-        "correct": "c",
-        "explanation": "The proxy makes selected notes easy to hear through one local policy; final patches are chosen in GarageBand.",
-    },
-    {
-        "question_id": "q06-timing",
-        "prompt": "Which GarageBand timing check is correct?",
+        "question_id": "q02-conversion-modes",
+        "prompt": "Which statement correctly describes the three conversion modes?",
         "options": (
             (
                 "a",
-                "Set the exact BPM, confirm the musical downbeat, and check start/middle/end for drift",
+                "Exact uses observed evidence; repair makes labelled conservative corrections; reconstruct may add labelled inference",
             ),
-            ("b", "Recorded zero always proves bar 1 beat 1"),
-            ("c", "GarageBand can use any BPM because MIDI timing is absolute audio"),
+            ("b", "All three modes are aliases for the same note generator"),
+            ("c", "Reconstruct is always more accurate because it creates more notes"),
         ),
         "correct": "a",
-        "explanation": "Tempo, file origin and musical downbeat are separate; a full-song listening check is still required.",
+        "explanation": "ConversionMode and NoteProvenance keep observed, repaired and inferred material distinguishable.",
+        "code_refs": (
+            "src/sunofriend/conversion.py::ConversionMode",
+            "src/sunofriend/conversion.py::NoteProvenance",
+        ),
     },
     {
-        "question_id": "q07-source-privacy",
-        "prompt": "When does original source audio enter a GarageBand pack?",
+        "question_id": "q03-ai-evidence",
+        "prompt": "A MuScriptor result is served twice from the exact-result cache. What evidence does that provide?",
         "options": (
-            ("a", "Whenever a source stem was played"),
-            (
-                "b",
-                "Only after the separate explicit local source-audio opt-in and file selection",
-            ),
-            ("c", "Always, because MIDI needs it"),
+            ("a", "Two independent model votes for those notes"),
+            ("b", "One pinned result reused exactly; the repeat is not independent agreement"),
+            ("c", "Proof that the result is musically correct"),
         ),
         "correct": "b",
-        "explanation": "Source audio is excluded by default; listening never checks it for export.",
+        "explanation": "Source/checkpoint/config/worker/runtime hashes prove identity; an exact cache hit proves reuse, not a second observation.",
+        "code_refs": (
+            "src/sunofriend/ai_bakeoff.py::run_ai_transcription",
+            "src/sunofriend/ai_cache.py::materialise_muscriptor_cache_entry",
+        ),
     },
     {
-        "question_id": "q08-instrument",
-        "prompt": "Imported MIDI is quiet or sounds wrong. What is the first useful check?",
+        "question_id": "q04-catalog-drift",
+        "prompt": "A catalogued MIDI file changes after its SHA-256 identity was recorded. What is safe?",
         "options": (
-            ("a", "Delete the MIDI because transcription must have failed"),
-            (
-                "b",
-                "Choose a playable, role-appropriate GarageBand patch and check its range",
-            ),
-            ("c", "Increase the project BPM until it becomes audible"),
+            ("a", "Continue serving it under the old candidate ID"),
+            ("b", "Trust the browser if its filename still matches"),
+            ("c", "Fail closed or rebuild a new identity from the changed bytes"),
+        ),
+        "correct": "c",
+        "explanation": "Artifact hashes bind identities and caches. Changed bytes cannot silently inherit earlier evidence or decisions.",
+        "code_refs": (
+            "src/sunofriend/workbench_catalog.py::build_workbench_catalog",
+            "src/sunofriend/workbench_artifacts.py::WorkbenchArtifacts",
+        ),
+    },
+    {
+        "question_id": "q05-terminal-replay",
+        "prompt": "Event history contains `main` for candidate A, followed by `cannot_tell` for that stem. What should current_state expose?",
+        "options": (
+            ("a", "Keep candidate A active because it appears earlier"),
+            ("b", "Preserve the history but expose no active/exportable selection"),
+            ("c", "Delete the earlier event row"),
         ),
         "correct": "b",
-        "explanation": "MIDI performance and timbre are separate; patch playability and range materially affect what you hear.",
+        "explanation": "Replay preserves append-only history while the terminal outcome forms a no-selection barrier for the current projection.",
+        "code_refs": (
+            "src/sunofriend/workbench_store.py::fold_workbench_events",
+            "src/sunofriend/workbench_semantics.py::terminal_no_selection_outcome",
+        ),
     },
     {
-        "question_id": "q09-restart",
-        "prompt": "What should a Workbench restart restore?",
+        "question_id": "q06-pack-state",
+        "prompt": "A user unchecks one eligible MIDI item in Pack Composer. What should change?",
+        "options": (
+            ("a", "Only the revisioned pack basket; the musical decision event remains unchanged"),
+            ("b", "The candidate becomes rejected"),
+            ("c", "The MIDI file is edited to contain no notes"),
+        ),
+        "correct": "a",
+        "explanation": "Musical selection, pack inclusion and temporary audition state are three separate contracts.",
+        "code_refs": (
+            "src/sunofriend/workbench_store.py::WorkbenchStore.save_pack_selection",
+            "src/sunofriend/workbench_artifacts.py::WorkbenchArtifacts.garageband_pack_plan",
+        ),
+    },
+    {
+        "question_id": "q07-http-authority",
+        "prompt": "The browser posts an arbitrary roster of selected candidate IDs that disagrees with saved state. What should the server do?",
+        "options": (
+            ("a", "Trust it because the request came from localhost"),
+            ("b", "Derive the canonical roster from current saved state and reject stale or extra fields"),
+            ("c", "Write the roster directly into SQLite"),
+        ),
+        "correct": "b",
+        "explanation": "Loopback and a launch token reduce exposure, but the browser is still untrusted input and cannot define server-owned selection state.",
+        "code_refs": (
+            "src/sunofriend/workbench_server.py::_require_exact_request_keys",
+            "src/sunofriend/workbench_server.py::_WorkbenchHandler._project_payload",
+        ),
+    },
+    {
+        "question_id": "q08-temporary-state",
+        "prompt": "Which action is deliberately zero-effect audition state?",
+        "options": (
+            ("a", "Saving candidate B as optional"),
+            ("b", "Opting source audio into the pack basket"),
+            ("c", "Playing a decoded loop while changing zoom, mute and level"),
+        ),
+        "correct": "c",
+        "explanation": "Transport, view and mixer actions stay in browser memory and do not record feedback, select candidates or alter pack state.",
+        "code_refs": (
+            "src/sunofriend/workbench_transport.js::DecodedLoopTransport",
+            "src/sunofriend/workbench.html::developerBrowserState",
+        ),
+    },
+    {
+        "question_id": "q09-pack-bytes",
+        "prompt": "Which GarageBand pack statement is correct?",
         "options": (
             (
                 "a",
-                "Saved decisions and basket choices, while temporary playhead/mixer state resets",
+                "Numbered selected MIDI is copied byte-for-byte; generated proxies are labelled; source audio needs explicit opt-in",
             ),
-            ("b", "Every playing audio buffer and exact playhead position"),
-            ("c", "Nothing at all"),
+            ("b", "Every preview is authoritative MIDI"),
+            ("c", "Playing a stem automatically includes it as source audio"),
         ),
         "correct": "a",
-        "explanation": "Durable explicit work survives; decoded audio and audition controls are deliberately temporary.",
+        "explanation": "The pack preserves chosen authoritative MIDI exactly and keeps proxy generation and source-audio privacy explicit.",
+        "code_refs": (
+            "src/sunofriend/workbench_artifacts.py::WorkbenchArtifacts.build_garageband_pack",
+            "src/sunofriend/garageband_pack_acceptance.py::verify_garageband_pack_archive",
+        ),
     },
     {
-        "question_id": "q10-phase-boundary",
-        "prompt": "What does a passed Phase 5 local acceptance review unlock first?",
+        "question_id": "q10-resolver-authority",
+        "prompt": "Why can browser-edited review JSON not unlock Phase 6 by changing its score to 10?",
         "options": (
-            ("a", "Automatic hybrid MIDI and public telemetry"),
             (
-                "b",
-                "A read-only Phase 6 Clip Library slice; hybrid construction remains separately gated",
+                "a",
+                "The resolver rebuilds the seed from the exact ZIP and current code manifest, recomputes all answers and checks immutable evidence",
             ),
-            ("c", "Automatic publication of source audio"),
+            ("b", "The page uploads a secret answer sheet to a remote server"),
+            ("c", "Any JSON file named reviewed.json is trusted"),
         ),
-        "correct": "b",
-        "explanation": "Clip browsing/audition/export can start first; explicit hybrids still need the open lineage and blind-choice evidence.",
+        "correct": "a",
+        "explanation": "Only offline Python resolution against exact bytes can pass the gate, and it opens only the read-only Clip entry.",
+        "code_refs": (
+            "src/sunofriend/garageband_pack_acceptance.py::_review_seed",
+            "src/sunofriend/garageband_pack_acceptance.py::resolve_garageband_pack_acceptance_review",
+        ),
     },
 )
 
@@ -301,6 +780,9 @@ def create_garageband_pack_acceptance_review(
         "schema": GARAGEBAND_PACK_ACCEPTANCE_SCHEMA,
         "status": "complete",
         "pack_sha256": seed["pack"]["sha256"],
+        "developer_code_binding_sha256": seed["developer_evidence"][
+            "code_binding_sha256"
+        ],
         "quiz_question_count": len(_QUIZ_BANK),
         "quiz_pass_score": _QUIZ_PASS_SCORE,
         "acceptance_check_count": len(seed["acceptance_checks"]),
@@ -414,9 +896,34 @@ def resolve_garageband_pack_acceptance_review(
         },
         "pack": dict(seed["pack"]),
         "automatic_evidence": dict(seed["automatic_evidence"]),
+        "developer_evidence": {
+            "schema": seed["developer_evidence"]["schema"],
+            "sunofriend_version": seed["developer_evidence"][
+                "sunofriend_version"
+            ],
+            "tutorial_content_sha256": seed["developer_evidence"][
+                "tutorial_content_sha256"
+            ],
+            "quiz_content_sha256": seed["developer_evidence"][
+                "quiz_content_sha256"
+            ],
+            "source_manifest_sha256": seed["developer_evidence"][
+                "source_manifest"
+            ]["manifest_sha256"],
+            "developer_inspector_sha256": seed["developer_evidence"][
+                "developer_inspector"
+            ]["contract_sha256"],
+            "code_binding_sha256": seed["developer_evidence"][
+                "code_binding_sha256"
+            ],
+        },
         "tutorial": {
+            "schema": tutorial["schema"],
+            "version": tutorial["version"],
             "completed": tutorial["completed"],
             "slide_count": tutorial["slide_count"],
+            "content_sha256": tutorial["content_sha256"],
+            "code_binding_sha256": tutorial["code_binding_sha256"],
         },
         "quiz": {
             "question_count": quiz["question_count"],
@@ -466,8 +973,75 @@ def resolve_garageband_pack_acceptance_review(
     return result
 
 
+def _developer_source_manifest() -> dict[str, Any]:
+    package_root = Path(__file__).resolve().parent
+    files: list[dict[str, Any]] = []
+    for binding in _DEVELOPER_SOURCE_BINDINGS:
+        source = package_root / str(binding["file_name"])
+        _require_regular_file(source, "Developer tutorial source")
+        files.append(
+            {
+                "source_path": str(binding["source_path"]),
+                "bytes": source.stat().st_size,
+                "sha256": _sha256(source),
+                "symbols": list(binding["symbols"]),
+                "slide_ids": list(binding["slide_ids"]),
+            }
+        )
+    unsigned = {
+        "schema": DEVELOPER_SOURCE_MANIFEST_SCHEMA,
+        "sunofriend_version": __version__,
+        "files": files,
+    }
+    return {**unsigned, "manifest_sha256": _document_hash(unsigned)}
+
+
+def _developer_evidence() -> dict[str, Any]:
+    source_manifest = _developer_source_manifest()
+    tutorial_spec = {
+        "schema": DEVELOPER_TUTORIAL_SCHEMA,
+        "version": _DEVELOPER_TUTORIAL_VERSION,
+        "slides": _TUTORIAL_SLIDES,
+    }
+    quiz_spec = {
+        "question_count": len(_QUIZ_BANK),
+        "pass_score": _QUIZ_PASS_SCORE,
+        "questions": _QUIZ_BANK,
+    }
+    inspector = json.loads(json.dumps(_DEVELOPER_INSPECTOR, sort_keys=True))
+    inspector_sha256 = _document_hash(inspector)
+    unsigned = {
+        "schema": DEVELOPER_EVIDENCE_SCHEMA,
+        "sunofriend_version": __version__,
+        "tutorial_schema": DEVELOPER_TUTORIAL_SCHEMA,
+        "tutorial_version": _DEVELOPER_TUTORIAL_VERSION,
+        "tutorial_content_sha256": _document_hash(tutorial_spec),
+        "quiz_content_sha256": _document_hash(quiz_spec),
+        "source_manifest": source_manifest,
+        "developer_inspector": {
+            **inspector,
+            "contract_sha256": inspector_sha256,
+        },
+    }
+    binding_payload = {
+        "schema": unsigned["schema"],
+        "sunofriend_version": unsigned["sunofriend_version"],
+        "tutorial_schema": unsigned["tutorial_schema"],
+        "tutorial_version": unsigned["tutorial_version"],
+        "tutorial_content_sha256": unsigned["tutorial_content_sha256"],
+        "quiz_content_sha256": unsigned["quiz_content_sha256"],
+        "source_manifest_sha256": source_manifest["manifest_sha256"],
+        "developer_inspector_sha256": inspector_sha256,
+    }
+    return {
+        **unsigned,
+        "code_binding_sha256": _document_hash(binding_payload),
+    }
+
+
 def _review_seed(pack: Path) -> dict[str, Any]:
     evidence = _inspect_pack(pack)
+    developer_evidence = _developer_evidence()
     quiz_questions = [
         {
             "question_id": row["question_id"],
@@ -561,8 +1135,12 @@ def _review_seed(pack: Path) -> dict[str, Any]:
         },
     ]
     tutorial = {
+        "schema": DEVELOPER_TUTORIAL_SCHEMA,
+        "version": _DEVELOPER_TUTORIAL_VERSION,
+        "content_sha256": developer_evidence["tutorial_content_sha256"],
+        "code_binding_sha256": developer_evidence["code_binding_sha256"],
         "slide_count": len(_TUTORIAL_SLIDES),
-        "slides": [dict(row) for row in _TUTORIAL_SLIDES],
+        "slides": json.loads(json.dumps(_TUTORIAL_SLIDES)),
         "viewed_slide_ids": [],
         "completed": False,
     }
@@ -584,6 +1162,7 @@ def _review_seed(pack: Path) -> dict[str, Any]:
                 "schema": GARAGEBAND_PACK_ACCEPTANCE_SCHEMA,
                 "pack_sha256": evidence["pack"]["sha256"],
                 "manifest_sha256": evidence["embedded_manifest"]["sha256"],
+                "code_binding_sha256": developer_evidence["code_binding_sha256"],
             }
         ),
         "pack": evidence["pack"],
@@ -591,6 +1170,7 @@ def _review_seed(pack: Path) -> dict[str, Any]:
         "included_items": evidence["included_items"],
         "embedded_manifest": evidence["embedded_manifest"],
         "automatic_evidence": evidence["automatic_evidence"],
+        "developer_evidence": developer_evidence,
         "tutorial": tutorial,
         "quiz": quiz,
         "acceptance_checks": checks,
@@ -953,11 +1533,24 @@ def _check_item(item_id: str, prompt: str) -> dict[str, Any]:
 def _validate_tutorial(value: Any) -> dict[str, Any]:
     if not isinstance(value, Mapping):
         raise ValueError("GarageBand acceptance tutorial is invalid")
+    developer_evidence = _developer_evidence()
+    expected_contract = {
+        "schema": DEVELOPER_TUTORIAL_SCHEMA,
+        "version": _DEVELOPER_TUTORIAL_VERSION,
+        "content_sha256": developer_evidence["tutorial_content_sha256"],
+        "code_binding_sha256": developer_evidence["code_binding_sha256"],
+    }
+    if any(value.get(key) != expected for key, expected in expected_contract.items()):
+        raise ValueError("GarageBand acceptance tutorial code binding changed")
     slide_ids = [row["slide_id"] for row in _TUTORIAL_SLIDES]
     viewed = value.get("viewed_slide_ids")
     if value.get("completed") is not True or viewed != slide_ids:
         raise ValueError("Every Sunofriend tutorial slide must be viewed in order")
-    return {"completed": True, "slide_count": len(slide_ids)}
+    return {
+        **expected_contract,
+        "completed": True,
+        "slide_count": len(slide_ids),
+    }
 
 
 def _validate_quiz(value: Any) -> dict[str, Any]:
@@ -1339,6 +1932,7 @@ def _review_html(seed: Mapping[str, Any]) -> str:
         row["question_id"]: {
             "correct": row["correct"],
             "explanation": row["explanation"],
+            "code_refs": list(row["code_refs"]),
         }
         for row in _QUIZ_BANK
     }
@@ -1348,27 +1942,47 @@ def _review_html(seed: Mapping[str, Any]) -> str:
         f"{_html(row['sha256'][:16])}…</li>"
         for row in seed["included_items"]
     )
+    developer_evidence = seed["developer_evidence"]
+    source_rows = "".join(
+        "<li><code>"
+        + _html(row["source_path"])
+        + "</code> · <code>"
+        + _html(", ".join(row["symbols"]))
+        + "</code> · "
+        + _html(row["sha256"][:16])
+        + "…</li>"
+        for row in developer_evidence["source_manifest"]["files"]
+    )
+    inspector_rows = "".join(
+        "<li><b>"
+        + _html(row["plane"])
+        + ":</b> "
+        + _html("; ".join(row["examples"]))
+        + "</li>"
+        for row in developer_evidence["developer_inspector"]["state_planes"]
+    )
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Sunofriend guided Phase 5 acceptance</title>
 <style>
 :root{{--bg:#081018;--panel:#111d28;--line:#294056;--text:#edf5fb;--muted:#a9bdca;--gold:#ffd45c;--green:#69d69b;--red:#ff8b8b;--blue:#8fd3ff}}
-*{{box-sizing:border-box}}body{{margin:0;background:linear-gradient(135deg,#081018,#0d1721 55%,#102239);color:var(--text);font:17px/1.5 system-ui,-apple-system,sans-serif}}main{{max-width:960px;margin:auto;padding:2rem 1rem 5rem}}h1{{font-size:clamp(2rem,5vw,3.7rem);line-height:1.05;margin:.25rem 0}}h2{{margin-top:0}}button{{font:inherit;border:1px solid #47708f;background:#183149;color:var(--text);border-radius:9px;padding:.7rem 1rem;cursor:pointer}}button.primary{{background:#2d6087}}button:disabled{{opacity:.45;cursor:not-allowed}}code{{color:var(--blue)}}.eyebrow{{color:var(--gold);text-transform:uppercase;letter-spacing:.12em;font-weight:750}}.muted{{color:var(--muted)}}.panel{{background:rgba(17,29,40,.96);border:1px solid var(--line);border-radius:18px;padding:clamp(1rem,4vw,2rem);box-shadow:0 18px 55px #0007}}.stepper{{display:grid;grid-template-columns:repeat(5,1fr);gap:.35rem;margin:1.5rem 0}}.step{{padding:.55rem .3rem;border-bottom:4px solid #314555;color:var(--muted);text-align:center;font-size:.82rem}}.step.active{{border-color:var(--gold);color:var(--text)}}.step.done{{border-color:var(--green);color:var(--green)}}.slide{{min-height:320px;display:grid;align-content:center}}.slide-count{{color:var(--gold)}}.takeaway{{border-left:4px solid var(--green);padding:.8rem 1rem;background:#10291f}}.actions{{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:1.2rem}}.flow{{display:flex;gap:.4rem;flex-wrap:wrap;margin:1rem 0}}.flow span{{background:#152b3d;border:1px solid #35516a;border-radius:999px;padding:.4rem .7rem}}.quiz-option,.answer-row{{display:block;border:1px solid var(--line);border-radius:10px;padding:.7rem;margin:.55rem 0;background:#0d1721}}.quiz-option input,.answer-row input{{margin-right:.6rem}}.feedback{{padding:.8rem 1rem;border-radius:10px;margin:1rem 0}}.correct{{background:#123426;border-left:4px solid var(--green)}}.wrong{{background:#3a2020;border-left:4px solid var(--red)}}.score{{font-size:1.35rem;color:var(--gold)}}.evidence{{max-height:240px;overflow:auto;background:#081018;border-radius:10px;padding:.7rem 1rem}}fieldset{{border:1px solid var(--line);border-radius:12px;margin:1rem 0;padding:1rem}}legend{{font-weight:750;padding:0 .3rem}}textarea{{width:100%;min-height:70px;background:#081018;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:.6rem}}.status{{padding:.8rem 1rem;border-radius:10px;background:#10291f}}.warning{{padding:.8rem 1rem;border-left:4px solid var(--gold);background:#2b2514}}[hidden]{{display:none!important}}@media(max-width:650px){{.stepper{{grid-template-columns:1fr}}.step{{text-align:left}}}}
+*{{box-sizing:border-box}}body{{margin:0;background:linear-gradient(135deg,#081018,#0d1721 55%,#102239);color:var(--text);font:17px/1.5 system-ui,-apple-system,sans-serif}}main{{max-width:1040px;margin:auto;padding:2rem 1rem 5rem}}h1{{font-size:clamp(2rem,5vw,3.7rem);line-height:1.05;margin:.25rem 0}}h2{{margin-top:0}}h3{{font-size:1rem;color:var(--gold);margin:.2rem 0 .45rem}}button{{font:inherit;border:1px solid #47708f;background:#183149;color:var(--text);border-radius:9px;padding:.7rem 1rem;cursor:pointer}}button.primary{{background:#2d6087}}button:disabled{{opacity:.45;cursor:not-allowed}}code{{color:var(--blue)}}.eyebrow{{color:var(--gold);text-transform:uppercase;letter-spacing:.12em;font-weight:750}}.muted{{color:var(--muted)}}.panel{{background:rgba(17,29,40,.96);border:1px solid var(--line);border-radius:18px;padding:clamp(1rem,4vw,2rem);box-shadow:0 18px 55px #0007}}.stepper{{display:grid;grid-template-columns:repeat(5,1fr);gap:.35rem;margin:1.5rem 0}}.step{{padding:.55rem .3rem;border-bottom:4px solid #314555;color:var(--muted);text-align:center;font-size:.82rem}}.step.active{{border-color:var(--gold);color:var(--text)}}.step.done{{border-color:var(--green);color:var(--green)}}.slide{{min-height:520px;display:grid;align-content:center}}.slide-count{{color:var(--gold)}}.intuition{{font-size:1.12rem;color:#d9ecf8;border-left:4px solid var(--blue);padding:.7rem 1rem;background:#102334}}.technical-grid{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem;margin:1rem 0}}.technical-block{{background:#0b1620;border:1px solid var(--line);border-radius:12px;padding:.8rem 1rem}}.technical-block ol,.technical-block ul{{margin:.25rem 0;padding-left:1.25rem}}.technical-block li{{margin:.3rem 0}}.failure{{border-left:4px solid var(--red)}}.review-prompt{{border-left:4px solid var(--gold)}}.takeaway{{border-left:4px solid var(--green);padding:.8rem 1rem;background:#10291f}}.actions{{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:1.2rem}}details.developer{{margin:1rem 0;background:#0b1620;border:1px solid var(--line);border-radius:12px;padding:.75rem 1rem}}details.developer summary{{cursor:pointer;font-weight:750;color:var(--blue)}}.quiz-option,.answer-row{{display:block;border:1px solid var(--line);border-radius:10px;padding:.7rem;margin:.55rem 0;background:#0d1721}}.quiz-option input,.answer-row input{{margin-right:.6rem}}.feedback{{padding:.8rem 1rem;border-radius:10px;margin:1rem 0}}.correct{{background:#123426;border-left:4px solid var(--green)}}.wrong{{background:#3a2020;border-left:4px solid var(--red)}}.quiz-refs{{display:block;margin-top:.55rem;color:var(--blue)}}.score{{font-size:1.35rem;color:var(--gold)}}.evidence{{max-height:240px;overflow:auto;background:#081018;border-radius:10px;padding:.7rem 1rem}}fieldset{{border:1px solid var(--line);border-radius:12px;margin:1rem 0;padding:1rem}}legend{{font-weight:750;padding:0 .3rem}}textarea{{width:100%;min-height:70px;background:#081018;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:.6rem}}.status{{padding:.8rem 1rem;border-radius:10px;background:#10291f}}.warning{{padding:.8rem 1rem;border-left:4px solid var(--gold);background:#2b2514}}[hidden]{{display:none!important}}@media(max-width:760px){{.technical-grid,.stepper{{grid-template-columns:1fr}}.step{{text-align:left}}}}
 </style></head><body><main>
 <p class="eyebrow">Local · private · zero effect</p><h1>Understand Sunofriend, then test it</h1>
-<p class="muted">One guided presentation, a 10-question one-at-a-time quiz, then two short human checks tied to one exact verified GarageBand pack.</p>
+<p class="muted">Eight code-linked lessons, a 10-question one-at-a-time quiz, then two short human checks tied to one exact verified GarageBand pack.</p>
 <div class="stepper" aria-label="Review progress"><div class="step active" data-step="tutorial">1 Learn</div><div class="step" data-step="quiz">2 Quiz</div><div class="step" data-step="garageband">3 GarageBand</div><div class="step" data-step="usability">4 Usability</div><div class="step" data-step="export">5 Export</div></div>
-<section class="panel" id="tutorial"><p class="slide-count" id="slide-count"></p><div class="slide"><h2 id="slide-title"></h2><p id="slide-body"></p><p class="takeaway" id="slide-takeaway"></p><div class="flow" id="flow" hidden><span>Stems + chords</span><span>Several MIDI methods</span><span>Listen + choose</span><span>Arrangement</span><span>Exact pack</span><span>GarageBand patches</span></div></div><div class="actions"><button id="slide-back">Back</button><button class="primary" id="slide-next">Next</button></div></section>
+<section class="panel" id="tutorial"><p class="slide-count" id="slide-count"></p><div class="slide"><h2 id="slide-title"></h2><p class="intuition" id="slide-intuition"></p><p id="slide-body"></p><div class="technical-grid"><section class="technical-block"><h3>Execution path</h3><ol id="slide-call-path"></ol></section><section class="technical-block"><h3>Read these symbols</h3><ul id="slide-code-refs"></ul></section><section class="technical-block"><h3>Invariants to preserve</h3><ul id="slide-invariants"></ul></section><section class="technical-block failure"><h3>Failure to look for</h3><p id="slide-failure"></p></section><section class="technical-block review-prompt"><h3>Code-review prompt</h3><p id="slide-review-prompt"></p></section></div><p class="takeaway" id="slide-takeaway"></p></div><details class="developer" id="developer-inspector-explanation"><summary>Optional Developer Inspector: what it may show</summary><p>{_html(developer_evidence["developer_inspector"]["purpose"])}</p><ul>{inspector_rows}</ul><p><b>Trace:</b> {_html(developer_evidence["developer_inspector"]["trace_contract"])}</p><p><b>Safety:</b> {_html(developer_evidence["developer_inspector"]["privacy_contract"])}</p><p class="muted">The Inspector is explanatory and read-only. It is not a shell, SQL console or second save path.</p></details><details class="developer" id="developer-code-binding"><summary>Exact tutorial schema, version and code hashes</summary><p>Sunofriend <code>{_html(developer_evidence["sunofriend_version"])}</code> · tutorial schema <code>{_html(developer_evidence["tutorial_schema"])}</code> · version <code>{_html(developer_evidence["tutorial_version"])}</code></p><p>Tutorial SHA-256 <code>{_html(developer_evidence["tutorial_content_sha256"])}</code><br>Quiz SHA-256 <code>{_html(developer_evidence["quiz_content_sha256"])}</code><br>Source manifest SHA-256 <code>{_html(developer_evidence["source_manifest"]["manifest_sha256"])}</code><br>Code binding SHA-256 <code>{_html(developer_evidence["code_binding_sha256"])}</code></p><ul class="evidence">{source_rows}</ul></details><div class="actions"><button id="slide-back">Back</button><button class="primary" id="slide-next">Next</button></div></section>
 <section class="panel" id="quiz" hidden><p class="eyebrow">Understanding check</p><h2>Question <span id="quiz-number"></span> of 10</h2><p id="quiz-prompt"></p><div id="quiz-options"></div><div id="quiz-feedback" hidden></div><div class="actions"><button class="primary" id="check-answer">Check answer</button><button id="quiz-next" hidden>Next question</button></div><div id="quiz-finish" hidden><p class="score" id="quiz-score"></p><p id="quiz-result"></p><div class="actions"><button id="retry-quiz">Retry all 10 questions</button><button class="primary" id="start-garageband">Continue to GarageBand check</button></div></div></section>
 <section class="panel" id="acceptance" hidden><p class="eyebrow" id="check-eyebrow"></p><h2 id="check-title"></h2><p id="check-purpose"></p><p class="warning" id="check-warning"></p><div id="check-items"></div><fieldset><legend>Explicit check outcome</legend><label class="answer-row"><input type="radio" name="check-outcome" value="passed">Passed</label><label class="answer-row"><input type="radio" name="check-outcome" value="needs_changes">Needs changes</label><label class="answer-row"><input type="radio" name="check-outcome" value="incomplete">Incomplete / cannot tell</label></fieldset><label>Private notes for this check<textarea id="check-notes" placeholder="Optional; retained only in the private reviewed export"></textarea></label><div class="actions"><button class="primary" id="save-check">Review this check and continue</button></div></section>
 <section class="panel" id="export" hidden><p class="eyebrow">Review ready</p><h2>Export the evidence</h2><p id="final-summary" class="status"></p><p>The reviewed JSON is private and can contain your notes. Resolve it against the exact ZIP with:</p><pre><code>sunofriend garageband-pack-resolve REVIEWED.json sunofriend-garageband-pack.zip --out phase5-acceptance-result.json</code></pre><div class="actions"><button class="primary" id="export-json">Export reviewed JSON</button></div><details><summary>Automatically verified pack evidence</summary><p>ZIP SHA-256 <code>{_html(seed["pack"]["sha256"])}</code></p><ul class="evidence">{item_rows}</ul></details><p class="muted">This page records no Workbench event and has no upload or submission action.</p></section>
 <script>
 const review={payload};const quizKey={key_payload};let slideIndex=0,quizIndex=0,checkIndex=0;
 const byId=id=>document.getElementById(id);const esc=value=>String(value).replace(/[&<>"']/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[c]));
+function renderList(id,items,code=false){{byId(id).innerHTML=items.map(item=>`<li>${{code?`<code>${{esc(item)}}</code>`:esc(item)}}</li>`).join('')}}
 function showStage(name){{for(const id of ['tutorial','quiz','acceptance','export'])byId(id).hidden=id!==(name==='garageband'||name==='usability'?'acceptance':name);document.querySelectorAll('.step').forEach(step=>{{const order=['tutorial','quiz','garageband','usability','export'],current=order.indexOf(name),index=order.indexOf(step.dataset.step);step.classList.toggle('active',index===current);step.classList.toggle('done',index<current)}});scrollTo({{top:0,behavior:'smooth'}})}}
-function renderSlide(){{const slide=review.tutorial.slides[slideIndex];if(!review.tutorial.viewed_slide_ids.includes(slide.slide_id))review.tutorial.viewed_slide_ids.push(slide.slide_id);byId('slide-count').textContent=`Slide ${{slideIndex+1}} of ${{review.tutorial.slide_count}}`;byId('slide-title').textContent=slide.title;byId('slide-body').textContent=slide.body;byId('slide-takeaway').innerHTML='<b>Remember:</b> '+esc(slide.takeaway);byId('flow').hidden=slide.slide_id!=='workflow';byId('slide-back').disabled=slideIndex===0;byId('slide-next').textContent=slideIndex===review.tutorial.slide_count-1?'Start the quiz':'Next'}}
+function renderSlide(){{const slide=review.tutorial.slides[slideIndex];if(!review.tutorial.viewed_slide_ids.includes(slide.slide_id))review.tutorial.viewed_slide_ids.push(slide.slide_id);byId('slide-count').textContent=`Slide ${{slideIndex+1}} of ${{review.tutorial.slide_count}}`;byId('slide-title').textContent=slide.title;byId('slide-intuition').textContent=slide.intuition;byId('slide-body').textContent=slide.body;renderList('slide-call-path',slide.call_path);renderList('slide-code-refs',slide.code_refs,true);renderList('slide-invariants',slide.invariants);byId('slide-failure').textContent=slide.failure_mode;byId('slide-review-prompt').textContent=slide.review_prompt;byId('slide-takeaway').innerHTML='<b>Remember:</b> '+esc(slide.takeaway);byId('slide-back').disabled=slideIndex===0;byId('slide-next').textContent=slideIndex===review.tutorial.slide_count-1?'Start the quiz':'Next'}}
 byId('slide-back').onclick=()=>{{slideIndex--;renderSlide()}};byId('slide-next').onclick=()=>{{if(slideIndex<review.tutorial.slide_count-1){{slideIndex++;renderSlide();return}}review.tutorial.completed=true;showStage('quiz');renderQuiz()}};
-function renderQuiz(){{const question=review.quiz.questions[quizIndex];byId('quiz-number').textContent=quizIndex+1;byId('quiz-prompt').textContent=question.prompt;byId('quiz-options').innerHTML=question.options.map(option=>`<label class="quiz-option"><input type="radio" name="quiz-answer" value="${{esc(option.option_id)}}" ${{question.answer===option.option_id?'checked':''}} ${{question.answer?'disabled':''}}>${{esc(option.label)}}</label>`).join('');const feedback=byId('quiz-feedback');if(question.answer){{const key=quizKey[question.question_id];feedback.hidden=false;feedback.className='feedback '+(question.correct?'correct':'wrong');feedback.innerHTML=`<b>${{question.correct?'Correct':'Not quite'}}.</b> ${{esc(key.explanation)}}`;byId('check-answer').hidden=true;byId('quiz-next').hidden=false;byId('quiz-next').textContent=quizIndex===review.quiz.question_count-1?'See my score':'Next question'}}else{{feedback.hidden=true;byId('check-answer').hidden=false;byId('quiz-next').hidden=true}}byId('quiz-finish').hidden=true}}
+function renderQuiz(){{const question=review.quiz.questions[quizIndex];byId('quiz-number').textContent=quizIndex+1;byId('quiz-prompt').textContent=question.prompt;byId('quiz-options').innerHTML=question.options.map(option=>`<label class="quiz-option"><input type="radio" name="quiz-answer" value="${{esc(option.option_id)}}" ${{question.answer===option.option_id?'checked':''}} ${{question.answer?'disabled':''}}>${{esc(option.label)}}</label>`).join('');const feedback=byId('quiz-feedback');if(question.answer){{const key=quizKey[question.question_id];feedback.hidden=false;feedback.className='feedback '+(question.correct?'correct':'wrong');feedback.innerHTML=`<b>${{question.correct?'Correct':'Not quite'}}.</b> ${{esc(key.explanation)}}<span class="quiz-refs">Read: ${{key.code_refs.map(ref=>`<code>${{esc(ref)}}</code>`).join(' · ')}}</span>`;byId('check-answer').hidden=true;byId('quiz-next').hidden=false;byId('quiz-next').textContent=quizIndex===review.quiz.question_count-1?'See my score':'Next question'}}else{{feedback.hidden=true;byId('check-answer').hidden=false;byId('quiz-next').hidden=true}}byId('quiz-finish').hidden=true}}
 byId('check-answer').onclick=()=>{{const chosen=document.querySelector('input[name="quiz-answer"]:checked');if(!chosen){{alert('Choose one answer first.');return}}const question=review.quiz.questions[quizIndex],key=quizKey[question.question_id];question.answer=chosen.value;question.correct=chosen.value===key.correct;renderQuiz()}};
 byId('quiz-next').onclick=()=>{{if(quizIndex<review.quiz.question_count-1){{quizIndex++;renderQuiz();return}}finishQuiz()}};
 function finishQuiz(){{review.quiz.answered_count=review.quiz.questions.filter(q=>q.answer).length;review.quiz.score=review.quiz.questions.filter(q=>q.correct).length;review.quiz.completed=review.quiz.answered_count===review.quiz.question_count;review.quiz.passed=review.quiz.completed&&review.quiz.score>=review.quiz.pass_score;byId('quiz-feedback').hidden=true;byId('check-answer').hidden=true;byId('quiz-next').hidden=true;byId('quiz-finish').hidden=false;byId('quiz-score').textContent=`Score: ${{review.quiz.score}} / ${{review.quiz.question_count}}`;byId('quiz-result').textContent=review.quiz.passed?'Understanding check passed. You can continue to the two human checks.':`Review the explanations and retry; at least ${{review.quiz.pass_score}}/10 is required before acceptance.`;byId('start-garageband').disabled=!review.quiz.passed}}
@@ -1383,6 +1997,10 @@ renderSlide();
 
 
 __all__ = [
+    "DEVELOPER_EVIDENCE_SCHEMA",
+    "DEVELOPER_INSPECTOR_SCHEMA",
+    "DEVELOPER_SOURCE_MANIFEST_SCHEMA",
+    "DEVELOPER_TUTORIAL_SCHEMA",
     "GARAGEBAND_PACK_ACCEPTANCE_RESULT_SCHEMA",
     "GARAGEBAND_PACK_ACCEPTANCE_SCHEMA",
     "create_garageband_pack_acceptance_review",

@@ -13,6 +13,14 @@ processes may produce immutable candidates, the Workbench makes their evidence
 approachable, and a human chooses what becomes part of an arrangement. No
 shared score or model label is an automatic winner.
 
+The optional Developer Inspector is a read-only projection across these
+layers. Its `sunofriend.workbench-developer-snapshot.v1` document explains
+application operations, append-only events, derived current state and the
+separate Pack Composer revision without becoming another state store. It is
+disabled unless `workbench --developer-inspector` is supplied, remains behind
+the loopback launch token and has no model, decision, basket, render, MIDI or
+export effect. See the [technical tour](TECHNICAL_TOUR.md).
+
 ## Current execution flow
 
 ```text
@@ -51,6 +59,11 @@ CLI parsing (`cli.py`)
         |                              `workbench_timeline.py`,
         |                              `workbench_artifacts.py`,
         |                              `workbench_server.py`,
+        |                              `workbench_clips.py`,
+        |                              `workbench_clips.js`,
+        |                              `workbench_reuse.py`,
+        |                              `workbench_developer.py`,
+        |                              `workbench_developer.js`,
         |                              `workbench_visualization.js`,
         |                              `workbench_transport.js`)
         +--> instrument discovery (`instrument_catalog.py`)
@@ -417,6 +430,84 @@ Phase 5.3 blind-choice/source-lineage prerequisites for hybrid construction.
 When no catalog downbeat is pinned, the result labels a listened pass as
 reviewer-observation-only rather than manufacturing exact downbeat evidence.
 
+The 22 July 2026 result passed that boundary: eight tutorial screens, a 10/10
+quiz and both six-item human checks passed without an issue or `cannot_tell`
+answer. The accepted pack contained five selected MIDI payloads, the dry
+arrangement proxy and no source audio. The resolver verified the exact member
+set, receipt, payload sizes and hashes and declared every project effect false.
+Its downbeat remains reviewer observation, not catalog metadata. The result is
+path-free and contains no private note text.
+
+Phase 6 Increment 6.0 is complete as a separate gated read-only
+projection. `workbench --clip-library --phase6-acceptance --phase6-pack`
+requires all three values together. Before opening the explicit existing
+library, the server verifies the passed result and exact pack; ordinary
+Workbench has no Clip capability when all three are absent. The library opens
+through independent SQLite and application read-only guards, and all catalog
+objects and lineage links are hash-checked.
+
+The browser may receive bounded browse/search results and path-free detail,
+then request deterministic MIDI reconstruction and an optional dry neutral
+render. Derived artifacts use a separate rebuildable cache. They are not added
+to the library. The reconstruction expresses Clip v1's canonical musical and
+timing contract; it is not an original-SMF byte copy. No source path, source
+URI, private provenance/note or transform parameter enters the browser.
+
+This boundary has no library, Clip, source-candidate, project-decision, basket,
+feedback or submission effect. It does not expose transforms, writes,
+piano-roll editing, arrangement placement or hybrid construction. The latter
+remains behind the Phase 5.3 blind-choice and source-lineage gates. See
+[Phase 6: Creative Arrangement and Reusable
+MIDI](PHASE6_CREATIVE_ARRANGEMENT.md).
+
+The real-browser completion check exposed 73 verified Clips across 51
+lineages, traversed browse/detail, built deterministic MIDI and a dry
+FluidSynth proxy, observed a repeat content-addressed cache hit, byte-range
+served both path-free artifacts and traced the operations through the optional
+Developer Inspector. Every musical, Clip-library and pack-state mutation
+remained zero. Broader Phase 6 remains in progress; transforms, piano roll,
+current-arrangement placement and hybrids are still outside this completed
+boundary.
+
+Phase 6 Increment 6.1 adds placement only as a separately gated proposal.
+`--enable-clip-reuse-plan` is valid only beside the three Increment 6.0 inputs;
+without it, the proposal endpoints and state plane do not exist. The browser
+keeps **Browse Clips** and **Proposed reuse plan** separate. A place action
+supplies only the current plan identity/revision/hash, exact `clip_id` and
+object SHA-256, plus a whole-beat target. The server derives all other Clip
+facts from the verified read-only library. Removal appends a tombstone; a move
+is an explicit remove followed by an explicit place.
+
+`workbench_reuse.py` contains `WorkbenchClipReuseStore` and
+`WorkbenchClipReuseService`. The store owns an append-only owner-only SQLite
+state plane at `STATE_DIR/phase6-reuse/reuse.sqlite3`, created lazily on the
+first explicit action. An empty GET does not create it. The service pins the
+project identity/setup/source hashes, resolved acceptance and pack hashes,
+complete library state, policy and fixed planning grid. Only an exact binding
+restores after restart. It validates immutable object identity, the positive
+project BPM and bounds before appending, and computes path-free compatibility
+warnings without transforming the Clip.
+
+`workbench_server.py` exposes token-protected
+`GET /api/clip-reuse-plan` and `POST /api/clip-reuse-action` only when enabled.
+Optimistic concurrency uses the plan ID, SHA-256 and revision. A conflict
+cannot replay a mutation: `workbench_clips.js` reloads current proposal state
+once, preserves the draft where possible and requires a fresh explicit submit.
+The optional Developer Inspector maps those routes to `clip_reuse.read` and
+`clip_reuse.change`, exposing only a bounded path-free summary.
+
+The planning grid is 4/4 and 480 ticks per quarter note, permits only whole
+beats and treats bar 1/beat 1 as recorded zero. It does not claim a confirmed
+downbeat or time signature, and it reports but does not apply existing project
+downbeat evidence. Bounds are 64 active placements, 512 events,
+20,000 notes per Clip, 40,000 active note instances and a 20-minute nominal
+end. The proposal state is independent of musical decisions, Clip/library
+state, the current arrangement and the Pack Composer basket. Increment 6.1
+does not add a transform, render/play, export, instrument attachment, feedback,
+submission, piano roll or hybrid path. Focused/full and real local
+restart/browser verification passed, completing Increment 6.1 without
+completing broader Phase 6.
+
 An optional explicit-catalog phrase link validates one existing diagnostic
 S0/M1/M3 hybrid report against its exact stem, three current candidate MIDI
 files and the pinned unresolved melody phrase-review package. The public
@@ -647,6 +738,12 @@ third-party integrations.
 
 ## Change rules
 
+For a literate walk through the modules, state transitions, invariants and
+tests behind these rules, start with the
+[Sunofriend technical tour](TECHNICAL_TOUR.md). It also gives the bounded
+method for adding another transcription or review process without turning its
+score into an automatic winner.
+
 - Preserve source audio and existing output by default. Require an explicit
   overwrite option for destructive replacement.
 - Characterize MIDI byte/event behaviour before moving parsers. Running status,
@@ -666,11 +763,12 @@ third-party integrations.
 
 The safest next boundaries are:
 
-1. Complete and resolve the Phase 5.9 exact-pack human acceptance review. Only
-   then begin the read-only Phase 6 Clip Library slice. Add another pack
-   artifact kind only after it has an explicit eligibility and rights
-   contract. Keep waveform display data, temporary mixer state, musical
-   decisions and export-basket choices separate.
+1. Build the next reversible Phase 6 slice from the completed, separately
+   gated Phase 6.1 immutable-placement contract.
+   Add another pack artifact kind only after it has an explicit eligibility
+   and rights contract. Keep Clip browse state, reuse proposals, derived
+   previews, waveform display data, temporary mixer state, musical decisions
+   and export-basket choices separate.
 2. Add typed application operations for folder conversion, one-stem conversion,
    vocal extraction and MIDI transformation; keep CLI handlers as adapters.
 3. Centralize instrument roles, aliases, channels, GM programs and GarageBand

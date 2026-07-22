@@ -123,70 +123,10 @@ class WorkbenchStore:
         ]
 
     def current_state(self, project: Mapping[str, Any]) -> dict[str, Any]:
-        states: dict[str, dict[str, Any]] = {}
-        for stem in project.get("stems", []):
-            states[str(stem["stem_id"])] = {
-                "role": stem.get("role"),
-                "review_context_sha256": stem.get("review_context_sha256"),
-                "outcome": None,
-                "candidates": {},
-                "main_candidate_id": None,
-                "auditioned_candidates": [],
-            }
-        applied_event_count = 0
-        for event in self.events(str(project["project_id"])):
-            stem = states.get(event["stem_id"])
-            if stem is None:
-                continue
-            applied_event_count += 1
-            payload = event["payload"]
-            review_context = payload.get("review_context", {})
-            review_context_sha256 = review_context.get("sha256")
-            if event["event_type"] == "candidate_decision":
-                decision_value = payload["decision"]
-                previous_main = stem["main_candidate_id"]
-                stem["candidates"][event["candidate_id"]] = {
-                    "decision": decision_value,
-                    "context": payload["context"],
-                    "problem_tags": list(payload.get("problem_tags", [])),
-                    "notes": payload.get("notes"),
-                    "review_context_sha256": review_context_sha256,
-                    "event_id": event["event_id"],
-                    "created_at": event["created_at"],
-                    "selection_active": decision_value in {"main", "optional"},
-                }
-                if decision_value in {"main", "optional"} and isinstance(
-                    stem.get("outcome"), Mapping
-                ) and terminal_no_selection_outcome(stem["outcome"].get("value")):
-                    stem["outcome"] = None
-                if decision_value == "main":
-                    if previous_main and previous_main != event["candidate_id"]:
-                        previous = stem["candidates"].get(previous_main)
-                        if isinstance(previous, dict):
-                            previous["selection_active"] = False
-                    stem["main_candidate_id"] = event["candidate_id"]
-                elif stem["main_candidate_id"] == event["candidate_id"]:
-                    stem["main_candidate_id"] = None
-            elif event["event_type"] == "stem_outcome":
-                stem["outcome"] = {
-                    "value": payload["outcome"],
-                    "context": payload["context"],
-                    "review_context_sha256": review_context_sha256,
-                    "event_id": event["event_id"],
-                    "created_at": event["created_at"],
-                }
-                if terminal_no_selection_outcome(payload["outcome"]):
-                    stem["main_candidate_id"] = None
-                    for decision in stem["candidates"].values():
-                        if decision.get("decision") in {"main", "optional"}:
-                            decision["selection_active"] = False
-            elif event["event_type"] == "role_tag":
-                stem["role"] = payload["role"]
-            elif event["event_type"] == "candidate_auditioned":
-                candidate_id = event.get("candidate_id")
-                if candidate_id and candidate_id not in stem["auditioned_candidates"]:
-                    stem["auditioned_candidates"].append(candidate_id)
-        return {"stems": states, "event_count": applied_event_count}
+        return fold_workbench_events(
+            project,
+            self.events(str(project["project_id"])),
+        )
 
     def export_review(self, project: Mapping[str, Any]) -> dict[str, Any]:
         project_id = str(project["project_id"])
@@ -388,6 +328,94 @@ class WorkbenchStore:
         connection.execute("PRAGMA journal_mode=WAL")
         connection.execute("PRAGMA foreign_keys=ON")
         return connection
+
+
+def fold_workbench_events(
+    project: Mapping[str, Any],
+    events: list[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Derive current state from immutable catalog defaults and ordered events.
+
+    Keeping this reducer pure makes the append-only model inspectable and
+    testable. The production store and Developer Inspector deliberately share
+    this one implementation so the teaching view cannot invent different
+    selection semantics.
+    """
+
+    states: dict[str, dict[str, Any]] = {}
+    for stem in project.get("stems", []):
+        states[str(stem["stem_id"])] = {
+            "role": stem.get("role"),
+            "review_context_sha256": stem.get("review_context_sha256"),
+            "outcome": None,
+            "candidates": {},
+            "main_candidate_id": None,
+            "auditioned_candidates": [],
+        }
+    applied_event_count = 0
+    for event in events:
+        stem = states.get(str(event.get("stem_id", "")))
+        if stem is None:
+            continue
+        _apply_workbench_event(stem, event)
+        applied_event_count += 1
+    return {"stems": states, "event_count": applied_event_count}
+
+
+def _apply_workbench_event(
+    stem: dict[str, Any], event: Mapping[str, Any]
+) -> None:
+    """Apply one already-validated stored event to one mutable stem fold."""
+
+    payload = event["payload"]
+    review_context = payload.get("review_context", {})
+    review_context_sha256 = review_context.get("sha256")
+    event_type = event["event_type"]
+    if event_type == "candidate_decision":
+        decision_value = payload["decision"]
+        candidate_id = event["candidate_id"]
+        previous_main = stem["main_candidate_id"]
+        stem["candidates"][candidate_id] = {
+            "decision": decision_value,
+            "context": payload["context"],
+            "problem_tags": list(payload.get("problem_tags", [])),
+            "notes": payload.get("notes"),
+            "review_context_sha256": review_context_sha256,
+            "event_id": event["event_id"],
+            "created_at": event["created_at"],
+            "selection_active": decision_value in {"main", "optional"},
+        }
+        if decision_value in {"main", "optional"} and isinstance(
+            stem.get("outcome"), Mapping
+        ) and terminal_no_selection_outcome(stem["outcome"].get("value")):
+            stem["outcome"] = None
+        if decision_value == "main":
+            if previous_main and previous_main != candidate_id:
+                previous = stem["candidates"].get(previous_main)
+                if isinstance(previous, dict):
+                    previous["selection_active"] = False
+            stem["main_candidate_id"] = candidate_id
+        elif stem["main_candidate_id"] == candidate_id:
+            stem["main_candidate_id"] = None
+    elif event_type == "stem_outcome":
+        stem["outcome"] = {
+            "value": payload["outcome"],
+            "context": payload["context"],
+            "review_context_sha256": review_context_sha256,
+            "event_id": event["event_id"],
+            "created_at": event["created_at"],
+        }
+        if terminal_no_selection_outcome(payload["outcome"]):
+            stem["main_candidate_id"] = None
+            for decision in stem["candidates"].values():
+                if decision.get("decision") in {"main", "optional"}:
+                    decision["selection_active"] = False
+    elif event_type == "role_tag":
+        stem["role"] = payload["role"]
+    elif event_type == "candidate_auditioned":
+        candidate_id = event.get("candidate_id")
+        if candidate_id and candidate_id not in stem["auditioned_candidates"]:
+            stem["auditioned_candidates"].append(candidate_id)
 
 
 def default_workbench_state_dir(project: Mapping[str, Any]) -> Path:

@@ -55,7 +55,10 @@ choice; scores and model labels never create an automatic global winner.
 | Split one reviewed MIDI into audible roles | `midi-role-split`, `midi-role-split-resolve` | Explicit source-event cluster choice, exact primary-note partition, optional independently transcribed residual layer, local A/B review and a hash-verified user-selected recommendation |
 | Compare consistent sounds on one fixed MIDI | `timbre-resynthesis` | Level-matched complete-patch, extracted-sampler and source-fitted harmonic-plus-noise auditions with note-by-note silence checks and no MIDI changes |
 | Review and hand off multi-process MIDI alternatives in one local site | `workbench` | Loopback-only Project Overview, precise decoded 0.5–15 second per-stem and canonical selected-arrangement loops, exact canonical full-song chunk playback, a bounded full-song timeline, a coarse arbitrary mixer, append-only decisions, private offline review export and an exact-selected-MIDI GarageBand ZIP; no automatic winner or submission endpoint |
+| Understand Workbench code and state transitions | `workbench --developer-inspector` | Optional, loopback-only, read-only application operation/state explorer; it is not a line debugger, evaluator, shell or filesystem browser and has no decision, basket, MIDI, render or export effect |
 | Learn the workflow and verify one exact GarageBand handoff | `garageband-pack-review`, `garageband-pack-resolve` | Eight-screen interactive tutorial, 10 one-at-a-time comprehension questions, then the two explicit GarageBand and local-usability checks; the resolver re-verifies the downloaded ZIP and has no MIDI, selection, basket, upload or feedback effect |
+| Explore reusable Clip v1 parts in Workbench | `workbench --clip-library --phase6-acceptance --phase6-pack` | Phase 6 Increment 6.0 complete: explicit gated read-only browse/search, path-free detail and lineage, neutral audition and deterministic Clip reconstruction; all three flags are required and no Clip, project, decision or basket is changed |
+| Propose explicit Clip reuse in Workbench | `workbench --clip-library --phase6-acceptance --phase6-pack --enable-clip-reuse-plan` | Phase 6 Increment 6.1 complete: whole-beat immutable-Clip placements in a separate append-only local proposal with exact restart recovery; no transform, playback, export, current-arrangement or pack effect |
 
 Development has started on a local-first ensemble of optional transcription
 models, phrase-level melody review and learned instrument matching. See the
@@ -133,14 +136,26 @@ presets, exact canonical full-song chunk transport, verified execution
 provenance and Phase 5.9 exact-pack guided acceptance tooling—is
 in the
 **[Phase 5 multi-process comparison and Result Explorer plan](docs/PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md)**.
-The technical entry gate for the first read-only Phase 6 Clip Library slice is
-complete, and Phase 5.9 now places an eight-screen tutorial and a 10/10
-one-question-at-a-time quiz before the two remaining human checks. A reviewed
-GarageBand Pack Composer pass and the authorised local usability pass still
-remain before Phase 6 starts; explicit hybrid construction also waits for the
+The Phase 5.9 local acceptance gate passed on 22 July 2026: all eight technical
+tutorial screens were completed, the quiz scored 10/10 and both six-item human
+checks passed without an issue or `cannot_tell` result. The exact pack contained
+five selected MIDI payloads, the dry arrangement proxy and no source audio;
+the resolver verified its receipt, member set, sizes and hashes while changing
+no project state. The first explicitly gated, read-only Phase 6 Clip Library
+increment is complete. The separate explicit Clip reuse proposal is also
+complete. Broader Phase 6 remains in
+progress, and explicit hybrid construction still waits for the
 separate Phase 5.3 blind-choice and source-lineage gates. See the
 **[Phase 5 local Studio learning and acceptance guide](docs/PHASE5_LOCAL_STUDIO_ACCEPTANCE.md)**.
-Creative note/phrase editing and Clip reuse remain Phase 6 work, while
+Developers can follow the code from transcription through append-only state,
+exact pack construction and acceptance in the **[Sunofriend technical
+tour](docs/TECHNICAL_TOUR.md)**. It also explains the optional Developer
+Inspector and the invariants to preserve when adding another analytical or AI
+candidate.
+The scope and all-or-none launch contract for that work are in
+**[Phase 6: Creative Arrangement and Reusable MIDI](docs/PHASE6_CREATIVE_ARRANGEMENT.md)**.
+Creative note/phrase editing and Clip reuse beyond the bounded proposal remain
+Phase 6 work, while
 cross-DAW and explicitly consented community work is deferred to Phase 7.
 
 For combining songs, first use `midi-transform` to choose a common key, BPM
@@ -343,6 +358,70 @@ shared loop and playhead. Every artifact still starts at recorded zero and
 Workbench infers no alignment
 offset. Preparing, playing, switching, seeking, pausing or stopping this
 comparison neither saves a selection nor appends an audition event.
+
+The first Phase 6 increment adds an explicitly gated read-only Clip Library
+view. Its launch contract is all-or-none: `--clip-library`,
+`--phase6-acceptance` and `--phase6-pack` must be supplied together. The
+acceptance result must have passed, and the ZIP must be the exact pack named by
+that result. Omitting all three keeps the Phase 5 Workbench unchanged.
+
+```bash
+.venv/bin/sunofriend workbench "/absolute/path/to/stems" \
+  --candidate-root "/absolute/path/to/results" \
+  --catalog "/absolute/path/to/workbench-catalog.json" \
+  --state-dir "/absolute/path/to/workbench-state" \
+  --clip-library "/absolute/path/to/existing-clip-library" \
+  --phase6-acceptance "/absolute/path/to/passed-phase5-acceptance-result.json" \
+  --phase6-pack "/absolute/path/to/exact-accepted-garageband-pack.zip" \
+  --open
+```
+
+This completed first slice is limited to browse/search, path-free details and
+lineage, a dry neutral audition and deterministic MIDI reconstruction. The
+download is reconstructed from the immutable Clip v1 document; it is not an
+original-MIDI byte copy. No transforms, writes, piano-roll editing, placement
+or hybrids are enabled. A real local browser check verified 73 Clips in 51
+lineages, browse/detail, deterministic MIDI, a dry FluidSynth proxy, a repeat
+cache hit, path-free byte-range serving and a Developer Inspector trace with
+zero musical or library mutations. See the
+[Phase 6 creative-arrangement contract](docs/PHASE6_CREATIVE_ARRANGEMENT.md).
+
+Increment 6.1 adds a separate **Proposed reuse plan** only when the user adds
+`--enable-clip-reuse-plan` to that same three-input launch. In **Browse Clips**,
+open an exact Clip and enter a target bar/beat; in **Proposed reuse plan**,
+inspect or explicitly remove placements. Version 1 places only on whole beats
+of a 4/4, 480-TPQ planning grid whose bar 1, beat 1 is recorded zero, not a
+confirmed musical downbeat. Reuse v1 does not apply project downbeat evidence;
+when such evidence exists, the warning says so explicitly. The server pins the
+immutable `clip_id` and object
+hash and shows key, BPM, timing, overlap and missing-instrument compatibility
+warnings without transforming anything.
+
+```bash
+.venv/bin/sunofriend workbench "/absolute/path/to/stems" \
+  --candidate-root "/absolute/path/to/results" \
+  --catalog "/absolute/path/to/workbench-catalog.json" \
+  --state-dir "/absolute/path/to/workbench-state" \
+  --clip-library "/absolute/path/to/existing-clip-library" \
+  --phase6-acceptance "/absolute/path/to/passed-phase5-acceptance-result.json" \
+  --phase6-pack "/absolute/path/to/exact-accepted-garageband-pack.zip" \
+  --enable-clip-reuse-plan \
+  --open
+```
+
+Proposal events are append-only and separate from decisions and the pack
+basket. The owner-only database at
+`STATE_DIR/phase6-reuse/reuse.sqlite3` is created lazily on the first explicit
+action; an empty read creates nothing. Exact project/library/acceptance-pack
+binding restores the plan after restart. A conflict reloads current state once
+but never automatically retries the user's mutation. Bounds are 64 active
+placements, 512 events, 20,000 notes per Clip, 40,000 active note instances
+and a 20-minute nominal end. The proposal itself has no transform, render,
+play, export, instrument, current-arrangement, pack, feedback or submission
+operation. A real local exercise verified place, exact restart recovery,
+explicit removal, second restart recovery, append-only history, owner-only
+storage, path-free Inspector state and byte-identical decision/library/pack
+inputs. Increment 6.1 is complete; broader Phase 6 remains in progress.
 
 The disclosed **Compatibility fallback** keeps the older browser-media players
 for environments where decoded audio cannot be prepared. It is synchronised in
@@ -562,6 +641,13 @@ pin a downbeat, a listening pass is labelled `reviewer-observation-only`; it
 does not invent downbeat metadata. This workflow records evidence only: it does
 not edit MIDI, promote a candidate, change decisions or pack choices, start
 Phase 6 automatically, upload audio or record telemetry.
+
+The 22 July 2026 close-out produced `passed`: eight tutorial screens complete,
+10/10 on the quiz and two six-item human checks passed with no issues or
+`cannot_tell` answers. The accepted pack contained five selected MIDI payloads,
+the dry proxy and no source audio. Its downbeat evidence remains correctly
+labelled `reviewer-observation-only`. This opens only the read-only Clip entry
+gate; it does not open hybrid construction.
 
 If you already have a downloaded pack but not the automatically generated
 page, create the same fresh local review explicitly:
@@ -2940,6 +3026,13 @@ Sunofriend needs testing beyond the current GarageBand, Suno and Moises
 workflow. Contributions are especially useful from people using other DAWs,
 music software, hardware MIDI instruments, AI music generators and stem
 separators.
+
+Before changing a workflow contract, read the
+[technical tour](docs/TECHNICAL_TOUR.md). It follows the real call paths,
+append-only state fold, privacy boundary, tests and safe method for adding a
+new transcription or review candidate. Run Workbench with
+`--developer-inspector` when an application-level operation/state trace would
+make the change easier to reason about.
 
 Please try the MIDI in [`examples/the-aisle-at-lidl/`](examples/the-aisle-at-lidl/)
 or convert your own authorised stems, then report timing, tempo, key, patch,

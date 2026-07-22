@@ -29,13 +29,28 @@ from .workbench_artifacts import (
     canonical_garageband_pack_basket,
     selected_candidates,
 )
+from .workbench_clips import WorkbenchClipService, public_artifact as public_clip_artifact
+from .workbench_reuse import (
+    WorkbenchClipReuseConflictError,
+    WorkbenchClipReuseNotFoundError,
+    WorkbenchClipReuseService,
+)
 from .workbench_store import (
     WorkbenchPackStateConflictError,
     WorkbenchStore,
     default_workbench_state_dir,
+    fold_workbench_events,
 )
 from .workbench_home import build_workbench_home
 from .workbench_privacy import path_free_browser_state, path_free_role
+from .workbench_developer import (
+    WorkbenchDeveloperTrace,
+    artifact_cache_summary,
+    build_developer_snapshot,
+    developer_code_step_for_route,
+    developer_operation_for_route,
+    trace_response_facts,
+)
 from .workbench_timeline import (
     TimelineArtifactChangedError,
     build_arrangement_timeline,
@@ -46,6 +61,7 @@ from .workbench_timeline import (
 _MAX_REQUEST_BYTES = 64 * 1024
 _MAX_GENERATED_MEDIA_RECORDS = 768
 _MAX_DECODED_STREAM_PLANS = 16
+_MAX_DEVELOPER_SNAPSHOT_BYTES = 512 * 1024
 
 
 class WorkbenchSelectionConflictError(ValueError):
@@ -89,6 +105,67 @@ def _require_lowercase_sha256(value: Any, *, label: str) -> str:
     ):
         raise ValueError(f"{label} must be a lowercase SHA-256 value")
     return value
+
+
+def _clip_browse_query(query_string: str) -> dict[str, Any]:
+    """Decode one bounded, path-free Clip search query."""
+
+    if len(query_string.encode("utf-8")) > 8192:
+        raise ValueError("Clip search query is too large")
+    parsed = parse_qs(
+        query_string,
+        keep_blank_values=True,
+        max_num_fields=64,
+    )
+    allowed = {
+        "token",
+        "text",
+        "role",
+        "key",
+        "bpm",
+        "bpm_tolerance",
+        "tag",
+        "limit",
+        "offset",
+    }
+    if set(parsed) - allowed:
+        raise ValueError("unexpected Clip search field")
+    for key, values in parsed.items():
+        if key != "tag" and len(values) != 1:
+            raise ValueError("duplicate Clip search field")
+
+    def optional_text(name: str) -> str | None:
+        value = parsed.get(name, [""])[0].strip()
+        return value or None
+
+    def optional_float(name: str) -> float | None:
+        value = optional_text(name)
+        return None if value is None else float(value)
+
+    def integer(name: str, default: int) -> int:
+        value = optional_text(name)
+        if value is None:
+            return default
+        if value.startswith("+") or not value.isdigit():
+            raise ValueError("Clip paging values must be decimal integers")
+        return int(value)
+
+    tags = tuple(value.strip() for value in parsed.get("tag", []) if value.strip())
+    if len(tags) != len(parsed.get("tag", [])):
+        raise ValueError("Clip tags must not be empty")
+    if len(tags) > 32:
+        raise ValueError("Clip tag filter is too large")
+    tolerance = optional_float("bpm_tolerance")
+    return {
+        "text": optional_text("text"),
+        "role": optional_text("role"),
+        "key": optional_text("key"),
+        "bpm": optional_float("bpm"),
+        "bpm_tolerance": 0.01 if tolerance is None else tolerance,
+        "tags": tags,
+        "limit": integer("limit", 50),
+        "offset": integer("offset", 0),
+    }
 
 
 def _mapping_contains_key(value: Any, key: str) -> bool:
@@ -199,11 +276,20 @@ class WorkbenchHTTPServer(ThreadingHTTPServer):
         store: WorkbenchStore,
         artifacts: WorkbenchArtifacts,
         token: str,
+        developer_inspector: bool = False,
+        clip_service: WorkbenchClipService | None = None,
+        clip_reuse_service: WorkbenchClipReuseService | None = None,
     ) -> None:
         self.catalog = catalog
         self.store = store
         self.artifacts = artifacts
         self.token = token
+        self.developer_inspector = bool(developer_inspector)
+        self.clip_service = clip_service
+        self.clip_reuse_service = clip_reuse_service
+        self.developer_trace = (
+            WorkbenchDeveloperTrace() if self.developer_inspector else None
+        )
         self.media = media_files(catalog)
         self.catalog_media_ids = frozenset(self.media)
         self.generated_media_ids: OrderedDict[str, None] = OrderedDict()
@@ -227,6 +313,11 @@ def create_workbench_server(
     port: int = 0,
     token: str | None = None,
     soundfont_path: str | Path | None = None,
+    developer_inspector: bool = False,
+    clip_library_path: str | Path | None = None,
+    phase6_acceptance_path: str | Path | None = None,
+    phase6_pack_path: str | Path | None = None,
+    enable_clip_reuse_plan: bool = False,
 ) -> WorkbenchHTTPServer:
     """Create, but do not start, a loopback-only Workbench server."""
 
@@ -237,10 +328,46 @@ def create_workbench_server(
         if state_dir is not None
         else default_workbench_state_dir(catalog)
     )
+    phase6_values = (
+        clip_library_path,
+        phase6_acceptance_path,
+        phase6_pack_path,
+    )
+    if any(value is not None for value in phase6_values) and not all(
+        value is not None for value in phase6_values
+    ):
+        raise ValueError(
+            "--clip-library, --phase6-acceptance and --phase6-pack must be supplied together"
+        )
+    if enable_clip_reuse_plan and not all(
+        value is not None for value in phase6_values
+    ):
+        raise ValueError(
+            "--enable-clip-reuse-plan requires --clip-library, "
+            "--phase6-acceptance and --phase6-pack"
+        )
+    clip_service = None
+    if all(value is not None for value in phase6_values):
+        clip_service = WorkbenchClipService.open(
+            acceptance_result_path=phase6_acceptance_path,
+            garageband_pack_path=phase6_pack_path,
+            library_root=clip_library_path,
+            cache_root=destination / "phase6-clip-cache",
+            soundfont_path=soundfont_path,
+        )
     destination.mkdir(parents=True, exist_ok=True)
     store = WorkbenchStore(destination / "workbench.sqlite3")
     artifacts = WorkbenchArtifacts(
         destination / "artifacts", soundfont_path=soundfont_path
+    )
+    clip_reuse_service = (
+        WorkbenchClipReuseService.open(
+            clip_service=clip_service,
+            catalog=catalog,
+            store_path=destination / "phase6-reuse" / "reuse.sqlite3",
+        )
+        if enable_clip_reuse_plan and clip_service is not None
+        else None
     )
     session_token = token or secrets.token_urlsafe(32)
     return WorkbenchHTTPServer(
@@ -249,6 +376,9 @@ def create_workbench_server(
         store=store,
         artifacts=artifacts,
         token=session_token,
+        developer_inspector=developer_inspector,
+        clip_service=clip_service,
+        clip_reuse_service=clip_reuse_service,
     )
 
 
@@ -263,11 +393,40 @@ def run_workbench(
     inspect_only: bool = False,
     export_review_path: str | Path | None = None,
     soundfont_path: str | Path | None = None,
+    developer_inspector: bool = False,
+    clip_library_path: str | Path | None = None,
+    phase6_acceptance_path: str | Path | None = None,
+    phase6_pack_path: str | Path | None = None,
+    enable_clip_reuse_plan: bool = False,
 ) -> dict[str, Any]:
     """Build a catalogue and inspect, export, or serve the local workbench."""
 
     if export_review_path is not None and (inspect_only or open_browser):
         raise ValueError("--export-review cannot be combined with --inspect or --open")
+    phase6_values = (
+        clip_library_path,
+        phase6_acceptance_path,
+        phase6_pack_path,
+    )
+    if any(value is not None for value in phase6_values) and not all(
+        value is not None for value in phase6_values
+    ):
+        raise ValueError(
+            "--clip-library, --phase6-acceptance and --phase6-pack must be supplied together"
+        )
+    if enable_clip_reuse_plan and not all(
+        value is not None for value in phase6_values
+    ):
+        raise ValueError(
+            "--enable-clip-reuse-plan requires --clip-library, "
+            "--phase6-acceptance and --phase6-pack"
+        )
+    if any(value is not None for value in phase6_values) and (
+        inspect_only or export_review_path is not None
+    ):
+        raise ValueError(
+            "Phase 6 Clip Library options require the live loopback Workbench"
+        )
 
     catalog = build_workbench_catalog(
         project_root,
@@ -291,11 +450,28 @@ def run_workbench(
         state_dir=state_dir,
         port=port,
         soundfont_path=soundfont_path,
+        developer_inspector=developer_inspector,
+        clip_library_path=clip_library_path,
+        phase6_acceptance_path=phase6_acceptance_path,
+        phase6_pack_path=phase6_pack_path,
+        enable_clip_reuse_plan=enable_clip_reuse_plan,
     )
     print("Sunofriend Workbench")
     print("Local — nothing is being uploaded")
     print(server.url, flush=True)
     print(f"Decisions: {server.store.path}", flush=True)
+    if developer_inspector:
+        print("Developer Inspector: enabled (read-only, memory-only trace)", flush=True)
+    if server.clip_service is not None:
+        print(
+            "Phase 6 Clip Library: enabled (verified, read-only, no transforms)",
+            flush=True,
+        )
+    if server.clip_reuse_service is not None:
+        print(
+            "Phase 6 Clip reuse plan: enabled (separate proposal, explicit writes only)",
+            flush=True,
+        )
     if open_browser:
         webbrowser.open(server.url)
     try:
@@ -445,12 +621,40 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 "text/javascript; charset=utf-8",
             )
             return
+        if parsed.path == "/workbench-clips.js":
+            self._bytes(
+                HTTPStatus.OK,
+                _workbench_clips_bytes(),
+                "text/javascript; charset=utf-8",
+            )
+            return
+        if parsed.path == "/workbench-developer.js":
+            self._bytes(
+                HTTPStatus.OK,
+                _workbench_developer_bytes(),
+                "text/javascript; charset=utf-8",
+            )
+            return
         if parsed.path.startswith("/phrase-review/"):
             self._serve_phrase_review(parsed.path)
             return
         if not self._authorised(parsed):
             self._error(HTTPStatus.FORBIDDEN, "invalid workbench session token")
             return
+        if parsed.path == "/api/developer-snapshot":
+            if not self.server.developer_inspector:
+                self._error(HTTPStatus.NOT_FOUND, "workbench route not found")
+                return
+            try:
+                self._json(HTTPStatus.OK, self._developer_snapshot_payload())
+            except (OSError, RuntimeError, ValueError):
+                # Do not place private exception text in this diagnostic surface.
+                self._error(
+                    HTTPStatus.BAD_REQUEST,
+                    "developer snapshot is temporarily unavailable",
+                )
+            return
+        self._start_developer_trace("GET", parsed.path)
         if parsed.path == "/":
             self._bytes(
                 HTTPStatus.OK,
@@ -459,7 +663,70 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             )
             return
         if parsed.path == "/api/project":
-            self._json(HTTPStatus.OK, self._project_payload())
+            try:
+                self._json(HTTPStatus.OK, self._project_payload())
+            except (OSError, RuntimeError, ValueError):
+                self._error(
+                    HTTPStatus.CONFLICT,
+                    "Workbench evidence changed or is unavailable; restart the Workbench",
+                )
+            return
+        if parsed.path == "/api/clips":
+            service = self.server.clip_service
+            if service is None:
+                self._error(HTTPStatus.NOT_FOUND, "workbench route not found")
+                return
+            try:
+                query = _clip_browse_query(parsed.query)
+                self._json(HTTPStatus.OK, service.browse(**query))
+            except (TypeError, ValueError):
+                self._error(HTTPStatus.BAD_REQUEST, "invalid Clip Library search")
+            except (OSError, RuntimeError):
+                self._error(
+                    HTTPStatus.CONFLICT,
+                    "Clip Library evidence changed or is unavailable; restart the Workbench",
+                )
+            return
+        if parsed.path.startswith("/api/clips/"):
+            service = self.server.clip_service
+            if service is None:
+                self._error(HTTPStatus.NOT_FOUND, "workbench route not found")
+                return
+            encoded_clip_id = parsed.path[len("/api/clips/") :]
+            try:
+                clip_id = unquote(encoded_clip_id, errors="strict")
+                if not clip_id or "/" in clip_id:
+                    raise ValueError("invalid clip identity")
+                detail = service.detail(clip_id)
+                reuse_service = self.server.clip_reuse_service
+                if reuse_service is not None:
+                    detail = {
+                        **detail,
+                        "reuse_compatibility": reuse_service.compatibility(clip_id),
+                    }
+                self._json(HTTPStatus.OK, detail)
+            except KeyError:
+                self._error(HTTPStatus.NOT_FOUND, "Clip not found")
+            except (TypeError, UnicodeDecodeError, ValueError):
+                self._error(HTTPStatus.BAD_REQUEST, "invalid Clip identity")
+            except (OSError, RuntimeError):
+                self._error(
+                    HTTPStatus.CONFLICT,
+                    "Clip Library evidence changed or is unavailable; restart the Workbench",
+                )
+            return
+        if parsed.path == "/api/clip-reuse-plan":
+            service = self.server.clip_reuse_service
+            if service is None:
+                self._error(HTTPStatus.NOT_FOUND, "workbench route not found")
+                return
+            try:
+                self._json(HTTPStatus.OK, {"plan": service.plan()})
+            except (OSError, RuntimeError):
+                self._error(
+                    HTTPStatus.CONFLICT,
+                    "Clip reuse evidence changed or is unavailable; restart the Workbench",
+                )
             return
         if parsed.path == "/api/timeline":
             timeline_query = parse_qs(parsed.query, keep_blank_values=True)
@@ -538,11 +805,82 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             "/api/garageband-export",
             "/api/garageband-pack-basket",
             "/api/garageband-pack",
+            "/api/clip-artifact",
+            "/api/clip-reuse-action",
         }:
             self._error(HTTPStatus.NOT_FOUND, "workbench route not found")
             return
+        self._start_developer_trace("POST", parsed.path)
         try:
-            request = self._request_json()
+            try:
+                request = self._request_json()
+            except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+                if parsed.path == "/api/clip-reuse-action":
+                    self._error(
+                        HTTPStatus.BAD_REQUEST,
+                        "invalid Clip reuse action",
+                    )
+                    return
+                raise
+            self._developer_checkpoint("validate", "validate")
+            if parsed.path == "/api/clip-reuse-action":
+                service = self.server.clip_reuse_service
+                if service is None:
+                    self._error(HTTPStatus.NOT_FOUND, "workbench route not found")
+                    return
+                try:
+                    with self.server.state_lock:
+                        result = service.apply(request)
+                    self._json(HTTPStatus.CREATED, result)
+                except WorkbenchClipReuseNotFoundError as exc:
+                    self._error(
+                        HTTPStatus.NOT_FOUND,
+                        "Clip not found"
+                        if exc.kind == "clip"
+                        else "Clip reuse placement not found",
+                    )
+                except WorkbenchClipReuseConflictError:
+                    self._error(
+                        HTTPStatus.CONFLICT,
+                        "Clip reuse plan changed; reload the proposal before trying again",
+                    )
+                except (OverflowError, TypeError, ValueError):
+                    self._error(HTTPStatus.BAD_REQUEST, "invalid Clip reuse action")
+                except (OSError, RuntimeError):
+                    self._error(
+                        HTTPStatus.CONFLICT,
+                        "Clip reuse evidence changed or is unavailable; restart the Workbench",
+                    )
+                return
+            if parsed.path == "/api/clip-artifact":
+                service = self.server.clip_service
+                if service is None:
+                    self._error(HTTPStatus.NOT_FOUND, "workbench route not found")
+                    return
+                try:
+                    _require_exact_request_keys(
+                        request,
+                        {"clip_id", "include_preview"},
+                        label="Clip artifact",
+                    )
+                    artifact = service.prepare_artifact(
+                        request.get("clip_id"),
+                        include_preview=request.get("include_preview"),
+                    )
+                    self._json(
+                        HTTPStatus.OK,
+                        {"artifact": self._public_clip_artifact(artifact)},
+                    )
+                except KeyError:
+                    self._error(HTTPStatus.NOT_FOUND, "Clip not found")
+                except (TypeError, ValueError):
+                    self._error(HTTPStatus.BAD_REQUEST, "invalid Clip artifact request")
+                except (OSError, RuntimeError):
+                    self._error(
+                        HTTPStatus.CONFLICT,
+                        "Clip evidence changed or the local renderer is unavailable",
+                    )
+                return
             if parsed.path == "/api/events":
                 with self.server.state_lock:
                     event = self.server.store.append(self.server.catalog, request)
@@ -1074,6 +1412,110 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         payload["arrangement"] = (
             self._public_artifact(arrangement) if arrangement else None
         )
+        payload["developer"] = {
+            "enabled": self.server.developer_inspector,
+            "snapshot_endpoint": (
+                "/api/developer-snapshot"
+                if self.server.developer_inspector
+                else None
+            ),
+            "read_only": True,
+        }
+        payload["clip_library"] = (
+            self.server.clip_service.capability()
+            if self.server.clip_service is not None
+            else {
+                "enabled": False,
+                "read_only": True,
+                "reason": "Phase 6 Clip Library options were not supplied for this launch",
+            }
+        )
+        payload["clip_reuse_plan"] = (
+            self.server.clip_reuse_service.capability()
+            if self.server.clip_reuse_service is not None
+            else {
+                "enabled": False,
+                "proposal_only": True,
+                "reason": (
+                    "Clip reuse planning was not explicitly enabled for this launch"
+                ),
+            }
+        )
+        return payload
+
+    def _developer_snapshot_payload(self) -> dict[str, Any]:
+        trace = self.server.developer_trace
+        if not self.server.developer_inspector or trace is None:
+            raise ValueError("developer inspector is disabled")
+        with self.server.state_lock:
+            events = self.server.store.events(str(self.server.catalog["project_id"]))
+            current = fold_workbench_events(self.server.catalog, events)
+            arrangement_selection = (
+                self.server.artifacts.decoded_arrangement_selection_manifest(
+                    self.server.catalog,
+                    current,
+                )
+            )
+            pack_plan = self._garageband_pack_plan_payload()
+            clip_capability = (
+                self.server.clip_service.capability()
+                if self.server.clip_service is not None
+                else None
+            )
+            clip_reuse_plan = (
+                self.server.clip_reuse_service.plan()
+                if self.server.clip_reuse_service is not None
+                else None
+            )
+            runtime = {
+                "catalog_media_capability_count": len(
+                    self.server.catalog_media_ids
+                ),
+                "generated_media_capability_count": len(
+                    self.server.generated_media_ids
+                ),
+                "generated_media_capability_limit": _MAX_GENERATED_MEDIA_RECORDS,
+                "decoded_stream_plan_count": len(self.server.decoded_stream_plans),
+                "decoded_stream_plan_limit": _MAX_DECODED_STREAM_PLANS,
+                "clip_library_enabled": clip_capability is not None,
+                "clip_library_clip_count": (
+                    0
+                    if clip_capability is None
+                    else int(clip_capability["library"]["clip_count"])
+                ),
+                "clip_reuse_plan_enabled": clip_reuse_plan is not None,
+                "clip_reuse_plan_revision": (
+                    0
+                    if clip_reuse_plan is None
+                    else int(clip_reuse_plan.get("revision", 0))
+                ),
+                "clip_reuse_active_placement_count": (
+                    0
+                    if clip_reuse_plan is None
+                    else len(clip_reuse_plan.get("placements", []))
+                ),
+            }
+            trace_snapshot = trace.snapshot()
+        cache = artifact_cache_summary(
+            self.server.artifacts.root,
+            verified_stream_entries=(
+                self.server.artifacts.developer_verified_stream_entry_count()
+            ),
+        )
+        payload = build_developer_snapshot(
+            self.server.catalog,
+            current,
+            events=events,
+            arrangement_selection=arrangement_selection,
+            pack_plan=pack_plan,
+            clip_reuse_plan=clip_reuse_plan,
+            trace=trace_snapshot,
+            runtime=runtime,
+            cache=cache,
+        )
+        encoded = json.dumps(payload, sort_keys=True).encode("utf-8")
+        if len(encoded) > _MAX_DEVELOPER_SNAPSHOT_BYTES:
+            raise ValueError("developer snapshot exceeds its fixed response limit")
         return payload
 
     def _request_json(self) -> Mapping[str, Any]:
@@ -1088,6 +1530,45 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         if not isinstance(request, Mapping):
             raise ValueError("workbench request must be an object")
         return request
+
+    def _start_developer_trace(self, method: str, route: str) -> None:
+        trace = self.server.developer_trace
+        operation = developer_operation_for_route(route)
+        if trace is None or operation is None:
+            self._developer_trace_sequence = None
+            self._developer_trace_route = None
+            return
+        self._developer_trace_sequence = trace.begin(method, operation)
+        self._developer_trace_route = route
+
+    def _developer_checkpoint(
+        self,
+        stage: str,
+        code_step: str,
+        facts: Mapping[str, Any] | None = None,
+    ) -> None:
+        trace = self.server.developer_trace
+        if trace is None:
+            return
+        trace.checkpoint(
+            getattr(self, "_developer_trace_sequence", None),
+            stage,
+            code_step,
+            facts,
+        )
+
+    def _complete_developer_trace(
+        self,
+        status: HTTPStatus,
+        facts: Mapping[str, Any] | None = None,
+    ) -> None:
+        trace = self.server.developer_trace
+        sequence = getattr(self, "_developer_trace_sequence", None)
+        if trace is None or sequence is None:
+            return
+        trace.complete(sequence, int(status), facts)
+        self._developer_trace_sequence = None
+        self._developer_trace_route = None
 
     def _public_artifact(self, artifact: Mapping[str, Any]) -> dict[str, Any]:
         public = {
@@ -1128,6 +1609,31 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             public["acceptance_seed"] = {
                 key: value for key, value in seed_record.items() if key != "path"
             }
+        return public
+
+    def _public_clip_artifact(
+        self, artifact: Mapping[str, Any]
+    ) -> dict[str, Any]:
+        """Register derived Clip files and expose only capability URLs."""
+
+        public = public_clip_artifact(artifact)
+        for key, prefix in (("midi", "clip-midi"), ("preview", "clip-preview")):
+            record = artifact.get(key)
+            if not isinstance(record, Mapping):
+                continue
+            media_id = f"{prefix}-{str(record.get('sha256', ''))[:24]}"
+            private_record = dict(record)
+            private_record["_freeze_on_serve"] = True
+            self._register_generated_media(media_id, private_record)
+            public_record = public.get(key)
+            if not isinstance(public_record, Mapping):
+                raise ValueError("Clip artifact public file record is invalid")
+            public[key] = {
+                **dict(public_record),
+                "url": self._media_url(media_id),
+            }
+        if _mapping_contains_key(public, "path"):
+            raise ValueError("Clip artifact exposed a private path")
         return public
 
     def _public_decoded_loop(self, artifact: Mapping[str, Any]) -> dict[str, Any]:
@@ -1553,6 +2059,13 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         *,
         filename: str | None = None,
     ) -> None:
+        route = getattr(self, "_developer_trace_route", None)
+        facts = trace_response_facts(route, value) if route else {}
+        self._developer_checkpoint(
+            "application",
+            developer_code_step_for_route(route) if route else "artifact.prepare",
+            facts,
+        )
         payload = json.dumps(value, indent=2, sort_keys=True).encode("utf-8")
         headers = {}
         if filename:
@@ -1570,6 +2083,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         *,
         headers: Mapping[str, str] | None = None,
     ) -> None:
+        self._complete_developer_trace(status)
         self.send_response(status)
         self._security_headers()
         self.send_header("Content-Type", content_type)
@@ -1655,6 +2169,30 @@ def _workbench_transport_bytes() -> bytes:
     except OSError as exc:
         raise RuntimeError(
             f"packaged Workbench transport is unavailable: {path}"
+        ) from exc
+
+
+def _workbench_developer_bytes() -> bytes:
+    """Load the optional read-only Developer Inspector browser module."""
+
+    path = Path(__file__).with_name("workbench_developer.js")
+    try:
+        return path.read_bytes()
+    except OSError as exc:
+        raise RuntimeError(
+            f"packaged Workbench developer module is unavailable: {path}"
+        ) from exc
+
+
+def _workbench_clips_bytes() -> bytes:
+    """Load the optional read-only Phase 6 Clip Library browser module."""
+
+    path = Path(__file__).with_name("workbench_clips.js")
+    try:
+        return path.read_bytes()
+    except OSError as exc:
+        raise RuntimeError(
+            f"packaged Workbench Clip Library module is unavailable: {path}"
         ) from exc
 
 

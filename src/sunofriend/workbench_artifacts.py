@@ -119,6 +119,12 @@ class WorkbenchArtifacts:
         self._verified_stream_cache: dict[str, dict[str, Any]] = {}
         self._lock = threading.RLock()
 
+    def developer_verified_stream_entry_count(self) -> int:
+        """Return one path-free in-memory cache count for the opt-in inspector."""
+
+        with self._lock:
+            return len(self._verified_stream_cache)
+
     def cached_candidate_preview(
         self,
         catalog: Mapping[str, Any],

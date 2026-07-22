@@ -1,5 +1,6 @@
 import dataclasses
 import json
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -306,6 +307,98 @@ class LibraryTests(unittest.TestCase):
             changed = dataclasses.replace(clip, title="Not immutable")
             with self.assertRaisesRegex(ValueError, "different immutable content"):
                 library.add(changed)
+
+    def test_read_only_catalog_supports_verified_queries_and_versions(self):
+        clip = make_clip()
+        child = transpose_same_mode(clip, "D", direction="up")
+        with tempfile.TemporaryDirectory() as tmp:
+            writable = ClipLibrary(tmp)
+            first = writable.add(clip)
+            writable.add_version(clip.clip_id, child)
+
+            library = ClipLibrary(tmp, read_only=True)
+
+            self.assertTrue(library.read_only)
+            self.assertEqual(library.get(clip.clip_id), clip)
+            self.assertEqual([item.clip_id for item in library.list()], [child.clip_id, clip.clip_id])
+            self.assertEqual(library.search(key="D major")[0].clip_id, child.clip_id)
+            self.assertEqual(
+                [item.clip_id for item in library.versions(child.clip_id)],
+                [clip.clip_id, child.clip_id],
+            )
+
+            library.object_path(first.object_hash).write_bytes(b"changed outside the library")
+            with self.assertRaisesRegex(RuntimeError, "checksum mismatch"):
+                library.get(clip.clip_id)
+
+    def test_read_only_catalog_uses_two_sqlite_write_guards(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            writable = ClipLibrary(tmp)
+            writable.add(make_clip())
+            library = ClipLibrary(tmp, read_only=True)
+
+            with library._connect() as connection:
+                self.assertEqual(connection.execute("PRAGMA query_only").fetchone()[0], 1)
+                connection.execute("PRAGMA query_only = OFF")
+                with self.assertRaisesRegex(sqlite3.OperationalError, "readonly"):
+                    connection.execute("DELETE FROM clips")
+
+    def test_read_only_catalog_rejects_every_library_write(self):
+        clip = make_clip()
+        child = transpose_same_mode(clip, "D", direction="up")
+        with tempfile.TemporaryDirectory() as tmp:
+            writable = ClipLibrary(tmp)
+            summary = writable.add(clip)
+            library = ClipLibrary(tmp, read_only=True)
+
+            with self.assertRaisesRegex(PermissionError, "read-only; cannot add clips"):
+                library.add(clip)
+            with self.assertRaisesRegex(PermissionError, "read-only; cannot add clip versions"):
+                library.add_version(clip.clip_id, child)
+            with self.assertRaisesRegex(PermissionError, "read-only; cannot store clip objects"):
+                library._store_object(summary.object_hash, clip.canonical_bytes())
+
+    def test_read_only_catalog_never_creates_missing_storage(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing_root = Path(tmp) / "missing-library"
+            with self.assertRaisesRegex(FileNotFoundError, "root does not exist"):
+                ClipLibrary(missing_root, read_only=True)
+            self.assertFalse(missing_root.exists())
+
+            missing_database = Path(tmp) / "missing-database"
+            missing_database.mkdir()
+            with self.assertRaisesRegex(FileNotFoundError, "database does not exist"):
+                ClipLibrary(missing_database, read_only=True)
+            self.assertFalse((missing_database / "catalog.sqlite3").exists())
+            self.assertFalse((missing_database / "objects").exists())
+
+            missing_objects = Path(tmp) / "missing-objects"
+            ClipLibrary(missing_objects)
+            (missing_objects / "objects").rmdir()
+            with self.assertRaisesRegex(FileNotFoundError, "objects directory does not exist"):
+                ClipLibrary(missing_objects, read_only=True)
+            self.assertFalse((missing_objects / "objects").exists())
+
+    def test_read_only_catalog_does_not_initialize_or_migrate_schema(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "objects").mkdir()
+            with sqlite3.connect(root / "catalog.sqlite3") as connection:
+                connection.execute("CREATE TABLE unrelated (value TEXT)")
+                journal_mode = connection.execute("PRAGMA journal_mode").fetchone()[0]
+
+            with self.assertRaisesRegex(RuntimeError, "schema is missing required columns"):
+                ClipLibrary(root, read_only=True)
+
+            with sqlite3.connect(root / "catalog.sqlite3") as connection:
+                self.assertEqual(connection.execute("PRAGMA journal_mode").fetchone()[0], journal_mode)
+                tables = {
+                    row[0]
+                    for row in connection.execute(
+                        "SELECT name FROM sqlite_master WHERE type = 'table'"
+                    ).fetchall()
+                }
+            self.assertEqual(tables, {"unrelated"})
 
 
 if __name__ == "__main__":

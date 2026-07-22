@@ -2119,6 +2119,46 @@ def build_parser() -> argparse.ArgumentParser:
             "auditions (default: SUNOFRIEND_SF2 or installed GeneralUser-GS)"
         ),
     )
+    workbench.add_argument(
+        "--developer-inspector",
+        action="store_true",
+        help=(
+            "Enable the optional read-only, path-free operation and state inspector"
+        ),
+    )
+    workbench.add_argument(
+        "--clip-library",
+        default=None,
+        help=(
+            "Explicit existing Clip v1 library to expose read-only after the "
+            "Phase 6 entry gate"
+        ),
+    )
+    workbench.add_argument(
+        "--phase6-acceptance",
+        default=None,
+        help=(
+            "Resolved passed Phase 5.9 acceptance result required with "
+            "--clip-library"
+        ),
+    )
+    workbench.add_argument(
+        "--phase6-pack",
+        default=None,
+        help=(
+            "Exact GarageBand pack named by --phase6-acceptance and required "
+            "with --clip-library"
+        ),
+    )
+    workbench.add_argument(
+        "--enable-clip-reuse-plan",
+        action="store_true",
+        help=(
+            "Explicitly enable the separate append-only Phase 6 Clip reuse "
+            "proposal; requires --clip-library, --phase6-acceptance and "
+            "--phase6-pack"
+        ),
+    )
     workbench_mode = workbench.add_mutually_exclusive_group()
     workbench_mode.add_argument(
         "--inspect",
@@ -4400,6 +4440,11 @@ def _run_workbench(args) -> int:
         inspect_only=args.inspect,
         export_review_path=args.export_review,
         soundfont_path=args.soundfont,
+        developer_inspector=args.developer_inspector,
+        clip_library_path=args.clip_library,
+        phase6_acceptance_path=args.phase6_acceptance,
+        phase6_pack_path=args.phase6_pack,
+        enable_clip_reuse_plan=args.enable_clip_reuse_plan,
     )
     if args.inspect or args.export_review:
         print(json.dumps(report, indent=2, sort_keys=True))

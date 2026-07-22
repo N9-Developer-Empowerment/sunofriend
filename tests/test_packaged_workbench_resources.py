@@ -68,6 +68,8 @@ class PackagedWorkbenchResourcesTests(unittest.TestCase):
                 import sunofriend
                 from sunofriend.cli import main
                 from sunofriend.workbench_server import (
+                    _workbench_clips_bytes,
+                    _workbench_developer_bytes,
                     _workbench_html_bytes,
                     _workbench_transport_bytes,
                     _workbench_visualization_bytes,
@@ -80,6 +82,8 @@ class PackagedWorkbenchResourcesTests(unittest.TestCase):
 
                 loaders = {
                     "workbench.html": _workbench_html_bytes,
+                    "workbench_clips.js": _workbench_clips_bytes,
+                    "workbench_developer.js": _workbench_developer_bytes,
                     "workbench_transport.js": _workbench_transport_bytes,
                     "workbench_visualization.js": _workbench_visualization_bytes,
                 }

@@ -1,11 +1,12 @@
 # Phase 5 local Studio learning and acceptance
 
-Status: **Phase 5.9 tooling is ready; human evidence is pending.** A generated
-page, an unanswered quiz or a successful ZIP integrity check is not an
+Status: **Phase 5.9 passed and closed on 22 July 2026.** The completed result
+contains both human checks as well as the automatic ZIP evidence; a generated
+page, an unanswered quiz or a ZIP integrity check alone would not have been an
 acceptance pass.
 
-This is the final local learning and human-check boundary before the first
-read-only Phase 6 Clip Library increment. It is intentionally attached to one
+This was the final local learning and human-check boundary before the first
+read-only Phase 6 Clip Library increment. It remains attached to one
 exact downloaded GarageBand pack so that understanding, GarageBand behaviour
 and usability evidence all refer to the same selected MIDI bytes.
 
@@ -39,6 +40,34 @@ The presentation teaches Sunofriend rather than a generic audio-to-MIDI app.
 It explicitly preserves the product's main distinction: analytical,
 specialist, AI and reviewed-repair processes remain separate alternatives,
 and Sunofriend does not pretend that one score or model is a universal winner.
+Its developer-facing architecture, actual call paths, append-only state model,
+invariants and test map are expanded in the
+[Sunofriend technical tour](TECHNICAL_TOUR.md). The optional Developer
+Inspector can make those state transitions visible before the checks, but
+using it is not required and has no effect on the quiz or acceptance result.
+
+## Resolved close-out evidence
+
+The path-free resolver result records:
+
+- eight technical tutorial screens completed;
+- exactly 10 quiz questions answered with a 10/10 pass;
+- the GarageBand pack check passed 6/6 with no issue or `cannot_tell` answer;
+- the authorised local-usability check passed 6/6 with no issue or
+  `cannot_tell` answer;
+- five selected MIDI payloads, one dry arrangement proxy and zero source-audio
+  payloads in the accepted ZIP;
+- exact schema, receipt, member set, payload sizes and hashes verified, with
+  the builder declaring the selected MIDI unchanged;
+- downbeat evidence labelled `reviewer-observation-only`, not promoted to
+  catalog-pinned timing evidence; and
+- every declared project, decision, basket, MIDI, candidate, ranking,
+  feedback, submission and automatic-phase-start effect false.
+
+Free-text note content remains private and is not present here or in the
+resolved result. The close-out sets `phase6_read_only_clip_entry_ready` true,
+leaves no local Studio acceptance gate open and leaves
+`explicit_hybrid_construction_ready` false.
 
 ## Resolve the review
 
@@ -110,9 +139,13 @@ effect on MIDI, candidates, main/optional decisions, audition state, the Pack
 Composer basket, rankings or defaults. Nothing is uploaded and no telemetry or
 contribution event is recorded.
 
-Only a resolver result with `status: "passed"` makes
-`phase6_read_only_clip_entry_ready` true. It does not start Phase 6 code by
-itself. It also leaves `explicit_hybrid_construction_ready` false: Phase 5.3
-blind-choice and source-lineage evidence remain separate prerequisites for
-hybrid construction, although they do not block read-only Clip browsing,
-audition and exact export.
+This resolver result has `status: "passed"` and makes
+`phase6_read_only_clip_entry_ready` true. It did not start Phase 6 code by
+itself. The first explicitly gated read-only Clip Library increment is now
+complete; broader Phase 6 remains in progress. See [Phase 6: Creative Arrangement and Reusable
+MIDI](PHASE6_CREATIVE_ARRANGEMENT.md). It requires `--clip-library`,
+`--phase6-acceptance` and `--phase6-pack` together. The result also leaves
+`explicit_hybrid_construction_ready` false: Phase 5.3 blind-choice and
+source-lineage evidence remain separate prerequisites for hybrid construction,
+although they do not block read-only Clip browsing, audition and deterministic
+Clip reconstruction.

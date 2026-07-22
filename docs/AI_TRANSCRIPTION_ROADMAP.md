@@ -16,7 +16,10 @@ completes bounded decoded short arrangement presets; Phase 5.7 implements
 long-song visualization/recovery and minimal exact canonical full-song chunk
 transport; Phase 5.8 completes verified exact-result-cache and bounded
 reused-model execution-provenance display; Phase 5.9 guided exact-pack
-learning and acceptance tooling is complete, with its human review pending
+learning and acceptance passed on 22 July 2026; Phase 6 Increment 6.0's gated,
+read-only Clip Library is complete and Increment 6.1's separate explicit Clip
+reuse proposal is complete; broader Phase 6
+creative arrangement remains in progress
 
 Started: 15 July 2026  
 Scope: local-first AI assistance for transcription, review, instrument matching
@@ -93,8 +96,8 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
-| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.5–5.9 hardening/tooling increments implemented; Phase 5.9 human review plus Phase 5.3 listening/lineage/role work remain** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench now has hash-pinned per-stem and full-song timelines, fixed-window long-song rendering/recovery, precise decoded 0.5–15 second per-stem and canonical selected-arrangement loops, exact canonical full-song chunk playback, an explicitly coarse arbitrary full-song custom mixer, a separate persistent exact GarageBand pack basket, an explicit disputed-range phrase-review bridge, a path-free Project Overview, fail-closed execution provenance, and an exact-pack eight-screen tutorial plus 10/10 quiz before two human acceptance checks. The resolver re-verifies pack bytes and has zero project effects. Terminal no-selection outcomes cannot leak older choices into export, path-like roles cannot leak into public/pack/MIDI metadata, and decisions plus a non-default basket are verified across two server launches |
-| 6. Creative Arrangement and Reusable MIDI | **Entry preparation: technical and guided-review tooling complete; one resolved GarageBand plus authorised-usability review remains** | Reversible note/phrase correction, explicit hybrids, transforms, Clip v1 browsing and reuse, mashup preparation and instrument attachment without becoming a full DAW. The first safe slice is read-only Clip browsing/audition/export; hybrid construction still waits for the Phase 5.3 blind-choice and lineage gates |
+| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.5–5.9 hardening complete and Phase 5.9 human acceptance passed; Phase 5.3 listening/lineage/role work remains** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench has hash-pinned per-stem and full-song timelines, bounded decoded transports, a separate exact GarageBand pack basket, Project Overview, fail-closed execution provenance and guided exact-pack acceptance. The 22 July close-out completed all eight tutorial screens, scored 10/10 and passed both six-item human checks; the resolver reverified five selected MIDI payloads plus the dry proxy and no source audio with zero project effects. Phase 5 remains open only for the separately gated Phase 5.3 work |
+| 6. Creative Arrangement and Reusable MIDI | **In progress: Increments 6.0 and 6.1 complete** | The completed read-only slice requires an explicit library, passed acceptance result and exact accepted pack. A fourth opt-in enables a separate append-only proposal of immutable Clip placements on a bounded whole-beat planning grid, with exact restart binding and server-derived compatibility warnings. It does not transform, play, render, export, attach instruments, alter the current arrangement or touch decisions/pack state. Reversible transforms, piano-roll editing and hybrids remain absent; hybrid construction still waits for the Phase 5.3 blind-choice and lineage gates |
 | 7. Cross-DAW and Opt-in Community Learning | **Deferred** | Compatibility testing, cleared public goldens and consented contextual feedback only after the local workflow is useful, private and stable |
 
 ## Phase 1: AI Transcription Bake-off v1
@@ -570,8 +573,12 @@ playable patches, drum routing where applicable, listened downbeat and
 full-song drift. The second confirms an authorised local project and the
 understandability of comparison, choice, arrangement, state separation, export
 and restart. A strict resolver re-verifies the downloaded ZIP and recomputes
-the review without changing project state. Tooling is complete; the user's
-human evidence is pending.
+the review without changing project state. The 22 July 2026 result passed all
+eight tutorial screens, the quiz at 10/10 and both six-item human checks
+without an issue or `cannot_tell` answer. It verified five selected MIDI
+payloads, the dry proxy and no source audio. The downbeat result remains
+reviewer observation rather than invented catalog metadata, and every project
+effect is false.
 
 Reload restores URL-hash view/stem and durable SQLite decisions, Overview state
 and the pack basket. Prepared audio/chunks, playhead, loop,
@@ -600,13 +607,36 @@ preparation; and instrument/Bundle attachment to reviewed parts. Every edit
 must preserve its source candidate and a minimal audit diff. GarageBand remains
 the final performance, patch and mixing environment.
 
-The technical and guided-review tooling gates are now complete. Under strict
-phase ordering, the first read-only Clip Library slice starts after the user
-completes and resolves one exact-pack 10/10 review with both GarageBand and
-authorised local-usability checks passed. Explicit hybrid
-construction remains separately gated by the open Phase 5.3 blind-choice and
-source-lineage work; those tasks do not block Clip browsing, neutral audition
-or exact export.
+The technical and guided-review gate has passed. The first read-only Clip
+Library slice is complete under an explicit all-or-none launch
+contract: `--clip-library`, `--phase6-acceptance` and `--phase6-pack` are all
+required. Its only functions are bounded browse/search, path-free detail and
+lineage, dry neutral audition and deterministic MIDI reconstruction from the
+immutable Clip document. That reconstruction is not an original-MIDI byte
+copy. It changes no library, project decision or basket and adds no transforms,
+writes, piano roll or hybrids. Explicit hybrid construction remains separately
+gated by the open Phase 5.3 blind-choice and source-lineage work. See
+[Phase 6: Creative Arrangement and Reusable
+MIDI](PHASE6_CREATIVE_ARRANGEMENT.md).
+
+Completion used a real read-only library with 73 Clips in 51 lineages. Browser
+validation covered browse/detail, deterministic MIDI, a dry FluidSynth proxy,
+a repeat cache hit, path-free byte-range serving and Developer Inspector
+tracing while producing zero musical/library mutations. Broader Phase 6
+remains in progress.
+
+Increment 6.1 is implemented behind an additional explicit
+`--enable-clip-reuse-plan` flag, valid only with those same three gate inputs.
+It adds **Browse Clips** and **Proposed reuse plan** modes, exact
+`clip_id`/object-hash placement, explicit removal and exact-binding restart
+restoration in a separate append-only local database. Its fixed 4/4,
+480-TPQ, whole-beat grid starts at recorded zero; neither downbeat nor time
+signature is inferred by the grid, and existing project downbeat evidence is
+reported but not applied. Key/BPM/timing/overlap/instrument warnings describe
+compatibility but apply no transformation. The plan is bounded to 64 active
+placements, 512 events, 20,000 notes per Clip, 40,000 active note instances
+and a 20-minute nominal end. Focused/full-suite and local restart/browser
+verification passed, so Increment 6.1 is complete.
 
 ## Phase 7: Cross-DAW and Opt-in Community Learning
 
@@ -649,6 +679,56 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-22 — Phase 6.1 explicit Clip reuse proposal complete
+
+- Goal: make one chosen library part reusable without silently constructing a
+  song, changing the Clip or coupling the action to Phase 5 decisions.
+- Change: added an explicit fourth launch flag, sibling Browse/Proposal views,
+  immutable Clip/object pinning, whole-beat place/remove actions, compatibility
+  facts and optimistic plan revision/hash checks.
+- State: the append-only owner-only proposal database lives at
+  `STATE_DIR/phase6-reuse/reuse.sqlite3` and is created only by the first
+  explicit action. Exact evidence binding controls restart restoration.
+- Bounds: 64 active placements, 512 events, 20,000 notes per Clip, 40,000
+  active note instances and a 20-minute nominal plan end.
+- Effects: no Clip/library, MIDI, transform, current-arrangement, decision,
+  pack, render/play/export, instrument, feedback or submission effect.
+- Verification: the real accepted Lidl project placed an exact immutable bass
+  Clip at bar 3, beat 2; revision 1 restored after restart; explicit removal
+  produced revision 2; and the empty active proposal restored after a second
+  restart while both append-only events remained. Owner-only modes, path-free
+  Inspector state, compatibility warnings and byte-identical decision,
+  library-object and accepted-pack inputs were confirmed.
+- Status: focused and full tests passed. Increment 6.1 is complete; broader
+  Phase 6 remains in progress.
+
+### 2026-07-22 — Phase 5.9 accepted; Phase 6 read-only Clip entry complete
+
+- Acceptance: the path-free resolver result is `passed`. All eight technical
+  tutorial screens were completed, the quiz scored 10/10 and both named
+  six-item human checks passed without an issue or `cannot_tell` answer.
+- Pack evidence: the exact accepted ZIP contained five selected MIDI payloads,
+  the dry arrangement proxy and no source audio. Schema, receipt, member set,
+  payload sizes and hashes were verified, and original selected MIDI remained
+  declared unchanged.
+- Timing/privacy: the listened downbeat is
+  `reviewer-observation-only`; it did not become catalog timing evidence.
+  Private note text remains outside the path-free result and these docs.
+- Effects: MIDI, candidates, decisions, basket, defaults, feedback, submission
+  and automatic phase-start effects are all false.
+- Phase boundary: `phase6_read_only_clip_entry_ready` is true and the first
+  gated Clip Library increment is complete. All three launch inputs are
+  required. Hybrid construction remains false behind the Phase 5.3 gates, and
+  broader Phase 6 remains in progress.
+- First increment: browse/search, path-free detail/lineage, dry neutral
+  audition and deterministic Clip reconstruction only. No transforms, writes,
+  piano roll, placement or hybrids; reconstruction is not an original-MIDI
+  byte copy.
+- Completion evidence: a real read-only library exposed 73 Clips across 51
+  lineages; browser checks verified browse/detail, deterministic MIDI, dry
+  FluidSynth proxy rendering, a repeat cache hit, path-free byte-range serving
+  and Developer Inspector tracing with zero musical/library mutations.
 
 ### 2026-07-21 — Phase 5.9 guided exact-pack learning and acceptance
 

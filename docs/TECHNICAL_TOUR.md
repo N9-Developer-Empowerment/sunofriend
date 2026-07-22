@@ -1,0 +1,456 @@
+# Sunofriend technical tour
+
+This tour is for a developer who wants to understand, review and extend
+Sunofriend rather than merely operate it. It starts with the system model and
+then follows real code paths. The aim is to make the next design idea easier to
+form without hiding uncertainty behind a large generated diff.
+
+The optional **Developer Inspector** described below is a small learning
+environment for the Workbench. It exposes application operations and state
+transitions. It is not a Python line debugger, evaluator, shell, SQL editor or
+filesystem browser.
+
+## The system in one picture
+
+```mermaid
+flowchart LR
+    A["Local stems and chord evidence"] --> B["Deterministic and optional AI transcription"]
+    B --> C["Immutable MIDI candidates and evidence"]
+    C --> D["Workbench catalog"]
+    D --> E["Explicit human decisions"]
+    E --> F["Derived selected arrangement"]
+    F --> G["Exact GarageBand pack"]
+    G --> H["GarageBand patches and mix"]
+
+    I["Temporary audition state"] -. "does not select" .-> E
+    J["Separate Pack Composer basket"] -. "controls files only" .-> G
+```
+
+There is deliberately no single arrow labelled “choose the best model.” A
+specialist converter, analytical tracker, conditioned AI run or reviewed
+repair can be useful for a different instrument or phrase. Sunofriend retains
+those alternatives and asks the listener to decide.
+
+The most important architectural separation is:
+
+| Layer | Durable? | What it means |
+| --- | --- | --- |
+| Source and candidate evidence | Content-addressed | What was analysed or generated |
+| Decision event history | Append-only SQLite | What the listener explicitly decided |
+| Derived current selection | Recomputed | Which current main and optional parts are active |
+| Pack Composer basket | Separately append-only | Which eligible files enter one ZIP |
+| Audition and view controls | Browser/process memory | What is playing or visible now |
+| Generated previews and streams | Rebuildable cache | Listening aids, not preference evidence |
+
+## 1. CLI and application entry points
+
+### Intuition
+
+The CLI is an adapter over deterministic operations. A command validates its
+arguments, calls the relevant module and prints or writes the operation's
+result. Code that performs musical analysis should not be reimplemented inside
+an argument handler.
+
+### Code path
+
+1. [`cli.build_parser`](../src/sunofriend/cli.py) declares the public command
+   surface.
+2. [`cli.main`](../src/sunofriend/cli.py) parses the request and dispatches to
+   a narrow `_run_*` adapter.
+3. The adapter calls an application module such as
+   [`listen_all.run_listen_all`](../src/sunofriend/listen_all.py),
+   [`pipeline.run_remake`](../src/sunofriend/pipeline.py) or
+   [`workbench_server.run_workbench`](../src/sunofriend/workbench_server.py).
+4. The operation returns structured evidence. The CLI reports it and preserves
+   its exit status.
+
+### Invariant
+
+CLI names, options, exit codes and JSON schemas are compatibility surfaces.
+Private helpers beginning with `_` are not an integration API.
+
+### Tests to read
+
+- [`tests/test_cli_basics.py`](../tests/test_cli_basics.py)
+- [`tests/test_listen_all_contract.py`](../tests/test_listen_all_contract.py)
+- [`tests/test_pipeline.py`](../tests/test_pipeline.py)
+
+## 2. Instrumental transcription and provenance
+
+### Intuition
+
+An isolated stem contains imperfect evidence. `exact`, `repair` and
+`reconstruct` describe different claims about a note. The system must not turn
+a plausible reconstruction into an observed fact merely because it sounds
+musical.
+
+### Code path
+
+1. [`listen_all.run_listen_all`](../src/sunofriend/listen_all.py) inventories
+   supported stems and creates one bounded output tree.
+2. Drum roles use
+   [`transcribe_drums.transcribe_drum_stem_detailed`](../src/sunofriend/transcribe_drums.py),
+   which measures onset and spectral evidence before assigning drum-family
+   pitches.
+3. Pitched roles use
+   [`transcribe_pitched.transcribe_pitched_stem`](../src/sunofriend/transcribe_pitched.py).
+   Bass contour selection and keys-role separation remain explicit specialist
+   policies rather than generic “music intelligence.”
+4. [`conversion.provenance_for_notes`](../src/sunofriend/conversion.py) and
+   `write_note_provenance` preserve the source of each published decision.
+5. Evaluation and report artifacts are written beside MIDI rather than folded
+   into one opaque score.
+
+### Invariant
+
+Source files are not replaced. Published variants retain their policy and
+provenance, and uncertain alternatives remain inspectable.
+
+### Tests to read
+
+- [`tests/test_listen_all_contract.py`](../tests/test_listen_all_contract.py)
+- [`tests/test_pipeline.py`](../tests/test_pipeline.py)
+- [`tests/test_drums_v2.py`](../tests/test_drums_v2.py)
+- [`tests/test_pitched_v2.py`](../tests/test_pitched_v2.py)
+
+## 3. Vocals and optional AI challengers
+
+### Intuition
+
+Singing produces a continuous pitch contour, while MIDI requires discrete note
+boundaries. Sunofriend therefore separates pitch observations, boundary
+hypotheses, decoded notes, repeated-phrase repair and human correction. Model
+agreement is evidence, not certainty.
+
+### Code path
+
+1. [`vocal.extract_consensus_pitch_frames`](../src/sunofriend/vocal.py)
+   combines independent frame evidence while retaining disagreement.
+2. [`vocal.transcribe_vocal_melody`](../src/sunofriend/vocal.py) converts the
+   contour into a conservative editable melody.
+3. [`vocal.repair_repeated_phrases`](../src/sunofriend/vocal.py) may restore
+   only source-supported material.
+4. Phrase review and guide modules publish separate alternatives for explicit
+   correction; they do not rewrite raw tracker evidence.
+5. Optional model requests are described by immutable types in
+   [`ai_runtime.py`](../src/sunofriend/ai_runtime.py) and executed through the
+   isolated [`ai_worker.py`](../src/sunofriend/ai_worker.py). Checkpoint,
+   request, runtime and output hashes remain part of the run evidence.
+
+### Invariant
+
+AI output is a separately auditionable challenger. Cache reuse, model reuse,
+label agreement and faster execution do not promote a musical candidate.
+
+### Tests to read
+
+- [`tests/test_vocal.py`](../tests/test_vocal.py)
+- [`tests/test_vocal_trackers.py`](../tests/test_vocal_trackers.py)
+- [`tests/test_ai_runtime.py`](../tests/test_ai_runtime.py)
+- [`tests/test_ai_matrix.py`](../tests/test_ai_matrix.py)
+
+## 4. Building the Workbench catalog
+
+### Intuition
+
+The Workbench does not transcribe audio. It presents already existing evidence
+through a verified catalog. A catalog record binds an identity to exact bytes,
+so a file that changes underneath a review fails closed.
+
+### Code path
+
+1. [`workbench_catalog.build_workbench_catalog`](../src/sunofriend/workbench_catalog.py)
+   reads the project and explicitly supplied candidate roots or catalog.
+2. Source and MIDI records contain size and SHA-256 evidence.
+3. Candidate ordering and the primary/advanced split are deterministic display
+   policy, not a preference ranking.
+4. [`workbench_catalog.public_catalog`](../src/sunofriend/workbench_catalog.py)
+   removes private paths before browser presentation.
+5. [`workbench_catalog.media_files`](../src/sunofriend/workbench_catalog.py)
+   creates the allow-list from which the loopback server can serve media.
+
+### Invariant
+
+The browser cannot nominate an arbitrary local path. Changed, missing or
+out-of-root evidence is rejected rather than silently rediscovered.
+
+### Tests to read
+
+- [`tests/test_workbench.py`](../tests/test_workbench.py)
+- [`tests/test_workbench_privacy.py`](../tests/test_workbench_privacy.py)
+- [`tests/test_workbench_ai_execution_provenance.py`](../tests/test_workbench_ai_execution_provenance.py)
+
+## 5. Append-only decisions and derived state
+
+### Intuition
+
+The SQLite database records what happened. It does not store one mutable
+“answer” row. Current state is a fold over the event history, which makes
+superseded choices and terminal no-selection barriers explainable.
+
+### Code path
+
+1. [`WorkbenchStore.append`](../src/sunofriend/workbench_store.py) validates and
+   inserts one `candidate_decision`, `stem_outcome`, `role_tag` or historical
+   `candidate_auditioned` event.
+2. [`WorkbenchStore.events`](../src/sunofriend/workbench_store.py) reads the
+   ordered history.
+3. [`WorkbenchStore.current_state`](../src/sunofriend/workbench_store.py) folds
+   that history over the current catalog.
+4. A later main choice makes the earlier main inactive without deleting its
+   event.
+5. `none_usable` and `cannot_tell` clear active main/optional selections. A
+   later explicit main or optional choice clears the barrier but does not
+   resurrect older optional choices.
+6. [`workbench_home.build_workbench_home`](../src/sunofriend/workbench_home.py)
+   derives path-free progress and one navigation-only next action.
+
+### Worked state example
+
+```text
+event 1: Candidate A -> optional       active: A optional
+event 2: Candidate B -> main           active: A optional, B main
+event 3: stem -> none_usable           active: none
+event 4: Candidate C -> main           active: C main only
+```
+
+Event 3 does not delete events 1 and 2. Event 4 does not revive Candidate A.
+
+### Invariant
+
+Existing decision rows are never updated or deleted. Current exportability is
+derived from the latest valid state, not from the presence of an old positive
+event.
+
+### Tests to read
+
+- [`tests/test_workbench.py`](../tests/test_workbench.py)
+- [`tests/test_workbench_home.py`](../tests/test_workbench_home.py)
+- [`tests/test_workbench_export.py`](../tests/test_workbench_export.py)
+
+## 6. Loopback server, browser and privacy boundary
+
+### Intuition
+
+Workbench is a private local presentation layer. The server owns file and
+selection identities; the browser receives bounded projections and random
+capability URLs. Browser controls do not become authority merely because they
+are convenient to manipulate.
+
+### Code path
+
+1. [`workbench_server.create_workbench_server`](../src/sunofriend/workbench_server.py)
+   binds only to `127.0.0.1` and creates a per-launch token.
+2. Request handlers validate exact key sets, identifiers and current hashes.
+3. [`workbench_privacy.path_free_browser_state`](../src/sunofriend/workbench_privacy.py)
+   removes path-like role values from the browser projection without rewriting
+   private history.
+4. The browser loads the packaged
+   [`workbench.html`](../src/sunofriend/workbench.html), transport JavaScript and
+   visualization JavaScript.
+5. Playback, zoom, lane visibility, mute, solo and attenuation remain
+   temporary browser state. They append no decision and never enter a pack.
+
+### Invariant
+
+GET, navigation, retry and audition controls have zero musical, feedback and
+export effects. There is no upload or submission endpoint.
+
+### Tests to read
+
+- [`tests/test_workbench_privacy.py`](../tests/test_workbench_privacy.py)
+- [`tests/test_workbench_home_ui.py`](../tests/test_workbench_home_ui.py)
+- [`tests/test_workbench_decoded_ui.py`](../tests/test_workbench_decoded_ui.py)
+- [`tests/test_packaged_workbench_resources.py`](../tests/test_packaged_workbench_resources.py)
+
+## 7. Timelines, transport and rebuildable artifacts
+
+### Intuition
+
+Visual and audible comparisons are views of evidence. They must stay useful
+for long songs without becoming a hidden editor or selection system.
+
+### Code path
+
+1. [`workbench_timeline.build_stem_timeline`](../src/sunofriend/workbench_timeline.py)
+   projects a bounded source waveform and unchanged MIDI note rectangles.
+2. [`workbench_timeline.build_arrangement_timeline`](../src/sunofriend/workbench_timeline.py)
+   uses only the server-derived active selection.
+3. [`WorkbenchArtifacts`](../src/sunofriend/workbench_artifacts.py) renders
+   content-addressed neutral previews and exact decoded loops or chunks.
+4. Precise comparison and canonical arrangement transports use one Web Audio
+   clock. The arbitrary full-song mixer is explicitly coarser HTML-media
+   playback.
+5. Cache eviction loses no musical decision. An artifact can be rebuilt from
+   verified source records and current state.
+
+### Invariant
+
+Timeline construction, rendering, play, switch, seek and cache activity do not
+rank candidates or alter source MIDI. Stale work cannot replace evidence for a
+newer selection.
+
+### Tests to read
+
+- [`tests/test_workbench_timeline.py`](../tests/test_workbench_timeline.py)
+- [`tests/test_workbench_decoded_loop_server.py`](../tests/test_workbench_decoded_loop_server.py)
+- [`tests/test_workbench_decoded_stream_server.py`](../tests/test_workbench_decoded_stream_server.py)
+- [`tests/test_workbench_transport_js.py`](../tests/test_workbench_transport_js.py)
+- [`tests/test_workbench_visualization_js.py`](../tests/test_workbench_visualization_js.py)
+
+## 8. Exact GarageBand pack and acceptance boundary
+
+### Intuition
+
+The final ZIP is a reproducible handoff, not a render of whatever happened to
+be audible in the browser. Musical selection and file inclusion remain two
+separate explicit acts.
+
+### Code path
+
+1. [`workbench_artifacts.selected_candidates`](../src/sunofriend/workbench_artifacts.py)
+   derives active main/optional parts from current state.
+2. `garageband_pack_plan` derives eligible files and the safe source-audio
+   default.
+3. [`canonical_garageband_pack_basket`](../src/sunofriend/workbench_artifacts.py)
+   validates one explicit basket. Its revision is stored separately from
+   musical events.
+4. `build_garageband_pack` verifies current catalog and selection evidence,
+   copies numbered MIDI byte-for-byte, optionally creates a clearly labelled
+   proxy and writes the receipt.
+5. [`verify_garageband_pack_archive`](../src/sunofriend/garageband_pack_acceptance.py)
+   independently verifies member identities, sizes and hashes without
+   extracting the ZIP.
+6. [`resolve_garageband_pack_acceptance_review`](../src/sunofriend/garageband_pack_acceptance.py)
+   checks the user's reviewed export against those exact bytes. It changes no
+   project state.
+
+### Invariant
+
+Rejected, unreviewed, needs-correction and superseded MIDI cannot enter the
+pack. Numbered selected MIDI is unchanged. Source audio is excluded unless the
+user separately opts in.
+
+### Tests to read
+
+- [`tests/test_workbench_pack_store.py`](../tests/test_workbench_pack_store.py)
+- [`tests/test_workbench_pack_artifacts.py`](../tests/test_workbench_pack_artifacts.py)
+- [`tests/test_workbench_pack_server.py`](../tests/test_workbench_pack_server.py)
+- [`tests/test_garageband_pack_acceptance.py`](../tests/test_garageband_pack_acceptance.py)
+
+## Use the Developer Inspector
+
+Start the normal Workbench with the same project, candidate roots, optional
+catalog and persistent state directory, then add the explicit developer flag:
+
+```bash
+sunofriend workbench \
+  "/absolute/path/to/stem-project" \
+  --candidate-root "/absolute/path/to/candidate-results" \
+  --catalog "/absolute/path/to/workbench-catalog.json" \
+  --state-dir "/absolute/path/to/workbench-state" \
+  --developer-inspector \
+  --open
+```
+
+Omit `--catalog` when the project does not use an explicit catalog. The flag is
+off by default. When enabled, Workbench exposes a **Developer Inspector** view
+inside the same token-protected loopback session.
+
+Use it as a state microworld:
+
+1. Read the operation map before interacting with the project.
+2. Make one ordinary Workbench decision, such as **Use as main**.
+3. Open the Inspector and select the corresponding operation.
+4. Follow its application-level steps and `module.function` references.
+5. Scrub the event sequence from state 0 through the latest event.
+6. Compare the before and after derived state.
+7. Use Play, zoom or mute, then confirm that the durable event count and pack
+   basket did not change.
+8. Save or change the Pack Composer basket and confirm that its revision moves
+   independently from musical decisions.
+
+The Inspector is read-only. Its own controls do not append an event, save a
+basket, build a pack, render audio, run a model or mutate a file. Its bounded
+operation trace is local and temporary; it is not included in the private
+review, contribution preview, GarageBand ZIP or acceptance result. It uses
+path-free projections and does not expose private listening notes or an
+arbitrary local file.
+
+Its server projection uses the
+`sunofriend.workbench-developer-snapshot.v1` schema. Treat that document as a
+read-only explanation of current application state, not a new durable state
+store. The implementation contract is covered by
+[`tests/test_workbench_developer.py`](../tests/test_workbench_developer.py).
+
+The Inspector explains application operations and state transitions. It does
+not step through Python statements, evaluate expressions, open a shell, edit
+SQLite, browse the filesystem or expose model tensors. Use a normal IDE or
+debugger when line-level diagnosis is actually required.
+
+## How to review a change without accumulating cognitive debt
+
+Read a change in this order:
+
+1. **Background:** which layer and invariant does it belong to?
+2. **Intuition:** what user-visible or evidence-visible behaviour should
+   change?
+3. **Call path:** which public adapter, application operation and pure helpers
+   run?
+4. **State:** what may persist, what is derived and what must remain temporary?
+5. **Evidence:** which source hashes, schemas or lineage claims change?
+6. **Failure:** what stale, malformed or incomplete input must fail closed?
+7. **Tests:** which test demonstrates the new behaviour and which regression
+   proves that old evidence was not mutated?
+
+A useful review should let you explain the change and predict a representative
+state transition before approving it. Passing tests is necessary, but it does
+not replace that understanding.
+
+## Safely add a new transcription or review method
+
+Use this sequence for a small extension:
+
+1. Define the musical question and the role/excerpt boundary. Do not start with
+   an automatic global-winner requirement.
+2. Add deterministic core logic in a focused module. Keep filesystem, CLI and
+   UI code outside the algorithm where practical.
+3. Write a fresh immutable result containing the request, inputs, versions,
+   hashes, raw evidence, derived MIDI and explicit effects.
+4. Preserve the unchanged source and existing candidates. Label the new result
+   as an alternative or diagnostic until listening evidence supports more.
+5. Add a narrow CLI adapter and command help. Reuse existing validators and
+   atomic fresh-output behaviour.
+6. Add the candidate through explicit catalog provenance. Do not let its score,
+   label, cache state or display position choose it.
+7. Add only a path-free browser projection. Never accept a browser-supplied
+   local path or arbitrary candidate roster.
+8. If a new persistent action is genuinely needed, define and validate one
+   typed append-only event. Do not persist a play, zoom or hover action.
+9. Keep generated listening artifacts content-addressed and rebuildable. Verify
+   inputs before and after expensive work when selection can change.
+10. Add unit, contract, privacy, no-effect and packaged-resource tests, then
+    update the relevant guide and the Agent Skill.
+
+Do not combine a new model, state-store rewrite, UI redesign and MIDI codec
+change in one increment. The golden songs and synthetic fixtures are useful
+only when each change has a bounded causal surface.
+
+## Developer review checklist
+
+Before suggesting or approving the next change, be able to answer:
+
+- Where do source and candidate identities come from?
+- Which exact operation writes durable state?
+- Can a terminal no-selection outcome leave old MIDI exportable?
+- Why can audition activity not become a preference signal?
+- Which selection is server-derived rather than browser-supplied?
+- Which MIDI bytes are authoritative and which artifact is only a proxy?
+- What makes a cache safe to discard?
+- Where are paths and private notes removed from browser data?
+- Which test would fail if this invariant regressed?
+- How would the new idea remain an explicit alternative rather than an
+  automatic winner?
+
+These are the concepts assessed by the technical tutorial and its 10-question
+quiz before the two human acceptance checks.

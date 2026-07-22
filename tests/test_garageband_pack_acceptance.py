@@ -12,6 +12,10 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 from sunofriend.garageband_pack_acceptance import (
+    DEVELOPER_EVIDENCE_SCHEMA,
+    DEVELOPER_INSPECTOR_SCHEMA,
+    DEVELOPER_SOURCE_MANIFEST_SCHEMA,
+    DEVELOPER_TUTORIAL_SCHEMA,
     GARAGEBAND_PACK_ACCEPTANCE_RESULT_SCHEMA,
     GARAGEBAND_PACK_ACCEPTANCE_SCHEMA,
     _QUIZ_BANK,
@@ -35,7 +39,80 @@ class GarageBandPackAcceptanceTests(unittest.TestCase):
             self.assertEqual(seed["status"], "unreviewed")
             self.assertFalse(seed["tutorial"]["completed"])
             self.assertEqual(seed["tutorial"]["viewed_slide_ids"], [])
+            self.assertEqual(seed["tutorial"]["schema"], DEVELOPER_TUTORIAL_SCHEMA)
+            self.assertEqual(seed["tutorial"]["version"], 1)
             self.assertEqual(len(seed["tutorial"]["slides"]), 8)
+            required_slide_fields = {
+                "slide_id",
+                "title",
+                "intuition",
+                "body",
+                "call_path",
+                "code_refs",
+                "invariants",
+                "failure_mode",
+                "review_prompt",
+                "takeaway",
+            }
+            self.assertTrue(
+                all(
+                    set(slide) == required_slide_fields
+                    and slide["call_path"]
+                    and slide["code_refs"]
+                    and slide["invariants"]
+                    for slide in seed["tutorial"]["slides"]
+                )
+            )
+            developer = seed["developer_evidence"]
+            self.assertEqual(developer["schema"], DEVELOPER_EVIDENCE_SCHEMA)
+            self.assertEqual(
+                developer["source_manifest"]["schema"],
+                DEVELOPER_SOURCE_MANIFEST_SCHEMA,
+            )
+            self.assertEqual(
+                developer["developer_inspector"]["schema"],
+                DEVELOPER_INSPECTOR_SCHEMA,
+            )
+            self.assertEqual(
+                seed["tutorial"]["content_sha256"],
+                developer["tutorial_content_sha256"],
+            )
+            self.assertEqual(
+                seed["tutorial"]["code_binding_sha256"],
+                developer["code_binding_sha256"],
+            )
+            self.assertTrue(
+                all(
+                    len(developer[field]) == 64
+                    for field in (
+                        "tutorial_content_sha256",
+                        "quiz_content_sha256",
+                        "code_binding_sha256",
+                    )
+                )
+            )
+            source_manifest = developer["source_manifest"]
+            unsigned_manifest = {
+                key: value
+                for key, value in source_manifest.items()
+                if key != "manifest_sha256"
+            }
+            self.assertEqual(
+                source_manifest["manifest_sha256"],
+                _document_sha256(unsigned_manifest),
+            )
+            repository_root = Path(__file__).parents[1]
+            for source in source_manifest["files"]:
+                source_path = repository_root / source["source_path"]
+                self.assertTrue(source_path.is_file(), source["source_path"])
+                self.assertEqual(source["bytes"], source_path.stat().st_size)
+                self.assertEqual(source["sha256"], _file_sha256(source_path))
+            self.assertTrue(
+                all(
+                    value is False
+                    for value in developer["developer_inspector"]["effects"].values()
+                )
+            )
             self.assertEqual(seed["quiz"]["question_count"], 10)
             self.assertEqual(seed["quiz"]["pass_score"], 10)
             self.assertEqual(len(seed["quiz"]["questions"]), 10)
@@ -62,10 +139,19 @@ class GarageBandPackAcceptanceTests(unittest.TestCase):
             self.assertIn("Human check 2 of 2", html)
             self.assertIn("garageband-pack-resolve", html)
             self.assertIn("10-question one-at-a-time quiz", html)
+            self.assertIn("Execution path", html)
+            self.assertIn("Invariants to preserve", html)
+            self.assertIn("Code-review prompt", html)
+            self.assertIn("Optional Developer Inspector", html)
+            self.assertIn("Exact tutorial schema, version and code hashes", html)
+            self.assertIn("fold_workbench_events", html)
+            self.assertIn("developerBrowserState", html)
             self.assertIn('id="acceptance" hidden', html)
             self.assertNotIn("/api/events", html)
             self.assertNotIn("fetch(", html)
             self.assertNotIn("XMLHttpRequest", html)
+            self.assertNotIn("localStorage", html)
+            self.assertNotIn("sessionStorage", html)
 
     def test_generated_html_script_parses_in_node(self) -> None:
         node = shutil.which("node")
@@ -183,6 +269,18 @@ requireValue(review.acceptance_checks.every(check=>check.outcome==='passed'),'ch
             self.assertTrue(result["phase6_read_only_clip_entry_ready"])
             self.assertFalse(result["explicit_hybrid_construction_ready"])
             self.assertEqual(result["quiz"]["score"], 10)
+            self.assertEqual(
+                result["developer_evidence"]["schema"],
+                DEVELOPER_EVIDENCE_SCHEMA,
+            )
+            self.assertEqual(
+                result["tutorial"]["schema"], DEVELOPER_TUTORIAL_SCHEMA
+            )
+            self.assertEqual(result["tutorial"]["version"], 1)
+            self.assertEqual(
+                result["tutorial"]["code_binding_sha256"],
+                result["developer_evidence"]["code_binding_sha256"],
+            )
             self.assertNotIn("attempt", result["quiz"])
             self.assertEqual(result["remaining_local_studio_acceptance_gates"], [])
             self.assertNotIn("sha256", result["review"])
@@ -259,6 +357,21 @@ requireValue(review.acceptance_checks.every(check=>check.outcome==='passed'),'ch
             with self.assertRaisesRegex(ValueError, "immutable evidence"):
                 resolve_garageband_pack_acceptance_review(
                     tampered_path, pack, root / "tampered-result.json"
+                )
+
+            source_tampered = _completed_review(Path(report["seed"]))
+            source_tampered["developer_evidence"]["source_manifest"]["files"][0][
+                "sha256"
+            ] = "0" * 64
+            source_tampered_path = root / "source-tampered.json"
+            source_tampered_path.write_text(
+                json.dumps(source_tampered), encoding="utf-8"
+            )
+            with self.assertRaisesRegex(ValueError, "immutable evidence"):
+                resolve_garageband_pack_acceptance_review(
+                    source_tampered_path,
+                    pack,
+                    root / "source-tampered-result.json",
                 )
 
     def test_malformed_or_oversized_review_fails_as_validation_error(self) -> None:
@@ -435,6 +548,21 @@ requireValue(review.acceptance_checks.every(check=>check.outcome==='passed'),'ch
             self.assertEqual(status, 0)
             self.assertEqual(json.loads(output.getvalue())["status"], "passed")
             self.assertTrue(result_path.is_file())
+
+
+def _document_sha256(value: object) -> str:
+    payload = json.dumps(value, sort_keys=True, separators=(",", ":")).encode(
+        "utf-8"
+    )
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def _completed_review(seed_path: Path) -> dict[str, object]:

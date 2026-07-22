@@ -39,19 +39,77 @@ class ClipLibrary:
     clip schema.
     """
 
-    def __init__(self, root: str | Path):
+    def __init__(self, root: str | Path, *, read_only: bool = False):
         self.root = Path(root).expanduser().resolve()
         self.database_path = self.root / "catalog.sqlite3"
         self.objects_path = self.root / "objects"
-        self.root.mkdir(parents=True, exist_ok=True)
-        self.objects_path.mkdir(parents=True, exist_ok=True)
-        self._initialize()
+        self.read_only = bool(read_only)
+        if self.read_only:
+            self._validate_read_only_library()
+        else:
+            self.root.mkdir(parents=True, exist_ok=True)
+            self.objects_path.mkdir(parents=True, exist_ok=True)
+            self._initialize()
 
     def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(str(self.database_path), timeout=30.0)
+        if self.read_only:
+            database_uri = f"{self.database_path.as_uri()}?mode=ro"
+            connection = sqlite3.connect(database_uri, timeout=30.0, uri=True)
+        else:
+            connection = sqlite3.connect(str(self.database_path), timeout=30.0)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
+        if self.read_only:
+            connection.execute("PRAGMA query_only = ON")
         return connection
+
+    def _validate_read_only_library(self) -> None:
+        if not self.root.exists():
+            raise FileNotFoundError(f"Read-only clip library root does not exist: {self.root}")
+        if not self.root.is_dir():
+            raise NotADirectoryError(f"Read-only clip library root is not a directory: {self.root}")
+        if not self.database_path.is_file():
+            raise FileNotFoundError(
+                f"Read-only clip library database does not exist: {self.database_path}"
+            )
+        if not self.objects_path.exists():
+            raise FileNotFoundError(
+                f"Read-only clip library objects directory does not exist: {self.objects_path}"
+            )
+        if not self.objects_path.is_dir():
+            raise NotADirectoryError(
+                f"Read-only clip library objects path is not a directory: {self.objects_path}"
+            )
+        with self._connect() as connection:
+            columns = {
+                row["name"] for row in connection.execute("PRAGMA table_info(clips)").fetchall()
+            }
+        required_columns = {
+            "clip_id",
+            "parent_clip_id",
+            "lineage_id",
+            "revision",
+            "title",
+            "key_tonic",
+            "key_mode",
+            "bpm",
+            "role",
+            "tags_json",
+            "source_uri",
+            "engine_version",
+            "object_hash",
+            "created_at",
+        }
+        missing_columns = sorted(required_columns - columns)
+        if missing_columns:
+            missing = ", ".join(missing_columns)
+            raise RuntimeError(
+                f"Read-only clip library schema is missing required columns: {missing}"
+            )
+
+    def _require_writable(self, operation: str) -> None:
+        if self.read_only:
+            raise PermissionError(f"Clip library is read-only; cannot {operation}")
 
     def _initialize(self) -> None:
         with self._connect() as connection:
@@ -91,6 +149,7 @@ class ClipLibrary:
     def add(self, clip: MidiClip) -> ClipSummary:
         """Add an immutable clip, idempotently when its ID/content already exist."""
 
+        self._require_writable("add clips")
         payload = clip.canonical_bytes()
         object_hash = hashlib.sha256(payload).hexdigest()
         self._store_object(object_hash, payload)
@@ -156,6 +215,7 @@ class ClipLibrary:
     def add_version(self, parent_clip_id: str, clip: MidiClip) -> ClipSummary:
         """Add a child version, making an accidental lineage mismatch explicit."""
 
+        self._require_writable("add clip versions")
         if clip.parent_clip_id != parent_clip_id:
             raise ValueError("clip.parent_clip_id does not match parent_clip_id")
         return self.add(clip)
@@ -277,6 +337,7 @@ class ClipLibrary:
     list_versions = versions
 
     def _store_object(self, object_hash: str, payload: bytes) -> None:
+        self._require_writable("store clip objects")
         path = self.object_path(object_hash)
         path.parent.mkdir(parents=True, exist_ok=True)
         if path.exists():

@@ -30,7 +30,15 @@ transport for those same canonical groups. Arbitrary custom mute/solo/gain
 playback remains an explicitly coarse compatibility path.
 Phase 5.8 explains independently verified execution provenance. Phase 5.9 now
 adds the exact-pack interactive tutorial, required 10/10 comprehension quiz and
-two-check local acceptance resolver; its human review is still pending.
+two-check local acceptance resolver. That review passed on 22 July 2026, so the
+first explicitly gated read-only Phase 6 Clip Library increment is complete.
+The separate explicit Clip reuse proposal is also complete. Broader Phase 6
+creative arrangement remains in progress.
+The optional **Developer Inspector** adds a read-only application operation and
+state explorer for developers who want to understand those contracts before
+reviewing or extending them. See the
+[technical tour](TECHNICAL_TOUR.md) for the implementation path and guided
+usage.
 The arrangement explorer shows every unique project source stem beside only
 the active explicit main and optional MIDI choices, with temporary visibility,
 mute, solo and level controls. It does not infer an offset: every source and
@@ -38,6 +46,25 @@ MIDI file begins at its recorded zero, so equal displayed seconds do not by
 themselves prove source/MIDI alignment. The user-composed GarageBand basket is
 persistent local export state, separate from both musical decisions and the
 temporary audition mixer.
+
+## Developer Inspector
+
+Add `--developer-inspector` to the normal `sunofriend workbench` command to
+make the **Developer Inspector** view available in the same token-protected
+loopback session. It presents the path-free
+`sunofriend.workbench-developer-snapshot.v1` projection: application operation
+steps, append-only events, derived current state, the separate basket revision
+and temporary-state boundaries.
+
+The Inspector is optional and read-only. Opening it, selecting an operation or
+scrubbing the event sequence does not append feedback, save a decision, change
+the basket, render audio, run a model, build a pack or alter MIDI. Its trace is
+bounded local diagnostic state and is not included in review or acceptance
+exports. It is an application-specific learning tool, not a Python line
+debugger, evaluator, shell, SQL editor or filesystem browser.
+
+Follow the worked invocation, architecture map, state-fold example and safe
+extension checklist in [Sunofriend technical tour](TECHNICAL_TOUR.md).
 
 ## Project overview and restart boundary
 
@@ -885,6 +912,133 @@ sunofriend garageband-pack-review \
 
 See [Phase 5 local Studio learning and acceptance](PHASE5_LOCAL_STUDIO_ACCEPTANCE.md)
 for the close-out boundary and Phase 6 interpretation.
+
+The resolved path-free close-out records eight tutorial screens complete,
+10/10 on the quiz and both six-item human checks passed with no issue or
+`cannot_tell` answer. The accepted pack contained five selected MIDI payloads,
+the dry arrangement proxy and no source audio. Exact receipt, member and
+payload evidence passed; the listened downbeat remains
+`reviewer-observation-only`. Resolution changed no MIDI, candidate, decision,
+basket, default, feedback or submission state.
+
+## Phase 6 read-only Clip Library (Increment 6.0 complete)
+
+The first Phase 6 slice is an optional Workbench view over one explicit,
+existing Clip v1 library. It can browse/search safe Clip metadata, inspect
+path-free detail and version lineage, request a dry neutral audition and
+download deterministic MIDI reconstructed from the immutable Clip document.
+
+The launch gate is all-or-none. **All three** Phase 6 flags are required:
+
+```bash
+sunofriend workbench "/absolute/path/to/stems" \
+  --candidate-root "/absolute/path/to/results" \
+  --catalog "/absolute/path/to/workbench-catalog.json" \
+  --state-dir "/absolute/path/to/workbench-state" \
+  --clip-library "/absolute/path/to/existing-clip-library" \
+  --phase6-acceptance "/absolute/path/to/passed-phase5-acceptance-result.json" \
+  --phase6-pack "/absolute/path/to/exact-accepted-garageband-pack.zip" \
+  --open
+```
+
+Supplying none leaves ordinary Workbench unchanged. Supplying only one or two
+must fail before the library opens. The acceptance result must be `passed`,
+must allow read-only Clip entry and must name the exact supplied ZIP. The
+existing Clip catalog and every object/lineage are opened and verified
+read-only; Workbench must not initialise or migrate the library.
+
+Browse/search and paging are temporary browser state. Public detail excludes
+source URIs, source stems, paths, private provenance/notes and transform
+parameters. The neutral preview renders the deterministic Clip reconstruction
+through a pinned dry local FluidSynth/SoundFont policy into a separate
+rebuildable cache. It is a listening proxy, not an original sound, instrument
+match or GarageBand patch.
+
+The MIDI download is **not an original-MIDI byte copy**. It is a repeatable SMF
+reconstruction of Clip v1's canonical notes, chords, instrument and timing
+contract. This is intentionally different from Pack Composer's exact selected
+candidate MIDI copies.
+
+Increment 6.0 has no Clip import/write/tag/version operation, transform,
+piano-roll, arrangement placement or hybrid. It changes no library object,
+Workbench decision, pack basket, candidate, feedback or contribution data.
+Hybrid construction remains behind the separate Phase 5.3 blind-choice and
+source-lineage gates. The complete scope and acceptance criteria are in
+[Phase 6: Creative Arrangement and Reusable
+MIDI](PHASE6_CREATIVE_ARRANGEMENT.md).
+
+The completion exercise opened a real library with 73 Clips across 51
+lineages. In the browser it verified browse and path-free detail/lineage,
+deterministic MIDI download, a dry FluidSynth proxy, a repeated artifact-cache
+hit, token-protected path-free byte-range serving and an optional Developer
+Inspector trace. Library objects, catalog state, musical decisions, candidates
+and the pack basket remained unchanged. This completes only the read-only
+entry slice; transforms, piano-roll/phrase editing, arrangement placement and
+hybrids remain deferred. Increment 6.1's proposal below is not placement in
+the current arrangement.
+
+## Phase 6 explicit Clip reuse proposal (Increment 6.1 complete)
+
+The next bounded slice adds **Proposed reuse plan** beside **Browse Clips**.
+It is disabled by default. Enable it only by adding
+`--enable-clip-reuse-plan` to the complete Increment 6.0 launch:
+
+```bash
+sunofriend workbench "/absolute/path/to/stems" \
+  --candidate-root "/absolute/path/to/results" \
+  --catalog "/absolute/path/to/workbench-catalog.json" \
+  --state-dir "/absolute/path/to/workbench-state" \
+  --clip-library "/absolute/path/to/existing-clip-library" \
+  --phase6-acceptance "/absolute/path/to/passed-phase5-acceptance-result.json" \
+  --phase6-pack "/absolute/path/to/exact-accepted-garageband-pack.zip" \
+  --enable-clip-reuse-plan \
+  --open
+```
+
+In **Browse Clips**, choose an exact Clip and submit a bar/beat target. The
+server pins the immutable `clip_id` and object SHA-256 and derives all Clip
+metadata itself. In **Proposed reuse plan**, inspect placements in timeline
+order or explicitly remove one. Multiple uses of one Clip require multiple
+place actions. There is no move or implicit repeat operation; remove then place
+again when a target changes.
+
+The v1 plan uses 4/4, 480 ticks per quarter note and whole-beat positions only.
+Bar 1/beat 1 is recorded zero for planning, not a confirmed musical downbeat,
+and the time signature remains unconfirmed. Reuse v1 does not apply project
+downbeat evidence; where it exists, the warning distinguishes present-but-not-
+applied evidence from an unconfirmed downbeat. Server-generated warnings
+describe key/BPM differences, stem-locked timing, grid limits, overlaps and
+missing instrument attachment. Warnings are not scores or preferences and
+apply no transformation.
+
+The proposal is a separate append-only state plane. Its owner-only database is
+`STATE_DIR/phase6-reuse/reuse.sqlite3`, created lazily by the first explicit
+action; merely loading an empty plan creates no file. Exact project/setup,
+source, acceptance, pack, library, policy and grid binding restores the plan
+after restart. A different binding starts empty.
+
+Every mutation includes the current plan ID, SHA-256 and revision. On a
+conflict, Workbench loads the current plan once and does not replay the action
+automatically; the user's unfinished target remains available where possible
+for an informed resubmit. Limits are 64 active placements, 512 total events,
+20,000 notes in one Clip, 40,000 active note instances and a 20-minute nominal
+plan end at the positive project BPM.
+
+Place/remove changes only this proposal. It neither edits the Clip/library or
+MIDI nor changes Workbench decisions, the current selected arrangement, pack
+basket, feedback or submission state. The proposal has no transform,
+render/play, export, instrument attachment, source sampling, piano roll or
+hybrid operation. Existing Increment 6.0 Clip audition and reconstructed-MIDI
+download remain separate read-only tools.
+
+The completed local acceptance exercise placed an exact immutable Lidl bass
+Clip at bar 3, beat 2, restored it after restart, removed it explicitly and
+restored revision 2 with no active placement after a second restart. The
+append-only history retained both events. Owner-only storage, exact binding,
+compatibility warnings, conflict-safe browser behaviour, path-free Inspector
+state and byte-identical Workbench/library/pack inputs were verified alongside
+the focused and full regression suites. Increment 6.1 is complete; wider
+arrangement construction remains deferred.
 
 ## Export the private review without a server
 
