@@ -60,7 +60,7 @@ choice; scores and model labels never create an automatic global winner.
 | Explore reusable Clip v1 parts in Workbench | `workbench --clip-library --phase6-acceptance --phase6-pack` | Phase 6 Increment 6.0 complete: explicit gated read-only browse/search, path-free detail and lineage, neutral audition and deterministic Clip reconstruction; all three flags are required and no Clip, project, decision or basket is changed |
 | Propose explicit Clip reuse in Workbench | `workbench --clip-library --phase6-acceptance --phase6-pack --enable-clip-reuse-plan` | Phase 6 Increment 6.1 complete: whole-beat immutable-Clip placements in a separate append-only local proposal with exact restart recovery; no transform, playback, export, current-arrangement or pack effect |
 | Create a key- or BPM-transformed Clip alternative | `workbench --clip-library --phase6-acceptance --phase6-pack --enable-clip-transforms` | Phase 6 Increment 6.2a complete: review one same-mode key change or one explicit BPM timing contract, then create one immutable child version; the parent and every project/reuse/pack choice remain unchanged |
-| Correct pitches or note attacks, or remove unwanted extra MIDI notes, in a bounded Clip phrase | `workbench --clip-library --phase6-acceptance --phase6-pack --enable-clip-corrections` | Phase 6 Increments 6.3a–c complete: choose exactly one pitch, attack-velocity or note-removal patch for up to 64 existing notes, review the complete diff and explicitly create one immutable child; velocity and removal work for drums, while the parent remains unchanged |
+| Correct pitches, note attacks or existing-note onsets, or remove unwanted extra MIDI notes, in a bounded Clip phrase | `workbench --clip-library --phase6-acceptance --phase6-pack --enable-clip-corrections` | Phase 6.3 uses one explicit patch kind per immutable child. Pitch, attack velocity and exact removal are complete; the bounded onset slice moves 1–64 exact existing notes by at most one quarter note without changing MIDI duration, pitch or expression. Velocity, removal and onset shifts work for drums, while the parent remains unchanged |
 
 Development has started on a local-first ensemble of optional transcription
 models, phrase-level melody review and learned instrument matching. See the
@@ -151,7 +151,11 @@ three bounded note-correction slices are complete too: a listener can create an
 immutable child containing exact pitch changes, exact Note On attack
 velocities, including velocity repair for drum Clips, or the exact removal of
 explicitly marked existing pitched or drum notes. Increment 6.3c does not call
-those notes noise automatically. Broader Phase 6 remains in progress, and
+those notes noise automatically. Increment 6.3d is complete and adds a fourth,
+still bounded operation for moving the onset of an exact existing pitched or
+drum note while preserving its emitted MIDI duration and every expression
+field. Broader Phase
+6 remains in progress, and
 explicit hybrid construction still waits for the
 separate Phase 5.3 blind-choice and source-lineage gates. See the
 **[Phase 5 local Studio learning and acceptance guide](docs/PHASE5_LOCAL_STUDIO_ACCEPTANCE.md)**.
@@ -163,7 +167,7 @@ candidate.
 The scope and all-or-none launch contract for that work are in
 **[Phase 6: Creative Arrangement and Reusable MIDI](docs/PHASE6_CREATIVE_ARRANGEMENT.md)**.
 Creative mode remapping, tuning/downbeat transforms, note insertion,
-onset/duration and broader phrase editing, plus Clip reuse beyond the bounded
+note-end/duration and broader phrase editing, plus Clip reuse beyond the bounded
 proposal, remain Phase 6 work, while
 cross-DAW and explicitly consented community work is deferred to Phase 7.
 
@@ -492,10 +496,11 @@ and the final deterministic MIDI repeated at SHA-256
 `42eabbb41cd484d104d67080833710bb240b0d73d817e8af93aa95217b35b502`.
 The full project suite passed with 910 tests.
 
-Increments 6.3a–c add a third separate Clip write launch for recognition-led
-pitch, attack-velocity and exact note-removal correction. Increment 6.3c is
-complete under the same launch and adds bounded exact removal of unwanted or
-extra MIDI notes. These slices do not turn the result explorer into an
+Increments 6.3a–d use a third separate Clip write launch for recognition-led
+pitch, attack-velocity, exact note-removal and bounded existing-note onset
+correction. All four increments are complete. Increment 6.3d adds the separately
+typed `note_onset_shift_patch` and retained `shift_note_onsets` recipe. These
+slices do not turn the result explorer into an
 automatic MIDI repairer. The user chooses one edit kind and a short exact
 window, identifies the notes by hearing and by their visible piano-roll
 positions, reviews the complete diff and then decides whether to create a
@@ -517,31 +522,35 @@ The correction, transform and reuse-plan flags are mutually exclusive. Each
 mode has a different state boundary, and a successful correction changes the
 complete library state that the other modes pin. In correction mode:
 
-1. open a Clip and choose **Wrong pitch**, **Attack loudness (MIDI velocity)**
-   or **Remove unwanted/extra MIDI notes**; pitch is unavailable for
+1. open a Clip and choose **Wrong pitch**, **Attack loudness (MIDI velocity)**,
+   **Remove unwanted/extra MIDI notes** or **Move existing note earlier or
+   later**; pitch is unavailable for
    drum-family Clips, while attack velocity and exact removal support drums
-   and pitched instruments;
+   and pitched instruments, and onset shift supports both;
 2. load a phrase of at most 32 quarter-note beats and 15 rendered seconds;
 3. select no more than 64 exact existing notes and either set replacement
    pitches, with a maximum two-octave move, set exact attack velocities from
-   1–127, or explicitly **Mark for removal**; merely focusing or navigating a
-   note never marks it;
+   1–127, explicitly **Mark for removal**, or apply an exact
+   `target_start_tick` no more than 480 ticks earlier or later; merely focusing,
+   navigating or typing a value never applies it;
 4. use the temporary review and inspect every numeric before/after value plus
    the operation-specific warnings, including note count, pitch range and
    horizon facts for removal; and
 5. use **Create immutable corrected Clip** only when that exact projection is
    intended.
 
-Pitch, velocity and removal never share one draft, projection or child. Reset
-the current draft before changing edit kind, or create one child and apply
-another operation as a separate explicit lineage step. The phrase view and
-projection are temporary and write nothing. A fresh create
+Pitch, velocity, removal and onset shift never share one draft, projection or
+child. Reset the current draft before changing edit kind, or create one child
+and apply another operation as a separate explicit lineage step. The phrase
+view and projection are temporary and write nothing. A fresh create
 appends one deterministic child version; an exact retry verifies the existing
-child and has zero effects. The parent, every surviving note's timing, duration,
-microtiming and source-second alignment, plus key, chords, instrument,
-provenance, current arrangement, reuse proposal and GarageBand Pack remain
-unchanged. Pitch patches also preserve velocity; attack-velocity patches
-preserve pitch.
+child and has zero effects. The parent, every unaffected note, plus key,
+chords, instrument, provenance, current arrangement, reuse proposal and
+GarageBand Pack remain unchanged. Pitch, velocity and deletion patches also
+preserve every surviving note's timing, duration, microtiming and source-second
+alignment. Pitch patches preserve velocity; attack-velocity patches
+preserve pitch; onset patches preserve pitch, attack/release velocity,
+articulation and exact normalised MIDI duration ticks.
 The browser accepts a review or result only when its kind-specific schema,
 request pins, exact correction/diff, deterministic child identity and complete
 effect map agree. Reapplying an unchanged value is a UI no-op and keeps an
@@ -574,6 +583,35 @@ the immutable child. Sunofriend does not infer that a note is noise, leakage or
 musically wrong, and it provides no draft audition, ranking, selection,
 placement or export effect.
 
+The onset contract accepts 1–64 exact existing note references and one exact
+integer `target_start_tick` per note. A target must differ from its source by
+no more than 480 ticks. Both the emitted Note On and its matching Note Off move
+by the same delta, so the exact normalized MIDI duration is held. The complete
+source and target intervals must fit the loaded half-open window. No target is
+inferred, snapped, quantised or chosen from theory.
+
+For `musical` Clips, Sunofriend moves `start_beat` by `delta / 480`, keeps
+`duration_beats` and both microtiming values, then recomputes source seconds
+through the retained tempo map. For `stem_locked` Clips, it shifts source
+start/end by `delta * 60 / (export_bpm * 480)`, preserves source duration and
+derives the beat coordinates. The first stem-locked contract blocks any note
+whose start or end microtiming is non-zero. Both modes must round-trip to the
+requested integer ticks while preserving the global beat, export and source
+horizons.
+
+The window exposes four explicit non-editable reasons:
+`context-note-outside-window`, `duplicate-export-note-on`,
+`normalized-lifetime-dependent` and
+`unsupported-stem-locked-microtiming`. A target is also rejected when it
+escapes the window, goes negative or beyond the MIDI tick bound, overlaps or
+duplicates another same-channel/same-pitch lifetime, cascades into another
+normalized note, or changes a global horizon. Preview has every effect false.
+A fresh create may set only `library_mutated`, `child_clip_created`,
+`correction_applied`, `note_onset_changed` and `note_timing_changed`; exact
+replay and restart audit have every effect false. The general capability stays
+v2 and keeps generic `timing: false`: clients must require the specific
+`note_onset_shift_patch` capability and `maximum_onset_delta_ticks: 480`.
+
 Correction mode also verifies that every retained note, chord and tempo event,
 tempo value, time signature and text meta-event can be encoded by the existing
 deterministic Standard MIDI File writer. It bounds parent Clips to 20,000 notes
@@ -581,10 +619,14 @@ and 20,000 chords and the exact four-byte MIDI variable-length tick limit. An
 unexportable parent fails before preview rather than creating a child that
 GarageBand cannot read.
 
-The correction slices still exclude note insertion, timing, duration, release
-velocity, continuous expression, split/merge, quantisation,
+The correction slices still exclude note insertion, note-end/duration repair,
+release velocity, continuous expression, split/merge, quantisation,
 repeated-phrase propagation, automatic scale snapping and hybrids. Those are
 separate musical operations and need their own evidence and review contracts.
+Release-velocity editing is deliberately still deferred: all audited local
+Clip libraries currently contain only zero release velocities, and GarageBand
+patch support for Note Off velocity varies, so there is no useful local golden
+yet. The next likely bounded slice is explicit note-end/duration correction.
 To hear a created correction, inspect its child and use the existing neutral
 audition; listening is still not a vote or preference signal.
 
@@ -630,6 +672,33 @@ child MIDI repeated at SHA-256
 The focused integrated correction suite passed 81 tests, the final independent
 audit passed 49 tests and the complete repository suite passed 970 tests. The
 single warning is the existing `resampy`/`pkg_resources` deprecation notice.
+
+The 6.3d completion exercise used a fresh copy of the accepted 12-Clip Lidl
+library in `work/ai-bakeoff/lidl-phase6-onset-smoke-v1`. Parent Keys Clip
+`a6112b69031a233a54531128dca4925f32d5b3b32ce5552daaa6393d0138d8aa`
+(object
+`d37975c915e790e290650cf5b48e316c19318c28bd1a50c3de342e889180356a`)
+and child
+`sf-correction-495e77ba31528090cc979465459d50acf9ad8f4e36f8a783e9f30398703d5727`
+(object
+`e70a297a01be3a086f5fa05e8dabb47975e6b634dd1adfc4e8c17565524932a2`)
+both contain 1,727 notes. One channel-1 pitch-66 interval moved from ticks
+442–873 to 472–903: +30 ticks, +31.512625 ms and the exact same 431-tick
+duration. Beat, export-event and source horizons remained respectively
+462.6458333333333 beats, 222070 ticks and 233.26695445833332 seconds. The
+source library and parent bytes were unchanged; the copy grew from 12 to 13
+Clips. Fresh creation set exactly the five documented effects, while exact
+replay and restart had every effect false. Parent and deterministic child MIDI
+SHA-256 values were respectively
+`e741334f8dfc1421850618d088b382a5fc051fc1fada4797ac742a1dcd201036`
+and
+`20b1298550568bb51cdb98c4d8e342a4ac27e22b2cd58f5e03f48f062cad7d9b`.
+The focused integrated correction suite passed 101 tests; the adversarial
+audit passed 17 onset-specific and 82 broader correction/server/UI tests. The
+complete repository suite passed 990 tests in 282.58 seconds with the one
+existing third-party `resampy`/`pkg_resources` deprecation warning. This is
+deterministic engineering evidence, not a human preference or musical-quality
+claim.
 
 The disclosed **Compatibility fallback** keeps the older browser-media players
 for environments where decoded audio cannot be prepared. It is synchronised in

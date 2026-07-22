@@ -393,17 +393,28 @@ mutation of its parent.
    explicitly marked existing notes from pitched or drum Clips. Before
    projection every policy proves that all retained note, chord, tempo and
    metadata events fit the deterministic Standard MIDI File encoding limits.
+   Increment 6.3d dispatches `note_onset_shift_patch` to
+   [`WorkbenchClipOnsetCorrectionService`](../src/sunofriend/workbench_onset.py).
+   It moves 1–64 exact existing pitched or drum intervals to explicit integer
+   targets within ±480 ticks and makes no timing inference or quantisation.
 10. A correction projection changes nothing. Exact creation reuses the
     sole-child compare-and-swap, while a recognized correction recipe can be
     revalidated only through the service-level restart verifier, which rebuilds
     the historical window hash and operation-specific before/after summary from
-    its exact retained parent. One child is pitch, attack velocity or deletion,
-    never a mixture. Pitch and velocity retain note count. Deletion requires
+    its exact retained parent. One child is pitch, attack velocity, deletion or
+    onset shift, never a mixture. Pitch, velocity and onset shift retain note
+    count. Deletion requires
     1–64 exact refs, at least one surviving note, unchanged beat/export/source
     horizons and normalized child MIDI equal to normalized parent MIDI minus
     exactly the named intervals. Duplicate, cascade, horizon and only-note
     cases are blocked. Every survivor plus chords, tempo, key, instrument and
     provenance is asserted unchanged.
+    Onset shift moves Note On and Note Off by one equal non-zero delta of no
+    more than 480 ticks, preserves MIDI duration, pitch and expression, and
+    requires both intervals inside the phrase window. Musical mode preserves
+    duration beats and microtiming; stem-locked mode requires zero microtiming
+    and preserves source duration. Both paths round-trip to exact ticks and
+    retain beat/export/source horizons.
 
 The 6.3c browser interaction keeps focus separate from intent: focusing or
 navigating a piano-roll note changes no draft, **Mark for removal** changes the
@@ -421,6 +432,48 @@ The focused integrated suite passed 81 tests, the independent audit passed 49
 and the complete repository suite passed 970 tests. The single warning is the
 existing `resampy`/`pkg_resources` deprecation notice. Increment 6.3c is
 complete; broader Phase 6 remains in progress.
+
+The 6.3d browser interaction adds **Move existing note earlier or later**. A
+user applies an exact `target_start_tick`, reviews the signed tick and
+export-time delta, then explicitly creates an immutable child. Typing or focus
+alone does not alter the draft. Row eligibility reports only
+`context-note-outside-window`, `duplicate-export-note-on`,
+`normalized-lifetime-dependent` or
+`unsupported-stem-locked-microtiming`; target overlap/cascade, window escape,
+negative/VLQ overflow and global-horizon movement fail the request. Preview is
+all false; fresh creation may set only library/child/correction/onset/timing
+effects, and replay/restart are all false. The capability remains v2 with
+generic `timing: false`; the explicit onset kind and 480-tick maximum are the
+client feature test. Pitch, velocity and deletion public contracts remain
+frozen. Release velocity, note insertion, note-end/duration and continuous
+expression remain deferred; note-end/duration is the likely next bounded
+slice.
+
+The completed 6.3d exercise used
+`work/ai-bakeoff/lidl-phase6-onset-smoke-v1`. Parent Keys Clip
+`a6112b69031a233a54531128dca4925f32d5b3b32ce5552daaa6393d0138d8aa`
+(object
+`d37975c915e790e290650cf5b48e316c19318c28bd1a50c3de342e889180356a`)
+produced child
+`sf-correction-495e77ba31528090cc979465459d50acf9ad8f4e36f8a783e9f30398703d5727`
+(object
+`e70a297a01be3a086f5fa05e8dabb47975e6b634dd1adfc4e8c17565524932a2`).
+The 12-Clip source stayed unchanged and only the copy grew to 13. Both Clips
+have 1,727 notes; channel-1 pitch 66 moved 442–873→472–903, +30 ticks or
++31.512625 ms, while retaining its exact 431-tick duration and the existing
+462.6458333333333-beat, 222070-tick and 233.26695445833332-second horizons.
+Fresh creation set exactly `library_mutated`, `child_clip_created`,
+`correction_applied`, `note_onset_changed` and `note_timing_changed`; replay
+and restart were all false. Parent and child MIDI SHA-256 values were
+`e741334f8dfc1421850618d088b382a5fc051fc1fada4797ac742a1dcd201036`
+and
+`20b1298550568bb51cdb98c4d8e342a4ac27e22b2cd58f5e03f48f062cad7d9b`.
+The focused suite passed 101 tests and the adversarial audit passed 17
+onset-specific plus 82 broader correction/server/UI tests. The complete
+repository suite passed 990 tests in 282.58 seconds with the one existing
+third-party `resampy`/`pkg_resources` deprecation warning. This proves the
+engineering contract; no human preference or musical-quality result was
+recorded.
 
 ### Worked state example
 

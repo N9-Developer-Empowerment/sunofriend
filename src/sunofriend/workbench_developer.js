@@ -216,7 +216,7 @@
     }),
     "/api/clip-note-correction-projection": Object.freeze({
       operation: "clip_correction.preview",
-      label: "Preview an exact pitch correction without writing",
+      label: "Preview one explicit pitch, attack-velocity, note-removal or onset-shift correction without writing",
       symbols: Object.freeze([
         "sunofriend.workbench_server._WorkbenchHandler.do_POST",
         "sunofriend.workbench_correction.WorkbenchClipCorrectionService.preview",

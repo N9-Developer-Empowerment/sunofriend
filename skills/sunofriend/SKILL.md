@@ -1,6 +1,6 @@
 ---
 name: sunofriend
-description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes, compare evidence-pinned specialist/full-mix/conditioned lead MIDI by phrase with explicit lineage limits and without creating a hybrid, benchmark verified fresh-process or bounded exact-repeat local AI runs, reuse and benchmark an explicit exact MuScriptor raw-result cache, partition model-reported labels exactly, and review existing source/MIDI alternatives; build blind exact-source-window, fixed-window sample-RMS-matched MIDI A/B reviews with explicit heard and choice evidence; render cached neutral previews, save explicit solo/full-mix choices, hear bounded or exact chunked canonical selected arrangements, export unchanged choices in a GarageBand handoff, and complete its guided tutorial, 10-question quiz and two human acceptance checks through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; browse a gated read-only Clip v1 library; explicitly propose immutable Clip placements; create reviewed immutable key/BPM children; apply bounded user-selected Clip pitch or attack-velocity corrections and exact note removals; or store and transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, explicit Clip reuse proposals, bounded wrong-note, note-intensity or unwanted-extra-note repair, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
+description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes, compare evidence-pinned specialist/full-mix/conditioned lead MIDI by phrase with explicit lineage limits and without creating a hybrid, benchmark verified fresh-process or bounded exact-repeat local AI runs, reuse and benchmark an explicit exact MuScriptor raw-result cache, partition model-reported labels exactly, and review existing source/MIDI alternatives; build blind exact-source-window, fixed-window sample-RMS-matched MIDI A/B reviews with explicit heard and choice evidence; render cached neutral previews, save explicit solo/full-mix choices, hear bounded or exact chunked canonical selected arrangements, export unchanged choices in a GarageBand handoff, and complete its guided tutorial, 10-question quiz and two human acceptance checks through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; browse a gated read-only Clip v1 library; explicitly propose immutable Clip placements; create reviewed immutable key/BPM children; apply bounded user-selected Clip pitch or attack-velocity corrections, exact note removals and exact existing-note onset shifts; or store and transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, explicit Clip reuse proposals, bounded wrong-note, note-intensity, unwanted-extra-note or existing-note onset repair, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
 ---
 
 # Sunofriend
@@ -157,21 +157,25 @@ scripts.
      Previewing a same-mode key or musical/stem-locked BPM change needs no
      audio, ML or playback capability. Creation adds exactly one immutable
      Clip version. A later neutral audition needs `doctor --require preview`.
-   - Phase 6 Increments 6.3a–c use those same three gate inputs plus the separate
+   - Phase 6 Increments 6.3a–d use those same three gate inputs plus the separate
      `--enable-clip-corrections` flag. Reject it without the complete gate and
      reject it together with reuse-plan or key/BPM-transform mode. It accepts
-     exactly one user-selected pitch, attack-velocity or `note_delete_patch`
-     for 1–64 exact existing notes in one bounded 480-TPQ phrase window.
-     Velocity and deletion are valid for drums; pitch is not. Deletion must
+     exactly one user-selected pitch, attack-velocity, `note_delete_patch` or
+     `note_onset_shift_patch` for 1–64 exact existing notes in one bounded
+     480-TPQ phrase window. Velocity, deletion and onset shift are valid for
+     drums; pitch is not. Deletion must
      retain at least one note and its eligibility must prove exact normalized
      parent-minus-named-interval topology with unchanged survivors and
-     beat/export/source horizons. Do not infer notes, intensity or noise, snap
-     to a key/chord, normalize dynamics, apply a repeated-phrase repair, change
-     timing or treat review as a preference. Preview has zero effects; creation
+     beat/export/source horizons. Onset shift must move Note On and Note Off by
+     the same explicit non-zero delta of at most 480 ticks while preserving
+     duration, pitch and expression. Do not infer notes, intensity, noise or
+     preferred timing, snap to a key/chord/grid, normalize dynamics, apply a
+     repeated-phrase repair, quantise or treat review as a preference. Preview has zero effects; creation
      appends one immutable child; an exact retry is a zero-effect replay. A
-     later neutral audition needs `doctor --require preview`. Increment 6.3c is
-     complete, but the capability response must still explicitly advertise its
-     `note_delete_patch` kind before use.
+     later neutral audition needs `doctor --require preview`. Increments 6.3c
+     and 6.3d are complete. For 6.3d require the capability to advertise
+     `note_onset_shift_patch` and `maximum_onset_delta_ticks: 480`; generic
+     `timing` deliberately remains false.
 5. Inventory the input directory read-only. Confirm files exist and identify
    stem roles, chord PDF, metronome, key, BPM, and tuning.
 6. Use absolute, quoted paths and a fresh output outside the source folder.
@@ -437,8 +441,8 @@ scripts.
   submission remain unchanged. Defer major/minor remapping, tuning, downbeat,
   register, note/phrase, batch and hybrid transforms.
   Add `--enable-clip-corrections` only when the user explicitly wants Increment
-  6.3a, 6.3b or 6.3c and can
-  recognise the wrong pitch, attack intensity or unwanted/extra MIDI note.
+  6.3a, 6.3b, 6.3c or 6.3d and can recognise the wrong pitch, attack
+  intensity, unwanted/extra MIDI note or exact existing-note onset to move.
   Keep it separate from transform and reuse-plan mode. Load a half-open phrase
   window of at most 32 quarter-note beats and 15 rendered seconds. It uses
   integer 480-TPQ export ticks and does not quantise the Clip. Nothing is
@@ -484,9 +488,36 @@ scripts.
   `correction_applied`, `note_count_changed` and `note_deleted`; preview,
   replay and restart audit have zero effects. Never
   classify noise, audition a draft, rank, select, place or export automatically.
-  Increment 6.3c is complete. Defer note insertion, timing, duration, release
-  velocity, continuous expression, split/merge, quantise, hum/F0 guidance,
-  repetition propagation and hybrids.
+  Increment 6.3c is complete.
+  For bounded onset shift, choose **Move existing note earlier or later** and
+  require explicit capability `note_onset_shift_patch` plus
+  `maximum_onset_delta_ticks: 480`. Its isolated policy is
+  `workbench_onset.py` and retained operation is `shift_note_onsets`. Accept
+  1–64 unique exact existing pitched or drum note refs with exact integer
+  `target_start_tick` values; every non-zero delta must be within ±480 and
+  both source and target full intervals must fit the loaded half-open window.
+  Focus/navigation/typing are zero-effect; require explicit Apply, zero-write
+  review, then Create. Move normalized Note On and Note Off by the same delta,
+  preserving duration ticks, pitch, attack/release velocity, articulation and
+  note count. In musical mode add `delta / 480` to start beat, retain duration
+  beats and both microtiming values, and recompute source seconds through the
+  tempo map. In stem-locked mode require both microtiming fields exactly zero,
+  shift source start/end by `delta * 60 / (export_bpm * 480)`, retain source
+  duration and derive beats. Require exact tick round-trip and unchanged
+  beat/export/source horizons. Use only `context-note-outside-window`,
+  `duplicate-export-note-on`, `normalized-lifetime-dependent` and
+  `unsupported-stem-locked-microtiming` as row block reasons. Reject target
+  overlap/duplicate/cascade, window escape, negative/VLQ overflow and horizon
+  changes. Never infer, snap, quantise, theory-repair or propagate timing.
+  Fresh-create true effects are exactly `library_mutated`,
+  `child_clip_created`, `correction_applied`, `note_onset_changed` and
+  `note_timing_changed`; preview, replay and restart are all false. Keep prior
+  schemas, hashes and recipes frozen and never mix correction kinds.
+  Defer note insertion, note-end/duration, release velocity, continuous
+  expression, split/merge, quantise, hum/F0 guidance, repetition propagation
+  and hybrids. Release velocity has no useful local non-zero golden and Note
+  Off velocity support varies by GarageBand patch; the likely next bounded
+  slice is note-end/duration correction.
 - Several completed immutable MuScriptor lanes: use `ai-matrix` with explicit
   repeated `LANE=RUN_DIR` values and a fresh `--out` JSON. Include M0
   unconditioned full mix, M1 discovered-label conditioning, M2 known-label
@@ -1858,5 +1889,56 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     passed 49 and the complete suite passed 970 tests. The single warning is
     the existing `resampy`/`pkg_resources` deprecation notice. Keep broader
     Phase 6 in progress.
-    Keep note insertion, timing/duration/release velocity/continuous
+    For Phase 6 Increment 6.3d, require explicit advertised
+    `note_onset_shift_patch`, `maximum_onset_delta_ticks: 480`, generic
+    `timing: false`, operation `shift_note_onsets` and 1–64 exact existing
+    pitched or drum note refs. Report each before/after Note On and Note Off
+    tick, held duration, signed tick/export-millisecond delta, beat start and
+    source-second start. Confirm the complete old and new intervals are inside
+    the half-open window, both events moved by one equal non-zero delta no
+    greater than 480 ticks, and normalized MIDI duration, pitch,
+    attack/release velocity, articulation, note count and unaffected notes are
+    exact. For musical timing confirm duration beats and both microtiming fields
+    were retained and source seconds were recomputed through the tempo map. For
+    stem-locked timing confirm both microtiming values were zero, source
+    start/end moved by `delta * 60 / (export_bpm * 480)`, source duration stayed
+    exact and beat coordinates were derived. Require exact tick round-trip and
+    unchanged beat/export/source horizons. Confirm only the four documented
+    row block reasons are exposed and that overlap/duplicate/cascade, window,
+    negative/VLQ and horizon attempts fail. Projection is all false; fresh
+    create true effects are exactly library/child/correction/onset/timing;
+    replay and restart are all false. Confirm no inference, snap, quantise,
+    theory repair, repetition propagation, selection, placement, export or
+    automatic audition. Increment 6.3d is complete on deterministic
+    engineering evidence only. The accepted Lidl exercise at
+    `work/ai-bakeoff/lidl-phase6-onset-smoke-v1` preserved the 12-Clip source
+    and parent, grew only the copy to 13, and moved one channel-1 pitch-66
+    interval in the 1,727-note Keys Clip from ticks 442–873 to 472–903. Require
+    the exact +30-tick/+31.512625-ms delta, unchanged 431-tick duration and
+    unchanged 462.6458333333333-beat, 222070-tick and
+    233.26695445833332-second horizons. Parent
+    `a6112b69031a233a54531128dca4925f32d5b3b32ce5552daaa6393d0138d8aa`
+    (object
+    `d37975c915e790e290650cf5b48e316c19318c28bd1a50c3de342e889180356a`)
+    produced child
+    `sf-correction-495e77ba31528090cc979465459d50acf9ad8f4e36f8a783e9f30398703d5727`
+    (object
+    `e70a297a01be3a086f5fa05e8dabb47975e6b634dd1adfc4e8c17565524932a2`).
+    Parent/child MIDI SHA-256 values are
+    `e741334f8dfc1421850618d088b382a5fc051fc1fada4797ac742a1dcd201036`
+    and
+    `20b1298550568bb51cdb98c4d8e342a4ac27e22b2cd58f5e03f48f062cad7d9b`.
+    Fresh effects were exactly `library_mutated`, `child_clip_created`,
+    `correction_applied`, `note_onset_changed` and `note_timing_changed`;
+    replay/restart were all false. The focused suite passed 101 tests and the
+    adversarial audit passed 17 onset plus 82 broader correction/server/UI
+    tests. The complete repository suite passed 990 tests in 282.58 seconds
+    with the one existing third-party `resampy`/`pkg_resources` deprecation
+    warning. Do not
+    turn that completion evidence into a human preference or musical-quality
+    claim; no such listening result was recorded.
+    Keep note insertion, note-end/duration/release velocity/continuous
     expression, theory repair, repetition propagation and hybrids deferred.
+    Release velocity currently has no useful non-zero local golden and
+    GarageBand patch support varies; note-end/duration is the likely next
+    bounded slice.

@@ -2173,10 +2173,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--enable-clip-corrections",
         action="store_true",
         help=(
-            "Explicitly enable Phase 6 bounded MIDI pitch, attack-velocity, or "
-            "exact note-deletion correction previews and immutable Clip version "
-            "creation; requires --clip-library, --phase6-acceptance and "
-            "--phase6-pack"
+            "Explicitly enable Phase 6 bounded MIDI pitch, attack-velocity, "
+            "exact note-deletion, or bounded note-onset shift previews and "
+            "immutable Clip version creation; requires --clip-library, "
+            "--phase6-acceptance and --phase6-pack"
         ),
     )
     workbench_mode = workbench.add_mutually_exclusive_group()

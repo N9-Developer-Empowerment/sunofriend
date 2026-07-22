@@ -140,6 +140,7 @@ class WorkbenchClipCorrectionService:
         self._writer = writer
         self._velocity_corrections: Any | None = None
         self._deletion_corrections: Any | None = None
+        self._onset_corrections: Any | None = None
 
     @classmethod
     def open(
@@ -189,6 +190,10 @@ class WorkbenchClipCorrectionService:
                     "enabled": True,
                     "drum_family": True,
                 },
+                "note_onset_shift_patch": {
+                    "enabled": True,
+                    "drum_family": True,
+                },
                 "timing": False,
                 "add_delete": False,
             },
@@ -205,6 +210,7 @@ class WorkbenchClipCorrectionService:
                 "maximum_window_chords": _MAX_WINDOW_CHORDS,
                 "maximum_changes": _MAX_CHANGES,
                 "maximum_pitch_delta_semitones": _MAX_PITCH_DELTA,
+                "maximum_onset_delta_ticks": _TICKS_PER_BEAT,
                 "minimum_attack_velocity": 1,
                 "maximum_attack_velocity": 127,
                 "maximum_clip_notes": _MAX_NOTES,
@@ -228,6 +234,8 @@ class WorkbenchClipCorrectionService:
                 return self._velocity_service().window(request)
             if kind == "note_delete_patch":
                 return self._deletion_service().window(request)
+            if kind == "note_onset_shift_patch":
+                return self._onset_service().window(request)
             raise WorkbenchClipCorrectionError(
                 "unknown Clip correction window kind; fields do not match the exact contract"
             )
@@ -250,6 +258,8 @@ class WorkbenchClipCorrectionService:
             return self._velocity_service().preview(request)
         if kind == "note_delete_patch":
             return self._deletion_service().preview(request)
+        if kind == "note_onset_shift_patch":
+            return self._onset_service().preview(request)
         if kind not in {None, "pitch_patch"}:
             raise WorkbenchClipCorrectionError("unknown Clip correction kind")
 
@@ -281,6 +291,8 @@ class WorkbenchClipCorrectionService:
             return self._velocity_service().create(request)
         if kind == "note_delete_patch":
             return self._deletion_service().create(request)
+        if kind == "note_onset_shift_patch":
+            return self._onset_service().create(request)
         if kind not in {None, "pitch_patch"}:
             raise WorkbenchClipCorrectionError("unknown Clip correction kind")
 
@@ -387,6 +399,11 @@ class WorkbenchClipCorrectionService:
                 requested,
                 state,
             )
+        if operation == "shift_note_onsets":
+            return self._onset_service().correction_summary_from_state(
+                requested,
+                state,
+            )
         if operation != "correct_note_pitches":
             return None
         if child.parent_clip_id is None or child.parent_clip_id not in state.clips:
@@ -455,6 +472,18 @@ class WorkbenchClipCorrectionService:
                 writer=self._writer,
             )
         return self._deletion_corrections
+
+    def _onset_service(self) -> Any:
+        """Load the separate onset policy only for its explicit requests."""
+
+        if self._onset_corrections is None:
+            from .workbench_onset import WorkbenchClipOnsetCorrectionService
+
+            self._onset_corrections = WorkbenchClipOnsetCorrectionService(
+                clip_service=self._clip_service,
+                writer=self._writer,
+            )
+        return self._onset_corrections
 
 
 def _derive_correction_summary(parent: MidiClip, child: MidiClip) -> dict[str, Any]:

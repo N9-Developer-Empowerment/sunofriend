@@ -566,17 +566,19 @@ transform or unrelated external append remains a conflict. Ordinary browse,
 detail, preview and capability reads never use this exception and remain strict
 against any unexpected library drift.
 
-Phase 6 Increments 6.3a–c reuse that sole-child append
+Phase 6 Increments 6.3a–d reuse that sole-child append
 boundary but give it a separate authority flag and sealed note-edit policies.
 `workbench_correction.py` keeps the published pitch-v1 facade and dispatches an
 explicit `attack_velocity_patch` to the isolated policy in
 `workbench_velocity.py` or `note_delete_patch` to the isolated policy in
-`workbench_deletion.py`. All use a bounded half-open integer window at 480 TPQ
+`workbench_deletion.py`. The bounded `note_onset_shift_patch` dispatches to
+`workbench_onset.py` and retains operation `shift_note_onsets`. All use a
+bounded half-open integer window at 480 TPQ
 resolved through the Clip's existing automatic export timing. The four-key
 pitch window request and its hashed public serializer remain byte-compatible;
-velocity and deletion windows add their explicit correction-kind
-discriminators. The published 6.3a and 6.3b schemas, hashes and retained recipes
-remain frozen.
+velocity, deletion and onset windows add their explicit correction-kind
+discriminators. The published 6.3a, 6.3b and 6.3c schemas, hashes and retained
+recipes remain frozen.
 
 Because Clip v1 intentionally has no mutable note ID, an editable note is
 addressed by its canonical parent index plus a digest over the parent object
@@ -612,34 +614,67 @@ key/BPM service. The deterministic child's recognized correction recipe keeps
 a bounded exact before/after audit. On later detail reads, the correction
 service validates that recipe against the retained exact parent before exposing
 a path-free summary; arbitrary transform parameters remain hidden. Each child
-contains exactly one correction kind. Timing, source seconds, key, chords,
-instrument, provenance, unaffected notes and all project/reuse/pack state
-remain unchanged. Pitch children preserve velocity; attack-velocity children
-preserve pitch, release velocity and articulation.
+contains exactly one correction kind. Key, chords, instrument, provenance,
+unaffected notes and all project/reuse/pack state remain unchanged. Pitch,
+velocity and deletion children also preserve timing and source seconds. Pitch
+children preserve velocity; attack-velocity children preserve pitch, release
+velocity and articulation.
 Deletion children preserve every field of every surviving note plus chords,
 tempo, key, time signature, instrument, provenance and all project/reuse/pack
 state. Only note count and the explicitly named intervals differ. A fresh
 deletion child may set only `library_mutated`, `child_clip_created`,
 `correction_applied`, `note_count_changed` and `note_deleted` effects; replay
 and restart validation have zero effects.
-One recipe contains one correction kind, so removal never shares a child with
-pitch or attack velocity.
+One recipe contains one correction kind, so removal or onset shift never shares
+a child with pitch, attack velocity or another correction kind.
+
+The 6.3d onset service addresses an existing note by the same exact canonical
+reference and accepts one integer `target_start_tick` for each of 1–64 notes.
+The non-zero delta is bounded to ±480 ticks. It moves the emitted Note On and
+matching Note Off by the same amount, preserving normalized MIDI duration,
+pitch, attack/release velocity, articulation and note count. Both old and new
+full intervals must fit the loaded half-open window. Pitched and drum-family
+Clips are eligible; the service performs no snapping, quantisation, theory
+repair, F0 inference or preferred-time selection.
+
+The onset policy exposes exactly four row-level block reasons:
+`context-note-outside-window`, `duplicate-export-note-on`,
+`normalized-lifetime-dependent` and
+`unsupported-stem-locked-microtiming`. It also rejects target overlaps,
+duplicates and normalization cascades, negative or VLQ-overflow ticks, window
+escape and any global beat/export/source-horizon movement. In `musical` mode it
+adds `delta / 480` to `start_beat`, keeps `duration_beats` and both microtiming
+fields, and derives source seconds through the retained tempo map. In
+`stem_locked` mode it accepts only notes whose two microtiming fields are
+exactly zero, moves source start/end by
+`delta * 60 / (export_bpm * 480)`, preserves source duration and derives beat
+coordinates. Both paths must round-trip to the exact requested MIDI ticks.
+
+Onset preview and restart audit have every effect false. A fresh create may
+set only `library_mutated`, `child_clip_created`, `correction_applied`,
+`note_onset_changed` and `note_timing_changed`; an exact replay is all false.
+The capability schema stays at v2 and deliberately retains generic
+`timing: false`; support is advertised only through the explicit
+`note_onset_shift_patch` entry and `maximum_onset_delta_ticks: 480`.
 The browser separately validates the exact kind-specific preview/result
 schema, all request and library pins, deterministic `sf-correction-<intent>`
 identity, one-to-one server diff and the complete fresh/replay effect map. It
 never fills absent server diff rows from its draft. A value equal to the
 current draft is an inspection no-op and cannot discard accepted review
-evidence. Deletion window, diff and restart-summary serializers redact a
+evidence. Deletion and onset window, diff and restart-summary serializers redact a
 path-like articulation value before it reaches the public response. Regression
 coverage also constructs normalized cascade and horizon-changing deletion
 cases and requires them to fail before an immutable child can be appended.
 
 `--enable-clip-corrections`, `--enable-clip-transforms` and
 `--enable-clip-reuse-plan` are separate mutually exclusive launch modes. Note
-insertion, timing, duration, release velocity and continuous
-expression remain later contracts rather than being interpreted through pitch
-correction, attack intensity or deletion. Increment 6.3c is complete while
-broader Phase 6 remains in progress. Its copied-Lidl exercise changed
+insertion, note-end/duration, release velocity and continuous expression remain
+later contracts rather than being interpreted through pitch correction,
+attack intensity, deletion or onset movement. Release velocity remains
+deferred because every audited local Clip currently carries zero there and DAW
+patch support for Note Off velocity varies. Increments 6.3c and 6.3d are
+complete while broader Phase 6 remains in progress. The 6.3c copied-Lidl
+exercise changed
 one channel-9 Snare note at ticks 140487–140573, reduced both Clip and
 normalized-MIDI counts from 249 to 248, kept beat/export/source horizons exact,
 replayed with all effects false and reconstructed deterministic child MIDI at
@@ -648,6 +683,32 @@ SHA-256
 The focused integrated suite passed 81 tests, the independent audit passed 49
 and the complete repository suite passed 970 tests. The single warning is the
 existing `resampy`/`pkg_resources` deprecation notice.
+
+The 6.3d copied-Lidl exercise in
+`work/ai-bakeoff/lidl-phase6-onset-smoke-v1` preserved the 12-Clip source and
+grew only the copy to 13. Parent Keys Clip
+`a6112b69031a233a54531128dca4925f32d5b3b32ce5552daaa6393d0138d8aa`
+(object
+`d37975c915e790e290650cf5b48e316c19318c28bd1a50c3de342e889180356a`)
+produced child
+`sf-correction-495e77ba31528090cc979465459d50acf9ad8f4e36f8a783e9f30398703d5727`
+(object
+`e70a297a01be3a086f5fa05e8dabb47975e6b634dd1adfc4e8c17565524932a2`).
+Both have 1,727 notes. Channel-1 pitch 66 moved 442–873→472–903, exactly
++30 ticks/+31.512625 ms with its 431-tick duration unchanged. Beat, export and
+source horizons remained 462.6458333333333 beats, 222070 ticks and
+233.26695445833332 seconds. Fresh effects were exactly `library_mutated`,
+`child_clip_created`, `correction_applied`, `note_onset_changed` and
+`note_timing_changed`; replay and restart were all false. Parent and child MIDI
+SHA-256 values were
+`e741334f8dfc1421850618d088b382a5fc051fc1fada4797ac742a1dcd201036`
+and
+`20b1298550568bb51cdb98c4d8e342a4ac27e22b2cd58f5e03f48f062cad7d9b`.
+The focused suite passed 101 tests; the adversarial audit passed 17 onset and
+82 broader correction/server/UI tests. The complete repository suite passed
+990 tests in 282.58 seconds with the one existing third-party
+`resampy`/`pkg_resources` deprecation warning. This closes deterministic
+engineering evidence only, with no human preference claim.
 
 An optional explicit-catalog phrase link validates one existing diagnostic
 S0/M1/M3 hybrid report against its exact stem, three current candidate MIDI

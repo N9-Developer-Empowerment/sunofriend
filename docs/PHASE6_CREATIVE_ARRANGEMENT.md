@@ -6,7 +6,9 @@ reuse proposal, is complete; Increment 6.2a, the first bounded immutable
 key/BPM transform workflow, is complete; Increment 6.3a, bounded immutable
 pitch correction, is complete; and Increment 6.3b, bounded immutable
 attack-velocity correction, is complete without changing the published pitch
-contract. Increment 6.3c, bounded exact note removal, is complete.**
+contract. Increment 6.3c, bounded exact note removal, and Increment 6.3d,
+bounded existing-note onset shift, are complete.** No listening-quality claim
+is made for the 6.3d engineering close-out.
 Broader Phase 6 creative arrangement remains in progress.
 
 Phase 6 builds on the local Workbench without turning Sunofriend into another
@@ -190,11 +192,12 @@ contract and tests:
    musical/stem-locked BPM operations now create reviewed immutable child
    versions with a minimal audit diff and range/alignment warnings. Mode
    remapping, tuning and downbeat remain separate later slices.
-4. **Phrase and note correction (6.3a–c complete):** bounded,
-   explicitly selected pitch, attack-velocity or exact note-removal patches
-   retain the parent and exact diff. Attack velocity and removal are available
-   for drums; insertion, timing, duration and continuous expression follow
-   under separate contracts.
+4. **Phrase and note correction (6.3a–d complete):** bounded, explicitly
+   selected pitch, attack-velocity, exact
+   note-removal or existing-note onset patches retain the parent and exact
+   diff. Attack velocity, removal and onset shift are available for drums.
+   Insertion, note-end/duration and continuous expression follow under
+   separate contracts.
 5. **Explicit hybrids:** only after both Phase 5.3 gates pass, construct a new
    candidate from user-named sources and ranges. Never infer a hybrid from
    agreement or popularity.
@@ -738,12 +741,113 @@ audit passed 49 and the complete repository suite passed 970 tests. The single
 warning is the existing `resampy`/`pkg_resources` deprecation notice. Increment
 6.3c is complete; broader Phase 6 remains in progress.
 
-### Deliberately deferred after 6.3c
+## Increment 6.3d: bounded existing-note onset shift
 
-Note insertion, onset and duration edits, release velocity,
-continuous expression, split/merge, phrase replacement, repetition
-propagation, source waveform/F0 or hummed-guide correction, quantisation,
-automatic theory repair and hybrids remain absent. Timing edits must reconcile
-both beat and source-second coordinates, and missing-note insertion needs a new
-note-identity/evidence contract. Those will be introduced as smaller
-reviewable increments rather than hidden inside pitch or velocity actions.
+Increment 6.3d keeps the same explicit correction launch, bounded phrase
+window, immutable-parent and sole-child compare-and-swap. It adds one isolated
+policy in `workbench_onset.py` with correction kind
+`note_onset_shift_patch`, retained recipe operation `shift_note_onsets` and its
+own window/preview/result/summary v1 schemas. The overall correction capability
+remains v2. Generic `timing: false` is deliberately unchanged; a client must
+check the explicit onset kind plus `maximum_onset_delta_ticks: 480` before
+offering this operation. Published pitch, attack-velocity and deletion
+schemas, hashes and recipes remain frozen.
+
+The user-facing choice is **Move existing note earlier or later**. It is
+available for pitched and drum-family Clips. One patch contains 1–64 unique
+exact existing note references and one exact integer `target_start_tick` for
+each. The target must differ from the source, the absolute delta may not exceed
+480 ticks, and both the complete source and target intervals must fit the
+loaded half-open phrase window. Focus, navigation and typing are browser-only;
+the user must explicitly apply a value, review the projection and create the
+immutable child.
+
+The emitted Note On and matching Note Off move by the same tick delta. Exact
+normalized MIDI duration ticks, pitch, attack/release velocity, articulation,
+note count and all unaffected notes remain unchanged. The operation neither
+infers a preferred onset nor snaps, quantises, repairs theory, copies a
+repeated phrase or uses chord evidence to choose one.
+
+Timing coordinates are reconciled under the Clip's existing export mode:
+
+- In `musical` mode, `start_beat` moves by `delta / 480`, `duration_beats` and
+  both microtiming values stay exact, and source start/end seconds are
+  recomputed through the retained tempo map.
+- In `stem_locked` mode, both microtiming fields must be exactly zero. Source
+  start/end move by `delta * 60 / (export_bpm * 480)`, source duration stays
+  exact, and beat start/duration are derived from those shifted source times.
+
+Both paths must round-trip to the exact requested Note On and Note Off ticks.
+Negative or overlong MIDI ticks, changed beat/export/source horizons and any
+reversed time fail closed.
+
+The public window uses exactly four eligibility reasons:
+
+- `context-note-outside-window` for a crossing context note whose full source
+  interval is not available to edit;
+- `duplicate-export-note-on` where source objects collapse to one Note On;
+- `normalized-lifetime-dependent` where normalization or a same-pitch
+  predecessor makes this interval dependent on another source note; and
+- `unsupported-stem-locked-microtiming` for the deliberately unsupported first
+  stem-locked microtiming case.
+
+Even an editable source is rejected when its target would escape the window,
+overlap or duplicate a same-channel/same-pitch lifetime, cause a normalization
+cascade, cross a global horizon or exceed the MIDI encoding bounds. These are
+identity and topology checks, not musical rankings.
+
+Projection has every effect false. A fresh create may set only
+`library_mutated`, `child_clip_created`, `correction_applied`,
+`note_onset_changed` and `note_timing_changed`. An exact replay appends nothing
+and every effect is false. Restart validates the recognized recipe against the
+exact retained parent and exposes only the bounded path-free summary. The
+child is not auditioned, ranked, selected, placed, exported or added to a Pack
+automatically.
+
+### Completed 6.3d evidence
+
+The completion exercise used a fresh copy of the accepted 12-Clip Lidl library
+at `work/ai-bakeoff/lidl-phase6-onset-smoke-v1`. The source stayed at 12 Clips
+and the copy grew to 13, while the copied parent remained byte-identical.
+Parent Keys Clip
+`a6112b69031a233a54531128dca4925f32d5b3b32ce5552daaa6393d0138d8aa`
+(object
+`d37975c915e790e290650cf5b48e316c19318c28bd1a50c3de342e889180356a`)
+produced child
+`sf-correction-495e77ba31528090cc979465459d50acf9ad8f4e36f8a783e9f30398703d5727`
+(object
+`e70a297a01be3a086f5fa05e8dabb47975e6b634dd1adfc4e8c17565524932a2`).
+Both Clips contain 1,727 notes. One channel-1 pitch-66 interval moved from
+442–873 to 472–903, a +30-tick/+31.512625-ms shift with its 431-tick duration
+unchanged. Beat, export-event and source horizons remained
+462.6458333333333 beats, 222070 ticks and 233.26695445833332 seconds.
+
+Fresh creation set exactly `library_mutated`, `child_clip_created`,
+`correction_applied`, `note_onset_changed` and `note_timing_changed`; exact
+replay and restart had every effect false. Parent and deterministic child MIDI
+SHA-256 values were
+`e741334f8dfc1421850618d088b382a5fc051fc1fada4797ac742a1dcd201036`
+and
+`20b1298550568bb51cdb98c4d8e342a4ac27e22b2cd58f5e03f48f062cad7d9b`.
+The focused integrated correction suite passed 101 tests. The adversarial
+audit passed 17 onset-specific and 82 broader correction/server/UI tests. The
+complete repository suite passed 990 tests in 282.58 seconds with the one
+existing third-party `resampy`/`pkg_resources` deprecation warning. This
+completes the contract and deterministic evidence only; no human preference or
+musical-quality result was recorded.
+
+### Deliberately deferred after 6.3d
+
+Note insertion, note-end/duration edits, release velocity, continuous
+expression, split/merge, phrase replacement, repetition propagation, source
+waveform/F0 or hummed-guide correction, quantisation, automatic theory repair
+and hybrids remain absent. Missing-note insertion needs a new note-identity and
+source-evidence contract. Note-end/duration is the likely next bounded slice
+and still needs exact same-pitch lifetime, horizon and dual-time rules.
+
+Release velocity is not the next slice because every audited local Clip
+library currently carries zero release velocities, while GarageBand and its
+patches vary in whether Note Off velocity is audible. That leaves no useful
+local golden for verifying value changes. These operations must arrive as
+small reviewable increments rather than being hidden inside pitch, attack
+velocity, deletion or onset actions.

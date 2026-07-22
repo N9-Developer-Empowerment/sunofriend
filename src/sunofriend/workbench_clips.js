@@ -12,9 +12,11 @@
   const MAXIMUM_CORRECTION_WINDOW_BEATS = 32;
   const MAXIMUM_CORRECTION_CHANGES = 64;
   const MAXIMUM_CORRECTION_PITCH_DELTA = 24;
+  const MAXIMUM_CORRECTION_ONSET_DELTA_TICKS = 480;
   const CORRECTION_KIND_PITCH = "pitch_patch";
   const CORRECTION_KIND_VELOCITY = "attack_velocity_patch";
   const CORRECTION_KIND_DELETE = "note_delete_patch";
+  const CORRECTION_KIND_ONSET = "note_onset_shift_patch";
   const PITCH_CORRECTION_EFFECT_KEYS = Object.freeze([
     "child_clip_created", "chords_changed", "correction_applied",
     "current_arrangement_changed", "data_submitted", "feedback_recorded",
@@ -40,6 +42,15 @@
     "note_pitch_changed", "note_timing_changed", "pack_changed",
     "placement_changed", "provenance_changed", "release_velocity_changed",
     "reuse_plan_changed", "source_clip_mutated",
+  ]);
+  const ONSET_CORRECTION_EFFECT_KEYS = Object.freeze([
+    "child_clip_created", "chords_changed", "correction_applied",
+    "current_arrangement_changed", "data_submitted", "feedback_recorded",
+    "hybrid_created", "instrument_changed", "key_changed", "library_mutated",
+    "note_attack_velocity_changed", "note_count_changed", "note_duration_changed",
+    "note_onset_changed", "note_pitch_changed", "note_timing_changed",
+    "pack_changed", "placement_changed", "provenance_changed",
+    "release_velocity_changed", "reuse_plan_changed", "source_clip_mutated",
   ]);
   const CORRECTION_CONTRACTS = Object.freeze({
     [CORRECTION_KIND_PITCH]: Object.freeze({
@@ -93,7 +104,48 @@
       effectKeys: DELETE_CORRECTION_EFFECT_KEYS,
       freshEffectKeys: Object.freeze(["library_mutated", "child_clip_created", "correction_applied", "note_count_changed", "note_deleted"]),
     }),
+    [CORRECTION_KIND_ONSET]: Object.freeze({
+      kind: CORRECTION_KIND_ONSET,
+      id: "onset",
+      label: "Move existing note earlier or later",
+      name: "note onset",
+      changeName: "note-onset",
+      resultName: "note-onset-corrected",
+      windowDiscriminator: true,
+      windowSchema: "sunofriend.workbench-clip-note-onset-window.v1",
+      windowOperation: "clip-note-onset-window",
+      previewSchema: "sunofriend.workbench-clip-note-onset-preview.v1",
+      previewOperation: "clip-note-onset-correction-preview",
+      resultSchema: "sunofriend.workbench-clip-note-onset-result.v1",
+      resultOperation: "clip-note-onset-correction-create",
+      effectKeys: ONSET_CORRECTION_EFFECT_KEYS,
+      freshEffectKeys: Object.freeze(["library_mutated", "child_clip_created", "correction_applied", "note_onset_changed", "note_timing_changed"]),
+    }),
   });
+  const ONSET_WINDOW_NOTE_KEYS = Object.freeze([
+    "articulation", "channel", "duration_beats", "duration_ticks",
+    "edit_block_reason", "editable", "end_microtiming_seconds", "end_tick",
+    "export_note_on_group_size", "microtiming_seconds", "note_ref", "pitch",
+    "release_velocity", "source_end_seconds", "source_start_seconds", "start_beat",
+    "start_tick", "velocity",
+  ]);
+  const ONSET_BLOCK_REASONS = Object.freeze([
+    "context-note-outside-window", "duplicate-export-note-on",
+    "normalized-lifetime-dependent", "unsupported-stem-locked-microtiming",
+  ]);
+  const ONSET_POLICY_KEYS = Object.freeze([
+    "context_membership", "correction_scope", "duplicate_export_note_on",
+    "editable_membership", "maximum_shift_ticks", "normalized_lifetime",
+  ]);
+  const ONSET_DIFF_KEYS = Object.freeze([
+    "changed_note_count", "changes", "export_bpm", "kind", "timing_mode",
+  ]);
+  const ONSET_DIFF_ROW_KEYS = Object.freeze([
+    "after_end_tick", "after_source_start_seconds", "after_start_beat",
+    "after_start_tick", "before_end_tick", "before_source_start_seconds",
+    "before_start_beat", "before_start_tick", "channel", "duration_ticks",
+    "milliseconds_delta", "note_ref", "pitch", "tick_delta",
+  ]);
   const DELETE_WINDOW_NOTE_KEYS = Object.freeze([
     "articulation", "channel", "duration_beats", "edit_block_reason", "editable",
     "end_tick", "export_note_on_group_size", "note_ref", "pitch", "release_velocity",
@@ -381,7 +433,7 @@
 
     function correctionSummaryHtml() {
       const summary = detailDocument?.correction_summary;
-      if (!summary || !["correct_note_pitches", "correct_note_attack_velocities", "delete_clip_notes"].includes(summary.operation)) return "";
+      if (!summary || !["correct_note_pitches", "correct_note_attack_velocities", "delete_clip_notes", "shift_note_onsets"].includes(summary.operation)) return "";
       const window = summary.window || {};
       const changes = list(summary.changes);
       const changedCount = Number.isInteger(Number(summary.changed_note_count)) ? Number(summary.changed_note_count) : changes.length;
@@ -400,6 +452,12 @@
             }).join("")}</ol></details>`
           : "";
         return `<section id="clip-correction-summary" class="panel" aria-labelledby="clip-correction-summary-heading"><h3 id="clip-correction-summary-heading">Saved note attack-velocity correction</h3><p>This immutable Clip is an attack-velocity-corrected child. This evidence was restored from the Clip document; it is not a current draft, ranking or preference.</p><dl class="clip-facts"><dt>Changed notes</dt><dd>${esc(changedCount)}</dd><dt>Exact tick window</dt><dd>${esc(window.start_tick ?? "unknown")}–${esc(window.end_tick ?? "unknown")} at ${esc(window.ticks_per_beat ?? "unknown")} ticks per beat</dd><dt>Parent Clip</dt><dd>${esc(summary.parent_clip_id || summary.parent?.clip_id || "unknown")}</dd><dt>Parent object</dt><dd>${esc(summary.parent_object_sha256 || summary.parent?.object_sha256 || "unknown")}</dd><dt>Contract</dt><dd>${esc(summary.contract_version || summary.schema || "unknown")}</dd></dl>${changeText}<p class="muted">MIDI attack velocity is note-on intensity, not dB or track volume. The selected GarageBand patch may turn it into a loudness, brightness, articulation or sample-layer change.</p><p class="muted">Reading this restored summary has zero effects. The earlier explicit create appended this child; it left the parent immutable and did not automatically select, place or add the child to a pack.</p></section>`;
+      }
+      if (summary.operation === "shift_note_onsets") {
+        const changeText = changes.length
+          ? `<details><summary>Show ${esc(changes.length)} exact onset change${changes.length === 1 ? "" : "s"}</summary><ol>${changes.map((change) => `<li>${esc(noteRefLabel(change.note_ref))}: tick ${esc(change.before_start_tick ?? "unknown")} → ${esc(change.after_start_tick ?? "unknown")} (${esc(signedNumberLabel(change.tick_delta))}); Note Off moved by the same amount and duration stayed ${esc(change.duration_ticks ?? "unknown")} ticks</li>`).join("")}</ol></details>`
+          : "";
+        return `<section id="clip-correction-summary" class="panel" aria-labelledby="clip-correction-summary-heading"><h3 id="clip-correction-summary-heading">Saved note-onset correction</h3><p>This immutable Clip is a note-onset-corrected child. The restored evidence is not a current draft, timing score, ranking or preference.</p><dl class="clip-facts"><dt>Moved notes</dt><dd>${esc(changedCount)}</dd><dt>Exact tick window</dt><dd>${esc(window.start_tick ?? "unknown")}–${esc(window.end_tick ?? "unknown")} at ${esc(window.ticks_per_beat ?? "unknown")} ticks per beat</dd><dt>Parent Clip</dt><dd>${esc(summary.parent_clip_id || summary.parent?.clip_id || "unknown")}</dd><dt>Parent object</dt><dd>${esc(summary.parent_object_sha256 || summary.parent?.object_sha256 || "unknown")}</dd><dt>Contract</dt><dd>${esc(summary.contract_version || summary.schema || "unknown")}</dd></dl>${changeText}<p class="muted">Each listed MIDI Note On and Note Off moved by the same exact tick delta, so its exported MIDI duration stayed unchanged. Musical and source coordinates were updated under the Clip's existing timing contract. This was not quantisation, beat detection or an inference of correct timing.</p><p class="muted">Reading this restored summary has zero effects. Audition parent and child at the same GarageBand BPM with the same patch.</p></section>`;
       }
       const changeText = changes.length
         ? `<details><summary>Show ${esc(changes.length)} exact pitch change${changes.length === 1 ? "" : "s"}</summary><ol>${changes.map((change) => `<li>${esc(noteRefLabel(change.note_ref))}: ${esc(midiPitchName(change.before_pitch ?? change.source_pitch))} (${esc(change.before_pitch ?? change.source_pitch ?? "unknown")}) → ${esc(midiPitchName(change.target_pitch ?? change.after_pitch))} (${esc(change.target_pitch ?? change.after_pitch ?? "unknown")})</li>`).join("")}</ol></details>`
@@ -556,6 +614,7 @@
       if (!kinds.includes(draft.kind)) draft.kind = kinds[0];
       const velocity = draft.kind === CORRECTION_KIND_VELOCITY;
       const deletion = draft.kind === CORRECTION_KIND_DELETE;
+      const onset = draft.kind === CORRECTION_KIND_ONSET;
       const busy = !!correctionPending;
       const maximumWindow = correctionMaximumWindowBeats();
       const notes = correctionNotes();
@@ -569,6 +628,8 @@
       const selectedCopy = selected
         ? deletion
           ? `Selected ${noteRefLabel(selected.note_ref)}: ${midiPitchName(correctionNotePitch(selected))} (${correctionNotePitch(selected)}) at beat ${numberLabel(correctionNoteStartBeat(selected))}, length ${numberLabel(correctionNoteDurationBeats(selected))}${correctionChangeForKey(correctionNoteRefKey(selected.note_ref)) ? "; marked for removal" : "; kept in the parent state"}${correctionNoteBlockedLabel(selected) ? `; ${correctionNoteBlockedLabel(selected)}` : ""}.`
+          : onset
+            ? `Selected ${noteRefLabel(selected.note_ref)}: start tick ${sourceValue}${exactValue !== sourceValue ? ` → ${exactValue}` : ""}; ${midiPitchName(correctionNotePitch(selected))} (${correctionNotePitch(selected)}), exact duration ${correctionNoteDurationTicks(selected)} ticks.`
           : velocity
             ? `Selected ${noteRefLabel(selected.note_ref)}: attack velocity ${sourceValue}${exactValue !== sourceValue ? ` → ${exactValue}` : ""}; pitch ${midiPitchName(correctionNotePitch(selected))} (${correctionNotePitch(selected)}) at beat ${numberLabel(correctionNoteStartBeat(selected))}.`
             : `Selected ${noteRefLabel(selected.note_ref)}: ${midiPitchName(correctionNotePitch(selected))} (${correctionNotePitch(selected)})${exactValue !== correctionNotePitch(selected) ? ` → ${midiPitchName(exactValue)} (${exactValue})` : ""}.`
@@ -589,7 +650,7 @@
             const editable = correctionNoteEditable(note);
             const reason = correctionNoteBlockedLabel(note);
             const draftText = changed
-              ? deletion ? " · marked for removal" : velocity ? ` · draft attack ${target}` : ` · draft ${midiPitchName(target)} (${target})`
+              ? deletion ? " · marked for removal" : onset ? ` · draft start tick ${target}` : velocity ? ` · draft attack ${target}` : ` · draft ${midiPitchName(target)} (${target})`
               : "";
             const blockedState = reason ? ` · state: ${esc(reason)}` : " · state: available";
             const deletionAccessibility = deletion && !editable ? `aria-disabled="true" aria-describedby="clip-correction-deletion-block-help"` : "";
@@ -600,17 +661,23 @@
       const pitchControls = `<fieldset ${busy || !selected ? "disabled" : ""}><legend>3. Change the selected note pitch</legend><p id="clip-correction-selection" role="status" aria-live="polite">${esc(selectedCopy)}</p><div class="actions" role="group" aria-label="Relative pitch changes"><button type="button" data-correction-pitch-delta="-12">Octave −</button><button type="button" data-correction-pitch-delta="-1">Semitone −</button><button type="button" data-correction-pitch-delta="1">Semitone +</button><button type="button" data-correction-pitch-delta="12">Octave +</button></div><label for="clip-correction-exact-pitch">Exact MIDI pitch, 0–127</label><input id="clip-correction-exact-pitch" type="number" min="0" max="127" step="1" inputmode="numeric" value="${esc(exactValue)}"><div class="actions"><button id="clip-correction-reset-note" type="button" ${selected && correctionChangeForKey(draft.selectedRefKey) ? "" : "disabled"}>Reset selected note</button><button id="clip-correction-reset-all" type="button" ${changes.length ? "" : "disabled"}>Reset all ${esc(changes.length)} draft change${changes.length === 1 ? "" : "s"}</button></div><p class="muted">Pitch edits are exact MIDI note numbers and must remain within ${esc(correctionMaximumPitchDelta())} semitones of the immutable parent note. They do not change key metadata, chords, timing, velocity, the source Clip or any unselected note. Up to ${esc(correctionMaximumChanges())} notes may be changed in one child.</p></fieldset>`;
       const velocityControls = `<fieldset ${busy || !selected ? "disabled" : ""}><legend>3. Change the selected note attack velocity</legend><p id="clip-correction-selection" role="status" aria-live="polite">${esc(selectedCopy)}</p><div class="actions" role="group" aria-label="Relative attack-velocity changes"><button type="button" data-correction-velocity-delta="-10">−10</button><button type="button" data-correction-velocity-delta="-1">−1</button><button type="button" data-correction-velocity-delta="1">+1</button><button type="button" data-correction-velocity-delta="10">+10</button></div><form id="clip-correction-velocity-form"><label for="clip-correction-exact-velocity">Exact MIDI attack velocity, 1–127</label><input id="clip-correction-exact-velocity" type="number" min="1" max="127" step="1" inputmode="numeric" value="${esc(exactValue)}"><button id="clip-correction-apply-velocity" type="submit">Apply exact attack velocity</button></form><div class="actions"><button id="clip-correction-reset-note" type="button" ${selected && correctionChangeForKey(draft.selectedRefKey) ? "" : "disabled"}>Reset selected note</button><button id="clip-correction-reset-all" type="button" ${changes.length ? "" : "disabled"}>Reset all ${esc(changes.length)} draft change${changes.length === 1 ? "" : "s"}</button></div><p class="muted"><b>MIDI attack velocity is note-on intensity, not dB or track volume.</b> The selected GarageBand patch may translate it into loudness, brightness, articulation or a different sample layer, so compare the created child with the same patch. Typing alone does not edit the draft; use Apply. Pitch, timing, duration, release velocity, metadata, the source Clip and unselected notes stay unchanged.</p></fieldset>`;
       const deletionControls = `<fieldset ${busy || !selected ? "disabled" : ""}><legend>3. Decide whether the selected note is retained</legend><p id="clip-correction-selection" role="status" aria-live="polite">${esc(selectedCopy)}</p><div class="actions" role="group" aria-label="Selected-note removal decision"><button id="clip-correction-mark-delete" type="button" ${!selected || !correctionNoteEditable(selected) || !!correctionChangeForKey(draft.selectedRefKey) || changes.length >= correctionMaximumChanges() || changes.length >= Number(clip.note_count || 0) - 1 ? "disabled" : ""}>Mark selected note for removal</button><button id="clip-correction-keep-delete" type="button" ${selected && correctionChangeForKey(draft.selectedRefKey) ? "" : "disabled"}>Keep selected note</button></div><div class="actions"><button id="clip-correction-reset-all" type="button" ${changes.length ? "" : "disabled"}>Keep all ${esc(changes.length)} marked note${changes.length === 1 ? "" : "s"}</button></div><p id="clip-correction-deletion-block-help" class="muted"><b>Selecting, clicking or focusing a note only inspects it.</b> Removal requires the explicit Mark button. Red crossed notes are marked for removal; amber dashed notes are blocked and state their reason in text. At least one parent note must remain. Retained notes, pitch, attack/release velocity, articulation, timing, duration horizon, key, chords and instrument metadata stay unchanged.</p></fieldset>`;
+      const onsetWindowStart = Number(correctionWindowContract?.start_tick ?? 0);
+      const onsetWindowEnd = Number(correctionWindowContract?.end_tick ?? 0);
+      const onsetLatestStart = Math.max(onsetWindowStart, onsetWindowEnd - (selected ? correctionNoteDurationTicks(selected) : 1));
+      const onsetControls = `<fieldset ${busy || !selected ? "disabled" : ""}><legend>3. Move the selected note earlier or later</legend><p id="clip-correction-selection" role="status" aria-live="polite">${esc(selectedCopy)}</p><div class="actions" role="group" aria-label="Relative note-onset changes"><button type="button" data-correction-onset-delta="-120">−120 ticks</button><button type="button" data-correction-onset-delta="-60">−60 ticks</button><button type="button" data-correction-onset-delta="-30">−30 ticks</button><button type="button" data-correction-onset-delta="30">+30 ticks</button><button type="button" data-correction-onset-delta="60">+60 ticks</button><button type="button" data-correction-onset-delta="120">+120 ticks</button></div><form id="clip-correction-onset-form"><label for="clip-correction-exact-onset">Exact target MIDI start tick, ${esc(onsetWindowStart)}–${esc(onsetLatestStart)}</label><input id="clip-correction-exact-onset" type="number" min="${esc(onsetWindowStart)}" max="${esc(onsetLatestStart)}" step="1" inputmode="numeric" value="${esc(exactValue)}"><button id="clip-correction-apply-onset" type="submit">Apply exact start tick</button></form><div class="actions"><button id="clip-correction-reset-note" type="button" ${selected && correctionChangeForKey(draft.selectedRefKey) ? "" : "disabled"}>Reset selected note</button><button id="clip-correction-reset-all" type="button" ${changes.length ? "" : "disabled"}>Reset all ${esc(changes.length)} draft change${changes.length === 1 ? "" : "s"}</button></div><p class="muted"><b>${esc(CORRECTION_TICKS_PER_BEAT)} ticks equal one quarter-note beat.</b> The complete shifted note interval must stay inside this exact window, differ from the immutable parent by no more than ${esc(correctionMaximumOnsetDeltaTicks())} ticks and cannot keep the parent start. Typing alone does not edit the draft; use Apply. MIDI Note On and Note Off move by the same exact delta, so exported MIDI duration stays unchanged. Musical and source coordinates update under the Clip's existing timing contract. This does not quantise, detect a beat or infer correct timing. Audition parent and child at the same GarageBand BPM with the same patch.</p></fieldset>`;
       const changeName = correctionChangeName(draft.kind);
-      const heading = deletion ? "Remove unwanted notes in a new version" : velocity ? "Correct note attack velocities in a new version" : "Correct note pitches in a new version";
+      const heading = onset ? "Move existing notes earlier or later in a new version" : deletion ? "Remove unwanted notes in a new version" : velocity ? "Correct note attack velocities in a new version" : "Correct note pitches in a new version";
       const intro = deletion
         ? "Load a short recorded-zero beat window, inspect exact events and explicitly mark only unwanted notes for removal."
+        : onset
+          ? "Load a short recorded-zero beat window, choose exact existing notes and review an onset-only shift."
         : velocity
           ? "Load a short recorded-zero beat window, choose exact notes and review the attack-velocity-only diff."
           : "Load a short recorded-zero beat window, choose exact notes and review the pitch-only diff.";
-      const controls = deletion ? deletionControls : velocity ? velocityControls : pitchControls;
+      const controls = onset ? onsetControls : deletion ? deletionControls : velocity ? velocityControls : pitchControls;
       const kindsHelp = changes.length > 0
         ? "Reset all draft changes before switching correction kind."
-        : "Pitch, attack velocity and note removal are separate alternatives and are never mixed in one child.";
+        : "Pitch, attack velocity, note removal and onset movement are separate alternatives and are never mixed in one child.";
       const rollHelp = deletion
         ? "Original retained notes are blue. Red crossed notes are explicitly marked for removal; amber dashed notes are blocked. Colour is backed by text and is not a score. Selecting or focusing another note only inspects it and does not change the draft or invalidate an exact review."
         : `Original notes are blue. Draft ${changeName} changes are gold overlays; display colour is not a score. Select on the roll or activate a matching note button below. Moving keyboard focus or inspecting another note does not change the draft or invalidate an exact review.`;
@@ -632,9 +699,13 @@
       const draft = correctionDraft(currentClipId);
       const velocity = draft.kind === CORRECTION_KIND_VELOCITY;
       const deletion = draft.kind === CORRECTION_KIND_DELETE;
+      const onset = draft.kind === CORRECTION_KIND_ONSET;
       const ticksPerBeat = correctionTicksPerBeat();
-      const startBeat = Number(window.start_tick || 0) / ticksPerBeat;
-      const endBeat = Number(window.end_tick || 0) / ticksPerBeat;
+      const windowStartTick = Number(window.start_tick || 0);
+      const windowEndTick = Number(window.end_tick || 0);
+      const windowTickSpan = Math.max(1, windowEndTick - windowStartTick);
+      const startBeat = windowStartTick / ticksPerBeat;
+      const endBeat = windowEndTick / ticksPerBeat;
       const duration = Math.max(1 / ticksPerBeat, endBeat - startBeat);
       const pitches = notes.flatMap((note) => {
         const source = correctionNotePitch(note);
@@ -662,10 +733,17 @@
         const change = correctionChangeForKey(key);
         const targetPitch = change?.target_pitch;
         const targetVelocity = change?.target_velocity;
+        const targetStartTick = change?.target_start_tick;
         const start = correctionNoteStartBeat(note);
         const noteDuration = correctionNoteDurationBeats(note);
-        const x = left + (start - startBeat) / duration * plotWidth;
-        const noteWidth = Math.max(3, noteDuration / duration * plotWidth);
+        const sourceStartTick = Number(note.start_tick);
+        const sourceDurationTicks = correctionNoteDurationTicks(note);
+        const x = onset
+          ? left + (sourceStartTick - windowStartTick) / windowTickSpan * plotWidth
+          : left + (start - startBeat) / duration * plotWidth;
+        const noteWidth = Math.max(3, onset
+          ? sourceDurationTicks / windowTickSpan * plotWidth
+          : noteDuration / duration * plotWidth);
         const y = top + (maximum - sourcePitch) * plotHeight / span;
         const selected = draft.selectedRefKey === key;
         const editable = correctionNoteEditable(note);
@@ -684,6 +762,11 @@
           const lineX2 = x + noteWidth;
           return `${original}<line data-correction-note-svg="${esc(encodeURIComponent(key))}" x1="${numberInputLabel(x)}" y1="${numberInputLabel(y)}" x2="${numberInputLabel(lineX2)}" y2="${numberInputLabel(lineY2)}" stroke="#fff1f2" stroke-width="2" style="cursor:pointer"><title>${esc(`Draft ${noteRefLabel(note.note_ref)} will be removed`)}</title></line><line data-correction-note-svg="${esc(encodeURIComponent(key))}" x1="${numberInputLabel(lineX2)}" y1="${numberInputLabel(y)}" x2="${numberInputLabel(x)}" y2="${numberInputLabel(lineY2)}" stroke="#fff1f2" stroke-width="2" style="cursor:pointer"><title>${esc(`Draft ${noteRefLabel(note.note_ref)} will be removed`)}</title></line>`;
         }
+        if (onset) {
+          if (!Number.isSafeInteger(targetStartTick) || targetStartTick === sourceStartTick) return original;
+          const targetX = left + (targetStartTick - windowStartTick) / windowTickSpan * plotWidth;
+          return `${original}<rect data-correction-note-svg="${esc(encodeURIComponent(key))}" x="${numberInputLabel(targetX)}" y="${numberInputLabel(y)}" width="${numberInputLabel(noteWidth)}" height="${numberInputLabel(noteHeight)}" rx="2" fill="#ffc94a" stroke="#eff6fc" stroke-width="2" style="cursor:pointer"><title>${esc(`Draft ${noteRefLabel(note.note_ref)} start tick ${note.start_tick} to ${targetStartTick}; duration stays ${correctionNoteDurationTicks(note)} ticks`)}</title></rect>`;
+        }
         if (velocity) {
           if (!Number.isInteger(targetVelocity) || targetVelocity === correctionNoteVelocity(note)) return original;
           return `${original}<rect data-correction-note-svg="${esc(encodeURIComponent(key))}" x="${numberInputLabel(x)}" y="${numberInputLabel(y)}" width="${numberInputLabel(noteWidth)}" height="${numberInputLabel(noteHeight)}" rx="2" fill="none" stroke="#ffc94a" stroke-width="4" style="cursor:pointer"><title>${esc(`Draft ${noteRefLabel(note.note_ref)} attack velocity ${correctionNoteVelocity(note)} to ${targetVelocity}`)}</title></rect>`;
@@ -692,7 +775,7 @@
         const targetY = top + (maximum - targetPitch) * plotHeight / span;
         return `${original}<rect data-correction-note-svg="${esc(encodeURIComponent(key))}" x="${numberInputLabel(x)}" y="${numberInputLabel(targetY)}" width="${numberInputLabel(noteWidth)}" height="${numberInputLabel(noteHeight)}" rx="2" fill="#ffc94a" stroke="#eff6fc" stroke-width="2" style="cursor:pointer"><title>${esc(`Draft ${noteRefLabel(note.note_ref)} ${midiPitchName(sourcePitch)} to ${midiPitchName(targetPitch)}`)}</title></rect>`;
       }).join("");
-      const draftDescription = deletion ? "red crossed notes are marked for removal and amber dashed notes are blocked" : velocity ? "gold outline is the temporary attack-velocity draft" : "gold is the temporary pitch draft";
+      const draftDescription = deletion ? "red crossed notes are marked for removal and amber dashed notes are blocked" : onset ? "gold is the temporary onset-shift draft" : velocity ? "gold outline is the temporary attack-velocity draft" : "gold is the temporary pitch draft";
       return `<div class="timeline-scroll"><svg id="clip-correction-roll" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${esc(`${notes.length} notes from beat ${numberLabel(startBeat)} to ${numberLabel(endBeat)}; blue is original and ${draftDescription}`)}" style="display:block;width:100%;min-width:520px;background:#09111a;border-radius:10px">${rows.join("")}${bars}</svg></div>`;
     }
 
@@ -705,12 +788,15 @@
       if (!contract) return '<div id="clip-correction-projection" class="app-alert" role="alert"><p><b>The correction review kind is not recognized.</b> No creation action is available.</p></div>';
       const velocity = kind === CORRECTION_KIND_VELOCITY;
       const deletion = kind === CORRECTION_KIND_DELETE;
+      const onset = kind === CORRECTION_KIND_ONSET;
       const warnings = list(projection.warnings);
       const rows = correctionDiffRows(projection, kind);
       const warningHtml = warnings.length
         ? `<div class="notice"><h5>Review warnings</h5><ul>${warnings.map((warning) => `<li>${esc(warning?.message || warning || `Review this ${contract.changeName} change carefully.`)}</li>`).join("")}</ul></div>`
         : '<p class="success">No correction warning was reported. This is not an accuracy, ranking or preference score.</p>';
-      const table = deletion
+      const table = onset
+        ? `<div class="timeline-scroll"><table><caption class="muted">Only these exact existing note intervals will move; each Note Off moves by the same delta as its Note On.</caption><thead><tr><th scope="col">Parent note</th><th scope="col">Pitch</th><th scope="col">Start tick</th><th scope="col">End tick</th><th scope="col">Delta</th><th scope="col">Musical/source start</th></tr></thead><tbody>${rows.map((row) => `<tr><th scope="row">${esc(noteRefLabel(row.note_ref))}</th><td>${esc(midiPitchName(row.pitch))} (${esc(row.pitch)})</td><td>${esc(row.before_start_tick)} → ${esc(row.after_start_tick)}</td><td>${esc(row.before_end_tick)} → ${esc(row.after_end_tick)}</td><td>${esc(signedNumberLabel(row.tick_delta))} ticks · ${esc(signedNumberLabel(row.milliseconds_delta))} ms</td><td>beat ${esc(numberLabel(row.before_start_beat))} → ${esc(numberLabel(row.after_start_beat))}<br>source ${esc(numberLabel(row.before_source_start_seconds))} → ${esc(numberLabel(row.after_source_start_seconds))} s</td></tr>`).join("")}</tbody></table></div><p class="muted"><b>Exact MIDI duration stays ${rows.length === 1 ? `${esc(rows[0]?.duration_ticks ?? "unknown")} ticks` : "unchanged for every listed note"}.</b> Note On and Note Off move equally; musical and source coordinates update under ${esc(projection.diff?.timing_mode || "the existing")} timing at ${esc(numberLabel(projection.diff?.export_bpm))} BPM. This is not quantisation, beat detection or a correctness inference. Audition parent and child with the same patch and BPM.</p>`
+        : deletion
         ? `<div class="timeline-scroll"><table><caption class="muted">Only these exact parent note references will be absent from the immutable child.</caption><thead><tr><th scope="col">Parent note</th><th scope="col">Pitch / beat</th><th scope="col">Exact lifetime</th><th scope="col">Velocity / articulation</th></tr></thead><tbody>${rows.map((row) => `<tr><th scope="row">${esc(noteRefLabel(row.note_ref))}</th><td>${esc(midiPitchName(row.pitch))} (${esc(row.pitch)}) · beat ${esc(numberLabel(row.start_beat))}</td><td>ticks ${esc(row.start_tick)}–${esc(row.end_tick)} · ${esc(numberLabel(row.duration_beats))} beats · source ${esc(numberLabel(row.source_start_seconds))}–${esc(numberLabel(row.source_end_seconds))} s</td><td>attack ${esc(row.velocity)} · release ${esc(row.release_velocity ?? "unknown")} · ${esc(row.articulation ?? "none")}</td></tr>`).join("")}</tbody></table></div><dl class="clip-facts"><dt>Parent → child notes</dt><dd>${esc(projection.diff?.note_count_before ?? "unknown")} → ${esc(projection.diff?.note_count_after ?? "unknown")}</dd><dt>Normalized MIDI notes</dt><dd>${esc(projection.diff?.normalized_midi_note_count_before ?? "unknown")} → ${esc(projection.diff?.normalized_midi_note_count_after ?? "unknown")}</dd><dt>Pitch range</dt><dd>${esc(rangeLabel(projection.diff?.pitch_range_before))} → ${esc(rangeLabel(projection.diff?.pitch_range_after))}</dd><dt>Beat horizon</dt><dd>${esc(numberLabel(projection.diff?.duration_beats_before))} → ${esc(numberLabel(projection.diff?.duration_beats_after))}</dd><dt>Second horizon</dt><dd>${esc(numberLabel(projection.diff?.duration_seconds_before))} → ${esc(numberLabel(projection.diff?.duration_seconds_after))}</dd><dt>Retained normalized notes changed</dt><dd>${esc(projection.diff?.retained_normalized_notes_changed ?? "unknown")}</dd></dl><p class="muted"><b>The child keeps the parent duration horizon.</b> Every retained normalized MIDI note must remain byte-for-byte equivalent in its musical payload; this review never repairs surrounding notes.</p>`
         : velocity
         ? `<div class="timeline-scroll"><table><caption class="muted">Only these exact parent note references will receive new MIDI Note On attack velocities.</caption><thead><tr><th scope="col">Parent note</th><th scope="col">Pitch / beat context</th><th scope="col">Before → after attack velocity</th><th scope="col">Change</th></tr></thead><tbody>${rows.map((row) => `<tr><th scope="row">${esc(noteRefLabel(row.note_ref))}</th><td>${esc(midiPitchName(row.pitch))} (${esc(row.pitch)}) · beat ${esc(numberLabel(row.start_beat))}</td><td>${esc(row.before_velocity)} → ${esc(row.after_velocity)}</td><td>${esc(velocityDeltaDirectionLabel(row.before_velocity, row.after_velocity))}</td></tr>`).join("")}</tbody></table></div><p class="muted"><b>This is MIDI Note On attack intensity, not dB or track volume.</b> A GarageBand patch may turn the same numeric change into loudness, tone, articulation or a different sample layer.</p>`
@@ -873,6 +959,8 @@
       if (velocityCorrectionKind) velocityCorrectionKind.onclick = () => setCorrectionKind(CORRECTION_KIND_VELOCITY, "clip-correction-kind-velocity");
       const deletionCorrectionKind = host.querySelector("#clip-correction-kind-delete");
       if (deletionCorrectionKind) deletionCorrectionKind.onclick = () => setCorrectionKind(CORRECTION_KIND_DELETE, "clip-correction-kind-delete");
+      const onsetCorrectionKind = host.querySelector("#clip-correction-kind-onset");
+      if (onsetCorrectionKind) onsetCorrectionKind.onclick = () => setCorrectionKind(CORRECTION_KIND_ONSET, "clip-correction-kind-onset");
       const correctionStart = host.querySelector("#clip-correction-window-start");
       if (correctionStart) correctionStart.oninput = () => setCorrectionWindowDraftValue("startBeat", String(correctionStart.value || ""), "clip-correction-window-start");
       const correctionLength = host.querySelector("#clip-correction-window-length");
@@ -889,6 +977,9 @@
       host.querySelectorAll("[data-correction-velocity-delta]").forEach((button) => {
         button.onclick = () => changeSelectedCorrectionVelocity(Number(button.dataset.correctionVelocityDelta));
       });
+      host.querySelectorAll("[data-correction-onset-delta]").forEach((button) => {
+        button.onclick = () => changeSelectedCorrectionOnset(Number(button.dataset.correctionOnsetDelta));
+      });
       const exactPitch = host.querySelector("#clip-correction-exact-pitch");
       if (exactPitch) exactPitch.oninput = () => setSelectedCorrectionPitchInput(exactPitch.value);
       const exactVelocityForm = host.querySelector("#clip-correction-velocity-form");
@@ -896,6 +987,12 @@
         event.preventDefault();
         const exactVelocity = host.querySelector("#clip-correction-exact-velocity");
         setSelectedCorrectionVelocityInput(exactVelocity?.value);
+      };
+      const exactOnsetForm = host.querySelector("#clip-correction-onset-form");
+      if (exactOnsetForm) exactOnsetForm.onsubmit = (event) => {
+        event.preventDefault();
+        const exactOnset = host.querySelector("#clip-correction-exact-onset");
+        setSelectedCorrectionOnsetInput(exactOnset?.value);
       };
       const resetCorrectionNote = host.querySelector("#clip-correction-reset-note");
       if (resetCorrectionNote) resetCorrectionNote.onclick = () => resetSelectedCorrectionNote();
@@ -1104,9 +1201,21 @@
         return kind === CORRECTION_KIND_PITCH ? { enabled: true, drum_family: false } : { enabled: false, drum_family: false };
       }
       const declared = corrections[kind];
+      if (kind === CORRECTION_KIND_ONSET && !onsetCapabilityContractIsExact()) {
+        return { enabled: false, drum_family: false };
+      }
       if (declared === true) return { enabled: true, drum_family: kind !== CORRECTION_KIND_PITCH };
       if (!declared || typeof declared !== "object" || Array.isArray(declared)) return { enabled: false, drum_family: false };
       return { enabled: declared.enabled === true, drum_family: declared.drum_family === true };
+    }
+
+    function onsetCapabilityContractIsExact() {
+      const limits = correctionCapability?.limits;
+      return Number.isSafeInteger(limits?.maximum_onset_delta_ticks)
+        && limits.maximum_onset_delta_ticks === MAXIMUM_CORRECTION_ONSET_DELTA_TICKS
+        && Number.isSafeInteger(limits?.ticks_per_beat)
+        && limits.ticks_per_beat === CORRECTION_TICKS_PER_BEAT
+        && correctionCapability?.corrections?.timing === false;
     }
 
     function correctionKindSupported(kind, clip = detailDocument?.clip) {
@@ -1118,7 +1227,7 @@
     }
 
     function correctionKindsForClip(clip) {
-      return [CORRECTION_KIND_PITCH, CORRECTION_KIND_VELOCITY, CORRECTION_KIND_DELETE].filter((kind) => correctionKindSupported(kind, clip));
+      return [CORRECTION_KIND_PITCH, CORRECTION_KIND_VELOCITY, CORRECTION_KIND_DELETE, CORRECTION_KIND_ONSET].filter((kind) => correctionKindSupported(kind, clip));
     }
 
     function defaultCorrectionKind(clip) {
@@ -1152,6 +1261,7 @@
       if (kind === CORRECTION_KIND_PITCH) return "target_pitch";
       if (kind === CORRECTION_KIND_VELOCITY) return "target_velocity";
       if (kind === CORRECTION_KIND_DELETE) return null;
+      if (kind === CORRECTION_KIND_ONSET) return "target_start_tick";
       return null;
     }
 
@@ -1167,6 +1277,9 @@
       if (reason === "retained-note-lifetime-would-change") return "blocked: removal would change a retained note lifetime";
       if (reason === "clip-horizon-would-change") return "blocked: removal would change the Clip horizon";
       if (reason === "only-note-in-clip") return "blocked: at least one parent note must remain";
+      if (reason === "context-note-outside-window") return "context only: the complete source note interval is outside this exact window";
+      if (reason === "normalized-lifetime-dependent") return "blocked: moving this note would change another normalized note lifetime";
+      if (reason === "unsupported-stem-locked-microtiming") return "blocked: this stem-locked note has microtiming that onset correction cannot preserve safely";
       if (reason) return `blocked: ${reason}`;
       if (note?.editable === false) return "context only";
       return "";
@@ -1215,6 +1328,10 @@
       const declared = Number(correctionCapability?.limits?.maximum_pitch_delta_semitones);
       if (!Number.isInteger(declared) || declared < 1) return MAXIMUM_CORRECTION_PITCH_DELTA;
       return Math.min(MAXIMUM_CORRECTION_PITCH_DELTA, declared);
+    }
+
+    function correctionMaximumOnsetDeltaTicks() {
+      return onsetCapabilityContractIsExact() ? MAXIMUM_CORRECTION_ONSET_DELTA_TICKS : 0;
     }
 
     function updateCorrectionWindowDraftFromInputs() {
@@ -1326,6 +1443,16 @@
       return 1 / correctionTicksPerBeat();
     }
 
+    function correctionNoteDurationTicks(note) {
+      const declared = Number(note?.duration_ticks);
+      if (Number.isSafeInteger(declared) && declared > 0) return declared;
+      const startTick = Number(note?.start_tick);
+      const endTick = Number(note?.end_tick);
+      return Number.isSafeInteger(startTick) && Number.isSafeInteger(endTick) && endTick > startTick
+        ? endTick - startTick
+        : 1;
+    }
+
     function correctionChangeForKey(key) {
       return correctionDraft(currentClipId).changes.get(key) || null;
     }
@@ -1351,7 +1478,9 @@
           seen.add(key);
         }
       }
-      if (draft.kind === CORRECTION_KIND_DELETE) ordered.sort((left, right) => String(left.note_ref).localeCompare(String(right.note_ref)));
+      if ([CORRECTION_KIND_DELETE, CORRECTION_KIND_ONSET].includes(draft.kind)) {
+        ordered.sort((left, right) => String(left.note_ref).localeCompare(String(right.note_ref)));
+      }
       return ordered;
     }
 
@@ -1375,16 +1504,24 @@
       return Number.isInteger(target) ? target : source;
     }
 
+    function correctionEffectiveOnset(note) {
+      const source = Number(note?.start_tick);
+      const target = correctionChangeForKey(correctionNoteRefKey(note.note_ref))?.target_start_tick;
+      return Number.isSafeInteger(target) ? target : source;
+    }
+
     function correctionSourceValue(note) {
-      return correctionDraft(currentClipId).kind === CORRECTION_KIND_VELOCITY
-        ? Number(correctionNoteVelocity(note))
-        : correctionNotePitch(note);
+      const kind = correctionDraft(currentClipId).kind;
+      if (kind === CORRECTION_KIND_VELOCITY) return Number(correctionNoteVelocity(note));
+      if (kind === CORRECTION_KIND_ONSET) return Number(note?.start_tick);
+      return correctionNotePitch(note);
     }
 
     function correctionEffectiveValue(note) {
-      return correctionDraft(currentClipId).kind === CORRECTION_KIND_VELOCITY
-        ? correctionEffectiveVelocity(note)
-        : correctionEffectivePitch(note);
+      const kind = correctionDraft(currentClipId).kind;
+      if (kind === CORRECTION_KIND_VELOCITY) return correctionEffectiveVelocity(note);
+      if (kind === CORRECTION_KIND_ONSET) return correctionEffectiveOnset(note);
+      return correctionEffectivePitch(note);
     }
 
     function selectCorrectionNote(key, restoreFocus) {
@@ -1583,10 +1720,96 @@
       setSelectedCorrectionVelocity(Number(text), "clip-correction-exact-velocity");
     }
 
+    function changeSelectedCorrectionOnset(delta) {
+      const note = correctionSelectedNote();
+      if (!note || correctionPending || correctionDraft(currentClipId).kind !== CORRECTION_KIND_ONSET || !Number.isInteger(delta)) return;
+      setSelectedCorrectionOnset(correctionEffectiveOnset(note) + delta, "clip-correction-exact-onset");
+    }
+
+    function setSelectedCorrectionOnset(value, focusId = "") {
+      const note = correctionSelectedNote();
+      if (!note || correctionPending || correctionDraft(currentClipId).kind !== CORRECTION_KIND_ONSET) return;
+      const targetStartTick = Number(value);
+      const sourceStartTick = Number(note.start_tick);
+      const durationTicks = correctionNoteDurationTicks(note);
+      const windowStartTick = Number(correctionWindowContract?.start_tick);
+      const windowEndTick = Number(correctionWindowContract?.end_tick);
+      if (!Number.isSafeInteger(targetStartTick) || targetStartTick < 0) {
+        correctionErrorMessage = "Exact MIDI start tick must be a whole nonnegative integer; no edit was applied.";
+        correctionStatusMessage = "";
+        pendingCorrectionFocusId = focusId;
+        render();
+        return;
+      }
+      if (!Number.isSafeInteger(sourceStartTick) || !Number.isSafeInteger(windowStartTick) || !Number.isSafeInteger(windowEndTick) || windowEndTick <= windowStartTick) {
+        correctionErrorMessage = "The exact note or window timing is unavailable; reload the bounded note window.";
+        correctionStatusMessage = "";
+        pendingCorrectionFocusId = focusId;
+        render();
+        return;
+      }
+      if (targetStartTick < windowStartTick || targetStartTick + durationTicks > windowEndTick) {
+        correctionErrorMessage = `The complete shifted note must stay inside this exact window (${windowStartTick}–${windowEndTick} ticks); no edit was applied.`;
+        correctionStatusMessage = "";
+        pendingCorrectionFocusId = focusId;
+        render();
+        return;
+      }
+      if (Math.abs(targetStartTick - sourceStartTick) > correctionMaximumOnsetDeltaTicks()) {
+        correctionErrorMessage = `The target start must remain within ${correctionMaximumOnsetDeltaTicks()} ticks of the immutable parent onset; no edit was applied.`;
+        correctionStatusMessage = "";
+        pendingCorrectionFocusId = focusId;
+        render();
+        return;
+      }
+      const draft = correctionDraft(currentClipId);
+      const key = correctionNoteRefKey(note.note_ref);
+      const previous = draft.changes.get(key);
+      const unchanged = targetStartTick === sourceStartTick
+        ? !previous
+        : Number(previous?.target_start_tick) === targetStartTick;
+      if (unchanged) {
+        correctionErrorMessage = "";
+        correctionStatusMessage = targetStartTick === sourceStartTick
+          ? "That is the immutable parent start tick, so no onset edit was applied. The reviewed projection, if present, remains valid."
+          : "That exact start tick is already the current draft value. The reviewed projection, if present, remains valid.";
+        pendingCorrectionFocusId = focusId;
+        render();
+        return;
+      }
+      if (targetStartTick === sourceStartTick) {
+        draft.changes.delete(key);
+      } else {
+        if (!draft.changes.has(key) && draft.changes.size >= correctionMaximumChanges()) {
+          correctionErrorMessage = `This correction is limited to ${correctionMaximumChanges()} changed notes. Reset one before adding another.`;
+          correctionStatusMessage = "";
+          pendingCorrectionFocusId = focusId;
+          render();
+          return;
+        }
+        draft.changes.set(key, { note_ref: cloneJson(note.note_ref), target_start_tick: targetStartTick });
+      }
+      invalidateCorrectionProjection(`Temporary note-onset draft updated: ${draft.changes.size} moved note${draft.changes.size === 1 ? "" : "s"}. Review is required before creation.`);
+      pendingCorrectionFocusId = focusId;
+      render();
+    }
+
+    function setSelectedCorrectionOnsetInput(value) {
+      const text = String(value ?? "").trim();
+      if (!text) {
+        correctionErrorMessage = "Exact MIDI start tick must be a whole nonnegative integer; no edit was applied.";
+        correctionStatusMessage = "";
+        pendingCorrectionFocusId = "clip-correction-exact-onset";
+        render();
+        return;
+      }
+      setSelectedCorrectionOnset(Number(text), "clip-correction-exact-onset");
+    }
+
     function resetSelectedCorrectionNote() {
       const draft = correctionDraft(currentClipId);
       if (!draft.selectedRefKey || correctionPending || !draft.changes.delete(draft.selectedRefKey)) return;
-      const resetValue = draft.kind === CORRECTION_KIND_DELETE ? "retained state" : draft.kind === CORRECTION_KIND_VELOCITY ? "attack velocity" : "pitch";
+      const resetValue = draft.kind === CORRECTION_KIND_DELETE ? "retained state" : draft.kind === CORRECTION_KIND_ONSET ? "note onset" : draft.kind === CORRECTION_KIND_VELOCITY ? "attack velocity" : "pitch";
       invalidateCorrectionProjection(`The selected note was reset to the immutable parent ${resetValue}. Review the remaining draft again.`);
       pendingCorrectionFocusRef = draft.selectedRefKey;
       render();
@@ -1674,10 +1897,92 @@
       return true;
     }
 
+    function onsetWindowNoteValid(note, requestWindow, timingMode) {
+      if (!exactObjectKeys(note, ONSET_WINDOW_NOTE_KEYS) || !isSha256(note.note_ref)) return false;
+      const reason = note.edit_block_reason;
+      if (reason !== null && !ONSET_BLOCK_REASONS.includes(reason)) return false;
+      if (typeof note.editable !== "boolean" || note.editable !== (reason === null)) return false;
+      if (!Number.isInteger(note.export_note_on_group_size) || note.export_note_on_group_size < 1) return false;
+      if (note.editable && note.export_note_on_group_size !== 1) return false;
+      if (reason === "duplicate-export-note-on" && note.export_note_on_group_size < 2) return false;
+      if (!Number.isInteger(note.channel) || note.channel < 0 || note.channel > 15) return false;
+      if (!Number.isInteger(note.pitch) || note.pitch < 0 || note.pitch > 127) return false;
+      if (!Number.isInteger(note.velocity) || note.velocity < 1 || note.velocity > 127) return false;
+      if (!Number.isInteger(note.release_velocity) || note.release_velocity < 0 || note.release_velocity > 127) return false;
+      if (!Number.isSafeInteger(note.start_tick) || !Number.isSafeInteger(note.end_tick) || note.start_tick < 0 || note.end_tick <= note.start_tick) return false;
+      if (!Number.isSafeInteger(note.duration_ticks) || note.duration_ticks !== note.end_tick - note.start_tick) return false;
+      if (!finiteNumber(note.start_beat) || !finiteNumber(note.duration_beats) || note.duration_beats <= 0) return false;
+      if (!finiteNumber(note.source_start_seconds) || !finiteNumber(note.source_end_seconds) || note.source_start_seconds < 0 || note.source_end_seconds <= note.source_start_seconds) return false;
+      if (!finiteNumber(note.microtiming_seconds) || !finiteNumber(note.end_microtiming_seconds)) return false;
+      if (!(note.articulation === null || typeof note.articulation === "string")) return false;
+      const hasMicrotiming = note.microtiming_seconds !== 0 || note.end_microtiming_seconds !== 0;
+      if (timingMode === "stem_locked" && note.editable && hasMicrotiming) return false;
+      if (reason === "unsupported-stem-locked-microtiming" && (timingMode !== "stem_locked" || !hasMicrotiming)) return false;
+      const fullyInside = note.start_tick >= requestWindow.start_tick && note.end_tick <= requestWindow.end_tick;
+      if (reason === "context-note-outside-window") return !fullyInside && note.end_tick > requestWindow.start_tick && note.start_tick < requestWindow.end_tick;
+      return fullyInside;
+    }
+
+    function onsetWindowMatchesRequest(document, request) {
+      const contract = correctionContract(CORRECTION_KIND_ONSET);
+      const expectedTopKeys = [
+        "blocked_note_count", "blocked_reason_counts", "chords", "correction_kind",
+        "editable_note_count", "effects", "library", "notes", "operation", "parent",
+        "policies", "schema", "timing", "visible_note_count", "window", "window_sha256",
+      ];
+      if (!exactObjectKeys(document, expectedTopKeys)) return false;
+      if (document.schema !== contract.windowSchema || document.operation !== contract.windowOperation || document.correction_kind !== CORRECTION_KIND_ONSET) return false;
+      if (!isSha256(document.window_sha256) || stableJson(document.library) !== stableJson({state_sha256: request.library_state_sha256})) return false;
+      if (!correctionEffectsMatch(document.effects, CORRECTION_KIND_ONSET, false)) return false;
+      if (!onsetParentIdentityMatches(document.parent || {}, request)) return false;
+      const window = document.window || {};
+      if (!exactObjectKeys(window, ["duration_seconds", "end_tick", "origin", "start_tick", "ticks_per_beat"])) return false;
+      if (window.start_tick !== request.window.start_tick || window.end_tick !== request.window.end_tick || window.ticks_per_beat !== CORRECTION_TICKS_PER_BEAT || window.origin !== "recorded-zero" || !finiteNumber(window.duration_seconds) || window.duration_seconds < 0) return false;
+      const timing = document.timing || {};
+      if (!exactObjectKeys(timing, ["export_bpm", "resolved_mode"]) || !["musical", "stem_locked"].includes(timing.resolved_mode) || !finiteNumber(timing.export_bpm) || timing.export_bpm <= 0) return false;
+      const parent = document.parent || {};
+      const parentChannel = Number(detailDocument?.clip?.instrument?.channel);
+      const minimumPitch = Number(parent.pitch_range?.minimum);
+      const maximumPitch = Number(parent.pitch_range?.maximum);
+      if (
+        !Array.isArray(document.notes)
+        || !Array.isArray(document.chords)
+        || !Number.isInteger(parent.note_count)
+        || document.notes.length > parent.note_count
+        || !Number.isInteger(parentChannel)
+        || parentChannel < 0
+        || parentChannel > 15
+        || !Number.isInteger(minimumPitch)
+        || !Number.isInteger(maximumPitch)
+        || minimumPitch < 0
+        || maximumPitch > 127
+        || minimumPitch > maximumPitch
+        || !document.notes.every((note) => (
+          onsetWindowNoteValid(note, window, timing.resolved_mode)
+          && note.channel === parentChannel
+          && note.pitch >= minimumPitch
+          && note.pitch <= maximumPitch
+        ))
+      ) return false;
+      const refs = document.notes.map((note) => note.note_ref);
+      if (new Set(refs).size !== refs.length) return false;
+      const editableCount = document.notes.filter((note) => note.editable).length;
+      const blockedCount = document.notes.length - editableCount;
+      if (document.visible_note_count !== document.notes.length || document.editable_note_count !== editableCount || document.blocked_note_count !== blockedCount) return false;
+      if (!exactObjectKeys(document.blocked_reason_counts, ONSET_BLOCK_REASONS)) return false;
+      for (const reason of ONSET_BLOCK_REASONS) {
+        const expected = document.notes.filter((note) => note.edit_block_reason === reason).length;
+        if (!Number.isInteger(document.blocked_reason_counts[reason]) || document.blocked_reason_counts[reason] !== expected) return false;
+      }
+      if (!exactObjectKeys(document.policies, ONSET_POLICY_KEYS) || document.policies.maximum_shift_ticks !== correctionMaximumOnsetDeltaTicks()) return false;
+      return ONSET_POLICY_KEYS.filter((key) => key !== "maximum_shift_ticks").every((key) => typeof document.policies[key] === "string" && document.policies[key].length > 0);
+    }
+
     function correctionWindowMatchesRequest(document, request, kind) {
       const contract = correctionContract(kind);
       if (!contract) return false;
       if (kind === CORRECTION_KIND_DELETE) return deletionWindowMatchesRequest(document, request);
+      if (kind === CORRECTION_KIND_ONSET) return onsetWindowMatchesRequest(document, request);
       return isSha256(document?.window_sha256)
         && Array.isArray(document?.notes)
         && (!contract.windowDiscriminator || document?.correction_kind === kind)
@@ -1767,12 +2072,16 @@
       if (!changes.length) throw new Error(`${draft.kind === CORRECTION_KIND_DELETE ? "Mark at least one note for removal" : `Change at least one note ${correctionKindName(draft.kind)}`} before reviewing.`);
       if (changes.length > correctionMaximumChanges()) throw new Error(`At most ${correctionMaximumChanges()} notes may be changed in one child.`);
       if (draft.kind === CORRECTION_KIND_DELETE && changes.length >= Number(detailDocument?.clip?.note_count || 0)) throw new Error("At least one parent note must remain in the immutable child.");
-      return {
+      const request = {
         ...correctionPins(),
         window: { ...correctionWindowContract },
         window_sha256: correctionWindowSha256(),
         correction: { kind: draft.kind, changes },
       };
+      if (draft.kind === CORRECTION_KIND_ONSET && !onsetRequestChangesMatchWindow(request)) {
+        throw new Error("The note-onset draft no longer matches the exact bounded window; reload it before review.");
+      }
+      return request;
     }
 
     function correctionEffectKeys(kind) {
@@ -1817,10 +2126,25 @@
         && finiteNumber(parent.duration_seconds) && parent.duration_seconds >= 0;
     }
 
+    function onsetParentIdentityMatches(parent, request) {
+      const clip = detailDocument?.clip || {};
+      const lineageId = clip.lineage_id || detailDocument?.lineage?.lineage_id;
+      const durationSeconds = Number(clip.duration_seconds ?? clip.duration?.export_seconds);
+      return deletionParentIdentityMatches(parent, request)
+        && parent.parent_clip_id === (clip.parent_clip_id ?? null)
+        && typeof lineageId === "string" && lineageId.length > 0
+        && parent.lineage_id === lineageId
+        && parent.revision === Number(clip.revision)
+        && parent.role_redacted === Boolean(clip.role_redacted)
+        && finiteNumber(durationSeconds)
+        && parent.duration_seconds === durationSeconds;
+    }
+
     function deletionChildIdentityMatches(parent, child, diff, intentSha256, request) {
       if (!exactObjectKeys(child, DELETE_IDENTITY_KEYS)) return false;
       return child.clip_id === `sf-correction-${intentSha256}`
         && isSha256(child.object_sha256)
+        && child.object_sha256 !== parent.object_sha256
         && child.parent_clip_id === request.parent_clip_id
         && child.lineage_id === parent.lineage_id
         && child.revision === parent.revision + 1
@@ -1831,6 +2155,25 @@
         && child.note_count === diff.note_count_after
         && child.chord_count === parent.chord_count
         && stableJson(child.pitch_range) === stableJson(diff.pitch_range_after)
+        && finiteNumber(child.duration_seconds)
+        && child.duration_seconds === parent.duration_seconds;
+    }
+
+    function onsetChildIdentityMatches(parent, child, intentSha256, request) {
+      if (!exactObjectKeys(child, DELETE_IDENTITY_KEYS)) return false;
+      return child.clip_id === `sf-correction-${intentSha256}`
+        && isSha256(child.object_sha256)
+        && child.object_sha256 !== parent.object_sha256
+        && child.parent_clip_id === request.parent_clip_id
+        && child.lineage_id === parent.lineage_id
+        && child.revision === parent.revision + 1
+        && stableJson(child.key) === stableJson(parent.key)
+        && child.bpm === parent.bpm
+        && child.role === parent.role
+        && child.role_redacted === parent.role_redacted
+        && child.note_count === parent.note_count
+        && child.chord_count === parent.chord_count
+        && stableJson(child.pitch_range) === stableJson(parent.pitch_range)
         && finiteNumber(child.duration_seconds)
         && child.duration_seconds === parent.duration_seconds;
     }
@@ -1880,10 +2223,92 @@
       return seen.size === requestsByRef.size;
     }
 
+    function nearlyEqual(left, right, tolerance = 1e-7) {
+      return finiteNumber(left) && finiteNumber(right) && Math.abs(left - right) <= tolerance;
+    }
+
+    function onsetRequestChangesMatchWindow(request) {
+      if (request?.correction?.kind !== CORRECTION_KIND_ONSET) return false;
+      const changes = request.correction.changes;
+      if (!Array.isArray(changes) || changes.length < 1 || changes.length > correctionMaximumChanges()) return false;
+      const notesByRef = new Map(correctionNotes().map((note) => [correctionNoteRefKey(note.note_ref), note]));
+      const window = correctionWindowDocument?.window || {};
+      const seen = new Set();
+      for (const change of changes) {
+        if (!exactObjectKeys(change, ["note_ref", "target_start_tick"]) || !isSha256(change.note_ref) || !Number.isSafeInteger(change.target_start_tick)) return false;
+        const key = correctionNoteRefKey(change.note_ref);
+        const note = notesByRef.get(key);
+        if (!note || !correctionNoteEditable(note) || seen.has(key)) return false;
+        seen.add(key);
+        const sourceStart = Number(note.start_tick);
+        const sourceEnd = Number(note.end_tick);
+        const duration = correctionNoteDurationTicks(note);
+        const targetStart = change.target_start_tick;
+        const targetEnd = targetStart + duration;
+        if (!Number.isSafeInteger(sourceStart) || !Number.isSafeInteger(sourceEnd) || !Number.isSafeInteger(targetEnd)) return false;
+        if (sourceStart < window.start_tick || sourceEnd > window.end_tick || targetStart < window.start_tick || targetEnd > window.end_tick) return false;
+        if (targetStart === sourceStart || Math.abs(targetStart - sourceStart) > correctionMaximumOnsetDeltaTicks()) return false;
+      }
+      return true;
+    }
+
+    function onsetDiffMatchesRequest(diff, request) {
+      if (!exactObjectKeys(diff, ONSET_DIFF_KEYS) || diff.kind !== CORRECTION_KIND_ONSET) return false;
+      if (!onsetRequestChangesMatchWindow(request)) return false;
+      const timing = correctionWindowDocument?.timing || {};
+      if (diff.timing_mode !== timing.resolved_mode || !nearlyEqual(diff.export_bpm, timing.export_bpm)) return false;
+      const requested = request.correction.changes;
+      const rows = diff.changes;
+      if (!Array.isArray(rows) || diff.changed_note_count !== requested.length || rows.length !== requested.length) return false;
+      const requestsByRef = new Map(requested.map((change) => [correctionNoteRefKey(change.note_ref), change]));
+      const notesByRef = new Map(correctionNotes().map((note) => [correctionNoteRefKey(note.note_ref), note]));
+      const seen = new Set();
+      for (const row of rows) {
+        if (!exactObjectKeys(row, ONSET_DIFF_ROW_KEYS) || !isSha256(row.note_ref)) return false;
+        const key = correctionNoteRefKey(row.note_ref);
+        const change = requestsByRef.get(key);
+        const note = notesByRef.get(key);
+        if (!change || !note || !correctionNoteEditable(note) || seen.has(key)) return false;
+        seen.add(key);
+        const beforeStart = Number(note.start_tick);
+        const beforeEnd = Number(note.end_tick);
+        const afterStart = Number(change.target_start_tick);
+        const delta = afterStart - beforeStart;
+        const duration = beforeEnd - beforeStart;
+        const afterEnd = beforeEnd + delta;
+        if (
+          row.channel !== note.channel
+          || row.pitch !== note.pitch
+          || row.before_start_tick !== beforeStart
+          || row.after_start_tick !== afterStart
+          || row.before_end_tick !== beforeEnd
+          || row.after_end_tick !== afterEnd
+          || row.duration_ticks !== duration
+          || row.tick_delta !== delta
+        ) return false;
+        if (!nearlyEqual(row.before_start_beat, note.start_beat) || !finiteNumber(row.after_start_beat) || row.after_start_beat < 0) return false;
+        if (!nearlyEqual(row.before_source_start_seconds, note.source_start_seconds) || !finiteNumber(row.after_source_start_seconds) || row.after_source_start_seconds < 0) return false;
+        const beatDelta = row.after_start_beat - row.before_start_beat;
+        const sourceDelta = row.after_source_start_seconds - row.before_source_start_seconds;
+        if (beatDelta === 0 || sourceDelta === 0 || Math.sign(beatDelta) !== Math.sign(delta) || Math.sign(sourceDelta) !== Math.sign(delta)) return false;
+        if (diff.timing_mode === "musical" && !nearlyEqual(beatDelta, delta / CORRECTION_TICKS_PER_BEAT)) return false;
+        if (!finiteNumber(row.milliseconds_delta) || row.milliseconds_delta === 0 || Math.sign(row.milliseconds_delta) !== Math.sign(delta)) return false;
+        if (diff.timing_mode === "stem_locked") {
+          const expectedMilliseconds = delta * 60000 / (diff.export_bpm * CORRECTION_TICKS_PER_BEAT);
+          if (
+            !nearlyEqual(row.milliseconds_delta, expectedMilliseconds, 1e-6)
+            || !nearlyEqual(sourceDelta, expectedMilliseconds / 1000, 1e-9)
+          ) return false;
+        }
+      }
+      return seen.size === requestsByRef.size;
+    }
+
     function correctionDiffMatchesRequest(diff, request) {
       const kind = request?.correction?.kind;
       if (!correctionContract(kind)) return false;
       if (kind === CORRECTION_KIND_DELETE) return deletionDiffMatchesRequest(diff, request);
+      if (kind === CORRECTION_KIND_ONSET) return onsetDiffMatchesRequest(diff, request);
       const requested = list(request?.correction?.changes);
       const rows = list(diff?.changes);
       if (diff?.kind !== kind || diff?.changed_note_count !== requested.length || rows.length !== requested.length) return false;
@@ -1921,7 +2346,7 @@
       const kind = request?.correction?.kind;
       const contract = correctionContract(kind);
       if (!contract) return false;
-      if (kind === CORRECTION_KIND_DELETE && !exactObjectKeys(projection, [
+      if ([CORRECTION_KIND_DELETE, CORRECTION_KIND_ONSET].includes(kind) && !exactObjectKeys(projection, [
         "child", "correction", "diff", "effects", "intent_sha256", "library", "operation",
         "parent", "projection_sha256", "schema", "status", "warnings", "window",
       ])) return false;
@@ -1936,8 +2361,8 @@
         && stableJson(projection?.library) === stableJson({state_sha256: request.library_state_sha256})
         && window.start_tick === request.window.start_tick
         && window.end_tick === request.window.end_tick
-        && window.ticks_per_beat === correctionTicksPerBeat()
-        && (kind !== CORRECTION_KIND_DELETE || stableJson(window) === stableJson(correctionWindowDocument?.window))
+        && window.ticks_per_beat === (kind === CORRECTION_KIND_ONSET ? CORRECTION_TICKS_PER_BEAT : correctionTicksPerBeat())
+        && (![CORRECTION_KIND_DELETE, CORRECTION_KIND_ONSET].includes(kind) || stableJson(window) === stableJson(correctionWindowDocument?.window))
         && stableJson(projection?.correction) === stableJson(request.correction)
         && parent.clip_id === request.parent_clip_id
         && parent.object_sha256 === request.parent_object_sha256
@@ -1953,6 +2378,10 @@
           deletionParentIdentityMatches(parent, request)
           && deletionChildIdentityMatches(parent, child, projection.diff, projection.intent_sha256, request)
         ))
+        && (kind !== CORRECTION_KIND_ONSET || (
+          onsetParentIdentityMatches(parent, request)
+          && onsetChildIdentityMatches(parent, child, projection.intent_sha256, request)
+        ))
         && Array.isArray(projection?.warnings)
         && correctionEffectsMatch(projection?.effects, request.correction.kind, false);
     }
@@ -1961,14 +2390,17 @@
       const kind = request?.correction?.kind;
       const contract = correctionContract(kind);
       if (!contract) return false;
-      if (kind === CORRECTION_KIND_DELETE && !exactObjectKeys(result, [
+      if ([CORRECTION_KIND_DELETE, CORRECTION_KIND_ONSET].includes(kind) && !exactObjectKeys(result, [
         "child", "correction", "diff", "effects", "library", "operation", "parent",
         "projection_sha256", "replayed", "schema", "status", "warnings", "window",
       ])) return false;
       const replayed = result?.replayed === true && result?.status === "replayed";
       const created = result?.replayed === false && result?.status === "created";
       const library = result?.library || {};
-      const libraryValid = isSha256(library.current_state_sha256)
+      const libraryValid = (kind !== CORRECTION_KIND_ONSET || exactObjectKeys(library, [
+        "current_state_sha256", "expected_state_sha256", "previous_state_sha256",
+      ]))
+        && isSha256(library.current_state_sha256)
         && library.expected_state_sha256 === request.library_state_sha256
         && (created
           ? library.previous_state_sha256 === request.library_state_sha256
@@ -2176,6 +2608,24 @@
           before_velocity: Number(row.before_velocity ?? row.before?.velocity ?? row.velocity_before),
           after_velocity: Number(row.after_velocity ?? row.target_velocity ?? row.after?.velocity ?? row.velocity_after),
         })).filter((row) => Number.isInteger(row.before_velocity) && Number.isInteger(row.after_velocity));
+      }
+      if (kind === CORRECTION_KIND_ONSET) {
+        return candidates.map((row) => ({
+          note_ref: row.note_ref,
+          channel: Number(row.channel),
+          pitch: Number(row.pitch),
+          before_start_tick: Number(row.before_start_tick),
+          after_start_tick: Number(row.after_start_tick),
+          before_end_tick: Number(row.before_end_tick),
+          after_end_tick: Number(row.after_end_tick),
+          duration_ticks: Number(row.duration_ticks),
+          tick_delta: Number(row.tick_delta),
+          milliseconds_delta: Number(row.milliseconds_delta),
+          before_start_beat: Number(row.before_start_beat),
+          after_start_beat: Number(row.after_start_beat),
+          before_source_start_seconds: Number(row.before_source_start_seconds),
+          after_source_start_seconds: Number(row.after_source_start_seconds),
+        })).filter((row) => isSha256(row.note_ref) && Number.isSafeInteger(row.before_start_tick) && Number.isSafeInteger(row.after_start_tick));
       }
       if (kind === CORRECTION_KIND_PITCH) return candidates.map((row) => ({
         note_ref: row.note_ref ?? row.ref ?? "note",

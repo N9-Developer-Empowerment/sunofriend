@@ -1,6 +1,6 @@
 # Phase 5: Multi-Process MIDI Comparison and Local Result Explorer
 
-Status: **Phase 5.0–5.2 are complete; the Phase 5.3 lead-only S0/M1/M3 diagnostic slice and Phase 5.4 explorer slice are complete, including hash-pinned comparison, GarageBand Pack Composer v1 and the disputed-range phrase-review bridge; Phase 5.5 completes Project Overview/restart/decision safety plus Decoded Stem Comparison v1, Phase 5.6 completes bounded decoded short arrangement presets, Phase 5.7 implements long-song visualization/recovery plus minimal exact canonical full-song chunk transport, Phase 5.8 completes verified cache/reused-model execution-provenance display, and Phase 5.9's exact-pack tutorial, 10/10 quiz and both human checks passed on 22 July 2026; Phase 5.3 blind choice, lineage and role expansion remain open; Phase 6 Increments 6.0, 6.1, 6.2a and 6.3a–c are complete while broader Phase 6 remains in progress; beam 1 and batch 1 remain the defaults, and no public service or new checkpoint download is authorised**
+Status: **Phase 5.0–5.2 are complete; the Phase 5.3 lead-only S0/M1/M3 diagnostic slice and Phase 5.4 explorer slice are complete, including hash-pinned comparison, GarageBand Pack Composer v1 and the disputed-range phrase-review bridge; Phase 5.5 completes Project Overview/restart/decision safety plus Decoded Stem Comparison v1, Phase 5.6 completes bounded decoded short arrangement presets, Phase 5.7 implements long-song visualization/recovery plus minimal exact canonical full-song chunk transport, Phase 5.8 completes verified cache/reused-model execution-provenance display, and Phase 5.9's exact-pack tutorial, 10/10 quiz and both human checks passed on 22 July 2026; Phase 5.3 blind choice, lineage and role expansion remain open; Phase 6 Increments 6.0, 6.1, 6.2a and 6.3a–d are complete while broader Phase 6 remains in progress; beam 1 and batch 1 remain the defaults, and no public service or new checkpoint download is authorised**
 
 Drafted: 19 July 2026
 Scope: accurate stem/full-mix MIDI, several analytical and AI processes kept as
@@ -1432,8 +1432,9 @@ continues to own final performance, patch editing and mixing.
 Entry history on 22 July 2026: the technical foundation, Phase 5.8 execution
 provenance and Phase 5.9 guided acceptance passed, opening the first gated
 read-only Clip Library slice. Phase 6 has since advanced independently:
-Increments 6.0, 6.1, 6.2a and 6.3a–c are complete, while broader Phase 6
-remains in progress. The authoritative current contracts,
+Increments 6.0, 6.1, 6.2a and 6.3a–d are complete while broader Phase 6
+remains in progress.
+The authoritative current contracts,
 launch flags, limits, immutable-child rules and completion evidence are in
 [Phase 6: Creative Arrangement and Reusable
 MIDI](PHASE6_CREATIVE_ARRANGEMENT.md); this Phase 5 plan does not duplicate or

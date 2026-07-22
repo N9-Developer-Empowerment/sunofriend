@@ -22,7 +22,9 @@ reuse proposal is complete; Increment 6.2a's reviewed immutable
 same-mode key and BPM child workflow is complete; Increment 6.3a's bounded
 immutable pitch-correction workflow is complete; Increment 6.3b's bounded
 immutable attack-velocity correction is complete; Increment 6.3c's bounded exact
-note-removal workflow is complete; broader Phase 6
+note-removal workflow is complete; Increment 6.3d's bounded existing-note
+onset-shift workflow is complete;
+broader Phase 6
 creative arrangement remains in progress
 
 Started: 15 July 2026  
@@ -101,7 +103,7 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
 | 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.5–5.9 hardening complete and Phase 5.9 human acceptance passed; Phase 5.3 listening/lineage/role work remains** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench has hash-pinned per-stem and full-song timelines, bounded decoded transports, a separate exact GarageBand pack basket, Project Overview, fail-closed execution provenance and guided exact-pack acceptance. The 22 July close-out completed all eight tutorial screens, scored 10/10 and passed both six-item human checks; the resolver reverified five selected MIDI payloads plus the dry proxy and no source audio with zero project effects. Phase 5 remains open only for the separately gated Phase 5.3 work |
-| 6. Creative Arrangement and Reusable MIDI | **In progress: Increments 6.0, 6.1, 6.2a and 6.3a–c complete** | The gated browser, immutable-placement proposal, key/BPM children and bounded recognition-first pitch/attack-velocity/exact-note-removal patches are complete. Increment 6.3c explicitly removes 1–64 exact existing pitched or drum notes while retaining at least one note and proving normalized MIDI is exactly the parent minus those intervals. One kind per child, zero-write review, immutable parent and restart validation remain mandatory. Note insertion, timing/duration/release velocity/continuous expression, mode remapping, tuning/downbeat and hybrids remain later slices; hybrid construction still waits for the Phase 5.3 gates |
+| 6. Creative Arrangement and Reusable MIDI | **In progress: Increments 6.0, 6.1, 6.2a and 6.3a–d complete** | The gated browser, immutable-placement proposal, key/BPM children and bounded recognition-first pitch/attack-velocity/exact-note-removal/existing-note-onset patches are complete. The 6.3d contract moves 1–64 exact existing pitched or drum note intervals by an explicit non-zero delta of at most 480 ticks, keeping the emitted duration, pitch and expression exact. One kind per child, zero-write review, immutable parent and restart validation remain mandatory. Note insertion, note-end/duration, release velocity/continuous expression, mode remapping, tuning/downbeat and hybrids remain later slices; hybrid construction still waits for the Phase 5.3 gates |
 | 7. Cross-DAW and Opt-in Community Learning | **Deferred** | Compatibility testing, cleared public goldens and consented contextual feedback only after the local workflow is useful, private and stable |
 
 ## Phase 1: AI Transcription Bake-off v1
@@ -672,9 +674,10 @@ duration, source seconds, release velocity, articulation and metadata. It is
 available for pitched and drum-family Clips. Notes that normalize to a shared
 channel/onset/pitch Note On are visible but blocked because the requested
 source-note edit would not map to one exported event. Pitch and velocity never
-share a draft or recipe. Note insertion, timing, duration, release velocity
-and continuous expression remain deferred to their own dual-timeline and
-identity contracts; exact deletion is the separately bounded 6.3c slice below.
+share a draft or recipe. Exact deletion is the separately bounded 6.3c slice
+below, and exact existing-note onset shift is the 6.3d slice after it. Note
+insertion, note-end/duration, release velocity and continuous expression remain
+deferred to their own dual-timeline and identity contracts.
 
 Increment 6.3c is complete under the same correction gate and routes. Its
 kind is `note_delete_patch`, its retained operation is
@@ -694,8 +697,47 @@ the only remaining note are blocked. A fresh child may set only
 `library_mutated`, `child_clip_created`, `correction_applied`,
 `note_count_changed` and `note_deleted`; replay and restart are zero-effect.
 Pitch-v1 and attack-velocity-v1 requests, schemas, hashes and recipes remain
-frozen. Note insertion and onset/duration editing remain separate because they
-need new identity/evidence and dual-time contracts.
+frozen. At the 6.3c close-out, note insertion and onset/duration editing still
+required separate identity/evidence and dual-time contracts; 6.3d now takes
+only the onset part under the contract below.
+
+Increment 6.3d is complete as the next bounded note-editing slice under the
+same explicit correction gate. Its separately discriminated kind is
+`note_onset_shift_patch`; its retained recipe operation is
+`shift_note_onsets`. One request names 1–64 exact existing pitched or drum note
+references and an exact integer `target_start_tick` for each. Every target must
+differ by a non-zero value no greater than 480 ticks, and both the source and
+target note intervals must be wholly inside the loaded half-open window.
+
+The operation shifts the normalized Note On and matching Note Off by the same
+delta. MIDI duration ticks, pitch, attack/release velocity, articulation,
+microtiming and note count remain exact. It does not infer a better time, snap
+to a grid, quantise, propagate a phrase or use scale/chord evidence. It rejects
+target overlap/duplicate/cascade ambiguity, negative or unencodable ticks,
+window escape and any changed beat/export/source horizon. Window rows use only
+these four block reasons: `context-note-outside-window`,
+`duplicate-export-note-on`, `normalized-lifetime-dependent` and
+`unsupported-stem-locked-microtiming`.
+
+For `musical` timing, the operation adds `delta / 480` to `start_beat`, keeps
+`duration_beats` and both microtiming fields, then recomputes source seconds
+through the retained tempo map. For `stem_locked` timing, v1 requires both
+microtiming fields to be exactly zero, shifts source start/end by
+`delta * 60 / (export_bpm * 480)`, preserves source duration and derives beat
+coordinates. Both paths must round-trip to the exact requested ticks. Preview
+is zero-effect; a fresh child may set only `library_mutated`,
+`child_clip_created`, `correction_applied`, `note_onset_changed` and
+`note_timing_changed`; replay and restart are all false.
+
+The overall correction capability remains schema v2 and continues to report
+generic `timing: false`; clients must test the explicit
+`note_onset_shift_patch` entry and `maximum_onset_delta_ticks: 480`. The frozen
+pitch, attack-velocity and deletion contracts remain byte-compatible. Release
+velocity was not selected for this increment because all audited local Clip
+libraries contain only zero release velocities and GarageBand patch support
+for Note Off velocity varies. Note insertion, note-end/duration, release
+velocity and continuous expression remain deferred; the likely next bounded
+slice is note-end/duration correction.
 
 ## Phase 7: Cross-DAW and Opt-in Community Learning
 
@@ -739,6 +781,53 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-07-22 — Phase 6.3d bounded existing-note onset shift
+
+- Goal: let a listener move an existing pitched note or drum hit earlier or
+  later without changing its emitted duration, pitch or expression.
+- Contract: `note_onset_shift_patch` retains `shift_note_onsets`; one request
+  names 1–64 exact existing refs and exact integer targets within ±480 ticks.
+  The source and target intervals must both fit the loaded half-open window.
+- Timing: Note On and Note Off move by the same delta. Musical timing keeps
+  duration beats and microtiming and recomputes source seconds; stem-locked
+  timing requires zero microtiming, shifts source seconds at the export BPM and
+  derives beat coordinates. Both must round-trip to exact 480-TPQ ticks.
+- Safety: no target is inferred, snapped or quantised. Duplicate, normalized-
+  lifetime, overlap/cascade, window, MIDI-bound and global-horizon cases fail
+  closed. Preview is zero-effect; only the five named onset-child effects may
+  be true on a fresh create, and replay/restart are all false.
+- Compatibility: capability schema v2 and generic `timing: false` remain
+  unchanged; the explicit onset kind and 480-tick limit advertise support.
+  Earlier correction schemas, hashes and recipes remain frozen.
+- Evidence: the fresh copied Lidl library at
+  `work/ai-bakeoff/lidl-phase6-onset-smoke-v1` grew from 12 to 13 Clips while
+  the 12-Clip source and copied parent stayed unchanged. Parent Keys Clip
+  `a6112b69031a233a54531128dca4925f32d5b3b32ce5552daaa6393d0138d8aa`
+  (object
+  `d37975c915e790e290650cf5b48e316c19318c28bd1a50c3de342e889180356a`)
+  produced child
+  `sf-correction-495e77ba31528090cc979465459d50acf9ad8f4e36f8a783e9f30398703d5727`
+  (object
+  `e70a297a01be3a086f5fa05e8dabb47975e6b634dd1adfc4e8c17565524932a2`).
+  Both contain 1,727 notes. One channel-1 pitch-66 interval moved
+  442–873→472–903: +30 ticks, +31.512625 ms and an unchanged 431-tick
+  duration. Beat/export/source horizons stayed 462.6458333333333 beats,
+  222070 ticks and 233.26695445833332 seconds. Fresh creation set exactly the
+  five onset-child effects; replay and restart were all false. Parent/child
+  MIDI SHA-256 values were
+  `e741334f8dfc1421850618d088b382a5fc051fc1fada4797ac742a1dcd201036`
+  and
+  `20b1298550568bb51cdb98c4d8e342a4ac27e22b2cd58f5e03f48f062cad7d9b`.
+  The focused integrated suite passed 101 tests and the adversarial audit
+  passed 17 onset-specific plus 82 broader correction/server/UI tests. The
+  complete repository suite passed 990 tests in 282.58 seconds with the one
+  existing third-party `resampy`/`pkg_resources` deprecation warning. This
+  closes 6.3d as deterministic engineering evidence, not a human preference
+  or musical-quality claim.
+- Deferred: note insertion, note-end/duration, release velocity and continuous
+  expression. Release velocity has no useful local non-zero golden and patch
+  support varies; note-end/duration is the likely next bounded increment.
+
 ### 2026-07-22 — Phase 6.3c bounded exact note removal complete
 
 - Goal: let a listener remove recognisable unwanted or extra MIDI notes from a
@@ -754,8 +843,9 @@ Each working day should aim for one narrow vertical improvement:
 - Topology: normalized child MIDI must equal normalized parent MIDI minus the
   named intervals. Every survivor plus beat/export/source horizon stays exact;
   duplicate, cascade, horizon and only-note cases are blocked.
-- Compatibility: pitch and attack-velocity v1 remain frozen. Insertion and
-  onset/duration wait for their identity/evidence and dual-time contracts.
+- Compatibility at 6.3c: pitch and attack-velocity v1 remained frozen.
+  Insertion and onset/duration still awaited separate contracts; 6.3d now
+  takes onset alone while insertion and note-end/duration remain deferred.
 - Evidence: a fresh copy of the accepted Lidl library at
   `work/ai-bakeoff/lidl-phase6-deletion-smoke-v2` grew from 12 to 13 Clips
   while the source remained at 12.
@@ -778,9 +868,10 @@ Each working day should aim for one narrow vertical improvement:
   final independent audit passed 49 and the complete repository suite passed
   970 tests. The single warning is the existing `resampy`/`pkg_resources`
   deprecation notice.
-- Decision: Increment 6.3c is complete. Broader Phase 6 remains in progress;
-  insertion, onset/duration, release velocity, continuous expression and the
-  other deferred operations remain outside this correction contract.
+- Decision: Increment 6.3c is complete. Broader Phase 6 remains in progress.
+  The later 6.3d contract takes onset shift alone; insertion,
+  note-end/duration, release velocity, continuous expression and the other
+  deferred operations remain outside 6.3c.
 
 ### 2026-07-22 — Phase 6.3b bounded attack velocity
 
@@ -813,8 +904,9 @@ Each working day should aim for one narrow vertical improvement:
   `f8570c9af8636e3cfeb1605082616a3e1e72f0bdd546b764baf055bca9abbc4c`.
 - Verification: the complete repository suite passed with 955 tests; the one
   warning is the existing `resampy`/`pkg_resources` deprecation notice.
-- Deferred: insertion, onset/duration, release velocity, continuous
-  expression, quantisation, phrase replacement and hybrids.
+- Deferred at the 6.3b boundary: insertion, onset/duration, release velocity,
+  continuous expression, quantisation, phrase replacement and hybrids. The
+  later 6.3d contract takes onset alone; the other items remain deferred.
 
 ### 2026-07-22 — Phase 6.3a bounded pitch correction complete
 

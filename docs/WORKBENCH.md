@@ -36,8 +36,10 @@ The separate explicit Clip reuse proposal is also complete, and the first
 review-before-create immutable same-mode key/BPM transform slice is complete.
 The bounded pitch and attack-velocity correction slices are complete too;
 velocity correction also supports drum Clips. Bounded exact note removal for
-pitched and drum Clips is Increment 6.3c and is complete. Note
-insertion, onset/duration and broader phrase editing remain later Phase 6 work.
+pitched and drum Clips is Increment 6.3c and is complete. The separately typed
+Increment 6.3d existing-note onset operation is complete too. Note insertion,
+note-end/duration and broader phrase editing remain
+later Phase 6 work.
 The optional **Developer Inspector** adds a read-only application operation and
 state explorer for developers who want to understand those contracts before
 reviewing or extending them. See the
@@ -1207,7 +1209,9 @@ This pitch slice cannot add a missing note, delete a note, change onset/duration
 release velocity, split/merge, quantise, copy a repeated phrase, apply a
 hummed guide, repair theory automatically or create a hybrid. Attack velocity
 is the separately bounded 6.3b operation below; exact deletion is the
-completed 6.3c operation after it; continuous expression remains deferred.
+completed 6.3c operation after it. Bounded existing-note onset shift is the
+separate 6.3d operation; note-end/duration and continuous expression remain
+deferred.
 
 ## Phase 6 bounded attack-velocity correction (Increment 6.3b)
 
@@ -1332,6 +1336,95 @@ audit passed 49 and the complete repository suite passed 970 tests. The single
 warning is the existing `resampy`/`pkg_resources` deprecation notice. Increment
 6.3c is complete while broader Phase 6 remains in progress.
 
+## Phase 6 bounded existing-note onset shift (Increment 6.3d)
+
+The same explicit `--enable-clip-corrections` launch provides **Move existing
+note earlier or later** for pitched and drum-family Clips. This is not a
+quantiser or automatic timing repair. Sunofriend does not listen for a better
+onset, snap to a grid, apply swing, use chords to choose a time or propagate an
+edit to a repeated phrase.
+
+Load the same bounded half-open 480-TPQ phrase window. One patch names 1–64
+exact existing note references and one exact integer `target_start_tick` for
+each. Use the bounded ±30/±60/±120 controls or enter a precise value, then
+explicitly apply it. Focus, keyboard navigation and typing alone remain
+temporary browser state. Every target must differ by a non-zero delta no
+greater than 480 ticks, and the complete old and new note intervals must both
+fit the loaded window.
+
+**Review temporary note-onset shift** shows the exact old/new Note On and Note
+Off ticks, held duration ticks, signed tick delta, elapsed export-time delta,
+beat start and source-second start. Both emitted events move by the same delta,
+so pitch, normalized MIDI duration, attack/release velocity, articulation and
+note count remain exact. Only **Create immutable corrected Clip** may append
+one child; the child is not played, selected, placed, exported or added to a
+GarageBand Pack automatically.
+
+Timing is explicit rather than hidden:
+
+- `musical` keeps `duration_beats` and both microtiming fields, adds
+  `delta / 480` to `start_beat`, and recomputes source start/end through the
+  retained tempo map;
+- `stem_locked` v1 requires both microtiming values to be exactly zero, shifts
+  source start/end by `delta * 60 / (export_bpm * 480)`, preserves source
+  duration and derives the new beat coordinates.
+
+Both modes must round-trip to the exact requested integer Note On/Off ticks
+and preserve the global beat, export and source horizons. A note row is locked
+with exactly one of `context-note-outside-window`,
+`duplicate-export-note-on`, `normalized-lifetime-dependent` or
+`unsupported-stem-locked-microtiming`. A request also fails when the new
+interval escapes the window, overlaps or duplicates another same-channel/
+same-pitch lifetime, creates a normalization cascade, becomes negative or
+unencodable, or changes a global horizon.
+
+The correction capability stays at v2 and retains generic `timing: false`.
+Clients must require the explicit `note_onset_shift_patch` entry and
+`maximum_onset_delta_ticks: 480`. Its public schemas are
+`sunofriend.workbench-clip-note-onset-window.v1`,
+`sunofriend.workbench-clip-note-onset-preview.v1`,
+`sunofriend.workbench-clip-note-onset-result.v1` and
+`sunofriend.workbench-clip-note-onset-summary.v1`; the retained recipe is
+`shift_note_onsets`. The path-free operation labels are
+`clip-note-onset-window`, `clip-note-onset-correction-preview` and
+`clip-note-onset-correction-create`. Earlier pitch, velocity and deletion
+schemas, hashes and recipes remain unchanged.
+
+Preview has every effect false. Fresh creation may set only
+`library_mutated`, `child_clip_created`, `correction_applied`,
+`note_onset_changed` and `note_timing_changed`; exact replay and validated
+restart summary have every effect false. Release velocity remains deferred:
+all audited local Clip libraries contain zero release velocities and
+GarageBand patch support for Note Off velocity varies. Note insertion,
+note-end/duration and continuous expression also remain separate; explicit
+note-end/duration correction is the likely next bounded slice.
+
+The completed real-library exercise used
+`work/ai-bakeoff/lidl-phase6-onset-smoke-v1`, a fresh copy of the accepted
+12-Clip Lidl library. The source stayed at 12 Clips and the copy grew to 13.
+Parent Keys Clip
+`a6112b69031a233a54531128dca4925f32d5b3b32ce5552daaa6393d0138d8aa`
+(object
+`d37975c915e790e290650cf5b48e316c19318c28bd1a50c3de342e889180356a`)
+and child
+`sf-correction-495e77ba31528090cc979465459d50acf9ad8f4e36f8a783e9f30398703d5727`
+(object
+`e70a297a01be3a086f5fa05e8dabb47975e6b634dd1adfc4e8c17565524932a2`)
+both contain 1,727 notes. One channel-1 pitch-66 interval moved
+442–873→472–903: +30 ticks, +31.512625 ms and the same 431-tick duration.
+Beat/export/source horizons stayed 462.6458333333333 beats, 222070 ticks and
+233.26695445833332 seconds. The source and copied parent were unchanged.
+Fresh creation set exactly the five documented effects; exact replay and
+restart were all false. Parent/child deterministic MIDI SHA-256 values were
+`e741334f8dfc1421850618d088b382a5fc051fc1fada4797ac742a1dcd201036`
+and
+`20b1298550568bb51cdb98c4d8e342a4ac27e22b2cd58f5e03f48f062cad7d9b`.
+The focused integrated correction suite passed 101 tests and the adversarial
+audit passed 17 onset-specific plus 82 broader correction/server/UI tests. The
+complete repository suite passed 990 tests in 282.58 seconds with the one
+existing third-party `resampy`/`pkg_resources` deprecation warning. No human
+preference or musical-quality claim was recorded.
+
 ## Export the private review without a server
 
 The browser download remains available, but an agent or terminal workflow can
@@ -1396,7 +1489,8 @@ note-free disclosure boundary.
   Workbench decoded loop is not level matched or blinded.
 - The arrangement is a dry GM proxy. Complete-instrument checks and installed
   GarageBand patch choice remain a later view.
-- Note insertion, timing/duration/expression correction, phrase
+- Note insertion, note-end/duration/release-velocity/continuous-expression
+  correction, phrase
   replacement and creative recombination remain later Phase 6 slices. Precise
   arbitrary custom mixes, server-paginated timeline payloads,
   medium/large checkpoint comparison and any opt-in public contribution are

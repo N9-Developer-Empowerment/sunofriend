@@ -276,7 +276,9 @@ _OPERATION_LABELS = {
     "clip_transform.preview": "Preview one immutable Clip version without writing",
     "clip_transform.create": "Append one explicitly confirmed immutable Clip version",
     "clip_correction.window": "Read one bounded immutable Clip note window",
-    "clip_correction.preview": "Preview an exact note correction without writing",
+    "clip_correction.preview": (
+        "Preview an exact pitch, attack-velocity, note-deletion or bounded note-onset shift without writing"
+    ),
     "clip_correction.create": "Append one explicitly confirmed corrected Clip version",
 }
 
@@ -334,6 +336,9 @@ _CODE_FLOW_NODES = (
             "sunofriend.workbench_clips.WorkbenchClipService",
             "sunofriend.workbench_transform.WorkbenchClipTransformService",
             "sunofriend.workbench_correction.WorkbenchClipCorrectionService",
+            "sunofriend.workbench_velocity.WorkbenchClipVelocityCorrectionService",
+            "sunofriend.workbench_deletion.WorkbenchClipDeletionCorrectionService",
+            "sunofriend.workbench_onset.WorkbenchClipOnsetCorrectionService",
         ],
         "invariant": "Original candidate MIDI is copied or rendered without mutation.",
     },
