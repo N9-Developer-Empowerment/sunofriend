@@ -205,6 +205,34 @@
       ]),
       durableEffect: true,
     }),
+    "/api/clip-note-correction-window": Object.freeze({
+      operation: "clip_correction.window",
+      label: "Read one bounded immutable Clip note window",
+      symbols: Object.freeze([
+        "sunofriend.workbench_server._WorkbenchHandler.do_POST",
+        "sunofriend.workbench_correction.WorkbenchClipCorrectionService.window",
+      ]),
+      durableEffect: false,
+    }),
+    "/api/clip-note-correction-projection": Object.freeze({
+      operation: "clip_correction.preview",
+      label: "Preview an exact pitch correction without writing",
+      symbols: Object.freeze([
+        "sunofriend.workbench_server._WorkbenchHandler.do_POST",
+        "sunofriend.workbench_correction.WorkbenchClipCorrectionService.preview",
+      ]),
+      durableEffect: false,
+    }),
+    "/api/clip-note-correction-action": Object.freeze({
+      operation: "clip_correction.create",
+      label: "Append one explicitly confirmed corrected Clip version",
+      symbols: Object.freeze([
+        "sunofriend.workbench_server._WorkbenchHandler.do_POST",
+        "sunofriend.workbench_correction.WorkbenchClipCorrectionService.create",
+        "sunofriend.library.ClipLibrary.append_version_if_state",
+      ]),
+      durableEffect: true,
+    }),
   });
 
   function escapeHtml(value) {
@@ -470,6 +498,17 @@
         symbol,
       };
     });
+    const projectedSymbols = list(record.symbols).filter((symbol) => (
+      typeof symbol === "string"
+      && symbol.length > 0
+      && symbol.length <= 500
+      && !/[\r\n]/.test(symbol)
+      && (symbol.startsWith("sunofriend.") || symbol.startsWith("src/sunofriend/"))
+    ));
+    const frameSymbols = frames.map((frame) => frame.symbol).filter(Boolean);
+    const projectedDurableEffect = typeof record.durable_effect_possible === "boolean"
+      ? record.durable_effect_possible
+      : ["decision.append", "pack_basket.save", "clip_reuse.change"].includes(record.operation);
     return {
       ...record,
       label: String(record.operation || "server operation")
@@ -478,8 +517,8 @@
         .join(" "),
       route: "server-owned route",
       duration_ms: finiteOrZero(record.duration_ms),
-      durable_effect_possible: ["decision.append", "pack_basket.save", "clip_reuse.change"].includes(record.operation),
-      symbols: [...new Set(frames.map((frame) => frame.symbol).filter(Boolean))],
+      durable_effect_possible: projectedDurableEffect,
+      symbols: [...new Set([...projectedSymbols, ...frameSymbols])],
       frames,
     };
   }

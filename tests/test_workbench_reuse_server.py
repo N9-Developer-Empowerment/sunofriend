@@ -246,6 +246,9 @@ class WorkbenchClipReuseServerTests(unittest.TestCase):
             self.assertFalse(
                 (state / "phase6-reuse" / "reuse.sqlite3").exists()
             )
+            self.assertFalse(
+                (state / "phase6-reuse" / "reuse.sqlite3.lock").exists()
+            )
             # The ordinary project payload intentionally carries tokenized local
             # media URLs.  The new capability and plan projections must not.
             _assert_path_free(self, capability, root=self.root, token=self.token)
@@ -346,9 +349,12 @@ class WorkbenchClipReuseServerTests(unittest.TestCase):
             )
             reuse_directory = state / "phase6-reuse"
             reuse_database = reuse_directory / "reuse.sqlite3"
+            writer_lock = reuse_directory / "reuse.sqlite3.lock"
             self.assertTrue(reuse_database.is_file())
+            self.assertTrue(writer_lock.is_file())
             self.assertEqual(reuse_directory.stat().st_mode & 0o777, 0o700)
             self.assertEqual(reuse_database.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(writer_lock.stat().st_mode & 0o777, 0o600)
             first = first_response["plan"]
             self.assertEqual(first["revision"], 1)
             self.assertNotEqual(first["plan_sha256"], empty["plan_sha256"])
@@ -556,6 +562,43 @@ class WorkbenchClipReuseServerTests(unittest.TestCase):
             self.assertEqual(current["revision"], 1)
             self.assertEqual(current["event_count"], 1)
             self.assertEqual(current["active_placement_count"], 1)
+
+    def test_reader_waits_until_lazy_schema_publication_is_complete(self) -> None:
+        database = self.root / "schema-publication-state" / "reuse.sqlite3"
+        writer = WorkbenchClipReuseStore(database)
+        reader = WorkbenchClipReuseStore(database)
+        writer._prepare_parent_for_write()
+        started = threading.Event()
+        finished = threading.Event()
+        outcome: list[object] = []
+
+        def read_visible_database() -> None:
+            started.set()
+            try:
+                outcome.append(
+                    reader.events(
+                        project_id="project",
+                        plan_id="reuse-plan-" + "a" * 64,
+                        binding_sha256="b" * 64,
+                    )
+                )
+            except Exception as exc:  # pragma: no cover - asserted below
+                outcome.append(exc)
+            finally:
+                finished.set()
+
+        with writer._exclusive_writer_lock():
+            sqlite3.connect(database).close()
+            thread = threading.Thread(target=read_visible_database)
+            thread.start()
+            self.assertTrue(started.wait(timeout=1))
+            self.assertFalse(finished.wait(timeout=0.05))
+            writer._prepare_for_write()
+
+        self.assertTrue(finished.wait(timeout=5))
+        thread.join(timeout=5)
+        self.assertFalse(thread.is_alive())
+        self.assertEqual(outcome, [[]])
 
     def test_event_513_is_rejected_before_store_creation(self) -> None:
         database = self.root / "event-limit-state" / "reuse.sqlite3"

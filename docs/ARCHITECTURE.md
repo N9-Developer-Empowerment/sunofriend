@@ -488,6 +488,14 @@ restores after restart. It validates immutable object identity, the positive
 project BPM and bounds before appending, and computes path-free compatibility
 warnings without transforming the Clip.
 
+The first explicit write uses an owner-only sidecar file lock. Writers hold an
+exclusive cross-process lock across lazy schema publication and the optimistic
+head-check/insert transaction; readers of an already-visible database take a
+shared lock before querying. This prevents a second Workbench process from
+observing the SQLite file before its append-only schema exists. A concurrent
+loser reaches the normal stale-plan conflict instead of being misreported as
+evidence corruption, while empty reads remain storage-free.
+
 `workbench_server.py` exposes token-protected
 `GET /api/clip-reuse-plan` and `POST /api/clip-reuse-action` only when enabled.
 Optimistic concurrency uses the plan ID, SHA-256 and revision. A conflict
@@ -553,6 +561,41 @@ Thus identical requests become one create plus one replay, while a different
 transform or unrelated external append remains a conflict. Ordinary browse,
 detail, preview and capability reads never use this exception and remain strict
 against any unexpected library drift.
+
+Phase 6 Increment 6.3a reuses that sole-child append boundary but gives it a
+separate authority flag and musical contract. `workbench_correction.py` accepts
+only a user-authored pitch patch against one exact parent. A bounded window is
+expressed as half-open integer ticks at 480 TPQ and resolved through the Clip's
+existing automatic export timing. It returns visible notes and chord context
+without quantising or modifying them.
+
+Because Clip v1 intentionally has no mutable note ID, an editable note is
+addressed by its canonical parent index plus a digest over the parent object
+hash, index and complete `ClipNote` payload. The parent pin makes the index
+stable, the digest detects stale/tampered input and the index distinguishes
+otherwise identical duplicates. A canonical patch changes only 1–64 selected
+pitches by at most two octaves. Drum-family clips and any edit that newly
+introduces an ambiguous same-pitch MIDI overlap or duplicate onset are rejected.
+
+Before either live projection or restart audit, the correction service also
+validates the complete preserved SMF encoding boundary: at most 20,000 notes
+and 20,000 chords, four-byte variable-length note/chord/tempo event ticks,
+three-byte tempo values, byte-encodable time signatures and bounded UTF-8
+title/chord meta payloads. A maximum-safe-tick child is write/read round-tripped
+in tests; a max-plus-one event is rejected.
+
+Projection and creation use the same intent/projection/CAS/replay rules as the
+key/BPM service. The deterministic child's recognized correction recipe keeps
+a bounded exact before/after audit. On later detail reads, the correction
+service validates that recipe against the retained exact parent before exposing
+a path-free summary; arbitrary transform parameters remain hidden. Timing,
+source seconds, expression, key, chords, instrument, provenance, unaffected
+notes and all project/reuse/pack state remain unchanged.
+
+`--enable-clip-corrections`, `--enable-clip-transforms` and
+`--enable-clip-reuse-plan` are separate mutually exclusive launch modes. Note
+insertion/deletion, timing, duration and velocity remain later contracts rather
+than being interpreted through the pitch-only endpoint.
 
 An optional explicit-catalog phrase link validates one existing diagnostic
 S0/M1/M3 hybrid report against its exact stem, three current candidate MIDI

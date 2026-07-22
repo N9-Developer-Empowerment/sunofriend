@@ -258,6 +258,10 @@ class WorkbenchDeveloperTraceTests(unittest.TestCase):
 
         self.assertFalse(operations[0]["durable_effect_possible"])
         self.assertTrue(operations[1]["durable_effect_possible"])
+        self.assertEqual(operations[0]["frames"][0]["code_step"], "request.get")
+        self.assertEqual(operations[0]["frames"][0]["symbol"], "sunofriend.workbench_server._WorkbenchHandler.do_GET")
+        self.assertEqual(operations[1]["frames"][0]["code_step"], "request.post")
+        self.assertEqual(operations[1]["frames"][0]["symbol"], "sunofriend.workbench_server._WorkbenchHandler.do_POST")
         self.assertIn(
             "sunofriend.workbench_reuse.WorkbenchClipReuseService.plan",
             operations[0]["symbols"],

@@ -84,6 +84,9 @@ _ROUTE_OPERATIONS = {
     "/api/clip-reuse-action": "clip_reuse.change",
     "/api/clip-transform-projection": "clip_transform.preview",
     "/api/clip-transform-action": "clip_transform.create",
+    "/api/clip-note-correction-window": "clip_correction.window",
+    "/api/clip-note-correction-projection": "clip_correction.preview",
+    "/api/clip-note-correction-action": "clip_correction.create",
 }
 
 _ROUTE_CODE_STEPS = {
@@ -109,12 +112,19 @@ _ROUTE_CODE_STEPS = {
     "/api/clip-reuse-action": "clip_reuse.change",
     "/api/clip-transform-projection": "clip_transform.preview",
     "/api/clip-transform-action": "clip_transform.create",
+    "/api/clip-note-correction-window": "clip_correction.window",
+    "/api/clip-note-correction-projection": "clip_correction.preview",
+    "/api/clip-note-correction-action": "clip_correction.create",
 }
 
 _CODE_MAP = {
-    "request": {
+    "request.get": {
         "module": "sunofriend.workbench_server",
-        "symbol": "_WorkbenchHandler.do_GET_or_do_POST",
+        "symbol": "_WorkbenchHandler.do_GET",
+    },
+    "request.post": {
+        "module": "sunofriend.workbench_server",
+        "symbol": "_WorkbenchHandler.do_POST",
     },
     "validate": {
         "module": "sunofriend.workbench_server",
@@ -220,6 +230,18 @@ _CODE_MAP = {
         "module": "sunofriend.workbench_transform",
         "symbol": "WorkbenchClipTransformService.create",
     },
+    "clip_correction.window": {
+        "module": "sunofriend.workbench_correction",
+        "symbol": "WorkbenchClipCorrectionService.window",
+    },
+    "clip_correction.preview": {
+        "module": "sunofriend.workbench_correction",
+        "symbol": "WorkbenchClipCorrectionService.preview",
+    },
+    "clip_correction.create": {
+        "module": "sunofriend.workbench_correction",
+        "symbol": "WorkbenchClipCorrectionService.create",
+    },
     "clip_version.append": {
         "module": "sunofriend.library",
         "symbol": "ClipLibrary.append_version_if_state",
@@ -253,6 +275,9 @@ _OPERATION_LABELS = {
     "clip_reuse.change": "Append one explicit Clip placement or removal",
     "clip_transform.preview": "Preview one immutable Clip version without writing",
     "clip_transform.create": "Append one explicitly confirmed immutable Clip version",
+    "clip_correction.window": "Read one bounded immutable Clip note window",
+    "clip_correction.preview": "Preview an exact pitch correction without writing",
+    "clip_correction.create": "Append one explicitly confirmed corrected Clip version",
 }
 
 _CODE_FLOW_NODES = (
@@ -308,6 +333,7 @@ _CODE_FLOW_NODES = (
             "sunofriend.workbench_artifacts.WorkbenchArtifacts",
             "sunofriend.workbench_clips.WorkbenchClipService",
             "sunofriend.workbench_transform.WorkbenchClipTransformService",
+            "sunofriend.workbench_correction.WorkbenchClipCorrectionService",
         ],
         "invariant": "Original candidate MIDI is copied or rendered without mutation.",
     },
@@ -379,13 +405,15 @@ class WorkbenchDeveloperTrace:
                     "pack_basket.save",
                     "clip_reuse.change",
                     "clip_transform.create",
+                    "clip_correction.create",
                 },
                 "symbols": _operation_symbols(operation),
                 "started_ns": now,
                 "frames": [],
             }
             self._active[sequence] = record
-            self._checkpoint_locked(record, "request", "request", {})
+            request_step = "request.get" if method == "GET" else "request.post"
+            self._checkpoint_locked(record, "request", request_step, {})
             return sequence
 
     def checkpoint(
@@ -657,8 +685,16 @@ def trace_response_facts(route: str, value: Mapping[str, Any]) -> dict[str, Any]
     if route in {
         "/api/clip-transform-projection",
         "/api/clip-transform-action",
+        "/api/clip-note-correction-window",
+        "/api/clip-note-correction-projection",
+        "/api/clip-note-correction-action",
     }:
-        wrapper = "projection" if route.endswith("projection") else "result"
+        if route.endswith("window"):
+            wrapper = "window"
+        elif route.endswith("projection"):
+            wrapper = "projection"
+        else:
+            wrapper = "result"
         document = value.get(wrapper, {})
         if not isinstance(document, Mapping):
             return {}
@@ -1051,6 +1087,7 @@ def _safe_runtime(value: Mapping[str, Any]) -> dict[str, Any]:
         "clip_library_enabled": value.get("clip_library_enabled") is True,
         "clip_reuse_plan_enabled": value.get("clip_reuse_plan_enabled") is True,
         "clip_transforms_enabled": value.get("clip_transforms_enabled") is True,
+        "clip_corrections_enabled": value.get("clip_corrections_enabled") is True,
     }
 
 
@@ -1102,7 +1139,7 @@ def _safe_trace_facts(value: Mapping[str, Any]) -> dict[str, Any]:
 
 def _operation_symbols(operation: str) -> list[str]:
     operation_step = operation if operation in _CODE_MAP else "artifact.prepare"
-    steps = ["request"]
+    steps = ["request.get", "request.post"]
     if operation.startswith("decision"):
         steps.extend(["validate", "decision.append", "state.derive"])
     elif operation == "pack.plan":
@@ -1118,6 +1155,15 @@ def _operation_symbols(operation: str) -> list[str]:
     elif operation == "clip_transform.create":
         steps.extend(
             ["validate", "clip_transform.create", "clip_version.append"]
+        )
+    elif operation in {
+        "clip_correction.window",
+        "clip_correction.preview",
+    }:
+        steps.extend(["validate", operation_step])
+    elif operation == "clip_correction.create":
+        steps.extend(
+            ["validate", "clip_correction.create", "clip_version.append"]
         )
     else:
         steps.append(operation_step)

@@ -46,6 +46,9 @@ function createDynamicHost() {{
     '[data-lineage-clip]': ['lineageClip', 'data-lineage-clip'],
     '[data-plan-inspect-clip]': ['planInspectClip', 'data-plan-inspect-clip'],
     '[data-remove-placement]': ['removePlacement', 'data-remove-placement'],
+    '[data-correction-note-ref]': ['correctionNoteRef', 'data-correction-note-ref'],
+    '[data-correction-note-svg]': ['correctionNoteSvg', 'data-correction-note-svg'],
+    '[data-correction-pitch-delta]': ['correctionPitchDelta', 'data-correction-pitch-delta'],
   }};
   return {{
     get innerHTML() {{ return html; }},
@@ -67,7 +70,10 @@ function createDynamicHost() {{
       const result = [];
       for (const match of html.matchAll(pattern)) {{
         const key = `${{selector}}:${{match[1]}}`;
-        if (!dataElements.has(key)) dataElements.set(key, {{dataset: {{[datasetKey]: match[1]}}, disabled: false, onclick: null}});
+        if (!dataElements.has(key)) dataElements.set(key, {{
+          dataset: {{[datasetKey]: match[1]}}, disabled: false, onclick: null, onfocus: null,
+          focus() {{ this.focused = true; if (this.onfocus) this.onfocus(); }},
+        }});
         result.push(dataElements.get(key));
       }}
       return result;
@@ -839,6 +845,7 @@ setTimeout(() => console.log(JSON.stringify({calls, html: host.innerHTML})), 0);
     {enabled: true, acceptance: {pack_sha256: 'e'.repeat(64)}, library: {clip_count: 1, state_sha256: 'b'.repeat(64)}},
     null,
     {enabled: true, transforms: {same_mode_key: {enabled: true}, bpm: {enabled: true}}, limits: {minimum_bpm: 20, maximum_bpm: 400}},
+    {enabled: true, actions: {window: true, preview: true, create: true}, limits: {ticks_per_beat: 480, maximum_changes: 64}},
   );
   browser.renderInto(host);
   await new Promise(resolve => setTimeout(resolve, 0));
@@ -855,6 +862,7 @@ setTimeout(() => console.log(JSON.stringify({calls, html: host.innerHTML})), 0);
             "Key change is unavailable because drum MIDI note numbers select kit pieces",
             result["html"],
         )
+        self.assertNotIn("Correct note pitches in a new version", result["html"])
 
     def test_transform_create_conflict_reloads_once_retains_draft_and_never_retries(self) -> None:
         result = self.run_node(
@@ -919,6 +927,291 @@ setTimeout(() => console.log(JSON.stringify({calls, html: host.innerHTML})), 0);
         self.assertIn('id="clip-transform-target-bpm" type="number" min="36.5" max="400" step="0.001" inputmode="decimal" value="125"', result["html"])
         self.assertIn('value="stem_locked" checked', result["html"])
         self.assertNotIn("Temporary transform review", result["html"])
+
+    def test_pitch_correction_window_review_create_and_explicit_child_inspection(self) -> None:
+        result = self.run_node(
+            """
+(async () => {
+  const calls = [];
+  const host = createDynamicHost();
+  const parentHash = 'a'.repeat(64);
+  const libraryHash = 'b'.repeat(64);
+  const windowHash = 'c'.repeat(64);
+  const projectionHash = 'd'.repeat(64);
+  const childHash = 'e'.repeat(64);
+  const firstRef = '1'.repeat(64);
+  const secondRef = '2'.repeat(64);
+  const contextRef = '3'.repeat(64);
+  const effects = {
+    library_mutated: false, child_clip_created: false, source_clip_mutated: false,
+    correction_applied: false, note_pitch_changed: false, note_timing_changed: false,
+    note_count_changed: false, key_changed: false, chords_changed: false,
+    instrument_changed: false, provenance_changed: false, reuse_plan_changed: false,
+    placement_changed: false, current_arrangement_changed: false, pack_changed: false,
+    hybrid_created: false, feedback_recorded: false, data_submitted: false,
+  };
+  const parentDetail = {
+    library_state_sha256: libraryHash,
+    clip: {clip_id: 'clip-parent', object_sha256: parentHash, title: 'Lead <unsafe>', role: 'lead', key: 'D minor', bpm: 146, revision: 1, note_count: 3, chord_count: 0, pitch_range: {minimum: 60, maximum: 64}, duration: {export_seconds: 6}, timing_contract: {resolved_mode: 'musical', export_bpm: 146}, instrument: {program: 81, channel: 0}},
+    lineage: {versions: [{clip_id: 'clip-parent', title: 'Lead', revision: 1, bpm: 146}]},
+  };
+  const api = async (path, options = {}) => {
+    calls.push({path, method: options.method || 'GET', body: options.body || null});
+    if (path.startsWith('/api/clips?')) return {page: {offset: 0, total: 1, has_more: false}, clips: [{clip_id: 'clip-parent', object_sha256: parentHash, title: 'Lead', role: 'lead', key: 'D minor', bpm: 146, revision: 1, note_count: 3, duration_seconds: 6, tags: []}]};
+    if (path === '/api/clips/clip-parent') return parentDetail;
+    if (path === '/api/clip-note-correction-window') return {window: {
+      schema: 'sunofriend.workbench-clip-correction-window.v1', operation: 'clip-correction-window',
+      window_sha256: windowHash, window: {start_tick: 0, end_tick: 3840, ticks_per_beat: 480, duration_seconds: 3.287, origin: 'recorded-zero'},
+      notes: [
+        {note_ref: contextRef, editable: false, pitch: 59, velocity: 70, start_tick: 0, end_tick: 120, start_beat: -0.1, duration_beats: 0.35},
+        {note_ref: firstRef, editable: true, pitch: 60, velocity: 90, start_tick: 240, end_tick: 720, start_beat: 0.5, duration_beats: 1},
+        {note_ref: secondRef, editable: true, pitch: 64, velocity: 88, start_tick: 960, end_tick: 1440, start_beat: 2, duration_beats: 1},
+      ],
+      effects,
+    }};
+    if (path === '/api/clip-note-correction-projection') return {projection: {
+      schema: 'sunofriend.workbench-clip-correction-preview.v1', status: 'previewed', operation: 'clip-correction-preview',
+      projection_sha256: projectionHash, window: {start_tick: 0, end_tick: 3840, ticks_per_beat: 480},
+      parent: {clip_id: 'clip-parent', object_sha256: parentHash, revision: 1},
+      child: {clip_id: 'clip-child', object_sha256: childHash, revision: 2},
+      diff: {kind: 'pitch_patch', changed_note_count: 1, changes: [{note_ref: firstRef, before_pitch: 60, after_pitch: 61}]},
+      warnings: [{message: 'Check <img src=x onerror=bad()> against the stem.'}], effects,
+    }};
+    if (path === '/api/clip-note-correction-action') return {result: {
+      status: 'created', replayed: false, operation: 'clip-correction-create', projection_sha256: projectionHash,
+      parent: {clip_id: 'clip-parent', object_sha256: parentHash, lineage_id: 'lineage-1', revision: 1},
+      child: {clip_id: 'clip-child', parent_clip_id: 'clip-parent', object_sha256: childHash, lineage_id: 'lineage-1', revision: 2},
+      library: {expected_state_sha256: libraryHash, previous_state_sha256: libraryHash, current_state_sha256: 'f'.repeat(64)}, effects,
+    }};
+    if (path === '/api/clips/clip-child') return {
+      library_state_sha256: 'f'.repeat(64),
+      clip: {clip_id: 'clip-child', object_sha256: childHash, title: 'Lead correction', role: 'lead', key: 'D minor', bpm: 146, revision: 2, note_count: 3, chord_count: 0, pitch_range: {minimum: 59, maximum: 64}, duration: {export_seconds: 6}, timing_contract: {resolved_mode: 'musical', export_bpm: 146}, instrument: {program: 81, channel: 0}},
+      lineage: {versions: [{clip_id: 'clip-parent', title: 'Lead', revision: 1, bpm: 146}, {clip_id: 'clip-child', title: 'Lead correction', revision: 2, bpm: 146}]},
+      correction_summary: {schema: 'sunofriend.workbench-clip-correction-summary.v1', operation: 'correct_note_pitches', contract_version: 'clip-correction-v1', parent_clip_id: 'clip-parent', parent_object_sha256: parentHash, child_clip_id: 'clip-child', child_object_sha256: childHash, window: {start_tick: 0, end_tick: 3840, ticks_per_beat: 480}, changed_note_count: 1, changes: [{note_ref: firstRef, before_pitch: 60, after_pitch: 61}], effects},
+    };
+    throw new Error(`unexpected ${path}`);
+  };
+  const escapeHtml = value => String(value ?? '').replace(/[&<>\"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;'}[character]));
+  const browser = clips.createClipLibrary({api, escapeHtml});
+  browser.setCapability(
+    {enabled: true, acceptance: {pack_sha256: '9'.repeat(64)}, library: {clip_count: 1, state_sha256: libraryHash}},
+    null,
+    null,
+    {enabled: true, actions: {window: true, preview: true, create: true}, limits: {ticks_per_beat: 480, maximum_window_ticks: 15360, maximum_changes: 64, maximum_pitch_delta_semitones: 24}},
+  );
+  browser.renderInto(host);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  host.querySelectorAll('[data-open-clip]')[0].onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const initialHtml = host.innerHTML;
+  host.element('clip-correction-window-form').onsubmit({preventDefault() {}});
+  const windowPendingHtml = host.innerHTML;
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const loadedHtml = host.innerHTML;
+  const contextToken = encodeURIComponent(`value:${contextRef}`);
+  const firstToken = encodeURIComponent(`value:${firstRef}`);
+  const secondToken = encodeURIComponent(`value:${secondRef}`);
+  host.data('[data-correction-note-ref]', contextToken).onfocus();
+  const afterContextFocusHtml = host.innerHTML;
+  host.data('[data-correction-note-ref]', firstToken).onfocus();
+  host.data('[data-correction-pitch-delta]', '1').onclick();
+  const editedHtml = host.innerHTML;
+  host.element('clip-correction-exact-pitch').value = '85';
+  host.element('clip-correction-exact-pitch').oninput();
+  const boundedHtml = host.innerHTML;
+  host.element('clip-correction-exact-pitch').value = '61';
+  host.element('clip-correction-exact-pitch').oninput();
+  host.element('clip-correction-review').onclick();
+  const reviewPendingHtml = host.innerHTML;
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const reviewedHtml = host.innerHTML;
+  host.data('[data-correction-note-ref]', secondToken).onfocus();
+  const invalidatedHtml = host.innerHTML;
+  host.data('[data-correction-note-ref]', firstToken).onfocus();
+  host.element('clip-correction-review').onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  host.element('clip-correction-create').onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const createdHtml = host.innerHTML;
+  const childReadsBeforeInspect = calls.filter(call => call.path === '/api/clips/clip-child').length;
+  host.element('clip-correction-inspect-child').onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  console.log(JSON.stringify({calls, initialHtml, windowPendingHtml, loadedHtml, afterContextFocusHtml, editedHtml, boundedHtml, reviewPendingHtml, reviewedHtml, invalidatedHtml, createdHtml, childReadsBeforeInspect, childHtml: host.innerHTML}));
+})().catch(error => { console.error(error); process.exitCode = 1; });
+"""
+        )
+
+        window_calls = [
+            call
+            for call in result["calls"]
+            if call["path"] == "/api/clip-note-correction-window"
+        ]
+        projection_calls = [
+            call
+            for call in result["calls"]
+            if call["path"] == "/api/clip-note-correction-projection"
+        ]
+        action_calls = [
+            call
+            for call in result["calls"]
+            if call["path"] == "/api/clip-note-correction-action"
+        ]
+        self.assertEqual(len(window_calls), 1)
+        self.assertEqual(
+            json.loads(window_calls[0]["body"]),
+            {
+                "parent_clip_id": "clip-parent",
+                "parent_object_sha256": "a" * 64,
+                "library_state_sha256": "b" * 64,
+                "window": {"start_tick": 0, "end_tick": 3840},
+            },
+        )
+        self.assertEqual(len(projection_calls), 2)
+        projection_body = json.loads(projection_calls[-1]["body"])
+        self.assertEqual(projection_body["window"], {"start_tick": 0, "end_tick": 3840})
+        self.assertEqual(projection_body["window_sha256"], "c" * 64)
+        self.assertEqual(
+            projection_body["correction"],
+            {
+                "kind": "pitch_patch",
+                "changes": [{"note_ref": "1" * 64, "target_pitch": 61}],
+            },
+        )
+        self.assertEqual(len(action_calls), 1)
+        action_body = json.loads(action_calls[0]["body"])
+        self.assertEqual(action_body["action"], "create")
+        self.assertEqual(action_body["projection_sha256"], "d" * 64)
+        self.assertNotIn("ticks_per_beat", action_body["window"])
+        self.assertIn("Correct note pitches in a new version", result["initialHtml"])
+        self.assertIn("No note window is loaded", result["initialHtml"])
+        self.assertIn('aria-busy="true"', result["windowPendingHtml"])
+        self.assertIn("Loading exact notes", result["windowPendingHtml"])
+        self.assertIn("No note selected", result["loadedHtml"])
+        self.assertIn("context only", result["loadedHtml"])
+        self.assertIn('id="clip-correction-roll-heading" tabindex="-1"', result["loadedHtml"])
+        self.assertIn("No note selected", result["afterContextFocusHtml"])
+        self.assertIn("#ffc94a", result["editedHtml"])
+        self.assertIn("1 changed note", result["editedHtml"])
+        self.assertIn("within 24 semitones", result["boundedHtml"])
+        self.assertIn('aria-busy="true"', result["reviewPendingHtml"])
+        self.assertIn("Exact temporary pitch review", result["reviewedHtml"])
+        self.assertIn("Check &lt;img", result["reviewedHtml"])
+        self.assertNotIn("<img src=x", result["reviewedHtml"])
+        self.assertNotIn("Exact temporary pitch review", result["invalidatedHtml"])
+        self.assertIn("Note selection changed", result["invalidatedHtml"])
+        self.assertIn("New pitch-corrected alternative created", result["createdHtml"])
+        self.assertEqual(result["childReadsBeforeInspect"], 0)
+        self.assertIn("Saved note-pitch correction", result["childHtml"])
+        self.assertIn("This immutable Clip is a pitch-corrected child", result["childHtml"])
+        self.assertIn("Reading this restored summary has zero effects", result["childHtml"])
+        self.assertIn("earlier explicit create appended this child", result["childHtml"])
+        self.assertEqual(
+            len(
+                [
+                    call
+                    for call in result["calls"]
+                    if call["path"] == "/api/clips/clip-child"
+                ]
+            ),
+            1,
+        )
+        self.assertFalse(
+            any("audition" in call["path"] for call in result["calls"])
+        )
+
+    def test_pitch_correction_create_conflict_reloads_detail_and_window_once_without_write_retry(self) -> None:
+        result = self.run_node(
+            """
+(async () => {
+  const calls = [];
+  const host = createDynamicHost();
+  const parentHash = 'a'.repeat(64);
+  const firstRef = '1'.repeat(64);
+  const replacementRef = '2'.repeat(64);
+  let detailReads = 0;
+  let windowReads = 0;
+  const api = async (path, options = {}) => {
+    calls.push({path, body: options.body || null});
+    if (path.startsWith('/api/clips?')) return {page: {offset: 0, total: 1, has_more: false}, clips: [{clip_id: 'clip-parent', object_sha256: parentHash, title: 'Keys', role: 'keys', key: 'B minor', bpm: 113, revision: 1, note_count: 2, duration_seconds: 6, tags: []}]};
+    if (path === '/api/clips/clip-parent') {
+      detailReads += 1;
+      return {library_state_sha256: (detailReads === 1 ? 'b' : 'f').repeat(64), clip: {clip_id: 'clip-parent', object_sha256: parentHash, title: 'Keys', role: 'keys', key: 'B minor', bpm: 113, revision: 1, note_count: 2, chord_count: 0, duration: {export_seconds: 6}, timing_contract: {resolved_mode: 'musical', export_bpm: 113}, instrument: {program: 4, channel: 0}}, lineage: {versions: [{clip_id: 'clip-parent', title: 'Keys', revision: 1, bpm: 113}]}};
+    }
+    if (path === '/api/clip-note-correction-window') {
+      windowReads += 1;
+      const noteRef = windowReads === 1 ? firstRef : replacementRef;
+      return {window: {window_sha256: (windowReads === 1 ? 'c' : '9').repeat(64), window: {start_tick: 0, end_tick: 3840, ticks_per_beat: 480}, notes: [{note_ref: noteRef, editable: true, pitch: windowReads === 1 ? 60 : 67, velocity: 90, start_tick: 240, end_tick: 720, start_beat: 0.5, duration_beats: 1}], effects: {library_mutated: false}}};
+    }
+    if (path === '/api/clip-note-correction-projection') return {projection: {projection_sha256: 'd'.repeat(64), parent: {clip_id: 'clip-parent', object_sha256: parentHash}, child: {clip_id: 'clip-child', object_sha256: 'e'.repeat(64)}, diff: {changes: [{note_ref: firstRef, before_pitch: 60, after_pitch: 61}]}, warnings: [], effects: {library_mutated: false}}};
+    if (path === '/api/clip-note-correction-action') {
+      const error = new Error('stale correction evidence');
+      error.status = 409;
+      throw error;
+    }
+    throw new Error(`unexpected ${path}`);
+  };
+  const browser = clips.createClipLibrary({api, escapeHtml: value => String(value)});
+  browser.setCapability(
+    {enabled: true, acceptance: {pack_sha256: '8'.repeat(64)}, library: {clip_count: 1, state_sha256: 'b'.repeat(64)}},
+    null,
+    null,
+    {enabled: true, actions: {window: true, preview: true, create: true}, limits: {ticks_per_beat: 480, maximum_changes: 64, maximum_pitch_delta_semitones: 24}},
+  );
+  browser.renderInto(host);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  host.querySelectorAll('[data-open-clip]')[0].onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  host.element('clip-correction-window-form').onsubmit({preventDefault() {}});
+  await new Promise(resolve => setTimeout(resolve, 0));
+  host.data('[data-correction-note-ref]', encodeURIComponent(`value:${firstRef}`)).onfocus();
+  host.data('[data-correction-pitch-delta]', '1').onclick();
+  host.element('clip-correction-review').onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  host.element('clip-correction-create').onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  await new Promise(resolve => setTimeout(resolve, 0));
+  await new Promise(resolve => setTimeout(resolve, 0));
+  console.log(JSON.stringify({calls, detailReads, windowReads, html: host.innerHTML}));
+})().catch(error => { console.error(error); process.exitCode = 1; });
+"""
+        )
+
+        self.assertEqual(result["detailReads"], 2)
+        self.assertEqual(result["windowReads"], 2)
+        self.assertEqual(
+            len(
+                [
+                    call
+                    for call in result["calls"]
+                    if call["path"] == "/api/clip-note-correction-projection"
+                ]
+            ),
+            1,
+        )
+        self.assertEqual(
+            len(
+                [
+                    call
+                    for call in result["calls"]
+                    if call["path"] == "/api/clip-note-correction-action"
+                ]
+            ),
+            1,
+        )
+        second_window = json.loads(
+            [
+                call
+                for call in result["calls"]
+                if call["path"] == "/api/clip-note-correction-window"
+            ][1]["body"]
+        )
+        self.assertEqual(second_window["library_state_sha256"], "f" * 64)
+        self.assertEqual(second_window["window"], {"start_tick": 0, "end_tick": 3840})
+        self.assertIn("No write retry was made", result["html"])
+        self.assertIn("Review 0 pitch changes", result["html"])
+        self.assertIn("No note selected", result["html"])
+        self.assertNotIn("#ffc94a", result["html"])
+        self.assertNotIn("Exact temporary pitch review", result["html"])
 
 
 if __name__ == "__main__":

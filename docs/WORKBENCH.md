@@ -1119,6 +1119,91 @@ from 10 to 12 Clips, restart recovered the three-version lineage, exact retries
 added nothing, the original library remained unchanged and the reconstructed
 MIDI repeated byte-for-byte. The full suite passed with 910 tests.
 
+## Phase 6 bounded Clip pitch correction (Increment 6.3a)
+
+Use correction mode when a pitched Clip has the right broad phrase but one or
+more visible notes sound wrong or are in the wrong octave:
+
+```bash
+sunofriend workbench "/absolute/path/to/stems" \
+  --candidate-root "/absolute/path/to/results" \
+  --catalog "/absolute/path/to/workbench-catalog.json" \
+  --state-dir "/absolute/path/to/workbench-state" \
+  --clip-library "/absolute/path/to/existing-clip-library" \
+  --phase6-acceptance "/absolute/path/to/passed-phase5-acceptance-result.json" \
+  --phase6-pack "/absolute/path/to/exact-accepted-garageband-pack.zip" \
+  --enable-clip-corrections \
+  --open
+```
+
+The flag is invalid without all three Phase 6 gate inputs and cannot be
+combined with reuse-plan or key/BPM-transform mode. It opens no correction
+surface for drum-family Clips. Existing browse, deterministic MIDI and neutral
+audition remain available.
+
+On exact Clip detail, **Correct wrong pitches** is a recognition-first workflow:
+
+1. Set a recorded-zero start beat and a phrase length, then load the bounded
+   local note window. The service converts those controls to a half-open 480-
+   TPQ tick range and returns notes exactly as the existing automatic MIDI
+   export places them.
+2. Select notes on the small piano roll or its keyboard-accessible note list.
+   Nothing is preselected. Use ±1 or ±12 semitone controls or enter an exact
+   MIDI pitch. A maximum of 64 changed notes and ±24 semitones per note keeps
+   one child understandable.
+3. Use **Review temporary pitch correction**. The zero-write projection shows
+   original and proposed notes together, an exact before/after table, advisory
+   scale/chord relationships, any MIDI lifetime warning and the immutable
+   parent/project boundaries.
+4. Only an unchanged projection enables **Create immutable corrected Clip**.
+   Inspect the resulting child explicitly, then use the existing neutral
+   audition or MIDI reconstruction. Creation does not play, select, place or
+   export the child automatically.
+
+A window is limited to 32 quarter-note beats, 15 rendered seconds, 512 visible
+notes, 256 editable note starts and 64 chord events. Crossing notes appear only
+as context. Oversized evidence is rejected rather than truncated. Each note
+reference includes its canonical index plus a hash of the exact parent object
+and every note field, so identical duplicates remain distinguishable and stale
+browser state fails closed.
+
+The pitch patch changes only selected `ClipNote.pitch` values. Timing, duration,
+source seconds, microtiming, velocity, release velocity, articulation, key,
+chords, tempo, time signature, instrument, provenance, tags and all unaffected
+notes remain exact. The service rejects a patch that would newly create a
+same-pitch overlapping lifetime or duplicate onset in the exported MIDI.
+Harmony labels are explanations, not scale snapping or a recommendation.
+
+Before showing a window, correction mode also validates the complete preserved
+Standard MIDI File event stream. Parent Clips are limited to 20,000 notes and
+20,000 chords; note, chord and tempo-event ticks must fit the four-byte MIDI
+variable-length limit; tempos, time-signature bytes and UTF-8 text meta-events
+must be encodable. Invalid source data is rejected before projection, rather
+than producing a corrected child that the deterministic exporter or
+GarageBand cannot read.
+
+The preview is pinned to parent Clip/object, complete library state, window,
+window hash and canonical edit list. Creation adds the projection hash and
+uses the same optimistic sole-child append as reviewed transforms. A fresh
+request appends one deterministic child. An exact retry is a zero-effect
+idempotent replay. A conflict reloads detail/window once but never retries the
+write. A validated bounded correction summary remains on the child's detail
+after restart; arbitrary transform parameters remain private.
+
+The completed real-library check used a fresh copy of the accepted Lidl
+library. One deliberate keys edit changed MIDI pitch 59 to 61 inside an
+eight-beat, 22-note window. The copied library grew from 12 to 13 Clips, while
+the original library and copied parent remained unchanged. Exact replay was
+zero-effect, restart restored the one-note audit and two reconstructed MIDI
+files matched at SHA-256
+`ce1edbc85f44b5c37cdb0576c89ef5cd2eee74afe7c9ee6f904ca248f866d4a8`.
+The complete repository suite passed with 943 tests.
+
+This slice cannot add a missing note, delete noise, change onset/duration or
+velocity, split/merge, quantise, copy a repeated phrase, apply a hummed guide,
+repair theory automatically or create a hybrid. Those actions need separate
+timing, identity or source-evidence contracts.
+
 ## Export the private review without a server
 
 The browser download remains available, but an agent or terminal workflow can
@@ -1183,8 +1268,9 @@ note-free disclosure boundary.
   Workbench decoded loop is not level matched or blinded.
 - The arrangement is a dry GM proxy. Complete-instrument checks and installed
   GarageBand patch choice remain a later view.
-- Phrase piano-roll correction and creative recombination remain a later phase.
-  Precise arbitrary custom mixes, server-paginated timeline payloads,
+- Note insertion/deletion, timing/duration/expression correction, phrase
+  replacement and creative recombination remain later Phase 6 slices. Precise
+  arbitrary custom mixes, server-paginated timeline payloads,
   medium/large checkpoint comparison and any opt-in public contribution are
   later, separately authorised work. The Workbench still consumes completed AI
   runs rather than launching a model itself.

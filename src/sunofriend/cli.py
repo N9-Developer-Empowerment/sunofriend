@@ -2169,6 +2169,15 @@ def build_parser() -> argparse.ArgumentParser:
             "and --phase6-pack"
         ),
     )
+    clip_write_mode.add_argument(
+        "--enable-clip-corrections",
+        action="store_true",
+        help=(
+            "Explicitly enable Phase 6 bounded MIDI pitch-correction previews "
+            "and immutable Clip version creation; requires --clip-library, "
+            "--phase6-acceptance and --phase6-pack"
+        ),
+    )
     workbench_mode = workbench.add_mutually_exclusive_group()
     workbench_mode.add_argument(
         "--inspect",
@@ -4456,6 +4465,7 @@ def _run_workbench(args) -> int:
         phase6_pack_path=args.phase6_pack,
         enable_clip_reuse_plan=args.enable_clip_reuse_plan,
         enable_clip_transforms=args.enable_clip_transforms,
+        enable_clip_corrections=args.enable_clip_corrections,
     )
     if args.inspect or args.export_review:
         print(json.dumps(report, indent=2, sort_keys=True))

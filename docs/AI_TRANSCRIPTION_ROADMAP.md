@@ -19,7 +19,8 @@ reused-model execution-provenance display; Phase 5.9 guided exact-pack
 learning and acceptance passed on 22 July 2026; Phase 6 Increment 6.0's gated,
 read-only Clip Library is complete and Increment 6.1's separate explicit Clip
 reuse proposal is complete; Increment 6.2a's reviewed immutable
-same-mode key and BPM child workflow is complete; broader Phase 6
+same-mode key and BPM child workflow is complete; Increment 6.3a's bounded
+immutable pitch-correction workflow is complete; broader Phase 6
 creative arrangement remains in progress
 
 Started: 15 July 2026  
@@ -98,7 +99,7 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
 | 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.5–5.9 hardening complete and Phase 5.9 human acceptance passed; Phase 5.3 listening/lineage/role work remains** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench has hash-pinned per-stem and full-song timelines, bounded decoded transports, a separate exact GarageBand pack basket, Project Overview, fail-closed execution provenance and guided exact-pack acceptance. The 22 July close-out completed all eight tutorial screens, scored 10/10 and passed both six-item human checks; the resolver reverified five selected MIDI payloads plus the dry proxy and no source audio with zero project effects. Phase 5 remains open only for the separately gated Phase 5.3 work |
-| 6. Creative Arrangement and Reusable MIDI | **In progress: Increments 6.0, 6.1 and 6.2a complete** | The gated read-only browser and separate immutable-placement proposal remain intact. A mutually exclusive transform opt-in now requires a zero-write projection before atomically appending one same-mode key or musical/stem-locked BPM child with exact parent/object/library pins. Parent Clips, proposals, decisions and packs are not rewritten. Mode remapping, tuning/downbeat, piano-roll editing and hybrids remain absent; hybrid construction still waits for the Phase 5.3 blind-choice and lineage gates |
+| 6. Creative Arrangement and Reusable MIDI | **In progress: Increments 6.0, 6.1, 6.2a and 6.3a complete** | The gated browser, immutable-placement proposal, key/BPM children and bounded recognition-first pitch patch are complete. Correction uses exact 480-TPQ phrase evidence, user-selected note refs, a zero-write diff, one immutable child and full restart/SMF-export validation while timing/expression stay unchanged. Note add/delete, timing/duration/velocity, mode remapping, tuning/downbeat and hybrids remain later slices; hybrid construction still waits for the Phase 5.3 gates |
 | 7. Cross-DAW and Opt-in Community Learning | **Deferred** | Compatibility testing, cleared public goldens and consented contextual feedback only after the local workflow is useful, private and stable |
 
 ## Phase 1: AI Transcription Bake-off v1
@@ -649,7 +650,18 @@ the child; the parent, process alternatives, project decisions, current
 arrangement, proposal placements and Pack Composer remain unchanged. Musical
 BPM changes retain beats and change elapsed time; stem-locked changes retain
 source seconds and change beat positions. Mode remapping, tuning, downbeat and
-note editing remain deferred.
+note editing remain separate.
+
+Increment 6.3a is the first bounded note-editing slice. A separate
+`--enable-clip-corrections` launch exposes one exact 480-TPQ phrase window for
+a pitched, non-drum Clip. The user selects 1–64 existing notes and supplies
+only their target pitches, reviews a zero-write exact diff, then may append one
+deterministic immutable child. The parent plus timing, duration, source
+seconds, expression, key, chords, instrument and unaffected notes remain
+unchanged. New same-pitch MIDI overlap/collapse is rejected. A recognized
+bounded correction recipe can be validated against the retained parent and
+shown again after restart. Note add/delete, timing, duration and velocity are
+deferred to their own dual-timeline and identity contracts.
 
 ## Phase 7: Cross-DAW and Opt-in Community Learning
 
@@ -692,6 +704,39 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-22 — Phase 6.3a bounded pitch correction complete
+
+- Goal: let a listener fix recognizable wrong pitches or octaves without
+  turning the multi-process explorer into an automatic theory repairer.
+- Contract: a half-open integer 480-TPQ window, at most 32 beats/15 seconds,
+  512 visible and 256 editable notes, with 1–64 unique exact note references
+  and a maximum ±24-semitone change.
+- Identity: each reference binds parent object, canonical note index and the
+  complete `ClipNote` payload, so stale state and identical duplicates are
+  handled without a Clip schema migration.
+- Safety: preview is zero-write; explicit creation appends one deterministic
+  child through the existing sole-child CAS; replay is zero-effect; ambiguous
+  newly introduced same-pitch export intervals are rejected.
+- Exportability: notes/chords/tempo events, tempo encoding, time-signature
+  bytes and text meta payloads are checked against the deterministic SMF
+  writer, including the exact four-byte variable-length tick boundary.
+- Preserved: timing/source seconds, expression, key/chords, instrument,
+  provenance, unaffected notes, parent, decisions, arrangement, reuse plan,
+  pack, feedback and submission.
+- Deferred: add/delete, timing, duration, velocity, split/merge, quantisation,
+  hum/F0 guidance, repetition propagation, automatic theory repair and
+  hybrids.
+- Evidence: a copied accepted Lidl library grew from 12 to 13 Clips after one
+  explicit 59-to-61 keys edit. The source library and parent stayed unchanged;
+  exact replay was zero-effect; restart retained the one-note diff; public
+  correction outputs were path-free; and deterministic MIDI repeated at
+  SHA-256 `ce1edbc85f44b5c37cdb0576c89ef5cd2eee74afe7c9ee6f904ca248f866d4a8`.
+- Verification: the complete repository suite passed with 943 tests, including
+  adversarial restart recipes, exact SMF limits, loopback/browser contracts and
+  concurrent lazy reuse-store publication.
+- Decision: Increment 6.3a is complete. The next note-editing operation remains
+  separately gated rather than expanding this pitch-only contract implicitly.
 
 ### 2026-07-22 — Phase 6.2a reviewed immutable transforms complete
 

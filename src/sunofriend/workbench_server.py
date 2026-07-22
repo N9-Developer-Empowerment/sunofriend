@@ -30,6 +30,12 @@ from .workbench_artifacts import (
     selected_candidates,
 )
 from .workbench_clips import WorkbenchClipService, public_artifact as public_clip_artifact
+from .workbench_correction import (
+    WorkbenchClipCorrectionConflictError,
+    WorkbenchClipCorrectionError,
+    WorkbenchClipCorrectionNotFoundError,
+    WorkbenchClipCorrectionService,
+)
 from .workbench_reuse import (
     WorkbenchClipReuseConflictError,
     WorkbenchClipReuseNotFoundError,
@@ -67,6 +73,13 @@ _MAX_REQUEST_BYTES = 64 * 1024
 _MAX_GENERATED_MEDIA_RECORDS = 768
 _MAX_DECODED_STREAM_PLANS = 16
 _MAX_DEVELOPER_SNAPSHOT_BYTES = 512 * 1024
+_CLIP_CORRECTION_ROUTES = frozenset(
+    {
+        "/api/clip-note-correction-window",
+        "/api/clip-note-correction-projection",
+        "/api/clip-note-correction-action",
+    }
+)
 
 
 class WorkbenchSelectionConflictError(ValueError):
@@ -285,6 +298,7 @@ class WorkbenchHTTPServer(ThreadingHTTPServer):
         clip_service: WorkbenchClipService | None = None,
         clip_reuse_service: WorkbenchClipReuseService | None = None,
         clip_transform_service: WorkbenchClipTransformService | None = None,
+        clip_correction_service: WorkbenchClipCorrectionService | None = None,
     ) -> None:
         self.catalog = catalog
         self.store = store
@@ -294,6 +308,7 @@ class WorkbenchHTTPServer(ThreadingHTTPServer):
         self.clip_service = clip_service
         self.clip_reuse_service = clip_reuse_service
         self.clip_transform_service = clip_transform_service
+        self.clip_correction_service = clip_correction_service
         self.developer_trace = (
             WorkbenchDeveloperTrace() if self.developer_inspector else None
         )
@@ -326,6 +341,7 @@ def create_workbench_server(
     phase6_pack_path: str | Path | None = None,
     enable_clip_reuse_plan: bool = False,
     enable_clip_transforms: bool = False,
+    enable_clip_corrections: bool = False,
 ) -> WorkbenchHTTPServer:
     """Create, but do not start, a loopback-only Workbench server."""
 
@@ -361,9 +377,23 @@ def create_workbench_server(
             "--enable-clip-transforms requires --clip-library, "
             "--phase6-acceptance and --phase6-pack"
         )
+    if enable_clip_corrections and not all(
+        value is not None for value in phase6_values
+    ):
+        raise ValueError(
+            "--enable-clip-corrections requires --clip-library, "
+            "--phase6-acceptance and --phase6-pack"
+        )
     if enable_clip_reuse_plan and enable_clip_transforms:
         raise ValueError(
             "--enable-clip-reuse-plan and --enable-clip-transforms are mutually exclusive"
+        )
+    if enable_clip_corrections and (
+        enable_clip_reuse_plan or enable_clip_transforms
+    ):
+        raise ValueError(
+            "--enable-clip-corrections, --enable-clip-reuse-plan and "
+            "--enable-clip-transforms are mutually exclusive"
         )
     clip_service = None
     if all(value is not None for value in phase6_values):
@@ -396,6 +426,14 @@ def create_workbench_server(
         if enable_clip_transforms and clip_service is not None
         else None
     )
+    clip_correction_service = (
+        WorkbenchClipCorrectionService.open(
+            clip_service=clip_service,
+            library_root=clip_library_path,
+        )
+        if enable_clip_corrections and clip_service is not None
+        else None
+    )
     session_token = token or secrets.token_urlsafe(32)
     return WorkbenchHTTPServer(
         ("127.0.0.1", int(port)),
@@ -407,6 +445,7 @@ def create_workbench_server(
         clip_service=clip_service,
         clip_reuse_service=clip_reuse_service,
         clip_transform_service=clip_transform_service,
+        clip_correction_service=clip_correction_service,
     )
 
 
@@ -427,6 +466,7 @@ def run_workbench(
     phase6_pack_path: str | Path | None = None,
     enable_clip_reuse_plan: bool = False,
     enable_clip_transforms: bool = False,
+    enable_clip_corrections: bool = False,
 ) -> dict[str, Any]:
     """Build a catalogue and inspect, export, or serve the local workbench."""
 
@@ -457,9 +497,23 @@ def run_workbench(
             "--enable-clip-transforms requires --clip-library, "
             "--phase6-acceptance and --phase6-pack"
         )
+    if enable_clip_corrections and not all(
+        value is not None for value in phase6_values
+    ):
+        raise ValueError(
+            "--enable-clip-corrections requires --clip-library, "
+            "--phase6-acceptance and --phase6-pack"
+        )
     if enable_clip_reuse_plan and enable_clip_transforms:
         raise ValueError(
             "--enable-clip-reuse-plan and --enable-clip-transforms are mutually exclusive"
+        )
+    if enable_clip_corrections and (
+        enable_clip_reuse_plan or enable_clip_transforms
+    ):
+        raise ValueError(
+            "--enable-clip-corrections, --enable-clip-reuse-plan and "
+            "--enable-clip-transforms are mutually exclusive"
         )
     if any(value is not None for value in phase6_values) and (
         inspect_only or export_review_path is not None
@@ -496,6 +550,7 @@ def run_workbench(
         phase6_pack_path=phase6_pack_path,
         enable_clip_reuse_plan=enable_clip_reuse_plan,
         enable_clip_transforms=enable_clip_transforms,
+        enable_clip_corrections=enable_clip_corrections,
     )
     print("Sunofriend Workbench")
     print("Local — nothing is being uploaded")
@@ -507,7 +562,10 @@ def run_workbench(
         print(
             (
                 "Phase 6 Clip Library: enabled (verified; source Clips immutable)"
-                if server.clip_transform_service is not None
+                if (
+                    server.clip_transform_service is not None
+                    or server.clip_correction_service is not None
+                )
                 else "Phase 6 Clip Library: enabled (verified, read-only, no transforms)"
             ),
             flush=True,
@@ -520,6 +578,11 @@ def run_workbench(
     if server.clip_transform_service is not None:
         print(
             "Phase 6 Clip transforms: enabled (preview first, immutable versions only)",
+            flush=True,
+        )
+    if server.clip_correction_service is not None:
+        print(
+            "Phase 6 Clip corrections: enabled (pitch only, preview first, immutable versions only)",
             flush=True,
         )
     if open_browser:
@@ -747,16 +810,41 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 clip_id = unquote(encoded_clip_id, errors="strict")
                 if not clip_id or "/" in clip_id:
                     raise ValueError("invalid clip identity")
-                detail = service.detail(clip_id)
-                reuse_service = self.server.clip_reuse_service
-                if reuse_service is not None:
-                    detail = {
-                        **detail,
-                        "reuse_compatibility": reuse_service.compatibility(clip_id),
-                    }
+                with self.server.state_lock:
+                    detail = service.detail(clip_id)
+                    reuse_service = self.server.clip_reuse_service
+                    if reuse_service is not None:
+                        detail = {
+                            **detail,
+                            "reuse_compatibility": reuse_service.compatibility(
+                                clip_id
+                            ),
+                        }
+                    correction_service = self.server.clip_correction_service
+                    if correction_service is not None:
+                        correction_summary = correction_service.correction_summary(
+                            clip_id
+                        )
+                        if correction_summary is not None:
+                            detail = {
+                                **detail,
+                                "correction_summary": correction_summary,
+                            }
                 self._json(HTTPStatus.OK, detail)
             except KeyError:
                 self._error(HTTPStatus.NOT_FOUND, "Clip not found")
+            except WorkbenchClipCorrectionNotFoundError:
+                self._error(HTTPStatus.NOT_FOUND, "Clip not found")
+            except WorkbenchClipCorrectionConflictError:
+                self._error(
+                    HTTPStatus.CONFLICT,
+                    "Clip correction evidence changed or is unavailable; restart the Workbench",
+                )
+            except WorkbenchClipCorrectionError:
+                self._error(
+                    HTTPStatus.CONFLICT,
+                    "Clip correction lineage is invalid or unavailable; restart the Workbench",
+                )
             except (TypeError, UnicodeDecodeError, ValueError):
                 self._error(HTTPStatus.BAD_REQUEST, "invalid Clip identity")
             except (OSError, RuntimeError):
@@ -859,6 +947,9 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             "/api/clip-reuse-action",
             "/api/clip-transform-projection",
             "/api/clip-transform-action",
+            "/api/clip-note-correction-window",
+            "/api/clip-note-correction-projection",
+            "/api/clip-note-correction-action",
         }:
             self._error(HTTPStatus.NOT_FOUND, "workbench route not found")
             return
@@ -870,6 +961,12 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 "/api/clip-transform-action",
             }
             and self.server.clip_transform_service is None
+        ):
+            self._error(HTTPStatus.NOT_FOUND, "workbench route not found")
+            return
+        if (
+            parsed.path in _CLIP_CORRECTION_ROUTES
+            and self.server.clip_correction_service is None
         ):
             self._error(HTTPStatus.NOT_FOUND, "workbench route not found")
             return
@@ -886,6 +983,12 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                         "invalid Clip transform request",
                     )
                     return
+                if parsed.path in _CLIP_CORRECTION_ROUTES:
+                    self._error(
+                        HTTPStatus.BAD_REQUEST,
+                        "invalid Clip note correction request",
+                    )
+                    return
                 if parsed.path == "/api/clip-reuse-action":
                     self._error(
                         HTTPStatus.BAD_REQUEST,
@@ -894,6 +997,45 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     return
                 raise
             self._developer_checkpoint("validate", "validate")
+            if parsed.path in _CLIP_CORRECTION_ROUTES:
+                service = self.server.clip_correction_service
+                if service is None:
+                    self._error(HTTPStatus.NOT_FOUND, "workbench route not found")
+                    return
+                try:
+                    self._developer_application_invoked = True
+                    with self.server.state_lock:
+                        if parsed.path == "/api/clip-note-correction-window":
+                            document = service.window(request)
+                            response_key = "window"
+                            status = HTTPStatus.OK
+                        elif parsed.path == "/api/clip-note-correction-projection":
+                            document = service.preview(request)
+                            response_key = "projection"
+                            status = HTTPStatus.OK
+                        else:
+                            document = service.create(request)
+                            response_key = "result"
+                            status = HTTPStatus.CREATED
+                    self._json(status, {response_key: document})
+                except WorkbenchClipCorrectionNotFoundError:
+                    self._error(HTTPStatus.NOT_FOUND, "Clip or note not found")
+                except WorkbenchClipCorrectionConflictError:
+                    self._error(
+                        HTTPStatus.CONFLICT,
+                        "Clip correction evidence changed; load the note window and preview again",
+                    )
+                except (OverflowError, TypeError, ValueError):
+                    self._error(
+                        HTTPStatus.BAD_REQUEST,
+                        "invalid Clip note correction request",
+                    )
+                except (OSError, RuntimeError):
+                    self._error(
+                        HTTPStatus.CONFLICT,
+                        "Clip correction evidence changed or is unavailable; restart the Workbench",
+                    )
+                return
             if parsed.path in {
                 "/api/clip-transform-projection",
                 "/api/clip-transform-action",
@@ -1560,6 +1702,18 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         else:
             with self.server.state_lock:
                 payload["clip_transforms"] = transform_service.capability()
+        correction_service = self.server.clip_correction_service
+        if correction_service is None:
+            payload["clip_corrections"] = {
+                "enabled": False,
+                "immutable_versions_only": True,
+                "reason": (
+                    "Clip pitch corrections were not explicitly enabled for this launch"
+                ),
+            }
+        else:
+            with self.server.state_lock:
+                payload["clip_corrections"] = correction_service.capability()
         return payload
 
     def _developer_snapshot_payload(self) -> dict[str, Any]:
@@ -1591,6 +1745,11 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 if self.server.clip_transform_service is not None
                 else None
             )
+            clip_correction_capability = (
+                self.server.clip_correction_service.capability()
+                if self.server.clip_correction_service is not None
+                else None
+            )
             runtime = {
                 "catalog_media_capability_count": len(
                     self.server.catalog_media_ids
@@ -1619,6 +1778,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     else len(clip_reuse_plan.get("placements", []))
                 ),
                 "clip_transforms_enabled": clip_transform_capability is not None,
+                "clip_corrections_enabled": clip_correction_capability is not None,
             }
             trace_snapshot = trace.snapshot()
         cache = artifact_cache_summary(
@@ -1657,6 +1817,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         return request
 
     def _start_developer_trace(self, method: str, route: str) -> None:
+        self._developer_application_invoked = False
         trace = self.server.developer_trace
         operation = developer_operation_for_route(route)
         if trace is None or operation is None:
@@ -2185,12 +2346,24 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         filename: str | None = None,
     ) -> None:
         route = getattr(self, "_developer_trace_route", None)
-        facts = trace_response_facts(route, value) if route else {}
-        self._developer_checkpoint(
-            "application",
-            developer_code_step_for_route(route) if route else "artifact.prepare",
-            facts,
+        # Correction errors can be emitted before the application service runs
+        # (for example, at an opt-in gate or while parsing JSON).  Keep those
+        # traces request-only, while preserving the application checkpoint when
+        # an invoked service reports a fixed 400/404/409 error envelope.
+        application_invoked = getattr(
+            self, "_developer_application_invoked", False
         )
+        if (
+            int(status) < 400
+            or route not in _CLIP_CORRECTION_ROUTES
+            or application_invoked
+        ):
+            facts = trace_response_facts(route, value) if route else {}
+            self._developer_checkpoint(
+                "application",
+                developer_code_step_for_route(route) if route else "artifact.prepare",
+                facts,
+            )
         payload = json.dumps(value, indent=2, sort_keys=True).encode("utf-8")
         headers = {}
         if filename:

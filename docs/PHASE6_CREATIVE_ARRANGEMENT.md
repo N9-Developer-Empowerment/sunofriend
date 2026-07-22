@@ -2,8 +2,9 @@
 
 Status on 22 July 2026: **entry gate passed; Increment 6.0, the first
 read-only Clip Library slice, is complete; Increment 6.1, the explicit Clip
-reuse proposal, is complete; and Increment 6.2a, the first bounded immutable
-key/BPM transform workflow, is complete.**
+reuse proposal, is complete; Increment 6.2a, the first bounded immutable
+key/BPM transform workflow, is complete; and Increment 6.3a, bounded immutable
+pitch correction, is complete.**
 Broader Phase 6 creative arrangement remains in progress.
 
 Phase 6 builds on the local Workbench without turning Sunofriend into another
@@ -187,8 +188,9 @@ contract and tests:
    musical/stem-locked BPM operations now create reviewed immutable child
    versions with a minimal audit diff and range/alignment warnings. Mode
    remapping, tuning and downbeat remain separate later slices.
-4. **Phrase and note correction:** add bounded piano-roll/phrase edits with the
-   original candidate and exact edit diff retained.
+4. **Phrase and note correction (6.3a complete):** first add bounded,
+   explicitly selected pitch patches with the parent and exact diff retained;
+   add/delete, timing, duration and expression follow under separate contracts.
 5. **Explicit hybrids:** only after both Phase 5.3 gates pass, construct a new
    candidate from user-named sources and ranges. Never infer a hybrid from
    agreement or popularity.
@@ -483,3 +485,146 @@ before commit, capacity cannot create a durable 10,001st Clip, identical
 cross-server requests become create-plus-replay and different cross-server
 requests become create-plus-conflict. The complete project suite passed with
 910 tests. Increment 6.2a is **complete**; broader Phase 6 remains in progress.
+
+## Increment 6.3a: bounded immutable pitch correction
+
+Increment 6.3a addresses a common failure that can be recognised more easily
+than it can be described: a transcription contains the right phrase rhythm but
+one or more notes sound wrong or sit in the wrong octave. It does not ask an
+algorithm to decide what the melody ought to be. The user identifies exact
+existing notes in a short visual window and supplies their replacement MIDI
+pitches.
+
+This is a separate controlled-write launch:
+
+```bash
+sunofriend workbench "/absolute/path/to/stems" \
+  --candidate-root "/absolute/path/to/results" \
+  --catalog "/absolute/path/to/workbench-catalog.json" \
+  --state-dir "/absolute/path/to/workbench-state" \
+  --clip-library "/absolute/path/to/existing-clip-library" \
+  --phase6-acceptance "/absolute/path/to/passed-phase5-acceptance-result.json" \
+  --phase6-pack "/absolute/path/to/exact-accepted-garageband-pack.zip" \
+  --enable-clip-corrections \
+  --open
+```
+
+Correction, key/BPM transform and reuse-proposal modes are mutually exclusive.
+Each intentionally pins or changes the complete Clip library in a different
+way. Create any corrected children first, stop the process, then restart under
+reuse mode to place an exact chosen child.
+
+### Fixed-grid phrase window
+
+The browser requests a half-open window using integer Standard MIDI File ticks
+at 480 ticks per quarter note. Membership therefore matches the note-on times
+GarageBand receives under the Clip's existing automatic export timing,
+including stem-locked source-second mapping and musical microtiming. The window
+does not quantise or move a note.
+
+One window is limited to 32 quarter-note beats and 15 rendered seconds. It may
+show at most 512 intersecting notes, of which no more than 256 may start in the
+window and therefore be editable. Notes crossing into the window are visible
+locked context. Chord context is capped at 64 events. A dense phrase fails with
+an instruction to choose a narrower window; it is never silently truncated.
+
+Each note reference binds:
+
+- the exact parent object SHA-256;
+- the note's canonical index in that immutable parent; and
+- every `ClipNote` field, including beat and source-second timing,
+  microtiming, velocity, release velocity and articulation.
+
+The index distinguishes byte-identical duplicate notes. The hash detects a
+stale or fabricated browser reference without changing the Clip v1 schema.
+
+### Pitch-patch contract
+
+One child may replace the pitch of 1 to 64 uniquely referenced notes. Each
+target is an integer MIDI pitch from 0 to 127 and no note may move by more than
+24 semitones in this first slice. Nothing is preselected and a patch containing
+only no-ops is rejected. Drum-family Clips are excluded because their MIDI
+note numbers identify kit pieces rather than a pitched melody.
+
+Pitch changes preserve the exact parent values for start, duration, source
+start/end, both microtiming fields, velocity, release velocity and
+articulation. The tempo map, key signature, chords, time signature, instrument,
+provenance, tags and every unaffected note remain unchanged. Key and chord
+relationships in the review are advisory evidence only; Sunofriend does not
+snap a chromatic note to a scale or chord.
+
+Before projection, the service calculates the exact 480-TPQ intervals produced
+by the Clip's existing export timing. It rejects a patch that would newly
+introduce a duplicate same-pitch onset or an overlapping same-channel,
+same-pitch lifetime, because Standard MIDI has no independent identity for
+those simultaneous note instances. Pre-existing ambiguity is not silently
+normalised into the correction.
+
+The same boundary rejects a parent that the deterministic Clip-to-MIDI writer
+cannot encode. Both notes and chords are capped at 20,000; note, chord and
+musical-tempo event ticks must fit the Standard MIDI File four-byte
+variable-length maximum (`0x0fffffff`); tempo values must fit the three-byte
+microseconds-per-quarter field; time-signature bytes and UTF-8 title/chord meta
+payloads must also be encodable. The maximum safe tick has a write/read
+round-trip test. This is validation of preserved data, not quantisation or
+repair.
+
+### Review, creation and restart audit
+
+`POST /api/clip-note-correction-window` returns the bounded path-free visual
+evidence and a hash of that exact window. `POST
+/api/clip-note-correction-projection` accepts only the parent/object/library
+pins, exact window/hash and canonical pitch patch. It recomputes everything in
+memory and returns the projected deterministic child, every before/after pitch,
+semitone delta, advisory harmony facts, warnings and unchanged-field
+invariants. All projection effects are false.
+
+Editing a note or window invalidates the projection. `POST
+/api/clip-note-correction-action` additionally requires `action: create` and
+the exact projection SHA-256. A fresh action appends one child whose ID is
+derived from the complete correction intent. An exact retry returns the same
+existing child as an idempotent replay and appends nothing. A stale or
+different library state is a conflict; the browser may reload detail/window
+once but never retries a write automatically.
+
+The recognized correction recipe retains a bounded canonical before/after
+audit. Clip detail validates it against the exact retained parent and exposes a
+path-free correction summary after restart. Arbitrary or legacy transform
+parameters remain hidden. Reversibility means inspecting or choosing the
+retained parent, not mutating the child backwards.
+
+A fresh create changes only the Clip library by adding that one corrected
+child. It does not select or rank a process, update the current arrangement or
+reuse proposal, alter the Pack Composer, attach an instrument, record
+feedback, submit data or build a hybrid. Existing deterministic MIDI and dry
+neutral audition can be prepared after explicitly opening either parent or
+child; listening still records no preference.
+
+### Verified completion
+
+The completion exercise used a fresh copy of the accepted Lidl library. The
+source keys Clip contained 1,727 notes; its first eight beats exposed 22
+editable notes at 480 TPQ. A deliberate test patch changed MIDI pitch 59 to 61
+and created revision 2,
+`sf-correction-daa1ce4dca1cd99823af371ffd16ffad9f3a5df387eaaa167245b4daec1767e6`,
+with object SHA-256
+`99b894f9aa78fb745d05c194a2cffbce0b6db705b8f8f392c68178d472b42caf`.
+The copied library grew from 12 to 13 Clips while the original library and
+parent bytes remained unchanged. An exact retry returned `replayed` with all
+effects false; restart re-derived the same one-note diff; public correction,
+detail and artifact responses were path-free; and two deterministic MIDI
+reconstructions matched at SHA-256
+`ce1edbc85f44b5c37cdb0576c89ef5cd2eee74afe7c9ee6f904ca248f866d4a8`.
+The complete repository suite passed with 943 tests. It includes the maximum
+SMF boundary round-trip, forged-recipe/restart cases, browser contracts and a
+deterministic two-server lazy-reuse initialization check.
+
+### Deliberately deferred from 6.3a
+
+Note insertion/deletion, onset and duration edits, velocity/expression,
+split/merge, phrase replacement, repetition propagation, source waveform/F0
+or hummed-guide correction, quantisation, automatic theory repair and hybrids
+remain absent. Timing edits must reconcile both beat and source-second
+coordinates, and missing-note insertion needs a new note-identity/evidence
+contract. Those will be introduced as smaller reviewable increments rather
+than hidden inside this pitch-only action.

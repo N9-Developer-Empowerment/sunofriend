@@ -182,6 +182,94 @@ console.log(JSON.stringify({
         )
         self.assertNotIn("secret", json.dumps(result))
 
+    def test_server_snapshot_preserves_create_durability_and_append_symbols(self) -> None:
+        result = self.run_node(
+            """
+(async () => {
+  function snapshot(operation, durableEffect, serviceSymbol) {
+    const [module, symbol] = serviceSymbol.split('::');
+    return {
+      code_flow: {code_map: {
+        service: {module, symbol},
+      }},
+      runtime: {recent_operations: [{
+        sequence: 1,
+        operation,
+        label: 'server label',
+        method: 'POST',
+        status: 'completed',
+        http_status: 201,
+        duration_ms: 4.5,
+        durable_effect_possible: durableEffect,
+        symbols: [
+          `${module}.${symbol}`,
+          'sunofriend.library.ClipLibrary.append_version_if_state',
+        ],
+        frames: [{stage: 'result', code_step: 'service', facts: {clip_version_appended: true}}],
+      }], active_operations: []},
+      privacy: {}, effects: {},
+    };
+  }
+
+  async function rendered(value) {
+    const host = {innerHTML: '', querySelector() { return null; }};
+    const inspector = developer.createInspector({api: async path => {
+      if (path !== '/api/developer-snapshot') throw new Error(`unexpected ${path}`);
+      return value;
+    }});
+    inspector.setEnabled(true);
+    inspector.renderInto(host);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    return host.innerHTML;
+  }
+
+  const correction = await rendered(snapshot(
+    'clip_correction.create',
+    true,
+    'sunofriend.workbench_correction::WorkbenchClipCorrectionService.create',
+  ));
+  const transform = await rendered(snapshot(
+    'clip_transform.create',
+    true,
+    'sunofriend.workbench_transform::WorkbenchClipTransformService.create',
+  ));
+  const projectedFalse = await rendered(snapshot(
+    'decision.append',
+    false,
+    'sunofriend.workbench_store::WorkbenchStore.append',
+  ));
+  console.log(JSON.stringify({correction, transform, projectedFalse}));
+})().catch(error => { console.error(error); process.exitCode = 1; });
+"""
+        )
+
+        for key in ("correction", "transform"):
+            html = result[key]
+            self.assertIn(
+                "Durable effect possible:</b> yes, only through this explicit production command",
+                html,
+            )
+            self.assertIn(
+                "<code>sunofriend.library.ClipLibrary.append_version_if_state</code>",
+                html,
+            )
+        self.assertIn(
+            "sunofriend.workbench_correction.WorkbenchClipCorrectionService.create",
+            result["correction"],
+        )
+        self.assertIn(
+            "sunofriend.workbench_transform.WorkbenchClipTransformService.create",
+            result["transform"],
+        )
+        self.assertIn(
+            "Durable effect possible:</b> no",
+            result["projectedFalse"],
+        )
+        self.assertNotIn(
+            "Durable effect possible:</b> yes",
+            result["projectedFalse"],
+        )
+
     def test_browser_state_is_an_explicit_non_persistent_allowlist(self) -> None:
         result = self.run_node(
             """

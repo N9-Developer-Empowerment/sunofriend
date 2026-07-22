@@ -379,6 +379,18 @@ mutation of its parent.
 8. `workbench_clips.js` keeps form drafts and projections in browser memory.
    Editing invalidates a projection; a conflict reloads detail once and never
    retries a create request.
+9. [`WorkbenchClipCorrectionService`](../src/sunofriend/workbench_correction.py)
+   opens under its own `--enable-clip-corrections` gate. It projects an exact
+   half-open 480-TPQ note window, binds each note index to the complete parent
+   object/note payload and accepts only a bounded explicit pitch patch. Before
+   projection it also proves that all retained note, chord, tempo and metadata
+   events fit the deterministic Standard MIDI File encoding limits.
+10. A correction projection changes nothing. Exact creation reuses the
+    sole-child compare-and-swap, while a recognized correction recipe can be
+    revalidated only through the service-level restart verifier, which rebuilds
+    the historical window hash and before/after pitch summary from its exact
+    retained parent. Timing, expression, key, chords and unaffected notes are
+    asserted unchanged.
 
 ### Worked state example
 

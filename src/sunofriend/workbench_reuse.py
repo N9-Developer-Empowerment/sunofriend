@@ -20,9 +20,12 @@ import sqlite3
 import stat
 import threading
 import uuid
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
+
+import fcntl
 
 
 REUSE_CAPABILITY_SCHEMA = "sunofriend.workbench-clip-reuse-capability.v1"
@@ -129,27 +132,28 @@ class WorkbenchClipReuseStore:
                         "Clip reuse database path must not be a symlink"
                     )
                 return []
-            _require_regular_nonsymlink(self.path, "Clip reuse database")
-            try:
-                with self._connect(read_only=True) as connection:
-                    rows = connection.execute(
-                        """
-                        SELECT event_id, schema_name, created_at, project_id, plan_id,
-                               binding_sha256, revision, event_type,
-                               placement_id, previous_plan_sha256,
-                               resulting_plan_sha256, payload_json
-                        FROM clip_reuse_events
-                        WHERE plan_id = ? AND binding_sha256 = ?
-                        ORDER BY revision
-                        """,
-                        (plan_id, binding_sha256),
-                    ).fetchall()
-            except (OSError, sqlite3.Error) as exc:
-                raise WorkbenchClipReuseEvidenceError(
-                    "Clip reuse event store is unavailable"
-                ) from exc
-            finally:
-                self._chmod_store_files()
+            with self._shared_reader_lock():
+                _require_regular_nonsymlink(self.path, "Clip reuse database")
+                try:
+                    with self._connect(read_only=True) as connection:
+                        rows = connection.execute(
+                            """
+                            SELECT event_id, schema_name, created_at, project_id, plan_id,
+                                   binding_sha256, revision, event_type,
+                                   placement_id, previous_plan_sha256,
+                                   resulting_plan_sha256, payload_json
+                            FROM clip_reuse_events
+                            WHERE plan_id = ? AND binding_sha256 = ?
+                            ORDER BY revision
+                            """,
+                            (plan_id, binding_sha256),
+                        ).fetchall()
+                except (OSError, sqlite3.Error) as exc:
+                    raise WorkbenchClipReuseEvidenceError(
+                        "Clip reuse event store is unavailable"
+                    ) from exc
+                finally:
+                    self._chmod_store_files()
         return _event_rows(
             rows,
             project_id=project_id,
@@ -184,70 +188,74 @@ class WorkbenchClipReuseStore:
             raise ValueError("Clip reuse event is too large")
 
         with self._lock:
-            self._prepare_for_write()
-            try:
-                with self._connect(read_only=False) as connection:
-                    connection.execute("BEGIN IMMEDIATE")
-                    latest = connection.execute(
-                        """
-                        SELECT revision, resulting_plan_sha256
-                        FROM clip_reuse_events
-                        WHERE plan_id = ? AND binding_sha256 = ?
-                        ORDER BY revision DESC
-                        LIMIT 1
-                        """,
-                        (plan_id, binding_sha256),
-                    ).fetchone()
-                    current_revision = 0 if latest is None else int(latest["revision"])
-                    current_sha256 = (
-                        expected_plan_sha256
-                        if latest is None
-                        else str(latest["resulting_plan_sha256"])
-                    )
-                    if (
-                        current_revision != expected_revision
-                        or current_sha256 != expected_plan_sha256
-                    ):
-                        raise WorkbenchClipReuseConflictError(
-                            "Clip reuse plan head changed"
+            self._prepare_parent_for_write()
+            with self._exclusive_writer_lock():
+                self._prepare_for_write()
+                try:
+                    with self._connect(read_only=False) as connection:
+                        connection.execute("BEGIN IMMEDIATE")
+                        latest = connection.execute(
+                            """
+                            SELECT revision, resulting_plan_sha256
+                            FROM clip_reuse_events
+                            WHERE plan_id = ? AND binding_sha256 = ?
+                            ORDER BY revision DESC
+                            LIMIT 1
+                            """,
+                            (plan_id, binding_sha256),
+                        ).fetchone()
+                        current_revision = (
+                            0 if latest is None else int(latest["revision"])
                         )
-                    connection.execute(
-                        """
-                        INSERT INTO clip_reuse_events (
-                            event_id, schema_name, created_at, project_id,
-                            plan_id, binding_sha256, revision, event_type,
-                            placement_id, previous_plan_sha256,
-                            resulting_plan_sha256, payload_json
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (
-                            event_id,
-                            REUSE_EVENT_SCHEMA,
-                            created_at,
-                            project_id,
-                            plan_id,
-                            binding_sha256,
-                            revision,
-                            event_type,
-                            placement_id,
-                            expected_plan_sha256,
-                            resulting_plan_sha256,
-                            encoded_payload.decode("utf-8"),
-                        ),
-                    )
-                    connection.commit()
-            except WorkbenchClipReuseConflictError:
-                raise
-            except sqlite3.IntegrityError as exc:
-                raise WorkbenchClipReuseConflictError(
-                    "Clip reuse plan head changed"
-                ) from exc
-            except (OSError, sqlite3.Error) as exc:
-                raise WorkbenchClipReuseEvidenceError(
-                    "Clip reuse event could not be appended"
-                ) from exc
-            finally:
-                self._chmod_store_files()
+                        current_sha256 = (
+                            expected_plan_sha256
+                            if latest is None
+                            else str(latest["resulting_plan_sha256"])
+                        )
+                        if (
+                            current_revision != expected_revision
+                            or current_sha256 != expected_plan_sha256
+                        ):
+                            raise WorkbenchClipReuseConflictError(
+                                "Clip reuse plan head changed"
+                            )
+                        connection.execute(
+                            """
+                            INSERT INTO clip_reuse_events (
+                                event_id, schema_name, created_at, project_id,
+                                plan_id, binding_sha256, revision, event_type,
+                                placement_id, previous_plan_sha256,
+                                resulting_plan_sha256, payload_json
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """,
+                            (
+                                event_id,
+                                REUSE_EVENT_SCHEMA,
+                                created_at,
+                                project_id,
+                                plan_id,
+                                binding_sha256,
+                                revision,
+                                event_type,
+                                placement_id,
+                                expected_plan_sha256,
+                                resulting_plan_sha256,
+                                encoded_payload.decode("utf-8"),
+                            ),
+                        )
+                        connection.commit()
+                except WorkbenchClipReuseConflictError:
+                    raise
+                except sqlite3.IntegrityError as exc:
+                    raise WorkbenchClipReuseConflictError(
+                        "Clip reuse plan head changed"
+                    ) from exc
+                except (OSError, sqlite3.Error) as exc:
+                    raise WorkbenchClipReuseEvidenceError(
+                        "Clip reuse event could not be appended"
+                    ) from exc
+                finally:
+                    self._chmod_store_files()
 
         return {
             "event_id": event_id,
@@ -263,7 +271,7 @@ class WorkbenchClipReuseStore:
             "payload": json.loads(encoded_payload),
         }
 
-    def _prepare_for_write(self) -> None:
+    def _prepare_parent_for_write(self) -> None:
         parent = self.path.parent
         if parent.is_symlink():
             raise WorkbenchClipReuseEvidenceError(
@@ -275,6 +283,90 @@ class WorkbenchClipReuseStore:
                 "Clip reuse state directory is invalid"
             )
         os.chmod(parent, 0o700)
+
+    @contextmanager
+    def _exclusive_writer_lock(self):
+        """Serialize lazy schema creation and CAS append across processes."""
+
+        lock_path = Path(f"{self.path}.lock")
+        if lock_path.is_symlink():
+            raise WorkbenchClipReuseEvidenceError(
+                "Clip reuse writer lock must not be a symlink"
+            )
+        flags = os.O_RDWR | os.O_CREAT
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        try:
+            descriptor = os.open(lock_path, flags, 0o600)
+        except OSError as exc:
+            raise WorkbenchClipReuseEvidenceError(
+                "Clip reuse writer lock is unavailable"
+            ) from exc
+        try:
+            status = os.fstat(descriptor)
+            if not stat.S_ISREG(status.st_mode):
+                raise WorkbenchClipReuseEvidenceError(
+                    "Clip reuse writer lock must be a regular file"
+                )
+            os.fchmod(descriptor, 0o600)
+            fcntl.flock(descriptor, fcntl.LOCK_EX)
+            yield
+        except OSError as exc:
+            raise WorkbenchClipReuseEvidenceError(
+                "Clip reuse writer lock is unavailable"
+            ) from exc
+        finally:
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
+            except OSError:
+                pass
+            os.close(descriptor)
+
+    @contextmanager
+    def _shared_reader_lock(self):
+        """Wait for any visible lazy initialization before querying its schema."""
+
+        lock_path = Path(f"{self.path}.lock")
+        if not lock_path.exists():
+            if lock_path.is_symlink():
+                raise WorkbenchClipReuseEvidenceError(
+                    "Clip reuse writer lock must not be a symlink"
+                )
+            yield
+            return
+        if lock_path.is_symlink():
+            raise WorkbenchClipReuseEvidenceError(
+                "Clip reuse writer lock must not be a symlink"
+            )
+        flags = os.O_RDONLY
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        try:
+            descriptor = os.open(lock_path, flags)
+        except OSError as exc:
+            raise WorkbenchClipReuseEvidenceError(
+                "Clip reuse writer lock is unavailable"
+            ) from exc
+        try:
+            status = os.fstat(descriptor)
+            if not stat.S_ISREG(status.st_mode):
+                raise WorkbenchClipReuseEvidenceError(
+                    "Clip reuse writer lock must be a regular file"
+                )
+            fcntl.flock(descriptor, fcntl.LOCK_SH)
+            yield
+        except OSError as exc:
+            raise WorkbenchClipReuseEvidenceError(
+                "Clip reuse writer lock is unavailable"
+            ) from exc
+        finally:
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
+            except OSError:
+                pass
+            os.close(descriptor)
+
+    def _prepare_for_write(self) -> None:
         if self.path.exists():
             _require_regular_nonsymlink(self.path, "Clip reuse database")
         elif self.path.is_symlink():
