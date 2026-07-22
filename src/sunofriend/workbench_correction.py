@@ -40,7 +40,7 @@ from .workbench_transform import (
 
 
 CLIP_CORRECTION_CAPABILITY_SCHEMA = (
-    "sunofriend.workbench-clip-correction-capability.v1"
+    "sunofriend.workbench-clip-correction-capability.v2"
 )
 CLIP_CORRECTION_WINDOW_SCHEMA = "sunofriend.workbench-clip-correction-window.v1"
 CLIP_CORRECTION_PREVIEW_SCHEMA = "sunofriend.workbench-clip-correction-preview.v1"
@@ -116,8 +116,19 @@ class WorkbenchClipCorrectionNotFoundError(WorkbenchClipCorrectionError):
     """The requested Clip is absent from the verified library."""
 
 
+def _request_correction_kind(request: Mapping[str, Any]) -> Any:
+    """Return only the explicit nested discriminator used for route dispatch."""
+
+    if not isinstance(request, Mapping):
+        return None
+    correction = request.get("correction")
+    if not isinstance(correction, Mapping):
+        return None
+    return correction.get("kind")
+
+
 class WorkbenchClipCorrectionService:
-    """Project and append one bounded immutable pitch correction at a time."""
+    """Dispatch one bounded immutable note correction at a time."""
 
     def __init__(
         self,
@@ -127,6 +138,7 @@ class WorkbenchClipCorrectionService:
     ) -> None:
         self._clip_service = clip_service
         self._writer = writer
+        self._velocity_corrections: Any | None = None
 
     @classmethod
     def open(
@@ -150,25 +162,30 @@ class WorkbenchClipCorrectionService:
         return cls(clip_service=clip_service, writer=writer)
 
     def capability(self) -> dict[str, Any]:
-        """Describe the separately gated pitch-only correction boundary."""
+        """Describe the separately gated bounded note-correction boundary."""
 
         state = self._snapshot()
         append_available = self._clip_service._transform_has_append_capacity(state)
         return {
             "schema": CLIP_CORRECTION_CAPABILITY_SCHEMA,
             "enabled": True,
-            "scope": "bounded-pitch-only-immutable-child",
+            "scope": "bounded-note-correction-immutable-child",
             "actions": {
                 "window": True,
                 "preview": append_available,
                 "create": append_available,
             },
             "corrections": {
-                "pitch_patch": True,
+                "pitch_patch": {
+                    "enabled": True,
+                    "drum_family": False,
+                },
+                "attack_velocity_patch": {
+                    "enabled": True,
+                    "drum_family": True,
+                },
                 "timing": False,
-                "velocity": False,
                 "add_delete": False,
-                "drum_family": False,
             },
             "library": {
                 "state_sha256": state.state_sha256,
@@ -183,6 +200,8 @@ class WorkbenchClipCorrectionService:
                 "maximum_window_chords": _MAX_WINDOW_CHORDS,
                 "maximum_changes": _MAX_CHANGES,
                 "maximum_pitch_delta_semitones": _MAX_PITCH_DELTA,
+                "minimum_attack_velocity": 1,
+                "maximum_attack_velocity": 127,
                 "maximum_clip_notes": _MAX_NOTES,
                 "maximum_clip_chords": _MAX_CHORDS,
                 "maximum_clip_duration_seconds": _MAX_DURATION_SECONDS,
@@ -198,6 +217,12 @@ class WorkbenchClipCorrectionService:
     def window(self, request: Mapping[str, Any]) -> dict[str, Any]:
         """Return one deterministic, path-free note/chord editing window."""
 
+        if (
+            isinstance(request, Mapping)
+            and request.get("correction_kind") == "attack_velocity_patch"
+        ):
+            return self._velocity_service().window(request)
+
         parsed = _parse_window_request(request)
         state = self._snapshot()
         _require_library_pin(state, parsed["library_state_sha256"])
@@ -210,6 +235,9 @@ class WorkbenchClipCorrectionService:
 
     def preview(self, request: Mapping[str, Any]) -> dict[str, Any]:
         """Return a zero-write pitch-patch projection for one exact window."""
+
+        if _request_correction_kind(request) == "attack_velocity_patch":
+            return self._velocity_service().preview(request)
 
         parsed = _parse_preview_request(request, create=False)
         state = self._snapshot()
@@ -233,6 +261,9 @@ class WorkbenchClipCorrectionService:
 
     def create(self, request: Mapping[str, Any]) -> dict[str, Any]:
         """Append the exact projected child or return an idempotent replay."""
+
+        if _request_correction_kind(request) == "attack_velocity_patch":
+            return self._velocity_service().create(request)
 
         parsed = _parse_preview_request(request, create=True)
         try:
@@ -322,10 +353,17 @@ class WorkbenchClipCorrectionService:
             child = state.clips[requested]
         except KeyError as exc:
             raise WorkbenchClipCorrectionNotFoundError("Unknown corrected Clip") from exc
-        if (
-            child.transform_recipe is None
-            or child.transform_recipe.operation != "correct_note_pitches"
-        ):
+        operation = (
+            None
+            if child.transform_recipe is None
+            else child.transform_recipe.operation
+        )
+        if operation == "correct_note_attack_velocities":
+            return self._velocity_service().correction_summary_from_state(
+                requested,
+                state,
+            )
+        if operation != "correct_note_pitches":
             return None
         if child.parent_clip_id is None or child.parent_clip_id not in state.clips:
             raise WorkbenchClipCorrectionError(
@@ -369,6 +407,18 @@ class WorkbenchClipCorrectionService:
             raise WorkbenchClipCorrectionConflictError(
                 "Verified Clip library changed; restart or load a fresh window"
             ) from exc
+
+    def _velocity_service(self) -> Any:
+        """Load the separate velocity policy only when its request is explicit."""
+
+        if self._velocity_corrections is None:
+            from .workbench_velocity import WorkbenchClipVelocityCorrectionService
+
+            self._velocity_corrections = WorkbenchClipVelocityCorrectionService(
+                clip_service=self._clip_service,
+                writer=self._writer,
+            )
+        return self._velocity_corrections
 
 
 def _derive_correction_summary(parent: MidiClip, child: MidiClip) -> dict[str, Any]:

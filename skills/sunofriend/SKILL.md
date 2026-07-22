@@ -1,6 +1,6 @@
 ---
 name: sunofriend
-description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes, compare evidence-pinned specialist/full-mix/conditioned lead MIDI by phrase with explicit lineage limits and without creating a hybrid, benchmark verified fresh-process or bounded exact-repeat local AI runs, reuse and benchmark an explicit exact MuScriptor raw-result cache, partition model-reported labels exactly, and review existing source/MIDI alternatives; build blind exact-source-window, fixed-window sample-RMS-matched MIDI A/B reviews with explicit heard and choice evidence; render cached neutral previews, save explicit solo/full-mix choices, hear bounded or exact chunked canonical selected arrangements, export unchanged choices in a GarageBand handoff, and complete its guided tutorial, 10-question quiz and two human acceptance checks through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; browse a gated read-only Clip v1 library; explicitly propose immutable Clip placements; create reviewed immutable key/BPM children; apply bounded user-selected Clip pitch corrections; or store and transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, explicit Clip reuse proposals, bounded wrong-note repair, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
+description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes, compare evidence-pinned specialist/full-mix/conditioned lead MIDI by phrase with explicit lineage limits and without creating a hybrid, benchmark verified fresh-process or bounded exact-repeat local AI runs, reuse and benchmark an explicit exact MuScriptor raw-result cache, partition model-reported labels exactly, and review existing source/MIDI alternatives; build blind exact-source-window, fixed-window sample-RMS-matched MIDI A/B reviews with explicit heard and choice evidence; render cached neutral previews, save explicit solo/full-mix choices, hear bounded or exact chunked canonical selected arrangements, export unchanged choices in a GarageBand handoff, and complete its guided tutorial, 10-question quiz and two human acceptance checks through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; browse a gated read-only Clip v1 library; explicitly propose immutable Clip placements; create reviewed immutable key/BPM children; apply bounded user-selected Clip pitch or attack-velocity corrections; or store and transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, explicit Clip reuse proposals, bounded wrong-note or note-intensity repair, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
 ---
 
 # Sunofriend
@@ -157,15 +157,16 @@ scripts.
      Previewing a same-mode key or musical/stem-locked BPM change needs no
      audio, ML or playback capability. Creation adds exactly one immutable
      Clip version. A later neutral audition needs `doctor --require preview`.
-   - Phase 6 Increment 6.3a uses those same three gate inputs plus the separate
+   - Phase 6 Increments 6.3a–b use those same three gate inputs plus the separate
      `--enable-clip-corrections` flag. Reject it without the complete gate and
      reject it together with reuse-plan or key/BPM-transform mode. It accepts
-     only user-selected pitch changes for 1–64 exact existing notes in one
-     bounded 480-TPQ phrase window. Do not infer notes, snap to a key/chord,
-     apply a repeated-phrase repair, change timing/expression or treat review as
-     a preference. Preview has zero effects; creation appends one immutable
-     child; an exact retry is a zero-effect replay. A later neutral audition
-     needs `doctor --require preview`.
+     exactly one user-selected pitch or attack-velocity patch for 1–64 exact
+     existing notes in one bounded 480-TPQ phrase window. Velocity is valid for
+     drums; pitch is not. Do not infer notes or intensity, snap to a key/chord,
+     normalize dynamics, apply a repeated-phrase repair, change timing or treat
+     review as a preference. Preview has zero effects; creation appends one
+     immutable child; an exact retry is a zero-effect replay. A later neutral
+     audition needs `doctor --require preview`.
 5. Inventory the input directory read-only. Confirm files exist and identify
    stem roles, chord PDF, metronome, key, BPM, and tuning.
 6. Use absolute, quoted paths and a fresh output outside the source folder.
@@ -431,14 +432,14 @@ scripts.
   submission remain unchanged. Defer major/minor remapping, tuning, downbeat,
   register, note/phrase, batch and hybrid transforms.
   Add `--enable-clip-corrections` only when the user explicitly wants Increment
-  6.3a and has a pitched, non-drum Clip whose wrong notes can be recognised.
+  6.3a or 6.3b and can recognise the wrong pitch or attack intensity.
   Keep it separate from transform and reuse-plan mode. Load a half-open phrase
   window of at most 32 quarter-note beats and 15 rendered seconds. It uses
   integer 480-TPQ export ticks and does not quantise the Clip. Nothing is
-  preselected. Choose at most 64 exact visible note references, keep every
-  target from 0–127 and no more than 24 semitones from its source, then require
-  **Review temporary pitch correction** before **Create immutable corrected
-  Clip**. Any window or pitch edit invalidates review.
+  preselected. For pitch, choose at most 64 exact visible note references,
+  keep every target from 0–127 and no more than 24 semitones from its source,
+  then require **Review temporary pitch correction** before **Create immutable
+  corrected Clip**. Any window or pitch edit invalidates review.
   Treat scale/chord labels as advisory and never choose a replacement from
   them automatically. Reject new same-pitch overlap/duplicate-onset ambiguity.
   On conflict reload detail/window once and never retry the write POST. A fresh
@@ -451,8 +452,18 @@ scripts.
   MIDI stream is encodable: at most 20,000 notes and 20,000 chords, four-byte
   variable-length note/chord/tempo ticks, three-byte tempo values,
   byte-encodable time signatures and bounded title/chord meta payloads.
-  Defer note add/delete, timing, duration, velocity/expression, split/merge,
-  quantise, hum/F0 guidance, repetition propagation and hybrids.
+  For attack velocity, choose **Attack loudness (MIDI velocity)** before
+  loading the window. It accepts 1–64 exact target integers from 1–127 and is
+  available for drum Clips. Reset before switching kind; never mix pitch and
+  velocity in one draft or child. Focus/navigation and typing alone have zero
+  effect; **Apply** changes the draft. Treat velocity as patch-dependent Note
+  On intensity, not dB, track volume, release velocity, CC7/CC11 expression or
+  a loudness guarantee. Block notes marked `duplicate-export-note-on` because
+  they collapse to one exported event. Confirm pitch, timing, duration, source
+  seconds, microtiming, release velocity, articulation and metadata remain
+  unchanged. Defer note add/delete, timing, duration, release velocity,
+  continuous expression, split/merge, quantise, hum/F0 guidance, repetition
+  propagation and hybrids.
 - Several completed immutable MuScriptor lanes: use `ai-matrix` with explicit
   repeated `LANE=RUN_DIR` values and a fresh `--out` JSON. Include M0
   unconditioned full mix, M1 discovered-label conditioning, M2 known-label
@@ -1778,5 +1789,20 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     repeated deterministic MIDI at SHA-256
     `ce1edbc85f44b5c37cdb0576c89ef5cd2eee74afe7c9ee6f904ca248f866d4a8`;
     the complete suite passed with 943 tests.
-    Keep note insertion/deletion, timing/duration/velocity, theory repair,
-    repetition propagation and hybrids deferred.
+    For Phase 6 Increment 6.3b, additionally confirm one exact
+    `attack_velocity_patch`, targets 1–127, drum eligibility and blocked
+    duplicate exported Note On groups. Projection is zero-effect; fresh create
+    sets only library/child/correction/attack-velocity effects; replay is all
+    false. Restart must recover the exact before/after velocity diff while
+    pitch, timing, duration, release velocity and normalized MIDI topology stay
+    unchanged. MIDI velocity is not a dB or preference claim. The completion
+    golden used a copied Lidl Snare Clip, changed one channel-9 pitch-38 Note
+    On from 101 to 89, retained exact source/parent bytes, replayed with zero
+    effects and repeated deterministic MIDI at SHA-256
+    `f8570c9af8636e3cfeb1605082616a3e1e72f0bdd546b764baf055bca9abbc4c`.
+    Confirm the browser rejects a mismatched schema, pin, correction, diff,
+    child identity or effect map; it must never synthesize absent server diff
+    rows. Reapplying an unchanged draft/source value must preserve any valid
+    projection and make no request or correction-state change.
+    Keep note insertion/deletion, timing/duration/release velocity/continuous
+    expression, theory repair, repetition propagation and hybrids deferred.

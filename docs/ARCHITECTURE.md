@@ -62,6 +62,9 @@ CLI parsing (`cli.py`)
         |                              `workbench_clips.py`,
         |                              `workbench_clips.js`,
         |                              `workbench_reuse.py`,
+        |                              `workbench_transform.py`,
+        |                              `workbench_correction.py`,
+        |                              `workbench_velocity.py`,
         |                              `workbench_developer.py`,
         |                              `workbench_developer.js`,
         |                              `workbench_visualization.js`,
@@ -562,20 +565,26 @@ transform or unrelated external append remains a conflict. Ordinary browse,
 detail, preview and capability reads never use this exception and remain strict
 against any unexpected library drift.
 
-Phase 6 Increment 6.3a reuses that sole-child append boundary but gives it a
-separate authority flag and musical contract. `workbench_correction.py` accepts
-only a user-authored pitch patch against one exact parent. A bounded window is
-expressed as half-open integer ticks at 480 TPQ and resolved through the Clip's
-existing automatic export timing. It returns visible notes and chord context
-without quantising or modifying them.
+Phase 6 Increments 6.3a–b reuse that sole-child append boundary but give it a
+separate authority flag and sealed note-edit policies. `workbench_correction.py`
+keeps the published pitch-v1 facade and dispatches an explicit
+`attack_velocity_patch` to the isolated policy in `workbench_velocity.py`.
+Both use a bounded half-open integer window at 480 TPQ resolved through the
+Clip's existing automatic export timing. The four-key pitch window request and
+its hashed public serializer remain byte-compatible; only a velocity window
+adds its explicit correction-kind discriminator.
 
 Because Clip v1 intentionally has no mutable note ID, an editable note is
 addressed by its canonical parent index plus a digest over the parent object
 hash, index and complete `ClipNote` payload. The parent pin makes the index
 stable, the digest detects stale/tampered input and the index distinguishes
-otherwise identical duplicates. A canonical patch changes only 1–64 selected
-pitches by at most two octaves. Drum-family clips and any edit that newly
-introduces an ambiguous same-pitch MIDI overlap or duplicate onset are rejected.
+otherwise identical duplicates. A pitch patch changes only 1–64 selected
+pitches by at most two octaves. Drum-family Clips and any pitch edit that newly
+introduces an ambiguous same-pitch MIDI overlap or duplicate onset are
+rejected. An attack-velocity patch changes 1–64 selected Note On velocities to
+exact integers from 1–127 and is valid for pitched and drum-family Clips.
+Source notes that collapse to the same exported channel/onset/pitch are shown
+but blocked because they do not have a one-to-one MIDI event.
 
 Before either live projection or restart audit, the correction service also
 validates the complete preserved SMF encoding boundary: at most 20,000 notes
@@ -588,14 +597,23 @@ Projection and creation use the same intent/projection/CAS/replay rules as the
 key/BPM service. The deterministic child's recognized correction recipe keeps
 a bounded exact before/after audit. On later detail reads, the correction
 service validates that recipe against the retained exact parent before exposing
-a path-free summary; arbitrary transform parameters remain hidden. Timing,
-source seconds, expression, key, chords, instrument, provenance, unaffected
-notes and all project/reuse/pack state remain unchanged.
+a path-free summary; arbitrary transform parameters remain hidden. Each child
+contains exactly one correction kind. Timing, source seconds, key, chords,
+instrument, provenance, unaffected notes and all project/reuse/pack state
+remain unchanged. Pitch children preserve velocity; attack-velocity children
+preserve pitch, release velocity and articulation.
+The browser separately validates the exact kind-specific preview/result
+schema, all request and library pins, deterministic `sf-correction-<intent>`
+identity, one-to-one server diff and the complete fresh/replay effect map. It
+never fills absent server diff rows from its draft. A value equal to the
+current draft is an inspection no-op and cannot discard accepted review
+evidence.
 
 `--enable-clip-corrections`, `--enable-clip-transforms` and
 `--enable-clip-reuse-plan` are separate mutually exclusive launch modes. Note
-insertion/deletion, timing, duration and velocity remain later contracts rather
-than being interpreted through the pitch-only endpoint.
+insertion/deletion, timing, duration, release velocity and continuous
+expression remain later contracts rather than being interpreted through pitch
+or attack intensity.
 
 An optional explicit-catalog phrase link validates one existing diagnostic
 S0/M1/M3 hybrid report against its exact stem, three current candidate MIDI

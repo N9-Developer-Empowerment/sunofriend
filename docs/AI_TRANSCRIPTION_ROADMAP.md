@@ -20,7 +20,8 @@ learning and acceptance passed on 22 July 2026; Phase 6 Increment 6.0's gated,
 read-only Clip Library is complete and Increment 6.1's separate explicit Clip
 reuse proposal is complete; Increment 6.2a's reviewed immutable
 same-mode key and BPM child workflow is complete; Increment 6.3a's bounded
-immutable pitch-correction workflow is complete; broader Phase 6
+immutable pitch-correction workflow is complete; Increment 6.3b's bounded
+immutable attack-velocity correction is complete; broader Phase 6
 creative arrangement remains in progress
 
 Started: 15 July 2026  
@@ -99,7 +100,7 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
 | 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.5–5.9 hardening complete and Phase 5.9 human acceptance passed; Phase 5.3 listening/lineage/role work remains** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench has hash-pinned per-stem and full-song timelines, bounded decoded transports, a separate exact GarageBand pack basket, Project Overview, fail-closed execution provenance and guided exact-pack acceptance. The 22 July close-out completed all eight tutorial screens, scored 10/10 and passed both six-item human checks; the resolver reverified five selected MIDI payloads plus the dry proxy and no source audio with zero project effects. Phase 5 remains open only for the separately gated Phase 5.3 work |
-| 6. Creative Arrangement and Reusable MIDI | **In progress: Increments 6.0, 6.1, 6.2a and 6.3a complete** | The gated browser, immutable-placement proposal, key/BPM children and bounded recognition-first pitch patch are complete. Correction uses exact 480-TPQ phrase evidence, user-selected note refs, a zero-write diff, one immutable child and full restart/SMF-export validation while timing/expression stay unchanged. Note add/delete, timing/duration/velocity, mode remapping, tuning/downbeat and hybrids remain later slices; hybrid construction still waits for the Phase 5.3 gates |
+| 6. Creative Arrangement and Reusable MIDI | **In progress: Increments 6.0, 6.1, 6.2a and 6.3a–b complete** | The gated browser, immutable-placement proposal, key/BPM children and bounded recognition-first pitch/attack-velocity patches are complete. One exact 480-TPQ phrase window, user-selected note refs, a zero-write diff, one-kind immutable child and restart/SMF validation preserve the parent. Velocity also supports drums and blocks collapsed duplicate Note On events. Note add/delete, timing/duration/release velocity/continuous expression, mode remapping, tuning/downbeat and hybrids remain later slices; hybrid construction still waits for the Phase 5.3 gates |
 | 7. Cross-DAW and Opt-in Community Learning | **Deferred** | Compatibility testing, cleared public goldens and consented contextual feedback only after the local workflow is useful, private and stable |
 
 ## Phase 1: AI Transcription Bake-off v1
@@ -602,8 +603,9 @@ promotion gates are in the
 
 ## Phase 6: Creative Arrangement and Reusable MIDI
 
-Once the local explorer and pack composer are trustworthy, add reversible
-piano-roll note correction, phrase alternatives and explicit hybrids; key,
+Once the local explorer and pack composer are trustworthy, add broader
+reversible piano-roll correction beyond the completed bounded pitch and attack
+velocity slices, phrase alternatives and explicit hybrids; key,
 BPM, tuning and downbeat transformation; Clip v1 browsing and reuse; mashup
 preparation; and instrument/Bundle attachment to reviewed parts. Every edit
 must preserve its source candidate and a minimal audit diff. GarageBand remains
@@ -660,8 +662,18 @@ deterministic immutable child. The parent plus timing, duration, source
 seconds, expression, key, chords, instrument and unaffected notes remain
 unchanged. New same-pitch MIDI overlap/collapse is rejected. A recognized
 bounded correction recipe can be validated against the retained parent and
-shown again after restart. Note add/delete, timing, duration and velocity are
-deferred to their own dual-timeline and identity contracts.
+shown again after restart.
+
+Increment 6.3b keeps that authority boundary and published pitch-v1 hashes,
+then adds an explicit `attack_velocity_patch` policy. One child changes 1–64
+unique attack velocities to integers from 1–127 and preserves pitch, timing,
+duration, source seconds, release velocity, articulation and metadata. It is
+available for pitched and drum-family Clips. Notes that normalize to a shared
+channel/onset/pitch Note On are visible but blocked because the requested
+source-note edit would not map to one exported event. Pitch and velocity never
+share a draft or recipe. Note add/delete, timing, duration, release velocity
+and continuous expression remain deferred to their own dual-timeline and
+identity contracts.
 
 ## Phase 7: Cross-DAW and Opt-in Community Learning
 
@@ -705,6 +717,40 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-07-22 — Phase 6.3b bounded attack velocity
+
+- Goal: let a listener repair an individual note attack or drum-hit intensity
+  without treating source amplitude as truth or changing the published pitch
+  correction contract.
+- Contract: the existing correction gate and routes accept exactly one sealed
+  kind per draft/child. Velocity targets are exact integers 1–127 on 1–64
+  unique note references; pitch-v1 requests, serializers, hashes and recipes
+  remain frozen by literal compatibility tests.
+- Meaning: velocity is Note On intensity, not dB, track volume, release
+  velocity, CC7/CC11 expression or guaranteed perceived loudness. A patch can
+  use it for loudness, brightness, attack or sample-layer selection.
+- Safety: pitched and drum Clips are eligible, but exact or quantised duplicate
+  exported channel/onset/pitch events are visible and blocked. Preview writes
+  nothing; create appends one immutable child; replay and restart retain exact
+  evidence without audition, selection, placement, ranking or feedback.
+- Browser evidence: kind-specific schemas, request/window/library pins, the
+  exact one-to-one server diff, deterministic child and complete effect map
+  must agree before review/create claims are shown. Missing rows are never
+  synthesized, and applying an unchanged value preserves an existing review.
+- Preserved: pitch, timing, duration, source seconds, microtiming, release
+  velocity, articulation, key/chords, instrument, provenance, parent and all
+  project/reuse/pack state.
+- Evidence: a copied accepted Lidl library grew from 12 to 13 Clips after one
+  channel-9 Snare Note On changed from velocity 101 to 89. Source and parent
+  bytes stayed exact, normalized MIDI changed only that event, replay was
+  zero-effect, restart recovered the −12 diff and deterministic MIDI repeated
+  at SHA-256
+  `f8570c9af8636e3cfeb1605082616a3e1e72f0bdd546b764baf055bca9abbc4c`.
+- Verification: the complete repository suite passed with 955 tests; the one
+  warning is the existing `resampy`/`pkg_resources` deprecation notice.
+- Deferred: insertion/deletion, onset/duration, release velocity, continuous
+  expression, quantisation, phrase replacement and hybrids.
+
 ### 2026-07-22 — Phase 6.3a bounded pitch correction complete
 
 - Goal: let a listener fix recognizable wrong pitches or octaves without
@@ -724,7 +770,8 @@ Each working day should aim for one narrow vertical improvement:
 - Preserved: timing/source seconds, expression, key/chords, instrument,
   provenance, unaffected notes, parent, decisions, arrangement, reuse plan,
   pack, feedback and submission.
-- Deferred: add/delete, timing, duration, velocity, split/merge, quantisation,
+- Deferred at 6.3a: add/delete, timing, duration, attack/release velocity,
+  split/merge, quantisation,
   hum/F0 guidance, repetition propagation, automatic theory repair and
   hybrids.
 - Evidence: a copied accepted Lidl library grew from 12 to 13 Clips after one

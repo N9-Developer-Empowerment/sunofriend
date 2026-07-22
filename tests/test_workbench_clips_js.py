@@ -939,6 +939,8 @@ setTimeout(() => console.log(JSON.stringify({calls, html: host.innerHTML})), 0);
   const windowHash = 'c'.repeat(64);
   const projectionHash = 'd'.repeat(64);
   const childHash = 'e'.repeat(64);
+  const intentHash = '4'.repeat(64);
+  const childId = `sf-correction-${intentHash}`;
   const firstRef = '1'.repeat(64);
   const secondRef = '2'.repeat(64);
   const contextRef = '3'.repeat(64);
@@ -950,6 +952,7 @@ setTimeout(() => console.log(JSON.stringify({calls, html: host.innerHTML})), 0);
     placement_changed: false, current_arrangement_changed: false, pack_changed: false,
     hybrid_created: false, feedback_recorded: false, data_submitted: false,
   };
+  const createdEffects = {...effects, library_mutated: true, child_clip_created: true, correction_applied: true, note_pitch_changed: true};
   const parentDetail = {
     library_state_sha256: libraryHash,
     clip: {clip_id: 'clip-parent', object_sha256: parentHash, title: 'Lead <unsafe>', role: 'lead', key: 'D minor', bpm: 146, revision: 1, note_count: 3, chord_count: 0, pitch_range: {minimum: 60, maximum: 64}, duration: {export_seconds: 6}, timing_contract: {resolved_mode: 'musical', export_bpm: 146}, instrument: {program: 81, channel: 0}},
@@ -971,23 +974,29 @@ setTimeout(() => console.log(JSON.stringify({calls, html: host.innerHTML})), 0);
     }};
     if (path === '/api/clip-note-correction-projection') return {projection: {
       schema: 'sunofriend.workbench-clip-correction-preview.v1', status: 'previewed', operation: 'clip-correction-preview',
-      projection_sha256: projectionHash, window: {start_tick: 0, end_tick: 3840, ticks_per_beat: 480},
-      parent: {clip_id: 'clip-parent', object_sha256: parentHash, revision: 1},
-      child: {clip_id: 'clip-child', object_sha256: childHash, revision: 2},
-      diff: {kind: 'pitch_patch', changed_note_count: 1, changes: [{note_ref: firstRef, before_pitch: 60, after_pitch: 61}]},
+      intent_sha256: intentHash, projection_sha256: projectionHash, library: {state_sha256: libraryHash},
+      window: {start_tick: 0, end_tick: 3840, ticks_per_beat: 480},
+      correction: {kind: 'pitch_patch', changes: [{note_ref: firstRef, target_pitch: 61}]},
+      parent: {clip_id: 'clip-parent', object_sha256: parentHash, lineage_id: 'lineage-1', revision: 1},
+      child: {clip_id: childId, parent_clip_id: 'clip-parent', object_sha256: childHash, lineage_id: 'lineage-1', revision: 2},
+      diff: {kind: 'pitch_patch', changed_note_count: 1, changes: [{note_ref: firstRef, before_pitch: 60, after_pitch: 61, semitones: 1}]},
       warnings: [{message: 'Check <img src=x onerror=bad()> against the stem.'}], effects,
     }};
     if (path === '/api/clip-note-correction-action') return {result: {
-      status: 'created', replayed: false, operation: 'clip-correction-create', projection_sha256: projectionHash,
+      schema: 'sunofriend.workbench-clip-correction-result.v1', status: 'created', replayed: false, operation: 'clip-correction-create', projection_sha256: projectionHash,
+      window: {start_tick: 0, end_tick: 3840, ticks_per_beat: 480},
+      correction: {kind: 'pitch_patch', changes: [{note_ref: firstRef, target_pitch: 61}]},
       parent: {clip_id: 'clip-parent', object_sha256: parentHash, lineage_id: 'lineage-1', revision: 1},
-      child: {clip_id: 'clip-child', parent_clip_id: 'clip-parent', object_sha256: childHash, lineage_id: 'lineage-1', revision: 2},
-      library: {expected_state_sha256: libraryHash, previous_state_sha256: libraryHash, current_state_sha256: 'f'.repeat(64)}, effects,
+      child: {clip_id: childId, parent_clip_id: 'clip-parent', object_sha256: childHash, lineage_id: 'lineage-1', revision: 2},
+      diff: {kind: 'pitch_patch', changed_note_count: 1, changes: [{note_ref: firstRef, before_pitch: 60, after_pitch: 61, semitones: 1}]},
+      warnings: [{message: 'Check <img src=x onerror=bad()> against the stem.'}],
+      library: {expected_state_sha256: libraryHash, previous_state_sha256: libraryHash, current_state_sha256: 'f'.repeat(64)}, effects: createdEffects,
     }};
-    if (path === '/api/clips/clip-child') return {
+    if (path === `/api/clips/${childId}`) return {
       library_state_sha256: 'f'.repeat(64),
-      clip: {clip_id: 'clip-child', object_sha256: childHash, title: 'Lead correction', role: 'lead', key: 'D minor', bpm: 146, revision: 2, note_count: 3, chord_count: 0, pitch_range: {minimum: 59, maximum: 64}, duration: {export_seconds: 6}, timing_contract: {resolved_mode: 'musical', export_bpm: 146}, instrument: {program: 81, channel: 0}},
-      lineage: {versions: [{clip_id: 'clip-parent', title: 'Lead', revision: 1, bpm: 146}, {clip_id: 'clip-child', title: 'Lead correction', revision: 2, bpm: 146}]},
-      correction_summary: {schema: 'sunofriend.workbench-clip-correction-summary.v1', operation: 'correct_note_pitches', contract_version: 'clip-correction-v1', parent_clip_id: 'clip-parent', parent_object_sha256: parentHash, child_clip_id: 'clip-child', child_object_sha256: childHash, window: {start_tick: 0, end_tick: 3840, ticks_per_beat: 480}, changed_note_count: 1, changes: [{note_ref: firstRef, before_pitch: 60, after_pitch: 61}], effects},
+      clip: {clip_id: childId, object_sha256: childHash, title: 'Lead correction', role: 'lead', key: 'D minor', bpm: 146, revision: 2, note_count: 3, chord_count: 0, pitch_range: {minimum: 59, maximum: 64}, duration: {export_seconds: 6}, timing_contract: {resolved_mode: 'musical', export_bpm: 146}, instrument: {program: 81, channel: 0}},
+      lineage: {versions: [{clip_id: 'clip-parent', title: 'Lead', revision: 1, bpm: 146}, {clip_id: childId, title: 'Lead correction', revision: 2, bpm: 146}]},
+      correction_summary: {schema: 'sunofriend.workbench-clip-correction-summary.v1', operation: 'correct_note_pitches', contract_version: 'clip-correction-v1', parent_clip_id: 'clip-parent', parent_object_sha256: parentHash, child_clip_id: childId, child_object_sha256: childHash, window: {start_tick: 0, end_tick: 3840, ticks_per_beat: 480}, changed_note_count: 1, changes: [{note_ref: firstRef, before_pitch: 60, after_pitch: 61}], effects},
     };
     throw new Error(`unexpected ${path}`);
   };
@@ -1011,9 +1020,9 @@ setTimeout(() => console.log(JSON.stringify({calls, html: host.innerHTML})), 0);
   const contextToken = encodeURIComponent(`value:${contextRef}`);
   const firstToken = encodeURIComponent(`value:${firstRef}`);
   const secondToken = encodeURIComponent(`value:${secondRef}`);
-  host.data('[data-correction-note-ref]', contextToken).onfocus();
+  host.data('[data-correction-note-ref]', contextToken).focus();
   const afterContextFocusHtml = host.innerHTML;
-  host.data('[data-correction-note-ref]', firstToken).onfocus();
+  host.data('[data-correction-note-ref]', firstToken).onclick();
   host.data('[data-correction-pitch-delta]', '1').onclick();
   const editedHtml = host.innerHTML;
   host.element('clip-correction-exact-pitch').value = '85';
@@ -1025,18 +1034,26 @@ setTimeout(() => console.log(JSON.stringify({calls, html: host.innerHTML})), 0);
   const reviewPendingHtml = host.innerHTML;
   await new Promise(resolve => setTimeout(resolve, 0));
   const reviewedHtml = host.innerHTML;
-  host.data('[data-correction-note-ref]', secondToken).onfocus();
+  const callsBeforeFocus = calls.length;
+  host.data('[data-correction-note-ref]', secondToken).focus();
+  const focusedOnlyHtml = host.innerHTML;
+  const callsAfterFocus = calls.length;
+  host.data('[data-correction-note-ref]', secondToken).onclick();
+  const navigatedHtml = host.innerHTML;
+  const callsAfterNavigation = calls.length;
+  host.data('[data-correction-pitch-delta]', '1').onclick();
   const invalidatedHtml = host.innerHTML;
-  host.data('[data-correction-note-ref]', firstToken).onfocus();
+  host.element('clip-correction-reset-note').onclick();
+  host.data('[data-correction-note-ref]', firstToken).onclick();
   host.element('clip-correction-review').onclick();
   await new Promise(resolve => setTimeout(resolve, 0));
   host.element('clip-correction-create').onclick();
   await new Promise(resolve => setTimeout(resolve, 0));
   const createdHtml = host.innerHTML;
-  const childReadsBeforeInspect = calls.filter(call => call.path === '/api/clips/clip-child').length;
+  const childReadsBeforeInspect = calls.filter(call => call.path === `/api/clips/${childId}`).length;
   host.element('clip-correction-inspect-child').onclick();
   await new Promise(resolve => setTimeout(resolve, 0));
-  console.log(JSON.stringify({calls, initialHtml, windowPendingHtml, loadedHtml, afterContextFocusHtml, editedHtml, boundedHtml, reviewPendingHtml, reviewedHtml, invalidatedHtml, createdHtml, childReadsBeforeInspect, childHtml: host.innerHTML}));
+  console.log(JSON.stringify({calls, initialHtml, windowPendingHtml, loadedHtml, afterContextFocusHtml, editedHtml, boundedHtml, reviewPendingHtml, reviewedHtml, focusedOnlyHtml, navigatedHtml, invalidatedHtml, callsBeforeFocus, callsAfterFocus, callsAfterNavigation, createdHtml, childReadsBeforeInspect, childHtml: host.innerHTML}));
 })().catch(error => { console.error(error); process.exitCode = 1; });
 """
         )
@@ -1088,6 +1105,12 @@ setTimeout(() => console.log(JSON.stringify({calls, html: host.innerHTML})), 0);
         self.assertIn("Loading exact notes", result["windowPendingHtml"])
         self.assertIn("No note selected", result["loadedHtml"])
         self.assertIn("context only", result["loadedHtml"])
+        self.assertIn(
+            '<ol class="clip-grid" id="clip-correction-note-list"',
+            result["loadedHtml"],
+        )
+        self.assertIn("<li><button", result["loadedHtml"])
+        self.assertNotIn('role="listitem"', result["loadedHtml"])
         self.assertIn('id="clip-correction-roll-heading" tabindex="-1"', result["loadedHtml"])
         self.assertIn("No note selected", result["afterContextFocusHtml"])
         self.assertIn("#ffc94a", result["editedHtml"])
@@ -1097,8 +1120,16 @@ setTimeout(() => console.log(JSON.stringify({calls, html: host.innerHTML})), 0);
         self.assertIn("Exact temporary pitch review", result["reviewedHtml"])
         self.assertIn("Check &lt;img", result["reviewedHtml"])
         self.assertNotIn("<img src=x", result["reviewedHtml"])
+        self.assertEqual(result["callsBeforeFocus"], result["callsAfterFocus"])
+        self.assertEqual(result["callsBeforeFocus"], result["callsAfterNavigation"])
+        self.assertIn("Exact temporary pitch review", result["focusedOnlyHtml"])
+        self.assertIn("Exact temporary pitch review", result["navigatedHtml"])
+        self.assertIn(
+            "Moving keyboard focus or inspecting another note does not change the draft",
+            result["navigatedHtml"],
+        )
         self.assertNotIn("Exact temporary pitch review", result["invalidatedHtml"])
-        self.assertIn("Note selection changed", result["invalidatedHtml"])
+        self.assertIn("Temporary pitch draft updated", result["invalidatedHtml"])
         self.assertIn("New pitch-corrected alternative created", result["createdHtml"])
         self.assertEqual(result["childReadsBeforeInspect"], 0)
         self.assertIn("Saved note-pitch correction", result["childHtml"])
@@ -1110,7 +1141,7 @@ setTimeout(() => console.log(JSON.stringify({calls, html: host.innerHTML})), 0);
                 [
                     call
                     for call in result["calls"]
-                    if call["path"] == "/api/clips/clip-child"
+                    if call["path"].startswith("/api/clips/sf-correction-")
                 ]
             ),
             1,
@@ -1128,6 +1159,16 @@ setTimeout(() => console.log(JSON.stringify({calls, html: host.innerHTML})), 0);
   const parentHash = 'a'.repeat(64);
   const firstRef = '1'.repeat(64);
   const replacementRef = '2'.repeat(64);
+  const intentHash = '4'.repeat(64);
+  const childId = `sf-correction-${intentHash}`;
+  const effects = {
+    library_mutated: false, child_clip_created: false, source_clip_mutated: false,
+    correction_applied: false, note_pitch_changed: false, note_timing_changed: false,
+    note_count_changed: false, key_changed: false, chords_changed: false,
+    instrument_changed: false, provenance_changed: false, reuse_plan_changed: false,
+    placement_changed: false, current_arrangement_changed: false, pack_changed: false,
+    hybrid_created: false, feedback_recorded: false, data_submitted: false,
+  };
   let detailReads = 0;
   let windowReads = 0;
   const api = async (path, options = {}) => {
@@ -1140,9 +1181,9 @@ setTimeout(() => console.log(JSON.stringify({calls, html: host.innerHTML})), 0);
     if (path === '/api/clip-note-correction-window') {
       windowReads += 1;
       const noteRef = windowReads === 1 ? firstRef : replacementRef;
-      return {window: {window_sha256: (windowReads === 1 ? 'c' : '9').repeat(64), window: {start_tick: 0, end_tick: 3840, ticks_per_beat: 480}, notes: [{note_ref: noteRef, editable: true, pitch: windowReads === 1 ? 60 : 67, velocity: 90, start_tick: 240, end_tick: 720, start_beat: 0.5, duration_beats: 1}], effects: {library_mutated: false}}};
+      return {window: {window_sha256: (windowReads === 1 ? 'c' : '9').repeat(64), window: {start_tick: 0, end_tick: 3840, ticks_per_beat: 480}, notes: [{note_ref: noteRef, editable: true, pitch: windowReads === 1 ? 60 : 67, velocity: 90, start_tick: 240, end_tick: 720, start_beat: 0.5, duration_beats: 1}], effects}};
     }
-    if (path === '/api/clip-note-correction-projection') return {projection: {projection_sha256: 'd'.repeat(64), parent: {clip_id: 'clip-parent', object_sha256: parentHash}, child: {clip_id: 'clip-child', object_sha256: 'e'.repeat(64)}, diff: {changes: [{note_ref: firstRef, before_pitch: 60, after_pitch: 61}]}, warnings: [], effects: {library_mutated: false}}};
+    if (path === '/api/clip-note-correction-projection') return {projection: {schema: 'sunofriend.workbench-clip-correction-preview.v1', status: 'previewed', operation: 'clip-correction-preview', intent_sha256: intentHash, projection_sha256: 'd'.repeat(64), library: {state_sha256: 'b'.repeat(64)}, window: {start_tick: 0, end_tick: 3840, ticks_per_beat: 480}, correction: {kind: 'pitch_patch', changes: [{note_ref: firstRef, target_pitch: 61}]}, parent: {clip_id: 'clip-parent', object_sha256: parentHash, lineage_id: 'lineage-1', revision: 1}, child: {clip_id: childId, parent_clip_id: 'clip-parent', object_sha256: 'e'.repeat(64), lineage_id: 'lineage-1', revision: 2}, diff: {kind: 'pitch_patch', changed_note_count: 1, changes: [{note_ref: firstRef, before_pitch: 60, after_pitch: 61, semitones: 1}]}, warnings: [], effects}};
     if (path === '/api/clip-note-correction-action') {
       const error = new Error('stale correction evidence');
       error.status = 409;
@@ -1163,7 +1204,7 @@ setTimeout(() => console.log(JSON.stringify({calls, html: host.innerHTML})), 0);
   await new Promise(resolve => setTimeout(resolve, 0));
   host.element('clip-correction-window-form').onsubmit({preventDefault() {}});
   await new Promise(resolve => setTimeout(resolve, 0));
-  host.data('[data-correction-note-ref]', encodeURIComponent(`value:${firstRef}`)).onfocus();
+  host.data('[data-correction-note-ref]', encodeURIComponent(`value:${firstRef}`)).onclick();
   host.data('[data-correction-pitch-delta]', '1').onclick();
   host.element('clip-correction-review').onclick();
   await new Promise(resolve => setTimeout(resolve, 0));

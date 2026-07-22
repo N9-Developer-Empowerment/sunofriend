@@ -43,7 +43,7 @@ _ACTION_ROUTE = "/api/clip-note-correction-action"
 _DISABLED_CAPABILITY = {
     "enabled": False,
     "immutable_versions_only": True,
-    "reason": "Clip pitch corrections were not explicitly enabled for this launch",
+    "reason": "Clip note corrections were not explicitly enabled for this launch",
 }
 _INVALID = {"error": "invalid Clip note correction request"}
 _NOT_FOUND = {"error": "Clip or note not found"}

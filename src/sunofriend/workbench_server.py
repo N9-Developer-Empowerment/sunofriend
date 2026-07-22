@@ -582,7 +582,7 @@ def run_workbench(
         )
     if server.clip_correction_service is not None:
         print(
-            "Phase 6 Clip corrections: enabled (pitch only, preview first, immutable versions only)",
+            "Phase 6 Clip corrections: enabled (pitch or attack velocity, preview first, immutable versions only)",
             flush=True,
         )
     if open_browser:
@@ -1708,7 +1708,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 "enabled": False,
                 "immutable_versions_only": True,
                 "reason": (
-                    "Clip pitch corrections were not explicitly enabled for this launch"
+                    "Clip note corrections were not explicitly enabled for this launch"
                 ),
             }
         else:

@@ -3,8 +3,10 @@
 Status on 22 July 2026: **entry gate passed; Increment 6.0, the first
 read-only Clip Library slice, is complete; Increment 6.1, the explicit Clip
 reuse proposal, is complete; Increment 6.2a, the first bounded immutable
-key/BPM transform workflow, is complete; and Increment 6.3a, bounded immutable
-pitch correction, is complete.**
+key/BPM transform workflow, is complete; Increment 6.3a, bounded immutable
+pitch correction, is complete; and Increment 6.3b, bounded immutable
+attack-velocity correction, is complete without changing the published pitch
+contract.**
 Broader Phase 6 creative arrangement remains in progress.
 
 Phase 6 builds on the local Workbench without turning Sunofriend into another
@@ -188,9 +190,10 @@ contract and tests:
    musical/stem-locked BPM operations now create reviewed immutable child
    versions with a minimal audit diff and range/alignment warnings. Mode
    remapping, tuning and downbeat remain separate later slices.
-4. **Phrase and note correction (6.3a complete):** first add bounded,
-   explicitly selected pitch patches with the parent and exact diff retained;
-   add/delete, timing, duration and expression follow under separate contracts.
+4. **Phrase and note correction (6.3a–b complete):** bounded, explicitly
+   selected pitch or attack-velocity patches retain the parent and exact diff.
+   Attack velocity is available for drums; add/delete, timing, duration and
+   continuous expression follow under separate contracts.
 5. **Explicit hybrids:** only after both Phase 5.3 gates pass, construct a new
    candidate from user-named sources and ranges. Never infer a hybrid from
    agreement or popularity.
@@ -619,12 +622,65 @@ The complete repository suite passed with 943 tests. It includes the maximum
 SMF boundary round-trip, forged-recipe/restart cases, browser contracts and a
 deterministic two-server lazy-reuse initialization check.
 
-### Deliberately deferred from 6.3a
+## Increment 6.3b: bounded immutable attack velocity
 
-Note insertion/deletion, onset and duration edits, velocity/expression,
-split/merge, phrase replacement, repetition propagation, source waveform/F0
-or hummed-guide correction, quantisation, automatic theory repair and hybrids
-remain absent. Timing edits must reconcile both beat and source-second
-coordinates, and missing-note insertion needs a new note-identity/evidence
-contract. Those will be introduced as smaller reviewable increments rather
-than hidden inside this pitch-only action.
+Increment 6.3b keeps the existing correction opt-in, routes and optimistic
+sole-child append, but adds a separately discriminated
+`attack_velocity_patch`. The four-field pitch window request, pitch schemas,
+hashes and `correct_note_pitches` recipes remain frozen. A velocity window adds
+only `correction_kind: attack_velocity_patch`; its preview/create patch carries
+1 to 64 unique `{note_ref, target_velocity}` changes, where every value is an
+exact integer from 1 through 127. The retained operation is
+`correct_note_attack_velocities`.
+
+One draft and one immutable child contain exactly one correction kind. Pitch
+and attack velocity can be chained as two visible lineage revisions, but are
+never merged implicitly. Velocity works on pitched and drum-family Clips. It
+changes only the Note On attack byte: pitch, onset, duration, source timing,
+microtiming, release velocity, articulation, instrument and metadata remain
+exact. The review is numeric and zero-write; creation does not audition,
+select, place, rank or export the child.
+
+Attack velocity is not dB, track volume, CC7/CC11 expression, aftertouch or a
+promise of perceived loudness. A GarageBand patch can use it for loudness,
+brightness, attack character or sample-layer selection. Sunofriend therefore
+does not infer a target from source energy, normalise dynamics or claim that a
+higher value is better.
+
+Standard MIDI normalisation collapses multiple source notes that export to the
+same channel, onset tick and pitch. Those exact or quantised duplicate Note On
+events remain visible but carry `duplicate-export-note-on` and are not
+velocity-editable, because no one-to-one audible edit can be guaranteed.
+Restart validation rebuilds the exact child and confirms that normalized MIDI
+event topology, pitch, timing, duration and release velocity are unchanged and
+only the named unique Note On velocities differ.
+
+The Workbench does not trust a response merely because it contains a hash. It
+checks the kind-specific schema and operation, request/window/library pins,
+exact correction and one-to-one diff, deterministic child identity and the
+complete effect map before showing a reviewed or created result. Missing rows
+are never rebuilt from the browser draft. Applying the already-current draft
+value changes no state and preserves any valid review.
+
+The real completion exercise copied the accepted 12-Clip Lidl library and
+used its channel-9 Snare Clip. In a five-note exact window, one pitch-38 Note
+On changed from velocity 101 to 89. The copy gained exactly child
+`sf-correction-bd3c06f634a12c5920d87bc901b7f618b46751766f807eb5a77f398862e307d6`
+with object SHA-256
+`a836e97bedce9f31b094f373121b602112054da8cd29b3366d90a54957425cb7`.
+The source library and copied parent remained byte-identical, normalized MIDI
+changed only that event velocity, exact replay had zero effects, restart
+restored the same −12 diff and deterministic MIDI repeated at SHA-256
+`f8570c9af8636e3cfeb1605082616a3e1e72f0bdd546b764baf055bca9abbc4c`.
+The complete repository suite passed with 955 tests; the single warning is the
+existing `resampy`/`pkg_resources` deprecation notice.
+
+### Deliberately deferred after 6.3b
+
+Note insertion/deletion, onset and duration edits, release velocity,
+continuous expression, split/merge, phrase replacement, repetition
+propagation, source waveform/F0 or hummed-guide correction, quantisation,
+automatic theory repair and hybrids remain absent. Timing edits must reconcile
+both beat and source-second coordinates, and missing-note insertion needs a new
+note-identity/evidence contract. Those will be introduced as smaller
+reviewable increments rather than hidden inside pitch or velocity actions.

@@ -382,15 +382,21 @@ mutation of its parent.
 9. [`WorkbenchClipCorrectionService`](../src/sunofriend/workbench_correction.py)
    opens under its own `--enable-clip-corrections` gate. It projects an exact
    half-open 480-TPQ note window, binds each note index to the complete parent
-   object/note payload and accepts only a bounded explicit pitch patch. Before
-   projection it also proves that all retained note, chord, tempo and metadata
-   events fit the deterministic Standard MIDI File encoding limits.
+   object/note payload and accepts one bounded explicit correction kind. The
+   published pitch-v1 serializer remains frozen; an explicit velocity request
+   dispatches to
+   [`WorkbenchClipVelocityCorrectionService`](../src/sunofriend/workbench_velocity.py),
+   which changes attack velocity only and also supports drum Clips. Before
+   projection both policies prove that all retained note, chord, tempo and
+   metadata events fit the deterministic Standard MIDI File encoding limits.
 10. A correction projection changes nothing. Exact creation reuses the
     sole-child compare-and-swap, while a recognized correction recipe can be
     revalidated only through the service-level restart verifier, which rebuilds
-    the historical window hash and before/after pitch summary from its exact
-    retained parent. Timing, expression, key, chords and unaffected notes are
-    asserted unchanged.
+    the historical window hash and operation-specific before/after summary from
+    its exact retained parent. One child is pitch or attack velocity, never a
+    mixture. Timing, duration, source seconds, key, chords and unaffected notes
+    are asserted unchanged; velocity additionally preserves pitch, release
+    velocity and normalized MIDI event topology.
 
 ### Worked state example
 

@@ -34,7 +34,9 @@ two-check local acceptance resolver. That review passed on 22 July 2026, so the
 first explicitly gated read-only Phase 6 Clip Library increment is complete.
 The separate explicit Clip reuse proposal is also complete, and the first
 review-before-create immutable same-mode key/BPM transform slice is complete.
-Broader Phase 6 creative arrangement remains in progress.
+The bounded pitch and attack-velocity correction slices are complete too;
+velocity correction also supports drum Clips. Note add/delete, onset/duration
+and broader phrase editing remain later Phase 6 work.
 The optional **Developer Inspector** adds a read-only application operation and
 state explorer for developers who want to understand those contracts before
 reviewing or extending them. See the
@@ -1137,9 +1139,10 @@ sunofriend workbench "/absolute/path/to/stems" \
 ```
 
 The flag is invalid without all three Phase 6 gate inputs and cannot be
-combined with reuse-plan or key/BPM-transform mode. It opens no correction
-surface for drum-family Clips. Existing browse, deterministic MIDI and neutral
-audition remain available.
+combined with reuse-plan or key/BPM-transform mode. Drum-family Clips cannot
+use the pitch patch, but Increment 6.3b exposes attack-velocity correction for
+them. Existing browse, deterministic MIDI and neutral audition remain
+available.
 
 On exact Clip detail, **Correct wrong pitches** is a recognition-first workflow:
 
@@ -1200,9 +1203,71 @@ files matched at SHA-256
 The complete repository suite passed with 943 tests.
 
 This slice cannot add a missing note, delete noise, change onset/duration or
-velocity, split/merge, quantise, copy a repeated phrase, apply a hummed guide,
-repair theory automatically or create a hybrid. Those actions need separate
-timing, identity or source-evidence contracts.
+release velocity, split/merge, quantise, copy a repeated phrase, apply a
+hummed guide, repair theory automatically or create a hybrid. Attack velocity
+is the separately bounded 6.3b operation below; continuous expression remains
+deferred.
+
+## Phase 6 bounded attack-velocity correction (Increment 6.3b)
+
+The same `--enable-clip-corrections` launch now offers **Attack loudness (MIDI
+velocity)** alongside **Wrong pitch**. Choose one kind before loading the
+window. A draft can contain exactly one kind: reset it before switching, or
+create one immutable child and apply the other kind to that child in a later
+step. Sunofriend never combines pitch and intensity edits silently.
+
+Velocity mode uses the same recorded-zero, half-open 480-TPQ limits and exact
+note references as pitch mode. It is also available for drum-family Clips. For
+each editable note, use the ±1/±10 controls or apply an exact integer from 1 to
+127, then review the numeric before/after values and signed deltas. Returning
+to the parent value removes that no-op. Focus, note navigation and typing in
+the number field are browser-only inspection state; only **Apply** changes the
+draft, and only an actual edit or window change invalidates a reviewed
+projection.
+
+The page validates more than the displayed SHA: the response schema and
+operation, exact request/window/library pins, correction body, one-to-one
+server diff, deterministic child identity and the complete fresh/replay effect
+map must all agree. It does not invent missing review rows from the browser
+draft. Applying a value already present in the draft, or applying the source
+value to an untouched note, is a true no-op and keeps an existing review
+active.
+
+MIDI attack velocity is the Note On intensity byte. It is not dB, a track
+volume fader, CC7, CC11 expression, aftertouch or release velocity. Depending
+on the GarageBand patch, a velocity change may alter loudness, brightness,
+attack character or the selected sample layer. The temporary review therefore
+makes no promise about perceived gain and does not recommend, normalise or
+rank a value. There is no draft audition: explicitly create and inspect the
+child, then prepare its existing neutral audition.
+
+Only named `ClipNote.velocity` fields may change. Pitch, onset, duration,
+source seconds, both microtiming fields, release velocity, articulation,
+instrument, key, chords, tempo, provenance and all other notes remain exact.
+The operation has its own schemas and retained recipe
+`correct_note_attack_velocities`; the published 6.3a pitch request, hashes and
+`correct_note_pitches` recipe remain byte-compatible.
+
+An exact or quantised duplicate Note On with the same exported channel,
+start tick and pitch cannot be mapped one-to-one after Standard MIDI File
+normalisation. Such notes remain visible with
+`duplicate-export-note-on`, but are not velocity-editable. Distinct onsets and
+ordinary overlaps remain valid because velocity does not alter note identity
+or lifetime. Preview has zero effects, create appends one deterministic child,
+exact retry is a zero-effect replay, and restart revalidates the retained
+parent, window, patch, child and exported MIDI topology.
+
+The real completion check copied the accepted 12-Clip Lidl library and edited
+one Snare hit on MIDI channel 10 (zero-based channel 9), pitch 38. An exact
+window exposed five editable notes; the chosen Note On changed from velocity
+101 to 89. The copy gained one child
+`sf-correction-bd3c06f634a12c5920d87bc901b7f618b46751766f807eb5a77f398862e307d6`
+while the source library and copied parent remained byte-identical. Normalized
+MIDI changed only that Note On velocity, replay had all effects false, restart
+restored the −12 audit and two deterministic exports matched at SHA-256
+`f8570c9af8636e3cfeb1605082616a3e1e72f0bdd546b764baf055bca9abbc4c`.
+The complete repository suite passed with 955 tests; the single warning is the
+existing `resampy`/`pkg_resources` deprecation notice.
 
 ## Export the private review without a server
 
