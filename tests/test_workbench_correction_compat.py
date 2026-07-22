@@ -18,6 +18,7 @@ from sunofriend.clip import (
     TempoMap,
     TempoPoint,
     TimeSignature,
+    write_clip_midi,
 )
 from sunofriend.library import ClipLibrary
 from sunofriend.workbench_clips import WorkbenchClipService
@@ -55,6 +56,28 @@ _EXPECTED_RECIPE_PARAMETER_KEYS = (
 _EXPECTED_RESTART_SUMMARY_SHA256 = (
     "1fe64476e2e4e726639b2ea71c415dac675237ec57e08cd6d42be78d73f6108d"
 )
+_EXPECTED_VELOCITY_WINDOW_SHA256 = (
+    "4e422c7f3913cdca873a2d3c7da4ad561bf1d4ec23804452f10c6c260078fe10"
+)
+_EXPECTED_VELOCITY_PROJECTION_SHA256 = (
+    "72515bfd4955cc92b5cca81ef403ab91c9ccb4a0302442a29b2a664a0f26936e"
+)
+_EXPECTED_VELOCITY_INTENT_SHA256 = (
+    "544a0fab49af32764e77806b6098120401f3a296bc4d667afbfbb4dfe50f5d5b"
+)
+_EXPECTED_VELOCITY_CHILD_CLIP_ID = (
+    "sf-correction-544a0fab49af32764e77806b6098120401f3a296bc4d667afbfbb4dfe50f5d5b"
+)
+_EXPECTED_VELOCITY_CHILD_CANONICAL_SHA256 = (
+    "3cea0b805c38245391fc7323a683bd6c19b626a555b1700435f5a0d778ba6fbf"
+)
+_EXPECTED_VELOCITY_RESTART_SUMMARY_SHA256 = (
+    "64997dc4b77f2481f387377f05121f679af8f306f3ab562670268226a737834d"
+)
+_EXPECTED_VELOCITY_MIDI_SHA256 = (
+    "33b5a24284e40fbd1d06ffa12f327b928c5a2962760aa96bd05b8ab0f7e697a4"
+)
+_EXPECTED_VELOCITY_MIDI_BYTES = 149
 
 
 def _canonical_sha256(value: object) -> str:
@@ -290,6 +313,104 @@ def _capture_published_pitch_v1() -> dict[str, object]:
         }
 
 
+def _capture_published_velocity_v1() -> dict[str, object]:
+    with tempfile.TemporaryDirectory() as temporary:
+        root = Path(temporary)
+        library_root = root / "library"
+        parent = _parent_clip()
+        ClipLibrary(library_root).add(parent)
+        _set_created_at(library_root, parent.clip_id, _PARENT_CREATED_AT)
+
+        with patch(
+            "sunofriend.workbench_clips.verify_garageband_pack_archive",
+            return_value={"status": "verified"},
+        ):
+            clip_service, corrections = _open_services(
+                root=root,
+                library_root=library_root,
+                cache_name="first-cache",
+            )
+            detail = clip_service.detail(parent.clip_id)
+            window_request = {
+                "parent_clip_id": parent.clip_id,
+                "parent_object_sha256": detail["clip"]["object_sha256"],
+                "library_state_sha256": detail["library_state_sha256"],
+                "window": {"start_tick": 0, "end_tick": 1440},
+                "correction_kind": "attack_velocity_patch",
+            }
+            window = corrections.window(window_request)
+            preview_request = {
+                key: window_request[key]
+                for key in (
+                    "parent_clip_id",
+                    "parent_object_sha256",
+                    "library_state_sha256",
+                    "window",
+                )
+            }
+            preview_request.update(
+                {
+                    "window_sha256": window["window_sha256"],
+                    "correction": {
+                        "kind": "attack_velocity_patch",
+                        "changes": [
+                            {
+                                "note_ref": window["notes"][0]["note_ref"],
+                                "target_velocity": 99,
+                            }
+                        ],
+                    },
+                }
+            )
+            preview = corrections.preview(preview_request)
+            result = corrections.create(
+                {
+                    "action": "create",
+                    **preview_request,
+                    "projection_sha256": preview["projection_sha256"],
+                }
+            )
+            child = ClipLibrary(library_root, read_only=True).get(
+                result["child"]["clip_id"]
+            )
+            first_midi = root / "velocity-child-first.mid"
+            second_midi = root / "velocity-child-second.mid"
+            write_clip_midi(first_midi, child)
+            write_clip_midi(second_midi, child)
+
+        _set_created_at(library_root, child.clip_id, _CHILD_CREATED_AT)
+        with patch(
+            "sunofriend.workbench_clips.verify_garageband_pack_archive",
+            return_value={"status": "verified"},
+        ):
+            _restarted_clips, restarted_corrections = _open_services(
+                root=root,
+                library_root=library_root,
+                cache_name="restart-cache",
+            )
+            restart_summary = restarted_corrections.correction_summary(child.clip_id)
+
+        assert child.transform_recipe is not None
+        assert restart_summary is not None
+        first_midi_bytes = first_midi.read_bytes()
+        return {
+            "window_sha256": window["window_sha256"],
+            "projection_sha256": preview["projection_sha256"],
+            "intent_sha256": preview["intent_sha256"],
+            "child_clip_id": child.clip_id,
+            "child_canonical_sha256": hashlib.sha256(
+                child.canonical_bytes()
+            ).hexdigest(),
+            "recipe_parameter_keys": sorted(
+                child.transform_recipe.parameters_dict
+            ),
+            "restart_summary_sha256": _canonical_sha256(restart_summary),
+            "midi_sha256": hashlib.sha256(first_midi_bytes).hexdigest(),
+            "midi_bytes": len(first_midi_bytes),
+            "midi_repeat_equal": first_midi_bytes == second_midi.read_bytes(),
+        }
+
+
 class WorkbenchClipCorrectionCompatibilityTests(unittest.TestCase):
     def test_published_pitch_v1_bytes_and_restart_projection_are_frozen(self) -> None:
         captured = _capture_published_pitch_v1()
@@ -315,6 +436,39 @@ class WorkbenchClipCorrectionCompatibilityTests(unittest.TestCase):
             _canonical_sha256(captured["restart_summary"]),
             _EXPECTED_RESTART_SUMMARY_SHA256,
         )
+
+    def test_published_velocity_v1_bytes_and_restart_projection_are_frozen(
+        self,
+    ) -> None:
+        captured = _capture_published_velocity_v1()
+        self.assertEqual(
+            captured["window_sha256"], _EXPECTED_VELOCITY_WINDOW_SHA256
+        )
+        self.assertEqual(
+            captured["projection_sha256"],
+            _EXPECTED_VELOCITY_PROJECTION_SHA256,
+        )
+        self.assertEqual(
+            captured["intent_sha256"], _EXPECTED_VELOCITY_INTENT_SHA256
+        )
+        self.assertEqual(
+            captured["child_clip_id"], _EXPECTED_VELOCITY_CHILD_CLIP_ID
+        )
+        self.assertEqual(
+            captured["child_canonical_sha256"],
+            _EXPECTED_VELOCITY_CHILD_CANONICAL_SHA256,
+        )
+        self.assertEqual(
+            tuple(captured["recipe_parameter_keys"]),
+            _EXPECTED_RECIPE_PARAMETER_KEYS,
+        )
+        self.assertEqual(
+            captured["restart_summary_sha256"],
+            _EXPECTED_VELOCITY_RESTART_SUMMARY_SHA256,
+        )
+        self.assertEqual(captured["midi_sha256"], _EXPECTED_VELOCITY_MIDI_SHA256)
+        self.assertEqual(captured["midi_bytes"], _EXPECTED_VELOCITY_MIDI_BYTES)
+        self.assertTrue(captured["midi_repeat_equal"])
 
 
 if __name__ == "__main__":

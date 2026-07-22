@@ -35,8 +35,9 @@ first explicitly gated read-only Phase 6 Clip Library increment is complete.
 The separate explicit Clip reuse proposal is also complete, and the first
 review-before-create immutable same-mode key/BPM transform slice is complete.
 The bounded pitch and attack-velocity correction slices are complete too;
-velocity correction also supports drum Clips. Note add/delete, onset/duration
-and broader phrase editing remain later Phase 6 work.
+velocity correction also supports drum Clips. Bounded exact note removal for
+pitched and drum Clips is Increment 6.3c and is complete. Note
+insertion, onset/duration and broader phrase editing remain later Phase 6 work.
 The optional **Developer Inspector** adds a read-only application operation and
 state explorer for developers who want to understand those contracts before
 reviewing or extending them. See the
@@ -1202,11 +1203,11 @@ files matched at SHA-256
 `ce1edbc85f44b5c37cdb0576c89ef5cd2eee74afe7c9ee6f904ca248f866d4a8`.
 The complete repository suite passed with 943 tests.
 
-This slice cannot add a missing note, delete noise, change onset/duration or
+This pitch slice cannot add a missing note, delete a note, change onset/duration or
 release velocity, split/merge, quantise, copy a repeated phrase, apply a
 hummed guide, repair theory automatically or create a hybrid. Attack velocity
-is the separately bounded 6.3b operation below; continuous expression remains
-deferred.
+is the separately bounded 6.3b operation below; exact deletion is the
+completed 6.3c operation after it; continuous expression remains deferred.
 
 ## Phase 6 bounded attack-velocity correction (Increment 6.3b)
 
@@ -1268,6 +1269,68 @@ restored the −12 audit and two deterministic exports matched at SHA-256
 `f8570c9af8636e3cfeb1605082616a3e1e72f0bdd546b764baf055bca9abbc4c`.
 The complete repository suite passed with 955 tests; the single warning is the
 existing `resampy`/`pkg_resources` deprecation notice.
+
+## Phase 6 bounded exact note removal (Increment 6.3c, complete)
+
+The same `--enable-clip-corrections` launch provides a third explicit choice:
+**Remove unwanted/extra MIDI notes**. The frozen correction kind is
+`note_delete_patch`, the retained operation is `delete_clip_notes`, and the
+isolated policy is implemented in `workbench_deletion.py`. Pitch and
+attack-velocity v1 requests, schemas, hashes and recipes remain unchanged.
+
+Use this mode only when listening lets you recognise a MIDI note or drum hit
+that should not be in the child. Sunofriend does not label a note as noise,
+bleed, leakage or a musical mistake. It preselects and recommends nothing.
+The intended interaction is deliberately three-step:
+
+1. focus a note on the piano roll or accessible note list, then explicitly use
+   **Mark for removal**; focus, keyboard navigation and ordinary selection are
+   inspection-only;
+2. mark 1–64 unique exact existing notes and use **Review temporary note
+   removal** to inspect every removed interval plus note-count, pitch-range and
+   horizon evidence; and
+3. use **Create immutable corrected Clip** only for that unchanged projection.
+
+Removal is valid for pitched and drum-family Clips, but at least one note must
+remain. A note is visible but blocked when it belongs to a duplicate or
+cascade-dependent normalized MIDI group, when its removal would change the
+beat, export or source horizon, or when it is the only remaining note. The
+service proves that normalized child MIDI equals normalized parent MIDI minus
+exactly the named intervals and that every survivor retains its pitch, onset,
+duration, source seconds, microtiming, attack/release velocity and articulation.
+
+One draft and child contain exactly one of pitch, attack velocity or removal.
+Create a separate lineage revision to chain operations. Review writes nothing;
+a fresh create appends one child with only `library_mutated`,
+`child_clip_created`, `correction_applied`, `note_count_changed` and
+`note_deleted` effects; exact replay and restart audit have zero effects. The
+parent, chords, tempo, key, instrument, provenance, decisions, arrangement,
+proposal and pack stay unchanged. There is no draft audition, ranking,
+preference, selection, placement or export effect. Inspect a created child and
+request its existing neutral audition afterward.
+
+The completion exercise used a fresh copy of the accepted Lidl library at
+`work/ai-bakeoff/lidl-phase6-deletion-smoke-v2`. The source and copy each had
+12 Clips before the operation. The listener removed one channel-9 Snare note,
+pitch 38 and velocity 46, at ticks 140487–140573 (beat 292.68125, duration
+0.17916666666667425) from parent
+`0718458e900dbcdf7dff7332c77808054dfaadb6c517d2c22d7b967a28f50826`
+(object
+`65b140afecb84099abbdf9880ee4597d8eeb7c6caf5d470e62213654ee857ae5`).
+The source stayed at 12 Clips, while the copied library grew to 13; child
+`sf-correction-6914357fcfbca9f597fe09ca8912fda3516554226bbbdab1507295f9b309576c`
+(object
+`622f9e88616f3b9450a126e5b671aae557e1b2ac8e27f9de3103828f61e5f20b`)
+contained 248 notes instead of 249, and normalized MIDI changed 249→248
+exactly. Beat, export-event and source horizons remained 442.7395833333333
+beats, 212515 ticks and 223.23018339583334 seconds. Replay had every effect
+false, restart recovered a path-free summary and repeated reconstruction gave
+child MIDI SHA-256
+`1e3e20d607c62b7b6c06d210b9f3fa90c1f126166aadcf86d82d870d83f5535c`.
+The focused integrated correction suite passed 81 tests, the final independent
+audit passed 49 and the complete repository suite passed 970 tests. The single
+warning is the existing `resampy`/`pkg_resources` deprecation notice. Increment
+6.3c is complete while broader Phase 6 remains in progress.
 
 ## Export the private review without a server
 
@@ -1333,7 +1396,7 @@ note-free disclosure boundary.
   Workbench decoded loop is not level matched or blinded.
 - The arrangement is a dry GM proxy. Complete-instrument checks and installed
   GarageBand patch choice remain a later view.
-- Note insertion/deletion, timing/duration/expression correction, phrase
+- Note insertion, timing/duration/expression correction, phrase
   replacement and creative recombination remain later Phase 6 slices. Precise
   arbitrary custom mixes, server-paginated timeline payloads,
   medium/large checkpoint comparison and any opt-in public contribution are

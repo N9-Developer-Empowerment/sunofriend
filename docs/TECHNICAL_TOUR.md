@@ -386,17 +386,41 @@ mutation of its parent.
    published pitch-v1 serializer remains frozen; an explicit velocity request
    dispatches to
    [`WorkbenchClipVelocityCorrectionService`](../src/sunofriend/workbench_velocity.py),
-   which changes attack velocity only and also supports drum Clips. Before
-   projection both policies prove that all retained note, chord, tempo and
+   which changes attack velocity only and also supports drum Clips. Increment
+   6.3c is complete with the separate
+   [`WorkbenchClipDeletionCorrectionService`](../src/sunofriend/workbench_deletion.py):
+   `note_delete_patch` retains operation `delete_clip_notes` and removes only
+   explicitly marked existing notes from pitched or drum Clips. Before
+   projection every policy proves that all retained note, chord, tempo and
    metadata events fit the deterministic Standard MIDI File encoding limits.
 10. A correction projection changes nothing. Exact creation reuses the
     sole-child compare-and-swap, while a recognized correction recipe can be
     revalidated only through the service-level restart verifier, which rebuilds
     the historical window hash and operation-specific before/after summary from
-    its exact retained parent. One child is pitch or attack velocity, never a
-    mixture. Timing, duration, source seconds, key, chords and unaffected notes
-    are asserted unchanged; velocity additionally preserves pitch, release
-    velocity and normalized MIDI event topology.
+    its exact retained parent. One child is pitch, attack velocity or deletion,
+    never a mixture. Pitch and velocity retain note count. Deletion requires
+    1–64 exact refs, at least one surviving note, unchanged beat/export/source
+    horizons and normalized child MIDI equal to normalized parent MIDI minus
+    exactly the named intervals. Duplicate, cascade, horizon and only-note
+    cases are blocked. Every survivor plus chords, tempo, key, instrument and
+    provenance is asserted unchanged.
+
+The 6.3c browser interaction keeps focus separate from intent: focusing or
+navigating a piano-roll note changes no draft, **Mark for removal** changes the
+temporary draft, **Review temporary note removal** is zero-write and only
+**Create immutable corrected Clip** may append a child. It makes no noise
+classification, draft audition, ranking, selection, placement or export. The
+public window, diff and restart-summary serializers also redact path-like
+articulation values. Normalized cascade and beat/export/source-horizon
+regressions fail before child creation. The copied-Lidl completion exercise
+removed one exact channel-9 Snare interval, changed Clip and normalized-MIDI
+counts from 249 to 248, replayed with every effect false and reconstructed
+deterministic child MIDI at SHA-256
+`1e3e20d607c62b7b6c06d210b9f3fa90c1f126166aadcf86d82d870d83f5535c`.
+The focused integrated suite passed 81 tests, the independent audit passed 49
+and the complete repository suite passed 970 tests. The single warning is the
+existing `resampy`/`pkg_resources` deprecation notice. Increment 6.3c is
+complete; broader Phase 6 remains in progress.
 
 ### Worked state example
 

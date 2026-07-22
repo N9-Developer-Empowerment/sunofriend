@@ -6,7 +6,7 @@ reuse proposal, is complete; Increment 6.2a, the first bounded immutable
 key/BPM transform workflow, is complete; Increment 6.3a, bounded immutable
 pitch correction, is complete; and Increment 6.3b, bounded immutable
 attack-velocity correction, is complete without changing the published pitch
-contract.**
+contract. Increment 6.3c, bounded exact note removal, is complete.**
 Broader Phase 6 creative arrangement remains in progress.
 
 Phase 6 builds on the local Workbench without turning Sunofriend into another
@@ -190,10 +190,11 @@ contract and tests:
    musical/stem-locked BPM operations now create reviewed immutable child
    versions with a minimal audit diff and range/alignment warnings. Mode
    remapping, tuning and downbeat remain separate later slices.
-4. **Phrase and note correction (6.3a–b complete):** bounded, explicitly
-   selected pitch or attack-velocity patches retain the parent and exact diff.
-   Attack velocity is available for drums; add/delete, timing, duration and
-   continuous expression follow under separate contracts.
+4. **Phrase and note correction (6.3a–c complete):** bounded,
+   explicitly selected pitch, attack-velocity or exact note-removal patches
+   retain the parent and exact diff. Attack velocity and removal are available
+   for drums; insertion, timing, duration and continuous expression follow
+   under separate contracts.
 5. **Explicit hybrids:** only after both Phase 5.3 gates pass, construct a new
    candidate from user-named sources and ranges. Never infer a hybrid from
    agreement or popularity.
@@ -675,9 +676,71 @@ restored the same −12 diff and deterministic MIDI repeated at SHA-256
 The complete repository suite passed with 955 tests; the single warning is the
 existing `resampy`/`pkg_resources` deprecation notice.
 
-### Deliberately deferred after 6.3b
+## Increment 6.3c: bounded exact note removal (complete)
 
-Note insertion/deletion, onset and duration edits, release velocity,
+Increment 6.3c retains the same explicit `--enable-clip-corrections` launch,
+routes, bounded phrase window and sole-child compare-and-swap. It adds one
+isolated policy in `workbench_deletion.py`, with frozen correction kind
+`note_delete_patch` and retained recipe operation `delete_clip_notes`. The
+published pitch-v1 request, hashes and `correct_note_pitches` recipe, plus every
+6.3b attack-velocity schema and recipe, remain unchanged.
+
+The user-facing choice is **Remove unwanted/extra MIDI notes**. It is available
+for pitched and drum-family Clips and accepts 1–64 unique exact existing note
+references, while requiring at least one note to remain. Nothing is selected or
+marked automatically. Clicking or keyboard-navigating to a note changes focus
+only; the listener must explicitly **Mark for removal**, then **Review temporary
+note removal**, then **Create immutable corrected Clip**. Sunofriend does not
+infer that any event is noise, bleed, leakage or musically wrong.
+
+Eligibility and patch validation must prove a stronger topology invariant than
+a simple note-count delta: normalized child MIDI equals normalized parent MIDI
+minus exactly the named intervals. Every surviving note retains its complete
+pitch, onset, duration, source-second timing, microtiming, attack and release
+velocity and articulation. Beat, export and source horizons also remain exact.
+A note is visible but not removable when it belongs to a duplicate or
+cascade-dependent export group, when its removal would move any horizon, or
+when it is the only remaining note. Those cases fail before projection or
+creation rather than silently changing another audible interval.
+
+One draft, projection, recipe and immutable child contain exactly one of
+`pitch_patch`, `attack_velocity_patch` or `note_delete_patch`. The operations
+may be chained only as separately visible lineage revisions. Projection is
+zero-write. A fresh create appends one deterministic child and sets only the
+`library_mutated`, `child_clip_created`, `correction_applied`,
+`note_count_changed` and `note_deleted` effects;
+an exact retry and restart audit have zero effects. The parent, every survivor,
+chords, tempo, key, time signature, instrument, provenance, project decisions,
+current arrangement, reuse proposal and GarageBand Pack remain unchanged.
+There is no draft audition, ranking, preference, selection, placement or export
+effect; the created child can be inspected and auditioned explicitly afterward.
+
+The completion exercise used a fresh copy of the accepted Lidl library at
+`work/ai-bakeoff/lidl-phase6-deletion-smoke-v2`. Both source and copy began at
+12 Clips. From channel-9 Snare parent
+`0718458e900dbcdf7dff7332c77808054dfaadb6c517d2c22d7b967a28f50826`
+(object
+`65b140afecb84099abbdf9880ee4597d8eeb7c6caf5d470e62213654ee857ae5`),
+the explicit patch removed one pitch-38, velocity-46 note at ticks
+140487–140573, beat 292.68125, duration 0.17916666666667425. The source stayed
+at 12 Clips, while the copied library grew to 13 and child
+`sf-correction-6914357fcfbca9f597fe09ca8912fda3516554226bbbdab1507295f9b309576c`
+(object
+`622f9e88616f3b9450a126e5b671aae557e1b2ac8e27f9de3103828f61e5f20b`)
+contained 248 notes instead of 249. Normalized MIDI also changed exactly
+249→248; beat, export-event and source horizons remained respectively
+442.7395833333333 beats, 212515 ticks and 223.23018339583334 seconds. Replay
+returned every effect false, restart restored a path-free summary, and two
+child reconstructions matched at SHA-256
+`1e3e20d607c62b7b6c06d210b9f3fa90c1f126166aadcf86d82d870d83f5535c`.
+The focused integrated correction suite passed 81 tests, the final independent
+audit passed 49 and the complete repository suite passed 970 tests. The single
+warning is the existing `resampy`/`pkg_resources` deprecation notice. Increment
+6.3c is complete; broader Phase 6 remains in progress.
+
+### Deliberately deferred after 6.3c
+
+Note insertion, onset and duration edits, release velocity,
 continuous expression, split/merge, phrase replacement, repetition
 propagation, source waveform/F0 or hummed-guide correction, quantisation,
 automatic theory repair and hybrids remain absent. Timing edits must reconcile

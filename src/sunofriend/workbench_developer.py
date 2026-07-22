@@ -276,7 +276,7 @@ _OPERATION_LABELS = {
     "clip_transform.preview": "Preview one immutable Clip version without writing",
     "clip_transform.create": "Append one explicitly confirmed immutable Clip version",
     "clip_correction.window": "Read one bounded immutable Clip note window",
-    "clip_correction.preview": "Preview an exact pitch correction without writing",
+    "clip_correction.preview": "Preview an exact note correction without writing",
     "clip_correction.create": "Append one explicitly confirmed corrected Clip version",
 }
 

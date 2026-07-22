@@ -139,6 +139,7 @@ class WorkbenchClipCorrectionService:
         self._clip_service = clip_service
         self._writer = writer
         self._velocity_corrections: Any | None = None
+        self._deletion_corrections: Any | None = None
 
     @classmethod
     def open(
@@ -184,6 +185,10 @@ class WorkbenchClipCorrectionService:
                     "enabled": True,
                     "drum_family": True,
                 },
+                "note_delete_patch": {
+                    "enabled": True,
+                    "drum_family": True,
+                },
                 "timing": False,
                 "add_delete": False,
             },
@@ -217,11 +222,15 @@ class WorkbenchClipCorrectionService:
     def window(self, request: Mapping[str, Any]) -> dict[str, Any]:
         """Return one deterministic, path-free note/chord editing window."""
 
-        if (
-            isinstance(request, Mapping)
-            and request.get("correction_kind") == "attack_velocity_patch"
-        ):
-            return self._velocity_service().window(request)
+        if isinstance(request, Mapping) and "correction_kind" in request:
+            kind = request.get("correction_kind")
+            if kind == "attack_velocity_patch":
+                return self._velocity_service().window(request)
+            if kind == "note_delete_patch":
+                return self._deletion_service().window(request)
+            raise WorkbenchClipCorrectionError(
+                "unknown Clip correction window kind; fields do not match the exact contract"
+            )
 
         parsed = _parse_window_request(request)
         state = self._snapshot()
@@ -236,8 +245,13 @@ class WorkbenchClipCorrectionService:
     def preview(self, request: Mapping[str, Any]) -> dict[str, Any]:
         """Return a zero-write pitch-patch projection for one exact window."""
 
-        if _request_correction_kind(request) == "attack_velocity_patch":
+        kind = _request_correction_kind(request)
+        if kind == "attack_velocity_patch":
             return self._velocity_service().preview(request)
+        if kind == "note_delete_patch":
+            return self._deletion_service().preview(request)
+        if kind not in {None, "pitch_patch"}:
+            raise WorkbenchClipCorrectionError("unknown Clip correction kind")
 
         parsed = _parse_preview_request(request, create=False)
         state = self._snapshot()
@@ -262,8 +276,13 @@ class WorkbenchClipCorrectionService:
     def create(self, request: Mapping[str, Any]) -> dict[str, Any]:
         """Append the exact projected child or return an idempotent replay."""
 
-        if _request_correction_kind(request) == "attack_velocity_patch":
+        kind = _request_correction_kind(request)
+        if kind == "attack_velocity_patch":
             return self._velocity_service().create(request)
+        if kind == "note_delete_patch":
+            return self._deletion_service().create(request)
+        if kind not in {None, "pitch_patch"}:
+            raise WorkbenchClipCorrectionError("unknown Clip correction kind")
 
         parsed = _parse_preview_request(request, create=True)
         try:
@@ -363,6 +382,11 @@ class WorkbenchClipCorrectionService:
                 requested,
                 state,
             )
+        if operation == "delete_clip_notes":
+            return self._deletion_service().correction_summary_from_state(
+                requested,
+                state,
+            )
         if operation != "correct_note_pitches":
             return None
         if child.parent_clip_id is None or child.parent_clip_id not in state.clips:
@@ -419,6 +443,18 @@ class WorkbenchClipCorrectionService:
                 writer=self._writer,
             )
         return self._velocity_corrections
+
+    def _deletion_service(self) -> Any:
+        """Load the separate deletion policy only for its explicit requests."""
+
+        if self._deletion_corrections is None:
+            from .workbench_deletion import WorkbenchClipDeletionCorrectionService
+
+            self._deletion_corrections = WorkbenchClipDeletionCorrectionService(
+                clip_service=self._clip_service,
+                writer=self._writer,
+            )
+        return self._deletion_corrections
 
 
 def _derive_correction_summary(parent: MidiClip, child: MidiClip) -> dict[str, Any]:

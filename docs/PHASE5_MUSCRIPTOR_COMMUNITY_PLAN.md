@@ -1,6 +1,6 @@
 # Phase 5: Multi-Process MIDI Comparison and Local Result Explorer
 
-Status: **Phase 5.0–5.2 are complete; the Phase 5.3 lead-only S0/M1/M3 diagnostic slice and Phase 5.4 explorer slice are complete, including hash-pinned comparison, GarageBand Pack Composer v1 and the disputed-range phrase-review bridge; Phase 5.5 completes Project Overview/restart/decision safety plus Decoded Stem Comparison v1, Phase 5.6 completes bounded decoded short arrangement presets, Phase 5.7 implements long-song visualization/recovery plus minimal exact canonical full-song chunk transport, Phase 5.8 completes verified cache/reused-model execution-provenance display, and Phase 5.9's exact-pack tutorial, 10/10 quiz and both human checks passed on 22 July 2026; Phase 5.3 blind choice, lineage and role expansion remain open, the gated read-only Phase 6 Clip Library slice, separate explicit Clip reuse proposal and first reviewed immutable same-mode key/BPM transform slice are complete while broader Phase 6 remains in progress, beam 1 and batch 1 remain the defaults, and no public service or new checkpoint download is authorised**
+Status: **Phase 5.0–5.2 are complete; the Phase 5.3 lead-only S0/M1/M3 diagnostic slice and Phase 5.4 explorer slice are complete, including hash-pinned comparison, GarageBand Pack Composer v1 and the disputed-range phrase-review bridge; Phase 5.5 completes Project Overview/restart/decision safety plus Decoded Stem Comparison v1, Phase 5.6 completes bounded decoded short arrangement presets, Phase 5.7 implements long-song visualization/recovery plus minimal exact canonical full-song chunk transport, Phase 5.8 completes verified cache/reused-model execution-provenance display, and Phase 5.9's exact-pack tutorial, 10/10 quiz and both human checks passed on 22 July 2026; Phase 5.3 blind choice, lineage and role expansion remain open; Phase 6 Increments 6.0, 6.1, 6.2a and 6.3a–c are complete while broader Phase 6 remains in progress; beam 1 and batch 1 remain the defaults, and no public service or new checkpoint download is authorised**
 
 Drafted: 19 July 2026
 Scope: accurate stem/full-mix MIDI, several analytical and AI processes kept as
@@ -1429,50 +1429,21 @@ Success means a user can make a new arrangement from reviewed parts while the
 original sources and every process candidate remain reproducible. GarageBand
 continues to own final performance, patch editing and mixing.
 
-Entry status on 22 July 2026: the technical foundation, Phase 5.8 execution
-provenance and Phase 5.9 guided acceptance have passed. The first read-only
-Clip Library slice is complete. It requires `--clip-library`,
-`--phase6-acceptance` and `--phase6-pack` together and is limited to bounded
-browse/search, path-free detail and lineage, dry neutral audition and
-deterministic Clip reconstruction. The result is not an original-MIDI byte
-copy, and no transforms, writes, piano roll, placement or hybrids are present.
+Entry history on 22 July 2026: the technical foundation, Phase 5.8 execution
+provenance and Phase 5.9 guided acceptance passed, opening the first gated
+read-only Clip Library slice. Phase 6 has since advanced independently:
+Increments 6.0, 6.1, 6.2a and 6.3a–c are complete, while broader Phase 6
+remains in progress. The authoritative current contracts,
+launch flags, limits, immutable-child rules and completion evidence are in
+[Phase 6: Creative Arrangement and Reusable
+MIDI](PHASE6_CREATIVE_ARRANGEMENT.md); this Phase 5 plan does not duplicate or
+redefine them.
+
 Phase 5.3 blind choice and source-lineage work remain separate prerequisites
-for explicit hybrid construction; they do not block read-only Clip browsing,
-audition or reconstruction. See [Phase 6: Creative Arrangement and Reusable
-MIDI](PHASE6_CREATIVE_ARRANGEMENT.md). Conditional medium/large-checkpoint and
-other-hardware measurements are not Phase 6 entry gates.
-
-The completion browser run exposed 73 immutable Clips across 51 lineages and
-verified browse/detail, deterministic MIDI, a dry FluidSynth proxy, a repeat
-cache hit, path-free byte-range serving and Developer Inspector tracing with
-zero musical/library mutations. This does not complete wider Phase 6: Clip
-transforms, piano-roll/phrase editing, current-arrangement placement and
-hybrids remain deferred.
-
-Increment 6.1 now implements only an explicitly enabled proposal placement,
-not a current-arrangement placement. It requires the same three gate inputs
-plus `--enable-clip-reuse-plan`, pins each `clip_id` and immutable object hash,
-and appends explicit whole-beat placements/removals to a separate owner-only
-local database. Exact evidence binding controls restart restoration. The 4/4,
-480-TPQ grid starts at recorded zero without inferring a downbeat or time
-signature; existing project downbeat evidence is reported but not applied, and
-server compatibility warnings do not transform the Clip. The
-proposal is bounded to 64 active placements, 512 events, 20,000 notes per Clip,
-40,000 active note instances and 20 minutes. It has no render/play, export,
-instrument, current-arrangement, pack, decision, feedback or hybrid effect.
-Real place/remove, two-restart recovery, owner-only append-only state,
-path-free Inspector and unchanged decision/library/pack checks passed together
-with the regression suite, completing Increment 6.1. This does not complete
-broader Phase 6.
-
-Increment 6.2a adds a different explicit `--enable-clip-transforms` launch,
-mutually exclusive with the complete-library-bound reuse plan. One temporary,
-zero-effect projection must precede one same-mode key or explicit
-musical/stem-locked BPM child creation. The append is pinned to the exact
-parent Clip/object, library state, typed request and projection hash. It leaves
-the parent, every process alternative, old proposal storage, decisions,
-current arrangement and pack unchanged. Mode remapping, tuning, downbeat,
-piano-roll/phrase editing and hybrids remain deferred.
+only for explicit hybrid construction. They do not block Clip browsing,
+audition, reconstruction, explicit reuse proposals, reviewed key/BPM children
+or the bounded user-authored correction slices. Conditional medium/large
+checkpoint and other-hardware measurements are not Phase 6 entry gates.
 
 ### Phase 7 — Cross-DAW and opt-in community learning
 

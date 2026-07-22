@@ -29,6 +29,10 @@ from sunofriend.workbench_correction import (
     WorkbenchClipCorrectionConflictError,
     WorkbenchClipCorrectionNotFoundError,
 )
+from sunofriend.workbench_deletion import (
+    CLIP_NOTE_DELETION_RESULT_SCHEMA,
+    CLIP_NOTE_DELETION_SUMMARY_SCHEMA,
+)
 from sunofriend.workbench_developer import (
     developer_code_step_for_route,
     developer_operation_for_route,
@@ -694,6 +698,204 @@ class WorkbenchClipCorrectionServerTests(unittest.TestCase):
             self.assertEqual(next(payload for status, payload in outcomes if status == 409), _STALE)
             self.assertEqual(len(ClipLibrary(pair.library_root, read_only=True).list()), 2)
 
+    def test_real_deletion_create_replay_restart_and_detail_summary_are_exact(
+        self,
+    ) -> None:
+        library_root, parent_hash = _real_clip_library(self.root)
+        pack_path, acceptance = _real_phase6_acceptance(self.root)
+        common = {
+            "token": self.token,
+            "clip_library_path": library_root,
+            "phase6_acceptance_path": acceptance,
+            "phase6_pack_path": pack_path,
+            "enable_clip_corrections": True,
+        }
+        with patch(
+            "sunofriend.workbench_clips.verify_garageband_pack_archive",
+            return_value={"status": "verified"},
+        ):
+            with _running_real_server(
+                self.catalog,
+                self.root / "real-deletion-create-state",
+                **common,
+            ) as first:
+                request = _real_deletion_create_request(
+                    first,
+                    self.token,
+                    parent_hash,
+                    editable_index=0,
+                )
+                status, created = _json_request(
+                    first,
+                    "POST",
+                    f"{_ACTION_ROUTE}?token={self.token}",
+                    request,
+                )
+                self.assertEqual(status, 201)
+                result = created["result"]
+                self.assertEqual(result["schema"], CLIP_NOTE_DELETION_RESULT_SCHEMA)
+                self.assertEqual(result["status"], "created")
+                self.assertFalse(result["replayed"])
+                self.assertEqual(
+                    {key for key, value in result["effects"].items() if value},
+                    {
+                        "library_mutated",
+                        "child_clip_created",
+                        "correction_applied",
+                        "note_deleted",
+                        "note_count_changed",
+                    },
+                )
+                child_id = result["child"]["clip_id"]
+                status, replayed = _json_request(
+                    first,
+                    "POST",
+                    f"{_ACTION_ROUTE}?token={self.token}",
+                    request,
+                )
+                self.assertEqual(status, 201)
+                self.assertEqual(replayed["result"]["status"], "replayed")
+                self.assertTrue(replayed["result"]["replayed"])
+                self.assertTrue(
+                    all(
+                        value is False
+                        for value in replayed["result"]["effects"].values()
+                    )
+                )
+                self.assertEqual(
+                    len(ClipLibrary(library_root, read_only=True).list()), 2
+                )
+                _assert_path_free_response(
+                    self,
+                    created,
+                    root=self.root,
+                    token=self.token,
+                )
+
+            with _running_real_server(
+                self.catalog,
+                self.root / "real-deletion-restart-state",
+                **common,
+            ) as restarted:
+                status, detail = _json_request(
+                    restarted,
+                    "GET",
+                    f"/api/clips/{child_id}?token={self.token}",
+                )
+                self.assertEqual(status, 200)
+                summary = detail["correction_summary"]
+                self.assertEqual(summary["schema"], CLIP_NOTE_DELETION_SUMMARY_SCHEMA)
+                self.assertEqual(summary["operation"], "delete_clip_notes")
+                self.assertEqual(summary["parent_clip_id"], "clip-1")
+                self.assertEqual(summary["child_clip_id"], child_id)
+                self.assertEqual(summary["changed_note_count"], 1)
+                self.assertEqual(summary["changes"][0]["pitch"], 60)
+                self.assertEqual(detail["lineage"]["version_count"], 2)
+                self.assertEqual(detail["lineage"]["current_clip_id"], child_id)
+                _assert_path_free_response(
+                    self,
+                    detail,
+                    root=self.root,
+                    token=self.token,
+                )
+                replay_status, restarted_replay = _json_request(
+                    restarted,
+                    "POST",
+                    f"{_ACTION_ROUTE}?token={self.token}",
+                    request,
+                )
+                self.assertEqual(replay_status, 201)
+                self.assertEqual(restarted_replay["result"]["status"], "replayed")
+                self.assertTrue(restarted_replay["result"]["replayed"])
+                self.assertTrue(
+                    all(
+                        value is False
+                        for value in restarted_replay["result"]["effects"].values()
+                    )
+                )
+                self.assertEqual(
+                    len(ClipLibrary(library_root, read_only=True).list()), 2
+                )
+
+    def test_two_servers_racing_identical_deletion_create_and_replay(
+        self,
+    ) -> None:
+        with _real_correction_server_pair(
+            self.catalog,
+            self.root,
+            self.token,
+        ) as pair:
+            first = _real_deletion_create_request(
+                pair.first,
+                self.token,
+                pair.parent_object_sha256,
+                editable_index=0,
+            )
+            second = _real_deletion_create_request(
+                pair.second,
+                self.token,
+                pair.parent_object_sha256,
+                editable_index=0,
+            )
+            self.assertEqual(first, second)
+            outcomes = _race_correction_actions(
+                (pair.first, pair.second),
+                (first, second),
+                self.token,
+            )
+            self.assertEqual([status for status, _payload in outcomes], [201, 201])
+            self.assertEqual(
+                sorted(
+                    payload["result"]["status"]
+                    for _status, payload in outcomes
+                ),
+                ["created", "replayed"],
+            )
+            self.assertEqual(
+                len(ClipLibrary(pair.library_root, read_only=True).list()), 2
+            )
+            for _status, payload in outcomes:
+                _assert_path_free_response(
+                    self,
+                    payload,
+                    root=self.root,
+                    token=self.token,
+                )
+
+    def test_two_servers_racing_different_deletions_create_only_one_child(
+        self,
+    ) -> None:
+        with _real_correction_server_pair(
+            self.catalog,
+            self.root,
+            self.token,
+        ) as pair:
+            first = _real_deletion_create_request(
+                pair.first,
+                self.token,
+                pair.parent_object_sha256,
+                editable_index=0,
+            )
+            second = _real_deletion_create_request(
+                pair.second,
+                self.token,
+                pair.parent_object_sha256,
+                editable_index=1,
+            )
+            outcomes = _race_correction_actions(
+                (pair.first, pair.second),
+                (first, second),
+                self.token,
+            )
+            self.assertEqual([status for status, _payload in outcomes], [201, 409])
+            self.assertEqual(
+                next(payload for status, payload in outcomes if status == 409),
+                _STALE,
+            )
+            self.assertEqual(
+                len(ClipLibrary(pair.library_root, read_only=True).list()), 2
+            )
+
 
 class _FakeCorrectionService:
     def __init__(self) -> None:
@@ -941,6 +1143,67 @@ def _real_correction_create_request(
     }
 
 
+def _real_deletion_create_request(
+    server,
+    token: str,
+    parent_object_sha256: str,
+    *,
+    editable_index: int,
+) -> dict:
+    project_status, project = _json_request(
+        server,
+        "GET",
+        f"/api/project?token={token}",
+    )
+    if project_status != 200:
+        raise AssertionError(f"project capability failed: {project_status} {project}")
+    base_request = {
+        "parent_clip_id": "clip-1",
+        "parent_object_sha256": parent_object_sha256,
+        "library_state_sha256": project["clip_corrections"]["library"][
+            "state_sha256"
+        ],
+        "window": {"start_tick": 0, "end_tick": 960},
+    }
+    window_status, window_payload = _json_request(
+        server,
+        "POST",
+        f"{_WINDOW_ROUTE}?token={token}",
+        {**base_request, "correction_kind": "note_delete_patch"},
+    )
+    if window_status != 200:
+        raise AssertionError(
+            f"deletion window failed: {window_status} {window_payload}"
+        )
+    window = window_payload["window"]
+    editable = [note for note in window["notes"] if note["editable"]]
+    if editable_index >= len(editable):
+        raise AssertionError("deletion window did not return enough editable notes")
+    preview_request = {
+        **base_request,
+        "window_sha256": window["window_sha256"],
+        "correction": {
+            "kind": "note_delete_patch",
+            "changes": [{"note_ref": editable[editable_index]["note_ref"]}],
+        },
+    }
+    preview_status, preview_payload = _json_request(
+        server,
+        "POST",
+        f"{_PROJECTION_ROUTE}?token={token}",
+        preview_request,
+    )
+    if preview_status != 200:
+        raise AssertionError(
+            f"deletion preview failed: {preview_status} {preview_payload}"
+        )
+    return {
+        "action": "create",
+        **preview_request,
+        "projection_sha256": preview_payload["projection"]["projection_sha256"],
+    }
+
+
 def _race_correction_actions(
     servers: tuple,
     requests: tuple[dict, dict],
@@ -1094,6 +1357,7 @@ def _real_clip_library(root: Path) -> tuple[Path, str]:
         notes=(
             ClipNote.from_beats(0.0, 1.0, 60, 90, tempo),
             ClipNote.from_beats(1.0, 1.0, 64, 84, tempo),
+            ClipNote.from_beats(2.0, 1.0, 67, 80, tempo),
         ),
         provenance=Provenance(source_uri="/Users/alice/private-correction.wav"),
         clip_id="clip-1",

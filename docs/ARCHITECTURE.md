@@ -65,6 +65,7 @@ CLI parsing (`cli.py`)
         |                              `workbench_transform.py`,
         |                              `workbench_correction.py`,
         |                              `workbench_velocity.py`,
+        |                              `workbench_deletion.py`,
         |                              `workbench_developer.py`,
         |                              `workbench_developer.js`,
         |                              `workbench_visualization.js`,
@@ -565,14 +566,17 @@ transform or unrelated external append remains a conflict. Ordinary browse,
 detail, preview and capability reads never use this exception and remain strict
 against any unexpected library drift.
 
-Phase 6 Increments 6.3a–b reuse that sole-child append boundary but give it a
-separate authority flag and sealed note-edit policies. `workbench_correction.py`
-keeps the published pitch-v1 facade and dispatches an explicit
-`attack_velocity_patch` to the isolated policy in `workbench_velocity.py`.
-Both use a bounded half-open integer window at 480 TPQ resolved through the
-Clip's existing automatic export timing. The four-key pitch window request and
-its hashed public serializer remain byte-compatible; only a velocity window
-adds its explicit correction-kind discriminator.
+Phase 6 Increments 6.3a–c reuse that sole-child append
+boundary but give it a separate authority flag and sealed note-edit policies.
+`workbench_correction.py` keeps the published pitch-v1 facade and dispatches an
+explicit `attack_velocity_patch` to the isolated policy in
+`workbench_velocity.py` or `note_delete_patch` to the isolated policy in
+`workbench_deletion.py`. All use a bounded half-open integer window at 480 TPQ
+resolved through the Clip's existing automatic export timing. The four-key
+pitch window request and its hashed public serializer remain byte-compatible;
+velocity and deletion windows add their explicit correction-kind
+discriminators. The published 6.3a and 6.3b schemas, hashes and retained recipes
+remain frozen.
 
 Because Clip v1 intentionally has no mutable note ID, an editable note is
 addressed by its canonical parent index plus a digest over the parent object
@@ -585,6 +589,16 @@ rejected. An attack-velocity patch changes 1–64 selected Note On velocities to
 exact integers from 1–127 and is valid for pitched and drum-family Clips.
 Source notes that collapse to the same exported channel/onset/pitch are shown
 but blocked because they do not have a one-to-one MIDI event.
+
+The completed 6.3c `note_delete_patch` names 1–64 unique exact existing note
+references and retains operation `delete_clip_notes`. It is valid for pitched
+and drum-family Clips and must leave at least one note. Eligibility and patch
+validation normalize the parent and proposed child and prove that the latter is
+exactly the former minus the named intervals. They also prove every survivor
+is exact and that beat, export and source horizons are unchanged. Notes in
+duplicate or cascade-dependent export groups, horizon-changing notes and the
+only remaining note are non-editable. This prevents one source-object deletion
+from changing a different normalized MIDI interval.
 
 Before either live projection or restart audit, the correction service also
 validates the complete preserved SMF encoding boundary: at most 20,000 notes
@@ -602,18 +616,38 @@ contains exactly one correction kind. Timing, source seconds, key, chords,
 instrument, provenance, unaffected notes and all project/reuse/pack state
 remain unchanged. Pitch children preserve velocity; attack-velocity children
 preserve pitch, release velocity and articulation.
+Deletion children preserve every field of every surviving note plus chords,
+tempo, key, time signature, instrument, provenance and all project/reuse/pack
+state. Only note count and the explicitly named intervals differ. A fresh
+deletion child may set only `library_mutated`, `child_clip_created`,
+`correction_applied`, `note_count_changed` and `note_deleted` effects; replay
+and restart validation have zero effects.
+One recipe contains one correction kind, so removal never shares a child with
+pitch or attack velocity.
 The browser separately validates the exact kind-specific preview/result
 schema, all request and library pins, deterministic `sf-correction-<intent>`
 identity, one-to-one server diff and the complete fresh/replay effect map. It
 never fills absent server diff rows from its draft. A value equal to the
 current draft is an inspection no-op and cannot discard accepted review
-evidence.
+evidence. Deletion window, diff and restart-summary serializers redact a
+path-like articulation value before it reaches the public response. Regression
+coverage also constructs normalized cascade and horizon-changing deletion
+cases and requires them to fail before an immutable child can be appended.
 
 `--enable-clip-corrections`, `--enable-clip-transforms` and
 `--enable-clip-reuse-plan` are separate mutually exclusive launch modes. Note
-insertion/deletion, timing, duration, release velocity and continuous
+insertion, timing, duration, release velocity and continuous
 expression remain later contracts rather than being interpreted through pitch
-or attack intensity.
+correction, attack intensity or deletion. Increment 6.3c is complete while
+broader Phase 6 remains in progress. Its copied-Lidl exercise changed
+one channel-9 Snare note at ticks 140487–140573, reduced both Clip and
+normalized-MIDI counts from 249 to 248, kept beat/export/source horizons exact,
+replayed with all effects false and reconstructed deterministic child MIDI at
+SHA-256
+`1e3e20d607c62b7b6c06d210b9f3fa90c1f126166aadcf86d82d870d83f5535c`.
+The focused integrated suite passed 81 tests, the independent audit passed 49
+and the complete repository suite passed 970 tests. The single warning is the
+existing `resampy`/`pkg_resources` deprecation notice.
 
 An optional explicit-catalog phrase link validates one existing diagnostic
 S0/M1/M3 hybrid report against its exact stem, three current candidate MIDI
