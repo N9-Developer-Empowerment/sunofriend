@@ -1,8 +1,9 @@
 # Phase 6: Creative Arrangement and Reusable MIDI
 
 Status on 22 July 2026: **entry gate passed; Increment 6.0, the first
-read-only Clip Library slice, is complete; and Increment 6.1, the explicit
-Clip reuse proposal, is complete.**
+read-only Clip Library slice, is complete; Increment 6.1, the explicit Clip
+reuse proposal, is complete; and Increment 6.2a, the first bounded immutable
+key/BPM transform workflow, is complete.**
 Broader Phase 6 creative arrangement remains in progress.
 
 Phase 6 builds on the local Workbench without turning Sunofriend into another
@@ -182,9 +183,10 @@ contract and tests:
 2. **Explicit reuse plan (complete):** let a
    user place a chosen immutable Clip into a proposed arrangement without
    mutating the source Clip or project decisions.
-3. **Reversible transforms:** expose existing key, BPM, tuning and downbeat
-   operations as new Clip versions with a minimal audit diff and range/alignment
-   warnings.
+3. **Reversible transforms (6.2a complete):** same-mode key and explicit
+   musical/stem-locked BPM operations now create reviewed immutable child
+   versions with a minimal audit diff and range/alignment warnings. Mode
+   remapping, tuning and downbeat remain separate later slices.
 4. **Phrase and note correction:** add bounded piano-roll/phrase edits with the
    original candidate and exact edit diff retained.
 5. **Explicit hybrids:** only after both Phase 5.3 gates pass, construct a new
@@ -356,3 +358,128 @@ Focused contract, UI, security, Developer Inspector and adjacent Clip tests
 passed together with the full project suite. Increment 6.1 is **complete**;
 this still does not complete broader Phase 6 or enable transforms, playback,
 export, instrument attachment, current-arrangement construction or hybrids.
+
+## Increment 6.2a: reviewed immutable key/BPM alternatives
+
+Increment 6.2a exposes a deliberately narrow wrapper around Sunofriend's
+existing Clip-level transforms. A user reviews one exact, temporary projection
+and may then explicitly append one immutable child Clip. The parent remains an
+available alternative; “undo” means choosing the parent, not mutating the
+child back into it.
+
+The transform capability requires the three Increment 6.0 gate inputs and a
+fourth explicit flag:
+
+```bash
+sunofriend workbench "/absolute/path/to/stems" \
+  --candidate-root "/absolute/path/to/results" \
+  --catalog "/absolute/path/to/workbench-catalog.json" \
+  --state-dir "/absolute/path/to/workbench-state" \
+  --clip-library "/absolute/path/to/existing-clip-library" \
+  --phase6-acceptance "/absolute/path/to/passed-phase5-acceptance-result.json" \
+  --phase6-pack "/absolute/path/to/exact-accepted-garageband-pack.zip" \
+  --enable-clip-transforms \
+  --open
+```
+
+`--enable-clip-transforms` and `--enable-clip-reuse-plan` are mutually
+exclusive in this first slice. Reuse v1 intentionally binds the complete Clip
+library state, while a successful transform intentionally changes that state.
+The safe workflow is therefore:
+
+1. start transform mode, review and create the required child versions;
+2. stop that Workbench; and
+3. restart with `--enable-clip-reuse-plan` and explicitly place the exact
+   child Clip wanted.
+
+An older proposal remains stored under its old complete-library binding. It is
+not migrated, rewritten or made to point at a new child.
+
+### Review, then create
+
+The browser supplies only the exact parent Clip/object/library pins and one
+typed transform request. `POST /api/clip-transform-projection` revalidates the
+accepted pack and whole library, performs the transformation in memory and
+returns a path-free, bounded before/after audit. Its effects are all false and
+it writes no object or catalog row.
+
+Editing any control invalidates that projection. Creation stays unavailable
+until the current draft has been projected. `POST /api/clip-transform-action`
+must contain the same parent/object/library/transform pins plus the exact
+projection SHA-256. The server recomputes and verifies the request and performs
+an optimistic catalog compare-and-swap. A fresh request appends exactly one
+child; an exact retry returns that already-existing child as an idempotent
+replay and appends nothing. Either result identifies the exact parent and child
+Clip/object hashes, lineage, revision, operation and before/after library
+states.
+
+Any drift is a conflict. The browser reloads current detail once, retains only
+the user's draft, clears the old projection and never retries the write. A
+fresh successful write is the sole durable effect: it adds one immutable Clip
+version. An idempotent replay has all effects false. Neither outcome mutates
+its parent, chooses or ranks a candidate, alters a reuse placement, changes
+Workbench decisions or the current arrangement, adds a Pack Composer item,
+attaches an instrument, records feedback or submits data.
+
+The capability disables both review and create at the accepted 10,000-Clip
+inventory boundary. The browser explains that limit and keeps inspection,
+audition and deterministic export available for existing Clips.
+
+### Supported musical contracts
+
+One action performs one operation, so changing both key and BPM requires two
+visible lineage children.
+
+**Same-mode key change** uses a mechanical semitone transposition to a target
+tonic while retaining the source major/minor mode. The user must choose
+nearest, upward or downward interval direction and inspect the exact semitone
+shift and resulting pitch range. Key changes for drum-family Clips are
+rejected because their MIDI pitches identify drum sounds. Major-to-minor or
+minor-to-major remapping remains deferred; that is a creative scale/chord
+rewrite, not the same reversible mechanical operation.
+
+**BPM change** requires one of two timing meanings:
+
+- `musical` retains bar/beat positions and groove while scaling elapsed time,
+  warp seconds and microtiming. This genuinely speeds up or slows down the
+  MIDI, so it no longer aligns with untreated source audio; or
+- `stem_locked` retains source seconds and recalculates beat positions against
+  a straight target GarageBand tempo. It preserves audio alignment and is not
+  an audible speed-up relative to that untreated audio.
+
+The target must be finite, from 20 to 400 BPM and from one quarter to four
+times the source BPM. A no-op, out-of-range MIDI pitch, Clip over 20,000 notes
+or output over 20 minutes is rejected before persistence.
+
+### Why tuning and downbeat remain absent
+
+The existing raw-MIDI concert-pitch cleanup uses pitch-bend and RPN events.
+Clip v1 does not retain those complete Standard MIDI File events, so presenting
+that operation as an immutable Clip transform would lose evidence. Similarly,
+the existing downbeat anchor shifts the complete MIDI event stream, while the
+current accepted downbeat is reviewer-observation-only and Clip v1 contains a
+canonical note/chord document rather than the whole original stream. Both need
+a separately defined Clip representation and hash-pinned evidence contract.
+
+Increment 6.2a therefore does not expose mode remapping, arbitrary semitone
+editing, tuning, downbeat, register, piano-roll, batch or combined transforms.
+It also creates no audio preview by itself. After a child exists, its ordinary
+Clip detail view can use the existing deterministic reconstruction and neutral
+audition; that audition still records no preference.
+
+### Completion evidence
+
+The real loopback exercise used a copy of the accepted Lidl Clip library. The
+171-note B-major bass at `118.99992463338107` BPM first produced a reviewed
+musical-timing 125 BPM child, then a reviewed +1-semitone C-major child. Exactly
+two rows/objects were added to the copy; the original 10-Clip library and all
+ten inherited rows/objects were unchanged. Both exact retries were zero-effect
+idempotent replays. Restart recovered all three lineage versions, public API
+documents remained path-free and the final deterministic MIDI repeated at
+SHA-256 `42eabbb41cd484d104d67080833710bb240b0d73d817e8af93aa95217b35b502`.
+
+Adversarial tests also prove that an insert trigger cannot mutate the parent
+before commit, capacity cannot create a durable 10,001st Clip, identical
+cross-server requests become create-plus-replay and different cross-server
+requests become create-plus-conflict. The complete project suite passed with
+910 tests. Increment 6.2a is **complete**; broader Phase 6 remains in progress.

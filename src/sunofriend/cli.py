@@ -2150,13 +2150,23 @@ def build_parser() -> argparse.ArgumentParser:
             "with --clip-library"
         ),
     )
-    workbench.add_argument(
+    clip_write_mode = workbench.add_mutually_exclusive_group()
+    clip_write_mode.add_argument(
         "--enable-clip-reuse-plan",
         action="store_true",
         help=(
             "Explicitly enable the separate append-only Phase 6 Clip reuse "
             "proposal; requires --clip-library, --phase6-acceptance and "
             "--phase6-pack"
+        ),
+    )
+    clip_write_mode.add_argument(
+        "--enable-clip-transforms",
+        action="store_true",
+        help=(
+            "Explicitly enable Phase 6 immutable Clip transform previews and "
+            "version creation; requires --clip-library, --phase6-acceptance "
+            "and --phase6-pack"
         ),
     )
     workbench_mode = workbench.add_mutually_exclusive_group()
@@ -4445,6 +4455,7 @@ def _run_workbench(args) -> int:
         phase6_acceptance_path=args.phase6_acceptance,
         phase6_pack_path=args.phase6_pack,
         enable_clip_reuse_plan=args.enable_clip_reuse_plan,
+        enable_clip_transforms=args.enable_clip_transforms,
     )
     if args.inspect or args.export_review:
         print(json.dumps(report, indent=2, sort_keys=True))

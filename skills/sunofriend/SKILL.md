@@ -150,6 +150,13 @@ scripts.
      has passed its focused/full and local restart/browser verification. Do
      not describe it as arrangement playback, a transform, an export or a
      completed wider Phase 6 feature.
+   - Phase 6 Increment 6.2a is complete and uses the same three gate inputs plus
+     `--enable-clip-transforms`. Reject that flag without the complete gate and
+     reject it together with `--enable-clip-reuse-plan`: reuse v1 pins the
+     complete library state while a successful transform appends a new child.
+     Previewing a same-mode key or musical/stem-locked BPM change needs no
+     audio, ML or playback capability. Creation adds exactly one immutable
+     Clip version. A later neutral audition needs `doctor --require preview`.
 5. Inventory the input directory read-only. Confirm files exist and identify
    stem roles, chord PDF, metronome, key, BPM, and tuning.
 6. Use absolute, quoted paths and a fresh output outside the source folder.
@@ -394,6 +401,26 @@ scripts.
   arrangement and pack basket. On a conflict, reload once but never retry the
   mutation automatically. Do not claim a transform, MIDI/render/play/export,
   instrument, pack, feedback, submission or hybrid effect.
+  Add `--enable-clip-transforms` only when the user explicitly wants Increment
+  6.2a. Keep it separate from reuse-plan mode. On exact Clip detail choose one
+  operation: a target key with the same source major/minor mode and explicit
+  nearest/up/down direction, or a finite target within both 20–400 BPM and
+  0.25–4 times the source BPM, with explicit `musical` or `stem_locked`
+  meaning. `musical` keeps beats and changes elapsed time; state that untreated
+  audio will no longer align. `stem_locked` keeps source seconds and moves
+  beats; state that this is not an audible speed-up.
+  Require **Review temporary transform** before **Create immutable Clip
+  version**. Any edit invalidates the projection. On conflict reload detail
+  once, retain only the draft and never replay the POST automatically. One
+  fresh action creates one child, so key plus BPM needs two visible lineage
+  steps. Treat an exact create-request retry as an idempotent replay of the
+  already-existing child: it appends nothing and every effect is false. At the
+  accepted 10,000-Clip boundary disable review/create while retaining existing
+  Clip inspection, audition and export.
+  Confirm the parent, all other process alternatives, reuse storage,
+  placements, decisions, current arrangement, pack, instruments, feedback and
+  submission remain unchanged. Defer major/minor remapping, tuning, downbeat,
+  register, note/phrase, batch and hybrid transforms.
 - Several completed immutable MuScriptor lanes: use `ai-matrix` with explicit
   repeated `LANE=RUN_DIR` values and a fresh `--out` JSON. Include M0
   unconditioned full mix, M1 discovered-label conditioning, M2 known-label
@@ -1679,3 +1706,22 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     recovered both revisions across restarts and confirmed unchanged
     decision/library/pack inputs. Describe Increment 6.1 as complete while
     keeping broader Phase 6 in progress.
+    For Phase 6 Increment 6.2a, confirm the transform flag is absent by default,
+    requires the complete 6.0 gate and is mutually exclusive with reuse-plan
+    mode. Confirm a projection adds no object/row and all effects are false.
+    Report the exact parent Clip/object/library pins, operation, projection
+    hash, before/after key/BPM/timing/duration/pitch facts and warnings. For a
+    create, report the child Clip/object/lineage/revision and the before/after
+    library states. For a fresh-created result, confirm the only true effects
+    are library append, child creation and transform applied to that child. For
+    an exact idempotent replay, confirm the existing child is returned, no row
+    is appended and every effect is false. On stale evidence confirm
+    one detail reload and no write retry. State explicitly whether BPM was
+    musical or stem-locked and what that means for source-audio alignment.
+    Treat the new child as an alternative, not a selection or winner; restart
+    in reuse-plan mode before placing it.
+    The completion golden used a copied accepted Lidl library: a 171-note
+    B-major bass at about 119 BPM became a musical 125 BPM child and then a
+    +1-semitone C-major child; all three versions survived restart, exact
+    retries had zero effects, original rows/objects remained unchanged and the
+    full suite passed with 910 tests.

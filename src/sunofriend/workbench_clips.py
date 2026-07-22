@@ -1,10 +1,13 @@
 """Gated, read-only Clip v1 browsing and derived audition artifacts.
 
-This module is the deliberately small Phase 6 entry boundary.  It does not
-import clips, edit metadata, transform notes or write to the Clip library.  A
-resolved Phase 5 GarageBand acceptance result and its exact ZIP are verified
-before the library is opened through :class:`~sunofriend.library.ClipLibrary`'s
-read-only mode.
+This module is the deliberately small Phase 6 entry boundary.  Ordinary browse,
+detail and artifact operations do not import clips, edit metadata, transform
+notes or write to the Clip library.  A resolved Phase 5 GarageBand acceptance
+result and its exact ZIP are verified before the library is opened through
+:class:`~sunofriend.library.ClipLibrary`'s read-only mode.  The separately
+gated transform service may call one private compare-and-swap append/adoption
+method after its explicit review/create contract; that method is not exposed to
+ordinary Clip browsing.
 
 The public projections contain no filesystem paths, provenance/source fields,
 private notes or transform parameters.  The path-bearing artifact record is an
@@ -29,7 +32,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 from .clip import KeySignature, MidiClip, resolve_export_timing, write_clip_midi
 from .garageband_pack_acceptance import verify_garageband_pack_archive
-from .library import ClipLibrary, ClipSummary
+from .library import MAXIMUM_CLIP_COUNT, ClipLibrary, ClipSummary
 from .render import find_fluidsynth, find_soundfont, render_midi_to_wav
 from .workbench_privacy import contains_local_path, path_free_role
 
@@ -52,7 +55,7 @@ _PREVIEW_POLICY = {
     "timeout_seconds": 120.0,
 }
 _MAX_ACCEPTANCE_BYTES = 4 * 1024 * 1024
-_MAX_LIBRARY_CLIPS = 10_000
+_MAX_LIBRARY_CLIPS = MAXIMUM_CLIP_COUNT
 _MAX_PAGE_SIZE = 100
 _DEFAULT_PAGE_SIZE = 50
 _MAXIMUM_ARTIFACT_SECONDS = 20.0 * 60.0
@@ -102,13 +105,23 @@ class _LibraryState:
     lineage_count: int
 
 
+@dataclass(frozen=True)
+class _TransformAppendState:
+    summary: ClipSummary
+    previous_state_sha256: str
+    current_state: _LibraryState
+    replayed: bool
+
+
 class WorkbenchClipService:
     """Read-only Phase 6 Clip service suitable for Workbench route handlers.
 
     Use :meth:`open` rather than constructing this class directly.  Every
     operation revalidates the exact acceptance result, the exact GarageBand
     pack and all catalogued Clip object hashes against the state captured at
-    open time.  Any drift requires an explicit service restart.
+    open time.  Unexpected drift requires an explicit service restart.  The
+    only exception is the separately gated transform service's private exact
+    append path, which re-verifies and adopts one proven child addition.
     """
 
     def __init__(
@@ -264,6 +277,129 @@ class WorkbenchClipService:
             },
             "effects": _effects(),
         }
+
+    def _transform_library_identity(self) -> Path:
+        """Return the already verified library root to the gated transform service."""
+
+        return self._library_root
+
+    def _transform_snapshot(self) -> _LibraryState:
+        """Return one verified immutable snapshot under the shared service lock."""
+
+        with self._lock:
+            return self._stable_state()
+
+    def _transform_create_snapshot(
+        self,
+        *,
+        expected_state_sha256: str,
+    ) -> _LibraryState:
+        """Return the exact preview baseline needed to verify a create retry.
+
+        A second Workbench process may observe the first process's valid append
+        before it reaches the catalog CAS.  Creation may still recompute the
+        deterministic child from its already verified launch snapshot, but the
+        append boundary below must prove that the newer catalog contains only
+        that exact child before adopting it.  Ordinary browsing remains strict.
+        """
+
+        with self._lock:
+            current = self._verified_current_library_state()
+            if current.state_sha256 == self._library_state.state_sha256:
+                return current
+            if expected_state_sha256 == self._library_state.state_sha256:
+                return self._library_state
+            raise RuntimeError("Clip library state conflict")
+
+    @staticmethod
+    def _transform_has_append_capacity(state: _LibraryState) -> bool:
+        """Return whether one more child can fit within the accepted inventory."""
+
+        return len(state.summaries) < _MAX_LIBRARY_CLIPS
+
+    def _append_transform_child(
+        self,
+        *,
+        writer: ClipLibrary,
+        expected_state_sha256: str,
+        parent_clip_id: str,
+        expected_parent_object_hash: str,
+        child: MidiClip,
+    ) -> _TransformAppendState:
+        """Append and adopt exactly one verified child without weakening browsing.
+
+        This is intentionally private to the separately gated Phase 6 transform
+        service.  Ordinary Workbench Clip browsing continues to use a SQLite
+        read-only connection and cannot obtain the append-only writer.
+        """
+
+        with self._lock:
+            baseline = self._library_state
+            before = self._verified_current_library_state()
+            child_hash = hashlib.sha256(child.canonical_bytes()).hexdigest()
+            existing = before.clips.get(child.clip_id)
+            exact_existing_child = False
+            existing_summary = None
+            if existing == child:
+                existing_summary = next(
+                    row for row in before.summaries if row.clip_id == child.clip_id
+                )
+                exact_existing_child = (
+                    existing_summary.object_hash == child_hash
+                    and existing_summary.parent_clip_id == parent_clip_id
+                )
+
+            if before.state_sha256 != baseline.state_sha256:
+                if not exact_existing_child or existing_summary is None:
+                    raise RuntimeError("Clip library state conflict")
+                _validate_exact_transform_append(
+                    baseline,
+                    before,
+                    child=child,
+                    child_hash=child_hash,
+                    summary=existing_summary,
+                )
+                self._library_state = before
+                return _TransformAppendState(
+                    summary=existing_summary,
+                    previous_state_sha256=before.state_sha256,
+                    current_state=before,
+                    replayed=True,
+                )
+
+            if before.state_sha256 != expected_state_sha256:
+                if exact_existing_child and existing_summary is not None:
+                    return _TransformAppendState(
+                        summary=existing_summary,
+                        previous_state_sha256=before.state_sha256,
+                        current_state=before,
+                        replayed=True,
+                    )
+                raise RuntimeError("Clip library state conflict")
+            if not self._transform_has_append_capacity(before):
+                raise RuntimeError("Clip library maximum clip count reached")
+
+            receipt = writer.append_version_if_state(
+                parent_clip_id,
+                child,
+                expected_state_sha256=expected_state_sha256,
+                expected_parent_object_hash=expected_parent_object_hash,
+            )
+            after = _capture_library_state(self._library)
+            _validate_exact_transform_append(
+                before,
+                after,
+                child=child,
+                child_hash=child_hash,
+                summary=receipt.summary,
+            )
+            self._library_state = after
+            return _TransformAppendState(
+                summary=receipt.summary,
+                previous_state_sha256=before.state_sha256,
+                current_state=after,
+                replayed=receipt.replayed,
+            )
 
     def browse(
         self,
@@ -539,6 +675,14 @@ class WorkbenchClipService:
             return _internal_artifact(loaded, final, cache_hit=False)
 
     def _stable_state(self) -> _LibraryState:
+        state = self._verified_current_library_state()
+        if state.state_sha256 != self._library_state.state_sha256:
+            raise RuntimeError("Clip library changed; restart required")
+        return state
+
+    def _verified_current_library_state(self) -> _LibraryState:
+        """Re-verify the acceptance gate and current on-disk Clip inventory."""
+
         try:
             acceptance = _validate_acceptance(
                 self._acceptance_result_path,
@@ -548,10 +692,18 @@ class WorkbenchClipService:
                 raise RuntimeError(
                     "Phase 5 acceptance evidence changed; restart required"
                 )
-            state = _capture_library_state(self._library)
-            if state.state_sha256 != self._library_state.state_sha256:
-                raise RuntimeError("Clip library changed; restart required")
-            return state
+            # Each verification pass intentionally uses fresh read-only SQLite
+            # snapshots.  A concurrent atomic append can land between the two
+            # inventory reads inside ``_capture_library_state``; retry that
+            # transient observation, while persistent drift still fails closed.
+            capture_error = None
+            for _attempt in range(3):
+                try:
+                    return _capture_library_state(self._library)
+                except RuntimeError as exc:
+                    capture_error = exc
+            assert capture_error is not None
+            raise capture_error
         except (OSError, ValueError, sqlite3.Error) as exc:
             raise RuntimeError(
                 "Immutable Phase 6 evidence changed; restart required"
@@ -739,6 +891,39 @@ def _capture_library_state(library: ClipLibrary) -> _LibraryState:
         clips=clips,
         lineage_count=len({summary.lineage_id for summary in summaries}),
     )
+
+
+def _validate_exact_transform_append(
+    before: _LibraryState,
+    after: _LibraryState,
+    *,
+    child: MidiClip,
+    child_hash: str,
+    summary: ClipSummary,
+) -> None:
+    """Prove that an append changed nothing except the requested child row/object."""
+
+    before_summaries = {row.clip_id: row for row in before.summaries}
+    after_summaries = {row.clip_id: row for row in after.summaries}
+    if any(after_summaries.get(clip_id) != row for clip_id, row in before_summaries.items()):
+        raise RuntimeError("Existing Clip metadata changed during transform append")
+    if any(after.clips.get(clip_id) != clip for clip_id, clip in before.clips.items()):
+        raise RuntimeError("Existing immutable Clip changed during transform append")
+    additions = set(after_summaries) - set(before_summaries)
+    expected_additions = set() if child.clip_id in before_summaries else {child.clip_id}
+    if additions != expected_additions or len(after_summaries) != len(before_summaries) + len(expected_additions):
+        raise RuntimeError("Transform append changed an unexpected Clip-library row")
+    if after.clips.get(child.clip_id) != child:
+        raise RuntimeError("Transform append child object does not match its projection")
+    actual = after_summaries.get(child.clip_id)
+    if (
+        actual is None
+        or actual != summary
+        or actual.object_hash != child_hash
+        or actual.parent_clip_id != child.parent_clip_id
+        or actual.revision != child.revision
+    ):
+        raise RuntimeError("Transform append child metadata does not match its projection")
 
 
 def _validate_summary_matches_clip(summary: ClipSummary, clip: MidiClip) -> None:

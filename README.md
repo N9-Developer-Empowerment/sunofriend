@@ -59,6 +59,7 @@ choice; scores and model labels never create an automatic global winner.
 | Learn the workflow and verify one exact GarageBand handoff | `garageband-pack-review`, `garageband-pack-resolve` | Eight-screen interactive tutorial, 10 one-at-a-time comprehension questions, then the two explicit GarageBand and local-usability checks; the resolver re-verifies the downloaded ZIP and has no MIDI, selection, basket, upload or feedback effect |
 | Explore reusable Clip v1 parts in Workbench | `workbench --clip-library --phase6-acceptance --phase6-pack` | Phase 6 Increment 6.0 complete: explicit gated read-only browse/search, path-free detail and lineage, neutral audition and deterministic Clip reconstruction; all three flags are required and no Clip, project, decision or basket is changed |
 | Propose explicit Clip reuse in Workbench | `workbench --clip-library --phase6-acceptance --phase6-pack --enable-clip-reuse-plan` | Phase 6 Increment 6.1 complete: whole-beat immutable-Clip placements in a separate append-only local proposal with exact restart recovery; no transform, playback, export, current-arrangement or pack effect |
+| Create a key- or BPM-transformed Clip alternative | `workbench --clip-library --phase6-acceptance --phase6-pack --enable-clip-transforms` | Phase 6 Increment 6.2a complete: review one same-mode key change or one explicit BPM timing contract, then create one immutable child version; the parent and every project/reuse/pack choice remain unchanged |
 
 Development has started on a local-first ensemble of optional transcription
 models, phrase-level melody review and learned instrument matching. See the
@@ -143,7 +144,8 @@ five selected MIDI payloads, the dry arrangement proxy and no source audio;
 the resolver verified its receipt, member set, sizes and hashes while changing
 no project state. The first explicitly gated, read-only Phase 6 Clip Library
 increment is complete. The separate explicit Clip reuse proposal is also
-complete. Broader Phase 6 remains in
+complete. The first reversible-transform slice is also complete and adds
+explicitly reviewed, immutable same-mode key and BPM child versions. Broader Phase 6 remains in
 progress, and explicit hybrid construction still waits for the
 separate Phase 5.3 blind-choice and source-lineage gates. See the
 **[Phase 5 local Studio learning and acceptance guide](docs/PHASE5_LOCAL_STUDIO_ACCEPTANCE.md)**.
@@ -154,8 +156,8 @@ Inspector and the invariants to preserve when adding another analytical or AI
 candidate.
 The scope and all-or-none launch contract for that work are in
 **[Phase 6: Creative Arrangement and Reusable MIDI](docs/PHASE6_CREATIVE_ARRANGEMENT.md)**.
-Creative note/phrase editing and Clip reuse beyond the bounded proposal remain
-Phase 6 work, while
+Creative mode remapping, tuning/downbeat transforms, note/phrase editing and
+Clip reuse beyond the bounded proposal remain Phase 6 work, while
 cross-DAW and explicitly consented community work is deferred to Phase 7.
 
 For combining songs, first use `midi-transform` to choose a common key, BPM
@@ -422,6 +424,66 @@ operation. A real local exercise verified place, exact restart recovery,
 explicit removal, second restart recovery, append-only history, owner-only
 storage, path-free Inspector state and byte-identical decision/library/pack
 inputs. Increment 6.1 is complete; broader Phase 6 remains in progress.
+
+Increment 6.2a adds a separate, explicitly enabled transform launch. It is
+mutually exclusive with `--enable-clip-reuse-plan`, because the reuse proposal
+pins the complete library state while a successful transform deliberately
+adds a new library object and catalog row:
+
+```bash
+.venv/bin/sunofriend workbench "/absolute/path/to/stems" \
+  --candidate-root "/absolute/path/to/results" \
+  --catalog "/absolute/path/to/workbench-catalog.json" \
+  --state-dir "/absolute/path/to/workbench-state" \
+  --clip-library "/absolute/path/to/existing-clip-library" \
+  --phase6-acceptance "/absolute/path/to/passed-phase5-acceptance-result.json" \
+  --phase6-pack "/absolute/path/to/exact-accepted-garageband-pack.zip" \
+  --enable-clip-transforms \
+  --open
+```
+
+Open a Clip, choose exactly one operation and use **Review temporary
+transform**. That projection writes nothing. It shows the exact parent/object
+and library pins, before/after key, BPM, timing, duration and pitch facts, plus
+alignment or range warnings. Only that current projection enables **Create
+immutable Clip version**. A fresh durable action appends one child with an
+exact parent, transform recipe and object hash; an exact retry reports the
+already-existing child as an idempotent replay and appends nothing. Neither
+outcome edits or replaces the parent, chooses a winner, moves a reuse
+placement or changes the selected arrangement or GarageBand Pack. The result
+panel labels fresh creation and replay separately and exposes the exact
+parent/child/object/lineage/library-state evidence.
+
+The first transform slice supports:
+
+- a same-mode key change with an explicit nearest/up/down interval; and
+- a BPM change with either **musical** timing, which keeps beats and changes
+  elapsed playback time, or **stem-locked** timing, which keeps source seconds
+  and changes beat positions for the requested GarageBand tempo.
+
+Use musical timing to make MIDI genuinely faster or slower. It will no longer
+line up with untreated audio. Use stem-locked timing when the source audio must
+stay at the same seconds; it is a DAW-grid conversion, not an audible speed-up.
+One fresh action creates one version, so changing both key and BPM requires
+two explicit lineage steps. An exact retry of the same request has all effects
+false. A conflict reloads current detail once and never automatically replays
+the write. At the accepted 10,000-Clip library boundary the Workbench explains
+and disables transform review and creation while existing Clips remain
+inspectable, auditionable and exportable. After creating alternatives, restart
+Workbench in `--enable-clip-reuse-plan` mode and explicitly place the version
+you want.
+Major/minor remapping, concert-pitch cleanup and downbeat anchoring remain
+deferred: those need a separate musical contract or full MIDI events that Clip
+v1 does not currently retain.
+
+The completion exercise used a copy of the accepted Lidl library. A 171-note
+B-major bass Clip at approximately 119 BPM produced a musical-timing 125 BPM
+child and then a +1-semitone C-major child. The original 10-Clip library stayed
+unchanged, the copy contained exactly the two requested additions, both exact
+request retries had zero effects, all three lineage versions survived restart,
+and the final deterministic MIDI repeated at SHA-256
+`42eabbb41cd484d104d67080833710bb240b0d73d817e8af93aa95217b35b502`.
+The full project suite passed with 910 tests.
 
 The disclosed **Compatibility fallback** keeps the older browser-media players
 for environments where decoded audio cannot be prepared. It is synchronised in

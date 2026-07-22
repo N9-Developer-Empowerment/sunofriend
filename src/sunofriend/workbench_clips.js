@@ -7,12 +7,14 @@
   "use strict";
 
   const DEFAULT_LIMIT = 24;
+  const KEY_TONICS = Object.freeze(["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]);
 
   function createClipLibrary({ api, escapeHtml }) {
     if (typeof api !== "function") throw new Error("Clip Library requires the Workbench API");
     const esc = typeof escapeHtml === "function" ? escapeHtml : fallbackEscape;
     let capability = null;
     let reuseCapability = null;
+    let transformCapability = null;
     let host = null;
     let mode = "browse";
     let detailReturnMode = "browse";
@@ -28,20 +30,36 @@
     let actionErrorMessage = "";
     let statusMessage = "";
     let planStatusMessage = "";
+    let transformProjection = null;
+    let transformProjectionTransform = null;
+    let transformResult = null;
+    let transformPending = "";
+    let transformErrorMessage = "";
+    let transformStatusMessage = "";
+    let pendingTransformFocusId = "";
+    let observedLibraryCount = null;
+    let libraryEvidenceStale = false;
     let requestSequence = 0;
     let planRequestSequence = 0;
+    let transformRequestSequence = 0;
     const artifacts = new Map();
     const placementDrafts = new Map();
+    const transformDrafts = new Map();
     const filters = { text: "", role: "", key: "", bpm: "", tags: "", offset: 0 };
 
-    function setCapability(value, optionalReuseCapability = null) {
-      capability = value && value.enabled === true ? value : null;
+    function setCapability(value, optionalReuseCapability = null, optionalTransformCapability = null) {
       const wasReuseEnabled = reuseEnabled();
+      const wasTransformEnabled = transformEnabled();
+      capability = value && value.enabled === true ? value : null;
       reuseCapability = optionalReuseCapability && optionalReuseCapability.enabled === true
         ? optionalReuseCapability
         : null;
+      transformCapability = optionalTransformCapability && optionalTransformCapability.enabled === true
+        ? optionalTransformCapability
+        : null;
       if (!capability) reset();
       if (wasReuseEnabled !== reuseEnabled()) resetReuseState();
+      if (wasTransformEnabled !== transformEnabled()) resetTransformState(true);
     }
 
     function enabled() {
@@ -50,6 +68,10 @@
 
     function reuseEnabled() {
       return capability !== null && reuseCapability !== null;
+    }
+
+    function transformEnabled() {
+      return capability !== null && transformCapability !== null;
     }
 
     function reset() {
@@ -64,7 +86,10 @@
       statusMessage = "";
       requestSequence += 1;
       artifacts.clear();
+      observedLibraryCount = null;
+      libraryEvidenceStale = false;
       resetReuseState();
+      resetTransformState(true);
     }
 
     function resetReuseState() {
@@ -77,6 +102,18 @@
       planStatusMessage = "";
       planRequestSequence += 1;
       placementDrafts.clear();
+    }
+
+    function resetTransformState(clearDrafts = false) {
+      transformProjection = null;
+      transformProjectionTransform = null;
+      transformResult = null;
+      transformPending = "";
+      transformErrorMessage = "";
+      transformStatusMessage = "";
+      pendingTransformFocusId = "";
+      transformRequestSequence += 1;
+      if (clearDrafts) transformDrafts.clear();
     }
 
     function stopAudio() {
@@ -100,15 +137,24 @@
       stopAudio();
       host.innerHTML = mode === "detail" ? detailHtml() : mode === "plan" ? planHtml() : browseHtml();
       wire();
+      restoreTransformFocus();
     }
 
     function gateHtml() {
       const acceptance = capability?.acceptance || {};
-      const count = Number(capability?.library?.clip_count || 0);
+      const count = Number(observedLibraryCount ?? capability?.library?.clip_count ?? 0);
+      const countText = libraryEvidenceStale
+        ? browseFiltersAreEmpty()
+          ? "library changed · exact count refreshes when Browse Clips reloads"
+          : "library changed · clear filters to refresh the exact library count"
+        : `${esc(count)} immutable clip${count === 1 ? "" : "s"}`;
+      if (transformEnabled()) {
+        return `<section class="identity"><p><b>Phase 6 Clip Library with explicit version creation</b></p><p>Existing Clip objects remain immutable. After reviewing one temporary key or BPM change, you may explicitly create one new child version from the exact Clip you opened.</p><p class="muted">${countText} · accepted pack ${esc(shortHash(acceptance.pack_sha256))} · no automatic transform, preference, selection, placement, current-arrangement change or GarageBand Pack change.</p></section>`;
+      }
       const boundary = reuseEnabled()
         ? "no transform, edit, tag change, hybrid, current-project selection or library write is available here"
         : "no transform, edit, tag change, hybrid, selection or library write is available here";
-      return `<section class="identity"><p><b>Phase 6 read-only Clip Library</b></p><p>The exact Phase 5.9 GarageBand and usability review passed before this view was enabled. This slice can browse verified Clip v1 objects, render a neutral listening proxy and download a deterministic MIDI reconstruction.</p><p class="muted">${esc(count)} immutable clip${count === 1 ? "" : "s"} · accepted pack ${esc(shortHash(acceptance.pack_sha256))} · ${boundary}.</p></section>`;
+      return `<section class="identity"><p><b>Phase 6 read-only Clip Library</b></p><p>The exact Phase 5.9 GarageBand and usability review passed before this view was enabled. This slice can browse verified Clip v1 objects, render a neutral listening proxy and download a deterministic MIDI reconstruction.</p><p class="muted">${countText} · accepted pack ${esc(shortHash(acceptance.pack_sha256))} · ${boundary}.</p></section>`;
     }
 
     function reuseHeaderHtml() {
@@ -170,7 +216,43 @@
       const instrument = clip.instrument || {};
       const range = clip.pitch_range ? `${esc(clip.pitch_range.minimum_name || clip.pitch_range.minimum)}–${esc(clip.pitch_range.maximum_name || clip.pitch_range.maximum)}` : "no notes";
       const backLabel = detailReturnMode === "plan" ? "← Back to proposed reuse plan" : "← Back to Clip Library";
-      return `<section aria-labelledby="clip-detail-heading"><button id="clip-back" type="button">${backLabel}</button><h2 id="clip-detail-heading">${esc(clip.title)}</h2>${clipHeaderHtml()}${statusHtml()}<div class="clip-detail-grid"><section class="panel"><h3>Musical content</h3><dl class="clip-facts"><dt>Role</dt><dd>${esc(clip.role)}</dd><dt>Key</dt><dd>${esc(clip.key || "unknown")}</dd><dt>Tempo</dt><dd>${esc(numberLabel(clip.bpm))} BPM</dd><dt>Timing contract</dt><dd>${esc(timing.resolved_mode || "musical")}</dd><dt>GarageBand tempo</dt><dd>${esc(numberLabel(timing.export_bpm || clip.bpm))} BPM</dd><dt>Notes / chords</dt><dd>${esc(clip.note_count)} / ${esc(clip.chord_count)}</dd><dt>Pitch range</dt><dd>${range}</dd><dt>Duration</dt><dd>${esc(numberLabel(duration.export_seconds))} seconds</dd><dt>Program / channel</dt><dd>${esc(instrument.program)} / ${esc(Number(instrument.channel) + 1)}</dd></dl></section><section class="panel"><h3>Immutable identity</h3><p>Revision ${esc(clip.revision)} · ${esc(lineage.length)} version${lineage.length === 1 ? "" : "s"} in this lineage.</p><p class="muted">Clip ID ${esc(clip.clip_id)}<br>Object SHA-256 ${esc(clip.object_sha256)}</p><p>The source pathname and private provenance are deliberately absent from this browser projection.</p></section></div><section class="controls"><h3>Listen and export</h3><p>The MIDI download is a deterministic reconstruction of this immutable Clip v1 document. It is not claimed to be a byte-for-byte copy of an earlier source MIDI. A neutral preview, when requested, renders that exact reconstructed MIDI through the pinned dry local SoundFont.</p><p class="muted">Listening and downloading do not record a preference or add this Clip to the reuse proposal.</p><div class="actions"><button id="clip-midi" class="primary" type="button">Prepare MIDI download</button><button id="clip-preview" type="button">Prepare neutral audition</button></div><div id="clip-artifact">${artifactHtml(artifact)}</div></section>${reusePlacementHtml(clip)}<section class="panel"><h3>Version lineage</h3>${lineage.length ? `<ol class="clip-lineage">${lineage.map((item) => `<li><button type="button" data-lineage-clip="${esc(item.clip_id)}" ${item.clip_id === clip.clip_id ? "disabled" : ""}>Revision ${esc(item.revision)} · ${esc(item.title)} · ${esc(numberLabel(item.bpm))} BPM${item.clip_id === clip.clip_id ? " (current)" : ""}</button></li>`).join("")}</ol>` : "<p>No lineage records were found.</p>"}</section></section>`;
+      return `<section aria-labelledby="clip-detail-heading"><button id="clip-back" type="button">${backLabel}</button><h2 id="clip-detail-heading">${esc(clip.title)}</h2>${clipHeaderHtml()}${statusHtml()}<div class="clip-detail-grid"><section class="panel"><h3>Musical content</h3><dl class="clip-facts"><dt>Role</dt><dd>${esc(clip.role)}</dd><dt>Key</dt><dd>${esc(clip.key || "unknown")}</dd><dt>Tempo</dt><dd>${esc(numberLabel(clip.bpm))} BPM</dd><dt>Timing contract</dt><dd>${esc(timing.resolved_mode || "musical")}</dd><dt>GarageBand tempo</dt><dd>${esc(numberLabel(timing.export_bpm || clip.bpm))} BPM</dd><dt>Notes / chords</dt><dd>${esc(clip.note_count)} / ${esc(clip.chord_count)}</dd><dt>Pitch range</dt><dd>${range}</dd><dt>Duration</dt><dd>${esc(numberLabel(duration.export_seconds))} seconds</dd><dt>Program / channel</dt><dd>${esc(instrument.program)} / ${esc(Number(instrument.channel) + 1)}</dd></dl></section><section class="panel"><h3>Immutable identity</h3><p>Revision ${esc(clip.revision)} · ${esc(lineage.length)} version${lineage.length === 1 ? "" : "s"} in this lineage.</p><p class="muted">Clip ID ${esc(clip.clip_id)}<br>Object SHA-256 ${esc(clip.object_sha256)}</p><p>The source pathname and private provenance are deliberately absent from this browser projection.</p></section></div><section class="controls"><h3>Listen and export</h3><p>The MIDI download is a deterministic reconstruction of this immutable Clip v1 document. It is not claimed to be a byte-for-byte copy of an earlier source MIDI. A neutral preview, when requested, renders that exact reconstructed MIDI through the pinned dry local SoundFont.</p><p class="muted">Listening and downloading do not record a preference or add this Clip to the reuse proposal.</p><div class="actions"><button id="clip-midi" class="primary" type="button">Prepare MIDI download</button><button id="clip-preview" type="button">Prepare neutral audition</button></div><div id="clip-artifact">${artifactHtml(artifact)}</div></section>${transformHtml(clip)}${reusePlacementHtml(clip)}<section class="panel"><h3>Version lineage</h3><p class="muted">Versions are alternatives in one source lineage, not a ranking. “Viewing” identifies only the detail currently open.</p>${lineage.length ? `<ol class="clip-lineage">${lineage.map((item) => `<li><button type="button" data-lineage-clip="${esc(item.clip_id)}" ${item.clip_id === clip.clip_id ? "disabled" : ""}>Revision ${esc(item.revision)} · ${esc(item.title)} · ${esc(numberLabel(item.bpm))} BPM${item.clip_id === clip.clip_id ? " (viewing)" : ""}</button></li>`).join("")}</ol>` : "<p>No lineage records were found.</p>"}</section></section>`;
+    }
+
+    function transformHtml(clip) {
+      if (!transformEnabled()) return "";
+      const draft = transformDraft(clip.clip_id);
+      const sourceMode = keyMode(clip.key);
+      const drumFamily = isDrumFamilyClip(clip);
+      const previewAllowed = transformActionAllowed("preview");
+      const createAllowed = transformActionAllowed("create");
+      const keyAllowed = transformOperationAllowed("key") && !!sourceMode && !drumFamily;
+      const bpmAllowed = transformOperationAllowed("bpm");
+      const targetProject = transformCapability?.target_project || {};
+      const projectKey = sameModeKey(targetProject.key, sourceMode);
+      const projectBpm = positiveFinite(targetProject.bpm);
+      const busy = !!transformPending;
+      const bpmBounds = transformBpmBounds(clip);
+      const formDisabled = busy || !previewAllowed ? "disabled" : "";
+      const keyOptions = sourceMode
+        ? KEY_TONICS.map((tonic) => {
+            const value = `${tonic} ${sourceMode}`;
+            return `<option value="${esc(value)}" ${draft.targetKey === value ? "selected" : ""}>${esc(value)}</option>`;
+          }).join("")
+        : "";
+      const operationHelp = !previewAllowed
+        ? '<div class="notice" id="clip-transform-capacity"><b>Version creation is unavailable at this library size.</b><p>The accepted 10,000-Clip boundary has been reached, so both temporary transform review and child creation are disabled. Existing Clips remain available to inspect, audition and export.</p></div>'
+        : !keyAllowed
+          ? `<p class="muted" id="clip-transform-key-unavailable">${drumFamily ? "Key change is unavailable because drum MIDI note numbers select kit pieces." : "This Clip has no usable source key, so this increment can only review a BPM change."}</p>`
+        : "";
+      const projectionHtml = transformProjectionHtml();
+      const resultHtml = transformResultHtml();
+      const createReady = !!transformProjection && !busy && createAllowed;
+      const reviewReady = !busy && previewAllowed && (keyAllowed || bpmAllowed);
+      const createHelp = createAllowed
+        ? "Creation is available only for the exact current temporary review. Editing any field invalidates it."
+        : "Creation is disabled because the accepted library capacity has been reached.";
+      return `<section id="clip-transform-section" class="controls" aria-labelledby="clip-transform-heading" aria-busy="${busy ? "true" : "false"}"><h3 id="clip-transform-heading">Create a transformed alternative</h3><p>Choose and review exactly one change to this exact Clip. Review is temporary and zero-effect. Only <b>Create immutable Clip version</b> adds a child; the parent and every analytical, AI and repaired alternative stay intact.</p><div class="notice"><b>State boundary</b><p>Draft and temporary review: this browser tab only. Created child: durable immutable version. Current song, reuse proposal, selection and GarageBand Pack: unchanged.</p></div>${transformStatusHtml()}${resultHtml}<form id="clip-transform-form"><fieldset ${formDisabled}><legend>1. Choose one change</legend><label class="answer-row"><input id="clip-transform-operation-key" name="clip-transform-operation" type="radio" value="key" ${draft.operation === "key" ? "checked" : ""} ${keyAllowed ? "" : "disabled"}> Key, keeping ${esc(sourceMode || "the existing mode")}</label><label class="answer-row"><input id="clip-transform-operation-bpm" name="clip-transform-operation" type="radio" value="bpm" ${draft.operation === "bpm" ? "checked" : ""} ${bpmAllowed ? "" : "disabled"}> BPM and timing behaviour</label><p class="muted">Sunofriend preselects nothing. Project values are never inferred or applied automatically.</p>${operationHelp}</fieldset><div id="clip-transform-key-controls" ${draft.operation === "key" ? "" : "hidden"}><fieldset ${formDisabled}><legend>2. Choose the target key and register direction</legend><label for="clip-transform-target-key">Target key</label><select id="clip-transform-target-key" aria-describedby="clip-transform-key-help"><option value="">Choose a target key</option>${keyOptions}</select>${projectKey ? `<button id="clip-transform-use-project-key" type="button">Use project key ${esc(projectKey)}</button>` : ""}<p id="clip-transform-key-help" class="muted">Only the source major/minor mode is offered. Smallest shift, upward and downward can land the same notes in different registers.</p><label class="answer-row"><input id="clip-transform-direction-nearest" name="clip-transform-direction" type="radio" value="nearest" ${draft.direction === "nearest" ? "checked" : ""}> Smallest semitone shift</label><label class="answer-row"><input id="clip-transform-direction-up" name="clip-transform-direction" type="radio" value="up" ${draft.direction === "up" ? "checked" : ""}> Transpose upward</label><label class="answer-row"><input id="clip-transform-direction-down" name="clip-transform-direction" type="radio" value="down" ${draft.direction === "down" ? "checked" : ""}> Transpose downward</label></fieldset></div><div id="clip-transform-bpm-controls" ${draft.operation === "bpm" ? "" : "hidden"}><fieldset ${formDisabled}><legend>2. Choose the target BPM and timing behaviour</legend><label for="clip-transform-target-bpm">Target BPM</label><input id="clip-transform-target-bpm" type="number" min="${esc(numberInputLabel(bpmBounds.minimum))}" max="${esc(numberInputLabel(bpmBounds.maximum))}" step="0.001" inputmode="decimal" value="${esc(draft.targetBpm)}" aria-describedby="clip-transform-bpm-help">${projectBpm ? `<button id="clip-transform-use-project-bpm" type="button">Use project BPM ${esc(numberLabel(projectBpm))}</button>` : ""}<p id="clip-transform-bpm-help" class="muted">For this ${esc(numberLabel(clip.bpm))} BPM Clip, choose ${esc(numberLabel(bpmBounds.minimum))}–${esc(numberLabel(bpmBounds.maximum))} BPM (${esc(numberLabel(bpmBounds.minimumRatio))}×–${esc(numberLabel(bpmBounds.maximumRatio))}×, within the global ${esc(numberLabel(bpmBounds.globalMinimum))}–${esc(numberLabel(bpmBounds.globalMaximum))} BPM boundary). <b>Musical</b> keeps bars and beats while elapsed duration changes. <b>Stem-locked</b> keeps source seconds while MIDI beat positions and the required GarageBand tempo change.</p><label class="answer-row"><input id="clip-transform-timing-musical" name="clip-transform-timing" type="radio" value="musical" ${draft.timingMode === "musical" ? "checked" : ""}> Musical timing</label><label class="answer-row"><input id="clip-transform-timing-stem-locked" name="clip-transform-timing" type="radio" value="stem_locked" ${draft.timingMode === "stem_locked" ? "checked" : ""}> Stem-locked timing</label></fieldset></div><div class="actions"><button id="clip-transform-review" class="primary" type="submit" ${reviewReady ? "" : "disabled"}>${transformPending === "projection" ? "Reviewing locally…" : "Review temporary transform"}</button><button id="clip-transform-create" type="button" aria-describedby="clip-transform-create-help" aria-disabled="${createReady ? "false" : "true"}" ${createReady ? "" : "disabled"}>${transformPending === "create" ? "Verifying or creating immutable version…" : "Create immutable Clip version"}</button></div><p id="clip-transform-create-help" class="muted">${esc(createHelp)}</p></form>${projectionHtml}<p class="muted">This increment does not tune audio, align a downbeat, edit notes, combine processes, render a song, export a pack or choose a winner.</p></section>`;
     }
 
     function reusePlacementHtml(clip) {
@@ -229,6 +311,54 @@
         : '<p class="success">No key or BPM mismatch was reported.</p>';
       const end = target.nominal_end_beat == null ? "unknown" : numberLabel(target.nominal_end_beat);
       return `<article class="card" data-placement-id="${esc(placement?.placement_id)}"><h3>${esc(clip.title || "Untitled Clip")}</h3><p><span class="badge good">${esc(clip.role || "unclassified")}</span> ${esc(clip.key || "key unknown")} · ${esc(numberLabel(clip.bpm))} BPM</p><p><b>Planning position:</b> bar ${esc(target.bar)} · beat ${esc(target.beat)} · nominal end beat ${esc(end)}.</p><p>${esc(clip.note_count || 0)} notes · ${esc(numberLabel(clip.duration_beats))} beats · source revision ${esc(clip.revision || 1)}</p>${warningHtml}<p class="muted">Unchanged Clip ${esc(shortHash(clip.clip_id))} · object ${esc(shortHash(clip.object_sha256))}. No transform or render is attached.</p><div class="actions"><button type="button" data-plan-inspect-clip="${esc(clip.clip_id)}">Inspect Clip</button><button type="button" data-remove-placement="${esc(placement?.placement_id)}" ${actionPending || !!planErrorMessage || !actionAllowed("remove") ? "disabled" : ""}>Remove from proposal</button></div></article>`;
+    }
+
+    function transformStatusHtml() {
+      if (transformErrorMessage) return `<div id="clip-transform-status" class="app-alert" role="alert" tabindex="-1"><p><b>The transform action did not complete:</b> ${esc(transformErrorMessage)}</p><p>No automatic retry was attempted. The parent Clip, current song, proposal, selection and pack remain unchanged.</p></div>`;
+      if (transformStatusMessage) return `<p id="clip-transform-status" class="success" role="status" aria-live="polite">${esc(transformStatusMessage)}</p>`;
+      if (transformPending) return `<p id="clip-transform-status" class="busy" role="status" aria-live="polite" tabindex="-1">${transformPending === "create" ? "Verifying or creating the exact immutable child…" : "Calculating a temporary, zero-effect transform review…"}</p>`;
+      return '<p id="clip-transform-status" class="muted" role="status" aria-live="polite">No transform has been reviewed or created in this browser tab.</p>';
+    }
+
+    function transformProjectionHtml() {
+      const projection = transformProjection;
+      if (!projection) return '<div id="clip-transform-projection"><p class="muted">No temporary transform review is active.</p></div>';
+      const before = projection.parent || projection.source || projection.before || {};
+      const after = projection.child || projection.target || projection.after || projection.proposed || {};
+      const warnings = list(projection.warnings);
+      const audit = projection.audit || projection.diff || {};
+      const warningHtml = warnings.length
+        ? `<div class="notice"><h4>Review warnings</h4><ul>${warnings.map((warning) => `<li>${esc(warning?.message || warning || "Review this transform carefully.")}</li>`).join("")}</ul></div>`
+        : '<p class="success">No transform warning was reported. This is not a preference or accuracy score.</p>';
+      const operation = transformProjectionOperation(projection);
+      const diffHtml = transformProjectionDiffHtml(before, after, audit);
+      const libraryState = projection.library?.state_sha256 || "unknown";
+      return `<section id="clip-transform-projection" class="panel" aria-labelledby="clip-transform-projection-heading" tabindex="-1"><h4 id="clip-transform-projection-heading">Temporary transform review</h4><p><b>${esc(operation)}</b> · projection ${esc(shortHash(projection.projection_sha256))}.</p>${diffHtml}${warningHtml}<details><summary>Exact projection evidence</summary><dl class="clip-facts"><dt>Projection SHA-256</dt><dd>${esc(projection.projection_sha256 || "unknown")}</dd><dt>Library state</dt><dd>${esc(libraryState)}</dd><dt>Parent Clip</dt><dd>${esc(before.clip_id || "unknown")}</dd><dt>Parent object</dt><dd>${esc(before.object_sha256 || "unknown")}</dd><dt>Parent lineage / revision</dt><dd>${esc(before.lineage_id || "unknown")} / ${esc(before.revision ?? "unknown")}</dd><dt>Projected child Clip</dt><dd>${esc(after.clip_id || "unknown")}</dd><dt>Projected child object</dt><dd>${esc(after.object_sha256 || "unknown")}</dd><dt>Child lineage / revision</dt><dd>${esc(after.lineage_id || "unknown")} / ${esc(after.revision ?? "unknown")}</dd></dl></details><p class="muted"><b>Effects: zero.</b> This review is browser-session/rebuildable state. It has not created a Clip, changed a source, selected a process, placed MIDI or changed a pack.</p></section>`;
+    }
+
+    function transformProjectionDiffHtml(before, after, diff) {
+      if (diff.kind === "key") {
+        return `<dl class="clip-facts"><dt>Key</dt><dd>${esc(diff.key_before ?? before.key ?? "unknown")} → ${esc(diff.key_after ?? after.key ?? "unknown")}</dd><dt>Semitone shift</dt><dd>${esc(signedNumberLabel(diff.semitones))}</dd><dt>Pitch range</dt><dd>${esc(rangeLabel(before.pitch_range))} → ${esc(rangeLabel(after.pitch_range))}</dd><dt>Note pitches changed</dt><dd>${esc(diff.note_pitches_changed ?? "unknown")}</dd><dt>Chord symbols changed</dt><dd>${esc(diff.chord_symbols_changed ?? "unknown")}</dd><dt>Notes / chords</dt><dd>${esc(before.note_count ?? diff.note_count_before ?? "unknown")} / ${esc(before.chord_count ?? diff.chord_count_before ?? "unknown")} → ${esc(after.note_count ?? diff.note_count_after ?? "unknown")} / ${esc(after.chord_count ?? diff.chord_count_after ?? "unknown")}</dd><dt>BPM / timing</dt><dd>unchanged</dd><dt>Duration</dt><dd>${esc(numberLabel(before.duration_seconds ?? before.export_seconds))} → ${esc(numberLabel(after.duration_seconds ?? after.export_seconds))} seconds</dd></dl>`;
+      }
+      if (diff.kind === "bpm") {
+        return `<dl class="clip-facts"><dt>BPM</dt><dd>${esc(numberLabel(diff.bpm_before ?? before.bpm))} → ${esc(numberLabel(diff.bpm_after ?? after.bpm))}</dd><dt>Tempo ratio</dt><dd>${esc(numberLabel(diff.ratio))}</dd><dt>Timing behaviour</dt><dd>${esc(statusLabel(diff.timing_mode))}</dd><dt>Elapsed duration</dt><dd>${esc(numberLabel(before.duration_seconds ?? before.export_seconds))} → ${esc(numberLabel(after.duration_seconds ?? after.export_seconds))} seconds</dd><dt>Beat positions changed</dt><dd>${esc(yesNo(diff.beat_positions_changed))}</dd><dt>Source seconds changed</dt><dd>${esc(yesNo(diff.source_seconds_changed))}</dd><dt>Key / pitch range</dt><dd>${esc(before.key || "unknown")} · ${esc(rangeLabel(before.pitch_range))} → unchanged</dd><dt>Notes / chords</dt><dd>${esc(before.note_count ?? diff.note_count_before ?? "unknown")} / ${esc(before.chord_count ?? diff.chord_count_before ?? "unknown")} → ${esc(after.note_count ?? diff.note_count_after ?? "unknown")} / ${esc(after.chord_count ?? diff.chord_count_after ?? "unknown")}</dd></dl>`;
+      }
+      return `<dl class="clip-facts"><dt>Key</dt><dd>${esc(before.key || "unknown")} → ${esc(after.key || "unchanged")}</dd><dt>BPM</dt><dd>${esc(numberLabel(before.bpm))} → ${esc(numberLabel(after.bpm))}</dd><dt>Duration</dt><dd>${esc(numberLabel(before.duration_seconds ?? before.export_seconds))} → ${esc(numberLabel(after.duration_seconds ?? after.export_seconds))} seconds</dd><dt>Pitch range</dt><dd>${esc(rangeLabel(before.pitch_range))} → ${esc(rangeLabel(after.pitch_range))}</dd><dt>Notes / chords</dt><dd>${esc(diff.note_count ?? after.note_count ?? "unchanged")} / ${esc(diff.chord_count ?? after.chord_count ?? "unchanged")}</dd></dl>`;
+    }
+
+    function transformResultHtml() {
+      const document = transformResult?.result || transformResult || {};
+      const child = document.child || document.clip || document.version;
+      if (!child) return "";
+      const parent = document.parent || {};
+      const replayed = document.replayed === true || document.status === "replayed";
+      const library = document.library || {};
+      const heading = replayed ? "Existing immutable alternative verified" : "New immutable alternative created";
+      const effectText = replayed
+        ? "This exact child already existed. The explicit retry was idempotent and appended nothing additional."
+        : "This explicit action appended exactly one child version.";
+      const inspectLabel = replayed ? "Inspect existing version" : "Inspect created version";
+      return `<section id="clip-transform-result" class="success" aria-labelledby="clip-transform-result-heading" tabindex="-1"><h4 id="clip-transform-result-heading">${heading}</h4><p>${effectText} Source revision ${esc(parent.revision ?? detailDocument?.clip?.revision ?? "unknown")} and every analytical, AI and repaired Clip remain unchanged. This child is not preferred, selected, placed or added to the GarageBand Pack.</p><dl class="clip-facts"><dt>Result status</dt><dd>${esc(replayed ? "idempotent replay · effects zero" : "created · one library append")}</dd><dt>Child revision</dt><dd>${esc(child.revision)}</dd><dt>Child Clip</dt><dd>${esc(child.clip_id)}</dd><dt>Child object</dt><dd>${esc(child.object_sha256)}</dd><dt>Lineage</dt><dd>${esc(child.lineage_id || parent.lineage_id || "unknown")}</dd><dt>Parent Clip</dt><dd>${esc(child.parent_clip_id || parent.clip_id || currentClipId)}</dd><dt>Parent object</dt><dd>${esc(parent.object_sha256 || detailDocument?.clip?.object_sha256 || "verified source")}</dd><dt>Key / BPM</dt><dd>${esc(child.key || "unknown")} · ${esc(numberLabel(child.bpm))} BPM</dd><dt>Projection SHA-256</dt><dd>${esc(document.projection_sha256 || "unknown")}</dd><dt>Requested library state</dt><dd>${esc(library.expected_state_sha256 || "unknown")}</dd><dt>Library before this response</dt><dd>${esc(library.previous_state_sha256 || "unknown")}</dd><dt>Library after this response</dt><dd>${esc(library.current_state_sha256 || "unknown")}</dd></dl><p class="muted">Reversibility means choosing the retained parent or another lineage version; Sunofriend did not mutate this child backwards.</p><div class="actions"><button id="clip-transform-inspect-child" class="primary" type="button">${inspectLabel}</button><button id="clip-transform-return-source" type="button">Return to source</button></div></section>`;
     }
 
     function artifactHtml(artifact) {
@@ -296,7 +426,15 @@
       const next = host.querySelector("#clip-next");
       if (next) next.onclick = () => loadList(Number(listDocument?.page?.offset || 0) + DEFAULT_LIMIT);
       const back = host.querySelector("#clip-back");
-      if (back) back.onclick = () => { stopAudio(); mode = detailReturnMode; errorMessage = ""; statusMessage = ""; actionErrorMessage = ""; render(); };
+      if (back) back.onclick = () => {
+        stopAudio();
+        mode = detailReturnMode;
+        errorMessage = "";
+        statusMessage = "";
+        actionErrorMessage = "";
+        render();
+        if (mode === "browse" && !listDocument && !loading) loadList(filters.offset || 0);
+      };
       const midi = host.querySelector("#clip-midi");
       if (midi) midi.onclick = () => prepareArtifact(false, midi);
       const preview = host.querySelector("#clip-preview");
@@ -317,6 +455,53 @@
         updatePlacementDraft();
         placeCurrentClip();
       };
+      const transformForm = host.querySelector("#clip-transform-form");
+      if (transformForm) transformForm.onsubmit = (event) => {
+        event.preventDefault();
+        updateTransformDraftFromInputs();
+        reviewTransform();
+      };
+      wireTransformChoice("clip-transform-operation-key", () => setTransformDraftValue("operation", "key", true, "clip-transform-target-key"));
+      wireTransformChoice("clip-transform-operation-bpm", () => setTransformDraftValue("operation", "bpm", true, "clip-transform-target-bpm"));
+      wireTransformChoice("clip-transform-direction-nearest", () => setTransformDraftValue("direction", "nearest", false, "clip-transform-direction-nearest"));
+      wireTransformChoice("clip-transform-direction-up", () => setTransformDraftValue("direction", "up", false, "clip-transform-direction-up"));
+      wireTransformChoice("clip-transform-direction-down", () => setTransformDraftValue("direction", "down", false, "clip-transform-direction-down"));
+      wireTransformChoice("clip-transform-timing-musical", () => setTransformDraftValue("timingMode", "musical", false, "clip-transform-timing-musical"));
+      wireTransformChoice("clip-transform-timing-stem-locked", () => setTransformDraftValue("timingMode", "stem_locked", false, "clip-transform-timing-stem-locked"));
+      const targetKey = host.querySelector("#clip-transform-target-key");
+      if (targetKey) targetKey.oninput = () => setTransformDraftValue("targetKey", String(targetKey.value || ""), false, "clip-transform-target-key");
+      const targetBpm = host.querySelector("#clip-transform-target-bpm");
+      if (targetBpm) targetBpm.oninput = () => setTransformDraftValue("targetBpm", String(targetBpm.value || ""), false, "clip-transform-target-bpm");
+      const useProjectKey = host.querySelector("#clip-transform-use-project-key");
+      if (useProjectKey) useProjectKey.onclick = () => setTransformDraftValue("targetKey", sameModeKey(transformCapability?.target_project?.key, keyMode(detailDocument?.clip?.key)) || "", true, "clip-transform-target-key");
+      const useProjectBpm = host.querySelector("#clip-transform-use-project-bpm");
+      if (useProjectBpm) useProjectBpm.onclick = () => setTransformDraftValue("targetBpm", String(positiveFinite(transformCapability?.target_project?.bpm) || ""), true, "clip-transform-target-bpm");
+      const createTransform = host.querySelector("#clip-transform-create");
+      if (createTransform) createTransform.onclick = () => createTransformVersion();
+      const inspectChild = host.querySelector("#clip-transform-inspect-child");
+      if (inspectChild) inspectChild.onclick = () => {
+        const child = transformResultChild();
+        if (child?.clip_id) openClip(child.clip_id, "browse");
+      };
+      const returnSource = host.querySelector("#clip-transform-return-source");
+      if (returnSource) returnSource.onclick = () => {
+        transformResult = null;
+        transformProjection = null;
+        transformStatusMessage = "Source Clip retained. No child was selected or placed.";
+        loadDetail(currentClipId);
+      };
+    }
+
+    function wireTransformChoice(id, callback) {
+      const element = host?.querySelector(`#${id}`);
+      if (element) element.onclick = callback;
+    }
+
+    function restoreTransformFocus() {
+      if (!pendingTransformFocusId || !host) return;
+      const target = host.querySelector(`#${pendingTransformFocusId}`);
+      pendingTransformFocusId = "";
+      target?.focus();
     }
 
     async function loadList(offset) {
@@ -333,6 +518,13 @@
         const value = await api(`/api/clips?${query.toString()}`);
         if (sequence !== requestSequence) return;
         listDocument = value;
+        if (browseFiltersAreEmpty()) {
+          const total = Number(value?.page?.total);
+          if (Number.isInteger(total) && total >= 0) {
+            observedLibraryCount = total;
+            libraryEvidenceStale = false;
+          }
+        }
         loading = false;
         render();
       } catch (error) {
@@ -345,6 +537,7 @@
 
     function openClip(clipId, returnMode = "browse") {
       stopAudio();
+      resetTransformState(false);
       mode = "detail";
       detailReturnMode = returnMode === "plan" ? "plan" : "browse";
       currentClipId = clipId;
@@ -425,6 +618,303 @@
           button.textContent = originalLabel;
         }
       }
+    }
+
+    function transformDraft(clipId) {
+      const existing = transformDrafts.get(clipId);
+      if (existing) return existing;
+      const draft = { operation: "", targetKey: "", direction: "", targetBpm: "", timingMode: "" };
+      transformDrafts.set(clipId, draft);
+      return draft;
+    }
+
+    function browseFiltersAreEmpty() {
+      return !filters.text && !filters.role && !filters.key && !filters.bpm && !filters.tags;
+    }
+
+    function setTransformDraftValue(name, value, rerender = false, focusId = "") {
+      if (!currentClipId || transformPending) return;
+      const draft = transformDraft(currentClipId);
+      if (draft[name] === value) return;
+      const hadReviewedState = !!transformProjection || !!transformResult;
+      draft[name] = value;
+      invalidateTransformProjection("Draft changed. Review it again before creating a version.");
+      if (rerender || hadReviewedState) {
+        pendingTransformFocusId = focusId;
+        render();
+      }
+    }
+
+    function updateTransformDraftFromInputs() {
+      if (!currentClipId || !host) return;
+      const draft = transformDraft(currentClipId);
+      const keyInput = host.querySelector("#clip-transform-target-key");
+      const bpmInput = host.querySelector("#clip-transform-target-bpm");
+      if (keyInput) draft.targetKey = String(keyInput.value || "").trim();
+      if (bpmInput) draft.targetBpm = String(bpmInput.value || "").trim();
+    }
+
+    function invalidateTransformProjection(message = "") {
+      transformRequestSequence += 1;
+      transformProjection = null;
+      transformProjectionTransform = null;
+      transformResult = null;
+      transformErrorMessage = "";
+      transformStatusMessage = message;
+      stopAudio();
+    }
+
+    function validatedTransform() {
+      const clip = detailDocument?.clip;
+      if (!clip || !currentClipId) throw new Error("Open an exact Clip before reviewing a transform.");
+      const draft = transformDraft(currentClipId);
+      if (draft.operation === "key") {
+        if (!transformOperationAllowed("key")) throw new Error("Key transformation is unavailable for this Clip.");
+        const sourceMode = keyMode(clip.key);
+        if (!sourceMode) throw new Error("A same-mode key transformation requires a known source key.");
+        const target = sameModeKey(draft.targetKey, sourceMode);
+        if (!target) throw new Error(`Choose a target ${sourceMode} key.`);
+        if (normalizeKey(target) === normalizeKey(clip.key)) throw new Error("Choose a target key different from the source key.");
+        if (!["nearest", "up", "down"].includes(draft.direction)) throw new Error("Choose smallest shift, upward or downward register direction.");
+        return { kind: "key", target_key: target, direction: draft.direction };
+      }
+      if (draft.operation === "bpm") {
+        if (!transformOperationAllowed("bpm")) throw new Error("BPM transformation is unavailable for this Clip.");
+        const target = Number(draft.targetBpm);
+        const bounds = transformBpmBounds(clip);
+        if (!Number.isFinite(target) || target < bounds.minimum || target > bounds.maximum) {
+          throw new Error(`For this ${numberLabel(clip.bpm)} BPM Clip, target BPM must be from ${numberLabel(bounds.minimum)} to ${numberLabel(bounds.maximum)} (${numberLabel(bounds.minimumRatio)}×–${numberLabel(bounds.maximumRatio)}× within the global ${numberLabel(bounds.globalMinimum)}–${numberLabel(bounds.globalMaximum)} BPM boundary).`);
+        }
+        if (Math.abs(target - Number(clip.bpm)) < 1e-9) throw new Error("Choose a target BPM different from the source BPM.");
+        if (!["musical", "stem_locked"].includes(draft.timingMode)) throw new Error("Choose musical or stem-locked timing behaviour.");
+        return { kind: "bpm", target_bpm: target, timing_mode: draft.timingMode };
+      }
+      throw new Error("Choose key or BPM as the one transform for this version.");
+    }
+
+    function transformPins(transform) {
+      const clip = detailDocument?.clip || {};
+      const libraryState = detailDocument?.library_state_sha256 || capability?.library?.state_sha256;
+      if (!clip.clip_id || !isSha256(clip.object_sha256) || !isSha256(libraryState)) {
+        throw new Error("The exact Clip and library pins are unavailable; reload the Clip detail.");
+      }
+      return {
+        parent_clip_id: clip.clip_id,
+        parent_object_sha256: clip.object_sha256,
+        library_state_sha256: libraryState,
+        transform,
+      };
+    }
+
+    async function reviewTransform() {
+      if (!transformEnabled() || !transformActionAllowed("preview") || transformPending || !currentClipId) return;
+      transformErrorMessage = "";
+      transformStatusMessage = "";
+      transformResult = null;
+      let transform;
+      let request;
+      try {
+        transform = validatedTransform();
+        request = transformPins(transform);
+      } catch (error) {
+        transformErrorMessage = error?.message || String(error);
+        render();
+        focusTransformStatus();
+        return;
+      }
+      const sourceClipId = currentClipId;
+      const sequence = ++transformRequestSequence;
+      transformPending = "projection";
+      render();
+      focusTransformStatus();
+      try {
+        const value = await api("/api/clip-transform-projection", { method: "POST", body: JSON.stringify(request) });
+        if (sequence !== transformRequestSequence || mode !== "detail" || currentClipId !== sourceClipId) return;
+        const projection = value?.projection || value;
+        if (!isSha256(projection?.projection_sha256) || !allEffectsFalse(projection?.effects)) {
+          throw new Error("The local server returned an invalid temporary transform review.");
+        }
+        transformProjection = projection;
+        transformProjectionTransform = transform;
+        transformStatusMessage = "Temporary transform reviewed. No Clip or project state changed; create only if this exact diff is intended.";
+      } catch (error) {
+        if (sequence !== transformRequestSequence) return;
+        if (Number(error?.status) === 409) {
+          await reloadTransformAfterConflict("The Clip library changed while reviewing. The latest source lineage was reloaded; review this retained draft again.");
+        } else {
+          transformErrorMessage = error?.message || String(error);
+        }
+      } finally {
+        if (sequence === transformRequestSequence) transformPending = "";
+        render();
+        if (transformErrorMessage) focusTransformStatus();
+        else if (transformProjection) host?.querySelector("#clip-transform-projection")?.focus();
+      }
+    }
+
+    async function createTransformVersion() {
+      if (!transformEnabled() || !transformActionAllowed("create") || transformPending || !currentClipId || !transformProjection) return;
+      transformErrorMessage = "";
+      transformStatusMessage = "";
+      let transform;
+      let pins;
+      try {
+        transform = validatedTransform();
+        pins = transformPins(transform);
+        if (!isSha256(transformProjection.projection_sha256)) throw new Error("Review this draft again before creating a version.");
+        if (JSON.stringify(transform) !== JSON.stringify(transformProjectionTransform)) throw new Error("The draft changed; review it again before creating a version.");
+      } catch (error) {
+        transformErrorMessage = error?.message || String(error);
+        render();
+        focusTransformStatus();
+        return;
+      }
+      const request = { action: "create", ...pins, projection_sha256: transformProjection.projection_sha256 };
+      const sourceClipId = currentClipId;
+      const sequence = ++transformRequestSequence;
+      transformPending = "create";
+      render();
+      focusTransformStatus();
+      try {
+        const value = await api("/api/clip-transform-action", { method: "POST", body: JSON.stringify(request) });
+        if (sequence !== transformRequestSequence || mode !== "detail" || currentClipId !== sourceClipId) return;
+        const result = value?.result || value;
+        if (!result?.child?.clip_id || !isSha256(result.child.object_sha256)) throw new Error("The local server returned no created immutable child.");
+        transformResult = value;
+        transformProjection = null;
+        transformProjectionTransform = null;
+        const replayed = result.replayed === true || result.status === "replayed";
+        transformStatusMessage = replayed
+          ? "The exact immutable child already existed; this explicit retry appended nothing. Nothing was selected, placed or added to a pack."
+          : "One immutable child version was created. Nothing was selected, placed or added to a pack.";
+        listDocument = null;
+        const knownCount = Number(observedLibraryCount ?? capability?.library?.clip_count);
+        if (Number.isInteger(knownCount) && knownCount >= 0) {
+          observedLibraryCount = knownCount + (replayed ? 0 : 1);
+          libraryEvidenceStale = false;
+        } else {
+          observedLibraryCount = null;
+          libraryEvidenceStale = true;
+        }
+      } catch (error) {
+        if (sequence !== transformRequestSequence) return;
+        if (Number(error?.status) === 409) {
+          await reloadTransformAfterConflict("The Clip library changed, or this creation may already have completed. No automatic retry was made. The latest lineage was reloaded; inspect it and review this retained draft again.");
+        } else {
+          transformErrorMessage = error?.message || String(error);
+        }
+      } finally {
+        if (sequence === transformRequestSequence) transformPending = "";
+        render();
+        if (transformErrorMessage) focusTransformStatus();
+        else if (transformResult) host?.querySelector("#clip-transform-result")?.focus();
+      }
+    }
+
+    async function reloadTransformAfterConflict(message) {
+      transformProjection = null;
+      transformProjectionTransform = null;
+      transformResult = null;
+      transformPending = "";
+      transformStatusMessage = "";
+      await loadDetail(currentClipId);
+      transformErrorMessage = message;
+    }
+
+    function focusTransformStatus() {
+      host?.querySelector("#clip-transform-status")?.focus();
+    }
+
+    function transformResultChild() {
+      const document = transformResult?.result || transformResult || {};
+      return document.child || document.clip || document.version || null;
+    }
+
+    function transformOperationAllowed(name) {
+      const transforms = transformCapability?.transforms;
+      if (!transformActionAllowed("preview")) return false;
+      if (name === "key" && transforms?.same_mode_key) return transforms.same_mode_key.enabled === true;
+      if (name === "bpm" && transforms?.bpm) return transforms.bpm.enabled === true;
+      return false;
+    }
+
+    function transformActionAllowed(name) {
+      const action = transformCapability?.actions?.[name];
+      return action !== false;
+    }
+
+    function transformBpmBounds(clip) {
+      const globalMinimum = positiveFinite(transformCapability?.limits?.minimum_bpm) || 20;
+      const globalMaximum = positiveFinite(transformCapability?.limits?.maximum_bpm) || 400;
+      const minimumRatio = positiveFinite(transformCapability?.limits?.minimum_bpm_ratio) || 0.25;
+      const maximumRatio = positiveFinite(transformCapability?.limits?.maximum_bpm_ratio) || 4;
+      const sourceBpm = positiveFinite(clip?.bpm) || globalMinimum;
+      return {
+        globalMinimum,
+        globalMaximum,
+        minimumRatio,
+        maximumRatio,
+        minimum: Math.max(globalMinimum, sourceBpm * minimumRatio),
+        maximum: Math.min(globalMaximum, sourceBpm * maximumRatio),
+      };
+    }
+
+    function transformProjectionOperation(projection) {
+      const transform = projection?.transform || transformProjectionTransform || {};
+      if (transform.kind === "key") return `Key change to ${transform.target_key || "target key"} (${statusLabel(transform.direction)})`;
+      if (transform.kind === "bpm") return `BPM change to ${numberLabel(transform.target_bpm)} (${statusLabel(transform.timing_mode)})`;
+      return "One reviewed Clip transform";
+    }
+
+    function keyMode(value) {
+      const match = String(value || "").trim().match(/\s+(major|minor)$/i);
+      return match ? match[1].toLowerCase() : "";
+    }
+
+    function sameModeKey(value, mode) {
+      if (!mode) return "";
+      const text = String(value || "").trim();
+      const match = text.match(/^([A-Ga-g](?:#|b)?)\s+(major|minor)$/i);
+      if (!match || match[2].toLowerCase() !== mode) return "";
+      const tonic = `${match[1][0].toUpperCase()}${match[1].slice(1)}`;
+      if (!KEY_TONICS.includes(tonic)) return "";
+      return `${tonic} ${mode}`;
+    }
+
+    function normalizeKey(value) {
+      return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+    }
+
+    function isDrumFamilyClip(clip) {
+      if (clip?.instrument?.is_drums === true) return true;
+      const role = String(clip?.role || clip?.instrument?.role || "")
+        .trim()
+        .toLowerCase()
+        .replaceAll("-", "_")
+        .replaceAll(" ", "_");
+      return ["kick", "snare", "hat", "hats", "cymbal", "cymbals", "tom", "toms", "other_kit", "drum", "drums", "percussion"].includes(role);
+    }
+
+    function positiveFinite(value) {
+      const number = Number(value);
+      return Number.isFinite(number) && number > 0 ? number : null;
+    }
+
+    function allEffectsFalse(value) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+      const effects = Object.values(value);
+      return effects.length > 0 && effects.every((effect) => effect === false);
+    }
+
+    function isSha256(value) {
+      return /^[0-9a-f]{64}$/.test(String(value || ""));
+    }
+
+    function rangeLabel(value) {
+      if (!value || typeof value !== "object") return "unknown";
+      const minimum = value.minimum_name ?? value.minimum;
+      const maximum = value.maximum_name ?? value.maximum;
+      return minimum == null || maximum == null ? "unknown" : `${minimum}–${maximum}`;
     }
 
     function placementDraft(clipId) {
@@ -562,6 +1052,25 @@
   function numberLabel(value) {
     const number = Number(value);
     return Number.isFinite(number) ? number.toFixed(3).replace(/\.000$/, "").replace(/(\.\d*?)0+$/, "$1") : "unknown";
+  }
+
+  function numberInputLabel(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return "";
+    return number.toFixed(9).replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
+  }
+
+  function signedNumberLabel(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return "unknown";
+    const label = numberLabel(number);
+    return number > 0 ? `+${label}` : label;
+  }
+
+  function yesNo(value) {
+    if (value === true) return "yes";
+    if (value === false) return "no";
+    return "unknown";
   }
 
   function list(value) {

@@ -136,6 +136,52 @@ console.log(JSON.stringify({
         )
         self.assertNotIn("secret", json.dumps(result))
 
+    def test_clip_transform_preview_is_non_durable_and_create_is_one_append(
+        self,
+    ) -> None:
+        result = self.run_node(
+            """
+let time = 0;
+const journal = developer.createOperationJournal({now: () => ++time});
+const previewDescriptor = developer.routeDescriptor('/api/clip-transform-projection?token=secret');
+const createDescriptor = developer.routeDescriptor('/api/clip-transform-action?token=secret');
+const preview = journal.start('/api/clip-transform-projection?token=secret', 'POST');
+preview.complete({statusCode: 200});
+const create = journal.start('/api/clip-transform-action?token=secret', 'POST');
+create.complete({statusCode: 201});
+console.log(JSON.stringify({
+  previewDescriptor,
+  createDescriptor,
+  snapshot: journal.snapshot(),
+}));
+"""
+        )
+
+        self.assertEqual(
+            result["previewDescriptor"]["operation"],
+            "clip_transform.preview",
+        )
+        self.assertFalse(result["previewDescriptor"]["durableEffect"])
+        self.assertEqual(
+            result["createDescriptor"]["operation"],
+            "clip_transform.create",
+        )
+        self.assertTrue(result["createDescriptor"]["durableEffect"])
+        records = result["snapshot"]["records"]
+        self.assertEqual(
+            [record["durable_effect_possible"] for record in records],
+            [False, True],
+        )
+        self.assertIn(
+            "sunofriend.library.ClipLibrary.append_version_if_state",
+            records[1]["symbols"],
+        )
+        self.assertNotIn(
+            "sunofriend.library.ClipLibrary.append_version_if_state",
+            records[0]["symbols"],
+        )
+        self.assertNotIn("secret", json.dumps(result))
+
     def test_browser_state_is_an_explicit_non_persistent_allowlist(self) -> None:
         result = self.run_node(
             """

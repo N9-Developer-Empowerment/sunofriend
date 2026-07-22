@@ -338,6 +338,88 @@ user separately opts in.
 - [`tests/test_workbench_pack_server.py`](../tests/test_workbench_pack_server.py)
 - [`tests/test_garageband_pack_acceptance.py`](../tests/test_garageband_pack_acceptance.py)
 
+## 9. Clip library, reuse proposal and immutable transforms
+
+### Intuition
+
+A Clip is a canonical musical document, not the original Standard MIDI File
+byte stream. Reuse, transformation and current-song selection are three
+different state planes. The Workbench must never turn “I listened to this
+Clip” into “replace the song with it,” or turn “create an alternative” into a
+mutation of its parent.
+
+### Code path
+
+1. [`MidiClip`](../src/sunofriend/clip.py) stores notes, chords, instrument,
+   timing, provenance and immutable lineage. `MidiClip.child()` allocates a
+   child revision with an exact parent and `TransformRecipe`.
+2. [`ClipLibrary`](../src/sunofriend/library.py) keeps searchable SQLite
+   metadata beside content-addressed canonical JSON objects. Normal Phase 6
+   browse uses independent application and SQLite read-only guards.
+3. [`WorkbenchClipService`](../src/sunofriend/workbench_clips.py) verifies the
+   passed acceptance result, exact accepted ZIP, complete catalog, every object
+   hash and every parent relationship before returning path-free browse/detail
+   projections or rebuildable audition artifacts.
+4. [`WorkbenchClipReuseService`](../src/sunofriend/workbench_reuse.py) stores
+   explicit immutable-object placements in a separate append-only proposal.
+   It pins the complete library state but never writes that library.
+5. [`WorkbenchClipTransformService`](../src/sunofriend/workbench_transform.py)
+   first constructs an in-memory, zero-effect before/after projection for one
+   same-mode key or BPM request. Only an exact projection hash, parent object
+   and expected library state can authorise creation.
+6. The controlled library append compares the catalog state while holding the
+   SQLite write transaction, writes one immutable child object/row and removes
+   an unreferenced staged object if the transaction fails. The read service
+   adopts the new state only after re-verifying that every prior object is
+   unchanged and the expected child is the sole addition.
+7. `workbench_server.py` exposes the transform routes only behind
+   `--enable-clip-transforms`. That flag and `--enable-clip-reuse-plan` are
+   mutually exclusive because the latter deliberately pins the entire library
+   generation.
+8. `workbench_clips.js` keeps form drafts and projections in browser memory.
+   Editing invalidates a projection; a conflict reloads detail once and never
+   retries a create request.
+
+### Worked state example
+
+```text
+parent Clip A (C major, 113 BPM)
+  |
+  +-- explicit key projection       durable effect: none
+  +-- create child B (D major)      durable effect: one Clip version
+        |
+        +-- explicit BPM projection durable effect: none
+        +-- create child C (125 BPM) durable effect: one Clip version
+
+reuse proposal still references exact A until the user explicitly removes A
+and places B or C in a separate reuse-plan launch
+```
+
+Musical BPM timing retains beat positions and changes elapsed time.
+Stem-locked timing retains source seconds and changes beat positions. They are
+different transformations, so the timing choice is part of the immutable
+recipe rather than a hidden export option.
+
+### Invariant
+
+A fresh explicit create action adds one child and changes nothing else. An
+exact retry is an idempotent replay of the existing child, with no new append
+and every effect false. Parent content, analytical/AI alternatives, Workbench
+decisions, current selection, reuse placements, pack basket, instruments,
+feedback and source files remain unchanged. A revision number is not a unique
+branch identity; exact Clip, object and parent hashes are authoritative. At
+the accepted 10,000-Clip boundary the capability disables new transform review
+and creation.
+
+### Tests to read
+
+- [`tests/test_clip_v1.py`](../tests/test_clip_v1.py)
+- [`tests/test_workbench_clips.py`](../tests/test_workbench_clips.py)
+- [`tests/test_workbench_reuse_server.py`](../tests/test_workbench_reuse_server.py)
+- [`tests/test_workbench_transform.py`](../tests/test_workbench_transform.py)
+- [`tests/test_workbench_transform_server.py`](../tests/test_workbench_transform_server.py)
+- [`tests/test_workbench_clips_js.py`](../tests/test_workbench_clips_js.py)
+
 ## Use the Developer Inspector
 
 Start the normal Workbench with the same project, candidate roots, optional

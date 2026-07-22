@@ -35,6 +35,11 @@ from .workbench_reuse import (
     WorkbenchClipReuseNotFoundError,
     WorkbenchClipReuseService,
 )
+from .workbench_transform import (
+    WorkbenchClipTransformConflictError,
+    WorkbenchClipTransformNotFoundError,
+    WorkbenchClipTransformService,
+)
 from .workbench_store import (
     WorkbenchPackStateConflictError,
     WorkbenchStore,
@@ -279,6 +284,7 @@ class WorkbenchHTTPServer(ThreadingHTTPServer):
         developer_inspector: bool = False,
         clip_service: WorkbenchClipService | None = None,
         clip_reuse_service: WorkbenchClipReuseService | None = None,
+        clip_transform_service: WorkbenchClipTransformService | None = None,
     ) -> None:
         self.catalog = catalog
         self.store = store
@@ -287,6 +293,7 @@ class WorkbenchHTTPServer(ThreadingHTTPServer):
         self.developer_inspector = bool(developer_inspector)
         self.clip_service = clip_service
         self.clip_reuse_service = clip_reuse_service
+        self.clip_transform_service = clip_transform_service
         self.developer_trace = (
             WorkbenchDeveloperTrace() if self.developer_inspector else None
         )
@@ -318,6 +325,7 @@ def create_workbench_server(
     phase6_acceptance_path: str | Path | None = None,
     phase6_pack_path: str | Path | None = None,
     enable_clip_reuse_plan: bool = False,
+    enable_clip_transforms: bool = False,
 ) -> WorkbenchHTTPServer:
     """Create, but do not start, a loopback-only Workbench server."""
 
@@ -346,6 +354,17 @@ def create_workbench_server(
             "--enable-clip-reuse-plan requires --clip-library, "
             "--phase6-acceptance and --phase6-pack"
         )
+    if enable_clip_transforms and not all(
+        value is not None for value in phase6_values
+    ):
+        raise ValueError(
+            "--enable-clip-transforms requires --clip-library, "
+            "--phase6-acceptance and --phase6-pack"
+        )
+    if enable_clip_reuse_plan and enable_clip_transforms:
+        raise ValueError(
+            "--enable-clip-reuse-plan and --enable-clip-transforms are mutually exclusive"
+        )
     clip_service = None
     if all(value is not None for value in phase6_values):
         clip_service = WorkbenchClipService.open(
@@ -369,6 +388,14 @@ def create_workbench_server(
         if enable_clip_reuse_plan and clip_service is not None
         else None
     )
+    clip_transform_service = (
+        WorkbenchClipTransformService.open(
+            clip_service=clip_service,
+            library_root=clip_library_path,
+        )
+        if enable_clip_transforms and clip_service is not None
+        else None
+    )
     session_token = token or secrets.token_urlsafe(32)
     return WorkbenchHTTPServer(
         ("127.0.0.1", int(port)),
@@ -379,6 +406,7 @@ def create_workbench_server(
         developer_inspector=developer_inspector,
         clip_service=clip_service,
         clip_reuse_service=clip_reuse_service,
+        clip_transform_service=clip_transform_service,
     )
 
 
@@ -398,6 +426,7 @@ def run_workbench(
     phase6_acceptance_path: str | Path | None = None,
     phase6_pack_path: str | Path | None = None,
     enable_clip_reuse_plan: bool = False,
+    enable_clip_transforms: bool = False,
 ) -> dict[str, Any]:
     """Build a catalogue and inspect, export, or serve the local workbench."""
 
@@ -420,6 +449,17 @@ def run_workbench(
         raise ValueError(
             "--enable-clip-reuse-plan requires --clip-library, "
             "--phase6-acceptance and --phase6-pack"
+        )
+    if enable_clip_transforms and not all(
+        value is not None for value in phase6_values
+    ):
+        raise ValueError(
+            "--enable-clip-transforms requires --clip-library, "
+            "--phase6-acceptance and --phase6-pack"
+        )
+    if enable_clip_reuse_plan and enable_clip_transforms:
+        raise ValueError(
+            "--enable-clip-reuse-plan and --enable-clip-transforms are mutually exclusive"
         )
     if any(value is not None for value in phase6_values) and (
         inspect_only or export_review_path is not None
@@ -455,6 +495,7 @@ def run_workbench(
         phase6_acceptance_path=phase6_acceptance_path,
         phase6_pack_path=phase6_pack_path,
         enable_clip_reuse_plan=enable_clip_reuse_plan,
+        enable_clip_transforms=enable_clip_transforms,
     )
     print("Sunofriend Workbench")
     print("Local — nothing is being uploaded")
@@ -464,12 +505,21 @@ def run_workbench(
         print("Developer Inspector: enabled (read-only, memory-only trace)", flush=True)
     if server.clip_service is not None:
         print(
-            "Phase 6 Clip Library: enabled (verified, read-only, no transforms)",
+            (
+                "Phase 6 Clip Library: enabled (verified; source Clips immutable)"
+                if server.clip_transform_service is not None
+                else "Phase 6 Clip Library: enabled (verified, read-only, no transforms)"
+            ),
             flush=True,
         )
     if server.clip_reuse_service is not None:
         print(
             "Phase 6 Clip reuse plan: enabled (separate proposal, explicit writes only)",
+            flush=True,
+        )
+    if server.clip_transform_service is not None:
+        print(
+            "Phase 6 Clip transforms: enabled (preview first, immutable versions only)",
             flush=True,
         )
     if open_browser:
@@ -807,14 +857,35 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             "/api/garageband-pack",
             "/api/clip-artifact",
             "/api/clip-reuse-action",
+            "/api/clip-transform-projection",
+            "/api/clip-transform-action",
         }:
             self._error(HTTPStatus.NOT_FOUND, "workbench route not found")
             return
         self._start_developer_trace("POST", parsed.path)
+        if (
+            parsed.path
+            in {
+                "/api/clip-transform-projection",
+                "/api/clip-transform-action",
+            }
+            and self.server.clip_transform_service is None
+        ):
+            self._error(HTTPStatus.NOT_FOUND, "workbench route not found")
+            return
         try:
             try:
                 request = self._request_json()
             except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+                if parsed.path in {
+                    "/api/clip-transform-projection",
+                    "/api/clip-transform-action",
+                }:
+                    self._error(
+                        HTTPStatus.BAD_REQUEST,
+                        "invalid Clip transform request",
+                    )
+                    return
                 if parsed.path == "/api/clip-reuse-action":
                     self._error(
                         HTTPStatus.BAD_REQUEST,
@@ -823,6 +894,42 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     return
                 raise
             self._developer_checkpoint("validate", "validate")
+            if parsed.path in {
+                "/api/clip-transform-projection",
+                "/api/clip-transform-action",
+            }:
+                service = self.server.clip_transform_service
+                if service is None:
+                    self._error(HTTPStatus.NOT_FOUND, "workbench route not found")
+                    return
+                try:
+                    with self.server.state_lock:
+                        if parsed.path == "/api/clip-transform-projection":
+                            projection = service.preview(request)
+                        else:
+                            result = service.create(request)
+                    if parsed.path == "/api/clip-transform-projection":
+                        self._json(HTTPStatus.OK, {"projection": projection})
+                    else:
+                        self._json(HTTPStatus.CREATED, {"result": result})
+                except WorkbenchClipTransformNotFoundError:
+                    self._error(HTTPStatus.NOT_FOUND, "Clip not found")
+                except WorkbenchClipTransformConflictError:
+                    self._error(
+                        HTTPStatus.CONFLICT,
+                        "Clip transform preview changed; preview again before creating a version",
+                    )
+                except (OverflowError, TypeError, ValueError):
+                    self._error(
+                        HTTPStatus.BAD_REQUEST,
+                        "invalid Clip transform request",
+                    )
+                except (OSError, RuntimeError):
+                    self._error(
+                        HTTPStatus.CONFLICT,
+                        "Clip transform evidence changed or is unavailable; restart the Workbench",
+                    )
+                return
             if parsed.path == "/api/clip-reuse-action":
                 service = self.server.clip_reuse_service
                 if service is None:
@@ -1441,6 +1548,18 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 ),
             }
         )
+        transform_service = self.server.clip_transform_service
+        if transform_service is None:
+            payload["clip_transforms"] = {
+                "enabled": False,
+                "immutable_versions_only": True,
+                "reason": (
+                    "Clip transforms were not explicitly enabled for this launch"
+                ),
+            }
+        else:
+            with self.server.state_lock:
+                payload["clip_transforms"] = transform_service.capability()
         return payload
 
     def _developer_snapshot_payload(self) -> dict[str, Any]:
@@ -1465,6 +1584,11 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             clip_reuse_plan = (
                 self.server.clip_reuse_service.plan()
                 if self.server.clip_reuse_service is not None
+                else None
+            )
+            clip_transform_capability = (
+                self.server.clip_transform_service.capability()
+                if self.server.clip_transform_service is not None
                 else None
             )
             runtime = {
@@ -1494,6 +1618,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     if clip_reuse_plan is None
                     else len(clip_reuse_plan.get("placements", []))
                 ),
+                "clip_transforms_enabled": clip_transform_capability is not None,
             }
             trace_snapshot = trace.snapshot()
         cache = artifact_cache_summary(

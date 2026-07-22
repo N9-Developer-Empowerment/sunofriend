@@ -310,6 +310,98 @@ class WorkbenchDeveloperTraceTests(unittest.TestCase):
             expected,
         )
 
+    def test_clip_transform_preview_is_effect_free_and_create_is_one_append(self) -> None:
+        self.assertEqual(
+            developer_operation_for_route("/api/clip-transform-projection"),
+            "clip_transform.preview",
+        )
+        self.assertEqual(
+            developer_operation_for_route("/api/clip-transform-action"),
+            "clip_transform.create",
+        )
+        self.assertEqual(
+            developer_code_step_for_route("/api/clip-transform-projection"),
+            "clip_transform.preview",
+        )
+        self.assertEqual(
+            developer_code_step_for_route("/api/clip-transform-action"),
+            "clip_transform.create",
+        )
+
+        trace = WorkbenchDeveloperTrace()
+        preview = trace.begin("POST", "clip_transform.preview")
+        create = trace.begin("POST", "clip_transform.create")
+        trace.complete(preview, 200)
+        trace.complete(create, 201)
+        operations = trace.snapshot()["recent_operations"]
+
+        self.assertFalse(operations[0]["durable_effect_possible"])
+        self.assertTrue(operations[1]["durable_effect_possible"])
+        self.assertIn(
+            "sunofriend.workbench_transform.WorkbenchClipTransformService.preview",
+            operations[0]["symbols"],
+        )
+        self.assertIn(
+            "sunofriend.workbench_transform.WorkbenchClipTransformService.create",
+            operations[1]["symbols"],
+        )
+        self.assertIn(
+            "sunofriend.library.ClipLibrary.append_version_if_state",
+            operations[1]["symbols"],
+        )
+        self.assertNotIn(
+            "sunofriend.library.ClipLibrary.append_version_if_state",
+            operations[0]["symbols"],
+        )
+
+        private = {
+            "schema": "sunofriend.workbench-clip-transform-preview.v1",
+            "source_path": "/Users/alice/private.mid",
+            "notes": "never trace this",
+            "effects": {"library_mutated": False},
+        }
+        self.assertEqual(
+            trace_response_facts(
+                "/api/clip-transform-projection", {"projection": private}
+            ),
+            {
+                "schema": "sunofriend.workbench-clip-transform-preview.v1",
+                "clip_version_appended": False,
+            },
+        )
+        self.assertEqual(
+            trace_response_facts(
+                "/api/clip-transform-action",
+                {
+                    "result": {
+                        **private,
+                        "schema": "sunofriend.workbench-clip-transform-result.v1",
+                        "effects": {"library_mutated": True},
+                    }
+                },
+            ),
+            {
+                "schema": "sunofriend.workbench-clip-transform-result.v1",
+                "clip_version_appended": True,
+            },
+        )
+        self.assertEqual(
+            trace_response_facts(
+                "/api/clip-transform-action",
+                {
+                    "result": {
+                        "schema": "sunofriend.workbench-clip-transform-result.v1",
+                        "replayed": True,
+                        "effects": {"library_mutated": False},
+                    }
+                },
+            ),
+            {
+                "schema": "sunofriend.workbench-clip-transform-result.v1",
+                "clip_version_appended": False,
+            },
+        )
+
     def test_clip_reuse_snapshot_is_a_path_free_bounded_summary(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             catalog = _catalog(Path(temporary))

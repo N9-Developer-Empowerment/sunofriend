@@ -186,6 +186,25 @@
       ]),
       durableEffect: true,
     }),
+    "/api/clip-transform-projection": Object.freeze({
+      operation: "clip_transform.preview",
+      label: "Preview one immutable Clip version without writing",
+      symbols: Object.freeze([
+        "sunofriend.workbench_server._WorkbenchHandler.do_POST",
+        "sunofriend.workbench_transform.WorkbenchClipTransformService.preview",
+      ]),
+      durableEffect: false,
+    }),
+    "/api/clip-transform-action": Object.freeze({
+      operation: "clip_transform.create",
+      label: "Append one explicitly confirmed immutable Clip version",
+      symbols: Object.freeze([
+        "sunofriend.workbench_server._WorkbenchHandler.do_POST",
+        "sunofriend.workbench_transform.WorkbenchClipTransformService.create",
+        "sunofriend.library.ClipLibrary.append_version_if_state",
+      ]),
+      durableEffect: true,
+    }),
   });
 
   function escapeHtml(value) {

@@ -82,6 +82,8 @@ _ROUTE_OPERATIONS = {
     "/api/clip-artifact": "clip_library.artifact",
     "/api/clip-reuse-plan": "clip_reuse.read",
     "/api/clip-reuse-action": "clip_reuse.change",
+    "/api/clip-transform-projection": "clip_transform.preview",
+    "/api/clip-transform-action": "clip_transform.create",
 }
 
 _ROUTE_CODE_STEPS = {
@@ -105,6 +107,8 @@ _ROUTE_CODE_STEPS = {
     "/api/clip-artifact": "clip_library.artifact",
     "/api/clip-reuse-plan": "clip_reuse.read",
     "/api/clip-reuse-action": "clip_reuse.change",
+    "/api/clip-transform-projection": "clip_transform.preview",
+    "/api/clip-transform-action": "clip_transform.create",
 }
 
 _CODE_MAP = {
@@ -208,6 +212,18 @@ _CODE_MAP = {
         "module": "sunofriend.workbench_reuse",
         "symbol": "WorkbenchClipReuseService.apply",
     },
+    "clip_transform.preview": {
+        "module": "sunofriend.workbench_transform",
+        "symbol": "WorkbenchClipTransformService.preview",
+    },
+    "clip_transform.create": {
+        "module": "sunofriend.workbench_transform",
+        "symbol": "WorkbenchClipTransformService.create",
+    },
+    "clip_version.append": {
+        "module": "sunofriend.library",
+        "symbol": "ClipLibrary.append_version_if_state",
+    },
     "publish": {
         "module": "sunofriend.workbench_server",
         "symbol": "_WorkbenchHandler._json",
@@ -235,6 +251,8 @@ _OPERATION_LABELS = {
     "clip_library.artifact": "Reconstruct deterministic MIDI or a dry proxy",
     "clip_reuse.read": "Read the separate explicit Clip reuse proposal",
     "clip_reuse.change": "Append one explicit Clip placement or removal",
+    "clip_transform.preview": "Preview one immutable Clip version without writing",
+    "clip_transform.create": "Append one explicitly confirmed immutable Clip version",
 }
 
 _CODE_FLOW_NODES = (
@@ -272,6 +290,7 @@ _CODE_FLOW_NODES = (
             "sunofriend.workbench_store.WorkbenchStore.append",
             "sunofriend.workbench_store.fold_workbench_events",
             "sunofriend.workbench_reuse.WorkbenchClipReuseStore",
+            "sunofriend.library.ClipLibrary.append_version_if_state",
         ],
         "invariant": (
             "Pack choices and Clip reuse proposals remain separate from musical "
@@ -288,6 +307,7 @@ _CODE_FLOW_NODES = (
         "symbols": [
             "sunofriend.workbench_artifacts.WorkbenchArtifacts",
             "sunofriend.workbench_clips.WorkbenchClipService",
+            "sunofriend.workbench_transform.WorkbenchClipTransformService",
         ],
         "invariant": "Original candidate MIDI is copied or rendered without mutation.",
     },
@@ -354,7 +374,12 @@ class WorkbenchDeveloperTrace:
                 "method": method,
                 "status": "running",
                 "durable_effect_possible": operation
-                in {"decision.append", "pack_basket.save", "clip_reuse.change"},
+                in {
+                    "decision.append",
+                    "pack_basket.save",
+                    "clip_reuse.change",
+                    "clip_transform.create",
+                },
                 "symbols": _operation_symbols(operation),
                 "started_ns": now,
                 "frames": [],
@@ -524,6 +549,7 @@ def build_developer_snapshot(
             "musical_selection_changed": False,
             "pack_selection_changed": False,
             "clip_reuse_plan_changed": False,
+            "clip_version_appended": False,
             "artifact_built": False,
             "midi_mutated": False,
             "audio_mutated": False,
@@ -627,6 +653,21 @@ def trace_response_facts(route: str, value: Mapping[str, Any]) -> dict[str, Any]
             "active_placement_count": (
                 len(placements) if isinstance(placements, list) else None
             ),
+        }
+    if route in {
+        "/api/clip-transform-projection",
+        "/api/clip-transform-action",
+    }:
+        wrapper = "projection" if route.endswith("projection") else "result"
+        document = value.get(wrapper, {})
+        if not isinstance(document, Mapping):
+            return {}
+        effects = document.get("effects", {})
+        if not isinstance(effects, Mapping):
+            effects = {}
+        return {
+            "schema": document.get("schema"),
+            "clip_version_appended": effects.get("library_mutated", False),
         }
     wrapper_by_route = {
         "/api/render-preview": "preview",
@@ -1009,6 +1050,7 @@ def _safe_runtime(value: Mapping[str, Any]) -> dict[str, Any]:
         },
         "clip_library_enabled": value.get("clip_library_enabled") is True,
         "clip_reuse_plan_enabled": value.get("clip_reuse_plan_enabled") is True,
+        "clip_transforms_enabled": value.get("clip_transforms_enabled") is True,
     }
 
 
@@ -1024,13 +1066,18 @@ def _safe_trace_facts(value: Mapping[str, Any]) -> dict[str, Any]:
         "cache_hit",
         "plan_revision",
         "active_placement_count",
+        "clip_version_appended",
     }
     result = {}
     for key in allowed:
         item = value.get(key)
         if item is None:
             continue
-        if key in {"build_blocked", "cache_hit"} and isinstance(item, bool):
+        if key in {
+            "build_blocked",
+            "cache_hit",
+            "clip_version_appended",
+        } and isinstance(item, bool):
             result[key] = item
         elif key in {
             "decision_event_count",
@@ -1066,6 +1113,12 @@ def _operation_symbols(operation: str) -> list[str]:
         steps.extend(["validate", "pack.plan", "pack.build"])
     elif operation == "clip_reuse.change":
         steps.extend(["validate", "clip_reuse.change"])
+    elif operation == "clip_transform.preview":
+        steps.extend(["validate", "clip_transform.preview"])
+    elif operation == "clip_transform.create":
+        steps.extend(
+            ["validate", "clip_transform.create", "clip_version.append"]
+        )
     else:
         steps.append(operation_step)
     steps.append("publish")

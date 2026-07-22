@@ -18,7 +18,8 @@ transport; Phase 5.8 completes verified exact-result-cache and bounded
 reused-model execution-provenance display; Phase 5.9 guided exact-pack
 learning and acceptance passed on 22 July 2026; Phase 6 Increment 6.0's gated,
 read-only Clip Library is complete and Increment 6.1's separate explicit Clip
-reuse proposal is complete; broader Phase 6
+reuse proposal is complete; Increment 6.2a's reviewed immutable
+same-mode key and BPM child workflow is complete; broader Phase 6
 creative arrangement remains in progress
 
 Started: 15 July 2026  
@@ -97,7 +98,7 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
 | 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.5–5.9 hardening complete and Phase 5.9 human acceptance passed; Phase 5.3 listening/lineage/role work remains** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench has hash-pinned per-stem and full-song timelines, bounded decoded transports, a separate exact GarageBand pack basket, Project Overview, fail-closed execution provenance and guided exact-pack acceptance. The 22 July close-out completed all eight tutorial screens, scored 10/10 and passed both six-item human checks; the resolver reverified five selected MIDI payloads plus the dry proxy and no source audio with zero project effects. Phase 5 remains open only for the separately gated Phase 5.3 work |
-| 6. Creative Arrangement and Reusable MIDI | **In progress: Increments 6.0 and 6.1 complete** | The completed read-only slice requires an explicit library, passed acceptance result and exact accepted pack. A fourth opt-in enables a separate append-only proposal of immutable Clip placements on a bounded whole-beat planning grid, with exact restart binding and server-derived compatibility warnings. It does not transform, play, render, export, attach instruments, alter the current arrangement or touch decisions/pack state. Reversible transforms, piano-roll editing and hybrids remain absent; hybrid construction still waits for the Phase 5.3 blind-choice and lineage gates |
+| 6. Creative Arrangement and Reusable MIDI | **In progress: Increments 6.0, 6.1 and 6.2a complete** | The gated read-only browser and separate immutable-placement proposal remain intact. A mutually exclusive transform opt-in now requires a zero-write projection before atomically appending one same-mode key or musical/stem-locked BPM child with exact parent/object/library pins. Parent Clips, proposals, decisions and packs are not rewritten. Mode remapping, tuning/downbeat, piano-roll editing and hybrids remain absent; hybrid construction still waits for the Phase 5.3 blind-choice and lineage gates |
 | 7. Cross-DAW and Opt-in Community Learning | **Deferred** | Compatibility testing, cleared public goldens and consented contextual feedback only after the local workflow is useful, private and stable |
 
 ## Phase 1: AI Transcription Bake-off v1
@@ -638,6 +639,18 @@ placements, 512 events, 20,000 notes per Clip, 40,000 active note instances
 and a 20-minute nominal end. Focused/full-suite and local restart/browser
 verification passed, so Increment 6.1 is complete.
 
+Increment 6.2a adds a separate `--enable-clip-transforms` launch, mutually
+exclusive with the complete-library-bound reuse proposal. On exact Clip detail,
+the user chooses one same-mode key change or one BPM timing contract, reviews a
+zero-write server projection and then explicitly creates one immutable child.
+The action is pinned to the parent Clip/object, complete library state,
+transform request and projection hash. It changes only the library by appending
+the child; the parent, process alternatives, project decisions, current
+arrangement, proposal placements and Pack Composer remain unchanged. Musical
+BPM changes retain beats and change elapsed time; stem-locked changes retain
+source seconds and change beat positions. Mode remapping, tuning, downbeat and
+note editing remain deferred.
+
 ## Phase 7: Cross-DAW and Opt-in Community Learning
 
 Only after the private workflow is useful and hardened, expand compatibility
@@ -679,6 +692,38 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-22 — Phase 6.2a reviewed immutable transforms complete
+
+- Goal: expose the existing key/BPM musical operations without mutating a
+  source Clip, silently selecting an alternative or weakening the accepted
+  Phase 6 evidence gate.
+- Change: added a separate `--enable-clip-transforms` launch, exact zero-write
+  projection, one-operation immutable child creation, same-mode key direction,
+  explicit musical/stem-locked BPM meaning and full parent/child/library audit
+  evidence in the local Workbench.
+- Atomicity: the existing-only writer checks the complete catalog state under
+  `BEGIN IMMEDIATE`, validates every old row and the sole expected child before
+  commit, cleans a published orphan while retaining the writer lock after
+  rollback and rejects new work at the 10,000-Clip bound. Adversarial trigger,
+  concurrent cleanup and capacity tests confirm rollback safety.
+- Concurrency: identical requests from two already-open servers resolve as one
+  fresh create plus one zero-effect idempotent replay; different transforms
+  resolve as one create plus one fixed conflict. Unrelated external additions
+  remain fail-closed.
+- Real acceptance: a copied accepted Lidl library grew from 10 to exactly 12
+  Clips. Its 171-note B-major bass at `118.99992463338107` BPM produced a
+  musical-timing 125 BPM child and then a +1-semitone C-major child. Restart
+  recovered the three-version lineage; the source library and all ten original
+  rows/objects remained unchanged; public responses were path-free.
+- Reconstruction: the final 125 BPM C-major child rebuilt MIDI twice at
+  SHA-256 `42eabbb41cd484d104d67080833710bb240b0d73d817e8af93aa95217b35b502`;
+  the second request was a verified content-addressed cache hit.
+- Verification: the full project suite passed with `910 passed, 1 warning`;
+  the warning is the existing `resampy`/`pkg_resources` deprecation notice.
+- Status: Increment 6.2a is complete. The next bounded Phase 6 work is explicit
+  phrase/note correction; mode remapping, tuning/downbeat and hybrids remain
+  separately gated.
 
 ### 2026-07-22 — Phase 6.1 explicit Clip reuse proposal complete
 

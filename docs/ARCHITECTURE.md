@@ -508,6 +508,52 @@ submission, piano roll or hybrid path. Focused/full and real local
 restart/browser verification passed, completing Increment 6.1 without
 completing broader Phase 6.
 
+Phase 6 Increment 6.2a adds a different, mutually exclusive controlled-write
+boundary. `--enable-clip-transforms` is valid only with the three Increment
+6.0 evidence inputs and cannot be combined with `--enable-clip-reuse-plan`.
+That separation is structural rather than cosmetic: reuse v1 pins the complete
+library state, while a transform intentionally appends a new library version.
+Transform first, then restart under the new state and place explicitly.
+
+`workbench_transform.py` owns the typed projection/create operation. A
+projection resolves one exact parent Clip and performs either a same-mode key
+transpose or one musical/stem-locked BPM retime in memory. Its path-free audit
+is bound to the parent Clip/object, complete library state, normalized request
+and projection SHA-256, and has no durable effect. Creation accepts only that
+current projection and uses an expected-catalog-state append to add one
+immutable child. `MidiClip.child`, `TransformRecipe` and the existing pure
+functions in `transform.py` remain the musical implementation; the Workbench
+layer adds authority, bounds, state pinning and public projections rather than
+duplicating their algorithms.
+
+After the controlled append, `WorkbenchClipService` re-captures every object
+and lineage and adopts the new state only when every old row/object is
+unchanged and the exact expected child is the sole addition. Unexpected drift
+fails closed. The parent is never mutated or hidden, and historical branches
+are identified by exact Clip/object/parent hashes rather than treating a
+revision number as unique. The browser invalidates a projection whenever the
+draft changes, never retries a failed create automatically and labels the
+opened lineage item as “viewing,” not “current” or “best.”
+
+The only true effects in a fresh-created result are the library append, child
+version creation and transform applied to that child. An exact idempotent
+replay returns the existing child with every effect false and no additional
+catalog row or object. Decisions, selected arrangement, old reuse-plan
+storage, Pack Composer, instruments, feedback, submission and source
+candidates are separate and unchanged. At the accepted 10,000-Clip boundary
+the capability disables new preview/create actions. Tuning and
+downbeat remain outside this boundary because Clip v1 does not preserve the
+complete pitch-bend/RPN or original-SMF event streams required by the existing
+raw-MIDI operations.
+
+The create-only replay path also handles two already-open Workbench processes.
+It may recompute from its verified preview baseline, but adopts a newer catalog
+only after proving that the deterministic requested child is its sole delta.
+Thus identical requests become one create plus one replay, while a different
+transform or unrelated external append remains a conflict. Ordinary browse,
+detail, preview and capability reads never use this exception and remain strict
+against any unexpected library drift.
+
 An optional explicit-catalog phrase link validates one existing diagnostic
 S0/M1/M3 hybrid report against its exact stem, three current candidate MIDI
 files and the pinned unresolved melody phrase-review package. The public

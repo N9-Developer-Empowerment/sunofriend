@@ -24,6 +24,7 @@ function createDynamicHost() {{
   let html = '';
   let elements = new Map();
   let dataElements = new Map();
+  let focusedId = '';
   function tagForId(id) {{
     return html.match(new RegExp(`<[^>]+id="${{id}}"[^>]*>`))?.[0] || '';
   }}
@@ -35,7 +36,7 @@ function createDynamicHost() {{
       elements.set(id, {{
         id, value, disabled: tag.includes(' disabled'), textContent: id,
         isConnected: true, onclick: null, oninput: null, onsubmit: null,
-        pause() {{}}, focus() {{}},
+        pause() {{}}, focus() {{ focusedId = id; this.focused = true; }},
       }});
     }}
     return elements.get(id);
@@ -73,6 +74,7 @@ function createDynamicHost() {{
     }},
     element(id) {{ return elementForId(id); }},
     data(selector, value) {{ return dataElements.get(`${{selector}}:${{value}}`); }},
+    get focusedId() {{ return focusedId; }},
   }};
 }}
 {body}
@@ -138,6 +140,7 @@ setTimeout(() => console.log(JSON.stringify({calls, html: host.innerHTML})), 0);
         self.assertIn("Golden bass", result["html"])
         self.assertIn("no transform, edit, tag change, hybrid", result["html"])
         self.assertNotIn("Proposed reuse plan", result["html"])
+        self.assertNotIn("Create a transformed alternative", result["html"])
         self.assertNotIn("/api/clip-reuse-plan", json.dumps(result["calls"]))
 
     def test_real_detail_and_artifact_contract_drives_lineage_and_download_ui(self) -> None:
@@ -224,6 +227,8 @@ setTimeout(() => console.log(JSON.stringify({calls, html: host.innerHTML})), 0);
             {"clip_id": "clip-1", "include_preview": False},
         )
         self.assertIn("Version lineage", result["html"])
+        self.assertIn("(viewing)", result["html"])
+        self.assertNotIn("(current)", result["html"])
         self.assertIn("stem_locked", result["html"])
         self.assertIn("Download deterministic MIDI", result["html"])
         self.assertIn("Library and project effects: zero", result["html"])
@@ -499,6 +504,421 @@ setTimeout(() => console.log(JSON.stringify({calls, html: host.innerHTML})), 0);
         self.assertIn("earlier save may already have completed", result["html"])
         self.assertIn('id="clip-start-bar" name="bar" type="number" min="1" step="1" value="3"', result["html"])
         self.assertIn('id="clip-start-beat" name="beat" type="number" min="1" max="4" step="1" value="4"', result["html"])
+
+    def test_key_transform_requires_temporary_review_then_explicit_create(self) -> None:
+        result = self.run_node(
+            """
+(async () => {
+  const calls = [];
+  const host = createDynamicHost();
+  const libraryHash = 'b'.repeat(64);
+  const projectionHash = 'c'.repeat(64);
+  let created = false;
+  const api = async (path, options = {}) => {
+    calls.push({path, method: options.method || 'GET', body: options.body || null});
+    if (path.startsWith('/api/clips?')) return {
+      library_state_sha256: (created ? 'f' : 'b').repeat(64),
+      page: {offset: 0, total: created ? 2 : 1, has_more: false},
+      clips: [
+        {clip_id: 'clip-parent', object_sha256: 'a'.repeat(64), title: 'Exact bass', role: 'bass', key: 'B major', bpm: 119, revision: 2, note_count: 4, duration_seconds: 4, tags: []},
+        ...(created ? [{clip_id: 'clip-child', object_sha256: 'd'.repeat(64), title: 'Exact bass', role: 'bass', key: 'G major', bpm: 119, revision: 3, note_count: 4, duration_seconds: 4, tags: []}] : []),
+      ],
+    };
+    if (path === '/api/clips/clip-parent') return {
+      library_state_sha256: libraryHash,
+      clip: {clip_id: 'clip-parent', object_sha256: 'a'.repeat(64), title: 'Exact bass', role: 'bass', key: 'B major', bpm: 119, revision: 2, note_count: 4, chord_count: 1, pitch_range: {minimum: 35, maximum: 47}, duration: {export_seconds: 4}, timing_contract: {resolved_mode: 'musical', export_bpm: 119}, instrument: {program: 38, channel: 0}},
+      lineage: {versions: [{clip_id: 'clip-parent', title: 'Exact bass', revision: 2, bpm: 119}]},
+    };
+    if (path === '/api/clip-transform-projection') {
+      const request = JSON.parse(options.body);
+      return {projection: {
+        projection_sha256: projectionHash,
+        transform: request.transform,
+        library: {state_sha256: libraryHash},
+        parent: {clip_id: 'clip-parent', object_sha256: 'a'.repeat(64), lineage_id: 'lineage-1', revision: 2, key: 'B major', bpm: 119, duration_seconds: 4, note_count: 4, chord_count: 1, pitch_range: {minimum: 35, maximum: 47}},
+        child: {clip_id: 'clip-child', object_sha256: 'd'.repeat(64), lineage_id: 'lineage-1', revision: 3, key: 'G major', bpm: 119, duration_seconds: 4, note_count: 4, chord_count: 1, pitch_range: {minimum: 43, maximum: 55}},
+        diff: {kind: 'key', key_before: 'B major', key_after: 'G major', semitones: 8, note_pitches_changed: 4, chord_symbols_changed: 1, note_count_before: 4, note_count_after: 4, chord_count_before: 1, chord_count_after: 1, bpm_changed: false, timing_changed: false},
+        warnings: [{message: '<unsafe warning>'}],
+        effects: {library_mutated: false, clip_created: false, selection_changed: false, placement_changed: false, pack_changed: false},
+      }};
+    }
+    if (path === '/api/clip-transform-action') {
+      created = true;
+      return {result: {
+        status: 'created', replayed: false, projection_sha256: projectionHash,
+        parent: {clip_id: 'clip-parent', object_sha256: 'a'.repeat(64), lineage_id: 'lineage-1', revision: 2},
+        child: {clip_id: 'clip-child', parent_clip_id: 'clip-parent', object_sha256: 'd'.repeat(64), lineage_id: 'lineage-1', revision: 3, key: 'G major', bpm: 119},
+        library: {expected_state_sha256: libraryHash, previous_state_sha256: libraryHash, current_state_sha256: 'f'.repeat(64)},
+        effects: {library_mutated: true, child_clip_created: true, transform_applied: true, selection_changed: false, placement_changed: false, pack_changed: false},
+      }};
+    }
+    throw new Error(`unexpected ${path}`);
+  };
+  const browser = clips.createClipLibrary({api});
+  browser.setCapability(
+    {enabled: true, acceptance: {pack_sha256: 'e'.repeat(64)}, library: {clip_count: 1, state_sha256: libraryHash}},
+    null,
+    {enabled: true, transforms: {same_mode_key: {enabled: true}, bpm: {enabled: true}}, target_project: {key: 'G major', bpm: 125}, limits: {minimum_bpm: 20, maximum_bpm: 400}},
+  );
+  browser.renderInto(host);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  host.querySelectorAll('[data-open-clip]')[0].onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const initialHtml = host.innerHTML;
+  host.element('clip-transform-operation-key').onclick();
+  const focusAfterOperation = host.focusedId;
+  host.element('clip-transform-target-key').value = 'G major';
+  host.element('clip-transform-target-key').oninput();
+  host.element('clip-transform-direction-up').onclick();
+  host.element('clip-transform-form').onsubmit({preventDefault() {}});
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const reviewedHtml = host.innerHTML;
+  host.element('clip-transform-create').onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const successHtml = host.innerHTML;
+  host.element('clip-back').onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const projectionCall = calls.find(call => call.path === '/api/clip-transform-projection');
+  const createCall = calls.find(call => call.path === '/api/clip-transform-action');
+  console.log(JSON.stringify({
+    calls,
+    projectionBody: JSON.parse(projectionCall.body),
+    createBody: JSON.parse(createCall.body),
+    initialHtml,
+    reviewedHtml,
+    successHtml,
+    browseHtml: host.innerHTML,
+    focusAfterOperation,
+  }));
+})().catch(error => { console.error(error); process.exitCode = 1; });
+"""
+        )
+
+        self.assertIn("Create a transformed alternative", result["initialHtml"])
+        self.assertIn("Sunofriend preselects nothing", result["initialHtml"])
+        self.assertNotIn('name="clip-transform-operation" type="radio" value="key" checked', result["initialHtml"])
+        self.assertEqual(
+            result["projectionBody"],
+            {
+                "parent_clip_id": "clip-parent",
+                "parent_object_sha256": "a" * 64,
+                "library_state_sha256": "b" * 64,
+                "transform": {
+                    "kind": "key",
+                    "target_key": "G major",
+                    "direction": "up",
+                },
+            },
+        )
+        self.assertEqual(
+            result["createBody"],
+            {
+                "action": "create",
+                "parent_clip_id": "clip-parent",
+                "parent_object_sha256": "a" * 64,
+                "library_state_sha256": "b" * 64,
+                "projection_sha256": "c" * 64,
+                "transform": {
+                    "kind": "key",
+                    "target_key": "G major",
+                    "direction": "up",
+                },
+            },
+        )
+        self.assertIn("Temporary transform review", result["reviewedHtml"])
+        self.assertIn("Effects: zero", result["reviewedHtml"])
+        self.assertIn("B major → G major", result["reviewedHtml"])
+        self.assertIn("+8", result["reviewedHtml"])
+        self.assertIn("&lt;unsafe warning&gt;", result["reviewedHtml"])
+        self.assertEqual(result["focusAfterOperation"], "clip-transform-target-key")
+        self.assertIn("35–47 → 43–55", result["reviewedHtml"])
+        self.assertIn("Exact projection evidence", result["reviewedHtml"])
+        self.assertIn("a" * 64, result["reviewedHtml"])
+        self.assertIn("b" * 64, result["reviewedHtml"])
+        self.assertIn("New immutable alternative created", result["successHtml"])
+        self.assertIn("not preferred, selected, placed or added", result["successHtml"])
+        self.assertIn("lineage-1", result["successHtml"])
+        self.assertIn("f" * 64, result["successHtml"])
+        self.assertIn("clip-child", result["successHtml"])
+        self.assertIn("2 immutable clips", result["successHtml"])
+        self.assertNotIn("library changed", result["successHtml"])
+        self.assertIn("Inspect created version", result["successHtml"])
+        self.assertIn("Showing 1–2 of 2 matching clips", result["browseHtml"])
+        self.assertIn("2 immutable clips", result["browseHtml"])
+        self.assertIn("clip-child", result["browseHtml"])
+        paths = [call["path"].split("?", 1)[0] for call in result["calls"]]
+        self.assertNotIn("/api/events", paths)
+        self.assertNotIn("/api/clip-reuse-action", paths)
+        self.assertNotIn("/api/garageband-pack-basket", paths)
+        self.assertNotIn("/api/clips/clip-child", paths)
+        self.assertEqual(paths.count("/api/clips"), 2)
+
+    def test_bpm_transform_input_change_invalidates_review_without_creating(self) -> None:
+        result = self.run_node(
+            """
+(async () => {
+  const calls = [];
+  const host = createDynamicHost();
+  const api = async (path, options = {}) => {
+    calls.push({path, method: options.method || 'GET', body: options.body || null});
+    if (path.startsWith('/api/clips?')) return {page: {offset: 0, total: 1, has_more: false}, clips: [{clip_id: 'clip-1', object_sha256: 'a'.repeat(64), title: 'Keys', role: 'keys', key: 'C minor', bpm: 113, revision: 1, note_count: 3, duration_seconds: 6, tags: []}]};
+    if (path === '/api/clips/clip-1') return {library_state_sha256: 'b'.repeat(64), clip: {clip_id: 'clip-1', object_sha256: 'a'.repeat(64), title: 'Keys', role: 'keys', key: 'C minor', bpm: 113, revision: 1, note_count: 3, chord_count: 0, duration: {export_seconds: 6}, timing_contract: {resolved_mode: 'musical', export_bpm: 113}, instrument: {program: 4, channel: 0}}, lineage: {versions: [{clip_id: 'clip-1', title: 'Keys', revision: 1, bpm: 113}]}};
+    if (path === '/api/clip-transform-projection') {
+      const request = JSON.parse(options.body);
+      return {projection: {projection_sha256: 'c'.repeat(64), transform: request.transform, parent: {key: 'C minor', bpm: 113, duration_seconds: 6}, child: {key: 'C minor', bpm: 125, duration_seconds: 5.424}, diff: {kind: 'bpm', bpm_before: 113, bpm_after: 125, ratio: 1.106, timing_mode: 'musical', beat_positions_changed: false, source_seconds_changed: true}, warnings: [], effects: {library_mutated: false, clip_created: false}}};
+    }
+    if (path === '/api/clip-transform-action') throw new Error('create must not be called');
+    throw new Error(`unexpected ${path}`);
+  };
+  const browser = clips.createClipLibrary({api, escapeHtml: value => String(value)});
+  browser.setCapability(
+    {enabled: true, acceptance: {pack_sha256: 'e'.repeat(64)}, library: {clip_count: 1, state_sha256: 'b'.repeat(64)}},
+    null,
+    {enabled: true, transforms: {same_mode_key: {enabled: true}, bpm: {enabled: true}}, limits: {minimum_bpm: 20, maximum_bpm: 400}},
+  );
+  browser.renderInto(host);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  host.querySelectorAll('[data-open-clip]')[0].onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  host.element('clip-transform-operation-bpm').onclick();
+  const boundsHtml = host.innerHTML;
+  const focusAfterOperation = host.focusedId;
+  host.element('clip-transform-target-bpm').value = '25';
+  host.element('clip-transform-target-bpm').oninput();
+  host.element('clip-transform-timing-musical').onclick();
+  host.element('clip-transform-form').onsubmit({preventDefault() {}});
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const invalidBoundsHtml = host.innerHTML;
+  host.element('clip-transform-target-bpm').value = '125';
+  host.element('clip-transform-target-bpm').oninput();
+  host.element('clip-transform-form').onsubmit({preventDefault() {}});
+  const pendingHtml = host.innerHTML;
+  const pendingFocus = host.focusedId;
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const reviewedHtml = host.innerHTML;
+  const reviewedFocus = host.focusedId;
+  host.element('clip-transform-target-bpm').value = '126';
+  host.element('clip-transform-target-bpm').oninput();
+  const create = host.element('clip-transform-create');
+  if (create.onclick) create.onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  console.log(JSON.stringify({calls, boundsHtml, invalidBoundsHtml, pendingHtml, pendingFocus, reviewedHtml, reviewedFocus, html: host.innerHTML, createDisabled: host.element('clip-transform-create').disabled, focusAfterOperation, focusAfterEdit: host.focusedId}));
+})().catch(error => { console.error(error); process.exitCode = 1; });
+"""
+        )
+
+        projection_calls = [
+            call for call in result["calls"] if call["path"] == "/api/clip-transform-projection"
+        ]
+        self.assertEqual(len(projection_calls), 1)
+        self.assertEqual(
+            json.loads(projection_calls[0]["body"])["transform"],
+            {"kind": "bpm", "target_bpm": 125, "timing_mode": "musical"},
+        )
+        self.assertIn('min="28.25" max="400"', result["boundsHtml"])
+        self.assertIn("0.25×–4×", result["boundsHtml"])
+        self.assertIn("target BPM must be from 28.25 to 400", result["invalidBoundsHtml"])
+        self.assertIn('aria-busy="true"', result["pendingHtml"])
+        self.assertGreaterEqual(result["pendingHtml"].count("<fieldset disabled>"), 2)
+        self.assertIn('id="clip-transform-review" class="primary" type="submit" disabled', result["pendingHtml"])
+        self.assertEqual(result["pendingFocus"], "clip-transform-status")
+        self.assertEqual(result["reviewedFocus"], "clip-transform-projection")
+        self.assertEqual(result["focusAfterOperation"], "clip-transform-target-bpm")
+        self.assertEqual(result["focusAfterEdit"], "clip-transform-target-bpm")
+        self.assertIn("Temporary transform review", result["reviewedHtml"])
+        self.assertNotIn("Temporary transform review", result["html"])
+        self.assertIn("Draft changed. Review it again", result["html"])
+        self.assertTrue(result["createDisabled"])
+        self.assertEqual(
+            [call for call in result["calls"] if call["path"] == "/api/clip-transform-action"],
+            [],
+        )
+
+    def test_idempotent_transform_replay_is_not_presented_as_a_new_version(self) -> None:
+        result = self.run_node(
+            """
+(async () => {
+  const host = createDynamicHost();
+  const calls = [];
+  const libraryHash = 'b'.repeat(64);
+  const projectionHash = 'c'.repeat(64);
+  const api = async (path, options = {}) => {
+    calls.push(path);
+    if (path.startsWith('/api/clips?')) return {page: {offset: 0, total: 2, has_more: false}, clips: [{clip_id: 'clip-parent', object_sha256: 'a'.repeat(64), title: 'Bass', role: 'bass', key: 'B major', bpm: 119, revision: 1, note_count: 2, duration_seconds: 2, tags: []}]};
+    if (path === '/api/clips/clip-parent') return {library_state_sha256: libraryHash, clip: {clip_id: 'clip-parent', object_sha256: 'a'.repeat(64), title: 'Bass', role: 'bass', key: 'B major', bpm: 119, revision: 1, note_count: 2, chord_count: 0, pitch_range: {minimum: 35, maximum: 47}, duration: {export_seconds: 2}, timing_contract: {resolved_mode: 'musical', export_bpm: 119}, instrument: {program: 38, channel: 0}}, lineage: {versions: [{clip_id: 'clip-parent', title: 'Bass', revision: 1, bpm: 119}]}};
+    if (path === '/api/clip-transform-projection') {
+      const transform = JSON.parse(options.body).transform;
+      return {projection: {projection_sha256: projectionHash, transform, parent: {clip_id: 'clip-parent', object_sha256: 'a'.repeat(64), lineage_id: 'lineage-1', revision: 1, key: 'B major', bpm: 119, duration_seconds: 2}, child: {clip_id: 'clip-child', object_sha256: 'd'.repeat(64), lineage_id: 'lineage-1', revision: 2, key: 'G major', bpm: 119, duration_seconds: 2}, diff: {kind: 'key', key_before: 'B major', key_after: 'G major', semitones: -4}, warnings: [], effects: {library_mutated: false, clip_created: false}}};
+    }
+    if (path === '/api/clip-transform-action') return {result: {status: 'replayed', replayed: true, projection_sha256: projectionHash, parent: {clip_id: 'clip-parent', object_sha256: 'a'.repeat(64), lineage_id: 'lineage-1', revision: 1}, child: {clip_id: 'clip-child', parent_clip_id: 'clip-parent', object_sha256: 'd'.repeat(64), lineage_id: 'lineage-1', revision: 2, key: 'G major', bpm: 119}, library: {expected_state_sha256: libraryHash, previous_state_sha256: libraryHash, current_state_sha256: libraryHash}, effects: {library_mutated: false, child_clip_created: false, transform_applied: false, selection_changed: false, placement_changed: false, pack_changed: false}}};
+    throw new Error(`unexpected ${path}`);
+  };
+  const browser = clips.createClipLibrary({api, escapeHtml: value => String(value)});
+  browser.setCapability(
+    {enabled: true, acceptance: {pack_sha256: 'e'.repeat(64)}, library: {clip_count: 2, state_sha256: libraryHash}},
+    null,
+    {enabled: true, actions: {preview: true, create: true}, transforms: {same_mode_key: {enabled: true}, bpm: {enabled: true}}, limits: {minimum_bpm: 20, maximum_bpm: 400, minimum_bpm_ratio: 0.25, maximum_bpm_ratio: 4}},
+  );
+  browser.renderInto(host);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  host.querySelectorAll('[data-open-clip]')[0].onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  host.element('clip-transform-operation-key').onclick();
+  host.element('clip-transform-target-key').value = 'G major';
+  host.element('clip-transform-target-key').oninput();
+  host.element('clip-transform-direction-nearest').onclick();
+  host.element('clip-transform-form').onsubmit({preventDefault() {}});
+  await new Promise(resolve => setTimeout(resolve, 0));
+  host.element('clip-transform-create').onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  console.log(JSON.stringify({calls, html: host.innerHTML}));
+})().catch(error => { console.error(error); process.exitCode = 1; });
+"""
+        )
+
+        self.assertIn("Existing immutable alternative verified", result["html"])
+        self.assertIn("appended nothing additional", result["html"])
+        self.assertIn("idempotent replay · effects zero", result["html"])
+        self.assertIn("Inspect existing version", result["html"])
+        self.assertIn("2 immutable clips", result["html"])
+        self.assertNotIn("New immutable alternative created", result["html"])
+        self.assertNotIn("Inspect new version", result["html"])
+
+    def test_transform_actions_are_explained_and_disabled_at_library_capacity(self) -> None:
+        result = self.run_node(
+            """
+(async () => {
+  const host = createDynamicHost();
+  const calls = [];
+  const api = async path => {
+    calls.push(path);
+    if (path.startsWith('/api/clips?')) return {page: {offset: 0, total: 10000, has_more: true}, clips: [{clip_id: 'clip-1', object_sha256: 'a'.repeat(64), title: 'Keys', role: 'keys', key: 'C major', bpm: 120, revision: 1, note_count: 3, duration_seconds: 2, tags: []}]};
+    if (path === '/api/clips/clip-1') return {library_state_sha256: 'b'.repeat(64), clip: {clip_id: 'clip-1', object_sha256: 'a'.repeat(64), title: 'Keys', role: 'keys', key: 'C major', bpm: 120, revision: 1, note_count: 3, chord_count: 0, duration: {export_seconds: 2}, timing_contract: {resolved_mode: 'musical', export_bpm: 120}, instrument: {program: 4, channel: 0}}, lineage: {versions: [{clip_id: 'clip-1', title: 'Keys', revision: 1, bpm: 120}]}};
+    throw new Error(`unexpected ${path}`);
+  };
+  const browser = clips.createClipLibrary({api, escapeHtml: value => String(value)});
+  browser.setCapability(
+    {enabled: true, acceptance: {pack_sha256: 'e'.repeat(64)}, library: {clip_count: 10000, state_sha256: 'b'.repeat(64)}},
+    null,
+    {enabled: true, actions: {preview: false, create: false}, transforms: {same_mode_key: {enabled: true}, bpm: {enabled: true}}, limits: {minimum_bpm: 20, maximum_bpm: 400, minimum_bpm_ratio: 0.25, maximum_bpm_ratio: 4}},
+  );
+  browser.renderInto(host);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  host.querySelectorAll('[data-open-clip]')[0].onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  host.element('clip-transform-form').onsubmit({preventDefault() {}});
+  host.element('clip-transform-create').onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  console.log(JSON.stringify({calls, html: host.innerHTML, keyDisabled: host.element('clip-transform-operation-key').disabled, bpmDisabled: host.element('clip-transform-operation-bpm').disabled, reviewDisabled: host.element('clip-transform-review').disabled, createDisabled: host.element('clip-transform-create').disabled}));
+})().catch(error => { console.error(error); process.exitCode = 1; });
+"""
+        )
+
+        self.assertTrue(result["keyDisabled"])
+        self.assertTrue(result["bpmDisabled"])
+        self.assertTrue(result["reviewDisabled"])
+        self.assertTrue(result["createDisabled"])
+        self.assertIn("accepted 10,000-Clip boundary has been reached", result["html"])
+        self.assertIn("inspect, audition and export", result["html"])
+        self.assertNotIn("/api/clip-transform-projection", result["calls"])
+        self.assertNotIn("/api/clip-transform-action", result["calls"])
+
+    def test_drum_family_disables_key_change_but_keeps_bpm_available(self) -> None:
+        result = self.run_node(
+            """
+(async () => {
+  const host = createDynamicHost();
+  const api = async path => {
+    if (path.startsWith('/api/clips?')) return {page: {offset: 0, total: 1, has_more: false}, clips: [{clip_id: 'clip-drums', object_sha256: 'a'.repeat(64), title: 'Other kit', role: 'other_kit', key: 'C major', bpm: 119, revision: 1, note_count: 3, duration_seconds: 4, tags: []}]};
+    if (path === '/api/clips/clip-drums') return {library_state_sha256: 'b'.repeat(64), clip: {clip_id: 'clip-drums', object_sha256: 'a'.repeat(64), title: 'Other kit', role: 'other_kit', key: 'C major', bpm: 119, revision: 1, note_count: 3, chord_count: 0, duration: {export_seconds: 4}, timing_contract: {resolved_mode: 'musical', export_bpm: 119}, instrument: {program: 0, channel: 9, is_drums: true}}, lineage: {versions: [{clip_id: 'clip-drums', title: 'Other kit', revision: 1, bpm: 119}]}};
+    throw new Error(`unexpected ${path}`);
+  };
+  const browser = clips.createClipLibrary({api, escapeHtml: value => String(value)});
+  browser.setCapability(
+    {enabled: true, acceptance: {pack_sha256: 'e'.repeat(64)}, library: {clip_count: 1, state_sha256: 'b'.repeat(64)}},
+    null,
+    {enabled: true, transforms: {same_mode_key: {enabled: true}, bpm: {enabled: true}}, limits: {minimum_bpm: 20, maximum_bpm: 400}},
+  );
+  browser.renderInto(host);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  host.querySelectorAll('[data-open-clip]')[0].onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  console.log(JSON.stringify({html: host.innerHTML, keyDisabled: host.element('clip-transform-operation-key').disabled, bpmDisabled: host.element('clip-transform-operation-bpm').disabled}));
+})().catch(error => { console.error(error); process.exitCode = 1; });
+"""
+        )
+
+        self.assertTrue(result["keyDisabled"])
+        self.assertFalse(result["bpmDisabled"])
+        self.assertIn(
+            "Key change is unavailable because drum MIDI note numbers select kit pieces",
+            result["html"],
+        )
+
+    def test_transform_create_conflict_reloads_once_retains_draft_and_never_retries(self) -> None:
+        result = self.run_node(
+            """
+(async () => {
+  const calls = [];
+  const host = createDynamicHost();
+  let detailReads = 0;
+  const api = async (path, options = {}) => {
+    calls.push({path, method: options.method || 'GET', body: options.body || null});
+    if (path.startsWith('/api/clips?')) return {page: {offset: 0, total: 1, has_more: false}, clips: [{clip_id: 'clip-1', object_sha256: 'a'.repeat(64), title: 'Lead', role: 'lead', key: 'D minor', bpm: 146, revision: 1, note_count: 5, duration_seconds: 5, tags: []}]};
+    if (path === '/api/clips/clip-1') {
+      detailReads += 1;
+      return {library_state_sha256: (detailReads === 1 ? 'b' : 'f').repeat(64), clip: {clip_id: 'clip-1', object_sha256: 'a'.repeat(64), title: 'Lead', role: 'lead', key: 'D minor', bpm: 146, revision: 1, note_count: 5, chord_count: 0, duration: {export_seconds: 5}, timing_contract: {resolved_mode: 'musical', export_bpm: 146}, instrument: {program: 81, channel: 0}}, lineage: {versions: [{clip_id: 'clip-1', title: 'Lead', revision: 1, bpm: 146}]}};
+    }
+    if (path === '/api/clip-transform-projection') {
+      const request = JSON.parse(options.body);
+      return {projection: {projection_sha256: 'c'.repeat(64), transform: request.transform, parent: {key: 'D minor', bpm: 146, duration_seconds: 5}, child: {key: 'D minor', bpm: 125, duration_seconds: 5}, diff: {kind: 'bpm', bpm_before: 146, bpm_after: 125, ratio: 0.856, timing_mode: 'stem_locked', beat_positions_changed: true, source_seconds_changed: false}, warnings: [], effects: {library_mutated: false, clip_created: false}}};
+    }
+    if (path === '/api/clip-transform-action') {
+      const error = new Error('stale transform projection');
+      error.status = 409;
+      throw error;
+    }
+    throw new Error(`unexpected ${path}`);
+  };
+  const browser = clips.createClipLibrary({api, escapeHtml: value => String(value)});
+  browser.setCapability(
+    {enabled: true, acceptance: {pack_sha256: 'e'.repeat(64)}, library: {clip_count: 1, state_sha256: 'b'.repeat(64)}},
+    null,
+    {enabled: true, transforms: {same_mode_key: {enabled: true}, bpm: {enabled: true}}, limits: {minimum_bpm: 20, maximum_bpm: 400}},
+  );
+  browser.renderInto(host);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  host.querySelectorAll('[data-open-clip]')[0].onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  host.element('clip-transform-operation-bpm').onclick();
+  host.element('clip-transform-target-bpm').value = '125';
+  host.element('clip-transform-target-bpm').oninput();
+  host.element('clip-transform-timing-stem-locked').onclick();
+  host.element('clip-transform-form').onsubmit({preventDefault() {}});
+  await new Promise(resolve => setTimeout(resolve, 0));
+  host.element('clip-transform-create').onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  await new Promise(resolve => setTimeout(resolve, 0));
+  console.log(JSON.stringify({calls, detailReads, html: host.innerHTML}));
+})().catch(error => { console.error(error); process.exitCode = 1; });
+"""
+        )
+
+        self.assertEqual(result["detailReads"], 2)
+        self.assertEqual(
+            len([call for call in result["calls"] if call["path"] == "/api/clip-transform-action"]),
+            1,
+        )
+        self.assertEqual(
+            len([call for call in result["calls"] if call["path"] == "/api/clip-transform-projection"]),
+            1,
+        )
+        self.assertIn("No automatic retry was made", result["html"])
+        self.assertIn("review this retained draft again", result["html"])
+        self.assertIn('id="clip-transform-target-bpm" type="number" min="36.5" max="400" step="0.001" inputmode="decimal" value="125"', result["html"])
+        self.assertIn('value="stem_locked" checked', result["html"])
+        self.assertNotIn("Temporary transform review", result["html"])
 
 
 if __name__ == "__main__":
