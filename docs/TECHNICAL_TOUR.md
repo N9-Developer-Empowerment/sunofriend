@@ -397,13 +397,17 @@ mutation of its parent.
    [`WorkbenchClipOnsetCorrectionService`](../src/sunofriend/workbench_onset.py).
    It moves 1–64 exact existing pitched or drum intervals to explicit integer
    targets within ±480 ticks and makes no timing inference or quantisation.
+   Increment 6.3e dispatches `note_end_shift_patch` to
+   [`WorkbenchClipDurationCorrectionService`](../src/sunofriend/workbench_duration.py).
+   It keeps Note On fixed and moves only 1–64 explicit Note Off events within
+   ±480 ticks, with a minimum one-tick duration.
 10. A correction projection changes nothing. Exact creation reuses the
     sole-child compare-and-swap, while a recognized correction recipe can be
     revalidated only through the service-level restart verifier, which rebuilds
     the historical window hash and operation-specific before/after summary from
     its exact retained parent. One child is pitch, attack velocity, deletion or
-    onset shift, never a mixture. Pitch, velocity and onset shift retain note
-    count. Deletion requires
+    onset or note-end shift, never a mixture. Pitch, velocity, onset and
+    note-end shift retain note count. Deletion requires
     1–64 exact refs, at least one surviving note, unchanged beat/export/source
     horizons and normalized child MIDI equal to normalized parent MIDI minus
     exactly the named intervals. Duplicate, cascade, horizon and only-note
@@ -415,6 +419,11 @@ mutation of its parent.
     duration beats and microtiming; stem-locked mode requires zero microtiming
     and preserves source duration. Both paths round-trip to exact ticks and
     retain beat/export/source horizons.
+    Note-end shift leaves Note On fixed, changes duration and Note Off only,
+    and requires both source and target intervals in the window. Musical mode
+    changes duration beats and recomputes source end; stem-locked mode requires
+    zero microtiming, changes source end at export BPM and derives duration
+    beats. The next same-pitch onset and all horizons remain fail-closed.
 
 The 6.3c browser interaction keeps focus separate from intent: focusing or
 navigating a piano-roll note changes no draft, **Mark for removal** changes the
@@ -445,9 +454,9 @@ all false; fresh creation may set only library/child/correction/onset/timing
 effects, and replay/restart are all false. The capability remains v2 with
 generic `timing: false`; the explicit onset kind and 480-tick maximum are the
 client feature test. Pitch, velocity and deletion public contracts remain
-frozen. Release velocity, note insertion, note-end/duration and continuous
-expression remain deferred; note-end/duration is the likely next bounded
-slice.
+frozen. Increment 6.3e now completes the separately bounded note-end/duration
+slice. Release velocity, note insertion and continuous expression remain
+deferred.
 
 The completed 6.3d exercise used
 `work/ai-bakeoff/lidl-phase6-onset-smoke-v1`. Parent Keys Clip
@@ -474,6 +483,52 @@ repository suite passed 990 tests in 282.58 seconds with the one existing
 third-party `resampy`/`pkg_resources` deprecation warning. This proves the
 engineering contract; no human preference or musical-quality result was
 recorded.
+
+The 6.3e browser interaction adds **Change existing note length (MIDI Note
+Off)**. An exact `target_end_tick` changes the draft only after Apply, then the
+user separately Reviews and Creates. The complete source and target intervals
+must stay in the window; the target differs by a non-zero value within ±480
+ticks and leaves at least one tick after the unchanged Note On. The four onset
+row block reasons are reused. Crossing the next same-pitch onset, normalized
+lifetime cascade and global-horizon movement fail closed. Musical and
+stem-locked dual-time paths round-trip to the exact Note Off without changing
+onset, pitch, expression or count.
+
+The public note-end schemas are
+`sunofriend.workbench-clip-note-end-window.v1`,
+`sunofriend.workbench-clip-note-end-preview.v1`,
+`sunofriend.workbench-clip-note-end-result.v1` and
+`sunofriend.workbench-clip-note-end-summary.v1`, with retained operation
+`shift_note_ends`. Capability v2 keeps
+generic `timing: false` and advertises 480 maximum delta plus one-tick minimum
+duration. Preview/replay/restart are all false; only
+library/child/correction/duration/timing effects are true on fresh creation.
+No timing, phrasing or quality judgement is inferred. The browser's restart
+summary validator fails closed against malformed child, lineage, timing, diff
+or effect evidence rather than filling gaps from current detail state.
+
+The ignored Lidl smoke at
+`work/ai-bakeoff/lidl-phase6-duration-smoke-v1` has report SHA-256
+`d0141814026c434c4702a9c7dcd00466fd6502921bb5e0fa1b437657d675bb77`.
+The source stayed at 12 Clips and the copy grew to 13. Parent Keys Clip
+`a6112b69031a233a54531128dca4925f32d5b3b32ce5552daaa6393d0138d8aa`
+(object
+`d37975c915e790e290650cf5b48e316c19318c28bd1a50c3de342e889180356a`)
+produced child
+`sf-correction-067bbbfc65e112ba175da84648f2b74f40b5cb5137eabb5f91ff28f4af9f03f6`
+(object
+`14fee0a6ac7dbc29043199e30041adc93c59eda34fccd8a6a9a15d972846281f`).
+Both contain 1,727 notes. Channel-1 pitch 66 changed 442–873→442–903,
++30 ticks/+31.512625 ms and duration 431→461 ticks, while horizons stayed
+462.6458333333333 beats, 222070 ticks and 233.26695445833332 seconds. Parent
+MIDI was
+`e741334f8dfc1421850618d088b382a5fc051fc1fada4797ac742a1dcd201036`;
+child/repeat were
+`27d5be64a4e992548c6a58139f8a7fb677e3d7f4cefc55ea4e2fc163b74fa918`.
+The focused integrated correction/UI suite passed 133 tests, the smoke passed
+and the complete repository suite passed 1009 tests with the one existing
+`resampy`/`pkg_resources` deprecation warning. This is engineering evidence
+only, not a human preference.
 
 ### Worked state example
 

@@ -566,19 +566,21 @@ transform or unrelated external append remains a conflict. Ordinary browse,
 detail, preview and capability reads never use this exception and remain strict
 against any unexpected library drift.
 
-Phase 6 Increments 6.3a–d reuse that sole-child append
+Phase 6 Increments 6.3a–e reuse that sole-child append
 boundary but give it a separate authority flag and sealed note-edit policies.
 `workbench_correction.py` keeps the published pitch-v1 facade and dispatches an
 explicit `attack_velocity_patch` to the isolated policy in
 `workbench_velocity.py` or `note_delete_patch` to the isolated policy in
 `workbench_deletion.py`. The bounded `note_onset_shift_patch` dispatches to
-`workbench_onset.py` and retains operation `shift_note_onsets`. All use a
+`workbench_onset.py` and retains operation `shift_note_onsets`. The bounded
+`note_end_shift_patch` dispatches to `workbench_duration.py` and retains
+`shift_note_ends`. All use a
 bounded half-open integer window at 480 TPQ
 resolved through the Clip's existing automatic export timing. The four-key
 pitch window request and its hashed public serializer remain byte-compatible;
-velocity, deletion and onset windows add their explicit correction-kind
-discriminators. The published 6.3a, 6.3b and 6.3c schemas, hashes and retained
-recipes remain frozen.
+velocity, deletion, onset and note-end windows add their explicit
+correction-kind discriminators. The published earlier schemas, hashes and
+retained recipes remain frozen.
 
 Because Clip v1 intentionally has no mutable note ID, an editable note is
 addressed by its canonical parent index plus a digest over the parent object
@@ -625,7 +627,7 @@ state. Only note count and the explicitly named intervals differ. A fresh
 deletion child may set only `library_mutated`, `child_clip_created`,
 `correction_applied`, `note_count_changed` and `note_deleted` effects; replay
 and restart validation have zero effects.
-One recipe contains one correction kind, so removal or onset shift never shares
+One recipe contains one correction kind, so removal, onset shift or note-end shift never shares
 a child with pitch, attack velocity or another correction kind.
 
 The 6.3d onset service addresses an existing note by the same exact canonical
@@ -656,23 +658,56 @@ set only `library_mutated`, `child_clip_created`, `correction_applied`,
 The capability schema stays at v2 and deliberately retains generic
 `timing: false`; support is advertised only through the explicit
 `note_onset_shift_patch` entry and `maximum_onset_delta_ticks: 480`.
+
+The 6.3e duration service uses the same canonical references but accepts one
+integer `target_end_tick` for each of 1–64 exact existing pitched or drum
+notes. Each non-zero delta is bounded to ±480 ticks, must retain at least one
+tick of duration and must keep both the source and target full intervals
+inside the half-open window. Only the normalized Note Off, `duration_beats`
+and `source_end_seconds` may change; Note On, pitch, attack/release velocity,
+articulation, note count and unaffected notes remain exact.
+
+The note-end policy exposes the same four block reasons as onset shift. Its
+target validator rejects crossing the next same-channel/same-pitch onset,
+changing a normalized neighbouring lifetime, escaping window/MIDI bounds or
+moving a beat/export/source horizon. In `musical` mode it adds `delta / 480`
+to `duration_beats`, preserves the onset and both microtiming values, and
+derives source end through the tempo map. In `stem_locked` mode it requires
+zero microtiming, moves source end by
+`delta * 60 / (export_bpm * 480)` and derives duration beats. Both modes must
+round-trip to the requested Note Off tick.
+
+Its public contracts are
+`sunofriend.workbench-clip-note-end-window.v1`,
+`sunofriend.workbench-clip-note-end-preview.v1`,
+`sunofriend.workbench-clip-note-end-result.v1` and
+`sunofriend.workbench-clip-note-end-summary.v1`. The capability remains v2
+with generic `timing: false` and advertises
+`maximum_note_end_delta_ticks: 480` plus
+`minimum_note_duration_ticks: 1`. Preview/replay/restart are all false; fresh
+creation may set only `library_mutated`, `child_clip_created`,
+`correction_applied`, `note_duration_changed` and `note_timing_changed`.
+The browser's restored-summary validator independently requires the exact
+child, lineage, timing, diff and complete all-false effect evidence; a malformed
+field fails closed instead of being reconstructed from nearby detail state.
 The browser separately validates the exact kind-specific preview/result
 schema, all request and library pins, deterministic `sf-correction-<intent>`
 identity, one-to-one server diff and the complete fresh/replay effect map. It
 never fills absent server diff rows from its draft. A value equal to the
 current draft is an inspection no-op and cannot discard accepted review
-evidence. Deletion and onset window, diff and restart-summary serializers redact a
-path-like articulation value before it reaches the public response. Regression
+evidence. Public correction windows redact path-like articulation values; the
+note-end diff and restart summary expose only their bounded change fields.
+Regression
 coverage also constructs normalized cascade and horizon-changing deletion
 cases and requires them to fail before an immutable child can be appended.
 
 `--enable-clip-corrections`, `--enable-clip-transforms` and
 `--enable-clip-reuse-plan` are separate mutually exclusive launch modes. Note
-insertion, note-end/duration, release velocity and continuous expression remain
+insertion, release velocity and continuous expression remain
 later contracts rather than being interpreted through pitch correction,
-attack intensity, deletion or onset movement. Release velocity remains
+attack intensity, deletion, onset movement or note-end movement. Release velocity remains
 deferred because every audited local Clip currently carries zero there and DAW
-patch support for Note Off velocity varies. Increments 6.3c and 6.3d are
+patch support for Note Off velocity varies. Increments 6.3c–e are
 complete while broader Phase 6 remains in progress. The 6.3c copied-Lidl
 exercise changed
 one channel-9 Snare note at ticks 140487–140573, reduced both Clip and
@@ -709,6 +744,29 @@ The focused suite passed 101 tests; the adversarial audit passed 17 onset and
 990 tests in 282.58 seconds with the one existing third-party
 `resampy`/`pkg_resources` deprecation warning. This closes deterministic
 engineering evidence only, with no human preference claim.
+
+The 6.3e ignored smoke at
+`work/ai-bakeoff/lidl-phase6-duration-smoke-v1` has report SHA-256
+`d0141814026c434c4702a9c7dcd00466fd6502921bb5e0fa1b437657d675bb77`.
+It preserved the 12-Clip source and grew only the copy to 13. Parent Keys Clip
+`a6112b69031a233a54531128dca4925f32d5b3b32ce5552daaa6393d0138d8aa`
+(object
+`d37975c915e790e290650cf5b48e316c19318c28bd1a50c3de342e889180356a`)
+produced child
+`sf-correction-067bbbfc65e112ba175da84648f2b74f40b5cb5137eabb5f91ff28f4af9f03f6`
+(object
+`14fee0a6ac7dbc29043199e30041adc93c59eda34fccd8a6a9a15d972846281f`).
+Both have 1,727 notes. Channel-1 pitch 66 retained onset tick 442 while Note
+Off moved 873→903, +30 ticks/+31.512625 ms and duration 431→461 ticks.
+Beat/export/source horizons stayed 462.6458333333333 beats, 222070 ticks and
+233.26695445833332 seconds. Parent MIDI SHA-256 was
+`e741334f8dfc1421850618d088b382a5fc051fc1fada4797ac742a1dcd201036`;
+child and repeat were
+`27d5be64a4e992548c6a58139f8a7fb677e3d7f4cefc55ea4e2fc163b74fa918`.
+The focused integrated correction/UI suite passed 133 tests, the real smoke
+passed and the complete repository suite passed 1009 tests with the one
+existing `resampy`/`pkg_resources` deprecation warning. This is deterministic
+engineering evidence only, not a human preference claim.
 
 An optional explicit-catalog phrase link validates one existing diagnostic
 S0/M1/M3 hybrid report against its exact stem, three current candidate MIDI

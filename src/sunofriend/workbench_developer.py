@@ -277,7 +277,7 @@ _OPERATION_LABELS = {
     "clip_transform.create": "Append one explicitly confirmed immutable Clip version",
     "clip_correction.window": "Read one bounded immutable Clip note window",
     "clip_correction.preview": (
-        "Preview an exact pitch, attack-velocity, note-deletion or bounded note-onset shift without writing"
+        "Preview an exact pitch, attack-velocity, note-deletion, bounded note-onset shift or bounded note-end duration change without writing"
     ),
     "clip_correction.create": "Append one explicitly confirmed corrected Clip version",
 }

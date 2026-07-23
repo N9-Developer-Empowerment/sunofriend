@@ -1,6 +1,8 @@
 # Sunofriend AI roadmap
 
-Status: Phase 1 and Phase 2 engineering complete; Phase 3 complete; Phase 4
+Status: Phase 1 complete; Phase 2 engineering and explicit three-unit human
+review complete, with one assembled reviewed-versus-automatic listening verdict
+still pending; Phase 3 complete; Phase 4
 fixed-MIDI review complete; Phase 5.1 private listening and the Phase 5.2
 fresh-process, bounded reused-model, exact-result cache and beam-1/beam-2
 small-CPU golden measurements plus the hardened private blind short-loop
@@ -23,7 +25,8 @@ same-mode key and BPM child workflow is complete; Increment 6.3a's bounded
 immutable pitch-correction workflow is complete; Increment 6.3b's bounded
 immutable attack-velocity correction is complete; Increment 6.3c's bounded exact
 note-removal workflow is complete; Increment 6.3d's bounded existing-note
-onset-shift workflow is complete;
+onset-shift workflow is complete; Increment 6.3e's bounded existing-note
+note-end/duration workflow is complete;
 broader Phase 6
 creative arrangement remains in progress
 
@@ -98,12 +101,12 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 
 | Phase | State | Outcome |
 | --- | --- | --- |
-| 1. AI Transcription Bake-off v1 | **Engineering complete; listening gate pending** | Independent local model candidates, common JSON, repeatable metrics and selection evidence; see the close-out report |
-| 2. Phrase Review v2 | **Engineering complete; listening calibration pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history |
+| 1. AI Transcription Bake-off v1 | **Complete** | Independent local model candidates, common JSON, repeatable metrics and final role-specific listening decisions; see the close-out report |
+| 2. Phrase Review v2 | **Engineering and phrase review complete; final assembled A/B pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history. The first genuine review selected Basic Pitch for all three Lidl units and was applied without changing raw candidates |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
 | 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.5–5.9 hardening complete and Phase 5.9 human acceptance passed; Phase 5.3 listening/lineage/role work remains** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench has hash-pinned per-stem and full-song timelines, bounded decoded transports, a separate exact GarageBand pack basket, Project Overview, fail-closed execution provenance and guided exact-pack acceptance. The 22 July close-out completed all eight tutorial screens, scored 10/10 and passed both six-item human checks; the resolver reverified five selected MIDI payloads plus the dry proxy and no source audio with zero project effects. Phase 5 remains open only for the separately gated Phase 5.3 work |
-| 6. Creative Arrangement and Reusable MIDI | **In progress: Increments 6.0, 6.1, 6.2a and 6.3a–d complete** | The gated browser, immutable-placement proposal, key/BPM children and bounded recognition-first pitch/attack-velocity/exact-note-removal/existing-note-onset patches are complete. The 6.3d contract moves 1–64 exact existing pitched or drum note intervals by an explicit non-zero delta of at most 480 ticks, keeping the emitted duration, pitch and expression exact. One kind per child, zero-write review, immutable parent and restart validation remain mandatory. Note insertion, note-end/duration, release velocity/continuous expression, mode remapping, tuning/downbeat and hybrids remain later slices; hybrid construction still waits for the Phase 5.3 gates |
+| 6. Creative Arrangement and Reusable MIDI | **In progress: Increments 6.0, 6.1, 6.2a and 6.3a–e complete** | The gated browser, immutable-placement proposal, key/BPM children and bounded recognition-first pitch/attack-velocity/exact-note-removal/existing-note onset and end patches are complete. The 6.3e contract moves only the Note Off for 1–64 exact existing pitched or drum notes by an explicit non-zero delta of at most 480 ticks, while keeping every Note On, pitch, expression and note count exact. One kind per child, zero-write review, immutable parent and restart validation remain mandatory. Note insertion, release velocity/continuous expression, mode remapping, tuning/downbeat and hybrids remain later slices; hybrid construction still waits for the Phase 5.3 gates |
 | 7. Cross-DAW and Opt-in Community Learning | **Deferred** | Compatibility testing, cleared public goldens and consented contextual feedback only after the local workflow is useful, private and stable |
 
 ## Phase 1: AI Transcription Bake-off v1
@@ -318,7 +321,7 @@ the relevant golden material without causing an unacceptable regression.
 - [x] Add synthetic protocol and failure tests.
 - [x] Run the first 10–15-second vocal and bass clips.
 - [x] Render neutral-instrument previews.
-- [ ] Capture GarageBand listening scores.
+- [x] Capture GarageBand listening scores.
 - [x] Write the first local model decision record; publish after listening.
 
 Optional close-out improvements are complete: PESTO has a pinned local worker
@@ -380,6 +383,10 @@ Implemented so far:
   alternative only after an explicit, audited user action;
 - [x] learn a local advisory personal ranking only from explicit reviewed
   choices, without changing candidate order, defaults or review status.
+- [x] complete the first genuine three-unit review, validate its source and
+  tracker lineage, apply its explicit choices and build a real local profile;
+- [ ] record whether the assembled reviewed neutral rendering is preferred to
+  the untouched automatic combined candidate.
 
 ## Phase 3: Instrument Intelligence v2
 
@@ -675,9 +682,9 @@ available for pitched and drum-family Clips. Notes that normalize to a shared
 channel/onset/pitch Note On are visible but blocked because the requested
 source-note edit would not map to one exported event. Pitch and velocity never
 share a draft or recipe. Exact deletion is the separately bounded 6.3c slice
-below, and exact existing-note onset shift is the 6.3d slice after it. Note
-insertion, note-end/duration, release velocity and continuous expression remain
-deferred to their own dual-timeline and identity contracts.
+below, exact existing-note onset shift is the 6.3d slice after it, and
+note-end/duration is the 6.3e slice. Note insertion, release velocity and
+continuous expression remain deferred to their own identity/evidence contracts.
 
 Increment 6.3c is complete under the same correction gate and routes. Its
 kind is `note_delete_patch`, its retained operation is
@@ -735,9 +742,45 @@ generic `timing: false`; clients must test the explicit
 pitch, attack-velocity and deletion contracts remain byte-compatible. Release
 velocity was not selected for this increment because all audited local Clip
 libraries contain only zero release velocities and GarageBand patch support
-for Note Off velocity varies. Note insertion, note-end/duration, release
-velocity and continuous expression remain deferred; the likely next bounded
-slice is note-end/duration correction.
+for Note Off velocity varies. Increment 6.3e now takes note-end/duration alone;
+note insertion, release velocity and continuous expression remain deferred.
+
+Increment 6.3e is complete under the same correction gate. Its kind is
+`note_end_shift_patch`, retained operation is `shift_note_ends`, and the four
+public schemas are
+`sunofriend.workbench-clip-note-end-window.v1`,
+`sunofriend.workbench-clip-note-end-preview.v1`,
+`sunofriend.workbench-clip-note-end-result.v1` and
+`sunofriend.workbench-clip-note-end-summary.v1`. One patch contains 1–64
+unique exact existing pitched or drum note references and one integer
+`target_end_tick` for each. The non-zero delta is bounded to ±480 ticks, the
+new duration is at least one tick, and both source and target full intervals
+must remain inside the loaded half-open window.
+
+Only the normalized Note Off and duration move. Note On, pitch,
+attack/release velocity, articulation, note count and every unaffected note
+remain exact. The same four row reasons used by onset shift apply:
+`context-note-outside-window`, `duplicate-export-note-on`,
+`normalized-lifetime-dependent` and
+`unsupported-stem-locked-microtiming`. Crossing the next same-channel,
+same-pitch onset, changing a neighbouring normalized lifetime, moving a global
+beat/export/source horizon or exceeding the window/MIDI bounds fails closed.
+
+In `musical` mode, `duration_beats` changes by `delta / 480`, onset and both
+microtiming fields remain exact, and source end is recomputed through the
+tempo map. In `stem_locked` mode, v1 requires zero start/end microtiming,
+changes source end by `delta * 60 / (export_bpm * 480)` and derives the new
+beat duration. Both paths must round-trip to the requested integer Note Off.
+The capability remains v2 with generic `timing: false`; clients must require
+`maximum_note_end_delta_ticks: 480` and
+`minimum_note_duration_ticks: 1` as well as the explicit kind.
+
+Typing and focus are zero-effect. The user must Apply, Review and Create.
+Preview has every effect false; a fresh child may set only
+`library_mutated`, `child_clip_created`, `correction_applied`,
+`note_duration_changed` and `note_timing_changed`; exact replay and restart
+have every effect false. No legato, phrase, quantisation, correctness or
+musical-quality inference is made.
 
 ## Phase 7: Cross-DAW and Opt-in Community Learning
 
@@ -780,6 +823,100 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-23 — Phase 1 closed; first genuine Phase 2 choices applied
+
+- Goal: close the outstanding human evidence honestly and turn the first real
+  phrase choices into an auditable MIDI result.
+- Phase 1: the private `sunofriend.phase1-listening-review.v1` export is
+  complete with all 46 required 1–5 scores and explicit choices. Its SHA-256
+  is
+  `b70863f5b64a6bea9e47c2187c8965780eeb0b7be2bddf92ef682017f72be75f`.
+  Bass preferred MuScriptor; backing preferred MuScriptor for the dominant line
+  and the existing harmony stack for polyphonic representation; neutral
+  MuScriptor velocity was preferred to source-derived expression. Phase 1 is
+  complete. Free-text notes remain private.
+- Phase 2: the reviewed export SHA-256 is
+  `0626b1dc2f62f50ef064792f9b547a3fd2afe64c98a37856aaaff4b461f9a48c`.
+  It pins source SHA-256
+  `a52b874719af8468e087ba62dec628cca142e6c649f79a718bbe9f880475a488`
+  and tracker-run SHA-256
+  `258aaf9c821aa59e6627cfffe1abe96016ad09ada3e31529d80f0929bcc86bc6`.
+  All three musical-length units were explicitly reviewed and selected raw
+  Basic Pitch instead of the automatic combined default.
+- Applied evidence: `melody-apply` produced a fresh 61-note, 119 BPM MIDI and
+  retained the complete three-choice audit. The reviewed evaluation scored
+  strong/possible onset F1 0.2059/0.4091, timing p95 35.21 ms, chroma 0.9266,
+  supported-note ratio 0.6230 and contour-direction accuracy 0.5745. The
+  untouched 23-note automatic combined candidate scored
+  0.3810/0.3396, 37.50 ms, 0.8872, 0.4348 and 0.5455 respectively. This is a
+  useful multi-metric trade-off, not an automatic accuracy verdict.
+- Personal calibration: the first genuine advisory profile contains three
+  explicit observations, all for Basic Pitch, at SHA-256
+  `84e91173a5423f8baa9e50db7ff96ff3094b5e48790d2c8dfd221ae034afdee8`.
+  It remains local, deterministic and advisory; it does not reorder candidates,
+  change defaults or select future melodies.
+- Remaining Phase 2 gate: record one explicit preference between the assembled
+  reviewed neutral rendering and the untouched automatic candidate. The phrase
+  review itself is complete, but that separate programme success criterion is
+  not inferred from JSON structure or objective metrics. A private three-loop
+  blind package is ready at
+  `work/ai-bakeoff/lidl-vocals-30-45/phase2-final-reviewed-vs-automatic-ab-v1/midi_ab_review.html`.
+  Its seed, answer-key and page SHA-256 values are respectively
+  `c972b27330a8c4cad34d075b45a2fe8921e5af4f155d1af88a36083bc9a39676`,
+  `64bb90d9be78bb7ffe6cacb44ad28c78864f485cc5092c206564d9c1b5452762`
+  and
+  `c46cee4d459e87b7e39537524774f438c4c8c2b951eb261e2996cedca6480e79`.
+  The answer key remains separate until the reviewed export is resolved.
+
+### 2026-07-23 — Phase 6.3e bounded existing-note end/duration correction
+
+- Goal: let a listener shorten or lengthen an exact existing pitched note or
+  drum hit without moving its Note On or changing pitch, expression or count.
+- Contract: `note_end_shift_patch` retains `shift_note_ends`; one request names
+  1–64 unique exact existing refs and integer `target_end_tick` values. Every
+  target differs by a non-zero delta within ±480 ticks, leaves at least one
+  tick of duration and keeps source and target full intervals in the window.
+- Timing: musical mode changes duration beats by `delta / 480` and derives
+  source end through the tempo map. Stem-locked mode requires zero microtiming,
+  changes source end at the export BPM and derives duration beats. The Note On
+  stays exact and both modes round-trip to the requested Note Off tick.
+- Safety: the same four onset row block reasons apply. The next same-pitch
+  onset, normalized-lifetime cascade, window/MIDI bounds and global
+  beat/export/source horizons fail closed. Apply, Review and Create remain
+  explicit, and Sunofriend makes no musical-quality or preference inference.
+  Browser restart summaries also fail closed against malformed child, lineage,
+  timing, diff or effect evidence.
+- Capability and effects: v2 keeps generic `timing: false` and adds
+  `maximum_note_end_delta_ticks: 480` plus
+  `minimum_note_duration_ticks: 1`. Preview is all false; fresh creation may
+  set only library/child/correction/duration/timing; replay/restart are false.
+- Evidence: ignored smoke
+  `work/ai-bakeoff/lidl-phase6-duration-smoke-v1` has report SHA-256
+  `d0141814026c434c4702a9c7dcd00466fd6502921bb5e0fa1b437657d675bb77`.
+  The source remained at 12 Clips, the copied parent stayed byte-identical and
+  the copy grew from 12 to 13. Parent Keys Clip
+  `a6112b69031a233a54531128dca4925f32d5b3b32ce5552daaa6393d0138d8aa`
+  (object
+  `d37975c915e790e290650cf5b48e316c19318c28bd1a50c3de342e889180356a`)
+  produced child
+  `sf-correction-067bbbfc65e112ba175da84648f2b74f40b5cb5137eabb5f91ff28f4af9f03f6`
+  (object
+  `14fee0a6ac7dbc29043199e30041adc93c59eda34fccd8a6a9a15d972846281f`).
+  In the 1,727-note Clip, channel-1 pitch 66 changed 442–873→442–903:
+  +30 ticks/+31.512625 ms and duration 431→461 ticks. Horizons stayed
+  462.6458333333333 beats, 222070 ticks and 233.26695445833332 seconds.
+  Parent MIDI was
+  `e741334f8dfc1421850618d088b382a5fc051fc1fada4797ac742a1dcd201036`;
+  child and repeat were
+  `27d5be64a4e992548c6a58139f8a7fb677e3d7f4cefc55ea4e2fc163b74fa918`.
+  The focused integrated correction/UI suite passed 133 tests, the real smoke
+  passed and the complete repository suite passed 1009 tests with the one
+  existing `resampy`/`pkg_resources` deprecation warning. This closes
+  deterministic engineering evidence only, without a human preference claim.
+- Deferred: note insertion, release velocity, continuous expression,
+  split/merge, phrase inference and hybrids. Broader Phase 6 remains in
+  progress.
 
 ### 2026-07-22 — Phase 6.3d bounded existing-note onset shift
 
@@ -824,9 +961,9 @@ Each working day should aim for one narrow vertical improvement:
   existing third-party `resampy`/`pkg_resources` deprecation warning. This
   closes 6.3d as deterministic engineering evidence, not a human preference
   or musical-quality claim.
-- Deferred: note insertion, note-end/duration, release velocity and continuous
-  expression. Release velocity has no useful local non-zero golden and patch
-  support varies; note-end/duration is the likely next bounded increment.
+- Deferred at 6.3d: note insertion, note-end/duration, release velocity and
+  continuous expression. Increment 6.3e now completes the separately bounded
+  note-end/duration contract; the other items remain deferred.
 
 ### 2026-07-22 — Phase 6.3c bounded exact note removal complete
 
@@ -845,7 +982,8 @@ Each working day should aim for one narrow vertical improvement:
   duplicate, cascade, horizon and only-note cases are blocked.
 - Compatibility at 6.3c: pitch and attack-velocity v1 remained frozen.
   Insertion and onset/duration still awaited separate contracts; 6.3d now
-  takes onset alone while insertion and note-end/duration remain deferred.
+  takes onset alone and the later 6.3e takes note-end/duration. Insertion
+  remains deferred.
 - Evidence: a fresh copy of the accepted Lidl library at
   `work/ai-bakeoff/lidl-phase6-deletion-smoke-v2` grew from 12 to 13 Clips
   while the source remained at 12.

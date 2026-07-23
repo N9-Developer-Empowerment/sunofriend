@@ -33,6 +33,10 @@ from sunofriend.workbench_deletion import (
     CLIP_NOTE_DELETION_RESULT_SCHEMA,
     CLIP_NOTE_DELETION_SUMMARY_SCHEMA,
 )
+from sunofriend.workbench_duration import (
+    CLIP_NOTE_END_RESULT_SCHEMA,
+    CLIP_NOTE_END_SUMMARY_SCHEMA,
+)
 from sunofriend.workbench_onset import (
     CLIP_NOTE_ONSET_RESULT_SCHEMA,
     CLIP_NOTE_ONSET_SUMMARY_SCHEMA,
@@ -988,6 +992,97 @@ class WorkbenchClipCorrectionServerTests(unittest.TestCase):
                     token=self.token,
                 )
 
+    def test_real_duration_create_replay_restart_and_detail_summary_are_exact(
+        self,
+    ) -> None:
+        library_root, parent_hash = _real_clip_library(self.root)
+        pack_path, acceptance = _real_phase6_acceptance(self.root)
+        common = {
+            "token": self.token,
+            "clip_library_path": library_root,
+            "phase6_acceptance_path": acceptance,
+            "phase6_pack_path": pack_path,
+            "enable_clip_corrections": True,
+        }
+        with patch(
+            "sunofriend.workbench_clips.verify_garageband_pack_archive",
+            return_value={"status": "verified"},
+        ):
+            with _running_real_server(
+                self.catalog,
+                self.root / "real-duration-create-state",
+                **common,
+            ) as first:
+                request = _real_duration_create_request(
+                    first,
+                    self.token,
+                    parent_hash,
+                    tick_delta=30,
+                )
+                status, created = _json_request(
+                    first,
+                    "POST",
+                    f"{_ACTION_ROUTE}?token={self.token}",
+                    request,
+                )
+                self.assertEqual(status, 201)
+                self.assertEqual(
+                    created["result"]["schema"],
+                    CLIP_NOTE_END_RESULT_SCHEMA,
+                )
+                self.assertEqual(created["result"]["status"], "created")
+                self.assertEqual(
+                    created["result"]["diff"]["changes"][0]["tick_delta"],
+                    30,
+                )
+                child_id = created["result"]["child"]["clip_id"]
+                status, replayed = _json_request(
+                    first,
+                    "POST",
+                    f"{_ACTION_ROUTE}?token={self.token}",
+                    request,
+                )
+                self.assertEqual(status, 201)
+                self.assertEqual(replayed["result"]["status"], "replayed")
+                self.assertTrue(
+                    all(
+                        value is False
+                        for value in replayed["result"]["effects"].values()
+                    )
+                )
+                self.assertEqual(
+                    len(ClipLibrary(library_root, read_only=True).list()),
+                    2,
+                )
+
+            with _running_real_server(
+                self.catalog,
+                self.root / "real-duration-restart-state",
+                **common,
+            ) as restarted:
+                status, detail = _json_request(
+                    restarted,
+                    "GET",
+                    f"/api/clips/{child_id}?token={self.token}",
+                )
+                self.assertEqual(status, 200)
+                summary = detail["correction_summary"]
+                self.assertEqual(summary["schema"], CLIP_NOTE_END_SUMMARY_SCHEMA)
+                self.assertEqual(summary["operation"], "shift_note_ends")
+                self.assertEqual(summary["parent_clip_id"], "clip-1")
+                self.assertEqual(summary["child_clip_id"], child_id)
+                self.assertEqual(summary["changed_note_count"], 1)
+                self.assertEqual(summary["changes"][0]["tick_delta"], 30)
+                self.assertTrue(
+                    all(value is False for value in summary["effects"].values())
+                )
+                _assert_path_free_response(
+                    self,
+                    detail,
+                    root=self.root,
+                    token=self.token,
+                )
+
     def test_two_servers_racing_identical_onset_create_and_replay(self) -> None:
         with _real_correction_server_pair(
             self.catalog,
@@ -1034,6 +1129,73 @@ class WorkbenchClipCorrectionServerTests(unittest.TestCase):
                 tick_delta=30,
             )
             second = _real_onset_create_request(
+                pair.second,
+                self.token,
+                pair.parent_object_sha256,
+                tick_delta=60,
+            )
+            outcomes = _race_correction_actions(
+                (pair.first, pair.second),
+                (first, second),
+                self.token,
+            )
+            self.assertEqual([status for status, _payload in outcomes], [201, 409])
+            self.assertEqual(
+                next(payload for status, payload in outcomes if status == 409),
+                _STALE,
+            )
+            self.assertEqual(
+                len(ClipLibrary(pair.library_root, read_only=True).list()), 2
+            )
+
+    def test_two_servers_racing_identical_duration_create_and_replay(self) -> None:
+        with _real_correction_server_pair(
+            self.catalog,
+            self.root,
+            self.token,
+        ) as pair:
+            first = _real_duration_create_request(
+                pair.first,
+                self.token,
+                pair.parent_object_sha256,
+                tick_delta=30,
+            )
+            second = _real_duration_create_request(
+                pair.second,
+                self.token,
+                pair.parent_object_sha256,
+                tick_delta=30,
+            )
+            self.assertEqual(first, second)
+            outcomes = _race_correction_actions(
+                (pair.first, pair.second),
+                (first, second),
+                self.token,
+            )
+            self.assertEqual([status for status, _payload in outcomes], [201, 201])
+            self.assertEqual(
+                sorted(payload["result"]["status"] for _status, payload in outcomes),
+                ["created", "replayed"],
+            )
+            self.assertEqual(
+                len(ClipLibrary(pair.library_root, read_only=True).list()), 2
+            )
+
+    def test_two_servers_racing_different_durations_create_only_one_child(
+        self,
+    ) -> None:
+        with _real_correction_server_pair(
+            self.catalog,
+            self.root,
+            self.token,
+        ) as pair:
+            first = _real_duration_create_request(
+                pair.first,
+                self.token,
+                pair.parent_object_sha256,
+                tick_delta=30,
+            )
+            second = _real_duration_create_request(
                 pair.second,
                 self.token,
                 pair.parent_object_sha256,
@@ -1420,6 +1582,73 @@ def _real_onset_create_request(
     if preview_status != 200:
         raise AssertionError(
             f"onset preview failed: {preview_status} {preview_payload}"
+        )
+    return {
+        "action": "create",
+        **preview_request,
+        "projection_sha256": preview_payload["projection"]["projection_sha256"],
+    }
+
+
+def _real_duration_create_request(
+    server,
+    token: str,
+    parent_object_sha256: str,
+    *,
+    tick_delta: int,
+) -> dict:
+    project_status, project = _json_request(
+        server,
+        "GET",
+        f"/api/project?token={token}",
+    )
+    if project_status != 200:
+        raise AssertionError(f"project capability failed: {project_status} {project}")
+    base_request = {
+        "parent_clip_id": "clip-1",
+        "parent_object_sha256": parent_object_sha256,
+        "library_state_sha256": project["clip_corrections"]["library"][
+            "state_sha256"
+        ],
+        "window": {"start_tick": 0, "end_tick": 960},
+    }
+    window_status, window_payload = _json_request(
+        server,
+        "POST",
+        f"{_WINDOW_ROUTE}?token={token}",
+        {**base_request, "correction_kind": "note_end_shift_patch"},
+    )
+    if window_status != 200:
+        raise AssertionError(
+            f"duration window failed: {window_status} {window_payload}"
+        )
+    window = window_payload["window"]
+    editable = [note for note in window["notes"] if note["editable"]]
+    if not editable:
+        raise AssertionError("duration window did not return an editable note")
+    source = editable[0]
+    preview_request = {
+        **base_request,
+        "window_sha256": window["window_sha256"],
+        "correction": {
+            "kind": "note_end_shift_patch",
+            "changes": [
+                {
+                    "note_ref": source["note_ref"],
+                    "target_end_tick": source["end_tick"] + tick_delta,
+                }
+            ],
+        },
+    }
+    preview_status, preview_payload = _json_request(
+        server,
+        "POST",
+        f"{_PROJECTION_ROUTE}?token={token}",
+        preview_request,
+    )
+    if preview_status != 200:
+        raise AssertionError(
+            f"duration preview failed: {preview_status} {preview_payload}"
         )
     return {
         "action": "create",

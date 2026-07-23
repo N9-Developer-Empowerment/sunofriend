@@ -582,7 +582,7 @@ def run_workbench(
         )
     if server.clip_correction_service is not None:
         print(
-            "Phase 6 Clip corrections: enabled (pitch, attack velocity, exact note deletion, or bounded note-onset shift; preview first, immutable versions only)",
+            "Phase 6 Clip corrections: enabled (pitch, attack velocity, exact note deletion, bounded note-onset shift, or bounded note-end/duration; preview first, immutable versions only)",
             flush=True,
         )
     if open_browser:
