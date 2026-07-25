@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any, Iterable, Literal, Mapping, Sequence
 
 from .note_safety import MidiNoteInterval, normalize_midi_intervals
+from .role_semantics import is_drum_role
 
 
 SCHEMA_VERSION = 1
@@ -434,7 +435,7 @@ class Instrument:
 
     @property
     def is_drums(self) -> bool:
-        return self.channel == 9 or self.role in {"drum", "drums", "percussion"}
+        return self.channel == 9 or is_drum_role(self.role)
 
 
 @dataclass(frozen=True)

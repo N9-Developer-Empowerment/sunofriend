@@ -198,6 +198,50 @@ class WorkbenchDeveloperServerTests(unittest.TestCase):
 
 
 class WorkbenchDeveloperTraceTests(unittest.TestCase):
+    def test_arrangement_response_facts_report_safe_track_counts(self) -> None:
+        self.assertEqual(
+            trace_response_facts(
+                "/api/arrangement",
+                {
+                    "arrangement": {
+                        "schema": "sunofriend.workbench-arrangement.v1",
+                        "cache_hit": False,
+                        "track_count": 3,
+                        "private_path": "/Users/alice/private.wav",
+                    }
+                },
+            ),
+            {
+                "schema": "sunofriend.workbench-arrangement.v1",
+                "cache_hit": False,
+                "track_count": 3,
+            },
+        )
+        self.assertEqual(
+            trace_response_facts(
+                "/api/balanced-arrangement",
+                {
+                    "balanced_arrangement": {
+                        "schema": (
+                            "sunofriend.workbench-balanced-arrangement.v1"
+                        ),
+                        "cache_hit": True,
+                        "mix_report": {
+                            "lanes": [
+                                {"private_path": "/Users/alice/kick.wav"},
+                                {"private_path": "/Users/alice/keys.wav"},
+                            ]
+                        },
+                    }
+                },
+            ),
+            {
+                "schema": "sunofriend.workbench-balanced-arrangement.v1",
+                "cache_hit": True,
+                "track_count": 2,
+            },
+        )
+
     def test_clip_routes_have_static_read_only_operation_identities(self) -> None:
         self.assertEqual(
             developer_operation_for_route("/api/clips"),

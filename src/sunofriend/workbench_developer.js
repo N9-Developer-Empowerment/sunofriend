@@ -103,6 +103,25 @@
       ]),
       durableEffect: false,
     }),
+    "/api/arrangement": Object.freeze({
+      operation: "arrangement.render",
+      label: "Render or reuse the selected arrangement proxy",
+      symbols: Object.freeze([
+        "sunofriend.workbench_server._WorkbenchHandler.do_POST",
+        "sunofriend.workbench_artifacts.WorkbenchArtifacts.render_arrangement",
+      ]),
+      durableEffect: false,
+    }),
+    "/api/balanced-arrangement": Object.freeze({
+      operation: "arrangement.balance",
+      label: "Render or reuse the source-referenced balanced audition",
+      symbols: Object.freeze([
+        "sunofriend.workbench_server._WorkbenchHandler.do_POST",
+        "sunofriend.workbench_artifacts.WorkbenchArtifacts.render_balanced_arrangement",
+        "sunofriend.workbench_mix.build_balanced_midi_audition",
+      ]),
+      durableEffect: false,
+    }),
     "/api/garageband-pack-plan": Object.freeze({
       operation: "pack.plan",
       label: "Derive the exact eligible GarageBand pack plan",

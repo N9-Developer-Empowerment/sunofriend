@@ -55,6 +55,7 @@ choice; scores and model labels never create an automatic global winner.
 | Split one reviewed MIDI into audible roles | `midi-role-split`, `midi-role-split-resolve` | Explicit source-event cluster choice, exact primary-note partition, optional independently transcribed residual layer, local A/B review and a hash-verified user-selected recommendation |
 | Compare consistent sounds on one fixed MIDI | `timbre-resynthesis` | Level-matched complete-patch, extracted-sampler and source-fitted harmonic-plus-noise auditions with note-by-note silence checks and no MIDI changes |
 | Review and hand off multi-process MIDI alternatives in one local site | `workbench` | Loopback-only Project Overview, precise decoded 0.5–15 second per-stem and canonical selected-arrangement loops, exact canonical full-song chunk playback, a bounded full-song timeline, a coarse arbitrary mixer, append-only decisions, private offline review export and an exact-selected-MIDI GarageBand ZIP; no automatic winner or submission endpoint |
+| Hear selected MIDI at a useful starting balance | `workbench` → **Hear selected arrangement** → **Create balanced audition** | Opt-in, source-referenced gain staging with measured summed-group calibration, a bounded drum-bus guard, audition normalisation and −1 dBFS sample-peak protection; the dry unity control, selected MIDI and decisions remain unchanged |
 | Understand Workbench code and state transitions | `workbench --developer-inspector` | Optional, loopback-only, read-only application operation/state explorer; it is not a line debugger, evaluator, shell or filesystem browser and has no decision, basket, MIDI, render or export effect |
 | Learn the workflow and verify one exact GarageBand handoff | `garageband-pack-review`, `garageband-pack-resolve` | Eight-screen interactive tutorial, 10 one-at-a-time comprehension questions, then the two explicit GarageBand and local-usability checks; the resolver re-verifies the downloaded ZIP and has no MIDI, selection, basket, upload or feedback effect |
 | Explore reusable Clip v1 parts in Workbench | `workbench --clip-library --phase6-acceptance --phase6-pack` | Phase 6 Increment 6.0 complete: explicit gated read-only browse/search, path-free detail and lineage, neutral audition and deterministic Clip reconstruction; all three flags are required and no Clip, project, decision or basket is changed |
@@ -69,11 +70,18 @@ for Phase 1–7 goals, licence boundaries, success criteria, current checklist
 and daily progress log. Phase 1 is complete: the measured backend decisions
 and final role-specific listening results are in the
 **[Phase 1 bake-off close-out report](docs/PHASE1_TRANSCRIPTION_BAKEOFF.md)**.
-The first genuine Phase 2 three-unit review is also complete and applied: all
-three units selected Basic Pitch over the automatic combined default, producing
-a hash-audited 61-note MIDI and the first real local preference profile. One
-separate assembled reviewed-versus-automatic listening verdict remains before
-the Phase 2 programme success criterion is closed.
+The first genuine Phase 2 three-unit review is complete and applied: all three
+units selected Basic Pitch over the automatic combined default, producing a
+hash-audited 61-note MIDI and the first real local preference profile. Its
+separate final blind assembled-versus-automatic review is now resolved. The
+reviewed assembly won the opening 0.250–4.966 second phrase, the untouched
+23-note automatic candidate won no phrase, and both later phrases were judged
+**neither**. That is useful evidence for one local phrase, but it does not
+demonstrate the programme's overall preference criterion. The reviewed export
+SHA-256 is
+`15ad1de80c5485b4c6dfeb05f158123218595ce698f763a3d53cc05c646ec275`;
+the resolved result SHA-256 is
+`252fd87b3fd2e9a0a7b156426eca79562959159999f67dca07318e816568efdd`.
 Phase 3 is complete; its implemented instrument features, reproducible golden
 evidence and final GarageBand/loop decisions are recorded in the
 **[Instrument Intelligence v2 close-out report](docs/PHASE3_INSTRUMENT_INTELLIGENCE.md)**.
@@ -161,8 +169,13 @@ those notes noise automatically. Increment 6.3d is complete and adds a fourth,
 still bounded operation for moving the onset of an exact existing pitched or
 drum note while preserving its emitted MIDI duration and every expression
 field. Increment 6.3e is complete and changes only exact existing Note Off
-ticks and their durations, while each Note On stays fixed. Broader Phase 6
-remains in progress, and
+ticks and their durations, while each Note On stays fixed. Ordinary Workbench
+also now creates an opt-in source-referenced balanced selected-MIDI audition
+with measured summed-group calibration, a drum-bus guard, transparent output gain,
+−1 dBFS sample-peak protection and a GarageBand fader recipe. Its dry unity
+control and selected MIDI stay unchanged; the derivative is neither final
+mastering nor a current GarageBand Pack/CLI output. Broader Phase 6 remains in
+progress, and
 explicit hybrid construction still waits for the
 separate Phase 5.3 blind-choice and source-lineage gates. See the
 **[Phase 5 local Studio learning and acceptance guide](docs/PHASE5_LOCAL_STUDIO_ACCEPTANCE.md)**.
@@ -879,6 +892,30 @@ There are three deliberately distinct arrangement playback paths:
    arbitrary visibility, mute, solo and 0–100 attenuation. They share elapsed
    seconds but are not sample accurate.
 
+These three technical playback paths deliberately remain unlevelled. After
+explicitly choosing the main and optional MIDI parts, the same page offers a
+separate **Balanced, master-protected audition**. It measures each neutral MIDI
+lane against its matching source stem, measures the actual waveform sum when
+several selected alternatives refer to the same stem, and calibrates that group
+back towards one source reference. It applies one shared drum-bus attenuation
+when combined drums would mask pitched parts, up to the guard's 18 dB safety
+bound, and reports whether that bound was sufficient. It then normalises the completed
+audition towards −18 dBFS median active block RMS, constrained by −1 dBFS
+sample-peak headroom. It uses gain only:
+compression, limiting, EQ, saturation, reverb, chorus and stereo widening stay
+off. The page exposes the exact per-track trims, a path-free provenance receipt
+containing the mix report, and a GarageBand fader recipe. The longest verified
+stem in the whole project fixes the WAV end, so a longer synth-render or
+transcription tail cannot add near-silent time after the source song.
+
+This balanced WAV is a more useful listening and starting-mix derivative, not
+a fourth transport or comparison score. Creating or playing it appends no
+decision, records no feedback, ranks no candidate and changes no source,
+selected MIDI, velocity or timing. The dry unity-gain proxy remains the
+reproducible technical control. The balanced output is sample-peak protected,
+not LUFS- or true-peak mastered; final patch choice, automation, mixing and
+mastering remain in GarageBand.
+
 The exact full-song path does not add an arbitrary precise mixer. Its request
 contains only the current selection-manifest hash and one of the four preset
 names; the browser cannot inject track IDs, roles, groups or gains. Every track
@@ -955,6 +992,10 @@ metadata, so inspect the ZIP before sharing it. The earlier source-free
 `sunofriend.workbench-garageband-handoff.v1` endpoint remains compatible.
 If no active MIDI remains, Pack Composer explains that no parts are ready and
 links back to Project Overview instead of presenting an unusable empty build.
+The balanced WAV, provenance receipt and fader recipe are not yet GarageBand
+Pack items. Download them explicitly from **Hear selected arrangement** if
+useful, then apply the suggested relative trims by hand after choosing
+comparable GarageBand patches.
 
 After a pack is built, open **Guided tutorial, 10-question quiz and acceptance
 review**. The page follows one fixed sequence:
@@ -2787,6 +2828,58 @@ Replace `GarageBand Virtual In` with the exact or uniquely matching destination
 shown by `midi-ports`. `play` auditions the notes; it does not start recording
 in GarageBand.
 
+### Make a balanced combined MIDI audition
+
+The ordinary combined FluidSynth render is intentionally a dry unity-gain
+technical control. With several drum-family tracks, that sum can be valid but
+musically unbalanced. To make a separate listening derivative:
+
+1. Check both the renderer and audio-analysis dependencies:
+
+   ```bash
+   .venv/bin/sunofriend doctor --require convert
+   ```
+
+   The dry control alone needs only `--require preview`; the balanced audition
+   additionally needs NumPy and SoundFile, which `--require convert` checks.
+2. Start `workbench` with the original stems and the candidate roots for the
+   song, as shown in **Getting started**.
+3. Save the MIDI tracks you want as **Use as main** or **Keep optional**.
+4. Open **Hear selected arrangement** and render the **Prepared dry control
+   mix** first.
+5. Choose **Create balanced audition**.
+6. Compare the two players. Download the balanced WAV, exact provenance receipt
+   or GarageBand fader recipe from that panel.
+
+The balanced builder measures 400 ms active blocks in each matching source
+stem and neutral MIDI preview. A final partial block is zero-padded for
+measurement only, so a short tail cannot masquerade as a loud full window;
+the audible output length is unchanged. A selected lane is trimmed towards its source's
+median active level, bounded from −24 to +6 dB. When more than one selected
+lane refers to the same source audio, Sunofriend measures their actual summed
+waveform and calibrates the group rather than assuming that alternatives are
+uncorrelated. On time-aligned 400 ms windows where both buses are active, a
+shared drum trim aims for median drum level at least 2 dB below the non-drum
+bus and p95 drum excess no more than 3 dB, within the maximum 18 dB drum-bus
+attenuation. The overlap gate reaches 30 dB below each bus peak, while retaining
+the −70 dBFS floor, so quieter pitched song sections are not compared with an
+unrelated loud intro. If the buses never overlap, no drum trim is invented. The
+report keeps that exact pre-guard qualifying-window cohort and gate floor for
+its before/after differences, and says whether each target was achieved or the
+guard reached its limit.
+One final gain targets −18 dBFS median active-block RMS. Positive gain is
+capped at +12 dB, attenuation is not artificially capped, and −1 dBFS
+sample-peak headroom with zero full-scale samples remains mandatory. The
+Workbench shows the achieved target error and explicitly warns when the boost
+cap or sample-peak ceiling prevented the target.
+
+This is available only through the local Workbench; there is no standalone
+balance CLI yet. It creates a PCM24 selected-MIDI WAV and reproducible relative
+fader recipe, not new MIDI and not a final master. Different GarageBand patches
+have different perceived loudness, so use the recipe as a starting point and
+finish patch choice, EQ, compression, automation and loudness by ear in the
+DAW.
+
 ### Discover, match and make instruments
 
 See what is already available before downloading anything:
@@ -3175,6 +3268,37 @@ Use `musical` timing to preserve bars/beats at a new BPM. Use `stem_locked` to
 preserve exact source seconds against the original stems.
 
 ## Outputs, instruments and provenance
+
+### Workbench balanced-audition artifacts
+
+An explicit balanced-arrangement request creates a private, content-addressed
+Workbench cache entry using
+`sunofriend.workbench-balanced-arrangement.v1` and policy
+`source-referenced-summed-group-balance-v3`. It contains:
+
+- `balanced-selected-midi-preview.wav`, a PCM24 gain-only audition;
+- `balanced-mix-receipt.json`, a path-free provenance receipt containing the
+  project and selection identity, BPM, every project-source and selected-lane
+  fingerprint, neutral renderer/SoundFont identity, exact output and per-lane
+  horizons, WAV/recipe hashes, the complete mix report and all-false project
+  effects; and
+- `garageband-mix-recipe.md`, the exact GarageBand Pack MIDI member/index,
+  relative per-track trim and output-gain starting recipe.
+
+Its private manifest contains no absolute or private local paths; artifact
+`path` fields are safe basenames. It additionally pins the current selection,
+declared input sizes, SoundFont and cache key. The key changes with the exact
+selected arrangement, source or neutral-preview bytes, BPM,
+renderer/SoundFont or balance policy. Corrupt or stale artifacts are rejected
+and can be rebuilt. The rebuildable cache retains at most eight entries and
+2 GiB. Downloads are hash/size verified into a per-request disk-backed
+anonymous snapshot before Range serving; changed files return 409 and
+unavailable temporary storage returns 503 rather than serving unverified
+bytes. Source stems are measured from verified private snapshots
+but are not mixed into the selected-MIDI WAV. Neither the original selected
+MIDI nor the prepared dry control is rewritten. These files are currently
+Workbench downloads only; neither `preview` nor a standalone balance command
+creates them, and Pack Composer does not include them.
 
 ### Output layouts
 

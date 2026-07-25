@@ -29,6 +29,15 @@ from .midi import MidiTrack, write_midi_file
 from .models import NoteEvent
 from .note_alignment import AlignmentEvent, align_events
 from .render import find_soundfont, render_midi_to_wav
+from .role_semantics import is_drum_role
+from .workbench_mix import (
+    BALANCED_ARRANGEMENT_SCHEMA,
+    BALANCED_MIX_POLICY,
+    BALANCED_MIX_REPORT_SCHEMA,
+    build_balanced_midi_audition,
+    garageband_mix_recipe,
+    measure_balanced_audio,
+)
 from .workbench_privacy import path_free_role
 from .workbench_semantics import terminal_no_selection_outcome
 
@@ -45,7 +54,7 @@ GARAGEBAND_PACK_PLAN_SCHEMA = "sunofriend.workbench-garageband-pack-plan.v1"
 GARAGEBAND_PACK_BASKET_SCHEMA = "sunofriend.workbench-garageband-pack-basket.v1"
 GARAGEBAND_PACK_SCHEMA = "sunofriend.workbench-garageband-pack.v1"
 SELECTED_MIDI_OVERLAP_SCHEMA = "sunofriend.workbench-selected-midi-overlap.v1"
-_RENDER_POLICY = "role-neutral-general-midi-v1"
+_RENDER_POLICY = "role-neutral-general-midi-v2"
 _DECODED_LOOP_POLICY = "recorded-zero-source-frame-window-v1"
 _DECODED_ARRANGEMENT_LOOP_POLICY = "recorded-zero-selected-arrangement-window-v1"
 _DECODED_ARRANGEMENT_STREAM_POLICY = (
@@ -65,6 +74,45 @@ _DECODED_STREAM_CHUNK_MAXIMUM_OUTPUT_BYTES = 32 * 1024 * 1024
 _DECODED_STREAM_TWO_CHUNK_FLOAT_MAXIMUM_BYTES = 192 * 1024 * 1024
 _DECODED_STREAM_CACHE_MAXIMUM_BYTES = 2 * 1024 * 1024 * 1024
 _DECODED_STREAM_CACHE_MAXIMUM_ENTRIES = 8
+_BALANCED_CACHE_MAXIMUM_BYTES = 2 * 1024 * 1024 * 1024
+_BALANCED_CACHE_MAXIMUM_ENTRIES = 8
+_BALANCED_DEFERRED_CACHE_SCHEMA = (
+    "sunofriend.workbench-balanced-deferred-cache.v1"
+)
+_BALANCED_DEFERRED_MARKER_NAME = ".deferred-cache.json"
+_BALANCED_DEFERRED_MAXIMUM_CLAIMS = 1024
+_BALANCED_DEFERRED_STALE_SECONDS = 6 * 60 * 60
+_BALANCED_RENDER_HORIZON_POLICY = "longest-verified-source-stem-v1"
+_BALANCED_MIX_RECEIPT_SCHEMA = "sunofriend.workbench-balanced-mix-receipt.v1"
+_BALANCED_RENDERER_BACKEND = "FluidSynth neutral-preview render"
+_BALANCED_MIX_LABEL = "Balanced selected-MIDI audition"
+_BALANCED_MASTERING_BOUNDARY = (
+    "gain-only source-referenced balance, audition normalisation and "
+    "sample-peak protection; not LUFS, true-peak or release mastering"
+)
+_BALANCED_WINDOW_SECONDS = 0.4
+_BALANCED_ABSOLUTE_GATE_DBFS = -70.0
+_BALANCED_RELATIVE_GATE_DB = 10.0
+_BALANCED_OVERLAP_RELATIVE_GATE_DB = 30.0
+_BALANCED_SOURCE_MATCH_GAIN_DB = [-24.0, 6.0]
+_BALANCED_DRUM_OVERLAP_MEDIAN_TARGET_DB = -2.0
+_BALANCED_DRUM_OVERLAP_P95_MAXIMUM_DB = 3.0
+_BALANCED_MAXIMUM_DRUM_ATTENUATION_DB = -18.0
+_BALANCED_AUDITION_TARGET_GATED_RMS_DBFS = -18.0
+_BALANCED_SAMPLE_PEAK_CEILING_DBFS = -1.0
+_BALANCED_MAXIMUM_NORMALISATION_BOOST_DB = 12.0
+_BALANCED_NORMALISATION_TARGET_TOLERANCE_DB = 0.1
+_BALANCED_MEASUREMENT_STATISTIC = "median active non-overlapping block RMS"
+_BALANCED_MEASUREMENT_PEAK_KIND = "sample peak, not true peak"
+_BALANCED_MEASUREMENT_SCOPE = (
+    "render horizon only; excluded source or neutral-preview tails are not measured"
+)
+_BALANCED_DRUM_GUARD_POLICY = (
+    "on time-aligned 400 ms windows where both buses are active, "
+    "the guard aims for median drum level at least 2 dB below "
+    "non-drums and p95 drum excess no more than 3 dB, within the "
+    "maximum attenuation limit"
+)
 _VERIFIED_STREAM_CACHE_MAXIMUM_ENTRIES = 8
 _DECODED_LOOP_MAXIMUM_OUTPUT_BYTES = 64 * 1024 * 1024
 _DECODED_LOOP_MAXIMUM_INPUT_BYTES = 2 * 1024 * 1024 * 1024
@@ -79,7 +127,6 @@ _NEUTRAL_PREVIEW_MAXIMUM_SECONDS = 20 * 60
 _OVERLAP_ONSET_TOLERANCE_SECONDS = 0.080
 _SUBSTANTIAL_OVERLAP_MINIMUM_MATCHED_NOTES = 8
 _SUBSTANTIAL_OVERLAP_MINIMUM_RATIO = 0.80
-_DRUM_ROLES = {"kick", "snare", "hat", "cymbals", "toms", "other_kit", "drums"}
 _MELODIC_CHANNELS = tuple(channel for channel in range(16) if channel != 9)
 _ROLE_PROGRAMS = {
     "bass": 33,
@@ -117,6 +164,8 @@ class WorkbenchArtifacts:
         )
         self._soundfont_cache: dict[str, Any] | None = None
         self._verified_stream_cache: dict[str, dict[str, Any]] = {}
+        self._verified_balanced_cache: dict[str, dict[str, Any]] = {}
+        self._balanced_live_deferred_cache_keys: set[str] = set()
         self._lock = threading.RLock()
 
     def developer_verified_stream_entry_count(self) -> int:
@@ -183,7 +232,7 @@ class WorkbenchArtifacts:
             if cached is not None:
                 cached["cache_hit"] = True
                 return cached
-            channel = 9 if _is_drum_role(role) else 0
+            channel = 9 if is_drum_role(role) else 0
             program = 0 if channel == 9 else _program_for_role(role)
             work, final = self._building_directory("previews", cache_key)
             _restrict_private_permissions(work, 0o700)
@@ -1802,6 +1851,779 @@ class WorkbenchArtifacts:
             result["cache_hit"] = False
             return result
 
+    def cached_balanced_arrangement(
+        self,
+        catalog: Mapping[str, Any],
+        current: Mapping[str, Any],
+    ) -> dict[str, Any] | None:
+        """Return a verified source-referenced MIDI balance without creating it."""
+
+        with self._lock:
+            self._reclaim_stale_balanced_deferred_caches()
+            balanced_root = self.root / "balanced-arrangements"
+            if not balanced_root.is_dir() or not any(
+                balanced_root.glob("*/manifest.json")
+            ):
+                # /api/project polls this read-only path.  On a fresh project
+                # there is no cache to authenticate, so avoid source/MIDI/
+                # preview hashing and any renderer discovery until the user
+                # explicitly asks to create a balanced audition.
+                return None
+            selection_manifest, source_groups, selection = (
+                _decoded_arrangement_selection(catalog, current)
+            )
+            if not selection:
+                return None
+            expected = {
+                "schema": BALANCED_ARRANGEMENT_SCHEMA,
+                "project_id": catalog.get("project_id"),
+                "selection_manifest_sha256": selection_manifest[
+                    "selection_manifest_sha256"
+                ],
+                "bpm": _project_bpm(catalog),
+                "policy": BALANCED_MIX_POLICY,
+                "render_horizon_policy": _BALANCED_RENDER_HORIZON_POLICY,
+            }
+            if not self._balanced_cache_might_match(expected):
+                # Old balance caches from another selection are cheap to rule
+                # out from their path-free manifests. Authenticate large
+                # source, MIDI, preview and SoundFont files only when a cache
+                # could actually be returned.
+                return None
+            for cache_key in self._matching_balanced_cache_keys(expected):
+                verified = self._cached_verified_balanced_arrangement(
+                    catalog=catalog,
+                    current=current,
+                    cache_key=cache_key,
+                )
+                if verified is not None:
+                    verified["cache_hit"] = True
+                    return verified
+            try:
+                self._verify_selection(selection)
+            except ValueError:
+                return None
+            soundfont_sha256 = self._available_soundfont_sha256()
+            if not soundfont_sha256:
+                return None
+            previews: list[dict[str, Any]] = []
+            for item in selection:
+                preview = self.cached_candidate_preview(
+                    catalog,
+                    str(item["stem_id"]),
+                    str(item["candidate_id"]),
+                    role_override=str(item["role"]),
+                )
+                if preview is None:
+                    return None
+                previews.append(preview)
+            try:
+                self._verify_decoded_arrangement_inputs(
+                    source_groups=source_groups,
+                    selection=selection,
+                    previews=previews,
+                    expected_soundfont_sha256=soundfont_sha256,
+                )
+            except ValueError:
+                return None
+            soundfont = self._soundfont_cache
+            if soundfont is None:
+                return None
+            expected_key_payload = _balanced_key_payload(
+                catalog=catalog,
+                selection_manifest_sha256=selection_manifest[
+                    "selection_manifest_sha256"
+                ],
+                source_groups=source_groups,
+                selection=selection,
+                previews=previews,
+                soundfont=soundfont,
+            )
+            cache_key = _document_hash(expected_key_payload)
+            result = self._load_balanced_arrangement(
+                cache_key,
+                expected_key_payload=expected_key_payload,
+            )
+            if result is not None:
+                self._remember_verified_balanced_arrangement(
+                    catalog=catalog,
+                    current=current,
+                    result=result,
+                    source_groups=source_groups,
+                    selection=selection,
+                    previews=previews,
+                    soundfont=soundfont,
+                )
+                result["cache_hit"] = True
+            return result
+
+    def render_balanced_arrangement(
+        self,
+        catalog: Mapping[str, Any],
+        current: Mapping[str, Any],
+        selection_manifest_sha256: str,
+        *,
+        promote_cache: bool = True,
+    ) -> dict[str, Any]:
+        """Render an opt-in gain-only selected-MIDI balance.
+
+        The current dry arrangement proxy and all selected MIDI remain unchanged.
+        Source stems are used only as absolute-level references.
+        """
+
+        selection_manifest, source_groups, selection = (
+            _decoded_arrangement_selection(catalog, current)
+        )
+        _require_decoded_arrangement_selection_hash(
+            selection_manifest, selection_manifest_sha256
+        )
+        if not selection:
+            raise ValueError(
+                "choose at least one candidate as main or optional before balancing"
+            )
+        if len(selection) > _DECODED_ARRANGEMENT_MAXIMUM_TRACKS:
+            raise ValueError("balanced MIDI audition supports at most 24 tracks")
+        self._verify_selection(selection)
+
+        with self._lock:
+            self._reclaim_stale_balanced_deferred_caches()
+            soundfont = self._soundfont()
+            declared_sources = {
+                str(group["source_sha256"]): group["records"][0]
+                for group in source_groups
+            }
+            declared_midis = {
+                str(item["midi"]["sha256"]): item["midi"] for item in selection
+            }
+            _require_decoded_input_limit(
+                _decoded_declared_input_bytes(
+                    [
+                        ("source audio", record)
+                        for record in declared_sources.values()
+                    ]
+                    + [
+                        ("selected candidate MIDI", record)
+                        for record in declared_midis.values()
+                    ]
+                    + [("SoundFont", soundfont)]
+                )
+            )
+            previews: list[dict[str, Any]] = []
+            for item in selection:
+                preview = self.cached_candidate_preview(
+                    catalog,
+                    str(item["stem_id"]),
+                    str(item["candidate_id"]),
+                    role_override=str(item["role"]),
+                )
+                if preview is None:
+                    preview = self.render_candidate_preview(
+                        catalog,
+                        str(item["stem_id"]),
+                        str(item["candidate_id"]),
+                        role_override=str(item["role"]),
+                    )
+                previews.append(preview)
+            self._verify_decoded_arrangement_inputs(
+                source_groups=source_groups,
+                selection=selection,
+                previews=previews,
+                expected_soundfont_sha256=str(soundfont["sha256"]),
+            )
+
+            source_by_stem_id: dict[str, Mapping[str, Any]] = {}
+            unique_records: dict[str, Mapping[str, Any]] = {}
+            for group in source_groups:
+                record = group["records"][0]
+                source_digest = str(record["sha256"])
+                unique_records[source_digest] = record
+                for stem_id in group["stem_ids"]:
+                    source_by_stem_id[str(stem_id)] = record
+            key_payload = _balanced_key_payload(
+                catalog=catalog,
+                selection_manifest_sha256=selection_manifest_sha256,
+                source_groups=source_groups,
+                selection=selection,
+                previews=previews,
+                soundfont=soundfont,
+            )
+            renderer_identity = key_payload["renderer"]
+            input_fingerprints = key_payload["input_fingerprints"]
+            project_source_fingerprints = input_fingerprints["project_sources"]
+            cache_key = _document_hash(key_payload)
+            cached = self._load_balanced_arrangement(
+                cache_key, expected_key_payload=key_payload
+            )
+            if cached is not None:
+                self._verify_decoded_arrangement_inputs(
+                    source_groups=source_groups,
+                    selection=selection,
+                    previews=previews,
+                    expected_soundfont_sha256=str(soundfont["sha256"]),
+                )
+                self._remember_verified_balanced_arrangement(
+                    catalog=catalog,
+                    current=current,
+                    result=cached,
+                    source_groups=source_groups,
+                    selection=selection,
+                    previews=previews,
+                    soundfont=soundfont,
+                )
+                if promote_cache:
+                    promoted = self.promote_balanced_arrangement(cache_key)
+                    promoted["cache_hit"] = True
+                    return promoted
+                claim_token = self._claim_deferred_balanced_arrangement(
+                    cache_key,
+                    newly_created=False,
+                )
+                cached["cache_hit"] = True
+                if claim_token is not None:
+                    cached["_deferred_cache_claim"] = claim_token
+                return cached
+
+            unique_previews: dict[str, Mapping[str, Any]] = {
+                str(preview["preview"]["sha256"]): preview["preview"]
+                for preview in previews
+            }
+            aggregate_input_bytes = _decoded_declared_input_bytes(
+                [("source audio", record) for record in unique_records.values()]
+                + [
+                    ("selected candidate MIDI", record)
+                    for record in declared_midis.values()
+                ]
+                + [
+                    ("neutral selected MIDI preview", record)
+                    for record in unique_previews.values()
+                ]
+                + [("SoundFont", soundfont)]
+            )
+            _require_decoded_input_limit(aggregate_input_bytes)
+
+            work, final = self._private_building_directory(
+                "balanced-arrangements", cache_key
+            )
+            try:
+                source_snapshots: dict[str, Path] = {}
+                for index, (digest, record) in enumerate(unique_records.items()):
+                    source_snapshots[digest] = _write_verified_private_snapshot(
+                        Path(str(record["path"])),
+                        record,
+                        work / f".verified-source-{index:02d}",
+                        label="source audio",
+                    )
+                preview_snapshots: dict[str, Path] = {}
+                for index, (digest, record) in enumerate(unique_previews.items()):
+                    preview_snapshots[digest] = _write_verified_private_snapshot(
+                        Path(str(record["path"])),
+                        record,
+                        work / f".verified-preview-{index:02d}",
+                        label="neutral selected MIDI preview",
+                    )
+
+                _np, soundfile = _decoded_audio_modules()
+                preview_infos = [
+                    _decoded_audio_info(
+                        soundfile,
+                        preview_snapshots[str(preview["preview"]["sha256"])],
+                        label="neutral selected MIDI preview snapshot",
+                    )
+                    for preview in previews
+                ]
+                preview_sample_rate = int(preview_infos[0]["sample_rate"])
+                maximum_preview_frames = max(
+                    int(info["frames"]) for info in preview_infos
+                )
+                source_infos = {
+                    digest: _decoded_audio_info(
+                        soundfile,
+                        path,
+                        label="source audio snapshot",
+                    )
+                    for digest, path in source_snapshots.items()
+                }
+                maximum_source_frames = max(
+                    _ceil_scaled_frame(
+                        int(info["frames"]),
+                        preview_sample_rate,
+                        int(info["sample_rate"]),
+                    )
+                    for info in source_infos.values()
+                )
+                # The source song, rather than a renderer tail or a transcription
+                # that strays beyond it, owns the audition horizon.  This keeps
+                # the derivative aligned with the stems in GarageBand while the
+                # immutable neutral previews remain available as evidence.
+                output_frames = maximum_source_frames
+                source_horizon_rows: list[dict[str, Any]] = []
+                for source_fingerprint in project_source_fingerprints:
+                    source_digest = str(source_fingerprint["source_sha256"])
+                    source_info = source_infos[source_digest]
+                    scaled_frames = _ceil_scaled_frame(
+                        int(source_info["frames"]),
+                        preview_sample_rate,
+                        int(source_info["sample_rate"]),
+                    )
+                    source_horizon_rows.append(
+                        {
+                            **source_fingerprint,
+                            "source_sample_rate": int(source_info["sample_rate"]),
+                            "source_channels": int(source_info["channels"]),
+                            "source_frames": int(source_info["frames"]),
+                            "output_rate_frames": scaled_frames,
+                            "owns_output_horizon": (
+                                scaled_frames == maximum_source_frames
+                            ),
+                        }
+                    )
+                lane_horizon_rows: list[dict[str, Any]] = []
+                for item, preview, preview_info in zip(
+                    selection,
+                    previews,
+                    preview_infos,
+                ):
+                    preview_frames = int(preview_info["frames"])
+                    lane_horizon_rows.append(
+                        {
+                            "track_id": str(item["track_id"]),
+                            "stem_id": str(item["stem_id"]),
+                            "candidate_id": str(item["candidate_id"]),
+                            "selection_index": int(item["selection_index"]),
+                            "garageband_pack_archive_member": str(
+                                item["garageband_pack_archive_member"]
+                            ),
+                            "neutral_preview_sha256": str(
+                                preview["preview"]["sha256"]
+                            ),
+                            "neutral_preview_frames": preview_frames,
+                            "excluded_neutral_preview_tail_frames": max(
+                                0,
+                                preview_frames - output_frames,
+                            ),
+                            "padded_output_frames": max(
+                                0,
+                                output_frames - preview_frames,
+                            ),
+                        }
+                    )
+                render_horizon = {
+                    "policy": _BALANCED_RENDER_HORIZON_POLICY,
+                    "sample_rate": preview_sample_rate,
+                    "output_frames": output_frames,
+                    "maximum_source_frames": maximum_source_frames,
+                    "maximum_neutral_preview_frames": maximum_preview_frames,
+                    "excluded_neutral_preview_tail_frames": max(
+                        0,
+                        maximum_preview_frames - output_frames,
+                    ),
+                    "padded_output_frames": max(
+                        0,
+                        output_frames - maximum_preview_frames,
+                    ),
+                    "sources": source_horizon_rows,
+                    "lanes": lane_horizon_rows,
+                }
+                lanes: list[dict[str, Any]] = []
+                for item, preview in zip(selection, previews):
+                    source = source_by_stem_id[str(item["stem_id"])]
+                    source_digest = str(source["sha256"])
+                    preview_digest = str(preview["preview"]["sha256"])
+                    lanes.append(
+                        {
+                            "track_id": str(item["track_id"]),
+                            "stem_id": str(item["stem_id"]),
+                            "candidate_id": str(item["candidate_id"]),
+                            "role": str(item["role"]),
+                            "decision": str(item["decision"]),
+                            "selection_index": int(item["selection_index"]),
+                            "garageband_pack_archive_member": str(
+                                item["garageband_pack_archive_member"]
+                            ),
+                            "source_path": source_snapshots[source_digest],
+                            "source_sha256": source_digest,
+                            "source_bytes": int(source["bytes"]),
+                            "source_midi_sha256": str(item["midi"]["sha256"]),
+                            "preview_path": preview_snapshots[preview_digest],
+                            "preview_sha256": preview_digest,
+                            "preview_bytes": int(preview["preview"]["bytes"]),
+                            "neutral_preview_cache_key": str(preview["cache_key"]),
+                        }
+                    )
+
+                wav_path = work / "balanced-selected-midi-preview.wav"
+                internal_mix_report_path = work / ".balanced-mix-report.internal.json"
+                receipt_path = work / "balanced-mix-receipt.json"
+                recipe_path = work / "garageband-mix-recipe.md"
+                mix_report = build_balanced_midi_audition(
+                    lanes,
+                    output_path=wav_path,
+                    report_path=internal_mix_report_path,
+                    recipe_path=recipe_path,
+                    output_frames=output_frames,
+                )
+
+                self._verify_decoded_arrangement_inputs(
+                    source_groups=source_groups,
+                    selection=selection,
+                    previews=previews,
+                    expected_soundfont_sha256=str(soundfont["sha256"]),
+                )
+                for snapshot in [
+                    *source_snapshots.values(),
+                    *preview_snapshots.values(),
+                ]:
+                    snapshot.unlink()
+                internal_mix_report_path.unlink()
+                preview_file_record = _relative_file_record(wav_path, work)
+                recipe_file_record = _relative_file_record(recipe_path, work)
+                receipt_preview_record = {
+                    "filename": str(preview_file_record["name"]),
+                    "bytes": int(preview_file_record["bytes"]),
+                    "sha256": str(preview_file_record["sha256"]),
+                }
+                receipt_recipe_record = {
+                    "filename": str(recipe_file_record["name"]),
+                    "bytes": int(recipe_file_record["bytes"]),
+                    "sha256": str(recipe_file_record["sha256"]),
+                }
+                receipt_payload = {
+                    "schema": _BALANCED_MIX_RECEIPT_SCHEMA,
+                    "project_id": catalog.get("project_id"),
+                    "selection_manifest_sha256": selection_manifest_sha256,
+                    "bpm": _project_bpm(catalog),
+                    "policy": BALANCED_MIX_POLICY,
+                    "render_horizon_policy": _BALANCED_RENDER_HORIZON_POLICY,
+                    "selection": _public_selection(selection),
+                    "renderer": renderer_identity,
+                    "input_fingerprints": input_fingerprints,
+                    "render_horizon": render_horizon,
+                    "preview": receipt_preview_record,
+                    "recipe": receipt_recipe_record,
+                    "mix_report": mix_report,
+                    "mastered": False,
+                    "mastering_boundary": mix_report["mastering_boundary"],
+                    "effects": _decoded_arrangement_effects(),
+                }
+                if not _balanced_path_free_document(receipt_payload):
+                    raise RuntimeError("balanced mix receipt contains a local path")
+                receipt = {
+                    **receipt_payload,
+                    "receipt_sha256": _document_hash(receipt_payload),
+                }
+                _write_json(receipt_path, receipt)
+                manifest_payload = {
+                    **key_payload,
+                    "cache_key": cache_key,
+                    "preview": preview_file_record,
+                    "report": _relative_file_record(receipt_path, work),
+                    "recipe": recipe_file_record,
+                    "mix_report": mix_report,
+                    "render_horizon": render_horizon,
+                    "mastered": False,
+                    "mastering_boundary": mix_report["mastering_boundary"],
+                    "path_free_manifest": True,
+                    "private_audio": True,
+                    "effects": _decoded_arrangement_effects(),
+                }
+                manifest = {
+                    **manifest_payload,
+                    "manifest_sha256": _document_hash(manifest_payload),
+                }
+                _write_json(work / "manifest.json", manifest)
+                _restrict_private_permissions(wav_path, 0o600)
+                _restrict_private_permissions(receipt_path, 0o600)
+                _restrict_private_permissions(recipe_path, 0o600)
+                _restrict_private_permissions(work / "manifest.json", 0o600)
+                work.replace(final)
+            except Exception:
+                shutil.rmtree(work, ignore_errors=True)
+                raise
+
+            result = self._load_balanced_arrangement(
+                cache_key, expected_key_payload=key_payload
+            )
+            if result is None:
+                raise RuntimeError("balanced arrangement cache verification failed")
+            self._remember_verified_balanced_arrangement(
+                catalog=catalog,
+                current=current,
+                result=result,
+                source_groups=source_groups,
+                selection=selection,
+                previews=previews,
+                soundfont=soundfont,
+            )
+            if promote_cache:
+                self._touch_and_prune_balanced_cache(cache_key)
+            else:
+                try:
+                    claim_token = self._claim_deferred_balanced_arrangement(
+                        cache_key,
+                        newly_created=True,
+                    )
+                except Exception:
+                    _remove_generated_path(final)
+                    self._verified_balanced_cache.pop(cache_key, None)
+                    raise
+                result["_deferred_cache_claim"] = claim_token
+            result["cache_hit"] = False
+            return result
+
+    def promote_balanced_arrangement(
+        self,
+        cache_key: str,
+        *,
+        claim_token: str | None = None,
+    ) -> dict[str, Any]:
+        """Adopt, verify, and make one completed balanced cache recently used."""
+
+        if not _is_sha256(cache_key):
+            raise ValueError("balanced arrangement cache key is invalid")
+        if claim_token is not None and not _is_balanced_deferred_claim(claim_token):
+            raise ValueError("balanced arrangement deferred claim is invalid")
+        with self._lock:
+            result = self._load_balanced_arrangement(cache_key)
+            if result is None:
+                raise ValueError(
+                    "balanced arrangement cache entry is missing or failed verification"
+                )
+            marker_path = self._balanced_deferred_marker_path(cache_key)
+            if _path_exists_or_is_symlink(marker_path):
+                marker = self._read_balanced_deferred_marker(cache_key)
+                if marker is None:
+                    raise ValueError(
+                        "balanced arrangement deferred cache marker is invalid"
+                    )
+                if (
+                    claim_token is not None
+                    and claim_token not in marker["claims"]
+                ):
+                    raise ValueError(
+                        "balanced arrangement deferred claim is not current"
+                    )
+                marker_path.unlink()
+                self._balanced_live_deferred_cache_keys.discard(cache_key)
+            self._touch_and_prune_balanced_cache(cache_key)
+            result["cache_hit"] = True
+            return result
+
+    def discard_deferred_balanced_arrangement(
+        self,
+        cache_key: str,
+        claim_token: str,
+    ) -> bool:
+        """Release one failed request and remove only its last unadopted cache.
+
+        A marker can exist only for a cache first created by a deferred render.
+        Existing or already promoted caches have no marker and are never removed.
+        """
+
+        if not _is_sha256(cache_key):
+            raise ValueError("balanced arrangement cache key is invalid")
+        if not _is_balanced_deferred_claim(claim_token):
+            raise ValueError("balanced arrangement deferred claim is invalid")
+        with self._lock:
+            marker = self._read_balanced_deferred_marker(cache_key)
+            if marker is None or claim_token not in marker["claims"]:
+                return False
+            result = self._load_balanced_arrangement(cache_key)
+            if (
+                result is None
+                or result.get("manifest_sha256") != marker["manifest_sha256"]
+            ):
+                return False
+            remaining_claims = [
+                value for value in marker["claims"] if value != claim_token
+            ]
+            if remaining_claims:
+                self._write_balanced_deferred_marker(
+                    cache_key,
+                    {**marker, "claims": remaining_claims},
+                )
+                return False
+            root = self.root / "balanced-arrangements" / cache_key
+            if root.is_symlink() or not root.is_dir() or root.name != cache_key:
+                return False
+            _remove_generated_path(root)
+            self._verified_balanced_cache.pop(cache_key, None)
+            self._balanced_live_deferred_cache_keys.discard(cache_key)
+            return True
+
+    def _claim_deferred_balanced_arrangement(
+        self,
+        cache_key: str,
+        *,
+        newly_created: bool,
+    ) -> str | None:
+        """Claim a deferred cache, or leave an established cache unowned."""
+
+        result = self._load_balanced_arrangement(cache_key)
+        if result is None:
+            raise ValueError(
+                "balanced arrangement cache entry is missing or failed verification"
+            )
+        marker_path = self._balanced_deferred_marker_path(cache_key)
+        marker_exists = _path_exists_or_is_symlink(marker_path)
+        if newly_created:
+            if marker_exists:
+                raise ValueError(
+                    "new balanced arrangement already has a deferred marker"
+                )
+            marker: dict[str, Any] = {
+                "schema": _BALANCED_DEFERRED_CACHE_SCHEMA,
+                "cache_key": cache_key,
+                "manifest_sha256": str(result["manifest_sha256"]),
+                "created_ns": time.time_ns(),
+                "claims": [],
+            }
+        else:
+            if not marker_exists:
+                # This entry predates the request or has already been adopted.
+                # A stale request must never gain authority to remove it.
+                return None
+            loaded_marker = self._read_balanced_deferred_marker(cache_key)
+            if loaded_marker is None:
+                raise ValueError(
+                    "balanced arrangement deferred cache marker is invalid"
+                )
+            marker = loaded_marker
+            if marker["manifest_sha256"] != result["manifest_sha256"]:
+                raise ValueError(
+                    "balanced arrangement deferred cache identity changed"
+                )
+        if len(marker["claims"]) >= _BALANCED_DEFERRED_MAXIMUM_CLAIMS:
+            raise ValueError("balanced arrangement has too many deferred claims")
+        claim_token = uuid.uuid4().hex
+        self._write_balanced_deferred_marker(
+            cache_key,
+            {**marker, "claims": [*marker["claims"], claim_token]},
+        )
+        self._balanced_live_deferred_cache_keys.add(cache_key)
+        return claim_token
+
+    def _balanced_deferred_marker_path(self, cache_key: str) -> Path:
+        return (
+            self.root
+            / "balanced-arrangements"
+            / cache_key
+            / _BALANCED_DEFERRED_MARKER_NAME
+        )
+
+    def _read_balanced_deferred_marker(
+        self,
+        cache_key: str,
+    ) -> dict[str, Any] | None:
+        marker_path = self._balanced_deferred_marker_path(cache_key)
+        if marker_path.is_symlink():
+            return None
+        try:
+            marker = json.loads(marker_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        if (
+            not isinstance(marker, dict)
+            or set(marker)
+            != {
+                "schema",
+                "cache_key",
+                "manifest_sha256",
+                "created_ns",
+                "claims",
+            }
+            or marker.get("schema") != _BALANCED_DEFERRED_CACHE_SCHEMA
+            or marker.get("cache_key") != cache_key
+            or not _is_sha256(marker.get("manifest_sha256"))
+            or not _valid_nonnegative_int(marker.get("created_ns"))
+            or not isinstance(marker.get("claims"), list)
+            or not 1
+            <= len(marker["claims"])
+            <= _BALANCED_DEFERRED_MAXIMUM_CLAIMS
+            or len(set(marker["claims"])) != len(marker["claims"])
+            or not all(
+                _is_balanced_deferred_claim(value) for value in marker["claims"]
+            )
+        ):
+            return None
+        return marker
+
+    def _write_balanced_deferred_marker(
+        self,
+        cache_key: str,
+        marker: Mapping[str, Any],
+    ) -> None:
+        marker_path = self._balanced_deferred_marker_path(cache_key)
+        root = marker_path.parent
+        if (
+            not _is_sha256(cache_key)
+            or root.is_symlink()
+            or not root.is_dir()
+            or root.name != cache_key
+        ):
+            raise ValueError("balanced arrangement cache storage is unsafe")
+        temporary = marker_path.with_name(
+            f".{_BALANCED_DEFERRED_MARKER_NAME}.writing-{uuid.uuid4().hex}"
+        )
+        try:
+            _write_json(temporary, marker)
+            _restrict_private_permissions(temporary, 0o600)
+            temporary.replace(marker_path)
+            _restrict_private_permissions(marker_path, 0o600)
+        finally:
+            if _path_exists_or_is_symlink(temporary):
+                temporary.unlink()
+
+    def _reclaim_stale_balanced_deferred_caches(self) -> None:
+        """Remove only authenticated orphan claims older than six hours."""
+
+        parent = self.root / "balanced-arrangements"
+        if not parent.is_dir():
+            return
+        cutoff_ns = time.time_ns() - (
+            _BALANCED_DEFERRED_STALE_SECONDS * 1_000_000_000
+        )
+        for root in parent.iterdir():
+            cache_key = root.name
+            if (
+                cache_key in self._balanced_live_deferred_cache_keys
+                or not _is_sha256(cache_key)
+                or root.is_symlink()
+                or not root.is_dir()
+            ):
+                continue
+            marker = self._read_balanced_deferred_marker(cache_key)
+            if marker is None or int(marker["created_ns"]) > cutoff_ns:
+                continue
+            manifest_path = root / "manifest.json"
+            if manifest_path.is_symlink():
+                continue
+            try:
+                manifest = json.loads(
+                    manifest_path.read_text(encoding="utf-8")
+                )
+            except (OSError, json.JSONDecodeError):
+                continue
+            if not isinstance(manifest, dict):
+                continue
+            manifest_sha256 = manifest.get("manifest_sha256")
+            unsigned_manifest = {
+                key: value
+                for key, value in manifest.items()
+                if key != "manifest_sha256"
+            }
+            if (
+                manifest.get("cache_key") != cache_key
+                or manifest_sha256 != marker["manifest_sha256"]
+                or not _is_sha256(manifest_sha256)
+                or _document_hash(unsigned_manifest) != manifest_sha256
+            ):
+                continue
+            try:
+                _remove_generated_path(root)
+            except OSError:
+                continue
+            self._verified_balanced_cache.pop(cache_key, None)
+
     def build_garageband_handoff(
         self,
         catalog: Mapping[str, Any],
@@ -1889,14 +2711,15 @@ class WorkbenchArtifacts:
                         "sunofriend-garageband-handoff.json",
                         json.dumps(pack_manifest, indent=2, sort_keys=True) + "\n",
                     )
-                    for index, item in enumerate(selection, start=1):
+                    for item in selection:
                         self._verify_catalog_record(
                             item["midi"], label="selected candidate MIDI"
                         )
-                        role = _safe_token(str(item["role"]))
-                        decision = _safe_token(str(item["decision"]))
-                        name = f"{index:02d}-{role}-{decision}.mid"
-                        _zip_file(archive, f"MIDI/{name}", Path(item["midi_path"]))
+                        _zip_file(
+                            archive,
+                            str(item["garageband_pack_archive_member"]),
+                            Path(item["midi_path"]),
+                        )
                     _zip_file(
                         archive,
                         "MIDI/selected-arrangement-proxy.mid",
@@ -2362,6 +3185,333 @@ class WorkbenchArtifacts:
         if document.get("schema") != schema or document.get("cache_key") != cache_key:
             return None
         return self._materialize(document, root)
+
+    def _balanced_cache_might_match(
+        self,
+        expected: Mapping[str, Any],
+    ) -> bool:
+        """Check small manifests before authenticating any large input file."""
+
+        return bool(self._matching_balanced_cache_keys(expected))
+
+    def _matching_balanced_cache_keys(
+        self,
+        expected: Mapping[str, Any],
+    ) -> list[str]:
+        """Return recent small-manifest matches without hashing large inputs."""
+
+        parent = self.root / "balanced-arrangements"
+        if not parent.is_dir():
+            return []
+        matches: list[tuple[int, str]] = []
+        for path in parent.glob("*/manifest.json"):
+            if not _is_sha256(path.parent.name):
+                continue
+            if _path_exists_or_is_symlink(
+                path.parent / _BALANCED_DEFERRED_MARKER_NAME
+            ):
+                continue
+            try:
+                document = json.loads(path.read_text(encoding="utf-8"))
+                modified = path.stat().st_mtime_ns
+            except (OSError, json.JSONDecodeError):
+                continue
+            if not isinstance(document, Mapping):
+                continue
+            if all(document.get(key) == value for key, value in expected.items()):
+                matches.append((modified, path.parent.name))
+        matches.sort(reverse=True)
+        return [cache_key for _modified, cache_key in matches]
+
+    def _load_balanced_arrangement(
+        self,
+        cache_key: str,
+        *,
+        expected_key_payload: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
+        root = self.root / "balanced-arrangements" / cache_key
+        manifest_path = root / "manifest.json"
+        try:
+            document = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        manifest_keys = {
+            "schema",
+            "project_id",
+            "selection_manifest_sha256",
+            "bpm",
+            "policy",
+            "render_horizon_policy",
+            "soundfont_sha256",
+            "selection",
+            "renderer",
+            "input_fingerprints",
+            "cache_key",
+            "preview",
+            "report",
+            "recipe",
+            "mix_report",
+            "render_horizon",
+            "mastered",
+            "mastering_boundary",
+            "path_free_manifest",
+            "private_audio",
+            "effects",
+            "manifest_sha256",
+        }
+        if not isinstance(document, dict) or set(document) != manifest_keys:
+            return None
+        manifest_sha256 = document.get("manifest_sha256")
+        unsigned_manifest = {
+            key: value for key, value in document.items() if key != "manifest_sha256"
+        }
+        if (
+            not _is_sha256(manifest_sha256)
+            or _document_hash(unsigned_manifest) != manifest_sha256
+        ):
+            return None
+        if (
+            document.get("schema") != BALANCED_ARRANGEMENT_SCHEMA
+            or document.get("cache_key") != cache_key
+        ):
+            return None
+        key_payload = {
+            key: document.get(key)
+            for key in (
+                "schema",
+                "project_id",
+                "selection_manifest_sha256",
+                "bpm",
+                "policy",
+                "render_horizon_policy",
+                "soundfont_sha256",
+                "selection",
+                "renderer",
+                "input_fingerprints",
+            )
+        }
+        if _document_hash(key_payload) != cache_key:
+            return None
+        if expected_key_payload is not None and dict(expected_key_payload) != key_payload:
+            return None
+        if not _valid_balanced_manifest_semantics(document):
+            return None
+        result = dict(document)
+        expected_artifact_names = {
+            "preview": "balanced-selected-midi-preview.wav",
+            "report": "balanced-mix-receipt.json",
+            "recipe": "garageband-mix-recipe.md",
+        }
+        for key, expected_name in expected_artifact_names.items():
+            record = document.get(key)
+            if (
+                not _valid_balanced_artifact_record(record)
+                or record.get("path") != expected_name
+                or record.get("name") != expected_name
+            ):
+                return None
+            materialized = self._materialize_file_record(record, root)
+            if materialized is None:
+                return None
+            result[key] = materialized
+        try:
+            recipe_text = Path(str(result["recipe"]["path"])).read_text(
+                encoding="utf-8"
+            )
+            expected_recipe = garageband_mix_recipe(document["mix_report"])
+        except (KeyError, OSError, TypeError, UnicodeError, ValueError):
+            return None
+        if recipe_text != expected_recipe:
+            return None
+        try:
+            receipt = json.loads(
+                Path(str(result["report"]["path"])).read_text(encoding="utf-8")
+            )
+        except (OSError, json.JSONDecodeError):
+            return None
+        if not _valid_balanced_receipt(receipt, document):
+            return None
+        try:
+            _np, soundfile = _decoded_audio_modules()
+            raw_wav_info = soundfile.info(str(result["preview"]["path"]))
+            wav_info = _decoded_audio_info(
+                soundfile,
+                Path(str(result["preview"]["path"])),
+                label="balanced selected-MIDI preview",
+            )
+            measured_output = measure_balanced_audio(
+                Path(str(result["preview"]["path"]))
+            )
+        except (OSError, RuntimeError, ValueError):
+            return None
+        render_horizon = document["render_horizon"]
+        mix_report = document["mix_report"]
+        if (
+            str(raw_wav_info.format) != "WAV"
+            or str(raw_wav_info.subtype) != "PCM_24"
+            or int(wav_info["sample_rate"]) != int(render_horizon["sample_rate"])
+            or int(wav_info["frames"]) != int(render_horizon["output_frames"])
+            or int(wav_info["sample_rate"]) != int(mix_report["sample_rate"])
+            or int(wav_info["channels"]) != int(mix_report["channels"])
+            or int(wav_info["frames"]) != int(mix_report["frames"])
+            or int(mix_report["output"]["pre_master"]["frames"])
+            != int(wav_info["frames"])
+            or int(mix_report["output"]["post_master"]["frames"])
+            != int(wav_info["frames"])
+            or measured_output != mix_report["output"]["post_master"]
+        ):
+            return None
+        result["receipt"] = receipt
+        return result
+
+    def _remember_verified_balanced_arrangement(
+        self,
+        *,
+        catalog: Mapping[str, Any],
+        current: Mapping[str, Any],
+        result: Mapping[str, Any],
+        source_groups: Sequence[Mapping[str, Any]],
+        selection: Sequence[Mapping[str, Any]],
+        previews: Sequence[Mapping[str, Any]],
+        soundfont: Mapping[str, Any],
+    ) -> None:
+        """Remember one fully hash-verified balance behind cheap stat guards."""
+
+        cache_key = str(result.get("cache_key", ""))
+        if not _is_sha256(cache_key):
+            return
+        try:
+            selection_manifest, expected_groups, expected_selection = (
+                _decoded_arrangement_selection(catalog, current)
+            )
+            if (
+                expected_groups != list(source_groups)
+                or expected_selection != list(selection)
+                or selection_manifest.get("selection_manifest_sha256")
+                != result.get("selection_manifest_sha256")
+            ):
+                raise ValueError("balanced arrangement current binding changed")
+            expected_key_payload = _balanced_key_payload(
+                catalog=catalog,
+                selection_manifest_sha256=str(
+                    selection_manifest["selection_manifest_sha256"]
+                ),
+                source_groups=source_groups,
+                selection=selection,
+                previews=previews,
+                soundfont=soundfont,
+            )
+            if (
+                result.get("cache_key") != _document_hash(expected_key_payload)
+                or any(
+                    result.get(key) != value
+                    for key, value in expected_key_payload.items()
+                )
+            ):
+                raise ValueError("balanced arrangement input fingerprints changed")
+            binding = _balanced_verification_binding(
+                selection_manifest=selection_manifest,
+                source_groups=source_groups,
+                selection=selection,
+                soundfont=soundfont,
+            )
+            files: dict[Path, int] = {}
+
+            def add_record(record: Mapping[str, Any], *, label: str) -> None:
+                path = Path(str(record.get("path", ""))).resolve()
+                byte_count = record.get("bytes")
+                if not _valid_nonnegative_int(byte_count):
+                    raise ValueError(f"{label} byte count is invalid")
+                files[path] = int(byte_count)
+
+            for group in source_groups:
+                for record in group["records"]:
+                    add_record(record, label="source audio")
+            for item in selection:
+                add_record(item["midi"], label="selected candidate MIDI")
+            add_record(soundfont, label="SoundFont")
+            for preview in previews:
+                preview_record = preview.get("preview")
+                midi_record = preview.get("midi")
+                if not isinstance(preview_record, Mapping) or not isinstance(
+                    midi_record, Mapping
+                ):
+                    raise ValueError("neutral preview evidence is invalid")
+                add_record(preview_record, label="neutral preview")
+                add_record(midi_record, label="neutral preview MIDI")
+                preview_root = Path(str(preview_record["path"])).resolve().parent
+                preview_manifest = preview_root / "manifest.json"
+                files[preview_manifest] = preview_manifest.stat().st_size
+            for key in ("preview", "report", "recipe"):
+                record = result.get(key)
+                if not isinstance(record, Mapping):
+                    raise ValueError("balanced artifact record is invalid")
+                add_record(record, label=f"balanced {key}")
+            manifest = (
+                Path(str(result["preview"]["path"])).resolve().parent / "manifest.json"
+            )
+            files[manifest] = manifest.stat().st_size
+            signatures = {
+                str(path): _regular_file_stat_signature(path, expected_bytes)
+                for path, expected_bytes in files.items()
+            }
+        except (KeyError, OSError, TypeError, ValueError):
+            self._verified_balanced_cache.pop(cache_key, None)
+            return
+        self._verified_balanced_cache.pop(cache_key, None)
+        self._verified_balanced_cache[cache_key] = {
+            "binding": binding,
+            "result": json.loads(json.dumps(result)),
+            "files": {str(path): size for path, size in files.items()},
+            "signatures": signatures,
+        }
+        while (
+            len(self._verified_balanced_cache)
+            > _BALANCED_CACHE_MAXIMUM_ENTRIES
+        ):
+            oldest = next(iter(self._verified_balanced_cache))
+            self._verified_balanced_cache.pop(oldest, None)
+
+    def _cached_verified_balanced_arrangement(
+        self,
+        *,
+        catalog: Mapping[str, Any],
+        current: Mapping[str, Any],
+        cache_key: str,
+    ) -> dict[str, Any] | None:
+        cached = self._verified_balanced_cache.get(cache_key)
+        if cached is None:
+            return None
+        try:
+            if self._soundfont_cache is None:
+                raise ValueError("balanced SoundFont identity is not cached")
+            selection_manifest, source_groups, selection = (
+                _decoded_arrangement_selection(catalog, current)
+            )
+            binding = _balanced_verification_binding(
+                selection_manifest=selection_manifest,
+                source_groups=source_groups,
+                selection=selection,
+                soundfont=self._soundfont_cache,
+            )
+            if binding != cached["binding"]:
+                raise ValueError("balanced arrangement current binding changed")
+            files = cached["files"]
+            signatures = {
+                path: _regular_file_stat_signature(
+                    Path(path),
+                    int(expected_bytes),
+                )
+                for path, expected_bytes in files.items()
+            }
+            if signatures != cached["signatures"]:
+                raise ValueError("balanced arrangement file identity changed")
+        except (KeyError, OSError, TypeError, ValueError):
+            self._verified_balanced_cache.pop(cache_key, None)
+            return None
+        self._verified_balanced_cache.pop(cache_key, None)
+        self._verified_balanced_cache[cache_key] = cached
+        return json.loads(json.dumps(cached["result"]))
 
     def _materialize(
         self, document: Mapping[str, Any], root: Path
@@ -2936,6 +4086,47 @@ class WorkbenchArtifacts:
                 continue
             _remove_generated_path(entry)
 
+    def _touch_and_prune_balanced_cache(self, keep_cache_key: str) -> None:
+        self._reclaim_stale_balanced_deferred_caches()
+        parent = self.root / "balanced-arrangements"
+        current = parent / keep_cache_key
+        if current.is_dir() and not current.is_symlink():
+            current.touch(exist_ok=True)
+        if not parent.is_dir():
+            return
+        entries = [
+            path
+            for path in parent.iterdir()
+            if path.is_dir()
+            and not path.is_symlink()
+            and _is_sha256(path.name)
+            and not _path_exists_or_is_symlink(
+                path / _BALANCED_DEFERRED_MARKER_NAME
+            )
+        ]
+        entries.sort(
+            key=lambda path: (path == current, path.stat().st_mtime_ns),
+            reverse=True,
+        )
+        retained_entries = 0
+        retained_bytes = 0
+        for entry in entries:
+            entry_bytes = _directory_regular_file_bytes(entry)
+            keep = entry == current or (
+                retained_entries < _BALANCED_CACHE_MAXIMUM_ENTRIES
+                and retained_bytes + entry_bytes <= _BALANCED_CACHE_MAXIMUM_BYTES
+            )
+            if keep:
+                retained_entries += 1
+                retained_bytes += entry_bytes
+                continue
+            _remove_generated_path(entry)
+            self._verified_balanced_cache.pop(entry.name, None)
+        for cached_key in tuple(self._verified_balanced_cache):
+            cached_root = parent / cached_key
+            if not cached_root.is_dir() or cached_root.is_symlink():
+                self._verified_balanced_cache.pop(cached_key, None)
+
     def _private_building_directory(
         self, family: str, cache_key: str
     ) -> tuple[Path, Path]:
@@ -2947,11 +4138,14 @@ class WorkbenchArtifacts:
             "decoded-arrangement-loops",
             "decoded-arrangement-streams",
             "decoded-arrangement-chunks",
+            "balanced-arrangements",
         }:
             _prune_stale_private_builds(parent)
         final = parent / cache_key
         if family == "decoded-arrangement-streams":
             self._verified_stream_cache.pop(cache_key, None)
+        if family == "balanced-arrangements":
+            self._verified_balanced_cache.pop(cache_key, None)
         _remove_generated_path(final)
         work = parent / f".{cache_key}.building-{uuid.uuid4().hex}"
         work.mkdir(mode=0o700, parents=False, exist_ok=False)
@@ -3562,6 +4756,13 @@ def selected_candidates(
                     "midi": dict(candidate["midi"]),
                 }
             )
+    for selection_index, item in enumerate(selected, start=1):
+        item["selection_index"] = selection_index
+        item["garageband_pack_archive_member"] = _selected_midi_archive_member(
+            selection_index,
+            str(item["role"]),
+            str(item["decision"]),
+        )
     return selected
 
 
@@ -3595,6 +4796,10 @@ def _decoded_arrangement_selection(
                 "candidate_id": str(item["candidate_id"]),
                 "role": path_free_role(item.get("role"))[0],
                 "decision": str(item["decision"]),
+                "selection_index": int(item["selection_index"]),
+                "garageband_pack_archive_member": str(
+                    item["garageband_pack_archive_member"]
+                ),
                 "midi_sha256": midi["sha256"],
                 "midi_bytes": midi["bytes"],
             }
@@ -3707,6 +4912,1626 @@ def _decoded_arrangement_effects() -> dict[str, bool]:
     }
 
 
+def _valid_balanced_manifest_semantics(document: Mapping[str, Any]) -> bool:
+    try:
+        if (
+            not isinstance(document.get("project_id"), str)
+            or not document["project_id"]
+            or not _is_sha256(document.get("selection_manifest_sha256"))
+            or not _is_sha256(document.get("soundfont_sha256"))
+            or document.get("policy") != BALANCED_MIX_POLICY
+            or document.get("render_horizon_policy")
+            != _BALANCED_RENDER_HORIZON_POLICY
+            or document.get("mastered") is not False
+            or document.get("path_free_manifest") is not True
+            or document.get("private_audio") is not True
+            or document.get("effects") != _decoded_arrangement_effects()
+        ):
+            return False
+        bpm = document.get("bpm")
+        if (
+            isinstance(bpm, bool)
+            or not isinstance(bpm, (int, float))
+            or not math.isfinite(float(bpm))
+            or float(bpm) <= 0
+        ):
+            return False
+        renderer = document.get("renderer")
+        if not isinstance(renderer, Mapping) or set(renderer) != {
+            "policy",
+            "backend",
+            "soundfont_sha256",
+            "soundfont_bytes",
+        }:
+            return False
+        if (
+            renderer.get("policy") != _RENDER_POLICY
+            or renderer.get("backend") != _BALANCED_RENDERER_BACKEND
+            or renderer.get("soundfont_sha256") != document["soundfont_sha256"]
+            or not _valid_nonnegative_int(renderer.get("soundfont_bytes"))
+        ):
+            return False
+
+        selection = document.get("selection")
+        inputs = document.get("input_fingerprints")
+        if (
+            not isinstance(selection, list)
+            or not 1 <= len(selection) <= _DECODED_ARRANGEMENT_MAXIMUM_TRACKS
+            or not isinstance(inputs, Mapping)
+            or set(inputs) != {"project_sources", "selected_lanes", "soundfont"}
+        ):
+            return False
+        soundfont = inputs.get("soundfont")
+        if (
+            not isinstance(soundfont, Mapping)
+            or set(soundfont) != {"sha256", "bytes"}
+            or soundfont.get("sha256") != renderer["soundfont_sha256"]
+            or soundfont.get("bytes") != renderer["soundfont_bytes"]
+        ):
+            return False
+        project_sources = inputs.get("project_sources")
+        selected_lanes = inputs.get("selected_lanes")
+        if (
+            not isinstance(project_sources, list)
+            or not project_sources
+            or not isinstance(selected_lanes, list)
+            or len(selected_lanes) != len(selection)
+        ):
+            return False
+        if not _valid_balanced_selection_and_inputs(
+            selection,
+            project_sources,
+            selected_lanes,
+        ):
+            return False
+        render_horizon = document.get("render_horizon")
+        if not _valid_balanced_render_horizon(
+            render_horizon,
+            project_sources,
+            selected_lanes,
+        ):
+            return False
+        mix_report = document.get("mix_report")
+        if not _valid_balanced_mix_report(
+            mix_report,
+            selected_lanes,
+            render_horizon,
+        ):
+            return False
+        return (
+            document.get("mastering_boundary")
+            == mix_report.get("mastering_boundary")
+        )
+    except (KeyError, TypeError, ValueError):
+        return False
+
+
+def _balanced_key_payload(
+    *,
+    catalog: Mapping[str, Any],
+    selection_manifest_sha256: str,
+    source_groups: Sequence[Mapping[str, Any]],
+    selection: Sequence[Mapping[str, Any]],
+    previews: Sequence[Mapping[str, Any]],
+    soundfont: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Bind a balance cache to the exact current source, MIDI and render inputs."""
+
+    if len(selection) != len(previews):
+        raise ValueError("balanced arrangement preview count is inconsistent")
+    project_source_fingerprints: list[dict[str, Any]] = []
+    source_by_stem_id: dict[str, Mapping[str, Any]] = {}
+    for group in source_groups:
+        records = group.get("records")
+        if not isinstance(records, list) or not records:
+            raise ValueError("balanced arrangement source group is invalid")
+        record = records[0]
+        if not isinstance(record, Mapping):
+            raise ValueError("balanced arrangement source record is invalid")
+        source_digest = record.get("sha256")
+        source_bytes = record.get("bytes")
+        if not _is_sha256(source_digest) or not _valid_nonnegative_int(
+            source_bytes
+        ):
+            raise ValueError("balanced arrangement source identity is invalid")
+        stem_ids = [str(value) for value in group["stem_ids"]]
+        project_source_fingerprints.append(
+            {
+                "track_id": str(group["track_id"]),
+                "source_sha256": str(source_digest),
+                "source_bytes": int(source_bytes),
+                "stem_ids": stem_ids,
+                "roles": [str(value) for value in group["roles"]],
+            }
+        )
+        for stem_id in stem_ids:
+            source_by_stem_id[stem_id] = record
+
+    selected_lane_fingerprints: list[dict[str, Any]] = []
+    for item, preview in zip(selection, previews):
+        source = source_by_stem_id.get(str(item["stem_id"]))
+        preview_record = preview.get("preview")
+        if not isinstance(source, Mapping) or not isinstance(
+            preview_record, Mapping
+        ):
+            raise ValueError("selected MIDI has no matching balance evidence")
+        selected_lane_fingerprints.append(
+            {
+                "track_id": str(item["track_id"]),
+                "stem_id": str(item["stem_id"]),
+                "candidate_id": str(item["candidate_id"]),
+                "role": str(item["role"]),
+                "decision": str(item["decision"]),
+                "selection_index": int(item["selection_index"]),
+                "garageband_pack_archive_member": str(
+                    item["garageband_pack_archive_member"]
+                ),
+                "source_sha256": str(source["sha256"]),
+                "source_bytes": int(source["bytes"]),
+                "source_midi_sha256": str(item["midi"]["sha256"]),
+                "source_midi_bytes": int(item["midi"]["bytes"]),
+                "neutral_preview_sha256": str(preview_record["sha256"]),
+                "neutral_preview_bytes": int(preview_record["bytes"]),
+                "neutral_preview_cache_key": str(preview["cache_key"]),
+            }
+        )
+    renderer_identity = {
+        "policy": _RENDER_POLICY,
+        "backend": _BALANCED_RENDERER_BACKEND,
+        "soundfont_sha256": str(soundfont["sha256"]),
+        "soundfont_bytes": int(soundfont["bytes"]),
+    }
+    input_fingerprints = {
+        "project_sources": project_source_fingerprints,
+        "selected_lanes": selected_lane_fingerprints,
+        "soundfont": {
+            "sha256": str(soundfont["sha256"]),
+            "bytes": int(soundfont["bytes"]),
+        },
+    }
+    return {
+        "schema": BALANCED_ARRANGEMENT_SCHEMA,
+        "project_id": catalog.get("project_id"),
+        "selection_manifest_sha256": selection_manifest_sha256,
+        "bpm": _project_bpm(catalog),
+        "policy": BALANCED_MIX_POLICY,
+        "render_horizon_policy": _BALANCED_RENDER_HORIZON_POLICY,
+        "soundfont_sha256": str(soundfont["sha256"]),
+        "selection": _public_selection(selection),
+        "renderer": renderer_identity,
+        "input_fingerprints": input_fingerprints,
+    }
+
+
+def _balanced_verification_binding(
+    *,
+    selection_manifest: Mapping[str, Any],
+    source_groups: Sequence[Mapping[str, Any]],
+    selection: Sequence[Mapping[str, Any]],
+    soundfont: Mapping[str, Any],
+) -> str:
+    """Bind cached stat signatures to the current catalogued input identities."""
+
+    def record_identity(record: Mapping[str, Any], *, label: str) -> dict[str, Any]:
+        path = record.get("path")
+        digest = record.get("sha256")
+        byte_count = record.get("bytes")
+        if (
+            not isinstance(path, str)
+            or not path
+            or not _is_sha256(digest)
+            or not _valid_nonnegative_int(byte_count)
+        ):
+            raise ValueError(f"{label} identity is invalid")
+        return {
+            "path": str(Path(path).resolve()),
+            "sha256": str(digest),
+            "bytes": int(byte_count),
+        }
+
+    sources = []
+    for group in source_groups:
+        sources.append(
+            {
+                "track_id": str(group["track_id"]),
+                "source_sha256": str(group["source_sha256"]),
+                "source_bytes": int(group["source_bytes"]),
+                "stem_ids": [str(value) for value in group["stem_ids"]],
+                "roles": [str(value) for value in group["roles"]],
+                "records": [
+                    record_identity(record, label="source audio")
+                    for record in group["records"]
+                ],
+            }
+        )
+    selected = []
+    for item in selection:
+        selected.append(
+            {
+                **_public_selection([item])[0],
+                "track_id": str(item["track_id"]),
+                "midi": record_identity(
+                    item["midi"],
+                    label="selected candidate MIDI",
+                ),
+            }
+        )
+    return _document_hash(
+        {
+            "selection_manifest": dict(selection_manifest),
+            "sources": sources,
+            "selection": selected,
+            "soundfont": record_identity(soundfont, label="SoundFont"),
+        }
+    )
+
+
+def _valid_balanced_selection_and_inputs(
+    selection: Sequence[Any],
+    project_sources: Sequence[Any],
+    selected_lanes: Sequence[Any],
+) -> bool:
+    selection_keys = {
+        "stem_id",
+        "candidate_id",
+        "role",
+        "decision",
+        "selection_index",
+        "garageband_pack_archive_member",
+        "process",
+        "midi_sha256",
+        "midi_bytes",
+        "candidate_origin_source_audio_sha256",
+        "candidate_origin_source_audio_sha256_basis",
+    }
+    source_keys = {
+        "track_id",
+        "source_sha256",
+        "source_bytes",
+        "stem_ids",
+        "roles",
+    }
+    lane_keys = {
+        "track_id",
+        "stem_id",
+        "candidate_id",
+        "role",
+        "decision",
+        "selection_index",
+        "garageband_pack_archive_member",
+        "source_sha256",
+        "source_bytes",
+        "source_midi_sha256",
+        "source_midi_bytes",
+        "neutral_preview_sha256",
+        "neutral_preview_bytes",
+        "neutral_preview_cache_key",
+    }
+    source_by_sha256: dict[str, Mapping[str, Any]] = {}
+    source_track_ids: set[str] = set()
+    for source in project_sources:
+        if not isinstance(source, Mapping) or set(source) != source_keys:
+            return False
+        digest = source.get("source_sha256")
+        track_id = source.get("track_id")
+        stem_ids = source.get("stem_ids")
+        roles = source.get("roles")
+        if (
+            not _is_sha256(digest)
+            or not isinstance(track_id, str)
+            or track_id != f"source-{str(digest)[:24]}"
+            or track_id in source_track_ids
+            or digest in source_by_sha256
+            or not _valid_nonnegative_int(source.get("source_bytes"))
+            or not isinstance(stem_ids, list)
+            or not stem_ids
+            or len(set(stem_ids)) != len(stem_ids)
+            or not all(isinstance(value, str) and value for value in stem_ids)
+            or not isinstance(roles, list)
+            or not roles
+            or len(set(roles)) != len(roles)
+            or not all(isinstance(value, str) and value for value in roles)
+        ):
+            return False
+        source_track_ids.add(track_id)
+        source_by_sha256[str(digest)] = source
+
+    lane_track_ids: set[str] = set()
+    archive_members: set[str] = set()
+    for expected_index, (selected, lane) in enumerate(
+        zip(selection, selected_lanes),
+        start=1,
+    ):
+        if (
+            not isinstance(selected, Mapping)
+            or set(selected) != selection_keys
+            or not isinstance(lane, Mapping)
+            or set(lane) != lane_keys
+        ):
+            return False
+        role = selected.get("role")
+        decision = selected.get("decision")
+        archive_member = selected.get("garageband_pack_archive_member")
+        if (
+            selected.get("selection_index") != expected_index
+            or not isinstance(role, str)
+            or not role
+            or not isinstance(decision, str)
+            or decision not in {"main", "optional"}
+            or archive_member
+            != _selected_midi_archive_member(expected_index, role, decision)
+            or archive_member in archive_members
+            or not _is_sha256(selected.get("midi_sha256"))
+            or not _valid_nonnegative_int(selected.get("midi_bytes"))
+            or not isinstance(selected.get("stem_id"), str)
+            or not selected["stem_id"]
+            or not isinstance(selected.get("candidate_id"), str)
+            or not selected["candidate_id"]
+            or (
+                selected.get("process") is not None
+                and not isinstance(selected.get("process"), str)
+            )
+            or not _is_sha256(
+                selected.get("candidate_origin_source_audio_sha256")
+            )
+            or selected.get("candidate_origin_source_audio_sha256_basis")
+            not in {"verified-ai-source", "review-stem-source-fallback"}
+        ):
+            return False
+        archive_members.add(str(archive_member))
+        lane_track_id = lane.get("track_id")
+        expected_lane_track_id = (
+            "midi-"
+            + _document_hash(
+                {
+                    "stem_id": selected["stem_id"],
+                    "candidate_id": selected["candidate_id"],
+                    "midi_sha256": selected["midi_sha256"],
+                }
+            )[:24]
+        )
+        if (
+            not isinstance(lane_track_id, str)
+            or lane_track_id != expected_lane_track_id
+            or lane_track_id in lane_track_ids
+            or lane.get("stem_id") != selected["stem_id"]
+            or lane.get("candidate_id") != selected["candidate_id"]
+            or lane.get("role") != role
+            or lane.get("decision") != decision
+            or lane.get("selection_index") != expected_index
+            or lane.get("garageband_pack_archive_member") != archive_member
+            or lane.get("source_midi_sha256") != selected["midi_sha256"]
+            or lane.get("source_midi_bytes") != selected["midi_bytes"]
+            or not _is_sha256(lane.get("source_sha256"))
+            or not _valid_nonnegative_int(lane.get("source_bytes"))
+            or not _is_sha256(lane.get("neutral_preview_sha256"))
+            or not _valid_nonnegative_int(lane.get("neutral_preview_bytes"))
+            or not _is_sha256(lane.get("neutral_preview_cache_key"))
+        ):
+            return False
+        lane_track_ids.add(lane_track_id)
+        source = source_by_sha256.get(str(lane["source_sha256"]))
+        if (
+            source is None
+            or lane["source_bytes"] != source["source_bytes"]
+            or lane["stem_id"] not in source["stem_ids"]
+        ):
+            return False
+    return True
+
+
+def _valid_balanced_render_horizon(
+    horizon: Any,
+    project_sources: Sequence[Mapping[str, Any]],
+    selected_lanes: Sequence[Mapping[str, Any]],
+) -> bool:
+    if not isinstance(horizon, Mapping) or set(horizon) != {
+        "policy",
+        "sample_rate",
+        "output_frames",
+        "maximum_source_frames",
+        "maximum_neutral_preview_frames",
+        "excluded_neutral_preview_tail_frames",
+        "padded_output_frames",
+        "sources",
+        "lanes",
+    }:
+        return False
+    if horizon.get("policy") != _BALANCED_RENDER_HORIZON_POLICY:
+        return False
+    sample_rate = horizon.get("sample_rate")
+    output_frames = horizon.get("output_frames")
+    if (
+        not _valid_positive_int(sample_rate)
+        or not 8_000 <= int(sample_rate) <= 96_000
+        or not _valid_positive_int(output_frames)
+        or int(output_frames) > int(sample_rate) * _DECODED_STREAM_MAXIMUM_SECONDS
+    ):
+        return False
+    sources = horizon.get("sources")
+    lanes = horizon.get("lanes")
+    if (
+        not isinstance(sources, list)
+        or len(sources) != len(project_sources)
+        or not isinstance(lanes, list)
+        or len(lanes) != len(selected_lanes)
+    ):
+        return False
+    source_geometry_keys = {
+        "track_id",
+        "source_sha256",
+        "source_bytes",
+        "stem_ids",
+        "roles",
+        "source_sample_rate",
+        "source_channels",
+        "source_frames",
+        "output_rate_frames",
+        "owns_output_horizon",
+    }
+    scaled_frames: list[int] = []
+    for fingerprint, row in zip(project_sources, sources):
+        if not isinstance(row, Mapping) or set(row) != source_geometry_keys:
+            return False
+        if any(
+            row.get(key) != fingerprint.get(key)
+            for key in (
+                "track_id",
+                "source_sha256",
+                "source_bytes",
+                "stem_ids",
+                "roles",
+            )
+        ):
+            return False
+        if (
+            not _valid_positive_int(row.get("source_sample_rate"))
+            or not 8_000 <= int(row["source_sample_rate"]) <= 96_000
+            or row.get("source_channels") not in {1, 2}
+            or not _valid_positive_int(row.get("source_frames"))
+            or not _valid_positive_int(row.get("output_rate_frames"))
+            or not isinstance(row.get("owns_output_horizon"), bool)
+        ):
+            return False
+        expected_scaled_frames = _ceil_scaled_frame(
+            int(row["source_frames"]),
+            int(sample_rate),
+            int(row["source_sample_rate"]),
+        )
+        if row["output_rate_frames"] != expected_scaled_frames:
+            return False
+        scaled_frames.append(expected_scaled_frames)
+    if not scaled_frames or max(scaled_frames) != int(output_frames):
+        return False
+    if (
+        horizon.get("maximum_source_frames") != max(scaled_frames)
+        or any(
+            bool(row["owns_output_horizon"])
+            != (int(row["output_rate_frames"]) == int(output_frames))
+            for row in sources
+        )
+    ):
+        return False
+
+    lane_geometry_keys = {
+        "track_id",
+        "stem_id",
+        "candidate_id",
+        "selection_index",
+        "garageband_pack_archive_member",
+        "neutral_preview_sha256",
+        "neutral_preview_frames",
+        "excluded_neutral_preview_tail_frames",
+        "padded_output_frames",
+    }
+    preview_frames: list[int] = []
+    for fingerprint, row in zip(selected_lanes, lanes):
+        if not isinstance(row, Mapping) or set(row) != lane_geometry_keys:
+            return False
+        if any(
+            row.get(row_key) != fingerprint.get(fingerprint_key)
+            for row_key, fingerprint_key in (
+                ("track_id", "track_id"),
+                ("stem_id", "stem_id"),
+                ("candidate_id", "candidate_id"),
+                ("selection_index", "selection_index"),
+                (
+                    "garageband_pack_archive_member",
+                    "garageband_pack_archive_member",
+                ),
+                ("neutral_preview_sha256", "neutral_preview_sha256"),
+            )
+        ):
+            return False
+        frames = row.get("neutral_preview_frames")
+        if (
+            not _valid_positive_int(frames)
+            or row.get("excluded_neutral_preview_tail_frames")
+            != max(0, int(frames) - int(output_frames))
+            or row.get("padded_output_frames")
+            != max(0, int(output_frames) - int(frames))
+        ):
+            return False
+        preview_frames.append(int(frames))
+    maximum_preview_frames = max(preview_frames)
+    return (
+        horizon.get("maximum_neutral_preview_frames") == maximum_preview_frames
+        and horizon.get("excluded_neutral_preview_tail_frames")
+        == max(0, maximum_preview_frames - int(output_frames))
+        and horizon.get("padded_output_frames")
+        == max(0, int(output_frames) - maximum_preview_frames)
+    )
+
+
+def _valid_balanced_mix_report(
+    report: Any,
+    selected_lanes: Sequence[Mapping[str, Any]],
+    render_horizon: Mapping[str, Any],
+) -> bool:
+    report_keys = {
+        "schema",
+        "policy",
+        "label",
+        "path_free_report",
+        "mastered",
+        "mastering_boundary",
+        "sample_rate",
+        "channels",
+        "frames",
+        "duration_seconds",
+        "measurement",
+        "source_groups",
+        "limits",
+        "lanes",
+        "drum_bus",
+        "output",
+        "processing",
+        "effects",
+    }
+    if (
+        not isinstance(report, Mapping)
+        or set(report) != report_keys
+        or report.get("schema") != BALANCED_MIX_REPORT_SCHEMA
+        or report.get("policy") != BALANCED_MIX_POLICY
+        or report.get("label") != _BALANCED_MIX_LABEL
+        or report.get("mastered") is not False
+        or report.get("path_free_report") is not True
+        or report.get("mastering_boundary") != _BALANCED_MASTERING_BOUNDARY
+        or report.get("effects") != _decoded_arrangement_effects()
+        or report.get("sample_rate") != render_horizon.get("sample_rate")
+        or report.get("frames") != render_horizon.get("output_frames")
+        or report.get("channels") not in {1, 2}
+        or not _finite_number(report.get("duration_seconds"))
+        or not math.isclose(
+            float(report["duration_seconds"]),
+            int(report["frames"]) / int(report["sample_rate"]),
+            abs_tol=1e-5,
+        )
+    ):
+        return False
+    measurement = report.get("measurement")
+    limits = report.get("limits")
+    expected_measurement = {
+        "window_seconds": _BALANCED_WINDOW_SECONDS,
+        "absolute_gate_dbfs": _BALANCED_ABSOLUTE_GATE_DBFS,
+        "relative_gate_db": _BALANCED_RELATIVE_GATE_DB,
+        "overlap_relative_gate_db": _BALANCED_OVERLAP_RELATIVE_GATE_DB,
+        "statistic": _BALANCED_MEASUREMENT_STATISTIC,
+        "peak_kind": _BALANCED_MEASUREMENT_PEAK_KIND,
+        "scope": _BALANCED_MEASUREMENT_SCOPE,
+    }
+    expected_limits = {
+        "source_match_gain_db": _BALANCED_SOURCE_MATCH_GAIN_DB,
+        "maximum_drum_bus_attenuation_db": (
+            _BALANCED_MAXIMUM_DRUM_ATTENUATION_DB
+        ),
+        "drum_overlap_median_target_db": (
+            _BALANCED_DRUM_OVERLAP_MEDIAN_TARGET_DB
+        ),
+        "drum_overlap_p95_maximum_db": (
+            _BALANCED_DRUM_OVERLAP_P95_MAXIMUM_DB
+        ),
+        "audition_target_gated_rms_dbfs": (
+            _BALANCED_AUDITION_TARGET_GATED_RMS_DBFS
+        ),
+        "sample_peak_ceiling_dbfs": _BALANCED_SAMPLE_PEAK_CEILING_DBFS,
+        "maximum_normalisation_boost_db": (
+            _BALANCED_MAXIMUM_NORMALISATION_BOOST_DB
+        ),
+        "normalisation_target_tolerance_db": (
+            _BALANCED_NORMALISATION_TARGET_TOLERANCE_DB
+        ),
+    }
+    if (
+        not isinstance(measurement, Mapping)
+        or dict(measurement) != expected_measurement
+        or not isinstance(limits, Mapping)
+        or dict(limits) != expected_limits
+    ):
+        return False
+    if not _valid_balanced_drum_overlap(
+        report.get("drum_bus"),
+        sample_rate=int(report["sample_rate"]),
+        channels=int(report["channels"]),
+        frames=int(report["frames"]),
+    ):
+        return False
+    if not _valid_balanced_lanes_and_source_groups(
+        report,
+        selected_lanes,
+        render_horizon,
+    ):
+        return False
+    output = report.get("output")
+    if not _valid_balanced_output(
+        output,
+        sample_rate=int(report["sample_rate"]),
+        channels=int(report["channels"]),
+        frames=int(report["frames"]),
+    ):
+        return False
+    processing = report.get("processing")
+    processing_keys = {
+        "per_lane_gain",
+        "summed_source_group_calibration",
+        "drum_bus_gain",
+        "global_output_gain",
+        "sample_peak_protection",
+        "compression",
+        "limiter",
+        "equalisation",
+        "saturation",
+        "reverb",
+        "chorus",
+        "stereo_widening",
+    }
+    required_disabled_processing = {
+        "compression",
+        "limiter",
+        "equalisation",
+        "saturation",
+        "reverb",
+        "chorus",
+        "stereo_widening",
+    }
+    if (
+        not isinstance(processing, Mapping)
+        or set(processing) != processing_keys
+        or processing.get("per_lane_gain") is not True
+        or processing.get("summed_source_group_calibration") is not True
+        or processing.get("sample_peak_protection") is not True
+        or any(
+            processing.get(key) is not False
+            for key in required_disabled_processing
+        )
+        or processing.get("drum_bus_gain")
+        is not (
+            not math.isclose(
+                float(report["drum_bus"]["guard_gain_db"]),
+                0.0,
+                abs_tol=1e-9,
+            )
+        )
+        or processing.get("global_output_gain")
+        is not (
+            not math.isclose(
+                float(output["master_output_gain_db"]),
+                0.0,
+                abs_tol=1e-9,
+            )
+        )
+    ):
+        return False
+    return True
+
+
+def _valid_balanced_lanes_and_source_groups(
+    report: Mapping[str, Any],
+    selected_lanes: Sequence[Mapping[str, Any]],
+    render_horizon: Mapping[str, Any],
+) -> bool:
+    lanes = report.get("lanes")
+    source_groups = report.get("source_groups")
+    if (
+        not isinstance(lanes, list)
+        or len(lanes) != len(selected_lanes)
+        or not isinstance(source_groups, list)
+    ):
+        return False
+    lane_keys = {
+        "track_id",
+        "stem_id",
+        "candidate_id",
+        "role",
+        "decision",
+        "selection_index",
+        "garageband_pack_archive_member",
+        "source_sha256",
+        "source_bytes",
+        "source_midi_sha256",
+        "preview_sha256",
+        "preview_bytes",
+        "neutral_preview_cache_key",
+        "source_metrics",
+        "preview_metrics",
+        "source_duplicate_count",
+        "provisional_source_match_gain_db",
+        "source_group_calibration_gain_db",
+        "raw_source_match_gain_db",
+        "source_match_gain_db",
+        "source_match_clamped",
+        "fallback_reason",
+        "drum_bus_gain_db",
+        "garageband_track_trim_db",
+    }
+    horizon_lanes = {
+        (
+            int(row["selection_index"]),
+            str(row["garageband_pack_archive_member"]),
+        ): row
+        for row in render_horizon["lanes"]
+    }
+    horizon_sources = {
+        str(row["source_sha256"]): row for row in render_horizon["sources"]
+    }
+    lanes_by_source: dict[str, list[Mapping[str, Any]]] = {}
+    guard_gain = float(report["drum_bus"]["guard_gain_db"])
+    for fingerprint, lane in zip(selected_lanes, lanes):
+        if not isinstance(lane, Mapping) or set(lane) != lane_keys:
+            return False
+        if any(
+            lane.get(key) != fingerprint.get(fingerprint_key)
+            for key, fingerprint_key in (
+                ("track_id", "track_id"),
+                ("stem_id", "stem_id"),
+                ("candidate_id", "candidate_id"),
+                ("role", "role"),
+                ("decision", "decision"),
+                ("selection_index", "selection_index"),
+                (
+                    "garageband_pack_archive_member",
+                    "garageband_pack_archive_member",
+                ),
+                ("source_sha256", "source_sha256"),
+                ("source_bytes", "source_bytes"),
+                ("source_midi_sha256", "source_midi_sha256"),
+                ("preview_sha256", "neutral_preview_sha256"),
+                ("preview_bytes", "neutral_preview_bytes"),
+                ("neutral_preview_cache_key", "neutral_preview_cache_key"),
+            )
+        ):
+            return False
+        horizon_lane = horizon_lanes.get(
+            (
+                int(lane["selection_index"]),
+                str(lane["garageband_pack_archive_member"]),
+            )
+        )
+        horizon_source = horizon_sources.get(str(lane["source_sha256"]))
+        if horizon_lane is None or horizon_source is None:
+            return False
+        source_frames = min(
+            int(horizon_source["source_frames"]),
+            _ceil_scaled_frame(
+                int(render_horizon["output_frames"]),
+                int(horizon_source["source_sample_rate"]),
+                int(render_horizon["sample_rate"]),
+            ),
+        )
+        preview_frames = min(
+            int(horizon_lane["neutral_preview_frames"]),
+            int(render_horizon["output_frames"]),
+        )
+        source_metrics = lane.get("source_metrics")
+        preview_metrics = lane.get("preview_metrics")
+        if not _valid_balanced_metrics(
+            source_metrics,
+            sample_rate=int(horizon_source["source_sample_rate"]),
+            channels=int(horizon_source["source_channels"]),
+            frames=source_frames,
+            require_active=False,
+        ) or not _valid_balanced_metrics(
+            preview_metrics,
+            sample_rate=int(report["sample_rate"]),
+            channels=int(report["channels"]),
+            frames=preview_frames,
+            require_active=True,
+        ):
+            return False
+        if int(preview_metrics["full_scale_sample_count"]) != 0:
+            return False
+        numeric_fields = (
+            "provisional_source_match_gain_db",
+            "source_group_calibration_gain_db",
+            "raw_source_match_gain_db",
+            "source_match_gain_db",
+            "drum_bus_gain_db",
+            "garageband_track_trim_db",
+        )
+        if (
+            not all(_finite_number(lane.get(key)) for key in numeric_fields)
+            or not _valid_positive_int(lane.get("source_duplicate_count"))
+            or not isinstance(lane.get("source_match_clamped"), bool)
+        ):
+            return False
+        source_level = source_metrics["gated_rms_dbfs"]
+        expected_fallback = None
+        if source_level is None:
+            expected_provisional = (
+                -6.0 if is_drum_role(lane["role"]) else 0.0
+            )
+            expected_fallback = (
+                "source stem had no measurable active blocks; conservative role "
+                "fallback used"
+            )
+        else:
+            expected_provisional = float(source_level) - float(
+                preview_metrics["gated_rms_dbfs"]
+            )
+        expected_drum_gain = (
+            guard_gain if is_drum_role(lane["role"]) else 0.0
+        )
+        if (
+            not math.isclose(
+                float(lane["provisional_source_match_gain_db"]),
+                expected_provisional,
+                abs_tol=2e-5,
+            )
+            or lane.get("fallback_reason") != expected_fallback
+            or not math.isclose(
+                float(lane["drum_bus_gain_db"]),
+                expected_drum_gain,
+                abs_tol=2e-5,
+            )
+            or not math.isclose(
+                float(lane["garageband_track_trim_db"]),
+                float(lane["source_match_gain_db"]) + expected_drum_gain,
+                abs_tol=2e-5,
+            )
+        ):
+            return False
+        lanes_by_source.setdefault(str(lane["source_sha256"]), []).append(lane)
+
+    expected_source_order = sorted(lanes_by_source)
+    if len(source_groups) != len(expected_source_order):
+        return False
+    source_group_keys = {
+        "source_sha256",
+        "selected_lane_count",
+        "target_gated_rms_dbfs",
+        "target_reason",
+        "before_calibration",
+        "calibration_gain_db",
+        "after_calibration",
+        "residual_level_error_db",
+        "clamped_lane_count",
+    }
+    for expected_source_sha256, source_group in zip(
+        expected_source_order,
+        source_groups,
+    ):
+        if (
+            not isinstance(source_group, Mapping)
+            or set(source_group) != source_group_keys
+            or source_group.get("source_sha256") != expected_source_sha256
+        ):
+            return False
+        group_lanes = lanes_by_source[expected_source_sha256]
+        if (
+            source_group.get("selected_lane_count") != len(group_lanes)
+            or not _finite_number(source_group.get("target_gated_rms_dbfs"))
+            or not _finite_number(source_group.get("calibration_gain_db"))
+            or not _valid_nonnegative_int(source_group.get("clamped_lane_count"))
+        ):
+            return False
+        before = source_group.get("before_calibration")
+        after = source_group.get("after_calibration")
+        if not _valid_balanced_metrics(
+            before,
+            sample_rate=int(report["sample_rate"]),
+            channels=int(report["channels"]),
+            frames=int(report["frames"]),
+            require_active=True,
+        ) or not _valid_balanced_metrics(
+            after,
+            sample_rate=int(report["sample_rate"]),
+            channels=int(report["channels"]),
+            frames=int(report["frames"]),
+            require_active=False,
+        ):
+            return False
+        first_source_metrics = group_lanes[0]["source_metrics"]
+        if any(
+            lane["source_metrics"] != first_source_metrics for lane in group_lanes
+        ):
+            return False
+        source_level = first_source_metrics["gated_rms_dbfs"]
+        if source_level is None:
+            target_level = max(
+                float(lane["preview_metrics"]["gated_rms_dbfs"])
+                + float(lane["provisional_source_match_gain_db"])
+                for lane in group_lanes
+            )
+            target_reason = (
+                "loudest conservatively adjusted selected preview because the "
+                "source stem had no measurable active blocks"
+            )
+        else:
+            target_level = float(source_level)
+            target_reason = "measured source-stem gated RMS"
+        calibration_gain = target_level - float(before["gated_rms_dbfs"])
+        after_level = after["gated_rms_dbfs"]
+        expected_residual = (
+            None
+            if after_level is None
+            else float(after_level) - target_level
+        )
+        residual = source_group.get("residual_level_error_db")
+        if (
+            not math.isclose(
+                float(source_group["target_gated_rms_dbfs"]),
+                target_level,
+                abs_tol=2e-5,
+            )
+            or source_group.get("target_reason") != target_reason
+            or not math.isclose(
+                float(source_group["calibration_gain_db"]),
+                calibration_gain,
+                abs_tol=2e-5,
+            )
+            or (
+                expected_residual is None
+                and residual is not None
+            )
+            or (
+                expected_residual is not None
+                and (
+                    not _finite_number(residual)
+                    or not math.isclose(
+                        float(residual),
+                        expected_residual,
+                        abs_tol=2e-5,
+                    )
+                )
+            )
+        ):
+            return False
+        clamped_count = 0
+        for lane in group_lanes:
+            raw_gain = (
+                float(lane["provisional_source_match_gain_db"])
+                + calibration_gain
+            )
+            matched_gain = max(
+                _BALANCED_SOURCE_MATCH_GAIN_DB[0],
+                min(_BALANCED_SOURCE_MATCH_GAIN_DB[1], raw_gain),
+            )
+            rounded_at_boundary = math.isclose(
+                raw_gain,
+                matched_gain,
+                abs_tol=1e-6,
+            )
+            expected_clamped = not rounded_at_boundary
+            if (
+                not math.isclose(
+                    float(lane["source_group_calibration_gain_db"]),
+                    calibration_gain,
+                    abs_tol=2e-5,
+                )
+                or not math.isclose(
+                    float(lane["raw_source_match_gain_db"]),
+                    raw_gain,
+                    abs_tol=2e-5,
+                )
+                or not math.isclose(
+                    float(lane["source_match_gain_db"]),
+                    matched_gain,
+                    abs_tol=2e-5,
+                )
+                or (
+                    lane["source_match_clamped"] is not expected_clamped
+                    and not (
+                        rounded_at_boundary
+                        and lane["source_match_clamped"] is True
+                        and math.isclose(
+                            matched_gain,
+                            _BALANCED_SOURCE_MATCH_GAIN_DB[0],
+                            abs_tol=1e-6,
+                        )
+                        or rounded_at_boundary
+                        and lane["source_match_clamped"] is True
+                        and math.isclose(
+                            matched_gain,
+                            _BALANCED_SOURCE_MATCH_GAIN_DB[1],
+                            abs_tol=1e-6,
+                        )
+                    )
+                )
+                or lane["source_duplicate_count"] != len(group_lanes)
+            ):
+                return False
+            clamped_count += int(bool(lane["source_match_clamped"]))
+        if source_group["clamped_lane_count"] != clamped_count:
+            return False
+    return True
+
+
+def _valid_balanced_metrics(
+    metrics: Any,
+    *,
+    sample_rate: int,
+    channels: int,
+    frames: int,
+    require_active: bool,
+) -> bool:
+    metric_keys = {
+        "sample_rate",
+        "channels",
+        "frames",
+        "duration_seconds",
+        "block_count",
+        "active_block_count",
+        "gated_rms_dbfs",
+        "active_block_p95_dbfs",
+        "sample_peak_dbfs",
+        "full_scale_sample_count",
+    }
+    if (
+        not isinstance(metrics, Mapping)
+        or set(metrics) != metric_keys
+        or metrics.get("sample_rate") != sample_rate
+        or metrics.get("channels") != channels
+        or metrics.get("frames") != frames
+        or not _finite_number(metrics.get("duration_seconds"))
+        or not math.isclose(
+            float(metrics["duration_seconds"]),
+            frames / sample_rate,
+            abs_tol=1e-5,
+        )
+        or not _valid_positive_int(metrics.get("block_count"))
+        or not _valid_nonnegative_int(metrics.get("active_block_count"))
+        or int(metrics["active_block_count"]) > int(metrics["block_count"])
+        or not _valid_nonnegative_int(metrics.get("full_scale_sample_count"))
+        or int(metrics["full_scale_sample_count"]) > frames * channels
+    ):
+        return False
+    block_frames = max(
+        1,
+        int(round(sample_rate * _BALANCED_WINDOW_SECONDS)),
+    )
+    if int(metrics["block_count"]) != (
+        frames + block_frames - 1
+    ) // block_frames:
+        return False
+    active_count = int(metrics["active_block_count"])
+    gated = metrics.get("gated_rms_dbfs")
+    p95 = metrics.get("active_block_p95_dbfs")
+    peak = metrics.get("sample_peak_dbfs")
+    if active_count:
+        return (
+            _finite_number(gated)
+            and _finite_number(p95)
+            and _finite_number(peak)
+        )
+    return (
+        not require_active
+        and gated is None
+        and p95 is None
+        and (peak is None or _finite_number(peak))
+    )
+
+
+def _valid_balanced_output(
+    output: Any,
+    *,
+    sample_rate: int,
+    channels: int,
+    frames: int,
+) -> bool:
+    output_keys = {
+        "pre_master",
+        "raw_normalisation_gain_db",
+        "requested_normalisation_gain_db",
+        "available_sample_peak_room_db",
+        "master_output_gain_db",
+        "post_master",
+        "post_master_target_error_db",
+        "normalisation_target_met",
+        "normalisation_limit",
+    }
+    if not isinstance(output, Mapping) or set(output) != output_keys:
+        return False
+    pre_master = output.get("pre_master")
+    post_master = output.get("post_master")
+    if not _valid_balanced_output_metrics(
+        pre_master,
+        sample_rate=sample_rate,
+        channels=channels,
+        frames=frames,
+    ) or not _valid_balanced_output_metrics(
+        post_master,
+        sample_rate=sample_rate,
+        channels=channels,
+        frames=frames,
+    ):
+        return False
+    raw_gain = output.get("raw_normalisation_gain_db")
+    requested_gain = output.get("requested_normalisation_gain_db")
+    peak_room = output.get("available_sample_peak_room_db")
+    master_gain = output.get("master_output_gain_db")
+    target_error = output.get("post_master_target_error_db")
+    if not all(
+        _finite_number(value)
+        for value in (
+            raw_gain,
+            requested_gain,
+            peak_room,
+            master_gain,
+            target_error,
+        )
+    ):
+        return False
+    expected_raw_gain = (
+        _BALANCED_AUDITION_TARGET_GATED_RMS_DBFS
+        - float(pre_master["gated_rms_dbfs"])
+    )
+    expected_requested_gain = min(
+        expected_raw_gain,
+        _BALANCED_MAXIMUM_NORMALISATION_BOOST_DB,
+    )
+    expected_peak_room = (
+        _BALANCED_SAMPLE_PEAK_CEILING_DBFS
+        - float(pre_master["sample_peak_dbfs"])
+    )
+    expected_master_gain = min(expected_requested_gain, expected_peak_room)
+    expected_target_error = (
+        float(post_master["gated_rms_dbfs"])
+        - _BALANCED_AUDITION_TARGET_GATED_RMS_DBFS
+    )
+    expected_target_met = (
+        abs(expected_target_error)
+        <= _BALANCED_NORMALISATION_TARGET_TOLERANCE_DB
+    )
+    expected_limit = None
+    if expected_requested_gain < expected_raw_gain:
+        expected_limit = "maximum_positive_boost"
+    if expected_master_gain < expected_requested_gain:
+        expected_limit = "sample_peak_ceiling"
+    if (
+        not math.isclose(float(raw_gain), expected_raw_gain, abs_tol=2e-5)
+        or not math.isclose(
+            float(requested_gain),
+            expected_requested_gain,
+            abs_tol=2e-5,
+        )
+        or not math.isclose(float(peak_room), expected_peak_room, abs_tol=2e-5)
+        or not math.isclose(
+            float(master_gain),
+            expected_master_gain,
+            abs_tol=2e-5,
+        )
+        or not math.isclose(
+            float(target_error),
+            expected_target_error,
+            abs_tol=2e-5,
+        )
+        or output.get("normalisation_target_met") is not expected_target_met
+        or output.get("normalisation_limit") != expected_limit
+        or int(post_master["full_scale_sample_count"]) != 0
+        or float(post_master["sample_peak_dbfs"])
+        > _BALANCED_SAMPLE_PEAK_CEILING_DBFS + 0.001
+    ):
+        return False
+    # A uniform gain shifts the sample peak directly. It does not necessarily
+    # shift the gated RMS or active-block p95 by the same amount: crossing the
+    # absolute −70 dBFS gate can legitimately change which blocks are active.
+    return math.isclose(
+        float(post_master["sample_peak_dbfs"]),
+        float(pre_master["sample_peak_dbfs"]) + float(master_gain),
+        abs_tol=0.01,
+    )
+
+
+def _valid_balanced_output_metrics(
+    metrics: Any,
+    *,
+    sample_rate: int,
+    channels: int,
+    frames: int,
+) -> bool:
+    metric_keys = {
+        "sample_rate",
+        "channels",
+        "frames",
+        "duration_seconds",
+        "block_count",
+        "active_block_count",
+        "gated_rms_dbfs",
+        "active_block_p95_dbfs",
+        "sample_peak_dbfs",
+        "full_scale_sample_count",
+    }
+    if (
+        not isinstance(metrics, Mapping)
+        or set(metrics) != metric_keys
+        or metrics.get("sample_rate") != sample_rate
+        or metrics.get("channels") != channels
+        or metrics.get("frames") != frames
+        or not _finite_number(metrics.get("duration_seconds"))
+        or not math.isclose(
+            float(metrics["duration_seconds"]),
+            frames / sample_rate,
+            abs_tol=1e-5,
+        )
+        or not _valid_positive_int(metrics.get("block_count"))
+        or not _valid_positive_int(metrics.get("active_block_count"))
+        or int(metrics["active_block_count"]) > int(metrics["block_count"])
+        or not _valid_nonnegative_int(metrics.get("full_scale_sample_count"))
+        or int(metrics["full_scale_sample_count"]) > frames * channels
+        or not all(
+            _finite_number(metrics.get(key))
+            for key in (
+                "gated_rms_dbfs",
+                "active_block_p95_dbfs",
+                "sample_peak_dbfs",
+            )
+        )
+    ):
+        return False
+    block_frames = max(
+        1,
+        int(round(sample_rate * _BALANCED_WINDOW_SECONDS)),
+    )
+    return int(metrics["block_count"]) == (
+        frames + block_frames - 1
+    ) // block_frames
+
+
+def _valid_balanced_drum_overlap(
+    drum_bus: Any,
+    *,
+    sample_rate: int,
+    channels: int,
+    frames: int,
+) -> bool:
+    if (
+        not isinstance(drum_bus, Mapping)
+        or set(drum_bus)
+        != {
+        "before_guard",
+        "non_drum_reference",
+        "before_guard_overlap",
+        "required_guard_gain_db",
+        "guard_gain_db",
+        "guard_clamped",
+        "after_guard",
+        "after_guard_non_drum_reference",
+        "after_guard_overlap",
+        "target_applicable",
+        "overlap_median_target_met",
+        "overlap_p95_target_met",
+        "target_met",
+        "policy",
+        }
+        or drum_bus.get("policy") != _BALANCED_DRUM_GUARD_POLICY
+    ):
+        return False
+    before_drum = drum_bus.get("before_guard")
+    before_non_drum = drum_bus.get("non_drum_reference")
+    after_drum = drum_bus.get("after_guard")
+    after_non_drum = drum_bus.get("after_guard_non_drum_reference")
+    bus_metrics = (
+        before_drum,
+        before_non_drum,
+        after_drum,
+        after_non_drum,
+    )
+    if any(
+        not _valid_balanced_metrics(
+            metrics,
+            sample_rate=sample_rate,
+            channels=channels,
+            frames=frames,
+            require_active=False,
+        )
+        for metrics in bus_metrics
+    ):
+        return False
+    assert isinstance(before_drum, Mapping)
+    assert isinstance(before_non_drum, Mapping)
+    assert isinstance(after_drum, Mapping)
+    assert isinstance(after_non_drum, Mapping)
+    if dict(after_non_drum) != dict(before_non_drum):
+        return False
+
+    before = drum_bus.get("before_guard_overlap")
+    after = drum_bus.get("after_guard_overlap")
+    overlap_keys = {
+        "block_count",
+        "overlap_block_count",
+        "drum_gate_dbfs",
+        "non_drum_gate_dbfs",
+        "drum_vs_non_drum_median_db",
+        "drum_vs_non_drum_p95_db",
+    }
+    if (
+        not isinstance(before, Mapping)
+        or set(before) != overlap_keys
+        or not isinstance(after, Mapping)
+        or set(after) != overlap_keys
+        or not _valid_nonnegative_int(before.get("block_count"))
+        or not _valid_nonnegative_int(before.get("overlap_block_count"))
+        or before["overlap_block_count"] > before["block_count"]
+        or before["block_count"] != before_drum["block_count"]
+        or after.get("block_count") != before["block_count"]
+        or after.get("overlap_block_count") != before["overlap_block_count"]
+        or after.get("non_drum_gate_dbfs") != before.get("non_drum_gate_dbfs")
+    ):
+        return False
+    required = drum_bus.get("required_guard_gain_db")
+    guard = drum_bus.get("guard_gain_db")
+    if not _finite_number(required) or not _finite_number(guard):
+        return False
+    before_peak = before_drum.get("sample_peak_dbfs")
+    after_peak = after_drum.get("sample_peak_dbfs")
+    if before_peak is None:
+        if after_peak is not None:
+            return False
+    elif (
+        not _finite_number(before_peak)
+        or not _finite_number(after_peak)
+        or not math.isclose(
+            float(after_peak),
+            float(before_peak) + float(guard),
+            abs_tol=2e-5,
+        )
+    ):
+        return False
+    if float(guard) > 1e-9 or float(guard) < (
+        _BALANCED_MAXIMUM_DRUM_ATTENUATION_DB - 1e-9
+    ):
+        return False
+    if math.isclose(float(guard), 0.0, abs_tol=1e-9):
+        if dict(after_drum) != dict(before_drum):
+            return False
+    elif (
+        int(after_drum["active_block_count"])
+        > int(before_drum["active_block_count"])
+        or int(after_drum["full_scale_sample_count"])
+        > int(before_drum["full_scale_sample_count"])
+    ):
+        return False
+    elif int(after_drum["active_block_count"]) == int(
+        before_drum["active_block_count"]
+    ):
+        for key in ("gated_rms_dbfs", "active_block_p95_dbfs"):
+            before_value = before_drum.get(key)
+            after_value = after_drum.get(key)
+            if before_value is None:
+                if after_value is not None:
+                    return False
+            elif (
+                not _finite_number(after_value)
+                or not math.isclose(
+                    float(after_value),
+                    float(before_value) + float(guard),
+                    abs_tol=2e-5,
+                )
+            ):
+                return False
+
+    overlap_count = int(before["overlap_block_count"])
+    before_median = before.get("drum_vs_non_drum_median_db")
+    before_p95 = before.get("drum_vs_non_drum_p95_db")
+    applicable = overlap_count > 0
+    if applicable:
+        if (
+            int(before_drum["active_block_count"]) < 1
+            or int(before_non_drum["active_block_count"]) < 1
+            or int(after_non_drum["active_block_count"]) < 1
+            or not _finite_number(before_median)
+            or not _finite_number(before_p95)
+            or not _finite_number(before.get("drum_gate_dbfs"))
+            or not _finite_number(before.get("non_drum_gate_dbfs"))
+        ):
+            return False
+    elif before_median is not None or before_p95 is not None:
+        return False
+    if (
+        (before_drum.get("sample_peak_dbfs") is None)
+        is not (before.get("drum_gate_dbfs") is None)
+        or (before_non_drum.get("sample_peak_dbfs") is None)
+        is not (before.get("non_drum_gate_dbfs") is None)
+    ):
+        return False
+    expected_required = (
+        min(
+            0.0,
+            _BALANCED_DRUM_OVERLAP_MEDIAN_TARGET_DB - float(before_median),
+            _BALANCED_DRUM_OVERLAP_P95_MAXIMUM_DB - float(before_p95),
+        )
+        if applicable
+        else 0.0
+    )
+    expected_guard = max(
+        _BALANCED_MAXIMUM_DRUM_ATTENUATION_DB,
+        min(0.0, expected_required),
+    )
+    if (
+        not math.isclose(float(required), expected_required, abs_tol=1e-5)
+        or not math.isclose(float(guard), expected_guard, abs_tol=1e-5)
+        or drum_bus.get("guard_clamped")
+        is not (expected_required < _BALANCED_MAXIMUM_DRUM_ATTENUATION_DB)
+    ):
+        return False
+    if after.get("drum_gate_dbfs") != before.get("drum_gate_dbfs"):
+        return False
+    for key in (
+        "drum_vs_non_drum_median_db",
+        "drum_vs_non_drum_p95_db",
+    ):
+        before_value = before.get(key)
+        after_value = after.get(key)
+        if before_value is None:
+            if after_value is not None:
+                return False
+        elif (
+            not _finite_number(before_value)
+            or not _finite_number(after_value)
+            or not math.isclose(
+                float(after_value),
+                float(before_value) + float(guard),
+                abs_tol=2e-5,
+            )
+        ):
+            return False
+    after_median = after.get("drum_vs_non_drum_median_db")
+    after_p95 = after.get("drum_vs_non_drum_p95_db")
+    target_applicable = overlap_count > 0
+    if target_applicable:
+        if not _finite_number(after_median) or not _finite_number(after_p95):
+            return False
+    elif after_median is not None or after_p95 is not None:
+        return False
+    median_met = (
+        float(after_median) <= _BALANCED_DRUM_OVERLAP_MEDIAN_TARGET_DB + 1e-6
+        if target_applicable
+        else None
+    )
+    p95_met = (
+        float(after_p95) <= _BALANCED_DRUM_OVERLAP_P95_MAXIMUM_DB + 1e-6
+        if target_applicable
+        else None
+    )
+    return (
+        drum_bus.get("target_applicable") is target_applicable
+        and drum_bus.get("overlap_median_target_met") is median_met
+        and drum_bus.get("overlap_p95_target_met") is p95_met
+        and drum_bus.get("target_met")
+        is (median_met and p95_met if target_applicable else None)
+    )
+
+
+def _valid_balanced_receipt(
+    receipt: Any,
+    manifest: Mapping[str, Any],
+) -> bool:
+    receipt_keys = {
+        "schema",
+        "project_id",
+        "selection_manifest_sha256",
+        "bpm",
+        "policy",
+        "render_horizon_policy",
+        "selection",
+        "renderer",
+        "input_fingerprints",
+        "render_horizon",
+        "preview",
+        "recipe",
+        "mix_report",
+        "mastered",
+        "mastering_boundary",
+        "effects",
+        "receipt_sha256",
+    }
+    if not isinstance(receipt, dict) or set(receipt) != receipt_keys:
+        return False
+    unsigned_receipt = {
+        key: value for key, value in receipt.items() if key != "receipt_sha256"
+    }
+    if (
+        not _is_sha256(receipt.get("receipt_sha256"))
+        or _document_hash(unsigned_receipt) != receipt["receipt_sha256"]
+        or not _balanced_path_free_document(receipt)
+    ):
+        return False
+    for key in (
+        "project_id",
+        "selection_manifest_sha256",
+        "bpm",
+        "policy",
+        "render_horizon_policy",
+        "selection",
+        "renderer",
+        "input_fingerprints",
+        "render_horizon",
+        "mix_report",
+        "mastered",
+        "mastering_boundary",
+        "effects",
+    ):
+        if receipt.get(key) != manifest.get(key):
+            return False
+    for key in ("preview", "recipe"):
+        receipt_record = receipt.get(key)
+        manifest_record = manifest.get(key)
+        if (
+            not isinstance(receipt_record, Mapping)
+            or set(receipt_record) != {"filename", "bytes", "sha256"}
+            or not isinstance(manifest_record, Mapping)
+            or receipt_record.get("filename") != manifest_record.get("name")
+            or receipt_record.get("bytes") != manifest_record.get("bytes")
+            or receipt_record.get("sha256") != manifest_record.get("sha256")
+        ):
+            return False
+    return True
+
+
+def _valid_balanced_artifact_record(record: Any) -> bool:
+    return bool(
+        isinstance(record, Mapping)
+        and set(record) == {"path", "name", "bytes", "sha256"}
+        and isinstance(record.get("path"), str)
+        and record.get("path") == record.get("name")
+        and "/" not in str(record.get("path"))
+        and "\\" not in str(record.get("path"))
+        and str(record.get("path")) not in {"", ".", ".."}
+        and _valid_nonnegative_int(record.get("bytes"))
+        and _is_sha256(record.get("sha256"))
+    )
+
+
+def _balanced_path_free_document(value: Any) -> bool:
+    if isinstance(value, Mapping):
+        for key, child in value.items():
+            if not isinstance(key, str):
+                return False
+            lowered = key.lower()
+            if lowered == "path" or lowered.endswith("_path"):
+                return False
+            if not _balanced_path_free_document(child):
+                return False
+        return True
+    if isinstance(value, list):
+        return all(_balanced_path_free_document(child) for child in value)
+    if isinstance(value, str):
+        lowered = value.lower()
+        if (
+            value.startswith(("/", "~/", "../", ".\\"))
+            or lowered.startswith("file://")
+            or (len(value) >= 3 and value[1] == ":" and value[2] in {"/", "\\"})
+        ):
+            return False
+    return True
+
+
+def _valid_nonnegative_int(value: Any) -> bool:
+    return not isinstance(value, bool) and isinstance(value, int) and value >= 0
+
+
+def _valid_positive_int(value: Any) -> bool:
+    return _valid_nonnegative_int(value) and int(value) > 0
+
+
+def _finite_number(value: Any) -> bool:
+    return (
+        not isinstance(value, bool)
+        and isinstance(value, (int, float))
+        and math.isfinite(float(value))
+    )
+
+
 def canonical_garageband_pack_basket(
     plan: Mapping[str, Any],
     included_item_ids: Sequence[str] | Any,
@@ -3805,9 +6630,15 @@ def _garageband_pack_inventory(
 
     items: list[dict[str, Any]] = []
     internal: dict[str, dict[str, Any]] = {}
-    for index, selected in enumerate(selection, start=1):
+    for selected in selection:
         role = str(selected["role"])
         decision = str(selected["decision"])
+        selection_index = int(selected["selection_index"])
+        archive_path = str(selected["garageband_pack_archive_member"])
+        if archive_path != _selected_midi_archive_member(
+            selection_index, role, decision
+        ):
+            raise ValueError("selected MIDI GarageBand archive identity changed")
         item_id = _pack_item_id(
             {
                 "kind": "selected_midi",
@@ -3816,9 +6647,6 @@ def _garageband_pack_inventory(
                 "midi_sha256": selected["midi"]["sha256"],
                 "basket_scope_sha256": basket_scope_sha256,
             }
-        )
-        archive_path = (
-            f"MIDI/{index:02d}-{_safe_token(role)}-{_safe_token(decision)}.mid"
         )
         item = {
             "item_id": item_id,
@@ -3830,7 +6658,8 @@ def _garageband_pack_inventory(
             "process": selected.get("process"),
             "role": role,
             "decision": decision,
-            "selection_index": index,
+            "selection_index": selection_index,
+            "garageband_pack_archive_member": archive_path,
             "default_included": True,
             "generated": False,
             "archive_paths": [archive_path],
@@ -3940,6 +6769,18 @@ def _is_sha256(value: Any) -> bool:
     )
 
 
+def _is_balanced_deferred_claim(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 32
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
+def _path_exists_or_is_symlink(path: Path) -> bool:
+    return path.exists() or path.is_symlink()
+
+
 def _arrangement_tracks(selection: Sequence[Mapping[str, Any]]) -> list[MidiTrack]:
     drum_notes: list[NoteEvent] = []
     melodic: list[tuple[Mapping[str, Any], list[NoteEvent]]] = []
@@ -3948,7 +6789,7 @@ def _arrangement_tracks(selection: Sequence[Mapping[str, Any]]) -> list[MidiTrac
         notes = _clips_to_notes(clips)
         if not notes:
             continue
-        if _is_drum_role(str(item["role"])):
+        if is_drum_role(str(item["role"])):
             drum_notes.extend(notes)
         else:
             melodic.append((item, notes))
@@ -4334,8 +7175,8 @@ def _decoded_audio_info(soundfile: Any, path: Path, *, label: str) -> dict[str, 
         raise ValueError(f"{label} sample rate must be between 8 and 96 kHz")
     if channels not in {1, 2}:
         raise ValueError(f"{label} must be mono or stereo")
-    if frames < 0:
-        raise ValueError(f"{label} has an invalid frame count")
+    if frames <= 0:
+        raise ValueError(f"{label} must contain at least one audio frame")
     return {
         "sample_rate": sample_rate,
         "channels": channels,
@@ -4511,10 +7352,6 @@ def _program_for_role(role: str) -> int:
     return _ROLE_PROGRAMS.get(role.lower(), 0)
 
 
-def _is_drum_role(role: str) -> bool:
-    return role.lower() in _DRUM_ROLES
-
-
 def _track_name(role: str) -> str:
     return "Neutral " + role.replace("_", " ").strip().title()
 
@@ -4681,6 +7518,10 @@ def _public_selection(selection: Sequence[Mapping[str, Any]]) -> list[dict[str, 
             "candidate_id": item["candidate_id"],
             "role": item["role"],
             "decision": item["decision"],
+            "selection_index": item["selection_index"],
+            "garageband_pack_archive_member": item[
+                "garageband_pack_archive_member"
+            ],
             "process": item.get("process"),
             "midi_sha256": item["midi"]["sha256"],
             "midi_bytes": item["midi"]["bytes"],
@@ -4851,6 +7692,23 @@ def _safe_token(value: str) -> str:
     return "".join(char for char in token if char.isalnum() or char == "-") or "part"
 
 
+def _selected_midi_archive_member(
+    selection_index: int,
+    role: str,
+    decision: str,
+) -> str:
+    if (
+        isinstance(selection_index, bool)
+        or not isinstance(selection_index, int)
+        or selection_index < 1
+    ):
+        raise ValueError("selected MIDI selection index is invalid")
+    return (
+        f"MIDI/{selection_index:02d}-{_safe_token(role)}-"
+        f"{_safe_token(decision)}.mid"
+    )
+
+
 def _zip_text(archive: zipfile.ZipFile, name: str, value: str) -> None:
     _zip_bytes(archive, name, value.encode("utf-8"))
 
@@ -4868,6 +7726,7 @@ def _zip_bytes(archive: zipfile.ZipFile, name: str, value: bytes) -> None:
 
 __all__ = [
     "ARRANGEMENT_SCHEMA",
+    "BALANCED_ARRANGEMENT_SCHEMA",
     "DECODED_ARRANGEMENT_CHUNK_SCHEMA",
     "DECODED_ARRANGEMENT_STREAM_SCHEMA",
     "DECODED_STEM_LOOP_SCHEMA",

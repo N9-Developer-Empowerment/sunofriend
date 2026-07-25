@@ -40,6 +40,7 @@ _CACHE_FAMILIES = (
     "decoded-arrangement-streams",
     "decoded-arrangement-chunks",
     "arrangements",
+    "balanced-arrangements",
     "handoffs",
     "packs",
 )
@@ -74,6 +75,7 @@ _ROUTE_OPERATIONS = {
     "/api/decoded-arrangement-stream": "arrangement_stream.prepare",
     "/api/decoded-arrangement-chunk": "arrangement_chunk.prepare",
     "/api/arrangement": "arrangement.render",
+    "/api/balanced-arrangement": "arrangement.balance",
     "/api/garageband-export": "handoff.build",
     "/api/garageband-pack-basket": "pack_basket.save",
     "/api/garageband-pack": "pack.build",
@@ -101,6 +103,7 @@ _ROUTE_CODE_STEPS = {
     "/api/decoded-arrangement-stream": "arrangement_stream.prepare",
     "/api/decoded-arrangement-chunk": "arrangement_chunk.prepare",
     "/api/arrangement": "arrangement.render",
+    "/api/balanced-arrangement": "arrangement.balance",
     "/api/garageband-export": "handoff.build",
     "/api/garageband-pack-plan": "pack.plan",
     "/api/garageband-pack-basket": "pack_basket.save",
@@ -181,6 +184,10 @@ _CODE_MAP = {
     "arrangement.render": {
         "module": "sunofriend.workbench_artifacts",
         "symbol": "WorkbenchArtifacts.render_arrangement",
+    },
+    "arrangement.balance": {
+        "module": "sunofriend.workbench_artifacts",
+        "symbol": "WorkbenchArtifacts.render_balanced_arrangement",
     },
     "handoff.build": {
         "module": "sunofriend.workbench_artifacts",
@@ -265,6 +272,7 @@ _OPERATION_LABELS = {
     "arrangement_stream.prepare": "Freeze a bounded full-song stream plan",
     "arrangement_chunk.prepare": "Verify and decode one bounded stream chunk",
     "arrangement.render": "Render or reuse the selected arrangement proxy",
+    "arrangement.balance": "Render or reuse the source-referenced balanced audition",
     "handoff.build": "Build the compatibility GarageBand handoff",
     "pack_basket.save": "Save a separate export-basket revision",
     "pack.build": "Build and verify an exact local ZIP",
@@ -717,6 +725,7 @@ def trace_response_facts(route: str, value: Mapping[str, Any]) -> dict[str, Any]
         "/api/decoded-arrangement-stream": "stream",
         "/api/decoded-arrangement-chunk": "chunk",
         "/api/arrangement": "arrangement",
+        "/api/balanced-arrangement": "balanced_arrangement",
         "/api/garageband-export": "handoff",
         "/api/garageband-pack": "pack",
         "/api/garageband-pack-basket": "basket",
@@ -726,10 +735,30 @@ def trace_response_facts(route: str, value: Mapping[str, Any]) -> dict[str, Any]
     row = value.get(key, {}) if key else value
     if not isinstance(row, Mapping):
         return {}
+    track_count = None
+    if route == "/api/arrangement":
+        reported_count = row.get("track_count")
+        if (
+            isinstance(reported_count, int)
+            and not isinstance(reported_count, bool)
+            and reported_count >= 0
+        ):
+            track_count = reported_count
+    elif route == "/api/balanced-arrangement":
+        mix_report = row.get("mix_report")
+        lanes = (
+            mix_report.get("lanes")
+            if isinstance(mix_report, Mapping)
+            else None
+        )
+        if isinstance(lanes, list):
+            track_count = len(lanes)
+    elif isinstance(row.get("tracks"), list):
+        track_count = len(row["tracks"])
     return {
         "schema": row.get("schema"),
         "cache_hit": row.get("cache_hit"),
-        "track_count": len(row.get("tracks", [])) if "tracks" in row else None,
+        "track_count": track_count,
     }
 
 

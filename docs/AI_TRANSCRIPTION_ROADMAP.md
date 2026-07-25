@@ -1,8 +1,9 @@
 # Sunofriend AI roadmap
 
-Status: Phase 1 complete; Phase 2 engineering and explicit three-unit human
-review complete, with one assembled reviewed-versus-automatic listening verdict
-still pending; Phase 3 complete; Phase 4
+Status: Phase 1 complete; Phase 2 engineering, explicit three-unit human review
+and final assembled-versus-automatic blind review complete, with one reviewed
+opening-phrase win, no automatic win and two **neither** results, so the overall
+programme preference criterion was not demonstrated; Phase 3 complete; Phase 4
 fixed-MIDI review complete; Phase 5.1 private listening and the Phase 5.2
 fresh-process, bounded reused-model, exact-result cache and beam-1/beam-2
 small-CPU golden measurements plus the hardened private blind short-loop
@@ -26,7 +27,8 @@ immutable pitch-correction workflow is complete; Increment 6.3b's bounded
 immutable attack-velocity correction is complete; Increment 6.3c's bounded exact
 note-removal workflow is complete; Increment 6.3d's bounded existing-note
 onset-shift workflow is complete; Increment 6.3e's bounded existing-note
-note-end/duration workflow is complete;
+note-end/duration workflow is complete; the ordinary-Workbench
+source-referenced balanced selected-MIDI audition is complete;
 broader Phase 6
 creative arrangement remains in progress
 
@@ -102,11 +104,11 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | Phase | State | Outcome |
 | --- | --- | --- |
 | 1. AI Transcription Bake-off v1 | **Complete** | Independent local model candidates, common JSON, repeatable metrics and final role-specific listening decisions; see the close-out report |
-| 2. Phrase Review v2 | **Engineering and phrase review complete; final assembled A/B pending** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history. The first genuine review selected Basic Pitch for all three Lidl units and was applied without changing raw candidates |
+| 2. Phrase Review v2 | **Engineering and human review complete; overall programme preference criterion not demonstrated** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history. The applied 61-note review won the opening blind loop, the untouched 23-note automatic candidate won none, and both later loops were judged neither |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
 | 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.5–5.9 hardening complete and Phase 5.9 human acceptance passed; Phase 5.3 listening/lineage/role work remains** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench has hash-pinned per-stem and full-song timelines, bounded decoded transports, a separate exact GarageBand pack basket, Project Overview, fail-closed execution provenance and guided exact-pack acceptance. The 22 July close-out completed all eight tutorial screens, scored 10/10 and passed both six-item human checks; the resolver reverified five selected MIDI payloads plus the dry proxy and no source audio with zero project effects. Phase 5 remains open only for the separately gated Phase 5.3 work |
-| 6. Creative Arrangement and Reusable MIDI | **In progress: Increments 6.0, 6.1, 6.2a and 6.3a–e complete** | The gated browser, immutable-placement proposal, key/BPM children and bounded recognition-first pitch/attack-velocity/exact-note-removal/existing-note onset and end patches are complete. The 6.3e contract moves only the Note Off for 1–64 exact existing pitched or drum notes by an explicit non-zero delta of at most 480 ticks, while keeping every Note On, pitch, expression and note count exact. One kind per child, zero-write review, immutable parent and restart validation remain mandatory. Note insertion, release velocity/continuous expression, mode remapping, tuning/downbeat and hybrids remain later slices; hybrid construction still waits for the Phase 5.3 gates |
+| 6. Creative Arrangement and Reusable MIDI | **In progress: Increments 6.0, 6.1, 6.2a and 6.3a–e plus the selected-arrangement balance slice complete** | The gated browser, immutable-placement proposal, key/BPM children and bounded recognition-first pitch/attack-velocity/exact-note-removal/existing-note onset and end patches are complete. Ordinary Workbench also has an opt-in source-referenced, drum-guarded, sample-peak-protected selected-MIDI audition while retaining its unity controls. One kind per Clip child, zero-write review, immutable parent and restart validation remain mandatory. Note insertion, release velocity/continuous expression, mode remapping, tuning/downbeat and hybrids remain later slices; hybrid construction still waits for the Phase 5.3 gates |
 | 7. Cross-DAW and Opt-in Community Learning | **Deferred** | Compatibility testing, cleared public goldens and consented contextual feedback only after the local workflow is useful, private and stable |
 
 ## Phase 1: AI Transcription Bake-off v1
@@ -385,8 +387,11 @@ Implemented so far:
   choices, without changing candidate order, defaults or review status.
 - [x] complete the first genuine three-unit review, validate its source and
   tracker lineage, apply its explicit choices and build a real local profile;
-- [ ] record whether the assembled reviewed neutral rendering is preferred to
-  the untouched automatic combined candidate.
+- [x] resolve the assembled reviewed neutral rendering against the untouched
+  automatic combined candidate in a blind three-loop review. The reviewed
+  assembly won the opening loop, the automatic candidate won none and both
+  later loops were judged neither. This completes the gate but does **not**
+  satisfy the overall Phase 2 preference criterion.
 
 ## Phase 3: Instrument Intelligence v2
 
@@ -530,6 +535,12 @@ explicit, hash-pinned bridge from diagnostic S0/M1/M3 disagreement ranges to
 the exact existing phrase-review anchors. It changes only temporary loop and
 navigation state and creates no choice, MIDI or feedback.
 
+A later cross-cutting Workbench slice adds the optional source-referenced
+balanced selected-MIDI audition described under Phase 6. It is deliberately
+separate from the three unity technical transports and Pack Composer: a
+listening derivative and fader recipe, not a candidate score, saved custom
+mixer or final master.
+
 Phase 5.5 starts with a default Project Overview backed by the path-free
 `sunofriend.workbench-home.v1` projection. It reports explicit decisions,
 selected parts, full-mix work and one deterministic resume state/action without
@@ -620,6 +631,19 @@ key, BPM, tuning and downbeat transformation; Clip v1 browsing and reuse; mashup
 preparation; and instrument/Bundle attachment to reviewed parts. Every edit
 must preserve its source candidate and a minimal audit diff. GarageBand remains
 the final performance, patch and mixing environment.
+
+The first arrangement-balance slice is complete in ordinary Workbench. It is
+an explicit selected-MIDI derivative rather than a Clip edit: verified source
+stems guide per-lane gain, the actual waveform sum of alternatives sharing one
+source is calibrated back towards that source reference, a bounded shared drum
+trim prevents the combined drum bus masking the non-drum bus, and final
+audition gain preserves −1 dBFS sample-peak headroom. The
+unity-gain dry proxy and exact transports remain unchanged. The report says
+`mastered: false`; no compressor, limiter, EQ or creative effects are used, and
+GarageBand still owns final patches, automation, mixing and mastering. The
+WAV/receipt/fader recipe are currently Workbench-only and do not enter Pack
+Composer v1. The longest verified stem across the whole project also owns the
+balanced WAV horizon; longer neutral-render tails are disclosed and excluded.
 
 The technical and guided-review gate has passed. The first read-only Clip
 Library slice is complete under an explicit all-or-none launch
@@ -824,6 +848,67 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-07-25 — Phase 2 final evidence and balanced selected-MIDI audition
+
+- Phase 2 goal: resolve the final assembled reviewed-versus-automatic listening
+  gate without inferring a whole-melody preference from the earlier phrase
+  choices or objective metrics.
+- Phase 2 evidence: the reviewed browser export SHA-256 is
+  `15ad1de80c5485b4c6dfeb05f158123218595ce698f763a3d53cc05c646ec275`.
+  `midi-ab-resolve` verified it against package commitment
+  `ea2b3f6367e1b0856db01c80902a1fadda1f42e0362f032f29c30ccf89c3b778`;
+  the resolved result SHA-256 is
+  `252fd87b3fd2e9a0a7b156426eca79562959159999f67dca07318e816568efdd`.
+- Phase 2 listening result: the 61-note reviewed assembly was preferred to the
+  untouched 23-note automatic candidate for the opening 0.250–4.966 second
+  loop. The 4.988–9.860 and 10.600–15.000 second loops were both judged
+  **neither**. The automatic candidate won no loop. This is a local
+  opening-phrase improvement, not evidence that the reviewed melody is
+  preferable overall; the Phase 2 programme success criterion was not met.
+  Every source/MIDI mutation, selection, promotion and default-change effect is
+  false.
+- Arrangement goal: make the selected MIDI useful as a combined listening
+  sample when several unity-gain drum tracks mask bass, keys and other pitched
+  parts, without corrupting the dry technical evidence or pretending to create
+  a release master.
+- Change: ordinary Workbench now offers a separate
+  `sunofriend.workbench-balanced-arrangement.v1` derivative. It measures each
+  selected neutral preview against its verified matching stem, measures and
+  calibrates the actual waveform sum of same-source alternatives, applies a
+  bounded drum-bus guard, then uses gain-only audition normalisation with a
+  −1 dBFS sample-peak ceiling. It writes a PCM24 WAV, path-free exact receipt
+  and GarageBand fader recipe. The API accepts only the current
+  selection-manifest hash.
+- Arrangement evidence: the 10-part Train smoke produced a source-horizon
+  199.200 second PCM24 WAV under
+  `source-referenced-summed-group-balance-v3`, cache key
+  `7026d22f124ccdd5aff4eb6e66247bc12a6f509310792d9e795636cf85978fd1`.
+  In 360 qualifying overlap windows, the drum/non-drum
+  median and p95 changed from −2.081/+9.625 dB to −8.706/+3.000 dB after a
+  −6.625 dB guard, meeting both drum targets. Final median active-block RMS was
+  −18.325 dBFS with a −1.000 dBFS sample peak and zero full-scale samples. The
+  requested −18 dBFS target was truthfully marked unmet by −0.325 dB because
+  the sample-peak ceiling prevented more gain. WAV SHA-256 is
+  `eea86a2f57d984850c6b3b1defb93969813239a228fd6880659d970769d46e0c`;
+  the receipt **file** SHA-256 is
+  `d8c187a425d19d087d15e305ccc830c71311a5ff7f966ab9b2c80f13a8b66032`,
+  while its separate internal unsigned-payload commitment
+  `receipt_sha256` is
+  `9f2f76c7bffbf7b7629ab5f09c9cc354cdc322754a688019f119eb6d3ada07fe`.
+  The GarageBand recipe SHA-256 is
+  `d2f792c7515938d133f638cd6ea0ebf4a09a85855879e59015e8f1efe3433e57`.
+- Verification: the focused balanced-audition, UI and developer suite passed
+  125 tests; the complete repository suite passed 1085 tests in 308.23
+  seconds. The sole warning is the existing third-party
+  `resampy`/`pkg_resources` deprecation warning.
+- Boundary: the dry proxy and all decoded transports remain unity gain. No MIDI
+  note, velocity, timing, source, selection, review event, feedback or default
+  changes. Compression, limiting, EQ, saturation and creative effects remain
+  off; the report records `mastered: false`. The new artifacts are
+  Workbench-only and are not standalone CLI or GarageBand Pack Composer v1
+  outputs. Final patch choice, mix automation and mastering remain in
+  GarageBand.
+
 ### 2026-07-23 — Phase 1 closed; first genuine Phase 2 choices applied
 
 - Goal: close the outstanding human evidence honestly and turn the first real
@@ -856,7 +941,7 @@ Each working day should aim for one narrow vertical improvement:
   `84e91173a5423f8baa9e50db7ff96ff3094b5e48790d2c8dfd221ae034afdee8`.
   It remains local, deterministic and advisory; it does not reorder candidates,
   change defaults or select future melodies.
-- Remaining Phase 2 gate: record one explicit preference between the assembled
+- Phase 2 gate as of 23 July: record one explicit preference between the assembled
   reviewed neutral rendering and the untouched automatic candidate. The phrase
   review itself is complete, but that separate programme success criterion is
   not inferred from JSON structure or objective metrics. A private three-loop
@@ -867,7 +952,9 @@ Each working day should aim for one narrow vertical improvement:
   `64bb90d9be78bb7ffe6cacb44ad28c78864f485cc5092c206564d9c1b5452762`
   and
   `c46cee4d459e87b7e39537524774f438c4c8c2b951eb261e2996cedca6480e79`.
-  The answer key remains separate until the reviewed export is resolved.
+  The answer key remained separate until the reviewed export was resolved on
+  25 July; see the newer daily entry above for the final 1/0/2 result and
+  honest non-promotion decision.
 
 ### 2026-07-23 — Phase 6.3e bounded existing-note end/duration correction
 

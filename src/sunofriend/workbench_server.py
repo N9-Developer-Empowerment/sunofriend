@@ -9,9 +9,11 @@ import json
 import mimetypes
 import os
 import secrets
+import tempfile
 import threading
 import webbrowser
 from collections import OrderedDict
+from contextlib import ExitStack
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -24,6 +26,7 @@ from .workbench_catalog import (
     public_catalog,
 )
 from .workbench_artifacts import (
+    BALANCED_ARRANGEMENT_SCHEMA,
     WorkbenchArtifacts,
     WorkbenchPackConflictError,
     canonical_garageband_pack_basket,
@@ -95,6 +98,37 @@ def _read_verified_immutable_bytes(handle: Any, record: Mapping[str, Any]) -> by
     ).hexdigest() != str(record.get("sha256", "")):
         raise ValueError("pinned file bytes changed")
     return payload
+
+
+def _freeze_verified_immutable_file(
+    handle: Any,
+    record: Mapping[str, Any],
+) -> Any:
+    """Copy verified bytes to a disk-backed anonymous snapshot for serving.
+
+    Balanced auditions can be hundreds of MiB. A TemporaryFile keeps the
+    post-verification response immutable without loading the full WAV into
+    memory, and Range requests seek only within that frozen snapshot.
+    """
+
+    snapshot = tempfile.TemporaryFile(mode="w+b")
+    digest = hashlib.sha256()
+    size = 0
+    try:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            snapshot.write(chunk)
+            digest.update(chunk)
+            size += len(chunk)
+        if (
+            size != record.get("bytes")
+            or digest.hexdigest() != str(record.get("sha256", ""))
+        ):
+            raise ValueError("pinned file bytes changed")
+        snapshot.seek(0)
+        return snapshot
+    except Exception:
+        snapshot.close()
+        raise
 
 
 def _require_exact_request_keys(
@@ -940,6 +974,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             "/api/decoded-arrangement-stream",
             "/api/decoded-arrangement-chunk",
             "/api/arrangement",
+            "/api/balanced-arrangement",
             "/api/garageband-export",
             "/api/garageband-pack-basket",
             "/api/garageband-pack",
@@ -1436,6 +1471,114 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     public_chunk = self._public_decoded_arrangement_chunk(artifact)
                 self._json(HTTPStatus.OK, {"chunk": public_chunk})
                 return
+            if parsed.path == "/api/balanced-arrangement":
+                _require_exact_request_keys(
+                    request,
+                    {"selection_manifest_sha256"},
+                    label="balanced arrangement",
+                )
+                requested_manifest_sha256 = _require_lowercase_sha256(
+                    request.get("selection_manifest_sha256"),
+                    label="balanced arrangement selection_manifest_sha256",
+                )
+                with self.server.state_lock:
+                    initial_state = self.server.store.current_state(
+                        self.server.catalog
+                    )
+                    initial_manifest = (
+                        self.server.artifacts.decoded_arrangement_selection_manifest(
+                            self.server.catalog,
+                            initial_state,
+                        )
+                    )
+                    if (
+                        requested_manifest_sha256
+                        != initial_manifest["selection_manifest_sha256"]
+                    ):
+                        raise WorkbenchSelectionConflictError(
+                            "the selected arrangement changed; reload it before "
+                            "creating a balanced audition"
+                        )
+                try:
+                    artifact = self.server.artifacts.render_balanced_arrangement(
+                        self.server.catalog,
+                        initial_state,
+                        requested_manifest_sha256,
+                        promote_cache=False,
+                    )
+                except ValueError as exc:
+                    with self.server.state_lock:
+                        failed_state = self.server.store.current_state(
+                            self.server.catalog
+                        )
+                        failed_manifest = self.server.artifacts.decoded_arrangement_selection_manifest(  # noqa: E501
+                            self.server.catalog,
+                            failed_state,
+                        )
+                    if (
+                        requested_manifest_sha256
+                        != failed_manifest["selection_manifest_sha256"]
+                    ):
+                        raise WorkbenchSelectionConflictError(
+                            "the selected arrangement changed while the balanced "
+                            "audition was being created; reload and retry"
+                        ) from exc
+                    raise
+                cache_key = str(artifact.get("cache_key", ""))
+                deferred_claim = artifact.get("_deferred_cache_claim")
+                claim_token = (
+                    str(deferred_claim)
+                    if isinstance(deferred_claim, str)
+                    else None
+                )
+                try:
+                    with self.server.state_lock:
+                        final_state = self.server.store.current_state(
+                            self.server.catalog
+                        )
+                        final_manifest = self.server.artifacts.decoded_arrangement_selection_manifest(  # noqa: E501
+                            self.server.catalog,
+                            final_state,
+                        )
+                        if (
+                            requested_manifest_sha256
+                            != final_manifest["selection_manifest_sha256"]
+                            or artifact.get("selection_manifest_sha256")
+                            != requested_manifest_sha256
+                        ):
+                            raise WorkbenchSelectionConflictError(
+                                "the selected arrangement changed while the balanced "
+                                "audition was being created; reload and retry"
+                            )
+                        promoted = (
+                            self.server.artifacts.promote_balanced_arrangement(
+                                cache_key,
+                                claim_token=claim_token,
+                            )
+                        )
+                        # Promotion consumes the private claim. From here onward
+                        # the verified cache is adopted even if response
+                        # serialization or delivery fails.
+                        claim_token = None
+                        promoted["cache_hit"] = artifact.get("cache_hit") is True
+                        public_artifact = self._public_artifact(promoted)
+                except Exception:
+                    if claim_token is not None:
+                        try:
+                            self.server.artifacts.discard_deferred_balanced_arrangement(
+                                cache_key,
+                                claim_token,
+                            )
+                        except Exception:
+                            # Cleanup is best effort. It must never replace the
+                            # truthful conflict or primary rendering error.
+                            pass
+                    raise
+                self._json(
+                    HTTPStatus.OK,
+                    {"balanced_arrangement": public_artifact},
+                )
+                return
             if parsed.path == "/api/garageband-pack-basket":
                 _require_exact_request_keys(
                     request,
@@ -1661,6 +1804,14 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         payload["arrangement"] = (
             self._public_artifact(arrangement) if arrangement else None
         )
+        balanced_arrangement = self.server.artifacts.cached_balanced_arrangement(
+            self.server.catalog, state
+        )
+        payload["balanced_arrangement"] = (
+            self._public_artifact(balanced_arrangement)
+            if balanced_arrangement
+            else None
+        )
         payload["developer"] = {
             "enabled": self.server.developer_inspector,
             "snapshot_endpoint": (
@@ -1857,6 +2008,9 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         self._developer_trace_route = None
 
     def _public_artifact(self, artifact: Mapping[str, Any]) -> dict[str, Any]:
+        freeze_balanced = (
+            artifact.get("schema") == BALANCED_ARRANGEMENT_SCHEMA
+        )
         public = {
             key: value
             for key, value in artifact.items()
@@ -1864,14 +2018,19 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             not in {
                 "midi",
                 "preview",
+                "report",
+                "recipe",
                 "zip",
                 "acceptance_review",
                 "acceptance_seed",
+                "_deferred_cache_claim",
             }
         }
         for key, prefix in (
             ("midi", "artifact-midi"),
             ("preview", "artifact-preview"),
+            ("report", "artifact-report"),
+            ("recipe", "artifact-recipe"),
             ("zip", "artifact-zip"),
             ("acceptance_review", "artifact-acceptance-review"),
         ):
@@ -1880,6 +2039,8 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 continue
             media_id = f"{prefix}-{str(record['sha256'])[:24]}"
             private_record = dict(record)
+            if freeze_balanced:
+                private_record["_freeze_on_serve"] = True
             if key == "acceptance_review":
                 private_record["_freeze_on_serve"] = True
                 private_record["_review_page"] = True
@@ -2233,9 +2394,10 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         except OSError:
             self._error(HTTPStatus.NOT_FOUND, "workbench media not found")
             return
-        with handle:
+        with handle, ExitStack() as response_stack:
             frozen_payload: bytes | None = None
-            if phrase_review or freeze_verified:
+            frozen_file: Any | None = None
+            if phrase_review:
                 try:
                     frozen_payload = _read_verified_immutable_bytes(handle, record)
                 except ValueError:
@@ -2245,6 +2407,30 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     )
                     return
                 size = len(frozen_payload)
+                verified = True
+            elif freeze_verified:
+                try:
+                    frozen_file = _freeze_verified_immutable_file(
+                        handle,
+                        record,
+                    )
+                except ValueError:
+                    self._error(
+                        HTTPStatus.CONFLICT,
+                        "workbench media changed after it was catalogued; restart the Workbench",
+                    )
+                    return
+                except OSError:
+                    try:
+                        self._error(
+                            HTTPStatus.SERVICE_UNAVAILABLE,
+                            "temporary verified media snapshot could not be created",
+                        )
+                    except (BrokenPipeError, ConnectionResetError):
+                        pass
+                    return
+                frozen_file = response_stack.enter_context(frozen_file)
+                size = int(record["bytes"])
                 verified = True
             else:
                 handle.seek(0, 2)
@@ -2270,44 +2456,59 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 try:
                     start, end = _parse_byte_range(range_header, size)
                 except ValueError as exc:
-                    self.send_response(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
-                    self.send_header("Content-Range", f"bytes */{size}")
-                    self._security_headers(phrase_review=phrase_review)
-                    payload = str(exc).encode("utf-8")
-                    self.send_header("Content-Type", "text/plain; charset=utf-8")
-                    self.send_header("Content-Length", str(len(payload)))
-                    self.end_headers()
-                    self.wfile.write(payload)
+                    try:
+                        self.send_response(
+                            HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE
+                        )
+                        self.send_header("Content-Range", f"bytes */{size}")
+                        self._security_headers(phrase_review=phrase_review)
+                        payload = str(exc).encode("utf-8")
+                        self.send_header(
+                            "Content-Type",
+                            "text/plain; charset=utf-8",
+                        )
+                        self.send_header("Content-Length", str(len(payload)))
+                        self.end_headers()
+                        self.wfile.write(payload)
+                    except (BrokenPipeError, ConnectionResetError):
+                        pass
                     return
                 status = HTTPStatus.PARTIAL_CONTENT
             content_type = (
                 mimetypes.guess_type(path.name)[0] or "application/octet-stream"
             )
-            self.send_response(status)
-            self._security_headers(phrase_review=phrase_review)
-            self.send_header("Content-Type", content_type)
-            self.send_header("Accept-Ranges", "bytes")
-            self.send_header("Content-Length", str(max(0, end - start + 1)))
-            disposition = (
-                "attachment"
-                if path.suffix.lower() == ".zip" and not phrase_review
-                else "inline"
-            )
-            self.send_header(
-                "Content-Disposition",
-                f'{disposition}; filename="{_safe_filename(path.name)}"',
-            )
-            if status == HTTPStatus.PARTIAL_CONTENT:
-                self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
-            self.end_headers()
             try:
+                self.send_response(status)
+                self._security_headers(phrase_review=phrase_review)
+                self.send_header("Content-Type", content_type)
+                self.send_header("Accept-Ranges", "bytes")
+                self.send_header(
+                    "Content-Length",
+                    str(max(0, end - start + 1)),
+                )
+                disposition = (
+                    "attachment"
+                    if path.suffix.lower() == ".zip" and not phrase_review
+                    else "inline"
+                )
+                self.send_header(
+                    "Content-Disposition",
+                    f'{disposition}; filename="{_safe_filename(path.name)}"',
+                )
+                if status == HTTPStatus.PARTIAL_CONTENT:
+                    self.send_header(
+                        "Content-Range",
+                        f"bytes {start}-{end}/{size}",
+                    )
+                self.end_headers()
                 if frozen_payload is not None:
                     self.wfile.write(frozen_payload[start : end + 1])
                     return
-                handle.seek(start)
+                response_handle = frozen_file or handle
+                response_handle.seek(start)
                 remaining = max(0, end - start + 1)
                 while remaining:
-                    chunk = handle.read(min(64 * 1024, remaining))
+                    chunk = response_handle.read(min(64 * 1024, remaining))
                     if not chunk:
                         break
                     self.wfile.write(chunk)

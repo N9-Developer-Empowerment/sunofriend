@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from .clip import MidiNoteLimitError, read_midi_clips
+from .role_semantics import is_drum_role
 from .workbench_privacy import path_free_role
 
 
@@ -35,9 +36,6 @@ MAX_TIMELINE_CANDIDATES = 12
 MAX_ARRANGEMENT_TIMELINE_NOTES = 40_000
 MAX_ARRANGEMENT_MIDI_LANES = 24
 MAX_ARRANGEMENT_SOURCE_LANES = 24
-_DRUM_ROLES = frozenset(
-    {"kick", "snare", "hat", "cymbals", "toms", "other_kit", "drums", "percussion"}
-)
 
 
 class _TruncatedPCMDataError(ValueError):
@@ -531,9 +529,7 @@ def _candidate_timeline(
         else "note-count-exceeds-arrangement-visual-budget"
     )
     stem_role = str(stem.get("role") or "unclassified").strip().lower()
-    role_display_mode = (
-        "drum-grid" if stem_role in _DRUM_ROLES else "piano-roll"
-    )
+    role_display_mode = "drum-grid" if is_drum_role(stem_role) else "piano-roll"
     base: dict[str, Any] = {
         "candidate_id": str(candidate.get("candidate_id", "")),
         "midi_sha256": str(record["sha256"]),
@@ -639,7 +635,7 @@ def _candidate_timeline(
             "tracks": [],
         }
 
-    drum_role = stem_role in _DRUM_ROLES
+    drum_role = is_drum_role(stem_role)
     tracks: list[dict[str, Any]] = []
     for track_index, clip in enumerate(clips):
         track_notes = []

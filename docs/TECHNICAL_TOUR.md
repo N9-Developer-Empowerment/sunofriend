@@ -24,6 +24,8 @@ flowchart LR
 
     I["Temporary audition state"] -. "does not select" .-> E
     J["Separate Pack Composer basket"] -. "controls files only" .-> G
+    F --> K["Optional source-referenced balanced audition"]
+    K -. "fader recipe only; not packed or mastered" .-> H
 ```
 
 There is deliberately no single arrow labelled “choose the best model.” A
@@ -41,6 +43,7 @@ The most important architectural separation is:
 | Pack Composer basket | Separately append-only | Which eligible files enter one ZIP |
 | Audition and view controls | Browser/process memory | What is playing or visible now |
 | Generated previews and streams | Rebuildable cache | Listening aids, not preference evidence |
+| Balanced selected-MIDI audition | Rebuildable cache | Gain-only listening derivative and DAW starting recipe, not a master |
 
 ## 1. CLI and application entry points
 
@@ -277,18 +280,46 @@ for long songs without becoming a hidden editor or selection system.
 2. [`workbench_timeline.build_arrangement_timeline`](../src/sunofriend/workbench_timeline.py)
    uses only the server-derived active selection.
 3. [`WorkbenchArtifacts`](../src/sunofriend/workbench_artifacts.py) renders
-   content-addressed neutral previews and exact decoded loops or chunks.
+   content-addressed neutral previews, exact decoded loops or chunks, and an
+   explicitly requested balanced selected-MIDI derivative.
 4. Precise comparison and canonical arrangement transports use one Web Audio
    clock. The arbitrary full-song mixer is explicitly coarser HTML-media
    playback.
-5. Cache eviction loses no musical decision. An artifact can be rebuilt from
+5. [`workbench_mix.build_balanced_midi_audition`](../src/sunofriend/workbench_mix.py)
+   measures matching source/neutral-preview pairs, measures and calibrates each
+   actual same-source waveform sum, applies transparent lane, drum-bus and
+   output gains, then writes PCM24 audio, a path-free internal mix report and
+   GarageBand fader recipe. `WorkbenchArtifacts.render_balanced_arrangement`
+   wraps those outputs in the separate path-free provenance receipt and
+   content-addressed cache manifest.
+6. Cache eviction loses no musical decision. An artifact can be rebuilt from
    verified source records and current state.
+
+The exact short/full-song transports and dry proxy stay at unity gain. The
+balance operation is a separate POST containing only the current selection
+manifest hash. It measures the actual coherent sum of selected alternatives
+derived from the same source and calibrates that group towards one source
+reference. It then restrains the combined drum bus against the non-drum bus,
+targets a useful audition level and preserves −1 dBFS sample-peak headroom. Its
+end frame is the longest verified source stem, with any longer neutral-preview
+tail disclosed in the artifact manifest.
+An inactive source uses the report's conservative −6 dB drum or 0 dB non-drum
+fallback.
+There is no compressor, limiter, EQ, saturation, reverb, chorus or stereo
+widening. The result says `mastered: false`; patch choice, automation, final
+mixing and release mastering remain in GarageBand.
+Balanced WAV, receipt and recipe capabilities freeze a hash/size-verified
+disk-backed anonymous snapshot per response before full or Range streaming.
+This closes the verification-to-stream race without holding a possible
+20-minute PCM24 WAV in memory; source drift returns 409 and temporary snapshot
+storage failure returns 503.
 
 ### Invariant
 
 Timeline construction, rendering, play, switch, seek and cache activity do not
 rank candidates or alter source MIDI. Stale work cannot replace evidence for a
-newer selection.
+newer selection. Balanced rendering likewise records no preference or feedback
+and cannot modify the dry control or any transport gain.
 
 ### Tests to read
 
@@ -297,6 +328,10 @@ newer selection.
 - [`tests/test_workbench_decoded_stream_server.py`](../tests/test_workbench_decoded_stream_server.py)
 - [`tests/test_workbench_transport_js.py`](../tests/test_workbench_transport_js.py)
 - [`tests/test_workbench_visualization_js.py`](../tests/test_workbench_visualization_js.py)
+- [`tests/test_workbench_mix.py`](../tests/test_workbench_mix.py)
+- [`tests/test_workbench_balanced_arrangement.py`](../tests/test_workbench_balanced_arrangement.py)
+- [`tests/test_workbench_balanced_server.py`](../tests/test_workbench_balanced_server.py)
+- [`tests/test_workbench_balanced_ui.py`](../tests/test_workbench_balanced_ui.py)
 
 ## 8. Exact GarageBand pack and acceptance boundary
 
@@ -329,7 +364,8 @@ separate explicit acts.
 
 Rejected, unreviewed, needs-correction and superseded MIDI cannot enter the
 pack. Numbered selected MIDI is unchanged. Source audio is excluded unless the
-user separately opts in.
+user separately opts in. The balanced-audition WAV, receipt and fader recipe
+remain explicit Workbench downloads and are not Pack Composer v1 members.
 
 ### Tests to read
 

@@ -19,6 +19,7 @@ from typing import Any, Mapping
 
 from .clip import KeySignature, MidiClip, resolve_export_timing
 from .library import ClipLibrary, ClipSummary
+from .role_semantics import is_drum_role
 from .transform import retime_bpm, transpose_same_mode
 from .workbench_clips import (
     WorkbenchClipService,
@@ -61,34 +62,6 @@ _EFFECT_KEYS = {
     "feedback_recorded",
     "data_submitted",
 }
-_DRUM_ROLES = {
-    "drum",
-    "drums",
-    "drum kit",
-    "drum set",
-    "drumset",
-    "drumkit",
-    "acoustic drums",
-    "electronic drums",
-    "kit",
-    "percussion",
-    "kick",
-    "snare",
-    "hat",
-    "hats",
-    "hi hat",
-    "hi hats",
-    "hihat",
-    "hihats",
-    "cymbal",
-    "cymbals",
-    "tom",
-    "toms",
-    "other kit",
-    "otherkit",
-}
-
-
 class WorkbenchClipTransformError(ValueError):
     """Base error for a rejected explicit Clip transform request."""
 
@@ -584,18 +557,7 @@ def _warnings(transform: Mapping[str, Any]) -> list[str]:
 
 
 def _is_drum_family(clip: MidiClip) -> bool:
-    if clip.instrument.is_drums:
-        return True
-    role = " ".join(
-        clip.instrument.role.casefold().replace("-", " ").replace("_", " ").split()
-    )
-    tokens = set(role.split())
-    return (
-        role in _DRUM_ROLES
-        or bool(tokens & {"kick", "snare", "hihat", "hihats", "cymbal", "cymbals", "tom", "toms"})
-        or "percussion" in tokens
-        or (bool(tokens & {"drum", "drums", "drumkit", "drumset"}) and "steel" not in tokens)
-    )
+    return clip.instrument.channel == 9 or is_drum_role(clip.instrument.role)
 
 
 def _pitch_range(clip: MidiClip) -> dict[str, int] | None:

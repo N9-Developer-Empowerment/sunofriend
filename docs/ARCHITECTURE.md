@@ -57,6 +57,7 @@ CLI parsing (`cli.py`)
         |                              `workbench_privacy.py`,
         |                              `workbench_home.py`,
         |                              `workbench_timeline.py`,
+        |                              `workbench_mix.py`,
         |                              `workbench_artifacts.py`,
         |                              `workbench_server.py`,
         |                              `workbench_clips.py`,
@@ -174,12 +175,13 @@ public catalogs, contribution previews, timelines, archive names or proxy MIDI
 metadata; private raw history is not rewritten.
 `workbench_artifacts.py` owns content-addressed role-neutral previews, private
 decoded per-stem/selected-arrangement clips, exact canonical full-song chunk
-streams, selected-arrangement proxies and deterministic
-GarageBand handoff ZIPs. It reads notes through Clip v1 and renders through the
-existing MIDI/FluidSynth boundaries; discovered MIDI is never rewritten, and
-numbered handoff tracks are exact copies of explicit main/optional choices.
-Rejected, needs-correction, superseded and unreviewed candidates never enter
-the arrangement or ZIP.
+streams, selected-arrangement proxies, source-referenced balanced selected-MIDI
+auditions and deterministic GarageBand handoff ZIPs. `workbench_mix.py` owns
+the gain-only balance calculation and its path-free receipt/fader recipe. Both
+read through verified source and neutral-preview snapshots. Discovered MIDI is
+never rewritten, and numbered handoff tracks are exact copies of explicit
+main/optional choices. Rejected, needs-correction, superseded and unreviewed
+candidates never enter the arrangement or ZIP.
 `workbench_server.py` binds only to `127.0.0.1`, requires a per-launch token,
 serves only catalogued or locally generated verified-cache files, supports byte
 ranges for media seeking and loads no remote scripts. Its packaged HTML uses a
@@ -380,6 +382,69 @@ visibility/mute/solo/0–100 attenuation. Precise arbitrary custom mixes remain
 deferred. The content-addressed prepared dry proxy remains the reproducible
 control.
 
+The optional balanced selected-MIDI artifact is deliberately outside all three
+transport contracts. `POST /api/balanced-arrangement` accepts exactly one
+current `selection_manifest_sha256`; it cannot accept lanes, roles or gains.
+The server validates current state, builds through
+`WorkbenchArtifacts.render_balanced_arrangement`, then rechecks the same
+selection before publishing. Its cache key pins the project and selection
+manifest, BPM, balance policy, SoundFont, source/MIDI/neutral-preview hashes
+and sizes. Source and preview bytes are copied through verified owner-only
+snapshots; source audio is measured and never included in the result.
+
+`workbench_mix.build_balanced_midi_audition` computes median active RMS from
+non-overlapping 400 ms blocks, first gated at −70 dBFS and then within 10 dB of
+each file's active peak. Its final partial analysis block is zero-padded to the
+same 400 ms without extending the written audio. Each neutral MIDI lane is matched towards its source
+level with a −24…+6 dB clamp. Several selected lanes that share one source
+SHA-256 are first matched provisionally, then their actual summed waveform is
+measured and calibrated towards one source reference. This handles identical
+or otherwise coherent alternatives without assuming uncorrelated power. A
+source with no measurable active block uses a disclosed
+conservative fallback of −6 dB for drums or 0 dB for non-drums.
+The longest verified source stem fixes the output horizon. The manifest records
+the maximum neutral-preview horizon and any excluded preview tail, preventing
+renderer or transcription overrun from extending the source-aligned audition.
+
+The combined drum bus then receives at most 18 dB attenuation using
+time-aligned 400 ms windows where both buses are active. It aims for the median
+drum/non-drum difference to be at most −2 dB and its p95 to be at most +3 dB.
+The overlap gate extends 30 dB below each bus peak while retaining the
+−70 dBFS floor; no active overlap means no invented drum trim. Required/applied
+gain, exact before/after overlap measurements on one fixed pre-guard qualifying
+cohort, clamp state and achieved flags are explicit. Both reported gates remain
+the original cohort-selection thresholds; only the after-gain level
+differences shift. A
+single output gain requests −18 dBFS median active-block RMS. Positive boost is
+capped at +12 dB while attenuation is unbounded by an arbitrary floor; peak
+protection may attenuate further to retain −1 dBFS sample-peak headroom. Target
+error and achieved status are recorded. The PCM24 result must contain no
+full-scale sample.
+Compression, limiting, EQ, saturation, reverb, chorus and widening are absent.
+The report explicitly sets `mastered: false`: this is gain staging, audition
+normalisation and sample-peak protection, not LUFS/true-peak or release
+mastering.
+
+`sunofriend.workbench-balanced-arrangement.v1` points to the private WAV,
+`sunofriend.workbench-balanced-mix-receipt.v1` provenance receipt and
+GarageBand fader recipe. The receipt pins project/selection/BPM identity, every
+project-source and selected-lane fingerprint, renderer/SoundFont identity,
+per-lane and output horizons, artifact hashes and the complete
+`sunofriend.workbench-balanced-mix-report.v1` calculation. Every
+musical/project effect is false. Creating or playing the artifact does not alter
+the unity dry proxy, selected MIDI, precise transports, decisions, ranking or
+feedback. It is Workbench-only and is not a Pack Composer item or standalone
+CLI output.
+
+The balanced cache is rebuildable and bounded independently to eight entries
+and 2 GiB. A public media capability never streams a mutable balanced file
+after merely checking it: WAV, receipt and recipe bytes are copied and
+hash/size verified into a per-request disk-backed anonymous snapshot first,
+then full or Range responses seek within that frozen snapshot. Drift returns
+409. Failure to allocate temporary snapshot storage returns 503. This avoids
+both a verification-to-stream race and loading a possible 20-minute PCM24 WAV
+into memory.
+
 The GarageBand Pack Composer translates explicit checkboxes into a versioned,
 path-free plan, canonical basket and deterministic ZIP. Its v1 inventory
 contains each current main/optional MIDI track unchanged, one optional dry
@@ -396,10 +461,11 @@ two-launch loopback integration test verifies restoration of decisions and a
 non-default basket under a fresh capability token while GET routes remain
 effect-free.
 
-Alternative MIDI, Instrument Bundles, persistent mixer projects and custom-mix
-rendering are not implemented in Pack Composer v1. Canonical selected
-arrangements now have bounded and chunked decoded audition paths, while the
-arbitrary custom mixer remains coarse HTML media. All audition transports stay
+Alternative MIDI, Instrument Bundles, persistent mixer projects, custom-mix
+rendering and the balanced-audition WAV/receipt/recipe are not implemented as
+Pack Composer v1 items. Canonical selected arrangements now have bounded and
+chunked decoded audition paths, while the arbitrary custom mixer remains coarse
+HTML media. All audition transports and the optional balance derivative stay
 separate from ZIP composition.
 
 Phase 5.9 adds a report-only learning and local acceptance boundary beside the
@@ -1013,6 +1079,10 @@ score into an automatic winner.
   into main-track notes.
 - Keep optional audio, preview and playback dependencies lazy so pure MIDI and
   Clip operations work in a lightweight installation.
+- Keep neutral/unity technical evidence separate from any creative balance
+  derivative. Label gain-only sample-peak protection as an audition aid, never
+  final mastering; GarageBand still owns patch choice, automation, mixing and
+  release loudness.
 - Add a deterministic regression test before changing pitch, timing, note
   count, provenance or output layout.
 - Keep instrument discovery read-only. Treat matching weights and report

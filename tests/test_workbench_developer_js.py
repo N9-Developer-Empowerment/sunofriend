@@ -323,6 +323,34 @@ console.log(JSON.stringify({rows}));
         self.assertTrue(all(row["symbolCount"] for row in result["rows"]))
         self.assertTrue(all(row["symbolsStatic"] for row in result["rows"]))
 
+    def test_arrangement_routes_match_the_server_operation_catalog(self) -> None:
+        result = self.run_node(
+            """
+console.log(JSON.stringify({
+  dry: developer.routeDescriptor('/api/arrangement?token=secret'),
+  balanced: developer.routeDescriptor(
+    '/api/balanced-arrangement?token=secret'
+  ),
+}));
+"""
+        )
+
+        self.assertEqual(result["dry"]["operation"], "arrangement.render")
+        self.assertEqual(
+            result["dry"]["label"],
+            "Render or reuse the selected arrangement proxy",
+        )
+        self.assertEqual(
+            result["balanced"]["operation"],
+            "arrangement.balance",
+        )
+        self.assertEqual(
+            result["balanced"]["label"],
+            "Render or reuse the source-referenced balanced audition",
+        )
+        self.assertFalse(result["dry"]["durableEffect"])
+        self.assertFalse(result["balanced"]["durableEffect"])
+
 
 if __name__ == "__main__":
     unittest.main()

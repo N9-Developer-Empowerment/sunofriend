@@ -1,6 +1,6 @@
 # Phase 6: Creative Arrangement and Reusable MIDI
 
-Status on 23 July 2026: **entry gate passed; Increment 6.0, the first
+Status on 25 July 2026: **entry gate passed; Increment 6.0, the first
 read-only Clip Library slice, is complete; Increment 6.1, the explicit Clip
 reuse proposal, is complete; Increment 6.2a, the first bounded immutable
 key/BPM transform workflow, is complete; Increment 6.3a, bounded immutable
@@ -10,6 +10,10 @@ contract. Increment 6.3c, bounded exact note removal, and Increment 6.3d,
 bounded existing-note onset shift, and Increment 6.3e, bounded existing-note
 end/duration correction, are complete.** No listening-quality claim is made
 for the 6.3d or 6.3e engineering close-outs.
+The separate, ordinary-Workbench selected-arrangement balance increment is
+also complete: it creates an opt-in source-referenced, sample-peak-protected
+selected-MIDI audition without changing the dry unity control or entering the
+GarageBand Pack.
 Broader Phase 6 creative arrangement remains in progress.
 
 Phase 6 builds on the local Workbench without turning Sunofriend into another
@@ -199,13 +203,16 @@ contract and tests:
    exact diff. Attack velocity, removal and both timing shifts are available
    for drums. Insertion and continuous expression follow under
    separate contracts.
-5. **Explicit hybrids:** only after both Phase 5.3 gates pass, construct a new
+5. **Selected-arrangement balance (complete, ordinary Workbench):** create a
+   source-referenced gain-only selected-MIDI audition and GarageBand fader
+   recipe while retaining the unity technical controls and unchanged MIDI.
+6. **Explicit hybrids:** only after both Phase 5.3 gates pass, construct a new
    candidate from user-named sources and ranges. Never infer a hybrid from
    agreement or popularity.
-6. **Instrument attachment:** attach an explicitly eligible, hash-pinned
+7. **Instrument attachment:** attach an explicitly eligible, hash-pinned
    instrument recommendation or Bundle without presenting it as a portable
    patch identity.
-7. **Mashup preparation:** align confirmed downbeats, key, BPM and timing while
+8. **Mashup preparation:** align confirmed downbeats, key, BPM and timing while
    retaining every source and transformation recipe for GarageBand handoff.
 
 Phase 7 remains the boundary for cross-DAW expansion and separately consented
@@ -913,6 +920,62 @@ The focused integrated correction/UI suite passed 133 tests, the real smoke
 passed and the complete repository suite passed 1009 tests with the one
 existing `resampy`/`pkg_resources` deprecation warning. This is deterministic
 engineering evidence, not a human preference or musical-quality result.
+
+## Selected-arrangement balance increment (complete)
+
+This cross-cutting increment belongs to the ordinary selected-arrangement
+Workbench rather than the gated Clip Library modes. After explicit main and
+optional MIDI choices exist, **Create balanced audition** builds one
+content-addressed selected-MIDI WAV, a path-free exact provenance receipt and a
+GarageBand fader recipe. It does not create or transform a Clip, place a Clip,
+construct a hybrid or require any of the Phase 6 Clip feature flags.
+
+The implementation retains the dry unity-gain proxy and all precise
+unity-gain transports as technical controls. For the separate derivative, each
+verified neutral MIDI preview is measured against its matching verified source
+stem using median active 400 ms block RMS. The final partial analysis block is
+zero-padded to 400 ms without extending the WAV, preventing a short tail or a
+shorter lane from acquiring a false level advantage. Several selected alternatives that
+share one source SHA-256 are calibrated from their actual provisionally matched
+waveform sum. Per-lane source matching is bounded to −24…+6 dB. A common
+drum-bus guard uses time-aligned 400 ms windows where both buses are active. It
+aims for median drum level 2 dB below the non-drum reference and p95 drum
+excess no more than 3 dB, with at most 18 dB attenuation. The overlap gate
+extends 30 dB below each bus peak while retaining the −70 dBFS floor. With no
+active overlap it applies 0 dB. Required/applied gain, exact before/after
+differences on the fixed pre-guard qualifying-window cohort and achieved or
+clamped status are reported. Both gate fields remain the original cohort
+selection thresholds. A source with no
+measurable active block uses a disclosed
+−6 dB drum or 0 dB non-drum fallback.
+
+The requested final gain targets −18 dBFS median active-block RMS. Positive
+boost is capped at +12 dB; attenuation has no arbitrary lower limit, and peak
+protection may attenuate further to retain a −1 dBFS sample-peak ceiling.
+Target error and achieved status are explicit. The PCM24 result must have zero
+full-scale samples.
+Compression, limiting, EQ, saturation, reverb, chorus and stereo widening
+remain off. The report explicitly records `mastered: false` because
+this is source-referenced gain staging, audition normalisation and sample-peak
+protection, not LUFS/true-peak or release mastering.
+The longest verified stem across the whole project defines the output end. The
+manifest and receipt record every source horizon, per-lane padding and excluded
+neutral-render or transcription tail so the listening derivative stays aligned
+with the source-song duration.
+
+The server accepts only the current selection-manifest hash and checks current
+state again after the build. Source audio is measured through private verified
+snapshots and is never mixed into the output. Creating, caching, downloading
+or playing the result leaves source audio, MIDI notes/velocities/timing,
+selections, review history, ranking, defaults, feedback and the dry control
+unchanged.
+
+The result is currently Workbench-only. It is not available through a
+standalone CLI and is not an eligible GarageBand Pack Composer v1 item. The
+recipe names each exact GarageBand Pack MIDI member/index and is a starting
+point for comparable GarageBand patches; GarageBand
+continues to own final patch choice, EQ, dynamics, automation, mixing and
+mastering.
 
 ### Deliberately deferred after 6.3e
 

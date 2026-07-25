@@ -1823,7 +1823,7 @@ class WorkbenchArtifactTests(unittest.TestCase):
                 catalog, stem["stem_id"], candidate["candidate_id"]
             )
             self.assertIsNotNone(cached)
-            self.assertEqual(cached["policy"], "role-neutral-general-midi-v1")
+            self.assertEqual(cached["policy"], "role-neutral-general-midi-v2")
             different_soundfont = root / "different.sf2"
             different_soundfont.write_bytes(b"different-test-soundfont")
             other_renderer = WorkbenchArtifacts(
