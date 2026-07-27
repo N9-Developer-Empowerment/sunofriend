@@ -1,8 +1,8 @@
 # MIDI-derived song interpretation and listening mastering
 
-Status: paired product contract and Workbench/TUI presentation implemented;
-receipt-bound listening-master feedback integration and promotion remain
-planned
+Status: paired product contract, Workbench/TUI presentation and explicit
+Workbench, native TUI and CLI Listening Master routes implemented; blinded
+receipt-bound feedback and any reviewed promotion remain planned
 
 Sunofriend has two linked creative outputs: reviewed, editable MIDI and a
 useful, good-sounding MIDI-derived song-interpretation WAV rendered from the
@@ -139,11 +139,77 @@ The report says `mastered: true` because loudness normalisation and true-peak
 limiting have been applied. It also says `release_master: false` because no
 human has approved it as a release master.
 
-## Run Listening Master v1
+## Create Listening Master v1 in Workbench
 
-First create and download the accepted
-`balanced-selected-midi-preview.wav` from Workbench. Install FFmpeg with its
-`loudnorm` filter, then choose two paths that do not exist:
+In the ordinary Workbench arrangement view:
+
+1. make explicit main/optional MIDI choices;
+2. create the **Balanced MIDI-derived song interpretation**;
+3. retain and hear that gain-only v3 player as the required product output and
+   control; and
+4. choose **Create Listening Master challenger**.
+
+The browser submits only the exact current selection-manifest hash and
+balanced-arrangement manifest hash. It cannot supply an audio path, loudness
+target, filter graph or alternative policy. The server verifies both
+identities, builds through the shared Listening Master v2 evidence contract,
+rechecks the current selection/control before publishing, and exposes a
+separate PCM24 player plus WAV and path-free receipt downloads. A verified
+content-addressed result can be reused after restart.
+
+The Workbench challenger is optional product readiness. It does not complete or
+replace either required product output. Creating, caching, playing or
+downloading it records no event, review, preference or feedback and changes no
+MIDI, selection, ranking, default or GarageBand pack. Its fixed result remains
+`mastered: true` and `release_master: false`.
+
+Before a fresh build, install FFmpeg with its `loudnorm` filter. The convert
+diagnostic checks the SoundFile side of that toolchain:
+
+```bash
+sunofriend doctor --require convert
+```
+
+A verified cache hit is reusable without FFmpeg.
+
+## Create or reuse Listening Master v1 in the Guided Local Studio
+
+The preferred terminal journey uses `sunofriend tui`:
+
+1. create the exact current balanced control in Visual Studio;
+2. stop Visual Studio and refresh the same project;
+3. open **Master**, confirm the comparative-only scope and choose
+   **Create / reuse listening master**; and
+4. return to Visual Studio to hear and download the control and challenger.
+
+The TUI request contains only its verified loaded project snapshot. It accepts
+no audio/output path, mastering target, filter graph, policy selector or
+release-master flag. The runner derives the exact current selection and
+balanced-control manifests, then delegates to the same
+`WorkbenchListeningMasterService` used by Workbench. It rechecks both identities
+before promotion and fails closed if either changed. A final read immediately
+after promotion prevents a separately launched local Workbench change in that
+gap from being reported as current; any old content-addressed entry remains
+only a non-current rebuildable cache.
+
+A verified content-addressed cache hit can be reused without FFmpeg. A fresh
+build first runs a path-free SoundFile, FFmpeg and `loudnorm` dependency
+preflight. Fixed bounded phase progress remains visible while project,
+conversion and Workbench-launch controls are locked. The synchronous verified
+FFmpeg operation has no pseudo-cancel; Quit waits briefly and is explicitly
+deferred if work is still active.
+
+The final panel identifies create versus reuse, shows bounded loudness and
+true-peak evidence and gives the private PCM24 WAV and receipt paths. It still
+says `mastered: true` and `release_master: false`. No operation, cache hit,
+display or later Workbench playback records feedback, changes MIDI/selection,
+promotes a default, completes a required output or adds the artifact to the
+GarageBand Pack.
+
+## Run Listening Master v1 from the expert CLI
+
+The standalone CLI remains useful for a downloaded
+`balanced-selected-midi-preview.wav`. Choose two paths that do not exist:
 
 ```bash
 sunofriend listening-master \
@@ -264,39 +330,33 @@ boundary used by both the renderer and cache verifier. A policy change can no
 longer leave the verifier silently interpreting a report under duplicated old
 constants.
 
-The next maintainability slices should be:
+The current maintainability boundaries are:
 
 1. create one role/instrument registry for renderer programmes, drum-family
    classification, labels and supported ranges;
-2. extract balanced-artifact creation and verification from the large
-   Workbench artifact module behind a small typed interface;
+2. extract balanced-artifact creation/verification from the large Workbench
+   artifact module, while keeping the new listening-master application service
+   as its only mastering orchestration boundary;
 3. keep audio measurement, balance policy, rendering, receipt construction
    and feedback as separate testable stages;
 4. add golden receipt fixtures and deterministic policy-version tests;
-5. make Workbench and TUI thin clients of those shared application services
-   instead of reimplementing audio or policy decisions.
-6. expose an immutable public listening-master contract plus receipt/audio
-   validation boundary before the next master policy or schema, then split
-   feedback evidence I/O and advisory-profile aggregation from that validator.
-   The current v2 implementation is tested, but its feedback validator still
-   imports private mastering helpers and should not carry that coupling into a
-   second policy.
+5. keep Workbench and TUI as thin clients of those shared application services
+   instead of reimplementing audio or policy decisions;
+6. preserve the now-shared immutable listening-master contract plus receipt/
+   audio verifier before adding another policy, then keep feedback evidence
+   I/O and advisory-profile aggregation outside that validator.
 
 Each refactor should preserve byte-level evidence or declare a new policy and
 produce a control/challenger comparison.
 
 ## Next acceptance increments
 
-1. Add the listening-master action and exact receipt to Workbench without
-   replacing the balanced v3 player.
-2. Add the same explicit operation to the TUI, including dependency preflight,
-   fresh-output semantics and bounded progress.
-3. Present a level-aware balanced-control versus listening-master A/B with an
+1. Present a level-aware balanced-control versus listening-master A/B with an
    explicit choice and useful problem tags.
-4. Add complete-instrument challengers one role at a time, starting with bass
+2. Add complete-instrument challengers one role at a time, starting with bass
    and keys, while keeping the MIDI fixed.
-5. Compare balance challengers only after instrumentation is held constant.
-6. Connect verified local feedback profiles as advisory context, never silent
+3. Compare balance challengers only after instrumentation is held constant.
+4. Connect verified local feedback profiles as advisory context, never silent
    selection or default promotion.
 
 The near-term success criterion is not “sounds exactly like the stems.” It is:

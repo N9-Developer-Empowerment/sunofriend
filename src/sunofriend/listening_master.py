@@ -28,32 +28,42 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from .listening_master_contract import (
+    ENCODED_ARTIFACT_LABEL,
+    FFMPEG_IDENTITY_POLICY,
+    INTEGRATED_LOUDNESS_TOLERANCE_LU,
+    LISTENING_MASTER_EFFECTS,
+    LISTENING_MASTER_LABEL,
+    LISTENING_MASTER_POLICY,
+    LISTENING_MASTER_PROCESSING_FLAGS,
+    LISTENING_MASTER_SCHEMA,
+    LISTENING_MASTER_SCOPE,
+    LISTENING_MASTER_TARGETS,
+    LISTENING_MASTER_TIMING_POLICY,
+    LISTENING_MASTER_VERIFICATION_SCHEMA,
+    LOUDNORM_FIELDS,
+    TARGET_INTEGRATED_LUFS,
+    TARGET_LOUDNESS_RANGE_LU,
+    TRUE_PEAK_CEILING_DBTP,
+    TRUE_PEAK_TOLERANCE_DB,
+    require_encoded_master_targets as _require_encoded_master_targets,
+    validated_loudnorm_stats as _validated_loudnorm_stats,
+)
 
-LISTENING_MASTER_SCHEMA = "sunofriend.listening-master.v2"
-LISTENING_MASTER_POLICY = "ffmpeg-loudnorm-two-pass-fixed-horizon-v1"
-FFMPEG_IDENTITY_POLICY = "stat-and-sha256-before-after-every-pass-v1"
 
-_TARGET_INTEGRATED_LUFS = -16.0
-_TARGET_LOUDNESS_RANGE_LU = 11.0
-_TRUE_PEAK_CEILING_DBTP = -1.0
-_LOUDNESS_TOLERANCE_LU = 0.2
-_TRUE_PEAK_TOLERANCE_DB = 0.05
+# Private aliases are retained for callers of the original v2 implementation.
+# New consumers must import the public names from listening_master_contract.
+_TARGET_INTEGRATED_LUFS = TARGET_INTEGRATED_LUFS
+_TARGET_LOUDNESS_RANGE_LU = TARGET_LOUDNESS_RANGE_LU
+_TRUE_PEAK_CEILING_DBTP = TRUE_PEAK_CEILING_DBTP
+_LOUDNESS_TOLERANCE_LU = INTEGRATED_LOUDNESS_TOLERANCE_LU
+_TRUE_PEAK_TOLERANCE_DB = TRUE_PEAK_TOLERANCE_DB
 _MAXIMUM_SECONDS = 20 * 60
 _MAXIMUM_SOURCE_BYTES = 2 * 1024 * 1024 * 1024
 _MAXIMUM_FFMPEG_OUTPUT_BYTES = 512 * 1024
-_LOUDNORM_FIELDS = frozenset(
-    {
-        "input_i",
-        "input_tp",
-        "input_lra",
-        "input_thresh",
-        "output_i",
-        "output_tp",
-        "output_lra",
-        "output_thresh",
-        "normalization_type",
-        "target_offset",
-    }
+_LOUDNORM_FIELDS = LOUDNORM_FIELDS
+LISTENING_MASTER_PREFLIGHT_SCHEMA = (
+    "sunofriend.listening-master-dependency-preflight.v1"
 )
 
 
@@ -89,6 +99,52 @@ class _PrivateFile:
     name: str
     fd: int
     identity: _FileIdentity
+
+
+def check_listening_master_dependencies(
+    ffmpeg_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Verify the fixed mastering runtime and return path-free evidence.
+
+    This performs the same import, pinned-executable identity, and ``loudnorm``
+    capability checks used by :func:`build_listening_master`, without reading
+    source audio or creating output files.  The returned document deliberately
+    omits the resolved executable path so it is safe to surface in bounded
+    application state and diagnostic views.  Dependency failures still raise
+    ``RuntimeError`` and create no artifacts.
+    """
+
+    soundfile = _soundfile_module()
+    executable = _pin_ffmpeg(_resolve_ffmpeg(ffmpeg_path))
+    try:
+        ffmpeg_identity = _ffmpeg_identity(executable)
+        _require_loudnorm_filter(executable)
+    finally:
+        try:
+            os.close(executable.fd)
+        except OSError:
+            pass
+
+    soundfile_version = getattr(soundfile, "__version__", None)
+    libsndfile_version = getattr(soundfile, "__libsndfile_version__", None)
+    return {
+        "schema": LISTENING_MASTER_PREFLIGHT_SCHEMA,
+        "ready": True,
+        "soundfile": {
+            "available": True,
+            "version": (
+                str(soundfile_version)[:200]
+                if soundfile_version is not None
+                else None
+            ),
+            "libsndfile_version": (
+                str(libsndfile_version)[:200]
+                if libsndfile_version is not None
+                else None
+            ),
+        },
+        "ffmpeg": ffmpeg_identity,
+    }
 
 
 def build_listening_master(
@@ -261,14 +317,10 @@ def build_listening_master(
             "schema": LISTENING_MASTER_SCHEMA,
             "status": "complete",
             "policy": LISTENING_MASTER_POLICY,
-            "label": "Balanced MIDI listening master challenger",
+            "label": LISTENING_MASTER_LABEL,
             "mastered": True,
             "release_master": False,
-            "mastering_scope": (
-                "two-pass integrated-loudness normalisation and true-peak "
-                "limiting for comparative listening; not a human-approved "
-                "release master"
-            ),
+            "mastering_scope": LISTENING_MASTER_SCOPE,
             "source": {
                 "sha256": source_record["sha256"],
                 "bytes": source_record["bytes"],
@@ -279,18 +331,12 @@ def build_listening_master(
                 "frames": source_info["frames"],
                 "duration_seconds": source_info["duration_seconds"],
             },
-            "targets": {
-                "integrated_lufs": _TARGET_INTEGRATED_LUFS,
-                "loudness_range_lu": _TARGET_LOUDNESS_RANGE_LU,
-                "true_peak_ceiling_dbtp": _TRUE_PEAK_CEILING_DBTP,
-                "integrated_loudness_tolerance_lu": _LOUDNESS_TOLERANCE_LU,
-                "true_peak_tolerance_db": _TRUE_PEAK_TOLERANCE_DB,
-            },
+            "targets": dict(LISTENING_MASTER_TARGETS),
             "analysis_pass": first_stats,
             "render_pass": second_stats,
             "verification_pass": {
                 **verification_stats,
-                "measured_artifact": "encoded_pcm24_output",
+                "measured_artifact": ENCODED_ARTIFACT_LABEL,
             },
             "renderer": ffmpeg_identity,
             "output": {
@@ -305,7 +351,7 @@ def build_listening_master(
                 "duration_seconds": rendered_info["duration_seconds"],
             },
             "timing": {
-                "policy": "retain-input-frame-horizon-v1",
+                "policy": LISTENING_MASTER_TIMING_POLICY,
                 "input_frames": source_info["frames"],
                 "output_frames": rendered_info["frames"],
                 "sample_rate": source_info["sample_rate"],
@@ -314,28 +360,10 @@ def build_listening_master(
                 "time_stretch_applied": False,
             },
             "processing": {
-                "integrated_loudness_normalisation": True,
-                "true_peak_limiting": True,
                 "normalization_type": second_stats["normalization_type"],
-                "encoded_artifact_verified": True,
-                "equalisation": False,
-                "stereo_widening": False,
-                "reverb": False,
-                "chorus": False,
-                "saturation": False,
+                **dict(LISTENING_MASTER_PROCESSING_FLAGS),
             },
-            "effects": {
-                "source_audio_mutated": False,
-                "source_audio_overwritten": False,
-                "midi_mutated": False,
-                "selection_changed": False,
-                "feedback_recorded": False,
-                "automatic_selection": False,
-                "automatic_ranking": False,
-                "default_selection_changed": False,
-                "control_balance_replaced": False,
-                "listening_master_created": True,
-            },
+            "effects": dict(LISTENING_MASTER_EFFECTS),
         }
         payload["receipt_sha256"] = _document_hash(payload)
         report_temporary = _create_private_file(
@@ -485,36 +513,6 @@ def _parse_loudnorm_stats(stderr: str) -> dict[str, Any]:
     if not candidates:
         raise RuntimeError("FFmpeg loudnorm did not return its JSON measurements")
     return _validated_loudnorm_stats(candidates[-1])
-
-
-def _validated_loudnorm_stats(value: Mapping[str, Any]) -> dict[str, Any]:
-    if not isinstance(value, Mapping) or not _LOUDNORM_FIELDS <= set(value):
-        raise ValueError("FFmpeg loudnorm measurements are incomplete")
-    output: dict[str, Any] = {}
-    for key in sorted(_LOUDNORM_FIELDS - {"normalization_type"}):
-        try:
-            number = float(value[key])
-        except (TypeError, ValueError) as exc:
-            raise ValueError("FFmpeg loudnorm measurements are invalid") from exc
-        if not math.isfinite(number) or not -200.0 <= number <= 200.0:
-            raise ValueError("FFmpeg loudnorm measurements are invalid")
-        output[key] = round(number, 6)
-    normalization_type = str(value["normalization_type"]).strip().lower()
-    if normalization_type not in {"linear", "dynamic"}:
-        raise ValueError("FFmpeg loudnorm normalization type is invalid")
-    output["normalization_type"] = normalization_type
-    return output
-
-
-def _require_encoded_master_targets(stats: Mapping[str, Any]) -> None:
-    values = _validated_loudnorm_stats(stats)
-    loudness_error = float(values["input_i"]) - _TARGET_INTEGRATED_LUFS
-    if abs(loudness_error) > _LOUDNESS_TOLERANCE_LU:
-        raise RuntimeError(
-            "listening-master integrated loudness missed its fixed target"
-        )
-    if float(values["input_tp"]) > _TRUE_PEAK_CEILING_DBTP + _TRUE_PEAK_TOLERANCE_DB:
-        raise RuntimeError("listening-master true-peak protection failed")
 
 
 def _resolve_ffmpeg(value: str | Path | None) -> Path:
@@ -1067,8 +1065,24 @@ def _soundfile_module() -> Any:
 
 
 __all__ = [
+    "ENCODED_ARTIFACT_LABEL",
     "FFMPEG_IDENTITY_POLICY",
+    "INTEGRATED_LOUDNESS_TOLERANCE_LU",
+    "LISTENING_MASTER_EFFECTS",
+    "LISTENING_MASTER_LABEL",
     "LISTENING_MASTER_POLICY",
+    "LISTENING_MASTER_PREFLIGHT_SCHEMA",
+    "LISTENING_MASTER_PROCESSING_FLAGS",
     "LISTENING_MASTER_SCHEMA",
+    "LISTENING_MASTER_SCOPE",
+    "LISTENING_MASTER_TARGETS",
+    "LISTENING_MASTER_TIMING_POLICY",
+    "LISTENING_MASTER_VERIFICATION_SCHEMA",
+    "LOUDNORM_FIELDS",
+    "TARGET_INTEGRATED_LUFS",
+    "TARGET_LOUDNESS_RANGE_LU",
+    "TRUE_PEAK_CEILING_DBTP",
+    "TRUE_PEAK_TOLERANCE_DB",
     "build_listening_master",
+    "check_listening_master_dependencies",
 ]

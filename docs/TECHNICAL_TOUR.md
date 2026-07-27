@@ -54,7 +54,7 @@ The most important architectural separation is:
 | Audition and view controls | Browser/process memory | What is playing or visible now |
 | Generated previews and streams | Rebuildable cache | Listening aids, not preference evidence |
 | MIDI-derived song-interpretation WAV | Rebuildable cache | Gain-only render of reviewed selected MIDI and DAW starting recipe; source stems provide timing, horizon and level evidence but are not mixed into it |
-| Optional listening master | Explicit derivative | Comparative fixed-policy challenger, not a release master |
+| Optional listening master | Rebuildable content-addressed cache or explicit CLI output | Comparative fixed-policy challenger, not a release master or preference |
 
 ## 1. CLI and application entry points
 
@@ -125,18 +125,36 @@ The `tui` command follows the same adapter rule:
    Cancellation reaps the process but preserves the partial output. Successful
    completion reloads the fresh root for review. Existing output is rejected,
    and neither completion nor reload selects a candidate.
+8. The native **Master** tab builds a parameter-free
+   [`tui_listening_master_contract.ListeningMasterRequest`](../src/sunofriend/tui_listening_master_contract.py)
+   from that same loaded snapshot.
+   [`tui_listening_master.ProductionListeningMasterRunner`](../src/sunofriend/tui_listening_master.py)
+   reads the current Workbench fold, resolves the exact verified balanced v3
+   control and delegates to
+   [`WorkbenchListeningMasterService`](../src/sunofriend/workbench_listening_master.py).
+   A cache hit is reverified and reused without FFmpeg. A fresh build performs
+   the shared path-free SoundFile/FFmpeg/`loudnorm` preflight, then rechecks the
+   selection and balanced-manifest hashes before promotion. One final read
+   immediately after promotion prevents a separately launched local Workbench
+   change in that gap from being reported as the current result.
+9. Textual displays bounded progress and verified private WAV/receipt paths
+   but owns no DSP target or FFmpeg filter. Project, conversion and Workbench
+   controls stay locked while the synchronous operation runs. Quit is deferred
+   rather than presented as a cancellation that the service cannot safely
+   guarantee.
 
 The current Activity tab is memory-only, capped and operational. It is not the
 Developer Inspector, a durable job ledger or product feedback. Restartable
 jobs, additional typed operation forms and structured feedback remain planned;
 see [Guided Local Studio TUI](LOCAL_STUDIO_TUI.md). Workbench remains the
-review-only visual decision/export surface and does not run conversion.
+visual decision/render/export/listening surface and does not run conversion.
 
 Tests to read:
 
 - [`tests/test_tui_model.py`](../tests/test_tui_model.py)
 - [`tests/test_tui.py`](../tests/test_tui.py)
 - [`tests/test_tui_conversion.py`](../tests/test_tui_conversion.py)
+- [`tests/test_tui_listening_master.py`](../tests/test_tui_listening_master.py)
 
 ## 2. Instrumental transcription and provenance
 
@@ -373,7 +391,17 @@ for long songs without becoming a hidden editor or selection system.
    [`product_contract.build_product_output_status`](../src/sunofriend/product_contract.py)
    reports whether reviewed MIDI and that matching song-interpretation
    artifact satisfy the versioned paired-output goal without mutating either.
-7. Cache eviction loses no musical decision. An artifact can be rebuilt from
+7. An explicit optional POST carrying only the current selection and balanced
+   manifest hashes delegates to
+   [`WorkbenchListeningMasterService`](../src/sunofriend/workbench_listening_master.py).
+   It prepares and verifies the fixed-policy PCM24 challenger privately,
+   rechecks both current identities, then publishes a separate player and
+   receipt. The required balanced v3 output remains unchanged.
+8. The native TUI runner is a second thin client of that same service. It finds
+   the exact current control from read-only folded state, uses a verified cache
+   hit without FFmpeg or performs the shared fresh-build dependency preflight,
+   and repeats both manifest checks before promotion.
+9. Cache eviction loses no musical decision. An artifact can be rebuilt from
    verified source records and current state.
 
 The canonical selected-arrangement short/full-song transports and dry proxy
@@ -398,7 +426,10 @@ fallback.
 There is no compressor, limiter, EQ, saturation, reverb, chorus or stereo
 widening. The result says `mastered: false`; patch choice, automation, final
 mixing and release mastering remain in GarageBand. The optional listening
-master is a separate comparative derivative and never a release master.
+master is a separate comparative derivative and never a release master. Its
+Workbench request contains only the exact current selection and balanced
+manifest hashes; the application service rechecks both around the fixed
+`sunofriend.listening-master.v2` build and publishes no browser-chosen policy.
 Balanced WAV, receipt and recipe capabilities freeze a hash/size-verified
 disk-backed anonymous snapshot per response before full or Range streaming.
 This closes the verification-to-stream race without holding a possible
@@ -411,6 +442,10 @@ Timeline construction, rendering, play, switch, seek and cache activity do not
 rank candidates or alter source MIDI. Stale work cannot replace evidence for a
 newer selection. Balanced rendering likewise records no preference or feedback
 and cannot modify the dry control or any transport gain.
+Listening-master creation/play/download also records no event, review,
+feedback or preference and changes no selection, default, required output or
+GarageBand pack. TUI confirmation, progress, cache reuse and result display
+have those same zero effects.
 
 ### Tests to read
 
@@ -423,6 +458,9 @@ and cannot modify the dry control or any transport gain.
 - [`tests/test_workbench_balanced_arrangement.py`](../tests/test_workbench_balanced_arrangement.py)
 - [`tests/test_workbench_balanced_server.py`](../tests/test_workbench_balanced_server.py)
 - [`tests/test_workbench_balanced_ui.py`](../tests/test_workbench_balanced_ui.py)
+- [`tests/test_workbench_listening_master.py`](../tests/test_workbench_listening_master.py)
+- [`tests/test_workbench_listening_master_ui.py`](../tests/test_workbench_listening_master_ui.py)
+- [`tests/test_tui_listening_master.py`](../tests/test_tui_listening_master.py)
 
 ## 8. Exact GarageBand pack and acceptance boundary
 

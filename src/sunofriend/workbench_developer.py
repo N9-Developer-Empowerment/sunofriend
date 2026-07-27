@@ -41,6 +41,7 @@ _CACHE_FAMILIES = (
     "decoded-arrangement-chunks",
     "arrangements",
     "balanced-arrangements",
+    "listening-masters",
     "handoffs",
     "packs",
 )
@@ -76,6 +77,7 @@ _ROUTE_OPERATIONS = {
     "/api/decoded-arrangement-chunk": "arrangement_chunk.prepare",
     "/api/arrangement": "arrangement.render",
     "/api/balanced-arrangement": "arrangement.balance",
+    "/api/listening-master": "arrangement.master",
     "/api/garageband-export": "handoff.build",
     "/api/garageband-pack-basket": "pack_basket.save",
     "/api/garageband-pack": "pack.build",
@@ -104,6 +106,7 @@ _ROUTE_CODE_STEPS = {
     "/api/decoded-arrangement-chunk": "arrangement_chunk.prepare",
     "/api/arrangement": "arrangement.render",
     "/api/balanced-arrangement": "arrangement.balance",
+    "/api/listening-master": "arrangement.master",
     "/api/garageband-export": "handoff.build",
     "/api/garageband-pack-plan": "pack.plan",
     "/api/garageband-pack-basket": "pack_basket.save",
@@ -188,6 +191,10 @@ _CODE_MAP = {
     "arrangement.balance": {
         "module": "sunofriend.workbench_artifacts",
         "symbol": "WorkbenchArtifacts.render_balanced_arrangement",
+    },
+    "arrangement.master": {
+        "module": "sunofriend.workbench_listening_master",
+        "symbol": "WorkbenchListeningMasterService.prepare",
     },
     "handoff.build": {
         "module": "sunofriend.workbench_artifacts",
@@ -274,6 +281,9 @@ _OPERATION_LABELS = {
     "arrangement.render": "Render or reuse the selected arrangement proxy",
     "arrangement.balance": (
         "Render or reuse the balanced MIDI-derived song interpretation"
+    ),
+    "arrangement.master": (
+        "Render or reuse the comparative listening-master challenger"
     ),
     "handoff.build": "Build the compatibility GarageBand handoff",
     "pack_basket.save": "Save a separate export-basket revision",
@@ -728,6 +738,7 @@ def trace_response_facts(route: str, value: Mapping[str, Any]) -> dict[str, Any]
         "/api/decoded-arrangement-chunk": "chunk",
         "/api/arrangement": "arrangement",
         "/api/balanced-arrangement": "balanced_arrangement",
+        "/api/listening-master": "listening_master",
         "/api/garageband-export": "handoff",
         "/api/garageband-pack": "pack",
         "/api/garageband-pack-basket": "basket",
@@ -755,6 +766,8 @@ def trace_response_facts(route: str, value: Mapping[str, Any]) -> dict[str, Any]
         )
         if isinstance(lanes, list):
             track_count = len(lanes)
+    elif route == "/api/listening-master":
+        track_count = 1
     elif isinstance(row.get("tracks"), list):
         track_count = len(row["tracks"])
     return {

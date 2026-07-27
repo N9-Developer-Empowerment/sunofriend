@@ -26,6 +26,10 @@ from sunofriend.tui_conversion_contract import (
     FullConversionProgress,
     FullConversionResult,
 )
+from sunofriend.tui_listening_master_contract import (
+    ListeningMasterProgress,
+    ListeningMasterResult,
+)
 
 
 class TuiCliTests(unittest.TestCase):
@@ -368,6 +372,116 @@ class TuiInteractionTests(unittest.IsolatedAsyncioTestCase):
                 )
                 self.assertIn("explicit Workbench catalog", status)
                 self.assertIn("without --catalog", status)
+
+    async def test_listening_master_requires_confirmation_and_reports_challenger(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project, candidates = _fixture(root)
+            runner = _CompletingListeningMasterRunner(root)
+            app = SunofriendTui(
+                project=project,
+                candidate_roots=(candidates,),
+                listening_master_runner=runner,
+            )
+
+            async with app.run_test(size=(150, 50)) as pilot:
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if app.snapshot is not None:
+                        break
+                self.assertIsNotNone(app.snapshot)
+                assert app.snapshot is not None
+                app.snapshot.document["counts"]["selected_part_count"] = 1
+                app._sync_listening_master_controls(update_status=True)
+
+                create = app.query_one(
+                    "#create-listening-master",
+                    Button,
+                )
+                self.assertTrue(create.disabled)
+                scope = str(app.query_one("#master-scope", Static).render())
+                self.assertIn("balanced gain-only WAV", scope)
+                self.assertIn("release master", scope)
+                self.assertIn("Immediate cancellation is not claimed", scope)
+
+                app.query_one("#master-confirm", Checkbox).value = True
+                await pilot.pause()
+                self.assertFalse(create.disabled)
+                create.press()
+
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if not app._listening_master_running and runner.request:
+                        break
+
+                self.assertIs(runner.request.snapshot, app.snapshot)
+                status = str(app.query_one("#master-status", Static).render())
+                self.assertIn("Verified listening master created", status)
+                self.assertIn("-21.5 LUFS", status)
+                self.assertIn("-16.0 LUFS", status)
+                self.assertIn("-1.0 dBTP", status)
+                self.assertIn("release master: false", status)
+                self.assertIn(str(runner.master_path), status)
+                self.assertFalse(app.query_one("#project-path", Input).disabled)
+                self.assertFalse(app.query_one("#open-studio", Button).disabled)
+                progress = app.query_one("#master-progress", ProgressBar)
+                self.assertEqual(progress.progress, progress.total)
+
+    async def test_listening_master_locks_competing_operations_while_running(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project, candidates = _fixture(root)
+            runner = _BlockingListeningMasterRunner()
+            app = SunofriendTui(
+                project=project,
+                candidate_roots=(candidates,),
+                listening_master_runner=runner,
+            )
+
+            async with app.run_test(size=(110, 34)) as pilot:
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if app.snapshot is not None:
+                        break
+                assert app.snapshot is not None
+                app.snapshot.document["counts"]["selected_part_count"] = 1
+                app.query_one("#master-confirm", Checkbox).value = True
+                app._sync_listening_master_controls(update_status=True)
+                app.query_one("#create-listening-master", Button).press()
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if runner.started.is_set():
+                        break
+
+                self.assertTrue(app._listening_master_running)
+                self.assertTrue(app.query_one("#project-path", Input).disabled)
+                self.assertTrue(app.query_one("#candidate-roots", Input).disabled)
+                self.assertTrue(app.query_one("#convert-all", Button).disabled)
+                self.assertTrue(app.query_one("#open-studio", Button).disabled)
+                self.assertTrue(app.query_one("#system-check", Button).disabled)
+
+                with patch(
+                    "sunofriend.tui._LISTENING_MASTER_QUIT_WAIT_SECONDS",
+                    0.01,
+                ):
+                    await pilot.press("ctrl+q")
+                    await pilot.pause(0.03)
+                self.assertTrue(app._listening_master_running)
+                self.assertIn(
+                    "no unsafe pseudo-cancel",
+                    str(app.query_one("#master-status", Static).render()),
+                )
+
+                runner.release.set()
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if not app._listening_master_running:
+                        break
+                self.assertFalse(app.query_one("#project-path", Input).disabled)
 
     async def test_stale_project_worker_cannot_replace_newer_project(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -720,6 +834,100 @@ class _CancellableConversionRunner:
 
     def cancel(self) -> None:
         self.cancel_called = True
+
+
+class _CompletingListeningMasterRunner:
+    def __init__(self, root: Path) -> None:
+        self.request = None
+        self.master_path = root / "listening-master.wav"
+        self.receipt_path = root / "listening-master-receipt.json"
+        self.control_path = root / "balanced-selected-midi-preview.wav"
+        for path in (self.master_path, self.receipt_path, self.control_path):
+            path.write_bytes(b"private-test-artifact")
+
+    async def run(self, request, *, on_progress) -> ListeningMasterResult:
+        self.request = request
+        on_progress(
+            ListeningMasterProgress(
+                completed=1,
+                total=4,
+                phase="preflight",
+                message="Checking SoundFile, FFmpeg, and loudnorm",
+            )
+        )
+        on_progress(
+            ListeningMasterProgress(
+                completed=4,
+                total=4,
+                phase="complete",
+                message="Comparative Listening Master verified and published",
+            )
+        )
+        return ListeningMasterResult(
+            status="complete",
+            cache_hit=False,
+            balanced_control_path=self.control_path,
+            master_path=self.master_path,
+            receipt_path=self.receipt_path,
+            cache_key="a" * 64,
+            selection_manifest_sha256="b" * 64,
+            balanced_arrangement_manifest_sha256="c" * 64,
+            listening_master_manifest_sha256="d" * 64,
+            policy="ffmpeg-loudnorm-two-pass-fixed-horizon-v1",
+            summary={
+                "input_integrated_lufs": -21.5,
+                "output_integrated_lufs": -16.0,
+                "output_true_peak_dbtp": -1.0,
+            },
+            mastered=True,
+            release_master=False,
+            effects={"selection_changed": False},
+            preflight_ready=("soundfile", "ffmpeg", "loudnorm"),
+        )
+
+
+class _BlockingListeningMasterRunner:
+    def __init__(self) -> None:
+        self.started = asyncio.Event()
+        self.release = asyncio.Event()
+
+    async def run(self, request, *, on_progress) -> ListeningMasterResult:
+        self.started.set()
+        on_progress(
+            ListeningMasterProgress(
+                completed=2,
+                total=4,
+                phase="build",
+                message="Creating the fixed-policy private listening challenger",
+            )
+        )
+        await self.release.wait()
+        root = request.snapshot.config.project
+        master = root / "test-listening-master.wav"
+        receipt = root / "test-listening-master.json"
+        control = root / "test-balanced-control.wav"
+        for path in (master, receipt, control):
+            path.write_bytes(b"test")
+        return ListeningMasterResult(
+            status="complete",
+            cache_hit=True,
+            balanced_control_path=control,
+            master_path=master,
+            receipt_path=receipt,
+            cache_key="a" * 64,
+            selection_manifest_sha256="b" * 64,
+            balanced_arrangement_manifest_sha256="c" * 64,
+            listening_master_manifest_sha256="d" * 64,
+            policy="ffmpeg-loudnorm-two-pass-fixed-horizon-v1",
+            summary={
+                "input_integrated_lufs": -20.0,
+                "output_integrated_lufs": -16.0,
+                "output_true_peak_dbtp": -1.0,
+            },
+            mastered=True,
+            release_master=False,
+            effects={"selection_changed": False},
+        )
 
 
 def _write_conversion_midi(path: Path) -> None:

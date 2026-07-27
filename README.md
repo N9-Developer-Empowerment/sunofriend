@@ -59,7 +59,7 @@ choice; scores and model labels never create an automatic global winner.
 | Compare consistent sounds on one fixed MIDI | `timbre-resynthesis` | Level-matched complete-patch, extracted-sampler and source-fitted harmonic-plus-noise auditions with note-by-note silence checks and no MIDI changes |
 | Review and hand off multi-process MIDI alternatives in one local site | `workbench` | Loopback-only Project Overview, precise decoded 0.5–15 second per-stem and canonical selected-arrangement loops, exact canonical full-song chunk playback, a bounded full-song timeline, a coarse arbitrary mixer, append-only decisions, private offline review export and an exact-selected-MIDI GarageBand ZIP; no automatic winner or submission endpoint |
 | Create the MIDI-derived song-interpretation WAV | `workbench` → **Build and hear song interpretation** → **Create song-interpretation WAV** | Renders the reviewed selected MIDI through neutral instruments with source-referenced timing, horizon and level evidence, measured summed-group calibration, a bounded drum-bus guard, audition normalisation and −1 dBFS sample-peak protection; source stems are not mixed into the WAV, and the dry unity control, selected MIDI and decisions remain unchanged |
-| Create a separate listening-master challenger | `listening-master` | Fixed two-pass FFmpeg render plus encoded-artifact verification at −16 LUFS integrated, 11 LU loudness-range target and −1 dBTP; exact frame horizon, PCM24 WAV, path-free receipt, `mastered: true` and `release_master: false` |
+| Create a separate listening-master challenger | TUI **Master** tab, Workbench or `listening-master` | From the exact balanced v3 control, use the native guided action, the Workbench button or expert fresh-path CLI; fixed two-pass FFmpeg render plus encoded-artifact verification at −16 LUFS integrated, 11 LU loudness-range target and −1 dBTP; exact frame horizon, PCM24 WAV, path-free receipt, `mastered: true` and `release_master: false` |
 | Understand Workbench code and state transitions | `workbench --developer-inspector` | Optional, loopback-only, read-only application operation/state explorer; it is not a line debugger, evaluator, shell or filesystem browser and has no decision, basket, MIDI, render or export effect |
 | Learn the workflow and verify one exact GarageBand handoff | `garageband-pack-review`, `garageband-pack-resolve` | Eight-screen interactive tutorial, 10 one-at-a-time comprehension questions, then the two explicit GarageBand and local-usability checks; the resolver re-verifies the downloaded ZIP and has no MIDI, selection, basket, upload or feedback effect |
 | Explore reusable Clip v1 parts in Workbench | `workbench --clip-library --phase6-acceptance --phase6-pack` | Phase 6 Increment 6.0 complete: explicit gated read-only browse/search, path-free detail and lineage, neutral audition and deterministic Clip reconstruction; all three flags are required and no Clip, project, decision or basket is changed |
@@ -206,10 +206,12 @@ operation forms and structured improvement feedback remain planned.
 The accepted Pupsies balanced WAV establishes the paired product goal:
 Sunofriend should provide reviewed editable MIDI and a clear, good-sounding
 MIDI-derived song-interpretation WAV. Source stems provide timing, horizon and
-level evidence for that render; their audio is not mixed into it. The first
-standalone `listening-master` challenger preserves the praised gain-only
-control and adds fixed integrated-loudness and true-peak processing for
-comparison without claiming release approval. See
+level evidence for that render; their audio is not mixed into it. The explicit
+Workbench and standalone `listening-master` challenger paths preserve the
+praised gain-only control and add fixed integrated-loudness and true-peak
+processing for comparison without claiming release approval. The TUI
+**Master** tab now exposes the same fixed operation with protected progress;
+blinded comparison feedback remains planned. See
 **[Musical rendering and listening mastering](docs/MUSICAL_RENDERING_AND_MASTERING.md)**
 for the golden evidence, quality ladder, feedback boundary and maintainability
 plan.
@@ -1041,8 +1043,36 @@ reproducible technical control. The balanced output is sample-peak protected,
 not LUFS- or true-peak mastered; final patch choice, automation, mixing and
 mastering remain in GarageBand.
 
-To create a separate fixed-policy listening-master challenger from a downloaded
-balanced control, use two fresh output paths:
+In Workbench, first create the exact **Balanced MIDI-derived song
+interpretation**, then choose **Create Listening Master challenger**. The
+gain-only v3 player and downloads remain visible as the required product output
+and control. The request pins only the current selection and balanced manifest
+hashes; source paths, targets, filters and policies are not browser inputs.
+The server rechecks both identities before publishing a separate PCM24 player,
+WAV and path-free receipt.
+
+The preferred guided route is the **Master** tab in `sunofriend tui`. Load the
+same project, stop any owned Visual Studio process, read and confirm the
+comparative scope, then choose **Create / reuse listening master**. The action
+accepts no output path, loudness target, filter or policy setting. It locates
+the exact current verified balanced v3 control, rechecks the selection and
+balanced-manifest hashes before and after work, and either reuses the verified
+content-addressed artifact or creates the same fixed-policy challenger. A cache
+hit does not require FFmpeg. A fresh build performs a path-free SoundFile,
+FFmpeg and `loudnorm` preflight first. It also rereads both identities
+immediately after promotion; a concurrent change from a separately launched
+local Workbench is refused as the current result, leaving only a harmless
+non-current content-addressed cache entry.
+
+The operation is synchronous and protected: the project, conversion and
+Workbench controls stay locked while it runs, bounded phase progress remains
+visible, and Quit is deferred instead of pretending an in-flight verified
+FFmpeg render was cancelled. When it completes, the TUI shows the private WAV
+and receipt paths plus bounded loudness evidence. Use **Open visual studio** to
+hear and download the unchanged balanced control and the challenger.
+
+For expert CLI use with a downloaded balanced control, choose two fresh output
+paths:
 
 ```bash
 sunofriend listening-master \
@@ -1058,10 +1088,11 @@ and frame horizon. Private workspaces are mode `0700`, files are mode `0600`
 from creation, and publication/rollback is device/inode checked. Its report
 says `mastered: true` because loudness normalisation and true-peak limiting
 were applied, and `release_master: false` because it is not a human-approved
-release master. It does not replace the v3 balanced control, change selected
-MIDI or record a preference. See
+release master. None of these routes replaces the v3 balanced control, changes
+selected MIDI, records an event/feedback/preference, changes a default or adds
+the artifact to the GarageBand pack. See
 [Musical rendering and listening mastering](docs/MUSICAL_RENDERING_AND_MASTERING.md)
-before comparing or promoting a challenger.
+before reviewing a challenger or proposing any future promotion.
 
 The local feedback foundation can bind an explicit six-axis review to the
 exact balanced receipt/WAV or to an exact master receipt/WAV linked back to
@@ -1069,9 +1100,9 @@ that control, then build a deterministic advisory history after re-verifying
 them. Separate artifact and domain-hashed reviewer/session identities support
 independent reviews without storing the raw key. An unmastered control must
 rate mastering as `cannot_tell`. It never learns from playback or silently
-changes a candidate, instrument, mix, ranking or default. A guided
+changes a candidate, instrument, mix, ranking or default. A guided blinded
 control-versus-challenger feedback form in Workbench/TUI is the next increment;
-there is not yet a public feedback command or button.
+the current Workbench and TUI mastering actions create or reuse evidence only.
 
 The exact full-song path does not add an arbitrary precise mixer. Its request
 contains only the current selection-manifest hash and one of the four preset
@@ -3520,13 +3551,22 @@ MIDI nor the prepared dry control is rewritten. These files are currently
 Workbench downloads only; neither `preview` nor a standalone balance command
 creates them, and Pack Composer does not include them.
 
-`sunofriend listening-master` can take the downloaded balanced WAV as an exact
-control and create a separate PCM24 challenger plus
+The Workbench **Create Listening Master challenger** action and the TUI
+**Master** tab bind the exact current selection and balanced-arrangement
+manifests, recheck them around the build, and publish a separate player plus
+PCM24 WAV and path-free receipt
+from the owner-only, content-addressed cache. The TUI exposes no user mastering
+target or path, performs the SoundFile/FFmpeg/`loudnorm` preflight only for a
+fresh build, and reports bounded protected progress; a verified cache hit can
+be reused without FFmpeg. The balanced v3 player remains
+unchanged and the optional challenger does not complete a required output.
+`sunofriend listening-master` remains the expert fresh-path route for a
+downloaded balanced WAV and creates the same separate PCM24 challenger plus
 `sunofriend.listening-master.v2` receipt. The v2 evidence schema pins and
-rechecks the FFmpeg executable identity for every pass. The command never edits the
-Workbench cache or balance receipt and refuses to replace an existing output.
-The listening master is currently a standalone CLI artifact, not a Workbench
-player or Pack Composer item.
+rechecks the FFmpeg executable identity for every pass. The CLI command never
+edits the Workbench cache or balance receipt and refuses to replace an existing
+output. None of the three routes makes a Pack Composer item or human-approved
+release master; explicit blinded feedback remains deferred.
 
 ### Output layouts
 

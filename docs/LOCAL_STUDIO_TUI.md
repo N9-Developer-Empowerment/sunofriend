@@ -1,8 +1,9 @@
 # Guided Local Studio TUI
 
-Status: Phase 5.10a and the initial Phase 5.10b full-project runner implemented;
-remaining Phase 5.10b plus Phases 5.10c–d planned
-Interface contract: `2026-07-27.2`
+Status: Phase 5.10a, the initial Phase 5.10b full-project runner and the first
+Phase 5.10c native Listening Master operation implemented; remaining Phase
+5.10b and 5.10c plus Phase 5.10d planned
+Interface contract: `2026-07-27.4`
 
 The Guided Local Studio is the preferred human entry point to Sunofriend. It
 puts a clear terminal dashboard in front of the deterministic CLI and opens the
@@ -15,6 +16,10 @@ selected MIDI. The conversion tab creates candidates; review establishes the
 selected MIDI; the Workbench then renders the listening interpretation. The
 TUI and Workbench share the versioned product definition from
 `product_contract.py`; neither interface redefines the audio or MIDI policy.
+Workbench can now create a separate fixed-policy Listening Master challenger
+from the exact current balanced control. The TUI **Master** tab exposes the
+same shared application service directly, while **Open visual studio** remains
+the place to hear and download both versions.
 
 It is not a replacement transcription engine and it is not a terminal rewrite
 of the Workbench. Sunofriend's strength remains the same: retain several
@@ -116,6 +121,46 @@ remains a review/decision/export surface and does not start transcription.
 There is no durable job ledger, restart recovery or automatic retry in this
 increment.
 
+### Create or reuse the comparative Listening Master
+
+The native **Master** tab operates only after the current selected MIDI has a
+verified balanced v3 song-interpretation control:
+
+1. Make and review the MIDI choices in Visual Studio.
+2. Create the balanced song-interpretation WAV there.
+3. Stop Visual Studio, refresh the same project in the TUI and open
+   **Master**.
+4. Read and tick the comparative-scope confirmation.
+5. Choose **Create / reuse listening master**.
+
+The form deliberately has no source path, destination path, loudness target,
+filter graph, FFmpeg option or release-master switch. It derives the current
+selection and balanced-control identities from verified local state and calls
+the same fixed-policy application service as Workbench. A verified
+content-addressed cache hit is reusable without FFmpeg. Before a fresh build,
+the runner performs a path-free SoundFile, FFmpeg and `loudnorm` capability
+preflight.
+
+The action rechecks both the selection-manifest and balanced-arrangement
+manifest hashes before promotion. If either changed, it discards pending work
+and asks for a refresh rather than publishing stale audio. It rereads both once
+more immediately after promotion and refuses to report success if a separate
+local Workbench changed them in that final gap; the old content-addressed cache
+entry then remains non-current and is not presented as the project's result.
+The operation
+shows bounded phase progress and locks project, conversion and Visual Studio
+controls while the synchronous FFmpeg work is protected. It offers no unsafe
+pseudo-cancel: Quit waits briefly and is then explicitly deferred while the
+operation remains active. This is distinct from full-project conversion,
+whose child process has a real cancel contract.
+
+Success shows whether the verified artifact was created or reused, bounded
+loudness/true-peak evidence and the private PCM24 WAV and receipt paths. The
+result is always `mastered: true` and `release_master: false`. Creating or
+reusing it records no event, review, feedback or preference and changes no
+MIDI, selection, ranking, default, required product status or GarageBand Pack.
+Open Visual Studio afterwards for the listening and download experience.
+
 The visual Workbench starts with its read-only Developer Inspector available by
 default. Use `--no-developer-inspector` when the additional developer view is
 not wanted:
@@ -177,6 +222,10 @@ Phase 5.10a provides the orientation and browser bridge:
 9. Project and result-root controls stay locked while that child is active, so
    the terminal dashboard and browser cannot silently point at different
    songs.
+10. The **Master** tab verifies the exact current balanced control and creates
+    or reuses its fixed-policy comparative challenger through the shared
+    application service, with fresh-build dependency preflight, identity
+    rechecks and bounded protected progress.
 
 Loading a project does not create a Workbench database. If the exact private
 database already exists, 5.10a folds its explicit events to show current
@@ -208,8 +257,8 @@ The three interfaces have separate jobs:
 
 | Surface | Purpose | State it may change |
 | --- | --- | --- |
-| Guided Local Studio TUI | Project orientation, explicit fresh full-project conversion, local diagnostics and safe orchestration | In-memory navigation/activity; an explicitly confirmed conversion may create one fresh output through the production engines; it may start, cancel and reap its conversion child or start/stop its Workbench child |
-| Workbench | Waveforms, MIDI lanes, synchronized listening, explicit musical decisions, MIDI-derived song-interpretation WAV and GarageBand pack basket | Only explicit decision, review and basket actions are durable; playback and views are temporary, while the requested WAV is a rebuildable artifact |
+| Guided Local Studio TUI | Project orientation, explicit fresh full-project conversion, local diagnostics, fixed-policy Listening Master orchestration and safe Workbench launch | In-memory navigation/activity; an explicitly confirmed conversion may create one fresh output through the production engines; an explicitly confirmed Master action may create/reuse one rebuildable private challenger; it may start, cancel and reap its conversion child or start/stop its Workbench child |
+| Workbench | Waveforms, MIDI lanes, synchronized listening, explicit musical decisions, MIDI-derived song-interpretation WAV, optional fixed-policy Listening Master challenger and GarageBand pack basket | Only explicit decision, review and basket actions are durable; playback and views are temporary, while requested audio outputs are rebuildable artifacts with no preference effect |
 | Developer Inspector | Explain the five-stage application architecture, allow-listed module/function references, recent operations, reducer replay and separate state planes | None; refresh, clear and replay are read-only and zero-effect |
 | CLI | Deterministic transcription, transformation, validation and artifact production | Only the files and stores explicitly named by the selected command |
 
@@ -285,14 +334,16 @@ Still planned for 5.10b:
 Retries must continue to use a new output rather than silently replacing an
 existing tree.
 
-### 5.10c — Guided project journey: planned
+### 5.10c — Guided project journey: started
 
 Connect completed jobs to an explicit sequence:
 
 1. verify generated evidence;
 2. compare each stem in Workbench;
 3. hear selected parts alone, against stems and in the arrangement;
-4. create and compare the MIDI-derived song-interpretation WAV;
+4. create the MIDI-derived song-interpretation WAV and, when wanted, its
+   separate fixed-policy Listening Master challenger in Workbench or the TUI
+   **Master** tab;
 5. inspect unresolved or failed candidates;
 6. choose the GarageBand pack basket; and
 7. run the existing tutorial, quiz and exact-pack acceptance checks.
@@ -301,6 +352,11 @@ The TUI will display durable progress derived from verified Workbench state and
 job evidence, while rich playback and piano-roll interaction remain in the
 browser. Navigation must not become a choice, and a visible default must not
 become a winner.
+
+The native Listening Master operation is implemented as the first narrow
+5.10c orchestration slice. It retains the balanced v3 control, exposes no user
+policy inputs and adds no inferred preference. Blinded
+control-versus-challenger feedback remains the next later explicit action.
 
 ### 5.10d — Explicit local feedback and full guided handoff: planned
 

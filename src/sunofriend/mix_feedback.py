@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import math
 import os
 import secrets
 import stat
@@ -21,8 +20,10 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from . import listening_master as _listening_master_contract
-from .listening_master import LISTENING_MASTER_POLICY, LISTENING_MASTER_SCHEMA
+from .listening_master_contract import (
+    LISTENING_MASTER_POLICY,
+    verify_listening_master_artifacts,
+)
 from .workbench_balanced_contract import BALANCED_MIX_CONTRACT
 
 
@@ -750,7 +751,7 @@ def _listening_master_evidence(
         raise ValueError(
             "listening-master receipt and WAV must be supplied together"
         )
-    receipt_record, receipt = _read_json_file(
+    receipt_record = _regular_file_record(
         receipt_path,
         label="listening-master receipt",
         maximum_bytes=_RECEIPT_MAXIMUM_BYTES,
@@ -765,8 +766,9 @@ def _listening_master_evidence(
         raise ValueError("listening-master receipt must be a .json file")
     if Path(wav_record["path"]).suffix.lower() != ".wav":
         raise ValueError("listening-master audition must be a .wav file")
-    binding = _validate_listening_master_binding(
-        receipt,
+    binding = _public_listening_master_binding(
+        receipt_path=receipt_record["path"],
+        wav_path=wav_record["path"],
         receipt_record=receipt_record,
         wav_record=wav_record,
         wav_info=wav_info,
@@ -789,7 +791,7 @@ def _verify_listening_master_evidence(
     control_preview_record: Mapping[str, Any],
     control_preview_info: Mapping[str, Any],
 ) -> None:
-    current_receipt, receipt = _read_json_file(
+    current_receipt = _regular_file_record(
         str(audition["receipt"]["path"]),
         label="listening-master receipt",
         maximum_bytes=_RECEIPT_MAXIMUM_BYTES,
@@ -817,8 +819,9 @@ def _verify_listening_master_evidence(
         raise ValueError(
             "listening-master WAV changed after feedback was recorded"
         )
-    binding = _validate_listening_master_binding(
-        receipt,
+    binding = _public_listening_master_binding(
+        receipt_path=current_receipt["path"],
+        wav_path=current_wav["path"],
         receipt_record=current_receipt,
         wav_record=current_wav,
         wav_info=current_wav_info,
@@ -839,99 +842,36 @@ def _verify_listening_master_evidence(
         )
 
 
-def _validate_listening_master_binding(
-    receipt: Mapping[str, Any],
+def _public_listening_master_binding(
     *,
+    receipt_path: str,
+    wav_path: str,
     receipt_record: Mapping[str, Any],
     wav_record: Mapping[str, Any],
     wav_info: Mapping[str, Any],
     control_preview_record: Mapping[str, Any],
     control_preview_info: Mapping[str, Any],
 ) -> dict[str, str]:
-    expected_top_level = {
-        "schema",
-        "status",
-        "policy",
-        "label",
-        "mastered",
-        "release_master",
-        "mastering_scope",
-        "source",
-        "targets",
-        "analysis_pass",
-        "render_pass",
-        "verification_pass",
-        "renderer",
-        "output",
-        "timing",
-        "processing",
-        "effects",
-        "receipt_sha256",
-    }
-    if set(receipt) != expected_top_level or (
-        receipt.get("schema") != LISTENING_MASTER_SCHEMA
-        or receipt.get("status") != "complete"
-        or receipt.get("policy") != LISTENING_MASTER_POLICY
-        or receipt.get("mastered") is not True
-        or receipt.get("release_master") is not False
-    ):
-        raise ValueError("unsupported listening-master receipt")
-    _bounded_text(receipt.get("label"), label="listening-master label", maximum=256)
-    _bounded_text(
-        receipt.get("mastering_scope"),
-        label="listening-master scope",
-        maximum=1_000,
+    verified = verify_listening_master_artifacts(
+        str(control_preview_record["path"]),
+        wav_path,
+        receipt_path,
     )
-    unsigned = {
-        key: value for key, value in receipt.items() if key != "receipt_sha256"
+    expected_receipt_file = {
+        "bytes": receipt_record["bytes"],
+        "sha256": receipt_record["sha256"],
     }
-    document_sha256 = _document_hash(unsigned)
-    if receipt.get("receipt_sha256") != document_sha256:
-        raise ValueError("listening-master receipt self-hash is invalid")
-
-    effects = receipt.get("effects")
-    expected_effects = {
-        "source_audio_mutated": False,
-        "source_audio_overwritten": False,
-        "midi_mutated": False,
-        "selection_changed": False,
-        "feedback_recorded": False,
-        "automatic_selection": False,
-        "automatic_ranking": False,
-        "default_selection_changed": False,
-        "control_balance_replaced": False,
-        "listening_master_created": True,
+    if verified["receipt_file"] != expected_receipt_file:
+        raise ValueError("listening-master receipt changed while it was verified")
+    expected_master_file = {
+        "bytes": wav_record["bytes"],
+        "sha256": wav_record["sha256"],
     }
-    if effects != expected_effects:
-        raise ValueError("listening-master receipt effects are invalid")
-
-    source = _audio_receipt_record(
-        receipt.get("source"),
-        label="listening-master source",
-        require_pcm24=False,
-    )
-    output = _audio_receipt_record(
-        receipt.get("output"),
-        label="listening-master output",
-        require_pcm24=True,
-        includes_name=True,
-    )
-    if (
-        source["sha256"] != control_preview_record["sha256"]
-        or source["bytes"] != control_preview_record["bytes"]
-    ):
-        raise ValueError(
-            "listening-master source does not match the exact balanced control"
-        )
-    for key in ("format", "subtype", "sample_rate", "channels", "frames"):
-        if source[key] != control_preview_info[key]:
-            raise ValueError(
-                "listening-master source geometry does not match the balanced control"
-            )
-    if output["name"] != Path(str(wav_record["path"])).name or (
-        output["sha256"] != wav_record["sha256"]
-        or output["bytes"] != wav_record["bytes"]
-    ):
+    if {
+        key: verified["master"][key] for key in ("bytes", "sha256")
+    } != expected_master_file:
+        raise ValueError("listening-master WAV changed while it was verified")
+    if verified["master"]["name"] != Path(wav_record["path"]).name:
         raise ValueError("listening-master WAV does not match its exact receipt")
     for key in (
         "format",
@@ -941,216 +881,30 @@ def _validate_listening_master_binding(
         "frames",
         "duration_seconds",
     ):
-        if output[key] != wav_info[key]:
+        if verified["master"][key] != wav_info[key]:
             raise ValueError(
                 "listening-master WAV geometry does not match its exact receipt"
             )
-    for key in ("sample_rate", "channels", "frames"):
-        if output[key] != source[key]:
+        if verified["source"][key] != control_preview_info[key]:
             raise ValueError(
-                "listening-master output changed the source audio horizon"
+                "listening-master source geometry does not match the balanced control"
             )
-
-    expected_targets = {
-        "integrated_lufs": _listening_master_contract._TARGET_INTEGRATED_LUFS,
-        "loudness_range_lu": (
-            _listening_master_contract._TARGET_LOUDNESS_RANGE_LU
-        ),
-        "true_peak_ceiling_dbtp": (
-            _listening_master_contract._TRUE_PEAK_CEILING_DBTP
-        ),
-        "integrated_loudness_tolerance_lu": (
-            _listening_master_contract._LOUDNESS_TOLERANCE_LU
-        ),
-        "true_peak_tolerance_db": (
-            _listening_master_contract._TRUE_PEAK_TOLERANCE_DB
-        ),
-    }
-    if receipt.get("targets") != expected_targets:
-        raise ValueError("listening-master targets are invalid")
-
-    analysis = _loudnorm_receipt_stats(
-        receipt.get("analysis_pass"),
-        label="listening-master analysis pass",
-    )
-    rendered = _loudnorm_receipt_stats(
-        receipt.get("render_pass"),
-        label="listening-master render pass",
-    )
-    verification_value = receipt.get("verification_pass")
-    verification_keys = set(_listening_master_contract._LOUDNORM_FIELDS) | {
-        "measured_artifact"
-    }
-    if (
-        not isinstance(verification_value, Mapping)
-        or set(verification_value) != verification_keys
-        or verification_value.get("measured_artifact")
-        != "encoded_pcm24_output"
-    ):
-        raise ValueError(
-            "listening-master encoded-artifact verification is invalid"
-        )
-    verification = _loudnorm_receipt_stats(
-        {
-            key: verification_value[key]
-            for key in _listening_master_contract._LOUDNORM_FIELDS
-        },
-        label="listening-master encoded-artifact verification",
-    )
-    try:
-        _listening_master_contract._require_encoded_master_targets(verification)
-    except (RuntimeError, ValueError) as exc:
-        raise ValueError(
-            "listening-master encoded artifact missed its receipt targets"
-        ) from exc
-
-    renderer = receipt.get("renderer")
-    if not isinstance(renderer, Mapping) or set(renderer) != {
-        "backend",
-        "executable_sha256",
-        "version",
-        "filter",
-        "policy",
-        "identity_verification",
+    if {
+        key: verified["source"][key] for key in ("bytes", "sha256")
+    } != {
+        "bytes": control_preview_record["bytes"],
+        "sha256": control_preview_record["sha256"],
     }:
-        raise ValueError("listening-master renderer is invalid")
-    if (
-        renderer.get("backend") != "FFmpeg loudnorm"
-        or renderer.get("filter") != "loudnorm"
-        or renderer.get("policy") != LISTENING_MASTER_POLICY
-        or renderer.get("identity_verification")
-        != _listening_master_contract.FFMPEG_IDENTITY_POLICY
-        or not _bounded_text(
-            renderer.get("version"),
-            label="listening-master renderer version",
-            maximum=500,
-        ).startswith("ffmpeg version ")
-    ):
-        raise ValueError("listening-master renderer is invalid")
-    _require_sha256(
-        renderer.get("executable_sha256"),
-        label="listening-master renderer executable SHA-256",
-    )
-
-    timing = receipt.get("timing")
-    expected_timing = {
-        "policy": "retain-input-frame-horizon-v1",
-        "input_frames": source["frames"],
-        "output_frames": output["frames"],
-        "sample_rate": source["sample_rate"],
-        "frame_horizon_changed": False,
-        "time_shift_applied": False,
-        "time_stretch_applied": False,
-    }
-    if timing != expected_timing:
-        raise ValueError("listening-master timing contract is invalid")
-
-    processing = receipt.get("processing")
-    expected_processing = {
-        "integrated_loudness_normalisation": True,
-        "true_peak_limiting": True,
-        "normalization_type": rendered["normalization_type"],
-        "encoded_artifact_verified": True,
-        "equalisation": False,
-        "stereo_widening": False,
-        "reverb": False,
-        "chorus": False,
-        "saturation": False,
-    }
-    if processing != expected_processing:
-        raise ValueError("listening-master processing contract is invalid")
-    # Ensure all three passes were normalized into the generator's canonical
-    # numeric representation.  The values are not otherwise used to infer a
-    # review or preference.
-    if (
-        analysis != receipt["analysis_pass"]
-        or rendered != receipt["render_pass"]
-        or {
-            **verification,
-            "measured_artifact": "encoded_pcm24_output",
-        }
-        != receipt["verification_pass"]
-    ):
-        raise ValueError("listening-master measurement records are not canonical")
+        raise ValueError(
+            "listening-master source does not match the exact balanced control"
+        )
     _validate_file_record(receipt_record, label="listening-master receipt")
     return {
         "policy": LISTENING_MASTER_POLICY,
-        "receipt_document_sha256": document_sha256,
+        "receipt_document_sha256": verified[
+            "receipt_document_sha256"
+        ],
     }
-
-
-def _audio_receipt_record(
-    value: Any,
-    *,
-    label: str,
-    require_pcm24: bool,
-    includes_name: bool = False,
-) -> dict[str, Any]:
-    expected = {
-        "sha256",
-        "bytes",
-        "format",
-        "subtype",
-        "sample_rate",
-        "channels",
-        "frames",
-        "duration_seconds",
-    }
-    if includes_name:
-        expected.add("name")
-    if not isinstance(value, Mapping) or set(value) != expected:
-        raise ValueError(f"{label} record is invalid")
-    sha256 = _require_sha256(value.get("sha256"), label=f"{label} SHA-256")
-    byte_count = _positive_int(value.get("bytes"), label=f"{label} bytes")
-    audio_format = value.get("format")
-    subtype = _bounded_text(
-        value.get("subtype"), label=f"{label} subtype", maximum=64
-    )
-    sample_rate = _positive_int(
-        value.get("sample_rate"), label=f"{label} sample rate"
-    )
-    channels = _positive_int(value.get("channels"), label=f"{label} channels")
-    frames = _positive_int(value.get("frames"), label=f"{label} frames")
-    if audio_format not in {"WAV", "WAVEX"} or channels not in {1, 2}:
-        raise ValueError(f"{label} audio geometry is invalid")
-    if require_pcm24 and subtype != "PCM_24":
-        raise ValueError(f"{label} must be PCM24 WAV")
-    expected_duration = round(frames / sample_rate, 6)
-    duration = _finite_number(
-        value.get("duration_seconds"), label=f"{label} duration"
-    )
-    if duration != expected_duration:
-        raise ValueError(f"{label} duration does not match its frame horizon")
-    record: dict[str, Any] = {
-        "sha256": sha256,
-        "bytes": byte_count,
-        "format": audio_format,
-        "subtype": subtype,
-        "sample_rate": sample_rate,
-        "channels": channels,
-        "frames": frames,
-        "duration_seconds": duration,
-    }
-    if includes_name:
-        name = _bounded_text(
-            value.get("name"), label=f"{label} name", maximum=512
-        )
-        if Path(name).name != name or Path(name).suffix.lower() != ".wav":
-            raise ValueError(f"{label} name is invalid")
-        record["name"] = name
-    return record
-
-
-def _loudnorm_receipt_stats(value: Any, *, label: str) -> dict[str, Any]:
-    if (
-        not isinstance(value, Mapping)
-        or set(value) != set(_listening_master_contract._LOUDNORM_FIELDS)
-    ):
-        raise ValueError(f"{label} measurements are invalid")
-    try:
-        return _listening_master_contract._validated_loudnorm_stats(value)
-    except ValueError as exc:
-        raise ValueError(f"{label} measurements are invalid") from exc
 
 
 def _validate_audition_shape(value: Any) -> None:
@@ -1692,7 +1446,7 @@ def _regular_wav_record(
         os.lseek(descriptor, 0, os.SEEK_SET)
         try:
             with os.fdopen(os.dup(descriptor), "rb") as handle:
-                info = _listening_master_contract._soundfile_module().info(handle)
+                info = _soundfile_module().info(handle)
         except Exception as exc:
             raise ValueError(f"{label} is not readable audio") from exc
         after = os.fstat(descriptor)
@@ -1725,6 +1479,17 @@ def _regular_wav_record(
         "bytes": total,
         "sha256": digest.hexdigest(),
     }, audio_info
+
+
+def _soundfile_module() -> Any:
+    try:
+        import soundfile
+    except (ImportError, OSError) as exc:
+        raise RuntimeError(
+            "mix feedback requires soundfile; install Sunofriend with the "
+            "convert extra"
+        ) from exc
+    return soundfile
 
 
 def _read_regular_bytes(
@@ -2044,23 +1809,6 @@ def _bounded_text(value: Any, *, label: str, maximum: int) -> str:
 def _nonnegative_int(value: Any, *, label: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise ValueError(f"{label} must be a non-negative integer")
-    return value
-
-
-def _positive_int(value: Any, *, label: str) -> int:
-    result = _nonnegative_int(value, label=label)
-    if result <= 0:
-        raise ValueError(f"{label} must be a positive integer")
-    return result
-
-
-def _finite_number(value: Any, *, label: str) -> float | int:
-    if (
-        isinstance(value, bool)
-        or not isinstance(value, (float, int))
-        or not math.isfinite(float(value))
-    ):
-        raise ValueError(f"{label} must be a finite number")
     return value
 
 

@@ -122,6 +122,16 @@
       ]),
       durableEffect: false,
     }),
+    "/api/listening-master": Object.freeze({
+      operation: "arrangement.master",
+      label: "Render or reuse the comparative listening-master challenger",
+      symbols: Object.freeze([
+        "sunofriend.workbench_server._WorkbenchHandler.do_POST",
+        "sunofriend.workbench_listening_master.WorkbenchListeningMasterService.prepare",
+        "sunofriend.listening_master.build_listening_master",
+      ]),
+      durableEffect: false,
+    }),
     "/api/garageband-pack-plan": Object.freeze({
       operation: "pack.plan",
       label: "Derive the exact eligible GarageBand pack plan",

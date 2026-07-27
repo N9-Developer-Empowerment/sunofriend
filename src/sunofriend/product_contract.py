@@ -10,12 +10,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from .listening_master import LISTENING_MASTER_POLICY, LISTENING_MASTER_SCHEMA
+from .listening_master_contract import (
+    LISTENING_MASTER_POLICY,
+    LISTENING_MASTER_SCHEMA,
+)
 from .workbench_balanced_contract import BALANCED_MIX_CONTRACT
 
 
 PRODUCT_CONTRACT_SCHEMA = "sunofriend.product-contract.v1"
-PRODUCT_CONTRACT_VERSION = "2026-07-27.1"
+PRODUCT_CONTRACT_VERSION = "2026-07-27.2"
 PRODUCT_OUTPUT_STATUS_SCHEMA = "sunofriend.product-output-status.v1"
 PRODUCT_SUMMARY = (
     "Create reviewed, editable MIDI plus a balanced MIDI-derived "
@@ -154,10 +157,11 @@ def product_contract_document() -> dict[str, Any]:
 def build_product_output_status(
     selection_manifest: Mapping[str, Any] | None,
     song_interpretation: Mapping[str, Any] | None,
+    listening_master: Mapping[str, Any] | None = None,
     *,
     full_mix_review_complete: bool,
 ) -> dict[str, Any]:
-    """Project readiness for the two required outputs without changing state."""
+    """Project readiness for required outputs and an optional master challenger."""
 
     selection = (
         selection_manifest if isinstance(selection_manifest, Mapping) else {}
@@ -177,6 +181,25 @@ def build_product_output_status(
         and artifact.get("policy") == BALANCED_MIX_CONTRACT.policy
         and artifact.get("selection_manifest_sha256") == selection_sha256
         and artifact.get("mastered") is False
+    )
+    master = (
+        listening_master if isinstance(listening_master, Mapping) else {}
+    )
+    listening_master_ready = bool(
+        interpretation_ready
+        and master.get("receipt_schema") == LISTENING_MASTER_SCHEMA
+        and master.get("policy") == LISTENING_MASTER_POLICY
+        and master.get("selection_manifest_sha256") == selection_sha256
+        and master.get("balanced_arrangement_manifest_sha256")
+        == artifact.get("manifest_sha256")
+        and master.get("balanced_preview_sha256")
+        == (
+            artifact.get("preview", {}).get("sha256")
+            if isinstance(artifact.get("preview"), Mapping)
+            else None
+        )
+        and master.get("mastered") is True
+        and master.get("release_master") is False
     )
 
     return {
@@ -214,10 +237,21 @@ def build_product_output_status(
         "optional_outputs": {
             "comparative_listening_master": {
                 "available_through_cli": True,
-                "ready": False,
+                "available_through_workbench": True,
+                "ready": listening_master_ready,
+                "selection_manifest_sha256": (
+                    selection_sha256 if listening_master_ready else None
+                ),
+                "balanced_arrangement_manifest_sha256": (
+                    artifact.get("manifest_sha256")
+                    if listening_master_ready
+                    else None
+                ),
                 "artifact_schema": LISTENING_MASTER_SCHEMA,
                 "policy": LISTENING_MASTER_POLICY,
+                "mastered": True,
                 "release_master": False,
+                "automatic_promotion": False,
             }
         },
         "effects": {

@@ -331,6 +331,7 @@ console.log(JSON.stringify({
   balanced: developer.routeDescriptor(
     '/api/balanced-arrangement?token=secret'
   ),
+  master: developer.routeDescriptor('/api/listening-master?token=secret'),
 }));
 """
         )
@@ -348,8 +349,14 @@ console.log(JSON.stringify({
             result["balanced"]["label"],
             "Render or reuse the balanced MIDI-derived song interpretation",
         )
+        self.assertEqual(result["master"]["operation"], "arrangement.master")
+        self.assertEqual(
+            result["master"]["label"],
+            "Render or reuse the comparative listening-master challenger",
+        )
         self.assertFalse(result["dry"]["durableEffect"])
         self.assertFalse(result["balanced"]["durableEffect"])
+        self.assertFalse(result["master"]["durableEffect"])
 
 
 if __name__ == "__main__":

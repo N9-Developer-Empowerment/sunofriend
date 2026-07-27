@@ -35,6 +35,7 @@ except ImportError as exc:  # pragma: no cover - installation guard
 
 from . import __version__
 from .diagnostics import collect_diagnostics
+from .tui_listening_master_contract import LISTENING_MASTER_PROGRESS_TOTAL
 from .tui_model import (
     TuiProjectConfig,
     TuiProjectSnapshot,
@@ -46,6 +47,8 @@ from .tui_model import (
     safe_activity_line,
     workbench_command,
 )
+
+_LISTENING_MASTER_QUIT_WAIT_SECONDS = 10.0
 
 
 class SunofriendTui(App[None]):
@@ -215,6 +218,34 @@ class SunofriendTui(App[None]):
         border: round #2b5068;
     }
 
+    #master-scope {
+        padding: 1 2;
+        margin-bottom: 1;
+        background: #102333;
+        border: round #2dd4bf;
+    }
+
+    #master-confirm {
+        margin: 0 1 1 1;
+    }
+
+    #master-actions {
+        height: 3;
+        margin-bottom: 1;
+    }
+
+    #master-progress {
+        margin: 0 1;
+    }
+
+    #master-status {
+        min-height: 8;
+        padding: 1 2;
+        margin-top: 1;
+        background: #0b1722;
+        border: round #2b5068;
+    }
+
     #activity-log {
         height: 1fr;
         padding: 0 1;
@@ -317,6 +348,7 @@ class SunofriendTui(App[None]):
         initial_conversion_output: str | Path | None = None,
         developer_inspector: bool = True,
         conversion_runner: Any | None = None,
+        listening_master_runner: Any | None = None,
     ) -> None:
         super().__init__()
         self.initial_project = str(project) if project is not None else ""
@@ -339,6 +371,14 @@ class SunofriendTui(App[None]):
         self._suggested_conversion_output = ""
         self._conversion_last_phase = ""
         self._preserve_conversion_status = False
+        self._listening_master_runner = listening_master_runner
+        self._listening_master_running = False
+        self._listening_master_sequence = 0
+        self._listening_master_done = asyncio.Event()
+        self._listening_master_done.set()
+        self._listening_master_last_phase = ""
+        self._listening_master_progress_total = LISTENING_MASTER_PROGRESS_TOTAL
+        self._preserve_listening_master_status = False
         self.snapshot: TuiProjectSnapshot | None = None
         self._workbench_process: asyncio.subprocess.Process | None = None
         self._workbench_launching = False
@@ -459,6 +499,36 @@ class SunofriendTui(App[None]):
                         ),
                         id="conversion-status",
                     )
+            with TabPane("Master", id="master"):
+                with VerticalScroll():
+                    yield Static(_LISTENING_MASTER_SCOPE, id="master-scope")
+                    yield Checkbox(
+                        (
+                            "I understand this creates a separate comparative "
+                            "challenger. The balanced control stays unchanged, "
+                            "and this is not a release master or a preference."
+                        ),
+                        id="master-confirm",
+                    )
+                    with Horizontal(id="master-actions"):
+                        yield Button(
+                            "Create / reuse listening master",
+                            id="create-listening-master",
+                            disabled=True,
+                        )
+                    yield ProgressBar(
+                        total=LISTENING_MASTER_PROGRESS_TOTAL,
+                        show_eta=False,
+                        id="master-progress",
+                    )
+                    yield Static(
+                        (
+                            "Load a project whose current selected MIDI already "
+                            "has a verified balanced song-interpretation WAV. "
+                            "Create that control in the Visual Studio first."
+                        ),
+                        id="master-status",
+                    )
             with TabPane("System", id="system"):
                 yield Static(
                     "Run the system check to inspect transcription, preview "
@@ -490,6 +560,7 @@ class SunofriendTui(App[None]):
             "The TUI started. Temporary navigation and logs are memory-only.",
         )
         self._sync_conversion_controls(update_status=False)
+        self._sync_listening_master_controls(update_status=False)
         if self.initial_project:
             self._start_project_load()
 
@@ -532,6 +603,16 @@ class SunofriendTui(App[None]):
             self._preserve_conversion_status = False
         self._sync_conversion_controls(update_status=True)
 
+    @on(Button.Pressed, "#create-listening-master")
+    def _create_listening_master_pressed(self) -> None:
+        self.action_create_listening_master()
+
+    @on(Checkbox.Changed, "#master-confirm")
+    def _listening_master_confirmation_changed(self) -> None:
+        if not self._listening_master_running:
+            self._preserve_listening_master_status = False
+        self._sync_listening_master_controls(update_status=True)
+
     @on(DataTable.RowHighlighted, "#stem-table")
     def _stem_highlighted(self, event: DataTable.RowHighlighted) -> None:
         key = event.row_key.value
@@ -542,12 +623,18 @@ class SunofriendTui(App[None]):
         self._start_project_load()
 
     def action_run_system_check(self) -> None:
+        if self._conversion_running or self._listening_master_running:
+            self.notify(
+                "Wait for the current audio operation to finish",
+                severity="warning",
+            )
+            return
         self._run_system_check()
 
     def action_open_visual_studio(self) -> None:
-        if self._conversion_running:
+        if self._conversion_running or self._listening_master_running:
             self.notify(
-                "Wait for conversion to finish or cancel it first",
+                "Wait for the current render operation to finish",
                 severity="warning",
             )
             return
@@ -572,6 +659,12 @@ class SunofriendTui(App[None]):
     def action_convert_all(self) -> None:
         if self._conversion_running:
             self.notify("A full conversion is already running", severity="warning")
+            return
+        if self._listening_master_running:
+            self.notify(
+                "Wait for the listening master to finish",
+                severity="warning",
+            )
             return
         if self._workbench_launching or self._workbench_process is not None:
             self.notify(
@@ -628,20 +721,94 @@ class SunofriendTui(App[None]):
         self._sync_conversion_controls(update_status=False)
         self._run_full_conversion(request, sequence)
 
+    def action_create_listening_master(self) -> None:
+        if self._listening_master_running:
+            self.notify(
+                "A listening master is already being verified",
+                severity="warning",
+            )
+            return
+        if self._conversion_running:
+            self.notify(
+                "Wait for conversion to finish or cancel it first",
+                severity="warning",
+            )
+            return
+        if self._workbench_launching or self._workbench_process is not None:
+            self.notify(
+                "Stop the visual studio before creating a listening master",
+                severity="warning",
+            )
+            return
+        problem = self._listening_master_start_problem()
+        if problem is not None:
+            self._set_listening_master_status(problem, error=True)
+            self.notify(problem, severity="warning")
+            self._sync_listening_master_controls(update_status=False)
+            return
+        assert self.snapshot is not None
+        try:
+            from .tui_listening_master import (
+                ListeningMasterRequest,
+                create_listening_master_runner,
+            )
+
+            request = ListeningMasterRequest.create(self.snapshot)
+            if self._listening_master_runner is None:
+                self._listening_master_runner = create_listening_master_runner()
+        except Exception as exc:
+            message = _safe_exception_message(exc)
+            self._set_listening_master_status(message, error=True)
+            self._activity("error", message)
+            return
+        self._listening_master_running = True
+        self._preserve_listening_master_status = False
+        self._listening_master_sequence += 1
+        sequence = self._listening_master_sequence
+        self._listening_master_done.clear()
+        self._listening_master_last_phase = ""
+        self.query_one("#master-progress", ProgressBar).update(
+            total=LISTENING_MASTER_PROGRESS_TOTAL,
+            progress=0,
+        )
+        self._set_listening_master_status(
+            "Verifying the exact current balanced control…"
+        )
+        self._set_status("Listening master starting · local only")
+        self._activity(
+            "master",
+            (
+                "Comparative listening master requested. This records no "
+                "review, preference, MIDI choice or Pack change."
+            ),
+        )
+        self._set_project_controls_locked(True)
+        self._sync_listening_master_controls(update_status=False)
+        self._run_listening_master(request, sequence)
+
     async def action_request_quit(self) -> None:
         if not await self._stop_full_conversion():
+            return
+        if not await self._wait_for_listening_master():
             return
         if await self._stop_visual_studio():
             self.exit()
 
     async def on_unmount(self) -> None:
         await self._stop_full_conversion(notify_timeout=False)
+        await self._wait_for_listening_master(notify_timeout=False)
         await self._stop_visual_studio()
 
     def _start_project_load(self) -> None:
         if self._conversion_running:
             self.notify(
                 "Cancel or finish conversion before changing the project",
+                severity="warning",
+            )
+            return
+        if self._listening_master_running:
+            self.notify(
+                "Wait for the listening master to finish before changing the project",
                 severity="warning",
             )
             return
@@ -670,6 +837,7 @@ class SunofriendTui(App[None]):
         self.query_one("#open-studio", Button).disabled = True
         self._project_loading = True
         self._sync_conversion_controls(update_status=False)
+        self._sync_listening_master_controls(update_status=False)
         self._set_status("Reading and verifying the local project…")
         self._activity("project", "Verifying stems and MIDI candidates.")
         self._project_load_sequence += 1
@@ -694,6 +862,7 @@ class SunofriendTui(App[None]):
             )
             self._set_status("Project unavailable")
             self._sync_conversion_controls(update_status=True)
+            self._sync_listening_master_controls(update_status=True)
             self._activity("error", _safe_exception_message(exc))
             self.notify(_safe_exception_message(exc), severity="error", timeout=8)
             return
@@ -776,6 +945,9 @@ class SunofriendTui(App[None]):
         )
         self._sync_conversion_controls(
             update_status=not self._preserve_conversion_status
+        )
+        self._sync_listening_master_controls(
+            update_status=not self._preserve_listening_master_status
         )
         self._activity(
             "project",
@@ -1115,7 +1287,11 @@ class SunofriendTui(App[None]):
         studio_active = (
             self._workbench_launching or self._workbench_process is not None
         )
-        locked = self._conversion_running or studio_active
+        locked = (
+            self._conversion_running
+            or self._listening_master_running
+            or studio_active
+        )
         output.disabled = locked
         confirmation.disabled = locked
         problem = self._conversion_start_problem()
@@ -1130,6 +1306,7 @@ class SunofriendTui(App[None]):
                 self.snapshot is None
                 or self._project_loading
                 or self._conversion_running
+                or self._listening_master_running
                 or studio_active
             )
         except Exception:
@@ -1144,6 +1321,274 @@ class SunofriendTui(App[None]):
                 )
             else:
                 self._set_conversion_status(problem, error=True)
+
+    @work(exclusive=True, group="listening-master")
+    async def _run_listening_master(self, request: Any, sequence: int) -> None:
+        runner = self._listening_master_runner
+        if runner is None:
+            self._finish_listening_master_failure(
+                sequence,
+                "The listening-master runner is unavailable.",
+            )
+            return
+        loop = asyncio.get_running_loop()
+
+        def on_progress(progress: Any) -> None:
+            loop.call_soon_threadsafe(
+                self._apply_listening_master_progress,
+                progress,
+                sequence,
+            )
+
+        try:
+            result = await runner.run(
+                request,
+                on_progress=on_progress,
+            )
+        except Exception as exc:
+            self._finish_listening_master_failure(
+                sequence,
+                _safe_exception_message(exc),
+            )
+            return
+        if sequence != self._listening_master_sequence:
+            return
+        if not bool(getattr(result, "succeeded", False)):
+            self._finish_listening_master_failure(
+                sequence,
+                (
+                    "Listening master finished without a verified artifact "
+                    f"(status: {getattr(result, 'status', 'failed')})."
+                ),
+            )
+            return
+
+        self._listening_master_running = False
+        self._listening_master_done.set()
+        self._set_project_controls_locked(False)
+        self._sync_listening_master_controls(update_status=False)
+        total = max(1, self._listening_master_progress_total)
+        self.query_one("#master-progress", ProgressBar).update(
+            total=total,
+            progress=total,
+        )
+        summary = getattr(result, "summary", {}) or {}
+        cache_hit = bool(getattr(result, "cache_hit", False))
+        master_path = getattr(result, "master_path", None)
+        receipt_path = getattr(result, "receipt_path", None)
+        control_path = getattr(result, "balanced_control_path", None)
+        policy = str(getattr(result, "policy", "fixed-policy") or "fixed-policy")
+        selection_hash = str(
+            getattr(result, "selection_manifest_sha256", "") or ""
+        )
+        balanced_hash = str(
+            getattr(result, "balanced_arrangement_manifest_sha256", "") or ""
+        )
+        input_lufs = summary.get("input_integrated_lufs", "unknown")
+        output_lufs = summary.get("output_integrated_lufs", "unknown")
+        output_peak = summary.get("output_true_peak_dbtp", "unknown")
+        status = (
+            "[bold #5eead4]Verified listening master "
+            f"{'reused' if cache_hit else 'created'}.[/]\n"
+            f"[bold]Input control[/] {input_lufs} LUFS\n"
+            f"[bold]Output[/] {output_lufs} LUFS · {output_peak} dBTP · PCM24\n"
+            f"[bold]Policy[/] {escape_markup(policy)} · exact song horizon\n"
+            "[bold]Meaning[/] mastered: true · release master: false\n"
+            f"[bold]Selection[/] {selection_hash[:12] or 'unknown'}… · "
+            f"[bold]balanced control[/] {balanced_hash[:12] or 'unknown'}…\n"
+            f"[bold]Control WAV[/] "
+            f"{escape_markup(str(control_path or 'unavailable'))}\n"
+            f"[bold]Challenger WAV[/] "
+            f"{escape_markup(str(master_path or 'unavailable'))}\n"
+            f"[bold]Receipt[/] "
+            f"{escape_markup(str(receipt_path or 'unavailable'))}\n\n"
+            "[#9fb3c8]The balanced control, MIDI choices, reviews and Pack basket "
+            "remain unchanged. Open the Visual Studio to hear and download both "
+            "versions.[/]"
+        )
+        self._set_listening_master_status(status)
+        self._preserve_listening_master_status = True
+        self._set_status(
+            f"Listening master {'reused' if cache_hit else 'created'} · "
+            "control unchanged"
+        )
+        self._activity(
+            "master",
+            (
+                f"Verified listening master {'reused' if cache_hit else 'created'}; "
+                "mastered true, release master false, no preference recorded."
+            ),
+        )
+
+    def _apply_listening_master_progress(
+        self,
+        progress: Any,
+        sequence: int,
+    ) -> None:
+        if (
+            sequence != self._listening_master_sequence
+            or not self._listening_master_running
+        ):
+            return
+        completed = max(0, int(getattr(progress, "completed", 0) or 0))
+        total = max(
+            1,
+            int(
+                getattr(
+                    progress,
+                    "total",
+                    LISTENING_MASTER_PROGRESS_TOTAL,
+                )
+                or LISTENING_MASTER_PROGRESS_TOTAL
+            ),
+        )
+        self._listening_master_progress_total = total
+        completed = min(completed, total)
+        phase = str(getattr(progress, "phase", "master") or "master")
+        message = str(getattr(progress, "message", "") or "").strip()
+        self.query_one("#master-progress", ProgressBar).update(
+            total=total,
+            progress=completed,
+        )
+        detail = f"{completed}/{total} · {phase}"
+        if message:
+            detail += f"\n{message}"
+        self._set_listening_master_status(detail)
+        self._set_status(f"Listening master · {completed}/{total} · {phase}")
+        if phase != self._listening_master_last_phase:
+            self._listening_master_last_phase = phase
+            self._activity("master", f"{phase}: {message or 'running'}")
+
+    async def _wait_for_listening_master(
+        self,
+        *,
+        notify_timeout: bool = True,
+    ) -> bool:
+        if not self._listening_master_running:
+            return True
+        self._set_listening_master_status(
+            (
+                "The verified FFmpeg operation has no unsafe pseudo-cancel. "
+                "Quit is waiting for its current bounded build to finish."
+            )
+        )
+        self._set_status("Waiting for listening master safe completion…")
+        try:
+            await asyncio.wait_for(
+                self._listening_master_done.wait(),
+                timeout=_LISTENING_MASTER_QUIT_WAIT_SECONDS,
+            )
+        except asyncio.TimeoutError:
+            pass
+        if not self._listening_master_running:
+            return True
+        self._activity(
+            "master",
+            "Quit deferred while the listening master remains active.",
+        )
+        if notify_timeout:
+            self.notify(
+                "Listening master is still running; try Quit again after it finishes",
+                severity="warning",
+            )
+        return False
+
+    def _finish_listening_master_failure(
+        self,
+        sequence: int,
+        message: str,
+    ) -> None:
+        if sequence != self._listening_master_sequence:
+            return
+        self._listening_master_running = False
+        self._listening_master_done.set()
+        self._set_project_controls_locked(False)
+        self._sync_listening_master_controls(update_status=False)
+        self._set_listening_master_status(message, error=True)
+        self._set_status("Listening master unavailable · control unchanged")
+        self._activity("error", message)
+
+    def _set_listening_master_status(
+        self,
+        message: str,
+        *,
+        error: bool = False,
+    ) -> None:
+        try:
+            target = self.query_one("#master-status", Static)
+        except Exception:
+            return
+        prefix = "[bold #fb7185]Cannot master.[/] " if error else ""
+        target.update(f"{prefix}{message}")
+
+    def _listening_master_start_problem(self) -> str | None:
+        if self.snapshot is None:
+            return "Load and verify a project first."
+        if self._project_loading:
+            return "Wait for the current project load to finish."
+        if self._conversion_running:
+            return "Wait for conversion to finish or cancel it first."
+        raw_project = self.query_one("#project-path", Input).value.strip()
+        if (
+            not raw_project
+            or Path(raw_project).expanduser().resolve()
+            != self.snapshot.config.project
+        ):
+            return "The project path changed. Load it before mastering."
+        current_roots = tuple(
+            Path(root).expanduser().resolve()
+            for root in parse_candidate_roots(
+                self.query_one("#candidate-roots", Input).value
+            )
+        )
+        if current_roots != self.snapshot.config.candidate_roots:
+            return "The MIDI result roots changed. Load them before mastering."
+        selected = int(
+            self.snapshot.document.get("counts", {}).get(
+                "selected_part_count",
+                0,
+            )
+            or 0
+        )
+        if selected < 1:
+            return (
+                "Choose at least one MIDI part and create its balanced "
+                "song-interpretation WAV in the Visual Studio first."
+            )
+        if not self.query_one("#master-confirm", Checkbox).value:
+            return (
+                "Confirm that this is a separate comparative challenger, not "
+                "a release master or preference."
+            )
+        return None
+
+    def _sync_listening_master_controls(self, *, update_status: bool) -> None:
+        try:
+            confirmation = self.query_one("#master-confirm", Checkbox)
+            create = self.query_one("#create-listening-master", Button)
+        except Exception:
+            return
+        studio_active = (
+            self._workbench_launching or self._workbench_process is not None
+        )
+        locked = (
+            self._listening_master_running
+            or self._conversion_running
+            or studio_active
+        )
+        confirmation.disabled = locked
+        problem = self._listening_master_start_problem()
+        create.disabled = locked or self._project_loading or problem is not None
+        if update_status and not self._listening_master_running:
+            if problem is None:
+                self._set_listening_master_status(
+                    (
+                        "Ready to verify the exact current balanced control, "
+                        "then create or reuse its fixed-policy challenger."
+                    )
+                )
+            else:
+                self._set_listening_master_status(problem, error=True)
 
     @work(exclusive=True, group="system-check")
     async def _run_system_check(self) -> None:
@@ -1296,6 +1741,7 @@ class SunofriendTui(App[None]):
             "ready": "#5eead4",
             "project": "#60a5fa",
             "conversion": "#34d399",
+            "master": "#22d3ee",
             "system": "#c084fc",
             "studio": "#fbbf24",
             "error": "#fb7185",
@@ -1310,12 +1756,15 @@ class SunofriendTui(App[None]):
         self.query_one("#project-path", Input).disabled = locked
         self.query_one("#candidate-roots", Input).disabled = locked
         self.query_one("#load-project", Button).disabled = locked
+        self.query_one("#system-check", Button).disabled = locked
         try:
             self.query_one("#conversion-output", Input).disabled = locked
             self.query_one("#conversion-confirm", Checkbox).disabled = locked
+            self.query_one("#master-confirm", Checkbox).disabled = locked
         except Exception:
             pass
         self._sync_conversion_controls(update_status=False)
+        self._sync_listening_master_controls(update_status=False)
 
     def _apply_responsive_layout(self, width: int, height: int) -> None:
         compact = int(width) < 110 or int(height) < 44
@@ -1457,16 +1906,23 @@ The WAV is rendered from selected MIDI. Source stems provide timing, horizon
 and level evidence but are not mixed into it. It is a creative interpolation
 of melody, harmony, rhythm and structure, not waveform reconstruction.
 
-[bold]4 · Understand[/] uses the optional Developer Inspector in that same local
+[bold]4 · Master[/] is ready now. After the verified balanced WAV exists, the
+[bold]Master[/] tab creates or reuses one fixed-policy PCM24 listening
+challenger. It checks the current selection and control before and after the
+render. The balanced gain-only WAV remains the control; the challenger is
+labelled [bold]mastered: true[/] and [bold]release master: false[/] and records
+no preference.
+
+[bold]5 · Understand[/] uses the optional Developer Inspector in that same local
 site. It exposes application operations and before/after state, not Python-line
 debugging, and cannot change choices or MIDI.
 
-[bold]5 · Export[/] leaves the song-interpretation WAV available as its own
+[bold]6 · Export[/] leaves the song-interpretation WAV available as its own
 download and uses the existing GarageBand Pack Composer for exact selected
 MIDI. Its basket is separate from playback, mixer state and review decisions;
 only explicit choices enter the ZIP.
 
-[bold]6 · Create[/] retains immutable Clip alternatives and review-before-write
+[bold]7 · Create[/] retains immutable Clip alternatives and review-before-write
 contracts. The TUI will add guided forms without weakening those gates.
 """
 
@@ -1486,6 +1942,31 @@ roots and source stems remain unchanged. Conversion starts only from the button
 below, can be cancelled at a safe boundary, and a successful or partial verified
 result is automatically reloaded for comparison. An explicit Workbench catalog
 must be removed at relaunch because it would ignore newly discovered results.
+"""
+
+_LISTENING_MASTER_SCOPE = """\
+[bold #5eead4]A separate listening challenger for the verified balanced WAV[/]
+
+[bold]What runs[/]
+• Sunofriend first finds the exact current selected-MIDI manifest and verified
+  balanced v3 song-interpretation WAV. You cannot supply a different input.
+• A path-free preflight checks the local audio runtime plus a pinned FFmpeg
+  executable with the loudnorm filter.
+• One fixed two-pass loudness policy creates PCM24 audio, preserves the exact
+  frame horizon, verifies the encoded WAV, and writes a reproducibility receipt.
+• An identical verified result is reused from the private content-addressed
+  cache instead of being rendered again.
+
+[bold]What does not happen[/]
+The balanced gain-only WAV is never replaced or modified. MIDI, selections,
+reviews, feedback, default choices and the GarageBand Pack basket do not change.
+The new WAV is a comparative listening master, not a release master. This TUI
+action records no A/B winner and makes no automatic recommendation.
+
+[bold]Safe execution[/]
+Project changes, conversion and Visual Studio launch are locked while the
+synchronous verified FFmpeg build runs. Immediate cancellation is not claimed:
+Quit waits for completion rather than abandoning potentially publishable work.
 """
 
 _PRIVACY_GUIDE = """\

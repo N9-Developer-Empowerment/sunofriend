@@ -5,10 +5,12 @@ Sunofriend has four user-facing layers:
 1. The Python package and `sunofriend` command are the deterministic engine.
 2. The Guided Local Studio TUI is the preferred human control surface. It
    projects local project state and orchestrates typed engine/Workbench actions
-   without implementing musical algorithms.
+   without implementing musical algorithms. Its native **Master** tab also
+   orchestrates the shared fixed-policy Listening Master service.
 3. The loopback-only Workbench presents completed source/MIDI alternatives,
    records explicit decisions, renders the selected MIDI as a
-   song-interpretation WAV and prepares the GarageBand handoff.
+   song-interpretation WAV, can explicitly create a separate fixed-policy
+   listening-master challenger and prepares the GarageBand handoff.
 4. The portable Agent Skill is the conversational expert route: it selects
    commands, checks prerequisites and interprets reports. It must not duplicate
    audio or MIDI algorithms.
@@ -522,15 +524,50 @@ policy change from being verified under duplicated stale constants. The next
 maintainability boundaries are a shared role/instrument registry and a small
 balanced-artifact service extracted from the larger Workbench artifact module.
 
-A separate standalone `listening_master.build_listening_master` stage accepts
-the exact balanced WAV as an immutable control. It uses fixed two-pass FFmpeg
+A separate `listening_master.build_listening_master` stage accepts the exact
+balanced WAV as an immutable control. It uses fixed two-pass FFmpeg
 `loudnorm` at −16 LUFS integrated, an 11 LU loudness-range target and −1 dBTP,
 then independently measures the actual encoded PCM24 bytes and verifies their
 geometry against the exact input frame horizon. Private temporary files are
 owner-only from creation; device/inode checks guard publication and rollback.
 Its path-free receipt says `mastered: true` and `release_master: false`; it does
-not alter the v3 report, Workbench selection, MIDI or cache. Workbench/TUI
-orchestration and explicit A/B feedback remain later application layers. See
+not alter the v3 report, Workbench selection or MIDI. The standalone command
+publishes to fresh caller paths. Ordinary Workbench instead delegates to
+`WorkbenchListeningMasterService`, which binds the exact selection and balanced
+manifests, prepares in owner-only pending storage, re-verifies the PCM24 WAV
+and receipt, then promotes only after the server has rechecked current
+selection/control state. The separate content-addressed cache is restart-safe,
+bounded to eight entries/2 GiB and loses no musical decision when evicted.
+
+`POST /api/listening-master` accepts exactly
+`selection_manifest_sha256` and
+`balanced_arrangement_manifest_sha256`. The browser cannot choose source paths,
+targets or FFmpeg filters. Public output exposes only the verified challenger,
+receipt, bounded measurements and all-false musical/preference effects. The
+balanced v3 control remains the required product output.
+
+The native TUI path uses
+`tui_listening_master.ProductionListeningMasterRunner` as a typed, one-at-a-time
+adapter over that same service. Its request is only the already verified TUI
+project snapshot; it exposes no mastering path, target, filter or policy. The
+runner reads and folds append-only Workbench state without creating a database,
+resolves the exact current selection/balanced control and checks for a verified
+cache entry. Cache hits are reused without an FFmpeg dependency. Fresh builds
+first call the shared path-free SoundFile/FFmpeg/`loudnorm` preflight, then
+prepare, re-read and compare both manifest hashes before promotion. A mismatch
+discards pending work and fails closed. The runner performs one final read
+immediately after promotion before it reports success. If an independently
+launched Workbench changed either identity in the promotion gap, the promoted
+content-addressed entry remains a harmless non-current cache and the TUI fails
+closed instead of presenting it as current.
+
+Textual owns only confirmation, protected bounded progress and result
+presentation. Project-changing, conversion and Workbench-launch actions remain
+locked during the synchronous operation. Quit may be deferred, because there
+is no process-safe cancel contract and the UI must not claim a pseudo-cancel.
+Creating or reusing the artifact still changes no event, feedback, MIDI,
+selection, default, required-product completion or GarageBand Pack. Explicit
+blinded A/B feedback remains a later application layer. See
 [Musical rendering and listening mastering](MUSICAL_RENDERING_AND_MASTERING.md).
 
 `sunofriend.workbench-balanced-arrangement.v1` points to the private WAV,

@@ -30,7 +30,21 @@ def _interpretation() -> dict:
         "schema": BALANCED_MIX_CONTRACT.arrangement_schema,
         "policy": BALANCED_MIX_CONTRACT.policy,
         "selection_manifest_sha256": "a" * 64,
+        "manifest_sha256": "b" * 64,
+        "preview": {"sha256": "c" * 64},
         "mastered": False,
+    }
+
+
+def _listening_master() -> dict:
+    return {
+        "receipt_schema": LISTENING_MASTER_SCHEMA,
+        "policy": LISTENING_MASTER_POLICY,
+        "selection_manifest_sha256": "a" * 64,
+        "balanced_arrangement_manifest_sha256": "b" * 64,
+        "balanced_preview_sha256": "c" * 64,
+        "mastered": True,
+        "release_master": False,
     }
 
 
@@ -142,3 +156,53 @@ def test_product_is_not_complete_until_selected_midi_has_full_mix_review() -> No
         is True
     )
     assert status["complete"] is False
+
+
+def test_optional_listening_master_readiness_requires_exact_current_control() -> None:
+    ready = build_product_output_status(
+        _selection(),
+        _interpretation(),
+        _listening_master(),
+        full_mix_review_complete=True,
+    )
+    stale_selection = build_product_output_status(
+        _selection(),
+        _interpretation(),
+        {
+            **_listening_master(),
+            "selection_manifest_sha256": "d" * 64,
+        },
+        full_mix_review_complete=True,
+    )
+    stale_control = build_product_output_status(
+        _selection(),
+        _interpretation(),
+        {
+            **_listening_master(),
+            "balanced_arrangement_manifest_sha256": "d" * 64,
+        },
+        full_mix_review_complete=True,
+    )
+
+    optional = ready["optional_outputs"]["comparative_listening_master"]
+    assert ready["complete"] is True
+    assert optional["available_through_cli"] is True
+    assert optional["available_through_workbench"] is True
+    assert optional["ready"] is True
+    assert optional["mastered"] is True
+    assert optional["release_master"] is False
+    assert optional["automatic_promotion"] is False
+    assert (
+        stale_selection["optional_outputs"]["comparative_listening_master"][
+            "ready"
+        ]
+        is False
+    )
+    assert (
+        stale_control["optional_outputs"]["comparative_listening_master"][
+            "ready"
+        ]
+        is False
+    )
+    assert stale_selection["complete"] is True
+    assert stale_control["complete"] is True

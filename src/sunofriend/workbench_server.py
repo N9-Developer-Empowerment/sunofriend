@@ -36,6 +36,10 @@ from .workbench_artifacts import (
     canonical_garageband_pack_basket,
     selected_candidates,
 )
+from .workbench_listening_master import (
+    WORKBENCH_LISTENING_MASTER_SCHEMA,
+    WorkbenchListeningMasterService,
+)
 from .workbench_clips import WorkbenchClipService, public_artifact as public_clip_artifact
 from .workbench_correction import (
     WorkbenchClipCorrectionConflictError,
@@ -331,6 +335,7 @@ class WorkbenchHTTPServer(ThreadingHTTPServer):
         catalog: Mapping[str, Any],
         store: WorkbenchStore,
         artifacts: WorkbenchArtifacts,
+        listening_masters: WorkbenchListeningMasterService,
         token: str,
         developer_inspector: bool = False,
         clip_service: WorkbenchClipService | None = None,
@@ -341,6 +346,7 @@ class WorkbenchHTTPServer(ThreadingHTTPServer):
         self.catalog = catalog
         self.store = store
         self.artifacts = artifacts
+        self.listening_masters = listening_masters
         self.token = token
         self.developer_inspector = bool(developer_inspector)
         self.clip_service = clip_service
@@ -447,6 +453,9 @@ def create_workbench_server(
     artifacts = WorkbenchArtifacts(
         destination / "artifacts", soundfont_path=soundfont_path
     )
+    listening_masters = WorkbenchListeningMasterService(
+        destination / "artifacts"
+    )
     clip_reuse_service = (
         WorkbenchClipReuseService.open(
             clip_service=clip_service,
@@ -478,6 +487,7 @@ def create_workbench_server(
         catalog=catalog,
         store=store,
         artifacts=artifacts,
+        listening_masters=listening_masters,
         token=session_token,
         developer_inspector=developer_inspector,
         clip_service=clip_service,
@@ -979,6 +989,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             "/api/decoded-arrangement-chunk",
             "/api/arrangement",
             "/api/balanced-arrangement",
+            "/api/listening-master",
             "/api/garageband-export",
             "/api/garageband-pack-basket",
             "/api/garageband-pack",
@@ -1571,6 +1582,14 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                         claim_token = None
                         promoted["cache_hit"] = artifact.get("cache_hit") is True
                         public_artifact = self._public_artifact(promoted)
+                        cached_master = self.server.listening_masters.cached(
+                            promoted
+                        )
+                        public_master = (
+                            self._public_artifact(cached_master)
+                            if cached_master
+                            else None
+                        )
                 except Exception:
                     if claim_token is not None:
                         try:
@@ -1587,9 +1606,193 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     HTTPStatus.OK,
                     {
                         "balanced_arrangement": public_artifact,
+                        "listening_master": public_master,
                         "product_outputs": build_product_output_status(
                             final_manifest,
                             public_artifact,
+                            public_master,
+                            full_mix_review_complete=bool(
+                                final_home["counts"]["selected_part_count"]
+                                and not final_home["counts"][
+                                    "selected_needing_full_mix_count"
+                                ]
+                            ),
+                        ),
+                    },
+                )
+                return
+            if parsed.path == "/api/listening-master":
+                _require_exact_request_keys(
+                    request,
+                    {
+                        "selection_manifest_sha256",
+                        "balanced_arrangement_manifest_sha256",
+                    },
+                    label="listening master",
+                )
+                requested_selection_sha256 = _require_lowercase_sha256(
+                    request.get("selection_manifest_sha256"),
+                    label="listening master selection_manifest_sha256",
+                )
+                requested_balanced_sha256 = _require_lowercase_sha256(
+                    request.get("balanced_arrangement_manifest_sha256"),
+                    label=(
+                        "listening master "
+                        "balanced_arrangement_manifest_sha256"
+                    ),
+                )
+                with self.server.state_lock:
+                    initial_state = self.server.store.current_state(
+                        self.server.catalog
+                    )
+                    initial_selection = (
+                        self.server.artifacts.decoded_arrangement_selection_manifest(
+                            self.server.catalog,
+                            initial_state,
+                        )
+                    )
+                    if (
+                        requested_selection_sha256
+                        != initial_selection["selection_manifest_sha256"]
+                    ):
+                        raise WorkbenchSelectionConflictError(
+                            "the selected arrangement changed; reload it before "
+                            "creating the comparative listening master"
+                        )
+                    initial_balanced = (
+                        self.server.artifacts.cached_balanced_arrangement(
+                            self.server.catalog,
+                            initial_state,
+                        )
+                    )
+                    if initial_balanced is None:
+                        raise WorkbenchSelectionConflictError(
+                            "the current song-interpretation WAV is unavailable; "
+                            "create it before the comparative listening master"
+                        )
+                    if (
+                        requested_balanced_sha256
+                        != initial_balanced.get("manifest_sha256")
+                    ):
+                        raise WorkbenchSelectionConflictError(
+                            "the balanced song interpretation changed; reload it "
+                            "before creating the comparative listening master"
+                        )
+                try:
+                    prepared = self.server.listening_masters.prepare(
+                        initial_balanced
+                    )
+                except (OSError, RuntimeError, ValueError) as exc:
+                    with self.server.state_lock:
+                        failed_state = self.server.store.current_state(
+                            self.server.catalog
+                        )
+                        failed_selection = self.server.artifacts.decoded_arrangement_selection_manifest(  # noqa: E501
+                            self.server.catalog,
+                            failed_state,
+                        )
+                        failed_balanced = (
+                            self.server.artifacts.cached_balanced_arrangement(
+                                self.server.catalog,
+                                failed_state,
+                            )
+                        )
+                    if (
+                        requested_selection_sha256
+                        != failed_selection["selection_manifest_sha256"]
+                        or failed_balanced is None
+                        or requested_balanced_sha256
+                        != failed_balanced.get("manifest_sha256")
+                    ):
+                        raise WorkbenchSelectionConflictError(
+                            "the selected arrangement or balanced song "
+                            "interpretation changed while the comparative "
+                            "listening master was being created; reload and retry"
+                        ) from exc
+                    raise
+                cache_key = str(prepared.get("cache_key", ""))
+                pending_token_value = prepared.get("_pending_token")
+                pending_token = (
+                    str(pending_token_value)
+                    if isinstance(pending_token_value, str)
+                    else None
+                )
+                try:
+                    with self.server.state_lock:
+                        final_state = self.server.store.current_state(
+                            self.server.catalog
+                        )
+                        final_selection = self.server.artifacts.decoded_arrangement_selection_manifest(  # noqa: E501
+                            self.server.catalog,
+                            final_state,
+                        )
+                        final_balanced = (
+                            self.server.artifacts.cached_balanced_arrangement(
+                                self.server.catalog,
+                                final_state,
+                            )
+                        )
+                        if (
+                            requested_selection_sha256
+                            != final_selection["selection_manifest_sha256"]
+                            or final_balanced is None
+                            or requested_balanced_sha256
+                            != final_balanced.get("manifest_sha256")
+                            or prepared.get("selection_manifest_sha256")
+                            != requested_selection_sha256
+                            or prepared.get(
+                                "balanced_arrangement_manifest_sha256"
+                            )
+                            != requested_balanced_sha256
+                        ):
+                            raise WorkbenchSelectionConflictError(
+                                "the selected arrangement or balanced song "
+                                "interpretation changed while the comparative "
+                                "listening master was being created; reload "
+                                "and retry"
+                            )
+                        if pending_token is None:
+                            promoted = self.server.listening_masters.cached(
+                                final_balanced
+                            )
+                            if promoted is None:
+                                raise RuntimeError(
+                                    "verified listening-master cache disappeared"
+                                )
+                        else:
+                            promoted = self.server.listening_masters.promote(
+                                cache_key,
+                                pending_token,
+                            )
+                            pending_token = None
+                        promoted["cache_hit"] = (
+                            prepared.get("cache_hit") is True
+                        )
+                        public_master = self._public_artifact(promoted)
+                        final_home = build_workbench_home(
+                            self.server.catalog,
+                            final_state,
+                        )
+                except Exception:
+                    if pending_token is not None:
+                        try:
+                            self.server.listening_masters.discard(
+                                cache_key,
+                                pending_token,
+                            )
+                        except Exception:
+                            # Best-effort cleanup must not replace a truthful
+                            # selection conflict or mastering failure.
+                            pass
+                    raise
+                self._json(
+                    HTTPStatus.OK,
+                    {
+                        "listening_master": public_master,
+                        "product_outputs": build_product_output_status(
+                            final_selection,
+                            final_balanced,
+                            public_master,
                             full_mix_review_complete=bool(
                                 final_home["counts"]["selected_part_count"]
                                 and not final_home["counts"][
@@ -1835,10 +2038,22 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             else None
         )
         payload["balanced_arrangement"] = public_balanced_arrangement
+        listening_master = (
+            self.server.listening_masters.cached(balanced_arrangement)
+            if balanced_arrangement
+            else None
+        )
+        public_listening_master = (
+            self._public_artifact(listening_master)
+            if listening_master
+            else None
+        )
+        payload["listening_master"] = public_listening_master
         payload["product_contract"] = product_contract_document()
         payload["product_outputs"] = build_product_output_status(
             decoded_arrangement_selection,
             public_balanced_arrangement,
+            public_listening_master,
             full_mix_review_complete=bool(
                 home["counts"]["selected_part_count"]
                 and not home["counts"]["selected_needing_full_mix_count"]
@@ -2043,35 +2258,45 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         freeze_balanced = (
             artifact.get("schema") == BALANCED_ARRANGEMENT_SCHEMA
         )
+        freeze_listening_master = (
+            artifact.get("schema") == WORKBENCH_LISTENING_MASTER_SCHEMA
+        )
+        private_artifact_keys = {
+            "midi",
+            "preview",
+            "report",
+            "recipe",
+            "master",
+            "zip",
+            "acceptance_review",
+            "acceptance_seed",
+        }
+        if freeze_listening_master:
+            private_artifact_keys.add("receipt")
         public = {
             key: value
             for key, value in artifact.items()
-            if key
-            not in {
-                "midi",
-                "preview",
-                "report",
-                "recipe",
-                "zip",
-                "acceptance_review",
-                "acceptance_seed",
-                "_deferred_cache_claim",
-            }
+            if not str(key).startswith("_")
+            and key not in private_artifact_keys
         }
         for key, prefix in (
             ("midi", "artifact-midi"),
             ("preview", "artifact-preview"),
             ("report", "artifact-report"),
             ("recipe", "artifact-recipe"),
+            ("master", "artifact-listening-master"),
+            ("receipt", "artifact-listening-master-receipt"),
             ("zip", "artifact-zip"),
             ("acceptance_review", "artifact-acceptance-review"),
         ):
+            if key == "receipt" and not freeze_listening_master:
+                continue
             record = artifact.get(key)
             if not isinstance(record, Mapping):
                 continue
             media_id = f"{prefix}-{str(record['sha256'])[:24]}"
             private_record = dict(record)
-            if freeze_balanced:
+            if freeze_balanced or freeze_listening_master:
                 private_record["_freeze_on_serve"] = True
             if key == "acceptance_review":
                 private_record["_freeze_on_serve"] = True

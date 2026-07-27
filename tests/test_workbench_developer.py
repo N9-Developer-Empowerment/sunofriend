@@ -241,6 +241,23 @@ class WorkbenchDeveloperTraceTests(unittest.TestCase):
                 "track_count": 2,
             },
         )
+        self.assertEqual(
+            trace_response_facts(
+                "/api/listening-master",
+                {
+                    "listening_master": {
+                        "schema": "sunofriend.workbench-listening-master.v1",
+                        "cache_hit": False,
+                        "private_path": "/Users/alice/master.wav",
+                    }
+                },
+            ),
+            {
+                "schema": "sunofriend.workbench-listening-master.v1",
+                "cache_hit": False,
+                "track_count": 1,
+            },
+        )
 
     def test_clip_routes_have_static_read_only_operation_identities(self) -> None:
         self.assertEqual(

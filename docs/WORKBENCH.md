@@ -44,6 +44,10 @@ receipt and GarageBand fader recipe. Source stems provide timing, horizon and
 level evidence only and are not mixed into the WAV. It does not replace the
 dry unity control, record feedback or enter the unchanged GarageBand Pack. The
 gain-only WAV is explicitly not mastered.
+After that exact control exists, an optional explicit action builds the fixed
+Listening Master challenger and presents its separate player, PCM24 WAV and
+receipt. It cannot replace the control, complete a required output or record a
+preference.
 Phase 5.8 explains independently verified execution provenance. Phase 5.9 now
 adds the exact-pack interactive tutorial, required 10/10 comprehension quiz and
 two-check local acceptance resolver. That review passed on 22 July 2026, so the
@@ -62,9 +66,10 @@ reviewing or extending them. See the
 [technical tour](TECHNICAL_TOUR.md) for the implementation path and guided
 usage.
 The [Guided Local Studio TUI plan](LOCAL_STUDIO_TUI.md) explains the terminal
-dashboard/Workbench boundary and the planned conversion, job-ledger and
-structured-feedback increments. Those later TUI capabilities are not part of
-the current Workbench or Phase 5.10a.
+dashboard/Workbench boundary, implemented conversion and native Listening
+Master operations, and the planned job-ledger and structured-feedback
+increments. The TUI mastering form is a thin client of the same application
+service described here; it does not add a second audio policy.
 
 The arrangement explorer shows every unique project source stem beside only
 the active explicit main and optional MIDI choices, with temporary visibility,
@@ -912,15 +917,37 @@ choice, automation, mixing or mastering. It is currently Workbench-only:
 there is no standalone balance CLI, and the WAV/receipt/recipe are not
 eligible GarageBand Pack Composer items.
 
-After downloading that exact balanced WAV, the separate CLI command
+After the exact balanced control exists, **Create Listening Master
+challenger** invokes a separate fixed two-pass −16 LUFS/−1 dBTP PCM24
+operation while retaining the exact frame horizon. The request contains only
+the current selection-manifest hash and balanced-arrangement manifest hash; it
+cannot name an audio file, target, filter graph or policy. The server verifies
+both identities before and after the render, independently verifies the encoded
+artifact, then exposes a separate player and WAV/receipt downloads from an
+owner-only, content-addressed cache.
+
+Its `sunofriend.listening-master.v2` receipt says `mastered: true` and
+`release_master: false`. The gain-only v3 player and downloads remain visible
+and unchanged as the required product output and control. Creating, caching,
+playing or downloading the challenger records no event, review, feedback or
+preference and changes no MIDI, selection, ranking, default, required-product
+completion or Pack Composer item. The standalone
 `sunofriend listening-master BALANCED.wav --out FRESH.wav --report FRESH.json`
-can create a fixed two-pass −16 LUFS/−1 dBTP PCM24 listening challenger while
-retaining the exact frame horizon. A third pass verifies the actual encoded
-artifact before owner-only, inode-checked publication. Its receipt says
-`mastered: true` and `release_master: false`. This command is not yet a
-Workbench button, player, feedback form or Pack Composer item, and it does not
-replace the gain-only v3 control. The planned control/challenger review and
-no-silent-promotion contract are in
+route remains available for expert fresh-path use.
+
+The native TUI **Master** tab offers the same exact-control operation without
+requiring the browser. It derives both identities from verified loaded state,
+has no user path/target/filter inputs, performs a path-free
+SoundFile/FFmpeg/`loudnorm` preflight for a fresh build, and reuses a verified
+cache hit without requiring FFmpeg. It checks both identities before and
+immediately after promotion, refusing to report a separately changed local
+state as current. It locks project-changing actions and shows bounded protected
+progress until the synchronous operation completes; there is no unsafe
+pseudo-cancel. Workbench remains the place to listen to and download both
+artifacts.
+
+The planned blinded control/challenger review remains deferred. The
+no-silent-promotion contract is in
 [Musical rendering and listening mastering](MUSICAL_RENDERING_AND_MASTERING.md).
 
 Only the buttons under **Save after listening** append `full_mix` decisions.

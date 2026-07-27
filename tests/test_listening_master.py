@@ -12,11 +12,19 @@ import soundfile
 
 import sunofriend.listening_master as listening_master
 from sunofriend.listening_master import (
+    LISTENING_MASTER_EFFECTS,
     LISTENING_MASTER_POLICY,
+    LISTENING_MASTER_PREFLIGHT_SCHEMA,
     LISTENING_MASTER_SCHEMA,
+    LISTENING_MASTER_TARGETS,
     _parse_loudnorm_stats,
     _second_pass_filter,
     build_listening_master,
+    check_listening_master_dependencies,
+)
+from sunofriend.listening_master_contract import (
+    LISTENING_MASTER_VERIFICATION_SCHEMA,
+    verify_listening_master_artifacts,
 )
 
 
@@ -53,6 +61,7 @@ def _fake_ffmpeg(
     verification_input_i: str = "-16.00",
     verification_input_tp: str = "-1.00",
     require_private_audio: bool = False,
+    provide_loudnorm: bool = True,
 ) -> None:
     render_stats = {**GOOD_STATS, "output_i": render_output_i}
     verification_stats = {
@@ -72,7 +81,7 @@ if "-version" in args:
     print("ffmpeg version sunofriend-test")
     raise SystemExit(0)
 if "-filters" in args:
-    print(" .. loudnorm          A->A       EBU R128 scanner")
+    print({"' .. loudnorm          A->A       EBU R128 scanner'" if provide_loudnorm else "' .. volume            A->A       Change input volume'"})
     raise SystemExit(0)
 source = args[args.index("-i") + 1]
 destination = args[-1]
@@ -106,6 +115,84 @@ def _contains_value(value: object, expected: str) -> bool:
     if isinstance(value, list):
         return any(_contains_value(item, expected) for item in value)
     return value == expected
+
+
+def _contains_absolute_path(value: object) -> bool:
+    if isinstance(value, dict):
+        return any(_contains_absolute_path(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_contains_absolute_path(item) for item in value)
+    return isinstance(value, str) and os.path.isabs(value)
+
+
+def test_dependency_preflight_returns_path_free_pinned_runtime_evidence(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = tmp_path / "ffmpeg"
+    _fake_ffmpeg(fake)
+    pinned: list[listening_master._PinnedExecutable] = []
+    original_pin = listening_master._pin_ffmpeg
+
+    def observed_pin(path: Path) -> listening_master._PinnedExecutable:
+        executable = original_pin(path)
+        pinned.append(executable)
+        return executable
+
+    monkeypatch.setattr(listening_master, "_pin_ffmpeg", observed_pin)
+
+    result = check_listening_master_dependencies(fake)
+
+    assert result["schema"] == LISTENING_MASTER_PREFLIGHT_SCHEMA
+    assert result["ready"] is True
+    assert result["soundfile"]["available"] is True
+    assert result["soundfile"]["version"]
+    assert result["ffmpeg"]["backend"] == "FFmpeg loudnorm"
+    assert result["ffmpeg"]["version"] == "ffmpeg version sunofriend-test"
+    assert result["ffmpeg"]["filter"] == "loudnorm"
+    assert result["ffmpeg"]["policy"] == LISTENING_MASTER_POLICY
+    assert result["ffmpeg"]["executable_sha256"] == hashlib.sha256(
+        fake.read_bytes()
+    ).hexdigest()
+    assert not _contains_absolute_path(result)
+    assert len(pinned) == 1
+    with pytest.raises(OSError):
+        os.fstat(pinned[0].fd)
+
+
+def test_dependency_preflight_rejects_ffmpeg_without_loudnorm(
+    tmp_path: Path,
+) -> None:
+    fake = tmp_path / "ffmpeg"
+    _fake_ffmpeg(fake, provide_loudnorm=False)
+
+    with pytest.raises(RuntimeError, match="required loudnorm filter"):
+        check_listening_master_dependencies(fake)
+
+
+def test_dependency_preflight_requires_soundfile_before_ffmpeg(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = tmp_path / "ffmpeg"
+    _fake_ffmpeg(fake)
+    pinned = False
+
+    def missing_soundfile() -> object:
+        raise RuntimeError("listening-master requires soundfile")
+
+    def unexpected_pin(_path: Path) -> listening_master._PinnedExecutable:
+        nonlocal pinned
+        pinned = True
+        raise AssertionError("FFmpeg must not be admitted without soundfile")
+
+    monkeypatch.setattr(listening_master, "_soundfile_module", missing_soundfile)
+    monkeypatch.setattr(listening_master, "_pin_ffmpeg", unexpected_pin)
+
+    with pytest.raises(RuntimeError, match="requires soundfile"):
+        check_listening_master_dependencies(fake)
+
+    assert pinned is False
 
 
 def test_parse_loudnorm_stats_uses_last_complete_json() -> None:
@@ -210,6 +297,50 @@ def test_build_listening_master_creates_fresh_private_hash_bound_artifacts(
     assert document["receipt_sha256"] == payload_hash
     destination_identity = (tmp_path.stat().st_dev, tmp_path.stat().st_ino)
     assert synced_directories.count(destination_identity) == 1
+
+
+def test_public_contract_verifies_exact_artifacts_and_returns_no_paths(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "balanced-control.wav"
+    output = tmp_path / "listening-master.wav"
+    report = tmp_path / "listening-master.json"
+    fake = tmp_path / "ffmpeg"
+    _source_wav(source)
+    _fake_ffmpeg(fake)
+    build_listening_master(
+        source,
+        output_path=output,
+        report_path=report,
+        ffmpeg_path=fake,
+    )
+
+    verified = verify_listening_master_artifacts(source, output, report)
+
+    assert verified["schema"] == LISTENING_MASTER_VERIFICATION_SCHEMA
+    assert verified["status"] == "verified"
+    assert verified["receipt_schema"] == LISTENING_MASTER_SCHEMA
+    assert verified["policy"] == LISTENING_MASTER_POLICY
+    assert verified["source"]["sha256"] == hashlib.sha256(
+        source.read_bytes()
+    ).hexdigest()
+    assert verified["master"]["sha256"] == hashlib.sha256(
+        output.read_bytes()
+    ).hexdigest()
+    assert verified["receipt_file"]["sha256"] == hashlib.sha256(
+        report.read_bytes()
+    ).hexdigest()
+    assert verified["targets"] == dict(LISTENING_MASTER_TARGETS)
+    assert verified["effects"] == dict(LISTENING_MASTER_EFFECTS)
+    assert (
+        verified["measurements"]["verification"]["measured_artifact"]
+        == "encoded_pcm24_output"
+    )
+    assert not _contains_absolute_path(verified)
+    with pytest.raises(TypeError):
+        LISTENING_MASTER_TARGETS["integrated_lufs"] = -14.0  # type: ignore[index]
+    with pytest.raises(TypeError):
+        LISTENING_MASTER_EFFECTS["selection_changed"] = True  # type: ignore[index]
 
 
 def test_build_listening_master_refuses_existing_output(tmp_path: Path) -> None:

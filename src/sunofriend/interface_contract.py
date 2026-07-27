@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-07-27.2"
+INTERFACE_CONTRACT_VERSION = "2026-07-27.4"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -87,12 +87,20 @@ PUBLIC_COMMAND_GROUPS: dict[str, tuple[str, ...]] = {
 
 PUBLIC_COMMANDS = frozenset(chain.from_iterable(PUBLIC_COMMAND_GROUPS.values()))
 
-# Phase 5.10b adds one typed full-project conversion journey over the existing
-# listen-all and vocal-melody engines. Every other public command remains
-# available through the CLI and is planned for later typed TUI operation forms
-# rather than being hidden or falsely described as complete.
+# The Guided Local Studio has typed full-project conversion plus exact-current
+# Listening Master orchestration over the existing production services. Every
+# other public command remains available through the CLI and is planned for
+# later typed TUI operation forms rather than being hidden or falsely
+# described as complete.
 DIRECT_TUI_COMMANDS = frozenset(
-    {"tui", "doctor", "listen-all", "vocal-melody", "workbench"}
+    {
+        "tui",
+        "doctor",
+        "listen-all",
+        "vocal-melody",
+        "listening-master",
+        "workbench",
+    }
 )
 
 _GROUP_TITLES = {
@@ -149,6 +157,14 @@ def render_skill_interface_reference() -> str:
             "The optional listening master is a comparative artifact, not a",
             "human-approved release master. Playback, metrics and visible",
             "defaults never imply a preference.",
+            "",
+            "Ordinary Workbench and the Guided Local Studio Master tab can",
+            "explicitly build or reuse a separate fixed-policy",
+            "listening-master challenger from the exact current balanced",
+            "control. The gain-only control remains unchanged; the operation",
+            "records no feedback or preference and changes no MIDI, selection,",
+            "default or GarageBand pack. Blinded control-versus-challenger",
+            "feedback remains deferred.",
             "",
             "## Guided entry points",
             "",

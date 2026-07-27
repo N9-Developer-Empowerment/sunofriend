@@ -3,7 +3,7 @@ name: sunofriend
 description: Use Sunofriend's local TUI, CLI, Workbench and Developer Inspector to turn Suno/Moises stems or vocals into two linked outputs, reviewed GarageBand-ready MIDI plus a balanced MIDI-derived song-interpretation WAV. Compare immutable analytical, tracker, repair and optional local-AI candidates; review phrases; render selected MIDI; create a separate receipt-bound listening master; export exact GarageBand packs; build or match sample instruments; transform key, BPM, tuning and alignment; and browse, reuse, transform or correct Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody, MIDI comparison, song interpolation, GarageBand handoff, instrument matching, tempo/key changes, mashups and bounded note correction. Prefer `sunofriend tui` for a human operator; retain CLI/skill routes for expert automation. Do not use it for generic stem separation, human-approved release mastering, lyric writing, arbitrary shell execution, unapproved model/plugin downloads or DAW GUI editing.
 ---
 
-<!-- sunofriend-interface-contract: 2026-07-27.2 -->
+<!-- sunofriend-interface-contract: 2026-07-27.4 -->
 
 # Sunofriend
 
@@ -49,9 +49,15 @@ guided forms.
      root; success reloads the fresh root. It never overwrites or auto-selects.
      Relaunch without `--catalog` for conversion because an explicit catalog
      would ignore newly discovered automatic candidates.
+     Its native **Master** tab can then create or reuse the separate
+     fixed-policy Listening Master challenger after the current balanced
+     selected-MIDI WAV has been explicitly created in Workbench. It exposes no
+     mastering controls, records no preference, and leaves listening/download
+     comparison in Workbench.
      There is no durable job ledger, restart recovery or structured improvement
-     feedback yet. Workbench remains review-only. The TUI enables the read-only
-     Developer Inspector by default.
+     feedback yet. Workbench remains the rich visual listening, review,
+     rendering and download surface. The TUI enables the read-only Developer
+     Inspector by default.
    - `sunofriend doctor --require transcribe` for lead or backing vocals and
      short `melody-guide` pitch/contour guides.
    - `sunofriend ai-doctor --require muscriptor-checkpoint` before explicitly
@@ -168,6 +174,21 @@ guided forms.
      GarageBand-handoff render actions. The MIDI-derived song-interpretation
      WAV also measures and mixes rendered MIDI audio with NumPy and SoundFile,
      so require `sunofriend doctor --require convert` before creating it.
+     Before a fresh **Create Listening Master challenger** build, also require
+     SoundFile and an existing local FFmpeg executable with the `loudnorm`
+     filter. Workbench and the TUI **Master** tab apply only the fixed
+     `ffmpeg-loudnorm-two-pass-fixed-horizon-v1` policy to the exact current
+     balanced control. An exact verified cache hit may be reused without
+     rerunning that dependency preflight. The TUI accepts no source path,
+     output path, loudness target, filter or mastering parameter: it rereads
+     the private event state, binds the current selection and balanced-control
+     hashes, rechecks both after preparation, and promotes only if they still
+     match. It must reread them once more immediately after promotion before
+     reporting success; concurrent drift fails closed and the content-addressed
+     artifact is not reported as current. It locks project changes, conversion
+     and Workbench launch while the synchronous verified build runs. Do not
+     claim immediate cancellation; TUI Quit is deferred while that operation
+     remains active.
      `--developer-inspector` is an optional read-only
      application operation/state explorer in the same token-protected loopback
      Workbench. It needs no extra dependency and must not be described as a
@@ -406,7 +427,29 @@ guided forms.
   file into a per-request disk-backed anonymous snapshot; return 409 on drift
   and 503 when temporary snapshot storage is unavailable.
   Keep `sunofriend listening-master` as a separate challenger downstream of
-  that unchanged gain-only control. It uses fixed policy
+  that unchanged gain-only control. The standalone command accepts fresh
+  output paths, while ordinary Workbench and the Guided Local Studio
+  **Master** tab expose an explicit **Create / reuse Listening Master** action
+  only after the exact current balanced artifact exists. Workbench requests
+  contain exactly the current selection-manifest hash and
+  balanced-arrangement manifest hash; never accept browser-supplied audio
+  paths, targets, filter graphs or policy choices. The TUI supplies neither
+  hashes nor paths from editable widgets: its typed runner derives them from
+  the loaded catalog and read-only event state, reusing the same artifact and
+  mastering services.
+  Recheck both identities before and after rendering, then publish a separate,
+  owner-only, content-addressed WAV and receipt. Retain the balanced v3 player,
+  downloads and required-product status unchanged. For the native TUI action,
+  check the promoted cache first; on a miss run the path-free SoundFile,
+  pinned-FFmpeg and `loudnorm` preflight, prepare privately, reread state,
+  recheck both hashes and discard the exact pending token on drift before
+  promotion. Reread once more after promotion and refuse a successful/current
+  result if a separate local writer changed either identity in that final gap;
+  an old content-addressed cache entry is harmless and must not be presented as
+  current. Progress must stay bounded and path-free. There is deliberately no
+  pseudo-cancel around the synchronous FFmpeg builder; defer Quit until its safe
+  completion. Blinded control-versus-challenger feedback is still deferred.
+  Both routes use fixed policy
   `ffmpeg-loudnorm-two-pass-fixed-horizon-v1`: two-pass FFmpeg EBU R128
   analysis/rendering at −16 LUFS integrated, 11 LU loudness-range target and
   −1 dBTP true-peak ceiling, followed by resampling and an exact trim back to
@@ -421,8 +464,9 @@ guided forms.
   It may use dynamic loudness processing but no EQ, widening, reverb, chorus or
   saturation. It must not overwrite or replace the praised balanced control,
   change MIDI/source/selection/ranking/defaults, or imply a listening
-  preference. Compare the control and challenger by ear before adopting any
-  future default.
+  preference. Creating, caching, playing or downloading it must also have no
+  review, event, pack or product-completion effect. Compare the control and
+  challenger by ear before adopting any future default.
   The explicitly labelled compatibility fallback is synchronized in seconds,
   not sample-accurate, but its controls must also remain feedback- and
   event-free. Require every included preview to use the current SoundFont hash
@@ -1937,12 +1981,20 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     unity control is unchanged and that the WAV/receipt/fader recipe are
     Workbench-only, not yet in the CLI or GarageBand Pack. Do not
     infer musical preference from trims or call the result final mastering.
-    If `listening-master` was explicitly requested, separately report its
+    If a listening master was explicitly requested through the standalone
+    command, Workbench action or native TUI **Master** tab, separately report its
     source/output/report hashes, fixed mastering policy, input/output
     integrated LUFS, output dBTP, normalization type and exact unchanged frame
     horizon. Call it a listening-master challenger with
     `release_master: false`; retain and name the original balanced WAV as the
-    control.
+    control. For Workbench or TUI, additionally confirm the selection and
+    balanced manifest hashes were current, the receipt and PCM24 WAV are
+    available through the local Workbench, and
+    feedback/event/preference/selection/default/pack effects were false. For a
+    TUI cache miss, report the SoundFile/FFmpeg/`loudnorm` preflight; for a
+    cache hit, state that verified content-addressed reuse needed no fresh
+    preflight. Do not imply that the optional challenger completes a required
+    product output or that creating it is a listening preference.
     For long-song visualization,
     report Fit/4×/16× fixed-window culling and bounded canvases, but disclose
     that the complete server-bounded JSON is still downloaded, parsed and
