@@ -1858,7 +1858,7 @@
         <p class="notice"><b>One controlled variable:</b> note pitches, starts,
         durations and velocities stay fixed. Only the complete instrument
         program changes. ${lane?.role === "keys"
-          ? "Before any blind keys audio is published, both server-owned keyboard proxies must pass the local functional coverage preflight for this selected MIDI."
+          ? "Before any blind keys audio is exposed in this loopback browser, both server-owned keyboard proxies must pass the local functional coverage preflight for this selected MIDI."
           : "Bass uses the fixed server-owned complete-patch pair; the separate keys coverage preflight is not required."}</p>
         <div class="actions" role="group" aria-label="Eligible bass or keys MIDI lanes">
           ${laneButtons}
