@@ -69,7 +69,19 @@ from .workbench_instrument_review import (
     WorkbenchInstrumentReviewRevisionConflictError,
     WorkbenchInstrumentReviewService,
 )
-from .workbench_clips import WorkbenchClipService, public_artifact as public_clip_artifact
+from .workbench_instrument_coverage import (
+    PROBE_BPM,
+    keys_coverage_contract,
+    validate_keys_coverage_report,
+)
+from .workbench_instrument_policy import (
+    complete_instrument_programs,
+    complete_instrument_roles,
+)
+from .workbench_clips import (
+    WorkbenchClipService,
+    public_artifact as public_clip_artifact,
+)
 from .workbench_correction import (
     WorkbenchClipCorrectionConflictError,
     WorkbenchClipCorrectionError,
@@ -113,6 +125,7 @@ _MAX_REQUEST_BYTES = 64 * 1024
 _MAX_GENERATED_MEDIA_RECORDS = 768
 _MAX_DECODED_STREAM_PLANS = 16
 _MAX_INSTRUMENT_REVIEW_CONTEXTS = 128
+_INSTRUMENT_REVIEW_ROLES = frozenset(complete_instrument_roles())
 _MAX_DEVELOPER_SNAPSHOT_BYTES = 512 * 1024
 _CLIP_CORRECTION_ROUTES = frozenset(
     {
@@ -157,9 +170,8 @@ def _freeze_verified_immutable_file(
             snapshot.write(chunk)
             digest.update(chunk)
             size += len(chunk)
-        if (
-            size != record.get("bytes")
-            or digest.hexdigest() != str(record.get("sha256", ""))
+        if size != record.get("bytes") or digest.hexdigest() != str(
+            record.get("sha256", "")
         ):
             raise ValueError("pinned file bytes changed")
         snapshot.seek(0)
@@ -203,8 +215,7 @@ def _workbench_master_reviewer_key(project_id: Any) -> str:
     if not isinstance(project_id, str) or not project_id:
         raise ValueError("Workbench project identity is invalid")
     payload = (
-        "sunofriend.workbench-listening-master-reviewer.v1\0"
-        f"{project_id}"
+        f"sunofriend.workbench-listening-master-reviewer.v1\0{project_id}"
     ).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
 
@@ -214,10 +225,9 @@ def _workbench_instrument_reviewer_key(project_id: Any) -> str:
 
     if not isinstance(project_id, str) or not project_id:
         raise ValueError("Workbench project identity is invalid")
-    payload = (
-        "sunofriend.workbench-instrument-reviewer.v1\0"
-        f"{project_id}"
-    ).encode("utf-8")
+    payload = (f"sunofriend.workbench-instrument-reviewer.v1\0{project_id}").encode(
+        "utf-8"
+    )
     return hashlib.sha256(payload).hexdigest()
 
 
@@ -420,9 +430,9 @@ class WorkbenchHTTPServer(ThreadingHTTPServer):
         self.catalog_media_ids = frozenset(self.media)
         self.generated_media_ids: OrderedDict[str, None] = OrderedDict()
         self.decoded_stream_plans: OrderedDict[str, dict[str, Any]] = OrderedDict()
-        self.instrument_review_contexts: OrderedDict[
-            str, dict[str, str]
-        ] = OrderedDict()
+        self.instrument_review_contexts: OrderedDict[str, dict[str, str]] = (
+            OrderedDict()
+        )
         (
             self.phrase_review_capabilities,
             self.phrase_review_capability_by_stem,
@@ -470,16 +480,12 @@ def create_workbench_server(
         raise ValueError(
             "--clip-library, --phase6-acceptance and --phase6-pack must be supplied together"
         )
-    if enable_clip_reuse_plan and not all(
-        value is not None for value in phase6_values
-    ):
+    if enable_clip_reuse_plan and not all(value is not None for value in phase6_values):
         raise ValueError(
             "--enable-clip-reuse-plan requires --clip-library, "
             "--phase6-acceptance and --phase6-pack"
         )
-    if enable_clip_transforms and not all(
-        value is not None for value in phase6_values
-    ):
+    if enable_clip_transforms and not all(value is not None for value in phase6_values):
         raise ValueError(
             "--enable-clip-transforms requires --clip-library, "
             "--phase6-acceptance and --phase6-pack"
@@ -495,9 +501,7 @@ def create_workbench_server(
         raise ValueError(
             "--enable-clip-reuse-plan and --enable-clip-transforms are mutually exclusive"
         )
-    if enable_clip_corrections and (
-        enable_clip_reuse_plan or enable_clip_transforms
-    ):
+    if enable_clip_corrections and (enable_clip_reuse_plan or enable_clip_transforms):
         raise ValueError(
             "--enable-clip-corrections, --enable-clip-reuse-plan and "
             "--enable-clip-transforms are mutually exclusive"
@@ -516,9 +520,7 @@ def create_workbench_server(
     artifacts = WorkbenchArtifacts(
         destination / "artifacts", soundfont_path=soundfont_path
     )
-    listening_masters = WorkbenchListeningMasterService(
-        destination / "artifacts"
-    )
+    listening_masters = WorkbenchListeningMasterService(destination / "artifacts")
     master_reviews = WorkbenchMasterReviewService(
         destination / "listening-master-reviews"
     )
@@ -607,16 +609,12 @@ def run_workbench(
         raise ValueError(
             "--clip-library, --phase6-acceptance and --phase6-pack must be supplied together"
         )
-    if enable_clip_reuse_plan and not all(
-        value is not None for value in phase6_values
-    ):
+    if enable_clip_reuse_plan and not all(value is not None for value in phase6_values):
         raise ValueError(
             "--enable-clip-reuse-plan requires --clip-library, "
             "--phase6-acceptance and --phase6-pack"
         )
-    if enable_clip_transforms and not all(
-        value is not None for value in phase6_values
-    ):
+    if enable_clip_transforms and not all(value is not None for value in phase6_values):
         raise ValueError(
             "--enable-clip-transforms requires --clip-library, "
             "--phase6-acceptance and --phase6-pack"
@@ -632,9 +630,7 @@ def run_workbench(
         raise ValueError(
             "--enable-clip-reuse-plan and --enable-clip-transforms are mutually exclusive"
         )
-    if enable_clip_corrections and (
-        enable_clip_reuse_plan or enable_clip_transforms
-    ):
+    if enable_clip_corrections and (enable_clip_reuse_plan or enable_clip_transforms):
         raise ValueError(
             "--enable-clip-corrections, --enable-clip-reuse-plan and "
             "--enable-clip-transforms are mutually exclusive"
@@ -954,9 +950,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     if reuse_service is not None:
                         detail = {
                             **detail,
-                            "reuse_compatibility": reuse_service.compatibility(
-                                clip_id
-                            ),
+                            "reuse_compatibility": reuse_service.compatibility(clip_id),
                         }
                     correction_service = self.server.clip_correction_service
                     if correction_service is not None:
@@ -1082,9 +1076,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                         )
                     filename = "sunofriend-listening-master-review-result.json"
                 else:
-                    raise ValueError(
-                        "Listening Master review download kind is invalid"
-                    )
+                    raise ValueError("Listening Master review download kind is invalid")
             except (OSError, RuntimeError, ValueError) as exc:
                 self._error(HTTPStatus.BAD_REQUEST, str(exc))
                 return
@@ -1094,9 +1086,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             query = parse_qs(parsed.query, keep_blank_values=True)
             readiness_review_id = query.get("readiness_review_id", [""])[0]
             try:
-                document = self.server.master_readiness.review(
-                    readiness_review_id
-                )
+                document = self.server.master_readiness.review(readiness_review_id)
             except (OSError, RuntimeError, ValueError) as exc:
                 self._error(HTTPStatus.BAD_REQUEST, str(exc))
                 return
@@ -1116,9 +1106,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 if set(query) != {"token", "kind", "review_id"} or any(
                     len(values) != 1 for values in query.values()
                 ):
-                    raise ValueError(
-                        "instrument review export query is invalid"
-                    )
+                    raise ValueError("instrument review export query is invalid")
                 kind = query["kind"][0]
                 review_id = _require_lowercase_sha256(
                     query["review_id"][0],
@@ -1128,22 +1116,16 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     document = self.server.instrument_reviews.review(review_id)
                     filename = "sunofriend-instrument-blind-review.json"
                 elif kind == "result":
-                    document = self.server.instrument_reviews.resolution(
-                        review_id
-                    )
+                    document = self.server.instrument_reviews.resolution(review_id)
                     if document is None:
                         raise ValueError(
                             "instrument review identities have not been resolved"
                         )
                     filename = "sunofriend-instrument-review-result.json"
                 else:
-                    raise ValueError(
-                        "instrument review export kind is invalid"
-                    )
+                    raise ValueError("instrument review export kind is invalid")
                 if _mapping_contains_key(document, "path"):
-                    raise ValueError(
-                        "instrument review export exposed a private path"
-                    )
+                    raise ValueError("instrument review export exposed a private path")
             except (OSError, RuntimeError, ValueError) as exc:
                 self._error(HTTPStatus.BAD_REQUEST, str(exc))
                 return
@@ -1387,9 +1369,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 stem_id = str(request.get("stem_id", ""))
                 candidate_id = str(request.get("candidate_id", ""))
                 with self.server.state_lock:
-                    initial_state = self.server.store.current_state(
-                        self.server.catalog
-                    )
+                    initial_state = self.server.store.current_state(self.server.catalog)
                     initial_role = _current_stem_role(
                         self.server.catalog, initial_state, stem_id
                     )
@@ -1453,9 +1433,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     label="decoded arrangement selection_manifest_sha256",
                 )
                 with self.server.state_lock:
-                    initial_state = self.server.store.current_state(
-                        self.server.catalog
-                    )
+                    initial_state = self.server.store.current_state(self.server.catalog)
                     initial_manifest = (
                         self.server.artifacts.decoded_arrangement_selection_manifest(
                             self.server.catalog,
@@ -1522,9 +1500,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                         "selected-midi, hybrid, or main-only"
                     )
                 with self.server.state_lock:
-                    initial_state = self.server.store.current_state(
-                        self.server.catalog
-                    )
+                    initial_state = self.server.store.current_state(self.server.catalog)
                     initial_manifest = (
                         self.server.artifacts.decoded_arrangement_selection_manifest(
                             self.server.catalog,
@@ -1540,13 +1516,11 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                             "preparing full-song playback"
                         )
                 try:
-                    artifact = (
-                        self.server.artifacts.prepare_decoded_arrangement_stream(
-                            self.server.catalog,
-                            initial_state,
-                            requested_manifest_sha256,
-                            str(preset),
-                        )
+                    artifact = self.server.artifacts.prepare_decoded_arrangement_stream(
+                        self.server.catalog,
+                        initial_state,
+                        requested_manifest_sha256,
+                        str(preset),
                     )
                 except ValueError as exc:
                     with self.server.state_lock:
@@ -1611,9 +1585,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                             "full-song preset again"
                         )
                     plan = dict(plan)
-                    initial_state = self.server.store.current_state(
-                        self.server.catalog
-                    )
+                    initial_state = self.server.store.current_state(self.server.catalog)
                     initial_manifest = (
                         self.server.artifacts.decoded_arrangement_selection_manifest(
                             self.server.catalog,
@@ -1629,13 +1601,11 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                             "continuing full-song playback"
                         )
                 try:
-                    artifact = (
-                        self.server.artifacts.prepare_decoded_arrangement_chunk(
-                            self.server.catalog,
-                            initial_state,
-                            stream_sha256,
-                            chunk_index,
-                        )
+                    artifact = self.server.artifacts.prepare_decoded_arrangement_chunk(
+                        self.server.catalog,
+                        initial_state,
+                        stream_sha256,
+                        chunk_index,
                     )
                 except ValueError as exc:
                     with self.server.state_lock:
@@ -1761,14 +1731,10 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                         ),
                     )
                     current_review = prepared.get("current_review")
-                    if (
-                        not isinstance(current_review, Mapping)
-                        or current_review.get("review_id")
-                        != completed.get("review_id")
-                    ):
-                        raise RuntimeError(
-                            "instrument review publication changed"
-                        )
+                    if not isinstance(current_review, Mapping) or current_review.get(
+                        "review_id"
+                    ) != completed.get("review_id"):
+                        raise RuntimeError("instrument review publication changed")
                     public_review = self._public_instrument_review(
                         prepared,
                         context=context,
@@ -1804,14 +1770,10 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     context = self._instrument_review_context_for_comparison(
                         comparison_sha256
                     )
-                    stored_review = self.server.instrument_reviews.review(
-                        review_id
-                    )
+                    stored_review = self.server.instrument_reviews.review(review_id)
                     if (
-                        stored_review.get("comparison_sha256")
-                        != comparison_sha256
-                        or stored_review.get("review_sha256")
-                        != review_sha256
+                        stored_review.get("comparison_sha256") != comparison_sha256
+                        or stored_review.get("review_sha256") != review_sha256
                     ):
                         raise WorkbenchInstrumentReviewConflictError(
                             "the completed instrument review changed"
@@ -1920,10 +1882,9 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                             self.server.catalog["project_id"]
                         ),
                     )
-                    if (
-                        prepared.get("review_state", {}).get("review_id")
-                        != completed.get("review_id")
-                    ):
+                    if prepared.get("review_state", {}).get(
+                        "review_id"
+                    ) != completed.get("review_id"):
                         raise RuntimeError(
                             "Listening Master review publication changed"
                         )
@@ -1964,10 +1925,8 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     current = self._master_review_inputs()
                     stored_review = self.server.master_reviews.review(review_id)
                     if (
-                        stored_review.get("comparison_sha256")
-                        != comparison_sha256
-                        or stored_review.get("review_sha256")
-                        != review_sha256
+                        stored_review.get("comparison_sha256") != comparison_sha256
+                        or stored_review.get("review_sha256") != review_sha256
                     ):
                         raise WorkbenchMasterReviewConflictError(
                             "the completed Listening Master review changed"
@@ -2002,9 +1961,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                             "review_sha256": review_sha256,
                             "revision": stored_review.get("revision"),
                             "response": stored_review.get("response"),
-                            "choice": stored_review.get("response", {}).get(
-                                "choice"
-                            ),
+                            "choice": stored_review.get("response", {}).get("choice"),
                             "review_url": (
                                 "/api/listening-master-review-export?kind=review"
                                 f"&review_id={review_id}"
@@ -2095,13 +2052,11 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                         ),
                         **anchors,
                     )
-                    if (
-                        prepared.get("comparison_sha256") != comparison_sha256
-                        or prepared.get("review", {}).get(
-                            "readiness_review_id"
-                        )
-                        != completed.get("readiness_review_id")
-                    ):
+                    if prepared.get(
+                        "comparison_sha256"
+                    ) != comparison_sha256 or prepared.get("review", {}).get(
+                        "readiness_review_id"
+                    ) != completed.get("readiness_review_id"):
                         raise WorkbenchMasterReadinessConflictError(
                             "native-level readiness publication changed"
                         )
@@ -2116,9 +2071,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     # the stored review's two truthful durable-feedback effects
                     # while every product, selection and artifact effect stays
                     # false.
-                    public_readiness["effects"] = dict(
-                        completed.get("effects", {})
-                    )
+                    public_readiness["effects"] = dict(completed.get("effects", {}))
                 self._json(HTTPStatus.OK, {"readiness": public_readiness})
                 return
             if parsed.path == "/api/balanced-arrangement":
@@ -2132,9 +2085,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     label="balanced arrangement selection_manifest_sha256",
                 )
                 with self.server.state_lock:
-                    initial_state = self.server.store.current_state(
-                        self.server.catalog
-                    )
+                    initial_state = self.server.store.current_state(self.server.catalog)
                     initial_manifest = (
                         self.server.artifacts.decoded_arrangement_selection_manifest(
                             self.server.catalog,
@@ -2177,9 +2128,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 cache_key = str(artifact.get("cache_key", ""))
                 deferred_claim = artifact.get("_deferred_cache_claim")
                 claim_token = (
-                    str(deferred_claim)
-                    if isinstance(deferred_claim, str)
-                    else None
+                    str(deferred_claim) if isinstance(deferred_claim, str) else None
                 )
                 try:
                     with self.server.state_lock:
@@ -2205,11 +2154,9 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                                 "song interpretation was being created; reload "
                                 "and retry"
                             )
-                        promoted = (
-                            self.server.artifacts.promote_balanced_arrangement(
-                                cache_key,
-                                claim_token=claim_token,
-                            )
+                        promoted = self.server.artifacts.promote_balanced_arrangement(
+                            cache_key,
+                            claim_token=claim_token,
                         )
                         # Promotion consumes the private claim. From here onward
                         # the verified cache is adopted even if response
@@ -2217,9 +2164,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                         claim_token = None
                         promoted["cache_hit"] = artifact.get("cache_hit") is True
                         public_artifact = self._public_artifact(promoted)
-                        cached_master = self.server.listening_masters.cached(
-                            promoted
-                        )
+                        cached_master = self.server.listening_masters.cached(promoted)
                         public_master = (
                             self._public_artifact(cached_master)
                             if cached_master
@@ -2272,15 +2217,10 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 )
                 requested_balanced_sha256 = _require_lowercase_sha256(
                     request.get("balanced_arrangement_manifest_sha256"),
-                    label=(
-                        "listening master "
-                        "balanced_arrangement_manifest_sha256"
-                    ),
+                    label=("listening master balanced_arrangement_manifest_sha256"),
                 )
                 with self.server.state_lock:
-                    initial_state = self.server.store.current_state(
-                        self.server.catalog
-                    )
+                    initial_state = self.server.store.current_state(self.server.catalog)
                     initial_selection = (
                         self.server.artifacts.decoded_arrangement_selection_manifest(
                             self.server.catalog,
@@ -2306,18 +2246,15 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                             "the current song-interpretation WAV is unavailable; "
                             "create it before the comparative listening master"
                         )
-                    if (
-                        requested_balanced_sha256
-                        != initial_balanced.get("manifest_sha256")
+                    if requested_balanced_sha256 != initial_balanced.get(
+                        "manifest_sha256"
                     ):
                         raise WorkbenchSelectionConflictError(
                             "the balanced song interpretation changed; reload it "
                             "before creating the comparative listening master"
                         )
                 try:
-                    prepared = self.server.listening_masters.prepare(
-                        initial_balanced
-                    )
+                    prepared = self.server.listening_masters.prepare(initial_balanced)
                 except (OSError, RuntimeError, ValueError) as exc:
                     with self.server.state_lock:
                         failed_state = self.server.store.current_state(
@@ -2376,9 +2313,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                             != final_balanced.get("manifest_sha256")
                             or prepared.get("selection_manifest_sha256")
                             != requested_selection_sha256
-                            or prepared.get(
-                                "balanced_arrangement_manifest_sha256"
-                            )
+                            or prepared.get("balanced_arrangement_manifest_sha256")
                             != requested_balanced_sha256
                         ):
                             raise WorkbenchSelectionConflictError(
@@ -2401,9 +2336,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                                 pending_token,
                             )
                             pending_token = None
-                        promoted["cache_hit"] = (
-                            prepared.get("cache_hit") is True
-                        )
+                        promoted["cache_hit"] = prepared.get("cache_hit") is True
                         public_master = self._public_artifact(promoted)
                         final_home = build_workbench_home(
                             self.server.catalog,
@@ -2639,9 +2572,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     str(stem["stem_id"]),
                     str(candidate["candidate_id"]),
                     role_override=str(
-                        state.get("stems", {})
-                        .get(str(stem["stem_id"]), {})
-                        .get("role")
+                        state.get("stems", {}).get(str(stem["stem_id"]), {}).get("role")
                         or stem.get("role")
                         or "unclassified"
                     ),
@@ -2687,9 +2618,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             else None
         )
         public_listening_master = (
-            self._public_artifact(listening_master)
-            if listening_master
-            else None
+            self._public_artifact(listening_master) if listening_master else None
         )
         payload["listening_master"] = public_listening_master
         # Project loading must not guess a review window or silently restore a
@@ -2709,9 +2638,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         payload["developer"] = {
             "enabled": self.server.developer_inspector,
             "snapshot_endpoint": (
-                "/api/developer-snapshot"
-                if self.server.developer_inspector
-                else None
+                "/api/developer-snapshot" if self.server.developer_inspector else None
             ),
             "read_only": True,
         }
@@ -2796,9 +2723,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 else None
             )
             runtime = {
-                "catalog_media_capability_count": len(
-                    self.server.catalog_media_ids
-                ),
+                "catalog_media_capability_count": len(self.server.catalog_media_ids),
                 "generated_media_capability_count": len(
                     self.server.generated_media_ids
                 ),
@@ -2902,9 +2827,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         self._developer_trace_route = None
 
     def _public_artifact(self, artifact: Mapping[str, Any]) -> dict[str, Any]:
-        freeze_balanced = (
-            artifact.get("schema") == BALANCED_ARRANGEMENT_SCHEMA
-        )
+        freeze_balanced = artifact.get("schema") == BALANCED_ARRANGEMENT_SCHEMA
         freeze_listening_master = (
             artifact.get("schema") == WORKBENCH_LISTENING_MASTER_SCHEMA
         )
@@ -2923,8 +2846,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         public = {
             key: value
             for key, value in artifact.items()
-            if not str(key).startswith("_")
-            and key not in private_artifact_keys
+            if not str(key).startswith("_") and key not in private_artifact_keys
         }
         for key, prefix in (
             ("midi", "artifact-midi"),
@@ -2963,14 +2885,12 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         return public
 
     def _instrument_review_plan(self) -> dict[str, Any]:
-        """Derive a path-free plan from only active selected bass MIDI."""
+        """Derive a path-free plan from active selected bass or keys MIDI."""
 
         current = self.server.store.current_state(self.server.catalog)
-        manifest = (
-            self.server.artifacts.decoded_arrangement_selection_manifest(
-                self.server.catalog,
-                current,
-            )
+        manifest = self.server.artifacts.decoded_arrangement_selection_manifest(
+            self.server.catalog,
+            current,
         )
         selected = selected_candidates(self.server.catalog, current)
         eligible = {
@@ -2978,48 +2898,58 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 str(item.get("stem_id", "")),
                 str(item.get("candidate_id", "")),
                 str(item.get("midi", {}).get("sha256", "")),
+                str(item.get("role", "")),
             )
             for item in selected
-            if item.get("role") == "bass"
+            if item.get("role") in _INSTRUMENT_REVIEW_ROLES
             and item.get("audition_blocked") is not True
         }
         lanes: list[dict[str, Any]] = []
+        role_counts = {role: 0 for role in _INSTRUMENT_REVIEW_ROLES}
         selection_sha256 = _require_lowercase_sha256(
             manifest.get("selection_manifest_sha256"),
             label="instrument review selection manifest",
         )
         for row in manifest.get("selected_midi", []):
-            if not isinstance(row, Mapping) or row.get("role") != "bass":
+            if (
+                not isinstance(row, Mapping)
+                or row.get("role") not in _INSTRUMENT_REVIEW_ROLES
+            ):
                 continue
+            role = str(row["role"])
             pins = (
                 str(row.get("stem_id", "")),
                 str(row.get("candidate_id", "")),
                 str(row.get("midi_sha256", "")),
+                role,
             )
             if pins not in eligible:
                 continue
+            role_counts[role] += 1
+            programs = complete_instrument_programs(role)
             lanes.append(
                 {
                     "selection_manifest_sha256": selection_sha256,
                     "stem_id": pins[0],
                     "candidate_id": pins[1],
                     "midi_sha256": pins[2],
-                    "role": "bass",
-                    "label": f"Selected bass MIDI {len(lanes) + 1}",
+                    "role": role,
+                    "label": (f"Selected {role} MIDI {role_counts[role]}"),
+                    "coverage_preflight": (
+                        "required" if role == "keys" else "not_required"
+                    ),
                     "pair": {
                         "description": (
                             "The exact selected MIDI through two complete "
-                            "General MIDI synth-bass programs."
+                            f"server-owned General MIDI {role} programs."
                         ),
-                        "control": {"label": "Synth Bass 1"},
-                        "challenger": {"label": "Synth Bass 2"},
+                        "control": {"label": programs["control"]["label"]},
+                        "challenger": {"label": programs["challenger"]["label"]},
                     },
                 }
             )
         if len(lanes) > 64:
-            raise ValueError(
-                "instrument review plan exceeds its fixed bass-lane limit"
-            )
+            raise ValueError("instrument review plan exceeds its fixed lane limit")
         plan = {
             "schema": "sunofriend.workbench-instrument-review-plan.v1",
             "selection_manifest_sha256": selection_sha256,
@@ -3053,20 +2983,14 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         identifiers: dict[str, str] = {}
         for key in ("stem_id", "candidate_id"):
             value = request.get(key)
-            if (
-                not isinstance(value, str)
-                or not value
-                or len(value) > 256
-            ):
+            if not isinstance(value, str) or not value or len(value) > 256:
                 raise ValueError(f"instrument review {key} is invalid")
             identifiers[key] = value
 
         current = self.server.store.current_state(self.server.catalog)
-        manifest = (
-            self.server.artifacts.decoded_arrangement_selection_manifest(
-                self.server.catalog,
-                current,
-            )
+        manifest = self.server.artifacts.decoded_arrangement_selection_manifest(
+            self.server.catalog,
+            current,
         )
         if manifest.get("selection_manifest_sha256") != selection_sha256:
             raise WorkbenchSelectionConflictError(
@@ -3079,24 +3003,25 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             and row.get("stem_id") == identifiers["stem_id"]
             and row.get("candidate_id") == identifiers["candidate_id"]
             and row.get("midi_sha256") == midi_sha256
-            and row.get("role") == "bass"
+            and row.get("role") in _INSTRUMENT_REVIEW_ROLES
         ]
         if len(matches) != 1:
             raise WorkbenchSelectionConflictError(
-                "the selected bass MIDI changed; reload the instrument review"
+                "the selected bass or keys MIDI changed; reload the instrument review"
             )
+        role = str(matches[0]["role"])
         active = [
             row
             for row in selected_candidates(self.server.catalog, current)
             if row.get("stem_id") == identifiers["stem_id"]
             and row.get("candidate_id") == identifiers["candidate_id"]
             and row.get("midi", {}).get("sha256") == midi_sha256
-            and row.get("role") == "bass"
+            and row.get("role") == role
             and row.get("audition_blocked") is not True
         ]
         if len(active) != 1:
             raise WorkbenchSelectionConflictError(
-                "the selected bass MIDI is no longer eligible for review"
+                f"the selected {role} MIDI is no longer eligible for review"
             )
         context = self.server.artifacts.instrument_review_context(
             self.server.catalog,
@@ -3109,7 +3034,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             not isinstance(track, Mapping)
             or track.get("stem_id") != identifiers["stem_id"]
             or track.get("candidate_id") != identifiers["candidate_id"]
-            or track.get("role") != "bass"
+            or track.get("role") != role
             or track.get("midi", {}).get("sha256") != midi_sha256
         ):
             raise WorkbenchSelectionConflictError(
@@ -3155,23 +3080,18 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             )
             track = binding.get("track")
             if (
-                binding.get("project_id")
-                != self.server.catalog.get("project_id")
-                or binding.get("role") != "bass"
+                binding.get("project_id") != self.server.catalog.get("project_id")
+                or binding.get("role") not in _INSTRUMENT_REVIEW_ROLES
                 or not isinstance(track, Mapping)
             ):
                 raise WorkbenchInstrumentReviewConflictError(
                     "instrument review comparison belongs to different evidence"
                 )
             pins = {
-                "selection_manifest_sha256": binding.get(
-                    "selection_manifest_sha256"
-                ),
+                "selection_manifest_sha256": binding.get("selection_manifest_sha256"),
                 "stem_id": track.get("stem_id"),
                 "candidate_id": track.get("candidate_id"),
-                "midi_sha256": binding.get("selected_midi", {}).get(
-                    "sha256"
-                ),
+                "midi_sha256": binding.get("selected_midi", {}).get("sha256"),
             }
             context = self._instrument_review_context(pins)
             self._remember_instrument_review_context(
@@ -3195,6 +3115,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 track.get("track_id") if isinstance(track, Mapping) else None,
                 track.get("stem_id") if isinstance(track, Mapping) else None,
                 track.get("candidate_id") if isinstance(track, Mapping) else None,
+                track.get("role") if isinstance(track, Mapping) else None,
                 (
                     track.get("midi", {}).get("sha256")
                     if isinstance(track, Mapping)
@@ -3206,7 +3127,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
 
         if anchors(before) != anchors(after):
             raise WorkbenchSelectionConflictError(
-                "the selected bass MIDI changed while its instrument review "
+                "the selected bass or keys MIDI changed while its instrument review "
                 "was being prepared; reload and retry"
             )
 
@@ -3216,11 +3137,9 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         """Return the exact current selection, balanced control and challenger."""
 
         state = self.server.store.current_state(self.server.catalog)
-        selection = (
-            self.server.artifacts.decoded_arrangement_selection_manifest(
-                self.server.catalog,
-                state,
-            )
+        selection = self.server.artifacts.decoded_arrangement_selection_manifest(
+            self.server.catalog,
+            state,
         )
         balanced = self.server.artifacts.cached_balanced_arrangement(
             self.server.catalog,
@@ -3300,8 +3219,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         if (
             latest is None
             or latest.get("review_id") != anchors["quality_review_id"]
-            or latest.get("review_sha256")
-            != anchors["quality_review_sha256"]
+            or latest.get("review_sha256") != anchors["quality_review_sha256"]
         ):
             raise WorkbenchMasterReadinessConflictError(
                 "blind quality review changed while native-level readiness "
@@ -3353,17 +3271,23 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         if (
             comparison.get("selection_manifest_sha256")
             != context.get("selection_manifest_sha256")
-            or comparison.get("track", {}).get("stem_id")
-            != track.get("stem_id")
+            or comparison.get("track", {}).get("stem_id") != track.get("stem_id")
             or comparison.get("track", {}).get("candidate_id")
             != track.get("candidate_id")
             or comparison.get("selected_midi", {}).get("sha256")
             != track.get("midi", {}).get("sha256")
-            or comparison.get("role") != "bass"
+            or comparison.get("role") != track.get("role")
+            or comparison.get("role") not in _INSTRUMENT_REVIEW_ROLES
         ):
             raise WorkbenchInstrumentReviewConflictError(
                 "instrument review comparison no longer matches its selected lane"
             )
+        public_coverage = self._public_instrument_review_coverage(
+            prepared,
+            comparison=comparison,
+            comparison_sha256=comparison_sha256,
+            context=context,
+        )
 
         audio = prepared.get("audio")
         if not isinstance(audio, Mapping):
@@ -3385,16 +3309,12 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 or not math.isfinite(float(gain))
                 or not -60.0 <= float(gain) <= 0.0
             ):
-                raise ValueError(
-                    "instrument review disclosed gain is invalid"
-                )
+                raise ValueError("instrument review disclosed gain is invalid")
             record = self.server.instrument_reviews.media_record(
                 comparison_sha256,
                 slot,
             )
-            media_id = (
-                f"instrument-review-{slot}-{comparison_sha256[:24]}"
-            )
+            media_id = f"instrument-review-{slot}-{comparison_sha256[:24]}"
             private_record = dict(record)
             private_record["_freeze_on_serve"] = True
             media_records[slot] = (media_id, private_record)
@@ -3438,9 +3358,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     "heard": dict(response.get("heard", {})),
                     "choice": response.get("choice"),
                     "problem_tags": {
-                        slot: list(
-                            response.get("problem_tags", {}).get(slot, [])
-                        )
+                        slot: list(response.get("problem_tags", {}).get(slot, []))
                         for slot in (
                             INSTRUMENT_CANDIDATE_A,
                             INSTRUMENT_CANDIDATE_B,
@@ -3456,9 +3374,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 },
             }
             if resolution is None:
-                resolution = self.server.instrument_reviews.resolution(
-                    review_id
-                )
+                resolution = self.server.instrument_reviews.resolution(review_id)
 
         public_result = None
         if resolution is not None:
@@ -3466,10 +3382,8 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 raise ValueError("instrument review resolution is invalid")
             if (
                 resolution.get("comparison_sha256") != comparison_sha256
-                or resolution.get("review_id")
-                != public_review["review_id"]
-                or resolution.get("review_sha256")
-                != public_review["review_sha256"]
+                or resolution.get("review_id") != public_review["review_id"]
+                or resolution.get("review_sha256") != public_review["review_sha256"]
             ):
                 raise WorkbenchInstrumentReviewConflictError(
                     "instrument review resolution changed"
@@ -3485,19 +3399,13 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             ):
                 identity = assignment.get(slot)
                 if not isinstance(identity, Mapping):
-                    raise ValueError(
-                        "instrument review assignment row is invalid"
-                    )
+                    raise ValueError("instrument review assignment row is invalid")
                 label = identity.get("label")
                 if not isinstance(label, str) or not label:
-                    raise ValueError(
-                        "instrument review assignment label is invalid"
-                    )
+                    raise ValueError("instrument review assignment label is invalid")
                 public_assignment[slot] = {
                     "label": label,
-                    "general_midi_number": identity.get(
-                        "general_midi_number"
-                    ),
+                    "general_midi_number": identity.get("general_midi_number"),
                 }
                 identity_name = identity.get("identity")
                 if isinstance(identity_name, str):
@@ -3534,13 +3442,12 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             "status": status,
             "blind": public_result is None,
             "comparison_sha256": comparison_sha256,
-            "selection_manifest_sha256": context.get(
-                "selection_manifest_sha256"
-            ),
+            "selection_manifest_sha256": context.get("selection_manifest_sha256"),
             "stem_id": track.get("stem_id"),
             "candidate_id": track.get("candidate_id"),
             "midi_sha256": track.get("midi", {}).get("sha256"),
-            "role": "bass",
+            "role": track.get("role"),
+            "coverage_preflight": public_coverage,
             "expected_revision": (
                 public_review["revision"] if public_review is not None else 0
             ),
@@ -3550,20 +3457,12 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             },
             "source_reference": public_audio[SOURCE_REFERENCE],
             "candidates": {
-                INSTRUMENT_CANDIDATE_A: public_audio[
-                    INSTRUMENT_CANDIDATE_A
-                ],
-                INSTRUMENT_CANDIDATE_B: public_audio[
-                    INSTRUMENT_CANDIDATE_B
-                ],
+                INSTRUMENT_CANDIDATE_A: public_audio[INSTRUMENT_CANDIDATE_A],
+                INSTRUMENT_CANDIDATE_B: public_audio[INSTRUMENT_CANDIDATE_B],
             },
-            "allowed_problem_tags": sorted(
-                INSTRUMENT_REVIEW_PROBLEM_TAGS
-            ),
+            "allowed_problem_tags": sorted(INSTRUMENT_REVIEW_PROBLEM_TAGS),
             "limits": {
-                "maximum_problem_tags_per_candidate": (
-                    INSTRUMENT_MAXIMUM_PROBLEM_TAGS
-                ),
+                "maximum_problem_tags_per_candidate": (INSTRUMENT_MAXIMUM_PROBLEM_TAGS),
                 "maximum_notes_characters_per_candidate": (
                     INSTRUMENT_MAXIMUM_NOTES_CHARACTERS
                 ),
@@ -3586,6 +3485,238 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             self._register_generated_media(media_id, record)
         return public
 
+    def _public_instrument_review_coverage(
+        self,
+        prepared: Mapping[str, Any],
+        *,
+        comparison: Mapping[str, Any],
+        comparison_sha256: str,
+        context: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Validate private probe detail and return only blind counts/floors."""
+
+        role = comparison.get("role")
+        expected_contract = keys_coverage_contract(required=role == "keys")
+        comparison_contract = comparison.get("coverage_preflight")
+        if comparison_contract != expected_contract:
+            raise ValueError("instrument review coverage contract changed")
+        coverage = prepared.get("coverage_preflight")
+        if role == "bass":
+            if coverage != expected_contract:
+                raise ValueError(
+                    "bass instrument review carried unexpected coverage evidence"
+                )
+            return {
+                "schema": expected_contract["schema"],
+                "required": False,
+                "status": "not_required",
+                "functional_status": "not_required",
+                "quality_status": "review_required",
+                "actual_review_midi_changed": False,
+            }
+        if role != "keys" or not isinstance(coverage, Mapping):
+            raise ValueError("keys instrument review coverage is unavailable")
+
+        exact_keys = set(expected_contract) | {
+            "zone_count",
+            "duration_seconds",
+            "candidate_identities_hidden",
+            INSTRUMENT_CANDIDATE_A,
+            INSTRUMENT_CANDIDATE_B,
+            "binding",
+            "coverage_sha256",
+        }
+        if set(coverage) != exact_keys:
+            raise ValueError("keys instrument review coverage shape changed")
+        for key, expected in expected_contract.items():
+            if key in {"status", "functional_status"}:
+                continue
+            if coverage.get(key) != expected:
+                raise ValueError(f"keys instrument review coverage {key} changed")
+        if (
+            coverage.get("required") is not True
+            or coverage.get("status") != "passed"
+            or coverage.get("functional_status") != "passed"
+            or coverage.get("quality_status") != "review_required"
+            or coverage.get("candidate_identities_hidden") is not True
+            or coverage.get("actual_review_midi_changed") is not False
+        ):
+            raise ValueError("keys instrument review coverage did not pass")
+
+        binding = coverage.get("binding")
+        selected_midi = comparison.get("selected_midi")
+        soundfont = comparison.get("soundfont")
+        renderer = comparison.get("renderer")
+        track = context.get("track")
+        if (
+            not isinstance(binding, Mapping)
+            or set(binding)
+            != {
+                "comparison_sha256",
+                "selection_manifest_sha256",
+                "selected_midi_sha256",
+                "soundfont_sha256",
+                "renderer_sha256",
+                "candidate_identity_set_commitment",
+            }
+            or not isinstance(selected_midi, Mapping)
+            or not isinstance(soundfont, Mapping)
+            or not isinstance(renderer, Mapping)
+            or not isinstance(track, Mapping)
+            or binding.get("comparison_sha256") != comparison_sha256
+            or binding.get("selection_manifest_sha256")
+            != context.get("selection_manifest_sha256")
+            or binding.get("selected_midi_sha256")
+            != track.get("midi", {}).get("sha256")
+            or binding.get("selected_midi_sha256") != selected_midi.get("sha256")
+            or binding.get("soundfont_sha256") != soundfont.get("sha256")
+            or binding.get("renderer_sha256") != renderer.get("sha256")
+            or binding.get("candidate_identity_set_commitment")
+            != comparison.get("candidate_identity_set_commitment")
+        ):
+            raise WorkbenchInstrumentReviewConflictError(
+                "keys coverage no longer matches its selected evidence"
+            )
+
+        unsigned_coverage = {
+            key: value for key, value in coverage.items() if key != "coverage_sha256"
+        }
+        encoded = json.dumps(
+            unsigned_coverage,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        if coverage.get("coverage_sha256") != hashlib.sha256(encoded).hexdigest():
+            raise ValueError("keys coverage receipt changed")
+
+        geometry: list[tuple[Any, ...]] | None = None
+        summaries: dict[str, dict[str, Any]] = {}
+        bucket_counts = {
+            str(row["id"]): 0 for row in expected_contract["velocity_buckets"]
+        }
+        for slot in (
+            INSTRUMENT_CANDIDATE_A,
+            INSTRUMENT_CANDIDATE_B,
+        ):
+            report = coverage.get(slot)
+            if not isinstance(report, Mapping) or set(report) != {
+                "passed",
+                "zone_count",
+                "failed_zone_count",
+                "duration_seconds",
+                "summary",
+                "zones",
+            }:
+                raise ValueError("keys coverage candidate report is invalid")
+            validate_keys_coverage_report(
+                {
+                    **expected_contract,
+                    **dict(report),
+                    "probe_bpm": PROBE_BPM,
+                    "status": "passed",
+                    "functional_status": "passed",
+                }
+            )
+            zones = report.get("zones")
+            summary = report.get("summary")
+            if (
+                report.get("passed") is not True
+                or report.get("failed_zone_count") != 0
+                or report.get("zone_count") != coverage.get("zone_count")
+                or report.get("duration_seconds") != coverage.get("duration_seconds")
+                or not isinstance(zones, list)
+                or not zones
+                or not isinstance(summary, Mapping)
+            ):
+                raise ValueError("keys coverage candidate did not pass every used zone")
+            current_geometry = [
+                (
+                    row.get("channel"),
+                    row.get("pitch"),
+                    row.get("velocity_bucket"),
+                    row.get("tested_velocity"),
+                    row.get("observed_velocity_minimum"),
+                    row.get("observed_velocity_maximum"),
+                    row.get("observed_note_count"),
+                    row.get("start_seconds"),
+                    row.get("note_end_seconds"),
+                    row.get("window_end_seconds"),
+                )
+                for row in zones
+                if isinstance(row, Mapping)
+            ]
+            if len(current_geometry) != len(zones):
+                raise ValueError("keys coverage zone evidence is invalid")
+            if geometry is None:
+                geometry = current_geometry
+                for row in zones:
+                    bucket = str(row["velocity_bucket"])
+                    if bucket not in bucket_counts:
+                        raise ValueError("keys coverage velocity bucket is invalid")
+                    bucket_counts[bucket] += 1
+            elif current_geometry != geometry:
+                raise ValueError(
+                    "blind keys coverage candidates tested different zones"
+                )
+            numeric_summary: dict[str, float] = {}
+            for key in (
+                "minimum_rms_dbfs",
+                "minimum_peak_dbfs",
+                "minimum_active_above_pre_guard_db",
+                "maximum_normalized_rms_deficit_db",
+            ):
+                value = summary.get(key)
+                if (
+                    isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not math.isfinite(float(value))
+                ):
+                    raise ValueError("keys coverage measurement summary is invalid")
+                numeric_summary[key] = float(value)
+            summaries[slot] = {
+                "functional_status": "passed",
+                "tested_zone_count": int(report["zone_count"]),
+                "passed_zone_count": int(report["zone_count"]),
+                "failed_zone_count": 0,
+                **numeric_summary,
+            }
+
+        if geometry is None:
+            raise ValueError("keys coverage tested no used zones")
+        tested_pitch_count = len({(row[0], row[1]) for row in geometry})
+        return {
+            "schema": expected_contract["schema"],
+            "required": True,
+            "status": "passed",
+            "functional_status": "passed",
+            "quality_status": "review_required",
+            "policy": expected_contract["policy"],
+            "claim": expected_contract["claim"],
+            "zone_definition": expected_contract["zone_definition"],
+            "safe_pass_text": expected_contract["safe_pass_text"],
+            "non_claims": list(expected_contract["non_claims"]),
+            "velocity_buckets": [
+                {
+                    **dict(bucket),
+                    "tested_zone_count": bucket_counts[str(bucket["id"])],
+                    "status": (
+                        "passed"
+                        if bucket_counts[str(bucket["id"])]
+                        else "not_exercised"
+                    ),
+                }
+                for bucket in expected_contract["velocity_buckets"]
+            ],
+            "tested_zone_count": len(geometry),
+            "tested_pitch_count": tested_pitch_count,
+            "failed_zone_count": 0,
+            "limits": dict(expected_contract["limits"]),
+            "thresholds": dict(expected_contract["thresholds"]),
+            "candidates": summaries,
+            "candidate_identities_hidden": True,
+            "actual_review_midi_changed": False,
+        }
+
     def _public_master_review(
         self,
         prepared: Mapping[str, Any],
@@ -3606,10 +3737,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 comparison_sha256,
                 slot,
             )
-            media_id = (
-                f"listening-master-review-{slot}-"
-                f"{comparison_sha256[:24]}"
-            )
+            media_id = f"listening-master-review-{slot}-{comparison_sha256[:24]}"
             private_record = dict(record)
             private_record["_freeze_on_serve"] = True
             self._register_generated_media(media_id, private_record)
@@ -3622,9 +3750,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 if key in row
             }
             candidates[slot]["audio"] = {
-                key: value
-                for key, value in row["audio"].items()
-                if key != "path"
+                key: value for key, value in row["audio"].items() if key != "path"
             }
             candidates[slot]["audio_url"] = self._media_url(media_id)
 
@@ -3656,15 +3782,9 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             "status": prepared.get("status"),
             "blind": True,
             "comparison_sha256": comparison_sha256,
-            "selection_manifest_sha256": selection.get(
-                "selection_manifest_sha256"
-            ),
-            "balanced_arrangement_manifest_sha256": balanced.get(
-                "manifest_sha256"
-            ),
-            "listening_master_manifest_sha256": listening_master.get(
-                "manifest_sha256"
-            ),
+            "selection_manifest_sha256": selection.get("selection_manifest_sha256"),
+            "balanced_arrangement_manifest_sha256": balanced.get("manifest_sha256"),
+            "listening_master_manifest_sha256": listening_master.get("manifest_sha256"),
             "nonce_commitment": prepared.get("nonce_commitment"),
             "window": prepared.get("window"),
             "policy": prepared.get("policy"),
@@ -3715,10 +3835,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 comparison_sha256,
                 identity,
             )
-            media_id = (
-                f"listening-master-readiness-{identity}-"
-                f"{comparison_sha256[:24]}"
-            )
+            media_id = f"listening-master-readiness-{identity}-{comparison_sha256[:24]}"
             private_record = dict(record)
             private_record["_freeze_on_serve"] = True
             self._register_generated_media(media_id, private_record)
@@ -3776,15 +3893,9 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             "identity_labelled": True,
             "native_level": True,
             "comparison_sha256": comparison_sha256,
-            "selection_manifest_sha256": selection.get(
-                "selection_manifest_sha256"
-            ),
-            "balanced_arrangement_manifest_sha256": balanced.get(
-                "manifest_sha256"
-            ),
-            "listening_master_manifest_sha256": listening_master.get(
-                "manifest_sha256"
-            ),
+            "selection_manifest_sha256": selection.get("selection_manifest_sha256"),
+            "balanced_arrangement_manifest_sha256": balanced.get("manifest_sha256"),
+            "listening_master_manifest_sha256": listening_master.get("manifest_sha256"),
             "quality_review": prepared.get("quality_review"),
             "artifact_hashes": dict(artifact_hashes),
             "window": prepared.get("window"),
@@ -3797,9 +3908,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             "effects": prepared.get("effects"),
         }
 
-    def _public_clip_artifact(
-        self, artifact: Mapping[str, Any]
-    ) -> dict[str, Any]:
+    def _public_clip_artifact(self, artifact: Mapping[str, Any]) -> dict[str, Any]:
         """Register derived Clip files and expose only capability URLs."""
 
         public = public_clip_artifact(artifact)
@@ -3868,9 +3977,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 if key in track
             }
             public_track["audio"] = {
-                key: record[key]
-                for key in ("name", "bytes", "sha256")
-                if key in record
+                key: record[key] for key in ("name", "bytes", "sha256") if key in record
             }
             public_track["audio_url"] = self._media_url(media_id)
             tracks.append(public_track)
@@ -3928,9 +4035,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 if key in track
             }
             public_track["audio"] = {
-                key: record[key]
-                for key in ("name", "bytes", "sha256")
-                if key in record
+                key: record[key] for key in ("name", "bytes", "sha256") if key in record
             }
             public_track["audio_url"] = self._media_url(media_id)
             tracks.append(public_track)
@@ -4058,9 +4163,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 if key in track
             }
             public_track["audio"] = {
-                key: record[key]
-                for key in ("name", "bytes", "sha256")
-                if key in record
+                key: record[key] for key in ("name", "bytes", "sha256") if key in record
             }
             public_track["audio_url"] = self._media_url(media_id)
             tracks.append(public_track)
@@ -4199,9 +4302,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     start, end = _parse_byte_range(range_header, size)
                 except ValueError as exc:
                     try:
-                        self.send_response(
-                            HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE
-                        )
+                        self.send_response(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
                         self.send_header("Content-Range", f"bytes */{size}")
                         self._security_headers(phrase_review=phrase_review)
                         payload = str(exc).encode("utf-8")
@@ -4293,9 +4394,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         # (for example, at an opt-in gate or while parsing JSON).  Keep those
         # traces request-only, while preserving the application checkpoint when
         # an invoked service reports a fixed 400/404/409 error envelope.
-        application_invoked = getattr(
-            self, "_developer_application_invoked", False
-        )
+        application_invoked = getattr(self, "_developer_application_invoked", False)
         if (
             int(status) < 400
             or route not in _CLIP_CORRECTION_ROUTES

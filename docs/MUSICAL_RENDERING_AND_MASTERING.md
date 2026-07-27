@@ -4,7 +4,9 @@ Status: paired product contract, Workbench/TUI presentation and explicit
 Workbench, native TUI and CLI Listening Master routes implemented; the first
 bounded blinded receipt-bound Workbench review, separate resolution and gated
 identity-labelled native-level readiness review are implemented; any reviewed
-promotion remains deliberately unimplemented
+promotion remains deliberately unimplemented; Stage 4 fixed-selected-MIDI bass
+and keys instrument comparisons are implemented, with the keys-only private
+representative functional-response preflight
 
 Sunofriend has two linked creative outputs: reviewed, editable MIDI and a
 useful, good-sounding MIDI-derived song-interpretation WAV rendered from the
@@ -76,16 +78,17 @@ useful.
 
 ### 2. Instrumentation
 
-Every note in the useful range should sound audibly and consistently. A
-complete instrument in the right broad family is preferable to a closer
-texture match with silent notes, abrupt timbre changes or unusable velocity
-zones.
+The instrument must first survive a scope-specific functional check, then an
+unchanged-MIDI musical listen. A broad-family proxy with measurable response
+and useful musical behaviour is preferable to a closer texture match with
+obvious silence, abrupt timbre changes or unusable velocity zones.
 
 The first baseline remains role-aware General MIDI/FluidSynth rendering.
-Future challengers may use better complete local patches, reviewed GarageBand
-recommendations, layered synthesis or rights-qualified source-derived
-instruments. They must pass full-range audibility and consistency checks before
-timbre similarity is considered.
+Future challengers may use other local patches, reviewed GarageBand
+suggestions, layered synthesis or rights-qualified source-derived instruments.
+Each needs a narrowly stated functional gate and explicit listening before
+timbre similarity is considered; no representative probe may be promoted into
+a full-range or every-velocity claim.
 
 ### 3. Mix
 
@@ -430,23 +433,28 @@ produce a control/challenger comparison.
    is complete and explicitly resolved. It reuses that exact frame window and
    writes unchanged-level PCM24 crops at 0 dB gain, so delivered loudness
    cannot bias or rewrite the first judgment.
-2. **Bass slice implemented:** add complete-instrument challengers one role at
-   a time while keeping the selected MIDI fixed. The first Workbench check
-   compares GM Synth Bass 1 with GM Synth Bass 2 through the same SoundFont,
-   renderer and exact MIDI performance. The source stem is a labelled
-   reference. Source and candidates are attenuated to the quietest fixed-window
-   RMS, reject more than 18 dB divergence, and share one attenuation-only
-   −1 dBFS sample-peak guard without boost, limiting or compression. Candidate
-   identity remains blind until an explicit review is complete, and the result
-   cannot change a MIDI decision, default instrument, mix or GarageBand Pack.
-   Keys are the next role and need a separate polyphonic audibility probe
-   before they use this contract.
-3. Compare balance challengers only after instrumentation is held constant.
-4. Connect verified local feedback profiles as advisory context, never silent
+2. **Bass and keys slices implemented:** keep the selected MIDI fixed while
+   comparing GM Synth Bass 1/2 or Electric Piano 1/2 through the same
+   SoundFont and renderer. Before a keys A/B is exposed in the loopback
+   browser, both hidden
+   candidates must pass the private representative used-pitch/velocity-bucket
+   response probe: −72 dBFS RMS, −60 dBFS peak, 3 dB above the pre-note guard
+   and at most a 24 dB velocity-normalised within-channel/bucket deficit, with
+   512-zone/180-second limits. Bass coverage is `not_required`; both roles
+   remain `quality_status: review_required`. The source stem is a labelled
+   reference and the unchanged-MIDI candidates remain blind through explicit
+   review; only the separate resolution action reveals their identities. A
+   pass does not prove pitch/octave correctness, every velocity,
+   polyphonic clarity, tone/source similarity or GarageBand equivalence. None
+   of this can change a MIDI decision, default, mix or GarageBand Pack.
+3. Add another role only with a role-specific functional gate and the same
+   narrow nonclaims; do not infer that the keys probe generalises.
+4. Compare balance challengers only after instrumentation is held constant.
+5. Connect verified local feedback profiles as advisory context, never silent
    selection or default promotion.
 
 The near-term success criterion is not “sounds exactly like the stems.” It is:
-the selected MIDI remains editable and recognisable, every chosen instrument
-is complete and consistent, the combined interpretation is musically clear,
-and a listener explicitly prefers or values the rendered WAV for understanding
-or continuing the song.
+the selected MIDI remains editable and recognisable, the chosen sounds survive
+explicit functional and listening review for this performance, the combined
+interpretation is musically clear, and a listener explicitly prefers or values
+the rendered WAV for understanding or continuing the song.

@@ -417,23 +417,48 @@ for long songs without becoming a hidden editor or selection system.
    Read-only export routes expose path-free blind or resolved JSON.
 10. Cache eviction loses no musical decision. An artifact can be rebuilt from
    verified source records and current state.
-11. Stage 4 instrument review reads one active selected bass lane from the
-    canonical arrangement manifest. The server, not the browser, fixes the
-    complete-patch pair to GM Synth Bass 1/2 and renders both from the same
-    verified MIDI, BPM and SoundFont. A separate application service verifies
-    that only programme bytes differ and crops one exact window. It attenuates
+11. Stage 4 instrument review reads one active selected bass or keys lane from
+    the canonical arrangement manifest.
+    [`workbench_instrument_policy.py`](../src/sunofriend/workbench_instrument_policy.py)
+    is the single source for zero-based GM Synth Bass 1/2 programmes 38/39 and
+    Electric Piano 1/2 programmes 4/5. The server, not the browser, selects the
+    pair. Before a keys A/B can be exposed to the loopback browser,
+    [`workbench_instrument_coverage.py`](../src/sunofriend/workbench_instrument_coverage.py)
+    renders a private CC120/CC123-guarded representative probe for both hidden
+    identities. It tests the minimum observed velocity for every occupied
+    channel/pitch/soft, medium or strong velocity bucket, bounded to 512 zones
+    and 180 seconds. Each zone must reach −72 dBFS RMS, −60 dBFS peak, 3 dB
+    above its pre-note guard and, where peers exist, remain within a 24 dB
+    velocity-normalised channel/bucket deficit. Bass records `not_required`.
+12. [`WorkbenchInstrumentReviewService`](../src/sunofriend/workbench_instrument_review.py)
+    then renders both private proxies from the same verified selected MIDI,
+    BPM and SoundFont. It verifies that only programme bytes differ and crops
+    one exact window. It attenuates
     the source and anonymous A/B renders to their quietest RMS, rejects more
     than 18 dB divergence, then applies one common attenuation-only −1 dBFS
     sample-peak guard without limiting or compression. It stores explicit
     local review evidence; a later resolve call reveals the committed identity
     mapping. This service never writes candidate decisions, selected MIDI, mix
     artifacts or export state.
-12. Program identity and resources fail closed before rendering. Bank Select
+13. Program identity and resources fail closed before rendering. Bank Select
     must remain unambiguous GM bank zero, the target Program Change must precede
-    every playable note in raw event order, MIDI is limited to 64 MiB and 20
-    minutes, source/SoundFont inputs to 2 GiB each, the renderer to 256 MiB and
-    declared aggregate inputs to 3 GiB. Only the requested source window is
-    decoded into private review state.
+    every playable note in raw event order, and effective CC7/CC11 must be
+    non-zero. MIDI is limited to 64 MiB and 20 minutes, source/SoundFont inputs
+    to 2 GiB each, the renderer to 256 MiB and declared aggregate inputs to
+    3 GiB. Only the requested source window is decoded into private review
+    state. The synthetic keys probe MIDI stays private and rebuildable. Raw
+    probe audio is deleted after measurement and can be re-rendered from the
+    verified inputs; the loopback browser receives only blind, path-free
+    aggregate response evidence. Keys notes on General MIDI channel 10
+    (zero-based channel 9) are rejected because that channel denotes drums.
+
+A keys `functional_status: passed` means only representative measurable
+response. Both roles retain `quality_status: review_required`, so the
+unchanged selected-MIDI A/B listen is still required. No stage proves pitch or
+octave correctness, every-velocity audibility, chord/polyphonic clarity, tone
+consistency or source similarity, GarageBand equivalence, or a winner,
+recommendation or default. Coverage, preparation, playback, completion and
+resolution do not mutate MIDI, selection, ranking, mix, pack or export state.
 
 The canonical selected-arrangement short/full-song transports and dry proxy
 stay at unity gain. The precise per-stem loop alone uses

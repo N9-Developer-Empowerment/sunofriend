@@ -192,6 +192,16 @@ guided forms.
      and Workbench launch while the synchronous verified build runs. Do not
      claim immediate cancellation; TUI Quit is deferred while that operation
      remains active.
+     Before a Workbench Stage 4 bass or keys instrument comparison, require
+     `sunofriend doctor --require preview`, the current selected arrangement
+     and its verified local SoundFont. The server owns the pair: bass uses
+     zero-based GM programmes 38/39 and coverage `not_required`; keys uses
+     programmes 4/5 and must privately render and pass both identities through
+     the representative channel/pitch/soft-medium-strong velocity-bucket
+     preflight before it publishes A/B media. Treat
+     `functional_status: passed` only as measurable-response evidence and
+     always require `quality_status: review_required` plus listening to the
+     unchanged selected-MIDI A/B.
      `--developer-inspector` is an optional read-only
      application operation/state explorer in the same token-protected loopback
      Workbench. It needs no extra dependency and must not be described as a
@@ -2008,17 +2018,31 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     without treating eviction as lost project work. If the compatibility
     fallback was needed, describe it as second-synchronised, not
     sample-accurate, and feedback/event-free.
-    For a Stage 4 complete-instrument review, require one active selected bass
-    lane and report the exact arrangement-selection and MIDI hashes, source
-    reference window, verified SoundFont, dry renderer and server-owned GM
-    Synth Bass 1/2 pair. Confirm both anonymous renders contain the identical
-    note timing, duration, pitch and velocity performance and that the selected
-    MIDI bytes remain unchanged. Require unambiguous GM bank zero and an
-    effective target Program Change before every playable Note On, including
-    raw same-tick order. Report the 64 MiB/20-minute MIDI, 2 GiB source,
-    2 GiB SoundFont, 256 MiB renderer and 3 GiB aggregate preparation limits,
-    plus exact-window-only source snapshotting. Confirm the source and both
-    candidates are
+    For a Stage 4 fixed-MIDI instrument review, require one active selected
+    bass or keys lane and report the exact arrangement-selection and MIDI
+    hashes, source reference window, verified SoundFont, dry renderer and
+    server-owned pair: zero-based GM Synth Bass 1/2 programmes 38/39 or
+    Electric Piano 1/2 programmes 4/5. Confirm both anonymous renders contain
+    the identical note timing, duration, pitch and velocity performance and
+    that the selected MIDI bytes remain unchanged. Require unambiguous GM bank
+    zero, an effective target Program Change before every playable Note On
+    including raw same-tick order, and non-zero effective CC7 volume and CC11
+    expression. Report the 64 MiB/20-minute MIDI, 2 GiB source, 2 GiB
+    SoundFont, 256 MiB renderer and 3 GiB aggregate preparation limits, plus
+    exact-window-only source snapshotting.
+    For bass require coverage status `not_required`. For keys require a private
+    probe zone for every occupied channel, pitch and soft 1–42, medium 43–84
+    or strong 85–127 velocity bucket, testing the minimum velocity actually
+    observed there. Require CC120/CC123 guards around 0.20-second notes in
+    0.35-second slots, at most 512 zones and 180 seconds. Before allowing A/B,
+    both hidden identities must pass at least −72 dBFS RMS, −60 dBFS peak,
+    3 dB active RMS above the pre-note guard and no more than a 24 dB
+    velocity-normalised deficit from the channel/bucket median when peers
+    exist. Reject playable keys notes on General MIDI channel 10 (zero-based
+    channel 9). The synthetic MIDI must remain private and rebuildable. Raw
+    probe audio must be deleted after measurement and remain reproducible from
+    verified inputs; the loopback browser response must be blind and path-free.
+    Confirm the source and both candidates are
     attenuated to the quietest fixed-window RMS with no boost, reject more than
     18 dB divergence, and apply one common attenuation-only −1 dBFS sample-peak
     guard with no limiter or compressor. Require all three source/A/B heard
@@ -2027,10 +2051,12 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     State that preparation/playback are feedback-free and that
     completion/resolution affect only the owner-only instrument-review ledger,
     never MIDI decisions, roles, defaults, mixes, product readiness or
-    GarageBand Pack membership.
-    Do not call either proxy a detected GarageBand patch or automatically apply
-    the preference. Keys remain ineligible until the separate polyphonic
-    pitch/velocity coverage increment exists.
+    GarageBand Pack membership, ranking or export.
+    Always report `quality_status: review_required`. Do not call a functional
+    pass pitch/octave correctness, every-velocity audibility, chord/polyphonic
+    clarity, tone consistency or source similarity, GarageBand equivalence,
+    or evidence for a winner, recommendation or default. Do not call either
+    proxy a detected GarageBand patch or automatically apply the preference.
     For a precise decoded arrangement
     loop, report its context-neutral manifest hash, deduplicated source and
     distinct selected-MIDI counts, 24-track maximum, exact canonical group

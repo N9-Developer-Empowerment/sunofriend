@@ -10,8 +10,78 @@ from pathlib import Path
 FIXTURES = r"""
 const sha = character => character.repeat(64);
 
+function bassCoverage() {
+  return {
+    schema: "sunofriend.workbench-instrument-review.keys-coverage.v1",
+    required: false,
+    status: "not_required",
+    functional_status: "not_required",
+    quality_status: "review_required",
+    actual_review_midi_changed: false,
+  };
+}
+
+function keysCoverage() {
+  const candidate = {
+    functional_status: "passed",
+    tested_zone_count: 4,
+    passed_zone_count: 4,
+    failed_zone_count: 0,
+    minimum_rms_dbfs: -30,
+    minimum_peak_dbfs: -20,
+    minimum_active_above_pre_guard_db: 4,
+    maximum_normalized_rms_deficit_db: 2,
+  };
+  return {
+    schema: "sunofriend.workbench-instrument-review.keys-coverage.v1",
+    required: true,
+    status: "passed",
+    functional_status: "passed",
+    quality_status: "review_required",
+    policy: "deterministic-observed-pitch-velocity-bucket-probe-v1",
+    claim: "representative-used-pitch-velocity-bucket-coverage",
+    zone_definition: "one zone per observed channel, pitch and velocity bucket; the minimum velocity actually observed in that zone is tested",
+    safe_pass_text: "Both complete keyboard proxies produced measurable responses for each representative pitch and used velocity bucket tested from this selected MIDI. Tone, musical fit, chord clarity, every exact velocity, pitch correctness and GarageBand equivalence still require listening.",
+    non_claims: [
+      "not every exact used velocity is tested",
+      "pitch correctness and octave mapping are not proven",
+      "polyphonic chord and per-voice clarity are not proven",
+      "tone, musical fit and GarageBand equivalence are not proven",
+    ],
+    velocity_buckets: [
+      {id: "soft", minimum: 1, maximum: 42, tested_zone_count: 1, status: "passed"},
+      {id: "medium", minimum: 43, maximum: 84, tested_zone_count: 2, status: "passed"},
+      {id: "strong", minimum: 85, maximum: 127, tested_zone_count: 1, status: "passed"},
+    ],
+    tested_zone_count: 4,
+    tested_pitch_count: 3,
+    failed_zone_count: 0,
+    limits: {
+      maximum_zones: 512,
+      maximum_probe_seconds: 180,
+      probe_note_seconds: 0.2,
+      probe_slot_seconds: 0.35,
+    },
+    thresholds: {
+      both_absolute_gates_required: true,
+      minimum_rms_dbfs: -72,
+      minimum_peak_dbfs: -60,
+      minimum_active_above_pre_guard_db: 3,
+      maximum_velocity_normalized_rms_deficit_db: 24,
+      singleton_channel_bucket_uses_absolute_gates_only: true,
+    },
+    candidates: {
+      candidate_a: {...candidate},
+      candidate_b: {...candidate, minimum_rms_dbfs: -28},
+    },
+    candidate_identities_hidden: true,
+    actual_review_midi_changed: false,
+  };
+}
+
 function plan(overrides = {}) {
   const selection = overrides.selection || "a";
+  const role = overrides.role || "bass";
   return {
     schema: "sunofriend.workbench-instrument-review-plan.v1",
     selection_manifest_sha256: sha(selection),
@@ -20,12 +90,24 @@ function plan(overrides = {}) {
       stem_id: overrides.stemId || "stem-bass",
       candidate_id: overrides.candidateId || "candidate-bass",
       midi_sha256: sha(overrides.midi || "b"),
-      role: overrides.role || "bass",
-      label: "Selected bass",
+      role,
+      label: `Selected ${role}`,
+      coverage_preflight:
+        overrides.coverage || (role === "keys" ? "required" : "not_required"),
       pair: {
-        description: "Synth Bass 1 versus Synth Bass 2",
-        control: {label: "GM 39 Synth Bass 1"},
-        challenger: {label: "GM 40 Synth Bass 2"},
+        description: role === "keys"
+          ? "Electric Piano 1 versus Electric Piano 2"
+          : "Synth Bass 1 versus Synth Bass 2",
+        control: {
+          label: role === "keys"
+            ? "Electric Piano 1"
+            : "Synth Bass 1",
+        },
+        challenger: {
+          label: role === "keys"
+            ? "Electric Piano 2"
+            : "Synth Bass 2",
+        },
       },
     }],
     effects: {
@@ -40,6 +122,7 @@ function plan(overrides = {}) {
 
 function comparison(overrides = {}) {
   const status = overrides.status || "unreviewed";
+  const role = overrides.role || "bass";
   const value = {
     schema: "sunofriend.workbench-instrument-review.comparison.v1",
     status,
@@ -49,7 +132,9 @@ function comparison(overrides = {}) {
     stem_id: overrides.stemId || "stem-bass",
     candidate_id: overrides.candidateId || "candidate-bass",
     midi_sha256: sha(overrides.midi || "b"),
-    role: "bass",
+    role,
+    coverage_preflight:
+      role === "keys" ? keysCoverage() : bassCoverage(),
     expected_revision: status === "unreviewed" ? 0 : 1,
     window: {start_seconds: 2, end_seconds: 9},
     source_reference: {
@@ -121,27 +206,21 @@ function comparison(overrides = {}) {
 class WorkbenchInstrumentReviewJavaScriptTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.module_path = Path(
-            "src/sunofriend/workbench_instrument_review.js"
-        )
+        cls.module_path = Path("src/sunofriend/workbench_instrument_review.js")
         cls.source = cls.module_path.read_text(encoding="utf-8")
 
     def run_node(self, body: str) -> dict[str, object]:
         node = shutil.which("node")
         if not node:
             self.skipTest("Node.js is not installed")
-        script = (
-            """
+        script = """
 const review = require("./src/sunofriend/workbench_instrument_review.js");
 FIXTURES
 Promise.resolve((async()=>{BODY})()).then(
   value => console.log(JSON.stringify(value)),
   error => { console.error(error.stack || error); process.exitCode = 1; }
 );
-"""
-            .replace("FIXTURES", FIXTURES)
-            .replace("BODY", body)
-        )
+""".replace("FIXTURES", FIXTURES).replace("BODY", body)
         completed = subprocess.run(
             [node, "-e", script],
             capture_output=True,
@@ -158,9 +237,17 @@ Promise.resolve((async()=>{BODY})()).then(
             """
 const accepted = review.normalizePlan({plan: plan()});
 const prepared = review.normalizeComparison(comparison());
-let nonBassRejected = false;
-try { review.normalizePlan(plan({role: "keys"})); }
-catch { nonBassRejected = true; }
+const keysAccepted = review.normalizePlan(plan({role: "keys"}));
+let coverageMarkerRejected = false;
+try {
+  review.normalizePlan(plan({role: "keys", coverage: "not_required"}));
+} catch { coverageMarkerRejected = true; }
+let clientProgramRejected = false;
+try {
+  const leaked = plan({role: "keys"});
+  leaked.eligible_lanes[0].program = 5;
+  review.normalizePlan(leaked);
+} catch { clientProgramRejected = true; }
 let assignmentRejected = false;
 try {
   const leaked = plan();
@@ -179,8 +266,10 @@ try {
 return {
   planSchema: accepted.schema,
   laneCount: accepted.eligible_lanes.length,
+  keysRole: keysAccepted.eligible_lanes[0].role,
   comparisonSha: prepared.comparison_sha256,
-  nonBassRejected,
+  coverageMarkerRejected,
+  clientProgramRejected,
   assignmentRejected,
   identityRejected,
 };
@@ -192,8 +281,10 @@ return {
             "sunofriend.workbench-instrument-review-plan.v1",
         )
         self.assertEqual(result["laneCount"], 1)
+        self.assertEqual(result["keysRole"], "keys")
         self.assertEqual(result["comparisonSha"], "c" * 64)
-        self.assertTrue(result["nonBassRejected"])
+        self.assertTrue(result["coverageMarkerRejected"])
+        self.assertTrue(result["clientProgramRejected"])
         self.assertTrue(result["assignmentRejected"])
         self.assertTrue(result["identityRejected"])
 
@@ -283,13 +374,95 @@ return {
         ):
             self.assertTrue(result[key], key)
 
+    def test_keys_coverage_is_exact_anonymous_and_fail_closed(self) -> None:
+        result = self.run_node(
+            """
+function rejected(mutate) {
+  const value = comparison({role: "keys"});
+  mutate(value);
+  try {
+    review.normalizeComparison(value);
+    return false;
+  } catch {
+    return true;
+  }
+}
+const holder = {
+  innerHTML: "",
+  querySelector() { return null; },
+  querySelectorAll() { return []; },
+};
+const controller = review.createInstrumentReview({api: async() => ({})});
+controller
+  .setPlan(plan({role: "keys"}))
+  .setComparison(comparison({role: "keys"}))
+  .renderInto(holder);
+return {
+  snapshot: controller.snapshot(),
+  html: holder.innerHTML,
+  missingCoverage: rejected(value => {
+    delete value.coverage_preflight;
+  }),
+  functionalDrift: rejected(value => {
+    value.coverage_preflight.functional_status = "required";
+  }),
+  qualityDrift: rejected(value => {
+    value.coverage_preflight.quality_status = "passed";
+  }),
+  thresholdDrift: rejected(value => {
+    value.coverage_preflight.thresholds.minimum_active_above_pre_guard_db = 2.9;
+  }),
+  countDrift: rejected(value => {
+    value.coverage_preflight.candidates.candidate_a.passed_zone_count = 3;
+  }),
+  oneCandidate: rejected(value => {
+    delete value.coverage_preflight.candidates.candidate_b;
+  }),
+  identityLeak: rejected(value => {
+    value.coverage_preflight.candidates.candidate_a.program = 4;
+  }),
+  bassMeasurementRejected: (() => {
+    const value = comparison();
+    value.coverage_preflight = keysCoverage();
+    try {
+      review.normalizeComparison(value);
+      return false;
+    } catch {
+      return true;
+    }
+  })(),
+};
+"""
+        )
+
+        self.assertEqual(result["snapshot"]["coverage_preflight_status"], "passed")
+        self.assertEqual(
+            result["snapshot"]["coverage_quality_status"],
+            "review_required",
+        )
+        self.assertIn("minimum velocity", result["html"])
+        self.assertIn("actually observed", result["html"])
+        self.assertIn("Candidate A", result["html"])
+        self.assertNotIn("Electric Piano", result["html"])
+        for key in (
+            "missingCoverage",
+            "functionalDrift",
+            "qualityDrift",
+            "thresholdDrift",
+            "countDrift",
+            "oneCandidate",
+            "identityLeak",
+            "bassMeasurementRejected",
+        ):
+            self.assertTrue(result[key], key)
+
     def test_prepare_posts_only_exact_lane_and_window_anchors(self) -> None:
         result = self.run_node(
             """
 const calls = [];
 const api = async(path, options) => {
   calls.push({path, method: options.method, body: JSON.parse(options.body)});
-  return {comparison: comparison()};
+  return {comparison: comparison({role: "keys"})};
 };
 const button = {};
 const fields = {
@@ -303,7 +476,7 @@ const holder = {
   querySelectorAll() { return []; },
 };
 const controller = review.createInstrumentReview({api});
-controller.setPlan({plan: plan()}).renderInto(holder);
+controller.setPlan({plan: plan({role: "keys"})}).renderInto(holder);
 await button.onclick();
 return {calls, snapshot: controller.snapshot()};
 """
@@ -326,9 +499,7 @@ return {calls, snapshot: controller.snapshot()};
                 }
             ],
         )
-        self.assertEqual(
-            result["snapshot"]["comparison_status"], "unreviewed"
-        )
+        self.assertEqual(result["snapshot"]["comparison_status"], "unreviewed")
         self.assertFalse(result["snapshot"]["feedback_persisted"])
 
     def test_one_clock_transport_and_three_heard_completion_contract(
@@ -530,9 +701,7 @@ return {
                 }
             ],
         )
-        self.assertEqual(
-            result["snapshot"]["comparison_status"], "reviewed"
-        )
+        self.assertEqual(result["snapshot"]["comparison_status"], "reviewed")
         self.assertTrue(result["snapshot"]["feedback_persisted"])
 
     def test_resolution_is_separate_and_renders_both_export_links(self) -> None:
@@ -579,16 +748,10 @@ return {
                 }
             ],
         )
-        self.assertIn(
-            "/api/instrument-review-export?kind=review", result["html"]
-        )
-        self.assertIn(
-            "/api/instrument-review-export?kind=result", result["html"]
-        )
+        self.assertIn("/api/instrument-review-export?kind=review", result["html"])
+        self.assertIn("/api/instrument-review-export?kind=result", result["html"])
         self.assertIn("GM 40 Synth Bass 2", result["html"])
-        self.assertEqual(
-            result["snapshot"]["comparison_status"], "resolved"
-        )
+        self.assertEqual(result["snapshot"]["comparison_status"], "resolved")
 
     def test_delayed_completion_is_single_submit_and_stale_prepare_is_ignored(
         self,

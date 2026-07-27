@@ -558,23 +558,52 @@ published as **GM 39 Synth Bass 1 proxy**.
 ## Stage 4: fixed-MIDI complete-instrument review
 
 **Choose instruments** is no longer a placeholder when the current saved
-arrangement contains an active bass candidate. The first narrow Stage 4 review
-holds the musical performance constant and compares two complete, consistently
-mapped General MIDI bass patches. It does not try to infer a GarageBand patch
-name and it does not compare different transcriptions.
+arrangement contains an active bass or keys candidate. Stage 4 holds the
+musical performance constant and compares one server-owned General MIDI pair
+for the role. It does not try to infer a GarageBand patch name and it does not
+compare different transcriptions.
 
 The local plan is server-derived. An eligible row is pinned to the current
 `sunofriend.workbench-arrangement-selection.v1` hash, stem ID, candidate ID,
 role and MIDI SHA-256. The browser cannot submit a local path, SoundFont,
-programme, gain, candidate roster or hidden identity. The current bass policy
-uses zero-based programme 38, Synth Bass 1, and programme 39, Synth Bass 2.
+programme, gain, candidate roster or hidden identity. Bass uses zero-based
+programmes 38/39, Synth Bass 1/2. Keys uses programmes 4/5, Electric Piano 1/2.
 Both private proxies use the same selected MIDI, BPM, verified SoundFont and
 dry renderer. Sunofriend rejects the comparison if the selected lane changes
 or if note timing, duration, pitch or velocity differs between proxies.
 It also rejects non-zero or cross-track-ambiguous MIDI bank selection, or a
 Program Change which does not take effect before every played note in raw
 same-tick order. That fail-closed rule is what makes the displayed GM Synth
-Bass identities true for the rendered audio rather than merely labels.
+Bass or Electric Piano identities true for the rendered audio rather than
+merely labels. Effective MIDI volume (CC7) and expression (CC11) must also be
+non-zero at every playable Note On. Keys coverage rejects playable notes on
+General MIDI channel 10 (zero-based channel 9), where note numbers identify
+drum sounds rather than keyboard pitches.
+
+Keys has an additional private, deterministic functional-response preflight.
+The selected MIDI is partitioned into occupied `(channel, pitch, velocity
+bucket)` zones for soft 1–42, medium 43–84 and strong 85–127 velocities. The
+minimum velocity actually observed in each zone is tested. Each 0.20-second
+probe note is isolated in a 0.35-second slot with CC120/CC123 All Sound
+Off/All Notes Off guards. The probe is bounded to 512 zones and 180 seconds.
+Every zone for both private candidate identities must satisfy all applicable
+declared response gates:
+
+- RMS at least −72 dBFS and peak at least −60 dBFS;
+- active RMS at least 3 dB above the 50 ms pre-note guard; and
+- velocity-normalised RMS no more than 24 dB below its channel/bucket median
+  when the group contains at least two zones. A singleton uses only the
+  absolute and guard gates.
+
+Only after both private keyboard identities pass does the server expose the
+anonymous A/B comparison. The probe MIDI remains private and rebuildable. Raw
+probe audio is deleted after measurement and can be re-rendered from verified
+inputs; the loopback browser receives blind, path-free aggregate evidence
+bound to the selection, selected MIDI, SoundFont, renderer and hidden identity
+commitment.
+Bass explicitly reports coverage `not_required`. Keys reports
+`functional_status: passed`; both roles always report
+`quality_status: review_required`.
 
 Set a 0.5–15 second source-time window and choose **Prepare instrument
 comparison**. The source crop is visibly labelled as reference evidence.
@@ -606,10 +635,13 @@ the separate instrument-review ledger. They do not change:
 - GarageBand Pack membership.
 
 The resolved result is evidence for a later advisory profile, never automatic
-promotion. GarageBand patch selection remains a human DAW action. Keys are
-deferred to the next role-specific increment because a polyphonic
-pitch/velocity audibility probe is required before a keyboard patch can enter
-this comparison honestly.
+promotion. GarageBand patch selection remains a human DAW action. A keys
+preflight pass means only that both proxies produced a representative
+measurable response. It does not prove pitch or octave correctness, response
+at every exact velocity, chord/polyphonic clarity, tone consistency or source
+similarity, or GarageBand equivalence. It neither ranks nor recommends a
+candidate, programme or default. Listening to the unchanged selected-MIDI A/B
+remains required.
 
 Neutral preview WAVs remain renderer-consistent and unnormalised. Only the
 prepared precise per-stem loop applies a disclosed browser audition gain under

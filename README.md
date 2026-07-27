@@ -58,6 +58,7 @@ choice; scores and model labels never create an automatic global winner.
 | Split one reviewed MIDI into audible roles | `midi-role-split`, `midi-role-split-resolve` | Explicit source-event cluster choice, exact primary-note partition, optional independently transcribed residual layer, local A/B review and a hash-verified user-selected recommendation |
 | Compare consistent sounds on one fixed MIDI | `timbre-resynthesis` | Level-matched complete-patch, extracted-sampler and source-fitted harmonic-plus-noise auditions with note-by-note silence checks and no MIDI changes |
 | Review and hand off multi-process MIDI alternatives in one local site | `workbench` | Loopback-only Project Overview, precise decoded 0.5–15 second per-stem and canonical selected-arrangement loops, exact canonical full-song chunk playback, a bounded full-song timeline, a coarse arbitrary mixer, append-only decisions, private offline review export and an exact-selected-MIDI GarageBand ZIP; no automatic winner or submission endpoint |
+| Compare bass or keys sounds with selected MIDI fixed | Workbench → **Choose instruments** | Labelled-source plus blind A/B review of server-owned GM Synth Bass 1/2 or Electric Piano 1/2; keys first requires both hidden identities to pass a bounded representative functional-response probe, while both roles remain `quality_status: review_required` and no MIDI, selection, default, mix or pack changes |
 | Create the MIDI-derived song-interpretation WAV | `workbench` → **Build and hear song interpretation** → **Create song-interpretation WAV** | Renders the reviewed selected MIDI through neutral instruments with source-referenced timing, horizon and level evidence, measured summed-group calibration, a bounded drum-bus guard, audition normalisation and −1 dBFS sample-peak protection; source stems are not mixed into the WAV, and the dry unity control, selected MIDI and decisions remain unchanged |
 | Create a separate listening-master challenger | TUI **Master** tab, Workbench or `listening-master` | From the exact balanced v3 control, use the native guided action, the Workbench button or expert fresh-path CLI; fixed two-pass FFmpeg render plus encoded-artifact verification at −16 LUFS integrated, 11 LU loudness-range target and −1 dBTP; exact frame horizon, PCM24 WAV, path-free receipt, `mastered: true` and `release_master: false` |
 | Blind-review the balanced control against its Listening Master | Workbench → **Prepare blind comparison** | One exact 0.5–15 second anonymous A/B window with louder-only fixed-window sample-RMS attenuation, explicit heard/choice evidence, a separate local feedback revision and an optional second identity-resolution action; neither action promotes a winner or changes MIDI, product audio or the GarageBand pack |
@@ -929,12 +930,12 @@ those snapshots are removed before results are published. Primary candidate
 audio preloads metadata for quick comparison; advanced alternatives do not
 preload audio until used, which keeps larger result spaces responsive.
 
-### Compare complete bass instruments with the MIDI held fixed
+### Stage 4: compare bass and keys instruments with the MIDI held fixed
 
-After choosing a main or optional bass MIDI part, open **Choose instruments**
-in the Workbench. This first Stage 4 slice answers a narrower question than the
-stem-to-MIDI explorer: “Which complete, consistently playable bass sound makes
-these exact notes most useful?”
+After choosing a main or optional bass or keys MIDI part, open **Choose
+instruments** in the Workbench. Stage 4 answers a narrower question than the
+stem-to-MIDI explorer: “Which of these two server-owned General MIDI proxies
+makes these exact selected notes more useful?”
 
 Choose a recognisable 0.5–15 second window and prepare the comparison locally.
 Sunofriend:
@@ -945,9 +946,9 @@ Sunofriend:
   program used by a private audition proxy. A proxy is rejected unless every
   played channel stays in General MIDI bank zero and establishes the target
   Program Change before its first note, including same-tick event order;
-- renders zero-based GM program 38, **Synth Bass 1**, and program 39,
-  **Synth Bass 2**, through the same verified SoundFont and dry FluidSynth
-  path;
+- renders zero-based GM programs 38/39, **Synth Bass 1/2**, for bass, or
+  programs 4/5, **Electric Piano 1/2**, for keys, through the same verified
+  SoundFont and dry FluidSynth path;
 - verifies that note timing, duration, pitch and velocity remain identical and
   that the selected MIDI file itself did not change;
 - presents the source stem as a labelled reference and the two renders as
@@ -957,7 +958,27 @@ Sunofriend:
   A comparison is rejected when that fair match would require more than 18 dB
   of attenuation; and
 - requires explicit heard marks and a choice before storing bounded local
-feedback. Identity is revealed only by a separate resolve action.
+  feedback. Identity is revealed only by a separate resolve action.
+
+Keys add a private functional-response preflight before Sunofriend publishes
+the anonymous A/B files. For each occupied channel, pitch and soft (1–42),
+medium (43–84) or strong (85–127) velocity bucket in the selected MIDI, the
+probe tests the minimum velocity actually observed in that zone. CC120 and
+CC123 guards bracket its 0.20-second notes in 0.35-second slots. Both patches
+must pass every representative zone, within 512 zones and 180 seconds:
+
+- RMS at least −72 dBFS and sample peak at least −60 dBFS;
+- active-window RMS at least 3 dB above its pre-note guard; and
+- velocity-normalised RMS no more than 24 dB below the median for the same
+  channel and velocity bucket when that group has more than one zone.
+
+The private probe MIDI is rebuildable and never replaces the selected MIDI.
+Raw probe audio is deleted after measurement and can be re-rendered from the
+verified inputs. Its loopback browser projection is blind and path-free. Bass
+reports coverage `not_required`;
+keys must report `functional_status: passed`. Both roles always retain
+`quality_status: review_required`, and the unchanged selected-MIDI A/B listen
+remains mandatory.
 
 Preparation is resource-bounded before it copies or renders anything. MIDI is
 limited to 64 MiB and a 20-minute render horizon; source audio and SoundFont
@@ -970,13 +991,13 @@ Preparation and playback are rebuildable cache work. Completing or resolving
 this instrument review creates a separate owner-only, path-free review record;
 it does **not** change the selected MIDI, Workbench decisions, role, renderer
 default, balanced interpretation, Listening Master, GarageBand Pack or product
-completion. This is a complete-instrument proxy comparison, not GarageBand
-patch automation and not a claim that either General MIDI sound is the
-physical instrument in the stem.
-
-The first slice is intentionally bass-only. Keys are next, after a
-polyphonic note/velocity coverage probe can prove that every required pitch is
-audible before a patch enters the same listening workflow.
+completion. This is a fixed-MIDI proxy comparison, not GarageBand patch
+automation and not a claim that either General MIDI sound is the physical
+instrument in the stem. A keys preflight pass proves only a representative
+measurable response: it proves neither pitch nor octave correctness,
+every-velocity audibility, chord/polyphonic clarity, tone consistency or
+source similarity, nor GarageBand equivalence. It never recommends a winner,
+programme or default.
 
 If a requested loop extends beyond available source or preview audio,
 Workbench pads that track's end with generated silence and identifies its

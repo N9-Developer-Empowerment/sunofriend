@@ -25,6 +25,11 @@ Studio TUI orientation and visual-Workbench bridge plus the initial Phase
 conversion ledger and additional guided operations remain planned; broader
 TUI/process/role/instrument/DAW feedback also remains planned, while the first
 bounded Workbench Listening Master A/B feedback slice is implemented;
+Workbench Stage 4 now supports fixed-selected-MIDI bass and keys instrument
+comparisons: bass uses zero-based GM programmes 38/39 with coverage
+`not_required`, while keys uses 4/5 and publishes A/B only after both private
+identities pass the bounded representative functional-response preflight;
+both roles remain `quality_status: review_required`;
 Phase 6 Increment 6.0's gated,
 read-only Clip Library is complete and Increment 6.1's separate explicit Clip
 reuse proposal is complete; Increment 6.2a's reviewed immutable
@@ -908,6 +913,56 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-07-27 — Stage 4 keys functional preflight and fixed-MIDI A/B
+
+- Goal: extend the existing bass instrument review to keys without publishing
+  a keyboard A/B that has an unmeasured response gap, while keeping the chosen
+  musical performance fixed.
+- Pair and binding: bass retains zero-based GM Synth Bass 1/2 programmes 38/39
+  and reports coverage `not_required`. Keys uses Electric Piano 1/2 programmes
+  4/5. Both roles bind the current arrangement-selection, selected MIDI,
+  verified SoundFont, FluidSynth renderer and anonymous identity commitment.
+  The selected-MIDI A/B still differs only in audited Program Change bytes.
+- Keys preflight: for each occupied channel, pitch and soft (1–42), medium
+  (43–84) or strong (85–127) velocity bucket, test the minimum velocity
+  actually observed in that zone. CC120/CC123 guards bracket 0.20-second notes
+  in 0.35-second slots. The probe is bounded to 512 zones and 180 seconds.
+  Both private identities must reach −72 dBFS RMS and −60 dBFS peak, at least
+  3 dB active RMS above the 50 ms pre-note guard, and no more than a 24 dB
+  velocity-normalised deficit from the same channel/bucket median when peers
+  exist.
+- Local acceptance evidence: the private Pupsies keys selection
+  `mode_repair/keys_listened.mid` exercised 73 representative zones with the
+  GeneralUser-GS bank SHA-256
+  `9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe`.
+  Both programmes passed. Programme 4 measured minimum RMS −51.993632 dBFS,
+  minimum peak −43.150302 dBFS, minimum active-over-guard 41.158745 dB and
+  maximum normalised deficit 11.428001 dB. Programme 5 measured −56.26035,
+  −46.962652, 3.886066 and 11.171982 dB respectively. The 3 dB guard was
+  calibrated to retain this valid dry Electric Piano 2 release-tail case;
+  a constant-drone adversarial fixture remains rejected at 0 dB.
+- Privacy and effects: synthetic probe MIDI is private, owner-only and
+  rebuildable. Raw probe audio is deleted after measurement and can be
+  re-rendered from verified inputs. Only blind, path-free aggregate response
+  evidence reaches the loopback browser. Preflight, A/B preparation/playback,
+  review and resolution do not mutate MIDI, selection, ranking, defaults,
+  mixes, packs or exports.
+- Decision: integrate the keys sibling, but keep
+  `quality_status: review_required` for bass and keys. A pass proves only
+  representative measurable response. It does not prove pitch/octave
+  correctness, every-velocity audibility, chord/polyphonic clarity, tone
+  consistency or source similarity, GarageBand equivalence, or a winner,
+  recommendation or default. Listening to the unchanged selected-MIDI A/B
+  remains mandatory.
+- Validation: the complete instrument-review gate passed 56 tests, including
+  malformed evidence and the constant-drone guard failure. Adjacent Workbench
+  UI, server and core gates passed 102, 28 and 32 tests respectively. The
+  complete repository suite passed 1,285 tests with the existing single
+  `resampy`/`pkg_resources` deprecation warning.
+- Next smallest step: run the human keys A/B in musical context, then add
+  another role only with its own narrowly scoped functional evidence rather
+  than generalising this keyboard probe.
+
 ### 2026-07-27 — Native TUI Listening Master operation
 
 - Goal: make the fixed-policy comparative challenger available in the preferred
@@ -1014,8 +1069,10 @@ Each working day should aim for one narrow vertical improvement:
   attenuation-only matched to the quietest fixed-window RMS and share one
   −1 dBFS sample-peak guard. The two rendered candidates remain blind until
   explicit heard/choice feedback is complete, and resolution is evidence
-  rather than automatic promotion. Keys remain the next sibling increment
-  because polyphonic note coverage needs its own probe.
+  rather than automatic promotion. At this checkpoint keys remained the next
+  sibling because they needed a separate response probe; the newer Stage 4
+  keys entry above records that completed follow-on without rewriting this
+  bass evidence.
 - Validation: 14 backend tests and the 34-test artifact/backend/server/browser
   integration gate cover bank/program ordering, immutable proxies, common
   level matching, resource bounds, restart, races and privacy. The wider

@@ -8,12 +8,12 @@ choice with the musician.
 
 ## Workbench complete-instrument comparison
 
-Instrument matching scores and names are advisory; a usable instrument must
-also play every required note consistently and sound musically useful. The
-first Workbench Stage 4 comparison therefore holds one currently selected bass
-MIDI performance fixed and renders it through two complete SoundFont patches:
-GM Synth Bass 1 and Synth Bass 2. The source stem is a labelled reference,
-while the two rendered candidates remain blind until explicit local review.
+Instrument matching scores and names are advisory. Workbench Stage 4 therefore
+holds one currently selected MIDI performance fixed and renders it through one
+server-owned SoundFont pair: GM Synth Bass 1/2 (zero-based programmes 38/39)
+for bass, or Electric Piano 1/2 (programmes 4/5) for keys. The source stem is a
+labelled reference, while the two rendered candidates remain blind until
+the separate identity-resolution action after explicit local review.
 
 This check measures the patch, not transcription quality: the selected MIDI
 SHA-256 and arrangement-selection hash are pinned, proxy note signatures must
@@ -28,14 +28,39 @@ candidates.
 The GM label is also verified structurally. Sunofriend rejects non-zero or
 ambiguous bank selection and requires the rewritten Program Change to be
 effective before every played note, including notes at the same MIDI tick.
+Effective CC7 volume and CC11 expression must be non-zero at each playable
+Note On. Keys coverage rejects playable notes on General MIDI channel 10
+(zero-based channel 9), where note numbers conventionally select drum sounds
+rather than keyboard pitches.
 Resource limits and a 20-minute render horizon are checked before FluidSynth;
 only the chosen source window is copied into review state.
 
-The bass slice does not claim to automate GarageBand's Library or identify the
-physical source instrument. A resolved Synth Bass preference is simply
-evidence about these exact complete proxies. Keys require a separate
-polyphonic pitch/velocity coverage probe and remain the next role-specific
-increment.
+Keys must also pass a private functional-response preflight before A/B media is
+exposed to the loopback browser. For every occupied channel/pitch/soft, medium
+or strong velocity bucket, it tests the minimum velocity actually observed in
+the selected MIDI.
+The 0.20-second note slots use CC120/CC123 guards, are bounded to 512 zones and
+180 seconds, and require both anonymous candidates to meet:
+
+- at least −72 dBFS RMS and −60 dBFS peak;
+- at least 3 dB active-window RMS above the pre-note guard; and
+- no more than 24 dB velocity-normalised RMS deficit from the channel/bucket
+  median when a comparison peer exists.
+
+The synthetic probe MIDI remains private and rebuildable. Raw probe audio is
+private and deleted after measurement; it can be re-rendered from verified
+inputs. The loopback browser response is blind and path-free. Bass coverage is
+`not_required`; a keys A/B exists only after both
+candidates report `functional_status: passed`. For both roles,
+`quality_status` stays `review_required`, and the listener must still judge the
+unchanged selected MIDI.
+
+This review does not automate GarageBand's Library or identify the physical
+source instrument. A functional pass is representative response evidence, not
+proof of pitch/octave correctness, every-velocity audibility, chord or
+polyphonic clarity, tone consistency, source similarity or GarageBand
+equivalence. It is not a winner, recommendation or default. Completion and
+resolution do not mutate MIDI, selection, ranking, a mix, a pack or an export.
 
 ## Instrument Bundle v1: sound and match together
 

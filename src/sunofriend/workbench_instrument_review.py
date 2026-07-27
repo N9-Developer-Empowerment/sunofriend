@@ -1,4 +1,4 @@
-"""Blind fixed-MIDI review of complete bass instruments.
+"""Blind fixed-MIDI review of complete bass and keys instruments.
 
 The review changes only General MIDI Program Change data in private audition
 proxies.  Every note event, tempo event, controller, pitch bend, and other MIDI
@@ -26,6 +26,17 @@ from .clip import read_midi_clips
 from .midi_transform import _parse_midi
 from .render import find_fluidsynth, render_midi_to_wav
 from .workbench_artifacts import INSTRUMENT_REVIEW_CONTEXT_SCHEMA
+from .workbench_instrument_coverage import (
+    keys_coverage_contract,
+    prepare_keys_coverage_preflight,
+    public_keys_coverage_report,
+    validate_keys_coverage_report,
+    verify_keys_coverage_probe,
+)
+from .workbench_instrument_policy import (
+    complete_instrument_programs,
+    complete_instrument_roles,
+)
 
 
 INSTRUMENT_REVIEW_COMPARISON_SCHEMA = (
@@ -36,9 +47,7 @@ INSTRUMENT_REVIEW_SCHEMA = "sunofriend.workbench-instrument-review.review.v1"
 INSTRUMENT_REVIEW_RESULT_SCHEMA = "sunofriend.workbench-instrument-review.result.v1"
 INSTRUMENT_REVIEW_POLICY = "blind-fixed-midi-complete-gm-patch-rms-v1"
 INSTRUMENT_REVIEW_ASSIGNMENT_POLICY = "secret-random-per-comparison-v1"
-INSTRUMENT_REVIEW_LEVEL_POLICY = (
-    "source-and-candidates-common-rms-attenuation-only-v1"
-)
+INSTRUMENT_REVIEW_LEVEL_POLICY = "source-and-candidates-common-rms-attenuation-only-v1"
 INSTRUMENT_REVIEW_RENDER_POLICY = (
     "same-midi-same-soundfont-fluidsynth-dry-program-only-v1"
 )
@@ -92,25 +101,11 @@ MINIMUM_RMS_DBFS = -60.0
 MAXIMUM_ATTENUATION_DB = 18.0
 MAXIMUM_FINAL_RMS_MISMATCH_DB = 0.05
 SAMPLE_PEAK_CEILING_DBFS = -1.0
-SOURCE_SNAPSHOT_POLICY = (
-    "decode-exact-requested-frame-window-to-private-float32-v1"
-)
+SOURCE_SNAPSHOT_POLICY = "decode-exact-requested-frame-window-to-private-float32-v1"
 
 _DATABASE_NAME = "reviews.sqlite3"
 _AUDIO_DIRECTORY = "audio"
 _MANIFEST_NAME = "manifest.json"
-_EXPECTED_PROGRAMS = {
-    CONTROL: {
-        "program": 38,
-        "general_midi_number": 39,
-        "label": "Synth Bass 1",
-    },
-    CHALLENGER: {
-        "program": 39,
-        "general_midi_number": 40,
-        "label": "Synth Bass 2",
-    },
-}
 _NO_PRODUCT_EFFECTS = {
     "midi_mutated": False,
     "selection_changed": False,
@@ -172,7 +167,7 @@ class WorkbenchInstrumentReviewService:
         end_seconds: float,
         reviewer_session_key: str,
     ) -> dict[str, Any]:
-        """Prepare a blind, exact-frame source/A/B bass review."""
+        """Prepare a blind, exact-frame source/A/B complete-patch review."""
 
         evidence = _verified_context_evidence(context)
         window = _review_window(
@@ -215,9 +210,7 @@ class WorkbenchInstrumentReviewService:
     ) -> dict[str, Any]:
         """Return one verified private audio record for loopback registration."""
 
-        comparison_id = _sha256_text(
-            comparison_sha256, label="comparison SHA-256"
-        )
+        comparison_id = _sha256_text(comparison_sha256, label="comparison SHA-256")
         slot = _media_slot(candidate)
         session = self._session(comparison_id)
         manifest = self._load_audio_manifest(
@@ -240,9 +233,7 @@ class WorkbenchInstrumentReviewService:
     def comparison_binding(self, comparison_sha256: str) -> dict[str, Any]:
         """Return the verified path-free pins stored for a prepared comparison."""
 
-        comparison_id = _sha256_text(
-            comparison_sha256, label="comparison SHA-256"
-        )
+        comparison_id = _sha256_text(comparison_sha256, label="comparison SHA-256")
         binding = _session_binding(self._session(comparison_id))
         if (
             binding.get("schema") != INSTRUMENT_REVIEW_COMPARISON_SCHEMA
@@ -262,9 +253,7 @@ class WorkbenchInstrumentReviewService:
     ) -> dict[str, Any]:
         """Return current blind state after re-verifying all input anchors."""
 
-        comparison_id = _sha256_text(
-            comparison_sha256, label="comparison SHA-256"
-        )
+        comparison_id = _sha256_text(comparison_sha256, label="comparison SHA-256")
         session = self._session(comparison_id)
         binding = _session_binding(session)
         self._require_current_context(
@@ -303,9 +292,7 @@ class WorkbenchInstrumentReviewService:
     ) -> dict[str, Any]:
         """Append one durable blind review with CAS and exact-retry semantics."""
 
-        comparison_id = _sha256_text(
-            comparison_sha256, label="comparison SHA-256"
-        )
+        comparison_id = _sha256_text(comparison_sha256, label="comparison SHA-256")
         session = self._session(comparison_id)
         binding = _session_binding(session)
         self._require_current_context(
@@ -386,13 +373,9 @@ class WorkbenchInstrumentReviewService:
     ) -> dict[str, Any]:
         """Reveal one review's A/B program identities without promoting either."""
 
-        comparison_id = _sha256_text(
-            comparison_sha256, label="comparison SHA-256"
-        )
+        comparison_id = _sha256_text(comparison_sha256, label="comparison SHA-256")
         checked_review_id = _sha256_text(review_id, label="review identity")
-        checked_review_sha = _sha256_text(
-            review_sha256, label="review SHA-256"
-        )
+        checked_review_sha = _sha256_text(review_sha256, label="review SHA-256")
         review = self._review(checked_review_id)
         self._require_review_binding(review)
         if (
@@ -428,17 +411,11 @@ class WorkbenchInstrumentReviewService:
         response = review["response"]
         choice_value = str(response["choice"])
         resolved_choice = (
-            assignment[choice_value]
-            if choice_value in assignment
-            else choice_value
+            assignment[choice_value] if choice_value in assignment else choice_value
         )
         tags = {
-            assignment[CANDIDATE_A]: list(
-                response["problem_tags"][CANDIDATE_A]
-            ),
-            assignment[CANDIDATE_B]: list(
-                response["problem_tags"][CANDIDATE_B]
-            ),
+            assignment[CANDIDATE_A]: list(response["problem_tags"][CANDIDATE_A]),
+            assignment[CANDIDATE_B]: list(response["problem_tags"][CANDIDATE_B]),
         }
         notes = {
             assignment[CANDIDATE_A]: str(response["notes"][CANDIDATE_A]),
@@ -520,6 +497,7 @@ class WorkbenchInstrumentReviewService:
             frame_count = int(window["frame_count"])
             sample_rate = int(comparison["geometry"]["sample_rate"])
             channels = int(comparison["geometry"]["channels"])
+            role = str(private["role"])
             source_snapshot = _verified_source_window_snapshot(
                 Path(private["source_path"]),
                 private["source_record"],
@@ -528,13 +506,13 @@ class WorkbenchInstrumentReviewService:
                 frame_count=frame_count,
                 sample_rate=sample_rate,
                 channels=channels,
-                label="bass source stem",
+                label=f"{role} source stem",
             )
             selected_snapshot = _verified_snapshot(
                 Path(private["midi_path"]),
                 private["midi_record"],
                 work / "selected-midi.mid",
-                label="selected bass MIDI",
+                label=f"selected {role} MIDI",
             )
             soundfont_snapshot = _verified_snapshot(
                 Path(private["soundfont_path"]),
@@ -543,6 +521,48 @@ class WorkbenchInstrumentReviewService:
                 label="SoundFont",
             )
             original_selected_sha = _file_sha256(selected_snapshot)
+            if role == "keys":
+                prepared_coverage = prepare_keys_coverage_preflight(
+                    selected_midi=selected_snapshot,
+                    work_directory=work,
+                    programs=private["programs"],
+                    maximum_note_ons=MAXIMUM_MIDI_NOTE_ONS,
+                    sample_rate=sample_rate,
+                    soundfont_path=soundfont_snapshot,
+                    renderer_path=str(private["renderer_path"]),
+                    render=render_midi_to_wav,
+                )
+                private_coverage_identities: dict[str, Any] = {}
+                for identity in (CONTROL, CHALLENGER):
+                    coverage_row = prepared_coverage["private_identities"][identity]
+                    probe_path = Path(coverage_row["probe_path"])
+                    probe_program_state = _midi_program_state_evidence(
+                        _parse_midi(probe_path.read_bytes()),
+                        expected_program=int(private["programs"][identity]["program"]),
+                    )
+                    if (
+                        probe_program_state["playable_note_on_count"]
+                        != prepared_coverage["zone_count"]
+                    ):
+                        raise RuntimeError("keys coverage probe note count changed")
+                    private_coverage_identities[identity] = {
+                        "report": coverage_row["report"],
+                        "probe_midi": _without_path(
+                            _private_file_record(
+                                probe_path,
+                                label=f"{identity} keys coverage probe",
+                            )
+                        ),
+                        "probe_program_state": probe_program_state,
+                    }
+                coverage_evidence = {
+                    key: _json_copy(value)
+                    for key, value in prepared_coverage.items()
+                    if key != "private_identities"
+                }
+                coverage_evidence["private_identities"] = private_coverage_identities
+            else:
+                coverage_evidence = keys_coverage_contract(required=False)
             program_evidence: dict[str, Any] = {}
             raw_audio: dict[str, Path] = {}
             for identity in (CONTROL, CHALLENGER):
@@ -566,8 +586,7 @@ class WorkbenchInstrumentReviewService:
                 raw_audio[identity] = rendered
             if (
                 _file_sha256(selected_snapshot) != original_selected_sha
-                or original_selected_sha
-                != comparison["selected_midi"]["sha256"]
+                or original_selected_sha != comparison["selected_midi"]["sha256"]
             ):
                 raise RuntimeError("selected MIDI changed while rendering instruments")
 
@@ -632,17 +651,14 @@ class WorkbenchInstrumentReviewService:
                 CANDIDATE_A: float(candidate_rows[CANDIDATE_A]["rms_dbfs"]),
                 CANDIDATE_B: float(candidate_rows[CANDIDATE_B]["rms_dbfs"]),
             }
-            final_mismatch = max(final_levels.values()) - min(
-                final_levels.values()
-            )
+            final_mismatch = max(final_levels.values()) - min(final_levels.values())
             if final_mismatch > MAXIMUM_FINAL_RMS_MISMATCH_DB:
                 raise RuntimeError(
                     "instrument review PCM16 level mismatch exceeds "
                     f"{MAXIMUM_FINAL_RMS_MISMATCH_DB:.2f} dB"
                 )
             if any(
-                float(value["sample_peak_dbfs"])
-                > SAMPLE_PEAK_CEILING_DBFS + 0.001
+                float(value["sample_peak_dbfs"]) > SAMPLE_PEAK_CEILING_DBFS + 0.001
                 for value in [source_info, *candidate_rows.values()]
             ):
                 raise RuntimeError(
@@ -663,9 +679,7 @@ class WorkbenchInstrumentReviewService:
                 raise WorkbenchInstrumentReviewConflictError(
                     "instrument review evidence changed during preparation"
                 )
-            if _file_sha256(selected_snapshot) != comparison["selected_midi"][
-                "sha256"
-            ]:
+            if _file_sha256(selected_snapshot) != comparison["selected_midi"]["sha256"]:
                 raise RuntimeError("selected MIDI snapshot was mutated")
 
             for path in (
@@ -678,7 +692,7 @@ class WorkbenchInstrumentReviewService:
             source_row = {
                 "audio": _without_path(source_record),
                 **source_info,
-                "label": "Original bass stem reference",
+                "label": f"Original {role} stem reference",
                 "level_policy": INSTRUMENT_REVIEW_LEVEL_POLICY,
                 "level_matched_to_candidates": True,
                 "applied_gain_db": level_match["inputs"][SOURCE_REFERENCE][
@@ -710,6 +724,7 @@ class WorkbenchInstrumentReviewService:
                 "private_assignment": assignment,
                 "private_identities": private_identities,
                 "selected_midi_snapshot": _without_path(selected_record),
+                "coverage_preflight": coverage_evidence,
                 "window": _json_copy(comparison["window"]),
                 "source_reference": source_row,
                 "level_match": level_match,
@@ -771,8 +786,7 @@ class WorkbenchInstrumentReviewService:
             or manifest.get("comparison_sha256") != comparison_sha256
             or manifest.get("comparison_binding_sha256") != comparison_sha256
             or manifest.get("nonce_commitment") != nonce_commitment
-            or manifest.get("assignment_policy")
-            != INSTRUMENT_REVIEW_ASSIGNMENT_POLICY
+            or manifest.get("assignment_policy") != INSTRUMENT_REVIEW_ASSIGNMENT_POLICY
             or manifest.get("private_assignment") != assignment
             or manifest.get("window") != binding.get("window")
             or manifest.get("path_free_manifest") is not True
@@ -785,6 +799,10 @@ class WorkbenchInstrumentReviewService:
         source = manifest.get("source_reference")
         candidates = manifest.get("candidates")
         identities = manifest.get("private_identities")
+        role = str(binding.get("role", ""))
+        if role not in complete_instrument_roles():
+            raise ValueError("instrument review role binding is invalid")
+        expected_programs = complete_instrument_programs(role)
         if (
             not isinstance(source, Mapping)
             or not isinstance(candidates, Mapping)
@@ -794,7 +812,7 @@ class WorkbenchInstrumentReviewService:
         ):
             raise ValueError("instrument review audio manifest is incomplete")
         if (
-            source.get("label") != "Original bass stem reference"
+            source.get("label") != f"Original {role} stem reference"
             or source.get("level_policy") != INSTRUMENT_REVIEW_LEVEL_POLICY
             or source.get("level_matched_to_candidates") is not True
         ):
@@ -836,6 +854,66 @@ class WorkbenchInstrumentReviewService:
             or selected.get("sha256") != binding["selected_midi"]["sha256"]
         ):
             raise ValueError("selected MIDI snapshot changed")
+        coverage = manifest.get("coverage_preflight")
+        if role == "keys":
+            coverage_contract = keys_coverage_contract(required=True)
+            if (
+                not isinstance(coverage, Mapping)
+                or set(coverage)
+                != set(coverage_contract)
+                | {"zone_count", "duration_seconds", "private_identities"}
+                or coverage.get("required") is not True
+                or coverage.get("status") != "passed"
+                or coverage.get("functional_status") != "passed"
+                or coverage.get("quality_status") != "review_required"
+                or any(
+                    coverage.get(key) != value
+                    for key, value in coverage_contract.items()
+                    if key not in {"status", "functional_status"}
+                )
+                or not isinstance(coverage.get("private_identities"), Mapping)
+                or set(coverage["private_identities"]) != {CONTROL, CHALLENGER}
+            ):
+                raise ValueError("keys coverage evidence is incomplete")
+            for identity in (CONTROL, CHALLENGER):
+                coverage_row = coverage["private_identities"][identity]
+                if (
+                    not isinstance(coverage_row, Mapping)
+                    or set(coverage_row)
+                    != {"report", "probe_midi", "probe_program_state"}
+                    or not isinstance(coverage_row.get("report"), Mapping)
+                    or not isinstance(coverage_row.get("probe_midi"), Mapping)
+                    or not isinstance(coverage_row.get("probe_program_state"), Mapping)
+                ):
+                    raise ValueError("keys coverage identity evidence is invalid")
+                report = coverage_row["report"]
+                validate_keys_coverage_report(report)
+                if report.get("zone_count") != coverage.get("zone_count") or report.get(
+                    "duration_seconds"
+                ) != coverage.get("duration_seconds"):
+                    raise ValueError("keys coverage reports disagree")
+                probe_record = coverage_row["probe_midi"]
+                probe_path = directory / str(probe_record.get("name", ""))
+                actual_probe = _private_file_record(
+                    probe_path,
+                    label=f"{identity} keys coverage probe",
+                )
+                if _without_path(actual_probe) != probe_record:
+                    raise ValueError("keys coverage probe changed")
+                verify_keys_coverage_probe(
+                    report,
+                    probe_path,
+                    expected_program=int(expected_programs[identity]["program"]),
+                    maximum_note_ons=MAXIMUM_MIDI_NOTE_ONS,
+                )
+                program_state = _midi_program_state_evidence(
+                    _parse_midi(probe_path.read_bytes()),
+                    expected_program=int(expected_programs[identity]["program"]),
+                )
+                if program_state != coverage_row["probe_program_state"]:
+                    raise ValueError("keys coverage probe state changed")
+        elif coverage != keys_coverage_contract(required=False):
+            raise ValueError("bass coverage disclosure is invalid")
         for identity in (CONTROL, CHALLENGER):
             row = identities[identity]
             if (
@@ -844,15 +922,13 @@ class WorkbenchInstrumentReviewService:
                     key: row.get(key)
                     for key in ("program", "general_midi_number", "label")
                 }
-                != _EXPECTED_PROGRAMS[identity]
+                != expected_programs[identity]
                 or not isinstance(row.get("proxy_midi"), Mapping)
             ):
                 raise ValueError("instrument identity evidence is invalid")
             proxy_record = row["proxy_midi"]
             proxy_path = directory / str(proxy_record.get("name", ""))
-            actual = _private_file_record(
-                proxy_path, label=f"{identity} proxy MIDI"
-            )
+            actual = _private_file_record(proxy_path, label=f"{identity} proxy MIDI")
             if _without_path(actual) != proxy_record:
                 raise ValueError("instrument proxy MIDI changed")
             verified = _program_proxy_evidence(
@@ -871,8 +947,7 @@ class WorkbenchInstrumentReviewService:
         if mismatch > MAXIMUM_FINAL_RMS_MISMATCH_DB:
             raise ValueError("instrument review audio levels changed")
         if any(
-            float(row["sample_peak_dbfs"])
-            > SAMPLE_PEAK_CEILING_DBFS + 0.001
+            float(row["sample_peak_dbfs"]) > SAMPLE_PEAK_CEILING_DBFS + 0.001
             for row in [source, *candidates.values()]
         ):
             raise ValueError("instrument review audio peak ceiling changed")
@@ -1028,11 +1103,9 @@ class WorkbenchInstrumentReviewService:
             "nonce": bytes(row[2]),
             "nonce_commitment": str(row[3]),
         }
-        if (
-            len(result["nonce"]) != 32
-            or result["nonce_commitment"]
-            != _nonce_commitment(result["nonce"], comparison_sha256)
-        ):
+        if len(result["nonce"]) != 32 or result[
+            "nonce_commitment"
+        ] != _nonce_commitment(result["nonce"], comparison_sha256):
             raise ValueError("instrument review session is invalid")
         return result
 
@@ -1058,9 +1131,7 @@ class WorkbenchInstrumentReviewService:
             ).fetchone()
             current_revision = int(row[0]) if row is not None else 0
             if current_revision == expected_revision + 1 and row is not None:
-                existing = _json_object(
-                    str(row[1]), label="instrument review record"
-                )
+                existing = _json_object(str(row[1]), label="instrument review record")
                 if existing == review:
                     return existing
             if current_revision != expected_revision:
@@ -1149,9 +1220,7 @@ class WorkbenchInstrumentReviewService:
         normalized_response = {
             "heard": _heard(response.get("heard", {})),
             "choice": _choice(response.get("choice")),
-            "problem_tags": _problem_tag_map(
-                response.get("problem_tags", {})
-            ),
+            "problem_tags": _problem_tag_map(response.get("problem_tags", {})),
             "notes": _notes_map(response.get("notes", {})),
         }
         revision = _positive_int(review.get("revision"), label="review revision")
@@ -1187,9 +1256,7 @@ class WorkbenchInstrumentReviewService:
             raise ValueError("instrument review binding is invalid")
         _require_path_free(review, label="instrument review")
 
-    def _save_or_load_resolution(
-        self, result: Mapping[str, Any]
-    ) -> dict[str, Any]:
+    def _save_or_load_resolution(self, result: Mapping[str, Any]) -> dict[str, Any]:
         review_id = str(result["review_id"])
         payload = _canonical_json(result)
         with self._connect() as connection:
@@ -1213,9 +1280,7 @@ class WorkbenchInstrumentReviewService:
                     ),
                 )
                 return _json_copy(result)
-        existing = _json_object(
-            str(row[0]), label="instrument review resolution"
-        )
+        existing = _json_object(str(row[0]), label="instrument review resolution")
         if existing != result:
             raise ValueError("instrument review resolution changed")
         return existing
@@ -1254,12 +1319,8 @@ class WorkbenchInstrumentReviewService:
         choice = str(response["choice"])
         expected_choice = assignment[choice] if choice in assignment else choice
         expected_tags = {
-            assignment[CANDIDATE_A]: list(
-                response["problem_tags"][CANDIDATE_A]
-            ),
-            assignment[CANDIDATE_B]: list(
-                response["problem_tags"][CANDIDATE_B]
-            ),
+            assignment[CANDIDATE_A]: list(response["problem_tags"][CANDIDATE_A]),
+            assignment[CANDIDATE_B]: list(response["problem_tags"][CANDIDATE_B]),
         }
         expected_notes = {
             assignment[CANDIDATE_A]: str(response["notes"][CANDIDATE_A]),
@@ -1313,12 +1374,14 @@ def _verified_context_evidence(
     if not 1.0 <= bpm <= 1_000.0:
         raise ValueError("instrument review BPM must be between 1 and 1000")
     track = context.get("track")
-    if not isinstance(track, Mapping) or track.get("role") != "bass":
-        raise ValueError("instrument review v1 accepts only selected bass MIDI")
+    role = str(track.get("role", "")) if isinstance(track, Mapping) else ""
+    if not isinstance(track, Mapping) or role not in complete_instrument_roles():
+        raise ValueError("instrument review accepts only selected bass or keys MIDI")
+    expected_programs = complete_instrument_programs(role)
     programs = context.get("programs")
-    if programs != _EXPECTED_PROGRAMS:
+    if programs != expected_programs:
         raise ValueError(
-            "instrument review programs must be Synth Bass 1 and Synth Bass 2"
+            f"instrument review programs do not match the {role} patch policy"
         )
     effects = context.get("effects")
     if not isinstance(effects, Mapping) or any(
@@ -1328,12 +1391,12 @@ def _verified_context_evidence(
 
     midi_record = _checked_input_record(
         track.get("midi"),
-        label="selected bass MIDI",
+        label=f"selected {role} MIDI",
         maximum_bytes=MAXIMUM_MIDI_BYTES,
     )
     source_record = _checked_input_record(
         context.get("source"),
-        label="bass source stem",
+        label=f"{role} source stem",
         maximum_bytes=MAXIMUM_SOURCE_AUDIO_BYTES,
     )
     soundfont_record = _checked_input_record(
@@ -1341,9 +1404,7 @@ def _verified_context_evidence(
         label="SoundFont",
         maximum_bytes=MAXIMUM_SOUNDFONT_BYTES,
     )
-    source_info = _audio_info(
-        Path(source_record["path"]), label="bass source stem"
-    )
+    source_info = _audio_info(Path(source_record["path"]), label=f"{role} source stem")
     renderer_path = Path(find_fluidsynth()).expanduser().resolve()
     if (
         not renderer_path.is_file()
@@ -1377,7 +1438,7 @@ def _verified_context_evidence(
     note_evidence = _selected_midi_evidence(Path(midi_record["path"]))
     public = {
         "project_id": project_id,
-        "role": "bass",
+        "role": role,
         "selection_manifest_sha256": selection_sha,
         "bpm": bpm,
         "track": {
@@ -1405,7 +1466,7 @@ def _verified_context_evidence(
         "source_reference": {
             "sha256": source_record["sha256"],
             "bytes": source_record["bytes"],
-            "label": "Original bass stem reference",
+            "label": f"Original {role} stem reference",
             "level_policy": INSTRUMENT_REVIEW_LEVEL_POLICY,
         },
         "soundfont": {
@@ -1433,8 +1494,9 @@ def _verified_context_evidence(
             "full_source_snapshot_created": False,
         },
         "candidate_identity_set_commitment": _document_hash(
-            {"identities": _EXPECTED_PROGRAMS}
+            {"role": role, "identities": expected_programs}
         ),
+        "coverage_preflight": keys_coverage_contract(required=role == "keys"),
         "geometry": source_info,
     }
     _require_path_free(public, label="instrument context evidence")
@@ -1450,7 +1512,8 @@ def _verified_context_evidence(
             "soundfont_record": soundfont_record,
             "renderer_path": renderer_record["path"],
             "renderer_record": renderer_record,
-            "programs": _EXPECTED_PROGRAMS,
+            "role": role,
+            "programs": expected_programs,
         },
     }
 
@@ -1512,21 +1575,65 @@ def _prepared_document(
                 "fixed-window RMS. Matching attenuates only and never boosts."
             ),
         },
+        "coverage_preflight": _public_coverage_preflight(
+            comparison=comparison,
+            comparison_sha256=comparison_sha256,
+            manifest=manifest,
+        ),
         "current_review": (
             None if current_review is None else _json_copy(current_review)
         ),
         "allowed": {
             "choices": sorted(INSTRUMENT_REVIEW_CHOICES),
             "problem_tags": sorted(INSTRUMENT_REVIEW_PROBLEM_TAGS),
-            "maximum_problem_tags_per_candidate": (
-                MAXIMUM_PROBLEM_TAGS_PER_CANDIDATE
-            ),
+            "maximum_problem_tags_per_candidate": (MAXIMUM_PROBLEM_TAGS_PER_CANDIDATE),
             "maximum_notes_characters": MAXIMUM_NOTES_CHARACTERS,
         },
         "effects": dict(PREPARE_EFFECTS),
     }
     _require_path_free(document, label="prepared instrument review")
     return document
+
+
+def _public_coverage_preflight(
+    *,
+    comparison: Mapping[str, Any],
+    comparison_sha256: str,
+    manifest: Mapping[str, Any],
+) -> dict[str, Any]:
+    coverage = manifest["coverage_preflight"]
+    if comparison.get("role") != "keys":
+        return _json_copy(coverage)
+    identities = coverage["private_identities"]
+    candidates = manifest["candidates"]
+    result = {
+        key: _json_copy(value)
+        for key, value in coverage.items()
+        if key != "private_identities"
+    }
+    result.update(
+        {
+            "candidate_identities_hidden": True,
+            CANDIDATE_A: public_keys_coverage_report(
+                identities[candidates[CANDIDATE_A]["identity"]]["report"]
+            ),
+            CANDIDATE_B: public_keys_coverage_report(
+                identities[candidates[CANDIDATE_B]["identity"]]["report"]
+            ),
+            "binding": {
+                "comparison_sha256": comparison_sha256,
+                "selection_manifest_sha256": comparison["selection_manifest_sha256"],
+                "selected_midi_sha256": comparison["selected_midi"]["sha256"],
+                "soundfont_sha256": comparison["soundfont"]["sha256"],
+                "renderer_sha256": comparison["renderer"]["sha256"],
+                "candidate_identity_set_commitment": comparison[
+                    "candidate_identity_set_commitment"
+                ],
+            },
+        }
+    )
+    result["coverage_sha256"] = _document_hash(result)
+    return result
 
 
 def _public_media_row(row: Mapping[str, Any]) -> dict[str, Any]:
@@ -1548,12 +1655,8 @@ def _public_level_match(manifest: Mapping[str, Any]) -> dict[str, Any]:
     }
     result["inputs"] = {
         SOURCE_REFERENCE: _json_copy(private_inputs[SOURCE_REFERENCE]),
-        CANDIDATE_A: _json_copy(
-            private_inputs[candidates[CANDIDATE_A]["identity"]]
-        ),
-        CANDIDATE_B: _json_copy(
-            private_inputs[candidates[CANDIDATE_B]["identity"]]
-        ),
+        CANDIDATE_A: _json_copy(private_inputs[candidates[CANDIDATE_A]["identity"]]),
+        CANDIDATE_B: _json_copy(private_inputs[candidates[CANDIDATE_B]["identity"]]),
     }
     return result
 
@@ -1574,42 +1677,39 @@ def _midi_program_state_evidence(
         and event.channel is not None
     ]
     if not playable_notes:
-        raise ValueError("selected bass MIDI contains no playable note events")
+        raise ValueError("selected instrument MIDI contains no playable note events")
     note_channels = {int(event.channel) for _track, event in playable_notes}
     if 9 in note_channels:
-        raise ValueError("selected bass MIDI must not use the drum channel")
+        raise ValueError("selected instrument MIDI must not use the drum channel")
 
     note_tracks: dict[int, set[int]] = {channel: set() for channel in note_channels}
-    relevant_tracks: dict[int, set[int]] = {
-        channel: set() for channel in note_channels
-    }
+    relevant_tracks: dict[int, set[int]] = {channel: set() for channel in note_channels}
     bank_events: list[Any] = []
+    audibility_events: list[Any] = []
     program_events: list[Any] = []
     for track in layout.tracks:
         for event in track.events:
             channel = event.channel
             if event.category != "channel" or channel not in note_channels:
                 continue
-            if (
-                event.event_type == 0x90
-                and len(event.data) == 2
-                and event.data[1] > 0
-            ):
+            if event.event_type == 0x90 and len(event.data) == 2 and event.data[1] > 0:
                 note_tracks[int(channel)].add(int(track.index))
                 relevant_tracks[int(channel)].add(int(track.index))
             elif event.event_type == 0xC0:
                 program_events.append(event)
                 relevant_tracks[int(channel)].add(int(track.index))
-            elif (
-                event.event_type == 0xB0
-                and len(event.data) == 2
-                and event.data[0] in {0, 32}
-            ):
+            elif event.event_type == 0xB0 and len(event.data) == 2:
+                controller = int(event.data[0])
+                if controller in {7, 11}:
+                    audibility_events.append(event)
+                    relevant_tracks[int(channel)].add(int(track.index))
+                if controller not in {0, 32}:
+                    continue
                 bank_events.append(event)
                 relevant_tracks[int(channel)].add(int(track.index))
                 if event.data[1] != 0:
                     raise ValueError(
-                        "selected bass MIDI uses a nonzero CC0/CC32 bank; "
+                        "selected instrument MIDI uses a nonzero CC0/CC32 bank; "
                         "General MIDI program identity would be ambiguous"
                     )
 
@@ -1619,14 +1719,18 @@ def _midi_program_state_evidence(
         relevant = relevant_tracks[channel]
         if len(tracks) != 1 or relevant != tracks:
             raise ValueError(
-                "selected bass MIDI has ambiguous cross-track bank, program, "
-                "or Note On ordering"
+                "selected instrument MIDI has ambiguous cross-track bank, "
+                "program, volume, expression, or Note On ordering"
             )
         channel_tracks[channel] = next(iter(tracks))
 
     effective_program: dict[int, int | None] = {
         channel: None for channel in note_channels
     }
+    effective_volume = {channel: 100 for channel in note_channels}
+    effective_expression = {channel: 127 for channel in note_channels}
+    note_volume_values: list[int] = []
+    note_expression_values: list[int] = []
     for track in layout.tracks:
         relevant_channels = {
             channel
@@ -1644,14 +1748,21 @@ def _midi_program_state_evidence(
             if event.event_type == 0xC0:
                 effective_program[int(channel)] = int(event.data[0])
             elif (
-                event.event_type == 0x90
+                event.event_type == 0xB0
                 and len(event.data) == 2
-                and event.data[1] > 0
+                and event.data[0] in {7, 11}
+            ):
+                if event.data[0] == 7:
+                    effective_volume[int(channel)] = int(event.data[1])
+                else:
+                    effective_expression[int(channel)] = int(event.data[1])
+            elif (
+                event.event_type == 0x90 and len(event.data) == 2 and event.data[1] > 0
             ):
                 current = effective_program[int(channel)]
                 if current is None:
                     raise ValueError(
-                        "selected bass MIDI needs an effective Program Change "
+                        "selected instrument MIDI needs an effective Program Change "
                         "before every playable Note On"
                     )
                 if expected_program is not None and current != expected_program:
@@ -1659,6 +1770,15 @@ def _midi_program_state_evidence(
                         "instrument proxy does not establish the target Program "
                         "Change before every playable Note On"
                     )
+                volume = effective_volume[int(channel)]
+                expression = effective_expression[int(channel)]
+                if volume == 0 or expression == 0:
+                    raise ValueError(
+                        "selected instrument MIDI silences a playable Note On "
+                        "with effective CC7 volume or CC11 expression"
+                    )
+                note_volume_values.append(volume)
+                note_expression_values.append(expression)
     return {
         "playable_note_on_count": len(playable_notes),
         "note_channels": sorted(note_channels),
@@ -1668,12 +1788,14 @@ def _midi_program_state_evidence(
         "program_change_event_count": len(program_events),
         "bank_select_event_count": len(bank_events),
         "bank_select_all_zero": True,
+        "volume_expression_event_count": len(audibility_events),
+        "effective_nonzero_volume_expression_before_every_note_on": True,
+        "minimum_effective_channel_volume": min(note_volume_values),
+        "minimum_effective_expression": min(note_expression_values),
         "cross_track_order_unambiguous": True,
         "same_tick_raw_event_order_checked": True,
         "effective_program_before_every_note_on": True,
-        "effective_target_program_before_every_note_on": (
-            expected_program is not None
-        ),
+        "effective_target_program_before_every_note_on": (expected_program is not None),
     }
 
 
@@ -1684,7 +1806,7 @@ def _write_program_proxy(
     program: int,
 ) -> dict[str, Any]:
     if source.stat().st_size > MAXIMUM_MIDI_BYTES:
-        raise ValueError("selected bass MIDI exceeds the safe file-size limit")
+        raise ValueError("selected instrument MIDI exceeds the safe file-size limit")
     data = source.read_bytes()
     layout = _parse_midi(data)
     state = _midi_program_state_evidence(layout, expected_program=None)
@@ -1700,7 +1822,8 @@ def _write_program_proxy(
     covered_channels = {int(event.channel) for event in program_events}
     if covered_channels != note_channels:
         raise ValueError(
-            "each selected bass MIDI note channel needs an explicit Program Change"
+            "each selected instrument MIDI note channel needs an explicit "
+            "Program Change"
         )
     output = bytearray(data)
     changed_offsets: list[int] = []
@@ -1711,9 +1834,7 @@ def _write_program_proxy(
             output[offset] = program
     destination.write_bytes(bytes(output))
     destination.chmod(0o600)
-    evidence = _program_proxy_evidence(
-        source, destination, expected_program=program
-    )
+    evidence = _program_proxy_evidence(source, destination, expected_program=program)
     if evidence["changed_byte_count"] != len(changed_offsets):
         raise RuntimeError("instrument proxy byte-diff evidence changed")
     return evidence
@@ -1753,6 +1874,10 @@ def _program_proxy_evidence(
             "program_change_event_count",
             "bank_select_event_count",
             "bank_select_all_zero",
+            "volume_expression_event_count",
+            "effective_nonzero_volume_expression_before_every_note_on",
+            "minimum_effective_channel_volume",
+            "minimum_effective_expression",
             "cross_track_order_unambiguous",
             "effective_program_before_every_note_on",
         )
@@ -1783,9 +1908,7 @@ def _program_proxy_evidence(
         if before != after
     ]
     if any(offset not in permitted for offset in differences):
-        raise ValueError(
-            "instrument proxy changed bytes outside Program Change data"
-        )
+        raise ValueError("instrument proxy changed bytes outside Program Change data")
     signature_sha = _document_hash({"note_events": source_signature})
     return {
         "source_midi_sha256": _file_sha256(source),
@@ -1799,6 +1922,12 @@ def _program_proxy_evidence(
         "program_change_event_count": proxy_state["program_change_event_count"],
         "bank_select_event_count": proxy_state["bank_select_event_count"],
         "bank_select_all_zero": True,
+        "volume_expression_event_count": proxy_state["volume_expression_event_count"],
+        "effective_nonzero_volume_expression_before_every_note_on": True,
+        "minimum_effective_channel_volume": proxy_state[
+            "minimum_effective_channel_volume"
+        ],
+        "minimum_effective_expression": proxy_state["minimum_effective_expression"],
         "cross_track_order_unambiguous": True,
         "same_tick_raw_event_order_checked": True,
         "effective_program_before_every_note_on": True,
@@ -1809,24 +1938,18 @@ def _program_proxy_evidence(
 
 def _selected_midi_evidence(path: Path) -> dict[str, Any]:
     if path.stat().st_size > MAXIMUM_MIDI_BYTES:
-        raise ValueError("selected bass MIDI exceeds the safe file-size limit")
+        raise ValueError("selected instrument MIDI exceeds the safe file-size limit")
     layout = _parse_midi(path.read_bytes())
     state = _midi_program_state_evidence(layout, expected_program=None)
     clips = read_midi_clips(path, max_notes=MAXIMUM_MIDI_NOTE_ONS)
     if not clips:
-        raise ValueError("selected bass MIDI contains no note-bearing clips")
+        raise ValueError("selected instrument MIDI contains no note-bearing clips")
     maximum_tick = max(
-        (
-            int(event.tick)
-            for track in layout.tracks
-            for event in track.events
-        ),
+        (int(event.tick) for track in layout.tracks for event in track.events),
         default=0,
     )
     render_horizon_seconds = float(
-        clips[0].tempo_map.musical_seconds_at(
-            maximum_tick / int(layout.ticks_per_beat)
-        )
+        clips[0].tempo_map.musical_seconds_at(maximum_tick / int(layout.ticks_per_beat))
     )
     if (
         not math.isfinite(render_horizon_seconds)
@@ -1834,13 +1957,13 @@ def _selected_midi_evidence(path: Path) -> dict[str, Any]:
         or render_horizon_seconds > MAXIMUM_RENDER_HORIZON_SECONDS
     ):
         raise ValueError(
-            "selected bass MIDI exceeds the 20-minute render horizon"
+            "selected instrument MIDI exceeds the 20-minute render horizon"
         )
     signature = _note_event_signature(layout)
     if not signature:
-        raise ValueError("selected bass MIDI contains no playable notes")
+        raise ValueError("selected instrument MIDI contains no playable notes")
     if any(row[3] == 9 for row in signature):
-        raise ValueError("selected bass MIDI contains drum-channel notes")
+        raise ValueError("selected instrument MIDI contains drum-channel notes")
     return {
         "note_event_count": len(signature),
         "note_signature_sha256": _document_hash({"note_events": signature}),
@@ -1921,9 +2044,7 @@ def _validate_level_manifest(
             or row.get("boost_applied") is not False
         ):
             raise ValueError("instrument review attenuation evidence is invalid")
-    if source.get("applied_gain_db") != inputs[SOURCE_REFERENCE][
-        "applied_gain_db"
-    ]:
+    if source.get("applied_gain_db") != inputs[SOURCE_REFERENCE]["applied_gain_db"]:
         raise ValueError("source reference gain evidence changed")
     for slot in (CANDIDATE_A, CANDIDATE_B):
         row = candidates[slot]
@@ -1978,21 +2099,16 @@ def _common_level_match(
         for audio in matched.values()
     )
     common_peak_gain = (
-        min(1.0, peak_ceiling / matched_peak)
-        if matched_peak > 0.0
-        else 1.0
+        min(1.0, peak_ceiling / matched_peak) if matched_peak > 0.0 else 1.0
     )
     common_peak_gain_db = 20.0 * math.log10(common_peak_gain)
     for identity in identities:
         matched[identity] = (
             np.asarray(matched[identity], dtype="float32") * common_peak_gain
         ).astype("float32")
-        inputs[identity]["common_peak_guard_gain_db"] = round(
-            common_peak_gain_db, 6
-        )
+        inputs[identity]["common_peak_guard_gain_db"] = round(common_peak_gain_db, 6)
         inputs[identity]["applied_gain_db"] = round(
-            float(inputs[identity]["rms_match_gain_db"])
-            + common_peak_gain_db,
+            float(inputs[identity]["rms_match_gain_db"]) + common_peak_gain_db,
             6,
         )
     return matched, {
@@ -2212,11 +2328,14 @@ def _media_slot(value: Any) -> str:
 
 
 def _blind_mapping(nonce: bytes, comparison_sha256: str) -> dict[str, str]:
-    bit = hashlib.sha256(
-        b"sunofriend-instrument-review-assignment-v1\0"
-        + nonce
-        + bytes.fromhex(comparison_sha256)
-    ).digest()[0] & 1
+    bit = (
+        hashlib.sha256(
+            b"sunofriend-instrument-review-assignment-v1\0"
+            + nonce
+            + bytes.fromhex(comparison_sha256)
+        ).digest()[0]
+        & 1
+    )
     order = (CONTROL, CHALLENGER) if bit == 0 else (CHALLENGER, CONTROL)
     return {CANDIDATE_A: order[0], CANDIDATE_B: order[1]}
 
@@ -2259,10 +2378,7 @@ def _checked_input_record(
         raise ValueError(f"{label} does not exist as a regular file")
     expected_bytes = _nonnegative_int(value.get("bytes"), label=f"{label} bytes")
     expected_sha = _sha256_text(value.get("sha256"), label=f"{label} SHA-256")
-    if (
-        expected_bytes > maximum_bytes
-        or path.stat().st_size > maximum_bytes
-    ):
+    if expected_bytes > maximum_bytes or path.stat().st_size > maximum_bytes:
         raise ValueError(
             f"{label} exceeds the safe {maximum_bytes}-byte file-size limit"
         )
@@ -2486,7 +2602,9 @@ def _json_object(payload: str, *, label: str) -> dict[str, Any]:
 
 def _sha256_text(value: Any, *, label: str) -> str:
     text = str(value)
-    if len(text) != 64 or any(character not in "0123456789abcdef" for character in text):
+    if len(text) != 64 or any(
+        character not in "0123456789abcdef" for character in text
+    ):
         raise ValueError(f"{label} is invalid")
     return text
 

@@ -16,9 +16,14 @@ import numpy as np
 import soundfile
 
 from sunofriend import workbench_instrument_review as instrument_module
+from sunofriend.clip import read_midi_clips
 from sunofriend.midi import MidiTrack, write_midi_file
 from sunofriend.models import NoteEvent
 from sunofriend.workbench_artifacts import WorkbenchArtifacts
+from sunofriend.workbench_instrument_coverage import (
+    InstrumentCoverageError,
+    validate_keys_coverage_report,
+)
 from sunofriend.workbench_instrument_review import (
     CANDIDATE_A,
     CANDIDATE_B,
@@ -40,7 +45,7 @@ from sunofriend.midi_transform import _parse_midi
 
 
 class WorkbenchInstrumentReviewContextTests(unittest.TestCase):
-    def test_context_is_selection_anchored_and_bass_only(self) -> None:
+    def test_context_is_selection_anchored_and_role_pinned(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             catalog, current, artifacts = _fixture(root)
@@ -57,7 +62,9 @@ class WorkbenchInstrumentReviewContextTests(unittest.TestCase):
             )
 
             self.assertEqual(context["track"]["role"], "bass")
-            self.assertEqual(context["track"]["midi"]["sha256"], selected["midi_sha256"])
+            self.assertEqual(
+                context["track"]["midi"]["sha256"], selected["midi_sha256"]
+            )
             self.assertEqual(
                 context["selection_manifest_sha256"],
                 selection["selection_manifest_sha256"],
@@ -78,12 +85,28 @@ class WorkbenchInstrumentReviewContextTests(unittest.TestCase):
             changed_selection = artifacts.decoded_arrangement_selection_manifest(
                 catalog, changed
             )
-            with self.assertRaisesRegex(ValueError, "only for selected bass"):
+            keys_context = artifacts.instrument_review_context(
+                catalog,
+                changed,
+                changed_selection["selected_midi"][0]["track_id"],
+                changed_selection["selection_manifest_sha256"],
+            )
+            self.assertEqual(keys_context["track"]["role"], "keys")
+            self.assertEqual(
+                {row["program"] for row in keys_context["programs"].values()},
+                {4, 5},
+            )
+            unsupported = copy.deepcopy(current)
+            unsupported["stems"]["bass-stem"]["role"] = "lead"
+            unsupported_selection = artifacts.decoded_arrangement_selection_manifest(
+                catalog, unsupported
+            )
+            with self.assertRaisesRegex(ValueError, "bass or keys"):
                 artifacts.instrument_review_context(
                     catalog,
-                    changed,
-                    changed_selection["selected_midi"][0]["track_id"],
-                    changed_selection["selection_manifest_sha256"],
+                    unsupported,
+                    unsupported_selection["selected_midi"][0]["track_id"],
+                    unsupported_selection["selection_manifest_sha256"],
                 )
 
 
@@ -162,7 +185,9 @@ class WorkbenchInstrumentReviewServiceTests(unittest.TestCase):
                 comparison_sha = prepared["comparison_sha256"]
                 for slot in (SOURCE_REFERENCE, CANDIDATE_A, CANDIDATE_B):
                     media = service.media_record(comparison_sha, slot)
-                    self.assertEqual(stat.S_IMODE(Path(media["path"]).stat().st_mode), 0o600)
+                    self.assertEqual(
+                        stat.S_IMODE(Path(media["path"]).stat().st_mode), 0o600
+                    )
                     info = soundfile.info(media["path"])
                     self.assertEqual(info.frames, 8_000)
                     self.assertEqual(info.samplerate, 8_000)
@@ -231,10 +256,7 @@ class WorkbenchInstrumentReviewServiceTests(unittest.TestCase):
                     review_sha256=review["review_sha256"],
                 )
                 self.assertEqual(
-                    {
-                        row["program"]
-                        for row in resolved["assignment"].values()
-                    },
+                    {row["program"] for row in resolved["assignment"].values()},
                     {38, 39},
                 )
                 self.assertFalse(resolved["promotion_allowed"])
@@ -430,9 +452,7 @@ class WorkbenchInstrumentReviewServiceTests(unittest.TestCase):
                 conflicts = [
                     value
                     for value in outcomes
-                    if isinstance(
-                        value, WorkbenchInstrumentReviewRevisionConflictError
-                    )
+                    if isinstance(value, WorkbenchInstrumentReviewRevisionConflictError)
                 ]
                 self.assertEqual(len(conflicts), 1)
                 self.assertEqual(conflicts[0].expected_revision, 0)
@@ -486,9 +506,7 @@ class WorkbenchInstrumentReviewServiceTests(unittest.TestCase):
                         audio.write_bytes(audio.read_bytes() + b"x")
                     else:
                         manifest_path = private / "manifest.json"
-                        manifest = json.loads(
-                            manifest_path.read_text(encoding="utf-8")
-                        )
+                        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
                         manifest["path_free_manifest"] = False
                         manifest_path.write_text(
                             json.dumps(manifest),
@@ -595,8 +613,7 @@ class WorkbenchInstrumentReviewServiceTests(unittest.TestCase):
             self.assertFalse(level["limiting_applied"])
             self.assertFalse(level["compression_applied"])
             common_gains = {
-                row["common_peak_guard_gain_db"]
-                for row in level["inputs"].values()
+                row["common_peak_guard_gain_db"] for row in level["inputs"].values()
             }
             self.assertEqual(len(common_gains), 1)
             peaks = [
@@ -688,6 +705,292 @@ class WorkbenchInstrumentReviewServiceTests(unittest.TestCase):
                 self.assertFalse(_contains_path_key(document))
 
 
+class WorkbenchKeysInstrumentCoverageTests(unittest.TestCase):
+    def test_keys_preflight_is_blind_bounded_restart_safe_and_fixed_midi(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            catalog, current, artifacts = _keys_fixture(root)
+            selection = artifacts.decoded_arrangement_selection_manifest(
+                catalog, current
+            )
+            context = artifacts.instrument_review_context(
+                catalog,
+                current,
+                selection["selected_midi"][0]["track_id"],
+                selection["selection_manifest_sha256"],
+            )
+            selected_path = Path(context["track"]["midi"]["path"])
+            selected_bytes = selected_path.read_bytes()
+            renderer = root / "fluidsynth"
+            renderer.write_bytes(b"private-test-renderer")
+            service = WorkbenchInstrumentReviewService(root / "review")
+
+            with (
+                patch(
+                    "sunofriend.workbench_instrument_review.find_fluidsynth",
+                    return_value=str(renderer),
+                ),
+                patch(
+                    "sunofriend.workbench_instrument_review.render_midi_to_wav",
+                    side_effect=_render_keys_program,
+                ),
+            ):
+                prepared = service.prepare(
+                    context=context,
+                    start_seconds=0.0,
+                    end_seconds=1.0,
+                    reviewer_session_key="keys-reviewer",
+                )
+                restarted = WorkbenchInstrumentReviewService(root / "review")
+                prepared_again = restarted.prepare(
+                    context=context,
+                    start_seconds=0.0,
+                    end_seconds=1.0,
+                    reviewer_session_key="keys-reviewer",
+                )
+
+            self.assertEqual(prepared, prepared_again)
+            self.assertEqual(selected_path.read_bytes(), selected_bytes)
+            comparison_gate = prepared["comparison"]["coverage_preflight"]
+            self.assertTrue(comparison_gate["required"])
+            self.assertEqual(comparison_gate["status"], "required")
+            self.assertEqual(comparison_gate["functional_status"], "required")
+            gate = prepared["coverage_preflight"]
+            self.assertEqual(gate["status"], "passed")
+            self.assertEqual(gate["functional_status"], "passed")
+            self.assertEqual(gate["quality_status"], "review_required")
+            self.assertEqual(gate["zone_count"], 4)
+            self.assertTrue(gate["candidate_identities_hidden"])
+            self.assertTrue(gate[CANDIDATE_A]["passed"])
+            self.assertTrue(gate[CANDIDATE_B]["passed"])
+            self.assertEqual(
+                {
+                    (
+                        row["channel"],
+                        row["pitch"],
+                        row["velocity_bucket"],
+                        row["tested_velocity"],
+                    )
+                    for row in gate[CANDIDATE_A]["zones"]
+                },
+                {
+                    (0, 60, "soft", 31),
+                    (0, 60, "medium", 64),
+                    (0, 64, "strong", 100),
+                    (1, 72, "medium", 55),
+                },
+            )
+            serialized = json.dumps(prepared, sort_keys=True)
+            self.assertNotIn(str(root), serialized)
+            self.assertNotIn("Electric Piano", serialized)
+            self.assertNotIn('"program": 4', serialized)
+            audio_root = service.audio_root / prepared["comparison_sha256"]
+            self.assertEqual(len(list(audio_root.glob("*-keys-coverage.mid"))), 2)
+            self.assertFalse(list(audio_root.glob("*-keys-coverage-raw.wav")))
+
+    def test_keys_preflight_fails_before_blind_audio_publication(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            catalog, current, artifacts = _keys_fixture(root)
+            selection = artifacts.decoded_arrangement_selection_manifest(
+                catalog, current
+            )
+            context = artifacts.instrument_review_context(
+                catalog,
+                current,
+                selection["selected_midi"][0]["track_id"],
+                selection["selection_manifest_sha256"],
+            )
+            renderer = root / "fluidsynth"
+            renderer.write_bytes(b"private-test-renderer")
+            service = WorkbenchInstrumentReviewService(root / "review")
+            with (
+                patch(
+                    "sunofriend.workbench_instrument_review.find_fluidsynth",
+                    return_value=str(renderer),
+                ),
+                patch(
+                    "sunofriend.workbench_instrument_review.render_midi_to_wav",
+                    side_effect=_render_keys_silent_zone,
+                ),
+            ):
+                with self.assertRaisesRegex(
+                    InstrumentCoverageError,
+                    "failed representative used-zone coverage",
+                ):
+                    service.prepare(
+                        context=context,
+                        start_seconds=0.0,
+                        end_seconds=1.0,
+                        reviewer_session_key="keys-reviewer",
+                    )
+            self.assertFalse(
+                [path for path in service.audio_root.iterdir() if path.is_dir()]
+            )
+
+    def test_constant_drone_cannot_masquerade_as_zone_coverage(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            catalog, current, artifacts = _keys_fixture(root)
+            selection = artifacts.decoded_arrangement_selection_manifest(
+                catalog, current
+            )
+            context = artifacts.instrument_review_context(
+                catalog,
+                current,
+                selection["selected_midi"][0]["track_id"],
+                selection["selection_manifest_sha256"],
+            )
+            renderer = root / "fluidsynth"
+            renderer.write_bytes(b"private-test-renderer")
+            service = WorkbenchInstrumentReviewService(root / "review")
+            with (
+                patch(
+                    "sunofriend.workbench_instrument_review.find_fluidsynth",
+                    return_value=str(renderer),
+                ),
+                patch(
+                    "sunofriend.workbench_instrument_review.render_midi_to_wav",
+                    side_effect=_render_keys_drone,
+                ),
+            ):
+                with self.assertRaisesRegex(
+                    InstrumentCoverageError,
+                    "failed representative used-zone coverage",
+                ):
+                    service.prepare(
+                        context=context,
+                        start_seconds=0.0,
+                        end_seconds=1.0,
+                        reviewer_session_key="keys-reviewer",
+                    )
+            self.assertFalse(
+                [path for path in service.audio_root.iterdir() if path.is_dir()]
+            )
+
+    def test_low_but_valid_zone_passes_both_absolute_gates(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            catalog, current, artifacts = _keys_fixture(root)
+            selection = artifacts.decoded_arrangement_selection_manifest(
+                catalog, current
+            )
+            context = artifacts.instrument_review_context(
+                catalog,
+                current,
+                selection["selected_midi"][0]["track_id"],
+                selection["selection_manifest_sha256"],
+            )
+            renderer = root / "fluidsynth"
+            renderer.write_bytes(b"private-test-renderer")
+            service = WorkbenchInstrumentReviewService(root / "review")
+            with (
+                patch(
+                    "sunofriend.workbench_instrument_review.find_fluidsynth",
+                    return_value=str(renderer),
+                ),
+                patch(
+                    "sunofriend.workbench_instrument_review.render_midi_to_wav",
+                    side_effect=_render_keys_low_valid,
+                ),
+            ):
+                prepared = service.prepare(
+                    context=context,
+                    start_seconds=0.0,
+                    end_seconds=1.0,
+                    reviewer_session_key="keys-reviewer",
+                )
+            gate = prepared["coverage_preflight"]
+            for slot in (CANDIDATE_A, CANDIDATE_B):
+                self.assertGreaterEqual(
+                    gate[slot]["summary"]["minimum_peak_dbfs"],
+                    -60.0,
+                )
+                self.assertGreaterEqual(
+                    gate[slot]["summary"]["minimum_rms_dbfs"],
+                    -72.0,
+                )
+                self.assertTrue(gate[slot]["passed"])
+
+    def test_persisted_report_validation_recomputes_types_and_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            catalog, current, artifacts = _keys_fixture(root)
+            selection = artifacts.decoded_arrangement_selection_manifest(
+                catalog, current
+            )
+            context = artifacts.instrument_review_context(
+                catalog,
+                current,
+                selection["selected_midi"][0]["track_id"],
+                selection["selection_manifest_sha256"],
+            )
+            renderer = root / "fluidsynth"
+            renderer.write_bytes(b"private-test-renderer")
+            service = WorkbenchInstrumentReviewService(root / "review")
+            with (
+                patch(
+                    "sunofriend.workbench_instrument_review.find_fluidsynth",
+                    return_value=str(renderer),
+                ),
+                patch(
+                    "sunofriend.workbench_instrument_review.render_midi_to_wav",
+                    side_effect=_render_keys_program,
+                ),
+            ):
+                prepared = service.prepare(
+                    context=context,
+                    start_seconds=0.0,
+                    end_seconds=1.0,
+                    reviewer_session_key="keys-reviewer",
+                )
+            manifest = json.loads(
+                (
+                    service.audio_root / prepared["comparison_sha256"] / "manifest.json"
+                ).read_text()
+            )
+            report = manifest["coverage_preflight"]["private_identities"]["control"][
+                "report"
+            ]
+            validate_keys_coverage_report(report)
+            wrong_type = copy.deepcopy(report)
+            wrong_type["zones"][0]["channel"] = True
+            with self.assertRaisesRegex(InstrumentCoverageError, "zone types"):
+                validate_keys_coverage_report(wrong_type)
+            nonfinite = copy.deepcopy(report)
+            nonfinite["zones"][0]["rms_dbfs"] = float("nan")
+            with self.assertRaisesRegex(InstrumentCoverageError, "zone levels"):
+                validate_keys_coverage_report(nonfinite)
+            changed_summary = copy.deepcopy(report)
+            changed_summary["summary"]["minimum_peak_dbfs"] += 1.0
+            with self.assertRaisesRegex(InstrumentCoverageError, "summary metrics"):
+                validate_keys_coverage_report(changed_summary)
+
+    def test_zero_expression_on_a_playable_note_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "zero-expression.mid"
+            _write_raw_midi(
+                source,
+                [
+                    [
+                        (0, bytes((0xC0, 4))),
+                        (0, bytes((0xB0, 11, 0))),
+                        (0, bytes((0x90, 60, 90))),
+                        (480, bytes((0x80, 60, 0))),
+                    ]
+                ],
+            )
+            with self.assertRaisesRegex(ValueError, "CC7 volume or CC11"):
+                _write_program_proxy(
+                    source,
+                    root / "proxy.mid",
+                    program=5,
+                )
+
+
 class WorkbenchInstrumentReviewResourceBoundTests(unittest.TestCase):
     def test_per_file_limits_reject_before_hashing(self) -> None:
         cases = (
@@ -716,9 +1019,7 @@ class WorkbenchInstrumentReviewResourceBoundTests(unittest.TestCase):
                             "oversized input must fail before hashing"
                         ),
                     ) as hasher:
-                        with self.assertRaisesRegex(
-                            ValueError, "file-size limit"
-                        ):
+                        with self.assertRaisesRegex(ValueError, "file-size limit"):
                             instrument_module._checked_input_record(
                                 record,
                                 label=label,
@@ -865,9 +1166,7 @@ class WorkbenchInstrumentReviewResourceBoundTests(unittest.TestCase):
             root = Path(temporary)
             catalog, current, artifacts = _fixture(root)
             long_midi = root / "long-horizon.mid"
-            maximum_tick = int(
-                (MAXIMUM_RENDER_HORIZON_SECONDS + 1) * 120 / 60 * 480
-            )
+            maximum_tick = int((MAXIMUM_RENDER_HORIZON_SECONDS + 1) * 120 / 60 * 480)
             _write_raw_midi(
                 long_midi,
                 [
@@ -1009,9 +1308,7 @@ class WorkbenchInstrumentProxyInvariantTests(unittest.TestCase):
             self.assertEqual(evidence["bank_select_event_count"], 2)
             self.assertTrue(evidence["bank_select_all_zero"])
             self.assertTrue(evidence["same_tick_raw_event_order_checked"])
-            self.assertTrue(
-                evidence["effective_target_program_before_every_note_on"]
-            )
+            self.assertTrue(evidence["effective_target_program_before_every_note_on"])
 
     def test_missing_program_and_non_program_byte_change_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -1140,6 +1437,39 @@ def _fixture(root: Path) -> tuple[dict, dict, WorkbenchArtifacts]:
     )
 
 
+def _keys_fixture(root: Path) -> tuple[dict, dict, WorkbenchArtifacts]:
+    catalog, current, artifacts = _fixture(root)
+    midi = root / "keys.mid"
+    write_midi_file(
+        midi,
+        [
+            MidiTrack(
+                "Keys body",
+                0,
+                4,
+                [
+                    NoteEvent(0.0, 0.20, 60, 31),
+                    NoteEvent(0.25, 0.45, 60, 40),
+                    NoteEvent(0.50, 0.90, 60, 64),
+                    NoteEvent(0.50, 0.90, 64, 100),
+                ],
+            ),
+            MidiTrack(
+                "Keys colour",
+                1,
+                4,
+                [NoteEvent(0.50, 0.90, 72, 55)],
+            ),
+        ],
+        bpm=120.0,
+    )
+    catalog["stems"][0]["role"] = "keys"
+    catalog["stems"][0]["candidates"][0]["midi_path"] = str(midi.resolve())
+    catalog["stems"][0]["candidates"][0]["midi"] = _record(midi)
+    current["stems"]["bass-stem"]["role"] = "keys"
+    return catalog, current, artifacts
+
+
 def _render_program(midi_path: Path, wav_path: Path, **kwargs: object) -> None:
     layout = _parse_midi(Path(midi_path).read_bytes())
     programs = [
@@ -1159,6 +1489,115 @@ def _render_program(midi_path: Path, wav_path: Path, **kwargs: object) -> None:
     )
 
 
+def _render_keys_program(
+    midi_path: Path,
+    wav_path: Path,
+    **kwargs: object,
+) -> None:
+    _render_keys(
+        midi_path,
+        wav_path,
+        silent_zone=None,
+        fixed_coverage_amplitude=None,
+        **kwargs,
+    )
+
+
+def _render_keys_silent_zone(
+    midi_path: Path,
+    wav_path: Path,
+    **kwargs: object,
+) -> None:
+    _render_keys(
+        midi_path,
+        wav_path,
+        silent_zone=(5, 72),
+        fixed_coverage_amplitude=None,
+        **kwargs,
+    )
+
+
+def _render_keys_low_valid(
+    midi_path: Path,
+    wav_path: Path,
+    **kwargs: object,
+) -> None:
+    _render_keys(
+        midi_path,
+        wav_path,
+        silent_zone=None,
+        fixed_coverage_amplitude=0.0012,
+        **kwargs,
+    )
+
+
+def _render_keys_drone(
+    midi_path: Path,
+    wav_path: Path,
+    **kwargs: object,
+) -> None:
+    if "keys-coverage" not in Path(midi_path).name:
+        _render_keys_program(midi_path, wav_path, **kwargs)
+        return
+    sample_rate = int(kwargs["sample_rate"])
+    soundfile.write(
+        wav_path,
+        np.full((sample_rate * 2, 2), 0.03, dtype="float32"),
+        sample_rate,
+        subtype="PCM_16",
+    )
+
+
+def _render_keys(
+    midi_path: Path,
+    wav_path: Path,
+    *,
+    silent_zone: tuple[int, int] | None,
+    fixed_coverage_amplitude: float | None,
+    **kwargs: object,
+) -> None:
+    layout = _parse_midi(Path(midi_path).read_bytes())
+    programs = [
+        int(event.data[0])
+        for track in layout.tracks
+        for event in track.events
+        if event.category == "channel" and event.event_type == 0xC0
+    ]
+    program = programs[-1]
+    sample_rate = int(kwargs["sample_rate"])
+    if "keys-coverage" not in Path(midi_path).name:
+        amplitude = {4: 0.1, 5: 0.2}[program]
+        soundfile.write(
+            wav_path,
+            np.full((sample_rate * 2, 2), amplitude, dtype="float32"),
+            sample_rate,
+            subtype="PCM_16",
+        )
+        return
+    clips = read_midi_clips(midi_path)
+    duration = (
+        max(
+            (float(note.source_end_seconds) for clip in clips for note in clip.notes),
+            default=0.0,
+        )
+        + 0.1
+    )
+    audio = np.zeros((int(np.ceil(duration * sample_rate)), 2), dtype="float32")
+    for clip in clips:
+        for note in clip.notes:
+            amplitude = (
+                fixed_coverage_amplitude
+                if fixed_coverage_amplitude is not None
+                else 0.03 * int(note.velocity) / 127.0
+            )
+            if silent_zone == (program, int(note.pitch)):
+                amplitude = 0.0
+            start = int(round(float(note.source_start_seconds) * sample_rate))
+            end = int(round(float(note.source_end_seconds) * sample_rate))
+            audio[start:end, :] = amplitude
+    soundfile.write(wav_path, audio, sample_rate, subtype="PCM_16")
+
+
 def _render_silent_challenger(
     midi_path: Path, wav_path: Path, **kwargs: object
 ) -> None:
@@ -1170,9 +1609,7 @@ def _render_silent_challenger(
     )
 
 
-def _render_too_quiet_pair(
-    midi_path: Path, wav_path: Path, **kwargs: object
-) -> None:
+def _render_too_quiet_pair(midi_path: Path, wav_path: Path, **kwargs: object) -> None:
     _render_with_amplitudes(
         midi_path,
         wav_path,
@@ -1181,9 +1618,7 @@ def _render_too_quiet_pair(
     )
 
 
-def _render_low_pair(
-    midi_path: Path, wav_path: Path, **kwargs: object
-) -> None:
+def _render_low_pair(midi_path: Path, wav_path: Path, **kwargs: object) -> None:
     _render_with_amplitudes(
         midi_path,
         wav_path,

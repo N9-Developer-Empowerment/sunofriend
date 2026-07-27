@@ -76,6 +76,9 @@ CLI parsing (`cli.py`)
         |                              `workbench_timeline.py`,
         |                              `workbench_mix.py`,
         |                              `workbench_artifacts.py`,
+        |                              `workbench_instrument_policy.py`,
+        |                              `workbench_instrument_coverage.py`,
+        |                              `workbench_instrument_review.py`,
         |                              `workbench_listening_master.py`,
         |                              `workbench_master_review.py`,
         |                              `workbench_master_review.js`,
@@ -346,16 +349,36 @@ Web Audio `GainNode`. Bass neutral rendering uses zero-based program 38,
 published as **GM 39 Synth Bass 1 proxy**.
 
 Instrument choice is a sibling review boundary rather than another mode in the
-transcription or balanced-mix renderer. The first
-`sunofriend.workbench-instrument-review` contract accepts only one currently
-selected bass lane and its exact arrangement-selection/MIDI hashes. It creates
-two private audition proxies from the same verified MIDI and SoundFont:
-zero-based GM programs 38 and 39. Only Program Change bytes may differ;
-normalised note timing, duration, pitch and velocity signatures must remain
-identical and the selected source MIDI is re-hashed before publication.
+transcription or balanced-mix renderer.
+`workbench_instrument_policy.py` is the single source for the supported
+server-owned pairs: bass zero-based GM 38/39 (Synth Bass 1/2), and keys 4/5
+(Electric Piano 1/2). The
+`sunofriend.workbench-instrument-review` contract accepts one currently
+selected bass or keys lane and its exact arrangement-selection/MIDI hashes. It
+creates two private audition proxies from the same verified MIDI and
+SoundFont. Only Program Change bytes may differ; normalised note timing,
+duration, pitch and velocity signatures must remain identical and the selected
+source MIDI is re-hashed before publication.
 Non-zero CC0/CC32 bank selection, cross-track bank/program ordering and a
 target Program Change that does not precede every playable Note On are rejected
 so the programme identity is effective, including raw same-tick event order.
+Effective CC7 volume and CC11 expression must be non-zero at every playable
+Note On.
+
+`workbench_instrument_coverage.py` owns the separate keys-only functional
+preflight. It constructs one private probe zone for each occupied channel,
+pitch and soft/medium/strong velocity bucket, using the minimum actually
+observed velocity. CC120/CC123 guards bracket 0.20-second notes in 0.35-second
+slots. Both identities must pass within 512 zones and 180 seconds: at least
+−72 dBFS RMS, −60 dBFS peak, 3 dB above the pre-note guard, and no more than a
+24 dB velocity-normalised deficit from the channel/bucket median when peers
+exist. Playable notes on General MIDI channel 10 (zero-based channel 9) are
+rejected because that channel uses note numbers as drum identities. The server
+validates full private per-zone reports and exposes only anonymous, path-free
+aggregate counts, floors and bucket counts after both identities pass. The
+synthetic MIDI remains private and rebuildable; raw probe audio is deleted
+after measurement and can be re-rendered from the verified inputs. Bass
+carries the exact `not_required` coverage contract.
 
 The service crops one exact 0.5–15 second source-reference window and the same
 elapsed-time window from both renders. One disclosed policy attenuates the
@@ -370,6 +393,13 @@ operation that reveals the committed programme mapping. Neither operation
 writes `WorkbenchStore`, changes the selection manifest, promotes an
 instrument, rebuilds the balanced WAV or alters a pack.
 
+Coverage success is only `functional_status: passed`; both bass and keys keep
+`quality_status: review_required`. It does not establish pitch/octave
+correctness, every-velocity response, chord/polyphonic clarity, tone
+consistency or source similarity, GarageBand equivalence, or any winner,
+recommendation or default. The A/B review still renders the unchanged selected
+MIDI and requires listening.
+
 Preparation checks resource ceilings before any copy or render: 64 MiB for
 MIDI, 20 minutes for its complete event horizon, 2 GiB each for source audio
 and SoundFont, 256 MiB for the renderer and 3 GiB in aggregate. It snapshots
@@ -378,11 +408,10 @@ private verified snapshots. This prevents an ostensibly short review from
 silently copying an unbounded source or rendering an unbounded MIDI timeline.
 
 This separation matters for maintainability: transcription chooses notes,
-instrument review compares complete sounds with notes held fixed, and
-arrangement/mastering compares balances only after those earlier variables are
-understood. The first policy is deliberately bass-only. A keys sibling must
-add a polyphonic pitch/velocity coverage probe rather than assuming that a
-successful bass render proves keyboard completeness.
+the policy module owns role/program pairs, the coverage module answers one
+narrow functional question, instrument review compares sounds with notes held
+fixed, and arrangement/mastering compares balances only after those earlier
+variables are understood.
 
 `workbench_transport.js` decodes those bounded clips, equalises their decoded
 frame lengths on one `AudioContext`, and creates fresh source nodes for every
@@ -564,8 +593,9 @@ The v3 renderer and cache verifier now read those schemas, measurements,
 limits, labels and mastering boundary from one frozen
 `workbench_balanced_contract.BALANCED_MIX_CONTRACT`. This prevents a renderer
 policy change from being verified under duplicated stale constants. The next
-maintainability boundaries are a shared role/instrument registry and a small
-balanced-artifact service extracted from the larger Workbench artifact module.
+maintainability boundaries are extending the new narrow Workbench instrument
+policy without duplicating it elsewhere, and extracting a small
+balanced-artifact service from the larger Workbench artifact module.
 
 A separate `listening_master.build_listening_master` stage accepts the exact
 balanced WAV as an immutable control. It uses fixed two-pass FFmpeg
@@ -1335,8 +1365,9 @@ The safest next boundaries are:
 2. Continue Phase 5.10b from the implemented fresh full-project runner: add a
    durable owner-only ledger/restart contract, then typed one-stem, standalone
    vocal and MIDI transformation forms; keep CLI and TUI handlers as adapters.
-3. Centralize instrument roles, aliases, channels, GM programs and GarageBand
-   suggestions in one immutable registry.
+3. Extend the new `workbench_instrument_policy.py` server-owned pair registry
+   cautiously; keep broader role aliases, channels and GarageBand suggestions
+   separate until their different evidence contracts can be unified safely.
 4. Introduce a lossless Standard MIDI File codec and shared batch/path-safety
    utilities, then migrate one command at a time against a common fixture set.
 5. Share phase-safe audio loading and an explicit beat-grid to `TempoMap`

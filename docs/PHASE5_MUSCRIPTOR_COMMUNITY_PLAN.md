@@ -1,10 +1,10 @@
 # Phase 5: Multi-Process MIDI Comparison and Local Result Explorer
 
-Status: **Phase 5.0–5.2 are complete; the Phase 5.3 lead-only S0/M1/M3 diagnostic slice and Phase 5.4 explorer slice are complete, including hash-pinned comparison, GarageBand Pack Composer v1 and the disputed-range phrase-review bridge; Phase 5.5 completes Project Overview/restart/decision safety plus Decoded Stem Comparison v1, Phase 5.6 completes bounded decoded short arrangement presets, Phase 5.7 implements long-song visualization/recovery plus minimal exact canonical full-song chunk transport, Phase 5.8 completes verified cache/reused-model execution-provenance display, and Phase 5.9's exact-pack tutorial, 10/10 quiz and both human checks passed on 22 July 2026; Phase 5.3 blind choice, lineage and role expansion remain open; Phase 6 Increments 6.0, 6.1, 6.2a and 6.3a–e are complete while broader Phase 6 remains in progress; beam 1 and batch 1 remain the defaults, and no public service or new checkpoint download is authorised**
+Status: **Phase 5.0–5.2 are complete; the Phase 5.3 lead-only S0/M1/M3 diagnostic slice and Phase 5.4 explorer slice are complete, including hash-pinned comparison, GarageBand Pack Composer v1 and the disputed-range phrase-review bridge; Phase 5.5 completes Project Overview/restart/decision safety plus Decoded Stem Comparison v1, Phase 5.6 completes bounded decoded short arrangement presets, Phase 5.7 implements long-song visualization/recovery plus minimal exact canonical full-song chunk transport, Phase 5.8 completes verified cache/reused-model execution-provenance display, and Phase 5.9's exact-pack tutorial, 10/10 quiz and both human checks passed on 22 July 2026; Workbench Stage 4 now compares fixed-selected-MIDI bass and keys instrument pairs, with a private keys-only representative functional-response preflight and mandatory listening; Phase 5.3 blind choice, lineage and role expansion remain open; Phase 6 Increments 6.0, 6.1, 6.2a and 6.3a–e are complete while broader Phase 6 remains in progress; beam 1 and batch 1 remain the defaults, and no public service or new checkpoint download is authorised**
 
 Drafted: 19 July 2026
 Scope: accurate stem/full-mix MIDI, several analytical and AI processes kept as
-auditionable evidence, faster local inference, GarageBand-ready instrument
+auditionable evidence, faster local inference, GarageBand-oriented instrument
 choices and an approachable local web workbench. Public feedback is deferred
 to a later phase.
 
@@ -217,8 +217,9 @@ separate goals.
    final musical decision?
 7. Which feedback improves Sunofriend selection and repair immediately, and
    which is sufficiently licensed and precise to support later model training?
-8. Can instrument feedback recommend a complete, playable GarageBand patch in
-   the right family without trying to clone an inconsistent stem sample?
+8. Can functional-response evidence plus explicit listening provide useful
+   GarageBand-family patch guidance without trying to clone an inconsistent
+   stem sample or silently choosing a default?
 
 ## The primary product: a local Sunofriend Workbench
 
@@ -261,7 +262,7 @@ Project
   1. Check song setup      BPM, key, tuning, downbeat, stem inventory
   2. Explore MIDI results  compare analytical and AI evidence per stem/role
   3. Hear the arrangement  audition stems, choices and useful combinations
-  4. Choose instruments    complete/playable sounds first, similarity second
+  4. Choose instruments    functional evidence, then blind musical listening
   5. Compose export pack   explicit GarageBand contents and decision report
 ```
 
@@ -380,11 +381,27 @@ The arrangement page plays all current per-stem choices together and makes it
 easy to solo the source, MIDI, or both. A choice that sounded good alone may be
 changed after full-mix listening; both decisions and contexts are retained.
 
-Instrument selection comes after MIDI selection. Each role begins with one
-complete portable control and a few installed GarageBand family suggestions.
-The page first checks that every required pitch is audible and sustained, then
-asks about tone and full-mix fit. Source samplers and resynthesis appear as
-optional textures unless they pass the complete-instrument and listening gates.
+Instrument selection comes after MIDI selection. The implemented Stage 4
+starts narrowly with server-owned role pairs while the selected MIDI remains
+fixed: zero-based GM Synth Bass 1/2 programmes 38/39, or Electric Piano 1/2
+programmes 4/5. Bass coverage is explicitly `not_required`. Keys publishes no
+A/B until both hidden identities pass a private, bounded representative probe:
+the minimum observed velocity for every occupied channel/pitch/soft, medium or
+strong bucket, bracketed with CC120/CC123 guards and measured against −72 dBFS
+RMS, −60 dBFS peak, 3 dB pre-guard separation and a 24 dB
+velocity-normalised peer-deficit limit.
+
+The synthetic probe MIDI remains private/rebuildable. Raw probe audio is
+deleted after measurement and can be re-rendered from verified inputs; the
+loopback browser sees blind, path-free evidence. A pass is only
+`functional_status: passed`, never a quality judgement. Both roles remain
+`quality_status: review_required` and use the
+unchanged selected-MIDI source/A/B listen. Stage 4 does not prove pitch/octave
+correctness, response at every velocity, chord/polyphonic clarity, tone
+consistency or source similarity, GarageBand equivalence, or a winner,
+recommendation or default. Its operations cannot mutate MIDI, selection,
+ranking, mix, pack or export state. Source samplers and resynthesis remain
+separate optional evidence.
 
 ### GarageBand pack composer
 
@@ -917,9 +934,9 @@ a narrow question and a human listening gate:
 | --- | --- | --- |
 | Query/learned isolation for mixed stems | 5.1 discovery and 5.3 hybrid consensus | One clearly audible 10–20 second role target; unchanged source and specialist MIDI remain controls |
 | Neural denoise or de-reverb | Optional 5.3 challenger | Must improve downstream pitch/boundary evidence and blind musical recognition, not just source energy |
-| Neural/DDSP timbre | Phase 6 creative arrangement, then Phase 7 only if justified | MIDI fixed first; complete playable patch mandatory; identical performance and full-mix listening |
+| Neural/DDSP timbre | Phase 6 creative arrangement, then Phase 7 only if justified | MIDI fixed first; scoped functional evidence plus identical-performance and full-mix listening mandatory |
 | Audio Unit model hosting | Optional Phase 7 cross-DAW work | Only after a distributable sound wins; it is not required for model research |
-| Generated missing samples | Phase 6/7 instrument experiment | Generated zones labelled separately, rights/licence recorded and every required pitch audibly checked |
+| Generated missing samples | Phase 6/7 instrument experiment | Generated zones labelled separately, rights/licence recorded and the exact declared pitch/velocity test scope reported without extrapolation |
 | `pkg_resources`/resampy warning | 5.2 controlled runtime benchmark | Resolve through a measured dependency update; never hide the warning |
 | Oversized CLI/match/bundle orchestrators | Incremental maintenance across Phases 5–7 | Characterization tests first; typed workbench operation now starts the separation, shared role registry comes before 5.1, bundle/match stages precede cross-DAW work |
 
@@ -1461,7 +1478,7 @@ Only after the local workflow is useful and stable:
   independent role-specific selector or error classifier against deterministic
   and personal-history baselines.
 
-Success requires complete playable instrument recommendations, useful
+Success requires useful explicitly reviewed instrument guidance, useful
 cross-DAW imports, adequate independent reviews for each declared comparison,
 no private audio in ordinary telemetry and no hidden automatic promotion.
 
@@ -1474,7 +1491,9 @@ A new MIDI path may become recommended for one role only when:
 3. it wins the declared blind recognition/usefulness comparison, with
    `equivalent` and `neither` retained as valid outcomes;
 4. a GarageBand import preserves BPM, downbeat and full-song timing;
-5. the recommended instrument plays every required note consistently; and
+5. any instrument recommendation is supported by its scoped functional gate
+   and explicit musical listening, without extrapolating beyond that evidence;
+   and
 6. licence and rights permit the intended private, public or commercial lane.
 
 Community majority never overrides a user's personal composition choice.

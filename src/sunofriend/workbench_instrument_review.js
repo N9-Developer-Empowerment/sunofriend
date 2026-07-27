@@ -16,6 +16,19 @@
     const PLAN_SCHEMA = "sunofriend.workbench-instrument-review-plan.v1";
     const COMPARISON_SCHEMA =
       "sunofriend.workbench-instrument-review.comparison.v1";
+    const COVERAGE_SCHEMA =
+      "sunofriend.workbench-instrument-review.keys-coverage.v1";
+    const COVERAGE_POLICY =
+      "deterministic-observed-pitch-velocity-bucket-probe-v1";
+    const COVERAGE_CLAIM =
+      "representative-used-pitch-velocity-bucket-coverage";
+    const INSTRUMENT_ROLES = Object.freeze(["bass", "keys"]);
+    const COVERAGE_NON_CLAIMS = Object.freeze([
+      "not every exact used velocity is tested",
+      "pitch correctness and octave mapping are not proven",
+      "polyphonic chord and per-voice clarity are not proven",
+      "tone, musical fit and GarageBand equivalence are not proven",
+    ]);
     const CHOICES = Object.freeze([
       ["candidate_a", "Candidate A"],
       ["candidate_b", "Candidate B"],
@@ -122,7 +135,7 @@
         }
         if (!plan.eligible_lanes.length) {
           holder.innerHTML = unavailableHtml(
-            "Choose at least one bass MIDI part before comparing complete instruments.",
+            "Choose at least one bass or keys MIDI part before comparing complete instruments.",
           );
           return;
         }
@@ -207,6 +220,10 @@
             : null,
           comparison_status: comparison?.status || null,
           comparison_sha256: comparison?.comparison_sha256 || null,
+          coverage_preflight_status:
+            comparison?.coverage_preflight?.status || null,
+          coverage_quality_status:
+            comparison?.coverage_preflight?.quality_status || null,
           audio_prepared: !!transport,
           playing: !!transportState?.playing,
           active_track: activeTrack,
@@ -779,6 +796,16 @@
       if (source.schema !== PLAN_SCHEMA) {
         throw new TypeError("Instrument review plan schema is invalid");
       }
+      requireExactKeys(
+        source,
+        [
+          "schema",
+          "selection_manifest_sha256",
+          "eligible_lanes",
+          "effects",
+        ],
+        "Instrument review plan",
+      );
       const selection = requireSha256(
         source.selection_manifest_sha256,
         "plan selection_manifest_sha256",
@@ -811,6 +838,20 @@
       if (!value || typeof value !== "object" || Array.isArray(value)) {
         throw new TypeError(`Instrument review lane ${index + 1} is invalid`);
       }
+      requireExactKeys(
+        value,
+        [
+          "selection_manifest_sha256",
+          "stem_id",
+          "candidate_id",
+          "midi_sha256",
+          "role",
+          "label",
+          "coverage_preflight",
+          "pair",
+        ],
+        `Instrument review lane ${index + 1}`,
+      );
       const selection = requireSha256(
         value.selection_manifest_sha256 ?? planSelection,
         "lane selection_manifest_sha256",
@@ -819,8 +860,23 @@
         throw new TypeError("Instrument review lane selection does not match its plan");
       }
       const role = requireString(value.role, "lane role", 40).toLowerCase();
-      if (role !== "bass") {
-        throw new TypeError("Instrument review v1 accepts bass lanes only");
+      if (!INSTRUMENT_ROLES.includes(role)) {
+        throw new TypeError(
+          "Instrument review accepts only bass or keys lanes",
+        );
+      }
+      const coveragePreflight = requireEnum(
+        value.coverage_preflight,
+        ["required", "not_required"],
+        "lane coverage_preflight",
+      );
+      if (
+        coveragePreflight !==
+        (role === "keys" ? "required" : "not_required")
+      ) {
+        throw new TypeError(
+          "Instrument review lane coverage does not match its role",
+        );
       }
       const pair = normalizePair(value.pair ?? value.pair_description);
       return Object.freeze({
@@ -839,7 +895,8 @@
         label:
           typeof value.label === "string"
             ? boundedString(value.label, 256)
-            : "Selected bass MIDI",
+            : `Selected ${role} MIDI`,
+        coverage_preflight: coveragePreflight,
         pair,
       });
     }
@@ -851,6 +908,11 @@
       if (!value || typeof value !== "object" || Array.isArray(value)) {
         throw new TypeError("Instrument review lane pair description is invalid");
       }
+      requireExactKeys(
+        value,
+        ["description", "control", "challenger"],
+        "Instrument review lane pair",
+      );
       for (const key of ["assignment", "candidate_a", "candidate_b", "answer_key"]) {
         if (Object.prototype.hasOwnProperty.call(value, key)) {
           throw new TypeError(
@@ -872,11 +934,21 @@
     }
 
     function pairLabel(value) {
-      if (typeof value === "string") return boundedString(value, 200);
-      if (value && typeof value === "object" && typeof value.label === "string") {
-        return boundedString(value.label, 200);
+      if (
+        value &&
+        typeof value === "object" &&
+        !Array.isArray(value)
+      ) {
+        requireExactKeys(
+          value,
+          ["label"],
+          "Instrument review pair label",
+        );
+        if (typeof value.label === "string") {
+          return boundedString(value.label, 200);
+        }
       }
-      return null;
+      throw new TypeError("Instrument review pair label is invalid");
     }
 
     function normalizeComparison(value) {
@@ -925,12 +997,18 @@
           source.midi_sha256,
           "comparison midi_sha256",
         ),
-        role: requireString(source.role ?? "bass", "comparison role", 40)
+        role: requireString(source.role, "comparison role", 40)
           .toLowerCase(),
       };
-      if (lane.role !== "bass") {
-        throw new TypeError("Instrument comparison v1 accepts bass lanes only");
+      if (!INSTRUMENT_ROLES.includes(lane.role)) {
+        throw new TypeError(
+          "Instrument comparison accepts only bass or keys lanes",
+        );
       }
+      const coveragePreflight = normalizeCoveragePreflight(
+        source.coverage_preflight,
+        lane.role,
+      );
       const window = normalizeWindow(source.window);
       const sourceReference = normalizeAudioRecord(
         source.source_reference,
@@ -973,6 +1051,7 @@
           "comparison comparison_sha256",
         ),
         ...lane,
+        coverage_preflight: coveragePreflight,
         expected_revision: expectedRevision,
         window,
         source_reference: sourceReference,
@@ -1003,6 +1082,329 @@
         start_seconds: start,
         end_seconds: end,
         duration_seconds: end - start,
+      });
+    }
+
+    function normalizeCoveragePreflight(value, role) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        throw new TypeError(
+          "Instrument comparison coverage preflight is invalid",
+        );
+      }
+      if (role === "bass") {
+        requireExactKeys(
+          value,
+          [
+            "schema",
+            "required",
+            "status",
+            "functional_status",
+            "quality_status",
+            "actual_review_midi_changed",
+          ],
+          "Bass coverage preflight",
+        );
+        if (
+          value.schema !== COVERAGE_SCHEMA ||
+          value.required !== false ||
+          value.status !== "not_required" ||
+          value.functional_status !== "not_required" ||
+          value.quality_status !== "review_required" ||
+          value.actual_review_midi_changed !== false
+        ) {
+          throw new TypeError(
+            "Bass comparison carried unexpected coverage evidence",
+          );
+        }
+        return Object.freeze({
+          schema: COVERAGE_SCHEMA,
+          required: false,
+          status: "not_required",
+          functional_status: "not_required",
+          quality_status: "review_required",
+          actual_review_midi_changed: false,
+        });
+      }
+
+      requireExactKeys(
+        value,
+        [
+          "schema",
+          "required",
+          "status",
+          "functional_status",
+          "quality_status",
+          "policy",
+          "claim",
+          "zone_definition",
+          "safe_pass_text",
+          "non_claims",
+          "velocity_buckets",
+          "tested_zone_count",
+          "tested_pitch_count",
+          "failed_zone_count",
+          "limits",
+          "thresholds",
+          "candidates",
+          "candidate_identities_hidden",
+          "actual_review_midi_changed",
+        ],
+        "Keys coverage preflight",
+      );
+      if (
+        value.schema !== COVERAGE_SCHEMA ||
+        value.required !== true ||
+        value.status !== "passed" ||
+        value.functional_status !== "passed" ||
+        value.quality_status !== "review_required" ||
+        value.policy !== COVERAGE_POLICY ||
+        value.claim !== COVERAGE_CLAIM ||
+        value.zone_definition !==
+          "one zone per observed channel, pitch and velocity bucket; the minimum velocity actually observed in that zone is tested" ||
+        value.safe_pass_text !==
+          "Both complete keyboard proxies produced measurable responses for each representative pitch and used velocity bucket tested from this selected MIDI. Tone, musical fit, chord clarity, every exact velocity, pitch correctness and GarageBand equivalence still require listening." ||
+        value.candidate_identities_hidden !== true ||
+        value.actual_review_midi_changed !== false
+      ) {
+        throw new TypeError(
+          "Keys comparison coverage contract did not pass exactly",
+        );
+      }
+      if (
+        !Array.isArray(value.non_claims) ||
+        value.non_claims.length !== COVERAGE_NON_CLAIMS.length ||
+        value.non_claims.some(
+          (item, index) => item !== COVERAGE_NON_CLAIMS[index],
+        )
+      ) {
+        throw new TypeError("Keys coverage non-claims changed");
+      }
+
+      const testedZoneCount = strictPositiveInteger(
+        value.tested_zone_count,
+        "keys coverage tested_zone_count",
+      );
+      const testedPitchCount = strictPositiveInteger(
+        value.tested_pitch_count,
+        "keys coverage tested_pitch_count",
+      );
+      const failedZoneCount = strictNonNegativeInteger(
+        value.failed_zone_count,
+        "keys coverage failed_zone_count",
+      );
+      if (
+        testedZoneCount > 512 ||
+        testedPitchCount > testedZoneCount ||
+        failedZoneCount !== 0
+      ) {
+        throw new TypeError("Keys coverage counts are inconsistent");
+      }
+
+      const expectedBuckets = [
+        ["soft", 1, 42],
+        ["medium", 43, 84],
+        ["strong", 85, 127],
+      ];
+      if (
+        !Array.isArray(value.velocity_buckets) ||
+        value.velocity_buckets.length !== expectedBuckets.length
+      ) {
+        throw new TypeError("Keys coverage velocity buckets are invalid");
+      }
+      const velocityBuckets = value.velocity_buckets.map((bucket, index) => {
+        requireExactKeys(
+          bucket,
+          ["id", "minimum", "maximum", "tested_zone_count", "status"],
+          "Keys coverage velocity bucket",
+        );
+        const expected = expectedBuckets[index];
+        const count = strictNonNegativeInteger(
+          bucket.tested_zone_count,
+          "keys coverage bucket count",
+        );
+        if (
+          bucket.id !== expected[0] ||
+          bucket.minimum !== expected[1] ||
+          bucket.maximum !== expected[2]
+        ) {
+          throw new TypeError("Keys coverage velocity bucket changed");
+        }
+        const status = count > 0 ? "passed" : "not_exercised";
+        if (bucket.status !== status) {
+          throw new TypeError(
+            "Keys coverage velocity bucket status is inconsistent",
+          );
+        }
+        return Object.freeze({
+          id: expected[0],
+          minimum: expected[1],
+          maximum: expected[2],
+          tested_zone_count: count,
+          status,
+        });
+      });
+      if (
+        velocityBuckets.reduce(
+          (total, bucket) => total + bucket.tested_zone_count,
+          0,
+        ) !== testedZoneCount
+      ) {
+        throw new TypeError(
+          "Keys coverage bucket counts do not cover every tested zone",
+        );
+      }
+
+      requireExactKeys(
+        value.limits,
+        [
+          "maximum_zones",
+          "maximum_probe_seconds",
+          "probe_note_seconds",
+          "probe_slot_seconds",
+        ],
+        "Keys coverage limits",
+      );
+      if (
+        value.limits.maximum_zones !== 512 ||
+        value.limits.maximum_probe_seconds !== 180 ||
+        value.limits.probe_note_seconds !== 0.2 ||
+        value.limits.probe_slot_seconds !== 0.35
+      ) {
+        throw new TypeError("Keys coverage limits changed");
+      }
+      requireExactKeys(
+        value.thresholds,
+        [
+          "both_absolute_gates_required",
+          "minimum_rms_dbfs",
+          "minimum_peak_dbfs",
+          "minimum_active_above_pre_guard_db",
+          "maximum_velocity_normalized_rms_deficit_db",
+          "singleton_channel_bucket_uses_absolute_gates_only",
+        ],
+        "Keys coverage thresholds",
+      );
+      if (
+        value.thresholds.both_absolute_gates_required !== true ||
+        value.thresholds.minimum_rms_dbfs !== -72 ||
+        value.thresholds.minimum_peak_dbfs !== -60 ||
+        value.thresholds.minimum_active_above_pre_guard_db !== 3 ||
+        value.thresholds.maximum_velocity_normalized_rms_deficit_db !== 24 ||
+        value.thresholds
+          .singleton_channel_bucket_uses_absolute_gates_only !== true
+      ) {
+        throw new TypeError("Keys coverage thresholds changed");
+      }
+
+      requireExactKeys(
+        value.candidates,
+        ["candidate_a", "candidate_b"],
+        "Keys coverage blind candidates",
+      );
+      const candidates = {};
+      for (const key of ["candidate_a", "candidate_b"]) {
+        const candidate = value.candidates[key];
+        requireExactKeys(
+          candidate,
+          [
+            "functional_status",
+            "tested_zone_count",
+            "passed_zone_count",
+            "failed_zone_count",
+            "minimum_rms_dbfs",
+            "minimum_peak_dbfs",
+            "minimum_active_above_pre_guard_db",
+            "maximum_normalized_rms_deficit_db",
+          ],
+          "Keys coverage blind candidate",
+        );
+        const candidateTested = strictPositiveInteger(
+          candidate.tested_zone_count,
+          "keys coverage candidate tested zones",
+        );
+        const candidatePassed = strictPositiveInteger(
+          candidate.passed_zone_count,
+          "keys coverage candidate passed zones",
+        );
+        const candidateFailed = strictNonNegativeInteger(
+          candidate.failed_zone_count,
+          "keys coverage candidate failed zones",
+        );
+        const minimumRms = strictFiniteNumber(
+          candidate.minimum_rms_dbfs,
+          "keys coverage minimum RMS",
+        );
+        const minimumPeak = strictFiniteNumber(
+          candidate.minimum_peak_dbfs,
+          "keys coverage minimum peak",
+        );
+        const minimumGuard = strictFiniteNumber(
+          candidate.minimum_active_above_pre_guard_db,
+          "keys coverage minimum active-over-guard",
+        );
+        const maximumDeficit = strictFiniteNumber(
+          candidate.maximum_normalized_rms_deficit_db,
+          "keys coverage maximum normalized deficit",
+        );
+        if (
+          candidate.functional_status !== "passed" ||
+          candidateTested !== testedZoneCount ||
+          candidatePassed !== testedZoneCount ||
+          candidateFailed !== 0 ||
+          minimumRms < -72 ||
+          minimumPeak < -60 ||
+          minimumGuard < 3 ||
+          maximumDeficit < 0 ||
+          maximumDeficit > 24
+        ) {
+          throw new TypeError(
+            "Keys coverage blind candidate did not pass every tested zone",
+          );
+        }
+        candidates[key] = Object.freeze({
+          functional_status: "passed",
+          tested_zone_count: candidateTested,
+          passed_zone_count: candidatePassed,
+          failed_zone_count: 0,
+          minimum_rms_dbfs: minimumRms,
+          minimum_peak_dbfs: minimumPeak,
+          minimum_active_above_pre_guard_db: minimumGuard,
+          maximum_normalized_rms_deficit_db: maximumDeficit,
+        });
+      }
+
+      return Object.freeze({
+        schema: COVERAGE_SCHEMA,
+        required: true,
+        status: "passed",
+        functional_status: "passed",
+        quality_status: "review_required",
+        policy: COVERAGE_POLICY,
+        claim: COVERAGE_CLAIM,
+        zone_definition: value.zone_definition,
+        safe_pass_text: value.safe_pass_text,
+        non_claims: Object.freeze([...COVERAGE_NON_CLAIMS]),
+        velocity_buckets: Object.freeze(velocityBuckets),
+        tested_zone_count: testedZoneCount,
+        tested_pitch_count: testedPitchCount,
+        failed_zone_count: 0,
+        limits: Object.freeze({
+          maximum_zones: 512,
+          maximum_probe_seconds: 180,
+          probe_note_seconds: 0.2,
+          probe_slot_seconds: 0.35,
+        }),
+        thresholds: Object.freeze({
+          both_absolute_gates_required: true,
+          minimum_rms_dbfs: -72,
+          minimum_peak_dbfs: -60,
+          minimum_active_above_pre_guard_db: 3,
+          maximum_velocity_normalized_rms_deficit_db: 24,
+          singleton_channel_bucket_uses_absolute_gates_only: true,
+        }),
+        candidates: Object.freeze(candidates),
+        candidate_identities_hidden: true,
+        actual_review_midi_changed: false,
       });
     }
 
@@ -1354,7 +1756,8 @@
         value.stem_id === lane.stem_id &&
         value.candidate_id === lane.candidate_id &&
         value.midi_sha256 === lane.midi_sha256 &&
-        value.role === lane.role
+        value.role === lane.role &&
+        coverageMarker(value) === lane.coverage_preflight
       );
     }
 
@@ -1373,8 +1776,18 @@
             value.candidate_id,
             value.midi_sha256,
             value.role,
+            coverageMarker(value),
           ].join(":")
         : "";
+    }
+
+    function coverageMarker(value) {
+      if (typeof value?.coverage_preflight === "string") {
+        return value.coverage_preflight;
+      }
+      if (value?.coverage_preflight?.required === true) return "required";
+      if (value?.coverage_preflight?.required === false) return "not_required";
+      return "";
     }
 
     function comparisonIdentity(value) {
@@ -1431,20 +1844,23 @@
             data-instrument-review-lane="${escapeHtml(laneIdentity(item))}"
             aria-pressed="${selected}"
             ${selected ? 'class="selected"' : ""}>
-            ${escapeHtml(item.label || `Selected bass part ${index + 1}`)}
+            ${escapeHtml(
+              item.label || `Selected ${item.role} part ${index + 1}`,
+            )}
           </button>`;
         })
         .join("");
       return `<section class="panel" aria-labelledby="instrument-review-heading">
-        <h2 id="instrument-review-heading">4. Compare complete bass instruments</h2>
+        <h2 id="instrument-review-heading">4. Compare complete bass or keys instruments</h2>
         <p>Hear the <b>same selected MIDI performance</b> through two complete
         broad-family instruments. The source stem is a tone and texture
         reference, not a candidate.</p>
         <p class="notice"><b>One controlled variable:</b> note pitches, starts,
         durations and velocities stay fixed. Only the complete instrument
-        program changes. This is a listening comparison, not proof that every
-        possible keyboard pitch has passed a separate full-range probe.</p>
-        <div class="actions" role="group" aria-label="Eligible bass MIDI lanes">
+        program changes. ${lane?.role === "keys"
+          ? "Before any blind keys audio is published, both server-owned keyboard proxies must pass the local functional coverage preflight for this selected MIDI."
+          : "Bass uses the fixed server-owned complete-patch pair; the separate keys coverage preflight is not required."}</p>
+        <div class="actions" role="group" aria-label="Eligible bass or keys MIDI lanes">
           ${laneButtons}
         </div>
         ${lane ? `<section class="diagnostics">
@@ -1484,7 +1900,7 @@
       }
       const tags = value.allowed_problem_tags;
       return `<section class="panel" aria-labelledby="instrument-review-heading">
-        <h2 id="instrument-review-heading">4. Blind fixed-MIDI bass-instrument review</h2>
+        <h2 id="instrument-review-heading">4. Blind fixed-MIDI ${escapeHtml(value.role)}-instrument review</h2>
         <p><b>Source window:</b>
           ${escapeHtml(displaySeconds(value.window.start_seconds))}–
           ${escapeHtml(displaySeconds(value.window.end_seconds))} seconds.
@@ -1494,6 +1910,7 @@
           were attenuated to one common sample-RMS target. Browser gain stays
           at unity because the disclosed gain was already applied by the
           server.</p>
+        ${coverageHtml(value.coverage_preflight, value.role, escapeHtml)}
         <table><thead><tr><th>Review track</th><th>Server crop gain</th></tr></thead>
           <tbody>${comparisonTracks(value)
             .map(
@@ -1571,6 +1988,7 @@
           choiceLabel(review.response.choice),
         )}</b> is bound to this selected MIDI, exact source window and hidden
         A/B assignment.</p>
+        ${coverageHtml(value.coverage_preflight, value.role, escapeHtml)}
         <p>${review.review_url
           ? `<a href="${escapeHtml(review.review_url)}" download>
               Export blind instrument-review JSON</a>`
@@ -1593,6 +2011,7 @@
           ${escapeHtml(result.assignment.candidate_b)}</p>
         <p><b>Resolved listening outcome:</b>
           ${escapeHtml(identityLabel(result.resolved_choice))}</p>
+        ${coverageHtml(value.coverage_preflight, value.role, escapeHtml)}
         <p>${value.review?.review_url
           ? `<a href="${escapeHtml(value.review.review_url)}" download>
               Export blind instrument-review JSON</a>`
@@ -1655,6 +2074,69 @@
       return `<label><input type="radio"
         name="instrument-review-choice" value="${value}"
         ${draft.choice === value ? "checked" : ""}> ${label}</label>`;
+    }
+
+    function coverageHtml(value, role, escapeHtml) {
+      if (role !== "keys") {
+        return `<section class="diagnostics">
+          <h3>Functional coverage preflight</h3>
+          <p><b>Not required for this fixed bass pair.</b> Musical usefulness
+          still comes only from the blind listening review.</p>
+        </section>`;
+      }
+      const buckets = value.velocity_buckets
+        .map(
+          (bucket) =>
+            `${bucket.id} ${bucket.minimum}–${bucket.maximum}: ${bucket.tested_zone_count} (${bucket.status})`,
+        )
+        .join(" · ");
+      const rows = ["candidate_a", "candidate_b"]
+        .map((key, index) => {
+          const candidate = value.candidates[key];
+          return `<tr>
+            <td>Candidate ${index === 0 ? "A" : "B"}</td>
+            <td>${escapeHtml(candidate.functional_status)}</td>
+            <td>${escapeHtml(candidate.passed_zone_count)} / ${escapeHtml(candidate.tested_zone_count)}</td>
+            <td>${escapeHtml(signedDb(candidate.minimum_rms_dbfs))}</td>
+            <td>${escapeHtml(signedDb(candidate.minimum_peak_dbfs))}</td>
+            <td>${escapeHtml(signedDb(candidate.minimum_active_above_pre_guard_db))}</td>
+            <td>${escapeHtml(signedDb(candidate.maximum_normalized_rms_deficit_db))}</td>
+          </tr>`;
+        })
+        .join("");
+      return `<section class="diagnostics">
+        <h3>Keys functional coverage preflight: passed</h3>
+        <p>${escapeHtml(value.safe_pass_text)}</p>
+        <p><b>${escapeHtml(value.tested_zone_count)} representative
+          pitch/velocity-bucket zones</b> across ${escapeHtml(
+            value.tested_pitch_count,
+          )} channel/pitch positions; failed zones: 0. For each used channel, pitch and
+          soft/medium/strong bucket, the probe tested the minimum velocity
+          actually observed in that bucket.</p>
+        <p class="muted">${escapeHtml(buckets)}</p>
+        <table>
+          <thead><tr><th>Blind proxy</th><th>Functional status</th>
+            <th>Passed zones</th><th>Minimum RMS</th><th>Minimum peak</th>
+            <th>Minimum active-over-guard</th><th>Maximum normalized deficit</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <p class="muted">Required floors: RMS ${escapeHtml(
+          signedDb(value.thresholds.minimum_rms_dbfs),
+        )}, peak ${escapeHtml(
+          signedDb(value.thresholds.minimum_peak_dbfs),
+        )}, active-over-guard ${escapeHtml(
+          signedDb(value.thresholds.minimum_active_above_pre_guard_db),
+        )}; maximum normalized deficit ${escapeHtml(
+          signedDb(
+            value.thresholds.maximum_velocity_normalized_rms_deficit_db,
+          ),
+        )}.</p>
+        <p class="muted">This is functional preflight evidence with quality
+          status <b>review required</b>. ${escapeHtml(
+            value.non_claims.join("; "),
+          )}.</p>
+      </section>`;
     }
 
     function effectsHtml() {
@@ -1737,6 +2219,20 @@
       return value;
     }
 
+    function requireExactKeys(value, expected, label) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        throw new TypeError(`${label} must be an object`);
+      }
+      const actual = Object.keys(value).sort();
+      const wanted = [...expected].sort();
+      if (
+        actual.length !== wanted.length ||
+        actual.some((key, index) => key !== wanted[index])
+      ) {
+        throw new TypeError(`${label} must use its exact public fields`);
+      }
+    }
+
     function boundedString(value, maximum) {
       if (typeof value !== "string" || value.length > maximum) {
         throw new TypeError("Instrument review text exceeds its fixed limit");
@@ -1757,6 +2253,27 @@
         throw new TypeError(`${label} must be finite`);
       }
       return number;
+    }
+
+    function strictFiniteNumber(value, label) {
+      if (typeof value !== "number" || !Number.isFinite(value)) {
+        throw new TypeError(`${label} must be a finite number`);
+      }
+      return value;
+    }
+
+    function strictPositiveInteger(value, label) {
+      if (!Number.isSafeInteger(value) || value <= 0) {
+        throw new TypeError(`${label} must be a positive integer`);
+      }
+      return value;
+    }
+
+    function strictNonNegativeInteger(value, label) {
+      if (!Number.isSafeInteger(value) || value < 0) {
+        throw new TypeError(`${label} must be a non-negative integer`);
+      }
+      return value;
     }
 
     function attenuationDb(value, label) {

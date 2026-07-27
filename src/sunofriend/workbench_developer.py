@@ -21,9 +21,7 @@ from .workbench_privacy import contains_local_path, path_free_role
 from .workbench_store import fold_workbench_events
 
 
-WORKBENCH_DEVELOPER_SNAPSHOT_SCHEMA = (
-    "sunofriend.workbench-developer-snapshot.v1"
-)
+WORKBENCH_DEVELOPER_SNAPSHOT_SCHEMA = "sunofriend.workbench-developer-snapshot.v1"
 _MAX_COMPLETED_OPERATIONS = 128
 _MAX_ACTIVE_OPERATIONS = 32
 _MAX_FRAMES_PER_OPERATION = 8
@@ -47,9 +45,7 @@ _CACHE_FAMILIES = (
 )
 _DECISIONS = frozenset({"main", "optional", "needs_correction", "reject"})
 _CONTEXTS = frozenset({"solo", "full_mix"})
-_OUTCOMES = frozenset(
-    {"equivalent", "none_usable", "cannot_tell", "clear_choice"}
-)
+_OUTCOMES = frozenset({"equivalent", "none_usable", "cannot_tell", "clear_choice"})
 _PROBLEM_TAGS = frozenset(
     {
         "missing_notes",
@@ -67,10 +63,7 @@ _MASTER_REVIEW_TRACE_SCHEMAS = frozenset(
         "sunofriend.workbench-listening-master-comparison.v1",
         "sunofriend.workbench-listening-master-review.v1",
         "sunofriend.workbench-listening-master-review-result.v1",
-        (
-            "sunofriend.workbench-listening-master-"
-            "native-readiness-comparison.v1"
-        ),
+        ("sunofriend.workbench-listening-master-native-readiness-comparison.v1"),
         "sunofriend.workbench-listening-master-native-readiness-review.v1",
     }
 )
@@ -80,6 +73,7 @@ _INSTRUMENT_REVIEW_TRACE_SCHEMAS = frozenset(
         "sunofriend.workbench-instrument-review.comparison.v1",
         "sunofriend.workbench-instrument-review.review.v1",
         "sunofriend.workbench-instrument-review.result.v1",
+        "sunofriend.workbench-instrument-review.keys-coverage.v1",
     }
 )
 
@@ -98,25 +92,13 @@ _ROUTE_OPERATIONS = {
     "/api/arrangement": "arrangement.render",
     "/api/balanced-arrangement": "arrangement.balance",
     "/api/listening-master": "arrangement.master",
-    "/api/listening-master-review/prepare": (
-        "arrangement.master_review_prepare"
-    ),
+    "/api/listening-master-review/prepare": ("arrangement.master_review_prepare"),
     "/api/listening-master-review": "arrangement.master_review_complete",
-    "/api/listening-master-review/resolve": (
-        "arrangement.master_review_resolve"
-    ),
-    "/api/listening-master-review-export": (
-        "arrangement.master_review_export"
-    ),
-    "/api/listening-master-readiness/prepare": (
-        "arrangement.master_readiness_prepare"
-    ),
-    "/api/listening-master-readiness": (
-        "arrangement.master_readiness_complete"
-    ),
-    "/api/listening-master-readiness-export": (
-        "arrangement.master_readiness_export"
-    ),
+    "/api/listening-master-review/resolve": ("arrangement.master_review_resolve"),
+    "/api/listening-master-review-export": ("arrangement.master_review_export"),
+    "/api/listening-master-readiness/prepare": ("arrangement.master_readiness_prepare"),
+    "/api/listening-master-readiness": ("arrangement.master_readiness_complete"),
+    "/api/listening-master-readiness-export": ("arrangement.master_readiness_export"),
     "/api/instrument-review-plan": "instrument_review.plan",
     "/api/instrument-review/prepare": "instrument_review.prepare",
     "/api/instrument-review": "instrument_review.complete",
@@ -151,25 +133,13 @@ _ROUTE_CODE_STEPS = {
     "/api/arrangement": "arrangement.render",
     "/api/balanced-arrangement": "arrangement.balance",
     "/api/listening-master": "arrangement.master",
-    "/api/listening-master-review/prepare": (
-        "arrangement.master_review_prepare"
-    ),
+    "/api/listening-master-review/prepare": ("arrangement.master_review_prepare"),
     "/api/listening-master-review": "arrangement.master_review_complete",
-    "/api/listening-master-review/resolve": (
-        "arrangement.master_review_resolve"
-    ),
-    "/api/listening-master-review-export": (
-        "arrangement.master_review_export"
-    ),
-    "/api/listening-master-readiness/prepare": (
-        "arrangement.master_readiness_prepare"
-    ),
-    "/api/listening-master-readiness": (
-        "arrangement.master_readiness_complete"
-    ),
-    "/api/listening-master-readiness-export": (
-        "arrangement.master_readiness_export"
-    ),
+    "/api/listening-master-review/resolve": ("arrangement.master_review_resolve"),
+    "/api/listening-master-review-export": ("arrangement.master_review_export"),
+    "/api/listening-master-readiness/prepare": ("arrangement.master_readiness_prepare"),
+    "/api/listening-master-readiness": ("arrangement.master_readiness_complete"),
+    "/api/listening-master-readiness-export": ("arrangement.master_readiness_export"),
     "/api/instrument-review-plan": "instrument_review.plan",
     "/api/instrument-review/prepare": "instrument_review.prepare",
     "/api/instrument-review": "instrument_review.complete",
@@ -304,6 +274,10 @@ _CODE_MAP = {
         "module": "sunofriend.workbench_instrument_review",
         "symbol": "WorkbenchInstrumentReviewService.prepare",
     },
+    "instrument_review.coverage_preflight": {
+        "module": "sunofriend.workbench_instrument_coverage",
+        "symbol": "prepare_keys_coverage_preflight",
+    },
     "instrument_review.complete": {
         "module": "sunofriend.workbench_instrument_review",
         "symbol": "WorkbenchInstrumentReviewService.complete",
@@ -431,10 +405,13 @@ _OPERATION_LABELS = {
         "Export one verified native-level readiness review"
     ),
     "instrument_review.plan": (
-        "Derive eligible active selected bass MIDI without choosing a sound"
+        "Derive eligible active selected bass or keys MIDI without choosing a sound"
     ),
     "instrument_review.prepare": (
-        "Prepare one fixed-MIDI source-referenced blind bass-instrument comparison"
+        "Prepare one fixed-MIDI source-referenced blind instrument comparison"
+    ),
+    "instrument_review.coverage_preflight": (
+        "Fail closed until both keys proxies pass used-zone functional coverage"
     ),
     "instrument_review.complete": (
         "Append one separate explicit blind instrument-review artifact"
@@ -513,10 +490,7 @@ _CODE_FLOW_NODES = (
         ),
         "symbols": [
             "sunofriend.workbench_artifacts.WorkbenchArtifacts",
-            (
-                "sunofriend.workbench_instrument_review."
-                "WorkbenchInstrumentReviewService"
-            ),
+            ("sunofriend.workbench_instrument_review.WorkbenchInstrumentReviewService"),
             "sunofriend.workbench_clips.WorkbenchClipService",
             "sunofriend.workbench_transform.WorkbenchClipTransformService",
             "sunofriend.workbench_correction.WorkbenchClipCorrectionService",
@@ -564,9 +538,7 @@ class WorkbenchDeveloperTrace:
         self._lock = threading.RLock()
         self._next_sequence = 1
         self._active: OrderedDict[int, dict[str, Any]] = OrderedDict()
-        self._completed: deque[dict[str, Any]] = deque(
-            maxlen=_MAX_COMPLETED_OPERATIONS
-        )
+        self._completed: deque[dict[str, Any]] = deque(maxlen=_MAX_COMPLETED_OPERATIONS)
         self._dropped_completed = 0
         self._dropped_active = 0
 
@@ -698,8 +670,7 @@ class WorkbenchDeveloperTrace:
             "explanation": _frame_explanation(stage),
             "symbol": _code_symbol(safe_code_step),
             "elapsed_ms": round(
-                max(0, time.monotonic_ns() - int(record["started_ns"]))
-                / 1_000_000,
+                max(0, time.monotonic_ns() - int(record["started_ns"])) / 1_000_000,
                 3,
             ),
             "facts": _safe_trace_facts(facts),
@@ -733,8 +704,7 @@ def build_developer_snapshot(
         },
         "code_flow": {
             "nodes": [
-                {**node, "symbols": list(node["symbols"])}
-                for node in _CODE_FLOW_NODES
+                {**node, "symbols": list(node["symbols"])} for node in _CODE_FLOW_NODES
             ],
             "stages": [
                 "catalog",
@@ -784,7 +754,9 @@ def build_developer_snapshot(
     return snapshot
 
 
-def artifact_cache_summary(root: Path, *, verified_stream_entries: int) -> dict[str, Any]:
+def artifact_cache_summary(
+    root: Path, *, verified_stream_entries: int
+) -> dict[str, Any]:
     """Count only allow-listed cache directories without returning their names."""
 
     families = []
@@ -796,7 +768,9 @@ def artifact_cache_summary(root: Path, *, verified_stream_entries: int) -> dict[
         visited = 0
         truncated = False
         try:
-            entries = parent.iterdir() if parent.is_dir() and not parent.is_symlink() else ()
+            entries = (
+                parent.iterdir() if parent.is_dir() and not parent.is_symlink() else ()
+            )
             for entry in entries:
                 visited += 1
                 if visited > _MAX_CACHE_ENTRIES_PER_FAMILY:
@@ -862,10 +836,22 @@ def trace_response_facts(route: str, value: Mapping[str, Any]) -> dict[str, Any]
     if route == "/api/instrument-review-plan":
         plan = value.get("plan", {})
         lanes = plan.get("eligible_lanes", [])
+        safe_lanes = (
+            [lane for lane in lanes if isinstance(lane, Mapping)]
+            if isinstance(lanes, list)
+            else []
+        )
         return {
             "schema": plan.get("schema"),
-            "eligible_lane_count": (
-                len(lanes) if isinstance(lanes, list) else None
+            "eligible_lane_count": (len(lanes) if isinstance(lanes, list) else None),
+            "eligible_bass_lane_count": sum(
+                lane.get("role") == "bass" for lane in safe_lanes
+            ),
+            "eligible_keys_lane_count": sum(
+                lane.get("role") == "keys" for lane in safe_lanes
+            ),
+            "coverage_required_lane_count": sum(
+                lane.get("coverage_preflight") == "required" for lane in safe_lanes
             ),
             "musical_selection_changed": False,
             "midi_changed": False,
@@ -955,23 +941,15 @@ def trace_response_facts(route: str, value: Mapping[str, Any]) -> dict[str, Any]
         if status not in {"unreviewed", "reviewed", "resolved", "complete"}:
             status = None
         revision = document.get("current_revision", document.get("revision"))
-        if (
-            isinstance(revision, bool)
-            or not isinstance(revision, int)
-            or revision < 0
-        ):
+        if isinstance(revision, bool) or not isinstance(revision, int) or revision < 0:
             revision = None
         schema = document.get("schema")
         facts = {
-            "schema": (
-                schema if schema in _MASTER_REVIEW_TRACE_SCHEMAS else None
-            ),
+            "schema": (schema if schema in _MASTER_REVIEW_TRACE_SCHEMAS else None),
             "status": status,
             "revision": revision,
         }
-        return {
-            key: item for key, item in facts.items() if item is not None
-        }
+        return {key: item for key, item in facts.items() if item is not None}
     if route in {
         "/api/instrument-review/prepare",
         "/api/instrument-review",
@@ -989,30 +967,47 @@ def trace_response_facts(route: str, value: Mapping[str, Any]) -> dict[str, Any]
             "expected_revision",
             document.get("revision"),
         )
-        if (
-            isinstance(revision, bool)
-            or not isinstance(revision, int)
-            or revision < 0
-        ):
+        if isinstance(revision, bool) or not isinstance(revision, int) or revision < 0:
             revision = None
+        role = document.get("role")
+        if role not in {"bass", "keys"}:
+            role = None
+        coverage = document.get("coverage_preflight")
+        if not isinstance(coverage, Mapping):
+            coverage = {}
+        coverage_status = coverage.get("status")
+        if coverage_status not in {"not_required", "required", "passed"}:
+            coverage_status = None
+        functional_status = coverage.get("functional_status")
+        if functional_status not in {"not_required", "required", "passed"}:
+            functional_status = None
+        quality_status = coverage.get("quality_status")
+        if quality_status != "review_required":
+            quality_status = None
         return {
             key: item
             for key, item in {
                 "schema": (
-                    schema
-                    if schema in _INSTRUMENT_REVIEW_TRACE_SCHEMAS
-                    else None
+                    schema if schema in _INSTRUMENT_REVIEW_TRACE_SCHEMAS else None
                 ),
                 "status": status,
                 "revision": revision,
+                "instrument_role": role,
+                "coverage_preflight_status": coverage_status,
+                "coverage_functional_status": functional_status,
+                "coverage_quality_status": quality_status,
+                "coverage_required": (
+                    coverage.get("required")
+                    if isinstance(coverage.get("required"), bool)
+                    else None
+                ),
                 "review_artifact_appended": (
                     route == "/api/instrument-review"
                     and status in {"reviewed", "resolved", "complete"}
                 ),
                 "identities_revealed": (
                     route == "/api/instrument-review/resolve"
-                    or schema
-                    == "sunofriend.workbench-instrument-review.result.v1"
+                    or schema == "sunofriend.workbench-instrument-review.result.v1"
                 ),
                 "musical_selection_changed": False,
                 "midi_changed": False,
@@ -1051,11 +1046,7 @@ def trace_response_facts(route: str, value: Mapping[str, Any]) -> dict[str, Any]
             track_count = reported_count
     elif route == "/api/balanced-arrangement":
         mix_report = row.get("mix_report")
-        lanes = (
-            mix_report.get("lanes")
-            if isinstance(mix_report, Mapping)
-            else None
-        )
+        lanes = mix_report.get("lanes") if isinstance(mix_report, Mapping) else None
         if isinstance(lanes, list):
             track_count = len(lanes)
     elif route == "/api/listening-master":
@@ -1123,12 +1114,15 @@ def _state_replay(
 def _safe_replay_event(event: Mapping[str, Any]) -> dict[str, Any]:
     event_type = event.get("event_type")
     result: dict[str, Any] = {
-        "event_type": event_type if event_type in {
+        "event_type": event_type
+        if event_type
+        in {
             "candidate_decision",
             "stem_outcome",
             "role_tag",
             "candidate_auditioned",
-        } else "unknown",
+        }
+        else "unknown",
         "stem_id": _safe_identifier(str(event.get("stem_id", ""))),
     }
     candidate_id = event.get("candidate_id")
@@ -1421,10 +1415,7 @@ def _safe_runtime(value: Mapping[str, Any]) -> dict[str, Any]:
         "clip_reuse_active_placement_count",
     }
     return {
-        **{
-            key: max(0, int(value.get(key, 0) or 0))
-            for key in integer_keys
-        },
+        **{key: max(0, int(value.get(key, 0) or 0)) for key in integer_keys},
         "clip_library_enabled": value.get("clip_library_enabled") is True,
         "clip_reuse_plan_enabled": value.get("clip_reuse_plan_enabled") is True,
         "clip_transforms_enabled": value.get("clip_transforms_enabled") is True,
@@ -1446,6 +1437,14 @@ def _safe_trace_facts(value: Mapping[str, Any]) -> dict[str, Any]:
         "active_placement_count",
         "clip_version_appended",
         "eligible_lane_count",
+        "eligible_bass_lane_count",
+        "eligible_keys_lane_count",
+        "coverage_required_lane_count",
+        "instrument_role",
+        "coverage_preflight_status",
+        "coverage_functional_status",
+        "coverage_quality_status",
+        "coverage_required",
         "review_artifact_appended",
         "identities_revealed",
         "musical_selection_changed",
@@ -1472,18 +1471,27 @@ def _safe_trace_facts(value: Mapping[str, Any]) -> dict[str, Any]:
             "instrument_default_changed",
             "mix_changed",
             "pack_changed",
+            "coverage_required",
         } and isinstance(item, bool):
             result[key] = item
-        elif key in {
-            "decision_event_count",
-            "stem_count",
-            "item_count",
-            "track_count",
-            "plan_revision",
-            "active_placement_count",
-            "revision",
-            "eligible_lane_count",
-        } and isinstance(item, int) and not isinstance(item, bool):
+        elif (
+            key
+            in {
+                "decision_event_count",
+                "stem_count",
+                "item_count",
+                "track_count",
+                "plan_revision",
+                "active_placement_count",
+                "revision",
+                "eligible_lane_count",
+                "eligible_bass_lane_count",
+                "eligible_keys_lane_count",
+                "coverage_required_lane_count",
+            }
+            and isinstance(item, int)
+            and not isinstance(item, bool)
+        ):
             result[key] = max(0, item)
         elif key == "event_type" and item in {
             "candidate_decision",
@@ -1500,6 +1508,15 @@ def _safe_trace_facts(value: Mapping[str, Any]) -> dict[str, Any]:
             "resolved",
             "complete",
         }:
+            result[key] = item
+        elif key == "instrument_role" and item in {"bass", "keys"}:
+            result[key] = item
+        elif key in {
+            "coverage_preflight_status",
+            "coverage_functional_status",
+        } and item in {"not_required", "required", "passed"}:
+            result[key] = item
+        elif key == "coverage_quality_status" and item == "review_required":
             result[key] = item
     return result
 
@@ -1520,8 +1537,14 @@ def _operation_symbols(operation: str) -> list[str]:
     elif operation == "clip_transform.preview":
         steps.extend(["validate", "clip_transform.preview"])
     elif operation == "clip_transform.create":
+        steps.extend(["validate", "clip_transform.create", "clip_version.append"])
+    elif operation == "instrument_review.prepare":
         steps.extend(
-            ["validate", "clip_transform.create", "clip_version.append"]
+            [
+                "validate",
+                "instrument_review.coverage_preflight",
+                operation_step,
+            ]
         )
     elif operation in {
         "clip_correction.window",
@@ -1529,16 +1552,13 @@ def _operation_symbols(operation: str) -> list[str]:
     }:
         steps.extend(["validate", operation_step])
     elif operation == "clip_correction.create":
-        steps.extend(
-            ["validate", "clip_correction.create", "clip_version.append"]
-        )
+        steps.extend(["validate", "clip_correction.create", "clip_version.append"])
     elif operation in {
         "arrangement.master_review_prepare",
         "arrangement.master_review_complete",
         "arrangement.master_review_resolve",
         "arrangement.master_readiness_prepare",
         "arrangement.master_readiness_complete",
-        "instrument_review.prepare",
         "instrument_review.complete",
         "instrument_review.resolve",
     }:
