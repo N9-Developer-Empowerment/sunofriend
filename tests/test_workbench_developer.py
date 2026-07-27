@@ -848,6 +848,74 @@ class WorkbenchDeveloperTraceTests(unittest.TestCase):
             self.assertEqual(replay["frames"][-1]["after"]["event_count"], 140)
 
 
+class WorkbenchMasterReadinessDeveloperTests(unittest.TestCase):
+    def test_native_readiness_routes_are_separate_and_truthfully_durable(
+        self,
+    ) -> None:
+        routes = {
+            "/api/listening-master-readiness/prepare": (
+                "arrangement.master_readiness_prepare",
+                True,
+                "WorkbenchMasterReadinessService.prepare",
+            ),
+            "/api/listening-master-readiness": (
+                "arrangement.master_readiness_complete",
+                True,
+                "WorkbenchMasterReadinessService.complete",
+            ),
+            "/api/listening-master-readiness-export": (
+                "arrangement.master_readiness_export",
+                False,
+                "WorkbenchMasterReadinessService.review",
+            ),
+        }
+        trace = WorkbenchDeveloperTrace()
+        for route, (operation, durable, symbol) in routes.items():
+            self.assertEqual(developer_operation_for_route(route), operation)
+            self.assertEqual(developer_code_step_for_route(route), operation)
+            sequence = trace.begin("GET" if route.endswith("export") else "POST", operation)
+            trace.complete(sequence, 200)
+            row = trace.snapshot()["recent_operations"][-1]
+            self.assertEqual(row["durable_effect_possible"], durable)
+            self.assertTrue(any(symbol in item for item in row["symbols"]))
+
+    def test_native_readiness_trace_facts_exclude_private_feedback(self) -> None:
+        comparison_schema = (
+            "sunofriend.workbench-listening-master-"
+            "native-readiness-comparison.v1"
+        )
+        review_schema = (
+            "sunofriend.workbench-listening-master-native-readiness-review.v1"
+        )
+        cases = (
+            (
+                "/api/listening-master-readiness/prepare",
+                {"readiness": {"schema": comparison_schema, "status": "unreviewed"}},
+                {"schema": comparison_schema, "status": "unreviewed"},
+            ),
+            (
+                "/api/listening-master-readiness",
+                {
+                    "readiness": {
+                        "schema": review_schema,
+                        "status": "reviewed",
+                        "notes": "private note",
+                        "path": "/Users/alice/private.wav",
+                        "choice": "listening_master",
+                    }
+                },
+                {"schema": review_schema, "status": "reviewed"},
+            ),
+        )
+        for route, response, expected in cases:
+            facts = trace_response_facts(route, response)
+            self.assertEqual(facts, expected)
+            encoded = json.dumps(facts)
+            self.assertNotIn("private note", encoded)
+            self.assertNotIn("/Users/", encoded)
+            self.assertNotIn("listening_master", encoded)
+
+
 class WorkbenchDeveloperReducerTests(unittest.TestCase):
     def test_production_store_and_pure_reducer_derive_identical_state(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

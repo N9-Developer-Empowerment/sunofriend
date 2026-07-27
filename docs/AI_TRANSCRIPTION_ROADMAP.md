@@ -40,7 +40,8 @@ ordinary Workbench now has an explicit exact-control Listening Master action
 and separate player/downloads; the native TUI **Master** action now provides
 the same fixed-policy cache/reuse operation with protected progress; the first
 bounded, fixed-window level-matched blind Workbench review and separate
-identity-resolution step are implemented;
+identity-resolution step plus the gated identity-labelled native-level
+readiness review are implemented;
 broader Phase 6
 creative arrangement remains in progress
 
@@ -135,7 +136,7 @@ listening master remains comparative rather than a release master.
 | 2. Phrase Review v2 | **Engineering and human review complete; overall programme preference criterion not demonstrated** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history. The applied 61-note review won the opening blind loop, the untouched 23-note automatic candidate won none, and both later loops were judged neither |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
-| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.5–5.9 hardening complete and Phase 5.9 human acceptance passed; Phase 5.10a, initial 5.10b full-project conversion, the first 5.10c native Listening Master operation and the first bounded Workbench blind-review slice implemented; Phase 5.3 gates and remaining 5.10b–d work remain** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench has hash-pinned per-stem and full-song timelines, bounded decoded transports, a separate exact GarageBand pack basket, Project Overview, fail-closed execution provenance, guided exact-pack acceptance and a receipt-bound exact-window Listening Master A/B response with separate identity resolution. The Textual TUI supplies project orientation, compact MIDI maps, diagnostics, one-key Workbench/Inspector access, an explicit fresh-output full-project runner over production instrumental and vocal engines and a protected fixed-policy Listening Master cache/reuse action. A durable conversion ledger/restart contract, additional operation forms and broader process/role/instrument/DAW feedback are not yet implemented |
+| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.5–5.9 hardening complete and Phase 5.9 human acceptance passed; Phase 5.10a, initial 5.10b full-project conversion, the first 5.10c native Listening Master operation, bounded blind quality review and native-level readiness slice implemented; Phase 5.3 gates and remaining 5.10b–d work remain** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench has hash-pinned per-stem and full-song timelines, bounded decoded transports, a separate exact GarageBand pack basket, Project Overview, fail-closed execution provenance, guided exact-pack acceptance, a receipt-bound exact-window Listening Master A/B response with separate identity resolution and a gated unchanged-level readiness response on the same frozen frames. The Textual TUI supplies project orientation, compact MIDI maps, diagnostics, one-key Workbench/Inspector access, an explicit fresh-output full-project runner over production instrumental and vocal engines and a protected fixed-policy Listening Master cache/reuse action. A durable conversion ledger/restart contract, additional operation forms and broader process/role/instrument/DAW feedback are not yet implemented |
 | 6. Creative Arrangement and Reusable MIDI | **In progress: Increments 6.0, 6.1, 6.2a and 6.3a–e plus the selected-arrangement balance slice complete** | The gated browser, immutable-placement proposal, key/BPM children and bounded recognition-first pitch/attack-velocity/exact-note-removal/existing-note onset and end patches are complete. Ordinary Workbench also creates the MIDI-derived, source-referenced, drum-guarded and sample-peak-protected song-interpretation WAV while retaining its unity controls. One kind per Clip child, zero-write review, immutable parent and restart validation remain mandatory. Note insertion, release velocity/continuous expression, mode remapping, tuning/downbeat and hybrids remain later slices; hybrid construction still waits for the Phase 5.3 gates |
 | 7. Cross-DAW and Opt-in Community Learning | **Deferred** | Compatibility testing, cleared public goldens and consented contextual feedback only after the local workflow is useful, private and stable |
 
@@ -938,7 +939,7 @@ Each working day should aim for one narrow vertical improvement:
   listening-master contract. Cache reuse must remain verified and must not
   depend on the fresh-build toolchain.
 - Next smallest step: completed in the following bounded Workbench blind-review
-  increment. A separate native-level readiness comparison remains next.
+  increment and its subsequent native-level readiness increment below.
 
 ### 2026-07-27 — Bounded blind Listening Master quality review
 
@@ -969,10 +970,44 @@ Each working day should aim for one narrow vertical improvement:
   controller tests and Developer Inspector privacy/effect tests cover restart,
   CAS, Range media, tamper/drift rejection, explicit heard evidence, blind and
   resolved downloads and zero musical/product mutation.
-- Next smallest step: add a secondary explicitly labelled native-level
-  readiness comparison only after the level-matched quality choice is frozen;
-  then feed explicitly named verified reviews into advisory profile analysis
-  without automatic ranking or default changes.
+- Next smallest step: completed in the following native-level readiness
+  increment; then feed explicitly named verified reviews into advisory profile
+  analysis without automatic ranking or default changes.
+
+### 2026-07-27 — Identity-labelled native-level readiness review
+
+- Goal: answer the separate practical question of which delivered file is more
+  useful at its own level without allowing loudness to bias or rewrite the
+  earlier blind processing-quality choice.
+- Gate: Workbench enables this stage only for the latest local blind quality
+  review after its separate identity resolution has been verified. The
+  readiness comparison binds the quality review ID/SHA, resolution SHA,
+  current control/master manifests and exact canonical frame window.
+- Audio contract: the reviewer cannot submit times, paths, gains or policy
+  parameters. Sunofriend reuses the exact quality frames and writes labelled
+  Balanced control and Listening Master PCM24 crops with linear scale `1.0`
+  and applied gain `0.0 dB`. There is no matching, boost, attenuation,
+  normalisation, limiting, compression, EQ, resampling, shift or stretch.
+- Review contract: both labelled files must be explicitly marked heard before
+  choosing control, master, equivalent, neither or cannot tell. Tags and notes
+  retain the existing bounds. One immutable response is allowed for the exact
+  quality result and local reviewer: an exact retry replays the verified
+  record and a changed retry conflicts.
+- Evidence boundary: readiness audio and its SQLite row are owner-only,
+  path-free at the browser boundary and separate from the quality ledger and
+  `WorkbenchStore`. Preparation, playback, completion and export change no
+  quality outcome, candidate decision, selected MIDI, ranking, default,
+  product bytes/completion or GarageBand Pack.
+- Maintainability: verified file reads, exact-frame decode, PCM16 writing and
+  measurements moved into `workbench_master_review_audio`; blind quality and
+  native readiness remain sibling services rather than modes in one contract.
+- Validation: service, tamper/restart/concurrency, real loopback HTTP, browser
+  double-submit/unity-volume and Developer Inspector privacy/effect tests are
+  included. The final focused gate passed 73 tests and the repository suite
+  passed 1,249 tests; the sole warning remains the existing
+  `resampy`/`pkg_resources` deprecation. The next increment is
+  complete-instrument challengers, beginning with bass and keys while holding
+  MIDI fixed.
 
 ### 2026-07-27 — Workbench Listening Master v1
 

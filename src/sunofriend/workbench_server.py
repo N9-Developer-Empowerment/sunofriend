@@ -41,14 +41,21 @@ from .workbench_listening_master import (
     WorkbenchListeningMasterService,
 )
 from .workbench_master_review import (
+    BALANCED_CONTROL,
     CANDIDATE_A,
     CANDIDATE_B,
+    LISTENING_MASTER,
     MASTER_REVIEW_PROBLEM_TAGS,
     MAXIMUM_NOTES_CHARACTERS,
     MAXIMUM_PROBLEM_TAGS_PER_CANDIDATE,
     WorkbenchMasterReviewConflictError,
     WorkbenchMasterReviewRevisionConflictError,
     WorkbenchMasterReviewService,
+)
+from .workbench_master_readiness import (
+    WorkbenchMasterReadinessConflictError,
+    WorkbenchMasterReadinessGateError,
+    WorkbenchMasterReadinessService,
 )
 from .workbench_clips import WorkbenchClipService, public_artifact as public_clip_artifact
 from .workbench_correction import (
@@ -359,6 +366,7 @@ class WorkbenchHTTPServer(ThreadingHTTPServer):
         artifacts: WorkbenchArtifacts,
         listening_masters: WorkbenchListeningMasterService,
         master_reviews: WorkbenchMasterReviewService,
+        master_readiness: WorkbenchMasterReadinessService,
         token: str,
         developer_inspector: bool = False,
         clip_service: WorkbenchClipService | None = None,
@@ -371,6 +379,7 @@ class WorkbenchHTTPServer(ThreadingHTTPServer):
         self.artifacts = artifacts
         self.listening_masters = listening_masters
         self.master_reviews = master_reviews
+        self.master_readiness = master_readiness
         self.token = token
         self.developer_inspector = bool(developer_inspector)
         self.clip_service = clip_service
@@ -483,6 +492,10 @@ def create_workbench_server(
     master_reviews = WorkbenchMasterReviewService(
         destination / "listening-master-reviews"
     )
+    master_readiness = WorkbenchMasterReadinessService(
+        destination / "listening-master-readiness",
+        master_reviews,
+    )
     clip_reuse_service = (
         WorkbenchClipReuseService.open(
             clip_service=clip_service,
@@ -516,6 +529,7 @@ def create_workbench_server(
         artifacts=artifacts,
         listening_masters=listening_masters,
         master_reviews=master_reviews,
+        master_readiness=master_readiness,
         token=session_token,
         developer_inspector=developer_inspector,
         clip_service=clip_service,
@@ -1026,6 +1040,22 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 return
             self._json(HTTPStatus.OK, document, filename=filename)
             return
+        if parsed.path == "/api/listening-master-readiness-export":
+            query = parse_qs(parsed.query, keep_blank_values=True)
+            readiness_review_id = query.get("readiness_review_id", [""])[0]
+            try:
+                document = self.server.master_readiness.review(
+                    readiness_review_id
+                )
+            except (OSError, RuntimeError, ValueError) as exc:
+                self._error(HTTPStatus.BAD_REQUEST, str(exc))
+                return
+            self._json(
+                HTTPStatus.OK,
+                document,
+                filename="sunofriend-listening-master-native-readiness-review.json",
+            )
+            return
         if parsed.path.startswith("/media/"):
             media_id = parsed.path[len("/media/") :]
             self._serve_media(media_id)
@@ -1052,6 +1082,8 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             "/api/listening-master-review/prepare",
             "/api/listening-master-review",
             "/api/listening-master-review/resolve",
+            "/api/listening-master-readiness/prepare",
+            "/api/listening-master-readiness",
             "/api/garageband-export",
             "/api/garageband-pack-basket",
             "/api/garageband-pack",
@@ -1725,6 +1757,111 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     }
                 self._json(HTTPStatus.OK, {"comparison": response})
                 return
+            if parsed.path == "/api/listening-master-readiness/prepare":
+                _require_exact_request_keys(
+                    request,
+                    {
+                        "quality_review_id",
+                        "quality_review_sha256",
+                        "quality_result_sha256",
+                    },
+                    label="Listening Master native-level readiness preparation",
+                )
+                anchors = self._master_readiness_anchors(request)
+                with self.server.state_lock:
+                    initial = self._master_review_inputs()
+                prepared = self.server.master_readiness.prepare(
+                    project_id=str(self.server.catalog["project_id"]),
+                    balanced=initial[1],
+                    listening_master=initial[2],
+                    reviewer_session_key=_workbench_master_reviewer_key(
+                        self.server.catalog["project_id"]
+                    ),
+                    **anchors,
+                )
+                with self.server.state_lock:
+                    final = self._master_review_inputs()
+                    self._require_same_master_review_inputs(initial, final)
+                    self._require_latest_master_readiness_review(anchors)
+                    public_readiness = self._public_master_readiness(
+                        prepared,
+                        selection=final[0],
+                        balanced=final[1],
+                        listening_master=final[2],
+                    )
+                self._json(HTTPStatus.OK, {"readiness": public_readiness})
+                return
+            if parsed.path == "/api/listening-master-readiness":
+                _require_exact_request_keys(
+                    request,
+                    {
+                        "comparison_sha256",
+                        "quality_review_id",
+                        "quality_review_sha256",
+                        "quality_result_sha256",
+                        "heard",
+                        "choice",
+                        "problem_tags",
+                        "notes",
+                    },
+                    label="Listening Master native-level readiness review",
+                )
+                comparison_sha256 = _require_lowercase_sha256(
+                    request.get("comparison_sha256"),
+                    label="native-level readiness comparison_sha256",
+                )
+                anchors = self._master_readiness_anchors(request)
+                with self.server.state_lock:
+                    current = self._master_review_inputs()
+                    completed = self.server.master_readiness.complete(
+                        project_id=str(self.server.catalog["project_id"]),
+                        balanced=current[1],
+                        listening_master=current[2],
+                        comparison_sha256=comparison_sha256,
+                        reviewer_session_key=_workbench_master_reviewer_key(
+                            self.server.catalog["project_id"]
+                        ),
+                        heard=request.get("heard"),
+                        choice=request.get("choice"),
+                        problem_tags=request.get("problem_tags"),
+                        notes=request.get("notes"),
+                        **anchors,
+                    )
+                    prepared = self.server.master_readiness.prepare(
+                        project_id=str(self.server.catalog["project_id"]),
+                        balanced=current[1],
+                        listening_master=current[2],
+                        reviewer_session_key=_workbench_master_reviewer_key(
+                            self.server.catalog["project_id"]
+                        ),
+                        **anchors,
+                    )
+                    if (
+                        prepared.get("comparison_sha256") != comparison_sha256
+                        or prepared.get("review", {}).get(
+                            "readiness_review_id"
+                        )
+                        != completed.get("readiness_review_id")
+                    ):
+                        raise WorkbenchMasterReadinessConflictError(
+                            "native-level readiness publication changed"
+                        )
+                    public_readiness = self._public_master_readiness(
+                        prepared,
+                        selection=current[0],
+                        balanced=current[1],
+                        listening_master=current[2],
+                    )
+                    # This response is the result of the explicit completion
+                    # operation, not another cache-only preparation. Preserve
+                    # the stored review's two truthful durable-feedback effects
+                    # while every product, selection and artifact effect stays
+                    # false.
+                    public_readiness["effects"] = dict(
+                        completed.get("effects", {})
+                    )
+                self._json(HTTPStatus.OK, {"readiness": public_readiness})
+                return
             if parsed.path == "/api/balanced-arrangement":
                 _require_exact_request_keys(
                     request,
@@ -2139,6 +2276,8 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             WorkbenchPackStateConflictError,
             WorkbenchMasterReviewConflictError,
             WorkbenchMasterReviewRevisionConflictError,
+            WorkbenchMasterReadinessConflictError,
+            WorkbenchMasterReadinessGateError,
             WorkbenchSelectionConflictError,
         ) as exc:
             self._error(HTTPStatus.CONFLICT, str(exc))
@@ -2292,9 +2431,9 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             else None
         )
         payload["listening_master"] = public_listening_master
-        # The browser supplies its private reviewer key and exact window only
-        # when it explicitly prepares a blind review. Project loading must not
-        # guess either value or disclose another local reviewer's state.
+        # Project loading must not guess a review window or silently restore a
+        # feedback workflow.  The server derives the private project-scoped
+        # reviewer identity only when the user explicitly prepares a review.
         payload["listening_master_review"] = None
         payload["product_contract"] = product_contract_document()
         payload["product_outputs"] = build_product_output_status(
@@ -2621,6 +2760,70 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     "Master changed; reload before continuing the blind review"
                 )
 
+    def _master_readiness_anchors(
+        self,
+        request: Mapping[str, Any],
+    ) -> dict[str, str]:
+        return {
+            key: _require_lowercase_sha256(
+                request.get(key),
+                label=f"native-level readiness {key}",
+            )
+            for key in (
+                "quality_review_id",
+                "quality_review_sha256",
+                "quality_result_sha256",
+            )
+        }
+
+    def _require_latest_master_readiness_review(
+        self,
+        anchors: Mapping[str, str],
+    ) -> None:
+        """Close preparation/publication races against a newer blind response."""
+
+        latest = self.server.master_reviews.latest_review_for_project_reviewer(
+            project_id=str(self.server.catalog["project_id"]),
+            reviewer_session_key=_workbench_master_reviewer_key(
+                self.server.catalog["project_id"]
+            ),
+        )
+        if (
+            latest is None
+            or latest.get("review_id") != anchors["quality_review_id"]
+            or latest.get("review_sha256")
+            != anchors["quality_review_sha256"]
+        ):
+            raise WorkbenchMasterReadinessConflictError(
+                "blind quality review changed while native-level readiness "
+                "was being prepared"
+            )
+
+    def _require_same_master_review_inputs(
+        self,
+        before: tuple[
+            Mapping[str, Any],
+            Mapping[str, Any],
+            Mapping[str, Any],
+        ],
+        after: tuple[
+            Mapping[str, Any],
+            Mapping[str, Any],
+            Mapping[str, Any],
+        ],
+    ) -> None:
+        identities = (
+            ("selection", "selection_manifest_sha256"),
+            ("balanced control", "manifest_sha256"),
+            ("Listening Master", "manifest_sha256"),
+        )
+        for (label, key), earlier, current in zip(identities, before, after):
+            if earlier.get(key) != current.get(key):
+                raise WorkbenchSelectionConflictError(
+                    f"the {label} changed while native-level readiness audio "
+                    "was being prepared; reload and retry"
+                )
+
     def _public_master_review(
         self,
         prepared: Mapping[str, Any],
@@ -2710,6 +2913,125 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             "maximum_notes_characters": MAXIMUM_NOTES_CHARACTERS,
             "expected_revision": prepared.get("current_revision"),
             "review": review,
+            "effects": prepared.get("effects"),
+        }
+
+    def _public_master_readiness(
+        self,
+        prepared: Mapping[str, Any],
+        *,
+        selection: Mapping[str, Any],
+        balanced: Mapping[str, Any],
+        listening_master: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Register native-level crops and expose a bounded direct projection."""
+
+        comparison_sha256 = _require_lowercase_sha256(
+            prepared.get("comparison_sha256"),
+            label="native-level readiness comparison_sha256",
+        )
+        artifact_hashes = prepared.get("artifact_hashes")
+        if (
+            not isinstance(artifact_hashes, Mapping)
+            or artifact_hashes.get("balanced_control_preview_sha256")
+            != balanced.get("preview", {}).get("sha256")
+            or artifact_hashes.get("listening_master_wav_sha256")
+            != listening_master.get("master", {}).get("sha256")
+            or artifact_hashes.get("listening_master_receipt_sha256")
+            != listening_master.get("receipt", {}).get("sha256")
+        ):
+            raise WorkbenchMasterReadinessConflictError(
+                "native-level readiness artifacts are no longer current"
+            )
+
+        candidates: dict[str, Any] = {}
+        for identity in (BALANCED_CONTROL, LISTENING_MASTER):
+            row = prepared.get("candidates", {}).get(identity)
+            if not isinstance(row, Mapping):
+                raise ValueError("native-level readiness candidate is invalid")
+            record = self.server.master_readiness.media_record(
+                comparison_sha256,
+                identity,
+            )
+            media_id = (
+                f"listening-master-readiness-{identity}-"
+                f"{comparison_sha256[:24]}"
+            )
+            private_record = dict(record)
+            private_record["_freeze_on_serve"] = True
+            self._register_generated_media(media_id, private_record)
+            candidates[identity] = {
+                key: row[key]
+                for key in (
+                    "label",
+                    "format",
+                    "subtype",
+                    "sample_rate",
+                    "channels",
+                    "frames",
+                    "applied_gain_db",
+                    "processing_applied",
+                )
+                if key in row
+            }
+            candidates[identity]["audio"] = {
+                key: value
+                for key, value in row.get("audio", {}).items()
+                if key != "path"
+            }
+            candidates[identity]["audio_url"] = self._media_url(media_id)
+
+        limits = prepared.get("limits")
+        if not isinstance(limits, Mapping):
+            raise ValueError("native-level readiness limits are invalid")
+        review = prepared.get("review")
+        public_review = None
+        if review is not None:
+            if not isinstance(review, Mapping):
+                raise ValueError("native-level readiness review is invalid")
+            readiness_review_id = _require_lowercase_sha256(
+                review.get("readiness_review_id"),
+                label="native-level readiness review identity",
+            )
+            readiness_review_sha256 = _require_lowercase_sha256(
+                review.get("readiness_review_sha256"),
+                label="native-level readiness review SHA-256",
+            )
+            public_review = {
+                "readiness_review_id": readiness_review_id,
+                "readiness_review_sha256": readiness_review_sha256,
+                "response": review.get("response"),
+                "choice": review.get("response", {}).get("choice"),
+                "review_url": (
+                    "/api/listening-master-readiness-export"
+                    f"?readiness_review_id={readiness_review_id}"
+                    f"&token={self.server.token}"
+                ),
+            }
+        return {
+            "schema": prepared.get("schema"),
+            "status": prepared.get("status"),
+            "identity_labelled": True,
+            "native_level": True,
+            "comparison_sha256": comparison_sha256,
+            "selection_manifest_sha256": selection.get(
+                "selection_manifest_sha256"
+            ),
+            "balanced_arrangement_manifest_sha256": balanced.get(
+                "manifest_sha256"
+            ),
+            "listening_master_manifest_sha256": listening_master.get(
+                "manifest_sha256"
+            ),
+            "quality_review": prepared.get("quality_review"),
+            "artifact_hashes": dict(artifact_hashes),
+            "window": prepared.get("window"),
+            "policy": prepared.get("policy"),
+            "candidates": candidates,
+            "choices": prepared.get("choices"),
+            "problem_tags": prepared.get("problem_tags"),
+            "limits": dict(limits),
+            "review": public_review,
             "effects": prepared.get("effects"),
         }
 

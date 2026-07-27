@@ -67,6 +67,11 @@ _MASTER_REVIEW_TRACE_SCHEMAS = frozenset(
         "sunofriend.workbench-listening-master-comparison.v1",
         "sunofriend.workbench-listening-master-review.v1",
         "sunofriend.workbench-listening-master-review-result.v1",
+        (
+            "sunofriend.workbench-listening-master-"
+            "native-readiness-comparison.v1"
+        ),
+        "sunofriend.workbench-listening-master-native-readiness-review.v1",
     }
 )
 
@@ -94,6 +99,15 @@ _ROUTE_OPERATIONS = {
     ),
     "/api/listening-master-review-export": (
         "arrangement.master_review_export"
+    ),
+    "/api/listening-master-readiness/prepare": (
+        "arrangement.master_readiness_prepare"
+    ),
+    "/api/listening-master-readiness": (
+        "arrangement.master_readiness_complete"
+    ),
+    "/api/listening-master-readiness-export": (
+        "arrangement.master_readiness_export"
     ),
     "/api/garageband-export": "handoff.build",
     "/api/garageband-pack-basket": "pack_basket.save",
@@ -133,6 +147,15 @@ _ROUTE_CODE_STEPS = {
     ),
     "/api/listening-master-review-export": (
         "arrangement.master_review_export"
+    ),
+    "/api/listening-master-readiness/prepare": (
+        "arrangement.master_readiness_prepare"
+    ),
+    "/api/listening-master-readiness": (
+        "arrangement.master_readiness_complete"
+    ),
+    "/api/listening-master-readiness-export": (
+        "arrangement.master_readiness_export"
     ),
     "/api/garageband-export": "handoff.build",
     "/api/garageband-pack-plan": "pack.plan",
@@ -243,6 +266,18 @@ _CODE_MAP = {
         "module": "sunofriend.workbench_master_review",
         "symbol": "WorkbenchMasterReviewService.resolution",
     },
+    "arrangement.master_readiness_prepare": {
+        "module": "sunofriend.workbench_master_readiness",
+        "symbol": "WorkbenchMasterReadinessService.prepare",
+    },
+    "arrangement.master_readiness_complete": {
+        "module": "sunofriend.workbench_master_readiness",
+        "symbol": "WorkbenchMasterReadinessService.complete",
+    },
+    "arrangement.master_readiness_export": {
+        "module": "sunofriend.workbench_master_readiness",
+        "symbol": "WorkbenchMasterReadinessService.review",
+    },
     "handoff.build": {
         "module": "sunofriend.workbench_artifacts",
         "symbol": "WorkbenchArtifacts.build_garageband_handoff",
@@ -343,6 +378,15 @@ _OPERATION_LABELS = {
     ),
     "arrangement.master_review_export": (
         "Export one verified Listening Master review or resolution artifact"
+    ),
+    "arrangement.master_readiness_prepare": (
+        "Prepare the resolved quality window at unchanged native levels"
+    ),
+    "arrangement.master_readiness_complete": (
+        "Record separate identity-labelled native-level readiness feedback"
+    ),
+    "arrangement.master_readiness_export": (
+        "Export one verified native-level readiness review"
     ),
     "handoff.build": "Build the compatibility GarageBand handoff",
     "pack_basket.save": "Save a separate export-basket revision",
@@ -493,6 +537,8 @@ class WorkbenchDeveloperTrace:
                     "arrangement.master_review_prepare",
                     "arrangement.master_review_complete",
                     "arrangement.master_review_resolve",
+                    "arrangement.master_readiness_prepare",
+                    "arrangement.master_readiness_complete",
                 },
                 "symbols": _operation_symbols(operation),
                 "started_ns": now,
@@ -797,6 +843,9 @@ def trace_response_facts(route: str, value: Mapping[str, Any]) -> dict[str, Any]
         "/api/listening-master-review",
         "/api/listening-master-review/resolve",
         "/api/listening-master-review-export",
+        "/api/listening-master-readiness/prepare",
+        "/api/listening-master-readiness",
+        "/api/listening-master-readiness-export",
     }:
         wrapper_keys = {
             "/api/listening-master-review/prepare": (
@@ -814,6 +863,9 @@ def trace_response_facts(route: str, value: Mapping[str, Any]) -> dict[str, Any]
                 "listening_master_review",
             ),
             "/api/listening-master-review-export": ("review", "result"),
+            "/api/listening-master-readiness/prepare": ("readiness",),
+            "/api/listening-master-readiness": ("readiness", "review"),
+            "/api/listening-master-readiness-export": ("review",),
         }[route]
         document: Mapping[str, Any] = value
         for wrapper in wrapper_keys:
@@ -1340,6 +1392,8 @@ def _operation_symbols(operation: str) -> list[str]:
         "arrangement.master_review_prepare",
         "arrangement.master_review_complete",
         "arrangement.master_review_resolve",
+        "arrangement.master_readiness_prepare",
+        "arrangement.master_readiness_complete",
     }:
         steps.extend(["validate", operation_step])
     elif operation == "arrangement.master_review_export":
@@ -1349,6 +1403,8 @@ def _operation_symbols(operation: str) -> list[str]:
                 "arrangement.master_review_resolution_read",
             ]
         )
+    elif operation == "arrangement.master_readiness_export":
+        steps.append(operation_step)
     else:
         steps.append(operation_step)
     steps.append("publish")

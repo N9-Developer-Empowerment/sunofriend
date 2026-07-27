@@ -520,6 +520,57 @@ console.log(JSON.stringify({descriptor, snapshot: journal.snapshot()}));
         self.assertNotIn("private-identity", encoded)
         self.assertNotIn("secret", encoded)
 
+    def test_native_readiness_routes_explain_separate_cache_and_feedback(
+        self,
+    ) -> None:
+        result = self.run_node(
+            """
+let time = 0;
+const routes = [
+  '/api/listening-master-readiness/prepare?token=secret',
+  '/api/listening-master-readiness?token=secret',
+  '/api/listening-master-readiness-export?review_id=private-review-identity&token=secret',
+];
+const journal = developer.createOperationJournal({now: () => ++time});
+for (const route of routes) {
+  const operation = journal.start(route, route.includes('export') ? 'GET' : 'POST');
+  operation.complete({statusCode: 200});
+}
+console.log(JSON.stringify({
+  descriptors: routes.map(route => developer.routeDescriptor(route)),
+  records: journal.snapshot().records,
+}));
+"""
+        )
+
+        descriptors = result["descriptors"]
+        self.assertEqual(
+            [row["operation"] for row in descriptors],
+            [
+                "arrangement.master_readiness_prepare",
+                "arrangement.master_readiness_complete",
+                "arrangement.master_readiness_export",
+            ],
+        )
+        self.assertEqual(
+            [row["durableEffect"] for row in descriptors],
+            [True, True, False],
+        )
+        self.assertIn(
+            "WorkbenchMasterReadinessService.prepare",
+            descriptors[0]["symbols"][-1],
+        )
+        self.assertIn(
+            "WorkbenchMasterReadinessService.complete",
+            descriptors[1]["symbols"][-1],
+        )
+        self.assertIn(
+            "WorkbenchMasterReadinessService.review",
+            descriptors[2]["symbols"][-1],
+        )
+        self.assertNotIn("private-review-identity", json.dumps(result))
+        self.assertNotIn("secret", json.dumps(result))
+
 
 if __name__ == "__main__":
     unittest.main()

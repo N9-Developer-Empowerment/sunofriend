@@ -169,6 +169,33 @@
       ]),
       durableEffect: false,
     }),
+    "/api/listening-master-readiness/prepare": Object.freeze({
+      operation: "arrangement.master_readiness_prepare",
+      label: "Prepare the resolved quality window at unchanged native levels",
+      symbols: Object.freeze([
+        "sunofriend.workbench_server._WorkbenchHandler.do_POST",
+        "sunofriend.workbench_master_readiness.WorkbenchMasterReadinessService.prepare",
+      ]),
+      durableEffect: true,
+    }),
+    "/api/listening-master-readiness": Object.freeze({
+      operation: "arrangement.master_readiness_complete",
+      label: "Record separate identity-labelled native-level readiness feedback",
+      symbols: Object.freeze([
+        "sunofriend.workbench_server._WorkbenchHandler.do_POST",
+        "sunofriend.workbench_master_readiness.WorkbenchMasterReadinessService.complete",
+      ]),
+      durableEffect: true,
+    }),
+    "/api/listening-master-readiness-export": Object.freeze({
+      operation: "arrangement.master_readiness_export",
+      label: "Export one verified native-level readiness review",
+      symbols: Object.freeze([
+        "sunofriend.workbench_server._WorkbenchHandler.do_GET",
+        "sunofriend.workbench_master_readiness.WorkbenchMasterReadinessService.review",
+      ]),
+      durableEffect: false,
+    }),
     "/api/garageband-pack-plan": Object.freeze({
       operation: "pack.plan",
       label: "Derive the exact eligible GarageBand pack plan",
@@ -509,6 +536,12 @@
     if (operation.operation === "arrangement.master_review_resolve") {
       return "yes, a separate local resolution artifact only; never a selection, default, promotion or product change";
     }
+    if (operation.operation === "arrangement.master_readiness_prepare") {
+      return "yes, a private unchanged-level comparison cache only; no feedback or product change";
+    }
+    if (operation.operation === "arrangement.master_readiness_complete") {
+      return "yes, a separate local readiness-feedback artifact only; no Workbench decision or product change";
+    }
     return "yes, only through this explicit production command";
   }
 
@@ -595,6 +628,8 @@
           "arrangement.master_review_prepare",
           "arrangement.master_review_complete",
           "arrangement.master_review_resolve",
+          "arrangement.master_readiness_prepare",
+          "arrangement.master_readiness_complete",
         ].includes(record.operation);
     return {
       ...record,

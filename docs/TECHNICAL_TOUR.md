@@ -56,6 +56,7 @@ The most important architectural separation is:
 | MIDI-derived song-interpretation WAV | Rebuildable cache | Gain-only render of reviewed selected MIDI and DAW starting recipe; source stems provide timing, horizon and level evidence but are not mixed into it |
 | Optional listening master | Rebuildable content-addressed cache or explicit CLI output | Comparative fixed-policy challenger, not a release master or preference |
 | Blind Listening Master review | Owner-only append ledger plus separate resolution | One explicit anonymous response revision and, only after another explicit action, its auditable A/B identity mapping; neither is a musical decision, product selection or promotion |
+| Native-level readiness review | Separate owner-only immutable ledger plus rebuildable PCM24 crops | One identity-labelled response on the exact resolved quality-review frames at unchanged delivered levels; it cannot revise quality evidence, select a product or approve a release master |
 
 ## 1. CLI and application entry points
 

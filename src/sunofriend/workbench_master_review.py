@@ -35,6 +35,23 @@ from .workbench_listening_master import (
     WORKBENCH_LISTENING_MASTER_SCHEMA,
     _validated_balanced_binding,
 )
+from .workbench_master_review_audio import (
+    MASTER_REVIEW_LEVEL_POLICY,
+    MAXIMUM_ATTENUATION_DB,
+    MAXIMUM_AUDIO_BYTES,
+    MAXIMUM_FINAL_RMS_MISMATCH_DB,
+    MINIMUM_RMS_DBFS,
+    absolute_path as _absolute_path,
+    open_owner_only_regular as _open_owner_only_regular,
+    pairwise_level_match as _pairwise_level_match,
+    private_file_record as _private_file_record,
+    read_audio_window as _read_audio_window,
+    require_owner_only_regular_file as _require_owner_only_regular_file,
+    require_same_identity as _require_same_identity,
+    validated_private_record as _validated_private_record,
+    verified_output_audio as _verified_output_audio,
+    write_pcm16 as _write_pcm16,
+)
 
 
 MASTER_REVIEW_COMPARISON_SCHEMA = "sunofriend.workbench-listening-master-comparison.v1"
@@ -42,7 +59,6 @@ MASTER_REVIEW_AUDIO_SCHEMA = "sunofriend.workbench-listening-master-review-audio
 MASTER_REVIEW_SCHEMA = "sunofriend.workbench-listening-master-review.v1"
 MASTER_REVIEW_RESULT_SCHEMA = "sunofriend.workbench-listening-master-review-result.v1"
 MASTER_REVIEW_POLICY = "blind-exact-window-fixed-rms-attenuation-only-v1"
-MASTER_REVIEW_LEVEL_POLICY = "pairwise-fixed-window-rms-attenuation-only-v1"
 MASTER_REVIEW_ASSIGNMENT_POLICY = "secret-random-per-comparison-v1"
 
 BALANCED_CONTROL = "balanced_control"
@@ -81,15 +97,10 @@ MASTER_REVIEW_PROBLEM_TAGS = frozenset(
 
 MINIMUM_WINDOW_SECONDS = 0.5
 MAXIMUM_WINDOW_SECONDS = 15.0
-MINIMUM_RMS_DBFS = -60.0
-MAXIMUM_ATTENUATION_DB = 18.0
-MAXIMUM_FINAL_RMS_MISMATCH_DB = 0.05
 MAXIMUM_NOTES_CHARACTERS = 2_000
 MAXIMUM_REVIEWER_KEY_CHARACTERS = 128
 MAXIMUM_PROBLEM_TAGS_PER_CANDIDATE = 8
-MAXIMUM_AUDIO_BYTES = 4 * 1024 * 1024 * 1024
 MAXIMUM_JSON_BYTES = 4 * 1024 * 1024
-_FULL_SCALE_GUARD = 1.0
 _AUDIO_DIRECTORY = "audio"
 _DATABASE_NAME = "reviews.sqlite3"
 _MANIFEST_NAME = "manifest.json"
@@ -363,6 +374,58 @@ class WorkbenchMasterReviewService:
         _validate_stored_review(document)
         self._require_review_binding(document)
         return _json_copy(document)
+
+    def latest_review_for_project_reviewer(
+        self,
+        *,
+        project_id: str,
+        reviewer_session_key: str,
+    ) -> dict[str, Any] | None:
+        """Return the latest appended review across every project comparison."""
+
+        checked_project_id = _bounded_text(
+            project_id,
+            label="project_id",
+            maximum=128,
+        )
+        reviewer_session_id = _reviewer_session_id(reviewer_session_key)
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT reviews.review_id, reviews.comparison_sha256,
+                       reviews.revision, reviews.reviewer_session_id,
+                       reviews.review_json
+                FROM review_events AS reviews
+                INNER JOIN comparison_sessions AS sessions
+                    ON sessions.comparison_sha256 = reviews.comparison_sha256
+                WHERE sessions.project_id = ?
+                  AND reviews.reviewer_session_id = ?
+                ORDER BY reviews.sequence DESC
+                LIMIT 1
+                """,
+                (checked_project_id, reviewer_session_id),
+            ).fetchone()
+        if row is None:
+            return None
+        try:
+            value = json.loads(str(row[4]))
+        except json.JSONDecodeError as exc:
+            raise ValueError("Listening Master review record is invalid") from exc
+        evidence = value.get("evidence") if isinstance(value, dict) else None
+        if (
+            not isinstance(value, dict)
+            or value.get("review_id") != row[0]
+            or value.get("comparison_sha256") != row[1]
+            or value.get("revision") != row[2]
+            or value.get("reviewer_session_id") != row[3]
+            or value.get("reviewer_session_id") != reviewer_session_id
+            or not isinstance(evidence, Mapping)
+            or evidence.get("project_id") != checked_project_id
+        ):
+            raise ValueError("Listening Master review record is invalid")
+        _validate_stored_review(value)
+        self._require_review_binding(value)
+        return _json_copy(value)
 
     def resolution(self, review_id: str) -> dict[str, Any] | None:
         """Return an existing verified resolution, or ``None`` before resolve."""
@@ -1386,262 +1449,6 @@ def _review_window(
     }
 
 
-def _pairwise_level_match(
-    audio: Mapping[str, Any],
-) -> tuple[dict[str, Any], dict[str, Any]]:
-    np = _numpy_module()
-    if set(audio) != {BALANCED_CONTROL, LISTENING_MASTER}:
-        raise ValueError("Listening Master review requires exactly two inputs")
-    rms = {name: _rms(np, values) for name, values in audio.items()}
-    peaks = {
-        name: float(np.max(np.abs(values))) if len(values) else 0.0
-        for name, values in audio.items()
-    }
-    if any(
-        not math.isfinite(value) or _dbfs(value) < MINIMUM_RMS_DBFS
-        for value in rms.values()
-    ):
-        raise ValueError(
-            "Listening Master review audio is silent, non-finite, or below "
-            f"{MINIMUM_RMS_DBFS:g} dBFS RMS"
-        )
-    if any(
-        not math.isfinite(value) or value >= _FULL_SCALE_GUARD
-        for value in peaks.values()
-    ):
-        raise ValueError("Listening Master review audio is clipped or non-finite")
-    target = min(rms.values())
-    scales = {name: target / value for name, value in rms.items()}
-    gains = {name: 20.0 * math.log10(scale) for name, scale in scales.items()}
-    if any(gain < -MAXIMUM_ATTENUATION_DB for gain in gains.values()):
-        raise ValueError(
-            "Listening Master review candidates differ by more than "
-            f"{MAXIMUM_ATTENUATION_DB:g} dB"
-        )
-    matched = {
-        name: np.asarray(values * scales[name], dtype=np.float64)
-        for name, values in audio.items()
-    }
-    after = {name: _rms(np, values) for name, values in matched.items()}
-    return matched, {
-        "policy": MASTER_REVIEW_LEVEL_POLICY,
-        "target_rms": round(target, 12),
-        "minimum_rms_dbfs": MINIMUM_RMS_DBFS,
-        "maximum_attenuation_db": MAXIMUM_ATTENUATION_DB,
-        "limiter_used": False,
-        "compression_used": False,
-        "equalisation_used": False,
-        "inputs": {
-            name: {
-                "rms_before": round(rms[name], 12),
-                "rms_before_dbfs": round(_dbfs(rms[name]), 6),
-                "sample_peak_before": round(peaks[name], 12),
-                "sample_peak_before_dbfs": round(_dbfs(peaks[name]), 6),
-                "linear_scale": round(scales[name], 12),
-                "applied_gain_db": round(gains[name], 6),
-                "rms_after": round(after[name], 12),
-                "rms_after_dbfs": round(_dbfs(after[name]), 6),
-            }
-            for name in (BALANCED_CONTROL, LISTENING_MASTER)
-        },
-    }
-
-
-def _read_audio_window(
-    path: Path,
-    *,
-    expected: Mapping[str, Any],
-    start_frame: int,
-    frame_count: int,
-    label: str,
-) -> Any:
-    descriptor = _open_owner_only_regular(path, label=label)
-    before = os.fstat(descriptor)
-    try:
-        digest = hashlib.sha256()
-        total = 0
-        while True:
-            block = os.read(descriptor, 1024 * 1024)
-            if not block:
-                break
-            digest.update(block)
-            total += len(block)
-            if total > MAXIMUM_AUDIO_BYTES:
-                raise ValueError(f"{label} exceeds the supported byte limit")
-        if total != expected.get("bytes") or digest.hexdigest() != expected.get(
-            "sha256"
-        ):
-            raise ValueError(f"{label} changed before review decoding")
-        os.lseek(descriptor, 0, os.SEEK_SET)
-        with os.fdopen(os.dup(descriptor), "rb") as handle:
-            with _soundfile_module().SoundFile(handle) as source:
-                source.seek(start_frame)
-                values = source.read(
-                    frame_count,
-                    dtype="float64",
-                    always_2d=True,
-                )
-        after = os.fstat(descriptor)
-        current = os.stat(path, follow_symlinks=False)
-        _require_same_identity(before, after, current, total=total, label=label)
-    finally:
-        os.close(descriptor)
-    np = _numpy_module()
-    if len(values) != frame_count or not np.all(np.isfinite(values)):
-        raise ValueError(f"{label} review window is incomplete or non-finite")
-    return values
-
-
-def _write_pcm16(path: Path, values: Any, sample_rate: int) -> None:
-    _soundfile_module().write(
-        str(path),
-        values,
-        sample_rate,
-        format="WAV",
-        subtype="PCM_16",
-    )
-    path.chmod(0o600)
-    _require_owner_only_regular_file(path)
-
-
-def _verified_output_audio(
-    path: Path,
-    *,
-    expected_frames: int,
-    expected_sample_rate: int,
-    expected_channels: int,
-) -> tuple[dict[str, Any], dict[str, Any]]:
-    record = _private_file_record(
-        path,
-        label="review output",
-        maximum_bytes=MAXIMUM_AUDIO_BYTES,
-    )
-    soundfile = _soundfile_module()
-    info = soundfile.info(str(path))
-    values, sample_rate = soundfile.read(str(path), dtype="float64", always_2d=True)
-    np = _numpy_module()
-    if (
-        str(info.format) != "WAV"
-        or str(info.subtype) != "PCM_16"
-        or int(sample_rate) != expected_sample_rate
-        or int(info.channels) != expected_channels
-        or int(info.frames) != expected_frames
-        or not np.all(np.isfinite(values))
-    ):
-        raise RuntimeError("Listening Master review output geometry changed")
-    rms = _rms(np, values)
-    peak = float(np.max(np.abs(values))) if len(values) else 0.0
-    if peak >= _FULL_SCALE_GUARD:
-        raise RuntimeError("Listening Master review output is clipped")
-    return record, {
-        "sample_rate": int(sample_rate),
-        "channels": int(info.channels),
-        "frames": int(info.frames),
-        "rms_dbfs": round(_dbfs(rms), 6),
-        "sample_peak_dbfs": round(_dbfs(peak), 6),
-    }
-
-
-def _validated_private_record(value: Any, *, label: str) -> dict[str, Any]:
-    if not isinstance(value, Mapping):
-        raise ValueError(f"{label} record is invalid")
-    path_value = value.get("path")
-    if not isinstance(path_value, str) or not path_value:
-        raise ValueError(f"{label} path is invalid")
-    actual = _private_file_record(
-        _absolute_path(path_value),
-        label=label,
-        maximum_bytes=MAXIMUM_AUDIO_BYTES,
-    )
-    if (
-        value.get("name") != actual["name"]
-        or value.get("bytes") != actual["bytes"]
-        or value.get("sha256") != actual["sha256"]
-    ):
-        raise ValueError(f"{label} changed")
-    return actual
-
-
-def _private_file_record(
-    path: Path,
-    *,
-    label: str,
-    maximum_bytes: int,
-) -> dict[str, Any]:
-    canonical = _absolute_path(path)
-    descriptor = _open_owner_only_regular(canonical, label=label)
-    before = os.fstat(descriptor)
-    try:
-        if before.st_size > maximum_bytes:
-            raise ValueError(f"{label} exceeds the supported byte limit")
-        digest = hashlib.sha256()
-        total = 0
-        while True:
-            block = os.read(descriptor, 1024 * 1024)
-            if not block:
-                break
-            total += len(block)
-            if total > maximum_bytes:
-                raise ValueError(f"{label} exceeds the supported byte limit")
-            digest.update(block)
-        after = os.fstat(descriptor)
-        current = os.stat(canonical, follow_symlinks=False)
-        _require_same_identity(before, after, current, total=total, label=label)
-    finally:
-        os.close(descriptor)
-    return {
-        "path": str(canonical),
-        "name": canonical.name,
-        "bytes": total,
-        "sha256": digest.hexdigest(),
-    }
-
-
-def _open_owner_only_regular(path: Path, *, label: str) -> int:
-    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
-    try:
-        descriptor = os.open(path, flags)
-    except OSError as exc:
-        raise ValueError(f"{label} is not a readable regular file") from exc
-    try:
-        details = os.fstat(descriptor)
-        if not stat.S_ISREG(details.st_mode) or stat.S_IMODE(details.st_mode) & 0o077:
-            raise ValueError(f"{label} is not an owner-only regular file")
-    except Exception:
-        os.close(descriptor)
-        raise
-    return descriptor
-
-
-def _require_same_identity(
-    before: os.stat_result,
-    after: os.stat_result,
-    current: os.stat_result,
-    *,
-    total: int,
-    label: str,
-) -> None:
-    identity = (
-        int(before.st_dev),
-        int(before.st_ino),
-        int(before.st_size),
-        int(before.st_mtime_ns),
-        int(before.st_ctime_ns),
-    )
-    if total != int(before.st_size) or any(
-        (
-            int(value.st_dev),
-            int(value.st_ino),
-            int(value.st_size),
-            int(value.st_mtime_ns),
-            int(value.st_ctime_ns),
-        )
-        != identity
-        for value in (after, current)
-    ):
-        raise ValueError(f"{label} changed while it was being read")
-
-
 def _heard(value: Any) -> dict[str, bool]:
     if (
         not isinstance(value, Mapping)
@@ -1963,16 +1770,6 @@ def _require_owner_only_directory(path: Path) -> None:
         raise ValueError("review storage must be an owner-only directory")
 
 
-def _require_owner_only_regular_file(path: Path) -> None:
-    details = os.stat(path, follow_symlinks=False)
-    if (
-        path.is_symlink()
-        or not stat.S_ISREG(details.st_mode)
-        or stat.S_IMODE(details.st_mode) & 0o077
-    ):
-        raise ValueError("review storage must contain owner-only regular files")
-
-
 def _remove_private_tree(path: Path) -> None:
     if not path.exists() or path.is_symlink():
         return
@@ -1993,14 +1790,6 @@ def _fsync_directory(path: Path) -> None:
         os.fsync(descriptor)
     finally:
         os.close(descriptor)
-
-
-def _absolute_path(value: str | Path) -> Path:
-    expanded = Path(value).expanduser()
-    absolute = Path(os.path.abspath(os.fspath(expanded)))
-    if absolute.is_symlink():
-        raise ValueError("review path must not be a symlink")
-    return absolute.parent.resolve() / absolute.name
 
 
 def _without_path(value: Mapping[str, Any]) -> dict[str, Any]:
@@ -2077,34 +1866,6 @@ def _nonnegative_int(value: Any, *, label: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise ValueError(f"{label} must be a non-negative integer")
     return value
-
-
-def _rms(np: Any, values: Any) -> float:
-    return float(np.sqrt(np.mean(np.square(values, dtype=np.float64))))
-
-
-def _dbfs(value: float) -> float:
-    return 20.0 * math.log10(max(float(value), 1e-12))
-
-
-def _numpy_module() -> Any:
-    try:
-        import numpy as np
-    except ImportError as exc:  # pragma: no cover - dependency boundary
-        raise RuntimeError(
-            "Listening Master review requires NumPy; install Sunofriend audio extras"
-        ) from exc
-    return np
-
-
-def _soundfile_module() -> Any:
-    try:
-        import soundfile
-    except ImportError as exc:  # pragma: no cover - dependency boundary
-        raise RuntimeError(
-            "Listening Master review requires SoundFile; install Sunofriend audio extras"
-        ) from exc
-    return soundfile
 
 
 def _json_copy(value: Any) -> Any:

@@ -53,10 +53,11 @@ guided forms.
      fixed-policy Listening Master challenger after the current balanced
      selected-MIDI WAV has been explicitly created in Workbench. It exposes no
      mastering controls, records no preference, and leaves listening/download
-     comparison plus the bounded blind review in Workbench.
+     comparison plus the bounded blind quality review, explicit resolution and
+     same-window identity-labelled native-level readiness review in Workbench.
      There is no durable conversion job ledger or automatic retry. Broader
-     structured improvement feedback remains planned; the implemented blind
-     master review records only an explicit local A/B response. Workbench
+     structured improvement feedback remains planned; the implemented master
+     reviews record only their explicit, separate local responses. Workbench
      remains the rich visual listening, review,
      rendering and download surface. The TUI enables the read-only Developer
      Inspector by default.
@@ -476,6 +477,27 @@ guided forms.
   assignment. Neither action may alter Workbench decision events, MIDI,
   selection, ranking, defaults, either product artifact, product completion or
   GarageBand Pack state, and a resolved result must never imply promotion.
+  Only after that latest blind response is complete and explicitly resolved
+  may Workbench offer the separate identity-labelled native-level readiness
+  review. Determine latest across every comparison window for that project
+  and local reviewer, not only revisions within the submitted window. Bind it
+  to the quality review ID/SHA, resolution SHA, current
+  control/master manifests and the same exact canonical frame window. Do not
+  accept new times, paths, gain values or processing parameters. Write private
+  PCM24 Balanced control and Listening Master crops at linear scale `1.0` and
+  applied gain `0.0 dB`; do not match, boost, attenuate, normalise, limit,
+  compress, equalise, resample, shift or stretch them. Keep both browser
+  volumes at unity and do not autoplay. On cache reuse and restart, re-read
+  the freshly hash-verified exact source frames and require sample equality
+  with each PCM24 crop; never trust a self-rehashed local crop manifest alone.
+  Show identities honestly because A/B has already been resolved. Require
+  explicit heard-control and heard-master confirmations plus exactly one of
+  balanced control, Listening Master, equivalent, neither or cannot-tell.
+  Reuse the bounded tags and private-note limits. Store the response in a
+  separate owner-only immutable ledger: replay an exact retry, conflict on a
+  changed retry, and expose export only as a read. Readiness evidence must not
+  revise the blind quality choice, approve a release master, promote either
+  file or change any Workbench/MIDI/product/default/pack state.
   Both routes use fixed policy
   `ffmpeg-loudnorm-two-pass-fixed-horizon-v1`: two-pass FFmpeg EBU R128
   analysis/rendering at −16 LUFS integrated, 11 LU loudness-range target and

@@ -597,6 +597,28 @@ musical-decision history, while prepared A/B audio remains rebuildable private
 cache data. See
 [Musical rendering and listening mastering](MUSICAL_RENDERING_AND_MASTERING.md).
 
+`workbench_master_readiness.WorkbenchMasterReadinessService` is a sibling
+application boundary, not a mode in the blind-review service. It accepts only
+the latest completed and explicitly resolved quality review for the same
+project-scoped reviewer across all comparison windows and current immutable
+artifacts. Its comparison hash binds the quality review/result hashes and
+reuses that review's canonical frame window. It writes direct-identity PCM24
+crops at zero applied gain and, on every cache load, re-reads the hash-pinned
+exact source frames and requires sample equality. It stores
+at most one immutable readiness response per quality result/reviewer; an exact
+retry is replayed and a changed retry conflicts. Its audio cache and SQLite
+ledger are separate from both `WorkbenchStore` and the quality ledger.
+
+Verified owner-only file reads, exact-frame decoding, PCM16 quality-crop
+writing and audio measurements live in
+`workbench_master_review_audio`. This shared internal security boundary keeps
+the two service schemas, persistence rules and musical questions isolated
+while avoiding duplicated file-verification code. The loopback server remains
+the only browser adapter: it derives the reviewer key, registers frozen media
+capabilities and projects bounded path-free fields. Developer Inspector labels
+readiness preparation as private rebuildable cache work, completion as
+separate feedback and export as a read.
+
 `sunofriend.workbench-balanced-arrangement.v1` points to the private WAV,
 `sunofriend.workbench-balanced-mix-receipt.v1` provenance receipt and
 GarageBand fader recipe. The receipt pins project/selection/BPM identity, every

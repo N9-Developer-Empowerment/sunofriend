@@ -2,7 +2,8 @@
 
 Status: paired product contract, Workbench/TUI presentation and explicit
 Workbench, native TUI and CLI Listening Master routes implemented; the first
-bounded blinded receipt-bound Workbench review is implemented; any reviewed
+bounded blinded receipt-bound Workbench review, separate resolution and gated
+identity-labelled native-level readiness review are implemented; any reviewed
 promotion remains deliberately unimplemented
 
 Sunofriend has two linked creative outputs: reviewed, editable MIDI and a
@@ -215,6 +216,35 @@ selection, ranking, defaults, required-product completion, Workbench decision
 events or GarageBand pack. A resolved preference is evidence for future
 analysis, not automatic promotion.
 
+## Check native delivered-level readiness after quality is frozen
+
+Only after the latest blind response has been completed and explicitly
+resolved can Workbench prepare the second, identity-labelled stage. It reuses
+the first comparison's exact canonical frame window; the reviewer cannot move
+the bounds or submit paths, gain targets or processing parameters. Latest is
+evaluated across every comparison window for that project and local reviewer,
+so a superseded resolved excerpt cannot be reused.
+
+The Balanced control and Listening Master crops are written as private PCM24
+WAVs at linear scale `1.0` and applied gain `0.0 dB`. Their different native
+levels are intentional evidence. No matching, boost, attenuation,
+normalisation, limiting, compression, EQ, resampling, time shift or stretch is
+allowed, and both browser audio elements stay at unity volume. Identities are
+shown because the same reviewer has already resolved the A/B mapping. Cached
+crops are rechecked sample-for-sample against freshly verified source frames
+after restart, rather than trusted from a locally rewritten manifest.
+
+The listener explicitly confirms hearing both labelled files and answers which
+is more useful at its delivered level, or equivalent, neither or cannot tell.
+This response is immutable for the exact quality result and local reviewer:
+an exact network retry replays the verified record, while a changed retry
+conflicts. It lives in its own owner-only ledger and can be exported locally.
+
+This stage does not reinterpret the earlier processing-quality choice and is
+not release-master approval. Preparing, playing, completing or exporting it
+changes no audio product, MIDI, selection, ranking, default, completion state
+or GarageBand pack.
+
 ## Create or reuse Listening Master v1 in the Guided Local Studio
 
 The preferred terminal journey uses `sunofriend tui`:
@@ -395,9 +425,11 @@ produce a control/challenger comparison.
 
 ## Next acceptance increments
 
-1. Add a secondary, explicitly labelled native-level readiness review only
-   after the matched-level quality choice is frozen, so loudness cannot bias
-   the first judgment.
+1. **Implemented:** a secondary, explicitly labelled native-level readiness
+   review becomes available only after the latest matched-level quality choice
+   is complete and explicitly resolved. It reuses that exact frame window and
+   writes unchanged-level PCM24 crops at 0 dB gain, so delivered loudness
+   cannot bias or rewrite the first judgment.
 2. Add complete-instrument challengers one role at a time, starting with bass
    and keys, while keeping the MIDI fixed.
 3. Compare balance challengers only after instrumentation is held constant.

@@ -981,9 +981,50 @@ They change no candidate decision, selected MIDI, ranking, default, balanced
 or mastered WAV, product-completion state or GarageBand pack. Playback,
 switching, seeking, checkbox changes and draft text write nothing.
 
-The no-silent-promotion contract and next native-level readiness experiment
-are in
+The no-silent-promotion contract and rendering context are in
 [Musical rendering and listening mastering](MUSICAL_RENDERING_AND_MASTERING.md).
+
+### Identity-labelled native-level readiness review
+
+After the latest blind quality review has been completed and explicitly
+resolved, Workbench offers **Prepare native-level readiness**. This is a
+second question, not a replacement for the first one:
+
+- the blind matched-level stage asks which processing is more musically useful
+  without a simple louder-is-better advantage;
+- the native-level stage asks which delivered file is more useful at its
+  actual level.
+
+The second stage cannot choose a new time range. It is cryptographically bound
+to the latest resolved quality review and reuses its exact start frame, end
+frame, sample rate, channels and frame count. The identities are labelled
+**Balanced control** and **Listening Master** because the reviewer has already
+resolved A/B; pretending to blind the same pair again would be misleading.
+“Latest” is project-and-reviewer-wide across every comparison window, not
+merely the newest revision inside the requested window.
+
+Sunofriend writes private PCM24 crops at linear scale `1.0` and applied gain
+`0.0 dB`. It performs no matching, boost, attenuation, normalisation,
+limiting, compression, EQ, resampling, shift or stretch. Both browser players
+remain at unity volume and share one playhead. Playback and draft changes
+write nothing. On cache reuse or restart, each crop is decoded again and
+compared sample-for-sample with freshly hash-verified exact source frames;
+rewriting a crop and its local manifest therefore fails closed.
+
+Completion requires explicit confirmation that both labelled files were
+heard, one of Balanced control, Listening Master, equivalent, neither or
+cannot tell, and optionally the same bounded problem tags and private note.
+The result is stored in a separate owner-only readiness ledger. An exact
+repeat returns the verified existing response; a different response for the
+same frozen quality result conflicts instead of silently overwriting it.
+
+The readiness review does not alter the earlier blind review or resolution.
+It is evidence, not release-master approval or automatic promotion, and
+changes no Workbench decision, selected MIDI, ranking, default, balanced or
+master WAV, product-completion state, Pack Composer basket or GarageBand ZIP.
+Its JSON export is a read-only local download. With Developer Inspector
+enabled, preparation appears as a private rebuildable cache operation,
+completion as separate readiness feedback and export as a read.
 
 Only the buttons under **Save after listening** append `full_mix` decisions.
 Playback and mixer activity never counts as preference, including when the
