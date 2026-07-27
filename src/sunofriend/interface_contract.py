@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-07-27.4"
+INTERFACE_CONTRACT_VERSION = "2026-07-27.5"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -163,8 +163,14 @@ def render_skill_interface_reference() -> str:
             "listening-master challenger from the exact current balanced",
             "control. The gain-only control remains unchanged; the operation",
             "records no feedback or preference and changes no MIDI, selection,",
-            "default or GarageBand pack. Blinded control-versus-challenger",
-            "feedback remains deferred.",
+            "default or GarageBand pack.",
+            "",
+            "Workbench can then prepare one exact 0.5–15 second blinded,",
+            "fixed-window sample-RMS-matched control-versus-challenger review.",
+            "Only explicit completion records a separate local feedback",
+            "artifact; a second explicit action reveals the A/B assignment.",
+            "Neither action promotes an artifact or changes MIDI, selection,",
+            "ranking, product completion, defaults or the GarageBand pack.",
             "",
             "## Guided entry points",
             "",

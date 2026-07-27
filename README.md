@@ -60,6 +60,7 @@ choice; scores and model labels never create an automatic global winner.
 | Review and hand off multi-process MIDI alternatives in one local site | `workbench` | Loopback-only Project Overview, precise decoded 0.5–15 second per-stem and canonical selected-arrangement loops, exact canonical full-song chunk playback, a bounded full-song timeline, a coarse arbitrary mixer, append-only decisions, private offline review export and an exact-selected-MIDI GarageBand ZIP; no automatic winner or submission endpoint |
 | Create the MIDI-derived song-interpretation WAV | `workbench` → **Build and hear song interpretation** → **Create song-interpretation WAV** | Renders the reviewed selected MIDI through neutral instruments with source-referenced timing, horizon and level evidence, measured summed-group calibration, a bounded drum-bus guard, audition normalisation and −1 dBFS sample-peak protection; source stems are not mixed into the WAV, and the dry unity control, selected MIDI and decisions remain unchanged |
 | Create a separate listening-master challenger | TUI **Master** tab, Workbench or `listening-master` | From the exact balanced v3 control, use the native guided action, the Workbench button or expert fresh-path CLI; fixed two-pass FFmpeg render plus encoded-artifact verification at −16 LUFS integrated, 11 LU loudness-range target and −1 dBTP; exact frame horizon, PCM24 WAV, path-free receipt, `mastered: true` and `release_master: false` |
+| Blind-review the balanced control against its Listening Master | Workbench → **Prepare blind comparison** | One exact 0.5–15 second anonymous A/B window with louder-only fixed-window sample-RMS attenuation, explicit heard/choice evidence, a separate local feedback revision and an optional second identity-resolution action; neither action promotes a winner or changes MIDI, product audio or the GarageBand pack |
 | Understand Workbench code and state transitions | `workbench --developer-inspector` | Optional, loopback-only, read-only application operation/state explorer; it is not a line debugger, evaluator, shell or filesystem browser and has no decision, basket, MIDI, render or export effect |
 | Learn the workflow and verify one exact GarageBand handoff | `garageband-pack-review`, `garageband-pack-resolve` | Eight-screen interactive tutorial, 10 one-at-a-time comprehension questions, then the two explicit GarageBand and local-usability checks; the resolver re-verifies the downloaded ZIP and has no MIDI, selection, basket, upload or feedback effect |
 | Explore reusable Clip v1 parts in Workbench | `workbench --clip-library --phase6-acceptance --phase6-pack` | Phase 6 Increment 6.0 complete: explicit gated read-only browse/search, path-free detail and lineage, neutral audition and deterministic Clip reconstruction; all three flags are required and no Clip, project, decision or basket is changed |
@@ -201,8 +202,11 @@ agent skill or graphical Workbench. Phase 5.10a provides project orientation,
 compact primary MIDI maps, diagnostics and the safely owned Workbench with the
 Developer Inspector available by default. The initial Phase 5.10b increment
 adds an explicit **Convert all stems** action over the production `listen-all`
-and `vocal-melody` engines. A durable job ledger/restart recovery, additional
-operation forms and structured improvement feedback remain planned.
+and `vocal-melody` engines. A durable conversion job ledger/restart recovery
+and additional operation forms remain planned. Broader TUI feedback about
+processes, roles, instruments and DAW outcomes also remains planned; the
+bounded Workbench Listening Master A/B review below is the first narrow
+feedback slice.
 The accepted Pupsies balanced WAV establishes the paired product goal:
 Sunofriend should provide reviewed editable MIDI and a clear, good-sounding
 MIDI-derived song-interpretation WAV. Source stems provide timing, horizon and
@@ -211,7 +215,8 @@ Workbench and standalone `listening-master` challenger paths preserve the
 praised gain-only control and add fixed integrated-loudness and true-peak
 processing for comparison without claiming release approval. The TUI
 **Master** tab now exposes the same fixed operation with protected progress;
-blinded comparison feedback remains planned. See
+Workbench now adds a bounded blinded, level-matched review without changing
+either audio file or promoting a winner. See
 **[Musical rendering and listening mastering](docs/MUSICAL_RENDERING_AND_MASTERING.md)**
 for the golden evidence, quality ladder, feedback boundary and maintainability
 plan.
@@ -1100,9 +1105,25 @@ that control, then build a deterministic advisory history after re-verifying
 them. Separate artifact and domain-hashed reviewer/session identities support
 independent reviews without storing the raw key. An unmastered control must
 rate mastering as `cannot_tell`. It never learns from playback or silently
-changes a candidate, instrument, mix, ranking or default. A guided blinded
-control-versus-challenger feedback form in Workbench/TUI is the next increment;
-the current Workbench and TUI mastering actions create or reuse evidence only.
+changes a candidate, instrument, mix, ranking or default.
+
+Workbench now supplies the first guided blinded control-versus-challenger
+review. After both exact players exist, choose one representative 0.5–15
+second window and **Prepare blind comparison**. Candidate A and B contain the
+same exact frame window from their aligned product WAVs; only the louder crop
+is attenuated so final fixed-window sample RMS differs by no more than
+0.05 dB. This is not LUFS,
+true-peak or perceived-loudness matching. Explicitly confirm that both
+candidates were heard, choose A, B, equivalent, neither or cannot tell, add
+bounded candidate-specific problem tags and an optional private note, then
+choose **Complete blind review**. That is the only feedback write. Export the
+still-blind JSON before the separate **Resolve A/B identities** action if
+wanted. Resolution reveals an auditable nonce-bound mapping but never promotes
+an artifact or changes MIDI, selection, ranking, defaults, product completion
+or the GarageBand pack. The native TUI still creates/reuses the challenger;
+its **Open visual studio** action opens this richer review. The browser stores
+and sends no reviewer key; the loopback server derives the stable
+project-scoped local identity and the ledger retains only its domain hash.
 
 The exact full-song path does not add an arbitrary precise mixer. Its request
 contains only the current selection-manifest hash and one of the four preset
@@ -3566,7 +3587,10 @@ downloaded balanced WAV and creates the same separate PCM24 challenger plus
 rechecks the FFmpeg executable identity for every pass. The CLI command never
 edits the Workbench cache or balance receipt and refuses to replace an existing
 output. None of the three routes makes a Pack Composer item or human-approved
-release master; explicit blinded feedback remains deferred.
+release master. Workbench's separate blind review uses one exact 0.5–15 second
+window, explicit heard/choice evidence and a second identity-resolution
+action. Its feedback and resolution stores remain separate from Workbench
+decision events and product outputs.
 
 ### Output layouts
 

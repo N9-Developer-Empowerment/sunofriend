@@ -15,3 +15,4 @@ recursive-include skills *.md *.yaml
 recursive-include assets/brand *.png
 include src/sunofriend/workbench.html
 include src/sunofriend/workbench_visualization.js
+include src/sunofriend/workbench_master_review.js

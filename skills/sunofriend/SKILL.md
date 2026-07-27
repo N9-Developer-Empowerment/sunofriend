@@ -3,7 +3,7 @@ name: sunofriend
 description: Use Sunofriend's local TUI, CLI, Workbench and Developer Inspector to turn Suno/Moises stems or vocals into two linked outputs, reviewed GarageBand-ready MIDI plus a balanced MIDI-derived song-interpretation WAV. Compare immutable analytical, tracker, repair and optional local-AI candidates; review phrases; render selected MIDI; create a separate receipt-bound listening master; export exact GarageBand packs; build or match sample instruments; transform key, BPM, tuning and alignment; and browse, reuse, transform or correct Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody, MIDI comparison, song interpolation, GarageBand handoff, instrument matching, tempo/key changes, mashups and bounded note correction. Prefer `sunofriend tui` for a human operator; retain CLI/skill routes for expert automation. Do not use it for generic stem separation, human-approved release mastering, lyric writing, arbitrary shell execution, unapproved model/plugin downloads or DAW GUI editing.
 ---
 
-<!-- sunofriend-interface-contract: 2026-07-27.4 -->
+<!-- sunofriend-interface-contract: 2026-07-27.5 -->
 
 # Sunofriend
 
@@ -53,9 +53,11 @@ guided forms.
      fixed-policy Listening Master challenger after the current balanced
      selected-MIDI WAV has been explicitly created in Workbench. It exposes no
      mastering controls, records no preference, and leaves listening/download
-     comparison in Workbench.
-     There is no durable job ledger, restart recovery or structured improvement
-     feedback yet. Workbench remains the rich visual listening, review,
+     comparison plus the bounded blind review in Workbench.
+     There is no durable conversion job ledger or automatic retry. Broader
+     structured improvement feedback remains planned; the implemented blind
+     master review records only an explicit local A/B response. Workbench
+     remains the rich visual listening, review,
      rendering and download surface. The TUI enables the read-only Developer
      Inspector by default.
    - `sunofriend doctor --require transcribe` for lead or backing vocals and
@@ -448,7 +450,32 @@ guided forms.
   an old content-addressed cache entry is harmless and must not be presented as
   current. Progress must stay bounded and path-free. There is deliberately no
   pseudo-cancel around the synchronous FFmpeg builder; defer Quit until its safe
-  completion. Blinded control-versus-challenger feedback is still deferred.
+  completion.
+  Keep the Workbench blind control-versus-challenger review separate from
+  creation and playback. It may prepare only one exact 0.5–15 second window
+  bound to the current selection, balanced-control and Listening Master
+  manifests. Require both inputs at or above −60 dBFS fixed-window sample RMS;
+  attenuate only the louder crop, by at most 18 dB, and require final PCM16 A/B
+  mismatch at or below 0.05 dB. Do not call this LUFS, true-peak or
+  perceived-loudness matching and do not boost, limit, compress, equalise,
+  resample, shift or stretch either review crop.
+  Preparation may create only the private comparison session and rebuildable
+  A/B audio cache; it must record no feedback/preference and change no
+  Workbench decision or product state. Replay, switching, seeking and form
+  drafts must write nothing. Do not persist or accept a raw reviewer key in
+  browser storage or the HTTP request. The loopback server derives one stable
+  project-scoped local reviewer key, and the review service stores only its
+  domain-hashed identity. Canonicalise requested times to exact frame bounds
+  before hashing the comparison, and let concurrent identical preparations
+  reuse only a fully verified publication winner.
+  Require explicit heard-A and heard-B confirmations plus exactly one of A, B,
+  equivalent, neither or cannot-tell before completion. Bound allow-listed
+  tags to eight per candidate and private notes to 2,000 characters. Completion
+  alone appends the blind feedback revision. Identity resolution must be a
+  separate explicit action that reveals and verifies the nonce-derived
+  assignment. Neither action may alter Workbench decision events, MIDI,
+  selection, ranking, defaults, either product artifact, product completion or
+  GarageBand Pack state, and a resolved result must never imply promotion.
   Both routes use fixed policy
   `ffmpeg-loudnorm-two-pass-fixed-horizon-v1`: two-pass FFmpeg EBU R128
   analysis/rendering at −16 LUFS integrated, 11 LU loudness-range target and
@@ -1995,6 +2022,14 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     cache hit, state that verified content-addressed reuse needed no fresh
     preflight. Do not imply that the optional challenger completes a required
     product output or that creating it is a listening preference.
+    If the user explicitly completed the Workbench blind master review, report
+    the exact window, attenuation-only RMS policy, both heard confirmations,
+    blind outcome, bounded tags and whether private notes were recorded. Keep
+    candidate identity hidden until the separate resolution exists. For a
+    resolved review, report the auditable nonce/commitment mapping and resolved
+    outcome, while stating that feedback/resolution changed no MIDI, selection,
+    ranking, default, product completion, audio artifact or Pack state and did
+    not promote a winner.
     For long-song visualization,
     report Fit/4×/16× fixed-window culling and bounded canvases, but disclose
     that the complete server-bounded JSON is still downloaded, parsed and

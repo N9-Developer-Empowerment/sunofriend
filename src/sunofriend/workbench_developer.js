@@ -132,6 +132,43 @@
       ]),
       durableEffect: false,
     }),
+    "/api/listening-master-review/prepare": Object.freeze({
+      operation: "arrangement.master_review_prepare",
+      label: "Prepare one exact blinded, level-matched Listening Master review window",
+      symbols: Object.freeze([
+        "sunofriend.workbench_server._WorkbenchHandler.do_POST",
+        "sunofriend.workbench_master_review.WorkbenchMasterReviewService.prepare",
+      ]),
+      durableEffect: true,
+    }),
+    "/api/listening-master-review": Object.freeze({
+      operation: "arrangement.master_review_complete",
+      label: "Append one separate explicit Listening Master feedback artifact",
+      symbols: Object.freeze([
+        "sunofriend.workbench_server._WorkbenchHandler.do_POST",
+        "sunofriend.workbench_master_review.WorkbenchMasterReviewService.complete",
+      ]),
+      durableEffect: true,
+    }),
+    "/api/listening-master-review/resolve": Object.freeze({
+      operation: "arrangement.master_review_resolve",
+      label: "Resolve one completed Listening Master review without promotion",
+      symbols: Object.freeze([
+        "sunofriend.workbench_server._WorkbenchHandler.do_POST",
+        "sunofriend.workbench_master_review.WorkbenchMasterReviewService.resolve",
+      ]),
+      durableEffect: true,
+    }),
+    "/api/listening-master-review-export": Object.freeze({
+      operation: "arrangement.master_review_export",
+      label: "Export one verified Listening Master review or resolution artifact",
+      symbols: Object.freeze([
+        "sunofriend.workbench_server._WorkbenchHandler.do_GET",
+        "sunofriend.workbench_master_review.WorkbenchMasterReviewService.review",
+        "sunofriend.workbench_master_review.WorkbenchMasterReviewService.resolution",
+      ]),
+      durableEffect: false,
+    }),
     "/api/garageband-pack-plan": Object.freeze({
       operation: "pack.plan",
       label: "Derive the exact eligible GarageBand pack plan",
@@ -454,11 +491,25 @@
     return `<article class="developer-operation">
       <h4>${escapeHtml(operation.label || operation.operation || "Operation")} ${statusBadge(operation.status)}</h4>
       <p><code>${escapeHtml(operation.method || "")}</code> <code>${escapeHtml(operation.route || "")}</code> · ${escapeHtml(Math.round(finiteOrZero(operation.duration_ms) * 10) / 10)} ms</p>
-      <p><b>Durable effect possible:</b> ${operation.durable_effect_possible ? "yes, only through this explicit production command" : "no"}</p>
+      <p><b>Durable effect possible:</b> ${durableEffectDescription(operation)}</p>
       ${frames.length > 1 ? `<label>Operation checkpoint <input id="developer-frame-range" type="range" min="0" max="${frames.length - 1}" value="${safeFrameIndex}"> <output>${safeFrameIndex + 1} of ${frames.length}</output></label>` : ""}
       ${frames.length ? `<section class="developer-frame"><h4>${escapeHtml(frame.label || `Checkpoint ${safeFrameIndex + 1}`)}</h4><p>${escapeHtml(frame.explanation || frame.summary || "")}</p>${frame.symbol ? `<p><code>${escapeHtml(frame.symbol)}</code></p>` : ""}</section>` : ""}
       <details><summary>Static code call chain</summary><ol class="developer-symbols">${list(operation.symbols).map((symbol) => `<li><code>${escapeHtml(symbol)}</code></li>`).join("")}</ol></details>
     </article>`;
+  }
+
+  function durableEffectDescription(operation) {
+    if (!operation?.durable_effect_possible) return "no";
+    if (operation.operation === "arrangement.master_review_prepare") {
+      return "yes, a private comparison session and rebuildable A/B cache only; no feedback or product change";
+    }
+    if (operation.operation === "arrangement.master_review_complete") {
+      return "yes, a separate local feedback artifact only; no Workbench decision or product change";
+    }
+    if (operation.operation === "arrangement.master_review_resolve") {
+      return "yes, a separate local resolution artifact only; never a selection, default, promotion or product change";
+    }
+    return "yes, only through this explicit production command";
   }
 
   function replayFrames(snapshot) {
@@ -537,7 +588,14 @@
     const frameSymbols = frames.map((frame) => frame.symbol).filter(Boolean);
     const projectedDurableEffect = typeof record.durable_effect_possible === "boolean"
       ? record.durable_effect_possible
-      : ["decision.append", "pack_basket.save", "clip_reuse.change"].includes(record.operation);
+      : [
+          "decision.append",
+          "pack_basket.save",
+          "clip_reuse.change",
+          "arrangement.master_review_prepare",
+          "arrangement.master_review_complete",
+          "arrangement.master_review_resolve",
+        ].includes(record.operation);
     return {
       ...record,
       label: String(record.operation || "server operation")

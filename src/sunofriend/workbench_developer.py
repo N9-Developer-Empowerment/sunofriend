@@ -62,6 +62,13 @@ _PROBLEM_TAGS = frozenset(
         "none_match",
     }
 )
+_MASTER_REVIEW_TRACE_SCHEMAS = frozenset(
+    {
+        "sunofriend.workbench-listening-master-comparison.v1",
+        "sunofriend.workbench-listening-master-review.v1",
+        "sunofriend.workbench-listening-master-review-result.v1",
+    }
+)
 
 _ROUTE_OPERATIONS = {
     "/api/project": "project.read",
@@ -78,6 +85,16 @@ _ROUTE_OPERATIONS = {
     "/api/arrangement": "arrangement.render",
     "/api/balanced-arrangement": "arrangement.balance",
     "/api/listening-master": "arrangement.master",
+    "/api/listening-master-review/prepare": (
+        "arrangement.master_review_prepare"
+    ),
+    "/api/listening-master-review": "arrangement.master_review_complete",
+    "/api/listening-master-review/resolve": (
+        "arrangement.master_review_resolve"
+    ),
+    "/api/listening-master-review-export": (
+        "arrangement.master_review_export"
+    ),
     "/api/garageband-export": "handoff.build",
     "/api/garageband-pack-basket": "pack_basket.save",
     "/api/garageband-pack": "pack.build",
@@ -107,6 +124,16 @@ _ROUTE_CODE_STEPS = {
     "/api/arrangement": "arrangement.render",
     "/api/balanced-arrangement": "arrangement.balance",
     "/api/listening-master": "arrangement.master",
+    "/api/listening-master-review/prepare": (
+        "arrangement.master_review_prepare"
+    ),
+    "/api/listening-master-review": "arrangement.master_review_complete",
+    "/api/listening-master-review/resolve": (
+        "arrangement.master_review_resolve"
+    ),
+    "/api/listening-master-review-export": (
+        "arrangement.master_review_export"
+    ),
     "/api/garageband-export": "handoff.build",
     "/api/garageband-pack-plan": "pack.plan",
     "/api/garageband-pack-basket": "pack_basket.save",
@@ -196,6 +223,26 @@ _CODE_MAP = {
         "module": "sunofriend.workbench_listening_master",
         "symbol": "WorkbenchListeningMasterService.prepare",
     },
+    "arrangement.master_review_prepare": {
+        "module": "sunofriend.workbench_master_review",
+        "symbol": "WorkbenchMasterReviewService.prepare",
+    },
+    "arrangement.master_review_complete": {
+        "module": "sunofriend.workbench_master_review",
+        "symbol": "WorkbenchMasterReviewService.complete",
+    },
+    "arrangement.master_review_resolve": {
+        "module": "sunofriend.workbench_master_review",
+        "symbol": "WorkbenchMasterReviewService.resolve",
+    },
+    "arrangement.master_review_export": {
+        "module": "sunofriend.workbench_master_review",
+        "symbol": "WorkbenchMasterReviewService.review",
+    },
+    "arrangement.master_review_resolution_read": {
+        "module": "sunofriend.workbench_master_review",
+        "symbol": "WorkbenchMasterReviewService.resolution",
+    },
     "handoff.build": {
         "module": "sunofriend.workbench_artifacts",
         "symbol": "WorkbenchArtifacts.build_garageband_handoff",
@@ -284,6 +331,18 @@ _OPERATION_LABELS = {
     ),
     "arrangement.master": (
         "Render or reuse the comparative listening-master challenger"
+    ),
+    "arrangement.master_review_prepare": (
+        "Prepare one exact blinded, level-matched Listening Master review window"
+    ),
+    "arrangement.master_review_complete": (
+        "Append one separate explicit Listening Master feedback artifact"
+    ),
+    "arrangement.master_review_resolve": (
+        "Resolve one completed Listening Master review without promotion"
+    ),
+    "arrangement.master_review_export": (
+        "Export one verified Listening Master review or resolution artifact"
     ),
     "handoff.build": "Build the compatibility GarageBand handoff",
     "pack_basket.save": "Save a separate export-basket revision",
@@ -431,6 +490,9 @@ class WorkbenchDeveloperTrace:
                     "clip_reuse.change",
                     "clip_transform.create",
                     "clip_correction.create",
+                    "arrangement.master_review_prepare",
+                    "arrangement.master_review_complete",
+                    "arrangement.master_review_resolve",
                 },
                 "symbols": _operation_symbols(operation),
                 "started_ns": now,
@@ -729,6 +791,56 @@ def trace_response_facts(route: str, value: Mapping[str, Any]) -> dict[str, Any]
         return {
             "schema": document.get("schema"),
             "clip_version_appended": effects.get("library_mutated", False),
+        }
+    if route in {
+        "/api/listening-master-review/prepare",
+        "/api/listening-master-review",
+        "/api/listening-master-review/resolve",
+        "/api/listening-master-review-export",
+    }:
+        wrapper_keys = {
+            "/api/listening-master-review/prepare": (
+                "comparison",
+                "listening_master_review",
+            ),
+            "/api/listening-master-review": (
+                "review",
+                "comparison",
+                "listening_master_review",
+            ),
+            "/api/listening-master-review/resolve": (
+                "result",
+                "comparison",
+                "listening_master_review",
+            ),
+            "/api/listening-master-review-export": ("review", "result"),
+        }[route]
+        document: Mapping[str, Any] = value
+        for wrapper in wrapper_keys:
+            candidate = value.get(wrapper)
+            if isinstance(candidate, Mapping):
+                document = candidate
+                break
+        status = document.get("status")
+        if status not in {"unreviewed", "reviewed", "resolved", "complete"}:
+            status = None
+        revision = document.get("current_revision", document.get("revision"))
+        if (
+            isinstance(revision, bool)
+            or not isinstance(revision, int)
+            or revision < 0
+        ):
+            revision = None
+        schema = document.get("schema")
+        facts = {
+            "schema": (
+                schema if schema in _MASTER_REVIEW_TRACE_SCHEMAS else None
+            ),
+            "status": status,
+            "revision": revision,
+        }
+        return {
+            key: item for key, item in facts.items() if item is not None
         }
     wrapper_by_route = {
         "/api/render-preview": "preview",
@@ -1153,6 +1265,8 @@ def _safe_trace_facts(value: Mapping[str, Any]) -> dict[str, Any]:
         "plan_revision",
         "active_placement_count",
         "clip_version_appended",
+        "status",
+        "revision",
     }
     result = {}
     for key in allowed:
@@ -1172,6 +1286,7 @@ def _safe_trace_facts(value: Mapping[str, Any]) -> dict[str, Any]:
             "track_count",
             "plan_revision",
             "active_placement_count",
+            "revision",
         } and isinstance(item, int) and not isinstance(item, bool):
             result[key] = max(0, item)
         elif key == "event_type" and item in {
@@ -1182,6 +1297,13 @@ def _safe_trace_facts(value: Mapping[str, Any]) -> dict[str, Any]:
         }:
             result[key] = item
         elif key == "schema" and isinstance(item, str) and len(item) <= 100:
+            result[key] = item
+        elif key == "status" and item in {
+            "unreviewed",
+            "reviewed",
+            "resolved",
+            "complete",
+        }:
             result[key] = item
     return result
 
@@ -1213,6 +1335,19 @@ def _operation_symbols(operation: str) -> list[str]:
     elif operation == "clip_correction.create":
         steps.extend(
             ["validate", "clip_correction.create", "clip_version.append"]
+        )
+    elif operation in {
+        "arrangement.master_review_prepare",
+        "arrangement.master_review_complete",
+        "arrangement.master_review_resolve",
+    }:
+        steps.extend(["validate", operation_step])
+    elif operation == "arrangement.master_review_export":
+        steps.extend(
+            [
+                operation_step,
+                "arrangement.master_review_resolution_read",
+            ]
         )
     else:
         steps.append(operation_step)

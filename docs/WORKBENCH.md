@@ -47,7 +47,9 @@ gain-only WAV is explicitly not mastered.
 After that exact control exists, an optional explicit action builds the fixed
 Listening Master challenger and presents its separate player, PCM24 WAV and
 receipt. It cannot replace the control, complete a required output or record a
-preference.
+preference. A separate bounded blind-review panel can compare one exact
+0.5–15 second control/challenger window, record an explicit local response and
+then resolve A/B identities without promoting either artifact.
 Phase 5.8 explains independently verified execution provenance. Phase 5.9 now
 adds the exact-pack interactive tutorial, required 10/10 comprehension quiz and
 two-check local acceptance resolver. That review passed on 22 July 2026, so the
@@ -946,8 +948,41 @@ progress until the synchronous operation completes; there is no unsafe
 pseudo-cancel. Workbench remains the place to listen to and download both
 artifacts.
 
-The planned blinded control/challenger review remains deferred. The
-no-silent-promotion contract is in
+### Blind level-matched quality review
+
+When the exact current balanced control and Listening Master are both ready:
+
+1. enter one representative start/end window between 0.5 and 15 seconds;
+2. choose **Prepare blind comparison**;
+3. switch between Candidate A and Candidate B on the shared browser playhead;
+4. explicitly tick **I heard Candidate A** and **I heard Candidate B**;
+5. choose A, B, equivalent, neither or cannot tell, optionally adding bounded
+   candidate-specific problem tags and one private note;
+6. choose **Complete blind review**; and
+7. export the still-blind JSON before choosing the separate
+   **Resolve A/B identities** action when useful.
+
+Preparation reads the same frames from both files. Each window must be at
+least −60 dBFS RMS; only the louder candidate can be attenuated, by no more
+than 18 dB, and the generated PCM16 review WAVs must finish within 0.05 dB RMS.
+No boost, limiting, compression, EQ, resampling, time shift or time stretch is
+used. This controls a simple fixed-window level advantage; it is not LUFS,
+true-peak or perceived-loudness matching.
+
+The A/B assignment is secret and stable for the exact comparison. Completion
+is the only feedback write and remains blind. Resolution is a second explicit
+write that reveals the nonce and assignment, making the earlier commitment
+auditable. The browser stores and submits no reviewer key; the local server
+derives a stable project-scoped identity and the ledger stores only its domain
+hash. Exact canonical frame bounds deduplicate sub-frame-equivalent requests,
+and concurrent identical preparation reuses only a verified cache winner.
+Both records are owner-only and separate from `WorkbenchStore`.
+They change no candidate decision, selected MIDI, ranking, default, balanced
+or mastered WAV, product-completion state or GarageBand pack. Playback,
+switching, seeking, checkbox changes and draft text write nothing.
+
+The no-silent-promotion contract and next native-level readiness experiment
+are in
 [Musical rendering and listening mastering](MUSICAL_RENDERING_AND_MASTERING.md).
 
 Only the buttons under **Save after listening** append `full_mix` decisions.

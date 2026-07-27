@@ -1,8 +1,9 @@
 # MIDI-derived song interpretation and listening mastering
 
 Status: paired product contract, Workbench/TUI presentation and explicit
-Workbench, native TUI and CLI Listening Master routes implemented; blinded
-receipt-bound feedback and any reviewed promotion remain planned
+Workbench, native TUI and CLI Listening Master routes implemented; the first
+bounded blinded receipt-bound Workbench review is implemented; any reviewed
+promotion remains deliberately unimplemented
 
 Sunofriend has two linked creative outputs: reviewed, editable MIDI and a
 useful, good-sounding MIDI-derived song-interpretation WAV rendered from the
@@ -172,6 +173,48 @@ sunofriend doctor --require convert
 
 A verified cache hit is reusable without FFmpeg.
 
+## Review the exact control and challenger blindly in Workbench
+
+After both exact current players exist, Workbench can prepare one
+representative 0.5–15 second review window. It reads the same exact frame-index
+range from both aligned immutable WAVs and performs one fixed-window sample-RMS
+match:
+
+- both inputs must measure at least −60 dBFS RMS in the chosen window;
+- only the louder crop may be attenuated;
+- attenuation is capped at 18 dB;
+- the final PCM16 review crops must be within 0.05 dB RMS;
+- there is no boost, limiting, compression, EQ, resampling, time shift or time
+  stretch; and
+- this is not LUFS, true-peak or perceived-loudness matching.
+
+The random A/B assignment is hidden behind a 32-byte nonce commitment.
+Preparation may create only the private comparison session and rebuildable A/B
+audio cache; it records no feedback or decision/product change. Playing,
+switching, seeking and drafting remain zero-write operations. The reviewer must
+explicitly confirm hearing A and B, then choose Candidate A, Candidate B,
+equivalent, neither or cannot tell. Candidate-specific tags are allow-listed
+and bounded to eight; the optional private note is bounded to 2,000 characters.
+
+The browser stores and sends no reviewer key. The loopback server derives one
+stable project-scoped local reviewer key, and the service stores only its
+domain-hashed identity. Requested seconds are canonicalised to exact frame
+bounds before comparison identity is calculated, so sub-frame-equivalent
+requests reuse one cache. Concurrent identical preparations accept only a
+fully verified publication winner.
+
+**Complete blind review** is the only feedback write. It appends a separate
+owner-only, revision-checked blind review and still reveals no identity.
+Exporting that blind JSON is read-only. **Resolve A/B identities** is a second
+explicit action that verifies the saved review, reveals the assignment and
+nonce, and writes only a separate resolution record. The commitment and
+assignment can therefore be audited after resolution.
+
+Neither action changes the balanced or mastered WAV, source audio, MIDI,
+selection, ranking, defaults, required-product completion, Workbench decision
+events or GarageBand pack. A resolved preference is evidence for future
+analysis, not automatic promotion.
+
 ## Create or reuse Listening Master v1 in the Guided Local Studio
 
 The preferred terminal journey uses `sunofriend tui`:
@@ -302,9 +345,10 @@ That exact owner-only v2 review has SHA-256
 `a0f2f384ec301fe6213976d2d70827caa79fcc1a38470fd40e40d8a28541c8a0`;
 the one-review advisory profile has SHA-256
 `92d24715a0868bdaf8481f7b84896c12a0c7cce25dd00244d020f7d6a6be4336`.
-There is not yet a mix-feedback Workbench or TUI form. Until that interface and
-its end-to-end acceptance tests exist, Sunofriend must not claim that ordinary
-listening activity trains or updates the system.
+The broader six-axis mix-feedback profile still has no Workbench or TUI form.
+The narrower Workbench blind control/challenger form is implemented separately
+and records only its explicit A/B response. Ordinary listening activity still
+does not train or update the system.
 
 Learning can later improve audition hints, expose historically successful
 role/instrument families, or propose a challenger policy. It must never alter
@@ -351,8 +395,9 @@ produce a control/challenger comparison.
 
 ## Next acceptance increments
 
-1. Present a level-aware balanced-control versus listening-master A/B with an
-   explicit choice and useful problem tags.
+1. Add a secondary, explicitly labelled native-level readiness review only
+   after the matched-level quality choice is frozen, so loudness cannot bias
+   the first judgment.
 2. Add complete-instrument challengers one role at a time, starting with bass
    and keys, while keeping the MIDI fixed.
 3. Compare balance challengers only after instrumentation is held constant.

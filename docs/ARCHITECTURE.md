@@ -10,7 +10,8 @@ Sunofriend has four user-facing layers:
 3. The loopback-only Workbench presents completed source/MIDI alternatives,
    records explicit decisions, renders the selected MIDI as a
    song-interpretation WAV, can explicitly create a separate fixed-policy
-   listening-master challenger and prepares the GarageBand handoff.
+   listening-master challenger, can record a bounded blind quality review in a
+   separate feedback plane and prepares the GarageBand handoff.
 4. The portable Agent Skill is the conversational expert route: it selects
    commands, checks prerequisites and interprets reports. It must not duplicate
    audio or MIDI algorithms.
@@ -75,6 +76,9 @@ CLI parsing (`cli.py`)
         |                              `workbench_timeline.py`,
         |                              `workbench_mix.py`,
         |                              `workbench_artifacts.py`,
+        |                              `workbench_listening_master.py`,
+        |                              `workbench_master_review.py`,
+        |                              `workbench_master_review.js`,
         |                              `workbench_server.py`,
         |                              `workbench_clips.py`,
         |                              `workbench_clips.js`,
@@ -567,7 +571,30 @@ locked during the synchronous operation. Quit may be deferred, because there
 is no process-safe cancel contract and the UI must not claim a pseudo-cancel.
 Creating or reusing the artifact still changes no event, feedback, MIDI,
 selection, default, required-product completion or GarageBand Pack. Explicit
-blinded A/B feedback remains a later application layer. See
+blinded A/B feedback is a separate application layer implemented by
+`workbench_master_review.WorkbenchMasterReviewService`. It binds the exact
+selection, balanced-control and Listening Master manifests, extracts one exact
+0.5–15 second frame window, rejects windows below −60 dBFS RMS or requiring
+more than 18 dB attenuation, and writes anonymous PCM16 A/B crops within
+0.05 dB fixed-window RMS. Only the louder crop is attenuated; the service does
+not boost, limit, compress, equalise, resample or alter time.
+
+The review service owns a mode-`0600` SQLite ledger and mode-`0700` private
+audio cache outside `WorkbenchStore`. `prepare` and `current` are zero-write
+with respect to feedback; `complete` appends one CAS-checked blind response;
+`resolve` separately reveals and verifies the nonce-derived assignment. The
+loopback server exposes frozen anonymous media capabilities and path-free JSON,
+rechecks current product identities under its state lock, and never projects
+this evidence into candidate decisions, rankings, product completion or Pack
+state. It derives the stable project-scoped local reviewer key itself, so the
+browser neither stores nor submits a raw key and only a domain-hashed reviewer
+identity reaches the ledger. Exact frame bounds, rather than non-canonical
+requested floats, identify a comparison; concurrent identical preparation
+accepts only a fully verified cache winner. This is a distinct durable state
+plane: comparison sessions, blind
+feedback revisions and identity resolutions do not enter the append-only
+musical-decision history, while prepared A/B audio remains rebuildable private
+cache data. See
 [Musical rendering and listening mastering](MUSICAL_RENDERING_AND_MASTERING.md).
 
 `sunofriend.workbench-balanced-arrangement.v1` points to the private WAV,

@@ -55,6 +55,7 @@ The most important architectural separation is:
 | Generated previews and streams | Rebuildable cache | Listening aids, not preference evidence |
 | MIDI-derived song-interpretation WAV | Rebuildable cache | Gain-only render of reviewed selected MIDI and DAW starting recipe; source stems provide timing, horizon and level evidence but are not mixed into it |
 | Optional listening master | Rebuildable content-addressed cache or explicit CLI output | Comparative fixed-policy challenger, not a release master or preference |
+| Blind Listening Master review | Owner-only append ledger plus separate resolution | One explicit anonymous response revision and, only after another explicit action, its auditable A/B identity mapping; neither is a musical decision, product selection or promotion |
 
 ## 1. CLI and application entry points
 
@@ -145,9 +146,12 @@ The `tui` command follows the same adapter rule:
 
 The current Activity tab is memory-only, capped and operational. It is not the
 Developer Inspector, a durable job ledger or product feedback. Restartable
-jobs, additional typed operation forms and structured feedback remain planned;
-see [Guided Local Studio TUI](LOCAL_STUDIO_TUI.md). Workbench remains the
-visual decision/render/export/listening surface and does not run conversion.
+jobs, additional typed operation forms and broader TUI feedback about
+processes, roles, instruments and DAW outcomes remain planned; see
+[Guided Local Studio TUI](LOCAL_STUDIO_TUI.md). The bounded blind Listening
+Master response is instead a separate Workbench state plane. Workbench remains
+the visual decision/render/export/listening surface and does not run
+conversion.
 
 Tests to read:
 
@@ -401,7 +405,16 @@ for long songs without becoming a hidden editor or selection system.
    the exact current control from read-only folded state, uses a verified cache
    hit without FFmpeg or performs the shared fresh-build dependency preflight,
    and repeats both manifest checks before promotion.
-9. Cache eviction loses no musical decision. An artifact can be rebuilt from
+9. After both exact artifacts exist, the Workbench controller in
+   [`workbench_master_review.js`](../src/sunofriend/workbench_master_review.js)
+   calls the loopback server's prepare route for one exact anonymous window.
+   [`WorkbenchMasterReviewService`](../src/sunofriend/workbench_master_review.py)
+   verifies the product receipts, writes rebuildable level-matched A/B audio
+   privately and keeps its assignment committed but hidden. The completion
+   route alone appends blind feedback; the separate resolve route verifies that
+   review before revealing and recording the nonce-derived identity mapping.
+   Read-only export routes expose path-free blind or resolved JSON.
+10. Cache eviction loses no musical decision. An artifact can be rebuilt from
    verified source records and current state.
 
 The canonical selected-arrangement short/full-song transports and dry proxy
@@ -447,6 +460,22 @@ feedback or preference and changes no selection, default, required output or
 GarageBand pack. TUI confirmation, progress, cache reuse and result display
 have those same zero effects.
 
+The bounded blind master review is deliberately separate. The browser calls
+`WorkbenchMasterReviewService.prepare` for one exact 0.5–15 second window,
+then receives two anonymous, frozen media capabilities already matched by
+attenuation-only fixed-window sample RMS. Playback and draft form state remain
+browser-only. No raw reviewer key is stored in or submitted by the browser;
+the loopback server derives a stable project-scoped key and the ledger retains
+only its domain-hashed identity. Exact frame bounds make sub-frame-equivalent
+requests one comparison, and concurrent prepare calls reuse only a verified
+winner. `complete` is the sole feedback append and keeps the assignment
+hidden; `resolve` is a later explicit resolution append that reveals the
+nonce-derived A/B mapping. Neither call enters the Workbench decision reducer,
+product-output calculation, renderer caches or Pack basket. The Developer
+Inspector records these as separate prepare, feedback, resolution and export
+operations without retaining request bodies, private notes, reviewer keys,
+paths or the pre-resolution assignment.
+
 ### Tests to read
 
 - [`tests/test_workbench_timeline.py`](../tests/test_workbench_timeline.py)
@@ -460,6 +489,9 @@ have those same zero effects.
 - [`tests/test_workbench_balanced_ui.py`](../tests/test_workbench_balanced_ui.py)
 - [`tests/test_workbench_listening_master.py`](../tests/test_workbench_listening_master.py)
 - [`tests/test_workbench_listening_master_ui.py`](../tests/test_workbench_listening_master_ui.py)
+- [`tests/test_workbench_master_review.py`](../tests/test_workbench_master_review.py)
+- [`tests/test_workbench_master_review_server.py`](../tests/test_workbench_master_review_server.py)
+- [`tests/test_workbench_master_review_js.py`](../tests/test_workbench_master_review_js.py)
 - [`tests/test_tui_listening_master.py`](../tests/test_tui_listening_master.py)
 
 ## 8. Exact GarageBand pack and acceptance boundary

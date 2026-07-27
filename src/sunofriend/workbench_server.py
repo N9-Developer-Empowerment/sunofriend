@@ -40,6 +40,16 @@ from .workbench_listening_master import (
     WORKBENCH_LISTENING_MASTER_SCHEMA,
     WorkbenchListeningMasterService,
 )
+from .workbench_master_review import (
+    CANDIDATE_A,
+    CANDIDATE_B,
+    MASTER_REVIEW_PROBLEM_TAGS,
+    MAXIMUM_NOTES_CHARACTERS,
+    MAXIMUM_PROBLEM_TAGS_PER_CANDIDATE,
+    WorkbenchMasterReviewConflictError,
+    WorkbenchMasterReviewRevisionConflictError,
+    WorkbenchMasterReviewService,
+)
 from .workbench_clips import WorkbenchClipService, public_artifact as public_clip_artifact
 from .workbench_correction import (
     WorkbenchClipCorrectionConflictError,
@@ -165,6 +175,18 @@ def _require_lowercase_sha256(value: Any, *, label: str) -> str:
     ):
         raise ValueError(f"{label} must be a lowercase SHA-256 value")
     return value
+
+
+def _workbench_master_reviewer_key(project_id: Any) -> str:
+    """Derive one stable local Workbench reviewer key without browser storage."""
+
+    if not isinstance(project_id, str) or not project_id:
+        raise ValueError("Workbench project identity is invalid")
+    payload = (
+        "sunofriend.workbench-listening-master-reviewer.v1\0"
+        f"{project_id}"
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
 
 
 def _clip_browse_query(query_string: str) -> dict[str, Any]:
@@ -336,6 +358,7 @@ class WorkbenchHTTPServer(ThreadingHTTPServer):
         store: WorkbenchStore,
         artifacts: WorkbenchArtifacts,
         listening_masters: WorkbenchListeningMasterService,
+        master_reviews: WorkbenchMasterReviewService,
         token: str,
         developer_inspector: bool = False,
         clip_service: WorkbenchClipService | None = None,
@@ -347,6 +370,7 @@ class WorkbenchHTTPServer(ThreadingHTTPServer):
         self.store = store
         self.artifacts = artifacts
         self.listening_masters = listening_masters
+        self.master_reviews = master_reviews
         self.token = token
         self.developer_inspector = bool(developer_inspector)
         self.clip_service = clip_service
@@ -456,6 +480,9 @@ def create_workbench_server(
     listening_masters = WorkbenchListeningMasterService(
         destination / "artifacts"
     )
+    master_reviews = WorkbenchMasterReviewService(
+        destination / "listening-master-reviews"
+    )
     clip_reuse_service = (
         WorkbenchClipReuseService.open(
             clip_service=clip_service,
@@ -488,6 +515,7 @@ def create_workbench_server(
         store=store,
         artifacts=artifacts,
         listening_masters=listening_masters,
+        master_reviews=master_reviews,
         token=session_token,
         developer_inspector=developer_inspector,
         clip_service=clip_service,
@@ -796,6 +824,13 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 "text/javascript; charset=utf-8",
             )
             return
+        if parsed.path == "/workbench-master-review.js":
+            self._bytes(
+                HTTPStatus.OK,
+                _workbench_master_review_bytes(),
+                "text/javascript; charset=utf-8",
+            )
+            return
         if parsed.path.startswith("/phrase-review/"):
             self._serve_phrase_review(parsed.path)
             return
@@ -967,6 +1002,30 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 filename="sunofriend-workbench-review.json",
             )
             return
+        if parsed.path == "/api/listening-master-review-export":
+            query = parse_qs(parsed.query, keep_blank_values=True)
+            kind = query.get("kind", [""])[0]
+            review_id = query.get("review_id", [""])[0]
+            try:
+                if kind == "review":
+                    document = self.server.master_reviews.review(review_id)
+                    filename = "sunofriend-listening-master-blind-review.json"
+                elif kind == "result":
+                    document = self.server.master_reviews.resolution(review_id)
+                    if document is None:
+                        raise ValueError(
+                            "Listening Master review identities have not been resolved"
+                        )
+                    filename = "sunofriend-listening-master-review-result.json"
+                else:
+                    raise ValueError(
+                        "Listening Master review download kind is invalid"
+                    )
+            except (OSError, RuntimeError, ValueError) as exc:
+                self._error(HTTPStatus.BAD_REQUEST, str(exc))
+                return
+            self._json(HTTPStatus.OK, document, filename=filename)
+            return
         if parsed.path.startswith("/media/"):
             media_id = parsed.path[len("/media/") :]
             self._serve_media(media_id)
@@ -990,6 +1049,9 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             "/api/arrangement",
             "/api/balanced-arrangement",
             "/api/listening-master",
+            "/api/listening-master-review/prepare",
+            "/api/listening-master-review",
+            "/api/listening-master-review/resolve",
             "/api/garageband-export",
             "/api/garageband-pack-basket",
             "/api/garageband-pack",
@@ -1486,6 +1548,183 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     public_chunk = self._public_decoded_arrangement_chunk(artifact)
                 self._json(HTTPStatus.OK, {"chunk": public_chunk})
                 return
+            if parsed.path == "/api/listening-master-review/prepare":
+                _require_exact_request_keys(
+                    request,
+                    {
+                        "selection_manifest_sha256",
+                        "balanced_arrangement_manifest_sha256",
+                        "listening_master_manifest_sha256",
+                        "start_seconds",
+                        "end_seconds",
+                    },
+                    label="Listening Master blind-review preparation",
+                )
+                with self.server.state_lock:
+                    initial = self._master_review_inputs()
+                    self._require_master_review_hashes(request, *initial)
+                prepared = self.server.master_reviews.prepare(
+                    project_id=str(self.server.catalog["project_id"]),
+                    balanced=initial[1],
+                    listening_master=initial[2],
+                    start_seconds=request.get("start_seconds"),
+                    end_seconds=request.get("end_seconds"),
+                    reviewer_session_key=_workbench_master_reviewer_key(
+                        self.server.catalog["project_id"]
+                    ),
+                )
+                with self.server.state_lock:
+                    final = self._master_review_inputs()
+                    self._require_master_review_hashes(request, *final)
+                    public_review = self._public_master_review(
+                        prepared,
+                        selection=final[0],
+                        balanced=final[1],
+                        listening_master=final[2],
+                    )
+                self._json(
+                    HTTPStatus.OK,
+                    {"comparison": public_review},
+                )
+                return
+            if parsed.path == "/api/listening-master-review":
+                _require_exact_request_keys(
+                    request,
+                    {
+                        "comparison_sha256",
+                        "expected_revision",
+                        "heard",
+                        "choice",
+                        "problem_tags",
+                        "notes",
+                    },
+                    label="Listening Master blind review",
+                )
+                comparison_sha256 = _require_lowercase_sha256(
+                    request.get("comparison_sha256"),
+                    label="Listening Master review comparison_sha256",
+                )
+                with self.server.state_lock:
+                    current = self._master_review_inputs()
+                    completed = self.server.master_reviews.complete(
+                        project_id=str(self.server.catalog["project_id"]),
+                        balanced=current[1],
+                        listening_master=current[2],
+                        comparison_sha256=comparison_sha256,
+                        reviewer_session_key=_workbench_master_reviewer_key(
+                            self.server.catalog["project_id"]
+                        ),
+                        expected_revision=request.get("expected_revision"),
+                        heard=request.get("heard"),
+                        choice=request.get("choice"),
+                        problem_tags=request.get("problem_tags"),
+                        notes=request.get("notes"),
+                    )
+                    prepared = self.server.master_reviews.current(
+                        project_id=str(self.server.catalog["project_id"]),
+                        balanced=current[1],
+                        listening_master=current[2],
+                        comparison_sha256=comparison_sha256,
+                        reviewer_session_key=_workbench_master_reviewer_key(
+                            self.server.catalog["project_id"]
+                        ),
+                    )
+                    if (
+                        prepared.get("review_state", {}).get("review_id")
+                        != completed.get("review_id")
+                    ):
+                        raise RuntimeError(
+                            "Listening Master review publication changed"
+                        )
+                    public_review = self._public_master_review(
+                        prepared,
+                        selection=current[0],
+                        balanced=current[1],
+                        listening_master=current[2],
+                    )
+                self._json(
+                    HTTPStatus.OK,
+                    {"comparison": public_review},
+                )
+                return
+            if parsed.path == "/api/listening-master-review/resolve":
+                _require_exact_request_keys(
+                    request,
+                    {
+                        "comparison_sha256",
+                        "review_id",
+                        "review_sha256",
+                    },
+                    label="Listening Master blind-review resolution",
+                )
+                comparison_sha256 = _require_lowercase_sha256(
+                    request.get("comparison_sha256"),
+                    label="Listening Master review comparison_sha256",
+                )
+                review_id = _require_lowercase_sha256(
+                    request.get("review_id"),
+                    label="Listening Master review review_id",
+                )
+                review_sha256 = _require_lowercase_sha256(
+                    request.get("review_sha256"),
+                    label="Listening Master review review_sha256",
+                )
+                with self.server.state_lock:
+                    current = self._master_review_inputs()
+                    stored_review = self.server.master_reviews.review(review_id)
+                    if (
+                        stored_review.get("comparison_sha256")
+                        != comparison_sha256
+                        or stored_review.get("review_sha256")
+                        != review_sha256
+                    ):
+                        raise WorkbenchMasterReviewConflictError(
+                            "the completed Listening Master review changed"
+                        )
+                    result = self.server.master_reviews.resolve(
+                        project_id=str(self.server.catalog["project_id"]),
+                        balanced=current[1],
+                        listening_master=current[2],
+                        review_id=review_id,
+                    )
+                    public_result = dict(result)
+                    public_result["result_url"] = (
+                        "/api/listening-master-review-export?kind=result"
+                        f"&review_id={review_id}&token={self.server.token}"
+                    )
+                    response = {
+                        "schema": result.get("schema"),
+                        "status": "resolved",
+                        "blind": False,
+                        "comparison_sha256": comparison_sha256,
+                        "selection_manifest_sha256": current[0].get(
+                            "selection_manifest_sha256"
+                        ),
+                        "balanced_arrangement_manifest_sha256": current[1].get(
+                            "manifest_sha256"
+                        ),
+                        "listening_master_manifest_sha256": current[2].get(
+                            "manifest_sha256"
+                        ),
+                        "review": {
+                            "review_id": review_id,
+                            "review_sha256": review_sha256,
+                            "revision": stored_review.get("revision"),
+                            "response": stored_review.get("response"),
+                            "choice": stored_review.get("response", {}).get(
+                                "choice"
+                            ),
+                            "review_url": (
+                                "/api/listening-master-review-export?kind=review"
+                                f"&review_id={review_id}"
+                                f"&token={self.server.token}"
+                            ),
+                        },
+                        "result": public_result,
+                        "effects": result.get("effects"),
+                    }
+                self._json(HTTPStatus.OK, {"comparison": response})
+                return
             if parsed.path == "/api/balanced-arrangement":
                 _require_exact_request_keys(
                     request,
@@ -1607,6 +1846,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     {
                         "balanced_arrangement": public_artifact,
                         "listening_master": public_master,
+                        "listening_master_review": None,
                         "product_outputs": build_product_output_status(
                             final_manifest,
                             public_artifact,
@@ -1789,6 +2029,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     HTTPStatus.OK,
                     {
                         "listening_master": public_master,
+                        "listening_master_review": None,
                         "product_outputs": build_product_output_status(
                             final_selection,
                             final_balanced,
@@ -1896,6 +2137,8 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         except (
             WorkbenchPackConflictError,
             WorkbenchPackStateConflictError,
+            WorkbenchMasterReviewConflictError,
+            WorkbenchMasterReviewRevisionConflictError,
             WorkbenchSelectionConflictError,
         ) as exc:
             self._error(HTTPStatus.CONFLICT, str(exc))
@@ -2049,6 +2292,10 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             else None
         )
         payload["listening_master"] = public_listening_master
+        # The browser supplies its private reviewer key and exact window only
+        # when it explicitly prepares a blind review. Project loading must not
+        # guess either value or disclose another local reviewer's state.
+        payload["listening_master_review"] = None
         payload["product_contract"] = product_contract_document()
         payload["product_outputs"] = build_product_output_status(
             decoded_arrangement_selection,
@@ -2314,6 +2561,157 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 key: value for key, value in seed_record.items() if key != "path"
             }
         return public
+
+    def _master_review_inputs(
+        self,
+    ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+        """Return the exact current selection, balanced control and challenger."""
+
+        state = self.server.store.current_state(self.server.catalog)
+        selection = (
+            self.server.artifacts.decoded_arrangement_selection_manifest(
+                self.server.catalog,
+                state,
+            )
+        )
+        balanced = self.server.artifacts.cached_balanced_arrangement(
+            self.server.catalog,
+            state,
+        )
+        if balanced is None:
+            raise WorkbenchSelectionConflictError(
+                "the current balanced song interpretation is unavailable"
+            )
+        listening_master = self.server.listening_masters.cached(balanced)
+        if listening_master is None:
+            raise WorkbenchSelectionConflictError(
+                "the current Listening Master challenger is unavailable"
+            )
+        return selection, balanced, listening_master
+
+    def _require_master_review_hashes(
+        self,
+        request: Mapping[str, Any],
+        selection: Mapping[str, Any],
+        balanced: Mapping[str, Any],
+        listening_master: Mapping[str, Any],
+    ) -> None:
+        checks = (
+            (
+                "selection_manifest_sha256",
+                selection.get("selection_manifest_sha256"),
+            ),
+            (
+                "balanced_arrangement_manifest_sha256",
+                balanced.get("manifest_sha256"),
+            ),
+            (
+                "listening_master_manifest_sha256",
+                listening_master.get("manifest_sha256"),
+            ),
+        )
+        for key, current in checks:
+            requested = _require_lowercase_sha256(
+                request.get(key),
+                label=f"Listening Master review {key}",
+            )
+            if requested != current:
+                raise WorkbenchSelectionConflictError(
+                    "the selected arrangement, balanced control or Listening "
+                    "Master changed; reload before continuing the blind review"
+                )
+
+    def _public_master_review(
+        self,
+        prepared: Mapping[str, Any],
+        *,
+        selection: Mapping[str, Any],
+        balanced: Mapping[str, Any],
+        listening_master: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Register anonymous review audio and expose one path-free projection."""
+
+        comparison_sha256 = str(prepared["comparison_sha256"])
+        candidates: dict[str, Any] = {}
+        for slot in (CANDIDATE_A, CANDIDATE_B):
+            row = prepared.get("candidates", {}).get(slot)
+            if not isinstance(row, Mapping):
+                raise ValueError("Listening Master review candidate is invalid")
+            record = self.server.master_reviews.media_record(
+                comparison_sha256,
+                slot,
+            )
+            media_id = (
+                f"listening-master-review-{slot}-"
+                f"{comparison_sha256[:24]}"
+            )
+            private_record = dict(record)
+            private_record["_freeze_on_serve"] = True
+            self._register_generated_media(media_id, private_record)
+            # Do not expose candidate-specific applied gain, RMS or peak before
+            # identity resolution. Those measurements can bias or partially
+            # unblind the comparison even without an explicit assignment.
+            candidates[slot] = {
+                key: row[key]
+                for key in ("sample_rate", "channels", "frames")
+                if key in row
+            }
+            candidates[slot]["audio"] = {
+                key: value
+                for key, value in row["audio"].items()
+                if key != "path"
+            }
+            candidates[slot]["audio_url"] = self._media_url(media_id)
+
+        review_state = prepared.get("review_state", {})
+        if not isinstance(review_state, Mapping):
+            raise ValueError("Listening Master review state is invalid")
+        review = None
+        review_id = review_state.get("review_id")
+        if review_state.get("reviewed") is True:
+            if not isinstance(review_id, str):
+                raise ValueError("Listening Master review identity is invalid")
+            review = {
+                "review_id": review_id,
+                "review_sha256": review_state.get("review_sha256"),
+                "revision": review_state.get("current_revision"),
+                "response": review_state.get("response"),
+                "choice": (
+                    review_state.get("response", {}).get("choice")
+                    if isinstance(review_state.get("response"), Mapping)
+                    else None
+                ),
+                "review_url": (
+                    "/api/listening-master-review-export?kind=review"
+                    f"&review_id={review_id}&token={self.server.token}"
+                ),
+            }
+        return {
+            "schema": prepared.get("schema"),
+            "status": prepared.get("status"),
+            "blind": True,
+            "comparison_sha256": comparison_sha256,
+            "selection_manifest_sha256": selection.get(
+                "selection_manifest_sha256"
+            ),
+            "balanced_arrangement_manifest_sha256": balanced.get(
+                "manifest_sha256"
+            ),
+            "listening_master_manifest_sha256": listening_master.get(
+                "manifest_sha256"
+            ),
+            "nonce_commitment": prepared.get("nonce_commitment"),
+            "window": prepared.get("window"),
+            "policy": prepared.get("policy"),
+            "artifact_hashes": prepared.get("artifact_hashes"),
+            "candidates": candidates,
+            "allowed_problem_tags": sorted(MASTER_REVIEW_PROBLEM_TAGS),
+            "maximum_problem_tags": MAXIMUM_PROBLEM_TAGS_PER_CANDIDATE,
+            "maximum_notes_characters": MAXIMUM_NOTES_CHARACTERS,
+            "expected_revision": prepared.get("current_revision"),
+            "review": review,
+            "effects": prepared.get("effects"),
+        }
 
     def _public_clip_artifact(
         self, artifact: Mapping[str, Any]
@@ -2952,6 +3350,18 @@ def _workbench_clips_bytes() -> bytes:
     except OSError as exc:
         raise RuntimeError(
             f"packaged Workbench Clip Library module is unavailable: {path}"
+        ) from exc
+
+
+def _workbench_master_review_bytes() -> bytes:
+    """Load the bounded blind Listening Master review browser module."""
+
+    path = Path(__file__).with_name("workbench_master_review.js")
+    try:
+        return path.read_bytes()
+    except OSError as exc:
+        raise RuntimeError(
+            f"packaged Workbench master-review module is unavailable: {path}"
         ) from exc
 
 

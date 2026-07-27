@@ -3,7 +3,7 @@
 Status: Phase 5.10a, the initial Phase 5.10b full-project runner and the first
 Phase 5.10c native Listening Master operation implemented; remaining Phase
 5.10b and 5.10c plus Phase 5.10d planned
-Interface contract: `2026-07-27.4`
+Interface contract: `2026-07-27.5`
 
 The Guided Local Studio is the preferred human entry point to Sunofriend. It
 puts a clear terminal dashboard in front of the deterministic CLI and opens the
@@ -19,7 +19,8 @@ TUI and Workbench share the versioned product definition from
 Workbench can now create a separate fixed-policy Listening Master challenger
 from the exact current balanced control. The TUI **Master** tab exposes the
 same shared application service directly, while **Open visual studio** remains
-the place to hear and download both versions.
+the place to hear and download both versions and to complete the bounded blind
+level-matched control/challenger review.
 
 It is not a replacement transcription engine and it is not a terminal rewrite
 of the Workbench. Sunofriend's strength remains the same: retain several
@@ -132,6 +133,9 @@ verified balanced v3 song-interpretation control:
    **Master**.
 4. Read and tick the comparative-scope confirmation.
 5. Choose **Create / reuse listening master**.
+6. Open Visual Studio again and, when a bounded quality judgment is useful,
+   prepare one exact 0.5–15 second blind window, explicitly complete the A/B
+   response and optionally export it before resolving the identities.
 
 The form deliberately has no source path, destination path, loudness target,
 filter graph, FFmpeg option or release-master switch. It derives the current
@@ -159,7 +163,8 @@ loudness/true-peak evidence and the private PCM24 WAV and receipt paths. The
 result is always `mastered: true` and `release_master: false`. Creating or
 reusing it records no event, review, feedback or preference and changes no
 MIDI, selection, ranking, default, required product status or GarageBand Pack.
-Open Visual Studio afterwards for the listening and download experience.
+Open Visual Studio afterwards for listening, downloads and the optional
+bounded blind review. The TUI Master action itself still records no review.
 
 The visual Workbench starts with its read-only Developer Inspector available by
 default. Use `--no-developer-inspector` when the additional developer view is
@@ -258,7 +263,7 @@ The three interfaces have separate jobs:
 | Surface | Purpose | State it may change |
 | --- | --- | --- |
 | Guided Local Studio TUI | Project orientation, explicit fresh full-project conversion, local diagnostics, fixed-policy Listening Master orchestration and safe Workbench launch | In-memory navigation/activity; an explicitly confirmed conversion may create one fresh output through the production engines; an explicitly confirmed Master action may create/reuse one rebuildable private challenger; it may start, cancel and reap its conversion child or start/stop its Workbench child |
-| Workbench | Waveforms, MIDI lanes, synchronized listening, explicit musical decisions, MIDI-derived song-interpretation WAV, optional fixed-policy Listening Master challenger and GarageBand pack basket | Only explicit decision, review and basket actions are durable; playback and views are temporary, while requested audio outputs are rebuildable artifacts with no preference effect |
+| Workbench | Waveforms, MIDI lanes, synchronized listening, explicit musical decisions, MIDI-derived song-interpretation WAV, optional fixed-policy Listening Master challenger, bounded blind control/challenger review and GarageBand pack basket | Only explicit decision, blind-review completion, identity resolution, other review and basket actions are durable; playback and views are temporary, while requested audio outputs are rebuildable artifacts with no preference effect |
 | Developer Inspector | Explain the five-stage application architecture, allow-listed module/function references, recent operations, reducer replay and separate state planes | None; refresh, clear and replay are read-only and zero-effect |
 | CLI | Deterministic transcription, transformation, validation and artifact production | Only the files and stores explicitly named by the selected command |
 
@@ -344,9 +349,11 @@ Connect completed jobs to an explicit sequence:
 4. create the MIDI-derived song-interpretation WAV and, when wanted, its
    separate fixed-policy Listening Master challenger in Workbench or the TUI
    **Master** tab;
-5. inspect unresolved or failed candidates;
-6. choose the GarageBand pack basket; and
-7. run the existing tutorial, quiz and exact-pack acceptance checks.
+5. optionally complete one exact-window blind control/challenger response and
+   resolve its identities only as a separate explicit action;
+6. inspect unresolved or failed candidates;
+7. choose the GarageBand pack basket; and
+8. run the existing tutorial, quiz and exact-pack acceptance checks.
 
 The TUI will display durable progress derived from verified Workbench state and
 job evidence, while rich playback and piano-roll interaction remain in the
@@ -355,17 +362,20 @@ become a winner.
 
 The native Listening Master operation is implemented as the first narrow
 5.10c orchestration slice. It retains the balanced v3 control, exposes no user
-policy inputs and adds no inferred preference. Blinded
-control-versus-challenger feedback remains the next later explicit action.
+policy inputs and adds no inferred preference. The bounded blinded
+control-versus-challenger feedback form is now implemented in the Workbench
+opened by **Open visual studio**; it remains separate from the TUI Master
+operation and from automatic promotion.
 
-### 5.10d — Explicit local feedback and full guided handoff: planned
+### 5.10d — Broader local feedback and full guided handoff: planned
 
-Add structured, user-initiated feedback for process usefulness, failure type,
-musical role, phrase context, instrument choice and GarageBand outcome. The
-local record will pin exact versions and candidate hashes, retain valid
-`equivalent`, `neither`, `none usable` and `cannot tell` outcomes, and stay
-separate from audition history. It may improve local ordering of what to hear
-first, but must not mutate evidence or select a candidate automatically.
+Beyond the implemented bounded Listening Master A/B response, add structured,
+user-initiated feedback for process usefulness, failure type, musical role,
+phrase context, instrument choice and GarageBand outcome. The local record will
+pin exact versions and candidate hashes, retain valid `equivalent`, `neither`,
+`none usable` and `cannot tell` outcomes, and stay separate from audition
+history. It may improve local ordering of what to hear first, but must not
+mutate evidence or select a candidate automatically.
 
 The TUI will also guide eligible Phase 6 Clip actions and exact handoff
 artifacts only as their existing review-before-write contracts become

@@ -259,6 +259,230 @@ class WorkbenchDeveloperTraceTests(unittest.TestCase):
             },
         )
 
+    def test_listening_master_review_routes_are_separate_and_truthfully_durable(
+        self,
+    ) -> None:
+        routes = {
+            "/api/listening-master-review/prepare": (
+                "arrangement.master_review_prepare",
+                True,
+                "sunofriend.workbench_master_review."
+                "WorkbenchMasterReviewService.prepare",
+            ),
+            "/api/listening-master-review": (
+                "arrangement.master_review_complete",
+                True,
+                "sunofriend.workbench_master_review."
+                "WorkbenchMasterReviewService.complete",
+            ),
+            "/api/listening-master-review/resolve": (
+                "arrangement.master_review_resolve",
+                True,
+                "sunofriend.workbench_master_review."
+                "WorkbenchMasterReviewService.resolve",
+            ),
+        }
+        trace = WorkbenchDeveloperTrace()
+        sequences = []
+        for route, (operation, _, _) in routes.items():
+            self.assertEqual(developer_operation_for_route(route), operation)
+            self.assertEqual(developer_code_step_for_route(route), operation)
+            sequences.append(trace.begin("POST", operation))
+        for sequence in sequences:
+            trace.complete(sequence, 200)
+
+        operations = trace.snapshot()["recent_operations"]
+        self.assertEqual(
+            [row["durable_effect_possible"] for row in operations],
+            [True, True, True],
+        )
+        for row, (_, expected) in zip(operations, routes.items()):
+            operation, _, service_symbol = expected
+            self.assertEqual(row["operation"], operation)
+            self.assertIn(
+                "sunofriend.workbench_server._WorkbenchHandler.do_POST",
+                row["symbols"],
+            )
+            self.assertIn(service_symbol, row["symbols"])
+        self.assertNotIn(
+            "sunofriend.workbench_store.WorkbenchStore.append",
+            operations[1]["symbols"],
+        )
+        self.assertNotIn(
+            "sunofriend.workbench_artifacts.WorkbenchArtifacts",
+            operations[2]["symbols"],
+        )
+
+    def test_listening_master_review_response_facts_exclude_private_evidence(
+        self,
+    ) -> None:
+        private = {
+            "notes": "private listening note",
+            "reviewer_session_key": "raw-private-reviewer-key",
+            "private_path": "/Users/alice/private/review.wav",
+            "assignment": {
+                "candidate_a": "balanced_control",
+                "candidate_b": "listening_master",
+            },
+            "token": "secret-token",
+        }
+        cases = (
+            (
+                "/api/listening-master-review/prepare",
+                {
+                    "comparison": {
+                        "schema": (
+                            "sunofriend.workbench-listening-master-comparison.v1"
+                        ),
+                        "status": "unreviewed",
+                        "current_revision": 0,
+                        **private,
+                    }
+                },
+                {
+                    "schema": (
+                        "sunofriend.workbench-listening-master-comparison.v1"
+                    ),
+                    "status": "unreviewed",
+                    "revision": 0,
+                },
+            ),
+            (
+                "/api/listening-master-review",
+                {
+                    "review": {
+                        "schema": (
+                            "sunofriend.workbench-listening-master-review.v1"
+                        ),
+                        "status": "reviewed",
+                        "revision": 1,
+                        **private,
+                    }
+                },
+                {
+                    "schema": (
+                        "sunofriend.workbench-listening-master-review.v1"
+                    ),
+                    "status": "reviewed",
+                    "revision": 1,
+                },
+            ),
+            (
+                "/api/listening-master-review/resolve",
+                {
+                    "result": {
+                        "schema": (
+                            "sunofriend.workbench-listening-master-review-result.v1"
+                        ),
+                        "status": "complete",
+                        **private,
+                    }
+                },
+                {
+                    "schema": (
+                        "sunofriend.workbench-listening-master-review-result.v1"
+                    ),
+                    "status": "complete",
+                },
+            ),
+        )
+        for route, response, expected in cases:
+            facts = trace_response_facts(route, response)
+            self.assertEqual(facts, expected)
+            encoded = json.dumps(facts, sort_keys=True)
+            for forbidden in (
+                "private listening note",
+                "raw-private-reviewer-key",
+                "/Users/alice",
+                "balanced_control",
+                "listening_master",
+                "secret-token",
+                "assignment",
+            ):
+                self.assertNotIn(forbidden, encoded)
+        self.assertEqual(
+            trace_response_facts(
+                "/api/listening-master-review",
+                {
+                    "review": {
+                        "schema": "private listening note /Users/alice",
+                        "status": "reviewed",
+                        "revision": 2,
+                    }
+                },
+            ),
+            {"status": "reviewed", "revision": 2},
+        )
+
+    def test_listening_master_review_export_is_a_separate_read_only_operation(
+        self,
+    ) -> None:
+        route = "/api/listening-master-review-export"
+        operation = "arrangement.master_review_export"
+        self.assertEqual(developer_operation_for_route(route), operation)
+        self.assertEqual(developer_code_step_for_route(route), operation)
+
+        trace = WorkbenchDeveloperTrace()
+        sequence = trace.begin("GET", operation)
+        trace.complete(
+            sequence,
+            200,
+            trace_response_facts(
+                route,
+                {
+                    "schema": (
+                        "sunofriend.workbench-listening-master-review.v1"
+                    ),
+                    "status": "reviewed",
+                    "revision": 3,
+                    "notes": "private listening note",
+                    "reviewer_session_key": "raw-private-key",
+                    "assignment": {
+                        "candidate_a": "balanced_control",
+                        "candidate_b": "listening_master",
+                    },
+                    "path": "/Users/alice/private-review.json",
+                },
+            ),
+        )
+        row = trace.snapshot()["recent_operations"][0]
+        self.assertFalse(row["durable_effect_possible"])
+        self.assertIn(
+            "sunofriend.workbench_server._WorkbenchHandler.do_GET",
+            row["symbols"],
+        )
+        self.assertIn(
+            "sunofriend.workbench_master_review."
+            "WorkbenchMasterReviewService.review",
+            row["symbols"],
+        )
+        self.assertIn(
+            "sunofriend.workbench_master_review."
+            "WorkbenchMasterReviewService.resolution",
+            row["symbols"],
+        )
+        facts = row["frames"][-1]["facts"]
+        self.assertEqual(
+            facts,
+            {
+                "schema": (
+                    "sunofriend.workbench-listening-master-review.v1"
+                ),
+                "status": "reviewed",
+                "revision": 3,
+            },
+        )
+        encoded = json.dumps(row, sort_keys=True)
+        for forbidden in (
+            "private listening note",
+            "raw-private-key",
+            "/Users/alice",
+            "balanced_control",
+            "listening_master",
+            "assignment",
+        ):
+            self.assertNotIn(forbidden, encoded)
+
     def test_clip_routes_have_static_read_only_operation_identities(self) -> None:
         self.assertEqual(
             developer_operation_for_route("/api/clips"),

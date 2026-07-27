@@ -358,6 +358,168 @@ console.log(JSON.stringify({
         self.assertFalse(result["balanced"]["durableEffect"])
         self.assertFalse(result["master"]["durableEffect"])
 
+    def test_listening_master_review_routes_keep_feedback_separate_from_product_state(
+        self,
+    ) -> None:
+        result = self.run_node(
+            """
+let time = 0;
+const journal = developer.createOperationJournal({now: () => ++time});
+const routes = [
+  '/api/listening-master-review/prepare?token=secret',
+  '/api/listening-master-review?token=secret',
+  '/api/listening-master-review/resolve?token=secret',
+];
+for (const route of routes) {
+  const operation = journal.start(route, 'POST');
+  operation.complete({statusCode: 200});
+}
+console.log(JSON.stringify({
+  descriptors: routes.map(route => developer.routeDescriptor(route)),
+  records: journal.snapshot().records,
+}));
+"""
+        )
+
+        descriptors = result["descriptors"]
+        self.assertEqual(
+            [descriptor["operation"] for descriptor in descriptors],
+            [
+                "arrangement.master_review_prepare",
+                "arrangement.master_review_complete",
+                "arrangement.master_review_resolve",
+            ],
+        )
+        self.assertEqual(
+            [descriptor["durableEffect"] for descriptor in descriptors],
+            [True, True, True],
+        )
+        self.assertIn(
+            "WorkbenchMasterReviewService.prepare",
+            descriptors[0]["symbols"][-1],
+        )
+        self.assertIn(
+            "WorkbenchMasterReviewService.complete",
+            descriptors[1]["symbols"][-1],
+        )
+        self.assertIn(
+            "WorkbenchMasterReviewService.resolve",
+            descriptors[2]["symbols"][-1],
+        )
+        self.assertIn("separate explicit", descriptors[1]["label"])
+        self.assertIn("without promotion", descriptors[2]["label"])
+        self.assertEqual(
+            [
+                record["durable_effect_possible"]
+                for record in result["records"]
+            ],
+            [True, True, True],
+        )
+        self.assertNotIn("secret", json.dumps(result))
+
+    def test_listening_master_review_inspector_explains_durable_scope(self) -> None:
+        result = self.run_node(
+            """
+(async () => {
+  async function rendered(operation) {
+    const host = {innerHTML: '', querySelector() { return null; }};
+    const inspector = developer.createInspector({api: async () => ({
+      code_flow: {nodes: []},
+      runtime: {recent_operations: [{
+        sequence: 1,
+        operation,
+        method: 'POST',
+        status: 'completed',
+        http_status: 200,
+        duration_ms: 1,
+        durable_effect_possible: true,
+        symbols: [
+          'sunofriend.workbench_server._WorkbenchHandler.do_POST',
+          `sunofriend.workbench_master_review.WorkbenchMasterReviewService.${
+            operation.endsWith('prepare')
+              ? 'prepare'
+              : operation.endsWith('complete') ? 'complete' : 'resolve'
+          }`,
+        ],
+        frames: [],
+      }], active_operations: []},
+      privacy: {},
+      effects: {},
+    })});
+    inspector.setEnabled(true);
+    inspector.renderInto(host);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    return host.innerHTML;
+  }
+  console.log(JSON.stringify({
+    prepare: await rendered('arrangement.master_review_prepare'),
+    complete: await rendered('arrangement.master_review_complete'),
+    resolve: await rendered('arrangement.master_review_resolve'),
+  }));
+})().catch(error => { console.error(error); process.exitCode = 1; });
+"""
+        )
+
+        self.assertIn(
+            "private comparison session and rebuildable A/B cache only; no feedback or product change",
+            result["prepare"],
+        )
+        self.assertIn(
+            "separate local feedback artifact only; no Workbench decision or product change",
+            result["complete"],
+        )
+        self.assertIn(
+            "separate local resolution artifact only; never a selection, default, promotion or product change",
+            result["resolve"],
+        )
+        self.assertNotIn(
+            "only through this explicit production command",
+            result["complete"],
+        )
+
+    def test_listening_master_review_export_is_a_distinct_read_only_route(
+        self,
+    ) -> None:
+        result = self.run_node(
+            """
+let time = 0;
+const path = '/api/listening-master-review-export'
+  + '?kind=review&review_id=private-identity&token=secret';
+const descriptor = developer.routeDescriptor(path);
+const journal = developer.createOperationJournal({now: () => ++time});
+const operation = journal.start(path, 'GET');
+operation.complete({statusCode: 200});
+console.log(JSON.stringify({descriptor, snapshot: journal.snapshot()}));
+"""
+        )
+
+        descriptor = result["descriptor"]
+        self.assertEqual(
+            descriptor["operation"],
+            "arrangement.master_review_export",
+        )
+        self.assertFalse(descriptor["durableEffect"])
+        self.assertIn(
+            "sunofriend.workbench_master_review."
+            "WorkbenchMasterReviewService.review",
+            descriptor["symbols"],
+        )
+        self.assertIn(
+            "sunofriend.workbench_master_review."
+            "WorkbenchMasterReviewService.resolution",
+            descriptor["symbols"],
+        )
+        record = result["snapshot"]["records"][0]
+        self.assertEqual(record["method"], "GET")
+        self.assertEqual(
+            record["route"],
+            "/api/listening-master-review-export",
+        )
+        self.assertFalse(record["durable_effect_possible"])
+        encoded = json.dumps(result)
+        self.assertNotIn("private-identity", encoded)
+        self.assertNotIn("secret", encoded)
+
 
 if __name__ == "__main__":
     unittest.main()
