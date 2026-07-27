@@ -46,6 +46,9 @@ from .workbench_semantics import terminal_no_selection_outcome
 NEUTRAL_PREVIEW_SCHEMA = "sunofriend.workbench-neutral-preview.v1"
 DECODED_STEM_LOOP_SCHEMA = "sunofriend.workbench-decoded-stem-loop.v1"
 ARRANGEMENT_SELECTION_SCHEMA = "sunofriend.workbench-arrangement-selection.v1"
+INSTRUMENT_REVIEW_CONTEXT_SCHEMA = (
+    "sunofriend.workbench-instrument-review.context.v1"
+)
 DECODED_ARRANGEMENT_LOOP_SCHEMA = "sunofriend.workbench-decoded-arrangement-loop.v1"
 DECODED_ARRANGEMENT_STREAM_SCHEMA = "sunofriend.workbench-decoded-arrangement-stream.v1"
 DECODED_ARRANGEMENT_CHUNK_SCHEMA = "sunofriend.workbench-decoded-arrangement-chunk.v1"
@@ -681,6 +684,98 @@ class WorkbenchArtifacts:
         """Return the canonical path-free tracks and preset groups for audition."""
 
         return decoded_arrangement_selection_manifest(catalog, current)
+
+    def instrument_review_context(
+        self,
+        catalog: Mapping[str, Any],
+        current: Mapping[str, Any],
+        track_id: str,
+        selection_manifest_sha256: str,
+    ) -> dict[str, Any]:
+        """Resolve one selected bass part for a fixed-MIDI instrument review.
+
+        This is an internal, path-bearing bridge between the immutable
+        Workbench catalog and the private review service.  Nothing returned
+        here changes a decision, candidate, preset, pack, or export.
+        """
+
+        (
+            manifest,
+            _source_groups,
+            selection,
+        ) = _decoded_arrangement_selection(catalog, current)
+        if (
+            not _is_sha256(selection_manifest_sha256)
+            or selection_manifest_sha256
+            != manifest["selection_manifest_sha256"]
+        ):
+            raise ValueError(
+                "the selected arrangement changed; reload it before preparing "
+                "an instrument review"
+            )
+        checked_track_id = str(track_id)
+        matches = [
+            item for item in selection if str(item["track_id"]) == checked_track_id
+        ]
+        if len(matches) != 1:
+            raise ValueError(
+                "instrument review track_id must identify one selected MIDI part"
+            )
+        selected = matches[0]
+        role = path_free_role(selected.get("role"))[0]
+        if role != "bass":
+            raise ValueError(
+                "complete-instrument review v1 is available only for selected "
+                "bass MIDI"
+            )
+        self._verify_selection([selected])
+        stem = _stem(catalog, str(selected["stem_id"]))
+        source_record = dict(stem["source"])
+        self._verify_catalog_record(source_record, label="bass source stem")
+        soundfont = self._soundfont()
+        self._verify_catalog_record(
+            soundfont,
+            label="instrument-review SoundFont",
+            restart_hint=True,
+        )
+        return {
+            "schema": INSTRUMENT_REVIEW_CONTEXT_SCHEMA,
+            "project_id": str(catalog.get("project_id", "")),
+            "selection_manifest_sha256": selection_manifest_sha256,
+            "bpm": _project_bpm(catalog),
+            "track": {
+                "track_id": checked_track_id,
+                "stem_id": str(selected["stem_id"]),
+                "candidate_id": str(selected["candidate_id"]),
+                "role": role,
+                "decision": str(selected["decision"]),
+                "selection_index": int(selected["selection_index"]),
+                "midi": dict(selected["midi"]),
+            },
+            "source": source_record,
+            "soundfont": soundfont,
+            "programs": {
+                "control": {
+                    "program": 38,
+                    "general_midi_number": 39,
+                    "label": "Synth Bass 1",
+                },
+                "challenger": {
+                    "program": 39,
+                    "general_midi_number": 40,
+                    "label": "Synth Bass 2",
+                },
+            },
+            "effects": {
+                "midi_mutated": False,
+                "selection_changed": False,
+                "automatic_selection": False,
+                "automatic_ranking": False,
+                "default_selection_changed": False,
+                "pack_changed": False,
+                "product_completion_changed": False,
+            },
+        }
 
     def prepare_decoded_arrangement_loop(
         self,

@@ -345,6 +345,45 @@ unchanged; the page publishes the signed gains and applies them only through a
 Web Audio `GainNode`. Bass neutral rendering uses zero-based program 38,
 published as **GM 39 Synth Bass 1 proxy**.
 
+Instrument choice is a sibling review boundary rather than another mode in the
+transcription or balanced-mix renderer. The first
+`sunofriend.workbench-instrument-review` contract accepts only one currently
+selected bass lane and its exact arrangement-selection/MIDI hashes. It creates
+two private audition proxies from the same verified MIDI and SoundFont:
+zero-based GM programs 38 and 39. Only Program Change bytes may differ;
+normalised note timing, duration, pitch and velocity signatures must remain
+identical and the selected source MIDI is re-hashed before publication.
+Non-zero CC0/CC32 bank selection, cross-track bank/program ordering and a
+target Program Change that does not precede every playable Note On are rejected
+so the programme identity is effective, including raw same-tick event order.
+
+The service crops one exact 0.5–15 second source-reference window and the same
+elapsed-time window from both renders. One disclosed policy attenuates the
+source and both candidates to the quietest input's fixed-window RMS, rejects
+more than 18 dB divergence, and applies one common attenuation-only guard for
+a −1 dBFS PCM16 sample-peak ceiling. It never boosts, limits or compresses.
+The source remains labelled reference evidence, not a third candidate. The
+browser receives anonymous A/B media capabilities and uses one decoded clock.
+Review completion records explicit heard, choice, allow-listed problem tags
+and bounded notes in a separate owner-only ledger. Resolution is a separate
+operation that reveals the committed programme mapping. Neither operation
+writes `WorkbenchStore`, changes the selection manifest, promotes an
+instrument, rebuilds the balanced WAV or alters a pack.
+
+Preparation checks resource ceilings before any copy or render: 64 MiB for
+MIDI, 20 minutes for its complete event horizon, 2 GiB each for source audio
+and SoundFont, 256 MiB for the renderer and 3 GiB in aggregate. It snapshots
+only the exact decoded source window, while the bounded MIDI and SoundFont are
+private verified snapshots. This prevents an ostensibly short review from
+silently copying an unbounded source or rendering an unbounded MIDI timeline.
+
+This separation matters for maintainability: transcription chooses notes,
+instrument review compares complete sounds with notes held fixed, and
+arrangement/mastering compares balances only after those earlier variables are
+understood. The first policy is deliberately bass-only. A keys sibling must
+add a polyphonic pitch/velocity coverage probe rather than assuming that a
+successful bass render proves keyboard completeness.
+
 `workbench_transport.js` decodes those bounded clips, equalises their decoded
 frame lengths on one `AudioContext`, and creates fresh source nodes for every
 scheduled start or switch. The outgoing stop and incoming start share one

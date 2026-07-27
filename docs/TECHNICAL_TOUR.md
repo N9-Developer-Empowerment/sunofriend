@@ -417,6 +417,23 @@ for long songs without becoming a hidden editor or selection system.
    Read-only export routes expose path-free blind or resolved JSON.
 10. Cache eviction loses no musical decision. An artifact can be rebuilt from
    verified source records and current state.
+11. Stage 4 instrument review reads one active selected bass lane from the
+    canonical arrangement manifest. The server, not the browser, fixes the
+    complete-patch pair to GM Synth Bass 1/2 and renders both from the same
+    verified MIDI, BPM and SoundFont. A separate application service verifies
+    that only programme bytes differ and crops one exact window. It attenuates
+    the source and anonymous A/B renders to their quietest RMS, rejects more
+    than 18 dB divergence, then applies one common attenuation-only −1 dBFS
+    sample-peak guard without limiting or compression. It stores explicit
+    local review evidence; a later resolve call reveals the committed identity
+    mapping. This service never writes candidate decisions, selected MIDI, mix
+    artifacts or export state.
+12. Program identity and resources fail closed before rendering. Bank Select
+    must remain unambiguous GM bank zero, the target Program Change must precede
+    every playable note in raw event order, MIDI is limited to 64 MiB and 20
+    minutes, source/SoundFont inputs to 2 GiB each, the renderer to 256 MiB and
+    declared aggregate inputs to 3 GiB. Only the requested source window is
+    decoded into private review state.
 
 The canonical selected-arrangement short/full-song transports and dry proxy
 stay at unity gain. The precise per-stem loop alone uses

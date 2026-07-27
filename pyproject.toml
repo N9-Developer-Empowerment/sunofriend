@@ -108,6 +108,7 @@ sunofriend = [
     "workbench.html",
     "workbench_clips.js",
     "workbench_developer.js",
+    "workbench_instrument_review.js",
     "workbench_master_review.js",
     "workbench_transport.js",
     "workbench_visualization.js",

@@ -74,6 +74,14 @@ _MASTER_REVIEW_TRACE_SCHEMAS = frozenset(
         "sunofriend.workbench-listening-master-native-readiness-review.v1",
     }
 )
+_INSTRUMENT_REVIEW_TRACE_SCHEMAS = frozenset(
+    {
+        "sunofriend.workbench-instrument-review-plan.v1",
+        "sunofriend.workbench-instrument-review.comparison.v1",
+        "sunofriend.workbench-instrument-review.review.v1",
+        "sunofriend.workbench-instrument-review.result.v1",
+    }
+)
 
 _ROUTE_OPERATIONS = {
     "/api/project": "project.read",
@@ -109,6 +117,11 @@ _ROUTE_OPERATIONS = {
     "/api/listening-master-readiness-export": (
         "arrangement.master_readiness_export"
     ),
+    "/api/instrument-review-plan": "instrument_review.plan",
+    "/api/instrument-review/prepare": "instrument_review.prepare",
+    "/api/instrument-review": "instrument_review.complete",
+    "/api/instrument-review/resolve": "instrument_review.resolve",
+    "/api/instrument-review-export": "instrument_review.export",
     "/api/garageband-export": "handoff.build",
     "/api/garageband-pack-basket": "pack_basket.save",
     "/api/garageband-pack": "pack.build",
@@ -157,6 +170,11 @@ _ROUTE_CODE_STEPS = {
     "/api/listening-master-readiness-export": (
         "arrangement.master_readiness_export"
     ),
+    "/api/instrument-review-plan": "instrument_review.plan",
+    "/api/instrument-review/prepare": "instrument_review.prepare",
+    "/api/instrument-review": "instrument_review.complete",
+    "/api/instrument-review/resolve": "instrument_review.resolve",
+    "/api/instrument-review-export": "instrument_review.export",
     "/api/garageband-export": "handoff.build",
     "/api/garageband-pack-plan": "pack.plan",
     "/api/garageband-pack-basket": "pack_basket.save",
@@ -278,6 +296,30 @@ _CODE_MAP = {
         "module": "sunofriend.workbench_master_readiness",
         "symbol": "WorkbenchMasterReadinessService.review",
     },
+    "instrument_review.plan": {
+        "module": "sunofriend.workbench_server",
+        "symbol": "_WorkbenchHandler._instrument_review_plan",
+    },
+    "instrument_review.prepare": {
+        "module": "sunofriend.workbench_instrument_review",
+        "symbol": "WorkbenchInstrumentReviewService.prepare",
+    },
+    "instrument_review.complete": {
+        "module": "sunofriend.workbench_instrument_review",
+        "symbol": "WorkbenchInstrumentReviewService.complete",
+    },
+    "instrument_review.resolve": {
+        "module": "sunofriend.workbench_instrument_review",
+        "symbol": "WorkbenchInstrumentReviewService.resolve",
+    },
+    "instrument_review.export": {
+        "module": "sunofriend.workbench_instrument_review",
+        "symbol": "WorkbenchInstrumentReviewService.review",
+    },
+    "instrument_review.resolution_read": {
+        "module": "sunofriend.workbench_instrument_review",
+        "symbol": "WorkbenchInstrumentReviewService.resolution",
+    },
     "handoff.build": {
         "module": "sunofriend.workbench_artifacts",
         "symbol": "WorkbenchArtifacts.build_garageband_handoff",
@@ -388,6 +430,21 @@ _OPERATION_LABELS = {
     "arrangement.master_readiness_export": (
         "Export one verified native-level readiness review"
     ),
+    "instrument_review.plan": (
+        "Derive eligible active selected bass MIDI without choosing a sound"
+    ),
+    "instrument_review.prepare": (
+        "Prepare one fixed-MIDI source-referenced blind bass-instrument comparison"
+    ),
+    "instrument_review.complete": (
+        "Append one separate explicit blind instrument-review artifact"
+    ),
+    "instrument_review.resolve": (
+        "Reveal the completed comparison identities without applying a choice"
+    ),
+    "instrument_review.export": (
+        "Export one verified instrument review or resolution artifact"
+    ),
     "handoff.build": "Build the compatibility GarageBand handoff",
     "pack_basket.save": "Save a separate export-basket revision",
     "pack.build": "Build and verify an exact local ZIP",
@@ -456,6 +513,10 @@ _CODE_FLOW_NODES = (
         ),
         "symbols": [
             "sunofriend.workbench_artifacts.WorkbenchArtifacts",
+            (
+                "sunofriend.workbench_instrument_review."
+                "WorkbenchInstrumentReviewService"
+            ),
             "sunofriend.workbench_clips.WorkbenchClipService",
             "sunofriend.workbench_transform.WorkbenchClipTransformService",
             "sunofriend.workbench_correction.WorkbenchClipCorrectionService",
@@ -539,6 +600,9 @@ class WorkbenchDeveloperTrace:
                     "arrangement.master_review_resolve",
                     "arrangement.master_readiness_prepare",
                     "arrangement.master_readiness_complete",
+                    "instrument_review.prepare",
+                    "instrument_review.complete",
+                    "instrument_review.resolve",
                 },
                 "symbols": _operation_symbols(operation),
                 "started_ns": now,
@@ -795,6 +859,20 @@ def trace_response_facts(route: str, value: Mapping[str, Any]) -> dict[str, Any]
             "item_count": len(plan.get("items", [])),
             "build_blocked": plan.get("build_blocked"),
         }
+    if route == "/api/instrument-review-plan":
+        plan = value.get("plan", {})
+        lanes = plan.get("eligible_lanes", [])
+        return {
+            "schema": plan.get("schema"),
+            "eligible_lane_count": (
+                len(lanes) if isinstance(lanes, list) else None
+            ),
+            "musical_selection_changed": False,
+            "midi_changed": False,
+            "instrument_default_changed": False,
+            "mix_changed": False,
+            "pack_changed": False,
+        }
     if route == "/api/clips":
         page = value.get("page", {})
         return {
@@ -893,6 +971,56 @@ def trace_response_facts(route: str, value: Mapping[str, Any]) -> dict[str, Any]
         }
         return {
             key: item for key, item in facts.items() if item is not None
+        }
+    if route in {
+        "/api/instrument-review/prepare",
+        "/api/instrument-review",
+        "/api/instrument-review/resolve",
+        "/api/instrument-review-export",
+    }:
+        document = value.get("comparison")
+        if not isinstance(document, Mapping):
+            document = value
+        schema = document.get("schema")
+        status = document.get("status")
+        if status not in {"unreviewed", "reviewed", "resolved", "complete"}:
+            status = None
+        revision = document.get(
+            "expected_revision",
+            document.get("revision"),
+        )
+        if (
+            isinstance(revision, bool)
+            or not isinstance(revision, int)
+            or revision < 0
+        ):
+            revision = None
+        return {
+            key: item
+            for key, item in {
+                "schema": (
+                    schema
+                    if schema in _INSTRUMENT_REVIEW_TRACE_SCHEMAS
+                    else None
+                ),
+                "status": status,
+                "revision": revision,
+                "review_artifact_appended": (
+                    route == "/api/instrument-review"
+                    and status in {"reviewed", "resolved", "complete"}
+                ),
+                "identities_revealed": (
+                    route == "/api/instrument-review/resolve"
+                    or schema
+                    == "sunofriend.workbench-instrument-review.result.v1"
+                ),
+                "musical_selection_changed": False,
+                "midi_changed": False,
+                "instrument_default_changed": False,
+                "mix_changed": False,
+                "pack_changed": False,
+            }.items()
+            if item is not None
         }
     wrapper_by_route = {
         "/api/render-preview": "preview",
@@ -1317,6 +1445,14 @@ def _safe_trace_facts(value: Mapping[str, Any]) -> dict[str, Any]:
         "plan_revision",
         "active_placement_count",
         "clip_version_appended",
+        "eligible_lane_count",
+        "review_artifact_appended",
+        "identities_revealed",
+        "musical_selection_changed",
+        "midi_changed",
+        "instrument_default_changed",
+        "mix_changed",
+        "pack_changed",
         "status",
         "revision",
     }
@@ -1329,6 +1465,13 @@ def _safe_trace_facts(value: Mapping[str, Any]) -> dict[str, Any]:
             "build_blocked",
             "cache_hit",
             "clip_version_appended",
+            "review_artifact_appended",
+            "identities_revealed",
+            "musical_selection_changed",
+            "midi_changed",
+            "instrument_default_changed",
+            "mix_changed",
+            "pack_changed",
         } and isinstance(item, bool):
             result[key] = item
         elif key in {
@@ -1339,6 +1482,7 @@ def _safe_trace_facts(value: Mapping[str, Any]) -> dict[str, Any]:
             "plan_revision",
             "active_placement_count",
             "revision",
+            "eligible_lane_count",
         } and isinstance(item, int) and not isinstance(item, bool):
             result[key] = max(0, item)
         elif key == "event_type" and item in {
@@ -1394,6 +1538,9 @@ def _operation_symbols(operation: str) -> list[str]:
         "arrangement.master_review_resolve",
         "arrangement.master_readiness_prepare",
         "arrangement.master_readiness_complete",
+        "instrument_review.prepare",
+        "instrument_review.complete",
+        "instrument_review.resolve",
     }:
         steps.extend(["validate", operation_step])
     elif operation == "arrangement.master_review_export":
@@ -1405,6 +1552,13 @@ def _operation_symbols(operation: str) -> list[str]:
         )
     elif operation == "arrangement.master_readiness_export":
         steps.append(operation_step)
+    elif operation == "instrument_review.export":
+        steps.extend(
+            [
+                operation_step,
+                "instrument_review.resolution_read",
+            ]
+        )
     else:
         steps.append(operation_step)
     steps.append("publish")

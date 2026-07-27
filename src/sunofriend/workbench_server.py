@@ -6,6 +6,7 @@ import errno
 import hashlib
 import hmac
 import json
+import math
 import mimetypes
 import os
 import secrets
@@ -57,6 +58,17 @@ from .workbench_master_readiness import (
     WorkbenchMasterReadinessGateError,
     WorkbenchMasterReadinessService,
 )
+from .workbench_instrument_review import (
+    CANDIDATE_A as INSTRUMENT_CANDIDATE_A,
+    CANDIDATE_B as INSTRUMENT_CANDIDATE_B,
+    INSTRUMENT_REVIEW_PROBLEM_TAGS,
+    MAXIMUM_NOTES_CHARACTERS as INSTRUMENT_MAXIMUM_NOTES_CHARACTERS,
+    MAXIMUM_PROBLEM_TAGS_PER_CANDIDATE as INSTRUMENT_MAXIMUM_PROBLEM_TAGS,
+    SOURCE_REFERENCE,
+    WorkbenchInstrumentReviewConflictError,
+    WorkbenchInstrumentReviewRevisionConflictError,
+    WorkbenchInstrumentReviewService,
+)
 from .workbench_clips import WorkbenchClipService, public_artifact as public_clip_artifact
 from .workbench_correction import (
     WorkbenchClipCorrectionConflictError,
@@ -100,6 +112,7 @@ from .workbench_timeline import (
 _MAX_REQUEST_BYTES = 64 * 1024
 _MAX_GENERATED_MEDIA_RECORDS = 768
 _MAX_DECODED_STREAM_PLANS = 16
+_MAX_INSTRUMENT_REVIEW_CONTEXTS = 128
 _MAX_DEVELOPER_SNAPSHOT_BYTES = 512 * 1024
 _CLIP_CORRECTION_ROUTES = frozenset(
     {
@@ -191,6 +204,18 @@ def _workbench_master_reviewer_key(project_id: Any) -> str:
         raise ValueError("Workbench project identity is invalid")
     payload = (
         "sunofriend.workbench-listening-master-reviewer.v1\0"
+        f"{project_id}"
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _workbench_instrument_reviewer_key(project_id: Any) -> str:
+    """Derive a separate stable local reviewer key for instrument feedback."""
+
+    if not isinstance(project_id, str) or not project_id:
+        raise ValueError("Workbench project identity is invalid")
+    payload = (
+        "sunofriend.workbench-instrument-reviewer.v1\0"
         f"{project_id}"
     ).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
@@ -367,6 +392,7 @@ class WorkbenchHTTPServer(ThreadingHTTPServer):
         listening_masters: WorkbenchListeningMasterService,
         master_reviews: WorkbenchMasterReviewService,
         master_readiness: WorkbenchMasterReadinessService,
+        instrument_reviews: WorkbenchInstrumentReviewService,
         token: str,
         developer_inspector: bool = False,
         clip_service: WorkbenchClipService | None = None,
@@ -380,6 +406,7 @@ class WorkbenchHTTPServer(ThreadingHTTPServer):
         self.listening_masters = listening_masters
         self.master_reviews = master_reviews
         self.master_readiness = master_readiness
+        self.instrument_reviews = instrument_reviews
         self.token = token
         self.developer_inspector = bool(developer_inspector)
         self.clip_service = clip_service
@@ -393,6 +420,9 @@ class WorkbenchHTTPServer(ThreadingHTTPServer):
         self.catalog_media_ids = frozenset(self.media)
         self.generated_media_ids: OrderedDict[str, None] = OrderedDict()
         self.decoded_stream_plans: OrderedDict[str, dict[str, Any]] = OrderedDict()
+        self.instrument_review_contexts: OrderedDict[
+            str, dict[str, str]
+        ] = OrderedDict()
         (
             self.phrase_review_capabilities,
             self.phrase_review_capability_by_stem,
@@ -496,6 +526,9 @@ def create_workbench_server(
         destination / "listening-master-readiness",
         master_reviews,
     )
+    instrument_reviews = WorkbenchInstrumentReviewService(
+        destination / "instrument-reviews"
+    )
     clip_reuse_service = (
         WorkbenchClipReuseService.open(
             clip_service=clip_service,
@@ -530,6 +563,7 @@ def create_workbench_server(
         listening_masters=listening_masters,
         master_reviews=master_reviews,
         master_readiness=master_readiness,
+        instrument_reviews=instrument_reviews,
         token=session_token,
         developer_inspector=developer_inspector,
         clip_service=clip_service,
@@ -845,6 +879,13 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 "text/javascript; charset=utf-8",
             )
             return
+        if parsed.path == "/workbench-instrument-review.js":
+            self._bytes(
+                HTTPStatus.OK,
+                _workbench_instrument_review_bytes(),
+                "text/javascript; charset=utf-8",
+            )
+            return
         if parsed.path.startswith("/phrase-review/"):
             self._serve_phrase_review(parsed.path)
             return
@@ -1009,6 +1050,15 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 return
             self._json(HTTPStatus.OK, {"plan": plan})
             return
+        if parsed.path == "/api/instrument-review-plan":
+            try:
+                with self.server.state_lock:
+                    plan = self._instrument_review_plan()
+            except (OSError, RuntimeError, ValueError) as exc:
+                self._error(HTTPStatus.BAD_REQUEST, str(exc))
+                return
+            self._json(HTTPStatus.OK, {"plan": plan})
+            return
         if parsed.path == "/api/review":
             self._json(
                 HTTPStatus.OK,
@@ -1056,6 +1106,49 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 filename="sunofriend-listening-master-native-readiness-review.json",
             )
             return
+        if parsed.path == "/api/instrument-review-export":
+            try:
+                query = parse_qs(
+                    parsed.query,
+                    keep_blank_values=True,
+                    max_num_fields=8,
+                )
+                if set(query) != {"token", "kind", "review_id"} or any(
+                    len(values) != 1 for values in query.values()
+                ):
+                    raise ValueError(
+                        "instrument review export query is invalid"
+                    )
+                kind = query["kind"][0]
+                review_id = _require_lowercase_sha256(
+                    query["review_id"][0],
+                    label="instrument review export review_id",
+                )
+                if kind == "review":
+                    document = self.server.instrument_reviews.review(review_id)
+                    filename = "sunofriend-instrument-blind-review.json"
+                elif kind == "result":
+                    document = self.server.instrument_reviews.resolution(
+                        review_id
+                    )
+                    if document is None:
+                        raise ValueError(
+                            "instrument review identities have not been resolved"
+                        )
+                    filename = "sunofriend-instrument-review-result.json"
+                else:
+                    raise ValueError(
+                        "instrument review export kind is invalid"
+                    )
+                if _mapping_contains_key(document, "path"):
+                    raise ValueError(
+                        "instrument review export exposed a private path"
+                    )
+            except (OSError, RuntimeError, ValueError) as exc:
+                self._error(HTTPStatus.BAD_REQUEST, str(exc))
+                return
+            self._json(HTTPStatus.OK, document, filename=filename)
+            return
         if parsed.path.startswith("/media/"):
             media_id = parsed.path[len("/media/") :]
             self._serve_media(media_id)
@@ -1084,6 +1177,9 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             "/api/listening-master-review/resolve",
             "/api/listening-master-readiness/prepare",
             "/api/listening-master-readiness",
+            "/api/instrument-review/prepare",
+            "/api/instrument-review",
+            "/api/instrument-review/resolve",
             "/api/garageband-export",
             "/api/garageband-pack-basket",
             "/api/garageband-pack",
@@ -1579,6 +1675,169 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     self._refresh_decoded_stream_plan(stream_sha256, plan)
                     public_chunk = self._public_decoded_arrangement_chunk(artifact)
                 self._json(HTTPStatus.OK, {"chunk": public_chunk})
+                return
+            if parsed.path == "/api/instrument-review/prepare":
+                _require_exact_request_keys(
+                    request,
+                    {
+                        "selection_manifest_sha256",
+                        "stem_id",
+                        "candidate_id",
+                        "midi_sha256",
+                        "start_seconds",
+                        "end_seconds",
+                    },
+                    label="instrument review preparation",
+                )
+                with self.server.state_lock:
+                    initial_context = self._instrument_review_context(request)
+                prepared = self.server.instrument_reviews.prepare(
+                    context=initial_context,
+                    start_seconds=request.get("start_seconds"),
+                    end_seconds=request.get("end_seconds"),
+                    reviewer_session_key=_workbench_instrument_reviewer_key(
+                        self.server.catalog["project_id"]
+                    ),
+                )
+                # Rendering can outlive another tab's selection change. Only
+                # publish/register media after the exact lane pins still resolve.
+                with self.server.state_lock:
+                    final_context = self._instrument_review_context(request)
+                    self._require_same_instrument_review_context(
+                        initial_context,
+                        final_context,
+                    )
+                    public_review = self._public_instrument_review(
+                        prepared,
+                        context=final_context,
+                    )
+                    self._remember_instrument_review_context(
+                        str(public_review["comparison_sha256"]),
+                        final_context,
+                    )
+                self._json(
+                    HTTPStatus.OK,
+                    {"comparison": public_review},
+                )
+                return
+            if parsed.path == "/api/instrument-review":
+                _require_exact_request_keys(
+                    request,
+                    {
+                        "comparison_sha256",
+                        "expected_revision",
+                        "heard",
+                        "choice",
+                        "problem_tags",
+                        "notes",
+                    },
+                    label="instrument review",
+                )
+                comparison_sha256 = _require_lowercase_sha256(
+                    request.get("comparison_sha256"),
+                    label="instrument review comparison_sha256",
+                )
+                with self.server.state_lock:
+                    context = self._instrument_review_context_for_comparison(
+                        comparison_sha256
+                    )
+                    completed = self.server.instrument_reviews.complete(
+                        context=context,
+                        comparison_sha256=comparison_sha256,
+                        reviewer_session_key=_workbench_instrument_reviewer_key(
+                            self.server.catalog["project_id"]
+                        ),
+                        expected_revision=request.get("expected_revision"),
+                        heard=request.get("heard"),
+                        choice=request.get("choice"),
+                        problem_tags=request.get("problem_tags"),
+                        notes=request.get("notes"),
+                    )
+                    prepared = self.server.instrument_reviews.current(
+                        context=context,
+                        comparison_sha256=comparison_sha256,
+                        reviewer_session_key=_workbench_instrument_reviewer_key(
+                            self.server.catalog["project_id"]
+                        ),
+                    )
+                    current_review = prepared.get("current_review")
+                    if (
+                        not isinstance(current_review, Mapping)
+                        or current_review.get("review_id")
+                        != completed.get("review_id")
+                    ):
+                        raise RuntimeError(
+                            "instrument review publication changed"
+                        )
+                    public_review = self._public_instrument_review(
+                        prepared,
+                        context=context,
+                    )
+                self._json(
+                    HTTPStatus.OK,
+                    {"comparison": public_review},
+                )
+                return
+            if parsed.path == "/api/instrument-review/resolve":
+                _require_exact_request_keys(
+                    request,
+                    {
+                        "comparison_sha256",
+                        "review_id",
+                        "review_sha256",
+                    },
+                    label="instrument review resolution",
+                )
+                comparison_sha256 = _require_lowercase_sha256(
+                    request.get("comparison_sha256"),
+                    label="instrument review comparison_sha256",
+                )
+                review_id = _require_lowercase_sha256(
+                    request.get("review_id"),
+                    label="instrument review review_id",
+                )
+                review_sha256 = _require_lowercase_sha256(
+                    request.get("review_sha256"),
+                    label="instrument review review_sha256",
+                )
+                with self.server.state_lock:
+                    context = self._instrument_review_context_for_comparison(
+                        comparison_sha256
+                    )
+                    stored_review = self.server.instrument_reviews.review(
+                        review_id
+                    )
+                    if (
+                        stored_review.get("comparison_sha256")
+                        != comparison_sha256
+                        or stored_review.get("review_sha256")
+                        != review_sha256
+                    ):
+                        raise WorkbenchInstrumentReviewConflictError(
+                            "the completed instrument review changed"
+                        )
+                    result = self.server.instrument_reviews.resolve(
+                        context=context,
+                        comparison_sha256=comparison_sha256,
+                        review_id=review_id,
+                        review_sha256=review_sha256,
+                    )
+                    prepared = self.server.instrument_reviews.current(
+                        context=context,
+                        comparison_sha256=comparison_sha256,
+                        reviewer_session_key=_workbench_instrument_reviewer_key(
+                            self.server.catalog["project_id"]
+                        ),
+                    )
+                    public_review = self._public_instrument_review(
+                        prepared,
+                        context=context,
+                        resolution=result,
+                    )
+                self._json(
+                    HTTPStatus.OK,
+                    {"comparison": public_review},
+                )
                 return
             if parsed.path == "/api/listening-master-review/prepare":
                 _require_exact_request_keys(
@@ -2278,6 +2537,8 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             WorkbenchMasterReviewRevisionConflictError,
             WorkbenchMasterReadinessConflictError,
             WorkbenchMasterReadinessGateError,
+            WorkbenchInstrumentReviewConflictError,
+            WorkbenchInstrumentReviewRevisionConflictError,
             WorkbenchSelectionConflictError,
         ) as exc:
             self._error(HTTPStatus.CONFLICT, str(exc))
@@ -2701,6 +2962,254 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             }
         return public
 
+    def _instrument_review_plan(self) -> dict[str, Any]:
+        """Derive a path-free plan from only active selected bass MIDI."""
+
+        current = self.server.store.current_state(self.server.catalog)
+        manifest = (
+            self.server.artifacts.decoded_arrangement_selection_manifest(
+                self.server.catalog,
+                current,
+            )
+        )
+        selected = selected_candidates(self.server.catalog, current)
+        eligible = {
+            (
+                str(item.get("stem_id", "")),
+                str(item.get("candidate_id", "")),
+                str(item.get("midi", {}).get("sha256", "")),
+            )
+            for item in selected
+            if item.get("role") == "bass"
+            and item.get("audition_blocked") is not True
+        }
+        lanes: list[dict[str, Any]] = []
+        selection_sha256 = _require_lowercase_sha256(
+            manifest.get("selection_manifest_sha256"),
+            label="instrument review selection manifest",
+        )
+        for row in manifest.get("selected_midi", []):
+            if not isinstance(row, Mapping) or row.get("role") != "bass":
+                continue
+            pins = (
+                str(row.get("stem_id", "")),
+                str(row.get("candidate_id", "")),
+                str(row.get("midi_sha256", "")),
+            )
+            if pins not in eligible:
+                continue
+            lanes.append(
+                {
+                    "selection_manifest_sha256": selection_sha256,
+                    "stem_id": pins[0],
+                    "candidate_id": pins[1],
+                    "midi_sha256": pins[2],
+                    "role": "bass",
+                    "label": f"Selected bass MIDI {len(lanes) + 1}",
+                    "pair": {
+                        "description": (
+                            "The exact selected MIDI through two complete "
+                            "General MIDI synth-bass programs."
+                        ),
+                        "control": {"label": "Synth Bass 1"},
+                        "challenger": {"label": "Synth Bass 2"},
+                    },
+                }
+            )
+        if len(lanes) > 64:
+            raise ValueError(
+                "instrument review plan exceeds its fixed bass-lane limit"
+            )
+        plan = {
+            "schema": "sunofriend.workbench-instrument-review-plan.v1",
+            "selection_manifest_sha256": selection_sha256,
+            "eligible_lanes": lanes,
+            "effects": {
+                "midi_changed": False,
+                "instrument_default_changed": False,
+                "pack_changed": False,
+                "mix_changed": False,
+                "feedback_recorded": False,
+            },
+        }
+        if _mapping_contains_key(plan, "path"):
+            raise ValueError("instrument review plan exposed a private path")
+        return plan
+
+    def _instrument_review_context(
+        self,
+        request: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Resolve browser lane pins to one trusted private current context."""
+
+        selection_sha256 = _require_lowercase_sha256(
+            request.get("selection_manifest_sha256"),
+            label="instrument review selection_manifest_sha256",
+        )
+        midi_sha256 = _require_lowercase_sha256(
+            request.get("midi_sha256"),
+            label="instrument review midi_sha256",
+        )
+        identifiers: dict[str, str] = {}
+        for key in ("stem_id", "candidate_id"):
+            value = request.get(key)
+            if (
+                not isinstance(value, str)
+                or not value
+                or len(value) > 256
+            ):
+                raise ValueError(f"instrument review {key} is invalid")
+            identifiers[key] = value
+
+        current = self.server.store.current_state(self.server.catalog)
+        manifest = (
+            self.server.artifacts.decoded_arrangement_selection_manifest(
+                self.server.catalog,
+                current,
+            )
+        )
+        if manifest.get("selection_manifest_sha256") != selection_sha256:
+            raise WorkbenchSelectionConflictError(
+                "the selected arrangement changed; reload the instrument review"
+            )
+        matches = [
+            row
+            for row in manifest.get("selected_midi", [])
+            if isinstance(row, Mapping)
+            and row.get("stem_id") == identifiers["stem_id"]
+            and row.get("candidate_id") == identifiers["candidate_id"]
+            and row.get("midi_sha256") == midi_sha256
+            and row.get("role") == "bass"
+        ]
+        if len(matches) != 1:
+            raise WorkbenchSelectionConflictError(
+                "the selected bass MIDI changed; reload the instrument review"
+            )
+        active = [
+            row
+            for row in selected_candidates(self.server.catalog, current)
+            if row.get("stem_id") == identifiers["stem_id"]
+            and row.get("candidate_id") == identifiers["candidate_id"]
+            and row.get("midi", {}).get("sha256") == midi_sha256
+            and row.get("role") == "bass"
+            and row.get("audition_blocked") is not True
+        ]
+        if len(active) != 1:
+            raise WorkbenchSelectionConflictError(
+                "the selected bass MIDI is no longer eligible for review"
+            )
+        context = self.server.artifacts.instrument_review_context(
+            self.server.catalog,
+            current,
+            str(matches[0]["track_id"]),
+            selection_sha256,
+        )
+        track = context.get("track")
+        if (
+            not isinstance(track, Mapping)
+            or track.get("stem_id") != identifiers["stem_id"]
+            or track.get("candidate_id") != identifiers["candidate_id"]
+            or track.get("role") != "bass"
+            or track.get("midi", {}).get("sha256") != midi_sha256
+        ):
+            raise WorkbenchSelectionConflictError(
+                "instrument review lane evidence changed"
+            )
+        return context
+
+    def _remember_instrument_review_context(
+        self,
+        comparison_sha256: str,
+        context: Mapping[str, Any],
+    ) -> None:
+        track = context.get("track")
+        if not isinstance(track, Mapping):
+            raise ValueError("instrument review context track is invalid")
+        pins = {
+            "selection_manifest_sha256": _require_lowercase_sha256(
+                context.get("selection_manifest_sha256"),
+                label="instrument review selection manifest",
+            ),
+            "stem_id": str(track.get("stem_id", "")),
+            "candidate_id": str(track.get("candidate_id", "")),
+            "midi_sha256": _require_lowercase_sha256(
+                track.get("midi", {}).get("sha256"),
+                label="instrument review MIDI",
+            ),
+        }
+        contexts = self.server.instrument_review_contexts
+        contexts.pop(comparison_sha256, None)
+        contexts[comparison_sha256] = pins
+        while len(contexts) > _MAX_INSTRUMENT_REVIEW_CONTEXTS:
+            contexts.popitem(last=False)
+
+    def _instrument_review_context_for_comparison(
+        self,
+        comparison_sha256: str,
+    ) -> dict[str, Any]:
+        contexts = self.server.instrument_review_contexts
+        pins = contexts.get(comparison_sha256)
+        if not isinstance(pins, Mapping):
+            binding = self.server.instrument_reviews.comparison_binding(
+                comparison_sha256
+            )
+            track = binding.get("track")
+            if (
+                binding.get("project_id")
+                != self.server.catalog.get("project_id")
+                or binding.get("role") != "bass"
+                or not isinstance(track, Mapping)
+            ):
+                raise WorkbenchInstrumentReviewConflictError(
+                    "instrument review comparison belongs to different evidence"
+                )
+            pins = {
+                "selection_manifest_sha256": binding.get(
+                    "selection_manifest_sha256"
+                ),
+                "stem_id": track.get("stem_id"),
+                "candidate_id": track.get("candidate_id"),
+                "midi_sha256": binding.get("selected_midi", {}).get(
+                    "sha256"
+                ),
+            }
+            context = self._instrument_review_context(pins)
+            self._remember_instrument_review_context(
+                comparison_sha256,
+                context,
+            )
+            return context
+        contexts.move_to_end(comparison_sha256)
+        return self._instrument_review_context(pins)
+
+    def _require_same_instrument_review_context(
+        self,
+        before: Mapping[str, Any],
+        after: Mapping[str, Any],
+    ) -> None:
+        def anchors(value: Mapping[str, Any]) -> tuple[Any, ...]:
+            track = value.get("track")
+            return (
+                value.get("project_id"),
+                value.get("selection_manifest_sha256"),
+                track.get("track_id") if isinstance(track, Mapping) else None,
+                track.get("stem_id") if isinstance(track, Mapping) else None,
+                track.get("candidate_id") if isinstance(track, Mapping) else None,
+                (
+                    track.get("midi", {}).get("sha256")
+                    if isinstance(track, Mapping)
+                    else None
+                ),
+                value.get("source", {}).get("sha256"),
+                value.get("soundfont", {}).get("sha256"),
+            )
+
+        if anchors(before) != anchors(after):
+            raise WorkbenchSelectionConflictError(
+                "the selected bass MIDI changed while its instrument review "
+                "was being prepared; reload and retry"
+            )
+
     def _master_review_inputs(
         self,
     ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
@@ -2823,6 +3332,259 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     f"the {label} changed while native-level readiness audio "
                     "was being prepared; reload and retry"
                 )
+
+    def _public_instrument_review(
+        self,
+        prepared: Mapping[str, Any],
+        *,
+        context: Mapping[str, Any],
+        resolution: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Register frozen blind crops and expose only a safe comparison."""
+
+        comparison_sha256 = _require_lowercase_sha256(
+            prepared.get("comparison_sha256"),
+            label="instrument review comparison_sha256",
+        )
+        comparison = prepared.get("comparison")
+        track = context.get("track")
+        if not isinstance(comparison, Mapping) or not isinstance(track, Mapping):
+            raise ValueError("instrument review comparison is invalid")
+        if (
+            comparison.get("selection_manifest_sha256")
+            != context.get("selection_manifest_sha256")
+            or comparison.get("track", {}).get("stem_id")
+            != track.get("stem_id")
+            or comparison.get("track", {}).get("candidate_id")
+            != track.get("candidate_id")
+            or comparison.get("selected_midi", {}).get("sha256")
+            != track.get("midi", {}).get("sha256")
+            or comparison.get("role") != "bass"
+        ):
+            raise WorkbenchInstrumentReviewConflictError(
+                "instrument review comparison no longer matches its selected lane"
+            )
+
+        audio = prepared.get("audio")
+        if not isinstance(audio, Mapping):
+            raise ValueError("instrument review audio is invalid")
+        public_audio: dict[str, dict[str, Any]] = {}
+        media_records: dict[str, tuple[str, dict[str, Any]]] = {}
+        for slot in (
+            SOURCE_REFERENCE,
+            INSTRUMENT_CANDIDATE_A,
+            INSTRUMENT_CANDIDATE_B,
+        ):
+            row = audio.get(slot)
+            if not isinstance(row, Mapping):
+                raise ValueError("instrument review audio row is invalid")
+            gain = row.get("applied_gain_db")
+            if (
+                isinstance(gain, bool)
+                or not isinstance(gain, (int, float))
+                or not math.isfinite(float(gain))
+                or not -60.0 <= float(gain) <= 0.0
+            ):
+                raise ValueError(
+                    "instrument review disclosed gain is invalid"
+                )
+            record = self.server.instrument_reviews.media_record(
+                comparison_sha256,
+                slot,
+            )
+            media_id = (
+                f"instrument-review-{slot}-{comparison_sha256[:24]}"
+            )
+            private_record = dict(record)
+            private_record["_freeze_on_serve"] = True
+            media_records[slot] = (media_id, private_record)
+            public_audio[slot] = {
+                "audio_url": self._media_url(media_id),
+                "applied_gain_db": float(gain),
+            }
+
+        current_review = prepared.get("current_review")
+        public_review = None
+        if current_review is not None:
+            if not isinstance(current_review, Mapping):
+                raise ValueError("instrument review artifact is invalid")
+            review_id = _require_lowercase_sha256(
+                current_review.get("review_id"),
+                label="instrument review identity",
+            )
+            review_sha256 = _require_lowercase_sha256(
+                current_review.get("review_sha256"),
+                label="instrument review SHA-256",
+            )
+            revision = current_review.get("revision")
+            if (
+                isinstance(revision, bool)
+                or not isinstance(revision, int)
+                or revision < 1
+            ):
+                raise ValueError("instrument review revision is invalid")
+            response = current_review.get("response")
+            if not isinstance(response, Mapping):
+                raise ValueError("instrument review response is invalid")
+            public_review = {
+                "review_id": review_id,
+                "review_sha256": review_sha256,
+                "revision": revision,
+                "review_url": (
+                    "/api/instrument-review-export?kind=review"
+                    f"&review_id={review_id}&token={self.server.token}"
+                ),
+                "response": {
+                    "heard": dict(response.get("heard", {})),
+                    "choice": response.get("choice"),
+                    "problem_tags": {
+                        slot: list(
+                            response.get("problem_tags", {}).get(slot, [])
+                        )
+                        for slot in (
+                            INSTRUMENT_CANDIDATE_A,
+                            INSTRUMENT_CANDIDATE_B,
+                        )
+                    },
+                    "notes": {
+                        slot: str(response.get("notes", {}).get(slot, ""))
+                        for slot in (
+                            INSTRUMENT_CANDIDATE_A,
+                            INSTRUMENT_CANDIDATE_B,
+                        )
+                    },
+                },
+            }
+            if resolution is None:
+                resolution = self.server.instrument_reviews.resolution(
+                    review_id
+                )
+
+        public_result = None
+        if resolution is not None:
+            if public_review is None or not isinstance(resolution, Mapping):
+                raise ValueError("instrument review resolution is invalid")
+            if (
+                resolution.get("comparison_sha256") != comparison_sha256
+                or resolution.get("review_id")
+                != public_review["review_id"]
+                or resolution.get("review_sha256")
+                != public_review["review_sha256"]
+            ):
+                raise WorkbenchInstrumentReviewConflictError(
+                    "instrument review resolution changed"
+                )
+            assignment = resolution.get("assignment")
+            if not isinstance(assignment, Mapping):
+                raise ValueError("instrument review assignment is invalid")
+            public_assignment: dict[str, dict[str, Any]] = {}
+            identity_labels: dict[str, str] = {}
+            for slot in (
+                INSTRUMENT_CANDIDATE_A,
+                INSTRUMENT_CANDIDATE_B,
+            ):
+                identity = assignment.get(slot)
+                if not isinstance(identity, Mapping):
+                    raise ValueError(
+                        "instrument review assignment row is invalid"
+                    )
+                label = identity.get("label")
+                if not isinstance(label, str) or not label:
+                    raise ValueError(
+                        "instrument review assignment label is invalid"
+                    )
+                public_assignment[slot] = {
+                    "label": label,
+                    "general_midi_number": identity.get(
+                        "general_midi_number"
+                    ),
+                }
+                identity_name = identity.get("identity")
+                if isinstance(identity_name, str):
+                    identity_labels[identity_name] = label
+            resolved_choice = resolution.get("resolved_choice")
+            if isinstance(resolved_choice, str):
+                resolved_choice = identity_labels.get(
+                    resolved_choice,
+                    resolved_choice,
+                )
+            public_result = {
+                "assignment": public_assignment,
+                "resolved_choice": resolved_choice,
+                "result_url": (
+                    "/api/instrument-review-export?kind=result"
+                    f"&review_id={public_review['review_id']}"
+                    f"&token={self.server.token}"
+                ),
+            }
+
+        allowed = prepared.get("allowed")
+        window = comparison.get("window")
+        if not isinstance(allowed, Mapping) or not isinstance(window, Mapping):
+            raise ValueError("instrument review limits or window are invalid")
+        status = (
+            "resolved"
+            if public_result is not None
+            else "reviewed"
+            if public_review is not None
+            else "unreviewed"
+        )
+        public = {
+            "schema": "sunofriend.workbench-instrument-review.comparison.v1",
+            "status": status,
+            "blind": public_result is None,
+            "comparison_sha256": comparison_sha256,
+            "selection_manifest_sha256": context.get(
+                "selection_manifest_sha256"
+            ),
+            "stem_id": track.get("stem_id"),
+            "candidate_id": track.get("candidate_id"),
+            "midi_sha256": track.get("midi", {}).get("sha256"),
+            "role": "bass",
+            "expected_revision": (
+                public_review["revision"] if public_review is not None else 0
+            ),
+            "window": {
+                "start_seconds": window.get("start_seconds"),
+                "end_seconds": window.get("end_seconds"),
+            },
+            "source_reference": public_audio[SOURCE_REFERENCE],
+            "candidates": {
+                INSTRUMENT_CANDIDATE_A: public_audio[
+                    INSTRUMENT_CANDIDATE_A
+                ],
+                INSTRUMENT_CANDIDATE_B: public_audio[
+                    INSTRUMENT_CANDIDATE_B
+                ],
+            },
+            "allowed_problem_tags": sorted(
+                INSTRUMENT_REVIEW_PROBLEM_TAGS
+            ),
+            "limits": {
+                "maximum_problem_tags_per_candidate": (
+                    INSTRUMENT_MAXIMUM_PROBLEM_TAGS
+                ),
+                "maximum_notes_characters_per_candidate": (
+                    INSTRUMENT_MAXIMUM_NOTES_CHARACTERS
+                ),
+            },
+            "review": public_review,
+            "result": public_result,
+            "effects": {
+                "midi_changed": False,
+                "instrument_default_changed": False,
+                "pack_changed": False,
+                "mix_changed": False,
+                "feedback_recorded": public_review is not None,
+            },
+        }
+        if _mapping_contains_key(public, "path"):
+            raise ValueError(
+                "instrument review browser projection exposed a private path"
+            )
+        for media_id, record in media_records.values():
+            self._register_generated_media(media_id, record)
+        return public
 
     def _public_master_review(
         self,
@@ -3684,6 +4446,18 @@ def _workbench_master_review_bytes() -> bytes:
     except OSError as exc:
         raise RuntimeError(
             f"packaged Workbench master-review module is unavailable: {path}"
+        ) from exc
+
+
+def _workbench_instrument_review_bytes() -> bytes:
+    """Load the bounded fixed-MIDI instrument-review browser module."""
+
+    path = Path(__file__).with_name("workbench_instrument_review.js")
+    try:
+        return path.read_bytes()
+    except OSError as exc:
+        raise RuntimeError(
+            f"packaged Workbench instrument-review module is unavailable: {path}"
         ) from exc
 
 

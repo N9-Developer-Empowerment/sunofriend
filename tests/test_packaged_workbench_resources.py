@@ -71,6 +71,7 @@ class PackagedWorkbenchResourcesTests(unittest.TestCase):
                     _workbench_clips_bytes,
                     _workbench_developer_bytes,
                     _workbench_html_bytes,
+                    _workbench_instrument_review_bytes,
                     _workbench_transport_bytes,
                     _workbench_visualization_bytes,
                 )
@@ -84,6 +85,7 @@ class PackagedWorkbenchResourcesTests(unittest.TestCase):
                     "workbench.html": _workbench_html_bytes,
                     "workbench_clips.js": _workbench_clips_bytes,
                     "workbench_developer.js": _workbench_developer_bytes,
+                    "workbench_instrument_review.js": _workbench_instrument_review_bytes,
                     "workbench_transport.js": _workbench_transport_bytes,
                     "workbench_visualization.js": _workbench_visualization_bytes,
                 }

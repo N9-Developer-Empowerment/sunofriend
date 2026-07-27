@@ -929,6 +929,55 @@ those snapshots are removed before results are published. Primary candidate
 audio preloads metadata for quick comparison; advanced alternatives do not
 preload audio until used, which keeps larger result spaces responsive.
 
+### Compare complete bass instruments with the MIDI held fixed
+
+After choosing a main or optional bass MIDI part, open **Choose instruments**
+in the Workbench. This first Stage 4 slice answers a narrower question than the
+stem-to-MIDI explorer: “Which complete, consistently playable bass sound makes
+these exact notes most useful?”
+
+Choose a recognisable 0.5–15 second window and prepare the comparison locally.
+Sunofriend:
+
+- binds the current arrangement-selection hash, stem, candidate and MIDI
+  SHA-256 before rendering;
+- copies the selected MIDI performance byte-for-byte and changes only the
+  program used by a private audition proxy. A proxy is rejected unless every
+  played channel stays in General MIDI bank zero and establishes the target
+  Program Change before its first note, including same-tick event order;
+- renders zero-based GM program 38, **Synth Bass 1**, and program 39,
+  **Synth Bass 2**, through the same verified SoundFont and dry FluidSynth
+  path;
+- verifies that note timing, duration, pitch and velocity remain identical and
+  that the selected MIDI file itself did not change;
+- presents the source stem as a labelled reference and the two renders as
+  blind Candidate A and Candidate B on one decoded browser clock. All three
+  files are attenuated to the quietest fixed-window RMS, with no boost; one
+  common attenuation-only guard then keeps every sample at or below −1 dBFS.
+  A comparison is rejected when that fair match would require more than 18 dB
+  of attenuation; and
+- requires explicit heard marks and a choice before storing bounded local
+feedback. Identity is revealed only by a separate resolve action.
+
+Preparation is resource-bounded before it copies or renders anything. MIDI is
+limited to 64 MiB and a 20-minute render horizon; source audio and SoundFont
+inputs are limited to 2 GiB each, the renderer to 256 MiB, and the combined
+declared inputs to 3 GiB. Only the requested source window is decoded into the
+private review workspace; the verified SoundFont and bounded MIDI are
+snapshotted so another process cannot change them during rendering.
+
+Preparation and playback are rebuildable cache work. Completing or resolving
+this instrument review creates a separate owner-only, path-free review record;
+it does **not** change the selected MIDI, Workbench decisions, role, renderer
+default, balanced interpretation, Listening Master, GarageBand Pack or product
+completion. This is a complete-instrument proxy comparison, not GarageBand
+patch automation and not a claim that either General MIDI sound is the
+physical instrument in the stem.
+
+The first slice is intentionally bass-only. Keys are next, after a
+polyphonic note/velocity coverage probe can prove that every required pitch is
+audible before a patch enters the same listening workflow.
+
 If a requested loop extends beyond available source or preview audio,
 Workbench pads that track's end with generated silence and identifies its
 duration in a warning that remains visible while the prepared loop is current.

@@ -555,6 +555,62 @@ preview rendering is limited to MIDI no longer than 20 minutes. The current
 policy is `role-neutral-general-midi-v3`; bass uses zero-based program 38,
 published as **GM 39 Synth Bass 1 proxy**.
 
+## Stage 4: fixed-MIDI complete-instrument review
+
+**Choose instruments** is no longer a placeholder when the current saved
+arrangement contains an active bass candidate. The first narrow Stage 4 review
+holds the musical performance constant and compares two complete, consistently
+mapped General MIDI bass patches. It does not try to infer a GarageBand patch
+name and it does not compare different transcriptions.
+
+The local plan is server-derived. An eligible row is pinned to the current
+`sunofriend.workbench-arrangement-selection.v1` hash, stem ID, candidate ID,
+role and MIDI SHA-256. The browser cannot submit a local path, SoundFont,
+programme, gain, candidate roster or hidden identity. The current bass policy
+uses zero-based programme 38, Synth Bass 1, and programme 39, Synth Bass 2.
+Both private proxies use the same selected MIDI, BPM, verified SoundFont and
+dry renderer. Sunofriend rejects the comparison if the selected lane changes
+or if note timing, duration, pitch or velocity differs between proxies.
+It also rejects non-zero or cross-track-ambiguous MIDI bank selection, or a
+Program Change which does not take effect before every played note in raw
+same-tick order. That fail-closed rule is what makes the displayed GM Synth
+Bass identities true for the rendered audio rather than merely labels.
+
+Set a 0.5–15 second source-time window and choose **Prepare instrument
+comparison**. The source crop is visibly labelled as reference evidence.
+The source, Candidate A and Candidate B are all attenuated to the quietest
+input's fixed-window RMS; no input is boosted and the comparison is rejected
+if the match would need more than 18 dB attenuation. One common
+attenuation-only sample-peak guard then keeps all three PCM16 files at or below
+−1 dBFS without limiting or compression. The two candidates remain anonymous
+until a completed response is separately resolved. All three files switch on
+one decoded browser clock and the page discloses each applied attenuation.
+Mark the source and both candidates heard, then choose A, B, equivalent,
+neither usable or cannot tell. Optional problem tags and private notes are
+bounded and stored locally.
+
+Before snapshotting or invoking FluidSynth, the service enforces a 64 MiB MIDI
+limit, a 20-minute MIDI render horizon, 2 GiB source-audio and SoundFont
+limits, a 256 MiB renderer limit and a 3 GiB declared aggregate-input limit.
+It decodes only the requested source window into private state rather than
+copying the full stem. These are safety limits, not quality scores.
+
+Preparation/playback are feedback-free. Completion and resolution write only
+the separate instrument-review ledger. They do not change:
+
+- the source or selected MIDI bytes;
+- candidate main/optional/correction/reject decisions or the saved role;
+- the neutral-preview programme or any instrument default;
+- the balanced interpretation, Listening Master or their review results;
+- product readiness; or
+- GarageBand Pack membership.
+
+The resolved result is evidence for a later advisory profile, never automatic
+promotion. GarageBand patch selection remains a human DAW action. Keys are
+deferred to the next role-specific increment because a polyphonic
+pitch/velocity audibility probe is required before a keyboard patch can enter
+this comparison honestly.
+
 Neutral preview WAVs remain renderer-consistent and unnormalised. Only the
 prepared precise per-stem loop applies a disclosed browser audition gain under
 `recorded-zero-source-frame-window-level-matched-v2` and

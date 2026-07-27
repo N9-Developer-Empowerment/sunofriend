@@ -1007,7 +1007,21 @@ Each working day should aim for one narrow vertical improvement:
   passed 1,249 tests; the sole warning remains the existing
   `resampy`/`pkg_resources` deprecation. The next increment is
   complete-instrument challengers, beginning with bass and keys while holding
-  MIDI fixed.
+  MIDI fixed. The first bounded bass challenger is now a real Workbench Stage
+  4: it hash-pins one currently selected bass lane and renders its unchanged
+  performance through complete GM Synth Bass 1 and Synth Bass 2 patches. A
+  source crop is a labelled reference; source and candidates are
+  attenuation-only matched to the quietest fixed-window RMS and share one
+  −1 dBFS sample-peak guard. The two rendered candidates remain blind until
+  explicit heard/choice feedback is complete, and resolution is evidence
+  rather than automatic promotion. Keys remain the next sibling increment
+  because polyphonic note coverage needs its own probe.
+- Validation: 14 backend tests and the 34-test artifact/backend/server/browser
+  integration gate cover bank/program ordering, immutable proxies, common
+  level matching, resource bounds, restart, races and privacy. The wider
+  adjacent Workbench gate passed 125 tests and the complete repository passed
+  1,275 tests. The sole warning remains the existing
+  `resampy`/`pkg_resources` deprecation.
 
 ### 2026-07-27 — Workbench Listening Master v1
 

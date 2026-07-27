@@ -2007,7 +2007,31 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     prepare it again
     without treating eviction as lost project work. If the compatibility
     fallback was needed, describe it as second-synchronised, not
-    sample-accurate, and feedback/event-free. For a precise decoded arrangement
+    sample-accurate, and feedback/event-free.
+    For a Stage 4 complete-instrument review, require one active selected bass
+    lane and report the exact arrangement-selection and MIDI hashes, source
+    reference window, verified SoundFont, dry renderer and server-owned GM
+    Synth Bass 1/2 pair. Confirm both anonymous renders contain the identical
+    note timing, duration, pitch and velocity performance and that the selected
+    MIDI bytes remain unchanged. Require unambiguous GM bank zero and an
+    effective target Program Change before every playable Note On, including
+    raw same-tick order. Report the 64 MiB/20-minute MIDI, 2 GiB source,
+    2 GiB SoundFont, 256 MiB renderer and 3 GiB aggregate preparation limits,
+    plus exact-window-only source snapshotting. Confirm the source and both
+    candidates are
+    attenuated to the quietest fixed-window RMS with no boost, reject more than
+    18 dB divergence, and apply one common attenuation-only −1 dBFS sample-peak
+    guard with no limiter or compressor. Require all three source/A/B heard
+    marks before accepting A, B, equivalent, neither usable or cannot tell;
+    reveal the programme mapping only through the separate resolved result.
+    State that preparation/playback are feedback-free and that
+    completion/resolution affect only the owner-only instrument-review ledger,
+    never MIDI decisions, roles, defaults, mixes, product readiness or
+    GarageBand Pack membership.
+    Do not call either proxy a detected GarageBand patch or automatically apply
+    the preference. Keys remain ineligible until the separate polyphonic
+    pitch/velocity coverage increment exists.
+    For a precise decoded arrangement
     loop, report its context-neutral manifest hash, deduplicated source and
     distinct selected-MIDI counts, 24-track maximum, exact canonical group
     membership, pre/post-render stale-selection check and atomic one-clock

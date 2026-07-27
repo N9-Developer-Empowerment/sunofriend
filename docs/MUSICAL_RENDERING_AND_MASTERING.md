@@ -430,8 +430,17 @@ produce a control/challenger comparison.
    is complete and explicitly resolved. It reuses that exact frame window and
    writes unchanged-level PCM24 crops at 0 dB gain, so delivered loudness
    cannot bias or rewrite the first judgment.
-2. Add complete-instrument challengers one role at a time, starting with bass
-   and keys, while keeping the MIDI fixed.
+2. **Bass slice implemented:** add complete-instrument challengers one role at
+   a time while keeping the selected MIDI fixed. The first Workbench check
+   compares GM Synth Bass 1 with GM Synth Bass 2 through the same SoundFont,
+   renderer and exact MIDI performance. The source stem is a labelled
+   reference. Source and candidates are attenuated to the quietest fixed-window
+   RMS, reject more than 18 dB divergence, and share one attenuation-only
+   −1 dBFS sample-peak guard without boost, limiting or compression. Candidate
+   identity remains blind until an explicit review is complete, and the result
+   cannot change a MIDI decision, default instrument, mix or GarageBand Pack.
+   Keys are the next role and need a separate polyphonic audibility probe
+   before they use this contract.
 3. Compare balance challengers only after instrumentation is held constant.
 4. Connect verified local feedback profiles as advisory context, never silent
    selection or default promotion.

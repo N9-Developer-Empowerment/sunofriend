@@ -6,6 +6,37 @@ the patch changes its attack, decay, brightness, noise, articulation or
 register. Sunofriend therefore produces audition evidence and keeps the final
 choice with the musician.
 
+## Workbench complete-instrument comparison
+
+Instrument matching scores and names are advisory; a usable instrument must
+also play every required note consistently and sound musically useful. The
+first Workbench Stage 4 comparison therefore holds one currently selected bass
+MIDI performance fixed and renders it through two complete SoundFont patches:
+GM Synth Bass 1 and Synth Bass 2. The source stem is a labelled reference,
+while the two rendered candidates remain blind until explicit local review.
+
+This check measures the patch, not transcription quality: the selected MIDI
+SHA-256 and arrangement-selection hash are pinned, proxy note signatures must
+match exactly, and both patches share the same SoundFont, renderer and review
+window. The source and both anonymous renders are attenuation-only matched to
+the quietest fixed-window RMS, with an 18 dB divergence limit and one common
+−1 dBFS sample-peak guard; no input is boosted, limited or compressed. Review
+evidence cannot change a default or GarageBand Pack. It can later inform an
+advisory, context-specific profile only after the user has heard both
+candidates.
+
+The GM label is also verified structurally. Sunofriend rejects non-zero or
+ambiguous bank selection and requires the rewritten Program Change to be
+effective before every played note, including notes at the same MIDI tick.
+Resource limits and a 20-minute render horizon are checked before FluidSynth;
+only the chosen source window is copied into review state.
+
+The bass slice does not claim to automate GarageBand's Library or identify the
+physical source instrument. A resolved Synth Bass preference is simply
+evidence about these exact complete proxies. Keys require a separate
+polyphonic pitch/velocity coverage probe and remain the next role-specific
+increment.
+
 ## Instrument Bundle v1: sound and match together
 
 A Standard MIDI file cannot contain the actual GarageBand patch audio.

@@ -281,6 +281,14 @@ progressively guide the work around it. Only the prepared precise per-stem loop
 applies disclosed browser-only active-block comparison gains; card/fallback and
 canonical arrangement/full-song transports remain unlevelled.
 
+The same visual boundary now includes the first **Choose instruments** stage.
+When a saved arrangement has an active bass lane, the browser can compare two
+complete GM bass patches while holding that selected MIDI fixed. The TUI does
+not duplicate the blind players, accept programme numbers or infer a winner;
+it launches the Workbench and reports only that the visual stage is available.
+All heard/choice evidence remains in the separate local Workbench
+instrument-review ledger.
+
 ## State and privacy contracts
 
 These rules apply to every Phase 5.10 increment:
