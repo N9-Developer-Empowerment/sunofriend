@@ -88,6 +88,7 @@ class WorkbenchDecodedLoopServerTests(unittest.TestCase):
                 "start_seconds",
                 "end_seconds",
                 "duration_seconds",
+                "audition_level",
                 "cache_hit",
                 "effects",
                 "tracks",
@@ -131,12 +132,22 @@ class WorkbenchDecodedLoopServerTests(unittest.TestCase):
                 "frames",
                 "start_frame",
                 "silence_padded_frames",
+                "audition_gain_db",
+                "audition_level",
                 "audio",
                 "audio_url",
             }
             if track["kind"] == "candidate":
                 expected_track_keys.add("candidate_id")
             self.assertEqual(set(track), expected_track_keys)
+            self.assertEqual(
+                track["audition_level"]["policy"],
+                "common-target-active-block-rms-v1",
+            )
+            self.assertEqual(
+                track["audition_gain_db"],
+                track["audition_level"]["applied_gain_db"],
+            )
             self.assertEqual(set(track["audio"]), {"name", "bytes", "sha256"})
             self.assertNotIn("path", track["audio"])
             self.assertEqual(track["audio"]["sha256"], _url_media_sha(self.server, audio_url))

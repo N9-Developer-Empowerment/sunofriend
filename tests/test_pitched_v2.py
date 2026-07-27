@@ -13,6 +13,9 @@ from sunofriend.imagine import (
 )
 from sunofriend.models import ChordSegment, NoteEvent
 from sunofriend.transcribe_pitched import (
+    _BassSustainEvidence,
+    repair_bass_octaves,
+    repair_bass_sustain,
     select_bass_contour,
     separate_keys_roles,
     transcribe_pitched_stem,
@@ -54,15 +57,30 @@ class BassRegisterTests(unittest.TestCase):
         ), patch(
             "sunofriend.imagine._verified",
             side_effect=lambda _path, notes, threshold: notes,
+        ), patch(
+            "sunofriend.transcribe_pitched.repair_bass_sustain",
+            side_effect=lambda _path, notes, **_kwargs: list(notes),
+        ), patch(
+            "sunofriend.transcribe_pitched.repair_bass_octaves",
+            side_effect=lambda _path, notes, **_kwargs: list(notes),
         ):
             variants = imagine_bass_variants(
                 "synthetic.wav", Grid(120.0), segments, "B major"
             )
 
         self.assertEqual(
-            set(variants), {"raw_verified", "contour_clean", "root_safe"}
+            set(variants),
+            {
+                "raw_verified",
+                "contour_clean",
+                "octave_resolved",
+                "continuous_sustain",
+                "root_safe",
+            },
         )
         self.assertEqual(variants["raw_verified"], evidence)
+        self.assertEqual(variants["octave_resolved"], evidence)
+        self.assertEqual(variants["continuous_sustain"], evidence)
         self.assertEqual(variants["contour_clean"][0].pitch, 27)
         self.assertTrue(
             all(note.pitch % 12 == segments[0].root_pc for note in variants["root_safe"])
@@ -70,6 +88,122 @@ class BassRegisterTests(unittest.TestCase):
 
 
 class BassContourTests(unittest.TestCase):
+    def test_octave_resolution_changes_only_a_dominant_pyin_harmonic(self):
+        notes = [
+            NoteEvent(0.0, 0.5, 47, 84),
+            NoteEvent(0.6, 1.0, 39, 88),
+        ]
+        evidence = _BassSustainEvidence(
+            frame_seconds=0.1,
+            rms_active=(True,) * 12,
+            voiced=(True,) * 12,
+            pitches=(35,) * 6 + (39,) * 6,
+        )
+
+        with patch(
+            "sunofriend.transcribe_pitched._bass_sustain_evidence",
+            return_value=evidence,
+        ):
+            got = repair_bass_octaves("bass.wav", notes)
+
+        self.assertEqual(got[0], NoteEvent(0.0, 0.5, 35, 84))
+        self.assertEqual(got[1], notes[1])
+        self.assertEqual(
+            [(note.start, note.end, note.velocity) for note in got],
+            [(note.start, note.end, note.velocity) for note in notes],
+        )
+
+    def test_octave_resolution_preserves_weak_or_different_pitch_evidence(self):
+        note = NoteEvent(0.0, 0.5, 47, 84)
+        evidence = _BassSustainEvidence(
+            frame_seconds=0.1,
+            rms_active=(True,) * 8,
+            voiced=(True,) * 8,
+            pitches=(35, 35, 35, 36, 36, 36, 36, 36),
+        )
+
+        with patch(
+            "sunofriend.transcribe_pitched._bass_sustain_evidence",
+            return_value=evidence,
+        ):
+            got = repair_bass_octaves("bass.wav", [note])
+
+        self.assertEqual(got, [note])
+
+    def test_continuous_sustain_extends_only_source_supported_short_gap(self):
+        notes = [
+            NoteEvent(0.0, 0.4, 35, 84),
+            NoteEvent(0.8, 1.2, 38, 88),
+        ]
+        evidence = _BassSustainEvidence(
+            frame_seconds=0.1,
+            rms_active=(True,) * 16,
+            voiced=(True,) * 16,
+            pitches=(35,) * 9 + (38,) * 7,
+        )
+
+        with patch(
+            "sunofriend.transcribe_pitched._bass_sustain_evidence",
+            return_value=evidence,
+        ):
+            got = repair_bass_sustain("bass.wav", notes, bpm=120.0)
+
+        self.assertEqual(got[0], NoteEvent(0.0, 0.8, 35, 84))
+        self.assertEqual(got[1], notes[1])
+        self.assertEqual(
+            [(note.start, note.pitch, note.velocity) for note in got],
+            [(note.start, note.pitch, note.velocity) for note in notes],
+        )
+
+    def test_continuous_sustain_preserves_unvoiced_and_long_rests(self):
+        unvoiced = [
+            NoteEvent(0.0, 0.4, 35, 84),
+            NoteEvent(0.8, 1.2, 38, 88),
+        ]
+        long_rest = [
+            NoteEvent(0.0, 0.4, 35, 84),
+            NoteEvent(2.0, 2.4, 38, 88),
+        ]
+        evidence = _BassSustainEvidence(
+            frame_seconds=0.1,
+            rms_active=(True,) * 30,
+            voiced=(False,) * 30,
+            pitches=(None,) * 30,
+        )
+
+        with patch(
+            "sunofriend.transcribe_pitched._bass_sustain_evidence",
+            return_value=evidence,
+        ):
+            self.assertEqual(
+                repair_bass_sustain("bass.wav", unvoiced, bpm=120.0),
+                unvoiced,
+            )
+            self.assertEqual(
+                repair_bass_sustain("bass.wav", long_rest, bpm=120.0),
+                long_rest,
+            )
+
+    def test_continuous_sustain_does_not_cross_a_real_pitch_change(self):
+        notes = [
+            NoteEvent(0.0, 0.4, 35, 84),
+            NoteEvent(0.8, 1.2, 38, 88),
+        ]
+        evidence = _BassSustainEvidence(
+            frame_seconds=0.1,
+            rms_active=(True,) * 16,
+            voiced=(True,) * 16,
+            pitches=(35,) * 4 + (38,) * 12,
+        )
+
+        with patch(
+            "sunofriend.transcribe_pitched._bass_sustain_evidence",
+            return_value=evidence,
+        ):
+            got = repair_bass_sustain("bass.wav", notes, bpm=120.0)
+
+        self.assertEqual(got, notes)
+
     def test_pyin_agreement_beats_a_louder_subharmonic(self):
         basic = [
             NoteEvent(0.0, 0.45, 24, 110),

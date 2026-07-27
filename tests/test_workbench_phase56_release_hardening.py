@@ -237,7 +237,7 @@ class WorkbenchPhase56ServerRoleTests(unittest.TestCase):
             )
         self.assertEqual(status, 200)
         self.assertEqual(payload["preview"]["role"], "bass")
-        self.assertEqual(payload["preview"]["program"], 33)
+        self.assertEqual(payload["preview"]["program"], 38)
 
         status, project = self._json_request(
             "GET", f"/api/project?token={self.token}"

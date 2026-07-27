@@ -1,0 +1,738 @@
+from __future__ import annotations
+
+import asyncio
+import json
+import tempfile
+import time
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+from textual.widgets import (
+    Button,
+    Checkbox,
+    DataTable,
+    Footer,
+    Input,
+    ProgressBar,
+    Static,
+)
+
+from sunofriend.cli import build_parser, main
+from sunofriend.midi import MidiTrack, write_midi_file
+from sunofriend.models import NoteEvent
+from sunofriend.tui import SunofriendTui
+from sunofriend.tui_conversion_contract import (
+    FullConversionProgress,
+    FullConversionResult,
+)
+
+
+class TuiCliTests(unittest.TestCase):
+    def test_parser_accepts_interactive_or_preconfigured_launch(self) -> None:
+        parser = build_parser()
+        empty = parser.parse_args(["tui"])
+        configured = parser.parse_args(
+            [
+                "tui",
+                "/music/song",
+                "--candidate-root",
+                "/music/results-a",
+                "--candidate-root",
+                "/music/results-b",
+                "--conversion-output",
+                "/music/fresh-results",
+                "--no-developer-inspector",
+            ]
+        )
+
+        self.assertIsNone(empty.project)
+        self.assertIsNone(empty.conversion_output)
+        self.assertTrue(empty.developer_inspector)
+        self.assertEqual(configured.project, "/music/song")
+        self.assertEqual(
+            configured.candidate_root,
+            ["/music/results-a", "/music/results-b"],
+        )
+        self.assertEqual(configured.conversion_output, "/music/fresh-results")
+        self.assertFalse(configured.developer_inspector)
+
+    @patch("sunofriend.tui.run_tui", return_value=0)
+    def test_cli_dispatches_to_tui(self, run_tui) -> None:
+        result = main(
+            [
+                "tui",
+                "/music/song",
+                "--candidate-root",
+                "/music/results",
+            ]
+        )
+
+        self.assertEqual(result, 0)
+        run_tui.assert_called_once_with(
+            project="/music/song",
+            candidate_roots=("/music/results",),
+            catalog_path=None,
+            state_dir=None,
+            soundfont_path=None,
+            initial_conversion_output=None,
+            developer_inspector=True,
+        )
+
+
+class TuiInteractionTests(unittest.IsolatedAsyncioTestCase):
+    async def test_empty_app_is_guided_and_keeps_studio_disabled(self) -> None:
+        app = SunofriendTui()
+        async with app.run_test(size=(140, 44)) as pilot:
+            await pilot.pause()
+            self.assertIn("song-interpretation WAV", app.SUB_TITLE)
+            self.assertIn(
+                "song-interpretation WAV",
+                str(app.query_one("#tagline", Static).render()),
+            )
+            self.assertEqual(app.query_one("#project-path", Input).value, "")
+            self.assertTrue(app.query_one("#open-studio", Button).disabled)
+            self.assertIn(
+                "Choose a stem project",
+                str(app.query_one("#project-summary", Static).render()),
+            )
+
+    async def test_project_load_populates_dashboard_and_midi_map(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            project, candidates = _fixture(Path(temporary))
+            state = Path(temporary) / "state-that-must-not-be-created"
+            app = SunofriendTui(
+                project=project,
+                candidate_roots=(candidates,),
+                state_dir=state,
+            )
+
+            async with app.run_test(size=(150, 50)) as pilot:
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if app.snapshot is not None:
+                        break
+                self.assertIsNotNone(app.snapshot)
+                table = app.query_one("#stem-table", DataTable)
+                self.assertEqual(table.row_count, 2)
+                self.assertFalse(app.query_one("#open-studio", Button).disabled)
+                self.assertFalse(state.exists())
+                summary = str(
+                    app.query_one("#project-summary", Static).render()
+                )
+                self.assertIn("Source stems", summary)
+                self.assertIn("MIDI-ready", summary)
+                self.assertIn("Missing MIDI", summary)
+                self.assertIn("Partial MIDI results", summary)
+                self.assertIn("Convert all stems", summary)
+                self.assertIn("Song-interpretation WAV", summary)
+                self.assertIn("only review existing results", summary)
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    rendered = str(app.query_one("#midi-map", Static).render())
+                    if "Primary MIDI alternatives" in rendered:
+                        break
+                self.assertIn("Primary MIDI alternatives", rendered)
+                self.assertIn("activity", rendered)
+
+    async def test_full_conversion_requires_confirmation_then_reloads_fresh_root(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project, candidates = _fixture(root)
+            output = root / "fresh-full-result"
+            runner = _CompletingConversionRunner()
+            app = SunofriendTui(
+                project=project,
+                candidate_roots=(candidates,),
+                initial_conversion_output=output,
+                conversion_runner=runner,
+            )
+
+            async with app.run_test(size=(150, 50)) as pilot:
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if app.snapshot is not None:
+                        break
+                self.assertEqual(
+                    app.query_one("#conversion-output", Input).value,
+                    str(output),
+                )
+                self.assertIsNone(runner.request)
+                convert = app.query_one("#convert-all", Button)
+                self.assertTrue(convert.disabled)
+                self.assertIn(
+                    "full supported instrumental conversion",
+                    str(app.query_one("#conversion-scope", Static).render()),
+                )
+
+                app.query_one("#conversion-confirm", Checkbox).value = True
+                await pilot.pause()
+                self.assertFalse(convert.disabled)
+                convert.press()
+
+                for _ in range(200):
+                    await pilot.pause(0.02)
+                    if (
+                        not app._conversion_running
+                        and app.snapshot is not None
+                        and app.snapshot.config.candidate_roots
+                        == (output.resolve(),)
+                    ):
+                        break
+
+                self.assertIsNotNone(runner.request)
+                self.assertEqual(runner.request.project, project.resolve())
+                self.assertEqual(runner.request.output_dir, output.resolve())
+                self.assertEqual(
+                    app.snapshot.config.candidate_roots,
+                    (output.resolve(),),
+                )
+                self.assertEqual(
+                    app.query_one("#candidate-roots", Input).value,
+                    str(output.resolve()),
+                )
+                self.assertIn(
+                    "conversion complete",
+                    str(app.query_one("#conversion-status", Static).render()).lower(),
+                )
+                conversion_status = str(
+                    app.query_one("#conversion-status", Static).render()
+                )
+                self.assertIn(
+                    "Skipped role(s): backing_vocals",
+                    conversion_status,
+                )
+                self.assertIn(
+                    "Review-required proxy role(s): bass",
+                    conversion_status,
+                )
+                self.assertIn("conservative keys engine", conversion_status)
+                progress = app.query_one("#conversion-progress", ProgressBar)
+                self.assertEqual(progress.progress, progress.total)
+                self.assertFalse(
+                    app.query_one("#project-path", Input).disabled
+                )
+
+    async def test_cancel_stops_conversion_and_does_not_reload_partial_output(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project, candidates = _fixture(root)
+            output = root / "cancelled-full-result"
+            runner = _CancellableConversionRunner()
+            app = SunofriendTui(
+                project=project,
+                candidate_roots=(candidates,),
+                initial_conversion_output=output,
+                conversion_runner=runner,
+            )
+
+            async with app.run_test(size=(150, 50)) as pilot:
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if app.snapshot is not None:
+                        break
+                app.query_one("#conversion-confirm", Checkbox).value = True
+                await pilot.pause()
+                app.query_one("#convert-all", Button).press()
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if runner.started.is_set():
+                        break
+
+                self.assertTrue(app._conversion_running)
+                self.assertTrue(app.query_one("#project-path", Input).disabled)
+                self.assertTrue(
+                    app.query_one("#conversion-output", Input).disabled
+                )
+                app.query_one("#cancel-conversion", Button).press()
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if not app._conversion_running:
+                        break
+
+                self.assertTrue(runner.cancel_called)
+                self.assertEqual(
+                    app.snapshot.config.candidate_roots,
+                    (candidates.resolve(),),
+                )
+                self.assertIn(
+                    "cancelled",
+                    str(app.query_one("#conversion-status", Static).render()).lower(),
+                )
+                self.assertFalse(app.query_one("#project-path", Input).disabled)
+                self.assertFalse(
+                    app.query_one("#conversion-output", Input).disabled
+                )
+
+    async def test_quit_cancels_and_reaps_active_conversion(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project, candidates = _fixture(root)
+            runner = _CancellableConversionRunner()
+            app = SunofriendTui(
+                project=project,
+                candidate_roots=(candidates,),
+                initial_conversion_output=root / "quit-cancelled-result",
+                conversion_runner=runner,
+            )
+
+            async with app.run_test(size=(130, 44)) as pilot:
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if app.snapshot is not None:
+                        break
+                app.query_one("#conversion-confirm", Checkbox).value = True
+                await pilot.pause()
+                app.query_one("#convert-all", Button).press()
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if runner.started.is_set():
+                        break
+
+                await app.action_request_quit()
+
+                self.assertTrue(runner.cancel_called)
+                self.assertFalse(app._conversion_running)
+                self.assertTrue(app._conversion_done.is_set())
+
+    async def test_conversion_rejects_existing_output(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project, candidates = _fixture(root)
+            existing = root / "existing-output"
+            existing.mkdir()
+            app = SunofriendTui(
+                project=project,
+                candidate_roots=(candidates,),
+                initial_conversion_output=existing,
+            )
+            async with app.run_test(size=(140, 48)) as pilot:
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if app.snapshot is not None:
+                        break
+                app.query_one("#conversion-confirm", Checkbox).value = True
+                await pilot.pause()
+
+                self.assertTrue(app.query_one("#convert-all", Button).disabled)
+                self.assertIn(
+                    "already exists",
+                    str(app.query_one("#conversion-status", Static).render()),
+                )
+
+    async def test_conversion_rejects_explicit_catalog_session(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project, candidates = _fixture(root)
+            source = project / "TUI Song-bass-D minor-120bpm-440hz.wav"
+            midi = candidates / "bass-listened" / "bass_listened.mid"
+            catalog = root / "catalog.json"
+            catalog.write_text(
+                json.dumps(
+                    {
+                        "schema": "sunofriend.workbench-catalog.v1",
+                        "stems": [
+                            {
+                                "source": str(source),
+                                "role": "bass",
+                                "candidates": [{"midi": str(midi)}],
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            app = SunofriendTui(
+                project=project,
+                candidate_roots=(candidates,),
+                catalog_path=catalog,
+                initial_conversion_output=root / "fresh-output",
+            )
+            async with app.run_test(size=(140, 48)) as pilot:
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if app.snapshot is not None:
+                        break
+                app.query_one("#conversion-confirm", Checkbox).value = True
+                await pilot.pause()
+
+                self.assertTrue(app.query_one("#convert-all", Button).disabled)
+                status = str(
+                    app.query_one("#conversion-status", Static).render()
+                )
+                self.assertIn("explicit Workbench catalog", status)
+                self.assertIn("without --catalog", status)
+
+    async def test_stale_project_worker_cannot_replace_newer_project(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            old_project, old_candidates = _fixture(root / "old")
+            new_project, new_candidates = _fixture(root / "new")
+            from sunofriend.tui_model import load_tui_project as real_load
+
+            def delayed_load(config):
+                if config.project == old_project.resolve():
+                    time.sleep(0.2)
+                return real_load(config)
+
+            app = SunofriendTui(
+                project=old_project,
+                candidate_roots=(old_candidates,),
+            )
+            with patch("sunofriend.tui.load_tui_project", side_effect=delayed_load):
+                async with app.run_test(size=(110, 34)) as pilot:
+                    app.query_one("#project-path", Input).value = str(new_project)
+                    app.query_one("#candidate-roots", Input).value = str(
+                        new_candidates
+                    )
+                    app._start_project_load()
+                    for _ in range(100):
+                        await pilot.pause(0.02)
+                        if (
+                            app.snapshot is not None
+                            and app.snapshot.config.project == new_project.resolve()
+                        ):
+                            break
+                    await pilot.pause(0.25)
+                    self.assertIsNotNone(app.snapshot)
+                    self.assertEqual(
+                        app.snapshot.config.project,
+                        new_project.resolve(),
+                    )
+
+    async def test_studio_cannot_open_old_snapshot_during_new_project_scan(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            old_project, old_candidates = _fixture(root / "old")
+            new_project, new_candidates = _fixture(root / "new")
+            from sunofriend.tui_model import load_tui_project as real_load
+
+            def delayed_new_load(config):
+                if config.project == new_project.resolve():
+                    time.sleep(0.2)
+                return real_load(config)
+
+            app = SunofriendTui(
+                project=old_project,
+                candidate_roots=(old_candidates,),
+            )
+            async with app.run_test(size=(140, 44)) as pilot:
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if app.snapshot is not None:
+                        break
+                old_snapshot = app.snapshot
+                app.query_one("#project-path", Input).value = str(new_project)
+                app.query_one("#candidate-roots", Input).value = str(
+                    new_candidates
+                )
+                with patch(
+                    "sunofriend.tui.load_tui_project",
+                    side_effect=delayed_new_load,
+                ):
+                    app._start_project_load()
+                    await pilot.pause(0.02)
+                    self.assertTrue(app._project_loading)
+                    self.assertIs(app.snapshot, old_snapshot)
+                    with patch.object(
+                        app,
+                        "_run_visual_studio",
+                    ) as launch:
+                        app.action_open_visual_studio()
+                        launch.assert_not_called()
+                    self.assertFalse(app._workbench_launching)
+                    for _ in range(100):
+                        await pilot.pause(0.02)
+                        if (
+                            app.snapshot is not None
+                            and app.snapshot.config.project
+                            == new_project.resolve()
+                        ):
+                            break
+
+                self.assertFalse(app._project_loading)
+                self.assertEqual(
+                    app.snapshot.config.project,
+                    new_project.resolve(),
+                )
+                self.assertFalse(app.query_one("#open-studio", Button).disabled)
+
+    async def test_stop_terminates_and_reaps_workbench_process(self) -> None:
+        app = SunofriendTui()
+        fake = _FakeProcess()
+        async with app.run_test(size=(80, 24)):
+            app._workbench_process = fake
+            await app._stop_visual_studio()
+            self.assertTrue(fake.terminated)
+            self.assertTrue(fake.waited)
+            self.assertIsNone(app._workbench_process)
+
+    async def test_running_studio_locks_project_and_blocks_project_switch(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project, candidates = _fixture(root / "current")
+            other_project, other_candidates = _fixture(root / "other")
+            app = SunofriendTui(project=project, candidate_roots=(candidates,))
+            async with app.run_test(size=(140, 44)) as pilot:
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if app.snapshot is not None:
+                        break
+                original_snapshot = app.snapshot
+                app._workbench_launching = True
+                app._set_project_controls_locked(True)
+                app.query_one("#project-path", Input).value = str(other_project)
+                app.query_one("#candidate-roots", Input).value = str(
+                    other_candidates
+                )
+
+                app._start_project_load()
+                await pilot.pause(0.05)
+
+                self.assertIs(app.snapshot, original_snapshot)
+                self.assertTrue(app.query_one("#project-path", Input).disabled)
+                self.assertTrue(app.query_one("#load-project", Button).disabled)
+                app._workbench_launching = False
+                app._set_project_controls_locked(False)
+
+    async def test_failed_studio_launch_unlocks_project_controls(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            project, candidates = _fixture(Path(temporary))
+            app = SunofriendTui(project=project, candidate_roots=(candidates,))
+            async with app.run_test(size=(140, 44)) as pilot:
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if app.snapshot is not None:
+                        break
+                with patch(
+                    "sunofriend.tui.asyncio.create_subprocess_exec",
+                    side_effect=OSError("launch unavailable"),
+                ):
+                    app.action_open_visual_studio()
+                    for _ in range(100):
+                        await pilot.pause(0.02)
+                        if not app._workbench_launching:
+                            break
+
+                self.assertFalse(app.query_one("#project-path", Input).disabled)
+                self.assertFalse(app.query_one("#load-project", Button).disabled)
+                self.assertTrue(app.query_one("#stop-studio", Button).disabled)
+
+    async def test_f6_opens_studio_without_editing_focused_path(self) -> None:
+        app = SunofriendTui()
+        async with app.run_test(size=(120, 44)) as pilot:
+            project = app.query_one("#project-path", Input)
+            project.value = "/tmp/some project"
+            project.focus()
+            with patch.object(app, "action_open_visual_studio") as open_action:
+                await pilot.press("f6")
+                await pilot.pause()
+
+            self.assertEqual(project.value, "/tmp/some project")
+            open_action.assert_called_once_with()
+
+    async def test_narrow_terminal_retains_keyboard_dashboard(self) -> None:
+        app = SunofriendTui()
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.press("tab", "tab", "tab")
+            await pilot.pause()
+            self.assertIsNotNone(app.focused)
+            table = app.query_one("#stem-table", DataTable)
+            status = app.query_one("#status-line", Static)
+            footer = app.query_one(Footer)
+            self.assertTrue(app.screen.has_class("compact"))
+            self.assertGreaterEqual(table.region.height, 3)
+            self.assertLess(table.region.y, status.region.y)
+            self.assertLess(status.region.y, footer.region.y)
+            self.assertEqual(
+                app.query_one("#midi-map", Static).styles.display,
+                "none",
+            )
+            self.assertIsNotNone(app.query_one("#activity-log"))
+
+    async def test_compact_layout_covers_height_breakpoint(self) -> None:
+        app = SunofriendTui()
+        async with app.run_test(size=(110, 34)) as pilot:
+            await pilot.pause()
+            table = app.query_one("#stem-table", DataTable)
+            status = app.query_one("#status-line", Static)
+
+            self.assertTrue(app.screen.has_class("compact"))
+            self.assertGreaterEqual(table.region.height, 3)
+            self.assertLess(table.region.y, status.region.y)
+
+
+def _fixture(root: Path) -> tuple[Path, Path]:
+    root.mkdir(parents=True, exist_ok=True)
+    project = root / "TUI Song-D minor-120bpm-440hz"
+    candidates = root / "outputs"
+    project.mkdir()
+    (project / "TUI Song-bass-D minor-120bpm-440hz.wav").write_bytes(
+        b"RIFF-local-source"
+    )
+    (project / "TUI Song-backing-vocals-D minor-120bpm-440hz.wav").write_bytes(
+        b"RIFF-local-vocal-source"
+    )
+    midi = candidates / "bass-listened" / "bass_listened.mid"
+    midi.parent.mkdir(parents=True)
+    write_midi_file(
+        midi,
+        [
+            MidiTrack(
+                "Bass",
+                0,
+                32,
+                [
+                    NoteEvent(0.0, 0.4, 38, 90),
+                    NoteEvent(0.5, 0.9, 41, 88),
+                ],
+            )
+        ],
+        bpm=120.0,
+    )
+    return project, candidates
+
+
+class _FakeProcess:
+    def __init__(self) -> None:
+        self.returncode = None
+        self.terminated = False
+        self.killed = False
+        self.waited = False
+
+    def terminate(self) -> None:
+        self.terminated = True
+        self.returncode = 0
+
+    def kill(self) -> None:
+        self.killed = True
+        self.returncode = -9
+
+    async def wait(self) -> int:
+        self.waited = True
+        return int(self.returncode or 0)
+
+
+class _CompletingConversionRunner:
+    def __init__(self) -> None:
+        self.request = None
+        self.cancel_called = False
+
+    async def run(
+        self,
+        request,
+        *,
+        on_progress,
+        cancellation_requested=None,
+    ) -> FullConversionResult:
+        self.request = request
+        on_progress(
+            FullConversionProgress(
+                completed=1,
+                total=2,
+                phase="instrumental",
+                message="Converted bass.",
+                current_role="bass",
+            )
+        )
+        midi = request.output_dir / "mode_repair" / "selected_bass"
+        _write_conversion_midi(midi / "bass_listened.mid")
+        on_progress(
+            FullConversionProgress(
+                completed=2,
+                total=2,
+                phase="reload",
+                message="Verified fresh result root.",
+            )
+        )
+        return FullConversionResult(
+            status="complete",
+            output_dir=request.output_dir,
+            candidate_roots=(request.output_dir,),
+            converted_roles=("bass",),
+            skipped_roles=("backing_vocals",),
+            failed_roles=(),
+            proxy_roles=("bass",),
+            warnings=(
+                "bass uses the conservative keys engine and remains review-required",
+            ),
+            summary_paths=(),
+            source_stem_count=2,
+            midi_ready_stem_count=1,
+            candidate_count=1,
+        )
+
+    def cancel(self) -> None:
+        self.cancel_called = True
+
+
+class _CancellableConversionRunner:
+    def __init__(self) -> None:
+        self.request = None
+        self.cancel_called = False
+        self.started = asyncio.Event()
+
+    async def run(
+        self,
+        request,
+        *,
+        on_progress,
+        cancellation_requested=None,
+    ) -> FullConversionResult:
+        self.request = request
+        self.started.set()
+        on_progress(
+            FullConversionProgress(
+                completed=0,
+                total=2,
+                phase="instrumental",
+                message="Starting bass.",
+                current_role="bass",
+            )
+        )
+        while not (cancellation_requested and cancellation_requested()):
+            await asyncio.sleep(0.01)
+        request.output_dir.mkdir(parents=True, exist_ok=True)
+        return FullConversionResult(
+            status="cancelled",
+            output_dir=request.output_dir,
+            candidate_roots=(),
+            converted_roles=(),
+            skipped_roles=(),
+            failed_roles=(),
+            proxy_roles=(),
+            warnings=("cancelled",),
+            summary_paths=(),
+            source_stem_count=2,
+            midi_ready_stem_count=0,
+            candidate_count=0,
+        )
+
+    def cancel(self) -> None:
+        self.cancel_called = True
+
+
+def _write_conversion_midi(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    write_midi_file(
+        path,
+        [
+            MidiTrack(
+                "Bass",
+                0,
+                38,
+                [NoteEvent(0.0, 0.5, 38, 90)],
+            )
+        ],
+        bpm=120.0,
+    )

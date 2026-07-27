@@ -1,9 +1,12 @@
 # Sunofriend
 
-Sunofriend converts separated music stems and vocal performances into editable,
-timing-aware MIDI for GarageBand and other DAWs. It can evaluate stem-to-MIDI
-accuracy, publish conservative or reconstructed variants, change MIDI key and
-tempo, preserve or straighten groove, and store reusable Clip v1 parts.
+Sunofriend turns separated music stems and vocal performances into two linked
+creative outputs: reviewed, editable, timing-aware MIDI and a MIDI-derived
+song-interpretation WAV rendered from the selected MIDI. Source stems provide
+timing, horizon and level evidence for that WAV; their audio is not mixed into
+it. Sunofriend can evaluate stem-to-MIDI accuracy, publish conservative or
+reconstructed variants, change MIDI key and tempo, preserve or straighten
+groove, and store reusable Clip v1 parts.
 It can also inventory installed GarageBand/Audio Unit instruments, create
 sound-based audition shortlists, and extract authorised isolated stem notes as
 self-contained SF2 sample instruments with GarageBand-selectable Apple
@@ -34,8 +37,9 @@ sounds while checking every note for functional audibility.
 The loopback-only Workbench presents existing source/MIDI alternatives in a
 normal browser, saves append-only solo/full-mix choices, renders missing MIDI
 through a verified local neutral-preview cache, auditions only explicit
-main/optional parts together, and packages unchanged selected MIDI plus a
-clearly labelled proxy arrangement for GarageBand. Selected candidates with
+main/optional parts together, creates the linked MIDI-derived
+song-interpretation WAV, and packages unchanged selected MIDI plus a clearly
+labelled proxy arrangement for GarageBand. Selected candidates with
 the same candidate-origin source receive a diagnostic doubled-line warning
 when exact-pitch attacks substantially overlap. AI candidates use the verified
 run source hash; non-AI MIDI falls back to the review-stem source hash. The
@@ -133,6 +137,64 @@ brew install fluid-synth
 uv tool install --python 3.11 'sunofriend[all]'
 sunofriend doctor --require convert
 ```
+
+For a human operator, start with the guided local terminal studio:
+
+```bash
+sunofriend tui
+```
+
+Enter a stem project and its existing MIDI result roots, or supply them at
+launch. The dashboard shows key, BPM, tuning, stem progress and compact MIDI
+maps, then opens the loopback-only graphical Workbench for waveform and
+piano-roll comparison, explicit listening choices, the read-only Developer
+Inspector, the MIDI-derived song-interpretation WAV and exact GarageBand ZIP:
+
+```bash
+sunofriend tui "/absolute/path/to/Song-B minor-113bpm-440hz" \
+  --candidate-root "/absolute/path/to/song-midi-results"
+```
+
+To learn the complete conversion flow, prefill a destination that does not
+exist:
+
+```bash
+sunofriend tui "/absolute/path/to/Song-B minor-113bpm-440hz" \
+  --conversion-output "/absolute/path/to/fresh-song-midi-v1"
+```
+
+The path remains editable and never starts work by itself. **Convert all
+stems** requires confirmation, runs the production repair/variant-evaluation
+instrumental path plus separate lead/backing vocal melody extraction, streams
+progress and reloads the fresh result on success. It never overwrites or
+auto-selects a candidate. `wind` → `lead`, `rhythm` → `keys` and `other` →
+`synth` proxy engines, plus near-silent skips, are disclosed rather than hidden.
+Cancellation preserves a partial output; durable job resume is not implemented
+yet. Workbench remains review-only.
+
+After selecting MIDI and downloading Workbench's gain-only MIDI-derived song
+interpretation, `balanced-selected-midi-preview.wav`, create an optional
+fixed-policy comparative listening master with FFmpeg:
+
+```bash
+sunofriend listening-master \
+  "/absolute/path/to/balanced-selected-midi-preview.wav" \
+  --out "/absolute/fresh/path/listening-master.wav" \
+  --report "/absolute/fresh/path/listening-master.json"
+```
+
+Listening Master v1 uses two-pass `loudnorm` at −16 LUFS integrated, an 11 LU
+loudness-range target and −1 dBTP, while retaining the exact input frame
+horizon in PCM24. A third pass measures the actual encoded artifact before
+owner-only publication. It leaves the balanced control and MIDI unchanged. The
+receipt says `mastered: true` and `release_master: false`: this is a
+reproducible comparative listening challenger, not a release master. Workbench
+and TUI integration plus explicit control/challenger feedback remain planned.
+See the repository's
+[musical rendering and listening-master plan](https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/MUSICAL_RENDERING_AND_MASTERING.md).
+
+Audio, MIDI and reviews stay local. The deterministic CLI remains available
+for scripting and advanced workflows.
 
 The repository also contains a portable Agent Skills workflow for Codex and
 Claude Code. Agent discovery links are installed by cloning or linking the

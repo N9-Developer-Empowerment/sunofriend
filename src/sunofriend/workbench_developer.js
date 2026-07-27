@@ -114,7 +114,7 @@
     }),
     "/api/balanced-arrangement": Object.freeze({
       operation: "arrangement.balance",
-      label: "Render or reuse the source-referenced balanced audition",
+      label: "Render or reuse the balanced MIDI-derived song interpretation",
       symbols: Object.freeze([
         "sunofriend.workbench_server._WorkbenchHandler.do_POST",
         "sunofriend.workbench_artifacts.WorkbenchArtifacts.render_balanced_arrangement",

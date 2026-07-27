@@ -925,10 +925,12 @@ engineering evidence, not a human preference or musical-quality result.
 
 This cross-cutting increment belongs to the ordinary selected-arrangement
 Workbench rather than the gated Clip Library modes. After explicit main and
-optional MIDI choices exist, **Create balanced audition** builds one
-content-addressed selected-MIDI WAV, a path-free exact provenance receipt and a
-GarageBand fader recipe. It does not create or transform a Clip, place a Clip,
-construct a hybrid or require any of the Phase 6 Clip feature flags.
+optional MIDI choices exist, **Create song-interpretation WAV** builds one
+content-addressed MIDI-derived WAV, a path-free exact provenance receipt and a
+GarageBand fader recipe. Source stems provide timing, horizon and level
+evidence but are not mixed into it. It does not create or transform a Clip,
+place a Clip, construct a hybrid or require any of the Phase 6 Clip feature
+flags.
 
 The implementation retains the dry unity-gain proxy and all precise
 unity-gain transports as technical controls. For the separate derivative, each

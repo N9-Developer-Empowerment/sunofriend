@@ -114,7 +114,7 @@ class WorkbenchDecodedArrangementSelectionTests(unittest.TestCase):
             self.assertEqual(default["role"], "keys")
             self.assertEqual(default["program"], 4)
             self.assertEqual(bass["role"], "bass")
-            self.assertEqual(bass["program"], 33)
+            self.assertEqual(bass["program"], 38)
             self.assertNotEqual(default["cache_key"], bass["cache_key"])
             self.assertEqual(
                 artifacts.cached_candidate_preview(

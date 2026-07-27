@@ -10,22 +10,31 @@ environment for the Workbench. It exposes application operations and state
 transitions. It is not a Python line debugger, evaluator, shell, SQL editor or
 filesystem browser.
 
+For human operation, start with `sunofriend tui`. Phase 5.10a adds a Textual
+orientation layer and one-key bridge to the same Workbench/Inspector described
+here. The initial Phase 5.10b increment adds one typed fresh full-project
+conversion operation over the existing engine. Neither increment replaces the
+deterministic CLI or duplicates the browser.
+
 ## The system in one picture
 
 ```mermaid
 flowchart LR
     A["Local stems and chord evidence"] --> B["Deterministic and optional AI transcription"]
     B --> C["Immutable MIDI candidates and evidence"]
-    C --> D["Workbench catalog"]
+    L["Guided Local Studio TUI"] --> B
+    L --> D["Workbench catalog"]
+    C --> D
     D --> E["Explicit human decisions"]
     E --> F["Derived selected arrangement"]
     F --> G["Exact GarageBand pack"]
     G --> H["GarageBand patches and mix"]
+    F --> K["MIDI-derived song-interpretation WAV"]
+    K -. "selected MIDI render; source is evidence only" .-> H
+    K --> M["Optional comparative listening master"]
 
     I["Temporary audition state"] -. "does not select" .-> E
     J["Separate Pack Composer basket"] -. "controls files only" .-> G
-    F --> K["Optional source-referenced balanced audition"]
-    K -. "fader recipe only; not packed or mastered" .-> H
 ```
 
 There is deliberately no single arrow labelled “choose the best model.” A
@@ -37,13 +46,15 @@ The most important architectural separation is:
 
 | Layer | Durable? | What it means |
 | --- | --- | --- |
+| TUI fields and activity | Process memory | Private project/output orientation and bounded streamed operational messages, not feedback or a durable job ledger |
 | Source and candidate evidence | Content-addressed | What was analysed or generated |
 | Decision event history | Append-only SQLite | What the listener explicitly decided |
 | Derived current selection | Recomputed | Which current main and optional parts are active |
 | Pack Composer basket | Separately append-only | Which eligible files enter one ZIP |
 | Audition and view controls | Browser/process memory | What is playing or visible now |
 | Generated previews and streams | Rebuildable cache | Listening aids, not preference evidence |
-| Balanced selected-MIDI audition | Rebuildable cache | Gain-only listening derivative and DAW starting recipe, not a master |
+| MIDI-derived song-interpretation WAV | Rebuildable cache | Gain-only render of reviewed selected MIDI and DAW starting recipe; source stems provide timing, horizon and level evidence but are not mixed into it |
+| Optional listening master | Explicit derivative | Comparative fixed-policy challenger, not a release master |
 
 ## 1. CLI and application entry points
 
@@ -78,6 +89,55 @@ Private helpers beginning with `_` are not an integration API.
 - [`tests/test_listen_all_contract.py`](../tests/test_listen_all_contract.py)
 - [`tests/test_pipeline.py`](../tests/test_pipeline.py)
 
+### Guided Local Studio code path
+
+The `tui` command follows the same adapter rule:
+
+1. [`cli._run_tui`](../src/sunofriend/cli.py) passes validated arguments to
+   [`tui.run_tui`](../src/sunofriend/tui.py).
+2. [`tui.SunofriendTui`](../src/sunofriend/tui.py) owns Textual widgets,
+   workers, one conversion child and the Workbench child-process lifecycle.
+3. [`tui_model.load_tui_project`](../src/sunofriend/tui_model.py) reuses the
+   production Workbench catalog/home/event fold to produce a path-free
+   `sunofriend.tui-project.v1` document. It calls
+   [`workbench_store.read_workbench_events_read_only`](../src/sunofriend/workbench_store.py)
+   only when the exact database already exists; SQLite `mode=ro` prevents this
+   projection from creating or migrating decision state.
+4. [`tui_model.build_tui_midi_map`](../src/sunofriend/tui_model.py) reuses the
+   bounded stem timeline and turns up to three primary lanes into compact
+   contour/activity maps. It does not rank or edit notes.
+5. [`tui_model.workbench_command`](../src/sunofriend/tui_model.py) constructs
+   the exact loopback Workbench invocation. The TUI enables the Inspector by
+   default, redacts its launch token from activity and terminates/reaps the
+   owned process on Stop, Quit or unmount. Project fields remain locked while
+   that child is active so the terminal and browser cannot silently refer to
+   different projects.
+6. The initial Phase 5.10b **Convert all stems** form constructs a
+   [`tui_conversion_contract.FullConversionRequest`](../src/sunofriend/tui_conversion_contract.py)
+   from the selected project and editable fresh output.
+   [`tui_conversion.ProductionFullConversionRunner`](../src/sunofriend/tui_conversion.py)
+   invokes the production `listen-all` repair/variant-evaluation path, then
+   separate `vocal-melody` operations for discovered lead and backing vocals.
+   The adapter discloses `wind` → `lead`, `rhythm` → `keys` and `other` →
+   `synth` proxies and near-silent skips.
+7. The conversion child streams `FullConversionProgress` to the bounded
+   Activity view.
+   Cancellation reaps the process but preserves the partial output. Successful
+   completion reloads the fresh root for review. Existing output is rejected,
+   and neither completion nor reload selects a candidate.
+
+The current Activity tab is memory-only, capped and operational. It is not the
+Developer Inspector, a durable job ledger or product feedback. Restartable
+jobs, additional typed operation forms and structured feedback remain planned;
+see [Guided Local Studio TUI](LOCAL_STUDIO_TUI.md). Workbench remains the
+review-only visual decision/export surface and does not run conversion.
+
+Tests to read:
+
+- [`tests/test_tui_model.py`](../tests/test_tui_model.py)
+- [`tests/test_tui.py`](../tests/test_tui.py)
+- [`tests/test_tui_conversion.py`](../tests/test_tui_conversion.py)
+
 ## 2. Instrumental transcription and provenance
 
 ### Intuition
@@ -99,6 +159,12 @@ musical.
    [`transcribe_pitched.transcribe_pitched_stem`](../src/sunofriend/transcribe_pitched.py).
    Bass contour selection and keys-role separation remain explicit specialist
    policies rather than generic “music intelligence.”
+   [`imagine.imagine_bass_variants`](../src/sunofriend/imagine.py) keeps the
+   raw, contour-clean, octave-resolved, continuous-sustain and root-safe claims
+   separate. `repair_bass_octaves` changes only pYIN-dominant octave harmonics;
+   `repair_bass_sustain` changes only short note ends supported by source
+   activity, pYIN voicing and the exact octave-resolved pitch. Neither becomes
+   repair mode's automatic main output.
 4. [`conversion.provenance_for_notes`](../src/sunofriend/conversion.py) and
    `write_note_provenance` preserve the source of each published decision.
 5. Evaluation and report artifacts are written beside MIDI rather than folded
@@ -164,12 +230,20 @@ so a file that changes underneath a review fails closed.
 
 1. [`workbench_catalog.build_workbench_catalog`](../src/sunofriend/workbench_catalog.py)
    reads the project and explicitly supplied candidate roots or catalog.
-2. Source and MIDI records contain size and SHA-256 evidence.
-3. Candidate ordering and the primary/advanced split are deterministic display
+2. `_automatic_candidate` rejects arrangement-named or multi-role MIDI,
+   requires one unambiguous role across note-bearing Clips, checks explicit
+   BPM/key compatibility and computes a path-free source-second note-geometry
+   signature. Invalid and note-free role-specific files remain explicit
+   unavailable/empty diagnostics.
+3. `_deduplicate_automatic_candidates` removes neutral-audition duplicates
+   while preferring the clearest role-specific candidate. Explicit catalogs
+   remain the route for deliberately transformed or combined comparisons.
+4. Source and MIDI records contain size and SHA-256 evidence.
+5. Candidate ordering and the primary/advanced split are deterministic display
    policy, not a preference ranking.
-4. [`workbench_catalog.public_catalog`](../src/sunofriend/workbench_catalog.py)
+6. [`workbench_catalog.public_catalog`](../src/sunofriend/workbench_catalog.py)
    removes private paths before browser presentation.
-5. [`workbench_catalog.media_files`](../src/sunofriend/workbench_catalog.py)
+7. [`workbench_catalog.media_files`](../src/sunofriend/workbench_catalog.py)
    creates the allow-list from which the loopback server can serve media.
 
 ### Invariant
@@ -281,10 +355,13 @@ for long songs without becoming a hidden editor or selection system.
    uses only the server-derived active selection.
 3. [`WorkbenchArtifacts`](../src/sunofriend/workbench_artifacts.py) renders
    content-addressed neutral previews, exact decoded loops or chunks, and an
-   explicitly requested balanced selected-MIDI derivative.
+   explicitly requested MIDI-derived song-interpretation WAV using the balanced
+   selected-MIDI policy.
 4. Precise comparison and canonical arrangement transports use one Web Audio
-   clock. The arbitrary full-song mixer is explicitly coarser HTML-media
-   playback.
+   clock. The precise per-stem loop reads its verified
+   `common-target-active-block-rms-v1` receipts and applies the disclosed gain
+   through a browser `GainNode`; decoded WAVs remain unchanged. The arbitrary
+   full-song mixer is explicitly coarser HTML-media playback.
 5. [`workbench_mix.build_balanced_midi_audition`](../src/sunofriend/workbench_mix.py)
    measures matching source/neutral-preview pairs, measures and calibrates each
    actual same-source waveform sum, applies transparent lane, drum-bus and
@@ -292,22 +369,36 @@ for long songs without becoming a hidden editor or selection system.
    GarageBand fader recipe. `WorkbenchArtifacts.render_balanced_arrangement`
    wraps those outputs in the separate path-free provenance receipt and
    content-addressed cache manifest.
-6. Cache eviction loses no musical decision. An artifact can be rebuilt from
+6. After the artifact cache verifier has authenticated the current render,
+   [`product_contract.build_product_output_status`](../src/sunofriend/product_contract.py)
+   reports whether reviewed MIDI and that matching song-interpretation
+   artifact satisfy the versioned paired-output goal without mutating either.
+7. Cache eviction loses no musical decision. An artifact can be rebuilt from
    verified source records and current state.
 
-The exact short/full-song transports and dry proxy stay at unity gain. The
-balance operation is a separate POST containing only the current selection
-manifest hash. It measures the actual coherent sum of selected alternatives
-derived from the same source and calibrates that group towards one source
-reference. It then restrains the combined drum bus against the non-drum bus,
-targets a useful audition level and preserves −1 dBFS sample-peak headroom. Its
-end frame is the longest verified source stem, with any longer neutral-preview
-tail disclosed in the artifact manifest.
+The canonical selected-arrangement short/full-song transports and dry proxy
+stay at unity gain. The precise per-stem loop alone uses
+`recorded-zero-source-frame-window-level-matched-v2`: each source/MIDI proxy is
+aimed at −18 dBFS median active 400 ms block RMS within −24…+12 dB trim and
+−1 dBFS sample-peak room. This is level assistance, not blinding or mastering.
+The renderer is `role-neutral-general-midi-v3`; bass uses the GM 39 Synth Bass
+1 proxy.
+
+The song-interpretation operation is a separate POST containing only the
+current selection manifest hash. It renders selected MIDI only: source stems
+provide timing, horizon and level evidence and are never mixed into the WAV.
+It measures the actual coherent sum of selected alternatives derived from the
+same source and calibrates that group towards one source reference. It then
+restrains the combined drum bus against
+the non-drum bus, targets a useful audition level and preserves −1 dBFS
+sample-peak headroom. Its end frame is the longest verified source stem, with
+any longer neutral-preview tail disclosed in the artifact manifest.
 An inactive source uses the report's conservative −6 dB drum or 0 dB non-drum
 fallback.
 There is no compressor, limiter, EQ, saturation, reverb, chorus or stereo
 widening. The result says `mastered: false`; patch choice, automation, final
-mixing and release mastering remain in GarageBand.
+mixing and release mastering remain in GarageBand. The optional listening
+master is a separate comparative derivative and never a release master.
 Balanced WAV, receipt and recipe capabilities freeze a hash/size-verified
 disk-backed anonymous snapshot per response before full or Range streaming.
 This closes the verification-to-stream race without holding a possible
@@ -607,6 +698,17 @@ and creation.
 - [`tests/test_workbench_clips_js.py`](../tests/test_workbench_clips_js.py)
 
 ## Use the Developer Inspector
+
+The preferred human route enables the Inspector when it opens Workbench:
+
+```bash
+sunofriend tui \
+  "/absolute/path/to/stem-project" \
+  --candidate-root "/absolute/path/to/candidate-results"
+```
+
+Use **Open visual studio**, then choose **Developer Inspector** in the browser.
+The direct expert invocation remains:
 
 Start the normal Workbench with the same project, candidate roots, optional
 catalog and persistent state directory, then add the explicit developer flag:

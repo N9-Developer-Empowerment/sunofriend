@@ -144,7 +144,7 @@ class RoleSemanticsTests(unittest.TestCase):
             self.assertEqual(rendered_channels, [9, 9])
             self.assertEqual(
                 {preview["policy"] for preview in previews},
-                {"role-neutral-general-midi-v2"},
+                {"role-neutral-general-midi-v3"},
             )
             self.assertEqual({preview["channel"] for preview in previews}, {9})
 

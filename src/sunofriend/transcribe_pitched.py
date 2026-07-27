@@ -6,6 +6,7 @@ Output is plain NoteEvent lists in seconds.
 """
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 
 from .models import ChordSegment, NoteEvent
@@ -138,6 +139,16 @@ class _BassCandidate:
     sources: frozenset[str]
 
 
+@dataclass(frozen=True)
+class _BassSustainEvidence:
+    """Frame evidence used only to decide whether a short MIDI gap is supported."""
+
+    frame_seconds: float
+    rms_active: tuple[bool, ...]
+    voiced: tuple[bool, ...]
+    pitches: tuple[int | None, ...]
+
+
 def select_bass_contour(
     basic_notes: list[NoteEvent],
     pyin_notes: list[NoteEvent],
@@ -168,7 +179,7 @@ def select_bass_contour(
         # Basic Pitch supplies event boundaries.  pYIN is independent pitch
         # evidence at those events, not a second onset detector: using every
         # short pYIN harmonic fragment as a new event more than doubled the
-        # Lidl candidate count.  Only exact, temporally overlapping pYIN
+        # Lidl candidate count. Only exact, temporally overlapping pYIN
         # support is attached to a Basic Pitch onset group.
         groups = _group_tagged_bass_onsets(
             [_TaggedBassNote("basic", note) for note in basic_notes],
@@ -253,6 +264,250 @@ def select_bass_contour(
             notes[-1] = NoteEvent(previous.start, clipped_end, previous.pitch, previous.velocity)
         notes.append(note)
     return _merge_split_notes(notes)
+
+
+def repair_bass_sustain(
+    path: str,
+    notes: list[NoteEvent],
+    *,
+    bpm: float,
+    max_gap_beats: float = 1.25,
+    minimum_gap_seconds: float = 0.035,
+    minimum_support_ratio: float = 0.80,
+    minimum_pitch_support_ratio: float = 0.70,
+) -> list[NoteEvent]:
+    """Extend short, source-supported bass gaps into legato note durations.
+
+    MIDI cannot store the buzzing texture of a synth-bass stem, but it can
+    preserve a continuously held accompaniment through note duration. This
+    conservative challenger changes note ends only: pitch, onset, velocity,
+    note count and genuine rests remain untouched.
+
+    A gap is filled only when it is no longer than ``max_gap_beats``, local
+    stem energy and independent pYIN voicing both cover at least
+    ``minimum_support_ratio`` of the gap, and octave-resolved pYIN pitch agrees
+    with the note being extended for at least ``minimum_pitch_support_ratio``.
+    This avoids stretching a detected pitch across either silence or a real
+    pitch transition merely because the following note starts nearby.
+    """
+
+    if not notes:
+        return []
+    if bpm <= 0:
+        raise ValueError("bpm must be greater than zero")
+    if max_gap_beats <= 0:
+        raise ValueError("max_gap_beats must be greater than zero")
+    if minimum_gap_seconds < 0:
+        raise ValueError("minimum_gap_seconds must be non-negative")
+    if not 0.0 <= minimum_support_ratio <= 1.0:
+        raise ValueError("minimum_support_ratio must be between zero and one")
+    if not 0.0 <= minimum_pitch_support_ratio <= 1.0:
+        raise ValueError("minimum_pitch_support_ratio must be between zero and one")
+
+    ordered = sorted(notes, key=lambda note: (note.start, note.pitch, note.end))
+    evidence = _bass_sustain_evidence(path)
+    max_gap_seconds = float(max_gap_beats) * 60.0 / float(bpm)
+    repaired: list[NoteEvent] = []
+
+    for index, note in enumerate(ordered):
+        if index + 1 >= len(ordered):
+            repaired.append(note)
+            continue
+        following = ordered[index + 1]
+        gap = float(following.start) - float(note.end)
+        if (
+            gap < minimum_gap_seconds
+            or gap > max_gap_seconds
+            or not _bass_gap_is_supported(
+                evidence,
+                float(note.end),
+                float(following.start),
+                pitch=int(note.pitch),
+                minimum_support_ratio=minimum_support_ratio,
+                minimum_pitch_support_ratio=minimum_pitch_support_ratio,
+            )
+        ):
+            repaired.append(note)
+            continue
+        repaired.append(
+            NoteEvent(
+                start=float(note.start),
+                end=float(following.start),
+                pitch=int(note.pitch),
+                velocity=int(note.velocity),
+            )
+        )
+    return repaired
+
+
+def repair_bass_octaves(
+    path: str,
+    notes: list[NoteEvent],
+    *,
+    minimum_voiced_ratio: float = 0.70,
+    minimum_exact_pitch_ratio: float = 0.80,
+) -> list[NoteEvent]:
+    """Shift only strongly supported octave harmonics to the source register.
+
+    The candidate preserves note starts, ends, velocities, pitch classes and
+    note count. A note moves by one or two octaves only when pYIN is voiced
+    across most of its duration and one exact rounded MIDI pitch dominates
+    those voiced frames. This is deliberately a separate challenger: it does
+    not change the default contour-clean repair.
+    """
+
+    if not 0.0 <= minimum_voiced_ratio <= 1.0:
+        raise ValueError("minimum_voiced_ratio must be between zero and one")
+    if not 0.0 <= minimum_exact_pitch_ratio <= 1.0:
+        raise ValueError(
+            "minimum_exact_pitch_ratio must be between zero and one"
+        )
+    if not notes:
+        return []
+
+    evidence = _bass_sustain_evidence(path)
+    repaired: list[NoteEvent] = []
+    for note in sorted(notes, key=lambda item: (item.start, item.pitch, item.end)):
+        first, last = _bass_evidence_frame_range(
+            evidence,
+            float(note.start),
+            float(note.end),
+        )
+        if first >= last:
+            repaired.append(note)
+            continue
+        frame_pitches = [
+            pitch
+            for pitch in evidence.pitches[first:last]
+            if pitch is not None
+        ]
+        frame_count = last - first
+        if (
+            len(frame_pitches) / frame_count < minimum_voiced_ratio
+            or not frame_pitches
+        ):
+            repaired.append(note)
+            continue
+        supported_pitch, support_count = Counter(frame_pitches).most_common(1)[0]
+        exact_ratio = support_count / len(frame_pitches)
+        octave_delta = int(supported_pitch) - int(note.pitch)
+        if (
+            exact_ratio >= minimum_exact_pitch_ratio
+            and supported_pitch % 12 == note.pitch % 12
+            and abs(octave_delta) in {12, 24}
+        ):
+            repaired.append(
+                NoteEvent(
+                    start=float(note.start),
+                    end=float(note.end),
+                    pitch=int(supported_pitch),
+                    velocity=int(note.velocity),
+                )
+            )
+        else:
+            repaired.append(note)
+    return repaired
+
+
+def _bass_sustain_evidence(
+    path: str,
+    *,
+    sample_rate: int = 22050,
+    hop_length: int = 256,
+) -> _BassSustainEvidence:
+    """Measure local activity and monophonic voicing once for all note gaps."""
+
+    import librosa
+    import numpy as np
+
+    audio, _ = librosa.load(path, sr=sample_rate, mono=True)
+    if audio.size == 0:
+        return _BassSustainEvidence(hop_length / sample_rate, (), (), ())
+    bass_fmin, bass_fmax = _KIND_FREQS["bass"]
+    f0, voiced, _ = librosa.pyin(
+        audio,
+        fmin=bass_fmin,
+        fmax=bass_fmax,
+        sr=sample_rate,
+        hop_length=hop_length,
+        fill_na=np.nan,
+    )
+    rms = librosa.feature.rms(y=audio, hop_length=hop_length)[0]
+    if rms.size == 0:
+        return _BassSustainEvidence(hop_length / sample_rate, (), (), ())
+    peak = float(np.max(rms))
+    threshold = max(5e-4, peak * 0.01)
+    count = min(len(rms), len(f0))
+    voiced_values = (
+        [False] * count
+        if voiced is None
+        else [
+            bool(voiced[index]) and not bool(np.isnan(f0[index]))
+            for index in range(count)
+        ]
+    )
+    return _BassSustainEvidence(
+        frame_seconds=hop_length / sample_rate,
+        rms_active=tuple(float(rms[index]) >= threshold for index in range(count)),
+        voiced=tuple(voiced_values),
+        pitches=tuple(
+            (
+                int(round(float(librosa.hz_to_midi(f0[index]))))
+                if voiced_values[index]
+                else None
+            )
+            for index in range(count)
+        ),
+    )
+
+
+def _bass_gap_is_supported(
+    evidence: _BassSustainEvidence,
+    start_seconds: float,
+    end_seconds: float,
+    *,
+    pitch: int,
+    minimum_support_ratio: float,
+    minimum_pitch_support_ratio: float,
+) -> bool:
+    if (
+        end_seconds <= start_seconds
+        or not evidence.rms_active
+        or not evidence.voiced
+        or not evidence.pitches
+    ):
+        return False
+    first, last = _bass_evidence_frame_range(
+        evidence,
+        start_seconds,
+        end_seconds,
+    )
+    if first >= last:
+        return False
+    count = last - first
+    rms_ratio = sum(evidence.rms_active[first:last]) / count
+    voiced_ratio = sum(evidence.voiced[first:last]) / count
+    pitch_ratio = sum(
+        frame_pitch == pitch for frame_pitch in evidence.pitches[first:last]
+    ) / count
+    return (
+        rms_ratio >= minimum_support_ratio
+        and voiced_ratio >= minimum_support_ratio
+        and pitch_ratio >= minimum_pitch_support_ratio
+    )
+
+
+def _bass_evidence_frame_range(
+    evidence: _BassSustainEvidence,
+    start_seconds: float,
+    end_seconds: float,
+) -> tuple[int, int]:
+    first = max(0, int(start_seconds / evidence.frame_seconds))
+    last = min(
+        len(evidence.rms_active),
+        max(first + 1, int(end_seconds / evidence.frame_seconds) + 1),
+    )
+    return first, last
 
 
 def _group_tagged_bass_onsets(

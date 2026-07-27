@@ -330,6 +330,47 @@ class WorkbenchStore:
         return connection
 
 
+def read_workbench_events_read_only(
+    path: str | Path,
+    project_id: str,
+) -> list[dict[str, Any]]:
+    """Read existing decision events without initializing or changing SQLite.
+
+    This is used by presentation-only clients such as the TUI. ``mode=ro`` is
+    an enforcement boundary: a missing or incomplete store fails instead of
+    creating a database, schema, journal or index as a normal Workbench launch
+    intentionally would.
+    """
+
+    database = Path(path).expanduser().resolve()
+    uri = f"{database.as_uri()}?mode=ro"
+    with sqlite3.connect(uri, uri=True, timeout=10.0) as connection:
+        connection.execute("PRAGMA query_only=ON")
+        rows = connection.execute(
+            """
+            SELECT event_id, schema_name, created_at, project_id, stem_id,
+                   candidate_id, event_type, payload_json
+            FROM decision_events
+            WHERE project_id = ?
+            ORDER BY sequence ASC
+            """,
+            (str(project_id),),
+        ).fetchall()
+    return [
+        {
+            "event_id": row[0],
+            "schema": row[1],
+            "created_at": row[2],
+            "project_id": row[3],
+            "stem_id": row[4],
+            "candidate_id": row[5],
+            "event_type": row[6],
+            "payload": json.loads(row[7]),
+        }
+        for row in rows
+    ]
+
+
 def fold_workbench_events(
     project: Mapping[str, Any],
     events: list[Mapping[str, Any]],

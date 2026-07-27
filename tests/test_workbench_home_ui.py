@@ -25,9 +25,11 @@ class WorkbenchHomeUITests(unittest.TestCase):
         self.assertIn('role="status" aria-live="polite"', self.page)
         self.assertIn("aria-current", self.page)
 
-    def test_status_and_next_action_use_only_server_project_home(self) -> None:
+    def test_status_uses_server_home_and_verified_product_output_state(self) -> None:
         self.assertIn("const home=project.home", self.home)
         self.assertIn("home?.next_step", self.home)
+        self.assertIn("project?.product_outputs?.required_outputs", self.home)
+        self.assertIn("midi_derived_song_interpretation_wav", self.home)
         self.assertIn("home.stems.map", self.home)
         self.assertIn("candidate_count", self.home)
         self.assertIn("decision_counts", self.home)
@@ -35,6 +37,20 @@ class WorkbenchHomeUITests(unittest.TestCase):
         self.assertNotIn("quality_metrics", self.home)
         self.assertNotIn("candidate.label", self.home)
         self.assertNotIn("candidate.process", self.home)
+
+    def test_paired_output_goal_and_interpretation_route_are_explicit(self) -> None:
+        self.assertIn(
+            "reviewed editable MIDI and a MIDI-derived song-interpretation WAV",
+            self.home,
+        )
+        self.assertIn("not waveform reconstruction", self.home)
+        self.assertIn("Build the song interpretation", self.home)
+        self.assertIn("Build song-interpretation WAV", self.home)
+        self.assertIn(
+            "next.action==='compose-pack'&&!songInterpretationReady()?"
+            "navigate('arrangement')",
+            self.home,
+        )
 
     def test_home_navigation_has_no_feedback_or_midi_effect(self) -> None:
         self.assertIn(

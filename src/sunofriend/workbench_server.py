@@ -20,6 +20,10 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 from urllib.parse import parse_qs, unquote, urlparse
 
+from .product_contract import (
+    build_product_output_status,
+    product_contract_document,
+)
 from .workbench_catalog import (
     build_workbench_catalog,
     media_files,
@@ -1497,7 +1501,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     ):
                         raise WorkbenchSelectionConflictError(
                             "the selected arrangement changed; reload it before "
-                            "creating a balanced audition"
+                            "creating the MIDI-derived song interpretation"
                         )
                 try:
                     artifact = self.server.artifacts.render_balanced_arrangement(
@@ -1521,7 +1525,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     ):
                         raise WorkbenchSelectionConflictError(
                             "the selected arrangement changed while the balanced "
-                            "audition was being created; reload and retry"
+                            "song interpretation was being created; reload and retry"
                         ) from exc
                     raise
                 cache_key = str(artifact.get("cache_key", ""))
@@ -1540,6 +1544,10 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                             self.server.catalog,
                             final_state,
                         )
+                        final_home = build_workbench_home(
+                            self.server.catalog,
+                            final_state,
+                        )
                         if (
                             requested_manifest_sha256
                             != final_manifest["selection_manifest_sha256"]
@@ -1548,7 +1556,8 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                         ):
                             raise WorkbenchSelectionConflictError(
                                 "the selected arrangement changed while the balanced "
-                                "audition was being created; reload and retry"
+                                "song interpretation was being created; reload "
+                                "and retry"
                             )
                         promoted = (
                             self.server.artifacts.promote_balanced_arrangement(
@@ -1576,7 +1585,19 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     raise
                 self._json(
                     HTTPStatus.OK,
-                    {"balanced_arrangement": public_artifact},
+                    {
+                        "balanced_arrangement": public_artifact,
+                        "product_outputs": build_product_output_status(
+                            final_manifest,
+                            public_artifact,
+                            full_mix_review_complete=bool(
+                                final_home["counts"]["selected_part_count"]
+                                and not final_home["counts"][
+                                    "selected_needing_full_mix_count"
+                                ]
+                            ),
+                        ),
+                    },
                 )
                 return
             if parsed.path == "/api/garageband-pack-basket":
@@ -1784,7 +1805,8 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 )
         review = self.server.store.export_review(self.server.catalog)
         payload["state"] = path_free_browser_state(state)
-        payload["home"] = build_workbench_home(self.server.catalog, state)
+        home = build_workbench_home(self.server.catalog, state)
+        payload["home"] = home
         payload["contribution_preview"] = review["contribution_preview"]
         payload["review_status"] = review["status"]
         payload["review_url"] = f"/api/review?token={self.server.token}"
@@ -1792,12 +1814,12 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
             self.server.catalog,
             state,
         )
-        payload["decoded_arrangement_selection"] = (
+        decoded_arrangement_selection = (
             self.server.artifacts.decoded_arrangement_selection_manifest(
-                self.server.catalog,
-                state,
+                self.server.catalog, state
             )
         )
+        payload["decoded_arrangement_selection"] = decoded_arrangement_selection
         arrangement = self.server.artifacts.cached_arrangement(
             self.server.catalog, state
         )
@@ -1807,10 +1829,20 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
         balanced_arrangement = self.server.artifacts.cached_balanced_arrangement(
             self.server.catalog, state
         )
-        payload["balanced_arrangement"] = (
+        public_balanced_arrangement = (
             self._public_artifact(balanced_arrangement)
             if balanced_arrangement
             else None
+        )
+        payload["balanced_arrangement"] = public_balanced_arrangement
+        payload["product_contract"] = product_contract_document()
+        payload["product_outputs"] = build_product_output_status(
+            decoded_arrangement_selection,
+            public_balanced_arrangement,
+            full_mix_review_complete=bool(
+                home["counts"]["selected_part_count"]
+                and not home["counts"]["selected_needing_full_mix_count"]
+            ),
         )
         payload["developer"] = {
             "enabled": self.server.developer_inspector,
@@ -2095,6 +2127,7 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                 "start_seconds",
                 "end_seconds",
                 "duration_seconds",
+                "audition_level",
                 "cache_hit",
                 "effects",
             )
@@ -2122,6 +2155,8 @@ class _WorkbenchHandler(BaseHTTPRequestHandler):
                     "frames",
                     "start_frame",
                     "silence_padded_frames",
+                    "audition_gain_db",
+                    "audition_level",
                 )
                 if key in track
             }

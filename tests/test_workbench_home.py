@@ -78,6 +78,10 @@ class WorkbenchHomeTests(unittest.TestCase):
         self.assertEqual(home["stems"][0]["attention_code"], "no-candidates")
         self.assertEqual(home["stems"][1]["heard_role"], "synth bass body")
         self.assertEqual(home["stems"][1]["attention_code"], "compare-candidates")
+        self.assertEqual(home["counts"]["stem_count"], 3)
+        self.assertEqual(home["counts"]["candidate_stem_count"], 2)
+        self.assertEqual(home["counts"]["midi_ready_stem_count"], 2)
+        self.assertEqual(home["counts"]["missing_midi_stem_count"], 1)
         self.assertEqual(home["counts"]["decision_recorded_stem_count"], 0)
 
     def test_recorded_reject_correction_and_outcome_are_not_called_selected(self) -> None:

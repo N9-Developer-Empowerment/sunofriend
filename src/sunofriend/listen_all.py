@@ -18,6 +18,14 @@ from .midi import MidiTrack, write_midi_file
 from .models import NoteEvent
 
 DRUM_PARTS = ["kick", "snare", "hat", "cymbals", "toms", "other_kit"]
+CONSERVATIVE_ROLE_ENGINES = {
+    # These broad separator roles do not yet have specialist transcribers.
+    # Keep their public identity while publishing a deliberately conservative
+    # candidate from the closest existing engine for explicit human review.
+    "wind": "lead",
+    "rhythm": "keys",
+    "other": "synth",
+}
 PITCHED_PARTS = {  # stem token -> processing kind
     "bass": "bass",
     "lead": "lead",
@@ -25,12 +33,14 @@ PITCHED_PARTS = {  # stem token -> processing kind
     "keys": "keys",
     "piano": "keys",
     "strings": "pads",  # sustained chords: chart voicings + stem dynamics beat transcription
+    **CONSERVATIVE_ROLE_ENGINES,
 }
 CHANNELS = {  # part -> (channel, GM program)
     "kick": (9, 0), "snare": (9, 0), "hat": (9, 0), "cymbals": (9, 0),
     "toms": (9, 0), "other_kit": (9, 0),
     "bass": (0, 38), "keys": (1, 7), "pads": (6, 89), "piano": (3, 0),
     "strings": (4, 48), "lead": (2, 81), "synth": (5, 81),
+    "wind": (7, 71), "rhythm": (8, 27), "other": (10, 81),
 }
 SILENCE_PEAK = 0.005
 SILENCE_RMS = 5e-4
@@ -49,6 +59,9 @@ INSTRUMENT_SUGGESTIONS = {
     "strings": ("Strings", "Warm Pad"),
     "lead": ("Flow Synth Lead", "Synth Lead"),
     "synth": ("Flow Synth Pluck", "Synth Lead"),
+    "wind": ("Clarinet", "Brass Section"),
+    "rhythm": ("Electric Guitar (clean)", "Acoustic Guitar (steel)"),
+    "other": ("Flow Synth Pluck", "Synth Lead"),
 }
 
 
@@ -364,6 +377,8 @@ def run_listen_all(
             shutil.rmtree(part_dir, ignore_errors=True)
             summary["parts"][name] = {
                 "status": "ok",
+                "published_role": name,
+                "processing_kind": kind,
                 "score": round(result.score, 4),
                 "score_scope": "render_proxy_before_semantic_filtering",
                 "notes": len(result.notes),
@@ -381,7 +396,7 @@ def run_listen_all(
                     str(stem),
                     str(final),
                     "--kind",
-                    name,
+                    CONSERVATIVE_ROLE_ENGINES.get(name, name),
                     "--out-dir",
                     str(publish_dir / "instrument_matches" / name),
                 ],
@@ -846,6 +861,8 @@ def _make_library_clip(
         "timing_mode": "stem_locked",
         "midi_sha256": digest,
         "conversion_mode": conversion_mode,
+        "published_role": name,
+        "processing_kind": kind,
         "variant": variant or "primary",
     }
     if score is None:

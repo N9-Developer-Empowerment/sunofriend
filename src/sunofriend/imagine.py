@@ -49,19 +49,27 @@ def imagine_bass_variants(
     segments: list[ChordSegment],
     key_name: str | None = None,
 ) -> dict[str, list[NoteEvent]]:
-    """Build three deterministic bass candidates from the same stem evidence.
+    """Build deterministic bass candidates from the same stem evidence.
 
     ``raw_verified`` preserves the hybrid Basic Pitch / pYIN contour without
     quantisation. ``contour_clean`` adds the existing grid and harmony safety
     rules while retaining supported passing tones. ``root_safe`` keeps the
-    contour-clean rhythm and expression but uses the active chord root.  The
+    contour-clean rhythm and expression but uses the active chord root.
+    ``octave_resolved`` changes only strong pYIN-supported octave harmonics.
+    ``continuous_sustain`` then extends only short note ends where the isolated
+    stem remains active, voiced and at the same octave-resolved pitch. The
     explicit alternatives make the creative trade-off audible instead of
     silently replacing a walking line with roots.
     """
-    from .transcribe_pitched import transcribe_pitched_stem
+    from .transcribe_pitched import (
+        repair_bass_octaves,
+        repair_bass_sustain,
+        transcribe_pitched_stem,
+    )
 
     evidence = transcribe_pitched_stem(stem_path, kind="bass")
     raw_verified = _verified(stem_path, evidence, threshold=0.18)
+    octave_resolved = repair_bass_octaves(stem_path, raw_verified)
     contour_clean = _theory_clean(
         raw_verified,
         segments,
@@ -74,6 +82,12 @@ def imagine_bass_variants(
     return {
         "raw_verified": raw_verified,
         "contour_clean": contour_clean,
+        "octave_resolved": octave_resolved,
+        "continuous_sustain": repair_bass_sustain(
+            stem_path,
+            octave_resolved,
+            bpm=grid.bpm,
+        ),
         "root_safe": _root_safe_bass(contour_clean, segments, BASS_LOW, BASS_HIGH),
     }
 

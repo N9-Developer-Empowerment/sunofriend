@@ -272,7 +272,9 @@ _OPERATION_LABELS = {
     "arrangement_stream.prepare": "Freeze a bounded full-song stream plan",
     "arrangement_chunk.prepare": "Verify and decode one bounded stream chunk",
     "arrangement.render": "Render or reuse the selected arrangement proxy",
-    "arrangement.balance": "Render or reuse the source-referenced balanced audition",
+    "arrangement.balance": (
+        "Render or reuse the balanced MIDI-derived song interpretation"
+    ),
     "handoff.build": "Build the compatibility GarageBand handoff",
     "pack_basket.save": "Save a separate export-basket revision",
     "pack.build": "Build and verify an exact local ZIP",

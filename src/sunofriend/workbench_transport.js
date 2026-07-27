@@ -17,6 +17,7 @@
   const DEFAULT_SCHEDULE_LEAD_SECONDS = 0.025;
   const DEFAULT_MAX_DECODED_SEQUENCE_BYTES = 64 * 1024 * 1024;
   const immutableDecodedBuffers = new WeakSet();
+  const sourceGainNodes = new WeakMap();
 
   function finiteNumber(value, label) {
     const number = Number(value);
@@ -210,6 +211,41 @@
     } catch (_) {
       // A source can already be disconnected after an asynchronous onended.
     }
+    const gainNode = sourceGainNodes.get(source);
+    if (gainNode && typeof gainNode.disconnect === "function") {
+      try {
+        gainNode.disconnect();
+      } catch (_) {
+        // The gain node may already have been disconnected with its source.
+      }
+    }
+    sourceGainNodes.delete(source);
+  }
+
+  function normaliseGainDbByKey(gains, buffers) {
+    const result = new Map();
+    for (const key of buffers.keys()) result.set(key, 0);
+    if (gains === undefined || gains === null) return result;
+    const entries = gains instanceof Map ? Array.from(gains.entries()) : (
+      typeof gains === "object" && !Array.isArray(gains)
+        ? Object.entries(gains)
+        : null
+    );
+    if (!entries) {
+      throw new TypeError("gain dB values must be a Map or plain object");
+    }
+    for (const [rawKey, rawGain] of entries) {
+      const key = nonEmptyString(String(rawKey), "gain key");
+      if (!buffers.has(key)) {
+        throw new RangeError(`gain key has no decoded buffer: ${key}`);
+      }
+      const gainDb = finiteNumber(rawGain, `gain dB for ${key}`);
+      if (gainDb < -60 || gainDb > 24) {
+        throw new RangeError("gain dB must be between -60 and 24");
+      }
+      result.set(key, gainDb);
+    }
+    return result;
   }
 
   function retireSource(source, when) {
@@ -306,6 +342,10 @@
         settings.decodedBuffers,
         this.frameCount
       );
+      this.gainDbByKey = normaliseGainDbByKey(
+        settings.gainDbByKey,
+        this.buffers
+      );
       this._activeKey = null;
       this._source = null;
       this._playing = false;
@@ -354,13 +394,34 @@
       return { key: normalisedKey, buffer };
     }
 
-    _newSource(buffer) {
+    _newSource(buffer, key) {
       const source = this.audioContext.createBufferSource();
       source.buffer = buffer;
       source.loop = true;
       source.loopStart = 0;
       source.loopEnd = this.loopDurationSeconds;
-      source.connect(this.audioContext.destination);
+      const gainDb = this.gainDbByKey.get(key) || 0;
+      if (Math.abs(gainDb) < 1e-12) {
+        source.connect(this.audioContext.destination);
+      } else {
+        if (typeof this.audioContext.createGain !== "function") {
+          throw new TypeError(
+            "audio context must provide createGain for level-matched playback"
+          );
+        }
+        const gainNode = this.audioContext.createGain();
+        if (
+          !gainNode ||
+          !gainNode.gain ||
+          typeof gainNode.connect !== "function"
+        ) {
+          throw new TypeError("audio context returned an invalid GainNode");
+        }
+        gainNode.gain.value = Math.pow(10, gainDb / 20);
+        source.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+        sourceGainNodes.set(source, gainNode);
+      }
       this._sourceSerial += 1;
       return source;
     }
@@ -384,7 +445,7 @@
             this.loopEndSeconds
           );
       const offsetSeconds = absolutePlayhead - this.loopStartSeconds;
-      const nextSource = this._newSource(selected.buffer);
+      const nextSource = this._newSource(selected.buffer, selected.key);
       const previousSource = this._source;
       const previousKey = this._activeKey;
 
@@ -412,6 +473,9 @@
         absolutePlayheadSeconds: absolutePlayhead,
         bufferOffsetSeconds: offsetSeconds,
         sourceSerial: this._sourceSerial,
+        activeGainDb: (
+          this._activeKey === null ? null : this.gainDbByKey.get(this._activeKey)
+        ),
       };
     }
 
@@ -483,6 +547,9 @@
         frameCount: this.frameCount,
         sampleRate: this.audioContext.sampleRate,
         sourceSerial: this._sourceSerial,
+        activeGainDb: (
+          this._activeKey === null ? null : this.gainDbByKey.get(this._activeKey)
+        ),
       };
     }
   }

@@ -388,12 +388,25 @@ def _seed_pitched_v2(
         origins = {
             "raw_verified": "observed",
             "contour_clean": "repaired",
+            "octave_resolved": "repaired",
+            "continuous_sustain": "repaired",
             "root_safe": "inferred",
         }
         for name, notes in bass_variants.items():
             sources = ["basic-pitch", "pyin", "spectral-verification"]
             if name in {"contour_clean", "root_safe"}:
                 sources.extend(("beat-grid", "key", "chord-chart"))
+            if name == "continuous_sustain":
+                sources.extend(
+                    (
+                        "source-rms-activity",
+                        "pyin-voicing",
+                        "pyin-exact-register",
+                        "bounded-gap-sustain",
+                    )
+                )
+            if name == "octave_resolved":
+                sources.extend(("pyin-voicing", "pyin-exact-register"))
             sources.append(name)
             records = provenance_for_notes(
                 notes,

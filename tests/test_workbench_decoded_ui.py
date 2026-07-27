@@ -97,19 +97,22 @@ Promise.resolve(vm.runInContext(`(async()=>{${body}})()`, context)).then(
         self.assertIn('id="decoded-included-summary"', self.decoded)
         self.assertIn("function decodedIncludedText", self.decoded)
         self.assertIn(
-            "Compatibility fallback — time-synchronised, not sample-accurate",
+            "Compatibility fallback — time-synchronised and not level-matched",
             self.page,
         )
-        self.assertIn("startup and loop boundaries can drift", self.page)
+        self.assertIn("startup, loop boundaries and loudness can differ", self.page)
         self.assertIn("fallback audition controls also record no review feedback", self.page)
         self.assertIn('id="compatibility-fallback"', self.page)
+        self.assertIn("gainDbByKey:new Map", self.decoded)
+        self.assertIn("active-block RMS adjustment", self.page)
+        self.assertIn("audition_gain_db", self.decoded)
 
     def test_candidate_players_cannot_bypass_the_shared_controls(self) -> None:
         self.assertIn('<audio id="audio-${esc(candidate.candidate_id)}" hidden', self.page)
         self.assertNotIn('<audio id="audio-${esc(candidate.candidate_id)}" controls', self.page)
         self.assertIn('id="source-audio" hidden', self.decoded)
         self.assertNotIn('id="source-audio" controls', self.decoded)
-        self.assertIn("Use the shared comparison transport above", self.page)
+        self.assertIn("Use the level-matched shared comparison transport above", self.page)
 
     def test_preparation_is_bounded_decoded_and_uses_one_transport(self) -> None:
         self.assertIn("/api/decoded-loop", self.decoded)
@@ -120,7 +123,7 @@ Promise.resolve(vm.runInContext(`(async()=>{${body}})()`, context)).then(
         self.assertIn("decodedTransport.seek(playhead)", self.page)
         self.assertIn("decodedTransport.pause()", self.decoded)
         self.assertIn("decodedTransport.stop()", self.decoded)
-        self.assertIn("recorded-zero timing, no inferred offset", self.decoded)
+        self.assertIn("recorded-zero timing · no inferred offset", self.decoded)
         self.assertIn("silence_padded_frames", self.decoded)
         self.assertIn("Precise loop only:", self.decoded)
         self.assertIn("Do not judge that silence as missing transcription", self.decoded)

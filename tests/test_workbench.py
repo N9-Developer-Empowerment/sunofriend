@@ -12,13 +12,129 @@ from unittest.mock import patch
 
 from sunofriend.midi import MidiTrack, write_midi_file
 from sunofriend.models import NoteEvent
-from sunofriend.workbench_catalog import build_workbench_catalog, public_catalog
+from sunofriend.workbench_catalog import (
+    _infer_roles,
+    build_workbench_catalog,
+    infer_role,
+    public_catalog,
+)
 from sunofriend.workbench_artifacts import WorkbenchArtifacts, selected_candidates
 from sunofriend.workbench_server import _display_candidates, create_workbench_server
 from sunofriend.workbench_store import WorkbenchStore
 
 
 class WorkbenchCatalogTests(unittest.TestCase):
+    def test_compound_role_tokens_suppress_only_their_broad_components(self) -> None:
+        self.assertEqual(_infer_roles("song-other_kit-take"), {"other_kit"})
+        self.assertEqual(_infer_roles("song-backing_vocal-take"), {"backing_vocals"})
+        self.assertEqual(_infer_roles("song-backing_vocals-take"), {"backing_vocals"})
+        self.assertEqual(_infer_roles("song-lead_vocal-take"), {"vocals"})
+        self.assertEqual(_infer_roles("song-lead_vocals-take"), {"vocals"})
+
+        self.assertEqual(_infer_roles("song-lead-take"), {"lead"})
+        self.assertEqual(_infer_roles("song-vocals-take"), {"vocals"})
+        self.assertEqual(
+            _infer_roles("song-other_kit-and-other-take"),
+            {"other_kit", "other"},
+        )
+        self.assertEqual(
+            _infer_roles("song-backing_vocal-and-lead_vocal-take"),
+            {"backing_vocals", "vocals"},
+        )
+
+        self.assertEqual(infer_role("song-backing_vocal-take"), "backing_vocals")
+        self.assertEqual(infer_role("song-lead_vocal-take"), "vocals")
+        self.assertEqual(infer_role("song-lead-take"), "lead")
+        self.assertEqual(infer_role("song-vocals-take"), "vocals")
+
+    def test_pupsies_style_compound_candidates_pair_with_specific_source_roles(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "pupsies - 01. misery. (1)-B major-119bpm-440hz"
+            candidates = root / "pupsies-full-midi"
+            project.mkdir()
+            candidates.mkdir()
+
+            prefix = "pupsies - 01. misery. (1)"
+            for role in (
+                "backing_vocals",
+                "vocals",
+                "lead",
+                "other_kit",
+                "other",
+            ):
+                (project / f"{prefix}-{role}-B major-119bpm-440hz.wav").write_bytes(
+                    f"RIFF-{role}".encode()
+                )
+
+            _write_midi(
+                candidates / "backing_vocal_melody.mid",
+                pitch=60,
+                bpm=119.0,
+            )
+            _write_midi(
+                candidates / "lead_vocal_melody.mid",
+                pitch=61,
+                bpm=119.0,
+            )
+            _write_midi(
+                candidates / "vocals_listened.mid",
+                pitch=62,
+                bpm=119.0,
+            )
+            _write_midi(
+                candidates / "lead_listened.mid",
+                pitch=63,
+                bpm=119.0,
+            )
+            _write_midi(
+                candidates / "other_kit_listened.mid",
+                pitch=64,
+                bpm=119.0,
+            )
+            _write_midi(
+                candidates / "other_listened.mid",
+                pitch=65,
+                bpm=119.0,
+            )
+
+            catalog = build_workbench_catalog(
+                project,
+                candidate_roots=[candidates],
+            )
+            stems = {stem["role"]: stem for stem in catalog["stems"]}
+
+            self.assertEqual(stems["backing_vocals"]["candidate_count"], 1)
+            self.assertEqual(
+                stems["backing_vocals"]["candidates"][0]["midi"]["name"],
+                "backing_vocal_melody.mid",
+            )
+            self.assertEqual(stems["vocals"]["candidate_count"], 2)
+            self.assertEqual(
+                {
+                    candidate["midi"]["name"]
+                    for candidate in stems["vocals"]["candidates"]
+                },
+                {"lead_vocal_melody.mid", "vocals_listened.mid"},
+            )
+            self.assertEqual(stems["lead"]["candidate_count"], 1)
+            self.assertEqual(
+                stems["lead"]["candidates"][0]["midi"]["name"],
+                "lead_listened.mid",
+            )
+            self.assertEqual(stems["other_kit"]["candidate_count"], 1)
+            self.assertEqual(
+                stems["other_kit"]["candidates"][0]["midi"]["name"],
+                "other_kit_listened.mid",
+            )
+            self.assertEqual(stems["other"]["candidate_count"], 1)
+            self.assertEqual(
+                stems["other"]["candidates"][0]["midi"]["name"],
+                "other_listened.mid",
+            )
+
     def test_discovers_bounded_role_candidates_and_path_free_public_catalog(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -37,7 +153,7 @@ class WorkbenchCatalogTests(unittest.TestCase):
                 midi = directory / (
                     "bass_listened.mid" if index == 1 else "candidate.mid"
                 )
-                _write_midi(midi, pitch=35 + index)
+                _write_midi(midi, pitch=35 + index, bpm=113.0)
                 if index == 1:
                     midi.with_suffix(".preview.wav").write_bytes(b"RIFF-preview")
 
@@ -62,6 +178,96 @@ class WorkbenchCatalogTests(unittest.TestCase):
             self.assertNotIn(str(root), rendered)
             self.assertNotIn("source_path", rendered)
             self.assertNotIn("midi_path", rendered)
+
+    def test_automatic_discovery_excludes_arrangements_transforms_and_duplicates(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "Strict Song-B major-119bpm-440hz"
+            candidates = root / "outputs"
+            project.mkdir()
+            candidates.mkdir()
+            (project / "Strict Song-bass-B major-119bpm-440hz.wav").write_bytes(
+                b"RIFF-bass-source"
+            )
+            (project / "Strict Song-kick-B major-119bpm-440hz.wav").write_bytes(
+                b"RIFF-kick-source"
+            )
+
+            bass_dir = candidates / "selected_bass-kick"
+            bass_dir.mkdir()
+            bass = bass_dir / "bass_listened.mid"
+            _write_midi(bass, pitch=38, bpm=119.0)
+            _write_midi(candidates / "kick_listened.mid", pitch=36, bpm=119.0)
+
+            duplicate_dir = candidates / "exports"
+            duplicate_dir.mkdir()
+            _write_midi(
+                duplicate_dir / "bass-stem-locked.mid",
+                pitch=38,
+                bpm=119.0,
+            )
+            transformed_dir = candidates / "variants"
+            transformed_dir.mkdir()
+            _write_midi(
+                transformed_dir / "bass-b-major-124-stem-locked.mid",
+                pitch=38,
+                bpm=124.0,
+            )
+            write_midi_file(
+                candidates / "arrangement-core-drums-bass-pads.mid",
+                [
+                    MidiTrack(
+                        "Bass",
+                        0,
+                        38,
+                        [NoteEvent(0.0, 0.5, 38, 90)],
+                    ),
+                    MidiTrack(
+                        "Pads",
+                        1,
+                        89,
+                        [NoteEvent(0.0, 1.0, 59, 80)],
+                    ),
+                ],
+                bpm=119.0,
+            )
+            write_midi_file(
+                candidates / "bass_mixed.mid",
+                [
+                    MidiTrack(
+                        "Bass",
+                        0,
+                        38,
+                        [NoteEvent(0.0, 0.5, 38, 90)],
+                    ),
+                    MidiTrack(
+                        "Pads",
+                        1,
+                        89,
+                        [NoteEvent(0.0, 1.0, 59, 80)],
+                    ),
+                ],
+                bpm=119.0,
+            )
+
+            catalog = build_workbench_catalog(
+                project,
+                candidate_roots=[candidates],
+            )
+            stems = {stem["role"]: stem for stem in catalog["stems"]}
+
+            self.assertEqual(stems["bass"]["candidate_count"], 1)
+            self.assertEqual(
+                stems["bass"]["candidates"][0]["midi"]["name"],
+                "bass_listened.mid",
+            )
+            self.assertEqual(stems["kick"]["candidate_count"], 1)
+            self.assertEqual(
+                stems["kick"]["candidates"][0]["midi"]["name"],
+                "kick_listened.mid",
+            )
 
     def test_byte_identical_stems_keep_distinct_review_state_ids(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -668,7 +874,7 @@ class WorkbenchCatalogTests(unittest.TestCase):
             checkpoint_hash = _record(checkpoint)["sha256"]
             config_hash = _record(config)["sha256"]
             midi = run_dir / "candidate.mid"
-            _write_midi(midi, pitch=40)
+            _write_midi(midi, pitch=40, bpm=119.0)
             request = {
                 "schema": "sunofriend.ai-transcription-request.v1",
                 "audio_path": str(source.resolve()),
@@ -1332,6 +1538,19 @@ class WorkbenchServerTests(unittest.TestCase):
         self.assertIn("project.selected_midi_overlap?.pairs||[]", page)
         self.assertIn("No reviewable stems found.", page)
         self.assertIn("No parts are selected yet.", page)
+        self.assertIn("Partial MIDI result set:", page)
+        self.assertIn("Source stems ${source}", page)
+        self.assertIn("MIDI-ready ${ready}", page)
+        self.assertIn("Missing MIDI ${missing}", page)
+        self.assertIn(
+            "Workbench reviews existing results and cannot run conversion.",
+            page,
+        )
+        self.assertIn("Convert → Convert all stems", page)
+        self.assertIn(
+            "This Workbench cannot create one: run conversion separately",
+            page,
+        )
         self.assertIn("Multiple methods, one musical decision.", page)
         self.assertIn("Visual result explorer", page)
         self.assertIn("never ranks, selects, merges or repairs", page)
@@ -1341,6 +1560,11 @@ class WorkbenchServerTests(unittest.TestCase):
         self.assertIn("Displaying a lane is not recorded as feedback.", page)
         self.assertIn("function drawTimeline(stem,timeline)", page)
         self.assertIn("function seekTimeline(canvas,clientX)", page)
+        self.assertIn("continuous held accompaniment", page)
+        self.assertIn(
+            "instrument buzz is a proxy-patch question, not a MIDI note",
+            page,
+        )
         self.assertIn("function updateTimelinePlayhead()", page)
         self.assertIn("function timelineNoteCountLabel(candidate)", page)
         self.assertIn("note count unavailable", page)
@@ -1823,7 +2047,7 @@ class WorkbenchArtifactTests(unittest.TestCase):
                 catalog, stem["stem_id"], candidate["candidate_id"]
             )
             self.assertIsNotNone(cached)
-            self.assertEqual(cached["policy"], "role-neutral-general-midi-v2")
+            self.assertEqual(cached["policy"], "role-neutral-general-midi-v3")
             different_soundfont = root / "different.sf2"
             different_soundfont.write_bytes(b"different-test-soundfont")
             other_renderer = WorkbenchArtifacts(
@@ -2607,7 +2831,7 @@ def _two_candidate_catalog(root: Path) -> dict:
     )
 
 
-def _write_midi(path: Path, *, pitch: int) -> None:
+def _write_midi(path: Path, *, pitch: int, bpm: float = 120.0) -> None:
     write_midi_file(
         path,
         [
@@ -2618,7 +2842,7 @@ def _write_midi(path: Path, *, pitch: int) -> None:
                 notes=[NoteEvent(start=0.0, end=0.5, pitch=pitch, velocity=90)],
             )
         ],
-        bpm=120.0,
+        bpm=bpm,
     )
 
 

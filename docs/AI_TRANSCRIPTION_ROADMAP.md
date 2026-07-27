@@ -19,7 +19,11 @@ completes bounded decoded short arrangement presets; Phase 5.7 implements
 long-song visualization/recovery and minimal exact canonical full-song chunk
 transport; Phase 5.8 completes verified exact-result-cache and bounded
 reused-model execution-provenance display; Phase 5.9 guided exact-pack
-learning and acceptance passed on 22 July 2026; Phase 6 Increment 6.0's gated,
+learning and acceptance passed on 22 July 2026; Phase 5.10a's Guided Local
+Studio TUI orientation and visual-Workbench bridge plus the initial Phase
+5.10b fresh full-project conversion runner are implemented, while its durable
+ledger, additional guided operations and structured feedback remain planned;
+Phase 6 Increment 6.0's gated,
 read-only Clip Library is complete and Increment 6.1's separate explicit Clip
 reuse proposal is complete; Increment 6.2a's reviewed immutable
 same-mode key and BPM child workflow is complete; Increment 6.3a's bounded
@@ -28,7 +32,8 @@ immutable attack-velocity correction is complete; Increment 6.3c's bounded exact
 note-removal workflow is complete; Increment 6.3d's bounded existing-note
 onset-shift workflow is complete; Increment 6.3e's bounded existing-note
 note-end/duration workflow is complete; the ordinary-Workbench
-source-referenced balanced selected-MIDI audition is complete;
+MIDI-derived song-interpretation WAV is complete;
+the separate fixed-policy Listening Master v1 CLI challenger is implemented;
 broader Phase 6
 creative arrangement remains in progress
 
@@ -45,12 +50,14 @@ GarageBand A/B test.
 
 ## Programme goal
 
-Make stems and vocals easier to turn into accurate, musical, editable MIDI and
-useful playable instruments. Analytical and AI processes supply independent
-observations and alternatives. Sunofriend preserves and compares them rather
-than forcing one global winner, and remains responsible for timing, evidence
-policy, musical constraints, evaluation, provenance, explicit human decisions
-and handoff to GarageBand.
+Make stems and vocals easier to turn into two linked creative outputs:
+accurate, musical, reviewed editable MIDI and a MIDI-derived
+song-interpretation WAV rendered from the selected MIDI, with useful playable
+instruments. The WAV helps a listener understand and continue the song.
+Analytical and AI processes supply independent observations and alternatives.
+Sunofriend preserves and compares them rather than forcing one global winner,
+and remains responsible for timing, evidence policy, musical constraints,
+evaluation, provenance, explicit human decisions and handoff to GarageBand.
 
 The intended flow is:
 
@@ -73,8 +80,22 @@ small comparable MIDI result space + uncertain passages + audible previews
 human recognition/review in short phrases
         |
         v
-GarageBand-ready MIDI, Instrument Bundle and durable provenance
+reviewed GarageBand-ready MIDI, Instrument Bundle and durable provenance
+        |
+        v
+MIDI-derived song-interpretation WAV
+        |
+        v
+optional comparative listening-master challengers
 ```
+
+The rendering branch, accepted Pupsies golden control, fixed mastering policy
+and control/challenger promotion rules are in
+[Musical rendering and listening mastering](MUSICAL_RENDERING_AND_MASTERING.md).
+Source stems provide timing, horizon and level evidence for the
+song-interpretation WAV and are not mixed into it. No rendering or mastering
+result becomes a default from metrics, plays or downloads alone; an optional
+listening master remains comparative rather than a release master.
 
 ## Principles and guardrails
 
@@ -107,8 +128,8 @@ GarageBand-ready MIDI, Instrument Bundle and durable provenance
 | 2. Phrase Review v2 | **Engineering and human review complete; overall programme preference criterion not demonstrated** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history. The applied 61-note review won the opening blind loop, the untouched 23-note automatic candidate won none, and both later loops were judged neither |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
-| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.5–5.9 hardening complete and Phase 5.9 human acceptance passed; Phase 5.3 listening/lineage/role work remains** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench has hash-pinned per-stem and full-song timelines, bounded decoded transports, a separate exact GarageBand pack basket, Project Overview, fail-closed execution provenance and guided exact-pack acceptance. The 22 July close-out completed all eight tutorial screens, scored 10/10 and passed both six-item human checks; the resolver reverified five selected MIDI payloads plus the dry proxy and no source audio with zero project effects. Phase 5 remains open only for the separately gated Phase 5.3 work |
-| 6. Creative Arrangement and Reusable MIDI | **In progress: Increments 6.0, 6.1, 6.2a and 6.3a–e plus the selected-arrangement balance slice complete** | The gated browser, immutable-placement proposal, key/BPM children and bounded recognition-first pitch/attack-velocity/exact-note-removal/existing-note onset and end patches are complete. Ordinary Workbench also has an opt-in source-referenced, drum-guarded, sample-peak-protected selected-MIDI audition while retaining its unity controls. One kind per Clip child, zero-write review, immutable parent and restart validation remain mandatory. Note insertion, release velocity/continuous expression, mode remapping, tuning/downbeat and hybrids remain later slices; hybrid construction still waits for the Phase 5.3 gates |
+| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.5–5.9 hardening complete and Phase 5.9 human acceptance passed; Phase 5.10a plus initial 5.10b full-project conversion implemented; Phase 5.3 gates and remaining 5.10b–d work remain** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench has hash-pinned per-stem and full-song timelines, bounded decoded transports, a separate exact GarageBand pack basket, Project Overview, fail-closed execution provenance and guided exact-pack acceptance. The Textual TUI supplies project orientation, compact MIDI maps, diagnostics, one-key Workbench/Inspector access and an explicit fresh-output full-project runner over production instrumental and vocal engines. A durable job ledger/restart contract, additional operation forms and structured feedback are not yet implemented |
+| 6. Creative Arrangement and Reusable MIDI | **In progress: Increments 6.0, 6.1, 6.2a and 6.3a–e plus the selected-arrangement balance slice complete** | The gated browser, immutable-placement proposal, key/BPM children and bounded recognition-first pitch/attack-velocity/exact-note-removal/existing-note onset and end patches are complete. Ordinary Workbench also creates the MIDI-derived, source-referenced, drum-guarded and sample-peak-protected song-interpretation WAV while retaining its unity controls. One kind per Clip child, zero-write review, immutable parent and restart validation remain mandatory. Note insertion, release velocity/continuous expression, mode remapping, tuning/downbeat and hybrids remain later slices; hybrid construction still waits for the Phase 5.3 gates |
 | 7. Cross-DAW and Opt-in Community Learning | **Deferred** | Compatibility testing, cleared public goldens and consented contextual feedback only after the local workflow is useful, private and stable |
 
 ## Phase 1: AI Transcription Bake-off v1
@@ -535,11 +556,11 @@ explicit, hash-pinned bridge from diagnostic S0/M1/M3 disagreement ranges to
 the exact existing phrase-review anchors. It changes only temporary loop and
 navigation state and creates no choice, MIDI or feedback.
 
-A later cross-cutting Workbench slice adds the optional source-referenced
-balanced selected-MIDI audition described under Phase 6. It is deliberately
-separate from the three unity technical transports and Pack Composer: a
-listening derivative and fader recipe, not a candidate score, saved custom
-mixer or final master.
+A later cross-cutting Workbench slice adds the source-referenced MIDI-derived
+song-interpretation WAV described under Phase 6. It is deliberately separate
+from the three unity technical transports and Pack Composer: a product
+derivative and fader recipe, not a candidate score, saved custom mixer or
+final master.
 
 Phase 5.5 starts with a default Project Overview backed by the path-free
 `sunofriend.workbench-home.v1` projection. It reports explicit decisions,
@@ -603,6 +624,37 @@ without an issue or `cannot_tell` answer. It verified five selected MIDI
 payloads, the dry proxy and no source audio. The downbeat result remains
 reviewer observation rather than invented catalog metadata, and every project
 effect is false.
+
+Phase 5.10 makes the existing power approachable without changing its
+authority boundaries. The preferred human route is now `sunofriend tui`; the
+CLI remains the deterministic engine, the graphical Workbench remains the
+rich comparison/decision/export surface and the agent skill remains an expert
+conversational route.
+
+Increment 5.10a is implemented. Its Textual dashboard scans an existing local
+project read-only, reports key/BPM/tuning, shows stem/candidate/decision state
+and compact primary-MIDI pitch/activity maps, runs local system diagnostics,
+keeps a bounded in-memory activity log and opens the existing Workbench with
+the read-only Developer Inspector available by default. It owns, stops and
+reaps the Workbench child process. Highlighting, mapping, diagnostics and
+navigation record no preference or feedback.
+
+The initial Increment 5.10b slice is implemented. **Convert all stems** uses an
+editable, explicitly confirmed fresh output. It calls production `listen-all`
+in repair mode with variant evaluation, then separate `vocal-melody` runs for
+lead and backing vocals. It discloses `wind` → `lead`, `rhythm` → `keys` and
+`other` → `synth` proxy engines, skips near-silent sources with a visible
+reason, streams progress, preserves partial output on cancellation and reloads
+the new root only after success. It never overwrites or auto-selects MIDI.
+
+The remaining 5.10b–d work adds a durable owner-only job ledger and restart
+recovery, further typed operation forms, an end-to-end Workbench/pack journey
+and explicit structured local feedback. Every form must call existing
+CLI/application operations rather than duplicate musical code, expose no
+arbitrary shell input, infer nothing from audition activity and add no upload
+or telemetry. Workbench remains review-only. The authoritative contract,
+carry-forward register and delivery order are in
+[Guided Local Studio TUI](LOCAL_STUDIO_TUI.md).
 
 Reload restores URL-hash view/stem and durable SQLite decisions, Overview state
 and the pack basket. Prepared audio/chunks, playhead, loop,
@@ -847,6 +899,154 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-27 — Pupsies golden balance and Listening Master v1
+
+- Goal: retain the useful, praised MIDI interpolation as an exact control while
+  adding a reproducible listening-master challenger and making rendering
+  quality a first-class goal alongside editable MIDI.
+- Change: added standalone `sunofriend listening-master BALANCED.wav --out
+  FRESH.wav --report FRESH.json`. Its fixed
+  `ffmpeg-loudnorm-two-pass-fixed-horizon-v1` policy targets −16 LUFS
+  integrated, 11 LU loudness range and −1 dBTP, writes PCM24, preserves the
+  exact input frame horizon, independently verifies the encoded artifact and
+  records `mastered: true` plus `release_master: false`. The existing gain-only
+  v3 control is not replaced.
+- Maintainability: the renderer and cache verifier now share the frozen
+  `BALANCED_MIX_CONTRACT` for v3 schemas, measurements, safety limits and
+  mastering boundary. A shared role/instrument registry and extraction of
+  balanced-artifact orchestration from the large Workbench artifact module are
+  the next refactors.
+- Feedback: added an owner-only v2 foundation that distinguishes balanced
+  controls from listening-master challengers, binds each master back to its
+  exact control, requires `cannot_tell` for mastering on an unmastered control,
+  and separates path-free artifact identity from a domain-hashed
+  reviewer/session identity. Profiles re-verify every named artifact and
+  remain advisory; no playback changes a default.
+- Inputs: the private Pupsies B-major, 119 BPM balanced selected-MIDI result,
+  containing 22 selected lanes across 15 source groups. Fourteen lanes reached
+  the +6 dB source-match clamp.
+- Evidence and metrics: the exact gain-only control SHA-256 is
+  `c202bba190d0556f2909cb072137f65e92863eba0f6d724c5f279414d98e2763`.
+  FFmpeg measured it at −17.37 LUFS integrated, −0.99 dBTP and 4.0 LU LRA.
+  The challenger reached exactly −16.00 LUFS and −1.00 dBTP, with 4.2 LU
+  output LRA and the same 7,338,321-frame, 44.1 kHz horizon. Its SHA-256 is
+  `5e8e59c716602168d1e0996295369e1c3ea536c6ca2aaf3d7798151929fd1e43`;
+  hardened receipt-file SHA-256 is
+  `ba7ddbdcd9b2310d2b3c475219c13439021e22e0810989133af9825ba89d8cbb`;
+  internal unsigned-payload commitment is
+  `46981e4547db0ddb1fb5eca357df685377bcedd0842e02c3b0cc123caeed3bbc`.
+  The hardened artifact uses the `sunofriend.listening-master.v2` receipt
+  schema so it cannot be confused with the earlier unpinned v1 renderer
+  record.
+- Listening result: the user described the v3 balanced control as very good,
+  good-sounding and especially helpful for understanding the song without
+  distracting effects. The new listening master has objective safety evidence
+  but has not yet won a human control/challenger A/B.
+- Decision: make musical rendering and a good mixed/mastered listening WAV an
+  explicit product goal. Preserve dry unity and accepted v3 controls, change
+  one declared dimension per challenger, and require receipt-bound explicit
+  listening before any bounded promotion. No play, download, metric or default
+  position counts as feedback.
+- Problems/risks: 14 source-match clamps show that neutral proxy
+  instrumentation and source-level matching still interact strongly. A louder
+  master may be preferred for loudness alone. The standalone local feedback
+  foundation is not yet a Workbench/TUI feedback interface.
+- Next smallest step: add Workbench/TUI control-versus-master playback and
+  explicit receipt-bound ratings, then test complete bass and keys instrument
+  challengers with fixed MIDI before changing the balance policy.
+
+### 2026-07-26 — Pupsies continuous synth-bass correction
+
+- Goal: stop an invalid Workbench result space and short, octave-confused
+  plucked proxies from making a continuous buzzing bass sound like another
+  song.
+- Change: automatic discovery now excludes arrangement-named, multi-role,
+  incompatible-BPM/key and neutral-audition-duplicate MIDI while retaining
+  layered single-role and explicit invalid/empty diagnostics. Bass adds a
+  separate pYIN-backed `octave_resolved` challenger and an exact-pitch-gated
+  `continuous_sustain` challenger. Workbench v3 renders bass with GM 39 Synth
+  Bass 1 and applies disclosed browser-only active-block gains in the precise
+  per-stem switcher.
+- Inputs: private Pupsies `misery.` bass stem, B major, 119 BPM, 166.402
+  seconds. The current source is byte-identical to the source used by the
+  previous conversion.
+- Evidence: the old normal view contained one genuine 204-note bass, its
+  audible duplicate, a flattened 1,374-note drums/bass/pads arrangement and
+  two incompatible 124 BPM transforms. The new 165-note octave-resolved lane
+  shifts 31 strongly supported octave harmonics and raises exact pYIN pitch
+  agreement from 79.2% to 90.9%. The continuous lane extends 51 note ends by
+  10.761 seconds, covers 89.7% of pYIN-voiced frames and measures 91.6% exact
+  pitch agreement. In the first 15 seconds the comparison receipt applies
+  −4.150 dB to source and +8.504 dB to the MIDI proxy towards the common
+  −18 dBFS target.
+- Listening result: pending the user's fresh three-lane TUI/Workbench review;
+  engineering metrics must not become a preference.
+- Decision: retain `contour_clean` as repair mode's main output. Present
+  contour-clean, continuous-sustain and octave-resolved as the three primary
+  lanes and raw/root-safe as advanced evidence. Treat buzz as patch texture,
+  not MIDI-note data.
+- Validation: 155 focused tests and the complete 1,114-test suite pass. Ruff,
+  Python compilation, JavaScript syntax and `git diff --check` pass. The only
+  warning is the existing third-party `resampy`/`pkg_resources` deprecation.
+- Next smallest step: collect the user's continuity/register/texture review.
+  If the MIDI contour is accepted but the proxy timbre is not, continue with a
+  separate GarageBand synth-patch or source-derived instrument comparison
+  rather than changing the notes.
+
+### 2026-07-26 — Phase 5.10b initial full-project conversion runner
+
+- Goal: let a human learn and run the normal complete project conversion in
+  the TUI without asking an agent to construct shell commands.
+- Change: added an editable **Fresh conversion output** field,
+  `--conversion-output` prefill and an explicitly confirmed **Convert all
+  stems** operation. Prefilling never starts work.
+- Engine contract: the runner uses production `listen-all` in repair mode with
+  candidate-variant evaluation, followed by separate production
+  `vocal-melody` operations for discovered lead and backing-vocal stems.
+  `wind` → `lead`, `rhythm` → `keys` and `other` → `synth` are disclosed proxy
+  engines, not instrument-identification claims. Near-silent inputs are
+  skipped visibly.
+- Safety/state contract: an existing output is rejected; progress is streamed
+  into bounded memory; cancel preserves the partial fresh root;
+  success reloads the new candidate root; no path automatically starts,
+  retries, overwrites, ranks or selects MIDI. Workbench remains review-only.
+- Deliberate limits: there is no durable job ledger, restart recovery or
+  automatic partial-tree resume yet. Standalone one-stem/vocal forms, common
+  transformations, guided review progress and structured local feedback remain
+  later increments.
+- Next smallest step: exercise the mixed instrumental/vocal/proxy/near-silent
+  outcomes on a real complete project before designing the durable ledger.
+
+### 2026-07-26 — Phase 5.10a Guided Local Studio TUI
+
+- Goal: let a lay user orient themselves, inspect current output and reach the
+  complete visual review surface without relying on an agent to construct
+  commands.
+- Change: added `sunofriend tui`, a Textual project dashboard with key, BPM,
+  tuning, stem/candidate/decision progress, compact primary-MIDI contour and
+  activity maps, local capability diagnostics, a bounded memory-only activity
+  log and one-key Workbench launch. The Workbench starts with its read-only
+  Developer Inspector available by default and is stopped/reaped on request or
+  TUI exit.
+- Evidence contract: project loading does not create a decision database;
+  existing explicit state is folded read-only. The widget projections contain
+  no paths, project loading and MIDI maps have all-false musical effects, and
+  Workbench tokens and decision-store paths are hidden from the activity log.
+- Validation: a private 16-stem/46-candidate long-song smoke exercised the
+  large and compact layouts without recording a preference; wheel/sdist
+  inspection verified the TUI dependency and canonical skill resources; the
+  complete suite passed 1,107 tests with the one existing third-party
+  `resampy`/`pkg_resources` deprecation warning; and the final independent
+  audit was clean.
+- Decision: make the TUI the preferred human route while retaining direct CLI,
+  Workbench and agent-skill expert routes.
+- Problems/risks at close-out: 5.10a did not run conversion, keep a durable job
+  ledger or record structured improvement feedback. The initial conversion
+  capability was added separately in 5.10b.
+- Next smallest step at close-out: implement one read-only 5.10b operation
+  preview/preflight before adding a cancellable fresh-output `listen-all` job;
+  that first 5.10b slice is now implemented above.
 
 ### 2026-07-25 — Phase 2 final evidence and balanced selected-MIDI audition
 

@@ -69,9 +69,13 @@ Promise.resolve(vm.runInContext(`(async()=>{${body}})()`, context)).then(
     def test_balanced_audition_is_explicit_and_separate_from_dry_control(self) -> None:
         self.assertIn("Prepared dry control mix", self.arrangement)
         self.assertIn("unity-gain GM proxy", self.arrangement)
-        self.assertIn("Balanced, master-protected audition", self.arrangement)
-        self.assertIn("Create balanced audition", self.arrangement)
-        self.assertIn("not final mastering", self.arrangement)
+        self.assertIn(
+            "Balanced MIDI-derived song interpretation",
+            self.arrangement,
+        )
+        self.assertIn("Create song-interpretation WAV", self.arrangement)
+        self.assertIn("not mixed into the WAV", self.arrangement)
+        self.assertIn("not mastered", self.arrangement)
         self.assertIn('id="arrangement-audio"', self.arrangement)
         self.assertIn('id="balanced-arrangement-audio"', self.arrangement)
         self.assertIn("Download exact balance receipt", self.arrangement)
@@ -96,7 +100,7 @@ Promise.resolve(vm.runInContext(`(async()=>{${body}})()`, context)).then(
             self.arrangement,
         )
         self.assertIn(
-            'aria-label="Balanced master-protected selected-MIDI audition"',
+            'aria-label="Balanced MIDI-derived song interpretation"',
             self.arrangement,
         )
         self.assertEqual(self.page.count("/api/balanced-arrangement"), 1)

@@ -57,12 +57,23 @@ class FakeSource {{
   finish() {{ if (typeof this.onended === "function") this.onended(); }}
 }}
 
+class FakeGain {{
+  constructor() {{
+    this.gain = {{value: 1}};
+    this.connections = [];
+    this.disconnectCount = 0;
+  }}
+  connect(destination) {{ this.connections.push(destination); }}
+  disconnect() {{ this.disconnectCount += 1; }}
+}}
+
 class FakeContext {{
   constructor(sampleRate = 10) {{
     this.sampleRate = sampleRate;
     this.currentTime = 0;
     this.destination = {{name: "destination"}};
     this.sources = [];
+    this.gains = [];
     this.failStartIds = new Set();
   }}
   createBuffer(numberOfChannels, length, sampleRate) {{
@@ -73,6 +84,11 @@ class FakeContext {{
     const source = new FakeSource(id, this.failStartIds.has(id));
     this.sources.push(source);
     return source;
+  }}
+  createGain() {{
+    const gain = new FakeGain();
+    this.gains.push(gain);
+    return gain;
   }}
 }}
 
@@ -220,6 +236,46 @@ console.log(JSON.stringify({
         self.assertAlmostEqual(result["thirdStart"]["offset"], 0.8)
         self.assertEqual(result["sourceIds"], [1, 2, 3])
         self.assertEqual(result["serial"], 3)
+
+    def test_disclosed_per_track_gain_is_applied_without_mutating_buffers(self) -> None:
+        result = self.run_node(
+            """
+const context = new FakeContext(10);
+const sourceBuffer = decodedBuffer(10, [0.5, 0.5, 0.5, 0.5, 0.5]);
+const candidateBuffer = decodedBuffer(10, [0.1, 0.1, 0.1, 0.1, 0.1]);
+const transport = new transportModule.DecodedLoopTransport({
+  audioContext: context,
+  decodedBuffers: {source: sourceBuffer, candidate: candidateBuffer},
+  gainDbByKey: {source: -4, candidate: 8},
+  loopStartSeconds: 0,
+  loopEndSeconds: 0.5,
+});
+transport.play("source");
+transport.switchTo("candidate");
+context.sources[0].finish();
+const snapshot = transport.snapshot();
+console.log(JSON.stringify({
+  gainValues: context.gains.map(node => node.gain.value),
+  gainDestinations: context.gains.map(node => node.connections[0]?.name),
+  sourceDestinationsAreGainNodes: context.sources.map(
+    (node, index) => node.connections[0] === context.gains[index]
+  ),
+  retiredGainDisconnected: context.gains[0].disconnectCount,
+  activeGainDb: snapshot.activeGainDb,
+  sourceBufferValues: Array.from(sourceBuffer.getChannelData(0)),
+  candidateBufferValues: Array.from(candidateBuffer.getChannelData(0)),
+}));
+"""
+        )
+
+        self.assertAlmostEqual(result["gainValues"][0], 10 ** (-4 / 20))
+        self.assertAlmostEqual(result["gainValues"][1], 10 ** (8 / 20))
+        self.assertEqual(result["gainDestinations"], ["destination", "destination"])
+        self.assertEqual(result["sourceDestinationsAreGainNodes"], [True, True])
+        self.assertEqual(result["retiredGainDisconnected"], 1)
+        self.assertEqual(result["activeGainDb"], 8)
+        self.assertEqual(result["sourceBufferValues"], [0.5] * 5)
+        self.assertAlmostEqual(result["candidateBufferValues"][0], 0.1, places=6)
 
     def test_absolute_playhead_wrap_pause_resume_and_stop(self) -> None:
         result = self.run_node(

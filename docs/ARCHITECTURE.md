@@ -1,17 +1,24 @@
 # Sunofriend architecture
 
-Sunofriend has three user-facing layers:
+Sunofriend has four user-facing layers:
 
 1. The Python package and `sunofriend` command are the deterministic engine.
-2. The loopback-only Workbench presents completed source/MIDI alternatives,
-   records explicit decisions and prepares the GarageBand handoff.
-3. The portable Agent Skill selects commands, checks prerequisites and
-   interprets reports. It must not duplicate audio or MIDI algorithms.
+2. The Guided Local Studio TUI is the preferred human control surface. It
+   projects local project state and orchestrates typed engine/Workbench actions
+   without implementing musical algorithms.
+3. The loopback-only Workbench presents completed source/MIDI alternatives,
+   records explicit decisions, renders the selected MIDI as a
+   song-interpretation WAV and prepares the GarageBand handoff.
+4. The portable Agent Skill is the conversational expert route: it selects
+   commands, checks prerequisites and interprets reports. It must not duplicate
+   audio or MIDI algorithms.
 
 These layers preserve Sunofriend's core separation: several analytical and AI
 processes may produce immutable candidates, the Workbench makes their evidence
-approachable, and a human chooses what becomes part of an arrangement. No
-shared score or model label is an automatic winner.
+approachable, and a human chooses what becomes part of an arrangement. The two
+linked creative outputs are reviewed editable MIDI and a MIDI-derived
+song-interpretation WAV rendered from that selected MIDI. No shared score or
+model label is an automatic winner.
 
 The optional Developer Inspector is a read-only projection across these
 layers. Its `sunofriend.workbench-developer-snapshot.v1` document explains
@@ -19,12 +26,18 @@ application operations, append-only events, derived current state and the
 separate Pack Composer revision without becoming another state store. It is
 disabled unless `workbench --developer-inspector` is supplied, remains behind
 the loopback launch token and has no model, decision, basket, render, MIDI or
-export effect. See the [technical tour](TECHNICAL_TOUR.md).
+export effect. The Guided Local Studio supplies that flag by default when it
+starts Workbench; `tui --no-developer-inspector` keeps it absent. See the
+[technical tour](TECHNICAL_TOUR.md).
 
 ## Current execution flow
 
 ```text
 stem folder / MIDI
+        |
+        v
+Guided Local Studio (`tui.py`, `tui_model.py`, `tui_conversion.py`,
+                     `tui_conversion_contract.py`) or direct expert route
         |
         v
 CLI parsing (`cli.py`)
@@ -55,6 +68,7 @@ CLI parsing (`cli.py`)
         |                              `workbench_store.py`,
         |                              `workbench_semantics.py`,
         |                              `workbench_privacy.py`,
+        |                              `product_contract.py`,
         |                              `workbench_home.py`,
         |                              `workbench_timeline.py`,
         |                              `workbench_mix.py`,
@@ -81,8 +95,66 @@ CLI parsing (`cli.py`)
         +--> reusable Clip v1 library (`clip.py`, `library.py`)
         |
         v
-MIDI + provenance/evaluation JSON + optional WAV preview
+reviewed editable MIDI + MIDI-derived song-interpretation WAV + provenance
 ```
+
+After explicit review, the Workbench branches one selected arrangement into
+the unchanged editable MIDI handoff and the MIDI-derived song-interpretation
+WAV. Source stems supply timing, horizon and level evidence for that render;
+their audio is not mixed into it. The existing balanced artifact schemas and
+policy remain the implementation contract. The optional listening master is a
+separate comparative derivative, not a release master, and GarageBand Pack
+Composer membership is unchanged.
+
+## Guided Local Studio boundary
+
+`tui.py` contains Textual widgets and lifecycle orchestration.
+`tui_model.py` contains deterministic, widget-free project projections, compact
+MIDI maps and exact Workbench command construction. It reuses
+`workbench_catalog.py`, `workbench_home.py`, `workbench_store.py` and
+`workbench_timeline.py`; it does not parse or rewrite MIDI independently.
+`tui_conversion_contract.py` defines the Textual-independent request, progress,
+result and runner protocol. `tui_conversion.py` validates and orchestrates the
+production child commands; it contains no transcription algorithm.
+
+Phase 5.10a's orientation path is read-only except for starting and stopping
+its owned Workbench child process. Loading an unreviewed project does not
+create SQLite state.
+Existing explicit events are read through SQLite `mode=ro` and may be folded
+to report progress, while the public TUI document remains path-free. The
+activity view is capped in memory, hides the per-launch token and private
+decision-store location, and disappears on exit. Project controls are locked
+while the child is active; the child is terminated and reaped on Stop, Quit or
+unmount.
+
+The initial Phase 5.10b runner adds one typed, explicitly confirmed full-project
+write. Its editable output must be fresh. It runs the production `listen-all`
+operation in repair mode with candidate-variant evaluation, then runs
+`vocal-melody` separately for discovered lead/backing stems. Compatibility
+roles are explicit at the adapter boundary: `wind` routes to the `lead`
+engine, `rhythm` to `keys`, and `other` to `synth`; those proxies are not
+instrument-identification claims. Near-silent sources become visible skips.
+Engine output is streamed into bounded in-memory activity.
+
+The TUI owns and reaps the one conversion child. Cancellation preserves the
+partial fresh tree; success reloads that tree as a candidate root. Neither path
+creates a musical selection. There is no automatic overwrite, retry, durable
+job ledger or restart recovery yet. The runner must not use an arbitrary shell
+field or reimplement `listen-all` or `vocal-melody` inside Textual callbacks.
+Workbench remains review-only and starts no transcription. See
+[Guided Local Studio TUI](LOCAL_STUDIO_TUI.md).
+
+Bass continuity remains an engine concern, not a TUI or Workbench inference.
+`transcribe_pitched.py` publishes `octave_resolved` as a separate repair that
+preserves note count, timing, velocity and pitch class while allowing dominant
+octave-resolved pYIN evidence to correct a harmonic-register error.
+`continuous_sustain` starts from that candidate and changes note ends only:
+it fills a 35 ms–1.25 beat gap only when source RMS activity, pYIN voicing and
+the exact preceding pitch support the gap. Both remain challengers;
+`contour_clean` is still repair mode's selected output. MIDI describes the
+gate continuity but cannot contain the source waveform's buzz, so Workbench's
+bass proxy uses GM 39 Synth Bass 1 and GarageBand patch choice remains
+separate.
 
 `midi_mask.py` is an experimental Phase 4 boundary, not a generic separator.
 It accepts one explicit note-bearing MIDI track, limits work to a short audio
@@ -164,7 +236,14 @@ Workbench candidate, promotes a preset or changes a default.
 The Phase 5 Workbench is a presentation and explicit-decision boundary, not a
 new transcription engine. `workbench_catalog.py` hash-pins existing source,
 MIDI and preview artifacts and limits the normal result space to three
-non-diagnostic candidates. `workbench_store.py` records immutable events in a
+non-diagnostic candidates. Automatic discovery rejects arrangement-named or
+multi-role MIDI, uses an unambiguous basename role before bounded parent-name
+fallback, rejects incompatible explicit BPM/key metadata, and removes both
+byte-identical and neutral-audition-equivalent note geometry. Layered Clips
+with one consistent role remain valid; malformed and note-free role-specific
+files remain explicit unavailable/empty diagnostics. An explicit catalog may
+intentionally bypass those automatic eligibility rules.
+`workbench_store.py` records immutable events in a
 local SQLite database and derives current state without updating old choices.
 `workbench_semantics.py` defines terminal no-selection outcomes: replay keeps
 the old main/optional evidence but marks it inactive until a later explicit
@@ -250,7 +329,17 @@ frozen before serving. A short input is padded with zeros to the requested end;
 silence is generated rather than missing transcription evidence. The warning
 uses a separate persistent element so transport-status updates do not erase it.
 
-`workbench_transport.js` decodes those bounded clips, normalises their decoded
+The decoded-loop artifact uses
+`recorded-zero-source-frame-window-level-matched-v2`. Each source/candidate
+track carries a verified `common-target-active-block-rms-v1` receipt:
+median active non-overlapping 400 ms RMS aims at −18 dBFS, target gain is
+bounded to −24…+12 dB, and −1 dBFS sample-peak room can reduce it further.
+The underlying source and `role-neutral-general-midi-v3` preview bytes remain
+unchanged; the page publishes the signed gains and applies them only through a
+Web Audio `GainNode`. Bass neutral rendering uses zero-based program 38,
+published as **GM 39 Synth Bass 1 proxy**.
+
+`workbench_transport.js` decodes those bounded clips, equalises their decoded
 frame lengths on one `AudioContext`, and creates fresh source nodes for every
 scheduled start or switch. The outgoing stop and incoming start share one
 future clock time, while an absolute loop playhead survives the switch. This is
@@ -258,8 +347,9 @@ sample-scheduled browser playback, not inferred alignment: source and MIDI
 still begin at their recorded zero and no offset is estimated. Preparing,
 playing, switching, seeking, pausing and stopping have zero selection, event,
 ranking and MIDI-mutation effects. The explicit compatibility fallback retains
-second-synchronised HTML media elements and is not sample-accurate, but its
-transport controls are likewise feedback- and event-free.
+second-synchronised, unlevelled HTML media elements and is not sample-accurate,
+but its transport controls are likewise feedback- and event-free. Canonical
+arrangement and full-song transports remain unity-gain and unlevelled.
 
 Phase 5.6's bounded selected-arrangement extension adds
 `sunofriend.workbench-arrangement-selection.v1` and
@@ -424,6 +514,24 @@ Compression, limiting, EQ, saturation, reverb, chorus and widening are absent.
 The report explicitly sets `mastered: false`: this is gain staging, audition
 normalisation and sample-peak protection, not LUFS/true-peak or release
 mastering.
+
+The v3 renderer and cache verifier now read those schemas, measurements,
+limits, labels and mastering boundary from one frozen
+`workbench_balanced_contract.BALANCED_MIX_CONTRACT`. This prevents a renderer
+policy change from being verified under duplicated stale constants. The next
+maintainability boundaries are a shared role/instrument registry and a small
+balanced-artifact service extracted from the larger Workbench artifact module.
+
+A separate standalone `listening_master.build_listening_master` stage accepts
+the exact balanced WAV as an immutable control. It uses fixed two-pass FFmpeg
+`loudnorm` at −16 LUFS integrated, an 11 LU loudness-range target and −1 dBTP,
+then independently measures the actual encoded PCM24 bytes and verifies their
+geometry against the exact input frame horizon. Private temporary files are
+owner-only from creation; device/inode checks guard publication and rollback.
+Its path-free receipt says `mastered: true` and `release_master: false`; it does
+not alter the v3 report, Workbench selection, MIDI or cache. Workbench/TUI
+orchestration and explicit A/B feedback remain later application layers. See
+[Musical rendering and listening mastering](MUSICAL_RENDERING_AND_MASTERING.md).
 
 `sunofriend.workbench-balanced-arrangement.v1` points to the private WAV,
 `sunofriend.workbench-balanced-mix-receipt.v1` provenance receipt and
@@ -1099,8 +1207,9 @@ The safest next boundaries are:
    and rights contract. Keep Clip browse state, reuse proposals, derived
    previews, waveform display data, temporary mixer state, musical decisions
    and export-basket choices separate.
-2. Add typed application operations for folder conversion, one-stem conversion,
-   vocal extraction and MIDI transformation; keep CLI handlers as adapters.
+2. Continue Phase 5.10b from the implemented fresh full-project runner: add a
+   durable owner-only ledger/restart contract, then typed one-stem, standalone
+   vocal and MIDI transformation forms; keep CLI and TUI handlers as adapters.
 3. Centralize instrument roles, aliases, channels, GM programs and GarageBand
    suggestions in one immutable registry.
 4. Introduce a lossless Standard MIDI File codec and shared batch/path-safety

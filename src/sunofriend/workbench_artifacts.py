@@ -30,6 +30,7 @@ from .models import NoteEvent
 from .note_alignment import AlignmentEvent, align_events
 from .render import find_soundfont, render_midi_to_wav
 from .role_semantics import is_drum_role
+from .workbench_balanced_contract import BALANCED_MIX_CONTRACT
 from .workbench_mix import (
     BALANCED_ARRANGEMENT_SCHEMA,
     BALANCED_MIX_POLICY,
@@ -54,8 +55,9 @@ GARAGEBAND_PACK_PLAN_SCHEMA = "sunofriend.workbench-garageband-pack-plan.v1"
 GARAGEBAND_PACK_BASKET_SCHEMA = "sunofriend.workbench-garageband-pack-basket.v1"
 GARAGEBAND_PACK_SCHEMA = "sunofriend.workbench-garageband-pack.v1"
 SELECTED_MIDI_OVERLAP_SCHEMA = "sunofriend.workbench-selected-midi-overlap.v1"
-_RENDER_POLICY = "role-neutral-general-midi-v2"
-_DECODED_LOOP_POLICY = "recorded-zero-source-frame-window-v1"
+_RENDER_POLICY = "role-neutral-general-midi-v3"
+_DECODED_LOOP_POLICY = "recorded-zero-source-frame-window-level-matched-v2"
+_DECODED_STEM_LEVEL_POLICY = "common-target-active-block-rms-v1"
 _DECODED_ARRANGEMENT_LOOP_POLICY = "recorded-zero-selected-arrangement-window-v1"
 _DECODED_ARRANGEMENT_STREAM_POLICY = (
     "recorded-zero-selected-arrangement-chunk-stream-v1"
@@ -82,37 +84,39 @@ _BALANCED_DEFERRED_CACHE_SCHEMA = (
 _BALANCED_DEFERRED_MARKER_NAME = ".deferred-cache.json"
 _BALANCED_DEFERRED_MAXIMUM_CLAIMS = 1024
 _BALANCED_DEFERRED_STALE_SECONDS = 6 * 60 * 60
-_BALANCED_RENDER_HORIZON_POLICY = "longest-verified-source-stem-v1"
-_BALANCED_MIX_RECEIPT_SCHEMA = "sunofriend.workbench-balanced-mix-receipt.v1"
-_BALANCED_RENDERER_BACKEND = "FluidSynth neutral-preview render"
-_BALANCED_MIX_LABEL = "Balanced selected-MIDI audition"
-_BALANCED_MASTERING_BOUNDARY = (
-    "gain-only source-referenced balance, audition normalisation and "
-    "sample-peak protection; not LUFS, true-peak or release mastering"
+_BALANCED_RENDER_HORIZON_POLICY = BALANCED_MIX_CONTRACT.render_horizon_policy
+_BALANCED_MIX_RECEIPT_SCHEMA = BALANCED_MIX_CONTRACT.receipt_schema
+_BALANCED_RENDERER_BACKEND = BALANCED_MIX_CONTRACT.renderer_backend
+_BALANCED_MIX_LABEL = BALANCED_MIX_CONTRACT.label
+_BALANCED_MASTERING_BOUNDARY = BALANCED_MIX_CONTRACT.mastering_boundary
+_BALANCED_WINDOW_SECONDS = BALANCED_MIX_CONTRACT.window_seconds
+_BALANCED_SOURCE_MATCH_GAIN_DB = BALANCED_MIX_CONTRACT.source_match_gain_db
+_BALANCED_DRUM_OVERLAP_MEDIAN_TARGET_DB = (
+    BALANCED_MIX_CONTRACT.drum_overlap_median_target_db
 )
-_BALANCED_WINDOW_SECONDS = 0.4
-_BALANCED_ABSOLUTE_GATE_DBFS = -70.0
-_BALANCED_RELATIVE_GATE_DB = 10.0
-_BALANCED_OVERLAP_RELATIVE_GATE_DB = 30.0
-_BALANCED_SOURCE_MATCH_GAIN_DB = [-24.0, 6.0]
-_BALANCED_DRUM_OVERLAP_MEDIAN_TARGET_DB = -2.0
-_BALANCED_DRUM_OVERLAP_P95_MAXIMUM_DB = 3.0
-_BALANCED_MAXIMUM_DRUM_ATTENUATION_DB = -18.0
-_BALANCED_AUDITION_TARGET_GATED_RMS_DBFS = -18.0
-_BALANCED_SAMPLE_PEAK_CEILING_DBFS = -1.0
-_BALANCED_MAXIMUM_NORMALISATION_BOOST_DB = 12.0
-_BALANCED_NORMALISATION_TARGET_TOLERANCE_DB = 0.1
-_BALANCED_MEASUREMENT_STATISTIC = "median active non-overlapping block RMS"
-_BALANCED_MEASUREMENT_PEAK_KIND = "sample peak, not true peak"
-_BALANCED_MEASUREMENT_SCOPE = (
-    "render horizon only; excluded source or neutral-preview tails are not measured"
+_BALANCED_DRUM_OVERLAP_P95_MAXIMUM_DB = (
+    BALANCED_MIX_CONTRACT.drum_overlap_p95_maximum_db
 )
-_BALANCED_DRUM_GUARD_POLICY = (
-    "on time-aligned 400 ms windows where both buses are active, "
-    "the guard aims for median drum level at least 2 dB below "
-    "non-drums and p95 drum excess no more than 3 dB, within the "
-    "maximum attenuation limit"
+_BALANCED_MAXIMUM_DRUM_ATTENUATION_DB = (
+    BALANCED_MIX_CONTRACT.maximum_drum_bus_attenuation_db
 )
+_BALANCED_AUDITION_TARGET_GATED_RMS_DBFS = (
+    BALANCED_MIX_CONTRACT.audition_target_gated_rms_dbfs
+)
+_BALANCED_SAMPLE_PEAK_CEILING_DBFS = (
+    BALANCED_MIX_CONTRACT.sample_peak_ceiling_dbfs
+)
+_BALANCED_MAXIMUM_NORMALISATION_BOOST_DB = (
+    BALANCED_MIX_CONTRACT.maximum_normalisation_boost_db
+)
+_BALANCED_NORMALISATION_TARGET_TOLERANCE_DB = (
+    BALANCED_MIX_CONTRACT.normalisation_target_tolerance_db
+)
+_BALANCED_MEASUREMENT_STATISTIC = (
+    BALANCED_MIX_CONTRACT.measurement_statistic
+)
+_BALANCED_MEASUREMENT_PEAK_KIND = BALANCED_MIX_CONTRACT.measurement_peak_kind
+_BALANCED_DRUM_GUARD_POLICY = BALANCED_MIX_CONTRACT.drum_guard_policy
 _VERIFIED_STREAM_CACHE_MAXIMUM_ENTRIES = 8
 _DECODED_LOOP_MAXIMUM_OUTPUT_BYTES = 64 * 1024 * 1024
 _DECODED_LOOP_MAXIMUM_INPUT_BYTES = 2 * 1024 * 1024 * 1024
@@ -129,7 +133,10 @@ _SUBSTANTIAL_OVERLAP_MINIMUM_MATCHED_NOTES = 8
 _SUBSTANTIAL_OVERLAP_MINIMUM_RATIO = 0.80
 _MELODIC_CHANNELS = tuple(channel for channel in range(16) if channel != 9)
 _ROLE_PROGRAMS = {
-    "bass": 33,
+    # Bass transcription embeds GM Synth Bass 1 (zero-based program 38).
+    # Keeping the neutral audition on the same broad timbre family avoids
+    # presenting a continuous synth-bass line as a plucked finger bass.
+    "bass": 38,
     "keys": 4,
     "piano": 0,
     "strings": 48,
@@ -281,6 +288,7 @@ class WorkbenchArtifacts:
                     **key_payload,
                     "cache_key": cache_key,
                     "program": program,
+                    "program_label": _program_label(role, program, channel),
                     "channel": channel,
                     "source_candidate_id": candidate_id,
                     "source_stem_id": stem_id,
@@ -487,6 +495,25 @@ class WorkbenchArtifacts:
                     "sample_rate_policy": "preserve each decoded input rate",
                     "channel_policy": "preserve mono or stereo",
                 },
+                "audition_level": {
+                    "policy": _DECODED_STEM_LEVEL_POLICY,
+                    "target_gated_rms_dbfs": (
+                        _BALANCED_AUDITION_TARGET_GATED_RMS_DBFS
+                    ),
+                    "sample_peak_ceiling_dbfs": (
+                        _BALANCED_SAMPLE_PEAK_CEILING_DBFS
+                    ),
+                    "maximum_positive_boost_db": (
+                        _BALANCED_MAXIMUM_NORMALISATION_BOOST_DB
+                    ),
+                    "minimum_gain_db": _BALANCED_SOURCE_MATCH_GAIN_DB[0],
+                    "measurement_statistic": _BALANCED_MEASUREMENT_STATISTIC,
+                    "peak_kind": _BALANCED_MEASUREMENT_PEAK_KIND,
+                    "boundary": (
+                        "gain-only private audition matching; source, preview "
+                        "audio and MIDI remain unchanged; not mastering"
+                    ),
+                },
                 "resource_limits": {
                     "aggregate_input_bytes": aggregate_input_bytes,
                     "maximum_input_bytes": _DECODED_LOOP_MAXIMUM_INPUT_BYTES,
@@ -573,6 +600,7 @@ class WorkbenchArtifacts:
                             "decoded loop PCM16 output verification failed"
                         )
                     audio_record = _relative_file_record(output_path, work)
+                    audition_level = _decoded_stem_audition_level(output_path)
                     track = {
                         "track_id": item["track_id"],
                         "kind": item["kind"],
@@ -592,6 +620,8 @@ class WorkbenchArtifacts:
                                 ),
                             ),
                         ),
+                        "audition_gain_db": audition_level["applied_gain_db"],
+                        "audition_level": audition_level,
                     }
                     if item["kind"] == "candidate":
                         track["candidate_id"] = item["candidate_id"]
@@ -4243,6 +4273,15 @@ class WorkbenchArtifacts:
             materialized_audio = self._materialize_file_record(audio, root)
             if materialized_audio is None:
                 return None
+            expected_audition_level = _decoded_stem_audition_level(
+                Path(str(materialized_audio["path"]))
+            )
+            if (
+                record.get("audition_level") != expected_audition_level
+                or record.get("audition_gain_db")
+                != expected_audition_level["applied_gain_db"]
+            ):
+                return None
             aggregate_bytes += int(materialized_audio["bytes"])
             materialized_track = dict(record)
             materialized_track["audio"] = materialized_audio
@@ -5511,37 +5550,8 @@ def _valid_balanced_mix_report(
         return False
     measurement = report.get("measurement")
     limits = report.get("limits")
-    expected_measurement = {
-        "window_seconds": _BALANCED_WINDOW_SECONDS,
-        "absolute_gate_dbfs": _BALANCED_ABSOLUTE_GATE_DBFS,
-        "relative_gate_db": _BALANCED_RELATIVE_GATE_DB,
-        "overlap_relative_gate_db": _BALANCED_OVERLAP_RELATIVE_GATE_DB,
-        "statistic": _BALANCED_MEASUREMENT_STATISTIC,
-        "peak_kind": _BALANCED_MEASUREMENT_PEAK_KIND,
-        "scope": _BALANCED_MEASUREMENT_SCOPE,
-    }
-    expected_limits = {
-        "source_match_gain_db": _BALANCED_SOURCE_MATCH_GAIN_DB,
-        "maximum_drum_bus_attenuation_db": (
-            _BALANCED_MAXIMUM_DRUM_ATTENUATION_DB
-        ),
-        "drum_overlap_median_target_db": (
-            _BALANCED_DRUM_OVERLAP_MEDIAN_TARGET_DB
-        ),
-        "drum_overlap_p95_maximum_db": (
-            _BALANCED_DRUM_OVERLAP_P95_MAXIMUM_DB
-        ),
-        "audition_target_gated_rms_dbfs": (
-            _BALANCED_AUDITION_TARGET_GATED_RMS_DBFS
-        ),
-        "sample_peak_ceiling_dbfs": _BALANCED_SAMPLE_PEAK_CEILING_DBFS,
-        "maximum_normalisation_boost_db": (
-            _BALANCED_MAXIMUM_NORMALISATION_BOOST_DB
-        ),
-        "normalisation_target_tolerance_db": (
-            _BALANCED_NORMALISATION_TARGET_TOLERANCE_DB
-        ),
-    }
+    expected_measurement = BALANCED_MIX_CONTRACT.measurement_document()
+    expected_limits = BALANCED_MIX_CONTRACT.limits_document()
     if (
         not isinstance(measurement, Mapping)
         or dict(measurement) != expected_measurement
@@ -7350,6 +7360,70 @@ def _preview_role(stem: Mapping[str, Any], role_override: str | None) -> str:
 
 def _program_for_role(role: str) -> int:
     return _ROLE_PROGRAMS.get(role.lower(), 0)
+
+
+def _program_label(role: str, program: int, channel: int) -> str:
+    if channel == 9:
+        return "General MIDI drum kit proxy"
+    if role.lower() == "bass" and program == 38:
+        return "GM 39 Synth Bass 1 proxy"
+    return f"General MIDI program {program + 1} proxy"
+
+
+def _decoded_stem_audition_level(path: Path) -> dict[str, Any]:
+    """Return a deterministic, disclosed browser gain for one short-loop track."""
+
+    metrics = measure_balanced_audio(path)
+    measured_level = metrics.get("gated_rms_dbfs")
+    measured_peak = metrics.get("sample_peak_dbfs")
+    if measured_level is None:
+        return {
+            "policy": _DECODED_STEM_LEVEL_POLICY,
+            "audible": False,
+            "measurement": metrics,
+            "raw_target_gain_db": None,
+            "bounded_target_gain_db": 0.0,
+            "peak_room_db": None,
+            "applied_gain_db": 0.0,
+            "limit": "no_active_blocks",
+        }
+
+    raw_gain = (
+        _BALANCED_AUDITION_TARGET_GATED_RMS_DBFS - float(measured_level)
+    )
+    bounded_gain = max(
+        float(_BALANCED_SOURCE_MATCH_GAIN_DB[0]),
+        min(float(_BALANCED_MAXIMUM_NORMALISATION_BOOST_DB), raw_gain),
+    )
+    peak_room = (
+        None
+        if measured_peak is None
+        else _BALANCED_SAMPLE_PEAK_CEILING_DBFS - float(measured_peak)
+    )
+    applied_gain = (
+        bounded_gain
+        if peak_room is None
+        else min(bounded_gain, peak_room)
+    )
+    limit = None
+    if bounded_gain < raw_gain:
+        limit = "maximum_positive_boost"
+    elif bounded_gain > raw_gain:
+        limit = "minimum_gain"
+    if peak_room is not None and applied_gain < bounded_gain:
+        limit = "sample_peak_ceiling"
+    return {
+        "policy": _DECODED_STEM_LEVEL_POLICY,
+        "audible": True,
+        "measurement": metrics,
+        "raw_target_gain_db": round(raw_gain, 6),
+        "bounded_target_gain_db": round(bounded_gain, 6),
+        "peak_room_db": (
+            None if peak_room is None else round(peak_room, 6)
+        ),
+        "applied_gain_db": round(applied_gain, 6),
+        "limit": limit,
+    }
 
 
 def _track_name(role: str) -> str:

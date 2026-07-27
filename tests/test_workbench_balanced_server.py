@@ -75,6 +75,32 @@ class WorkbenchBalancedArrangementServerTests(unittest.TestCase):
         )
         self.assertEqual(status, 200)
         self.assertIsNone(initial["balanced_arrangement"])
+        self.assertEqual(
+            [
+                row["output_id"]
+                for row in initial["product_contract"]["required_outputs"]
+            ],
+            [
+                "evaluated_editable_midi",
+                "midi_derived_song_interpretation_wav",
+            ],
+        )
+        self.assertFalse(initial["product_outputs"]["complete"])
+        self.assertTrue(
+            initial["product_outputs"]["required_outputs"][
+                "evaluated_editable_midi"
+            ]["ready"]
+        )
+        self.assertFalse(
+            initial["product_outputs"]["required_outputs"][
+                "midi_derived_song_interpretation_wav"
+            ]["ready"]
+        )
+        self.assertFalse(
+            initial["product_contract"]["source_evidence"][
+                "mixed_into_song_interpretation_wav"
+            ]
+        )
         selection_sha256 = initial["decoded_arrangement_selection"][
             "selection_manifest_sha256"
         ]
@@ -89,6 +115,12 @@ class WorkbenchBalancedArrangementServerTests(unittest.TestCase):
 
         self.assertEqual(status, 200)
         artifact = payload["balanced_arrangement"]
+        self.assertTrue(payload["product_outputs"]["complete"])
+        self.assertTrue(
+            payload["product_outputs"]["required_outputs"][
+                "midi_derived_song_interpretation_wav"
+            ]["ready"]
+        )
         self.assertEqual(
             artifact["selection_manifest_sha256"],
             selection_sha256,
@@ -170,6 +202,7 @@ class WorkbenchBalancedArrangementServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         restored_artifact = restored["balanced_arrangement"]
         self.assertIsNotNone(restored_artifact)
+        self.assertTrue(restored["product_outputs"]["complete"])
         self.assertTrue(restored_artifact["cache_hit"])
         self.assertEqual(
             restored_artifact["selection_manifest_sha256"],
@@ -440,7 +473,7 @@ class WorkbenchBalancedArrangementServerTests(unittest.TestCase):
         self.assertEqual(operation["operation"], "arrangement.balance")
         self.assertEqual(
             operation["label"],
-            "Render or reuse the source-referenced balanced audition",
+            "Render or reuse the balanced MIDI-derived song interpretation",
         )
         self.assertEqual(operation["http_status"], 200)
         self.assertFalse(operation["durable_effect_possible"])

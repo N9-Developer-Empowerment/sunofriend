@@ -1,13 +1,29 @@
 ---
 name: sunofriend
-description: Use the local Sunofriend CLI to convert isolated Suno/Moises WAV stems and lead or backing vocals into evaluated GarageBand-ready MIDI; compare immutable AI transcription lanes, compare evidence-pinned specialist/full-mix/conditioned lead MIDI by phrase with explicit lineage limits and without creating a hybrid, benchmark verified fresh-process or bounded exact-repeat local AI runs, reuse and benchmark an explicit exact MuScriptor raw-result cache, partition model-reported labels exactly, and review existing source/MIDI alternatives; build blind exact-source-window, fixed-window sample-RMS-matched MIDI A/B reviews with explicit heard and choice evidence; render cached neutral previews, save explicit solo/full-mix choices, hear bounded or exact chunked canonical selected arrangements, create an opt-in source-referenced balanced selected-MIDI audition while retaining the unity technical controls, export unchanged choices in a GarageBand handoff, and complete its guided tutorial, 10-question quiz and two human acceptance checks through the loopback-only Workbench; combine tracker consensus, phrase-by-phrase alternatives, repeated phrases, hummed guidance and local advisory review-history profiles; create short experimental MIDI-guided or pinned learned target/residual cleanup pairs, split reviewed mixed-role MIDI into separate body/pluck challengers, and compare complete, sampled and harmonic-plus-noise sounds on one fixed monophonic MIDI; inventory, sound-match, audition, build self-contained SF2 sample instruments, or package MIDI plus sound in Instrument Bundle v1; preview or play results; change MIDI key, BPM, tuning, and downbeat alignment; browse a gated read-only Clip v1 library; explicitly propose immutable Clip placements; create reviewed immutable key/BPM children; apply bounded user-selected Clip pitch or attack-velocity corrections, exact note removals, existing-note onset shifts and Note-Off-only duration corrections; or store and transform Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody MIDI, GarageBand timing, MIDI mashups, instrument selection, stem sample instruments, tempo or transposition changes, explicit Clip reuse proposals, bounded wrong-note, note-intensity, unwanted-extra-note, onset or note-length repair, and stem-versus-MIDI accuracy. Do not use for generic stem separation, mastering, lyric writing, downloading third-party plug-ins, or editing a DAW GUI.
+description: Use Sunofriend's local TUI, CLI, Workbench and Developer Inspector to turn Suno/Moises stems or vocals into two linked outputs, reviewed GarageBand-ready MIDI plus a balanced MIDI-derived song-interpretation WAV. Compare immutable analytical, tracker, repair and optional local-AI candidates; review phrases; render selected MIDI; create a separate receipt-bound listening master; export exact GarageBand packs; build or match sample instruments; transform key, BPM, tuning and alignment; and browse, reuse, transform or correct Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody, MIDI comparison, song interpolation, GarageBand handoff, instrument matching, tempo/key changes, mashups and bounded note correction. Prefer `sunofriend tui` for a human operator; retain CLI/skill routes for expert automation. Do not use it for generic stem separation, human-approved release mastering, lyric writing, arbitrary shell execution, unapproved model/plugin downloads or DAW GUI editing.
 ---
+
+<!-- sunofriend-interface-contract: 2026-07-27.2 -->
 
 # Sunofriend
 
-Use the packaged `sunofriend` CLI as the deterministic audio and MIDI engine.
-Do not reimplement transcription, evaluation, or MIDI transformation in ad-hoc
-scripts.
+Prefer the packaged `sunofriend tui` Guided Local Studio when a person wants
+to operate and inspect Sunofriend directly. Use the packaged `sunofriend` CLI
+as the deterministic audio and MIDI engine and the loopback Workbench as the
+rich visual comparison/decision/render/export surface. The required result is a
+pair: reviewed editable MIDI and a balanced MIDI-derived song-interpretation
+WAV rendered from the selected MIDI. Here interpolation means a creative
+interpretation of melody, harmony, rhythm and structure, not waveform or
+production-effect reconstruction. Source stems supply timing, horizon and
+level evidence but are not mixed into that WAV. Retain direct CLI operation
+for expert, scripted and agent-led workflows. Do not reimplement transcription,
+evaluation, MIDI transformation or the accepted mix policy in ad-hoc scripts
+or TUI callbacks.
+
+Read [the generated public interface contract](references/interface-contract.md)
+before choosing a command. It is versioned with this skill and distinguishes
+the current direct TUI actions from expert CLI commands that do not yet have
+guided forms.
 
 ## Preflight
 
@@ -17,6 +33,25 @@ scripts.
 3. Run `sunofriend --version`, `sunofriend --help`, and the selected command's
    `--help` before constructing a command.
 4. Run the narrowest capability check:
+   - `sunofriend tui` is the preferred human route. It can load an existing
+     project, show key/BPM/tuning and stem/candidate/decision state, draw
+     compact primary MIDI maps, run local diagnostics and open/stop the
+     graphical Workbench. The initial Phase 5.10b runner also has one explicit
+     **Convert all stems** operation. Its editable **Fresh conversion output**
+     must not exist; `--conversion-output` only prefills the field and never
+     starts work. After confirmation it runs production `listen-all` in repair
+     mode with variant evaluation, then production `vocal-melody` separately
+     for discovered lead and backing vocals. It discloses `wind` → `lead`,
+     `rhythm` → `keys` and `other` → `synth` proxy engines and visible
+     near-silent skips. Completion names skipped, failed and proxy roles plus
+     bounded warnings, and reload verifies fresh-root coverage for every role
+     reported converted. Progress is streamed; cancel preserves the partial
+     root; success reloads the fresh root. It never overwrites or auto-selects.
+     Relaunch without `--catalog` for conversion because an explicit catalog
+     would ignore newly discovered automatic candidates.
+     There is no durable job ledger, restart recovery or structured improvement
+     feedback yet. Workbench remains review-only. The TUI enables the read-only
+     Developer Inspector by default.
    - `sunofriend doctor --require transcribe` for lead or backing vocals and
      short `melody-guide` pitch/contour guides.
    - `sunofriend ai-doctor --require muscriptor-checkpoint` before explicitly
@@ -106,6 +141,10 @@ scripts.
    - `sunofriend instrument-feedback` and `instrument-profile` need no audio/ML
      capability check. They read explicit local Bundle/review JSON and MIDI
      hashes only.
+   - `sunofriend listening-master` requires the `convert` audio runtime and an
+     existing local FFmpeg executable with the `loudnorm` filter. The command
+     verifies both before writing. Its input is an existing reviewed balanced
+     MIDI WAV; both `--out` and `--report` must be fresh paths.
    - `sunofriend doctor --require convert` for factory-sample matching or
      stem-derived sample instruments. Also require `preview` for rendered GM
      matches and for sample instruments unless using `--no-preview`.
@@ -126,10 +165,9 @@ scripts.
      Inspect and private review export start no server or model. Run
      `sunofriend doctor --require preview` before using the site's
      explicit neutral-preview, dry selected-arrangement or
-     GarageBand-handoff render actions. The separate source-referenced
-     balanced selected-MIDI audition also measures and mixes audio with NumPy
-     and SoundFile, so require `sunofriend doctor --require convert` before
-     creating it.
+     GarageBand-handoff render actions. The MIDI-derived song-interpretation
+     WAV also measures and mixes rendered MIDI audio with NumPy and SoundFile,
+     so require `sunofriend doctor --require convert` before creating it.
      `--developer-inspector` is an optional read-only
      application operation/state explorer in the same token-protected loopback
      Workbench. It needs no extra dependency and must not be described as a
@@ -193,8 +231,36 @@ scripts.
 
 ## Choose the workflow
 
+- Human operator who wants guidance and visible state: start with
+  `sunofriend tui [PROJECT]` and add the same narrow `--candidate-root`,
+  optional `--catalog`, `--state-dir` and `--soundfont` inputs that should be
+  passed to Workbench. Use its **Open visual studio** action for waveform/MIDI
+  timelines, synchronized audition, explicit decisions, the MIDI-derived
+  song-interpretation WAV, Inspector and exact GarageBand pack. TUI
+  highlighting, maps, diagnostics and activity are zero-effect. Use
+  `--no-developer-inspector` only when the extra read-only developer view is
+  not wanted. See `docs/LOCAL_STUDIO_TUI.md`.
+  When the project has not been converted, instead prefill a fresh path with
+  `--conversion-output FRESH`, review the editable field, choose **Convert all
+  stems** and explicitly confirm. The initial runner orchestrates only the
+  fixed full-project repair/variant recipe described in Preflight. Cancellation
+  leaves a partial root and cannot resume after restart; do not treat it as
+  success or delete it automatically. After success the TUI reloads the root;
+  open Workbench to compare and select, never to transcribe.
 - Whole instrumental stem folder: use `listen-all`; default to
   `--conversion-mode repair` and leave evaluation enabled.
+  For bass, retain all five claims separately: `raw_verified`,
+  `contour_clean`, `octave_resolved`, `continuous_sustain` and `root_safe`.
+  Repair mode still selects `contour_clean`. `octave_resolved` may shift only
+  a one- or two-octave harmonic when pYIN is voiced across at least 70% of the
+  note and one exact rounded pitch dominates at least 80% of those voiced
+  frames. `continuous_sustain` starts from that candidate and may extend a
+  note end only across a 35 ms–1.25 beat gap where source RMS activity, pYIN
+  voicing and the same exact pitch each meet their configured evidence gate.
+  Do not describe either challenger as a theory repair or automatic winner.
+  MIDI note gates can represent continuous accompaniment but not the source
+  waveform's buzzing texture; review contour/register, continuity/true rests
+  and patch texture as separate questions.
 - Existing source/MIDI/preview result space: use `workbench` with the original
   stem directory and only the narrow candidate roots intended for that song.
   It is a loopback-only presentation and explicit-decision boundary, not a
@@ -204,11 +270,23 @@ scripts.
   or phrase. Never collapse them into one automatic winner or imply that a
   model label, score, preview count or visible default is preference. Prefer an
   explicit `sunofriend.workbench-catalog.v1` document
-  when filenames cannot distinguish songs or audible roles. Treat at most
+  when filenames cannot distinguish songs or audible roles. Automatic
+  discovery must remain role-specific: reject arrangement-named MIDI, require
+  one consistent inferred role across note-bearing Clips, prefer one
+  unambiguous basename role over a bounded parent-name fallback, reject
+  explicit BPM differences greater than
+  `max(0.5 BPM, 0.5%)`, reject an explicit tonic/mode mismatch, and remove both
+  byte-identical and neutral-audition-equivalent note geometry. An explicit
+  catalog is the only route for intentionally including a combined,
+  transformed or otherwise automatically ineligible candidate. Retain a
+  malformed or note-free role-specific file only as an explicit
+  unavailable/empty diagnostic lane. Treat at most
   three primary candidates as the normal result space, keep diagnostic files
   advanced, and do not infer preference from audition events, dwell time or
   unclicked defaults. Prefer the content-addressed role-neutral preview when an
-  existing WAV is absent or uses a different sound. For precise per-stem
+  existing WAV is absent or uses a different sound. Require
+  `role-neutral-general-midi-v3`; bass uses zero-based program 38, displayed as
+  **GM 39 Synth Bass 1 proxy**, not a plucked finger-bass proxy. For precise per-stem
   listening, prepare a 0.5–15 second decoded loop: primary candidates are
   included by default, an advanced candidate requires explicit **Include in
   precise loop**, and no more than six candidates may be requested. Source and
@@ -216,6 +294,17 @@ scripts.
   and one absolute playhead. They all begin at recorded zero; do not infer an
   alignment offset. Preparing, playing, switching, seeking, pausing or stopping
   must not append an event, change a selection, rank a process or mutate MIDI.
+  The precise per-stem artifact must use
+  `recorded-zero-source-frame-window-level-matched-v2` and
+  `common-target-active-block-rms-v1`. Measure each decoded source/candidate
+  independently by median active non-overlapping 400 ms block RMS with the
+  −70 dBFS absolute and 10 dB relative gates, aim at −18 dBFS, bound target
+  trim to −24…+12 dB and reduce it when required for −1 dBFS sample-peak room.
+  Show every signed gain and apply it only through a Web Audio `GainNode`;
+  never rewrite the source, preview WAV or MIDI. Call this gain-only comparison
+  assistance, not LUFS, true-peak, compression, limiting, mastering or
+  blinding. Neutral preview cards and the compatibility fallback remain at
+  renderer gain.
   For a precise selected arrangement, prepare a separate 0.5–15 second decoded
   loop from the server-derived `sunofriend.workbench-arrangement-selection.v1`
   manifest. Byte-identical sources are one lane, current main/optional MIDI
@@ -264,7 +353,7 @@ scripts.
   use regular-file identity/stat signatures for unchanged sequential chunks;
   any drift must invalidate it, return to full verification and fail closed on
   missing or altered evidence.
-  Keep the opt-in **Balanced, master-protected audition** separate from all
+  Keep the **Balanced MIDI-derived song interpretation** separate from all
   three playback contracts. It is available only in ordinary Workbench after
   explicit main/optional choices exist; there is no standalone balance CLI.
   POST only the current
@@ -316,6 +405,24 @@ scripts.
   2 GiB. Before full or Range serving, copy and hash/size verify each balanced
   file into a per-request disk-backed anonymous snapshot; return 409 on drift
   and 503 when temporary snapshot storage is unavailable.
+  Keep `sunofriend listening-master` as a separate challenger downstream of
+  that unchanged gain-only control. It uses fixed policy
+  `ffmpeg-loudnorm-two-pass-fixed-horizon-v1`: two-pass FFmpeg EBU R128
+  analysis/rendering at −16 LUFS integrated, 11 LU loudness-range target and
+  −1 dBTP true-peak ceiling, followed by resampling and an exact trim back to
+  the input frame horizon, then an independent analysis of the encoded PCM24
+  artifact. Require private workspaces and files to be owner-only from
+  creation, plus device/inode-checked publication and rollback. Require a fresh
+  PCM24 WAV and fresh path-free JSON receipt. Hash the source, output and
+  FFmpeg executable; retain the source, render and encoded-artifact
+  measurement sets and the exact target/processing/effect contract. Report
+  `mastered: true` and `release_master: false`: it is a
+  machine-produced comparative listening master, not human release approval.
+  It may use dynamic loudness processing but no EQ, widening, reverb, chorus or
+  saturation. It must not overwrite or replace the praised balanced control,
+  change MIDI/source/selection/ranking/defaults, or imply a listening
+  preference. Compare the control and challenger by ear before adopting any
+  future default.
   The explicitly labelled compatibility fallback is synchronized in seconds,
   not sample-accurate, but its controls must also remain feedback- and
   event-free. Require every included preview to use the current SoundFont hash
@@ -407,8 +514,9 @@ scripts.
   visualization. Per-stem comparison, bounded canonical arrangement presets
   and canonical exact full-song presets use separate decoded transports. Only
   the arbitrary full-song/custom mixer uses coarse HTML media elements that
-  share seconds but are not sample-accurate. Source/MIDI levels are not
-  normalised.
+  share seconds but are not sample-accurate. Canonical arrangement/full-song
+  and coarse-mixer source/MIDI levels are not normalised; this does not apply
+  to the separately prepared, disclosed-gain precise per-stem loop.
   The GarageBand Pack Composer has a
   separate persistent basket for exact current main/optional MIDI, the dry
   arrangement proxy and source audio behind an explicit opt-in. It must never
@@ -998,6 +1106,12 @@ scripts.
 Read the live command help for exact options. Typical command shapes are:
 
 ```bash
+sunofriend tui "$INPUT" \
+  --candidate-root "$OUTPUT"
+
+sunofriend tui "$INPUT" \
+  --conversion-output "$FRESH_OUTPUT"
+
 sunofriend listen-all "$INPUT" \
   --out-dir "$OUTPUT" \
   --conversion-mode repair
@@ -1784,8 +1898,15 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     candidate counts (six maximum), verified private content-addressed clips,
     one-clock scheduled switching and all false selection/event/ranking/MIDI
     mutation effects. State that no alignment was inferred, that renderer
-    previews matched the current SoundFont/policy and that owner-only verified
-    renderer/decode snapshots were deleted before publication. Report any
+    previews matched `role-neutral-general-midi-v3`, the current SoundFont and
+    disclosed role program; for bass report **GM 39 Synth Bass 1 proxy**.
+    Require decoded-loop policy
+    `recorded-zero-source-frame-window-level-matched-v2` and report each
+    source/candidate's measured gated RMS, signed applied gain, any peak-room
+    limit and `common-target-active-block-rms-v1` receipt. State that the gain
+    exists only in the browser transport, with source/preview/MIDI bytes
+    unchanged, and that this comparison is not blind. Confirm owner-only
+    verified renderer/decode snapshots were deleted before publication. Report any
     `silence_padded_frames` as generated end silence, not missing transcription,
     plus the 2 GiB all-input (source, candidate MIDI, SoundFont and preview)
     bound with early pre-render rejection, the 64 MiB output bound and the
@@ -1800,7 +1921,7 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     switching. State that it is unity-gain, unlevelled/unlimited, recorded-zero
     and feedback-free. Do not imply that its four canonical presets make the
     coarse full-song/custom mixer sample-accurate.
-    For a separately requested balanced selected-MIDI audition, report its
+    For the MIDI-derived song-interpretation WAV, report its
     selection-manifest hash, `source-referenced-summed-group-balance-v3`
     policy, lane count, source/preview/SoundFont verification, actual
     same-source waveform-sum calibration, every exact GarageBand Pack MIDI
@@ -1816,6 +1937,12 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
     unity control is unchanged and that the WAV/receipt/fader recipe are
     Workbench-only, not yet in the CLI or GarageBand Pack. Do not
     infer musical preference from trims or call the result final mastering.
+    If `listening-master` was explicitly requested, separately report its
+    source/output/report hashes, fixed mastering policy, input/output
+    integrated LUFS, output dBTP, normalization type and exact unchanged frame
+    horizon. Call it a listening-master challenger with
+    `release_master: false`; retain and name the original balanced WAV as the
+    control.
     For long-song visualization,
     report Fit/4×/16× fixed-window culling and bounded canvases, but disclose
     that the complete server-bounded JSON is still downloaded, parsed and

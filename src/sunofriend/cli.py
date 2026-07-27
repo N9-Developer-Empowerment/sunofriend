@@ -10,74 +10,18 @@ from pathlib import Path
 from . import __version__
 from .ai_runtime import AI_REQUIREMENTS
 from .diagnostics import CAPABILITIES
+from .interface_contract import PUBLIC_COMMANDS
 from .phrase_guide import GUIDE_KINDS
 from .pipeline import run_remake
+from .product_contract import PRODUCT_SUMMARY
 
-_COMMANDS = {
-    "remake",
-    "listen",
-    "listen-all",
-    "vocal-melody",
-    "vocal-trackers",
-    "melody-review",
-    "melody-profile",
-    "melody-guide",
-    "melody-apply",
-    "evaluate",
-    "doctor",
-    "ai-doctor",
-    "ai-transcribe",
-    "ai-transcribe-session",
-    "ai-benchmark",
-    "ai-setting-compare",
-    "ai-cache-benchmark",
-    "ai-session-benchmark",
-    "ai-matrix",
-    "hybrid-report",
-    "ai-label-split",
-    "ai-cleanup",
-    "midi-mask",
-    "midi-role-split",
-    "midi-role-split-resolve",
-    "midi-ab-review",
-    "midi-ab-resolve",
-    "timbre-resynthesis",
-    "preview",
-    "midi-ports",
-    "play",
-    "midi-tempo",
-    "midi-transform",
-    "midi-anchor",
-    "midi-align",
-    "garageband-info",
-    "instrument-inventory",
-    "instrument-match",
-    "sample-pack",
-    "sample-pack-review",
-    "sample-pack-apply",
-    "sample-pack-boundary-review",
-    "sample-pack-boundary-apply",
-    "sample-pack-ab-review",
-    "sample-pack-ab-resolve",
-    "instrument-feedback",
-    "instrument-profile",
-    "instrument-bundle",
-    "workbench",
-    "garageband-pack-review",
-    "garageband-pack-resolve",
-    "clip-import",
-    "clip-list",
-    "clip-show",
-    "clip-export",
-    "clip-transform",
-    "clip-instrument",
-}
+_COMMANDS = PUBLIC_COMMANDS
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="sunofriend",
-        description="Clean GarageBand-ready MIDI from AI-generated stems.",
+        description=PRODUCT_SUMMARY,
     )
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}"
@@ -1983,6 +1927,33 @@ def build_parser() -> argparse.ArgumentParser:
         "--out", required=True, help="Fresh profile JSON path"
     )
 
+    listening_master = sub.add_parser(
+        "listening-master",
+        help=(
+            "Create a separate loudness/true-peak mastered challenger from a "
+            "reviewed balanced MIDI WAV"
+        ),
+    )
+    listening_master.add_argument(
+        "balanced_wav",
+        help="Existing balanced-selected-midi-preview.wav control",
+    )
+    listening_master.add_argument(
+        "--out",
+        required=True,
+        help="Fresh PCM24 listening-master WAV path",
+    )
+    listening_master.add_argument(
+        "--report",
+        required=True,
+        help="Fresh path-free listening-master receipt JSON",
+    )
+    listening_master.add_argument(
+        "--ffmpeg",
+        default=None,
+        help="Optional explicit FFmpeg executable with the loudnorm filter",
+    )
+
     instrument_bundle = sub.add_parser(
         "instrument-bundle",
         help="Package MIDI, carried source sound, match evidence, and A/B previews",
@@ -2075,6 +2046,68 @@ def build_parser() -> argparse.ArgumentParser:
     garageband_pack_resolve.add_argument(
         "--out", required=True, help="Fresh path-free acceptance result JSON"
     )
+
+    tui = sub.add_parser(
+        "tui",
+        help=(
+            "Open the guided local terminal studio and its graphical "
+            "Workbench bridge"
+        ),
+    )
+    tui.add_argument(
+        "project",
+        nargs="?",
+        default=None,
+        help=(
+            "Optional directory containing top-level source audio stems; it "
+            "can also be entered interactively"
+        ),
+    )
+    tui.add_argument(
+        "--candidate-root",
+        action="append",
+        default=[],
+        help=(
+            "Narrow local directory containing existing MIDI/preview "
+            "alternatives; repeat as needed"
+        ),
+    )
+    tui.add_argument(
+        "--catalog",
+        default=None,
+        help="Optional explicit sunofriend.workbench-catalog.v1 JSON",
+    )
+    tui.add_argument(
+        "--state-dir",
+        default=None,
+        help=(
+            "Local Workbench state directory; the TUI only opens the existing "
+            "decision database after a project is loaded"
+        ),
+    )
+    tui.add_argument(
+        "--soundfont",
+        default=None,
+        help="Optional GM SoundFont used by the graphical Workbench",
+    )
+    tui.add_argument(
+        "--conversion-output",
+        default=None,
+        help=(
+            "Prefill the TUI's fresh conversion output folder; this never "
+            "starts conversion automatically"
+        ),
+    )
+    tui.add_argument(
+        "--no-developer-inspector",
+        action="store_false",
+        dest="developer_inspector",
+        help=(
+            "Do not enable the Workbench's optional read-only application "
+            "operation/state Inspector"
+        ),
+    )
+    tui.set_defaults(developer_inspector=True)
 
     workbench = sub.add_parser(
         "workbench",
@@ -2398,12 +2431,16 @@ def main(argv: list[str] | None = None) -> int:
             return _run_instrument_feedback(args)
         if args.command == "instrument-profile":
             return _run_instrument_profile(args)
+        if args.command == "listening-master":
+            return _run_listening_master(args)
         if args.command == "instrument-bundle":
             return _run_instrument_bundle(args)
         if args.command == "garageband-pack-review":
             return _run_garageband_pack_review(args)
         if args.command == "garageband-pack-resolve":
             return _run_garageband_pack_resolve(args)
+        if args.command == "tui":
+            return _run_tui(args)
         if args.command == "workbench":
             return _run_workbench(args)
         if args.command == "clip-import":
@@ -4423,6 +4460,19 @@ def _run_instrument_profile(args) -> int:
     return 0
 
 
+def _run_listening_master(args) -> int:
+    from .listening_master import build_listening_master
+
+    report = build_listening_master(
+        args.balanced_wav,
+        output_path=args.out,
+        report_path=args.report,
+        ffmpeg_path=args.ffmpeg,
+    )
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
 def _run_garageband_pack_review(args) -> int:
     from .garageband_pack_acceptance import (
         create_garageband_pack_acceptance_review,
@@ -4471,6 +4521,20 @@ def _run_workbench(args) -> int:
     if args.inspect or args.export_review:
         print(json.dumps(report, indent=2, sort_keys=True))
     return 0
+
+
+def _run_tui(args) -> int:
+    from .tui import run_tui
+
+    return run_tui(
+        project=args.project,
+        candidate_roots=tuple(args.candidate_root),
+        catalog_path=args.catalog,
+        state_dir=args.state_dir,
+        soundfont_path=args.soundfont,
+        initial_conversion_output=args.conversion_output,
+        developer_inspector=args.developer_inspector,
+    )
 
 
 def _run_clip_import(args) -> int:

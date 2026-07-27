@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 import wave
@@ -10,19 +11,218 @@ from unittest.mock import patch
 
 from sunofriend.beatgrid import Grid
 from sunofriend.cli import main
-from sunofriend.listen_all import CHANNELS, _is_silent, run_listen_all
+from sunofriend.listen_all import (
+    CHANNELS,
+    CONSERVATIVE_ROLE_ENGINES,
+    INSTRUMENT_SUGGESTIONS,
+    _is_silent,
+    run_listen_all,
+)
 from sunofriend.listen_all import _make_library_clip
-from sunofriend.clip import KeySignature
+from sunofriend.clip import KeySignature, read_midi_clips
+from sunofriend.conversion import NoteProvenance
 from sunofriend.library import ClipLibrary
 from sunofriend.loop import RefineResult
 from sunofriend.midi import MidiTrack, write_midi_file
 from sunofriend.models import NoteEvent
+from sunofriend.workbench_catalog import build_workbench_catalog
+from sunofriend.workbench_store import WorkbenchStore
 
 
 class ListenAllContractTests(unittest.TestCase):
     def test_keys_and_pads_use_distinct_preview_channels_and_programs(self):
         self.assertEqual(CHANNELS["keys"], (1, 7))
         self.assertEqual(CHANNELS["pads"], (6, 89))
+
+    def test_broad_separator_roles_have_disclosed_engines_and_distinct_patches(self):
+        self.assertEqual(
+            CONSERVATIVE_ROLE_ENGINES,
+            {
+                "wind": "lead",
+                "rhythm": "keys",
+                "other": "synth",
+            },
+        )
+        self.assertEqual(CHANNELS["wind"], (7, 71))
+        self.assertEqual(CHANNELS["rhythm"], (8, 27))
+        self.assertEqual(CHANNELS["other"], (10, 81))
+        self.assertEqual(
+            INSTRUMENT_SUGGESTIONS["wind"],
+            ("Clarinet", "Brass Section"),
+        )
+        self.assertEqual(
+            INSTRUMENT_SUGGESTIONS["rhythm"],
+            ("Electric Guitar (clean)", "Acoustic Guitar (steel)"),
+        )
+        self.assertEqual(
+            INSTRUMENT_SUGGESTIONS["other"],
+            ("Flow Synth Pluck", "Synth Lead"),
+        )
+
+    def test_full_run_publishes_broad_roles_without_selecting_them(self):
+        engines = {
+            "wind": "lead",
+            "rhythm": "keys",
+            "other": "synth",
+        }
+        pitches = {"wind": 71, "rhythm": 55, "other": 67}
+        calls: list[tuple[str, str]] = []
+
+        def fake_refine(**kwargs):
+            stem = Path(kwargs["stem_path"])
+            role = next(
+                role for role in engines if f"-{role}-" in stem.name.lower()
+            )
+            kind = kwargs["kind"]
+            calls.append((role, kind))
+            work = Path(kwargs["out_dir"])
+            work.mkdir(parents=True, exist_ok=True)
+            note = NoteEvent(0.0, 0.5, pitches[role], 88)
+            midi = work / f"{kind}_listened.mid"
+            write_midi_file(
+                midi,
+                [MidiTrack(kind.title(), 0, 0, [note])],
+                bpm=119,
+            )
+            provenance = NoteProvenance.from_note(
+                note,
+                origin="observed",
+                confidence=0.9,
+                family=f"{kind}_melody",
+                sources=("stem", f"listen-{kind}"),
+            )
+            return RefineResult(
+                notes=[note],
+                score=0.9,
+                history=[],
+                midi_path=midi,
+                note_provenance=[provenance],
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            folder = root / "Pupsies-B major-119bpm-440hz"
+            folder.mkdir()
+            for role in engines:
+                (folder / f"Pupsies-{role}-B major-119bpm-440hz.wav").touch()
+            out = root / "out"
+
+            with patch(
+                "sunofriend.listen_all._is_silent",
+                return_value=False,
+            ), patch(
+                "sunofriend.loop.refine_stem",
+                side_effect=fake_refine,
+            ):
+                summary = run_listen_all(
+                    folder,
+                    out,
+                    evaluate_outputs=False,
+                    library=root / "library",
+                    progress=lambda _message: None,
+                )
+
+            self.assertEqual(calls, list(engines.items()))
+            self.assertEqual(summary["status"], "complete")
+            for role, kind in engines.items():
+                with self.subTest(role=role):
+                    part = summary["parts"][role]
+                    self.assertEqual(part["status"], "ok")
+                    self.assertEqual(part["published_role"], role)
+                    self.assertEqual(part["processing_kind"], kind)
+                    self.assertEqual(
+                        part["instrument_suggestions"],
+                        list(INSTRUMENT_SUGGESTIONS[role]),
+                    )
+                    command_kind = part["instrument_match_command"][
+                        part["instrument_match_command"].index("--kind") + 1
+                    ]
+                    self.assertEqual(command_kind, kind)
+
+                    clip = read_midi_clips(part["midi"], role=role)[0]
+                    self.assertEqual(
+                        (clip.instrument.channel, clip.instrument.program),
+                        CHANNELS[role],
+                    )
+                    sidecar = json.loads(
+                        Path(part["provenance"]).read_text(encoding="utf-8")
+                    )
+                    record = sidecar["notes"][0]
+                    self.assertEqual(record["family"], f"{role}_melody")
+                    self.assertIn(f"listen-{role}", record["sources"])
+                    self.assertIn(
+                        f"processing-engine:{kind}",
+                        record["sources"],
+                    )
+                    self.assertNotIn(f"listen-{kind}", record["sources"])
+                    self.assertEqual(record["details"]["published_role"], role)
+                    self.assertEqual(record["details"]["processing_kind"], kind)
+
+                    archived = ClipLibrary(root / "library").get(
+                        part["library_clip_id"]
+                    )
+                    self.assertEqual(archived.instrument.role, role)
+                    self.assertEqual(
+                        (archived.instrument.channel, archived.instrument.program),
+                        CHANNELS[role],
+                    )
+                    self.assertEqual(
+                        archived.instrument.suggestions,
+                        INSTRUMENT_SUGGESTIONS[role],
+                    )
+                    self.assertEqual(
+                        archived.provenance.details_dict["published_role"],
+                        role,
+                    )
+                    self.assertEqual(
+                        archived.provenance.details_dict["processing_kind"],
+                        kind,
+                    )
+
+            catalog = build_workbench_catalog(folder, candidate_roots=[out])
+            by_role = {stem["role"]: stem for stem in catalog["stems"]}
+            self.assertEqual(
+                {role: by_role[role]["candidate_count"] for role in engines},
+                {"wind": 1, "rhythm": 1, "other": 1},
+            )
+            state = WorkbenchStore(root / "state/workbench.sqlite3").current_state(
+                catalog
+            )
+            self.assertEqual(state["event_count"], 0)
+            self.assertTrue(
+                all(
+                    not stem["candidates"] and stem["main_candidate_id"] is None
+                    for stem in state["stems"].values()
+                )
+            )
+
+    def test_near_silent_broad_roles_remain_skipped(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            folder = root / "Pupsies-B major-119bpm-440hz"
+            folder.mkdir()
+            for role in CONSERVATIVE_ROLE_ENGINES:
+                (folder / f"Pupsies-{role}-B major-119bpm-440hz.wav").touch()
+
+            with patch(
+                "sunofriend.listen_all._is_silent",
+                return_value=True,
+            ), patch("sunofriend.loop.refine_stem") as refine:
+                summary = run_listen_all(
+                    folder,
+                    root / "out",
+                    evaluate_outputs=False,
+                    progress=lambda _message: None,
+                )
+
+            refine.assert_not_called()
+            self.assertEqual(summary["status"], "no-output")
+            for role in CONSERVATIVE_ROLE_ENGINES:
+                self.assertEqual(
+                    summary["parts"][role]["status"],
+                    "skipped: near-silent stem",
+                )
+            self.assertNotIn("arrangement", summary)
 
     def test_borderline_peak_with_negligible_rms_is_treated_as_bleed(self):
         try:

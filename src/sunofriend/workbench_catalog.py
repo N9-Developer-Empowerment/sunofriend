@@ -15,6 +15,7 @@ import re
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
+from .clip import read_midi_clips
 from .metadata import infer_project_metadata
 from .workbench_privacy import path_free_role, validated_role
 from .workbench_phrase_links import build_workbench_phrase_review_link
@@ -25,6 +26,12 @@ _AUDIO_SUFFIXES = {".wav", ".wave", ".aif", ".aiff", ".flac", ".mp3", ".m4a"}
 _MIDI_SUFFIXES = {".mid", ".midi"}
 _IGNORED_SOURCE_ROLES = {"metronome"}
 _MAX_DISCOVERED_MIDI = 5000
+_AUTOMATIC_BPM_ABSOLUTE_TOLERANCE = 0.5
+_AUTOMATIC_BPM_RELATIVE_TOLERANCE = 0.005
+_ARRANGEMENT_TOKEN = re.compile(
+    r"(?<![a-z0-9])(?:full[-_ ]*)?arrangement(?![a-z0-9])",
+    re.IGNORECASE,
+)
 _PATH_KEY = re.compile(
     r"(?:^|_)(?:path|paths|dir|directory|cwd|command|argv|executable|python)(?:_|$)"
 )
@@ -64,6 +71,36 @@ _ROLE_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("other", ("other",)),
 )
 
+# These compound labels carry one role even though their component words are
+# also broad aliases.  Matching spans let automatic discovery suppress only
+# the component inside the compound: a separate ``vocals`` or ``other`` token
+# elsewhere in the same filename still exposes a genuine multi-role file.
+_COMPOUND_ROLE_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "backing_vocals",
+        (
+            "backing_vocal",
+            "backing-vocal",
+            "backing vocal",
+            "backing_vocals",
+            "backing-vocals",
+            "backing vocals",
+        ),
+    ),
+    ("other_kit", ("other_kit", "other-kit", "other kit")),
+    (
+        "vocals",
+        (
+            "lead_vocal",
+            "lead-vocal",
+            "lead vocal",
+            "lead_vocals",
+            "lead-vocals",
+            "lead vocals",
+        ),
+    ),
+)
+
 
 def build_workbench_catalog(
     project_root: str | Path,
@@ -89,7 +126,12 @@ def build_workbench_catalog(
         )
         catalog_source = _file_record(document_path)
     else:
-        stems = _discover_stems(project, roots)
+        stems = _discover_stems(
+            project,
+            roots,
+            project_bpm=metadata.bpm,
+            project_key=metadata.key,
+        )
         catalog_source = None
 
     project_id = hashlib.sha256(str(project).encode("utf-8")).hexdigest()[:20]
@@ -191,7 +233,11 @@ def media_files(catalog: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
 
 
 def _discover_stems(
-    project: Path, candidate_roots: Sequence[Path]
+    project: Path,
+    candidate_roots: Sequence[Path],
+    *,
+    project_bpm: float | None,
+    project_key: str | None,
 ) -> list[dict[str, Any]]:
     source_files = []
     for path in sorted(project.iterdir(), key=lambda item: item.name.lower()):
@@ -210,24 +256,26 @@ def _discover_stems(
     midi_files = _discover_midi(candidate_roots)
     candidates_by_role: dict[str, list[dict[str, Any]]] = {}
     for midi in midi_files:
-        role = infer_role(" ".join(midi.parts[-5:]))
-        if role is None or midi.name.lower().startswith("full_arrangement"):
+        automatic = _automatic_candidate(
+            midi,
+            project_bpm=project_bpm,
+            project_key=project_key,
+        )
+        if automatic is None:
             continue
+        role, audition_signature = automatic
         candidate = _candidate_record(midi, role=role, candidate_roots=candidate_roots)
+        candidate["_automatic_audition_signature"] = audition_signature
         bucket = candidates_by_role.setdefault(role, [])
-        if not any(
-            item["midi"]["sha256"] == candidate["midi"]["sha256"] for item in bucket
-        ):
-            bucket.append(candidate)
+        bucket.append(candidate)
 
     stems = []
     for source in source_files:
         role = infer_role(source.stem) or "unclassified"
         if role in _IGNORED_SOURCE_ROLES:
             continue
-        candidates = sorted(
+        candidates = _deduplicate_automatic_candidates(
             candidates_by_role.get(role, []),
-            key=_candidate_sort_key,
         )
         stems.append(_stem_record(source, role=role, candidates=candidates))
     if not stems:
@@ -1950,13 +1998,134 @@ def _find_preview(midi: Path, roots: Sequence[Path]) -> Path | None:
 
 
 def infer_role(value: str) -> str | None:
+    matches = _infer_roles(value)
+    for role, _aliases in _ROLE_ALIASES:
+        if role in matches:
+            return role
+    return None
+
+
+def _infer_roles(value: str) -> set[str]:
     lowered = value.lower().replace("%20", " ")
+    compound_spans: list[tuple[int, int, str]] = []
+    for role, aliases in _COMPOUND_ROLE_ALIASES:
+        for alias in aliases:
+            for match in _bounded_alias_matches(lowered, alias):
+                compound_spans.append((match.start(), match.end(), role))
+
+    matches: set[str] = {role for _start, _end, role in compound_spans}
     for role, aliases in _ROLE_ALIASES:
         for alias in aliases:
-            pattern = r"(?<![a-z0-9])" + re.escape(alias) + r"(?![a-z0-9])"
-            if re.search(pattern, lowered):
-                return role
-    return None
+            role_matches = list(_bounded_alias_matches(lowered, alias))
+            if any(
+                not any(
+                    start <= match.start()
+                    and match.end() <= end
+                    and compound_role != role
+                    for start, end, compound_role in compound_spans
+                )
+                for match in role_matches
+            ):
+                matches.add(role)
+                break
+    return matches
+
+
+def _bounded_alias_matches(value: str, alias: str) -> Iterable[re.Match[str]]:
+    pattern = r"(?<![a-z0-9])" + re.escape(alias) + r"(?![a-z0-9])"
+    return re.finditer(pattern, value)
+
+
+def _automatic_candidate(
+    midi: Path,
+    *,
+    project_bpm: float | None,
+    project_key: str | None,
+) -> tuple[str, str] | None:
+    """Return an eligible automatic role and neutral-audition signature.
+
+    Automatic discovery is intentionally conservative. A playable Workbench
+    candidate must describe one role across its note-bearing MIDI tracks at
+    the project's key and tempo. Invalid or note-free role-specific files stay
+    visible as explicit unavailable/empty diagnostic evidence. Combined
+    arrangements and transformed-song variants remain available through an
+    explicit Workbench catalogue, where their inclusion is deliberate.
+    """
+
+    if _ARRANGEMENT_TOKEN.search(midi.stem):
+        return None
+
+    basename_roles = _infer_roles(midi.stem)
+    if len(basename_roles) == 1:
+        role = next(iter(basename_roles))
+    elif basename_roles:
+        return None
+    else:
+        parent_roles: set[str] = set()
+        for parent in list(midi.parents)[:4]:
+            parent_roles.update(_infer_roles(parent.name))
+        if len(parent_roles) != 1:
+            return None
+        role = next(iter(parent_roles))
+
+    try:
+        clips = [clip for clip in read_midi_clips(midi, role=role) if clip.notes]
+    except (OSError, ValueError):
+        return role, "opaque-" + _sha256(midi)
+    if not clips:
+        return role, hashlib.sha256(b"[]").hexdigest()
+
+    title_roles: set[str] = set()
+    for clip in clips:
+        title_roles.update(_infer_roles(clip.title))
+    # A role-specific basename is authoritative over one stale/generic track
+    # title (common in exported MIDI). Multiple distinct titled roles reveal a
+    # flattened arrangement even when its filename looks role-specific.
+    if len(title_roles) > 1:
+        return None
+
+    clip = clips[0]
+    if project_bpm is not None:
+        tolerance = max(
+            _AUTOMATIC_BPM_ABSOLUTE_TOLERANCE,
+            abs(float(project_bpm)) * _AUTOMATIC_BPM_RELATIVE_TOLERANCE,
+        )
+        if abs(float(clip.bpm) - float(project_bpm)) > tolerance:
+            return None
+
+    if project_key is not None and clip.key is not None:
+        try:
+            from .clip import KeySignature
+
+            expected_key = KeySignature.parse(project_key)
+        except ValueError:
+            expected_key = None
+        if (
+            expected_key is not None
+            and (
+                clip.key.tonic_pc != expected_key.tonic_pc
+                or clip.key.mode != expected_key.mode
+            )
+        ):
+            return None
+
+    signature_rows = sorted(
+        (
+            round(float(note.source_start_seconds), 6),
+            round(float(note.source_end_seconds), 6),
+            int(note.pitch),
+            int(note.velocity),
+        )
+        for candidate_clip in clips
+        for note in candidate_clip.notes
+    )
+    signature = hashlib.sha256(
+        json.dumps(
+            signature_rows,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    return role, signature
 
 
 def _describe_candidate(path: Path) -> tuple[str, str, str]:
@@ -1996,6 +2165,30 @@ def _describe_candidate(path: Path) -> tuple[str, str, str]:
             "specialist-raw-verified",
             "Strong observed notes only",
             "The verified raw note evidence before broader musical repair.",
+        )
+    if any(
+        marker in path.stem.lower()
+        for marker in ("continuous-sustain", "continuous_sustain")
+    ):
+        return (
+            "specialist-continuous-sustain",
+            "Source-supported sustained bass",
+            (
+                "The observed bass line with only short, stem-active and "
+                "pYIN-voiced gaps extended into legato note durations."
+            ),
+        )
+    if any(
+        marker in path.stem.lower()
+        for marker in ("octave-resolved", "octave_resolved")
+    ):
+        return (
+            "specialist-octave-resolved",
+            "Source-supported bass register",
+            (
+                "The observed bass notes with only dominant, octave-resolved "
+                "pYIN evidence allowed to correct a harmonic-register error."
+            ),
         )
     if "root-safe" in path.stem.lower():
         return (
@@ -2039,6 +2232,8 @@ def _candidate_sort_key(candidate: Mapping[str, Any]) -> tuple[int, int, int, st
         "muscriptor-conditioned": 1,
         "source-supported-hybrid": 2,
         "specialist-melody": 2,
+        "specialist-continuous-sustain": 2,
+        "specialist-octave-resolved": 2,
         "specialist-accompaniment": 3,
         "specialist-raw-verified": 3,
         "specialist-root-safe": 4,
@@ -2067,6 +2262,24 @@ def _deduplicate_candidates(
         hashes.add(digest)
         result.append(dict(candidate))
     return sorted(result, key=_candidate_sort_key)
+
+
+def _deduplicate_automatic_candidates(
+    candidates: Iterable[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    """Prefer the clearest candidate when neutral auditions are equivalent."""
+
+    result: list[dict[str, Any]] = []
+    signatures: set[str] = set()
+    for candidate in sorted(candidates, key=_candidate_sort_key):
+        row = dict(candidate)
+        signature = str(row.pop("_automatic_audition_signature", ""))
+        if signature and signature in signatures:
+            continue
+        if signature:
+            signatures.add(signature)
+        result.append(row)
+    return result
 
 
 def _candidate_roots(project: Path, roots: Sequence[str | Path]) -> list[Path]:

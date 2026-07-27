@@ -346,7 +346,7 @@ console.log(JSON.stringify({
         )
         self.assertEqual(
             result["balanced"]["label"],
-            "Render or reuse the source-referenced balanced audition",
+            "Render or reuse the balanced MIDI-derived song interpretation",
         )
         self.assertFalse(result["dry"]["durableEffect"])
         self.assertFalse(result["balanced"]["durableEffect"])

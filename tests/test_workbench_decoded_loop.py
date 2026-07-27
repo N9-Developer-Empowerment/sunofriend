@@ -78,6 +78,30 @@ class WorkbenchDecodedStemLoopTests(unittest.TestCase):
             self.assertEqual(candidate_track["frames"], 16_000)
             self.assertEqual(candidate_track["silence_padded_frames"], 8_000)
             self.assertEqual(candidate_track["candidate_id"], candidate["candidate_id"])
+            for track in first["tracks"]:
+                self.assertEqual(
+                    track["audition_level"]["policy"],
+                    "common-target-active-block-rms-v1",
+                )
+                self.assertEqual(
+                    track["audition_gain_db"],
+                    track["audition_level"]["applied_gain_db"],
+                )
+                self.assertTrue(track["audition_level"]["audible"])
+            self.assertAlmostEqual(
+                source_track["audition_level"]["measurement"]["gated_rms_dbfs"]
+                + source_track["audition_gain_db"],
+                -18.0,
+                places=5,
+            )
+            self.assertAlmostEqual(
+                candidate_track["audition_level"]["measurement"][
+                    "gated_rms_dbfs"
+                ]
+                + candidate_track["audition_gain_db"],
+                -18.0,
+                places=5,
+            )
 
             soundfile = _soundfile()
             for track in first["tracks"]:
@@ -119,8 +143,30 @@ class WorkbenchDecodedStemLoopTests(unittest.TestCase):
                 },
             )
 
-            expected_candidate_sha256 = candidate_track["audio"]["sha256"]
-            Path(candidate_track["audio"]["path"]).write_bytes(b"corrupt-loop-cache")
+            stored["tracks"][1]["audition_gain_db"] += 1.0
+            manifest_path.write_text(json.dumps(stored), encoding="utf-8")
+            with patch.object(
+                artifacts,
+                "render_candidate_preview",
+                side_effect=AssertionError("neutral preview should be reused"),
+            ):
+                rebuilt_level = artifacts.prepare_decoded_stem_loop(
+                    catalog,
+                    stem["stem_id"],
+                    [candidate["candidate_id"]],
+                    0.25,
+                    1.25,
+                )
+            self.assertFalse(rebuilt_level["cache_hit"])
+            self.assertEqual(
+                rebuilt_level["tracks"][1]["audition_gain_db"],
+                first["tracks"][1]["audition_gain_db"],
+            )
+
+            expected_candidate_sha256 = rebuilt_level["tracks"][1]["audio"]["sha256"]
+            Path(rebuilt_level["tracks"][1]["audio"]["path"]).write_bytes(
+                b"corrupt-loop-cache"
+            )
             with patch.object(
                 artifacts,
                 "render_candidate_preview",

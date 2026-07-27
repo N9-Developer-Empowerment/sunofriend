@@ -1,7 +1,15 @@
 # Sunofriend Workbench
 
-The Workbench is the local Phase 5 interface for deciding which MIDI result is
-musically useful. It does not run a model or upload a song. Its explicit
+The Workbench is the graphical local interface for producing Sunofriend's two
+linked creative outputs: reviewed editable MIDI and a MIDI-derived
+song-interpretation WAV rendered from the selected MIDI. The preferred human
+entry point is now `sunofriend tui`, whose **Open visual studio** action starts
+this same
+Workbench with the exact project inputs and the read-only Developer Inspector
+available by default. Direct `sunofriend workbench` remains supported for
+scripts and expert use.
+
+Workbench does not run a model or upload a song. Its explicit
 preview/arrangement actions create content-addressed local audition proxies;
 discovered MIDI remains byte-for-byte unchanged.
 
@@ -14,8 +22,9 @@ uncertainty visible, records an explicit human choice and never infers a winner
 from a score, label, audition count or displayed default.
 
 The current interface supplies per-stem source/candidate playback, persistent
-decisions, neutral preview rendering, selected-arrangement audition and an
-explicit GarageBand pack composer. Phase 5.4 now supplies both a read-only
+decisions, neutral preview rendering, selected-arrangement audition, the linked
+song-interpretation WAV and an explicit GarageBand pack composer. Phase 5.4 now
+supplies both a read-only
 per-stem source/MIDI comparison timeline and a full-song selected-arrangement
 explorer, plus an explicit bridge from verified disputed lead-vocal ranges to
 the existing phrase-review page. Phase 5.5 now adds a default Project Overview,
@@ -28,11 +37,13 @@ canonical, server-derived groups. Phase 5.7 adds fixed-window long-song
 visualization with explicit recovery and a minimal exact full-song chunk
 transport for those same canonical groups. Arbitrary custom mute/solo/gain
 playback remains an explicitly coarse compatibility path.
-The selected-arrangement page now also offers a separate, opt-in,
-source-referenced balanced selected-MIDI WAV with a drum-bus guard,
-sample-peak protection, exact provenance receipt and GarageBand fader recipe. It does not
-replace the dry unity control, record feedback or enter the GarageBand Pack,
-and it is explicitly not final mastering.
+The selected-arrangement page also creates the MIDI-derived
+song-interpretation WAV through the existing source-referenced balanced-render
+contract, with a drum-bus guard, sample-peak protection, exact provenance
+receipt and GarageBand fader recipe. Source stems provide timing, horizon and
+level evidence only and are not mixed into the WAV. It does not replace the
+dry unity control, record feedback or enter the unchanged GarageBand Pack. The
+gain-only WAV is explicitly not mastered.
 Phase 5.8 explains independently verified execution provenance. Phase 5.9 now
 adds the exact-pack interactive tutorial, required 10/10 comprehension quiz and
 two-check local acceptance resolver. That review passed on 22 July 2026, so the
@@ -50,6 +61,11 @@ state explorer for developers who want to understand those contracts before
 reviewing or extending them. See the
 [technical tour](TECHNICAL_TOUR.md) for the implementation path and guided
 usage.
+The [Guided Local Studio TUI plan](LOCAL_STUDIO_TUI.md) explains the terminal
+dashboard/Workbench boundary and the planned conversion, job-ledger and
+structured-feedback increments. Those later TUI capabilities are not part of
+the current Workbench or Phase 5.10a.
+
 The arrangement explorer shows every unique project source stem beside only
 the active explicit main and optional MIDI choices, with temporary visibility,
 mute, solo and level controls. It does not infer an offset: every source and
@@ -74,23 +90,34 @@ bounded local diagnostic state and is not included in review or acceptance
 exports. It is an application-specific learning tool, not a Python line
 debugger, evaluator, shell, SQL editor or filesystem browser.
 
+`sunofriend tui` enables this flag when it owns the Workbench launch so a
+developer can move from the terminal project dashboard to the visual code/state
+explanation in one action. Pass `tui --no-developer-inspector` to retain the
+ordinary Workbench surface. This default changes only view availability: the
+Inspector remains GET-only, read-only and zero-effect.
+
 Follow the worked invocation, architecture map, state-fold example and safe
 extension checklist in [Sunofriend technical tour](TECHNICAL_TOUR.md).
 
 ## Project overview and restart boundary
 
-Workbench now opens on a path-free `sunofriend.workbench-home.v1` projection.
-It derives its counts, stem statuses and one recommended next workflow step only from
-the current catalog plus explicit saved state. It can direct the listener to an
-undecided stem, a stem with no active selection, the full arrangement or the
-pack composer, or truthfully report that no MIDI part is selected. It never
-uses model scores, process labels, preview activity or
-technical metrics to rank a candidate, and navigation records no feedback.
+Workbench opens on the path-free `sunofriend.workbench-home.v1` projection and
+combines it in `/api/project` with the verified
+`sunofriend.product-output-status.v1` projection. Home derives its counts,
+stem statuses and one recommended next workflow step from the current catalog
+plus explicit saved state; output status separately reports whether the exact
+current song-interpretation artifact is ready. The browser can direct the
+listener to an undecided stem, a stem with no active selection, the full
+arrangement, the song-interpretation render or the pack composer, or truthfully
+report that no MIDI part is selected. It never uses model scores, process
+labels, preview activity or technical metrics to rank a candidate, and
+navigation records no feedback.
 
 Routing is deterministic: first visit the first candidate-bearing stem with no
 candidate decision or explicit outcome; then revisit any non-terminal decided
 stem that still has no active main/optional part; then hear selected parts that
-lack `full_mix` context; otherwise compose the pack. When no active
+lack `full_mix` context; then create the exact current song-interpretation WAV
+if it is absent; otherwise compose the pack. When no active
 main/optional part remains, explicit **None are usable** and **I cannot tell**
 outcomes are terminal for resume routing, so they do not create an endless
 revisit loop. They are also no-selection barriers: older main/optional events
@@ -280,9 +307,28 @@ sunofriend workbench "/absolute/path/to/Song-B minor-113bpm-440hz" \
 ```
 
 Run `--inspect` first to see the path-free catalog without starting a server.
-Filename-based discovery infers roles, deduplicates byte-identical MIDI, shows
-at most three normal candidates and keeps `possible`, `uncertain` or `rejected`
-variants under advanced diagnostics.
+Automatic discovery is deliberately role-specific. It rejects
+arrangement-named MIDI, requires one consistent inferred role across all
+note-bearing Clips, infers that role from the basename (or, only when absent
+there, from up to four parent names), rejects BPM differences greater than
+`max(0.5 BPM, 0.5%)`, and rejects an explicit MIDI key whose tonic or mode
+differs from the project. It removes byte-identical files and
+neutral-audition duplicates with the same source-second note geometry, pitches
+and velocities, preferring the clearest role-specific name. This prevents a
+flattened arrangement, a tempo/key transform or an audible duplicate from
+masquerading as one stem's candidate. Use an explicit
+`sunofriend.workbench-catalog.v1` when such a file is a deliberate comparison.
+Malformed or note-free role-specific MIDI remains an explicit unavailable or
+empty diagnostic lane rather than disappearing.
+The normal result space still shows at most three candidates; `possible`,
+`uncertain` or `rejected` variants remain advanced diagnostics.
+
+For synth bass, automatic runs may include `octave_resolved` and
+`continuous_sustain` as explicit challengers. The former changes only strongly
+pYIN-supported octave harmonics. The latter extends only short note ends that
+remain active, voiced and at the same exact pitch. Neither silently replaces
+repair mode's `contour_clean` output. MIDI holds the note continuity; the
+source's buzzing texture remains an instrument/patch property.
 
 Run `sunofriend doctor --require preview` before asking the page to render
 missing previews or the dry selected arrangement. Run
@@ -498,14 +544,26 @@ comparison. When a preview must be rendered, Workbench copies the verified
 candidate MIDI and SoundFont through single open handles into owner-only
 temporary snapshots and renders only from those bytes. It rechecks the
 originals and deletes the snapshots before publishing the preview. Neutral
-preview rendering is limited to MIDI no longer than 20 minutes.
+preview rendering is limited to MIDI no longer than 20 minutes. The current
+policy is `role-neutral-general-midi-v3`; bass uses zero-based program 38,
+published as **GM 39 Synth Bass 1 proxy**.
 
-The selected-arrangement balance feature does not change this comparison
-contract. Per-candidate neutral previews, precise stem loops, precise
-arrangement loops and canonical full-song streams remain unlevelled evidence.
-Source-referenced gain staging is available only as a separate, explicitly
-created selected-MIDI audition after musical choices exist; it is not used to
-rank or promote a candidate.
+Neutral preview WAVs remain renderer-consistent and unnormalised. Only the
+prepared precise per-stem loop applies a disclosed browser audition gain under
+`recorded-zero-source-frame-window-level-matched-v2` and
+`common-target-active-block-rms-v1`. Each decoded source or MIDI proxy is
+measured independently with median active, non-overlapping 400 ms block RMS,
+using the −70 dBFS absolute gate and 10 dB relative gate, and is aimed at
+−18 dBFS. Target trim is bounded to −24…+12 dB, after which −1 dBFS
+sample-peak protection may attenuate further. The page shows the signed gain
+for every source/candidate. A Web Audio `GainNode` applies it without changing
+the decoded WAV, source, preview or MIDI. This is gain-only comparison
+assistance, not LUFS, true-peak, compression, limiting, mastering or blinding.
+
+Card/fallback playback and every canonical arrangement/full-song transport
+remain unlevelled. The MIDI-derived song-interpretation WAV remains a
+separate arrangement-level operation after choices exist; neither path ranks
+or promotes a candidate.
 
 Workbench then verifies the source and neutral-preview hashes and copies each
 through a single open handle into an owner-only, hash-and-size-verified audio
@@ -530,7 +588,7 @@ players share a position in seconds but are not sample-accurate. Their audition
 controls are also feedback- and event-free; use the decoded panel for a precise
 comparison and the fallback only when required.
 
-On **Hear selected arrangement**, set the same kind of 0.5–15 second range and
+On **Build and hear song interpretation**, set the same kind of 0.5–15 second range and
 choose **Prepare precise arrangement loop**. Workbench builds
 `sunofriend.workbench-arrangement-selection.v1` from current saved state. It
 deduplicates byte-identical project sources in catalog order, retains every
@@ -571,11 +629,11 @@ separate Phase 5.5 per-stem comparison; the arrangement view provides:
    arbitrary visibility, mute, solo and 0–100 attenuation. They share elapsed
    seconds but are not sample accurate.
 
-The optional **Balanced, master-protected audition** is a separate rendered
-artifact, not a fourth transport. It contains only the active selected MIDI,
-uses the same neutral previews as inputs, and cannot accept browser-supplied
-track membership or gains. The three playback contracts above retain unity
-gain, including after a balanced artifact has been created.
+The **MIDI-derived song interpretation** is a separate rendered artifact, not a
+fourth transport. It contains only the active selected MIDI, uses the same
+neutral previews as inputs, and cannot accept browser-supplied track membership
+or gains. The three playback contracts above retain unity gain, including
+after a song-interpretation artifact has been created.
 
 For precise full-song playback the browser POSTs exactly the current selection
 manifest hash and one preset name to `/api/decoded-arrangement-stream`; it
@@ -785,8 +843,9 @@ not take over audio.
 The separately prepared dry GM proxy remains the reproducible control and
 downloadable convenience render.
 
-Beside that control, **Create balanced audition** builds an opt-in selected-MIDI
-WAV under `sunofriend.workbench-balanced-arrangement.v1` with policy
+Beside that control, **Create song-interpretation WAV** builds the selected-MIDI
+listening output under the unchanged
+`sunofriend.workbench-balanced-arrangement.v1` schema with policy
 `source-referenced-summed-group-balance-v3`. The request contains only the
 current server-derived selection-manifest hash. Workbench re-derives and
 verifies the active lanes before and after building; a selection changed in
@@ -847,11 +906,22 @@ levels from the neutral SoundFont and still need ear-led adjustment.
 
 Creating, caching, downloading or playing this derivative changes no source,
 MIDI, velocity, timing, selection, rank, default, review event or feedback.
-The dry proxy and unity technical transports remain unchanged. The balanced
-audition is not final mastering and does not replace GarageBand patch choice,
-automation, mixing or mastering. It is currently Workbench-only: there is no
-standalone balance CLI, and the balanced WAV/receipt/recipe are not eligible
-GarageBand Pack Composer items.
+The dry proxy and unity technical transports remain unchanged. The
+song-interpretation WAV is not mastered and does not replace GarageBand patch
+choice, automation, mixing or mastering. It is currently Workbench-only:
+there is no standalone balance CLI, and the WAV/receipt/recipe are not
+eligible GarageBand Pack Composer items.
+
+After downloading that exact balanced WAV, the separate CLI command
+`sunofriend listening-master BALANCED.wav --out FRESH.wav --report FRESH.json`
+can create a fixed two-pass −16 LUFS/−1 dBTP PCM24 listening challenger while
+retaining the exact frame horizon. A third pass verifies the actual encoded
+artifact before owner-only, inode-checked publication. Its receipt says
+`mastered: true` and `release_master: false`. This command is not yet a
+Workbench button, player, feedback form or Pack Composer item, and it does not
+replace the gain-only v3 control. The planned control/challenger review and
+no-silent-promotion contract are in
+[Musical rendering and listening mastering](MUSICAL_RENDERING_AND_MASTERING.md).
 
 Only the buttons under **Save after listening** append `full_mix` decisions.
 Playback and mixer activity never counts as preference, including when the
@@ -903,9 +973,9 @@ embedded producer metadata; inspect the ZIP before sharing it. Import the MIDI
 files onto separate Software Instrument tracks and choose the final patches in
 GarageBand.
 
-The separate balanced selected-MIDI WAV, exact provenance receipt and
+The separate MIDI-derived song-interpretation WAV, exact provenance receipt and
 GarageBand fader recipe are not included in this compatibility handoff or Pack
-Composer v1. Download them explicitly from **Hear selected arrangement** when
+Composer v1. Download them explicitly from **Build and hear song interpretation** when
 useful. Their absence preserves the accepted pack schema and keeps a derived
 listening balance separate from authoritative MIDI.
 
@@ -951,10 +1021,10 @@ a later explicit, hash-pinned catalog contract. The legacy
 `sunofriend.workbench-garageband-handoff.v1` endpoint remains unchanged for
 existing clients.
 
-Pack Composer v1 also excludes the balanced audition WAV, its JSON provenance
+Pack Composer v1 also excludes the song-interpretation WAV, its JSON provenance
 receipt and its fader recipe. They are rebuildable Workbench downloads rather
 than eligible pack records. Adding them later requires a new explicit
-plan/basket/receipt contract; creating a balanced audition does not silently
+plan/basket/receipt contract; creating a song interpretation does not silently
 change the existing safe basket.
 
 ## Learn first, then complete the two acceptance checks
@@ -1661,12 +1731,14 @@ note-free disclosure boundary.
   evidence that the transcription omitted music.
 - The standalone `midi-ab-review` command remains the blind,
   exact-source-window, fixed-window sample-RMS-matched promotion gate; the
-  Workbench decoded loop is not level matched or blinded.
+  Workbench precise per-stem loop is common-target level matched but not
+  blinded. Precise arrangement and full-song transports remain unity-gain and
+  unlevelled.
 - The prepared dry arrangement is still a unity-gain GM proxy and the precise
-  transports stay unlevelled. The separate balanced selected-MIDI audition is
-  gain-only, sample-peak protected and source-referenced; it is neither a
-  complete-instrument check nor final mastering. Installed GarageBand patch
-  choice and final mix/master remain outside Workbench.
+  transports stay unlevelled. The separate MIDI-derived song-interpretation
+  WAV is gain-only, sample-peak protected and source-referenced; it is neither
+  a complete-instrument check nor a mastered output. Installed GarageBand
+  patch choice and final mix/master remain outside Workbench.
 - Note insertion, release-velocity/continuous-expression correction, phrase
   replacement and creative recombination remain later Phase 6 slices. Precise
   arbitrary custom mixes, server-paginated timeline payloads,

@@ -1,15 +1,17 @@
 # Sunofriend
 
-![Sunofriend — From AI stems to playable MIDI](assets/brand/sunofriend-banner-v2.png)
+![Sunofriend — From AI stems to reviewed MIDI and a song interpretation](assets/brand/sunofriend-banner-v2.png)
 
-Sunofriend converts separated Suno/Moises audio stems into editable,
-timing-locked MIDI for GarageBand. It preserves what was actually heard,
-separates uncertain alternatives for auditioning, and clearly labels notes
-that were repaired or musically inferred.
+Sunofriend turns separated Suno/Moises audio stems into two linked creative
+outputs: reviewed, editable, timing-locked MIDI and a MIDI-derived
+song-interpretation WAV rendered from the selected MIDI. It preserves what was
+actually heard, separates uncertain alternatives for auditioning, and clearly
+labels notes that were repaired or musically inferred.
 
 It complements Suno, Moises and GarageBand rather than replacing them: use
 Suno to generate a song, Moises to export stems and chords, Sunofriend to make
-clean MIDI resources, and GarageBand to choose instruments and finish the mix.
+clean MIDI resources and a useful listening interpretation, and GarageBand to
+choose instruments and finish the mix.
 
 Sunofriend's main difference is not one transcription model. It preserves and
 compares a small set of results from several analytical and AI processes—such
@@ -22,6 +24,7 @@ choice; scores and model labels never create an automatic global winner.
 
 | Goal | Command | Timing and data contract |
 | --- | --- | --- |
+| Use the guided human interface | `tui` | Preferred interactive route: local project dashboard, explicit fresh full-project conversion, streamed progress, compact MIDI maps, diagnostics and one-key graphical Workbench with the read-only Developer Inspector available |
 | Convert a complete folder of instrumental stems | `listen-all` | Stem-locked MIDI with exact, repair and reconstruct policies |
 | Turn lead or backing vocals into playable melodies | `vocal-melody` | pYIN/Basic Pitch consensus, repeated-phrase repair, hummed guidance and editable correction artifacts |
 | Compare and conservatively repair vocal trackers | `vocal-trackers` | Immutable pYIN/Basic Pitch evidence, optional RMVPE consensus, and Basic Pitch/GAME boundaries accepted only where pYIN and RMVPE agree on pitch |
@@ -55,7 +58,8 @@ choice; scores and model labels never create an automatic global winner.
 | Split one reviewed MIDI into audible roles | `midi-role-split`, `midi-role-split-resolve` | Explicit source-event cluster choice, exact primary-note partition, optional independently transcribed residual layer, local A/B review and a hash-verified user-selected recommendation |
 | Compare consistent sounds on one fixed MIDI | `timbre-resynthesis` | Level-matched complete-patch, extracted-sampler and source-fitted harmonic-plus-noise auditions with note-by-note silence checks and no MIDI changes |
 | Review and hand off multi-process MIDI alternatives in one local site | `workbench` | Loopback-only Project Overview, precise decoded 0.5–15 second per-stem and canonical selected-arrangement loops, exact canonical full-song chunk playback, a bounded full-song timeline, a coarse arbitrary mixer, append-only decisions, private offline review export and an exact-selected-MIDI GarageBand ZIP; no automatic winner or submission endpoint |
-| Hear selected MIDI at a useful starting balance | `workbench` → **Hear selected arrangement** → **Create balanced audition** | Opt-in, source-referenced gain staging with measured summed-group calibration, a bounded drum-bus guard, audition normalisation and −1 dBFS sample-peak protection; the dry unity control, selected MIDI and decisions remain unchanged |
+| Create the MIDI-derived song-interpretation WAV | `workbench` → **Build and hear song interpretation** → **Create song-interpretation WAV** | Renders the reviewed selected MIDI through neutral instruments with source-referenced timing, horizon and level evidence, measured summed-group calibration, a bounded drum-bus guard, audition normalisation and −1 dBFS sample-peak protection; source stems are not mixed into the WAV, and the dry unity control, selected MIDI and decisions remain unchanged |
+| Create a separate listening-master challenger | `listening-master` | Fixed two-pass FFmpeg render plus encoded-artifact verification at −16 LUFS integrated, 11 LU loudness-range target and −1 dBTP; exact frame horizon, PCM24 WAV, path-free receipt, `mastered: true` and `release_master: false` |
 | Understand Workbench code and state transitions | `workbench --developer-inspector` | Optional, loopback-only, read-only application operation/state explorer; it is not a line debugger, evaluator, shell or filesystem browser and has no decision, basket, MIDI, render or export effect |
 | Learn the workflow and verify one exact GarageBand handoff | `garageband-pack-review`, `garageband-pack-resolve` | Eight-screen interactive tutorial, 10 one-at-a-time comprehension questions, then the two explicit GarageBand and local-usability checks; the resolver re-verifies the downloaded ZIP and has no MIDI, selection, basket, upload or feedback effect |
 | Explore reusable Clip v1 parts in Workbench | `workbench --clip-library --phase6-acceptance --phase6-pack` | Phase 6 Increment 6.0 complete: explicit gated read-only browse/search, path-free detail and lineage, neutral audition and deterministic Clip reconstruction; all three flags are required and no Clip, project, decision or basket is changed |
@@ -170,11 +174,12 @@ still bounded operation for moving the onset of an exact existing pitched or
 drum note while preserving its emitted MIDI duration and every expression
 field. Increment 6.3e is complete and changes only exact existing Note Off
 ticks and their durations, while each Note On stays fixed. Ordinary Workbench
-also now creates an opt-in source-referenced balanced selected-MIDI audition
-with measured summed-group calibration, a drum-bus guard, transparent output gain,
-−1 dBFS sample-peak protection and a GarageBand fader recipe. Its dry unity
-control and selected MIDI stay unchanged; the derivative is neither final
-mastering nor a current GarageBand Pack/CLI output. Broader Phase 6 remains in
+also creates the linked MIDI-derived song-interpretation WAV using the existing
+source-referenced balanced selected-MIDI policy, measured summed-group
+calibration, a drum-bus guard, transparent output gain, −1 dBFS sample-peak
+protection and a GarageBand fader recipe. Its dry unity control and selected
+MIDI stay unchanged; the derivative is neither final mastering nor a current
+GarageBand Pack/CLI output. Broader Phase 6 remains in
 progress, and
 explicit hybrid construction still waits for the
 separate Phase 5.3 blind-choice and source-lineage gates. See the
@@ -190,6 +195,24 @@ Creative mode remapping, tuning/downbeat transforms, note insertion and
 broader phrase editing, plus Clip reuse beyond the bounded
 proposal, remain Phase 6 work, while
 cross-DAW and explicitly consented community work is deferred to Phase 7.
+The **[Guided Local Studio TUI](docs/LOCAL_STUDIO_TUI.md)** makes
+`sunofriend tui` the preferred human entry point without replacing the CLI,
+agent skill or graphical Workbench. Phase 5.10a provides project orientation,
+compact primary MIDI maps, diagnostics and the safely owned Workbench with the
+Developer Inspector available by default. The initial Phase 5.10b increment
+adds an explicit **Convert all stems** action over the production `listen-all`
+and `vocal-melody` engines. A durable job ledger/restart recovery, additional
+operation forms and structured improvement feedback remain planned.
+The accepted Pupsies balanced WAV establishes the paired product goal:
+Sunofriend should provide reviewed editable MIDI and a clear, good-sounding
+MIDI-derived song-interpretation WAV. Source stems provide timing, horizon and
+level evidence for that render; their audio is not mixed into it. The first
+standalone `listening-master` challenger preserves the praised gain-only
+control and adds fixed integrated-loudness and true-peak processing for
+comparison without claiming release approval. See
+**[Musical rendering and listening mastering](docs/MUSICAL_RENDERING_AND_MASTERING.md)**
+for the golden evidence, quality ladder, feedback boundary and maintainability
+plan.
 
 For combining songs, first use `midi-transform` to choose a common key, BPM
 and tuning, then use `midi-anchor` to place confirmed downbeats on the same
@@ -217,14 +240,71 @@ Ready-to-post artwork and suggested copy for X, Bluesky, Threads, Instagram,
 Facebook, WhatsApp and Slack are in the [social media kit](SOCIAL.md). Brand
 files and generation notes are under [`assets/`](assets/).
 
+## Use the Guided Local Studio
+
+For normal interactive use, start with:
+
+```bash
+sunofriend tui
+```
+
+You can enter the project and MIDI result folders in the dashboard, or provide
+them up front:
+
+```bash
+sunofriend tui \
+  "/absolute/path/to/Song-B minor-113bpm-440hz" \
+  --candidate-root "/absolute/path/to/song-midi-output"
+```
+
+To learn the complete conversion journey in the TUI, prefill a new destination
+or type it into **Fresh conversion output**:
+
+```bash
+sunofriend tui \
+  "/absolute/path/to/Song-B minor-113bpm-440hz" \
+  --conversion-output "/absolute/path/to/fresh-song-midi-v1"
+```
+
+This only prefills the editable destination; it never starts work. Review the
+project and output, then choose **Convert all stems** and confirm. The runner:
+
+- rejects an existing output rather than overwriting it;
+- uses repair mode with candidate-variant evaluation for instrumental roles;
+- invokes the normal `listen-all` engine, then invokes `vocal-melody`
+  separately for discovered lead and backing-vocal stems;
+- discloses the bounded proxy routing used for otherwise unsupported file
+  roles: `wind` → `lead`, `rhythm` → `keys`, and `other` → `synth`;
+- skips a near-silent source with a visible reason;
+- streams engine progress into the TUI Activity view; and
+- preserves a clearly partial fresh root if you cancel, while a successful run
+  reloads the dashboard with that new root as the review candidate root.
+
+The completion panel names skipped, failed and proxy-routed roles and shows
+bounded review warnings. Reload verification also checks that every role
+reported as converted is actually visible in the fresh Workbench candidate
+root before it can call the run complete.
+
+The runner creates alternatives but makes no musical decision and selects no
+candidate. It does not yet keep a durable job ledger or resume an interrupted
+job after restarting the TUI. The graphical Workbench remains review-only: use
+it after conversion for waveforms, MIDI lanes, synchronized listening,
+explicit choices, the MIDI-derived song-interpretation WAV and GarageBand ZIP
+composition. Its
+read-only Developer Inspector is available by default. See the
+[Guided Local Studio TUI](docs/LOCAL_STUDIO_TUI.md) for the exact boundary,
+privacy model and remaining delivery order.
+
 ## Use Sunofriend as an AI-agent skill
 
 The repository includes one portable [Sunofriend Agent Skill](skills/sunofriend/)
-for Codex and Claude Code. The skill is the conversational front end: it
+for Codex and Claude Code. The skill remains the conversational expert route: it
 inventories a stem folder, chooses safe commands, runs capability checks,
 keeps source audio local, validates the JSON/MIDI outputs and explains what to
-import into a DAW. The packaged Python CLI remains the deterministic audio and
-MIDI engine.
+import into a DAW. It should prefer `sunofriend tui` when a person wants to
+operate and inspect the project directly, while retaining direct CLI workflows
+for automation and specialist tasks. The packaged Python CLI remains the
+deterministic audio and MIDI engine.
 
 The checked-in discovery links expose the same skill without maintaining two
 copies:
@@ -320,7 +400,40 @@ CoreMIDI destination for `play`. The standard Basic Pitch path uses ONNX
 Runtime, so TensorFlow/TFLite warnings are harmless when the transcription or
 conversion checks pass.
 
-### 3. Review existing MIDI choices in the local Workbench
+### 3. Open the Guided Local Studio
+
+```bash
+.venv/bin/sunofriend tui
+```
+
+Enter a stem folder, then either inspect existing MIDI result roots or enter a
+fresh destination and run **Convert all stems**. An already prepared project
+can be supplied on the command line:
+
+```bash
+.venv/bin/sunofriend tui \
+  "/absolute/path/to/Song-B minor-113bpm-440hz" \
+  --candidate-root "/absolute/path/to/song-midi-output"
+```
+
+To start with the conversion destination already filled in:
+
+```bash
+.venv/bin/sunofriend tui \
+  "/absolute/path/to/Song-B minor-113bpm-440hz" \
+  --conversion-output "/absolute/path/to/fresh-song-midi-v1"
+```
+
+The prefilled path never auto-starts. Confirm the fresh-output operation in the
+TUI. Progress appears in Activity; cancellation retains the partial output for
+inspection but does not resume automatically after restart. On success the TUI
+reloads the new result root. Then use **Open visual studio** for detailed
+comparison and explicit selection. Workbench itself does not transcribe.
+
+The TUI is the preferred human route. Direct CLI and Workbench commands below
+remain supported for repeatable scripts, agent operation and advanced options.
+
+### 4. Review existing MIDI choices directly in the local Workbench
 
 The Workbench is the Phase 5 local interface. It does not upload audio, load
 third-party scripts or start AI inference. It can explicitly run the existing
@@ -786,15 +899,27 @@ The disclosed **Compatibility fallback** keeps the older browser-media players
 for environments where decoded audio cannot be prepared. It is synchronised in
 seconds, not sample-accurate, and its controls are also feedback- and
 event-free. **Render neutral preview** gives candidates for one stem the same
-local SoundFont, gain and role-based GM program; it is renderer-consistent but
-deliberately does not peak-normalise away MIDI expression. Precise preparation
-fails closed unless every candidate preview uses the current SoundFont and
-neutral-renderer policy. The renderer copies verified MIDI and SoundFont bytes
-to owner-only temporary snapshots, while decoded cropping does the same for the
-source and preview audio; those snapshots are removed before results are
-published. Primary candidate audio preloads metadata for quick comparison;
-advanced alternatives do not preload audio until used, which keeps larger
-result spaces responsive.
+local SoundFont and role-based GM program; its WAV stays at renderer gain and
+deliberately does not peak-normalise away MIDI expression. Bass uses zero-based
+program 38, the **GM 39 Synth Bass 1 proxy**, rather than a plucked finger-bass
+proxy. Precise preparation fails closed unless every candidate preview uses
+the current SoundFont and `role-neutral-general-midi-v3` renderer policy.
+
+Only **Prepare precise loop** applies disclosed comparison gains. Under
+`common-target-active-block-rms-v1`, each decoded source or MIDI proxy is
+measured independently with median active 400 ms block RMS and aimed at
+−18 dBFS; trim is bounded to −24…+12 dB and −1 dBFS sample-peak headroom can
+attenuate further. Each button shows its signed gain. A Web Audio `GainNode`
+applies it without changing the source, preview WAV or MIDI. This is gain-only
+comparison assistance, not LUFS matching, true-peak limiting, mastering or
+blinding. Card/fallback playback and all selected-arrangement/full-song
+transports remain unlevelled.
+
+The renderer copies verified MIDI and SoundFont bytes to owner-only temporary
+snapshots, while decoded cropping does the same for source and preview audio;
+those snapshots are removed before results are published. Primary candidate
+audio preloads metadata for quick comparison; advanced alternatives do not
+preload audio until used, which keeps larger result spaces responsive.
 
 If a requested loop extends beyond available source or preview audio,
 Workbench pads that track's end with generated silence and identifies its
@@ -864,7 +989,7 @@ note on every audio progress event. Opening an advanced lane verifies the
 source identity once and reuses the already loaded source projection instead
 of rebuilding the full waveform.
 
-The **Hear selected arrangement** page includes only the active explicit main
+The **Build and hear song interpretation** page includes only the active explicit main
 choice and explicit optional choices. Full-mix confirmation is stored with a
 `full_mix` listening context. Its full-song explorer shows the source stems and
 selected MIDI as separate lanes with one playhead, loop and fit/4×/16× views.
@@ -894,7 +1019,7 @@ There are three deliberately distinct arrangement playback paths:
 
 These three technical playback paths deliberately remain unlevelled. After
 explicitly choosing the main and optional MIDI parts, the same page offers a
-separate **Balanced, master-protected audition**. It measures each neutral MIDI
+separate **MIDI-derived song interpretation**. It measures each neutral MIDI
 lane against its matching source stem, measures the actual waveform sum when
 several selected alternatives refer to the same stem, and calibrates that group
 back towards one source reference. It applies one shared drum-bus attenuation
@@ -915,6 +1040,38 @@ selected MIDI, velocity or timing. The dry unity-gain proxy remains the
 reproducible technical control. The balanced output is sample-peak protected,
 not LUFS- or true-peak mastered; final patch choice, automation, mixing and
 mastering remain in GarageBand.
+
+To create a separate fixed-policy listening-master challenger from a downloaded
+balanced control, use two fresh output paths:
+
+```bash
+sunofriend listening-master \
+  "/absolute/path/to/balanced-selected-midi-preview.wav" \
+  --out "/absolute/fresh/path/listening-master.wav" \
+  --report "/absolute/fresh/path/listening-master.json"
+```
+
+Listening Master v1 uses two-pass FFmpeg `loudnorm` at −16 LUFS integrated,
+11 LU loudness-range target and −1 dBTP, then independently measures the
+encoded PCM24 artifact and retains the input's exact sample rate, channel count
+and frame horizon. Private workspaces are mode `0700`, files are mode `0600`
+from creation, and publication/rollback is device/inode checked. Its report
+says `mastered: true` because loudness normalisation and true-peak limiting
+were applied, and `release_master: false` because it is not a human-approved
+release master. It does not replace the v3 balanced control, change selected
+MIDI or record a preference. See
+[Musical rendering and listening mastering](docs/MUSICAL_RENDERING_AND_MASTERING.md)
+before comparing or promoting a challenger.
+
+The local feedback foundation can bind an explicit six-axis review to the
+exact balanced receipt/WAV or to an exact master receipt/WAV linked back to
+that control, then build a deterministic advisory history after re-verifying
+them. Separate artifact and domain-hashed reviewer/session identities support
+independent reviews without storing the raw key. An unmastered control must
+rate mastering as `cannot_tell`. It never learns from playback or silently
+changes a candidate, instrument, mix, ranking or default. A guided
+control-versus-challenger feedback form in Workbench/TUI is the next increment;
+there is not yet a public feedback command or button.
 
 The exact full-song path does not add an arbitrary precise mixer. Its request
 contains only the current selection-manifest hash and one of the four preset
@@ -993,7 +1150,7 @@ metadata, so inspect the ZIP before sharing it. The earlier source-free
 If no active MIDI remains, Pack Composer explains that no parts are ready and
 links back to Project Overview instead of presenting an unusable empty build.
 The balanced WAV, provenance receipt and fader recipe are not yet GarageBand
-Pack items. Download them explicitly from **Hear selected arrangement** if
+Pack items. Download them explicitly from **Build and hear song interpretation** if
 useful, then apply the suggested relative trims by hand after choosing
 comparable GarageBand patches.
 
@@ -1098,10 +1255,20 @@ atomically and exits without opening a browser or starting an HTTP server. The
 JSON is a private archive: unlike the separate contribution preview, it may
 contain absolute local paths and free-text notes.
 
-Automatic discovery is intentionally conservative. If filenames do not make
-the source/candidate role clear, provide an explicit
-`sunofriend.workbench-catalog.v1` JSON through `--catalog`; candidate files
-must still be inside the project or an explicitly named `--candidate-root`.
+Automatic discovery is deliberately role-specific. It rejects
+arrangement-named MIDI, requires one consistent inferred role across all
+note-bearing Clips, infers that role from the basename (or, only when absent
+there, from up to four parent names), rejects BPM differences greater than
+`max(0.5 BPM, 0.5%)`, and rejects an explicit MIDI key whose tonic or mode
+differs from the project. It then removes both byte-identical files and
+neutral-audition duplicates with the same source-second note starts/ends,
+pitches and velocities, preferring the clearest role-specific name. These
+rules prevent a flattened multi-role arrangement, a tempo/key transform or an
+audible duplicate from masquerading as another stem candidate. Use an explicit
+`sunofriend.workbench-catalog.v1` when such a file is a deliberate comparison;
+candidate files must still be inside the project or an explicitly named
+`--candidate-root`. A malformed or note-free role-specific file remains an
+explicit unavailable or empty diagnostic lane rather than disappearing.
 Role tags are one-line musical descriptions of at most 80 characters, not file
 references. New path-like roles are rejected. A legacy saved role
 that contains a POSIX, home-relative, Windows, UNC or relative local path is
@@ -2368,6 +2535,58 @@ conversion:
 
 The results are in `mode_exact/`, `mode_repair/` and `mode_reconstruct/`.
 
+### Continuous synth bass and octave harmonics
+
+Bass conversion now publishes two additional challengers without replacing
+repair mode's `contour_clean` main output:
+
+- `octave_resolved` preserves note count, starts, ends, velocities and pitch
+  classes. It moves a note by an octave only when pYIN is voiced across at
+  least 70% of that note and one exact rounded pitch accounts for at least 80%
+  of its voiced frames.
+- `continuous_sustain` starts from that octave-resolved line and extends a
+  short note end to the following onset only when the gap is 35 ms–1.25 beats
+  long and source activity, pYIN voicing and the same exact pitch support it.
+  Longer, quiet, unvoiced or pitch-changing gaps remain rests.
+
+MIDI note duration can describe continuous accompaniment, but MIDI notes do
+not contain the source waveform's buzz. That texture comes from the selected
+instrument. Workbench therefore uses the broad-family **GM 39 Synth Bass 1**
+proxy for bass, while GarageBand remains the place to choose the final patch.
+Listen separately for contour/register, continuity/true rests and timbre.
+
+This Pupsies command creates the new alternatives:
+
+```bash
+PUPSIES="/Users/errolelliott/IdeaProjects/Sunofriend/work/pupsies - 01. misery. (1)-B major-119bpm-440hz"
+
+.venv/bin/sunofriend listen-all "$PUPSIES" \
+  --out-dir "work/pupsies-misery-continuous-bass-v3" \
+  --parts bass \
+  --conversion-mode repair \
+  --evaluate-variants
+```
+
+On that local run, the 165-note `octave_resolved` lane changed 31 octave
+harmonics and raised exact octave-resolved pYIN agreement from 79.2% to 90.9%.
+The `continuous_sustain` lane then extended 51 note ends by 10.761 seconds in
+total, reached 89.7% of pYIN-voiced frames, and measured 91.6% exact pitch
+agreement. Those are engineering diagnostics, not an automatic musical
+preference.
+
+Restart any older TUI/Workbench process so the new renderer policy is loaded,
+then compare the three primary bass lanes with fresh decision state:
+
+```bash
+.venv/bin/sunofriend tui "$PUPSIES" \
+  --candidate-root "$PWD/work/pupsies-misery-continuous-bass-v3" \
+  --state-dir "$PWD/work/pupsies-misery-continuous-bass-review-state-v3"
+```
+
+Choose **Open visual studio**, open **bass**, set a recognisable 10–15 second
+range and choose **Prepare precise loop**. The buttons disclose their temporary
+audition gains. The Developer Inspector is enabled by default.
+
 ### Worked example: The Aisle at Lidl
 
 The committed [example pack](examples/the-aisle-at-lidl/) contains the selected
@@ -2828,7 +3047,7 @@ Replace `GarageBand Virtual In` with the exact or uniquely matching destination
 shown by `midi-ports`. `play` auditions the notes; it does not start recording
 in GarageBand.
 
-### Make a balanced combined MIDI audition
+### Make a MIDI-derived song interpretation
 
 The ordinary combined FluidSynth render is intentionally a dry unity-gain
 technical control. With several drum-family tracks, that sum can be valid but
@@ -2840,15 +3059,16 @@ musically unbalanced. To make a separate listening derivative:
    .venv/bin/sunofriend doctor --require convert
    ```
 
-   The dry control alone needs only `--require preview`; the balanced audition
-   additionally needs NumPy and SoundFile, which `--require convert` checks.
+   The dry control alone needs only `--require preview`; the
+   song-interpretation WAV additionally needs NumPy and SoundFile, which
+   `--require convert` checks.
 2. Start `workbench` with the original stems and the candidate roots for the
    song, as shown in **Getting started**.
 3. Save the MIDI tracks you want as **Use as main** or **Keep optional**.
-4. Open **Hear selected arrangement** and render the **Prepared dry control
+4. Open **Build and hear song interpretation** and render the **Prepared dry control
    mix** first.
-5. Choose **Create balanced audition**.
-6. Compare the two players. Download the balanced WAV, exact provenance receipt
+5. Choose **Create song-interpretation WAV**.
+6. Compare the two players. Download the song-interpretation WAV, exact provenance receipt
    or GarageBand fader recipe from that panel.
 
 The balanced builder measures 400 ms active blocks in each matching source
@@ -3300,6 +3520,14 @@ MIDI nor the prepared dry control is rewritten. These files are currently
 Workbench downloads only; neither `preview` nor a standalone balance command
 creates them, and Pack Composer does not include them.
 
+`sunofriend listening-master` can take the downloaded balanced WAV as an exact
+control and create a separate PCM24 challenger plus
+`sunofriend.listening-master.v2` receipt. The v2 evidence schema pins and
+rechecks the FFmpeg executable identity for every pass. The command never edits the
+Workbench cache or balance receipt and refuses to replace an existing output.
+The listening master is currently a standalone CLI artifact, not a Workbench
+player or Pack Composer item.
+
 ### Output layouts
 
 - A full batch writes parts, `full_arrangement.mid`, variants and
@@ -3322,7 +3550,7 @@ current, and another conversion mode cannot overwrite the result.
 | Kick/snare | Deep/high kick and body/bright snare alternatives retain distinct timbres |
 | Hats/cymbals/toms | Closed/open, ride/crash and floor/low/mid/high family tracks; recurring hat repair is mode-controlled |
 | `other_kit` | Mixed events are classified as kicks, snares, hats, toms or crashes; unknowns stay `uncertain` |
-| Bass | Hybrid Basic Pitch + pYIN contour with `raw_verified`, `contour_clean` and `root_safe` choices |
+| Bass | Hybrid Basic Pitch + pYIN contour with separate `raw_verified`, `contour_clean`, pYIN-backed `octave_resolved`, source-supported `continuous_sustain` and chord-inferred `root_safe` choices; the two new repairs are challengers, not the repair-mode default |
 | Keys/piano | Polyphonic evidence separated into melody, accompaniment and `uncertain`; chords constrain accompaniment only |
 | Lead/synth | Audio evidence cleaned against the metronome, key and chord chart in repair/reconstruct modes |
 | Strings | Source-pitch transcription in exact/repair; reconstruct publishes a chart-based part but keeps it outside the default arrangement for auditioning |

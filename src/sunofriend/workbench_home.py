@@ -52,12 +52,18 @@ def build_workbench_home(
         needs_full_mix_count=needs_full_mix_count,
     )
 
+    source_stem_count = len(rows)
+    midi_ready_stem_count = len(candidate_rows)
+    missing_midi_stem_count = source_stem_count - midi_ready_stem_count
+
     return {
         "schema": WORKBENCH_HOME_SCHEMA,
         "project_id": str(catalog.get("project_id", "")),
         "counts": {
-            "stem_count": len(rows),
-            "candidate_stem_count": len(candidate_rows),
+            "stem_count": source_stem_count,
+            "candidate_stem_count": midi_ready_stem_count,
+            "midi_ready_stem_count": midi_ready_stem_count,
+            "missing_midi_stem_count": missing_midi_stem_count,
             "decision_recorded_stem_count": decision_recorded_count,
             "selected_part_count": selected_part_count,
             "selected_main_count": sum(row["selected_main_count"] for row in rows),

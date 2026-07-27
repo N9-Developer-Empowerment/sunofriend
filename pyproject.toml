@@ -1,7 +1,7 @@
 [project]
 name = "sunofriend"
 dynamic = ["version"]
-description = "Convert AI-generated music stems and vocals into evaluated, GarageBand-ready MIDI."
+description = "Create reviewed MIDI and a balanced song-interpretation WAV from separated music stems."
 readme = "PYPI.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -29,7 +29,9 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Topic :: Multimedia :: Sound/Audio :: MIDI",
 ]
-dependencies = []
+dependencies = [
+    "textual>=8.2,<9",
+]
 
 [project.urls]
 Homepage = "https://github.com/N9-Developer-Empowerment/sunofriend"

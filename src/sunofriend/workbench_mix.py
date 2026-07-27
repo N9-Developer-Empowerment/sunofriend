@@ -15,27 +15,39 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from .role_semantics import is_drum_role
+from .workbench_balanced_contract import BALANCED_MIX_CONTRACT
 
 
-BALANCED_ARRANGEMENT_SCHEMA = "sunofriend.workbench-balanced-arrangement.v1"
-BALANCED_MIX_REPORT_SCHEMA = "sunofriend.workbench-balanced-mix-report.v1"
-BALANCED_MIX_POLICY = "source-referenced-summed-group-balance-v3"
+BALANCED_ARRANGEMENT_SCHEMA = BALANCED_MIX_CONTRACT.arrangement_schema
+BALANCED_MIX_REPORT_SCHEMA = BALANCED_MIX_CONTRACT.mix_report_schema
+BALANCED_MIX_POLICY = BALANCED_MIX_CONTRACT.policy
 
-_WINDOW_SECONDS = 0.4
-_ABSOLUTE_GATE_DBFS = -70.0
-_RELATIVE_GATE_DB = 10.0
-_OVERLAP_RELATIVE_GATE_DB = 30.0
-_LANE_MIN_GAIN_DB = -24.0
-_LANE_MAX_GAIN_DB = 6.0
-_DRUM_BUS_MAXIMUM_ATTENUATION_DB = -18.0
-_DRUM_VS_NON_DRUM_TARGET_DB = -2.0
-_DRUM_P95_ALLOWANCE_DB = 3.0
-_AUDITION_TARGET_GATED_RMS_DBFS = -18.0
-_SAMPLE_PEAK_CEILING_DBFS = -1.0
-_MAXIMUM_NORMALISATION_BOOST_DB = 12.0
-_NORMALISATION_TARGET_TOLERANCE_DB = 0.1
-_MAXIMUM_LANES = 24
-_MAXIMUM_SECONDS = 20 * 60
+_WINDOW_SECONDS = BALANCED_MIX_CONTRACT.window_seconds
+_ABSOLUTE_GATE_DBFS = BALANCED_MIX_CONTRACT.absolute_gate_dbfs
+_RELATIVE_GATE_DB = BALANCED_MIX_CONTRACT.relative_gate_db
+_OVERLAP_RELATIVE_GATE_DB = BALANCED_MIX_CONTRACT.overlap_relative_gate_db
+_LANE_MIN_GAIN_DB, _LANE_MAX_GAIN_DB = (
+    BALANCED_MIX_CONTRACT.source_match_gain_db
+)
+_DRUM_BUS_MAXIMUM_ATTENUATION_DB = (
+    BALANCED_MIX_CONTRACT.maximum_drum_bus_attenuation_db
+)
+_DRUM_VS_NON_DRUM_TARGET_DB = (
+    BALANCED_MIX_CONTRACT.drum_overlap_median_target_db
+)
+_DRUM_P95_ALLOWANCE_DB = BALANCED_MIX_CONTRACT.drum_overlap_p95_maximum_db
+_AUDITION_TARGET_GATED_RMS_DBFS = (
+    BALANCED_MIX_CONTRACT.audition_target_gated_rms_dbfs
+)
+_SAMPLE_PEAK_CEILING_DBFS = BALANCED_MIX_CONTRACT.sample_peak_ceiling_dbfs
+_MAXIMUM_NORMALISATION_BOOST_DB = (
+    BALANCED_MIX_CONTRACT.maximum_normalisation_boost_db
+)
+_NORMALISATION_TARGET_TOLERANCE_DB = (
+    BALANCED_MIX_CONTRACT.normalisation_target_tolerance_db
+)
+_MAXIMUM_LANES = BALANCED_MIX_CONTRACT.maximum_lanes
+_MAXIMUM_SECONDS = BALANCED_MIX_CONTRACT.maximum_seconds
 
 
 def build_balanced_midi_audition(
@@ -55,7 +67,10 @@ def build_balanced_midi_audition(
     if not lanes:
         raise ValueError("balanced MIDI audition requires at least one selected lane")
     if len(lanes) > _MAXIMUM_LANES:
-        raise ValueError("balanced MIDI audition supports at most 24 selected lanes")
+        raise ValueError(
+            "balanced MIDI audition supports at most "
+            f"{_MAXIMUM_LANES} selected lanes"
+        )
 
     np, soundfile = _audio_modules()
     prepared = [dict(lane) for lane in lanes]
@@ -115,7 +130,10 @@ def build_balanced_midi_audition(
     if selected_output_frames <= 0:
         raise ValueError("balanced MIDI audition output must contain audio frames")
     if selected_output_frames > sample_rate * _MAXIMUM_SECONDS:
-        raise ValueError("balanced MIDI audition supports songs up to 20 minutes")
+        raise ValueError(
+            "balanced MIDI audition supports songs up to "
+            f"{_MAXIMUM_SECONDS // 60} minutes"
+        )
 
     # Balance evidence is scoped to exactly the audio that will be heard.  A
     # renderer tail or stray transcription after the source-song horizon must
@@ -438,50 +456,17 @@ def build_balanced_midi_audition(
     result = {
         "schema": BALANCED_MIX_REPORT_SCHEMA,
         "policy": BALANCED_MIX_POLICY,
-        "label": "Balanced selected-MIDI audition",
+        "label": BALANCED_MIX_CONTRACT.label,
         "path_free_report": True,
         "mastered": False,
-        "mastering_boundary": (
-            "gain-only source-referenced balance, audition normalisation and "
-            "sample-peak protection; not LUFS, true-peak or release mastering"
-        ),
+        "mastering_boundary": BALANCED_MIX_CONTRACT.mastering_boundary,
         "sample_rate": sample_rate,
         "channels": channels,
         "frames": selected_output_frames,
         "duration_seconds": _rounded(selected_output_frames / sample_rate),
-        "measurement": {
-            "window_seconds": _WINDOW_SECONDS,
-            "absolute_gate_dbfs": _ABSOLUTE_GATE_DBFS,
-            "relative_gate_db": _RELATIVE_GATE_DB,
-            "overlap_relative_gate_db": _OVERLAP_RELATIVE_GATE_DB,
-            "statistic": "median active non-overlapping block RMS",
-            "peak_kind": "sample peak, not true peak",
-            "scope": (
-                "render horizon only; excluded source or neutral-preview tails "
-                "are not measured"
-            ),
-        },
+        "measurement": BALANCED_MIX_CONTRACT.measurement_document(),
         "source_groups": public_source_groups,
-        "limits": {
-            "source_match_gain_db": [_LANE_MIN_GAIN_DB, _LANE_MAX_GAIN_DB],
-            "maximum_drum_bus_attenuation_db": (
-                _DRUM_BUS_MAXIMUM_ATTENUATION_DB
-            ),
-            "drum_overlap_median_target_db": (
-                _DRUM_VS_NON_DRUM_TARGET_DB
-            ),
-            "drum_overlap_p95_maximum_db": _DRUM_P95_ALLOWANCE_DB,
-            "audition_target_gated_rms_dbfs": (
-                _AUDITION_TARGET_GATED_RMS_DBFS
-            ),
-            "sample_peak_ceiling_dbfs": _SAMPLE_PEAK_CEILING_DBFS,
-            "maximum_normalisation_boost_db": (
-                _MAXIMUM_NORMALISATION_BOOST_DB
-            ),
-            "normalisation_target_tolerance_db": (
-                _NORMALISATION_TARGET_TOLERANCE_DB
-            ),
-        },
+        "limits": BALANCED_MIX_CONTRACT.limits_document(),
         "lanes": public_lanes,
         "drum_bus": {
             "before_guard": _public_metrics(drum_metrics),
@@ -497,12 +482,7 @@ def build_balanced_midi_audition(
             ),
             "after_guard_overlap": public_after_guard_overlap_metrics,
             **drum_guard_status,
-            "policy": (
-                "on time-aligned 400 ms windows where both buses are active, "
-                "the guard aims for median drum level at least 2 dB below "
-                "non-drums and p95 drum excess no more than 3 dB, within the "
-                "maximum attenuation limit"
-            ),
+            "policy": BALANCED_MIX_CONTRACT.drum_guard_policy,
         },
         "output": {
             "pre_master": public_pre_master,
