@@ -44,6 +44,21 @@ approval, integration partnership, or endorsement.
 > Sunofriend—named from the Hindi **सुनो**, “listen”—turns separated song
 > parts into editable MIDI interpretations and a balanced MIDI-derived WAV.
 
+### Newcomer invitation
+
+> Ask Codex to use the Sunofriend skill. It can help you try a built-in demo,
+> use stems you already have or find a route to stems you are allowed to
+> process, one step at a time.
+
+### Agent-readable product definition
+
+> Sunofriend is a local-first macOS music application and agent skill. Given
+> authorised separated WAV stems, it compares analytical and optional local-AI
+> transcription processes and produces editable MIDI plus a balanced
+> MIDI-derived song-interpretation WAV. Its built-in synthetic demo requires no
+> user-supplied stems. It is not a stem separator, DAW, music downloader,
+> waveform reconstructor or human-approved release-mastering service.
+
 ### Short origin and distinction
 
 > **सुनो** (*suno*) is Hindi for “listen.” Sunofriend is a friend that listens:
@@ -74,6 +89,24 @@ approval, integration partnership, or endorsement.
   the Sunofriend identity.
 - It is fine to describe an authorised workflow factually, for example:
   **Suno (third-party) → Moises → Sunofriend → DAW**.
+
+## Product doorway
+
+For a non-technical audience, present the product in this order:
+
+1. **Hear an example.**
+2. **Open sunofriend.com and copy the two Codex prompts.**
+3. **Choose demo, existing stems or help obtaining authorised stems.**
+4. **Listen to the resulting WAV.**
+5. **Open the MIDI in a DAW or explore alternatives in Studio.**
+
+Do not lead a newcomer with Git, Python, Homebrew, FluidSynth, model names or
+the full command catalogue. Those details remain available to developers and
+Studio users, but they are implementation details rather than the promise.
+
+The copy must not imply that an ordinary browser chat can control a Mac.
+Agent-led installation requires a coding-agent surface with local file and
+terminal access. Setup changes and downloads must remain permission-gated.
 
 ## Visual identity
 

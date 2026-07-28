@@ -2,13 +2,16 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://sunofriend.example.com";
+  process.env.NEXT_PUBLIC_SITE_URL || "https://sunofriend.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "Sunofriend — Listen deeper. Create further.",
+  title: {
+    default: "Sunofriend — Hear the song. Change the parts.",
+    template: "%s — Sunofriend",
+  },
   description:
-    "Named from the Hindi सुनो, “listen”: Sunofriend turns separated music stems into editable MIDI and a balanced MIDI-derived song interpretation. Independent of Suno Inc.",
+    "Use the Sunofriend skill with Codex to turn authorised music stems into editable MIDI, a balanced song-interpretation WAV and a starter ZIP on your Mac.",
   applicationName: "Sunofriend",
   alternates: {
     canonical: "/",
@@ -24,6 +27,9 @@ export const metadata: Metadata = {
     "third-party Suno stems",
     "Moises stems",
     "music transcription",
+    "Codex music skill",
+    "AI agent skill",
+    "local music tool",
   ],
   authors: [{ name: "Unsigned Media Ltd" }],
   creator: "Unsigned Media Ltd",
@@ -34,9 +40,9 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    title: "Sunofriend — Listen deeper. Create further.",
+    title: "Sunofriend — Hear the song. Change the parts.",
     description:
-      "सुनो means “listen.” Sunofriend is an independent music tool that turns stems into editable MIDI and a balanced song interpretation—not a Suno Inc. product.",
+      "Let Codex guide the local setup. Authorised stems become editable MIDI, a balanced MIDI-derived listening WAV and a starter ZIP.",
     siteName: "Sunofriend",
     images: [
       {
@@ -49,9 +55,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Sunofriend — Listen deeper. Create further.",
+    title: "Sunofriend — Hear the song. Change the parts.",
     description:
-      "Named from Hindi सुनो, “listen.” Independent of Suno Inc. Stems in; editable MIDI and a balanced interpretation out.",
+      "Use the Sunofriend skill with Codex: authorised stems in; editable MIDI, listening WAV and a starter ZIP out.",
     images: ["/og.png"],
   },
 };

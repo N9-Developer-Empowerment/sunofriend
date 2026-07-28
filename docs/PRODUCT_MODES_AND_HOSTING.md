@@ -1,16 +1,19 @@
 # Product modes and the hosted future
 
-Status: Simple and Studio are local alpha experiences. Hosted processing,
-accounts and payment are product plans, not implemented services.
+Status: the skill-led setup, built-in demo, Simple and Studio are local alpha
+experiences. Hosted processing, accounts and payment are product plans, not
+implemented services.
 
 ## Product goal
 
 Sunofriend should help two kinds of musician without splitting into two
 different audio engines:
 
-1. A person who wants to provide stems, choose one clear action and receive
+1. A person who may have no stems or technical setup and needs an agent to
+   explain the choices, inspect first and run a safe built-in demo.
+2. A person who wants to provide stems, choose one clear action and receive
    useful MIDI plus a listenable WAV.
-2. A person who wants to understand, compare and improve how that result was
+3. A person who wants to understand, compare and improve how that result was
    made.
 
 Both journeys use the same production conversion and rendering services.
@@ -28,6 +31,31 @@ launch.
 This distinction lets Sunofriend remain approachable without losing its main
 advantage: it can preserve several analytical, tracker, AI and repair results
 instead of hiding every stem behind one model answer.
+
+## Agent-led first door
+
+The public beginner journey starts with the installable `$sunofriend` skill,
+not a repository clone or a list of audio dependencies.
+
+The skill:
+
+1. offers a built-in demo, existing stems or help obtaining authorised stems;
+2. runs a read-only macOS setup plan;
+3. explains network and machine changes in plain language;
+4. requires one approval to prepare only the source;
+5. shows the exact prepared commit and requires a separate approval to install
+   that same unchanged commit;
+6. can run the deterministic `demo` or `create` command; and
+7. presents the balanced WAV before the implementation evidence.
+
+The setup helper uses an isolated local checkout and preserves an existing
+checkout. It does not install Homebrew, optional AI runtimes or checkpoints.
+Those remain separate, explicit choices.
+
+This agent route is an interface over the same local engine. It is not an
+online conversion service, a second implementation or permission for an agent
+to upload private audio. A standard web chat without local workspace and
+terminal access cannot run it.
 
 ## Simple mode
 
@@ -185,21 +213,22 @@ new musician can install and use Sunofriend unaided.
 Before presenting it publicly as easy for non-technical users, run a small
 clean-machine acceptance programme. Give each participant only:
 
-- the repository or packaged-app link;
-- the beginner getting-started page;
-- their own authorised stem folder; and
+- the website or repository README;
+- the two agent-skill prompts;
+- the built-in demo as the default first route;
+- an authorised stem folder only for a second test; and
 - the issue/feedback link.
 
 Collect explicit answers to:
 
-1. Could they install without live developer intervention?
-2. Did the capability checks explain any missing component?
-3. Did the app recognise their folder and roles?
-4. Did **Create MIDI + WAV** finish?
+1. Could they install the skill without cloning the repository?
+2. Did the skill offer demo, existing stems and stem-source help clearly?
+3. Did the read-only setup plan make every proposed change understandable?
+4. Could they complete the demo without live developer intervention?
 5. Could they find and play the WAV?
-6. Could they find and import the MIDI at the correct BPM?
-7. Did the WAV help them understand or reuse the song?
-8. Which stem roles were useful or weak?
+6. Could they find the MIDI and ZIP?
+7. Did the WAV help them understand or reuse the synthetic song?
+8. On a second run, did the app recognise their real folder and roles?
 9. Did they understand that the automatic result was unreviewed?
 10. Would they use it again, and in which DAW?
 
@@ -214,13 +243,15 @@ finished one-click consumer product.
 
 ## Packaging work before hosting
 
-The current clone-and-venv setup is still technical. The local product should
-progress through:
+The skill now hides much of the clone-and-venv setup, but the underlying local
+installation remains technical and macOS-specific. The local product should
+continue through:
 
 1. a stable versioned release and migration notes;
 2. a reproducible end-user package that does not require an editable checkout;
 3. signed/notarised macOS distribution when practical;
-4. first-run dependency and SoundFont setup with clear licences;
+4. acceptance testing and refinement of the implemented permission-gated
+   dependency and SoundFont helper;
 5. a project picker and output reveal action;
 6. resumable conversion jobs rather than only a preserved partial folder;
 7. structured, opt-in beginner feedback; and

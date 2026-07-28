@@ -20,24 +20,42 @@ body:
   - type: input
     id: environment
     attributes:
-      label: Mac model, macOS version and architecture
-      placeholder: "Example: MacBook Air M2, macOS 15.5, Apple Silicon"
-    validations:
-      required: true
+      label: Mac model, macOS version and architecture, if known
+      placeholder: "Example: MacBook Air M2, macOS 15.5, Apple Silicon — or write unknown"
   - type: input
     id: sunofriend
     attributes:
-      label: Sunofriend version or commit
-      placeholder: "Run: .venv/bin/sunofriend --version"
+      label: Sunofriend version or commit, if installation reached that point
+      placeholder: "Ask the skill to report this, or write not installed / not reached"
+  - type: dropdown
+    id: starting_route
+    attributes:
+      label: Which starting route did you use?
+      options:
+        - Codex and the Sunofriend skill
+        - Manual Getting started guide
+        - Existing installation
+        - Someone else installed it
+    validations:
+      required: true
+  - type: dropdown
+    id: source_route
+    attributes:
+      label: Which music route did you choose?
+      options:
+        - Built-in synthetic demo
+        - My own authorised stems
+        - Help obtaining authorised stems
+        - I did not reach this choice
     validations:
       required: true
   - type: dropdown
     id: install
     attributes:
-      label: Could you install it using only the Getting started guide?
+      label: Could you complete setup without live developer help?
       options:
-        - Yes, without help
-        - Yes, after solving a documented problem
+        - Yes, and every proposed change was clear
+        - Yes, but one or more changes were unclear
         - Yes, but I needed help
         - No
     validations:
@@ -56,7 +74,7 @@ body:
   - type: dropdown
     id: stems
     attributes:
-      label: Did Simple mode recognise your stem folder and roles?
+      label: Did Sunofriend recognise the demo or your stem folder and roles?
       options:
         - Yes, all expected roles
         - Partly
@@ -67,7 +85,7 @@ body:
   - type: dropdown
     id: completion
     attributes:
-      label: Did Create MIDI + WAV finish?
+      label: Did the automatic MIDI + WAV operation finish?
       options:
         - Yes
         - It finished with understandable warnings
@@ -111,6 +129,7 @@ body:
         - Somewhat useful
         - Not useful
         - I could not play it
+        - I did not reach an output
     validations:
       required: true
   - type: textarea

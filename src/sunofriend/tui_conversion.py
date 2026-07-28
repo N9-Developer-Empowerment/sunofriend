@@ -42,6 +42,11 @@ _WARNING_LINE = re.compile(
     r"^(?:sunofriend:|warning:|evaluation warning:)",
     re.IGNORECASE,
 )
+# Basic Pitch logs these optional-backend notices even though Sunofriend pins
+# and uses its ONNX path. They are not an incomplete conversion or user action.
+_OPTIONAL_BASIC_PITCH_BACKEND_WARNING = re.compile(
+    r"^WARNING:root:(?:tflite-runtime|Tensorflow) is not installed\.",
+)
 _PATH_FRAGMENT = re.compile(r"(?<![A-Za-z0-9])(?:/[^ \t\r\n:]+)+")
 _TOKEN_FRAGMENT = re.compile(r"([#?&]token=)[^&#\s]+", re.IGNORECASE)
 _MAX_CHILD_LINE = 500
@@ -743,7 +748,10 @@ class ProductionFullConversionRunner:
                     warnings.append(
                         "A progress observer failed; conversion continued"
                     )
-                if _WARNING_LINE.match(clean):
+                if (
+                    _WARNING_LINE.match(clean)
+                    and not _OPTIONAL_BASIC_PITCH_BACKEND_WARNING.match(clean)
+                ):
                     warning = _safe_child_warning(clean)
                     if warning:
                         warnings.append(warning)

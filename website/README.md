@@ -1,8 +1,10 @@
 # Sunofriend launch site
 
-This is the public, serverless launch site for Sunofriend. It explains the
-local alpha, gives musicians a first-song route, links to listening examples
-and asks for the feedback that will decide whether a hosted conversion pilot
+This is the public, serverless launch site for Sunofriend. Its main page is a
+plain-language route for musicians: install the official Sunofriend skill
+first, let Codex guide local setup, then choose existing stems, help obtaining
+stems or the no-private-audio worked demo. It links to listening examples and
+asks for the feedback that will decide whether a hosted conversion pilot
 should be built.
 
 The public strapline is **Listen deeper. Create further.** The name is taken
@@ -19,6 +21,28 @@ The website and the music engine have deliberately different boundaries:
   GitHub issue forms; and
 - Sunofriend audio processing remains local. The site has no stem upload,
   account, database or music-processing API.
+
+Agent discovery has its own public surfaces so the musician page does not need
+to carry every technical detail:
+
+- `/for-agents` explains recognition, onboarding and the Simple/Studio boundary;
+- `/llms.txt` is the concise text discovery document;
+- `/agent-capabilities.json` is the versioned machine-readable contract;
+- `/demo` explains how to run the copyright-safe synthetic stem demo through
+  the normal automatic MIDI/WAV/ZIP path and includes a listening/worked-output
+  tour; and
+- `robots.txt`, `sitemap.xml` and JSON-LD metadata make those routes discoverable.
+
+The agent pages explicitly distinguish Codex with local workspace access from a
+standard ChatGPT conversation. They do not claim that a normal web chat can run
+commands or inspect files on a Mac.
+
+The newcomer copy uses a reliable two-turn handoff. Turn one explicitly invokes
+`$skill-installer`, installs only the skill and stops. Turn two explicitly
+invokes `$sunofriend`, then inspects the Mac and offers stems, stem help or the
+built-in demo. A new app installation has two further change boundaries:
+prepare only the source, then review its exact commit before separately
+approving dependencies and audio assets for that unchanged commit.
 
 ## Local preview
 

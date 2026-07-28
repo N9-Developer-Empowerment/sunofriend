@@ -4,165 +4,104 @@
 
 > **Listen deeper. Create further.**
 
-Sunofriend turns separated music stems into editable MIDI interpretations and
-a balanced MIDI-rendered WAV that helps you hear the song in a simplified
-instrumental form.
+Sunofriend turns separated music stems into editable MIDI and a balanced
+MIDI-derived WAV. The WAV is a clean musical interpretation that can make a
+song's rhythm, harmony and melody easier to hear; the MIDI can then be changed
+in GarageBand or another DAW.
 
-The name comes from **सुनो** (*suno*), the familiar Hindi invitation or
-command meaning “listen.” Paired with “friend,” it can be read as both
-**“Listen, friend”** and **“a friend that listens.”** Sunofriend listens,
-offers musical interpretations and hands the decision back to the musician.
+It is local-first, open source and designed to compare several analytical and
+AI transcription methods rather than pretending one method always wins.
 
-Sunofriend is an independent project of **Unsigned Media Ltd**. It is not
-related to, affiliated with, endorsed by, or sponsored by **Suno Inc.**, the
-AI music company. References to Suno in example workflows mean that separate
-third-party service. See the canonical [brand and name guide](BRAND.md).
+Sunofriend is an independent Unsigned Media Ltd project. Its name comes from
+the Hindi **सुनो** (*suno*), “listen.” It is not related to, affiliated with,
+endorsed by or sponsored by Suno Inc.
 
-Sunofriend is a local-first companion to generators, stem separators and DAWs.
-It does not try to replace stem separation or a DAW. Its distinctive strength
-is keeping results from several analytical and AI processes available, because
-a different method may work best for each instrument or phrase.
+## Easiest start: ask Codex
 
-> Sunofriend is an alpha project. It is currently tested most deeply on macOS
-> with GarageBand and exports from independent third-party tools including
-> Suno and Moises.
+You do not need to clone the repository or understand Python first. Use
+[Codex with access to a local folder on your Mac](https://learn.chatgpt.com/docs/quickstart)
+and follow the copyable prompts on the
+[beginner website](https://sunofriend.com), or send them directly:
 
-## Choose how much control you want
+```text
+Use $skill-installer to install the Sunofriend skill from
+https://github.com/N9-Developer-Empowerment/sunofriend/tree/main/skills/sunofriend.
+Do not install the application yet. Tell me when the skill is available.
+```
 
-| Experience | Best for | What happens |
+Then start a new message:
+
+```text
+Use $sunofriend. I am new to music software. Help me choose between:
+1. trying the built-in demo,
+2. using stems I already have, or
+3. getting stems I am allowed to process.
+Explain one thing at a time. Inspect my Mac and show me an installation plan
+before making system or network changes. Keep my audio local.
+```
+
+The skill should:
+
+1. ask what you want to try;
+2. inspect the Mac without changing it;
+3. explain the exact setup plan in plain language;
+4. ask once before preparing the source and again before installing the exact
+   reviewed commit;
+5. run the demo or process your stem folder; and
+6. show the WAV, MIDI and ZIP in the order they are useful.
+
+If the skill does not appear immediately, restart Codex and send the second
+message again. See [AI-assisted first song](docs/AI_ASSISTED_START.md) for the
+complete newcomer journey.
+
+## No stems yet?
+
+Choose the built-in demo. It creates a small copyright-safe synthetic song and
+runs the same automatic MIDI, WAV and ZIP workflow used for a real project.
+It is the quickest way to decide whether Sunofriend is useful before paying
+for a stem-separation service.
+
+For your own music, valid starting points include:
+
+- separate tracks exported from a DAW;
+- stems from a song generator or project you are allowed to process;
+- separated tracks exported from Moises or another stem separator; or
+- the built-in Sunofriend demo.
+
+Plans and export features change, so ask the agent to check the provider's
+current official help before you subscribe. Sunofriend does not download
+songs, separate a full mix itself or grant permission to process music.
+
+## What you receive
+
+The automatic result contains:
+
+```text
+AUTOMATIC-SONG/
+├── START-HERE.txt
+├── MIDI/individual parts and combined-gm-interpretation.mid
+├── AUDIO/balanced-midi-song-interpretation.wav
+├── garageband-mix-recipe.md
+└── sunofriend-automatic-midi-and-wav.zip
+```
+
+Listen to the WAV first. Then import the individual MIDI files into
+GarageBand, set the project to the BPM in `START-HERE.txt`, and choose sounds
+you like.
+
+The WAV contains rendered MIDI, not the original stems. It is a creative
+interpretation of notes, rhythm and structure, not an exact reconstruction or
+a human-approved release master.
+
+## Simple or Studio?
+
+| Mode | Use it when | Result |
 | --- | --- | --- |
-| **Simple**, the default | Musicians who want the shortest workflow after installation | Supply a folder of WAV stems and choose **Create MIDI + WAV**. Sunofriend converts the stems, uses each production process's published primary result, and creates individual MIDI, a combined MIDI, a balanced WAV and a ZIP. |
-| **Studio** | Musicians and developers who want to compare and improve results | Hear the source beside several MIDI methods, inspect waveforms and notes, make explicit choices, record local feedback, test sounds, build a reviewed GarageBand pack and use the read-only Developer Inspector. |
+| **Simple** | You want Sunofriend to make a useful first interpretation | Automatic, explicitly unreviewed MIDI, WAV and ZIP |
+| **Studio** | You want to compare methods, listen closely and choose | Visual timelines, explicit feedback, reviewed selections and GarageBand handoff |
 
-Both experiences use the same conversion, rendering and verification code.
-Simple mode does not pretend its automatic defaults were reviewed. Studio
-keeps the alternatives visible so your ears, not a score, make the final
-musical decision.
-
-Use the visible **Simple · Make my song** and **Studio · Compare & improve**
-buttons to switch at any time. `F2` and `F3` do the same from the keyboard.
-Switching changes only the view and returns to your last Studio tab; it does
-not start processing, save feedback or alter MIDI choices.
-
-Read [Product modes and the hosted future](docs/PRODUCT_MODES_AND_HOSTING.md)
-for the complete product boundary.
-
-## Quick start on macOS
-
-### 1. Install the app and audio tools
-
-Python 3.11 is recommended:
-
-```bash
-git clone https://github.com/N9-Developer-Empowerment/sunofriend.git
-cd sunofriend
-brew install python@3.11 fluid-synth
-"$(brew --prefix python@3.11)/bin/python3.11" -m venv .venv
-.venv/bin/python -m ensurepip --upgrade
-.venv/bin/python -m pip install \
-  -c constraints-audio-macos.txt -e '.[all]'
-```
-
-Install the validated GeneralUser GS SoundFont used for MIDI previews:
-
-```bash
-mkdir -p "$HOME/.local/share/sunofriend/soundfonts"
-curl --fail --location \
-  "https://raw.githubusercontent.com/mrbumpy409/GeneralUser-GS/684543d5e5efaef08d02be50dcda8d552478fa60/GeneralUser-GS.sf2" \
-  --output "$HOME/.local/share/sunofriend/soundfonts/GeneralUser-GS.sf2"
-echo "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe  $HOME/.local/share/sunofriend/soundfonts/GeneralUser-GS.sf2" \
-  | shasum -a 256 -c -
-```
-
-Check conversion and preview support:
-
-```bash
-.venv/bin/sunofriend doctor --require convert
-.venv/bin/sunofriend doctor --require preview
-```
-
-### 2. Prepare one folder of stems
-
-Keep the WAV files at the top level. Put the key, BPM and tuning in the folder
-name:
-
-```text
-My Song-B minor-113bpm-440hz/
-├── My Song-kick-B minor-113bpm-440hz.wav
-├── My Song-snare-B minor-113bpm-440hz.wav
-├── My Song-bass-B minor-113bpm-440hz.wav
-├── My Song-keys-B minor-113bpm-440hz.wav
-├── My Song-vocals-B minor-113bpm-440hz.wav
-├── My Song-backing vocals-B minor-113bpm-440hz.wav
-├── My Song-metronome-B minor-113bpm-440hz.wav  # optional
-└── My Song-chords.pdf                           # optional
-```
-
-Use clear role words such as `kick`, `snare`, `hat`, `cymbals`, `toms`,
-`other kit`, `bass`, `keys`, `piano`, `strings`, `lead`, `synth`, `vocals` or
-`backing vocals`. Unsupported, silent or ambiguous stems are reported rather
-than quietly presented as successful.
-
-### 3. Make the song
-
-```bash
-.venv/bin/sunofriend tui \
-  "/absolute/path/to/My Song-B minor-113bpm-440hz"
-```
-
-The default **Make my song** tab suggests a fresh output folder. Check the two
-paths and choose **Create MIDI + WAV**. Use the **Studio** button whenever you
-want the detailed controls. Conversion can take time, especially on a long
-song; progress remains visible and everything stays on this Mac.
-
-The fresh result contains:
-
-```text
-your-chosen-output/
-├── ...conversion evidence and alternatives...
-└── AUTOMATIC-SONG/
-    ├── START-HERE.txt
-    ├── MIDI/
-    │   ├── individual automatic-primary parts
-    │   └── combined-gm-interpretation.mid
-    ├── AUDIO/balanced-midi-song-interpretation.wav
-    ├── TECHNICAL/balanced-mix-report.json
-    ├── garageband-mix-recipe.md
-    ├── sunofriend-result.json
-    └── sunofriend-automatic-midi-and-wav.zip
-```
-
-Listen to the WAV first, then drag the individual MIDI files into GarageBand
-and set the GarageBand project to the exact BPM in `START-HERE.txt`. Choose the
-GarageBand sounds you like for the software-instrument tracks.
-
-The WAV contains rendered MIDI only. Source stems provide timing, song length
-and relative-level evidence; their audio is not mixed into it. It is a
-balanced creative interpretation, not an exact reconstruction or a
-human-approved release master.
-
-For screenshots, detailed setup, GarageBand steps and troubleshooting, follow
-the [Getting started guide](docs/GETTING_STARTED.md).
-
-## Explore and improve the result
-
-Open the detailed experience directly:
-
-```bash
-.venv/bin/sunofriend tui \
-  "/absolute/path/to/My Song-B minor-113bpm-440hz" \
-  --mode studio \
-  --candidate-root "/absolute/path/to/your-chosen-output"
-```
-
-Studio can compare the unchanged MIDI alternatives, prepare level-assisted
-source/MIDI loops, save explicit main or optional choices, hear the selected
-arrangement, create the reviewed song-interpretation WAV and compose an exact
-GarageBand ZIP. Playback and mixer experiments do not silently become
-feedback. Only clearly labelled review actions save a choice.
-
-See the [Guided Local Studio](docs/LOCAL_STUDIO_TUI.md) and
-[visual Workbench](docs/WORKBENCH.md) guides.
+Both modes use the same conversion engine. Studio preserves Sunofriend's main
+strength: different methods can be best for different instruments or phrases.
 
 ## Hear an example
 
@@ -171,71 +110,47 @@ See the [Guided Local Studio](docs/LOCAL_STUDIO_TUI.md) and
 </p>
 
 [Listen to “Out of Place” on SoundCloud](https://soundcloud.com/ezzye-1/out-of-place?si=93616bdf10d7406c838be366106c1025&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing).
-The maintainer shares it as an example of Sunofriend interpolation: a new
-MIDI-derived musical interpretation, not an exact reconstruction of source
-audio.
+It is shared as an example of Sunofriend interpolation: a new MIDI-derived
+musical interpretation, not an exact copy of source audio.
 
-For a documented four-tool workflow, [listen to Version 1 of “The Aisle at
-Lidl”](https://soundcloud.com/ezzye-1/the-aisle-at-lidl?si=97cf744ff4a743bca875bec3db88024f&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing).
-The maintainer wrote that song and approved it as a public **Suno
-(third-party) → Moises → Sunofriend → GarageBand** example. It is a finished
-workflow example rather than the raw Simple-mode WAV. The repository contains a compact
-[worked MIDI pack](examples/the-aisle-at-lidl/); the large source stems are not
-committed.
+For a documented four-tool workflow, hear
+[“The Aisle at Lidl”](https://soundcloud.com/ezzye-1/the-aisle-at-lidl?si=97cf744ff4a743bca875bec3db88024f&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing)
+and explore its compact [worked MIDI pack](examples/the-aisle-at-lidl/).
 
-## Documentation
+## More detail
 
-| If you want to… | Read |
+| I want to… | Read |
 | --- | --- |
-| Understand the name, strapline and independence language | [Brand and name guide](BRAND.md) |
-| Install and make a first song | [Getting started](docs/GETTING_STARTED.md) |
-| Understand Simple and Studio modes | [Product modes and hosted future](docs/PRODUCT_MODES_AND_HOSTING.md) |
-| Operate the terminal dashboard | [Guided Local Studio TUI](docs/LOCAL_STUDIO_TUI.md) |
-| Compare, review and export visually | [Workbench](docs/WORKBENCH.md) |
-| Understand the WAV, mix and mastering boundary | [Musical rendering and mastering](docs/MUSICAL_RENDERING_AND_MASTERING.md) |
-| Improve vocal melody extraction | [Vocal melody](docs/VOCAL_MELODY.md) |
-| Match or build playable instruments | [Instruments](docs/INSTRUMENTS.md) |
-| Review the code and state model | [Technical tour](docs/TECHNICAL_TOUR.md) and [architecture](docs/ARCHITECTURE.md) |
-| Follow AI and product research | [AI roadmap](docs/AI_TRANSCRIPTION_ROADMAP.md) and [Phase 5 plan](docs/PHASE5_MUSCRIPTOR_COMMUNITY_PLAN.md) |
-| Reuse and transform MIDI clips | [Phase 6 creative arrangement](docs/PHASE6_CREATIVE_ARRANGEMENT.md) |
-| Use the full command line | Run `.venv/bin/sunofriend --help` and the chosen command's `--help` |
+| Let an agent guide my first session | [AI-assisted first song](docs/AI_ASSISTED_START.md) |
+| Install or troubleshoot manually | [Getting started](docs/GETTING_STARTED.md) |
+| Understand Simple and Studio | [Product modes](docs/PRODUCT_MODES_AND_HOSTING.md) |
+| Use the terminal studio | [Local Studio TUI](docs/LOCAL_STUDIO_TUI.md) |
+| Compare results visually | [Workbench](docs/WORKBENCH.md) |
+| Understand the WAV and mix boundary | [Musical rendering](docs/MUSICAL_RENDERING_AND_MASTERING.md) |
+| Work with vocal melody | [Vocal melody](docs/VOCAL_MELODY.md) |
+| Match or build instruments | [Instruments](docs/INSTRUMENTS.md) |
+| Review the architecture and code | [Technical tour](docs/TECHNICAL_TOUR.md) |
+| Use every expert command | Run `sunofriend --help` and read the [skill interface contract](skills/sunofriend/references/interface-contract.md) |
+| Share or promote the project | [Social media kit](SOCIAL.md) and [brand guide](BRAND.md) |
 
-## Privacy, rights and current limits
+## Privacy, rights and limits
 
-- The current TUI, Workbench, stems, MIDI, notes and feedback are local. The
-  Workbench binds to loopback and has no community-upload endpoint.
-- Use only music you own or are authorised to process. Do not redistribute
-  stems, samples or model outputs unless their rights permit it.
-- GarageBand supplies the final playable patches. Sunofriend does not copy
-  Apple factory samples or claim to reproduce every production effect.
-- Melody extraction, mixed stems and source-derived instruments remain
-  difficult. Automatic results are starting points, not ground truth.
-- The current release is a local macOS application. A paid hosted version for
-  people without suitable hardware is a future product direction, not an
-  available service.
+- Current processing, review notes and feedback stay on the local Mac.
+- Use only music you own or are authorised to process.
+- GarageBand or another instrument supplies the final sound; MIDI does not
+  contain a stem's exact texture, voice or effects.
+- Mixed or noisy stems and melody extraction remain difficult. Automatic
+  results are useful starting points, not ground truth.
+- The current release is an alpha local macOS application. A hosted service
+  for people without suitable hardware is a future direction.
 
-## Help improve Sunofriend
+## Contribute
 
-Testing in other DAWs, on other operating systems, and with other stem
-separators or AI music tools is especially valuable. Please report whether the
-setup was understandable, the song completed, the MIDI imported at the right
-tempo, and the WAV was musically useful.
-
-Read [Contributing](CONTRIBUTING.md), submit a
+Reports from beginners, other DAWs, other operating systems, stem separators
+and AI tools are especially useful. Use the
 [beginner first-song report](https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=beginner-first-song.yml),
-or submit a
-[DAW / AI compatibility report](https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml).
-Share only material you are allowed to share.
+the
+[DAW / AI compatibility report](https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml),
+or read [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Ready-to-post artwork and draft copy for X, Bluesky, Threads, Instagram,
-Facebook, WhatsApp and Slack are in the [social media kit](SOCIAL.md).
-
-## Development
-
-```bash
-.venv/bin/python -m pip install -e '.[all,dev]'
-.venv/bin/python -m pytest
-.venv/bin/python -m ruff check src tests
-```
-
-Sunofriend is available under the [Apache License 2.0](LICENSE).
+Sunofriend is licensed under [Apache-2.0](LICENSE).

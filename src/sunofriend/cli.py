@@ -2054,6 +2054,65 @@ def build_parser() -> argparse.ArgumentParser:
         "--out", required=True, help="Fresh path-free acceptance result JSON"
     )
 
+    create = sub.add_parser(
+        "create",
+        help=(
+            "Run the normal automatic Simple workflow for one authorised "
+            "top-level WAV stem project"
+        ),
+    )
+    create.add_argument(
+        "project",
+        help="Directory containing top-level authorised WAV stems",
+    )
+    create.add_argument(
+        "--out-dir",
+        required=True,
+        help="Fresh result directory; existing paths are never replaced",
+    )
+    create.add_argument(
+        "--state-dir",
+        default=None,
+        help=(
+            "Optional local artifact-cache root used by the normal Simple "
+            "workflow"
+        ),
+    )
+    create.add_argument(
+        "--soundfont",
+        default=None,
+        help="Optional GM SoundFont used for the MIDI-derived listening WAV",
+    )
+
+    demo = sub.add_parser(
+        "demo",
+        help=(
+            "Create copyright-safe synthetic stems, then run the normal "
+            "automatic MIDI, balanced WAV and starter-ZIP workflow"
+        ),
+    )
+    demo.add_argument(
+        "--out-dir",
+        required=True,
+        help=(
+            "Fresh result directory; a fresh synthetic stem project is retained "
+            "beside it"
+        ),
+    )
+    demo.add_argument(
+        "--state-dir",
+        default=None,
+        help=(
+            "Optional local artifact-cache root used by the normal Simple "
+            "workflow"
+        ),
+    )
+    demo.add_argument(
+        "--soundfont",
+        default=None,
+        help="Optional GM SoundFont used for the MIDI-derived listening WAV",
+    )
+
     tui = sub.add_parser(
         "tui",
         help=(
@@ -2456,6 +2515,10 @@ def main(argv: list[str] | None = None) -> int:
             return _run_garageband_pack_review(args)
         if args.command == "garageband-pack-resolve":
             return _run_garageband_pack_resolve(args)
+        if args.command == "create":
+            return _run_create(args)
+        if args.command == "demo":
+            return _run_demo(args)
         if args.command == "tui":
             return _run_tui(args)
         if args.command == "workbench":
@@ -4553,6 +4616,70 @@ def _run_tui(args) -> int:
         initial_mode=args.mode,
         developer_inspector=args.developer_inspector,
     )
+
+
+def _run_demo(args) -> int:
+    import asyncio
+
+    from .demo import create_demo
+
+    def progress(item) -> None:
+        print(
+            f"[{item.completed}/{item.total}] "
+            f"{item.phase}: {item.message}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+    result = asyncio.run(
+        create_demo(
+            args.out_dir,
+            state_dir=args.state_dir,
+            soundfont_path=args.soundfont,
+            on_progress=progress,
+        )
+    )
+    print(json.dumps(result.as_dict(), indent=2, sort_keys=True))
+    return 0 if result.succeeded else 1
+
+
+def _run_create(args) -> int:
+    import asyncio
+
+    from .simple_create import create_simple_create_runner
+    from .simple_create_contract import (
+        SimpleCreateRequest,
+        simple_create_result_document,
+    )
+
+    def progress(item) -> None:
+        print(
+            f"[{item.completed}/{item.total}] "
+            f"{item.phase}: {item.message}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+    request = SimpleCreateRequest.create(
+        args.project,
+        args.out_dir,
+        state_dir=args.state_dir,
+        soundfont_path=args.soundfont,
+    )
+    result = asyncio.run(
+        create_simple_create_runner().run(
+            request,
+            on_progress=progress,
+        )
+    )
+    print(
+        json.dumps(
+            simple_create_result_document(result, project=request.project),
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0 if result.succeeded else 1
 
 
 def _run_clip_import(args) -> int:

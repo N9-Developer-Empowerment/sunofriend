@@ -7,12 +7,14 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-07-27.7"
+INTERFACE_CONTRACT_VERSION = "2026-07-28.1"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
 PUBLIC_COMMAND_GROUPS: dict[str, tuple[str, ...]] = {
     "start_and_setup": (
+        "create",
+        "demo",
         "tui",
         "doctor",
         "ai-doctor",

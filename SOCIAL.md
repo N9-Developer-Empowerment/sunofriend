@@ -46,8 +46,13 @@ explaining the “Listen, friend” wordplay. The complete usage rules are in th
 
 - Listen to **“Out of Place”**, the lead Sunofriend interpolation example:
   https://soundcloud.com/ezzye-1/out-of-place?si=93616bdf10d7406c838be366106c1025&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing
-- Explore or install Sunofriend:
+- Try the beginner route and copy the two Codex prompts:
+  https://sunofriend.com
+- Browse the Apache-2.0 source:
   https://github.com/N9-Developer-Empowerment/sunofriend
+- Ask Codex to guide the setup:
+  open the website, copy the two short prompts, and choose the built-in demo if
+  you have no stems.
 - Hear **“The Aisle at Lidl”**, an earlier worked song:
   https://soundcloud.com/ezzye-1/the-aisle-at-lidl
 - Tell us whether your first-song instructions worked:
@@ -56,7 +61,34 @@ explaining the “Listen, friend” wordplay. The complete usage rules are in th
   https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml
 
 For listeners, put “Out of Place” before the repository link. For music makers
-who already want to try the tool, put the repository first.
+who already want to try the tool, put the agent-led start before manual
+installation. Do not ask a non-technical person to clone the repository as
+their first action.
+
+## The easiest call to action
+
+Use this when the audience has Codex but does not normally install developer
+tools:
+
+> Want to try Sunofriend without learning its command line? Open the beginner
+> website and copy its two prompts into Codex. The `$sunofriend` skill
+> offers a built-in demo, your own stems, or help finding stems you are allowed
+> to process. It inspects first and uses two clear setup approvals:
+> https://sunofriend.com
+
+Use “Codex” only for a session with local file and terminal access. Do not
+suggest that an ordinary web chat can install software on someone's Mac. The
+built-in demo is the best first invitation because it needs no subscription,
+private music or knowledge of stem separation.
+
+The primary campaign sequence is:
+
+1. **Listen:** share “Out of Place”.
+2. **Try:** point to the skill-led built-in demo.
+3. **Make:** invite authorised stems and a first automatic MIDI/WAV/ZIP.
+4. **Explore:** introduce Studio's multi-method comparison only after the
+   listener has heard a useful result.
+5. **Respond:** ask one concrete beginner or DAW compatibility question.
 
 ## What the words mean
 
@@ -100,32 +132,32 @@ different shape and may crop text on smaller screens, so use the square as
 track artwork rather than stretching it into a profile header:
 
 - [SoundCloud track artwork guidance](https://help.soundcloud.com/hc/en-us/articles/46022345620123-Adding-Or-Changing-Track-Artwork)
-- [SoundCloud profile image and header guidance](https://help.soundcloud.com/hc/en-us/articles/115003450007-Profile-image-and-header%29%20and%20your%20%5BURL%20and)
+- [SoundCloud profile image and header guidance](https://help.soundcloud.com/hc/en-us/articles/115003450007-Profile-image-and-header)
 
 ## Short post for X
 
-> सुनो means “listen” in Hindi. I built Sunofriend—a friend that listens—to turn separate song parts into editable MIDI, with more than one answer. Hear “Out of Place”: https://soundcloud.com/ezzye-1/out-of-place
+> सुनो means “listen” in Hindi. I built Sunofriend, an independent tool not affiliated with Suno Inc., to turn separate song parts into editable MIDI and a balanced listening mix. Hear “Out of Place”: https://soundcloud.com/ezzye-1/out-of-place
 >
-> Listen deeper. Create further. #MusicMaking #MIDI
+> Try it: https://sunofriend.com #MIDI
 
 Reply with:
 
-> Sunofriend is an independent project of Unsigned Media Ltd, not related to or affiliated with Suno Inc. Try the local macOS alpha: https://github.com/N9-Developer-Empowerment/sunofriend
+> Sunofriend is an independent project of Unsigned Media Ltd, not related to or affiliated with Suno Inc. Have Codex on a Mac? Copy two prompts and try the built-in demo: https://sunofriend.com
 
 Attach the square “Out of Place” card. Keep the independence reply attached to
 the first campaign post.
 
 ## Short post for Bluesky
 
-> सुनो means “listen” in Hindi. Sunofriend is a friend that listens: it turns separate song parts into MIDI interpretations and a balanced listening mix.
+> सुनो means “listen” in Hindi. Sunofriend turns separate song parts into editable MIDI and a balanced listening mix.
 >
-> Hear “Out of Place”, a Sunofriend interpolation:
-> https://soundcloud.com/ezzye-1/out-of-place
+> Hear “Out of Place”: https://soundcloud.com/ezzye-1/out-of-place
 >
-> Listen deeper. Create further. Independent of Suno Inc. Code and guide in the reply.
+> Try it: https://sunofriend.com
+> Independent, not affiliated with Suno Inc.
 
 Attach the square card, add alt text from the section below, then reply with
-the repository link.
+the beginner website. Add the repository separately for developers.
 
 ## Threads or Instagram
 
@@ -148,8 +180,10 @@ the repository link.
 > different analytical interpretations, plus optional AI alternatives where
 > configured, rather than hiding everything behind one answer.
 >
-> Try it and tell me whether a non-technical musician can follow the guide:
-> https://github.com/N9-Developer-Empowerment/sunofriend
+> If you have Codex on a Mac, the website gives you two prompts: install the
+> Sunofriend skill, then choose a built-in demo, your own stems, or help
+> finding authorised stems. Tell me whether the agent-led journey works:
+> https://sunofriend.com
 >
 > #MusicMaking #MusicProduction #MIDI #AIMusic #GarageBand
 
@@ -181,8 +215,10 @@ Story.
 > methods, choose with your ears and prepare files for GarageBand or another
 > DAW.
 >
-> Code and beginner guide:
-> https://github.com/N9-Developer-Empowerment/sunofriend
+> The easiest start is now an agent-led built-in demo. Open the website, copy
+> its two prompts into Codex, and let the Sunofriend skill inspect before you
+> approve each setup stage:
+> https://sunofriend.com
 >
 > I would particularly value feedback from music makers who are not software
 > developers. Could you install it, find the result and make music with it?
@@ -198,8 +234,9 @@ Story.
 > “Out of Place” is an example:
 > https://soundcloud.com/ezzye-1/out-of-place
 >
-> If you make music and want to try the alpha:
-> https://github.com/N9-Developer-Empowerment/sunofriend
+> If you have Codex on a Mac, the website has a two-prompt guided start and a
+> demo that needs no stems:
+> https://sunofriend.com
 
 ### Status
 
@@ -231,8 +268,10 @@ group chats.
 > “Out of Place” is my latest example of the interpolation idea:
 > https://soundcloud.com/ezzye-1/out-of-place
 >
-> Repo and beginner setup:
-> https://github.com/N9-Developer-Empowerment/sunofriend
+> The beginner route no longer starts with a wall of terminal commands. In
+> Codex, install the Sunofriend skill and choose the built-in demo, existing
+> stems, or help getting authorised stems:
+> https://sunofriend.com
 >
 > It is still an alpha. I would value tests from musicians who are not Python
 > developers, especially whether the setup is understandable, the result is
@@ -259,8 +298,8 @@ Use the landscape banner so the technical explanation remains readable.
 > renders a balanced MIDI-derived instrumental WAV. The result is a new musical
 > interpretation rather than an exact copy of the source sound.
 >
-> Explore the local open-source alpha:
-> https://github.com/N9-Developer-Empowerment/sunofriend
+> Try the guided local alpha:
+> https://sunofriend.com
 >
 > I would love to hear which parts feel musical, which sound surprising and
 > whether this makes you want to explore a song differently.
@@ -270,7 +309,7 @@ Use the landscape banner so the technical explanation remains readable.
 > This is Sunofriend interpolation: separate song parts became editable MIDI
 > and a new instrumental listening mix. सुनो means “listen”; Sunofriend is
 > independent of Suno Inc. Which part catches your ear first?
-> https://github.com/N9-Developer-Empowerment/sunofriend
+> https://sunofriend.com
 
 ### Short profile bio
 
@@ -300,6 +339,8 @@ the current name origin and independence statement.
 ## Posting checklist
 
 - Lead with the song and a human question, not a list of technologies.
+- For a first try, lead with the skill-led built-in demo rather than cloning,
+  Python or stem subscriptions.
 - Put **सुनो = listen** and **independent of Suno Inc.** in every profile and
   the first outward-facing post of a campaign.
 - Explain “interpolation” the first time you use it.

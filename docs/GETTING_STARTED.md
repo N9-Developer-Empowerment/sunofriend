@@ -1,21 +1,27 @@
 # Getting started
 
-This guide is for a musician who has a folder of separated WAV stems and wants
-editable MIDI plus a clean listening version of the song. You do not need to
-understand Python, MIDI analysis or machine learning to use Simple mode.
+This guide is the detailed manual route for a musician who has separated WAV
+stems and wants editable MIDI plus a clean listening version of the song.
 
 Sunofriend is currently an alpha macOS application presented in the terminal.
 The default **Make my song** screen is designed to keep the technical choices
 out of the first journey. The deeper Studio and command line remain available
 when you want them.
 
+If you do not want to install Python and audio tools yourself, start with
+the [beginner website](https://sunofriend.com) or
+[AI-assisted first song](AI_ASSISTED_START.md). The Sunofriend skill asks one
+question at a time, inspects the Mac without changing it, uses separate
+source-preparation and exact-commit installation approvals, and can run a
+copyright-safe demo even when you have no stems.
+
 ## Before you begin
 
 You need:
 
 - a Mac;
-- [Homebrew](https://brew.sh/);
-- a folder containing one song's separated WAV stems;
+- [Homebrew](https://brew.sh/) for this manual route;
+- a folder containing one song's separated WAV stems, or the built-in demo;
 - the song's key and BPM, preferably in the folder name; and
 - permission to process the music.
 
@@ -25,7 +31,7 @@ Python 3.11 is the recommended runtime. Sunofriend supports Python 3.9 through
 All current processing is local. The TUI does not upload your stems, MIDI,
 private notes or feedback.
 
-## Install Sunofriend
+## Install Sunofriend manually
 
 Open Terminal and run:
 
@@ -39,8 +45,11 @@ brew install python@3.11 fluid-synth
   -c constraints-audio-macos.txt -e '.[all]'
 ```
 
-The clone is currently the supported installation. A PyPI end-user release and
-a signed macOS application are future packaging work.
+The clone is currently the manual installation route. An agent using the
+installed skill can instead use the conservative setup helper, which defaults
+to a read-only plan, prepares an isolated checkout separately, and binds the
+later installation approval to its exact commit. A PyPI end-user release and a
+signed macOS application are future packaging work.
 
 ### Install the preview sound
 
@@ -56,6 +65,10 @@ echo "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe  $HOME/.l
 ```
 
 The final line verifies the exact file before Sunofriend uses it.
+GeneralUser GS is supplied under its own
+[License v2.0](https://github.com/mrbumpy409/GeneralUser-GS/blob/684543d5e5efaef08d02be50dcda8d552478fa60/documentation/LICENSE.txt).
+That licence permits music creation and documents a sample-origin caveat that
+commercial software distributors should review.
 
 ### Check the installation
 
@@ -73,6 +86,25 @@ SoundFont.
 
 CoreMIDI is not required to create the files. It is needed only for live MIDI
 playback through a software or hardware MIDI destination.
+
+## Try the built-in demo
+
+The quickest manual check needs no private music or stem subscription:
+
+```bash
+.venv/bin/sunofriend demo \
+  --out-dir "$HOME/Music/Sunofriend/demo-first-run"
+```
+
+The output path must be fresh. The command creates a small copyright-safe
+synthetic stem project beside it, then runs the same production Simple
+workflow used for a real song. It prints progress and the exact balanced WAV,
+MIDI, receipt and ZIP paths.
+
+Listen to
+`demo-first-run/AUTOMATIC-SONG/AUDIO/balanced-midi-song-interpretation.wav`
+first. The demo proves that setup, transcription, rendering and packaging work
+together; it does not predict accuracy on every real stem.
 
 ## Prepare the stems
 
@@ -114,6 +146,20 @@ Sunofriend lists silent, unsupported and ambiguous roles in its result instead
 of silently claiming that they converted.
 
 ## Make a first song in Simple mode
+
+An agent can run the non-interactive wrapper:
+
+```bash
+.venv/bin/sunofriend create \
+  "/absolute/path/to/My Song-B minor-113bpm-440hz" \
+  --out-dir "/absolute/path/to/fresh-song-output"
+```
+
+It uses the exact same production runner as the TUI's Simple action and prints
+bounded progress plus a machine-readable result. It does not write a human
+review or feedback event.
+
+To operate the visual terminal journey yourself, run the TUI:
 
 Run the TUI with the absolute path to the stem folder:
 
@@ -261,19 +307,25 @@ musical choices yourself.
 Read [Guided Local Studio](LOCAL_STUDIO_TUI.md) for all TUI controls and
 [Workbench](WORKBENCH.md) for the visual review contract.
 
-## Optional agent skill
+## Agent-led route
 
-The repository includes a Sunofriend skill for Codex and Claude Code. It is an
-expert conversational route over the same CLI, not a different conversion
-engine. From the repository root:
+The repository includes a Sunofriend skill for Codex and compatible coding
+agents. It uses the same conversion engine; it is not a simplified or remote
+copy of Sunofriend.
 
-```bash
-mkdir -p "$HOME/.agents/skills" "$HOME/.claude/skills"
-ln -s "$PWD/skills/sunofriend" "$HOME/.agents/skills/sunofriend"
-ln -s "$PWD/skills/sunofriend" "$HOME/.claude/skills/sunofriend"
-```
+For a first installation, use the copyable prompts in
+[AI-assisted first song](AI_ASSISTED_START.md). The agent should offer three
+clear choices:
 
-Each link command fails safely if that skill path already exists.
+1. run the copyright-safe built-in demo;
+2. process an existing authorised stem folder; or
+3. explain current ways to obtain authorised stems.
+
+The skill's macOS setup helper inspects by default. A new checkout requires
+one explicit approval to prepare only the source. The agent then shows its
+exact 40-character commit and requests a separate installation approval bound
+to that same commit. Apply preserves the checkout rather than fetching,
+resetting, switching or overwriting it.
 
 ## Troubleshooting
 

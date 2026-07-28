@@ -1,0 +1,117 @@
+{
+  "schema": "sunofriend.agent-capabilities.v1",
+  "product": {
+    "name": "Sunofriend",
+    "status": "alpha",
+    "operating_system": "macOS",
+    "local_first": true,
+    "hosted_conversion_available": false,
+    "website_accepts_audio": false,
+    "repository": "https://github.com/N9-Developer-Empowerment/sunofriend",
+    "license": "Apache-2.0",
+    "independence": "Unsigned Media Ltd project; not related to or affiliated with Suno Inc."
+  },
+  "agent_entry": {
+    "skill_install_url": "https://github.com/N9-Developer-Empowerment/sunofriend/tree/main/skills/sunofriend",
+    "raw_skill_url": "https://raw.githubusercontent.com/N9-Developer-Empowerment/sunofriend/main/skills/sunofriend/SKILL.md",
+    "interface_contract_url": "https://raw.githubusercontent.com/N9-Developer-Empowerment/sunofriend/main/skills/sunofriend/references/interface-contract.md",
+    "advanced_operations_url": "https://raw.githubusercontent.com/N9-Developer-Empowerment/sunofriend/main/skills/sunofriend/references/advanced-operations.md",
+    "preferred_surface": "Codex or another agent with explicit local workspace and command access",
+    "standard_chat_boundary": "A standard ChatGPT conversation may guide but must not claim local execution.",
+    "two_turn_start": [
+      "Use $skill-installer to install the official skill. Do not install the app or audio dependencies. Confirm availability, then stop.",
+      "Use $sunofriend in a new turn. Inspect first, explain changes, then offer the three newcomer routes."
+    ],
+    "installation_protocol": {
+      "stage_1": "Run the read-only plan. If source is absent, ask before preparing only the source checkout.",
+      "stage_2": "Rerun the plan, show the exact 40-character commit, and ask separately before installing that same reviewed commit.",
+      "apply_fetches_or_switches_checkout": false,
+      "optional_ai_models_are_first_run_requirements": false
+    }
+  },
+  "newcomer_routes": [
+    {
+      "id": "have_stems",
+      "input": "authorised top-level WAV stems",
+      "action": "for agent-led work use sunofriend create PROJECT --out-dir FRESH; prefer Simple / Make my song when the person operates the TUI"
+    },
+    {
+      "id": "need_stems",
+      "action": "explain DAW export or independent authorised stem services; Sunofriend does not separate"
+    },
+    {
+      "id": "worked_demo",
+      "command": "sunofriend demo --out-dir FRESH",
+      "action": "create copyright-safe synthetic stems and run the normal automatic MIDI/WAV/ZIP path in a fresh output directory"
+    }
+  ],
+  "modes": {
+    "agent_create": {
+      "audience": "newcomer working through a local agent",
+      "command": "sunofriend create PROJECT --out-dir FRESH",
+      "human_preference_recorded": false,
+      "labels": [
+        "automatic",
+        "unreviewed",
+        "review_recommended"
+      ]
+    },
+    "demo": {
+      "audience": "newcomer without personal stems",
+      "command": "sunofriend demo --out-dir FRESH",
+      "source": "copyright-safe synthetic stems",
+      "uses_normal_automatic_pipeline": true
+    },
+    "simple": {
+      "audience": "newcomer",
+      "decision_policy": "exact published production primaries only",
+      "human_preference_recorded": false,
+      "labels": [
+        "automatic",
+        "unreviewed",
+        "review_recommended"
+      ],
+      "outputs": [
+        "individual_midi",
+        "combined_general_midi_proxy",
+        "balanced_midi_derived_wav",
+        "receipt",
+        "start_guide",
+        "starter_zip"
+      ]
+    },
+    "studio": {
+      "audience": "musician seeking comparison and control",
+      "candidates": "multiple analytical, AI and repair methods remain separate",
+      "preference_policy": "explicit human action only",
+      "workbench_available": true,
+      "developer_inspector": "read-only application-level inspector"
+    }
+  },
+  "boundaries": {
+    "stem_separation": false,
+    "streaming_download": false,
+    "exact_waveform_reconstruction": false,
+    "guaranteed_perfect_transcription": false,
+    "human_approved_release_master": false,
+    "source_audio_mixed_into_balanced_wav": false,
+    "rights_required": true,
+    "optional_downloads_require_approval": true
+  },
+  "advanced_capabilities": [
+    "vocal melody transcription, consensus, phrase review and bounded correction",
+    "key, BPM, tuning, anchoring and alignment transforms",
+    "two-song mashup preparation",
+    "sample instrument analysis, matching and instrument bundles",
+    "Clip v1 cataloguing, reuse and transformation",
+    "multi-method analytical, tracker, optional local-AI and repaired candidate comparison",
+    "reviewed GarageBand handoff and separate receipt-bound listening master"
+  ],
+  "canonical_pages": {
+    "musician": "https://sunofriend.com/",
+    "agents": "https://sunofriend.com/for-agents/",
+    "llms": "https://sunofriend.com/llms.txt",
+    "demo": "https://sunofriend.com/demo/",
+    "getting_started": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/GETTING_STARTED.md"
+  }
+}

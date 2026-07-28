@@ -508,6 +508,34 @@ class FullConversionRunnerTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("super-secret", warning)
         self.assertLessEqual(len(warning), 240)
 
+    async def test_unused_basic_pitch_backend_not_reported_as_failure_warning(
+        self,
+    ) -> None:
+        runner = ProductionFullConversionRunner()
+        lines = [
+            (
+                "WARNING:root:tflite-runtime is not installed. If you plan to "
+                "use a TFLite Model, install it."
+            ),
+            (
+                "WARNING:root:Tensorflow is not installed. If you plan to use "
+                "a TF Saved Model, install it."
+            ),
+        ]
+        outcome = await runner._execute_command(
+            (
+                sys.executable,
+                "-u",
+                "-c",
+                f"print({lines[0]!r}); print({lines[1]!r})",
+            ),
+            on_line=lambda _line: None,
+            cancellation_requested=None,
+        )
+
+        self.assertEqual(outcome.return_code, 0)
+        self.assertEqual(outcome.warning_lines, ())
+
     async def test_reload_counts_only_candidates_from_the_fresh_output(self) -> None:
         from sunofriend.midi import MidiTrack, write_midi_file
         from sunofriend.models import NoteEvent

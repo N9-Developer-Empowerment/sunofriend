@@ -1,0 +1,61 @@
+# Sunofriend
+
+> Sunofriend is a local-first macOS alpha that turns authorised top-level WAV stems into editable MIDI, a balanced MIDI-derived song-interpretation WAV and a starter ZIP. Its focused agent create command and TUI Simple mode make an automatic, explicitly unreviewed first result. Studio preserves multiple analytical and AI candidates for explicit listening and choice.
+
+Sunofriend is an independent Unsigned Media Ltd project. Its name begins with the Hindi सुनो ("listen"). It is not related to or affiliated with Suno Inc.
+
+## Best agent entry point
+
+- Install the official skill before constructing commands: https://github.com/N9-Developer-Empowerment/sunofriend/tree/main/skills/sunofriend
+- Raw SKILL.md: https://raw.githubusercontent.com/N9-Developer-Empowerment/sunofriend/main/skills/sunofriend/SKILL.md
+- Generated interface contract: https://raw.githubusercontent.com/N9-Developer-Empowerment/sunofriend/main/skills/sunofriend/references/interface-contract.md
+- Human/agent integration guide: https://sunofriend.com/for-agents/
+- Structured capability document: https://sunofriend.com/agent-capabilities.json
+- Repository: https://github.com/N9-Developer-Empowerment/sunofriend
+- Beginner guide: https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/GETTING_STARTED.md
+
+## Newcomer protocol
+
+1. Be honest about execution: hands-on setup requires Codex or another agent with local workspace and command access. A standard ChatGPT conversation can explain steps but cannot claim to install software or inspect local files.
+2. Use `$skill-installer` to install and read the official Sunofriend skill first. Do not install the app or audio dependencies in that turn. Confirm the skill is available, then stop.
+3. In a second turn, explicitly use `$sunofriend`. Inspect what is already available and explain every proposed change.
+4. For a new app checkout, use the skill's two-stage bootstrap: ask before preparing source only; rerun the plan and show the exact 40-character commit; then ask separately before applying that same commit. Apply must not fetch or switch it.
+5. Offer exactly three friendly routes: existing authorised WAV stems; help exporting or obtaining authorised stems; or the built-in copyright-safe synthetic demo.
+6. For agent-led work with stems, use `sunofriend create PROJECT --out-dir FRESH`. With no stems, use `sunofriend demo --out-dir FRESH`. When the person operates the TUI, prefer Simple / Make my song. These routes use only each exact published production primary and record no human preference.
+7. Require a fresh output path. Keep automatic output labelled unreviewed and review recommended.
+8. Use Studio only when the musician wants multiple-method comparison, explicit choices, feedback or a reviewed GarageBand handoff.
+
+## Inputs
+
+- One local folder containing top-level WAV stems for one song.
+- Key, BPM and tuning in the folder name are strongly preferred.
+- Optional local chord PDF.
+- Music the user owns or is authorised to process.
+
+Sunofriend does not separate a mixed song, download streaming audio or infer processing permission from a public URL.
+
+## Simple outputs
+
+- individual editable MIDI files;
+- a combined General MIDI proxy;
+- a balanced MIDI-derived song-interpretation WAV;
+- receipt, short start guide and starter ZIP.
+
+The source stems provide timing, horizon and level evidence. They are not mixed into the interpretation WAV. The WAV is not exact waveform reconstruction and is not a human-approved release master.
+
+## Current boundary
+
+- macOS local alpha;
+- no stem upload or conversion endpoint on the public website;
+- optional models and checkpoints require separate explicit approval;
+- automatic output is not a human Workbench decision;
+- process only authorised music.
+
+## Demo
+
+- Built-in command: `sunofriend demo --out-dir FRESH`
+- Guided copyright-safe demo instructions: https://sunofriend.com/demo/
+- Interpolation example: https://soundcloud.com/ezzye-1/out-of-place
+- Included worked MIDI output pack: https://github.com/N9-Developer-Empowerment/sunofriend/tree/main/examples/the-aisle-at-lidl
+
+The built-in demo creates copyright-safe synthetic stems and runs the normal automatic MIDI/WAV/ZIP pipeline after core setup. The page explains the command and includes a listening and worked-output tour; it does not host a pre-rendered demo download.

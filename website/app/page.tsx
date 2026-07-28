@@ -1,25 +1,12 @@
-const links = {
-  repo: "https://github.com/N9-Developer-Empowerment/sunofriend",
-  gettingStarted:
-    "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/GETTING_STARTED.md",
-  outOfPlace:
-    "https://soundcloud.com/ezzye-1/out-of-place?si=93616bdf10d7406c838be366106c1025&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing",
-  lidl:
-    "https://soundcloud.com/ezzye-1/the-aisle-at-lidl?si=97cf744ff4a743bca875bec3db88024f&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing",
-  lidlPack:
-    "https://github.com/N9-Developer-Empowerment/sunofriend/tree/main/examples/the-aisle-at-lidl",
-  firstSong:
-    "https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=beginner-first-song.yml",
-  compatibility:
-    "https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml",
-  license:
-    "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/LICENSE",
-  brandGuide:
-    "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/BRAND.md",
-  hindiName:
-    "https://www.hindwi.org/hindi-dictionary/meaning-of-sunnaa-2",
-  sunoTerms: "https://suno.com/terms",
-};
+import Link from "next/link";
+import Image from "next/image";
+import { CopyPrompt } from "./copy-prompt";
+import {
+  agentSummary,
+  links,
+  newcomerPrompt,
+  skillInstallPrompt,
+} from "./content";
 
 const ExternalLink = ({
   href,
@@ -35,9 +22,39 @@ const ExternalLink = ({
   </a>
 );
 
+const softwareJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Sunofriend",
+  applicationCategory: "MultimediaApplication",
+  operatingSystem: "macOS",
+  isAccessibleForFree: true,
+  description: agentSummary,
+  downloadUrl: links.repo,
+  installUrl: links.skill,
+  license: links.license,
+  codeRepository: links.repo,
+  creator: {
+    "@type": "Organization",
+    name: "Unsigned Media Ltd",
+  },
+  featureList: [
+    "Authorised WAV stems to editable MIDI",
+    "Balanced MIDI-derived song-interpretation WAV",
+    "Starter ZIP for a DAW handoff",
+    "Simple automatic mode",
+    "Studio multi-method comparison",
+    "Local processing on macOS",
+  ],
+};
+
 export default function Home() {
   return (
     <main id="top">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }}
+      />
       <div className="noise" aria-hidden="true" />
 
       <header className="site-header">
@@ -46,59 +63,56 @@ export default function Home() {
           <span>SUNOFRIEND</span>
         </a>
         <nav aria-label="Main navigation">
-          <a href="#origin">The name</a>
-          <a href="#how">How it works</a>
-          <a href="#examples">Hear it</a>
-          <a href="#start">Try it</a>
-          <a href="#signal">Send signal</a>
+          <a href="#codex">Start</a>
+          <a href="#choose">Choose a route</a>
+          <a href="#demo">Try the demo</a>
+          <Link href="/for-agents">For AI agents</Link>
         </nav>
-        <ExternalLink className="header-cta" href={links.repo}>
-          Get the alpha <span aria-hidden="true">↗</span>
-        </ExternalLink>
+        <a className="header-cta" href="#codex">
+          Use with Codex <span aria-hidden="true">↓</span>
+        </a>
       </header>
 
       <section className="hero" aria-labelledby="hero-title">
         <div className="hero-copy">
           <div className="eyebrow">
             <span className="live-dot" aria-hidden="true" />
-            सुनो / SUNO = LISTEN
+            LOCAL MUSIC TOOL FOR MAC
           </div>
           <h1 id="hero-title">
-            Listen deeper.
-            <span>Create further.</span>
+            Hear the song.
+            <span>Change the parts.</span>
           </h1>
-          <p className="hero-proof">Your song has more than one answer.</p>
+          <p className="hero-proof">Let Codex guide the setup.</p>
           <p className="hero-lede">
-            Give Sunofriend separated stems. Get editable MIDI and a balanced
-            instrumental interpretation. Hear the parts. Change the sounds.
-            Make the song yours.
+            Sunofriend listens to separate drums, bass, keys, vocals and other
+            song parts. It gives you editable MIDI and a clean instrumental
+            interpretation you can hear before opening your music software.
           </p>
           <div className="hero-actions">
-            <ExternalLink className="button button-hot" href={links.outOfPlace}>
-              <span className="play-mark" aria-hidden="true">
-                ▶
-              </span>
-              Hear “Out of Place”
-            </ExternalLink>
-            <a className="button button-ghost" href="#start">
-              Make your first song <span aria-hidden="true">↓</span>
+            <a className="button button-hot" href="#codex">
+              Start with the skill <span aria-hidden="true">↓</span>
             </a>
+            <ExternalLink className="button button-ghost" href={links.outOfPlace}>
+              <span className="play-mark" aria-hidden="true">▶</span>
+              Hear an example
+            </ExternalLink>
           </div>
           <ul className="signal-list" aria-label="Sunofriend principles">
-            <li>NO UPLOAD</li>
-            <li>NO BLACK-BOX WINNER</li>
-            <li>INDEPENDENT BY DESIGN</li>
+            <li>AUDIO STAYS ON YOUR MAC</li>
+            <li>FIRST RESULT IS AUTOMATIC</li>
+            <li>YOU CAN GO DEEPER LATER</li>
           </ul>
         </div>
 
         <div className="hero-visual">
-          <div className="hero-status" aria-hidden="true">
-            <span>STATUS</span>
-            <strong>SIGNAL LIVE</strong>
-          </div>
-          <img
+          <Image
             src="/brand/sunofriend-listener-banner.png"
-            alt="A waveform becoming the Sunofriend mark and editable MIDI notes, with सुनो meaning listen and an independence statement"
+            alt="A waveform becoming the Sunofriend mark and editable MIDI notes"
+            width={1672}
+            height={941}
+            priority
+            unoptimized
           />
           <div className="hero-stamp" aria-hidden="true">
             <span>STEMS</span>
@@ -108,433 +122,294 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="ticker" aria-label="Sunofriend capabilities">
-        <div>
-          <span>STEMS IN</span>
-          <i>✦</i>
-          <span>सुनो = LISTEN</span>
-          <i>✦</i>
-          <span>EDITABLE MIDI OUT</span>
-          <i>✦</i>
-          <span>SONG INTERPRETATION WAV</span>
-          <i>✦</i>
-          <span>LOCAL FIRST</span>
-          <i>✦</i>
-          <span>GARAGEBAND READY</span>
-          <i>✦</i>
-          <span>MORE THAN ONE ANSWER</span>
-          <i>✦</i>
-          <span>NOT AFFILIATED WITH SUNO INC.</span>
-          <i>✦</i>
-        </div>
+      <div className="plain-strip">
+        <strong>You do not need to understand Python.</strong>
+        <span>
+          You need a Mac and Codex with local workspace access for the guided
+          route. To use your own song, you also need music you are allowed to
+          process.
+        </span>
       </div>
 
-      <section id="origin" className="origin section-shell" aria-labelledby="origin-title">
-        <div className="section-index">00 / THE NAME</div>
-        <div className="origin-grid">
-          <div className="origin-lead">
-            <p className="kicker">LISTEN, FRIEND.</p>
-            <h2 id="origin-title">
-              A friend
-              <span> that listens.</span>
-            </h2>
-          </div>
-          <div className="origin-copy">
-            <div className="origin-language" aria-label="Suno means listen in Hindi">
-              <strong lang="hi">सुनो</strong>
-              <span>SUNO / LISTEN</span>
-            </div>
-            <p>
-              Every song begins with a simple invitation: <strong>सुनो—suno—listen.</strong>{" "}
-              Sunofriend takes its name from that familiar Hindi imperative.
-              Paired with “friend,” it carries two readings: “Listen, friend”
-              and “a friend that listens.”
-            </p>
-            <p>
-              That is its role. Sunofriend listens to separated musical parts,
-              offers editable interpretations and hands the decisions back to
-              the musician.
-            </p>
-            <div className="origin-independence">
-              <strong>Independent, by name and by design.</strong>
-              <p>
-                Sunofriend is an Unsigned Media Ltd project. It is not related
-                to, affiliated with, endorsed by, or sponsored by Suno Inc.,
-                the AI music company.
-              </p>
-              <div className="origin-links">
-                <ExternalLink className="text-link" href={links.hindiName}>
-                  Read the Hindi meaning <span aria-hidden="true">↗</span>
-                </ExternalLink>
-                <ExternalLink className="text-link text-link-muted" href={links.brandGuide}>
-                  Read the brand guide <span aria-hidden="true">↗</span>
-                </ExternalLink>
-                <ExternalLink className="text-link text-link-muted" href={links.sunoTerms}>
-                  Suno trademark source <span aria-hidden="true">↗</span>
-                </ExternalLink>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="manifesto section-shell" aria-labelledby="why-title">
-        <div className="section-index">01 / WHY</div>
-        <div className="manifesto-grid">
+      <section id="codex" className="codex-start section-shell" aria-labelledby="codex-title">
+        <div className="section-index">01 / EASIEST WAY IN</div>
+        <div className="section-heading-row">
           <div>
-            <p className="kicker">A SONG IS NOT A FLAT FILE.</p>
-            <h2 id="why-title">
-              Get inside it.
-              <br />
-              Pull it apart.
-              <br />
-              Build again.
-            </h2>
+            <p className="kicker">INSTALL THE GUIDE BEFORE THE TOOL.</p>
+            <h2 id="codex-title">Give this job to Codex.</h2>
           </div>
-          <div className="manifesto-copy">
-            <p>
-              A finished track can sound brilliant and still be impossible to
-              explore. Sunofriend turns drums, bass, keys, vocals and other
-              separated parts into note interpretations you can see, hear and
-              edit.
-            </p>
-            <p>
-              Its unusual move is refusing to hide every stem behind one
-              supposedly perfect answer. Simple mode gets you moving. Studio
-              keeps the alternatives alive so your ears can choose.
-            </p>
-            <p className="pullquote">
-              “The machine brings evidence. You make the musical decision.”
+          <p>
+            The Sunofriend skill tells an AI coding agent what the tool can do,
+            what must stay local and which questions to ask before it changes
+            anything on your Mac.
+          </p>
+        </div>
+        <div className="codex-grid">
+          <div className="prompt-stack">
+            <CopyPrompt
+              prompt={skillInstallPrompt}
+              label="TURN 1 / INSTALL THE SKILL"
+            />
+            <CopyPrompt
+              prompt={newcomerPrompt}
+              label="TURN 2 / USE SUNOFRIEND"
+            />
+            <p className="prompt-help">
+              <strong>Do not clone the repository first.</strong> If
+              <code>$sunofriend</code> is not recognised after turn 1, restart
+              Codex once and send turn 2 again.
             </p>
           </div>
-        </div>
-      </section>
-
-      <section className="benefits section-shell" aria-labelledby="benefits-title">
-        <div className="section-index">02 / THE PAYOFF</div>
-        <div className="section-heading-row">
-          <h2 id="benefits-title">Not another magic button.</h2>
-          <p>
-            A playable route from generated or recorded audio to musical
-            material you can actually work with.
-          </p>
-        </div>
-        <div className="benefit-grid">
-          <article className="benefit-card benefit-featured">
-            <span className="card-number">A01</span>
-            <h3>Editable by design</h3>
-            <p>
-              Move notes. Change instruments. Rework timing. Keep going in
-              GarageBand or another DAW instead of being trapped inside audio.
-            </p>
-            <div className="piano-roll" aria-hidden="true">
-              <span />
-              <span />
-              <span />
-              <span />
-              <span />
-              <span />
-              <span />
-            </div>
-          </article>
-          <article className="benefit-card">
-            <span className="card-number">A02</span>
-            <h3>Hear the whole idea</h3>
-            <p>
-              Sunofriend renders a balanced MIDI-only WAV so you can audition
-              the interpretation before opening a full music project.
-            </p>
-          </article>
-          <article className="benefit-card">
-            <span className="card-number">A03</span>
-            <h3>Local means local</h3>
-            <p>
-              The current app processes your stems, MIDI and private feedback
-              on your Mac. There is no upload endpoint hiding in the Workbench.
-            </p>
-          </article>
-          <article className="benefit-card">
-            <span className="card-number">A04</span>
-            <h3>Fast lane or deep dive</h3>
-            <p>
-              Simple makes an automatic, clearly unreviewed first result.
-              Studio reveals comparisons, waveforms, notes and explicit
-              choices.
-            </p>
-          </article>
-          <article className="benefit-card">
-            <span className="card-number">A05</span>
-            <h3>Evidence stays attached</h3>
-            <p>
-              Source roles, timings, alternatives and receipts stay visible.
-              A score can inform the work; it does not get to crown a winner.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section id="how" className="how section-shell" aria-labelledby="how-title">
-        <div className="section-index">03 / HOW</div>
-        <div className="section-heading-row">
-          <h2 id="how-title">Three moves. One new version.</h2>
-          <p>
-            Authorised stems can come from generators or separators—including
-            the independent third-party services Suno or Moises. Sunofriend
-            makes them editable. Your DAW takes it from there.
-          </p>
-        </div>
-        <ol className="steps">
-          <li>
-            <span className="step-number">01</span>
-            <div>
-              <h3>Bring the separated parts</h3>
-              <p>
-                Put top-level WAV stems in one folder. Name the song with its
-                key, BPM and tuning. Clear role names help: kick, snare, bass,
-                keys, vocals.
-              </p>
-              <div className="mini-path">
-                MY SONG-B MINOR-113BPM-440HZ/
-              </div>
-            </div>
-          </li>
-          <li>
-            <span className="step-number">02</span>
-            <div>
-              <h3>Hit Create MIDI + WAV</h3>
-              <p>
-                Launch the terminal studio, check the fresh output folder and
-                let the production processes do their work. Progress stays
-                visible; source files stay on the Mac.
-              </p>
-              <code className="inline-command">
-                .venv/bin/sunofriend tui &quot;/path/to/My Song...&quot;
-              </code>
-            </div>
-          </li>
-          <li>
-            <span className="step-number">03</span>
-            <div>
-              <h3>Listen, drag, mutate</h3>
-              <p>
-                Hear the balanced interpretation. Drag the individual MIDI into
-                GarageBand at the exact BPM. Pick sounds, change notes and make
-                the next thing.
-              </p>
-              <div className="output-tags">
-                <span>INDIVIDUAL MIDI</span>
-                <span>COMBINED MIDI</span>
-                <span>BALANCED WAV</span>
-                <span>STARTER ZIP</span>
-              </div>
-            </div>
-          </li>
-        </ol>
-      </section>
-
-      <section id="examples" className="examples section-shell" aria-labelledby="examples-title">
-        <div className="section-index">04 / HEAR THE EVIDENCE</div>
-        <div className="section-heading-row">
-          <h2 id="examples-title">Press play on the idea.</h2>
-          <p>
-            These are musical interpretations, not attempts to impersonate
-            every texture in the source.
-          </p>
-        </div>
-        <div className="example-grid">
-          <article className="example-card example-primary">
-            <div className="example-art">
-              <img
-                src="/examples/out-of-place.png"
-                alt="Out of Place, a Sunofriend interpolation"
-              />
-              <ExternalLink
-                className="floating-play"
-                href={links.outOfPlace}
-              >
-                <span aria-hidden="true">▶</span>
-                <span className="sr-only">Play Out of Place on SoundCloud</span>
-              </ExternalLink>
-            </div>
-            <div className="example-copy">
-              <span className="example-label">LEAD EXAMPLE / INTERPOLATION</span>
-              <h3>Out of Place</h3>
-              <p>
-                Hear musical ideas cross the gap from separated audio into a
-                new MIDI-derived instrumental interpretation.
-              </p>
-              <ExternalLink className="text-link" href={links.outOfPlace}>
-                Listen on SoundCloud <span aria-hidden="true">↗</span>
-              </ExternalLink>
-            </div>
-          </article>
-          <article className="example-card">
-            <div className="example-art">
-              <img
-                src="/examples/the-aisle-at-lidl.png"
-                alt="The Aisle at Lidl, a worked Sunofriend song"
-              />
-              <ExternalLink className="floating-play" href={links.lidl}>
-                <span aria-hidden="true">▶</span>
-                <span className="sr-only">
-                  Play The Aisle at Lidl on SoundCloud
+          <aside className="what-happens">
+            <span className="card-number">WHAT HAPPENS NEXT</span>
+            <ol>
+              <li>
+                <strong>First turn: install only the skill.</strong>
+                <span>
+                  Codex confirms the guide is available, then stops before
+                  installing the app or audio dependencies.
                 </span>
-              </ExternalLink>
-            </div>
-            <div className="example-copy">
-              <span className="example-label">SUNO (THIRD-PARTY) → MOISES → SUNOFRIEND → DAW</span>
-              <h3>The Aisle at Lidl</h3>
-              <p>
-                A complete four-tool workflow: AI performance, stem separation,
-                timing-locked MIDI and a finished GarageBand production.
-              </p>
-              <div className="example-links">
-                <ExternalLink className="text-link" href={links.lidl}>
-                  Hear Version 1 <span aria-hidden="true">↗</span>
-                </ExternalLink>
-                <ExternalLink className="text-link text-link-muted" href={links.lidlPack}>
-                  Explore the MIDI pack <span aria-hidden="true">↗</span>
-                </ExternalLink>
-              </div>
-            </div>
-          </article>
+              </li>
+              <li>
+                <strong>Second turn: use $sunofriend.</strong>
+                <span>
+                  The installed skill checks your Mac, explains missing
+                  software, asks before preparing the source, then asks again
+                  before installing the exact reviewed commit.
+                </span>
+              </li>
+              <li>
+                <strong>You choose your starting point.</strong>
+                <span>Existing stems, help finding stems or the worked demo.</span>
+              </li>
+              <li>
+                <strong>The beginner route makes a first result.</strong>
+                <span>
+                  Codex can use the focused create or demo command; the TUI
+                  offers the same outcome through Simple mode. MIDI, a listening
+                  WAV and a ZIP stay automatic and unreviewed.
+                </span>
+              </li>
+            </ol>
+            <ExternalLink className="text-link" href={links.skill}>
+              See the official skill <span aria-hidden="true">↗</span>
+            </ExternalLink>
+          </aside>
         </div>
       </section>
 
-      <section id="start" className="start section-shell" aria-labelledby="start-title">
-        <div className="start-panel">
-          <div className="section-index">05 / START TRANSMISSION</div>
-          <div className="start-grid">
-            <div>
-              <p className="kicker">CURRENTLY: MACOS LOCAL ALPHA</p>
-              <h2 id="start-title">Take it. Run it. Make noise.</h2>
-              <p className="start-lede">
-                The shortest first journey is one stem folder, one fresh output
-                and one button. Installation is still a developer-style clone
-                today; the beginner guide walks through it line by line.
-              </p>
-              <div className="hero-actions">
-                <ExternalLink className="button button-hot" href={links.gettingStarted}>
-                  Open the beginner guide <span aria-hidden="true">↗</span>
-                </ExternalLink>
-                <ExternalLink className="button button-ghost" href={links.repo}>
-                  View source <span aria-hidden="true">↗</span>
-                </ExternalLink>
-              </div>
-            </div>
-            <div className="terminal-card" aria-label="Sunofriend installation commands">
-              <div className="terminal-top">
-                <span />
-                <span />
-                <span />
-                <b>FIRST CONTACT</b>
-              </div>
-              <pre>
-                <code>{`git clone https://github.com/\nN9-Developer-Empowerment/sunofriend.git\n\ncd sunofriend\nbrew install python@3.11 fluid-synth\n\n# Follow the guide, then launch:\n.venv/bin/sunofriend tui \\\n  "/path/to/your-stems"`}</code>
-              </pre>
-              <div className="terminal-footer">
-                <span>PYTHON 3.11 RECOMMENDED</span>
-                <span>APACHE-2.0</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="signal" className="signal section-shell" aria-labelledby="signal-title">
-        <div className="section-index">06 / WHAT HAPPENS NEXT</div>
-        <div className="signal-hero">
-          <p className="kicker">THE WEB VERSION NEEDS A SIGNAL.</p>
-          <h2 id="signal-title">
-            If enough musicians bang on the door,
-            <span> Sunofriend goes online.</span>
-          </h2>
+      <section id="choose" className="journeys section-shell" aria-labelledby="choose-title">
+        <div className="section-index">02 / WHERE ARE YOU STARTING?</div>
+        <div className="section-heading-row">
+          <h2 id="choose-title">Pick the sentence that sounds like you.</h2>
           <p>
-            This launch site is serverless. The music engine is still local.
-            Your feedback decides whether the next move is an invited,
-            pay-per-conversion web pilot with private uploads, queued workers
-            and automatic deletion.
+            After the two prompts above, Codex should offer these same three
+            routes one at a time.
           </p>
         </div>
-        <div className="roadmap" aria-label="Sunofriend product route">
-          <div className="roadmap-item roadmap-now">
-            <span>NOW</span>
-            <h3>Local alpha</h3>
-            <p>Stems stay on your Mac. Simple and Studio are live.</p>
-          </div>
-          <div className="roadmap-line" aria-hidden="true" />
-          <div className="roadmap-item">
-            <span>NEXT</span>
-            <h3>Musician proof</h3>
-            <p>Clean-machine installs, more DAWs, honest first-song reports.</p>
-          </div>
-          <div className="roadmap-line" aria-hidden="true" />
-          <div className="roadmap-item">
-            <span>THEN</span>
-            <h3>Hosted pilot</h3>
-            <p>Short authorised songs. Private storage. Bounded cost.</p>
-          </div>
-        </div>
-        <div className="feedback-grid">
-          <article>
-            <span className="card-number">F01</span>
-            <h3>Made your first song?</h3>
+        <div className="journey-grid">
+          <article id="have-stems" className="journey-card journey-primary">
+            <span className="card-number">A / I HAVE STEMS</span>
+            <h3>I already have separate WAV files.</h3>
             <p>
-              Tell us whether installation worked, the WAV helped and the MIDI
-              landed in your DAW at the right tempo.
+              Give Codex the folder location. It will check that the files sit
+              together, confirm or ask you for the song key and BPM, and prepare
+              a fresh output folder.
             </p>
-            <ExternalLink className="button button-hot" href={links.firstSong}>
-              Send a first-song report <span aria-hidden="true">↗</span>
-            </ExternalLink>
+            <ul>
+              <li>Best when you already export separate parts</li>
+              <li>Use music you own or can process</li>
+              <li>Codex uses the focused create command</li>
+            </ul>
+            <a className="text-link" href="#codex">
+              Copy the starter prompt ↑
+            </a>
           </article>
-          <article>
-            <span className="card-number">F02</span>
-            <h3>Using another setup?</h3>
+
+          <article id="need-stems" className="journey-card">
+            <span className="card-number">B / I NEED STEMS</span>
+            <h3>I only have a finished song.</h3>
             <p>
-              Logic, Ableton, REAPER, FL Studio, Pro Tools, Cubase, Bitwig,
-              another separator or hardware MIDI: bring it.
+              Sunofriend does not separate a mixed song. Codex can explain how
+              to export your own DAW parts or use a separate stem service such
+              as Moises or Suno, subject to that service&apos;s terms.
             </p>
-            <ExternalLink className="button button-purple" href={links.compatibility}>
-              Report your setup <span aria-hidden="true">↗</span>
-            </ExternalLink>
+            <div className="journey-links">
+              <ExternalLink className="text-link" href={links.moisesExportHelp}>
+                Moises export help ↗
+              </ExternalLink>
+              <ExternalLink className="text-link text-link-muted" href={links.sunoStemHelp}>
+                Suno stem help ↗
+              </ExternalLink>
+            </div>
+            <small>
+              Never upload or process music unless you have the necessary rights.
+            </small>
+          </article>
+
+          <article id="want-demo" className="journey-card">
+            <span className="card-number">C / I WANT THE DEMO</span>
+            <h3>I want to try it without personal music or paid stems.</h3>
+            <p>
+              Let Codex run a copyright-safe synthetic stem project through the
+              real automatic pipeline. Then hear the result and explore the
+              included worked MIDI pack.
+            </p>
+            <div className="journey-links">
+              <Link className="text-link" href="/demo">
+                Get the guided demo instructions →
+              </Link>
+              <ExternalLink className="text-link text-link-muted" href={links.outOfPlace}>
+                Hear Out of Place ↗
+              </ExternalLink>
+            </div>
+            <small>
+              The built-in demo writes only to a fresh folder you approve.
+            </small>
           </article>
         </div>
       </section>
 
-      <section className="truth-strip" aria-label="Current product boundary">
-        <p>
-          <strong>TRUTH IN THE SIGNAL:</strong> Sunofriend creates a new
-          MIDI-derived interpretation. It does not promise exact waveform
-          reconstruction, perfect notes or a human-approved release master.
-          Use music you own or are authorised to process.
-        </p>
+      <section className="results section-shell" aria-labelledby="results-title">
+        <div className="section-index">03 / WHAT YOU GET</div>
+        <div className="section-heading-row">
+          <h2 id="results-title">A song you can hear and parts you can change.</h2>
+          <p>
+            The first result is deliberately useful before you learn the deeper
+            Studio workflow.
+          </p>
+        </div>
+        <div className="result-grid">
+          <article>
+            <span className="result-mark">♪</span>
+            <h3>Editable MIDI</h3>
+            <p>
+              Separate note files for the parts Sunofriend could interpret.
+              Change notes, timing and instruments in GarageBand or another DAW.
+            </p>
+          </article>
+          <article>
+            <span className="result-mark">▶</span>
+            <h3>Listening WAV</h3>
+            <p>
+              A balanced MIDI-derived interpretation for hearing the whole idea.
+              The source stems are level references, not audio in this mix.
+            </p>
+          </article>
+          <article>
+            <span className="result-mark">↓</span>
+            <h3>Starter ZIP</h3>
+            <p>
+              The individual MIDI, combined MIDI, WAV, receipt and short start
+              guide in one clearly labelled automatic, unreviewed bundle.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="demo" className="demo section-shell" aria-labelledby="demo-title">
+        <div className="demo-panel">
+          <div className="demo-copy">
+            <div className="section-index">04 / HEAR IT FIRST</div>
+            <p className="kicker">NO PERSONAL STEMS NEEDED.</p>
+            <h2 id="demo-title">Start with your ears.</h2>
+            <p>
+              Run the built-in synthetic demo to see the actual automatic
+              MIDI/WAV/ZIP path. Then hear “Out of Place” for the wider creative
+              goal: musical ideas carried into a new MIDI-derived interpretation.
+            </p>
+            <div className="hero-actions">
+              <ExternalLink className="button button-hot" href={links.outOfPlace}>
+                <span className="play-mark" aria-hidden="true">▶</span>
+                Listen on SoundCloud
+              </ExternalLink>
+              <Link className="button button-ghost" href="/demo">
+                Get the 3-step demo instructions →
+              </Link>
+            </div>
+          </div>
+          <Image
+            src="/examples/out-of-place.png"
+            alt="Out of Place, a Sunofriend musical interpolation"
+            width={1254}
+            height={1254}
+            unoptimized
+          />
+        </div>
+      </section>
+
+      <section className="boundary section-shell" aria-labelledby="boundary-title">
+        <div>
+          <span className="card-number">CURRENT BOUNDARY</span>
+          <h2 id="boundary-title">Local alpha, honestly labelled.</h2>
+        </div>
+        <div className="boundary-list">
+          <p>
+            <strong>It is not an online converter.</strong> This website never
+            receives your stems. Processing currently happens on your Mac.
+          </p>
+          <p>
+            <strong>It is not a stem separator.</strong> Bring top-level WAV stems
+            from your own project or an authorised third-party service.
+          </p>
+          <p>
+            <strong>It is not a perfect transcription.</strong> The WAV is a
+            creative MIDI interpretation, not waveform reconstruction or a
+            human-approved release master.
+          </p>
+        </div>
+      </section>
+
+      <section className="signal section-shell" aria-labelledby="signal-title">
+        <div className="section-index">05 / HELP SHAPE THE NEXT VERSION</div>
+        <div className="signal-grid">
+          <div>
+            <p className="kicker">MADE A FIRST SONG?</p>
+            <h2 id="signal-title">Tell us where it was easy and where it hurt.</h2>
+          </div>
+          <div className="feedback-actions">
+            <ExternalLink className="button button-hot" href={links.firstSong}>
+              Send a first-song report ↗
+            </ExternalLink>
+            <ExternalLink className="button button-ghost" href={links.compatibility}>
+              Report another DAW or AI setup ↗
+            </ExternalLink>
+          </div>
+        </div>
       </section>
 
       <footer>
         <div className="footer-brand">
-          <img src="/brand/sunofriend-logo.png" alt="" aria-hidden="true" />
+          <Image
+            src="/brand/sunofriend-logo.png"
+            alt=""
+            aria-hidden="true"
+            width={1254}
+            height={1254}
+            unoptimized
+          />
           <div>
             <strong>SUNOFRIEND</strong>
             <span>LISTEN DEEPER. CREATE FURTHER.</span>
           </div>
         </div>
         <div className="footer-links">
+          <Link href="/for-agents">For AI agents</Link>
+          <a href="/llms.txt">llms.txt</a>
           <ExternalLink href={links.repo}>GitHub ↗</ExternalLink>
-          <ExternalLink href={links.gettingStarted}>Beginner guide ↗</ExternalLink>
           <ExternalLink href={links.license}>Apache 2.0 ↗</ExternalLink>
-          <a href="#top">Back to top ↑</a>
         </div>
         <p className="footer-note">
           <span>
             © 2026 <strong>Unsigned Media Ltd</strong> · Company No. 17046305
           </span>
           <span>
-            The name begins with Hindi <strong>सुनो</strong>, “listen.”
-            Sunofriend is not related to or affiliated with Suno Inc.
+            Sunofriend takes its name from Hindi <strong>सुनो</strong>, “listen.”
+            It is not related to or affiliated with Suno Inc.
           </span>
           <span>
-            References to Suno, Moises, Apple, GarageBand, SoundCloud or Lidl
-            describe independent third-party products or examples only.
+            References to Suno, Moises, Apple, GarageBand or SoundCloud describe
+            independent third-party products or examples only.
           </span>
         </p>
       </footer>

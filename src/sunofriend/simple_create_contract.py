@@ -9,6 +9,7 @@ from typing import Callable, Protocol
 
 SimpleProgressCallback = Callable[["SimpleCreateProgress"], None]
 SimpleCancellationPredicate = Callable[[], bool]
+SIMPLE_CREATE_CLI_RESULT_SCHEMA = "sunofriend.simple-create-cli-result.v1"
 
 
 @dataclass(frozen=True)
@@ -79,6 +80,60 @@ class SimpleCreateResult:
         return self.status == "cancelled"
 
 
+def simple_create_result_document(
+    result: SimpleCreateResult,
+    *,
+    project: str | Path,
+) -> dict:
+    """Return the stable path-bearing CLI summary for one Simple run."""
+
+    return {
+        "schema": SIMPLE_CREATE_CLI_RESULT_SCHEMA,
+        "status": result.status,
+        "source_project": str(Path(project).expanduser().resolve()),
+        "workflow": {
+            "mode": "simple",
+            "automatic": True,
+            "review_status": "not_reviewed",
+            "review_recommended": True,
+            "source_audio_mixed_into_wav": False,
+            "release_master": False,
+        },
+        "outputs": {
+            "root": str(result.result_root) if result.result_root is not None else None,
+            "listen_first": (
+                str(result.balanced_wav_path)
+                if result.balanced_wav_path is not None
+                else None
+            ),
+            "combined_midi": (
+                str(result.combined_midi_path)
+                if result.combined_midi_path is not None
+                else None
+            ),
+            "starter_zip": (
+                str(result.zip_path) if result.zip_path is not None else None
+            ),
+            "receipt": (
+                str(result.manifest_path)
+                if result.manifest_path is not None
+                else None
+            ),
+        },
+        "selected_midi_parts": result.selected_count,
+        "omitted_source_roles": result.omitted_count,
+        "warnings": list(result.warnings),
+        "next_step": (
+            "Listen to outputs.listen_first, then open the individual MIDI "
+            "files in GarageBand. Use Studio only if you want to compare "
+            "alternatives or record feedback."
+            if result.succeeded
+            else "The automatic result is incomplete; inspect the warnings and "
+            "use a new output path for any retry."
+        ),
+    }
+
+
 class SimpleCreateRunner(Protocol):
     """Injectable runner boundary used by the terminal UI."""
 
@@ -96,10 +151,12 @@ class SimpleCreateRunner(Protocol):
 
 
 __all__ = [
+    "SIMPLE_CREATE_CLI_RESULT_SCHEMA",
     "SimpleCancellationPredicate",
     "SimpleCreateProgress",
     "SimpleCreateRequest",
     "SimpleCreateResult",
     "SimpleCreateRunner",
     "SimpleProgressCallback",
+    "simple_create_result_document",
 ]
