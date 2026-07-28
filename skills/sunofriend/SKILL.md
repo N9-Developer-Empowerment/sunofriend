@@ -1,11 +1,15 @@
 ---
 name: sunofriend
-description: Use Sunofriend's local TUI, CLI, Workbench and Developer Inspector to turn Suno/Moises stems or vocals into editable MIDI plus a balanced MIDI-derived song-interpretation WAV. Prefer the TUI's default Simple mode for one-action automatic, explicitly unreviewed MIDI/WAV/ZIP creation; use Studio for immutable multi-method comparison, explicit choices and feedback, reviewed GarageBand packs and technical inspection. Also render a separate receipt-bound listening master; build or match sample instruments; transform key, BPM, tuning and alignment; and browse, reuse, transform or correct Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody, MIDI comparison, song interpolation, GarageBand handoff, instrument matching, tempo/key changes, mashups and bounded note correction. Retain CLI/skill routes for expert automation. Do not use it for generic stem separation, human-approved release mastering, lyric writing, arbitrary shell execution, unapproved model/plugin downloads or DAW GUI editing.
+description: Use Sunofriend—named from Hindi सुनो ("listen") and independent of Suno Inc.—through its local TUI, CLI, Workbench and Developer Inspector to turn authorised stems or vocals into editable MIDI plus a balanced MIDI-derived song-interpretation WAV. Prefer the TUI's default Simple mode for one-action automatic, explicitly unreviewed MIDI/WAV/ZIP creation; use Studio for immutable multi-method comparison, explicit choices and feedback, reviewed GarageBand packs and technical inspection. Also render a separate receipt-bound listening master; build or match sample instruments; transform key, BPM, tuning and alignment; and browse, reuse, transform or correct Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody, MIDI comparison, song interpolation, GarageBand handoff, instrument matching, tempo/key changes, mashups and bounded note correction. Retain CLI/skill routes for expert automation. Do not use it for generic stem separation, human-approved release mastering, lyric writing, arbitrary shell execution, unapproved model/plugin downloads or DAW GUI editing.
 ---
 
 <!-- sunofriend-interface-contract: 2026-07-27.7 -->
 
 # Sunofriend
+
+**Listen deeper. Create further.** Sunofriend takes its name from the Hindi
+**सुनो** (*suno*), “listen,” and is an independent Unsigned Media Ltd project,
+not related to or affiliated with Suno Inc., the AI music company.
 
 Prefer the packaged `sunofriend tui` Guided Local Studio when a person wants
 to operate Sunofriend directly. It opens in **Simple / Make my song** mode:

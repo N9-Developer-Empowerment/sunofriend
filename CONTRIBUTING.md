@@ -1,9 +1,13 @@
 # Contributing to Sunofriend
 
-Sunofriend is currently proven most deeply with Suno/Moises exports and
-GarageBand on macOS. Compatibility reports from other workflows are valuable
-even when they reveal a failure: they turn assumptions about MIDI timing,
-tempo, key, instruments and stem quality into reproducible requirements.
+Sunofriend—named from the Hindi **सुनो**, “listen”—is currently proven most
+deeply with GarageBand on macOS and exports from independent third-party tools
+including Suno and Moises. Sunofriend is not related to or affiliated with
+Suno Inc.; see the [brand and name guide](BRAND.md).
+
+Compatibility reports from other workflows are valuable even when they reveal
+a failure: they turn assumptions about MIDI timing, tempo, key, instruments
+and stem quality into reproducible requirements.
 Contributions are accepted under the repository's
 [Apache License 2.0](LICENSE).
 

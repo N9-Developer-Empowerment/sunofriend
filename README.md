@@ -1,18 +1,31 @@
 # Sunofriend
 
-![Sunofriend, hear it, edit it, make it yours](assets/brand/sunofriend-listener-banner-v3.png)
+![Sunofriend — सुनो means listen; listen deeper, create further; independent of Suno Inc.](assets/brand/sunofriend-listener-banner-v4.png)
+
+> **Listen deeper. Create further.**
 
 Sunofriend turns separated music stems into editable MIDI interpretations and
 a balanced MIDI-rendered WAV that helps you hear the song in a simplified
 instrumental form.
 
-It is a local-first companion to tools such as Suno, Moises and GarageBand.
-Sunofriend does not try to replace stem separation or a DAW. Its distinctive
-strength is keeping results from several analytical and AI processes available,
-because a different method may work best for each instrument or phrase.
+The name comes from **सुनो** (*suno*), the familiar Hindi invitation or
+command meaning “listen.” Paired with “friend,” it can be read as both
+**“Listen, friend”** and **“a friend that listens.”** Sunofriend listens,
+offers musical interpretations and hands the decision back to the musician.
+
+Sunofriend is an independent project of **Unsigned Media Ltd**. It is not
+related to, affiliated with, endorsed by, or sponsored by **Suno Inc.**, the
+AI music company. References to Suno in example workflows mean that separate
+third-party service. See the canonical [brand and name guide](BRAND.md).
+
+Sunofriend is a local-first companion to generators, stem separators and DAWs.
+It does not try to replace stem separation or a DAW. Its distinctive strength
+is keeping results from several analytical and AI processes available, because
+a different method may work best for each instrument or phrase.
 
 > Sunofriend is an alpha project. It is currently tested most deeply on macOS
-> with GarageBand, Suno and Moises exports.
+> with GarageBand and exports from independent third-party tools including
+> Suno and Moises.
 
 ## Choose how much control you want
 
@@ -164,9 +177,9 @@ audio.
 
 For a documented four-tool workflow, [listen to Version 1 of “The Aisle at
 Lidl”](https://soundcloud.com/ezzye-1/the-aisle-at-lidl?si=97cf744ff4a743bca875bec3db88024f&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing).
-The maintainer wrote that song and approved it as a public Suno → Moises →
-Sunofriend → GarageBand example. It is a finished workflow example rather than
-the raw Simple-mode WAV. The repository contains a compact
+The maintainer wrote that song and approved it as a public **Suno
+(third-party) → Moises → Sunofriend → GarageBand** example. It is a finished
+workflow example rather than the raw Simple-mode WAV. The repository contains a compact
 [worked MIDI pack](examples/the-aisle-at-lidl/); the large source stems are not
 committed.
 
@@ -174,6 +187,7 @@ committed.
 
 | If you want to… | Read |
 | --- | --- |
+| Understand the name, strapline and independence language | [Brand and name guide](BRAND.md) |
 | Install and make a first song | [Getting started](docs/GETTING_STARTED.md) |
 | Understand Simple and Studio modes | [Product modes and hosted future](docs/PRODUCT_MODES_AND_HOSTING.md) |
 | Operate the terminal dashboard | [Guided Local Studio TUI](docs/LOCAL_STUDIO_TUI.md) |

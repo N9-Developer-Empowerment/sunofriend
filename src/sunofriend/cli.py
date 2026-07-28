@@ -29,7 +29,8 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     remake = sub.add_parser(
-        "remake", help="Legacy grid-based remake of a Moises/Suno export folder"
+        "remake",
+        help="Legacy grid-based remake of a third-party Moises or Suno export folder",
     )
     remake.add_argument(
         "input_folder", help="Folder containing Moises stems and a chords PDF"
@@ -80,7 +81,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Also compare every audition variant with the source stem",
     )
     listen.add_argument(
-        "--bpm", type=float, required=True, help="Track BPM (from Suno/Moises metadata)"
+        "--bpm",
+        type=float,
+        required=True,
+        help="Track BPM (from third-party Suno or Moises metadata)",
     )
     listen.add_argument("--out-dir", required=True, help="Output directory")
     listen.add_argument("--max-iterations", type=int, default=30)
@@ -466,7 +470,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     listen_all = sub.add_parser(
         "listen-all",
-        help="Process a whole Suno/Moises export folder: all stems -> MIDI + combined arrangement",
+        help=(
+            "Process a third-party Suno or Moises export folder: "
+            "all stems -> MIDI + combined arrangement"
+        ),
     )
     listen_all.add_argument(
         "input_folder", help="Export folder with stems (+ chords PDF, metronome)"

@@ -1,4 +1,4 @@
-"""Process a whole Suno/Moises export folder in one command.
+"""Process a third-party Suno or Moises export folder in one command.
 
 Discovers stems, the chords PDF, and the metronome; infers BPM/key from the
 folder name; skips near-silent stems; runs the listen/refine loop per stem
