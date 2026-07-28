@@ -70,6 +70,8 @@ The deployment uses CloudFormation to create:
 
 - one encrypted, versioned, private S3 bucket;
 - one CloudFront distribution with Origin Access Control;
+- one viewer-request function that maps clean routes such as `/demo/` to their
+  generated static `index.html` files;
 - HTTPS, compression and security headers; and
 - optional Route 53 records for a custom domain.
 

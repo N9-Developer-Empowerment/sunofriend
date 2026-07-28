@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import vm from "node:vm";
 
 async function render(path = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
@@ -22,6 +23,40 @@ async function render(path = "/") {
     },
   );
 }
+
+async function loadCleanRouteHandler() {
+  const template = await readFile(
+    new URL("../infra/site.yaml", import.meta.url),
+    "utf8",
+  );
+  const block = template.match(
+    /FunctionCode: \|\n(?<code>(?: {8}.+(?:\n|$))+)/,
+  );
+  assert.ok(block?.groups?.code, "CloudFront function code was not found");
+  const code = block.groups.code
+    .split("\n")
+    .map((line) => line.replace(/^ {8}/, ""))
+    .join("\n");
+  const handler = vm.runInNewContext(`${code}\nhandler;`);
+  assert.equal(typeof handler, "function");
+  return handler;
+}
+
+test("rewrites clean website routes to their static index files", async () => {
+  const handler = await loadCleanRouteHandler();
+  const rewrite = (uri) => handler({ request: { uri } }).uri;
+
+  assert.equal(rewrite("/"), "/index.html");
+  assert.equal(rewrite("/demo"), "/demo/index.html");
+  assert.equal(rewrite("/demo/"), "/demo/index.html");
+  assert.equal(rewrite("/for-agents"), "/for-agents/index.html");
+  assert.equal(rewrite("/for-agents/"), "/for-agents/index.html");
+  assert.equal(rewrite("/llms.txt"), "/llms.txt");
+  assert.equal(
+    rewrite("/_next/static/chunks/app.js"),
+    "/_next/static/chunks/app.js",
+  );
+});
 
 test("server-renders an approachable skill-first musician page", async () => {
   const response = await render();
@@ -196,6 +231,12 @@ test("keeps public discovery and the AWS boundary explicit", async () => {
   assert.match(domainTemplate, /AlternateValidationRecordName/);
   assert.match(domainTemplate, /mx\.hover\.com\.cust\.hostedemail\.com/);
   assert.match(template, /AWS::CloudFront::Distribution/);
+  assert.match(template, /AWS::CloudFront::Function/);
+  assert.match(template, /EventType: viewer-request/);
+  assert.match(
+    template,
+    /CleanRouteFunction\.FunctionMetadata\.FunctionARN/,
+  );
   assert.match(template, /AWS::CloudFront::OriginAccessControl/);
   assert.match(template, /BlockPublicAcls: true/);
   assert.match(template, /SSEAlgorithm: AES256/);

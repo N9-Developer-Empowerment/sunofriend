@@ -89,6 +89,26 @@ Resources:
             Protection: true
             Override: true
 
+  CleanRouteFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      AutoPublish: true
+      Name: !Sub "${AWS::StackName}-clean-routes"
+      FunctionConfig:
+        Comment: Serve static index files for extensionless website routes.
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var request = event.request;
+          var uri = request.uri;
+          if (uri.charAt(uri.length - 1) === '/') {
+            request.uri = uri + 'index.html';
+          } else if (uri.indexOf('.') === -1) {
+            request.uri = uri + '/index.html';
+          }
+          return request;
+        }
+
   SiteDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
@@ -112,6 +132,9 @@ Resources:
             - HEAD
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
           Compress: true
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt CleanRouteFunction.FunctionMetadata.FunctionARN
           ResponseHeadersPolicyId: !Ref SecurityHeaders
           TargetOriginId: SiteBucketOrigin
           ViewerProtocolPolicy: redirect-to-https
