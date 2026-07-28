@@ -1,122 +1,256 @@
 # Sunofriend social media kit
 
-Use these assets and messages to introduce Sunofriend and the worked example
-without implying endorsement by any commercial platform or retailer.
+Sunofriend is for people who enjoy making music, including people who do not
+write code or know much music theory.
 
-> **Before publishing:** commit and push the current app, beginner guide and
-> artwork so every public link works. Sunofriend's code is Apache-2.0, but music,
-> checkpoints, SoundFonts, samples and third-party tools retain their own
-> licences. The drafts call the app a local alpha and ask for independent
-> testing; they do not claim that one-click usability has already been proven.
+The short positioning line is:
 
-## Links
+> From separated stems to editable MIDI, with more than one answer.
 
-- Project: https://github.com/N9-Developer-Empowerment/sunofriend
-- “The Aisle at Lidl” Version 1: https://soundcloud.com/ezzye-1/the-aisle-at-lidl
-- Beginner first-song report: https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=beginner-first-song.yml
-- Contributor report: https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml
+The simplest lay description is:
 
-## Assets
+> Sunofriend listens to the separate parts of a song, turns what it hears into
+> editable note interpretations, and makes a balanced MIDI-rendered
+> instrumental version you can listen to or continue in music software.
 
-| File | Shape | Suggested use |
+This is a local alpha, not a finished online service. Results vary by song.
+It is currently tested most deeply on macOS with GarageBand. Sunofriend does
+not download or separate a SoundCloud track. A user supplies local stems that
+they own or are authorised to process.
+
+## Start with the music
+
+- Listen to **“Out of Place”**, the lead Sunofriend interpolation example:
+  https://soundcloud.com/ezzye-1/out-of-place?si=93616bdf10d7406c838be366106c1025&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing
+- Explore or install Sunofriend:
+  https://github.com/N9-Developer-Empowerment/sunofriend
+- Hear **“The Aisle at Lidl”**, an earlier worked song:
+  https://soundcloud.com/ezzye-1/the-aisle-at-lidl
+- Tell us whether your first-song instructions worked:
+  https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=beginner-first-song.yml
+- Report another DAW, separator, AI tool or MIDI setup:
+  https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml
+
+For listeners, put “Out of Place” before the repository link. For music makers
+who already want to try the tool, put the repository first.
+
+## What the words mean
+
+- **Stems** are separate audio parts such as drums, bass, keys and vocals.
+- **MIDI** stores editable notes and timing. It is not the original recorded
+  sound.
+- A **Sunofriend interpolation** is a new MIDI-derived instrumental
+  interpretation of what Sunofriend heard across the stems. It keeps musical
+  ideas while using playable instrument sounds.
+- The interpretation WAV contains rendered MIDI, not the original stem audio.
+  It is a creative listening mix, not an exact copy or a human-approved release
+  master.
+
+Use “interpolation” with that explanation. Do not promise that Sunofriend
+reconstructs every sound or note exactly.
+
+## Graphics
+
+| File | Shape | Best use |
 | --- | --- | --- |
-| [`assets/brand/sunofriend-logo.png`](assets/brand/sunofriend-logo.png) | 1254 × 1254 square | Profile/avatar image; keep the full mark inside circular crops |
-| [`assets/brand/sunofriend-banner-v2.png`](assets/brand/sunofriend-banner-v2.png) | 1672 × 941 landscape | X, Bluesky, Facebook and Slack launch posts; repository hero |
-| [`assets/social/the-aisle-at-lidl-square-v2.png`](assets/social/the-aisle-at-lidl-square-v2.png) | 1254 × 1254 square | Instagram, Threads, Facebook, WhatsApp and cross-platform feed post |
-| [`assets/social/the-aisle-at-lidl-story.png`](assets/social/the-aisle-at-lidl-story.png) | 941 × 1672 portrait | Instagram/Facebook Stories and WhatsApp Status |
+| [`assets/brand/sunofriend-logo.png`](assets/brand/sunofriend-logo.png) | 1254 × 1254 square | Avatar or profile image; the full mark survives circular crops |
+| [`assets/brand/sunofriend-listener-banner-v3.png`](assets/brand/sunofriend-listener-banner-v3.png) | 1672 × 941 landscape | Repository hero, Facebook, Bluesky, X and Slack |
+| [`assets/brand/sunofriend-social-preview-1280x640-v1.png`](assets/brand/sunofriend-social-preview-1280x640-v1.png) | 1280 × 640 landscape | GitHub social preview and wide link cards; under 1 MB |
+| [`assets/social/out-of-place-interpolation-square-v1.png`](assets/social/out-of-place-interpolation-square-v1.png) | 1254 × 1254 square | SoundCloud track art and feed posts on Instagram, Threads, Facebook, WhatsApp, Bluesky and X |
+| [`assets/social/out-of-place-interpolation-story-v1.png`](assets/social/out-of-place-interpolation-story-v1.png) | 941 × 1672 portrait | Instagram/Facebook Stories and WhatsApp Status |
+| [`assets/social/the-aisle-at-lidl-square-v2.png`](assets/social/the-aisle-at-lidl-square-v2.png) | 1254 × 1254 square | Earlier worked-example posts |
+| [`assets/social/the-aisle-at-lidl-story.png`](assets/social/the-aisle-at-lidl-story.png) | 941 × 1672 portrait | Earlier worked-example Story/Status |
 
-The square asset is deliberately reusable. Instagram accepts uploaded photos
-across a broad feed range and resizes images over 1080 pixels wide; Facebook
-recommends PNG for profile/cover artwork containing logos or text. See Meta's
-[Instagram image guidance](https://www.facebook.com/help/1631821640426723/)
-and [Facebook Page image guidance](https://www.facebook.com/help/125379114252045/).
+The “Out of Place” square is a PNG under 2 MB. At 1254 × 1254 it exceeds
+SoundCloud's recommendation of at least 800 × 800 for square track artwork.
+The graphic is original and contains no SoundCloud or third-party logo.
 
-## Short post — X or Bluesky
+SoundCloud advises simple, bold and relevant track art. Its profile header is a
+different shape and may crop text on smaller screens, so use the square as
+track artwork rather than stretching it into a profile header:
 
-> AI music is easy to generate, but hard to edit. Sunofriend is an open-source local alpha that turns separated stems into editable MIDI plus a clean balanced WAV. Its new Simple mode is one Create button. I am looking for musicians to test the setup and other DAWs: https://github.com/N9-Developer-Empowerment/sunofriend #AIMusic #MIDI
+- [SoundCloud track artwork guidance](https://help.soundcloud.com/hc/en-us/articles/46022345620123-Adding-Or-Changing-Track-Artwork)
+- [SoundCloud profile image and header guidance](https://help.soundcloud.com/hc/en-us/articles/115003450007-Profile-image-and-header%29%20and%20your%20%5BURL%20and)
 
-Use the landscape banner or square song card.
+## Short post for X
+
+> What can editable notes reveal about a song? I built Sunofriend to explore that. Hear “Out of Place”, a MIDI-derived interpolation: https://soundcloud.com/ezzye-1/out-of-place
+>
+> Local alpha and beginner guide in the reply. #MusicMaking #MIDI
+
+Reply with:
+
+> Sunofriend starts with separate WAVs for parts such as bass, drums, keys and vocals. Try the local macOS alpha: https://github.com/N9-Developer-Empowerment/sunofriend
+
+The main post is 240 characters before platform link handling. Attach the
+square “Out of Place” card.
+
+## Short post for Bluesky
+
+> Can a song become something you can see, hear and edit? I built Sunofriend to turn separate parts into MIDI interpretations and a balanced listening mix.
+>
+> Hear “Out of Place”, a Sunofriend interpolation:
+> https://soundcloud.com/ezzye-1/out-of-place
+>
+> Code and guide in the reply.
+
+This post is 277 characters. Attach the square card, add alt text from the
+section below, then reply with the repository link.
 
 ## Threads or Instagram
 
-> I built Sunofriend because AI-generated music can sound exciting but still leave muddy, hard-to-edit instruments. It is an open-source, local-first alpha that converts separated stems into editable MIDI and a balanced MIDI-rendered WAV.
+> I love hearing a song, but I also want to get inside it: hear the bass line
+> clearly, see the notes, change the instruments and make a new version.
 >
-> The new Simple mode asks for a stem folder and one fresh output, then one Create button makes individual MIDI parts, a combined MIDI, a clean whole-song interpretation and a ZIP. The detailed Studio still lets you compare several analytical and AI methods rather than hiding them behind one model answer.
+> That is why I built Sunofriend. Give it separate audio parts such as drums,
+> bass and keys. It turns what it hears into editable MIDI notes and makes a
+> balanced MIDI-rendered instrumental listening mix.
 >
-> “The Aisle at Lidl” is my worked example using Suno, Moises, Sunofriend and GarageBand. Listen to Version 1: https://soundcloud.com/ezzye-1/the-aisle-at-lidl
+> “Out of Place” is an example of that interpolation:
+> https://soundcloud.com/ezzye-1/out-of-place
 >
-> Code, beginner instructions and example MIDI: https://github.com/N9-Developer-Empowerment/sunofriend
+> Sunofriend is open source, local-first and still an alpha. Simple mode makes
+> an automatic first result. Studio mode lets curious musicians compare
+> different analytical interpretations, plus optional AI alternatives where
+> configured, rather than hiding everything behind one answer.
 >
-> I would especially like non-technical musicians to tell me whether the install and first-song instructions are genuinely clear: https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=beginner-first-song.yml
+> Try it and tell me whether a non-technical musician can follow the guide:
+> https://github.com/N9-Developer-Empowerment/sunofriend
 >
-> Contributors are also welcome to try other DAWs, music software, AI generators, stem separators and MIDI hardware.
->
-> Compatibility report: https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml
->
-> #AIMusic #MusicProduction #MIDI #MusicTech #GarageBand
+> #MusicMaking #MusicProduction #MIDI #AIMusic #GarageBand
 
-Use the square card for a feed post and the portrait artwork for Stories. On
+Use the square card in the feed and the portrait graphic for Stories. On
 Instagram, put the listening link in your bio or add the official
 [link sticker](https://www.facebook.com/help/instagram/192168966243613) to the
 Story.
 
 ## Facebook
 
-> I have been developing Sunofriend, an open-source local music tool that turns separated stems into editable MIDI plus a balanced MIDI-rendered WAV. Its new Simple mode lets you choose a stem folder, press Create once and receive individual MIDI, a combined interpretation and a ZIP. The detailed Studio keeps several analytical and AI methods available for comparison.
+> A finished song can be lovely to hear but difficult to explore. Which notes
+> make the bass line work? What happens if the keys use another sound? Can the
+> musical idea become something editable?
 >
-> My song “The Aisle at Lidl” is now the public worked example. Version 1 is here: https://soundcloud.com/ezzye-1/the-aisle-at-lidl
+> I built Sunofriend to help with that. It listens to separate song parts and
+> turns what it hears into MIDI notes you can edit. It also makes a balanced
+> instrumental WAV, so you can hear the whole interpretation before opening a
+> music project.
 >
-> The repository includes a lightweight MIDI pack showing two kick timbres, three bass choices, separated keys roles and a reconstructed arrangement: https://github.com/N9-Developer-Empowerment/sunofriend
+> Listen first: “Out of Place” is a Sunofriend interpolation.
+> https://soundcloud.com/ezzye-1/out-of-place
 >
-> It is still an alpha. I would love independent feedback on whether the setup guide works without developer help, whether the MIDI imports at the correct tempo and whether the WAV is musically useful: https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=beginner-first-song.yml
+> Sunofriend runs locally and is still an alpha. The default Simple mode makes
+> an automatic first result. The detailed Studio lets you compare several
+> methods, choose with your ears and prepare files for GarageBand or another
+> DAW.
 >
-> Tests with other DAWs, AI tools, separators and MIDI setups are also welcome: https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml
+> Code and beginner guide:
+> https://github.com/N9-Developer-Empowerment/sunofriend
+>
+> I would particularly value feedback from music makers who are not software
+> developers. Could you install it, find the result and make music with it?
 
 ## WhatsApp
 
-> I have released a new alpha of Sunofriend, my open-source local stem-to-MIDI tool. Give it stems, press Create, and it makes editable MIDI plus a clean balanced WAV and ZIP. I need honest beginner and other-DAW tests. Repo and instructions: https://github.com/N9-Developer-Empowerment/sunofriend Worked example: https://soundcloud.com/ezzye-1/the-aisle-at-lidl
+### Direct message
 
-Use the portrait artwork for Status and the square card in a direct message or
-group chat.
+> I have been making a local music tool called Sunofriend. It listens to the
+> separate parts of a song, turns them into editable notes and makes a balanced
+> MIDI-rendered instrumental interpretation. “Out of Place” is an example:
+> https://soundcloud.com/ezzye-1/out-of-place
+>
+> If you make music and want to try the alpha:
+> https://github.com/N9-Developer-Empowerment/sunofriend
+
+### Status
+
+> Hear the song. Explore the parts. Make it yours.
+>
+> “Out of Place”, a Sunofriend interpolation:
+> https://soundcloud.com/ezzye-1/out-of-place
+
+Use the portrait artwork for Status and the square card in direct messages or
+group chats.
 
 ## BBC Slack `#music-production-chat`
 
-> Hi all, I have been building an Apache-2.0 local music tool called Sunofriend. It converts separated stems into editable MIDI plus a balanced MIDI-rendered WAV. The new default Simple mode takes a stem folder and one fresh output, then one Create action produces individual MIDI, a combined interpretation and a ZIP. The detailed Studio keeps analytical, tracker, repair and AI alternatives available for visual and listening comparison.
+> Hi all. I have been building Sunofriend, an Apache-2.0 local music tool for
+> exploring a song after stem separation.
 >
-> I have published my own song “The Aisle at Lidl” as the worked example: https://soundcloud.com/ezzye-1/the-aisle-at-lidl
+> It converts separate audio parts into editable MIDI and renders a balanced
+> MIDI-derived listening mix. Its unusual strength is keeping several
+> analytical, tracker and repair interpretations, plus optional AI alternatives
+> where configured, because a different method may work best for each musical
+> part.
 >
-> Repo, beginner setup and example MIDI: https://github.com/N9-Developer-Empowerment/sunofriend
+> “Out of Place” is my latest example of the interpolation idea:
+> https://soundcloud.com/ezzye-1/out-of-place
 >
-> This is still an alpha. I would value tests from musicians who are not Python developers, especially whether the instructions are clear, the app completes, the files are easy to find, the MIDI imports at the correct BPM and the WAV is musically useful: https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=beginner-first-song.yml
+> Repo and beginner setup:
+> https://github.com/N9-Developer-Empowerment/sunofriend
 >
-> Logic, Ableton, REAPER, FL Studio, Pro Tools, Cubase, Bitwig, other AI generators/separators and hardware MIDI reports are also welcome: https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml
+> It is still an alpha. I would value tests from musicians who are not Python
+> developers, especially whether the setup is understandable, the result is
+> easy to find, the MIDI imports at the right BPM and the listening mix is
+> musically useful.
+>
+> Reports from Logic, Ableton, REAPER, FL Studio, Pro Tools, Cubase, Bitwig,
+> other AI generators or separators, and hardware MIDI setups are welcome:
+> https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml
 
-Use the landscape banner so the technical explanation remains the focus.
+Use the landscape banner so the technical explanation remains readable.
+
+## SoundCloud copy
+
+### Optional description for “Out of Place”
+
+> “Out of Place” is shared as an example of Sunofriend interpolation.
+>
+> Sunofriend listens to separate audio parts, proposes editable MIDI notes and
+> renders a balanced MIDI-derived instrumental WAV. The result is a new musical
+> interpretation rather than an exact copy of the source sound.
+>
+> Explore the local open-source alpha:
+> https://github.com/N9-Developer-Empowerment/sunofriend
+>
+> I would love to hear which parts feel musical, which sound surprising and
+> whether this makes you want to explore a song differently.
+
+### Pinned comment
+
+> This is an example of Sunofriend interpolation: separate song parts became
+> editable MIDI and a new instrumental listening mix. Which part catches your
+> ear first? https://github.com/N9-Developer-Empowerment/sunofriend
+
+### Short profile bio
+
+> Songs, experiments and Sunofriend interpolations. Hear the result, explore
+> the parts, make something new.
 
 ## Suggested alt text
 
-**Logo:** Sunofriend's cyan audio waveform curves into an S and becomes coral
-rectangular notes on a MIDI piano-roll grid against a dark navy background.
+**Logo:** A cyan audio waveform curves into an S and becomes coral rectangular
+notes on a MIDI grid against a dark navy background.
 
-**Banner:** A dark navy Sunofriend banner with a cyan waveform becoming coral
-MIDI blocks inside an S. Text reads “SUNOFRIEND”, “FROM AI STEMS TO PLAYABLE
-MIDI” and “MUSIC MAKERS • DAW READY”.
+**Listener banner:** A glowing cyan waveform flows into Sunofriend's cyan and
+coral S, then into layered MIDI blocks. Text reads “SUNOFRIEND”, “HEAR IT. EDIT
+IT. MAKE IT YOURS.” and “STEMS → MIDI + SONG MIX”.
 
-**Square card:** A futuristic dark-blue supermarket aisle made from cyan and
-coral MIDI piano-roll notes, with a central waveform path. Text reads “THE
-AISLE AT LIDL”, “A SUNOFRIEND WORKED EXAMPLE” and the four-tool workflow.
+**Out of Place square:** A cyan waveform becomes the Sunofriend S and then a
+layered cyan, coral and violet arrangement on a dark navy background. Text
+reads “OUT OF PLACE”, “A SUNOFRIEND INTERPOLATION” and “HEAR THE SONG. EXPLORE
+THE PARTS.”
 
-**Story/Status:** A tall cyan-and-coral MIDI aisle with the Sunofriend mark,
-“THE AISLE AT LIDL”, “FROM AI STEMS TO PLAYABLE MIDI” and the call to action
-“LISTEN TO VERSION 1”.
+**Out of Place Story/Status:** A tall dark navy graphic with a glowing waveform
+above the Sunofriend S and layered note blocks. Text reads “OUT OF PLACE”, “A
+SUNOFRIEND INTERPOLATION”, “LISTEN NOW” and “HEAR IT. EDIT IT. MAKE IT YOURS.”
 
-## Posting notes
+## Posting checklist
 
-- Lead with the musical problem and audible example, not a generic “AI app”
-  announcement.
-- Put the SoundCloud link before the repository link when speaking to music
-  listeners; reverse the order for developer/music-tech audiences.
-- Invite one concrete action: complete the beginner path, listen, try the
-  example MIDI in another DAW, or file a compatibility report.
-- Do not use third-party logos or imply affiliation with Suno, Moises, Apple,
-  GarageBand, SoundCloud, Lidl or any social platform.
+- Lead with the song and a human question, not a list of technologies.
+- Explain “interpolation” the first time you use it.
+- Ask for one action: listen, try a first song, or test another DAW.
+- Say that Sunofriend is a local alpha and that automatic results vary.
+- Do not call the MIDI-derived WAV an exact reconstruction or release master.
+- Do not imply affiliation with Suno, Moises, Apple, GarageBand, SoundCloud,
+  Lidl or any social platform.
+- Use only music and stems you own or are authorised to process.

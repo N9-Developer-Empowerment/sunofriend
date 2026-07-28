@@ -1,10 +1,10 @@
 # Sunofriend
 
-![Sunofriend, from AI stems to editable MIDI and a song interpretation](assets/brand/sunofriend-banner-v2.png)
+![Sunofriend, hear it, edit it, make it yours](assets/brand/sunofriend-listener-banner-v3.png)
 
-Sunofriend turns separated music stems into editable MIDI and a balanced
-MIDI-rendered WAV that helps you hear the song as a clean instrumental
-interpretation.
+Sunofriend turns separated music stems into editable MIDI interpretations and
+a balanced MIDI-rendered WAV that helps you hear the song in a simplified
+instrumental form.
 
 It is a local-first companion to tools such as Suno, Moises and GarageBand.
 Sunofriend does not try to replace stem separation or a DAW. Its distinctive
@@ -18,7 +18,7 @@ because a different method may work best for each instrument or phrase.
 
 | Experience | Best for | What happens |
 | --- | --- | --- |
-| **Simple**, the default | Musicians who want a useful result without learning the technical tools | Supply a folder of WAV stems and choose **Create MIDI + WAV**. Sunofriend converts the stems, uses each production process's published primary result, and creates individual MIDI, a combined MIDI, a balanced WAV and a ZIP. |
+| **Simple**, the default | Musicians who want the shortest workflow after installation | Supply a folder of WAV stems and choose **Create MIDI + WAV**. Sunofriend converts the stems, uses each production process's published primary result, and creates individual MIDI, a combined MIDI, a balanced WAV and a ZIP. |
 | **Studio** | Musicians and developers who want to compare and improve results | Hear the source beside several MIDI methods, inspect waveforms and notes, make explicit choices, record local feedback, test sounds, build a reviewed GarageBand pack and use the read-only Developer Inspector. |
 
 Both experiences use the same conversion, rendering and verification code.
@@ -154,12 +154,19 @@ See the [Guided Local Studio](docs/LOCAL_STUDIO_TUI.md) and
 ## Hear an example
 
 <p align="center">
-  <img src="assets/social/the-aisle-at-lidl-square-v2.png" width="520" alt="The Aisle at Lidl Sunofriend worked example">
+  <img src="assets/social/out-of-place-interpolation-square-v1.png" width="520" alt="Out of Place, a Sunofriend interpolation">
 </p>
 
-[Listen to Version 1 of “The Aisle at Lidl” on SoundCloud](https://soundcloud.com/ezzye-1/the-aisle-at-lidl?si=97cf744ff4a743bca875bec3db88024f&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing).
-The maintainer wrote the song and approved it as a public Suno → Moises →
-Sunofriend → GarageBand example. The repository contains a compact
+[Listen to “Out of Place” on SoundCloud](https://soundcloud.com/ezzye-1/out-of-place?si=93616bdf10d7406c838be366106c1025&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing).
+The maintainer shares it as an example of Sunofriend interpolation: a new
+MIDI-derived musical interpretation, not an exact reconstruction of source
+audio.
+
+For a documented four-tool workflow, [listen to Version 1 of “The Aisle at
+Lidl”](https://soundcloud.com/ezzye-1/the-aisle-at-lidl?si=97cf744ff4a743bca875bec3db88024f&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing).
+The maintainer wrote that song and approved it as a public Suno → Moises →
+Sunofriend → GarageBand example. It is a finished workflow example rather than
+the raw Simple-mode WAV. The repository contains a compact
 [worked MIDI pack](examples/the-aisle-at-lidl/); the large source stems are not
 committed.
 

@@ -82,3 +82,31 @@ Banner edit: Replace only "OPEN SOURCE • DAW READY" with "MUSIC MAKERS • DAW
 
 Square edit: In the small upper-left brand block, replace only "OPEN SOURCE • DAW READY" with "MUSIC MAKERS • DAW READY". Preserve the title, worked-example line, four-tool line, Sunofriend mark, aisle illustration, layout and colors.
 ```
+
+## Listener banner v3
+
+Input image: `brand/sunofriend-banner-v2.png`
+
+```text
+Create a new, original v3 landscape campaign banner for the local music tool Sunofriend, using the attached approved banner only as a brand reference. Preserve the deep midnight-navy background, electric-cyan waveform, warm coral MIDI blocks, crisp contemporary flat/vector-like style, and recognisable waveform-to-MIDI S motif, but redesign the composition for non-technical musicians and music listeners. The core idea should be instantly understandable: a messy organic audio waveform becomes clean, colourful editable note blocks and then a balanced song-shaped arrangement. Make it warm, musical, inviting, human and creative rather than developer-focused or corporate. Wide 16:9 composition, generous safe margins, strong phone-readable hierarchy, suitable for a repository hero and social link preview. Render exactly these text lines once each, spelled exactly: “SUNOFRIEND” and “HEAR IT. EDIT IT. MAKE IT YOURS.” and “STEMS → MIDI + SONG MIX”. No other words. No people, no realistic UI screenshot, no third-party logos, no platform logos, no retailer branding, no watermark, no music-note clip art. Keep all text comfortably inside the safe area and make SUNOFRIEND clearly legible.
+```
+
+The `brand/sunofriend-social-preview-1280x640-v1.png` file is a centred crop
+and resize of the approved banner. It was not sent through another generative
+step.
+
+## Out of Place square interpolation card
+
+Input image: `brand/sunofriend-listener-banner-v3.png`
+
+```text
+Create a new original square 1:1 campaign artwork for the track “Out of Place” as a listener-friendly example of a Sunofriend song interpolation. Use the attached approved Sunofriend v3 banner only as the visual identity reference: deep midnight navy, electric cyan, warm coral-orange, a little violet, crisp luminous waveform and clean MIDI-block geometry. Do not copy the banner layout. Make the art feel musical, atmospheric and emotionally inviting: an organic cyan waveform enters from the edge, passes through a recognisable waveform-to-MIDI S motif, and opens into a balanced layered arrangement of glowing rectangular note lanes, suggesting that a song has been heard, understood and reimagined. Strong central composition, simple enough to stand out in a busy music feed, high contrast, generous safe margins, and readable at phone size. Render exactly these text lines once each, spelled exactly: “OUT OF PLACE” and “A SUNOFRIEND INTERPOLATION” and “HEAR THE SONG. EXPLORE THE PARTS.” No other words. No people, no realistic instruments, no real software UI, no SoundCloud logo, no platform logos, no third-party marks, no retailer branding, no QR code, no watermark. Keep every text line comfortably inside the square safe area.
+```
+
+## Out of Place Story and Status
+
+Input image: `social/out-of-place-interpolation-square-v1.png`
+
+```text
+Recompose the attached approved “Out of Place” Sunofriend square artwork as a new original vertical 9:16 Story and WhatsApp Status graphic. Preserve the deep midnight-navy, electric-cyan, warm coral-orange and subtle violet identity; the organic waveform transforming through the waveform-to-MIDI S motif into layered glowing note lanes; and the listener-friendly, atmospheric music-campaign feeling. Make the visual flow vertically from sound at the top, through the Sunofriend transformation in the middle, to a clean layered arrangement below. Use large phone-readable typography and generous top and bottom safe margins for platform controls. Render exactly these text lines once each, spelled exactly: “OUT OF PLACE” and “A SUNOFRIEND INTERPOLATION” and “LISTEN NOW” and “HEAR IT. EDIT IT. MAKE IT YOURS.” No other words. No people, no realistic software screenshot, no third-party logos, no SoundCloud logo, no platform marks, no retailer branding, no QR code, no watermark. Keep every required text line comfortably inside the central safe area and ensure none is clipped.
+```
