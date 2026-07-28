@@ -8,7 +8,8 @@
 and included with the author's permission. It demonstrates a practical
 four-tool workflow:
 
-1. Suno helped create the initial AI performance.
+1. Suno, the separate third-party AI music service, helped create the initial
+   performance.
 2. Moises separated the performance into stems and supplied harmonic/timing
    evidence.
 3. Sunofriend converted the difficult stems into timing-locked MIDI, preserved
@@ -94,6 +95,7 @@ same naming convention—the accepted repair run is:
 ```
 
 Commercial product and retailer names describe the production workflow and
-song title only. Sunofriend and this example are independent and are not
-affiliated with or endorsed by Suno, Moises, Apple, GarageBand, SoundCloud or
-Lidl.
+song title only. Sunofriend takes its name from Hindi **सुनो**, “listen,” and
+is not related to, affiliated with, or endorsed by Suno Inc. Sunofriend and
+this example are also independent of Moises, Apple, GarageBand, SoundCloud and
+Lidl. See the project [brand and name guide](../../BRAND.md).

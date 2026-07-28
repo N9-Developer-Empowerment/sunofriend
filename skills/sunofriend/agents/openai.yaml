@@ -1,4 +1,4 @@
 interface:
   display_name: "Sunofriend"
-  short_description: "Turn stems into editable MIDI and a song WAV"
+  short_description: "Listen deeper: turn stems into editable MIDI + WAV"
   default_prompt: "Use $sunofriend. Prefer the Guided Local Studio TUI through `sunofriend tui` when I want to operate the project myself. Its default Simple mode makes separately labelled automatic, unreviewed MIDI, a balanced MIDI-derived WAV and a starter ZIP in one action without writing human decisions or feedback; use `--mode studio` and the loopback Workbench for graphical multi-process comparison, explicit choices, feedback and the separate exact reviewed GarageBand MIDI ZIP. Keep the deterministic CLI as the engine. Source stems are evidence and are not mixed into the interpretation WAV. Use reviewed immutable Clip workflows only behind their existing gates. Keep audio local and do not infer preference from playback, scores or visible defaults."

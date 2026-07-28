@@ -1,5 +1,12 @@
 # Sunofriend
 
+**Listen deeper. Create further.**
+
+Sunofriend takes its name from **सुनो** (*suno*), the familiar Hindi
+imperative “listen”: both “Listen, friend” and “a friend that listens.” It is
+an independent project of Unsigned Media Ltd and is not related to or
+affiliated with Suno Inc., the AI music company.
+
 Sunofriend turns separated music stems and vocal performances into two linked
 creative outputs: editable, timing-aware MIDI and a MIDI-derived
 song-interpretation WAV. Its default Simple mode creates a separately labelled
@@ -126,10 +133,11 @@ S0/M3 comparison source and rendered candidate payloads; it explicitly cannot
 prove that M1's pinned full mix was derived from the same song or verify M3's
 unsupplied original pre-projection MIDI.
 
-Sunofriend complements AI music generators, stem separators, and DAWs rather
-than replacing them. The current supported production workflow is macOS-first,
-using Python 3.9–3.11, FluidSynth for offline preview, and CoreMIDI for optional
-live playback.
+Sunofriend complements independent AI music generators, stem separators, and
+DAWs rather than replacing them. When this documentation mentions Suno as an
+input tool, it means the separate third-party service from Suno Inc. The
+current supported production workflow is macOS-first, using Python 3.9–3.11,
+FluidSynth for offline preview, and CoreMIDI for optional live playback.
 
 See the [full documentation, worked examples, and agent-skill setup](https://github.com/N9-Developer-Empowerment/sunofriend#readme).
 

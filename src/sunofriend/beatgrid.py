@@ -1,7 +1,8 @@
 """Beat grid derived from the metronome stem (or nominal BPM as fallback).
 
-Suno/Moises exports include a metronome track whose clicks are beat-tracked
-from the song itself. Two truths hide in it:
+Exports from third-party services such as Suno or Moises can include a
+metronome track whose clicks are beat-tracked from the song itself. Two truths
+hide in it:
 
   1. The average tempo usually differs from the labeled BPM (124 -> 124.538).
   2. The beat positions WANDER around the ideal straight grid (hundreds of ms

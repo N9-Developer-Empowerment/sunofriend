@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Route 53 records for the Sunofriend website while preserving Hover email.
+
+Parameters:
+  RootDomain:
+    Type: String
+    Default: sunofriend.com
+  AlternateDomain:
+    Type: String
+    Default: www.sunofriend.com
+  CloudFrontDomainName:
+    Type: String
+    Description: CloudFront distribution hostname without a protocol.
+  RootValidationRecordName:
+    Type: String
+    Description: ACM validation CNAME name for the root domain.
+  RootValidationRecordValue:
+    Type: String
+    Description: ACM validation CNAME value for the root domain.
+  AlternateValidationRecordName:
+    Type: String
+    Description: ACM validation CNAME name for the alternate domain.
+  AlternateValidationRecordValue:
+    Type: String
+    Description: ACM validation CNAME value for the alternate domain.
+
+Resources:
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Ref RootDomain
+      HostedZoneConfig:
+        Comment: DNS for the Sunofriend launch website and preserved Hover mail.
+      HostedZoneTags:
+        - Key: Application
+          Value: Sunofriend
+        - Key: Surface
+          Value: LaunchSite
+
+  WebsiteAndMailRecords:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: !Ref HostedZone
+      RecordSets:
+        - Name: !Ref RootDomain
+          Type: A
+          AliasTarget:
+            DNSName: !Ref CloudFrontDomainName
+            HostedZoneId: Z2FDTNDATAQYW2
+            EvaluateTargetHealth: false
+        - Name: !Ref RootDomain
+          Type: AAAA
+          AliasTarget:
+            DNSName: !Ref CloudFrontDomainName
+            HostedZoneId: Z2FDTNDATAQYW2
+            EvaluateTargetHealth: false
+        - Name: !Ref AlternateDomain
+          Type: A
+          AliasTarget:
+            DNSName: !Ref CloudFrontDomainName
+            HostedZoneId: Z2FDTNDATAQYW2
+            EvaluateTargetHealth: false
+        - Name: !Ref AlternateDomain
+          Type: AAAA
+          AliasTarget:
+            DNSName: !Ref CloudFrontDomainName
+            HostedZoneId: Z2FDTNDATAQYW2
+            EvaluateTargetHealth: false
+        - Name: !Ref RootDomain
+          Type: MX
+          TTL: "900"
+          ResourceRecords:
+            - "10 mx.hover.com.cust.hostedemail.com."
+        - Name: !Ref RootValidationRecordName
+          Type: CNAME
+          TTL: "300"
+          ResourceRecords:
+            - !Ref RootValidationRecordValue
+        - Name: !Ref AlternateValidationRecordName
+          Type: CNAME
+          TTL: "300"
+          ResourceRecords:
+            - !Ref AlternateValidationRecordValue
+
+Outputs:
+  HostedZoneId:
+    Description: Route 53 hosted zone ID.
+    Value: !Ref HostedZone
+  NameServers:
+    Description: Set these four authoritative name servers at Hover.
+    Value: !Join [",", !GetAtt HostedZone.NameServers]

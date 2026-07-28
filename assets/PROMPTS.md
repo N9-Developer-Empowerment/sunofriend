@@ -5,6 +5,12 @@ Each later campaign asset used the preceding approved image as its visual
 reference. The first banner draft used “OPEN SOURCE”; the final correction
 replaces that claim pending an owner-selected repository licence.
 
+Current public assets must follow [`BRAND.md`](../BRAND.md): **सुनो** (*suno*)
+means “listen,” the strapline is **Listen deeper. Create further.**, and
+Sunofriend is independent of and not affiliated with Suno Inc. Historical
+prompts below are retained as provenance and must not be reused without adding
+that distinction.
+
 > The “OPEN SOURCE” wording below is retained only as historical prompt
 > provenance. Do not reuse those superseded draft lines unless the repository
 > owner first adds a licence that grants reuse rights.
@@ -93,6 +99,28 @@ Create a new, original v3 landscape campaign banner for the local music tool Sun
 
 The `brand/sunofriend-social-preview-1280x640-v1.png` file is a centred crop
 and resize of the approved banner. It was not sent through another generative
+step.
+
+## Origin-story listener banner v4
+
+Input image: `brand/sunofriend-listener-banner-v3.png`
+
+```text
+Use case: ads-marketing
+Asset type: primary Sunofriend landscape brand banner and website/social preview
+Input image: the supplied Sunofriend listener banner is the edit target. Preserve its deep midnight-navy background, electric-cyan waveform, warm coral and violet MIDI blocks, recognisable waveform-to-MIDI S motif, wide composition, strong contrast and crisp luminous flat/vector-like finish.
+Primary request: refresh the banner copy so the origin of the name and the new strapline are unmistakable, while retaining the existing visual transformation from sound into editable musical parts.
+Composition: keep the waveform-to-S-to-MIDI transformation across the upper half. Rebuild the lower typography cleanly with generous safe margins, phone-readable hierarchy and balanced spacing.
+Text (verbatim; render every line exactly once, with no other text):
+“SUNOFRIEND”
+“सुनो / SUNO = LISTEN”
+“LISTEN DEEPER. CREATE FURTHER.”
+“NOT AFFILIATED WITH SUNO INC.”
+Constraints: spell SUNOFRIEND exactly; render the Devanagari सुनो accurately; make the independence line clear but visually secondary; no Suno Inc. logo, no third-party logos, no people, no realistic UI, no music-note clip art, no watermark; do not imply endorsement or affiliation; preserve the established Sunofriend colour palette and waveform-to-MIDI identity.
+```
+
+The `brand/sunofriend-social-preview-1280x640-v2.png` file is a mechanical
+resample of the approved v4 banner. It was not sent through another generative
 step.
 
 ## Out of Place square interpolation card

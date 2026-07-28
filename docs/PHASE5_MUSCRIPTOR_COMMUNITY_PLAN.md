@@ -104,10 +104,14 @@ The published training recipe is more important than a novel architecture:
 
 On the authors' 372-track held-out set, their fully trained 1.3B model reports
 onset/frame/offset/drum/multi-instrument F1 of
-`60.4/73.3/49.0/50.2/48.2`. These results are useful evidence, not a promise for
-Suno or Moises stems: the paper also shows substantial variation by dataset,
-and some onset scores are worse than the YourMT3+ baseline even where frame
-activity is much better.
+`60.4/73.3/49.0/50.2/48.2`. These results are useful evidence, not a promise
+for stems exported by third-party services such as Suno or Moises: the paper
+also shows substantial variation by dataset, and some onset scores are worse
+than the YourMT3+ baseline even where frame activity is much better.
+
+Here “Suno” means the separate AI music company. Sunofriend takes its name from
+Hindi **सुनो**, “listen,” and is not related to or affiliated with Suno Inc.;
+see the project [brand and name guide](../BRAND.md).
 
 The current [official repository](https://github.com/muscriptor/muscriptor)
 publishes three checkpoints:
