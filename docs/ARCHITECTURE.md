@@ -3,8 +3,10 @@
 Sunofriend has four user-facing layers:
 
 1. The Python package and `sunofriend` command are the deterministic engine.
-2. The Guided Local Studio TUI is the preferred human control surface. It
-   projects local project state and orchestrates typed engine/Workbench actions
+2. The Guided Local Studio TUI is the preferred human control surface. Its
+   default **Make my song** mode runs one typed automatic pipeline and publishes
+   an explicitly unreviewed MIDI/WAV/ZIP starter result. Its **Studio** tabs
+   project local project state and orchestrate typed engine/Workbench actions
    without implementing musical algorithms. Its native **Master** tab also
    orchestrates the shared fixed-policy Listening Master service.
 3. The loopback-only Workbench presents completed source/MIDI alternatives,
@@ -16,12 +18,14 @@ Sunofriend has four user-facing layers:
    commands, checks prerequisites and interprets reports. It must not duplicate
    audio or MIDI algorithms.
 
-These layers preserve Sunofriend's core separation: several analytical and AI
-processes may produce immutable candidates, the Workbench makes their evidence
-approachable, and a human chooses what becomes part of an arrangement. The two
-linked creative outputs are reviewed editable MIDI and a MIDI-derived
-song-interpretation WAV rendered from that selected MIDI. No shared score or
-model label is an automatic winner.
+These layers preserve Sunofriend's core separation. Several analytical and AI
+processes may produce immutable candidates. Simple mode accepts only the exact
+primary already published by each production conversion summary and records it
+in a separate automatic, unreviewed receipt. Studio makes the alternatives
+approachable and records only explicit human choices. Both paths create
+editable MIDI plus a MIDI-derived song-interpretation WAV; only Studio may
+describe its completed selection as reviewed. No shared score or model label
+is silently promoted into a Workbench decision.
 
 The optional Developer Inspector is a read-only projection across these
 layers. Its `sunofriend.workbench-developer-snapshot.v1` document explains
@@ -39,11 +43,17 @@ starts Workbench; `tui --no-developer-inspector` keeps it absent. See the
 stem folder / MIDI
         |
         v
-Guided Local Studio (`tui.py`, `tui_model.py`, `tui_conversion.py`,
-                     `tui_conversion_contract.py`) or direct expert route
+Guided Local Studio (`tui.py`, `simple_create.py`, `tui_model.py`,
+                     `tui_conversion.py`) or direct expert route
+        |
+        +--> Simple: production conversion
+        |       --> exact summary primaries (`automatic_selection.py`)
+        |       --> verified MIDI/WAV/ZIP (`simple_result.py`)
+        |
+        +--> Studio: immutable candidate review and explicit decisions
         |
         v
-CLI parsing (`cli.py`)
+CLI/application services (`cli.py`)
         |
         +--> folder orchestration (`listen_all.py`)
         +--> stem refinement (`loop.py`)
@@ -104,16 +114,18 @@ CLI parsing (`cli.py`)
         +--> reusable Clip v1 library (`clip.py`, `library.py`)
         |
         v
-reviewed editable MIDI + MIDI-derived song-interpretation WAV + provenance
+automatic unreviewed starter result OR reviewed Studio result + provenance
 ```
 
-After explicit review, the Workbench branches one selected arrangement into
-the unchanged editable MIDI handoff and the MIDI-derived song-interpretation
-WAV. Source stems supply timing, horizon and level evidence for that render;
-their audio is not mixed into it. The existing balanced artifact schemas and
-policy remain the implementation contract. The optional listening master is a
-separate comparative derivative, not a release master, and GarageBand Pack
-Composer membership is unchanged.
+Simple mode branches exact production-summary primaries into individual MIDI,
+a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a
+starter ZIP. It does not create or mutate Workbench SQLite state. After
+explicit Studio review, the Workbench branches one human-selected arrangement
+into the unchanged editable MIDI handoff and the same kind of MIDI-derived
+song-interpretation WAV. In both cases source stems supply timing, horizon and
+level evidence; their audio is not mixed into the WAV. The optional listening
+master is a separate comparative derivative, not a release master, and
+GarageBand Pack Composer remains a reviewed Studio handoff.
 
 ## Guided Local Studio boundary
 
@@ -126,7 +138,23 @@ MIDI maps and exact Workbench command construction. It reuses
 result and runner protocol. `tui_conversion.py` validates and orchestrates the
 production child commands; it contains no transcription algorithm.
 
-Phase 5.10a's orientation path is read-only except for starting and stopping
+`simple_create_contract.py` is the Textual-independent one-action request,
+progress, cancellation and result boundary. `simple_create.py` composes the
+existing production conversion runner with two new side-effect-isolated
+services:
+
+- `automatic_selection.py` verifies bounded production summaries and matches
+  only their exact primary paths back to hash-pinned catalog entries. It neither
+  scores alternatives nor writes a Workbench decision.
+- `simple_result.py` copies those exact MIDI files, builds a combined GM proxy,
+  reuses the accepted balanced-mix policy, and atomically publishes
+  `AUTOMATIC-SONG/` with a path-free receipt and deterministic ZIP.
+
+The automatic receipt says `not_reviewed` and `review_recommended`, reports
+omitted roles, records zero human decisions and feedback, and cannot be
+mistaken for GarageBand Pack Composer state.
+
+Studio's orientation path is read-only except for starting and stopping
 its owned Workbench child process. Loading an unreviewed project does not
 create SQLite state.
 Existing explicit events are read through SQLite `mode=ro` and may be folded
@@ -136,7 +164,7 @@ decision-store location, and disappears on exit. Project controls are locked
 while the child is active; the child is terminated and reaped on Stop, Quit or
 unmount.
 
-The initial Phase 5.10b runner adds one typed, explicitly confirmed full-project
+The Studio conversion runner adds one typed, explicitly confirmed full-project
 write. Its editable output must be fresh. It runs the production `listen-all`
 operation in repair mode with candidate-variant evaluation, then runs
 `vocal-melody` separately for discovered lead/backing stems. Compatibility
@@ -145,12 +173,13 @@ engine, `rhythm` to `keys`, and `other` to `synth`; those proxies are not
 instrument-identification claims. Near-silent sources become visible skips.
 Engine output is streamed into bounded in-memory activity.
 
-The TUI owns and reaps the one conversion child. Cancellation preserves the
-partial fresh tree; success reloads that tree as a candidate root. Neither path
-creates a musical selection. There is no automatic overwrite, retry, durable
-job ledger or restart recovery yet. The runner must not use an arbitrary shell
-field or reimplement `listen-all` or `vocal-melody` inside Textual callbacks.
-Workbench remains review-only and starts no transcription. See
+The TUI owns and reaps its conversion child. Cancellation preserves the
+partial fresh tree; a completed Simple run publishes its result only after
+verification, while a completed Studio conversion merely reloads candidates.
+There is no automatic overwrite, retry, durable job ledger or restart recovery
+yet. The runner must not use an arbitrary shell field or reimplement
+`listen-all` or `vocal-melody` inside Textual callbacks. Workbench remains
+review-only and starts no transcription. See
 [Guided Local Studio TUI](LOCAL_STUDIO_TUI.md).
 
 Bass continuity remains an engine concern, not a TUI or Workbench inference.

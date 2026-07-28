@@ -74,8 +74,13 @@ class InterfaceContractTests(unittest.TestCase):
         reference = render_skill_interface_reference()
 
         self.assertEqual(parser.description, PRODUCT_SUMMARY)
-        self.assertIn("Reviewed editable MIDI", reference)
+        self.assertIn("Editable MIDI arrangement", reference)
         self.assertIn("MIDI-derived song-interpretation WAV", reference)
+        self.assertIn("Simple / Make my song", reference)
+        self.assertIn("automatic and", reference)
+        self.assertIn("sunofriend tui --mode studio", reference)
+        self.assertIn("visible Simple/Studio", reference)
+        self.assertIn("without starting work", reference)
         self.assertIn("not waveform reconstruction", reference)
         self.assertIn("never imply a preference", reference)
 

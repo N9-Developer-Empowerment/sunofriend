@@ -2094,8 +2094,18 @@ def build_parser() -> argparse.ArgumentParser:
         "--conversion-output",
         default=None,
         help=(
-            "Prefill the TUI's fresh conversion output folder; this never "
-            "starts conversion automatically"
+            "Prefill Studio's fresh candidate-conversion output folder; this "
+            "never starts conversion automatically"
+        ),
+    )
+    tui.add_argument(
+        "--mode",
+        choices=("simple", "studio"),
+        default="simple",
+        help=(
+            "Initial TUI experience: one-action automatic MIDI + WAV "
+            "(simple, default) or the detailed review workspace (studio); "
+            "the visible mode switch can change this after launch"
         ),
     )
     tui.add_argument(
@@ -4533,6 +4543,7 @@ def _run_tui(args) -> int:
         state_dir=args.state_dir,
         soundfont_path=args.soundfont,
         initial_conversion_output=args.conversion_output,
+        initial_mode=args.mode,
         developer_inspector=args.developer_inspector,
     )
 

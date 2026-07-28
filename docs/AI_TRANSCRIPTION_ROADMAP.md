@@ -21,7 +21,10 @@ transport; Phase 5.8 completes verified exact-result-cache and bounded
 reused-model execution-provenance display; Phase 5.9 guided exact-pack
 learning and acceptance passed on 22 July 2026; Phase 5.10a's Guided Local
 Studio TUI orientation and visual-Workbench bridge plus the initial Phase
-5.10b fresh full-project conversion runner are implemented, while its durable
+5.10b fresh full-project conversion runner are implemented; the default
+one-action Simple path now publishes separately labelled automatic, unreviewed
+MIDI, a balanced MIDI-derived WAV and a starter ZIP from exact production
+primaries, while its durable
 conversion ledger and additional guided operations remain planned; broader
 TUI/process/role/instrument/DAW feedback also remains planned, while the first
 bounded Workbench Listening Master A/B feedback slice is implemented;
@@ -64,9 +67,11 @@ GarageBand A/B test.
 ## Programme goal
 
 Make stems and vocals easier to turn into two linked creative outputs:
-accurate, musical, reviewed editable MIDI and a MIDI-derived
-song-interpretation WAV rendered from the selected MIDI, with useful playable
-instruments. The WAV helps a listener understand and continue the song.
+accurate, musical, editable MIDI and a MIDI-derived song-interpretation WAV,
+with useful playable instruments. A non-technical musician can first request a
+transparent automatic, unreviewed starting result; Studio can then replace
+those defaults with explicit reviewed choices. The WAV helps a listener
+understand and continue the song.
 Analytical and AI processes supply independent observations and alternatives.
 Sunofriend preserves and compares them rather than forcing one global winner,
 and remains responsible for timing, evidence policy, musical constraints,
@@ -120,7 +125,10 @@ listening master remains comparative rather than a release master.
 - Keep `exact`, `repair` and `reconstruct` meanings intact.
 - Model agreement increases confidence; it does not prove correctness.
 - Do not hide several useful analytical and AI processes behind one automatic
-  winner. A different process may be useful for each role or phrase.
+  score-based winner. Simple mode may consume the exact primary already
+  published by each production conversion, but it must preserve that lineage,
+  remain unreviewed and direct uncertain roles to Studio. A different process
+  may be useful for each role or phrase.
 - Make evidence approachable through plain musical questions, synchronized
   listening and visual lanes while preserving advanced provenance and metrics.
 - Borrow useful interaction patterns from other transcription tools without
@@ -141,9 +149,9 @@ listening master remains comparative rather than a release master.
 | 2. Phrase Review v2 | **Engineering and human review complete; overall programme preference criterion not demonstrated** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history. The applied 61-note review won the opening blind loop, the untouched 23-note automatic candidate won none, and both later loops were judged neither |
 | 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
 | 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
-| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.5–5.9 hardening complete and Phase 5.9 human acceptance passed; Phase 5.10a, initial 5.10b full-project conversion, the first 5.10c native Listening Master operation, bounded blind quality review and native-level readiness slice implemented; Phase 5.3 gates and remaining 5.10b–d work remain** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. A path-free lead-only report aligns S0/M1/M3 by phrase without creating MIDI. The Workbench has hash-pinned per-stem and full-song timelines, bounded decoded transports, a separate exact GarageBand pack basket, Project Overview, fail-closed execution provenance, guided exact-pack acceptance, a receipt-bound exact-window Listening Master A/B response with separate identity resolution and a gated unchanged-level readiness response on the same frozen frames. The Textual TUI supplies project orientation, compact MIDI maps, diagnostics, one-key Workbench/Inspector access, an explicit fresh-output full-project runner over production instrumental and vocal engines and a protected fixed-policy Listening Master cache/reuse action. A durable conversion ledger/restart contract, additional operation forms and broader process/role/instrument/DAW feedback are not yet implemented |
+| 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.5–5.9 hardening complete and Phase 5.9 human acceptance passed; Phase 5.10a, full-project conversion, one-action Simple result, the first 5.10c native Listening Master operation, bounded blind quality review and native-level readiness slice implemented; Phase 5.3 gates and remaining guided work remain** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. The Workbench has hash-pinned per-stem and full-song timelines, bounded decoded transports, a separate exact GarageBand pack basket, Project Overview, fail-closed execution provenance, guided exact-pack acceptance and receipt-bound Listening Master reviews. The Textual TUI now opens with a lay-user Simple action that runs the production engines, consumes only exact published primaries, and creates automatic unreviewed MIDI, balanced WAV and ZIP without fabricating Workbench state; Studio retains detailed comparison, diagnostics, feedback, Inspector and reviewed handoff. A durable conversion ledger/restart contract, additional operation forms and broader process/role/instrument/DAW feedback are not yet implemented |
 | 6. Creative Arrangement and Reusable MIDI | **In progress: Increments 6.0, 6.1, 6.2a and 6.3a–e plus the selected-arrangement balance slice complete** | The gated browser, immutable-placement proposal, key/BPM children and bounded recognition-first pitch/attack-velocity/exact-note-removal/existing-note onset and end patches are complete. Ordinary Workbench also creates the MIDI-derived, source-referenced, drum-guarded and sample-peak-protected song-interpretation WAV while retaining its unity controls. One kind per Clip child, zero-write review, immutable parent and restart validation remain mandatory. Note insertion, release velocity/continuous expression, mode remapping, tuning/downbeat and hybrids remain later slices; hybrid construction still waits for the Phase 5.3 gates |
-| 7. Cross-DAW and Opt-in Community Learning | **Deferred** | Compatibility testing, cleared public goldens and consented contextual feedback only after the local workflow is useful, private and stable |
+| 7. Cross-DAW, Hosted Access and Opt-in Community Learning | **Planned, not implemented** | Beginner installation/acceptance evidence first; then compatibility testing, cleared public goldens and consented contextual feedback. Wider access should use a thin authenticated API/control plane with queued CPU/GPU workers and encrypted expiring object storage, not pretend heavy music inference is a request-duration serverless function. Usage metering, per-transaction payment, rights declarations, model/checkpoint licences and deletion policy are design gates; see [Product modes and hosted future](PRODUCT_MODES_AND_HOSTING.md) |
 
 ## Phase 1: AI Transcription Bake-off v1
 

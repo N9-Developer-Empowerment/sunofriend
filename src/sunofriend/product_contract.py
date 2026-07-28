@@ -18,11 +18,11 @@ from .workbench_balanced_contract import BALANCED_MIX_CONTRACT
 
 
 PRODUCT_CONTRACT_SCHEMA = "sunofriend.product-contract.v1"
-PRODUCT_CONTRACT_VERSION = "2026-07-27.2"
+PRODUCT_CONTRACT_VERSION = "2026-07-27.3"
 PRODUCT_OUTPUT_STATUS_SCHEMA = "sunofriend.product-output-status.v1"
 PRODUCT_SUMMARY = (
-    "Create reviewed, editable MIDI plus a balanced MIDI-derived "
-    "song-interpretation WAV from separated music stems."
+    "Create editable MIDI plus a balanced MIDI-derived song-interpretation "
+    "WAV from separated music stems, automatically or through detailed review."
 )
 
 
@@ -98,6 +98,42 @@ class ProductContract:
                 "rendering_changes_selected_midi": False,
                 "automatic_promotion_enabled": False,
             },
+            "modes": {
+                "simple": {
+                    "label": "Make my song",
+                    "default_human_entry": True,
+                    "selection_policy": (
+                        "exact-primary-from-production-summary"
+                    ),
+                    "review_status": "not_reviewed",
+                    "quality_status": "review_recommended",
+                    "human_decision_events": 0,
+                    "feedback_recorded": False,
+                    "result_schema": "sunofriend.simple-result.v1",
+                    "result_kind": (
+                        "automatic editable MIDI, balanced MIDI-derived WAV "
+                        "and starter ZIP"
+                    ),
+                    "may_claim_human_review": False,
+                },
+                "studio": {
+                    "label": "Studio",
+                    "default_human_entry": False,
+                    "selection_policy": (
+                        "explicit-human-selection-from-immutable-candidates"
+                    ),
+                    "review_status": "explicit",
+                    "quality_status": "human_review_required_for_completion",
+                    "human_decision_events": "explicit_only",
+                    "feedback_recorded": "explicit_only",
+                    "result_schema": None,
+                    "result_kind": (
+                        "reviewed editable MIDI, balanced MIDI-derived WAV "
+                        "and exact GarageBand handoff"
+                    ),
+                    "may_claim_human_review": True,
+                },
+            },
             "garageband_pack": {
                 "song_interpretation_wav_included_automatically": False,
                 "reason": (
@@ -114,12 +150,12 @@ PRODUCT_CONTRACT = ProductContract(
     required_outputs=(
         ProductOutput(
             output_id="evaluated_editable_midi",
-            label="Reviewed editable MIDI",
+            label="Editable MIDI arrangement",
             media_type="audio/midi",
             editable=True,
             required=True,
             artifact_schema=None,
-            policy="explicit-human-selection-from-immutable-candidates",
+            policy="mode-specific-automatic-or-explicit-selection",
             source_audio_mixed=False,
         ),
         ProductOutput(
@@ -205,6 +241,12 @@ def build_product_output_status(
     return {
         "schema": PRODUCT_OUTPUT_STATUS_SCHEMA,
         "contract_version": PRODUCT_CONTRACT_VERSION,
+        "mode": "studio",
+        "review_status": (
+            "reviewed"
+            if midi_ready and bool(full_mix_review_complete)
+            else "review_incomplete"
+        ),
         "complete": (
             midi_ready
             and bool(full_mix_review_complete)

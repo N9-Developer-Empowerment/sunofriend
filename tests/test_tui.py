@@ -16,6 +16,7 @@ from textual.widgets import (
     Input,
     ProgressBar,
     Static,
+    TabbedContent,
 )
 
 from sunofriend.cli import build_parser, main
@@ -29,6 +30,10 @@ from sunofriend.tui_conversion_contract import (
 from sunofriend.tui_listening_master_contract import (
     ListeningMasterProgress,
     ListeningMasterResult,
+)
+from sunofriend.simple_create_contract import (
+    SimpleCreateProgress,
+    SimpleCreateResult,
 )
 
 
@@ -52,6 +57,7 @@ class TuiCliTests(unittest.TestCase):
 
         self.assertIsNone(empty.project)
         self.assertIsNone(empty.conversion_output)
+        self.assertEqual(empty.mode, "simple")
         self.assertTrue(empty.developer_inspector)
         self.assertEqual(configured.project, "/music/song")
         self.assertEqual(
@@ -59,6 +65,7 @@ class TuiCliTests(unittest.TestCase):
             ["/music/results-a", "/music/results-b"],
         )
         self.assertEqual(configured.conversion_output, "/music/fresh-results")
+        self.assertEqual(configured.mode, "simple")
         self.assertFalse(configured.developer_inspector)
 
     @patch("sunofriend.tui.run_tui", return_value=0)
@@ -80,6 +87,7 @@ class TuiCliTests(unittest.TestCase):
             state_dir=None,
             soundfont_path=None,
             initial_conversion_output=None,
+            initial_mode="simple",
             developer_inspector=True,
         )
 
@@ -96,10 +104,98 @@ class TuiInteractionTests(unittest.IsolatedAsyncioTestCase):
             )
             self.assertEqual(app.query_one("#project-path", Input).value, "")
             self.assertTrue(app.query_one("#open-studio", Button).disabled)
+            self.assertEqual(app.query_one(TabbedContent).active, "simple")
+            self.assertIn(
+                "automatic",
+                str(app.query_one("#simple-scope", Static).render()).lower(),
+            )
             self.assertIn(
                 "Choose a stem project",
                 str(app.query_one("#project-summary", Static).render()),
             )
+
+    async def test_explicit_mode_switch_is_two_way_and_navigation_only(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary) / "state-that-must-not-exist"
+            app = SunofriendTui(state_dir=state)
+
+            async with app.run_test(size=(150, 50)) as pilot:
+                tabs = app.query_one("#workspace-tabs", TabbedContent)
+                simple = app.query_one("#switch-simple", Button)
+                studio = app.query_one("#switch-studio", Button)
+                description = app.query_one("#mode-description", Static)
+
+                self.assertEqual(tabs.active, "simple")
+                self.assertTrue(simple.has_class("active-mode"))
+                self.assertFalse(studio.has_class("active-mode"))
+                self.assertIn(
+                    "switching changes only this view",
+                    str(description.render()).lower(),
+                )
+
+                studio.press()
+                await pilot.pause()
+                self.assertEqual(tabs.active, "overview")
+                self.assertFalse(simple.has_class("active-mode"))
+                self.assertTrue(studio.has_class("active-mode"))
+
+                tabs.active = "convert"
+                await pilot.pause()
+                await pilot.press("f2")
+                await pilot.pause()
+                self.assertEqual(tabs.active, "simple")
+
+                await pilot.press("f3")
+                await pilot.pause()
+                self.assertEqual(tabs.active, "convert")
+                self.assertTrue(studio.has_class("active-mode"))
+
+                self.assertIsNone(app.snapshot)
+                self.assertIsNone(app._workbench_process)
+                self.assertFalse(state.exists())
+
+    async def test_simple_mode_needs_one_explicit_create_action_and_no_review_event(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project, _candidates = _fixture(root)
+            output = root / "automatic-song-output"
+            state = root / "state-that-must-not-exist"
+            runner = _CompletingSimpleRunner()
+            app = SunofriendTui(
+                project=project,
+                state_dir=state,
+                simple_runner=runner,
+            )
+
+            async with app.run_test(size=(150, 50)) as pilot:
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if app.snapshot is not None:
+                        break
+                app.query_one("#simple-output", Input).value = str(output)
+                await pilot.pause()
+                create = app.query_one("#create-simple", Button)
+                self.assertFalse(create.disabled)
+                self.assertNotIn("confirm", str(create.label).lower())
+                create.press()
+
+                for _ in range(200):
+                    await pilot.pause(0.02)
+                    if not app._simple_running and runner.request is not None:
+                        break
+
+                self.assertEqual(runner.request.project, project.resolve())
+                self.assertEqual(runner.request.output_dir, output.resolve())
+                self.assertIn(
+                    "automatic song is ready",
+                    str(app.query_one("#simple-status", Static).render()).lower(),
+                )
+                self.assertEqual(app.query_one(TabbedContent).active, "simple")
+                self.assertFalse((state / "workbench.sqlite3").exists())
 
     async def test_project_load_populates_dashboard_and_midi_map(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -656,7 +752,7 @@ class TuiInteractionTests(unittest.IsolatedAsyncioTestCase):
             open_action.assert_called_once_with()
 
     async def test_narrow_terminal_retains_keyboard_dashboard(self) -> None:
-        app = SunofriendTui()
+        app = SunofriendTui(initial_mode="studio")
         async with app.run_test(size=(80, 24)) as pilot:
             await pilot.press("tab", "tab", "tab")
             await pilot.pause()
@@ -675,7 +771,7 @@ class TuiInteractionTests(unittest.IsolatedAsyncioTestCase):
             self.assertIsNotNone(app.query_one("#activity-log"))
 
     async def test_compact_layout_covers_height_breakpoint(self) -> None:
-        app = SunofriendTui()
+        app = SunofriendTui(initial_mode="studio")
         async with app.run_test(size=(110, 34)) as pilot:
             await pilot.pause()
             table = app.query_one("#stem-table", DataTable)
@@ -830,6 +926,62 @@ class _CancellableConversionRunner:
             source_stem_count=2,
             midi_ready_stem_count=0,
             candidate_count=0,
+        )
+
+    def cancel(self) -> None:
+        self.cancel_called = True
+
+
+class _CompletingSimpleRunner:
+    def __init__(self) -> None:
+        self.request = None
+        self.cancel_called = False
+
+    async def run(
+        self,
+        request,
+        *,
+        on_progress,
+        cancellation_requested=None,
+    ) -> SimpleCreateResult:
+        self.request = request
+        on_progress(
+            SimpleCreateProgress(
+                completed=1,
+                total=6,
+                phase="convert",
+                message="Converting stems",
+            )
+        )
+        root = request.output_dir / "AUTOMATIC-SONG"
+        midi = root / "MIDI" / "combined-gm-interpretation.mid"
+        wav = root / "AUDIO" / "balanced-midi-song-interpretation.wav"
+        manifest = root / "sunofriend-result.json"
+        archive = root / "sunofriend-automatic-midi-and-wav.zip"
+        midi.parent.mkdir(parents=True, exist_ok=True)
+        wav.parent.mkdir(parents=True, exist_ok=True)
+        _write_conversion_midi(midi)
+        wav.write_bytes(b"RIFF-test")
+        manifest.write_text("{}", encoding="utf-8")
+        archive.write_bytes(b"PK-test")
+        on_progress(
+            SimpleCreateProgress(
+                completed=6,
+                total=6,
+                phase="complete",
+                message="Automatic result ready",
+            )
+        )
+        return SimpleCreateResult(
+            status="complete",
+            output_dir=request.output_dir,
+            result_root=root,
+            zip_path=archive,
+            balanced_wav_path=wav,
+            combined_midi_path=midi,
+            manifest_path=manifest,
+            selected_count=1,
+            omitted_count=1,
         )
 
     def cancel(self) -> None:

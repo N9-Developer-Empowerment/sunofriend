@@ -49,6 +49,16 @@ from .tui_model import (
 )
 
 _LISTENING_MASTER_QUIT_WAIT_SECONDS = 10.0
+_STUDIO_TAB_IDS = frozenset(
+    {
+        "overview",
+        "workflow",
+        "convert",
+        "master",
+        "system",
+        "activity",
+    }
+)
 
 
 class SunofriendTui(App[None]):
@@ -91,6 +101,29 @@ class SunofriendTui(App[None]):
         padding: 1 2;
         background: #0b1722;
         border-bottom: solid #233a4d;
+    }
+
+    #mode-switch-row {
+        height: 3;
+        margin-bottom: 1;
+    }
+
+    .mode-choice {
+        min-width: 28;
+        background: #1e293b;
+        color: #cbd5e1;
+    }
+
+    .mode-choice.active-mode {
+        background: #0f766e;
+        color: #ffffff;
+        text-style: bold;
+    }
+
+    #mode-description {
+        width: 1fr;
+        padding: 1 0 0 1;
+        color: #9fb3c8;
     }
 
     .field-label {
@@ -190,6 +223,43 @@ class SunofriendTui(App[None]):
         margin-bottom: 1;
         background: #102333;
         border: round #2dd4bf;
+    }
+
+    #simple-scope {
+        padding: 1 2;
+        margin-bottom: 1;
+        background: #102333;
+        border: round #5eead4;
+    }
+
+    #simple-output-row {
+        height: 3;
+        margin-bottom: 1;
+    }
+
+    #simple-actions {
+        height: 3;
+        margin-bottom: 1;
+    }
+
+    #create-simple {
+        background: #0f766e;
+    }
+
+    #cancel-simple {
+        background: #7f1d1d;
+    }
+
+    #simple-progress {
+        margin: 0 1;
+    }
+
+    #simple-status {
+        min-height: 6;
+        padding: 1 2;
+        margin-top: 1;
+        background: #0b1722;
+        border: round #2b5068;
     }
 
     #conversion-output-row {
@@ -325,12 +395,18 @@ class SunofriendTui(App[None]):
         display: none;
     }
 
+    Screen.compact #mode-description {
+        display: none;
+    }
+
     Footer {
         background: #0d1a26;
     }
     """
 
     BINDINGS = [
+        ("f2", "switch_simple_mode", "Simple mode"),
+        ("f3", "switch_studio_mode", "Studio mode"),
         ("ctrl+r", "refresh_project", "Refresh"),
         ("f6", "open_visual_studio", "Visual Studio"),
         ("ctrl+d", "run_system_check", "System check"),
@@ -346,11 +422,16 @@ class SunofriendTui(App[None]):
         state_dir: str | Path | None = None,
         soundfont_path: str | Path | None = None,
         initial_conversion_output: str | Path | None = None,
+        initial_mode: str = "simple",
         developer_inspector: bool = True,
         conversion_runner: Any | None = None,
+        simple_runner: Any | None = None,
         listening_master_runner: Any | None = None,
     ) -> None:
         super().__init__()
+        if initial_mode not in {"simple", "studio"}:
+            raise ValueError("TUI mode must be simple or studio")
+        self.initial_mode = initial_mode
         self.initial_project = str(project) if project is not None else ""
         self.initial_candidate_roots = tuple(candidate_roots)
         self.catalog_path = catalog_path
@@ -371,6 +452,20 @@ class SunofriendTui(App[None]):
         self._suggested_conversion_output = ""
         self._conversion_last_phase = ""
         self._preserve_conversion_status = False
+        self._simple_runner = simple_runner
+        self._simple_running = False
+        self._simple_sequence = 0
+        self._simple_cancel_requested = asyncio.Event()
+        self._simple_done = asyncio.Event()
+        self._simple_done.set()
+        self._suggested_simple_output = (
+            _suggest_fresh_simple_output(Path(self.initial_project))
+            if self.initial_project
+            else ""
+        )
+        self._simple_last_phase = ""
+        self._preserve_simple_status = False
+        self._simple_start_after_load = False
         self._listening_master_runner = listening_master_runner
         self._listening_master_running = False
         self._listening_master_sequence = 0
@@ -388,6 +483,7 @@ class SunofriendTui(App[None]):
         self._stem_ids: list[str] = []
         self._project_load_sequence = 0
         self._midi_map_sequence = 0
+        self._last_studio_tab = "overview"
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -409,12 +505,36 @@ class SunofriendTui(App[None]):
                     classes="field-input",
                 )
             with Horizontal(classes="field-row"):
-                yield Label("MIDI result roots", classes="field-label")
+                yield Label("Existing MIDI (Studio)", classes="field-label")
                 yield Input(
                     value=candidate_roots_field(self.initial_candidate_roots),
-                    placeholder="Separate several local result folders with ;",
+                    placeholder="Optional; separate result folders with ;",
                     id="candidate-roots",
                     classes="field-input",
+                )
+            with Horizontal(id="mode-switch-row"):
+                yield Label("Experience", classes="field-label")
+                yield Button(
+                    "Simple · Make my song",
+                    id="switch-simple",
+                    classes=(
+                        "mode-choice active-mode"
+                        if self.initial_mode == "simple"
+                        else "mode-choice"
+                    ),
+                )
+                yield Button(
+                    "Studio · Compare & improve",
+                    id="switch-studio",
+                    classes=(
+                        "mode-choice active-mode"
+                        if self.initial_mode == "studio"
+                        else "mode-choice"
+                    ),
+                )
+                yield Static(
+                    _mode_description(self.initial_mode),
+                    id="mode-description",
                 )
             with Horizontal(id="button-row"):
                 yield Button("Load / refresh project", id="load-project")
@@ -429,7 +549,50 @@ class SunofriendTui(App[None]):
                     id="stop-studio",
                     disabled=True,
                 )
-        with TabbedContent(initial="overview"):
+        with TabbedContent(
+            initial="simple" if self.initial_mode == "simple" else "overview",
+            id="workspace-tabs",
+        ):
+            with TabPane("Make my song", id="simple"):
+                with VerticalScroll():
+                    yield Static(_SIMPLE_SCOPE, id="simple-scope")
+                    with Horizontal(id="simple-output-row"):
+                        yield Label(
+                            "Fresh output folder",
+                            classes="field-label",
+                        )
+                        yield Input(
+                            value=self._suggested_simple_output,
+                            placeholder=(
+                                "/path/outside/source/song-sunofriend-song-v1"
+                            ),
+                            id="simple-output",
+                            classes="field-input",
+                        )
+                    with Horizontal(id="simple-actions"):
+                        yield Button(
+                            "Create MIDI + WAV",
+                            id="create-simple",
+                            disabled=True,
+                        )
+                        yield Button(
+                            "Cancel",
+                            id="cancel-simple",
+                            disabled=True,
+                        )
+                    yield ProgressBar(
+                        total=6,
+                        show_eta=False,
+                        id="simple-progress",
+                    )
+                    yield Static(
+                        (
+                            "Choose a folder of stems above. Sunofriend will "
+                            "use safe automatic primaries, make editable MIDI, "
+                            "a balanced interpretation WAV and one starter ZIP."
+                        ),
+                        id="simple-status",
+                    )
             with TabPane("Project", id="overview"):
                 yield Static(
                     "Choose a stem project above. Loading is read-only and "
@@ -559,8 +722,10 @@ class SunofriendTui(App[None]):
             "ready",
             "The TUI started. Temporary navigation and logs are memory-only.",
         )
+        self._sync_simple_controls(update_status=False)
         self._sync_conversion_controls(update_status=False)
         self._sync_listening_master_controls(update_status=False)
+        self._sync_mode_switch(self.initial_mode)
         if self.initial_project:
             self._start_project_load()
 
@@ -583,9 +748,63 @@ class SunofriendTui(App[None]):
     async def _stop_pressed(self) -> None:
         await self._stop_visual_studio()
 
+    @on(Button.Pressed, "#switch-simple")
+    def _switch_simple_pressed(self) -> None:
+        self.action_switch_simple_mode()
+
+    @on(Button.Pressed, "#switch-studio")
+    def _switch_studio_pressed(self) -> None:
+        self.action_switch_studio_mode()
+
+    @on(TabbedContent.TabActivated, "#workspace-tabs")
+    def _workspace_tab_activated(
+        self,
+        event: TabbedContent.TabActivated,
+    ) -> None:
+        active_tab = event.pane.id or ""
+        if active_tab in _STUDIO_TAB_IDS:
+            self._last_studio_tab = active_tab
+            self._sync_mode_switch("studio")
+        elif active_tab == "simple":
+            self._sync_mode_switch("simple")
+
     @on(Button.Pressed, "#convert-all")
     def _convert_all_pressed(self) -> None:
         self.action_convert_all()
+
+    @on(Button.Pressed, "#create-simple")
+    def _create_simple_pressed(self) -> None:
+        self.action_create_simple()
+
+    @on(Button.Pressed, "#cancel-simple")
+    def _cancel_simple_pressed(self) -> None:
+        self._cancel_simple_create()
+
+    @on(Input.Changed, "#project-path")
+    def _project_path_changed(self) -> None:
+        if self._simple_running:
+            return
+        raw_project = self.query_one("#project-path", Input).value.strip()
+        simple_output = self.query_one("#simple-output", Input)
+        if (
+            raw_project
+            and (
+                not simple_output.value.strip()
+                or simple_output.value.strip() == self._suggested_simple_output
+            )
+        ):
+            self._suggested_simple_output = _suggest_fresh_simple_output(
+                Path(raw_project).expanduser()
+            )
+            simple_output.value = self._suggested_simple_output
+        self._preserve_simple_status = False
+        self._sync_simple_controls(update_status=True)
+
+    @on(Input.Changed, "#simple-output")
+    def _simple_output_changed(self) -> None:
+        if not self._simple_running:
+            self._preserve_simple_status = False
+        self._sync_simple_controls(update_status=True)
 
     @on(Button.Pressed, "#cancel-conversion")
     def _cancel_conversion_pressed(self) -> None:
@@ -622,8 +841,52 @@ class SunofriendTui(App[None]):
     def action_refresh_project(self) -> None:
         self._start_project_load()
 
+    def action_switch_simple_mode(self) -> None:
+        """Show the one-action journey without changing project state."""
+
+        self._switch_mode("simple")
+
+    def action_switch_studio_mode(self) -> None:
+        """Show the detailed workspace without changing project state."""
+
+        self._switch_mode("studio")
+
+    def _switch_mode(self, mode: str) -> None:
+        tabs = self.query_one("#workspace-tabs", TabbedContent)
+        active_tab = tabs.active or ""
+        if mode == "simple":
+            if active_tab in _STUDIO_TAB_IDS:
+                self._last_studio_tab = active_tab
+            if active_tab != "simple":
+                tabs.active = "simple"
+            self._sync_mode_switch("simple")
+            return
+        if mode != "studio":  # pragma: no cover - private contract guard
+            raise ValueError("TUI mode must be simple or studio")
+        if active_tab == "simple":
+            target = (
+                self._last_studio_tab
+                if self._last_studio_tab in _STUDIO_TAB_IDS
+                else "overview"
+            )
+            tabs.active = target
+        self._sync_mode_switch("studio")
+
+    def _sync_mode_switch(self, mode: str) -> None:
+        simple = self.query_one("#switch-simple", Button)
+        studio = self.query_one("#switch-studio", Button)
+        simple.set_class(mode == "simple", "active-mode")
+        studio.set_class(mode == "studio", "active-mode")
+        self.query_one("#mode-description", Static).update(
+            _mode_description(mode)
+        )
+
     def action_run_system_check(self) -> None:
-        if self._conversion_running or self._listening_master_running:
+        if (
+            self._simple_running
+            or self._conversion_running
+            or self._listening_master_running
+        ):
             self.notify(
                 "Wait for the current audio operation to finish",
                 severity="warning",
@@ -632,7 +895,11 @@ class SunofriendTui(App[None]):
         self._run_system_check()
 
     def action_open_visual_studio(self) -> None:
-        if self._conversion_running or self._listening_master_running:
+        if (
+            self._simple_running
+            or self._conversion_running
+            or self._listening_master_running
+        ):
             self.notify(
                 "Wait for the current render operation to finish",
                 severity="warning",
@@ -656,9 +923,91 @@ class SunofriendTui(App[None]):
         self.query_one("#open-studio", Button).disabled = True
         self._run_visual_studio()
 
+    def action_create_simple(self) -> None:
+        if self._simple_running:
+            self.notify("A Simple song is already being created", severity="warning")
+            return
+        if self._conversion_running or self._listening_master_running:
+            self.notify(
+                "Wait for the current audio operation to finish",
+                severity="warning",
+            )
+            return
+        if self._workbench_launching or self._workbench_process is not None:
+            self.notify(
+                "Stop the visual studio before creating a Simple song",
+                severity="warning",
+            )
+            return
+        problem = self._simple_start_problem(require_loaded=False)
+        if problem is not None:
+            self._set_simple_status(problem, error=True)
+            self.notify(problem, severity="warning")
+            self._sync_simple_controls(update_status=False)
+            return
+        raw_project = Path(
+            self.query_one("#project-path", Input).value.strip()
+        ).expanduser().resolve()
+        if self.snapshot is None or self.snapshot.config.project != raw_project:
+            self._simple_start_after_load = True
+            self._set_simple_status(
+                "Checking the source stems, BPM, key and tuning before starting…"
+            )
+            self._start_project_load()
+            return
+        try:
+            from .simple_create import create_simple_create_runner
+            from .simple_create_contract import SimpleCreateRequest
+
+            request = SimpleCreateRequest.create(
+                self.snapshot.config.project,
+                self.query_one("#simple-output", Input).value,
+                state_dir=self.state_dir,
+                soundfont_path=self.soundfont_path,
+            )
+            if self._simple_runner is None:
+                self._simple_runner = create_simple_create_runner()
+        except Exception as exc:
+            message = _safe_exception_message(exc)
+            self._set_simple_status(message, error=True)
+            self._activity("error", message)
+            return
+        self._simple_running = True
+        self._simple_start_after_load = False
+        self._preserve_simple_status = False
+        self._simple_sequence += 1
+        sequence = self._simple_sequence
+        self._simple_cancel_requested.clear()
+        self._simple_done.clear()
+        self._simple_last_phase = ""
+        self.query_one("#simple-progress", ProgressBar).update(
+            total=6,
+            progress=0,
+        )
+        self._set_simple_status(
+            "Starting local conversion. This can take some time on a full song…"
+        )
+        self._set_status("Making automatic MIDI + WAV · local only")
+        self._activity(
+            "simple",
+            (
+                "Simple creation started with production repair conversion and "
+                "automatic, unreviewed primary selection."
+            ),
+        )
+        self._set_project_controls_locked(True)
+        self._sync_simple_controls(update_status=False)
+        self._run_simple_create(request, sequence)
+
     def action_convert_all(self) -> None:
         if self._conversion_running:
             self.notify("A full conversion is already running", severity="warning")
+            return
+        if self._simple_running:
+            self.notify(
+                "Wait for Simple creation to finish or cancel it first",
+                severity="warning",
+            )
             return
         if self._listening_master_running:
             self.notify(
@@ -728,6 +1077,12 @@ class SunofriendTui(App[None]):
                 severity="warning",
             )
             return
+        if self._simple_running:
+            self.notify(
+                "Wait for Simple creation to finish or cancel it first",
+                severity="warning",
+            )
+            return
         if self._conversion_running:
             self.notify(
                 "Wait for conversion to finish or cancel it first",
@@ -787,6 +1142,8 @@ class SunofriendTui(App[None]):
         self._run_listening_master(request, sequence)
 
     async def action_request_quit(self) -> None:
+        if not await self._stop_simple_create():
+            return
         if not await self._stop_full_conversion():
             return
         if not await self._wait_for_listening_master():
@@ -795,11 +1152,18 @@ class SunofriendTui(App[None]):
             self.exit()
 
     async def on_unmount(self) -> None:
+        await self._stop_simple_create(notify_timeout=False)
         await self._stop_full_conversion(notify_timeout=False)
         await self._wait_for_listening_master(notify_timeout=False)
         await self._stop_visual_studio()
 
     def _start_project_load(self) -> None:
+        if self._simple_running:
+            self.notify(
+                "Cancel or finish Simple creation before changing the project",
+                severity="warning",
+            )
+            return
         if self._conversion_running:
             self.notify(
                 "Cancel or finish conversion before changing the project",
@@ -836,6 +1200,7 @@ class SunofriendTui(App[None]):
         self.query_one("#load-project", Button).disabled = True
         self.query_one("#open-studio", Button).disabled = True
         self._project_loading = True
+        self._sync_simple_controls(update_status=False)
         self._sync_conversion_controls(update_status=False)
         self._sync_listening_master_controls(update_status=False)
         self._set_status("Reading and verifying the local project…")
@@ -853,6 +1218,7 @@ class SunofriendTui(App[None]):
             if sequence != self._project_load_sequence:
                 return
             self._project_loading = False
+            self._simple_start_after_load = False
             studio_active = (
                 self._workbench_launching or self._workbench_process is not None
             )
@@ -861,6 +1227,7 @@ class SunofriendTui(App[None]):
                 studio_active or self.snapshot is None
             )
             self._set_status("Project unavailable")
+            self._sync_simple_controls(update_status=True)
             self._sync_conversion_controls(update_status=True)
             self._sync_listening_master_controls(update_status=True)
             self._activity("error", _safe_exception_message(exc))
@@ -885,6 +1252,15 @@ class SunofriendTui(App[None]):
             suggestion = _suggest_fresh_conversion_output(snapshot.config.project)
             self._suggested_conversion_output = suggestion
             output_input.value = suggestion
+        simple_output = self.query_one("#simple-output", Input)
+        current_simple_output = simple_output.value.strip()
+        if (
+            not current_simple_output
+            or current_simple_output == self._suggested_simple_output
+        ):
+            simple_suggestion = _suggest_fresh_simple_output(snapshot.config.project)
+            self._suggested_simple_output = simple_suggestion
+            simple_output.value = simple_suggestion
         midi_ready = counts["midi_ready_stem_count"]
         missing_midi = counts["missing_midi_stem_count"]
         coverage_message = (
@@ -946,6 +1322,9 @@ class SunofriendTui(App[None]):
         self._sync_conversion_controls(
             update_status=not self._preserve_conversion_status
         )
+        self._sync_simple_controls(
+            update_status=not self._preserve_simple_status
+        )
         self._sync_listening_master_controls(
             update_status=not self._preserve_listening_master_status
         )
@@ -976,6 +1355,8 @@ class SunofriendTui(App[None]):
                 "Use the Convert tab's Convert all stems action. Project "
                 "loading and the visual studio only review existing results."
             )
+        if self._simple_start_after_load:
+            self.call_after_refresh(self.action_create_simple)
 
     def _start_midi_map_load(self, stem_id: str) -> None:
         self._midi_map_sequence += 1
@@ -1004,6 +1385,274 @@ class SunofriendTui(App[None]):
             and self.snapshot is snapshot
         ):
             target.update(format_tui_midi_map(document))
+
+    @work(exclusive=True, group="simple-create")
+    async def _run_simple_create(self, request: Any, sequence: int) -> None:
+        runner = self._simple_runner
+        if runner is None:
+            self._finish_simple_failure(
+                sequence,
+                "The Simple creation runner is unavailable.",
+            )
+            return
+        loop = asyncio.get_running_loop()
+
+        def on_progress(progress: Any) -> None:
+            loop.call_soon_threadsafe(
+                self._apply_simple_progress,
+                progress,
+                sequence,
+            )
+
+        try:
+            result = await runner.run(
+                request,
+                on_progress=on_progress,
+                cancellation_requested=self._simple_cancel_requested.is_set,
+            )
+        except Exception as exc:
+            self._finish_simple_failure(
+                sequence,
+                _safe_exception_message(exc),
+            )
+            return
+        if sequence != self._simple_sequence:
+            return
+        self._simple_running = False
+        self._simple_done.set()
+        self._set_project_controls_locked(False)
+        self._sync_simple_controls(update_status=False)
+        if bool(getattr(result, "cancelled", False)):
+            self.query_one("#simple-progress", ProgressBar).update(
+                total=6,
+                progress=0,
+            )
+            self._set_simple_status(
+                (
+                    "Cancelled. Any incomplete conversion tree is preserved for "
+                    "inspection, but it is not labelled as a finished Simple result."
+                )
+            )
+            self._set_status("Simple creation cancelled · source unchanged")
+            self._activity(
+                "simple",
+                "Simple creation cancelled; no automatic result was published.",
+            )
+            return
+        if not bool(getattr(result, "succeeded", False)):
+            self._finish_simple_failure(
+                sequence,
+                f"Simple creation finished with status: {getattr(result, 'status', 'failed')}.",
+                controls_already_reset=True,
+            )
+            return
+        self.query_one("#simple-progress", ProgressBar).update(
+            total=6,
+            progress=6,
+        )
+        selected_count = int(getattr(result, "selected_count", 0) or 0)
+        omitted_count = int(getattr(result, "omitted_count", 0) or 0)
+        warnings = tuple(getattr(result, "warnings", ()) or ())
+        warning_lines = "\n".join(
+            f"• {escape_markup(str(value)[:400])}" for value in warnings[:5]
+        )
+        if len(warnings) > 5:
+            warning_lines += f"\n• {len(warnings) - 5} more note(s) in the receipt"
+        status = (
+            "[bold #5eead4]Your automatic song is ready.[/]\n"
+            f"[bold]MIDI parts[/] {selected_count} automatic primaries\n"
+            f"[bold]Roles without a safe default[/] {omitted_count}\n"
+            f"[bold]Balanced WAV[/] "
+            f"{escape_markup(str(getattr(result, 'balanced_wav_path', '')))}\n"
+            f"[bold]GarageBand starter ZIP[/] "
+            f"{escape_markup(str(getattr(result, 'zip_path', '')))}\n\n"
+            "[#9fb3c8]These are automatic, unreviewed starting choices. "
+            "Use Visual Studio when you want to compare alternatives and "
+            "record feedback.[/]"
+        )
+        if warning_lines:
+            status += f"\n\n[bold #facc15]Review notes[/]\n{warning_lines}"
+        self._set_simple_status(status)
+        self._preserve_simple_status = True
+        self._set_status("Automatic MIDI + WAV ready · source unchanged")
+        self._activity(
+            "simple",
+            (
+                f"Simple result published with {selected_count} automatic "
+                f"primary part(s) and {omitted_count} omitted role(s). No human "
+                "review or feedback event was recorded."
+            ),
+        )
+        output_dir = getattr(result, "output_dir", None)
+        if output_dir is not None:
+            self.query_one("#candidate-roots", Input).value = str(output_dir)
+            self.query_one(TabbedContent).active = "simple"
+            self._start_project_load()
+
+    def _apply_simple_progress(self, progress: Any, sequence: int) -> None:
+        if sequence != self._simple_sequence or not self._simple_running:
+            return
+        completed = max(0, int(getattr(progress, "completed", 0) or 0))
+        total = max(1, int(getattr(progress, "total", 6) or 6))
+        completed = min(completed, total)
+        phase = str(getattr(progress, "phase", "create") or "create")
+        message = str(getattr(progress, "message", "") or "").strip()
+        self.query_one("#simple-progress", ProgressBar).update(
+            total=total,
+            progress=completed,
+        )
+        self._set_simple_status(
+            f"{completed}/{total} · {phase}\n{message or 'Working locally…'}"
+        )
+        self._set_status(f"Make my song · {completed}/{total} · {phase}")
+        if phase != self._simple_last_phase:
+            self._simple_last_phase = phase
+            self._activity("simple", f"{phase}: {message or 'running'}")
+
+    @work(exclusive=True, group="simple-cancel")
+    async def _cancel_simple_create(self) -> None:
+        await self._request_simple_cancel(wait=False)
+
+    async def _request_simple_cancel(self, *, wait: bool) -> None:
+        if not self._simple_running:
+            return
+        self._simple_cancel_requested.set()
+        self.query_one("#cancel-simple", Button).disabled = True
+        self._set_simple_status(
+            (
+                "Cancellation requested. A model process will stop at its next "
+                "safe boundary; a WAV already being verified must finish safely."
+            )
+        )
+        self._set_status("Cancelling Simple creation…")
+        self._activity("simple", "Cancellation requested.")
+        runner = self._simple_runner
+        if runner is not None:
+            try:
+                cancelled = runner.cancel()
+                if inspect.isawaitable(cancelled):
+                    await cancelled
+            except Exception as exc:
+                self._activity(
+                    "error",
+                    f"Simple cancellation warning: {_safe_exception_message(exc)}",
+                )
+        if wait:
+            try:
+                await asyncio.wait_for(
+                    self._simple_done.wait(),
+                    timeout=10.0,
+                )
+            except asyncio.TimeoutError:
+                pass
+
+    async def _stop_simple_create(self, *, notify_timeout: bool = True) -> bool:
+        if not self._simple_running:
+            return True
+        await self._request_simple_cancel(wait=True)
+        if not self._simple_running:
+            return True
+        self._activity(
+            "error",
+            "Simple creation is still stopping; terminal shutdown was deferred.",
+        )
+        if notify_timeout:
+            self.notify(
+                "Simple creation is still stopping; try Quit again shortly",
+                severity="warning",
+            )
+        return False
+
+    def _finish_simple_failure(
+        self,
+        sequence: int,
+        message: str,
+        *,
+        controls_already_reset: bool = False,
+    ) -> None:
+        if sequence != self._simple_sequence:
+            return
+        self._simple_running = False
+        self._simple_done.set()
+        if not controls_already_reset:
+            self._set_project_controls_locked(False)
+            self._sync_simple_controls(update_status=False)
+        self._set_simple_status(message, error=True)
+        self._set_status("Simple creation failed · source unchanged")
+        self._activity("error", message)
+
+    def _set_simple_status(self, message: str, *, error: bool = False) -> None:
+        try:
+            target = self.query_one("#simple-status", Static)
+        except Exception:
+            return
+        prefix = "[bold #fb7185]Cannot make the song.[/] " if error else ""
+        target.update(f"{prefix}{message}")
+
+    def _simple_start_problem(self, *, require_loaded: bool) -> str | None:
+        if self._project_loading:
+            return "Wait for the current project check to finish."
+        if self.catalog_path is not None:
+            return (
+                "Simple mode discovers its exact production primaries from a "
+                "fresh conversion. Relaunch without --catalog, or use Studio."
+            )
+        raw_project = self.query_one("#project-path", Input).value.strip()
+        if not raw_project:
+            return "Choose a folder containing top-level WAV stems."
+        project = Path(raw_project).expanduser().resolve()
+        if not project.is_dir():
+            return "The stem project folder does not exist."
+        if not any(project.glob("*.wav")):
+            return "The stem project folder contains no top-level WAV stems."
+        if require_loaded and (
+            self.snapshot is None or self.snapshot.config.project != project
+        ):
+            return "Wait for Sunofriend to finish checking the stem project."
+        output_value = self.query_one("#simple-output", Input).value.strip()
+        if not output_value:
+            return "Choose a fresh, separate output folder."
+        output = Path(output_value).expanduser().resolve()
+        if output == project or project in output.parents:
+            return "The Simple output must be outside the source project."
+        if output.exists() or output.is_symlink():
+            return (
+                "The Simple output already exists. Choose a fresh folder; "
+                "Sunofriend never overwrites a prior result."
+            )
+        return None
+
+    def _sync_simple_controls(self, *, update_status: bool) -> None:
+        try:
+            output = self.query_one("#simple-output", Input)
+            create = self.query_one("#create-simple", Button)
+            cancel = self.query_one("#cancel-simple", Button)
+        except Exception:
+            return
+        studio_active = (
+            self._workbench_launching or self._workbench_process is not None
+        )
+        locked = (
+            self._simple_running
+            or self._conversion_running
+            or self._listening_master_running
+            or studio_active
+        )
+        output.disabled = locked
+        problem = self._simple_start_problem(require_loaded=False)
+        create.disabled = locked or self._project_loading or problem is not None
+        cancel.disabled = not self._simple_running
+        if update_status and not self._simple_running:
+            if problem is None:
+                self._set_simple_status(
+                    (
+                        "Ready. Press Create MIDI + WAV once. Sunofriend will "
+                        "convert every supported stem, choose only production "
+                        "primaries, balance the interpretation and make a ZIP."
+                    )
+                )
+            else:
+                self._set_simple_status(problem, error=True)
 
     @work(exclusive=True, group="full-conversion")
     async def _run_full_conversion(self, request: Any, sequence: int) -> None:
@@ -1288,7 +1937,8 @@ class SunofriendTui(App[None]):
             self._workbench_launching or self._workbench_process is not None
         )
         locked = (
-            self._conversion_running
+            self._simple_running
+            or self._conversion_running
             or self._listening_master_running
             or studio_active
         )
@@ -1305,6 +1955,7 @@ class SunofriendTui(App[None]):
             self.query_one("#open-studio", Button).disabled = (
                 self.snapshot is None
                 or self._project_loading
+                or self._simple_running
                 or self._conversion_running
                 or self._listening_master_running
                 or studio_active
@@ -1526,6 +2177,8 @@ class SunofriendTui(App[None]):
             return "Load and verify a project first."
         if self._project_loading:
             return "Wait for the current project load to finish."
+        if self._simple_running:
+            return "Wait for Simple creation to finish or cancel it first."
         if self._conversion_running:
             return "Wait for conversion to finish or cancel it first."
         raw_project = self.query_one("#project-path", Input).value.strip()
@@ -1573,6 +2226,7 @@ class SunofriendTui(App[None]):
         )
         locked = (
             self._listening_master_running
+            or self._simple_running
             or self._conversion_running
             or studio_active
         )
@@ -1740,6 +2394,7 @@ class SunofriendTui(App[None]):
         colours = {
             "ready": "#5eead4",
             "project": "#60a5fa",
+            "simple": "#5eead4",
             "conversion": "#34d399",
             "master": "#22d3ee",
             "system": "#c084fc",
@@ -1758,11 +2413,13 @@ class SunofriendTui(App[None]):
         self.query_one("#load-project", Button).disabled = locked
         self.query_one("#system-check", Button).disabled = locked
         try:
+            self.query_one("#simple-output", Input).disabled = locked
             self.query_one("#conversion-output", Input).disabled = locked
             self.query_one("#conversion-confirm", Checkbox).disabled = locked
             self.query_one("#master-confirm", Checkbox).disabled = locked
         except Exception:
             pass
+        self._sync_simple_controls(update_status=False)
         self._sync_conversion_controls(update_status=False)
         self._sync_listening_master_controls(update_status=False)
 
@@ -1801,6 +2458,7 @@ def run_tui(
     state_dir: str | Path | None = None,
     soundfont_path: str | Path | None = None,
     initial_conversion_output: str | Path | None = None,
+    initial_mode: str = "simple",
     developer_inspector: bool = True,
 ) -> int:
     """Run the local studio and return a CLI-compatible exit status."""
@@ -1812,6 +2470,7 @@ def run_tui(
         state_dir=state_dir,
         soundfont_path=soundfont_path,
         initial_conversion_output=initial_conversion_output,
+        initial_mode=initial_mode,
         developer_inspector=developer_inspector,
     )
     app.run()
@@ -1823,10 +2482,39 @@ def _safe_exception_message(exc: Exception) -> str:
     return message[:500]
 
 
+def _mode_description(mode: str) -> str:
+    if mode == "simple":
+        return (
+            "Automatic, explicitly unreviewed MIDI + WAV + ZIP. "
+            "Switching changes only this view."
+        )
+    if mode == "studio":
+        return (
+            "Compare, correct and export with explicit choices. "
+            "Switching changes only this view."
+        )
+    raise ValueError("TUI mode must be simple or studio")
+
+
 def _suggest_fresh_conversion_output(project: Path) -> str:
     """Suggest but never create a fresh sibling output directory."""
 
     base = project.parent / f"{project.name}-sunofriend-midi-v1"
+    if not base.exists():
+        return str(base)
+    stem = base.name.rsplit("-v1", 1)[0]
+    for index in range(2, 1000):
+        candidate = base.with_name(f"{stem}-v{index}")
+        if not candidate.exists():
+            return str(candidate)
+    return str(base.with_name(f"{base.name}-fresh"))
+
+
+def _suggest_fresh_simple_output(project: Path) -> str:
+    """Suggest but never create a fresh sibling Simple result directory."""
+
+    expanded = project.expanduser()
+    base = expanded.parent / f"{expanded.name}-sunofriend-song-v1"
     if not base.exists():
         return str(base)
     stem = base.name.rsplit("-v1", 1)[0]
@@ -1885,6 +2573,32 @@ def _format_diagnostics(report: dict[str, Any]) -> str:
         f"CoreMIDI destinations: {len(outputs)}\n\n"
         "[#9fb3c8]This check downloads nothing and changes no project state.[/]"
     )
+
+
+_SIMPLE_SCOPE = """\
+[bold #5eead4]Make a useful first version without learning the technical tools[/]
+
+[bold]You provide[/] one folder containing top-level WAV stems. Put the BPM,
+key and tuning in its name, for example [bold]My Song-B minor-113bpm-440hz[/].
+
+[bold]Sunofriend makes[/]
+• one exact automatic-primary MIDI file for every safely paired role;
+• one combined General MIDI interpretation;
+• one source-referenced balanced interpretation WAV; and
+• a starter ZIP plus a plain-English receipt.
+
+[bold]What “automatic” means[/]
+Sunofriend uses only the primary result explicitly published by each production
+repair conversion. It does not score all alternatives and invent a winner,
+write a Workbench decision, or claim that you reviewed the result. Missing,
+ambiguous, silent and diagnostic-only roles are listed instead of being hidden.
+
+The WAV contains rendered MIDI only. Source stems provide timing, song length
+and relative-level evidence; their audio is not mixed into it. The result is a
+creative starting interpretation, not an exact reconstruction or release
+master. Open [bold]Visual Studio[/] afterwards to compare methods, improve the
+choices, record feedback and compose a reviewed GarageBand pack.
+"""
 
 
 _WORKFLOW_GUIDE = """\

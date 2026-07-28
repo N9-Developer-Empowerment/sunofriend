@@ -1,0 +1,134 @@
+name: Beginner first-song report
+description: Tell us whether you could install Sunofriend and make a MIDI/WAV result without developer help.
+title: "[First song]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for testing the beginner journey. Please do not upload stems, private filenames or music you cannot redistribute. A failed or confusing attempt is just as useful as a successful one.
+  - type: dropdown
+    id: music_software_experience
+    attributes:
+      label: Music software experience
+      options:
+        - New to DAWs and MIDI
+        - Comfortable with a DAW, but not developer tools
+        - Comfortable with DAWs and command-line tools
+        - Developer or advanced technical user
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Mac model, macOS version and architecture
+      placeholder: "Example: MacBook Air M2, macOS 15.5, Apple Silicon"
+    validations:
+      required: true
+  - type: input
+    id: sunofriend
+    attributes:
+      label: Sunofriend version or commit
+      placeholder: "Run: .venv/bin/sunofriend --version"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Could you install it using only the Getting started guide?
+      options:
+        - Yes, without help
+        - Yes, after solving a documented problem
+        - Yes, but I needed help
+        - No
+    validations:
+      required: true
+  - type: dropdown
+    id: checks
+    attributes:
+      label: Did both convert and preview checks pass?
+      options:
+        - Yes
+        - One failed, but the message explained what to do
+        - One failed and the message was unclear
+        - I did not reach the checks
+    validations:
+      required: true
+  - type: dropdown
+    id: stems
+    attributes:
+      label: Did Simple mode recognise your stem folder and roles?
+      options:
+        - Yes, all expected roles
+        - Partly
+        - No
+        - I did not reach this step
+    validations:
+      required: true
+  - type: dropdown
+    id: completion
+    attributes:
+      label: Did Create MIDI + WAV finish?
+      options:
+        - Yes
+        - It finished with understandable warnings
+        - It failed
+        - I cancelled it
+        - I did not reach this step
+    validations:
+      required: true
+  - type: checkboxes
+    id: outputs
+    attributes:
+      label: Which outputs could you find and use?
+      options:
+        - label: START-HERE.txt
+        - label: Balanced song-interpretation WAV
+        - label: Individual MIDI files
+        - label: Combined MIDI
+        - label: Starter ZIP
+  - type: input
+    id: daw
+    attributes:
+      label: DAW and version, if you imported the MIDI
+      placeholder: "Example: GarageBand 10.4.11"
+  - type: dropdown
+    id: tempo
+    attributes:
+      label: Did the MIDI line up at the documented BPM?
+      options:
+        - Yes
+        - Partly
+        - No
+        - Not tested
+    validations:
+      required: true
+  - type: dropdown
+    id: usefulness
+    attributes:
+      label: Did the balanced WAV help you understand or reuse the song?
+      options:
+        - Very useful
+        - Somewhat useful
+        - Not useful
+        - I could not play it
+    validations:
+      required: true
+  - type: textarea
+    id: clarity
+    attributes:
+      label: What was clear, and where did you get stuck?
+      description: Please include the step and the exact non-private error text where possible.
+    validations:
+      required: true
+  - type: textarea
+    id: musical_result
+    attributes:
+      label: Which MIDI roles sounded useful or weak?
+      description: Descriptions such as bass, keys, kick or vocals are enough. Do not attach source audio unless you separately own and choose to share it.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: I removed private filenames, tokens and confidential information from this report.
+          required: true

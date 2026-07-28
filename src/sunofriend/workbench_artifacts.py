@@ -1919,7 +1919,7 @@ class WorkbenchArtifacts:
             if cached is not None:
                 cached["cache_hit"] = True
                 return cached
-            tracks = _arrangement_tracks(selection)
+            tracks = build_arrangement_tracks(selection)
             work, final = self._building_directory("arrangements", cache_key)
             try:
                 midi_path = work / "selected-arrangement-proxy.mid"
@@ -6790,7 +6790,17 @@ def _path_exists_or_is_symlink(path: Path) -> bool:
     return path.exists() or path.is_symlink()
 
 
-def _arrangement_tracks(selection: Sequence[Mapping[str, Any]]) -> list[MidiTrack]:
+def build_arrangement_tracks(
+    selection: Sequence[Mapping[str, Any]],
+) -> list[MidiTrack]:
+    """Build one role-neutral GM proxy from an explicit selection.
+
+    This is a rendering helper only.  It does not choose, rank, persist or
+    review any candidate, so both the human-reviewed Workbench and the
+    separately labelled automatic Simple workflow can share identical proxy
+    construction without sharing decision state.
+    """
+
     drum_notes: list[NoteEvent] = []
     melodic: list[tuple[Mapping[str, Any], list[NoteEvent]]] = []
     for item in selection:
@@ -6812,7 +6822,7 @@ def _arrangement_tracks(selection: Sequence[Mapping[str, Any]]) -> list[MidiTrac
         tracks.append(MidiTrack("Selected drums", 9, 0, drum_notes))
     for channel, (item, notes) in zip(_MELODIC_CHANNELS, melodic):
         role = str(item["role"])
-        decision = str(item["decision"])
+        decision = str(item.get("decision") or "selected")
         tracks.append(
             MidiTrack(
                 f"{_track_name(role)} ({decision})",
@@ -6824,6 +6834,11 @@ def _arrangement_tracks(selection: Sequence[Mapping[str, Any]]) -> list[MidiTrac
     if not tracks:
         raise ValueError("the selected MIDI files contain no playable notes")
     return tracks
+
+
+# Backwards-compatible private name retained for older internal tests and
+# callers.  New code should use the explicitly side-effect-free public helper.
+_arrangement_tracks = build_arrangement_tracks
 
 
 def _clips_to_notes(clips: Sequence[Any]) -> list[NoteEvent]:
@@ -7800,4 +7815,5 @@ __all__ = [
     "WorkbenchPackConflictError",
     "canonical_garageband_pack_basket",
     "selected_candidates",
+    "build_arrangement_tracks",
 ]

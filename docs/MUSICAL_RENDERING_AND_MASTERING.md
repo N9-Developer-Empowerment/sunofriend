@@ -8,11 +8,13 @@ promotion remains deliberately unimplemented; Stage 4 fixed-selected-MIDI bass
 and keys instrument comparisons are implemented, with the keys-only private
 representative functional-response preflight
 
-Sunofriend has two linked creative outputs: reviewed, editable MIDI and a
-useful, good-sounding MIDI-derived song-interpretation WAV rendered from the
-selected MIDI. The WAV should help a listener hear the song's melody, harmony,
-rhythm and structure without being distracted by implausible effects or an
-unbalanced technical render.
+Sunofriend has two linked creative outputs: editable MIDI and a useful,
+good-sounding MIDI-derived song-interpretation WAV. Simple mode renders exact
+production-summary primaries into an automatic, explicitly unreviewed starting
+result. Studio renders the human-selected arrangement and can describe it as
+reviewed only after the existing explicit review gates. The WAV should help a
+listener hear the song's melody, harmony, rhythm and structure without being
+distracted by implausible effects or an unbalanced technical render.
 
 Here, **interpolation** means a creative interpretation of the source song's
 melody, harmony, rhythm and structure. It does not mean reconstruction of the

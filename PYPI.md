@@ -1,10 +1,13 @@
 # Sunofriend
 
 Sunofriend turns separated music stems and vocal performances into two linked
-creative outputs: reviewed, editable, timing-aware MIDI and a MIDI-derived
-song-interpretation WAV rendered from the selected MIDI. Source stems provide
-timing, horizon and level evidence for that WAV; their audio is not mixed into
-it. Sunofriend can evaluate stem-to-MIDI accuracy, publish conservative or
+creative outputs: editable, timing-aware MIDI and a MIDI-derived
+song-interpretation WAV. Its default Simple mode creates a separately labelled
+automatic, unreviewed MIDI/WAV/ZIP starting result; Studio preserves several
+methods for explicit listening, feedback and a reviewed GarageBand handoff.
+Source stems provide timing, horizon and level evidence for the WAV; their
+audio is not mixed into it. Sunofriend can evaluate stem-to-MIDI accuracy,
+publish conservative or
 reconstructed variants, change MIDI key and tempo, preserve or straighten
 groove, and store reusable Clip v1 parts.
 It can also inventory installed GarageBand/Audio Unit instruments, create
@@ -141,25 +144,31 @@ sunofriend doctor --require convert
 For a human operator, start with the guided local terminal studio:
 
 ```bash
-sunofriend tui
+sunofriend tui "/absolute/path/to/Song-B minor-113bpm-440hz"
 ```
 
-Enter a stem project and its existing MIDI result roots, or supply them at
-launch. The dashboard shows key, BPM, tuning, stem progress and compact MIDI
-maps, then opens the loopback-only graphical Workbench for waveform and
-piano-roll comparison, explicit listening choices, the read-only Developer
-Inspector, the MIDI-derived song-interpretation WAV and exact GarageBand ZIP:
+The default **Make my song** tab suggests a fresh sibling output. One
+**Create MIDI + WAV** action runs the production conversion, uses only each
+bounded production summary's exact published primary, and creates individual
+MIDI, combined General MIDI, a balanced MIDI-only interpretation WAV and a
+starter ZIP. The result is explicitly `not_reviewed` and
+`review_recommended`; it writes no Workbench human choice or feedback event.
+
+Open the detailed Studio experience when you want waveform and piano-roll
+comparison, explicit listening choices, the read-only Developer Inspector, a
+reviewed MIDI-derived WAV and the exact GarageBand ZIP:
 
 ```bash
 sunofriend tui "/absolute/path/to/Song-B minor-113bpm-440hz" \
+  --mode studio \
   --candidate-root "/absolute/path/to/song-midi-results"
 ```
 
-To learn the complete conversion flow, prefill a destination that does not
-exist:
+Studio can also prefill a fresh candidate-conversion destination:
 
 ```bash
 sunofriend tui "/absolute/path/to/Song-B minor-113bpm-440hz" \
+  --mode studio \
   --conversion-output "/absolute/path/to/fresh-song-midi-v1"
 ```
 
@@ -189,7 +198,8 @@ horizon in PCM24. A third pass measures the actual encoded artifact before
 owner-only publication. It leaves the balanced control and MIDI unchanged. The
 receipt says `mastered: true` and `release_master: false`: this is a
 reproducible comparative listening challenger, not a release master. Workbench
-and TUI integration plus explicit control/challenger feedback remain planned.
+and the TUI Master tab expose the same fixed-policy service; bounded
+control/challenger feedback remains a separate explicit Workbench action.
 See the repository's
 [musical rendering and listening-master plan](https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/MUSICAL_RENDERING_AND_MASTERING.md).
 

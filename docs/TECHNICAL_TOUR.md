@@ -10,11 +10,13 @@ environment for the Workbench. It exposes application operations and state
 transitions. It is not a Python line debugger, evaluator, shell, SQL editor or
 filesystem browser.
 
-For human operation, start with `sunofriend tui`. Phase 5.10a adds a Textual
-orientation layer and one-key bridge to the same Workbench/Inspector described
-here. The initial Phase 5.10b increment adds one typed fresh full-project
-conversion operation over the existing engine. Neither increment replaces the
-deterministic CLI or duplicates the browser.
+For human operation, start with `sunofriend tui`. It opens in **Make my song**:
+a one-action adapter over the existing production engine which publishes
+automatic, explicitly unreviewed MIDI, a balanced MIDI-only interpretation WAV
+and a ZIP. Use `sunofriend tui --mode studio` for the Textual project
+orientation, conversion controls and one-key bridge to the same
+Workbench/Inspector described here. Neither mode replaces the deterministic
+CLI or duplicates the browser.
 
 ## The system in one picture
 
@@ -23,6 +25,8 @@ flowchart LR
     A["Local stems and chord evidence"] --> B["Deterministic and optional AI transcription"]
     B --> C["Immutable MIDI candidates and evidence"]
     L["Guided Local Studio TUI"] --> B
+    C --> Q["Simple: exact published primaries"]
+    Q --> R["Automatic unreviewed MIDI + balanced WAV + ZIP"]
     L --> D["Workbench catalog"]
     C --> D
     D --> E["Explicit human decisions"]
@@ -47,6 +51,7 @@ The most important architectural separation is:
 | Layer | Durable? | What it means |
 | --- | --- | --- |
 | TUI fields and activity | Process memory | Private project/output orientation and bounded streamed operational messages, not feedback or a durable job ledger |
+| Simple automatic receipt | Fresh immutable result folder | Exact production-summary primaries and omissions, explicitly `not_reviewed`; no Workbench decision or feedback event |
 | Source and candidate evidence | Content-addressed | What was analysed or generated |
 | Decision event history | Append-only SQLite | What the listener explicitly decided |
 | Derived current selection | Recomputed | Which current main and optional parts are active |
@@ -114,7 +119,23 @@ The `tui` command follows the same adapter rule:
    owned process on Stop, Quit or unmount. Project fields remain locked while
    that child is active so the terminal and browser cannot silently refer to
    different projects.
-6. The initial Phase 5.10b **Convert all stems** form constructs a
+6. The default **Create MIDI + WAV** action constructs a
+   [`simple_create_contract.SimpleCreateRequest`](../src/sunofriend/simple_create_contract.py).
+   [`simple_create.ProductionSimpleCreateRunner`](../src/sunofriend/simple_create.py)
+   first delegates to the same production full-project conversion service.
+   [`automatic_selection.plan_automatic_selection`](../src/sunofriend/automatic_selection.py)
+   then verifies each bounded summary inside the fresh root and accepts only
+   its exact published primary when it uniquely matches a playable,
+   non-diagnostic catalog entry. It neither ranks candidates nor writes
+   Workbench state.
+7. [`simple_result.build_simple_result`](../src/sunofriend/simple_result.py)
+   hash-verifies source and MIDI before and after rendering, copies exact MIDI,
+   builds a combined GM proxy through the shared side-effect-free arrangement
+   helper, reuses the accepted balanced mixer, and atomically publishes
+   `AUTOMATIC-SONG/`. Its receipt and UI both state automatic, unreviewed and
+   review recommended. The source supplies timing, horizon and relative-level
+   evidence but is not mixed into the WAV.
+8. The Studio **Convert all stems** form constructs a
    [`tui_conversion_contract.FullConversionRequest`](../src/sunofriend/tui_conversion_contract.py)
    from the selected project and editable fresh output.
    [`tui_conversion.ProductionFullConversionRunner`](../src/sunofriend/tui_conversion.py)
@@ -122,12 +143,12 @@ The `tui` command follows the same adapter rule:
    separate `vocal-melody` operations for discovered lead and backing vocals.
    The adapter discloses `wind` → `lead`, `rhythm` → `keys` and `other` →
    `synth` proxies and near-silent skips.
-7. The conversion child streams `FullConversionProgress` to the bounded
+9. The conversion child streams `FullConversionProgress` to the bounded
    Activity view.
    Cancellation reaps the process but preserves the partial output. Successful
    completion reloads the fresh root for review. Existing output is rejected,
    and neither completion nor reload selects a candidate.
-8. The native **Master** tab builds a parameter-free
+10. The native **Master** tab builds a parameter-free
    [`tui_listening_master_contract.ListeningMasterRequest`](../src/sunofriend/tui_listening_master_contract.py)
    from that same loaded snapshot.
    [`tui_listening_master.ProductionListeningMasterRunner`](../src/sunofriend/tui_listening_master.py)
@@ -139,7 +160,7 @@ The `tui` command follows the same adapter rule:
    selection and balanced-manifest hashes before promotion. One final read
    immediately after promotion prevents a separately launched local Workbench
    change in that gap from being reported as the current result.
-9. Textual displays bounded progress and verified private WAV/receipt paths
+11. Textual displays bounded progress and verified private WAV/receipt paths
    but owns no DSP target or FFmpeg filter. Project, conversion and Workbench
    controls stay locked while the synchronous operation runs. Quit is deferred
    rather than presented as a cancellation that the service cannot safely
@@ -160,6 +181,9 @@ Tests to read:
 - [`tests/test_tui.py`](../tests/test_tui.py)
 - [`tests/test_tui_conversion.py`](../tests/test_tui_conversion.py)
 - [`tests/test_tui_listening_master.py`](../tests/test_tui_listening_master.py)
+- [`tests/test_simple_create.py`](../tests/test_simple_create.py)
+- [`tests/test_automatic_selection.py`](../tests/test_automatic_selection.py)
+- [`tests/test_simple_result.py`](../tests/test_simple_result.py)
 
 ## 2. Instrumental transcription and provenance
 

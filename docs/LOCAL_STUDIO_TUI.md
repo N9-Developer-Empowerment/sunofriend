@@ -1,25 +1,42 @@
 # Guided Local Studio TUI
 
-Status: Phase 5.10a, the initial Phase 5.10b full-project runner and the first
-Phase 5.10c native Listening Master operation implemented; remaining Phase
-5.10b and 5.10c plus Phase 5.10d planned
-Interface contract: `2026-07-27.5`
+Status: default Simple automatic MIDI + balanced-WAV bundle implemented;
+Studio orientation, full-project conversion, Workbench bridge and native
+Listening Master operation implemented; wider guided operations, durable job
+recovery and broader feedback remain planned
+Interface contract: `2026-07-27.7`
 
 The Guided Local Studio is the preferred human entry point to Sunofriend. It
-puts a clear terminal dashboard in front of the deterministic CLI and opens the
-existing graphical Workbench when detailed listening, piano-roll evidence,
-decisions, the Developer Inspector or GarageBand export is needed.
+puts a clear terminal dashboard in front of the deterministic CLI and provides
+two experiences over the same production engines:
 
-The complete product journey produces two linked creative outputs: reviewed,
-editable MIDI and a MIDI-derived song-interpretation WAV rendered from the
-selected MIDI. The conversion tab creates candidates; review establishes the
-selected MIDI; the Workbench then renders the listening interpretation. The
-TUI and Workbench share the versioned product definition from
-`product_contract.py`; neither interface redefines the audio or MIDI policy.
-Workbench can now create a separate fixed-policy Listening Master challenger
-from the exact current balanced control. The TUI **Master** tab exposes the
-same shared application service directly, while **Open visual studio** remains
-the place to hear and download both versions and to complete the bounded blind
+- **Simple**, the default, accepts one stem folder and one fresh output, then
+  creates automatic-primary MIDI, a combined MIDI, a balanced MIDI-derived WAV
+  and a starter ZIP without requiring a technical review.
+- **Studio** exposes project state, explicit conversion, several unchanged
+  MIDI alternatives, local diagnostics and the existing graphical Workbench
+  for detailed listening, decisions, the Developer Inspector and a reviewed
+  GarageBand export.
+
+The persistent **Simple · Make my song** and
+**Studio · Compare & improve** controls switch between these experiences in
+either direction. `F2` opens Simple; `F3` returns to the last Studio tab.
+Changing mode is memory-only navigation and starts no process, writes no
+review or feedback, and changes no MIDI, selection, pack or export state.
+`--mode` selects only the initial view.
+
+Simple has a separate `sunofriend.simple-result.v1` receipt. Its automatic
+parts are explicitly `not_reviewed` and `review_recommended`; it writes no
+Workbench decision or feedback. Studio's reviewed product journey produces
+editable selected MIDI and a MIDI-derived song-interpretation WAV under the
+versioned product definition from `product_contract.py`. The two journeys
+reuse the same conversion, neutral rendering and balance policies rather than
+reimplementing audio or MIDI work in Textual callbacks.
+
+Workbench can create a separate fixed-policy Listening Master challenger from
+the exact current balanced control. The TUI **Master** tab exposes the same
+shared application service directly, while **Open visual studio** remains the
+place to hear and download both versions and complete the bounded blind
 level-matched control/challenger review.
 
 It is not a replacement transcription engine and it is not a terminal rewrite
@@ -37,17 +54,25 @@ The expert routes remain supported:
 
 ## Start the Guided Local Studio
 
-Start without arguments and enter the folders in the dashboard:
+Start without arguments and enter the stem folder in the dashboard:
 
 ```bash
 sunofriend tui
 ```
 
-Or open one project and its existing result roots immediately:
+This opens the default **Make my song** tab. To open the detailed Studio
+experience first:
+
+```bash
+sunofriend tui --mode studio
+```
+
+Or open one project and its existing result roots in Studio immediately:
 
 ```bash
 sunofriend tui \
   "/absolute/path/to/Song-B minor-113bpm-440hz" \
+  --mode studio \
   --candidate-root "/absolute/path/to/song-specialist-midi" \
   --candidate-root "/absolute/path/to/song-ai-midi"
 ```
@@ -57,6 +82,7 @@ the visual review path:
 
 ```bash
 sunofriend tui "$PROJECT" \
+  --mode studio \
   --candidate-root "$RESULTS" \
   --catalog "$WORKBENCH_CATALOG" \
   --state-dir "$PRIVATE_WORKBENCH_STATE" \
@@ -66,18 +92,54 @@ sunofriend tui "$PROJECT" \
 Candidate roots may also be entered interactively, separated by semicolons.
 Inside the TUI:
 
+- the visible **Simple** and **Studio** buttons switch experiences;
+- `F2` switches to Simple and `F3` returns to the last Studio tab;
 - `Ctrl+R` refreshes the project projection;
 - `F6` opens the visual Workbench without conflicting with path-field editing;
 - `Ctrl+D` runs the local system check; and
 - `Ctrl+Q` stops the owned Workbench process and exits.
 
-### Convert a complete project into a separate output
+### Make automatic MIDI and a balanced WAV
+
+The default Simple journey needs only the source and one fresh output:
+
+```bash
+sunofriend tui \
+  "/absolute/path/to/Song-B minor-113bpm-440hz"
+```
+
+The **Make my song** tab suggests a fresh sibling output. Check the source and
+output paths, then choose **Create MIDI + WAV**. The TUI:
+
+1. runs the production repair/variant conversion for supported instruments and
+   the separate production vocal conversion for discovered vocals;
+2. takes only the exact primary MIDI published by each completed production
+   summary;
+3. omits and reports ambiguous, silent, missing or diagnostic-only roles;
+4. renders a combined General MIDI interpretation;
+5. uses the existing source-referenced balance policy to create a MIDI-only
+   song-interpretation WAV; and
+6. publishes `AUTOMATIC-SONG/` with MIDI, WAV, receipt, recipe,
+   `START-HERE.txt` and a deterministic ZIP.
+
+This is automatic selection, not automatic ranking. It does not write a human
+decision, mark a role reviewed or change Workbench feedback. The source audio
+is measured for timing, horizon and relative level but is not mixed into the
+WAV. The result is not a release master.
+
+After completion, use **Open visual studio** when you want to compare
+alternatives, replace a default or build a reviewed GarageBand pack. See
+[Product modes and the hosted future](PRODUCT_MODES_AND_HOSTING.md) for the
+complete Simple/Studio contract.
+
+### Convert a complete Studio project into a separate output
 
 Supply a project and prefill a destination that does not yet exist:
 
 ```bash
 sunofriend tui \
   "/absolute/path/to/Song-B minor-113bpm-440hz" \
+  --mode studio \
   --conversion-output "/absolute/path/to/fresh-song-midi-v1"
 ```
 
@@ -172,6 +234,7 @@ not wanted:
 
 ```bash
 sunofriend tui "$PROJECT" \
+  --mode studio \
   --candidate-root "$RESULTS" \
   --no-developer-inspector
 ```
@@ -190,6 +253,7 @@ RESULTS="$PWD/work/pupsies-misery-continuous-bass-v3"
 STATE="$PWD/work/pupsies-misery-continuous-bass-review-state-v3"
 
 .venv/bin/sunofriend tui "$PROJECT" \
+  --mode studio \
   --candidate-root "$RESULTS" \
   --state-dir "$STATE"
 ```
@@ -203,6 +267,24 @@ and proxy-patch texture. Each switch button shows its temporary comparison
 gain. Source, preview WAV and MIDI remain unchanged.
 
 ## What the implemented TUI provides
+
+The default Simple experience provides:
+
+1. One visible source-folder field and one required fresh-output field.
+2. One **Create MIDI + WAV** action with six bounded progress phases.
+3. Production `listen-all` and separate lead/backing `vocal-melody`
+   orchestration without duplicating their transcription policy.
+4. Exact pairing of verified sources to production-summary primaries.
+5. A fail-closed omission list for missing, ambiguous, silent or
+   diagnostic-only roles.
+6. Exact individual MIDI copies, one combined General MIDI proxy, a
+   source-referenced balanced WAV, a path-free receipt and a starter ZIP.
+7. Explicit `not_reviewed`, `review_recommended`, `mastered: false` and
+   `release_master: false` boundaries.
+8. Safe cancellation during conversion and protected completion of any WAV
+   verification already in progress.
+9. Automatic reload of the completed result root so Studio can inspect it.
+10. Zero Workbench decision, preference or feedback writes.
 
 Phase 5.10a provides the orientation and browser bridge:
 
@@ -252,9 +334,9 @@ preference. Large-terminal, 110×34 boundary and 80×24 compact layouts were
 visually and programmatically checked. The wheel contained the TUI and Textual
 dependency; the source distribution contained the canonical skill and its
 generated interface reference. The original completion suite passed 1,107
-tests. After the bass-continuity increment the complete suite passes 1,114,
-with the one existing third-party `resampy`/`pkg_resources` deprecation
-warning. An independent final audit found no remaining actionable issue.
+tests. After the subsequent conversion, correction, instrument and Simple-mode
+increments, the complete suite passes 1,296, with the one existing third-party
+`resampy`/`pkg_resources` deprecation warning.
 
 ## TUI, Workbench and Inspector boundary
 
@@ -262,7 +344,7 @@ The three interfaces have separate jobs:
 
 | Surface | Purpose | State it may change |
 | --- | --- | --- |
-| Guided Local Studio TUI | Project orientation, explicit fresh full-project conversion, local diagnostics, fixed-policy Listening Master orchestration and safe Workbench launch | In-memory navigation/activity; an explicitly confirmed conversion may create one fresh output through the production engines; an explicitly confirmed Master action may create/reuse one rebuildable private challenger; it may start, cancel and reap its conversion child or start/stop its Workbench child |
+| Guided Local Studio TUI | Default one-action automatic MIDI/WAV bundle, Studio project orientation, explicit fresh full-project conversion, local diagnostics, fixed-policy Listening Master orchestration and safe Workbench launch | In-memory navigation/activity; **Create MIDI + WAV** may create one fresh conversion tree and separately labelled automatic bundle without review state; an explicitly confirmed Studio conversion may create one fresh output through the same production engines; an explicitly confirmed Master action may create/reuse one rebuildable private challenger; it may start, cancel and reap its conversion child or start/stop its Workbench child |
 | Workbench | Waveforms, MIDI lanes, synchronized listening, explicit musical decisions, MIDI-derived song-interpretation WAV, optional fixed-policy Listening Master challenger, bounded blind quality review, gated identity-labelled native-level readiness review and GarageBand pack basket | Only explicit decision, blind-review completion, identity resolution, native-readiness completion, other review and basket actions are feedback/state writes; playback and views are temporary, while requested audio outputs are rebuildable artifacts with no preference effect |
 | Developer Inspector | Explain the five-stage application architecture, allow-listed module/function references, recent operations, reducer replay and separate state planes | None; refresh, clear and replay are read-only and zero-effect |
 | CLI | Deterministic transcription, transformation, validation and artifact production | Only the files and stores explicitly named by the selected command |
@@ -315,6 +397,8 @@ These rules apply to every Phase 5.10 increment:
 - TUI activity is bounded in memory and disappears on exit. Streamed conversion
   output is operational progress, not training data, feedback or a durable job
   history.
+- Simple's automatic-primary receipt is separate from append-only Workbench
+  decisions. Creating or opening it cannot mark a role reviewed.
 - Workbench uses `127.0.0.1`, a fresh per-launch capability token and an
   allow-list of verified files. The token is hidden from the TUI activity
   display.
@@ -330,6 +414,19 @@ These rules apply to every Phase 5.10 increment:
   operation with a complete preview of the exact data leaving the machine.
 
 ## Delivery plan
+
+### Simple automatic result — implemented
+
+The implemented slice makes **Make my song** the default tab. A lay user can
+provide top-level stems and one fresh output, choose **Create MIDI + WAV**, see
+bounded progress and receive exact MIDI, a combined General MIDI
+interpretation, a balanced MIDI-only WAV and a ZIP without making technical
+candidate decisions.
+
+This engineering completion still needs independent clean-machine musician
+testing before Sunofriend can claim that installation and first use are easy.
+The acceptance questions and future packaging/hosted path are in
+[Product modes and the hosted future](PRODUCT_MODES_AND_HOSTING.md).
 
 ### 5.10a — Orientation and visual bridge: implemented
 
@@ -400,8 +497,9 @@ mutate evidence or select a candidate automatically.
 The TUI will also guide eligible Phase 6 Clip actions and exact handoff
 artifacts only as their existing review-before-write contracts become
 available. Exporting or contributing feedback will remain a separate explicit
-action with a path-free disclosure preview. No feedback collection, automatic
-learning or network contribution is implemented in 5.10a.
+action with a path-free disclosure preview. No general TUI feedback collection,
+automatic learning or network contribution is implemented. The existing
+Workbench keeps only its explicit, bounded local review records.
 
 ## Unfinished work carried forward
 
@@ -472,15 +570,24 @@ remains the exhaustive programme record.
 
 The next safe order is:
 
-1. exercise the initial full-project runner on mixed real projects and retain
+1. exercise Simple mode with independent musicians on clean Macs, recording
+   install, recognition, completion, output discovery, DAW import and musical
+   usefulness without collecting their audio by default;
+2. fix the resulting setup and first-run problems before claiming one-click
+   consumer usability;
+3. exercise the full-project runner on mixed real projects and retain
    explicit near-silent/proxy/vocal outcomes;
-2. add the durable owner-only ledger and restart recovery only after that
+4. add the durable owner-only ledger and restart recovery only after that
    single job is reliable;
-3. add one-stem and standalone-vocal forms, then common transformations;
-4. connect verified completed jobs to the 5.10c Workbench journey; and
-5. design 5.10d local feedback against real user reviews before defining any
+5. add one-stem and standalone-vocal forms, then common transformations;
+6. connect verified completed jobs to the 5.10c Workbench journey; and
+7. design 5.10d local feedback against real user reviews before defining any
    opt-in Phase 7 contribution format.
 
 Each increment must keep the CLI usable by itself, keep the agent skill current
 with the same public interface contract, and leave the repository in a state
 where an interrupted TUI cannot corrupt evidence or durable choices.
+
+Packaging and any future paid hosted service follow the separate control-plane,
+queued-worker, storage, privacy, licensing and payment plan in
+[Product modes and the hosted future](PRODUCT_MODES_AND_HOSTING.md).

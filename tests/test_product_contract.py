@@ -56,6 +56,9 @@ def test_contract_has_exactly_two_first_class_outputs_and_fresh_documents() -> N
         "evaluated_editable_midi",
         "midi_derived_song_interpretation_wav",
     ]
+    assert document["required_outputs"][0]["label"] == (
+        "Editable MIDI arrangement"
+    )
     assert all(row["required"] for row in document["required_outputs"])
     assert all(
         row["source_audio_mixed"] is False
@@ -66,6 +69,26 @@ def test_contract_has_exactly_two_first_class_outputs_and_fresh_documents() -> N
 
     document["required_outputs"][0]["label"] = "mutated"
     assert product_contract_document()["required_outputs"][0]["label"] != "mutated"
+
+
+def test_contract_separates_simple_automatic_work_from_studio_review() -> None:
+    modes = product_contract_document()["modes"]
+    simple = modes["simple"]
+    studio = modes["studio"]
+
+    assert simple["default_human_entry"] is True
+    assert simple["review_status"] == "not_reviewed"
+    assert simple["quality_status"] == "review_recommended"
+    assert simple["human_decision_events"] == 0
+    assert simple["feedback_recorded"] is False
+    assert simple["may_claim_human_review"] is False
+    assert simple["result_schema"] == "sunofriend.simple-result.v1"
+
+    assert studio["default_human_entry"] is False
+    assert studio["review_status"] == "explicit"
+    assert studio["human_decision_events"] == "explicit_only"
+    assert studio["feedback_recorded"] == "explicit_only"
+    assert studio["may_claim_human_review"] is True
 
 
 def test_contract_maps_to_existing_accepted_audio_controls() -> None:
@@ -102,6 +125,8 @@ def test_output_status_requires_a_matching_verified_interpretation() -> None:
     )
 
     assert waiting["schema"] == PRODUCT_OUTPUT_STATUS_SCHEMA
+    assert waiting["mode"] == "studio"
+    assert waiting["review_status"] == "reviewed"
     assert waiting["required_outputs"]["evaluated_editable_midi"]["ready"] is True
     assert (
         waiting["required_outputs"]["midi_derived_song_interpretation_wav"][
@@ -128,6 +153,7 @@ def test_no_selected_midi_means_neither_required_output_is_ready() -> None:
     )
 
     assert status["complete"] is False
+    assert status["review_status"] == "review_incomplete"
     assert all(
         row["ready"] is False for row in status["required_outputs"].values()
     )

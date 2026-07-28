@@ -1,7 +1,7 @@
 [project]
 name = "sunofriend"
 dynamic = ["version"]
-description = "Create reviewed MIDI and a balanced song-interpretation WAV from separated music stems."
+description = "Create editable MIDI and a balanced song-interpretation WAV from separated music stems."
 readme = "PYPI.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]

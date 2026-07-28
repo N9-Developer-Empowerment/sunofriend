@@ -1,24 +1,32 @@
 ---
 name: sunofriend
-description: Use Sunofriend's local TUI, CLI, Workbench and Developer Inspector to turn Suno/Moises stems or vocals into two linked outputs, reviewed GarageBand-ready MIDI plus a balanced MIDI-derived song-interpretation WAV. Compare immutable analytical, tracker, repair and optional local-AI candidates; review phrases; render selected MIDI; create a separate receipt-bound listening master; export exact GarageBand packs; build or match sample instruments; transform key, BPM, tuning and alignment; and browse, reuse, transform or correct Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody, MIDI comparison, song interpolation, GarageBand handoff, instrument matching, tempo/key changes, mashups and bounded note correction. Prefer `sunofriend tui` for a human operator; retain CLI/skill routes for expert automation. Do not use it for generic stem separation, human-approved release mastering, lyric writing, arbitrary shell execution, unapproved model/plugin downloads or DAW GUI editing.
+description: Use Sunofriend's local TUI, CLI, Workbench and Developer Inspector to turn Suno/Moises stems or vocals into editable MIDI plus a balanced MIDI-derived song-interpretation WAV. Prefer the TUI's default Simple mode for one-action automatic, explicitly unreviewed MIDI/WAV/ZIP creation; use Studio for immutable multi-method comparison, explicit choices and feedback, reviewed GarageBand packs and technical inspection. Also render a separate receipt-bound listening master; build or match sample instruments; transform key, BPM, tuning and alignment; and browse, reuse, transform or correct Clip v1 parts. Use for Sunofriend, stems-to-MIDI, vocal melody, MIDI comparison, song interpolation, GarageBand handoff, instrument matching, tempo/key changes, mashups and bounded note correction. Retain CLI/skill routes for expert automation. Do not use it for generic stem separation, human-approved release mastering, lyric writing, arbitrary shell execution, unapproved model/plugin downloads or DAW GUI editing.
 ---
 
-<!-- sunofriend-interface-contract: 2026-07-27.5 -->
+<!-- sunofriend-interface-contract: 2026-07-27.7 -->
 
 # Sunofriend
 
 Prefer the packaged `sunofriend tui` Guided Local Studio when a person wants
-to operate and inspect Sunofriend directly. Use the packaged `sunofriend` CLI
+to operate Sunofriend directly. It opens in **Simple / Make my song** mode:
+one explicit action runs the production conversion, chooses only each exact
+published primary, and creates separately labelled automatic, unreviewed MIDI,
+a balanced MIDI-derived song-interpretation WAV and a starter ZIP. It writes no
+human Workbench choice or feedback event. Use `sunofriend tui --mode studio`
+to open immutable multi-method comparison first, or use the TUI's persistent
+Simple/Studio switch (`F2`/`F3`) in either direction. Switching restores the
+last Studio tab and changes only memory-only navigation: it starts no process
+and changes no review, feedback, MIDI, selection, pack or export state. Use
+Studio for explicit choices, feedback, technical inspection and a reviewed
+GarageBand handoff. Use the packaged `sunofriend` CLI
 as the deterministic audio and MIDI engine and the loopback Workbench as the
-rich visual comparison/decision/render/export surface. The required result is a
-pair: reviewed editable MIDI and a balanced MIDI-derived song-interpretation
-WAV rendered from the selected MIDI. Here interpolation means a creative
-interpretation of melody, harmony, rhythm and structure, not waveform or
-production-effect reconstruction. Source stems supply timing, horizon and
-level evidence but are not mixed into that WAV. Retain direct CLI operation
-for expert, scripted and agent-led workflows. Do not reimplement transcription,
-evaluation, MIDI transformation or the accepted mix policy in ad-hoc scripts
-or TUI callbacks.
+rich Studio comparison/decision/render/export surface. Here interpolation means
+a creative interpretation of melody, harmony, rhythm and structure, not
+waveform or production-effect reconstruction. Source stems supply timing,
+horizon and level evidence but are not mixed into the WAV. Retain direct CLI
+operation for expert, scripted and agent-led workflows. Do not reimplement
+transcription, evaluation, MIDI transformation or the accepted mix policy in
+ad-hoc scripts or TUI callbacks.
 
 Read [the generated public interface contract](references/interface-contract.md)
 before choosing a command. It is versioned with this skill and distinguishes
@@ -33,11 +41,24 @@ guided forms.
 3. Run `sunofriend --version`, `sunofriend --help`, and the selected command's
    `--help` before constructing a command.
 4. Run the narrowest capability check:
-   - `sunofriend tui` is the preferred human route. It can load an existing
-     project, show key/BPM/tuning and stem/candidate/decision state, draw
-     compact primary MIDI maps, run local diagnostics and open/stop the
-     graphical Workbench. The initial Phase 5.10b runner also has one explicit
-     **Convert all stems** operation. Its editable **Fresh conversion output**
+   - `sunofriend tui` is the preferred human route. Its default **Make my
+     song** tab accepts one top-level WAV stem folder and a fresh output path.
+     One **Create MIDI + WAV** action runs production repair conversion with
+     variants and vocals, consumes only the exact primary published by each
+     bounded production summary, renders the existing balanced MIDI-only mix,
+     and publishes `AUTOMATIC-SONG/` with individual MIDI, combined GM MIDI,
+     WAV, receipt, start guide and ZIP. The result is always marked automatic,
+     `not_reviewed` and `review_recommended`; ambiguous, missing, silent or
+     diagnostic-only roles are omitted visibly. It never writes a Workbench
+     human decision or feedback event and never calls the result a reviewed
+     GarageBand pack or release master. Cancellation stops at a safe boundary,
+     and every run requires a fresh output outside the source project.
+     Use `sunofriend tui --mode studio`, the visible **Studio** switch or `F3`
+     to load existing candidates, show key/BPM/tuning and
+     stem/candidate/decision state,
+     draw compact primary MIDI maps, run local diagnostics and open/stop the
+     graphical Workbench. Studio also has one explicit **Convert all stems**
+     operation. Its editable **Fresh conversion output**
      must not exist; `--conversion-output` only prefills the field and never
      starts work. After confirmation it runs production `listen-all` in repair
      mode with variant evaluation, then production `vocal-melody` separately
@@ -46,7 +67,8 @@ guided forms.
      near-silent skips. Completion names skipped, failed and proxy roles plus
      bounded warnings, and reload verifies fresh-root coverage for every role
      reported converted. Progress is streamed; cancel preserves the partial
-     root; success reloads the fresh root. It never overwrites or auto-selects.
+     root; success reloads the fresh root. That Studio conversion never
+     overwrites or auto-selects.
      Relaunch without `--catalog` for conversion because an explicit catalog
      would ignore newly discovered automatic candidates.
      Its native **Master** tab can then create or reuse the separate
@@ -265,8 +287,13 @@ guided forms.
 
 ## Choose the workflow
 
-- Human operator who wants guidance and visible state: start with
-  `sunofriend tui [PROJECT]` and add the same narrow `--candidate-root`,
+- Human operator who wants a useful automatic starting arrangement: start with
+  `sunofriend tui [PROJECT]`, review the suggested fresh sibling output, then
+  press **Create MIDI + WAV** once. Do not reinterpret its automatic primaries
+  as human-reviewed choices. Open the published WAV first, import the individual
+  MIDI into GarageBand, and use Studio if any role needs comparison or repair.
+- Human operator who wants detailed comparison and visible state: start with
+  `sunofriend tui [PROJECT] --mode studio` and add the same narrow `--candidate-root`,
   optional `--catalog`, `--state-dir` and `--soundfont` inputs that should be
   passed to Workbench. Use its **Open visual studio** action for waveform/MIDI
   timelines, synchronized audition, explicit decisions, the MIDI-derived
@@ -1209,10 +1236,14 @@ guided forms.
 Read the live command help for exact options. Typical command shapes are:
 
 ```bash
+sunofriend tui "$INPUT"
+
 sunofriend tui "$INPUT" \
+  --mode studio \
   --candidate-root "$OUTPUT"
 
 sunofriend tui "$INPUT" \
+  --mode studio \
   --conversion-output "$FRESH_OUTPUT"
 
 sunofriend listen-all "$INPUT" \

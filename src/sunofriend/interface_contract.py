@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-07-27.5"
+INTERFACE_CONTRACT_VERSION = "2026-07-27.7"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -132,9 +132,13 @@ def render_skill_interface_reference() -> str:
         "",
         f"Contract version: `{INTERFACE_CONTRACT_VERSION}`",
         "",
-        "The Guided Local Studio TUI is the preferred human entry point. The",
-        "expert CLI and agent skill remain supported and share the public",
-        "commands below.",
+        "The Guided Local Studio TUI is the preferred human entry point. It",
+        "opens in Simple mode by default; `sunofriend tui --mode studio` opens",
+        "the detailed comparison workspace first. Its visible Simple/Studio",
+        "switch changes views in either direction and remembers the last",
+        "Studio tab without starting work or changing project state. The",
+        "expert CLI and agent skill",
+        "remain supported and share the public commands below.",
         "",
         "## Product outputs",
         "",
@@ -146,13 +150,25 @@ def render_skill_interface_reference() -> str:
         f"- **{output['label']}** (`{output['output_id']}`)"
         for output in product["required_outputs"]
     )
+    simple = product["modes"]["simple"]
+    studio = product["modes"]["studio"]
     lines.extend(
         [
             "",
+            "### Two honest operating modes",
+            "",
+            f"- **Simple / Make my song:** {simple['result_kind']}. It uses",
+            "  exact production-summary primaries, is marked automatic and",
+            "  unreviewed, writes no human decision or feedback event, and",
+            "  recommends Studio review.",
+            f"- **Studio:** {studio['result_kind']}. Choices and feedback are",
+            "  recorded only after an explicit human action.",
+            "",
             "The song-interpretation WAV is rendered only from explicitly",
-            "selected MIDI. Source stems provide timing, render-horizon and",
-            "level evidence but are not mixed into it. Interpolation means a",
-            "creative MIDI interpretation, not waveform reconstruction.",
+            "selected MIDI in Studio or separately labelled automatic-primary",
+            "MIDI in Simple mode. Source stems provide timing, render-horizon",
+            "and level evidence but are not mixed into it. Interpolation means",
+            "a creative MIDI interpretation, not waveform reconstruction.",
             "",
             "The optional listening master is a comparative artifact, not a",
             "human-approved release master. Playback, metrics and visible",
