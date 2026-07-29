@@ -1,9 +1,9 @@
 # Stem access and local separation research
 
 Status: **research and architecture decision complete; S1 synchronized source
-preparation and S2 source lineage/composite drums accepted; S3 contract and
-controlled-fake integration harness implemented; real source separation is
-not implemented**
+preparation and S2 source lineage/composite drums accepted; S3 separation-run,
+controlled-fake harness and acceptance pre-registration contracts implemented;
+real source separation, hidden evaluation and promotion are not implemented**
 
 Checked: 29 July 2026
 
@@ -81,6 +81,22 @@ failure cleanup without presenting fake separation as a product feature. It
 has no CLI or TUI action, isolated worker, real backend, model installation,
 checkpoint loading or finished-song route. There is still no full-mix
 separator.
+
+The third S3 increment adds the internal, dependency-free
+`sunofriend.separation-acceptance-thresholds.v1` contract in
+`separation_acceptance.py`. Its pure freeze step requires every policy section
+and threshold explicitly, computes a self-hash and returns a deeply immutable
+canonical projection. Its read-only loader accepts only bounded canonical
+regular non-symlink JSON and revalidates that hash. A separate
+`sunofriend.separation-hidden-evaluation-manifest.v1` verifier accepts the
+complete frozen artifact, rehashes the private manifest, derives song, group
+and unique song-role-pair coverage, and rejects both declared-song and
+canonical-source overlap with the committed development split. The policy also
+commits blind audition windows, random assignment, the withheld answer key,
+level-matcher identity and exact statistical treatment without exposing those
+private records. This slice publishes or registers no production profile,
+consumes no hidden scores, returns no pass result and adds no
+model/checkpoint, install, run, audio, CLI, registry or promotion operation.
 
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
@@ -581,10 +597,11 @@ The fake copies the source as each target and creates a silent residual. Its
 arithmetic therefore closes, but that is integration evidence rather than
 separation-accuracy evidence. It records leakage for every actual role as
 structured `not_measured` evidence with null metric, score and reference, so
-v2 quality is necessarily `review_required`. New v2 receipts cannot claim
-`passed` until a later hashed acceptance-profile contract exists. There is
-still no isolated real worker, backend adapter, model install flow or cache.
-No model may download implicitly when those pieces are added.
+v2 quality is necessarily `review_required`. New v2 receipts still cannot
+claim `passed`: the separate acceptance-thresholds contract pre-registers
+policy only and is not wired to result evaluation or receipt promotion. There
+is still no isolated real worker, backend adapter, model install flow or
+cache. No model may download implicitly when those pieces are added.
 
 ### Nested refinement
 
@@ -708,8 +725,8 @@ A model can win one role and lose another. Promotion remains role-specific.
 
 ### Pre-registered acceptance
 
-Before running hidden evaluation, S3 must commit an
-`acceptance-thresholds.v1` artifact. At minimum:
+Before running hidden evaluation, S3 must commit a
+`sunofriend.separation-acceptance-thresholds.v1` artifact. At minimum:
 
 - use at least 12 songs across acoustic, electronic/AI-generated and mixed
   production, with at least four songs in each group;
@@ -723,6 +740,17 @@ Before running hidden evaluation, S3 must commit an
 - require a zero-network offline inference test after explicit model
   installation; and
 - define the blind level-matched human non-inferiority and preference rule.
+
+The internal v1 contract now validates and freezes that policy in memory and
+can load a separately persisted canonical artifact read-only. Its
+hidden-manifest verifier derives coverage and split identity from canonical
+manifest bytes, checks both song-identity and canonical-source exclusion, and
+requires distinct per-role ground-truth evidence plus per-song rights evidence
+before counting coverage. It matches licence commitments to the complete
+frozen artifact and also requires hash commitments for private audition
+windows, assignment and the answer key, plus exact tie, cannot-tell,
+non-inferiority and preference policies. No production threshold artifact or
+hidden evaluation result is included in this slice.
 
 No threshold may be filled in after hidden results are seen. Missing sample
 coverage, missing licence/hash evidence, a blank threshold or a failed gate
@@ -916,8 +944,9 @@ Likely modules:
 
 ### S3 — Separation bake-off harness
 
-Status: **contract and controlled-fake harness slices implemented; isolated
-real runner/backends and bake-off not implemented**
+Status: **contract, controlled-fake harness and acceptance pre-registration
+slices implemented; isolated real runner/backends and bake-off not
+implemented**
 
 - [x] Add a pure backend-neutral `SeparationBackend` contract plus immutable
   request/result DTOs and strict versioned separation-run receipts.
@@ -925,6 +954,9 @@ real runner/backends and bake-off not implemented**
   parent-computed WAV/reconstruction evidence, review-required unmeasured
   leakage, plan-bound v2 receipts, atomic terminal-tree publication and
   fail-closed cleanup.
+- [x] Add a pure explicit-threshold validator/freezer, read-only canonical
+  loader and full-artifact-bound hidden-manifest verifier, with no bundled
+  production profile, result or promotion behaviour.
 - [ ] Generalise the existing AI runtime/checkpoint registry and isolate heavy
   runtimes in a separate worker environment.
 - [ ] Require explicit checkpoint installation, hashes and licences in the
@@ -940,6 +972,7 @@ Likely modules:
 - `separation.py`
 - `ai_separation_worker.py`
 - `separation_quality.py`
+- `separation_acceptance.py`
 
 ### S4 — Experimental broad separation in Studio
 

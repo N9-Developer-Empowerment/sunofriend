@@ -152,6 +152,21 @@ executable callbacks are rejected. This is an integration self-test, not
 source separation: it adds no CLI/TUI action, isolated real backend, model or
 finished-song action to Simple or Studio.
 
+The third S3 slice adds the internal
+`sunofriend.separation-acceptance-thresholds.v1` pre-registration contract. It
+requires every threshold explicitly, produces a self-hashed immutable
+in-memory projection and loads separately persisted canonical JSON read-only.
+Its verifier accepts the complete frozen artifact and derives coverage, split
+identity and development exclusion from a separate
+`sunofriend.separation-hidden-evaluation-manifest.v1`, including canonical
+source hashes rather than trusting relabelled song IDs. The artifact fixes
+operationally distinct candidate/baseline arms, deterministic evaluation,
+Mac/offline/licence gates, per-song rights and independent ground-truth
+commitments, and hash-committed blind-listening/statistical policy. This is
+protocol scaffolding only: there is no production profile, hidden score or
+pass result, backend/model/checkpoint operation, CLI/registry integration or
+promotion decision.
+
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
 transcriber. They need independent lineage, model/checkpoint licensing,

@@ -200,6 +200,22 @@ executable cancellation callbacks are rejected because they cannot prove zero
 network or outside-output writes. There is still no CLI/TUI action, isolated
 real worker/backend, model or install flow, cache, or finished-song operation.
 
+`separation_acceptance.py` is the third internal S3 boundary. It validates the
+strict, path-free `sunofriend.separation-acceptance-thresholds.v1` schema. Its
+pure freeze operation requires explicit policy sections and thresholds,
+self-hashes the canonical document and returns an immutable projection;
+loading is bounded, canonical, regular-file-only and read-only.
+`verify_hidden_evaluation_manifest` accepts the complete frozen artifact,
+independently rehashes a
+`sunofriend.separation-hidden-evaluation-manifest.v1`, derives dataset coverage
+and split identity, and rejects committed development/hidden song-identity and
+canonical-source overlap. Candidate and baseline execution identities,
+resource classes, per-song rights and distinct ground-truth evidence,
+licences, private audition/assignment/answer-key commitments, level matching
+and statistical treatment are fixed before hidden evaluation. The module
+contains no production profile, hidden scores, pass logic, model execution,
+registry integration or promotion effect.
+
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a
 starter ZIP. It does not create or mutate Workbench SQLite state. After
