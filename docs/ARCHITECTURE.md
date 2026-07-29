@@ -216,6 +216,22 @@ and statistical treatment are fixed before hidden evaluation. The module
 contains no production profile, hidden scores, pass logic, model execution,
 registry integration or promotion effect.
 
+`separation_bakeoff.py` is the fourth internal S3 boundary. Its deterministic,
+read-only `sunofriend.separation-bakeoff-preparation.v1` document is canonical,
+self-hashed, deeply immutable, redacted and explicitly `prepared_not_run`.
+Prepare, validate and load each reload the complete canonical frozen acceptance
+artifact and reverify the complete canonical hidden manifest. The plan binds
+the profile identity and acceptance artifact, canonical-document,
+hidden-manifest and split hashes, aggregate coverage, ordered
+baseline-then-candidate separator arms, roles proposed for promotion,
+downstream MIDI identities, evaluator, resource classes and the fixed gate
+conjunction. It exposes no song or source ID; no song, source, ground-truth,
+checkpoint or worker hash; and no path, threshold value, score or private
+note. Every model, worker, inference, checkpoint, download, network, audio,
+file, result, metric, score, selection, promotion and default-changing effect
+is false; the module has no writer, CLI/TUI, registry, result, pass or
+promotion operation.
+
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a
 starter ZIP. It does not create or mutate Workbench SQLite state. After

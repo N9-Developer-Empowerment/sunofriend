@@ -167,6 +167,20 @@ protocol scaffolding only: there is no production profile, hidden score or
 pass result, backend/model/checkpoint operation, CLI/registry integration or
 promotion decision.
 
+The fourth S3 slice adds the internal, deterministic and read-only
+`sunofriend.separation-bakeoff-preparation.v1` contract. Prepare, validate and
+load each reload the complete canonical frozen acceptance artifact and
+reverify the complete canonical hidden manifest before returning the same
+self-hashed, deeply immutable redacted `prepared_not_run` plan. It binds the
+profile identity and acceptance artifact, canonical-document, hidden-manifest
+and split hashes, aggregate coverage, ordered baseline-then-candidate arms,
+roles proposed for promotion, downstream identities, evaluator, resource
+classes and gate IDs. It discloses no song or source ID; no song, source,
+ground-truth, checkpoint or worker hash; and no path, threshold value, score
+or private note. All execution, result, selection, promotion and
+default-changing effects are false. It has no writer, model or audio operation,
+CLI/TUI or registry integration, result, pass or promotion behaviour.
+
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
 transcriber. They need independent lineage, model/checkpoint licensing,

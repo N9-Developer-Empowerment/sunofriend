@@ -2,8 +2,9 @@
 
 Status: **research and architecture decision complete; S1 synchronized source
 preparation and S2 source lineage/composite drums accepted; S3 separation-run,
-controlled-fake harness and acceptance pre-registration contracts implemented;
-real source separation, hidden evaluation and promotion are not implemented**
+controlled-fake harness, acceptance pre-registration and bake-off preparation
+contracts implemented; real source separation, hidden evaluation and promotion
+are not implemented**
 
 Checked: 29 July 2026
 
@@ -97,6 +98,21 @@ level-matcher identity and exact statistical treatment without exposing those
 private records. This slice publishes or registers no production profile,
 consumes no hidden scores, returns no pass result and adds no
 model/checkpoint, install, run, audio, CLI, registry or promotion operation.
+
+The fourth S3 increment adds the internal, read-only
+`sunofriend.separation-bakeoff-preparation.v1` contract in
+`separation_bakeoff.py`. It reloads the complete canonical frozen acceptance
+artifact, reverifies the complete hidden manifest and returns a deterministic,
+canonical, deeply immutable redacted plan with status `prepared_not_run`. The
+plan binds the profile identity and acceptance artifact, canonical-document,
+hidden-manifest and split hashes; retains only aggregate group and
+ground-truth-role coverage; and fixes the baseline-before-candidate arms,
+roles proposed for promotion, downstream MIDI identities, evaluator, resource
+classes and gate IDs. Every execution, result, score, private-data, selection,
+promotion and default-changing effect is explicitly false. It contains no
+song or source ID; no song, source, ground-truth, checkpoint or worker hash;
+and no path, threshold value, score or private note. It adds no writer,
+model/audio operation, CLI/TUI, registry, result, pass or promotion.
 
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
@@ -752,6 +768,14 @@ windows, assignment and the answer key, plus exact tie, cannot-tell,
 non-inferiority and preference policies. No production threshold artifact or
 hidden evaluation result is included in this slice.
 
+The separate bake-off preparation boundary now reloads that complete frozen
+artifact and reverifies the complete hidden manifest before deriving its
+redacted `prepared_not_run` plan. Validation and loading repeat both checks;
+the plan is not self-sufficient evidence. It exposes only the bound document
+hashes, aggregate coverage and exact public orchestration IDs, never the
+private evaluation units, threshold values, scores or paths, and every
+execution, result, selection, promotion and default effect remains false.
+
 No threshold may be filled in after hidden results are seen. Missing sample
 coverage, missing licence/hash evidence, a blank threshold or a failed gate
 means **no promotion**. Development data may be used to calibrate the numbers,
@@ -944,9 +968,9 @@ Likely modules:
 
 ### S3 — Separation bake-off harness
 
-Status: **contract, controlled-fake harness and acceptance pre-registration
-slices implemented; isolated real runner/backends and bake-off not
-implemented**
+Status: **contract, controlled-fake harness, acceptance pre-registration and
+redacted bake-off preparation slices implemented; isolated real
+runner/backends and bake-off execution not implemented**
 
 - [x] Add a pure backend-neutral `SeparationBackend` contract plus immutable
   request/result DTOs and strict versioned separation-run receipts.
@@ -957,6 +981,9 @@ implemented**
 - [x] Add a pure explicit-threshold validator/freezer, read-only canonical
   loader and full-artifact-bound hidden-manifest verifier, with no bundled
   production profile, result or promotion behaviour.
+- [x] Add a deterministic, read-only, redacted `prepared_not_run` bake-off
+  plan that reverifies both complete frozen inputs, fixes the
+  baseline-before-candidate orchestration and declares every effect false.
 - [ ] Generalise the existing AI runtime/checkpoint registry and isolate heavy
   runtimes in a separate worker environment.
 - [ ] Require explicit checkpoint installation, hashes and licences in the
@@ -973,6 +1000,7 @@ Likely modules:
 - `ai_separation_worker.py`
 - `separation_quality.py`
 - `separation_acceptance.py`
+- `separation_bakeoff.py`
 
 ### S4 — Experimental broad separation in Studio
 
