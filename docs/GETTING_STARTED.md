@@ -3,6 +3,12 @@
 This guide is the detailed manual route for a musician who has separated WAV
 stems and wants editable MIDI plus a clean listening version of the song.
 
+If “stem” is unfamiliar, or you need legitimate ways to obtain examples, read
+[Stems: what they are and where to get them](STEMS.md) first. Sunofriend does
+not yet separate a finished mix itself. The researched local separation and
+multi-format import programme is documented in
+[Stem access and separation research](STEM_ACCESS_AND_SEPARATION_RESEARCH.md).
+
 Sunofriend is currently an alpha macOS application presented in the terminal.
 The default **Make my song** screen is designed to keep the technical choices
 out of the first journey. The deeper Studio and command line remain available

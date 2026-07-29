@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide beginners and experts through local Sunofriend setup and use. Turn authorised separated WAV stems into editable MIDI plus a balanced MIDI-derived song-interpretation WAV and ZIP; offer a copyright-safe built-in demo when no stems are available; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instrument matching and bundles, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded note correction. Use for Sunofriend, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not perform generic stem separation, music downloading, lyric writing, DAW GUI editing, human-approved release mastering or unapproved dependency/model installation.
 ---
 
-<!-- sunofriend-interface-contract: 2026-07-28.1 -->
+<!-- sunofriend-interface-contract: 2026-07-29.1 -->
 
 # Sunofriend
 
@@ -201,22 +201,40 @@ human Workbench choice or feedback event.
 
 ## Route C: help obtaining authorised stems
 
-Explain that stems are separate audio parts such as drums, bass, keys and
-vocals. Offer:
+Explain that a stem is commonly a **grouped submix**, not necessarily one
+instrument. A drums stem may contain kick, snare, hats, toms, cymbals and
+percussion; `other` is usually a mixed residual. An AI-separated stem is an
+estimate, not the lost original studio track.
+
+Offer:
 
 - separate-track exports from GarageBand or another DAW;
 - stems or multitracks from a generator project the user may process;
-- separated tracks exported from Moises or another stem separator; or
+- estimated stems exported from an authorised local or cloud separator; or
 - the built-in demo.
 
 Provider features, subscriptions and export formats change. When the user
 wants current guidance, check the provider's official help rather than relying
-on remembered prices. Prefer WAV where the user's plan supports it.
+on remembered prices. Prefer WAV or FLAC where the user's plan supports it,
+and explain that converting lossy audio to WAV does not restore discarded
+detail. Ask whether unreleased or confidential audio may be uploaded before
+recommending a cloud provider.
 
 Useful official starting points include:
 
 - Suno Studio export and stem-separation help at `help.suno.com`;
 - Moises separated-track export help at `help.moises.ai`.
+- BandLab Splitter help at `help.bandlab.com`;
+- LALAL.AI's Stem Splitter, desktop and privacy pages at `lalal.ai`; explain
+  that its desktop app currently defaults to cloud processing and that
+  offline Lyra processing requires Pro; and
+- Apple's Logic Pro Stem Splitter guide for a local Apple-silicon option.
+
+The maintained beginner glossary and neutral provider guide is:
+`https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/STEMS.md`.
+Do not present any provider as best for MIDI until it has passed Sunofriend's
+downstream transcription bake-off. Do not use a tracked affiliate link unless
+the commercial relationship is verified and clearly disclosed beside it.
 
 Do not sign up, subscribe, upload music or accept provider terms on the user's
 behalf. Do not infer that a subscription grants rights to process or

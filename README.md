@@ -61,6 +61,10 @@ runs the same automatic MIDI, WAV and ZIP workflow used for a real project.
 It is the quickest way to decide whether Sunofriend is useful before paying
 for a stem-separation service.
 
+Not sure what a stem is, why a drums stem contains several drums, or where to
+get authorised examples? Read
+[Stems: what they are and where to get them](docs/STEMS.md).
+
 For your own music, valid starting points include:
 
 - separate tracks exported from a DAW;
@@ -122,6 +126,7 @@ and explore its compact [worked MIDI pack](examples/the-aisle-at-lidl/).
 | I want to… | Read |
 | --- | --- |
 | Let an agent guide my first session | [AI-assisted first song](docs/AI_ASSISTED_START.md) |
+| Understand or obtain stems | [Stems and provider guide](docs/STEMS.md) |
 | Install or troubleshoot manually | [Getting started](docs/GETTING_STARTED.md) |
 | Understand Simple and Studio | [Product modes](docs/PRODUCT_MODES_AND_HOSTING.md) |
 | Use the terminal studio | [Local Studio TUI](docs/LOCAL_STUDIO_TUI.md) |
@@ -132,6 +137,7 @@ and explore its compact [worked MIDI pack](examples/the-aisle-at-lidl/).
 | Review the architecture and code | [Technical tour](docs/TECHNICAL_TOUR.md) |
 | Use every expert command | Run `sunofriend --help` and read the [skill interface contract](skills/sunofriend/references/interface-contract.md) |
 | Share or promote the project | [Social media kit](SOCIAL.md) and [brand guide](BRAND.md) |
+| Follow the local separation plan | [Stem access and separation research](docs/STEM_ACCESS_AND_SEPARATION_RESEARCH.md) |
 
 ## Privacy, rights and limits
 
