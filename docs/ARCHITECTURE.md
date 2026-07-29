@@ -178,15 +178,27 @@ candidate in automatic arrangements to prevent doubled hits, but the broad
 candidate remains available in Studio. If the explicit leaves produce no
 viable primary MIDI, the composite result is the review-required fallback.
 
-Source Access S3 currently stops at `separation_contract.py`. It defines
-path-bearing local request/result DTOs, a backend-neutral
-`SeparationBackend` protocol and a path-free, self-hashed
-`sunofriend.separation-run.v1` receipt. The receipt binds source, backend,
-checkpoint, roles, execution, same-clock target/residual pairs, quality and
-side-effect facts; only `complete` is loadable. The module performs no file
-I/O and imports no model or audio runtime. There is no separation runner,
-worker, backend adapter, model installation, artifact persistence, quality
-calculation or finished-song TUI action yet.
+Source Access S3 keeps `separation_contract.py` as the pure, backend-neutral
+DTO and receipt boundary. New path-free, self-hashed receipts use
+`sunofriend.separation-run.v2`, while canonical v1 float-leakage receipts
+remain readable. They bind source, backend, checkpoint, roles, execution,
+same-clock target/residual pairs, quality and side-effect facts; only
+`complete` is loadable.
+
+An internal optional-dependency-free harness in `separation.py` and
+`separation_quality.py` accepts only the exact deterministic
+`FakeSeparationBackend`. The parent verifies source/checkpoint identity,
+recomputes persisted PCM16/PCM24 hashes, geometry, level and reconstruction
+evidence, records unmeasured leakage as review-required, uses a fresh private
+sibling work root and publishes a completely revalidated terminal tree with
+one rename. Its v2 receipt embeds the full canonical run plan, derives
+`run_id` from that plan hash and cross-binds the plan to all receipt-visible
+execution identities. Module/runtime identity and monotonic wall time are
+derived by the parent; aggregate files, bytes, checkpoint size and free-space
+reserve are bounded. Arbitrary in-process backends, fake subclasses and
+executable cancellation callbacks are rejected because they cannot prove zero
+network or outside-output writes. There is still no CLI/TUI action, isolated
+real worker/backend, model or install flow, cache, or finished-song operation.
 
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a

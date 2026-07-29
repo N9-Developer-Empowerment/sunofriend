@@ -133,11 +133,24 @@ take automatic-arrangement precedence while the broad result remains
 reviewable.
 
 The first S3 slice is a pure backend-neutral separation contract. It defines
-local request/result DTOs and strict path-free
-`sunofriend.separation-run.v1` receipts with source/backend/checkpoint
-identity, target/residual geometry, quality and terminal loadability rules.
-It does not run a separator, load a checkpoint, persist stem artifacts or add
-a finished-song action to Simple or Studio.
+local request/result DTOs and strict path-free versioned receipts with
+source/backend/checkpoint identity, target/residual geometry, quality and
+terminal loadability rules. New receipts use
+`sunofriend.separation-run.v2`; canonical v1 float-leakage receipts remain
+readable.
+
+The second S3 slice adds an internal controlled-fake-only harness. Its parent
+verifies source/checkpoint identity, recomputes persisted PCM16/PCM24 WAV
+hashes, geometry, level and target-plus-residual reconstruction evidence,
+records structured `not_measured` leakage as `review_required`, confines work
+to fresh private sibling directories and atomically renames one completely
+revalidated terminal tree. The v2 receipt embeds and hashes the canonical run
+plan, derives its `run_id` from that hash and cross-binds actual module,
+package, runtime, checkpoint, settings and role identities. Resource use is
+bounded and wall time is measured. Arbitrary in-process backends and
+executable callbacks are rejected. This is an integration self-test, not
+source separation: it adds no CLI/TUI action, isolated real backend, model or
+finished-song action to Simple or Studio.
 
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every

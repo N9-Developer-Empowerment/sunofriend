@@ -1,8 +1,9 @@
 # Stem access and local separation research
 
 Status: **research and architecture decision complete; S1 synchronized source
-preparation and S2 source lineage/composite drums accepted; the first S3 pure
-contract is implemented; source separation is not implemented**
+preparation and S2 source lineage/composite drums accepted; S3 contract and
+controlled-fake integration harness implemented; real source separation is
+not implemented**
 
 Checked: 29 July 2026
 
@@ -70,10 +71,16 @@ consume.
 S2 now adds a canonical role registry and an append-only source graph with an
 active-source frontier. Composite `drums` can use the existing mixed-kit MIDI
 family classifier without pretending that narrower audio stems were created.
-The first S3 increment adds the strict backend-neutral request/result and
-`sunofriend.separation-run.v1` receipt contract. It does not run a model,
-write separation artifacts or make a finished-song route available. There is
-still no full-mix separator.
+The first S3 increment added the strict backend-neutral request/result and
+receipt contract. New receipts use `sunofriend.separation-run.v2`; canonical
+v1 receipts remain readable.
+
+The second S3 increment is an internal, dependency-free deterministic-fake
+integration harness. It verifies the contract, evidence calculations and
+failure cleanup without presenting fake separation as a product feature. It
+has no CLI or TUI action, isolated worker, real backend, model installation,
+checkpoint loading or finished-song route. There is still no full-mix
+separator.
 
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
@@ -516,9 +523,10 @@ declaration, not legal adjudication.
 
 The first S3 increment implements an immutable, backend-neutral contract in
 `separation_contract.py`. Its local `SeparationRequest` and
-`SeparationResult` DTOs are separate from the shareable
-`sunofriend.separation-run.v1` receipt. Private source, checkpoint and work
-paths remain in the local DTOs and cannot enter that receipt.
+`SeparationResult` DTOs are separate from the shareable receipt. New receipts
+use `sunofriend.separation-run.v2`, while strict validation retains canonical
+v1 float-leakage receipts. Private source, checkpoint and work paths remain in
+the local DTOs and cannot enter either receipt.
 
 A complete receipt binds:
 
@@ -543,10 +551,40 @@ evidence, settings and measurements must be finite, and artifact paths must
 be safe relative POSIX paths. The canonical receipt hash excludes only its
 own `receipt_sha256` field.
 
-This is a pure contract boundary. It imports no model or audio runtime, reads
-or writes no file, downloads nothing and does not yet have a parent runner,
-worker, backend adapter, persistence service, quality calculator or cache. No
-model may download implicitly when those pieces are added.
+The contract module remains a pure boundary: it imports no model or audio
+runtime and performs no file I/O. `separation.py` and
+`separation_quality.py` now exercise it through one exact
+`FakeSeparationBackend` type. Arbitrary protocol implementations and fake
+subclasses are rejected because an in-process Python backend cannot prove
+network denial or filesystem confinement.
+
+The controlled parent verifies the canonical source hash and geometry plus
+the checkpoint hash before execution. It then independently inspects the
+persisted PCM16/PCM24 target and residual bytes for hashes, geometry, levels,
+silence, clipping and target-plus-residual reconstruction. Backend-supplied
+quality claims are not trusted. The v2 receipt carries the complete canonical
+run plan and its hash, cross-binds that plan to the receipt and derives
+`run_id` from it. The plan includes the actual parent/backend module hash,
+package/runtime identity and cache/backend policy rather than caller-supplied
+claims.
+
+Each run builds in fresh private sibling work and publication directories,
+confines declared regular non-symlink artifacts, revalidates every terminal
+byte and publishes the complete directory with one final rename. Failed,
+cancelled or invalid runs similarly publish only a non-loadable path-free
+receipt. Staging identity is pinned so cleanup refuses to recurse into a
+replacement directory. Aggregate output, checkpoint size, file count and
+free-space reserve are bounded; copying, zero-fill and hashing are chunked,
+and wall time is measured with a monotonic clock.
+
+The fake copies the source as each target and creates a silent residual. Its
+arithmetic therefore closes, but that is integration evidence rather than
+separation-accuracy evidence. It records leakage for every actual role as
+structured `not_measured` evidence with null metric, score and reference, so
+v2 quality is necessarily `review_required`. New v2 receipts cannot claim
+`passed` until a later hashed acceptance-profile contract exists. There is
+still no isolated real worker, backend adapter, model install flow or cache.
+No model may download implicitly when those pieces are added.
 
 ### Nested refinement
 
@@ -878,11 +916,15 @@ Likely modules:
 
 ### S3 — Separation bake-off harness
 
-Status: **contract slice complete; runner, backends and bake-off not
-implemented**
+Status: **contract and controlled-fake harness slices implemented; isolated
+real runner/backends and bake-off not implemented**
 
 - [x] Add a pure backend-neutral `SeparationBackend` contract plus immutable
-  request/result DTOs and strict `sunofriend.separation-run.v1` receipts.
+  request/result DTOs and strict versioned separation-run receipts.
+- [x] Add a controlled-fake-only parent harness with private staging,
+  parent-computed WAV/reconstruction evidence, review-required unmeasured
+  leakage, plan-bound v2 receipts, atomic terminal-tree publication and
+  fail-closed cleanup.
 - [ ] Generalise the existing AI runtime/checkpoint registry and isolate heavy
   runtimes in a separate worker environment.
 - [ ] Require explicit checkpoint installation, hashes and licences in the

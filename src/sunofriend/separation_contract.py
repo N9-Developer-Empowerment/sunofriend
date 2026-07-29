@@ -3,7 +3,9 @@
 This module deliberately contains no audio, model, NumPy or Torch imports.
 Heavy backends exchange path-bearing request/result DTOs with a future parent
 runner.  The parent runner is responsible for persistence, hashing artifacts
-and constructing the path-free, shareable ``separation-run.v1`` receipt.
+and constructing a path-free, shareable separation-run receipt.  New receipts
+use v2; the validator retains strict read compatibility with canonical v1
+receipts whose leakage evidence was represented by bounded floats.
 
 The receipt contract is intentionally strict:
 
@@ -21,6 +23,7 @@ import hashlib
 import json
 import math
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from types import MappingProxyType
@@ -30,7 +33,12 @@ from .source_roles import canonical_source_role, prepared_source_role_ids
 
 
 SEPARATION_REQUEST_SCHEMA = "sunofriend.separation-request.v1"
-SEPARATION_RUN_SCHEMA = "sunofriend.separation-run.v1"
+SEPARATION_RUN_SCHEMA_V1 = "sunofriend.separation-run.v1"
+SEPARATION_RUN_SCHEMA_V2 = "sunofriend.separation-run.v2"
+SEPARATION_RUN_SCHEMA = SEPARATION_RUN_SCHEMA_V2
+SEPARATION_RUN_SCHEMAS = frozenset(
+    {SEPARATION_RUN_SCHEMA_V1, SEPARATION_RUN_SCHEMA_V2}
+)
 SEPARATION_RESIDUAL_DEFINITION = (
     "persisted-source-minus-persisted-target-v1"
 )
@@ -51,6 +59,9 @@ _SHA256_ID_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 _RUN_ID_RE = re.compile(r"^separation-run:[0-9a-f]{64}$")
 _NODE_ID_RE = re.compile(r"^node:[0-9a-f]{64}$")
 _SAFE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9._+-]{0,127}$")
+_QUALIFIED_ID_RE = re.compile(
+    r"^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)+$"
+)
 _ERROR_CODE_RE = re.compile(r"^[a-z][a-z0-9_.-]{0,63}$")
 _COMMIT_RE = re.compile(r"^[0-9a-f]{7,64}$")
 _WINDOWS_ABSOLUTE_RE = re.compile(r"^[a-zA-Z]:[\\/]")
@@ -69,7 +80,7 @@ _FORBIDDEN_PATH_KEYS = frozenset(
         "home",
     }
 )
-_RECEIPT_FIELDS = frozenset(
+_RECEIPT_FIELDS_V1 = frozenset(
     {
         "schema",
         "receipt_sha256",
@@ -87,6 +98,57 @@ _RECEIPT_FIELDS = frozenset(
         "quality",
         "effects",
         "error",
+    }
+)
+_RECEIPT_FIELDS_V2 = frozenset(
+    set(_RECEIPT_FIELDS_V1) | {"run_plan_sha256", "run_plan"}
+)
+_RUN_PLAN_SCHEMA = "sunofriend.separation-run-plan.v1"
+_RUN_PLAN_FIELDS = frozenset(
+    {
+        "schema",
+        "request_fingerprint_sha256",
+        "runner",
+        "backend",
+        "checkpoint",
+        "runtime",
+        "device",
+        "command",
+        "requested_roles",
+        "settings",
+        "seed",
+    }
+)
+_RUNNER_FIELDS = frozenset(
+    {
+        "schema",
+        "version",
+        "module",
+        "module_sha256",
+        "package",
+        "package_version",
+        "backend_policy",
+        "cache_replay",
+    }
+)
+_PLAN_BACKEND_FIELDS = frozenset(
+    {
+        "backend_id",
+        "class",
+        "module_sha256",
+        "package",
+        "version",
+        "commit",
+        "code_license",
+        "training_data_note",
+    }
+)
+_PLAN_CHECKPOINT_FIELDS = frozenset(
+    {
+        "checkpoint_id",
+        "sha256",
+        "weights_license",
+        "distribution_policy",
     }
 )
 _SOURCE_FIELDS = frozenset(
@@ -163,6 +225,10 @@ _RECONSTRUCTION_FIELDS = frozenset(
         "passed",
     }
 )
+_LEAKAGE_FIELDS = frozenset(
+    {"status", "metric", "score", "reference_id"}
+)
+_LEAKAGE_STATUSES = frozenset({"measured", "not_measured"})
 _EFFECT_FIELDS = frozenset(
     {
         "network_used",
@@ -523,6 +589,8 @@ class SeparationRunReceipt:
     quality: Mapping[str, Any] | None
     effects: Mapping[str, Any]
     error: Mapping[str, Any] | None
+    run_plan_sha256: str | None = None
+    run_plan: Mapping[str, Any] | None = None
     schema: str = SEPARATION_RUN_SCHEMA
 
     def __post_init__(self) -> None:
@@ -545,10 +613,14 @@ class SeparationRunReceipt:
             )
         if self.error is not None:
             object.__setattr__(self, "error", _freeze_json(self.error))
+        if self.run_plan is not None:
+            object.__setattr__(
+                self, "run_plan", _freeze_json(self.run_plan)
+            )
         validate_separation_run_receipt(self.to_dict())
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        document = {
             "schema": self.schema,
             "receipt_sha256": self.receipt_sha256,
             "run_id": self.run_id,
@@ -574,6 +646,14 @@ class SeparationRunReceipt:
                 None if self.error is None else _thaw_json(self.error)
             ),
         }
+        if self.schema == SEPARATION_RUN_SCHEMA_V2:
+            document["run_plan_sha256"] = self.run_plan_sha256
+            document["run_plan"] = (
+                None
+                if self.run_plan is None
+                else _thaw_json(self.run_plan)
+            )
+        return document
 
     def canonical_bytes(self) -> bytes:
         """Return the canonical complete receipt, including its self-hash."""
@@ -604,6 +684,8 @@ class SeparationRunReceipt:
             quality=canonical["quality"],
             effects=canonical["effects"],
             error=canonical["error"],
+            run_plan_sha256=canonical.get("run_plan_sha256"),
+            run_plan=canonical.get("run_plan"),
         )
 
     @classmethod
@@ -629,6 +711,8 @@ class SeparationRunReceipt:
 def build_separation_run_receipt(
     *,
     run_id: str,
+    run_plan_sha256: str,
+    run_plan: Mapping[str, Any],
     request_fingerprint_sha256: str,
     status: str,
     loadable: bool,
@@ -645,7 +729,11 @@ def build_separation_run_receipt(
 ) -> SeparationRunReceipt:
     """Canonicalize, self-hash and freeze one terminal receipt."""
 
-    _run_id(run_id)
+    plan_document = _validate_run_plan(
+        run_plan,
+        run_plan_sha256=run_plan_sha256,
+        run_id=run_id,
+    )
     _sha256(
         request_fingerprint_sha256, "request_fingerprint_sha256"
     )
@@ -698,20 +786,23 @@ def build_separation_run_receipt(
             actual_roles=roles_document["actual"],
         )
         quality_document = _validate_quality(
-            quality, actual_roles=roles_document["actual"]
+            quality,
+            actual_roles=roles_document["actual"],
+            schema=SEPARATION_RUN_SCHEMA,
         )
         _require_quality_status_for_outputs(
             targets, residuals, quality_document
+        )
+        _require_quality_status_for_requested_roles(
+            roles_document,
+            quality_document,
         )
         all_paths = [
             *(item["path"] for item in targets),
             *(item["path"] for item in residuals),
             quality_document["path"],
         ]
-        if len(set(all_paths)) != len(all_paths):
-            raise ValueError(
-                "separation receipt artifact paths must be unique"
-            )
+        _require_unique_artifact_paths(all_paths)
         if error is not None:
             raise ValueError(
                 "complete separation receipt must not contain an error"
@@ -781,6 +872,16 @@ def build_separation_run_receipt(
         raise ValueError(
             "request_fingerprint_sha256 does not bind the separation request"
         )
+    _cross_bind_run_plan(
+        plan_document,
+        request_fingerprint_sha256=request_fingerprint_sha256,
+        backend=backend_document,
+        checkpoint=checkpoint_document,
+        roles=roles_document,
+        execution=execution_document,
+    )
+    unsigned["run_plan_sha256"] = run_plan_sha256
+    unsigned["run_plan"] = plan_document
     document = {
         **unsigned,
         "receipt_sha256": separation_run_receipt_sha256(unsigned),
@@ -857,18 +958,40 @@ def validate_separation_run_receipt(
     """Return a strict canonical copy of one valid shareable receipt."""
 
     value = _mapping(document, "separation receipt")
-    _exact_fields(value, _RECEIPT_FIELDS, "separation receipt")
-    if value["schema"] != SEPARATION_RUN_SCHEMA:
+    if "schema" not in value:
+        raise ValueError("separation receipt is missing schema")
+    schema = str(value["schema"])
+    if schema not in SEPARATION_RUN_SCHEMAS:
         raise ValueError(
-            f"separation receipt schema must be {SEPARATION_RUN_SCHEMA}"
+            "separation receipt schema must be one of "
+            + ", ".join(sorted(SEPARATION_RUN_SCHEMAS))
         )
+    _exact_fields(
+        value,
+        (
+            _RECEIPT_FIELDS_V2
+            if schema == SEPARATION_RUN_SCHEMA_V2
+            else _RECEIPT_FIELDS_V1
+        ),
+        "separation receipt",
+    )
     _sha256(value["receipt_sha256"], "receipt_sha256")
     if (
         separation_run_receipt_sha256(value)
         != value["receipt_sha256"]
     ):
         raise ValueError("separation receipt SHA-256 does not match")
-    _run_id(value["run_id"])
+    if schema == SEPARATION_RUN_SCHEMA_V2:
+        run_plan = _validate_run_plan(
+            value["run_plan"],
+            run_plan_sha256=value["run_plan_sha256"],
+            run_id=value["run_id"],
+        )
+        run_plan_sha256 = str(value["run_plan_sha256"])
+    else:
+        _run_id(value["run_id"])
+        run_plan = None
+        run_plan_sha256 = None
     _sha256(
         value["request_fingerprint_sha256"],
         "request_fingerprint_sha256",
@@ -923,18 +1046,18 @@ def validate_separation_run_receipt(
             actual_roles=roles["actual"],
         )
         quality = _validate_quality(
-            value["quality"], actual_roles=roles["actual"]
+            value["quality"],
+            actual_roles=roles["actual"],
+            schema=schema,
         )
         _require_quality_status_for_outputs(targets, residuals, quality)
+        _require_quality_status_for_requested_roles(roles, quality)
         all_paths = [
             *(item["path"] for item in targets),
             *(item["path"] for item in residuals),
             quality["path"],
         ]
-        if len(set(all_paths)) != len(all_paths):
-            raise ValueError(
-                "separation receipt artifact paths must be unique"
-            )
+        _require_unique_artifact_paths(all_paths)
         if value["error"] is not None:
             raise ValueError(
                 "complete separation receipt must not contain an error"
@@ -979,9 +1102,20 @@ def validate_separation_run_receipt(
         raise ValueError(
             "request_fingerprint_sha256 does not bind the separation request"
         )
+    if run_plan is not None:
+        _cross_bind_run_plan(
+            run_plan,
+            request_fingerprint_sha256=value[
+                "request_fingerprint_sha256"
+            ],
+            backend=backend,
+            checkpoint=checkpoint,
+            roles=roles,
+            execution=execution,
+        )
 
     canonical = {
-        "schema": SEPARATION_RUN_SCHEMA,
+        "schema": schema,
         "receipt_sha256": str(value["receipt_sha256"]),
         "run_id": str(value["run_id"]),
         "request_fingerprint_sha256": str(
@@ -1000,6 +1134,9 @@ def validate_separation_run_receipt(
         "effects": effects,
         "error": error,
     }
+    if schema == SEPARATION_RUN_SCHEMA_V2:
+        canonical["run_plan_sha256"] = run_plan_sha256
+        canonical["run_plan"] = run_plan
     _validate_json_value(
         canonical,
         "separation receipt",
@@ -1012,6 +1149,228 @@ def validate_separation_run_receipt(
     if canonical != _thaw_json(value):
         raise ValueError("separation receipt is not in canonical form")
     return canonical
+
+
+def _validate_run_plan(
+    value: Any,
+    *,
+    run_plan_sha256: Any,
+    run_id: Any,
+) -> dict[str, Any]:
+    plan = _mapping(value, "run_plan")
+    _exact_fields(plan, _RUN_PLAN_FIELDS, "run_plan")
+    _validate_json_value(plan, "run_plan", forbid_private_paths=True)
+    _validate_run_plan_strings(plan, "run_plan")
+    claimed_hash = _sha256(run_plan_sha256, "run_plan_sha256")
+    raw_hash = hashlib.sha256(
+        _canonical_run_plan_json_bytes(plan)
+    ).hexdigest()
+    if claimed_hash != raw_hash:
+        raise ValueError("run_plan_sha256 does not match run_plan")
+    if _run_id(run_id) != f"separation-run:{raw_hash}":
+        raise ValueError("run_id does not bind run_plan_sha256")
+    if plan["schema"] != _RUN_PLAN_SCHEMA:
+        raise ValueError(f"run_plan.schema must be {_RUN_PLAN_SCHEMA}")
+    request_fingerprint = _sha256(
+        plan["request_fingerprint_sha256"],
+        "run_plan.request_fingerprint_sha256",
+    )
+
+    runner = _mapping(plan["runner"], "run_plan.runner")
+    _exact_fields(runner, _RUNNER_FIELDS, "run_plan.runner")
+    if runner["schema"] != "sunofriend.separation-parent.v1":
+        raise ValueError("run_plan.runner.schema is unsupported")
+    runner_version = _plan_text(
+        runner["version"], "run_plan.runner.version"
+    )
+    runner_module = _qualified_identifier(
+        runner["module"], "run_plan.runner.module"
+    )
+    module_sha256 = _sha256(
+        runner["module_sha256"], "run_plan.runner.module_sha256"
+    )
+    runner_document = {
+        "schema": "sunofriend.separation-parent.v1",
+        "version": runner_version,
+        "module": runner_module,
+        "module_sha256": module_sha256,
+        "package": _safe_identifier(
+            runner["package"], "run_plan.runner.package"
+        ),
+        "package_version": _plan_text(
+            runner["package_version"],
+            "run_plan.runner.package_version",
+        ),
+        "backend_policy": _plan_text(
+            runner["backend_policy"],
+            "run_plan.runner.backend_policy",
+        ),
+        "cache_replay": _plan_text(
+            runner["cache_replay"],
+            "run_plan.runner.cache_replay",
+        ),
+    }
+    backend = _mapping(plan["backend"], "run_plan.backend")
+    _exact_fields(backend, _PLAN_BACKEND_FIELDS, "run_plan.backend")
+    backend_module_sha256 = _sha256(
+        backend["module_sha256"], "run_plan.backend.module_sha256"
+    )
+    backend_class = _qualified_identifier(
+        backend["class"], "run_plan.backend.class"
+    )
+    commit = str(backend["commit"])
+    if not _COMMIT_RE.fullmatch(commit):
+        raise ValueError(
+            "run_plan.backend.commit must be lowercase hexadecimal"
+        )
+    backend_document = {
+        "backend_id": _safe_identifier(
+            backend["backend_id"], "run_plan.backend.backend_id"
+        ),
+        "class": backend_class,
+        "module_sha256": backend_module_sha256,
+        "package": _safe_identifier(
+            backend["package"], "run_plan.backend.package"
+        ),
+        "version": _plan_text(
+            backend["version"], "run_plan.backend.version"
+        ),
+        "commit": commit,
+        "code_license": _plan_text(
+            backend["code_license"], "run_plan.backend.code_license"
+        ),
+        "training_data_note": _plan_text(
+            backend["training_data_note"],
+            "run_plan.backend.training_data_note",
+        ),
+    }
+    checkpoint = _mapping(
+        plan["checkpoint"], "run_plan.checkpoint"
+    )
+    _exact_fields(
+        checkpoint, _PLAN_CHECKPOINT_FIELDS, "run_plan.checkpoint"
+    )
+    checkpoint_document = {
+        "checkpoint_id": _safe_identifier(
+            checkpoint["checkpoint_id"],
+            "run_plan.checkpoint.checkpoint_id",
+        ),
+        "sha256": _sha256(
+            checkpoint["sha256"], "run_plan.checkpoint.sha256"
+        ),
+        "weights_license": _plan_text(
+            checkpoint["weights_license"],
+            "run_plan.checkpoint.weights_license",
+        ),
+        "distribution_policy": _plan_text(
+            checkpoint["distribution_policy"],
+            "run_plan.checkpoint.distribution_policy",
+        ),
+    }
+
+    runtime = _mapping(plan["runtime"], "run_plan.runtime")
+    if not runtime:
+        raise ValueError("run_plan.runtime must not be empty")
+    _validate_json_value(
+        runtime, "run_plan.runtime", forbid_private_paths=True
+    )
+    runtime_document = _thaw_json(runtime)
+    device = _safe_identifier(plan["device"], "run_plan.device")
+    command_value = plan["command"]
+    if (
+        not isinstance(command_value, list)
+        or not command_value
+        or not all(isinstance(token, str) and token for token in command_value)
+    ):
+        raise ValueError("run_plan.command must be a non-empty string list")
+    command = [
+        _plan_command_token(token, f"run_plan.command[{index}]")
+        for index, token in enumerate(command_value)
+    ]
+    roles = _canonical_roles(
+        plan["requested_roles"],
+        "run_plan.requested_roles",
+        require_sorted=True,
+        allow_empty=False,
+    )
+    settings = _mapping(plan["settings"], "run_plan.settings")
+    _validate_json_value(
+        settings, "run_plan.settings", forbid_private_paths=True
+    )
+    seed = plan["seed"]
+    if seed is not None:
+        seed = _strict_int(seed, "run_plan.seed")
+
+    canonical = {
+        "schema": _RUN_PLAN_SCHEMA,
+        "request_fingerprint_sha256": request_fingerprint,
+        "runner": runner_document,
+        "backend": backend_document,
+        "checkpoint": checkpoint_document,
+        "runtime": runtime_document,
+        "device": device,
+        "command": command,
+        "requested_roles": roles,
+        "settings": _thaw_json(settings),
+        "seed": seed,
+    }
+    _validate_json_value(
+        canonical, "run_plan", forbid_private_paths=True
+    )
+    if canonical != _thaw_json(plan):
+        raise ValueError("run_plan is not in canonical form")
+    return canonical
+
+
+def _cross_bind_run_plan(
+    plan: Mapping[str, Any],
+    *,
+    request_fingerprint_sha256: Any,
+    backend: Mapping[str, Any],
+    checkpoint: Mapping[str, Any],
+    roles: Mapping[str, Any],
+    execution: Mapping[str, Any],
+) -> None:
+    if (
+        plan["request_fingerprint_sha256"]
+        != request_fingerprint_sha256
+    ):
+        raise ValueError("run_plan does not bind the request fingerprint")
+    for field_name in (
+        "backend_id",
+        "package",
+        "version",
+        "commit",
+        "code_license",
+        "training_data_note",
+    ):
+        if plan["backend"][field_name] != backend[field_name]:
+            raise ValueError(
+                f"run_plan does not bind backend.{field_name}"
+            )
+    for field_name in (
+        "checkpoint_id",
+        "sha256",
+        "weights_license",
+        "distribution_policy",
+    ):
+        if plan["checkpoint"][field_name] != checkpoint[field_name]:
+            raise ValueError(
+                f"run_plan does not bind checkpoint.{field_name}"
+            )
+    if plan["requested_roles"] != roles["requested"]:
+        raise ValueError("run_plan does not bind roles.requested")
+    for field_name in (
+        "runtime",
+        "device",
+        "command",
+        "settings",
+        "seed",
+    ):
+        if plan[field_name] != execution[field_name]:
+            raise ValueError(
+                f"run_plan does not bind execution.{field_name}"
+            )
 
 
 def _validate_source(value: Any) -> dict[str, Any]:
@@ -1320,7 +1679,10 @@ def _validate_target_residual_pairs(
 
 
 def _validate_quality(
-    value: Any, *, actual_roles: Sequence[str]
+    value: Any,
+    *,
+    actual_roles: Sequence[str],
+    schema: str,
 ) -> dict[str, Any]:
     quality = _mapping(value, "quality")
     _exact_fields(quality, _QUALITY_FIELDS, "quality")
@@ -1381,19 +1743,73 @@ def _validate_quality(
             "failed reconstruction requires review_required quality status"
         )
     leakage = _mapping(quality["leakage"], "quality.leakage")
-    leakage_document: dict[str, float] = {}
-    for role, score in leakage.items():
+    leakage_document: dict[str, Any] = {}
+    for role, evidence_value in leakage.items():
         canonical = _canonical_role(role, "quality.leakage role")
         if canonical != role:
             raise ValueError(
                 "quality.leakage keys must be canonical roles"
             )
-        leakage_document[canonical] = _bounded_float(
-            score,
+        if schema == SEPARATION_RUN_SCHEMA_V1:
+            leakage_document[canonical] = _bounded_float(
+                evidence_value,
+                f"quality.leakage.{canonical}",
+                minimum=0.0,
+                maximum=1.0,
+            )
+            continue
+        evidence = _mapping(
+            evidence_value,
             f"quality.leakage.{canonical}",
+        )
+        _exact_fields(
+            evidence,
+            _LEAKAGE_FIELDS,
+            f"quality.leakage.{canonical}",
+        )
+        evidence_status = str(evidence["status"])
+        if evidence_status not in _LEAKAGE_STATUSES:
+            raise ValueError(
+                f"quality.leakage.{canonical}.status is unsupported"
+            )
+        if evidence_status == "not_measured":
+            if any(
+                evidence[field] is not None
+                for field in ("metric", "score", "reference_id")
+            ):
+                raise ValueError(
+                    f"quality.leakage.{canonical} not_measured evidence "
+                    "must not claim a metric, score or reference"
+                )
+            leakage_document[canonical] = {
+                "status": "not_measured",
+                "metric": None,
+                "score": None,
+                "reference_id": None,
+            }
+            continue
+        metric = _safe_identifier(
+            evidence["metric"],
+            f"quality.leakage.{canonical}.metric",
+        )
+        score = _bounded_float(
+            evidence["score"],
+            f"quality.leakage.{canonical}.score",
             minimum=0.0,
             maximum=1.0,
         )
+        reference_id = str(evidence["reference_id"])
+        if not _SHA256_ID_RE.fullmatch(reference_id):
+            raise ValueError(
+                f"quality.leakage.{canonical}.reference_id must be a "
+                "SHA-256 identity"
+            )
+        leakage_document[canonical] = {
+            "status": "measured",
+            "metric": metric,
+            "score": score,
+            "reference_id": reference_id,
+        }
     if list(leakage_document) != sorted(leakage_document):
         raise ValueError(
             "quality.leakage must use canonical role order"
@@ -1401,6 +1817,22 @@ def _validate_quality(
     if set(leakage_document) != set(actual_roles):
         raise ValueError(
             "quality.leakage roles must exactly match roles.actual"
+        )
+    if (
+        schema == SEPARATION_RUN_SCHEMA_V2
+        and any(
+            evidence["status"] == "not_measured"
+            for evidence in leakage_document.values()
+        )
+        and status != "review_required"
+    ):
+        raise ValueError(
+            "unmeasured leakage requires review_required quality status"
+        )
+    if schema == SEPARATION_RUN_SCHEMA_V2 and status == "passed":
+        raise ValueError(
+            "v2 quality cannot be passed without a hashed acceptance "
+            "profile binding; use review_required"
         )
     return {
         "path": path,
@@ -1434,6 +1866,19 @@ def _require_quality_status_for_outputs(
                 "silent or clipped output requires review_required "
                 "quality status"
             )
+
+
+def _require_quality_status_for_requested_roles(
+    roles: Mapping[str, Sequence[str]],
+    quality: Mapping[str, Any],
+) -> None:
+    if (
+        set(roles["actual"]) != set(roles["requested"])
+        and quality["status"] != "review_required"
+    ):
+        raise ValueError(
+            "missing requested roles require review_required quality status"
+        )
 
 
 def _validate_effects(value: Any) -> dict[str, bool]:
@@ -1580,6 +2025,14 @@ def _safe_identifier(value: Any, label: str) -> str:
     return text
 
 
+def _qualified_identifier(value: Any, label: str) -> str:
+    text = str(value)
+    if not _QUALIFIED_ID_RE.fullmatch(text):
+        raise ValueError(f"{label} must be a safe qualified identifier")
+    _reject_private_path_string(text, label)
+    return text
+
+
 def _safe_relative_path(value: Any, label: str) -> PurePosixPath:
     if not isinstance(value, str):
         raise ValueError(f"{label} must be a safe relative POSIX path")
@@ -1588,6 +2041,7 @@ def _safe_relative_path(value: Any, label: str) -> PurePosixPath:
     if (
         not text
         or text != text.strip()
+        or unicodedata.normalize("NFC", text) != text
         or "\\" in text
         or "\x00" in text
         or path.is_absolute()
@@ -1599,6 +2053,20 @@ def _safe_relative_path(value: Any, label: str) -> PurePosixPath:
     ):
         raise ValueError(f"{label} must be a safe relative POSIX path")
     return path
+
+
+def _require_unique_artifact_paths(paths: Sequence[str]) -> None:
+    """Reject exact, case-insensitive and Unicode-equivalent path aliases."""
+
+    collision_keys = [
+        unicodedata.normalize("NFC", path).casefold()
+        for path in paths
+    ]
+    if len(set(collision_keys)) != len(collision_keys):
+        raise ValueError(
+            "separation receipt artifact paths must be unique after "
+            "Unicode NFC normalization and casefolding"
+        )
 
 
 def _safe_command_token(value: str, label: str) -> str:
@@ -1613,6 +2081,43 @@ def _safe_command_token(value: str, label: str) -> str:
         raise ValueError(f"{label} must not contain a path or URL")
     _reject_private_path_string(value, label)
     return value
+
+
+def _plan_command_token(value: str, label: str) -> str:
+    token = _safe_command_token(value, label)
+    if "<" in token or ">" in token:
+        raise ValueError(f"{label} must not contain a placeholder")
+    return token
+
+
+def _plan_text(value: Any, label: str) -> str:
+    text = _nonempty_text(value, label)
+    _reject_private_path_string(text, label)
+    if "<" in text or ">" in text:
+        raise ValueError(f"{label} must not contain a placeholder")
+    return text
+
+
+def _validate_run_plan_strings(value: Any, label: str) -> None:
+    if isinstance(value, str):
+        if (
+            "/" in value
+            or "\\" in value
+            or "://" in value
+            or "<" in value
+            or ">" in value
+        ):
+            raise ValueError(
+                f"{label} must not contain a path, URL or placeholder"
+            )
+        return
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            _validate_run_plan_strings(item, f"{label}.{key}")
+        return
+    if isinstance(value, (list, tuple)):
+        for index, item in enumerate(value):
+            _validate_run_plan_strings(item, f"{label}[{index}]")
 
 
 def _validate_json_value(
@@ -1768,12 +2273,32 @@ def _canonical_json_bytes(document: Mapping[str, Any]) -> bytes:
     ).encode("utf-8")
 
 
+def _canonical_run_plan_json_bytes(
+    document: Mapping[str, Any],
+) -> bytes:
+    """Match the repository canonical form used by SeparationRunPlan."""
+
+    return (
+        json.dumps(
+            _thaw_json(document),
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+            allow_nan=False,
+        )
+        + "\n"
+    ).encode("utf-8")
+
+
 __all__ = [
     "SEPARATION_FAILURE_STATUSES",
     "SEPARATION_QUALITY_STATUSES",
     "SEPARATION_REQUEST_SCHEMA",
     "SEPARATION_RESIDUAL_DEFINITION",
     "SEPARATION_RUN_SCHEMA",
+    "SEPARATION_RUN_SCHEMAS",
+    "SEPARATION_RUN_SCHEMA_V1",
+    "SEPARATION_RUN_SCHEMA_V2",
     "SEPARATION_TERMINAL_STATUSES",
     "SeparationAudioGeometry",
     "SeparationBackend",
