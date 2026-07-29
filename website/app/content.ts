@@ -8,6 +8,8 @@ export const links = {
     "https://raw.githubusercontent.com/N9-Developer-Empowerment/sunofriend/main/skills/sunofriend/references/interface-contract.md",
   gettingStarted:
     "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/GETTING_STARTED.md",
+  stemGuide:
+    "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/STEMS.md",
   outOfPlace:
     "https://soundcloud.com/ezzye-1/out-of-place?si=93616bdf10d7406c838be366106c1025&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing",
   lidl:
@@ -28,6 +30,176 @@ export const links = {
   moisesExportHelp:
     "https://help.moises.ai/hc/en-us/articles/360013691720-How-do-I-export-my-file",
 };
+
+export type ProviderLocation = "Cloud" | "Local" | "Cloud + local option";
+
+export type StemProvider = {
+  name: string;
+  href: string;
+  location: ProviderLocation;
+  usefulFor: string;
+  boundary: string;
+};
+
+export const stemProviders: readonly StemProvider[] = [
+  {
+    name: "Moises",
+    href: "https://moises.ai/",
+    location: "Cloud",
+    usefulFor:
+      "Detailed separation, including narrower drum parts on eligible plans.",
+    boundary:
+      "Your audio is uploaded. Check the current plan, export format, retention and privacy terms before using private music.",
+  },
+  {
+    name: "BandLab Splitter",
+    href: "https://www.bandlab.com/splitter",
+    location: "Cloud",
+    usefulFor:
+      "A low-friction first experiment with separated parts and MIDI export.",
+    boundary:
+      "Processing is online and some categories require membership. Check the current terms before uploading.",
+  },
+  {
+    name: "Fadr",
+    href: "https://fadr.com/",
+    location: "Cloud",
+    usefulFor:
+      "Stems alongside MIDI, chords, key and tempo, with paid refinements.",
+    boundary:
+      "Review the current privacy and rights terms, especially for unreleased or confidential audio.",
+  },
+  {
+    name: "Suno stem separation",
+    href: "https://help.suno.com/en/articles/12702337",
+    location: "Cloud",
+    usefulFor:
+      "Exporting parts from material already created in, or legitimately uploaded to, a Suno workflow.",
+    boundary:
+      "A paid cloud feature. Confirm upload rights; category labels and requested splits are estimates.",
+  },
+  {
+    name: "LALAL.AI",
+    href: "https://www.lalal.ai/stem-splitter/",
+    location: "Cloud + local option",
+    usefulFor:
+      "Target-plus-complement separation and a range of instrument categories.",
+    boundary:
+      "The desktop app uses cloud processing by default. Check whether your plan and chosen model actually process on-device.",
+  },
+  {
+    name: "Logic Pro Stem Splitter",
+    href: "https://support.apple.com/en-gb/guide/logicpro/lgcp61bae908/mac",
+    location: "Local",
+    usefulFor:
+      "On-device broad separation on supported Apple-silicon Macs.",
+    boundary:
+      "Requires Logic Pro and supported Apple hardware. It is not available inside GarageBand.",
+  },
+  {
+    name: "RipX DAW",
+    href: "https://hitnmix.com/",
+    location: "Local",
+    usefulFor:
+      "Desktop separation, note-level inspection and MIDI export.",
+    boundary:
+      "Commercial software. Check current macOS support and process only audio you are authorised to use.",
+  },
+] as const;
+
+export type GlossaryEntry = {
+  term: string;
+  short: string;
+  explanation: string;
+};
+
+export const glossaryEntries: readonly GlossaryEntry[] = [
+  {
+    term: "Finished mix",
+    short: "The complete stereo song people normally hear.",
+    explanation:
+      "Its voices, instruments, effects and mastering have already been combined, so the original parts cannot be recovered perfectly from it.",
+  },
+  {
+    term: "Multitracks",
+    short: "The discrete tracks from the original recording or production.",
+    explanation:
+      "Examples include a kick microphone, snare microphone, bass DI, piano and lead vocal. They are usually cleaner and narrower than stems.",
+  },
+  {
+    term: "Stem",
+    short: "A synchronized grouped part of a song.",
+    explanation:
+      "A stem is usually a submix such as all drums, all keys or all backing vocals. It can contain several instruments, performers, microphones and effects.",
+  },
+  {
+    term: "AI-separated stem",
+    short: "A model's estimate of one category from a finished mix.",
+    explanation:
+      "It is useful source material, but it is not the lost original studio track. Bleed, holes, muffling and watery artefacts can remain.",
+  },
+  {
+    term: "Broad stem",
+    short: "A large category such as drums, vocals, keys or other.",
+    explanation:
+      "Broad stems are convenient but often contain several musical parts with different pitches, rhythms and sounds.",
+  },
+  {
+    term: "Refined stem or sub-stem",
+    short: "A narrower child made from a broad stem.",
+    explanation:
+      "For example, drums may be refined into kick, snare, hats, toms, cymbals and other percussion. Refinement is another estimate and may add artefacts.",
+  },
+  {
+    term: "Bleed or leakage",
+    short: "Sound from one part that remains in another stem.",
+    explanation:
+      "Examples include vocals audible in keys or cymbals audible in snare. Leakage can produce false MIDI notes.",
+  },
+  {
+    term: "Residual or complement",
+    short: "Everything a separator did not assign to its target.",
+    explanation:
+      "A residual is not necessarily one coherent instrument. A file named other may contain guitars, keyboards, strings, effects and artefacts together.",
+  },
+  {
+    term: "MIDI",
+    short: "Editable note and performance instructions, not recorded sound.",
+    explanation:
+      "MIDI can describe pitch, timing, duration, velocity and controls. It does not contain words, a singer's voice, instrument texture or the original effects.",
+  },
+  {
+    term: "Instrument or sample bundle",
+    short: "Sounds used to play MIDI notes.",
+    explanation:
+      "A suitable instrument helps a MIDI interpretation resemble the source, but an instrument bundle is not itself a stem.",
+  },
+  {
+    term: "Lossless and lossy audio",
+    short: "Two ways audio files preserve or discard signal detail.",
+    explanation:
+      "WAV, AIFF and FLAC are commonly lossless. MP3 and AAC discard information to reduce size. Converting MP3 to WAV does not restore that discarded detail.",
+  },
+] as const;
+
+export const stemBoundary = {
+  songProjectInputToday: "synchronised, top-level WAV stems",
+  sourceImportToday: "one authorised local audio asset at a time",
+  sourceImportOutput:
+    "an immutable original copy, canonical PCM24 WAV, receipt and source-project manifest",
+  sourceDoctorCommand: "sunofriend source-doctor",
+  sourceImportCommand:
+    "sunofriend source-import SOURCE --out-dir FRESH --plan",
+  sourceImportExecCommand:
+    "sunofriend source-import SOURCE --out-dir FRESH",
+  builtInSeparationToday: false,
+  websiteUploadToday: false,
+  folderImportToday: false,
+  crossFileAlignmentToday: false,
+  directNonWavProjectToday: false,
+  nextPlannedInputWork:
+    "folder-level import and alignment followed by a measured local-separation bake-off",
+} as const;
 
 export const skillInstallPrompt = `Use $skill-installer to install the official Sunofriend skill from:
 https://github.com/N9-Developer-Empowerment/sunofriend/tree/main/skills/sunofriend

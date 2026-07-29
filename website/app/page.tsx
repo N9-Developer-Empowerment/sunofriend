@@ -65,6 +65,7 @@ export default function Home() {
         <nav aria-label="Main navigation">
           <a href="#codex">Start</a>
           <a href="#choose">Choose a route</a>
+          <Link href="/stems/">What are stems?</Link>
           <a href="#demo">Try the demo</a>
           <Link href="/for-agents">For AI agents</Link>
         </nav>
@@ -230,20 +231,22 @@ export default function Home() {
             <span className="card-number">B / I NEED STEMS</span>
             <h3>I only have a finished song.</h3>
             <p>
-              Sunofriend does not separate a mixed song. Codex can explain how
-              to export your own DAW parts or use a separate stem service such
-              as Moises or Suno, subject to that service&apos;s terms.
+              A stem is a synchronized grouped part, not necessarily one
+              instrument. Sunofriend does not yet separate a mixed song, but
+              the guide explains DAW exports and independent local or cloud
+              options.
             </p>
             <div className="journey-links">
-              <ExternalLink className="text-link" href={links.moisesExportHelp}>
-                Moises export help ↗
-              </ExternalLink>
-              <ExternalLink className="text-link text-link-muted" href={links.sunoStemHelp}>
-                Suno stem help ↗
-              </ExternalLink>
+              <Link className="text-link" href="/stems/">
+                What stems are and where to get them →
+              </Link>
+              <Link className="text-link text-link-muted" href="/glossary/">
+                Open the glossary →
+              </Link>
             </div>
             <small>
-              Never upload or process music unless you have the necessary rights.
+              Local and cloud tools have different privacy boundaries. Never
+              upload or process music unless you have the necessary rights.
             </small>
           </article>
 
@@ -350,7 +353,11 @@ export default function Home() {
           </p>
           <p>
             <strong>It is not a stem separator.</strong> Bring top-level WAV stems
-            from your own project or an authorised third-party service.
+            from your own project or an authorised third-party service. See the{" "}
+            <Link className="inline-link" href="/stems/">
+              neutral stems guide
+            </Link>
+            .
           </p>
           <p>
             <strong>It is not a perfect transcription.</strong> The WAV is a
@@ -394,6 +401,9 @@ export default function Home() {
           </div>
         </div>
         <div className="footer-links">
+          <Link href="/stems/">Stems guide</Link>
+          <Link href="/glossary/">Glossary</Link>
+          <Link href="/demo/">Demo</Link>
           <Link href="/for-agents">For AI agents</Link>
           <a href="/llms.txt">llms.txt</a>
           <ExternalLink href={links.repo}>GitHub ↗</ExternalLink>

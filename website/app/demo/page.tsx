@@ -39,9 +39,10 @@ export default function Demo() {
           <a href="#run">Run</a>
           <a href="#hear">Hear</a>
           <a href="#continue">Continue</a>
+          <Link href="/glossary/">Glossary</Link>
         </nav>
-        <Link className="header-cta" href="/#codex">
-          Use my stems
+        <Link className="header-cta" href="/stems/">
+          What are stems?
         </Link>
       </header>
 
@@ -158,8 +159,8 @@ export default function Demo() {
                 <Link className="text-link" href="/#codex">
                   Use my stems →
                 </Link>
-                <Link className="text-link text-link-muted" href="/#need-stems">
-                  I still need stems →
+                <Link className="text-link text-link-muted" href="/stems/">
+                  Learn how to get stems →
                 </Link>
               </div>
             </div>

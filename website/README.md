@@ -31,7 +31,21 @@ to carry every technical detail:
 - `/demo` explains how to run the copyright-safe synthetic stem demo through
   the normal automatic MIDI/WAV/ZIP path and includes a listening/worked-output
   tour; and
+- `/stems` explains what stems are, why one stem can contain several
+  instruments, where authorised parts may come from, and the privacy and rights
+  boundaries of independent local and cloud providers;
+- `/glossary` shares the plain-language definitions used by the musician and
+  agent pages;
 - `robots.txt`, `sitemap.xml` and JSON-LD metadata make those routes discoverable.
+
+Provider links are currently neutral ordinary links. There is no current
+affiliate relationship, no provider is ranked as best for downstream MIDI, and
+the site keeps the current product boundary explicit: synchronized top-level
+WAV stems remain the input to complete song conversion. The narrow local
+`source-doctor` and `source-import` CLI can inspect, preserve and canonicalise
+one supported authorised audio asset at a time to PCM24 WAV. It does not align
+a folder, separate a mix, create MIDI, or send a non-WAV project directly into
+Simple or Studio.
 
 The agent pages explicitly distinguish Codex with local workspace access from a
 standard ChatGPT conversation. They do not claim that a normal web chat can run
@@ -63,6 +77,7 @@ npm test
 
 `npm run build` validates the normal Sites-compatible worker build.
 `npm run build:aws` creates the static export in `out/`.
+The test command validates both builds, including the generated `out/404.html`.
 
 ## Deploy to AWS
 
@@ -72,6 +87,8 @@ The deployment uses CloudFormation to create:
 - one CloudFront distribution with Origin Access Control;
 - one viewer-request function that maps clean routes such as `/demo/` to their
   generated static `index.html` files;
+- a branded `/404.html` response for missing or inaccessible objects, retaining
+  an HTTP 404 status rather than silently serving the homepage;
 - HTTPS, compression and security headers; and
 - optional Route 53 records for a custom domain.
 
@@ -80,6 +97,11 @@ With AWS CLI credentials configured:
 ```bash
 npm run deploy:aws
 ```
+
+The deployment script completes and validates the static export, including its
+branded `404.html`, before it updates the CloudFront error mapping. If a new
+CloudFront-only URL is allocated, it rebuilds metadata for that final URL before
+uploading the same validated export.
 
 The default stack name is `sunofriend-site` in `eu-west-2`. Override them when
 needed:

@@ -150,12 +150,12 @@ Resources:
               OriginAccessIdentity: ""
         CustomErrorResponses:
           - ErrorCode: 403
-            ResponseCode: 200
-            ResponsePagePath: /index.html
+            ResponseCode: 404
+            ResponsePagePath: /404.html
             ErrorCachingMinTTL: 0
           - ErrorCode: 404
-            ResponseCode: 200
-            ResponsePagePath: /index.html
+            ResponseCode: 404
+            ResponsePagePath: /404.html
             ErrorCachingMinTTL: 0
         PriceClass: PriceClass_100
         ViewerCertificate: !If

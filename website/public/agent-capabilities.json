@@ -16,6 +16,8 @@
     "raw_skill_url": "https://raw.githubusercontent.com/N9-Developer-Empowerment/sunofriend/main/skills/sunofriend/SKILL.md",
     "interface_contract_url": "https://raw.githubusercontent.com/N9-Developer-Empowerment/sunofriend/main/skills/sunofriend/references/interface-contract.md",
     "advanced_operations_url": "https://raw.githubusercontent.com/N9-Developer-Empowerment/sunofriend/main/skills/sunofriend/references/advanced-operations.md",
+    "stem_guide_url": "https://sunofriend.com/stems/",
+    "glossary_url": "https://sunofriend.com/glossary/",
     "preferred_surface": "Codex or another agent with explicit local workspace and command access",
     "standard_chat_boundary": "A standard ChatGPT conversation may guide but must not claim local execution.",
     "two_turn_start": [
@@ -45,6 +47,34 @@
       "action": "create copyright-safe synthetic stems and run the normal automatic MIDI/WAV/ZIP path in a fresh output directory"
     }
   ],
+  "stem_inputs": {
+    "song_conversion_input_today": "synchronised top-level WAV stems",
+    "stem_definition": "a grouped submix such as drums, bass, vocals or keys; not necessarily one isolated instrument",
+    "ai_separated_stem_definition": "an estimate of a category from a finished mix, not the lost original studio track",
+    "built_in_full_mix_separation_available": false,
+    "website_accepts_audio": false,
+    "one_asset_multi_format_import_available": true,
+    "multi_format_song_project_import_available": false,
+    "multi_format_import_scope": "one authorised supported local audio asset per source-import execution",
+    "source_doctor_command": "sunofriend source-doctor",
+    "source_import_plan_command": "sunofriend source-import SOURCE --out-dir FRESH --plan",
+    "source_import_execute_command": "sunofriend source-import SOURCE --out-dir FRESH",
+    "source_import_outputs": [
+      "immutable_original_copy",
+      "canonical_pcm24_wav",
+      "source_import_receipt",
+      "source_project_manifest"
+    ],
+    "source_import_creates_midi": false,
+    "source_import_separates_audio": false,
+    "folder_import_available": false,
+    "cross_file_alignment_available": false,
+    "direct_non_wav_simple_or_studio_project_available": false,
+    "provider_links_are_affiliate_links": false,
+    "provider_ranking_for_downstream_midi_available": false,
+    "cloud_privacy_check_required": true,
+    "rights_check_required": true
+  },
   "modes": {
     "agent_create": {
       "audience": "newcomer working through a local agent",
@@ -112,6 +142,8 @@
     "agents": "https://sunofriend.com/for-agents/",
     "llms": "https://sunofriend.com/llms.txt",
     "demo": "https://sunofriend.com/demo/",
+    "stems": "https://sunofriend.com/stems/",
+    "glossary": "https://sunofriend.com/glossary/",
     "getting_started": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/GETTING_STARTED.md"
   }
 }

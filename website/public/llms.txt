@@ -10,6 +10,8 @@ Sunofriend is an independent Unsigned Media Ltd project. Its name begins with th
 - Raw SKILL.md: https://raw.githubusercontent.com/N9-Developer-Empowerment/sunofriend/main/skills/sunofriend/SKILL.md
 - Generated interface contract: https://raw.githubusercontent.com/N9-Developer-Empowerment/sunofriend/main/skills/sunofriend/references/interface-contract.md
 - Human/agent integration guide: https://sunofriend.com/for-agents/
+- Plain-language stems and provider guide: https://sunofriend.com/stems/
+- Shared music terminology: https://sunofriend.com/glossary/
 - Structured capability document: https://sunofriend.com/agent-capabilities.json
 - Repository: https://github.com/N9-Developer-Empowerment/sunofriend
 - Beginner guide: https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/GETTING_STARTED.md
@@ -28,11 +30,26 @@ Sunofriend is an independent Unsigned Media Ltd project. Its name begins with th
 ## Inputs
 
 - One local folder containing top-level WAV stems for one song.
+- A stem is a synchronized grouped submix, not necessarily one instrument. A drums stem can contain kick, snare, hats, toms, cymbals and percussion.
+- An AI-separated stem is an estimate of a musical category, not the lost original studio track.
 - Key, BPM and tuning in the folder name are strongly preferred.
 - Optional local chord PDF.
 - Music the user owns or is authorised to process.
 
 Sunofriend does not separate a mixed song, download streaming audio or infer processing permission from a public URL.
+
+### Narrow one-asset source import
+
+- `sunofriend source-doctor` checks the existing local FFmpeg and FFprobe import toolchain without writing files.
+- `sunofriend source-import SOURCE --out-dir FRESH --plan` probes one authorised supported local audio asset and prints the exact read-only plan.
+- After the plan is reviewed, the same command without `--plan` preserves an immutable copy of the original and creates a canonical PCM24 WAV, receipt and source-project manifest in a fresh folder.
+- This is preparation of one asset, not a song-project importer. It does not align a folder, separate a finished mix, transcribe MIDI, or make a non-WAV project directly usable by create, Simple or Studio.
+- Repeat the import deliberately for another asset only after checking its own plan. Do not claim cross-file alignment.
+
+The public provider guide uses neutral ordinary links. Sunofriend currently
+has no affiliate relationship with a listed provider and has not ranked one
+as best for downstream MIDI. Before suggesting a cloud service, ask whether
+the audio is unreleased, confidential or otherwise unsuitable for upload.
 
 ## Simple outputs
 

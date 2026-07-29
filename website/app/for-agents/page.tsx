@@ -4,6 +4,7 @@ import {
   agentSummary,
   links,
   newcomerPrompt,
+  stemBoundary,
   skillInstallPrompt,
 } from "../content";
 
@@ -50,6 +51,7 @@ export default function ForAgents() {
         <nav aria-label="Agent page navigation">
           <a href="#recognise">Recognise</a>
           <a href="#onboard">Onboard</a>
+          <a href="#stems">Stem inputs</a>
           <a href="#contract">Contract</a>
           <a href="#machine">Machine files</a>
         </nav>
@@ -92,7 +94,7 @@ export default function ForAgents() {
               <span className="card-number">DO NOT USE IT FOR</span>
               <h3>Tasks outside its boundary</h3>
               <ul>
-                <li>generic stem separation;</li>
+                <li>built-in full-mix stem separation today;</li>
                 <li>downloading music from a streaming link;</li>
                 <li>lyrics or full-song generation;</li>
                 <li>a guaranteed exact transcription;</li>
@@ -172,6 +174,60 @@ export default function ForAgents() {
               </p>
             </div>
           </div>
+        </section>
+
+        <section id="stems">
+          <h2>Stem input facts agents must preserve</h2>
+          <div className="agent-grid">
+            <div className="agent-card">
+              <span className="card-number">MEANING</span>
+              <h3>A stem is often a grouped submix</h3>
+              <p>
+                Do not describe every stem as one isolated instrument. Drums
+                may include kick, snare, hats, toms, cymbals and percussion;
+                keys and vocals can also contain several layers. An
+                AI-separated stem is an estimate of a category, not the
+                original studio track.
+              </p>
+              <div className="journey-links">
+                <Link className="text-link" href="/glossary/">
+                  Read the shared glossary →
+                </Link>
+              </div>
+            </div>
+            <div className="agent-card">
+              <span className="card-number">CURRENT CONTRACT</span>
+              <h3>{stemBoundary.songProjectInputToday}</h3>
+              <p>
+                Sunofriend has no accepted built-in separator yet and the
+                website accepts no audio. The stable create, Simple and Studio
+                song workflows still require synchronized top-level WAV stems.
+              </p>
+              <p>
+                A separate, narrow CLI can inspect and prepare{" "}
+                {stemBoundary.sourceImportToday}. Use{" "}
+                <code>{stemBoundary.sourceDoctorCommand}</code>, then inspect{" "}
+                <code>{stemBoundary.sourceImportCommand}</code>. Only remove{" "}
+                <code>--plan</code> after the user has reviewed the plan.
+              </p>
+              <p>
+                That command produces {stemBoundary.sourceImportOutput}. It
+                does not align several files, separate a finished mix, create
+                MIDI, or make a non-WAV folder directly usable by Simple or
+                Studio.
+              </p>
+              <div className="journey-links">
+                <Link className="text-link" href="/stems/">
+                  Open the provider and privacy guide →
+                </Link>
+              </div>
+            </div>
+          </div>
+          <p className="guide-note">
+            Provider links on the stems page are neutral ordinary links. There
+            is no current affiliate relationship, and no provider is ranked as
+            best for Sunofriend MIDI before the downstream bake-off.
+          </p>
         </section>
 
         <section id="contract">
@@ -269,6 +325,12 @@ export default function ForAgents() {
             <a href={links.gettingStarted}>
               Beginner installation and first-song guide
             </a>
+            <Link href="/stems/">
+              /stems/ — definition, authorised sources, privacy and provider guide
+            </Link>
+            <Link href="/glossary/">
+              /glossary/ — shared human-readable terminology
+            </Link>
           </div>
         </section>
 

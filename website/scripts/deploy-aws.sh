@@ -15,6 +15,30 @@ fi
 
 aws sts get-caller-identity >/dev/null
 
+build_and_validate_static_site() {
+  local site_url="$1"
+  cd "$SITE_ROOT"
+  NEXT_PUBLIC_SITE_URL="$site_url" npm run build:aws
+  if [[ ! -s "$SITE_ROOT/out/404.html" ]]; then
+    echo "Static build did not create out/404.html; refusing to update CloudFront." >&2
+    exit 1
+  fi
+  if ! grep -q "This page is silent" "$SITE_ROOT/out/404.html"; then
+    echo "Static 404 output did not contain the expected branded page." >&2
+    exit 1
+  fi
+}
+
+PREBUILD_SITE_URL="${NEXT_PUBLIC_SITE_URL:-}"
+if [[ -z "$PREBUILD_SITE_URL" && -n "$DOMAIN_NAME" ]]; then
+  PREBUILD_SITE_URL="https://$DOMAIN_NAME"
+fi
+PREBUILD_SITE_URL="${PREBUILD_SITE_URL:-https://sunofriend.com}"
+
+# Build and verify the page used by CustomErrorResponses before changing that
+# mapping. A broken export therefore cannot point CloudFront at a missing file.
+build_and_validate_static_site "$PREBUILD_SITE_URL"
+
 CFN_ARGS=(
   --template-file "$SITE_ROOT/infra/site.yaml"
   --stack-name "$STACK_NAME"
@@ -59,8 +83,11 @@ SITE_URL="$(
     --output text
 )"
 
-cd "$SITE_ROOT"
-NEXT_PUBLIC_SITE_URL="$SITE_URL" npm run build:aws
+if [[ "$SITE_URL" != "$PREBUILD_SITE_URL" ]]; then
+  # A first deployment without a custom domain learns its CloudFront URL only
+  # after stack creation. Rebuild metadata for that final URL and revalidate.
+  build_and_validate_static_site "$SITE_URL"
+fi
 
 aws s3 sync "$SITE_ROOT/out/" "s3://$SITE_BUCKET/" \
   --region "$SITE_AWS_REGION" \

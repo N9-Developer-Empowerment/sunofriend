@@ -42,6 +42,17 @@ async function loadCleanRouteHandler() {
   return handler;
 }
 
+function cloudFrontErrorBlock(template, errorCode) {
+  const match = template.match(
+    new RegExp(
+      `^ {10}- ErrorCode: ${errorCode}\\n(?<settings>(?: {12}.+(?:\\n|$))+)`,
+      "m",
+    ),
+  );
+  assert.ok(match, `CloudFront ${errorCode} error response was not found`);
+  return match[0];
+}
+
 test("rewrites clean website routes to their static index files", async () => {
   const handler = await loadCleanRouteHandler();
   const rewrite = (uri) => handler({ request: { uri } }).uri;
@@ -51,6 +62,10 @@ test("rewrites clean website routes to their static index files", async () => {
   assert.equal(rewrite("/demo/"), "/demo/index.html");
   assert.equal(rewrite("/for-agents"), "/for-agents/index.html");
   assert.equal(rewrite("/for-agents/"), "/for-agents/index.html");
+  assert.equal(rewrite("/stems"), "/stems/index.html");
+  assert.equal(rewrite("/stems/"), "/stems/index.html");
+  assert.equal(rewrite("/glossary"), "/glossary/index.html");
+  assert.equal(rewrite("/glossary/"), "/glossary/index.html");
   assert.equal(rewrite("/llms.txt"), "/llms.txt");
   assert.equal(
     rewrite("/_next/static/chunks/app.js"),
@@ -80,6 +95,8 @@ test("server-renders an approachable skill-first musician page", async () => {
   assert.match(html, /restart Codex once/);
   assert.match(html, /I HAVE STEMS/);
   assert.match(html, /I NEED STEMS/);
+  assert.match(html, /What stems are and where to get them/);
+  assert.match(html, /Open the glossary/);
   assert.match(html, /I WANT THE DEMO/);
   assert.match(html, /Codex with local workspace access/);
   assert.match(html, /normal ChatGPT conversation/);
@@ -114,7 +131,62 @@ test("publishes a canonical developer and agent integration page", async () => {
   assert.match(html, /\/llms\.txt/);
   assert.match(html, /\/agent-capabilities\.json/);
   assert.match(html, /raw\.githubusercontent\.com/);
+  assert.match(html, /sunofriend source-doctor/);
+  assert.match(html, /sunofriend source-import SOURCE --out-dir FRESH --plan/);
+  assert.match(html, /does not align several files/);
+  assert.match(html, /does not .*create\s+MIDI/s);
   assert.match(html, /not related to or affiliated/);
+});
+
+test("explains stems, neutral providers, privacy and the current boundary", async () => {
+  const response = await render("/stems/");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+
+  assert.match(html, /BEGINNER STEM GUIDE/);
+  assert.match(html, /A stem is <strong>not necessarily one instrument/);
+  assert.match(
+    html,
+    /Bring separate WAV stems\. Convert one source file when needed\./,
+  );
+  assert.match(html, /sunofriend source-doctor/);
+  assert.match(html, /sunofriend source-import SOURCE --out-dir FRESH --plan/);
+  assert.match(html, /does not separate, align or transcribe it/);
+  assert.match(html, /not yet a folder importer/);
+  assert.match(html, /does not yet separate one finished song into stems/);
+  assert.match(html, /Neutral provider starting points/);
+  assert.match(html, /No current affiliate links/);
+  assert.match(html, /receives no commission/);
+  assert.match(html, /Cloud \+ local option/);
+  assert.match(html, /Check before you process/);
+  assert.match(html, /Is the song unreleased, confidential/);
+  assert.match(html, /What to bring back/);
+  assert.match(html, /Open the demo guide/);
+  assert.match(html, /Start with the skill/);
+  assert.match(
+    html,
+    /aria-label="Moises official site \(opens in a new tab\)"/,
+  );
+  assert.match(html, />Moises(?:<!-- -->)? official site ↗<\/a>/);
+  assert.doesNotMatch(html, /rel="sponsored"/);
+});
+
+test("publishes shared plain-language stem and MIDI terminology", async () => {
+  const response = await render("/glossary/");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+
+  assert.match(html, /PLAIN-LANGUAGE MUSIC GLOSSARY/);
+  assert.match(html, /Finished mix/);
+  assert.match(html, /Multitracks/);
+  assert.match(html, /AI-separated stem/);
+  assert.match(html, /Refined stem or sub-stem/);
+  assert.match(html, /Bleed or leakage/);
+  assert.match(html, /Residual or complement/);
+  assert.match(html, /MIDI/);
+  assert.match(html, /Instrument or sample bundle/);
+  assert.match(html, /A stem can contain many sounds/);
+  assert.match(html, /Where to get stems/);
 });
 
 test("publishes an executable copyright-safe synthetic demo", async () => {
@@ -136,6 +208,7 @@ test("publishes an executable copyright-safe synthetic demo", async () => {
   assert.match(html, /Out of Place/);
   assert.match(html, /The Aisle at Lidl MIDI pack/);
   assert.match(html, /sunofriend create PROJECT --out-dir FRESH/);
+  assert.match(html, /Learn how to get stems/);
   assert.doesNotMatch(html, /does not currently bundle redistributable raw WAV stems/);
 });
 
@@ -158,6 +231,17 @@ test("publishes concise llms.txt discovery guidance", async () => {
   assert.match(text, /sunofriend demo --out-dir FRESH/);
   assert.match(text, /copyright-safe synthetic stems/);
   assert.match(text, /not exact waveform reconstruction/);
+  assert.match(text, /A stem is a synchronized grouped submix/);
+  assert.match(text, /no affiliate relationship/);
+  assert.match(text, /sunofriend\.com\/stems/);
+  assert.match(text, /sunofriend\.com\/glossary/);
+  assert.match(text, /sunofriend source-doctor/);
+  assert.match(
+    text,
+    /sunofriend source-import SOURCE --out-dir FRESH --plan/,
+  );
+  assert.match(text, /not a song-project importer/);
+  assert.match(text, /Do not claim cross-file alignment/);
   assert.doesNotMatch(text, /No redistributable raw-stem conversion demo/);
 });
 
@@ -192,6 +276,35 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(data.modes.demo.uses_normal_automatic_pipeline, true);
   assert.equal(data.boundaries.stem_separation, false);
   assert.equal(data.boundaries.rights_required, true);
+  assert.equal(data.stem_inputs.built_in_full_mix_separation_available, false);
+  assert.equal(
+    data.stem_inputs.one_asset_multi_format_import_available,
+    true,
+  );
+  assert.equal(
+    data.stem_inputs.multi_format_song_project_import_available,
+    false,
+  );
+  assert.equal(
+    data.stem_inputs.multi_format_import_scope,
+    "one authorised supported local audio asset per source-import execution",
+  );
+  assert.equal(
+    data.stem_inputs.source_import_plan_command,
+    "sunofriend source-import SOURCE --out-dir FRESH --plan",
+  );
+  assert.equal(data.stem_inputs.source_import_creates_midi, false);
+  assert.equal(data.stem_inputs.source_import_separates_audio, false);
+  assert.equal(data.stem_inputs.folder_import_available, false);
+  assert.equal(data.stem_inputs.cross_file_alignment_available, false);
+  assert.equal(
+    data.stem_inputs.direct_non_wav_simple_or_studio_project_available,
+    false,
+  );
+  assert.equal(data.stem_inputs.provider_links_are_affiliate_links, false);
+  assert.equal(data.stem_inputs.cloud_privacy_check_required, true);
+  assert.equal(data.canonical_pages.stems, "https://sunofriend.com/stems/");
+  assert.equal(data.canonical_pages.glossary, "https://sunofriend.com/glossary/");
   assert.equal(data.newcomer_routes.length, 3);
   assert.match(data.newcomer_routes[0].action, /sunofriend create/);
   assert.equal(data.advanced_capabilities.length >= 6, true);
@@ -206,6 +319,8 @@ test("keeps public discovery and the AWS boundary explicit", async () => {
     deployScript,
     robots,
     sitemap,
+    missingPage,
+    awsMissingPage,
   ] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
@@ -214,10 +329,12 @@ test("keeps public discovery and the AWS boundary explicit", async () => {
     readFile(new URL("../scripts/deploy-aws.sh", import.meta.url), "utf8"),
     readFile(new URL("../public/robots.txt", import.meta.url), "utf8"),
     readFile(new URL("../public/sitemap.xml", import.meta.url), "utf8"),
+    readFile(new URL("../app/not-found.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../out/404.html", import.meta.url), "utf8"),
   ]);
 
   assert.match(page, /This website never/);
-  assert.match(page, /does not separate/);
+  assert.match(page, /does not (?:yet )?separate/);
   assert.match(page, /not waveform reconstruction/);
   assert.match(page, /SoftwareApplication/);
   assert.match(layout, /publisher: "Unsigned Media Ltd"/);
@@ -226,6 +343,8 @@ test("keeps public discovery and the AWS boundary explicit", async () => {
   assert.match(robots, /Allow: \//);
   assert.match(robots, /sunofriend\.com\/sitemap\.xml/);
   assert.match(sitemap, /sunofriend\.com\/for-agents/);
+  assert.match(sitemap, /sunofriend\.com\/stems/);
+  assert.match(sitemap, /sunofriend\.com\/glossary/);
   assert.match(sitemap, /sunofriend\.com\/llms\.txt/);
   assert.match(domainTemplate, /RootValidationRecordName/);
   assert.match(domainTemplate, /AlternateValidationRecordName/);
@@ -241,7 +360,26 @@ test("keeps public discovery and the AWS boundary explicit", async () => {
   assert.match(template, /BlockPublicAcls: true/);
   assert.match(template, /SSEAlgorithm: AES256/);
   assert.match(template, /AlternateDomainName/);
+  const forbiddenResponse = cloudFrontErrorBlock(template, 403);
+  const missingResponse = cloudFrontErrorBlock(template, 404);
+  assert.match(forbiddenResponse, /ResponseCode: 404/);
+  assert.match(forbiddenResponse, /ResponsePagePath: \/404\.html/);
+  assert.doesNotMatch(forbiddenResponse, /ErrorCode: 404/);
+  assert.match(missingResponse, /ResponseCode: 404/);
+  assert.match(missingResponse, /ResponsePagePath: \/404\.html/);
+  assert.doesNotMatch(missingResponse, /ErrorCode: 403/);
+  assert.match(missingPage, /This page is silent/);
+  assert.match(missingPage, /href="\/stems\/"/);
+  assert.match(awsMissingPage, /This page is silent/);
+  assert.match(awsMissingPage, /SUNOFRIEND \/ 404/);
+  assert.match(awsMissingPage, /class="not-found-page"/);
   assert.match(domainTemplate, /AWS::Route53::HostedZone/);
   assert.match(deployScript, /NEXT_PUBLIC_SITE_URL/);
+  assert.match(deployScript, /out\/404\.html/);
+  assert.ok(
+    deployScript.indexOf("npm run build:aws") <
+      deployScript.indexOf("aws cloudformation deploy"),
+    "the static 404 must be built before CloudFormation enables its mapping",
+  );
   assert.match(deployScript, /cloudfront create-invalidation/);
 });
