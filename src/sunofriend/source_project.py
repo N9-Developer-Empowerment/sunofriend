@@ -10,11 +10,13 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Mapping, Sequence
 
+from .audio_formats import file_sha256
 from .metadata import infer_project_metadata
 from .source_receipt import canonical_json_bytes, document_sha256
 
 
 SOURCE_PROJECT_SCHEMA = "sunofriend.source-project.v1"
+SOURCE_PROJECT_RELATIVE_PATH = PurePosixPath("INPUT/source-project.json")
 RIGHTS_CATEGORIES = frozenset(
     {
         "owned",
@@ -120,6 +122,15 @@ class SourceProject:
         }
         project_id = f"sha256:{document_sha256(seed)}"
         return {**seed, "project_id": project_id}
+
+
+@dataclass(frozen=True)
+class PreparedProjectContext:
+    """Strict, path-verified metadata declared by a prepared source project."""
+
+    manifest_path: Path
+    metadata: SourceMetadata
+    chord_document: Path | None
 
 
 def resolve_source_metadata(
@@ -319,6 +330,149 @@ def load_source_project(path: str | Path) -> dict[str, Any]:
     return dict(document)
 
 
+def load_prepared_project_context(
+    project_root: str | Path,
+) -> PreparedProjectContext | None:
+    """Load authoritative prepared-project metadata, or return ``None``.
+
+    The absence of ``INPUT/source-project.json`` deliberately means that
+    callers should retain their legacy filename/folder inference unchanged.
+    Once that reserved manifest path exists, however, its schema and metadata
+    are authoritative, and declared chord path/size/hash problems fail closed.
+    This lightweight context lookup does not attest source audio; immutable
+    source/canonical evidence remains the responsibility of import receipts.
+    """
+
+    root = Path(project_root).expanduser().absolute()
+    manifest = root.joinpath(*SOURCE_PROJECT_RELATIVE_PATH.parts)
+    if manifest.is_symlink():
+        raise ValueError("source-project manifest must not be a symbolic link")
+    if not manifest.exists():
+        return None
+    if not manifest.is_file():
+        raise ValueError("source-project manifest must be a regular file")
+    _reject_relative_symlinks(
+        root,
+        SOURCE_PROJECT_RELATIVE_PATH,
+        label="source-project manifest",
+    )
+
+    document = load_source_project(manifest)
+    metadata_value = document["metadata"]
+    if not isinstance(metadata_value, Mapping):
+        # Kept explicit even though schema validation already enforces this:
+        # this function is the boundary where prepared metadata becomes
+        # authoritative application state.
+        raise ValueError("source-project metadata must be an object")
+    missing_metadata = {
+        field
+        for field in ("key", "bpm", "tuning_hz")
+        if field not in metadata_value
+    }
+    if missing_metadata:
+        raise ValueError(
+            "source-project metadata is missing required field(s): "
+            + ", ".join(sorted(missing_metadata))
+        )
+    metadata = SourceMetadata(
+        key=_strict_optional_key(metadata_value.get("key")),
+        bpm=_strict_optional_positive_number(
+            metadata_value.get("bpm"),
+            label="source-project metadata.bpm",
+        ),
+        tuning_hz=_strict_optional_positive_number(
+            metadata_value.get("tuning_hz"),
+            label="source-project metadata.tuning_hz",
+        ),
+    )
+
+    if "chord_document" not in document:
+        raise ValueError("source-project chord_document field is missing")
+    chord_value = document["chord_document"]
+    chord_document = (
+        _resolve_declared_chord_document(root, chord_value)
+        if chord_value is not None
+        else None
+    )
+    return PreparedProjectContext(
+        manifest_path=manifest.resolve(),
+        metadata=metadata,
+        chord_document=chord_document,
+    )
+
+
+def _strict_optional_key(value: Any) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(
+            "source-project metadata.key must be a non-empty string or null"
+        )
+    return value
+
+
+def _strict_optional_positive_number(value: Any, *, label: str) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{label} must be a finite positive number or null")
+    number = float(value)
+    if not math.isfinite(number) or number <= 0:
+        raise ValueError(f"{label} must be a finite positive number or null")
+    return number
+
+
+def _resolve_declared_chord_document(
+    root: Path,
+    value: Any,
+) -> Path:
+    if not isinstance(value, Mapping):
+        raise ValueError("chord_document must be an object or null")
+    name = value.get("name")
+    if not isinstance(name, str) or not name.strip():
+        raise ValueError("chord_document.name must be a non-empty string")
+    relative = _safe_relative_path(value.get("path"), "chord_document.path")
+    _reject_relative_symlinks(root, relative, label="chord document")
+    path = root.joinpath(*relative.parts)
+    resolved_root = root.resolve()
+    resolved = path.resolve()
+    try:
+        resolved.relative_to(resolved_root)
+    except ValueError as exc:
+        raise ValueError("chord document path escapes the project root") from exc
+    if not resolved.is_file() or resolved.is_symlink():
+        raise ValueError("declared chord document is missing or unsafe")
+    if resolved.suffix.casefold() not in {".pdf", ".txt"}:
+        raise ValueError("declared chord document must be PDF or plain text")
+
+    expected_bytes = value.get("bytes")
+    if (
+        isinstance(expected_bytes, bool)
+        or not isinstance(expected_bytes, int)
+        or expected_bytes < 0
+    ):
+        raise ValueError("chord_document.bytes must be a non-negative integer")
+    if resolved.stat().st_size != expected_bytes:
+        raise ValueError("declared chord document byte size does not match")
+    expected_sha256 = str(value.get("sha256") or "")
+    if file_sha256(resolved) != expected_sha256:
+        raise ValueError("declared chord document hash does not match")
+    return resolved
+
+
+def _reject_relative_symlinks(
+    root: Path,
+    relative: PurePosixPath,
+    *,
+    label: str,
+) -> None:
+    current = root
+    for part in relative.parts:
+        current /= part
+        if current.is_symlink():
+            raise ValueError(f"{label} path must not contain symbolic links")
+
+
 def _safe_relative_path(value: Any, label: str) -> PurePosixPath:
     path = PurePosixPath(str(value or ""))
     if not str(value or "") or path.is_absolute() or ".." in path.parts:
@@ -329,12 +483,15 @@ def _safe_relative_path(value: Any, label: str) -> PurePosixPath:
 __all__ = [
     "RIGHTS_CATEGORIES",
     "SOURCE_PROJECT_SCHEMA",
+    "SOURCE_PROJECT_RELATIVE_PATH",
+    "PreparedProjectContext",
     "SourceMetadata",
     "SourcePart",
     "SourceProject",
     "build_source_project",
     "discover_chord_document",
     "infer_source_role",
+    "load_prepared_project_context",
     "load_source_project",
     "normalize_source_role",
     "resolve_source_metadata",

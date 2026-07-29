@@ -17,6 +17,7 @@ from .product_contract import PRODUCT_SUMMARY
 from .source_project import RIGHTS_CATEGORIES
 
 _COMMANDS = PUBLIC_COMMANDS
+_MAXIMUM_SOURCE_FOLDER_ROLE_MAP_BYTES = 64 * 1024
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -653,6 +654,116 @@ def build_parser() -> argparse.ArgumentParser:
         "--plan",
         action="store_true",
         help="Inspect and print the exact read-only plan without creating output",
+    )
+
+    source_folder_import = sub.add_parser(
+        "source-import-folder",
+        help=(
+            "Prepare one authorised folder of synchronized audio parts as one "
+            "fresh canonical WAV stem project"
+        ),
+    )
+    source_folder_import.add_argument(
+        "source_folder",
+        help=(
+            "Folder containing 2–64 top-level authorised audio parts; "
+            "subfolders are not imported"
+        ),
+    )
+    source_folder_import.add_argument(
+        "--out-dir",
+        required=True,
+        help=(
+            "Fresh prepared-project directory outside the source; existing "
+            "paths are never replaced"
+        ),
+    )
+    source_folder_import.add_argument(
+        "--ffmpeg",
+        default=os.environ.get("SUNOFRIEND_FFMPEG", "ffmpeg"),
+        help=(
+            "Existing local FFmpeg executable "
+            "(default: SUNOFRIEND_FFMPEG or ffmpeg)"
+        ),
+    )
+    source_folder_import.add_argument(
+        "--ffprobe",
+        default=os.environ.get("SUNOFRIEND_FFPROBE", "ffprobe"),
+        help=(
+            "Existing local FFprobe executable "
+            "(default: SUNOFRIEND_FFPROBE or ffprobe)"
+        ),
+    )
+    source_folder_import.add_argument(
+        "--role-map",
+        default=None,
+        help=(
+            "Path to an optional JSON file containing an object that maps "
+            "exact top-level filenames to roles; required for ambiguous or "
+            "unclassified names"
+        ),
+    )
+    source_folder_import.add_argument(
+        "--key",
+        default=None,
+        help='Key override, e.g. "B minor"',
+    )
+    source_folder_import.add_argument(
+        "--bpm",
+        type=float,
+        default=None,
+        help="Tempo override",
+    )
+    source_folder_import.add_argument(
+        "--tuning-hz",
+        type=float,
+        default=None,
+        help="Concert-A tuning override, for example 440",
+    )
+    source_folder_import.add_argument(
+        "--chords",
+        default=None,
+        help="Optional explicit local chord PDF/text document",
+    )
+    source_folder_import.add_argument(
+        "--no-discover-chords",
+        action="store_true",
+        help="Do not look for one unambiguous adjacent chords document",
+    )
+    source_folder_import.add_argument(
+        "--rights-category",
+        choices=sorted(RIGHTS_CATEGORIES),
+        default="declined_to_state",
+        help=(
+            "User-declared processing basis; Sunofriend records but does not "
+            "verify it (default: declined_to_state)"
+        ),
+    )
+    source_folder_import.add_argument(
+        "--title",
+        default=None,
+        help="Prepared source-project title",
+    )
+    source_folder_import.add_argument(
+        "--accept-unconfirmed-origin",
+        action="store_true",
+        help=(
+            "Allow execution when origin evidence is missing; audio remains "
+            "at its recorded zero and is never shifted"
+        ),
+    )
+    source_folder_import.add_argument(
+        "--allow-conditional-format",
+        action="store_true",
+        help="Allow a probed AIFC, CAF or WMA combination outside the portable set",
+    )
+    source_folder_import.add_argument(
+        "--plan",
+        action="store_true",
+        help=(
+            "Inspect and print the exact read-only folder-preparation plan "
+            "without creating output"
+        ),
     )
 
     ai_doctor = sub.add_parser(
@@ -2533,6 +2644,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_source_doctor(args)
         if args.command == "source-import":
             return _run_source_import(args)
+        if args.command == "source-import-folder":
+            return _run_source_folder_import(args)
         if args.command == "ai-doctor":
             return _run_ai_doctor(args)
         if args.command == "ai-transcribe":
@@ -2736,12 +2849,18 @@ def _run_vocal_melody(args) -> int:
 
     from .beatgrid import Grid, grid_from_metronome
     from .metadata import infer_project_metadata
+    from .source_project import load_prepared_project_context
     from .vocal import VocalConfig, transcribe_vocal_melody
 
     stem = Path(args.stem)
     if not stem.is_file():
         raise ValueError(f"Vocal stem does not exist: {stem}")
-    metadata = infer_project_metadata(stem.parent)
+    prepared_context = load_prepared_project_context(stem.parent)
+    metadata = (
+        prepared_context.metadata
+        if prepared_context is not None
+        else infer_project_metadata(stem.parent)
+    )
     bpm = float(args.bpm if args.bpm is not None else (metadata.bpm or 0.0))
     if not bpm > 0:
         raise ValueError(
@@ -2752,7 +2871,11 @@ def _run_vocal_melody(args) -> int:
         tuning_source = "command-line"
     elif metadata.tuning_hz is not None:
         tuning_hz = float(metadata.tuning_hz)
-        tuning_source = "parent-folder"
+        tuning_source = (
+            "source-project"
+            if prepared_context is not None
+            else "parent-folder"
+        )
     else:
         tuning_hz = 440.0
         tuning_source = "default-a440"
@@ -2775,6 +2898,8 @@ def _run_vocal_melody(args) -> int:
     chords_pdf = (
         Path(args.chords_pdf)
         if args.chords_pdf
+        else prepared_context.chord_document
+        if prepared_context is not None
         else next(iter(sorted(stem.parent.glob("*chords*.pdf"))), None)
     )
     if chords_pdf is not None and not chords_pdf.is_file():
@@ -2902,12 +3027,18 @@ def _run_vocal_trackers(args) -> int:
     """Preserve raw trackers before opt-in consensus and boundary repair."""
 
     from .metadata import infer_project_metadata
+    from .source_project import load_prepared_project_context
     from .vocal_trackers import run_vocal_tracker_bakeoff
 
     stem = Path(args.stem)
     if not stem.is_file():
         raise ValueError(f"Vocal stem does not exist: {stem}")
-    metadata = infer_project_metadata(stem.parent)
+    prepared_context = load_prepared_project_context(stem.parent)
+    metadata = (
+        prepared_context.metadata
+        if prepared_context is not None
+        else infer_project_metadata(stem.parent)
+    )
     bpm = float(args.bpm if args.bpm is not None else (metadata.bpm or 0.0))
     if not bpm > 0:
         raise ValueError(
@@ -3838,6 +3969,151 @@ def _run_source_import(args) -> int:
         )
     )
     return 0
+
+
+def _run_source_folder_import(args) -> int:
+    from .source_folder_import import (
+        execute_source_folder_import,
+        plan_source_folder_import,
+    )
+
+    role_map = _load_source_folder_role_map(args.role_map)
+    plan = plan_source_folder_import(
+        args.source_folder,
+        args.out_dir,
+        ffmpeg=args.ffmpeg,
+        ffprobe=args.ffprobe,
+        role_map=role_map,
+        key=args.key,
+        bpm=args.bpm,
+        tuning_hz=args.tuning_hz,
+        chord_document=args.chords,
+        discover_chords=not args.no_discover_chords,
+        rights_category=args.rights_category,
+        title=args.title,
+        accept_unconfirmed_origin=args.accept_unconfirmed_origin,
+        allow_conditional_format=args.allow_conditional_format,
+    )
+    if args.plan:
+        print(json.dumps(plan.to_dict(), indent=2, sort_keys=True))
+        return 0
+    result = execute_source_folder_import(plan)
+    if len(plan.parts) != len(result.canonicals):
+        raise RuntimeError(
+            "source-folder result does not match its planned part count"
+        )
+    print(
+        json.dumps(
+            {
+                "schema": "sunofriend.source-folder-import-result.v1",
+                "status": "complete",
+                "scope": "one synchronized source-part folder",
+                "root": str(result.root),
+                "canonicals": [str(path) for path in result.canonicals],
+                "roles": [part.import_plan.role for part in plan.parts],
+                "parts": [
+                    {
+                        "role": part.import_plan.role,
+                        "canonical": str(canonical),
+                    }
+                    for part, canonical in zip(
+                        plan.parts,
+                        result.canonicals,
+                    )
+                ],
+                "originals": [str(path) for path in result.originals],
+                "receipts": [str(path) for path in result.receipts],
+                "aggregate_receipt": str(result.aggregate_receipt),
+                "source_project": str(result.source_project),
+                "chord_document": (
+                    str(result.chord_document)
+                    if result.chord_document is not None
+                    else None
+                ),
+                "source_ids": list(result.source_ids),
+                "source_count": len(result.source_ids),
+                "origin_status": result.origin_status,
+                "network_used": False,
+                "normalised": False,
+                "audio_normalised": False,
+                "alignment_corrected": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _load_source_folder_role_map(
+    value: str | None,
+) -> dict[str, str] | None:
+    if value is None:
+        return None
+    candidate = Path(value).expanduser()
+    if candidate.is_symlink():
+        raise ValueError("source-folder role map must not be a symlink")
+    try:
+        path = candidate.resolve(strict=True)
+    except FileNotFoundError as exc:
+        raise ValueError(
+            f"source-folder role map does not exist: {candidate}"
+        ) from exc
+    if not path.is_file():
+        raise ValueError(
+            f"source-folder role map must be a regular local file: {candidate}"
+        )
+    size = path.stat().st_size
+    if size > _MAXIMUM_SOURCE_FOLDER_ROLE_MAP_BYTES:
+        raise ValueError(
+            "source-folder role map exceeds the 65536-byte safety limit"
+        )
+    with path.open("rb") as handle:
+        payload = handle.read(_MAXIMUM_SOURCE_FOLDER_ROLE_MAP_BYTES + 1)
+    if len(payload) > _MAXIMUM_SOURCE_FOLDER_ROLE_MAP_BYTES:
+        raise ValueError(
+            "source-folder role map exceeds the 65536-byte safety limit"
+        )
+    if len(payload) != size:
+        raise ValueError("source-folder role map changed while it was read")
+    try:
+        text = payload.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError("source-folder role map must be UTF-8 JSON") from exc
+
+    def object_without_duplicate_keys(
+        pairs: list[tuple[str, object]],
+    ) -> dict[str, object]:
+        document: dict[str, object] = {}
+        for key, item in pairs:
+            if key in document:
+                raise ValueError(
+                    f"source-folder role map has duplicate key: {key!r}"
+                )
+            document[key] = item
+        return document
+
+    try:
+        document = json.loads(
+            text,
+            object_pairs_hook=object_without_duplicate_keys,
+        )
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"source-folder role map is not valid JSON: {exc.msg}"
+        ) from exc
+    if not isinstance(document, dict):
+        raise ValueError(
+            "source-folder role map must be a JSON object keyed by exact filename"
+        )
+    if not all(
+        isinstance(key, str) and isinstance(item, str)
+        for key, item in document.items()
+    ):
+        raise ValueError(
+            "source-folder role map keys and values must be strings"
+        )
+    return document
 
 
 def _run_ai_doctor(args) -> int:

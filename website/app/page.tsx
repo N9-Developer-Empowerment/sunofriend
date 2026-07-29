@@ -39,7 +39,7 @@ const softwareJsonLd = {
     name: "Unsigned Media Ltd",
   },
   featureList: [
-    "Authorised WAV stems to editable MIDI",
+    "Authorised separated audio parts to canonical WAV stems and editable MIDI",
     "Balanced MIDI-derived song-interpretation WAV",
     "Starter ZIP for a DAW handoff",
     "Simple automatic mode",
@@ -211,16 +211,17 @@ export default function Home() {
         <div className="journey-grid">
           <article id="have-stems" className="journey-card journey-primary">
             <span className="card-number">A / I HAVE STEMS</span>
-            <h3>I already have separate WAV files.</h3>
+            <h3>I already have separate audio files.</h3>
             <p>
-              Give Codex the folder location. It will check that the files sit
-              together, confirm or ask you for the song key and BPM, and prepare
-              a fresh output folder.
+              Give Codex the folder location. It will check the files and,
+              when needed, prepare supported WAV, AIFF, FLAC, M4A, MP3 or Ogg
+              parts as one canonical WAV project before making a fresh result.
             </p>
             <ul>
               <li>Best when you already export separate parts</li>
               <li>Use music you own or can process</li>
-              <li>Codex uses the focused create command</li>
+              <li>Preparation never separates or repairs alignment</li>
+              <li>Codex then uses the focused create command</li>
             </ul>
             <a className="text-link" href="#codex">
               Copy the starter prompt ↑
@@ -352,8 +353,9 @@ export default function Home() {
             receives your stems. Processing currently happens on your Mac.
           </p>
           <p>
-            <strong>It is not a stem separator.</strong> Bring top-level WAV stems
-            from your own project or an authorised third-party service. See the{" "}
+            <strong>It is not a stem separator.</strong> Bring already-separated
+            parts from your own project or an authorised third-party service.
+            Sunofriend can prepare supported formats as canonical WAV stems. See the{" "}
             <Link className="inline-link" href="/stems/">
               neutral stems guide
             </Link>

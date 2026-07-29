@@ -441,6 +441,36 @@ def probe_audio(
     return probe
 
 
+def probe_stable_audio(
+    source: str | Path,
+    *,
+    ffprobe: str | Path,
+    limits: AudioImportLimits = DEFAULT_AUDIO_IMPORT_LIMITS,
+    allow_conditional: bool = False,
+) -> tuple[AudioProbe, str]:
+    """Probe one file only when the same bytes exist before and afterwards."""
+
+    source_path = validate_local_source_path(source, limits=limits)
+    hash_before = file_sha256(source_path)
+    probe = probe_audio(
+        source_path,
+        ffprobe=ffprobe,
+        limits=limits,
+        allow_conditional=allow_conditional,
+    )
+    hash_after = file_sha256(source_path)
+    if hash_after != hash_before:
+        raise ValueError(
+            f"source audio changed while it was being probed: {source_path.name}"
+        )
+    if probe.source != source_path or probe.source_bytes != source_path.stat().st_size:
+        raise ValueError(
+            f"source audio identity changed while it was being probed: "
+            f"{source_path.name}"
+        )
+    return probe, hash_after
+
+
 def validate_local_source_path(
     source: str | Path,
     *,
@@ -824,6 +854,7 @@ __all__ = [
     "decoder_capability_report",
     "file_sha256",
     "probe_audio",
+    "probe_stable_audio",
     "resolve_executable",
     "validate_local_source_path",
 ]

@@ -298,7 +298,7 @@ def _load_theory_context(
     import soundfile
 
     from .beatgrid import Grid, grid_from_metronome
-    from .chords import extract_chords_from_moises_pdf, make_chord_segments
+    from .chords import extract_chords, make_chord_segments
     from .harmony import align_chords_to_audio
 
     duration = soundfile.info(stem_path).duration
@@ -319,7 +319,7 @@ def _load_theory_context(
     cached = _THEORY_CONTEXT_CACHE.get(cache_key)
     if cached is not None:
         return cached
-    chart = extract_chords_from_moises_pdf(chords_pdf)
+    chart = extract_chords(chords_pdf)
     grid = (
         grid_from_metronome(str(metronome), nominal_bpm=bpm)
         if metronome

@@ -13,6 +13,7 @@ import soundfile
 
 from sunofriend.cli import _find_exact_stem, main
 from sunofriend.models import NoteEvent
+from sunofriend.source_project import PreparedProjectContext, SourceMetadata
 from sunofriend.vocal import (
     PitchFrame,
     VocalConfig,
@@ -615,6 +616,55 @@ class VocalCliTests(unittest.TestCase):
                 summary["correction"]["html"],
                 str(output / "melody_correction.html"),
             )
+
+    def test_prepared_project_manifest_supplies_vocal_context(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / "arbitrary-prepared-name"
+            folder.mkdir()
+            stem = folder / "project-vocals-01-canonical.wav"
+            stem.touch()
+            chord = folder / "INPUT/context/declared-chords.pdf"
+            chord.parent.mkdir(parents=True)
+            chord.write_bytes(b"declared")
+            context = PreparedProjectContext(
+                manifest_path=folder / "INPUT/source-project.json",
+                metadata=SourceMetadata("F minor", 127.0, 442.0),
+                chord_document=chord,
+            )
+            output = Path(tmp) / "out"
+
+            with patch(
+                "sunofriend.source_project.load_prepared_project_context",
+                return_value=context,
+            ), patch(
+                "sunofriend.vocal.transcribe_vocal_melody",
+                return_value=_lead_result(442.0),
+            ) as transcribe, redirect_stdout(StringIO()):
+                status = main(
+                    [
+                        "vocal-melody",
+                        str(stem),
+                        "--role",
+                        "lead",
+                        "--out-dir",
+                        str(output),
+                    ]
+                )
+
+            self.assertEqual(status, 0)
+            config = transcribe.call_args.kwargs["config"]
+            self.assertEqual(config.bpm, 127.0)
+            self.assertEqual(config.tuning_hz, 442.0)
+            self.assertEqual(config.tuning_source, "source-project")
+            analysis = json.loads((output / "vocal_analysis.json").read_text())
+            self.assertEqual(
+                analysis["diagnostics"]["chords_pdf"],
+                str(chord),
+            )
+            corrections = json.loads(
+                (output / "melody_corrections.json").read_text()
+            )
+            self.assertEqual(corrections["key"], "F minor")
 
     def test_no_evidence_is_a_successful_explicit_result_without_midi(self):
         with tempfile.TemporaryDirectory() as tmp:

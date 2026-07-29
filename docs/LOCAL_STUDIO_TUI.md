@@ -3,9 +3,10 @@
 Status: default Simple automatic MIDI + balanced-WAV bundle implemented;
 Studio orientation, full-project conversion, Workbench bridge and native
 Listening Master operation implemented; wider guided operations, durable job
-recovery and broader feedback remain planned; one-asset Source Import S1 is
-available separately in the CLI but is not yet a TUI project loader
-Interface contract: `2026-07-29.2`
+recovery and broader feedback remain planned; Source Import S1 folder
+preparation is available separately in the CLI.
+
+Interface contract: `2026-07-29.3`
 
 The Guided Local Studio is the preferred human entry point to Sunofriend. It
 puts a clear terminal dashboard in front of the deterministic CLI and provides
@@ -53,21 +54,24 @@ The expert routes remain supported:
 - use `sunofriend workbench` directly when a project is already prepared; or
 - use `sunofriend tui` for the guided human workflow.
 
-The TUI source field still means a folder of synchronized top-level WAV stems.
-It does not accept a finished MP3/FLAC/M4A as a song project and it does not
-run stem separation. To preserve and prepare exactly one authorised local
-audio asset first, use:
+The TUI source field still means a prepared folder of synchronized top-level
+WAV stems. It never imports files or runs stem separation as a side effect of
+loading. If you already have 2–64 separated parts as supported WAV, AIFF,
+FLAC, MP3, M4A or Ogg audio, prepare them first with:
 
 ```bash
 sunofriend source-doctor
-sunofriend source-import SOURCE --out-dir FRESH_OUTPUT --plan
-sunofriend source-import SOURCE --out-dir FRESH_OUTPUT
+sunofriend source-import-folder SOURCE_FOLDER --out-dir FRESH_OUTPUT --plan
+sunofriend source-import-folder SOURCE_FOLDER --out-dir FRESH_OUTPUT
+sunofriend tui FRESH_OUTPUT
 ```
 
-The first two commands are read-only. The final command executes by default
-and writes immutable original/canonical evidence plus `INPUT/` receipts. It
-does not prepare a complete TUI project or replace the synchronized-WAV
-requirement.
+The doctor and plan are read-only. Folder import writes immutable originals,
+per-source and aggregate receipts, one source-project manifest and canonical
+top-level WAV stems. It does not split a finished song, shift, pad, stretch,
+normalize or align files. A raw mixed-format folder is rejected with guidance
+rather than imported automatically. `source-import` remains available when
+you need to preserve one standalone asset rather than make a full TUI project.
 
 ## Start the Guided Local Studio
 

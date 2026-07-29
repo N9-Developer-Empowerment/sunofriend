@@ -9,7 +9,7 @@ import {
 export const metadata: Metadata = {
   title: "What music stems are and where to get them",
   description:
-    "A plain-language Sunofriend guide to music stems, authorised sources, local and cloud separation, privacy, one-file import and the current WAV project boundary.",
+    "A plain-language Sunofriend guide to music stems, authorised sources, local and cloud separation, privacy, folder import and the current WAV project boundary.",
   alternates: {
     canonical: "/stems/",
   },
@@ -65,20 +65,19 @@ export default function Stems() {
         <section className="status-panel" aria-labelledby="today-title">
           <span className="card-number">WHAT WORKS TODAY</span>
           <h2 id="today-title">
-            Bring separate WAV stems. Convert one source file when needed.
+            Bring separate audio parts. Prepare supported formats locally.
           </h2>
           <p>
             The complete MIDI, listening-WAV, Simple and Studio workflows still
-            accept {stemBoundary.songProjectInputToday}. The narrow local CLI
-            can now inspect and preserve {stemBoundary.sourceImportToday}, then
-            make {stemBoundary.sourceImportOutput}. It does not yet align a
-            folder of files or send a non-WAV project straight into MIDI
-            conversion.
+            accept {stemBoundary.songProjectInputToday}. The local folder
+            importer can prepare {stemBoundary.sourceFolderImportToday} as one
+            project containing {stemBoundary.sourceFolderImportOutput}.
           </p>
           <p>
             Sunofriend does not yet separate one finished song into stems, and
-            the public website does not receive audio. The planned next work is{" "}
-            {stemBoundary.nextPlannedInputWork}.
+            the public website does not receive audio. Folder preparation does
+            not shift, pad, stretch, normalize or align parts, and it does not
+            prove the musical downbeat.
           </p>
           <div className="prompt-stack">
             <div className="prompt-box">
@@ -94,21 +93,27 @@ export default function Stems() {
             </div>
             <div className="prompt-box">
               <div className="prompt-top">
-                <span>INSPECT ONE FILE WITHOUT WRITING</span>
+                <span>PLAN A FOLDER WITHOUT WRITING</span>
               </div>
               <textarea
-                aria-label="Read-only one-file source import plan command"
+                aria-label="Read-only source folder import plan command"
                 readOnly
-                value={stemBoundary.sourceImportCommand}
-                rows={2}
+                value={stemBoundary.sourceFolderImportCommand}
+                rows={3}
               />
             </div>
           </div>
           <p className="guide-note">
             Remove <code>--plan</code> only after checking the read-only plan.
-            The command accepts one supported, authorised local audio asset and
-            a fresh output folder. It preserves and canonicalises that asset; it
-            does not separate, align or transcribe it.
+            Execution replans the current files rather than replaying a stored
+            plan, so plan again after any input, role-map or option change.
+            Missing recorded-origin evidence requires the explicit{" "}
+            <code>--accept-unconfirmed-origin</code> acknowledgement; that is
+            not proof that the parts are aligned.
+          </p>
+          <p className="guide-note">
+            For one standalone asset, <code>{stemBoundary.sourceImportCommand}</code>{" "}
+            remains available. It does not make a complete song project.
           </p>
         </section>
 
@@ -249,18 +254,25 @@ export default function Stems() {
           <div className="agent-grid">
             <article className="agent-card">
               <span className="card-number">FOR SUNOFRIEND TODAY</span>
-              <h3>A folder of synchronized WAV stems</h3>
+              <h3>A folder of synchronized separated parts</h3>
               <ul>
                 <li>one song per folder;</li>
-                <li>every file starts and ends together;</li>
-                <li>clear names such as bass.wav and drums.wav;</li>
+                <li>2–64 top-level files intended to share a recorded start;</li>
+                <li>WAV, AIFF, FLAC, M4A, MP3 or Ogg;</li>
+                <li>clear names such as bass.flac and kick.wav;</li>
                 <li>the song key and BPM if you know them.</li>
               </ul>
               <p>
-                If one part arrives in another supported audio format, use the
-                bounded <code>source-import</code> CLI first. Repeat it
-                deliberately for each asset and check alignment yourself; it is
-                not yet a folder importer.
+                Use <code>source-import-folder --plan</code>, review its roles
+                and origin evidence, then explicitly execute into a fresh
+                project. It preserves a broad <code>drums</code> part for later
+                composite handling.
+              </p>
+              <p>
+                Do not map an observed part to <code>pads</code>: production
+                currently synthesizes pads from keys. A genuinely string-like
+                sustained part may be <code>strings</code>; otherwise leave it
+                unresolved instead of mislabelling it.
               </p>
             </article>
             <article className="agent-card">

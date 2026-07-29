@@ -35,6 +35,7 @@ except ImportError as exc:  # pragma: no cover - installation guard
 
 from . import __version__
 from .diagnostics import collect_diagnostics
+from .project_audio_inputs import prepared_project_input_problem
 from .tui_listening_master_contract import LISTENING_MASTER_PROGRESS_TOTAL
 from .tui_model import (
     TuiProjectConfig,
@@ -130,6 +131,10 @@ class SunofriendTui(App[None]):
         width: 18;
         padding: 1 1 0 0;
         color: #9fb3c8;
+    }
+
+    #project-path-label {
+        width: 46;
     }
 
     .field-row {
@@ -497,10 +502,14 @@ class SunofriendTui(App[None]):
             )
         with Vertical(id="project-controls"):
             with Horizontal(classes="field-row"):
-                yield Label("Stem project", classes="field-label")
+                yield Label(
+                    "Stem folder (top-level lower-case .wav files)",
+                    id="project-path-label",
+                    classes="field-label",
+                )
                 yield Input(
                     value=self.initial_project,
-                    placeholder="/path/to/song-key-bpm-tuning",
+                    placeholder="/path/to/fresh-prepared-stems",
                     id="project-path",
                     classes="field-input",
                 )
@@ -1603,8 +1612,9 @@ class SunofriendTui(App[None]):
         project = Path(raw_project).expanduser().resolve()
         if not project.is_dir():
             return "The stem project folder does not exist."
-        if not any(project.glob("*.wav")):
-            return "The stem project folder contains no top-level WAV stems."
+        input_problem = prepared_project_input_problem(project)
+        if input_problem is not None:
+            return input_problem
         if require_loaded and (
             self.snapshot is None or self.snapshot.config.project != project
         ):
@@ -1909,6 +1919,11 @@ class SunofriendTui(App[None]):
             return "Choose and load a source-stem project first."
         if Path(raw_project).expanduser().resolve() != self.snapshot.config.project:
             return "The project path changed. Load it before starting conversion."
+        input_problem = prepared_project_input_problem(
+            self.snapshot.config.project
+        )
+        if input_problem is not None:
+            return input_problem
         output_value = self.query_one("#conversion-output", Input).value.strip()
         if not output_value:
             return "Choose a fresh, separate conversion output folder."

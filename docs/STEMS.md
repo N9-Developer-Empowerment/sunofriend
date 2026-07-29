@@ -1,9 +1,10 @@
 # Stems: what they are and where to get them
 
-Sunofriend's Simple and Studio journeys currently start with a folder of
-separated WAV files. This guide explains what those files are, how to obtain
-them legitimately, and why a file called `drums` or `keys` may still contain
-several sounds.
+Sunofriend's Simple and Studio journeys start with a prepared folder of
+separated, synchronized WAV files. Existing separated parts in several common
+audio formats can now be preserved and converted into that prepared project.
+This guide explains what those files are, how to obtain them legitimately,
+and why a file called `drums` or `keys` may still contain several sounds.
 
 Only process music you made or have permission or another lawful basis to use.
 The more formal term **authorised audio** is used elsewhere in the project for
@@ -32,15 +33,20 @@ artefacts are normal.
 
 ## What Sunofriend can do today
 
-> **Today, Simple and Studio need separate, synchronized, top-level WAV
-> files.** Sunofriend cannot yet turn one finished song into stems.
+> **Today, Sunofriend can prepare an existing folder of separated audio
+> parts. It still cannot turn one finished song into stems.**
 
-The initial Source Import tool can preserve and decode exactly one authorised
-local PCM WAV/AIFF, FLAC, MP3, AAC/ALAC M4A or Vorbis/Opus Ogg asset into a
-canonical PCM24 WAV with receipts. It does not orchestrate a folder, prove
-cross-file alignment, feed the TUI automatically or perform separation. See
-[Prepare one local audio asset](GETTING_STARTED.md#prepare-one-local-audio-asset).
-Local full-mix separation remains research, not a product feature.
+`source-import-folder` accepts 2–64 top-level, already-separated PCM
+WAV/AIFF, FLAC, MP3, AAC/ALAC M4A or Vorbis/Opus Ogg assets and prepares one
+canonical PCM24 WAV project with receipts. It checks available recorded-origin
+evidence, rejects concrete conflicts and warns about different endings. It
+does not shift, pad, stretch or normalize audio, prove a downbeat, or repair
+alignment. See
+[Prepare a folder of existing audio parts](GETTING_STARTED.md#prepare-a-folder-of-existing-audio-parts).
+
+The narrower `source-import` command remains useful for preserving exactly one
+standalone authorised asset. Local full-mix separation remains research, not
+a product feature.
 
 ## Which route should I choose?
 
@@ -196,17 +202,16 @@ results.
 
 After exporting or separating a song:
 
-1. Download WAV files when that option is available.
+1. Prefer lossless WAV, AIFF or FLAC files when that option is available.
 2. Make every file start at the same point and end at the same point.
 3. Use recognisable names such as `bass.wav`, `drums.wav` and `vocals.wav`.
 4. Put the files together in one folder.
 5. Continue with [Getting started](GETTING_STARTED.md).
 
-FLAC is also lossless, but the current production converter still requires
-WAV. The separate one-asset importer can create a canonical PCM24 WAV and
-receipt from FLAC or supported lossy formats; it does not make a complete
-Simple/Studio project. Turning an MP3 into WAV changes its representation, not
-its sound quality.
+Simple and Studio still consume WAV. The folder importer can prepare supported
+lossless or lossy parts as one complete canonical WAV project first. Turning
+an MP3 into WAV changes its representation, not its sound quality, and does
+not restore discarded information.
 
 ## Rights and privacy checklist
 
@@ -266,11 +271,18 @@ strings, effects and separation artefacts together.
 
 ### Can Sunofriend use MP3 today?
 
-The `source-import` command can prepare exactly one local MP3 as canonical
-PCM24 WAV evidence. The Simple and Studio converters still expect a complete
-folder of synchronized top-level WAV stems, and Sunofriend does not yet
-orchestrate several imports into that folder. Decoding an MP3 does not restore
-discarded information.
+Yes, when the MP3 is one already-separated part. `source-import-folder` can
+prepare 2–64 supported parts as one canonical WAV project for Simple or
+Studio. It does not split a finished MP3 into stems, repair alignment or
+restore information discarded by lossy compression.
+
+### Can I label a pad as `pads`?
+
+Not in the current folder-import contract. Production currently synthesizes
+pads from keys and has no observed-pads conversion job. A genuinely
+string-like sustained part may be mapped to `strings`; otherwise leave it
+unresolved rather than mislabelling it. A broad `drums` part is preserved but
+its direct composite conversion is planned for the next source-input stage.
 
 ### Can I publish AI-separated stems?
 

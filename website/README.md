@@ -41,11 +41,12 @@ to carry every technical detail:
 Provider links are currently neutral ordinary links. There is no current
 affiliate relationship, no provider is ranked as best for downstream MIDI, and
 the site keeps the current product boundary explicit: synchronized top-level
-WAV stems remain the input to complete song conversion. The narrow local
-`source-doctor` and `source-import` CLI can inspect, preserve and canonicalise
-one supported authorised audio asset at a time to PCM24 WAV. It does not align
-a folder, separate a mix, create MIDI, or send a non-WAV project directly into
-Simple or Studio.
+WAV stems remain the input to complete song conversion. The local
+`source-import-folder` CLI can inspect and prepare 2–64 already-separated
+supported audio parts as one fresh canonical WAV project for Create, Simple or
+Studio. It compares available recorded-origin evidence but does not separate,
+shift, pad, stretch, normalize or align audio, prove a downbeat or create MIDI.
+The narrower `source-import` command preserves one standalone asset.
 
 The agent pages explicitly distinguish Codex with local workspace access from a
 standard ChatGPT conversation. They do not claim that a normal web chat can run

@@ -40,15 +40,21 @@ starts Workbench; `tui --no-developer-inspector` keeps it absent. See the
 ## Current execution flow
 
 ```text
-one authorised local audio asset
+authorised local audio
+        |
+        +--> one asset: source-import --plan / source-import
+        |
+        +--> 2–64 already-separated parts:
+        |       source-import-folder --plan
+        |       source-import-folder
+        |         --> immutable originals + per-source receipts
+        |         --> aggregate receipt + source-project manifest
+        |         --> canonical top-level PCM24 WAV stems
         |
         +--> source-doctor (read-only existing FFmpeg/FFprobe evidence)
-        +--> source-import --plan (read-only exact import plan)
-        +--> source-import (fresh, atomic INPUT/original + canonical + receipts)
         |
-        |    preparation stops here in S1
         v
-stem folder / MIDI
+prepared stem folder / existing MIDI
         |
         v
 Guided Local Studio (`tui.py`, `simple_create.py`, `tui_model.py`,
@@ -125,20 +131,26 @@ CLI/application services (`cli.py`)
 automatic unreviewed starter result OR reviewed Studio result + provenance
 ```
 
-The initial Source Import S1 boundary is intentionally separate from the
-production flow below it. `audio_formats.py` validates one local
-container-plus-codec combination and the exact existing FFmpeg/FFprobe
-toolchain. `source_import.py` plans or atomically executes one fresh import.
-`source_receipt.py` pins the unchanged original and canonical PCM24 WAV;
-`source_project.py` preserves role, filename, key, BPM, tuning, chord and
-user-declared rights context.
+Source Access S1 is intentionally separate from transcription.
+`audio_formats.py` validates supported local container-plus-codec
+combinations and the exact existing FFmpeg/FFprobe toolchain.
+`source_import.py` plans or atomically executes one fresh import;
+`source_folder_import.py` composes 2–64 already-separated top-level parts,
+checks role and available recorded-origin evidence, and publishes one fresh
+project atomically. `source_receipt.py` pins unchanged originals and canonical
+PCM24 WAV files. `source_project.py` preserves role, filename, key, BPM,
+tuning, chord and user-declared rights context.
 
-`source-import --plan` is explicitly read-only. Without `--plan`, it executes
-by default, with file-only decoder protocols, no normalization, no network and
-no dependency installation. This slice does not orchestrate a folder, compare
-several source clocks, separate a full mix or make prepared `INPUT/` evidence
-loadable by Simple or Studio. Those journeys still discover synchronized
-top-level WAV stems through the legacy production contract.
+Both import commands have an explicitly read-only `--plan` form. Execution
+uses file-only decoder protocols with no normalization, network access or
+dependency installation. Folder import does not recurse, separate a full mix,
+shift, pad, stretch or musically align files. `project_audio_inputs.py`
+centralises the preflight that prevents an unprepared mixed-format folder from
+being mistaken for a valid project. A successfully prepared folder exposes
+canonical top-level WAV stems, so Create, TUI and Workbench retain their
+existing production discovery and candidate identities. Prepared-project
+metadata and an optional chord document are read from the manifest before
+falling back to legacy filename inference.
 
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a

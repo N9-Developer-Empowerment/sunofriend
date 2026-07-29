@@ -16,6 +16,7 @@ from pathlib import Path
 from .metadata import infer_project_metadata
 from .midi import MidiTrack, write_midi_file
 from .models import NoteEvent
+from .source_project import load_prepared_project_context
 
 DRUM_PARTS = ["kick", "snare", "hat", "cymbals", "toms", "other_kit"]
 CONSERVATIVE_ROLE_ENGINES = {
@@ -87,13 +88,22 @@ def run_listen_all(
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    metadata = infer_project_metadata(folder)
+    prepared_context = load_prepared_project_context(folder)
+    metadata = (
+        prepared_context.metadata
+        if prepared_context is not None
+        else infer_project_metadata(folder)
+    )
     bpm = bpm or metadata.bpm
     if bpm is None:
         raise ValueError("BPM not provided and not inferable from folder name")
     key = key or metadata.key
 
-    chords_pdf = next(iter(sorted(folder.glob("*chords*.pdf"))), None)
+    chords_pdf = (
+        prepared_context.chord_document
+        if prepared_context is not None
+        else next(iter(sorted(folder.glob("*chords*.pdf"))), None)
+    )
     metronome = _find_stem(folder, "metronome")
     keys_stem = _find_stem(folder, "keys")
 
@@ -108,6 +118,8 @@ def run_listen_all(
         "conversion_mode": conversion_mode,
         "parts": {},
     }
+    if prepared_context is not None:
+        summary["tuning_hz"] = metadata.tuning_hz
     if library is not None:
         from .library import ClipLibrary
 

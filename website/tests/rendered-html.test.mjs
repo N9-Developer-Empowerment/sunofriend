@@ -132,8 +132,13 @@ test("publishes a canonical developer and agent integration page", async () => {
   assert.match(html, /\/agent-capabilities\.json/);
   assert.match(html, /raw\.githubusercontent\.com/);
   assert.match(html, /sunofriend source-doctor/);
-  assert.match(html, /sunofriend source-import SOURCE --out-dir FRESH --plan/);
-  assert.match(html, /does not align several files/);
+  assert.match(
+    html,
+    /sunofriend source-import-folder SOURCE_FOLDER --out-dir FRESH/,
+  );
+  assert.match(html, /Execution replans current inputs/);
+  assert.match(html, /accept-unconfirmed-origin/);
+  assert.match(html, /does not shift, pad/);
   assert.match(html, /does not .*create\s+MIDI/s);
   assert.match(html, /not related to or affiliated/);
 });
@@ -145,14 +150,16 @@ test("explains stems, neutral providers, privacy and the current boundary", asyn
 
   assert.match(html, /BEGINNER STEM GUIDE/);
   assert.match(html, /A stem is <strong>not necessarily one instrument/);
+  assert.match(html, /Bring separate audio parts/);
+  assert.match(html, /sunofriend source-doctor/);
   assert.match(
     html,
-    /Bring separate WAV stems\. Convert one source file when needed\./,
+    /sunofriend source-import-folder SOURCE_FOLDER --out-dir FRESH/,
   );
-  assert.match(html, /sunofriend source-doctor/);
-  assert.match(html, /sunofriend source-import SOURCE --out-dir FRESH --plan/);
-  assert.match(html, /does not separate, align or transcribe it/);
-  assert.match(html, /not yet a folder importer/);
+  assert.match(html, /does not shift, pad, stretch, normalize or align/);
+  assert.match(html, /replans the current files/);
+  assert.match(html, /accept-unconfirmed-origin/);
+  assert.match(html, /Do not map an observed part to/);
   assert.match(html, /does not yet separate one finished song into stems/);
   assert.match(html, /Neutral provider starting points/);
   assert.match(html, /No current affiliate links/);
@@ -240,8 +247,13 @@ test("publishes concise llms.txt discovery guidance", async () => {
     text,
     /sunofriend source-import SOURCE --out-dir FRESH --plan/,
   );
+  assert.match(
+    text,
+    /sunofriend source-import-folder SOURCE_FOLDER --out-dir FRESH/,
+  );
   assert.match(text, /not a song-project importer/);
-  assert.match(text, /Do not claim cross-file alignment/);
+  assert.match(text, /does not prove alignment/);
+  assert.match(text, /Composite `drums` is preserved pending S2/);
   assert.doesNotMatch(text, /No redistributable raw-stem conversion demo/);
 });
 
@@ -283,11 +295,11 @@ test("publishes a versioned machine-readable capability contract", async () => {
   );
   assert.equal(
     data.stem_inputs.multi_format_song_project_import_available,
-    false,
+    true,
   );
   assert.equal(
     data.stem_inputs.multi_format_import_scope,
-    "one authorised supported local audio asset per source-import execution",
+    "2–64 already-separated synchronized top-level supported audio parts per source-import-folder execution",
   );
   assert.equal(
     data.stem_inputs.source_import_plan_command,
@@ -295,8 +307,32 @@ test("publishes a versioned machine-readable capability contract", async () => {
   );
   assert.equal(data.stem_inputs.source_import_creates_midi, false);
   assert.equal(data.stem_inputs.source_import_separates_audio, false);
-  assert.equal(data.stem_inputs.folder_import_available, false);
+  assert.equal(data.stem_inputs.folder_import_available, true);
+  assert.match(
+    data.stem_inputs.source_folder_import_plan_command,
+    /source-import-folder/,
+  );
+  assert.equal(data.stem_inputs.source_folder_import_replans_on_execute, true);
+  assert.equal(data.stem_inputs.source_folder_import_replays_saved_plan, false);
+  assert.equal(data.stem_inputs.source_folder_import_minimum_parts, 2);
+  assert.equal(data.stem_inputs.source_folder_import_maximum_parts, 64);
+  assert.equal(data.stem_inputs.source_folder_import_recurses, false);
+  assert.equal(data.stem_inputs.source_folder_import_separates_audio, false);
+  assert.equal(
+    data.stem_inputs.cross_file_origin_comparison_available,
+    true,
+  );
+  assert.equal(
+    data.stem_inputs.unconfirmed_origin_requires_explicit_acknowledgement,
+    true,
+  );
   assert.equal(data.stem_inputs.cross_file_alignment_available, false);
+  assert.equal(
+    data.stem_inputs.prepared_folder_directly_usable_by_create_and_tui,
+    true,
+  );
+  assert.equal(data.stem_inputs.observed_pads_role_available, false);
+  assert.equal(data.stem_inputs.composite_drums_conversion_available, false);
   assert.equal(
     data.stem_inputs.direct_non_wav_simple_or_studio_project_available,
     false,

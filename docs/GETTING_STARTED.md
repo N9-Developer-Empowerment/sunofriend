@@ -1,16 +1,16 @@
 # Getting started
 
-This guide is the detailed manual route for a musician who has separated WAV
-stems and wants editable MIDI plus a clean listening version of the song.
-Simple and Studio still require synchronized top-level WAV stems. A separate
-expert command can now prepare exactly one authorised local audio asset from a
-common format, but it does not yet prepare a whole stem folder or separate a
-finished mix.
+This guide is the detailed manual route for a musician who has separated
+audio parts and wants editable MIDI plus a clean listening version of the
+song. Simple and Studio consume synchronized top-level WAV stems. If your
+existing separated parts are WAV, AIFF, FLAC, M4A, MP3 or Ogg, the folder
+importer can first preserve and prepare them as that canonical WAV project.
+It does not separate a finished mix or repair musical alignment.
 
 If “stem” is unfamiliar, or you need legitimate ways to obtain examples, read
 [Stems: what they are and where to get them](STEMS.md) first. Sunofriend does
-not yet separate a finished mix itself. The implemented one-asset import
-boundary and the researched local-separation programme are documented in
+not yet separate a finished mix itself. The implemented source-import
+boundaries and the researched local-separation programme are documented in
 [Stem access and separation research](STEM_ACCESS_AND_SEPARATION_RESEARCH.md).
 
 Sunofriend is currently an alpha macOS application presented in the terminal.
@@ -31,7 +31,8 @@ You need:
 
 - a Mac;
 - [Homebrew](https://brew.sh/) for this manual route;
-- a folder containing one song's separated WAV stems, or the built-in demo;
+- a folder containing one song's separated, synchronized audio parts, or the
+  built-in demo;
 - the song's key and BPM, preferably in the folder name; and
 - permission to process the music.
 
@@ -159,7 +160,103 @@ padding, and the canonical WAV is capped to the declared source duration.
 
 This command does **not** split a finished song, align several files, import a
 folder, or launch conversion. The current Simple and Studio journeys below
-still need separate synchronized WAV stems directly inside one folder.
+still need a prepared folder of separate synchronized WAV stems. Use the
+folder importer below when you already have several separated parts.
+
+## Prepare a folder of existing audio parts
+
+`source-import-folder` prepares 2–64 already-separated, synchronized,
+top-level audio files as one canonical WAV project. It supports the same
+portable formats as the one-file importer. It does **not** separate a finished
+mix, shift or pad files, stretch time, normalize audio, repair alignment, or
+claim that recorded zero is the musical downbeat.
+
+Check the existing local decoder first, then inspect a read-only plan:
+
+```bash
+.venv/bin/sunofriend source-doctor
+.venv/bin/sunofriend source-import-folder \
+  "/absolute/path/to/My Song source parts" \
+  --out-dir "/absolute/path/to/fresh-prepared-project" \
+  --rights-category authorised_private_use \
+  --key "B minor" \
+  --bpm 113 \
+  --tuning-hz 440 \
+  --plan
+```
+
+The plan reports inferred roles, source clocks, duration warnings and every
+intended output without writing anything. If any input, role map or option
+changes, run the plan again. Removing `--plan` replans the current inputs and
+then executes; it does not replay a stored plan:
+
+```bash
+.venv/bin/sunofriend source-import-folder \
+  "/absolute/path/to/My Song source parts" \
+  --out-dir "/absolute/path/to/fresh-prepared-project" \
+  --rights-category authorised_private_use \
+  --key "B minor" \
+  --bpm 113 \
+  --tuning-hz 440
+```
+
+The source folder must contain 2–64 supported regular audio files directly at
+its top level. Subfolders and symbolic links are not followed. The output must
+be fresh. Sunofriend publishes it as one atomic, no-replace operation:
+
+```text
+fresh-prepared-project/
+├── <safe-name>-<role>-canonical.wav
+└── INPUT/
+    ├── original/<byte-identical source copies with safe local names>
+    ├── receipts/<one receipt per source>.source-import.json
+    ├── source-folder-import.json
+    ├── source-project.json
+    └── context/<optional copied PDF or text file>
+```
+
+Role inference is deliberately conservative. If a filename is ambiguous,
+provide a flat JSON role map keyed by exact filename:
+
+```json
+{
+  "My Song low synth.flac": "bass",
+  "My Song handclaps.m4a": "other_kit"
+}
+```
+
+Then add `--role-map "/absolute/path/to/roles.json"` to both plan and
+execution. Supported observed roles are `backing_vocals`, `bass`, `cymbals`,
+`drums`, `hat`, `keys`, `kick`, `lead`, `other`, `other_kit`, `piano`,
+`rhythm`, `snare`, `strings`, `synth`, `toms`, `vocals` and `wind`. Only
+`vocals` and `backing_vocals` may repeat. `hats` is normalized to `hat`, guitars to
+`rhythm`, and percussion to `other_kit`.
+
+`pads` is deliberately not an accepted observed role yet: production
+currently synthesizes pads from keys and has no observed-pads conversion job.
+Map a genuinely string-like sustained part to `strings`; otherwise keep the
+role unresolved rather than mislabelling it. A composite `drums` part is
+preserved as evidence, but direct composite-drum conversion remains planned
+for Source Separation S2. A metronome is timing evidence rather than an S1
+source role, so keep it outside the folder being imported.
+
+Sunofriend compares recorded start times when the containers expose them.
+Compatible origins are evidence only. If any origin is missing, the plan is
+`unconfirmed` and execution requires the explicit
+`--accept-unconfirmed-origin` acknowledgement. A concrete origin conflict
+blocks execution. Different end times are reported as warnings rather than
+silently padded or trimmed.
+
+Once preparation succeeds, use the fresh project directly with `create` or
+the TUI:
+
+```bash
+.venv/bin/sunofriend create \
+  "/absolute/path/to/fresh-prepared-project" \
+  --out-dir "/absolute/path/to/fresh-song-output"
+
+.venv/bin/sunofriend tui "/absolute/path/to/fresh-prepared-project"
+```
 
 ## Try the built-in demo
 

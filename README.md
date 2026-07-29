@@ -76,10 +76,12 @@ Plans and export features change, so ask the agent to check the provider's
 current official help before you subscribe. Sunofriend does not download
 songs, separate a full mix itself or grant permission to process music.
 
-Have one authorised MP3, FLAC, M4A, AIFF, Ogg or WAV asset? The expert
-`source-import` command prepares one local file with an audit receipt. It does
-not separate it or make a whole project; Simple and Studio still need
-synchronized WAV stems. See [source import](docs/GETTING_STARTED.md#prepare-one-local-audio-asset).
+Already have separate, synchronized parts as MP3, FLAC, M4A, AIFF, Ogg or
+WAV? The local `source-import-folder` command can check and prepare 2–64 files
+as one canonical WAV stem project before Simple or Studio runs. It does not
+separate a finished mix, repair alignment or prove the musical downbeat.
+The narrower `source-import` command still prepares one standalone asset.
+See [source preparation](docs/GETTING_STARTED.md#prepare-a-folder-of-existing-audio-parts).
 
 ## What you receive
 
@@ -132,6 +134,7 @@ and explore its compact [worked MIDI pack](examples/the-aisle-at-lidl/).
 | --- | --- |
 | Let an agent guide my first session | [AI-assisted first song](docs/AI_ASSISTED_START.md) |
 | Understand or obtain stems | [Stems and provider guide](docs/STEMS.md) |
+| Prepare a folder of existing separated parts | [Folder source import](docs/GETTING_STARTED.md#prepare-a-folder-of-existing-audio-parts) |
 | Prepare one local audio file safely | [Source import](docs/GETTING_STARTED.md#prepare-one-local-audio-asset) |
 | Install or troubleshoot manually | [Getting started](docs/GETTING_STARTED.md) |
 | Understand Simple and Studio | [Product modes](docs/PRODUCT_MODES_AND_HOSTING.md) |

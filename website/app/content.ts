@@ -185,20 +185,29 @@ export const glossaryEntries: readonly GlossaryEntry[] = [
 export const stemBoundary = {
   songProjectInputToday: "synchronised, top-level WAV stems",
   sourceImportToday: "one authorised local audio asset at a time",
+  sourceFolderImportToday:
+    "2–64 already-separated, synchronized top-level audio parts",
   sourceImportOutput:
     "an immutable original copy, canonical PCM24 WAV, receipt and source-project manifest",
+  sourceFolderImportOutput:
+    "immutable originals, canonical top-level PCM24 WAV stems, per-source and aggregate receipts, and one source-project manifest",
   sourceDoctorCommand: "sunofriend source-doctor",
   sourceImportCommand:
     "sunofriend source-import SOURCE --out-dir FRESH --plan",
   sourceImportExecCommand:
     "sunofriend source-import SOURCE --out-dir FRESH",
+  sourceFolderImportCommand:
+    "sunofriend source-import-folder SOURCE_FOLDER --out-dir FRESH --rights-category CATEGORY --plan",
+  sourceFolderImportExecCommand:
+    "sunofriend source-import-folder SOURCE_FOLDER --out-dir FRESH --rights-category CATEGORY",
   builtInSeparationToday: false,
   websiteUploadToday: false,
-  folderImportToday: false,
+  folderImportToday: true,
+  crossFileOriginComparisonToday: true,
   crossFileAlignmentToday: false,
   directNonWavProjectToday: false,
   nextPlannedInputWork:
-    "folder-level import and alignment followed by a measured local-separation bake-off",
+    "composite-role handling followed by a measured local-separation bake-off",
 } as const;
 
 export const skillInstallPrompt = `Use $skill-installer to install the official Sunofriend skill from:
@@ -209,7 +218,7 @@ Do not install the Sunofriend app or any audio dependencies yet. Tell me when th
 export const newcomerPrompt = `Use $sunofriend to help me try Sunofriend on this Mac.
 
 Use the installed skill, not a generic audio workflow. Start by inspecting what is already available and explain what you would need to change. If setup is needed, ask before preparing the source, show me the exact prepared commit, then ask again before installing that reviewed commit. Then offer me three routes:
-1. use my existing authorised WAV stems;
+1. use my existing authorised separated audio parts, preparing supported formats locally when needed;
 2. help me obtain or export authorised stems (Sunofriend itself does not separate audio);
 3. run the built-in copyright-safe demo in a fresh folder, then show me what it made.
 
@@ -227,4 +236,4 @@ Choose a fresh output folder with me. Do not install optional AI models just for
 If you cannot access local files or run commands, do not pretend that you can. Give me manual guidance or tell me to continue in Codex with local workspace access.`;
 
 export const agentSummary =
-  "Sunofriend is a local-first macOS alpha that turns authorised top-level WAV stems into editable MIDI, a balanced MIDI-derived song-interpretation WAV and a starter ZIP. Its focused agent create command and TUI Simple mode make an automatic, explicitly unreviewed first result. Studio preserves multiple analytical and AI candidates for explicit listening and choice.";
+  "Sunofriend is a local-first macOS alpha that prepares authorised folders of already-separated supported audio parts, then turns canonical top-level WAV stems into editable MIDI, a balanced MIDI-derived song-interpretation WAV and a starter ZIP. It does not separate a finished mix. Its focused agent create command and TUI Simple mode make an automatic, explicitly unreviewed first result. Studio preserves multiple analytical and AI candidates for explicit listening and choice.";

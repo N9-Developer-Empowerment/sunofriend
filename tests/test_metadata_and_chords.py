@@ -4,7 +4,9 @@ from pathlib import Path
 
 from sunofriend.chords import (
     choose_voicing,
+    extract_chords,
     extract_chords_from_moises_pdf,
+    extract_chords_from_text,
     make_chord_segments,
     parse_chord_name,
     parse_key,
@@ -13,6 +15,42 @@ from sunofriend.metadata import infer_project_metadata
 
 
 class MetadataAndChordTests(unittest.TestCase):
+    def test_plain_text_chord_chart_uses_chord_only_rows(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "song_chords.txt"
+            path.write_text(
+                "\n".join(
+                    (
+                        "# Simple chart",
+                        "Key: A minor",
+                        "Am | F | C | G",
+                        "This lyric line must not become harmony",
+                        "Dm, Am, E7, Am",
+                    )
+                ),
+                encoding="utf-8",
+            )
+
+            chart = extract_chords(path)
+
+            self.assertEqual(chart.key, "A minor")
+            self.assertEqual(
+                chart.chords,
+                ["Am", "F", "C", "G", "Dm", "Am", "E7", "Am"],
+            )
+            self.assertEqual(extract_chords_from_text(path), chart)
+
+    def test_chord_dispatch_rejects_unknown_document_format(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "song_chords.csv"
+            path.write_text("C,G,Am,F", encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                ValueError,
+                "expected PDF or plain text",
+            ):
+                extract_chords(path)
+
     def test_infer_metadata_from_moises_folder_name(self):
         meta = infer_project_metadata(
             Path("/tmp/Get This Party Start_reference_24bit_44hz_target-14-G major-150bpm-440hz")

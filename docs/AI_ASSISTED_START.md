@@ -55,11 +55,23 @@ so the first run is easier to understand.
 Give the agent the folder path. It should inventory the folder without changing
 it and confirm:
 
-- the WAV files are directly inside the folder;
+- the already-separated audio files are directly inside the folder;
 - the filenames contain useful role words such as `kick`, `bass`, `keys` or
   `vocals`;
 - the key and BPM are known; and
 - the output will be a new folder outside the source folder.
+
+If the parts are already synchronized but use supported MP3, FLAC, M4A, AIFF,
+Ogg or mixed formats, the agent should run `source-import-folder --plan` first
+and explain its role and clock findings. It must ask before executing the same
+options without `--plan`; execution replans the current inputs. Missing
+recorded-origin evidence requires the separate
+`--accept-unconfirmed-origin` acknowledgement; that option means “proceed
+without concrete origin evidence,” not “the files are proved aligned.”
+
+This folder preparation preserves originals and makes canonical WAV stems for
+Simple or Studio. It does not split a finished song, repair alignment,
+normalize audio or infer the downbeat.
 
 ### Get authorised stems
 
@@ -77,6 +89,9 @@ Common routes are:
 Use only material you own or are authorised to process. A subscription,
 download button or locally available file does not by itself settle music
 rights.
+
+A finished MP3 or WAV is one mix, not a folder of stems. The new folder
+importer is useful only after separate song parts already exist.
 
 ## 4. Review the setup plan
 

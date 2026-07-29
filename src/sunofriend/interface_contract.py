@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-07-29.2"
+INTERFACE_CONTRACT_VERSION = "2026-07-29.3"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -19,6 +19,7 @@ PUBLIC_COMMAND_GROUPS: dict[str, tuple[str, ...]] = {
         "doctor",
         "source-doctor",
         "source-import",
+        "source-import-folder",
         "ai-doctor",
         "garageband-info",
         "instrument-inventory",
@@ -147,13 +148,27 @@ def render_skill_interface_reference() -> str:
         "## Source preparation",
         "",
         "`sunofriend source-doctor` inspects an existing local FFmpeg/FFprobe",
-        "toolchain without writing files. `sunofriend source-import` can then",
-        "preserve and prepare exactly one authorised local audio asset as",
-        "deterministic PCM24 WAV evidence in a fresh output. It does not",
-        "download anything, separate a finished mix, prepare an aligned folder",
-        "of stems or make that asset a complete Simple/Studio project. Direct",
-        "Simple and Studio conversion still starts from synchronized top-level",
-        "WAV stems.",
+        "toolchain without writing files.",
+        "",
+        "`sunofriend source-import` preserves exactly one authorised local",
+        "audio asset as immutable original evidence plus canonical PCM24 WAV.",
+        "It does not create stems or make a complete Simple/Studio project.",
+        "",
+        "`sunofriend source-import-folder` prepares 2–64 already-separated,",
+        "synchronized top-level audio parts as one fresh canonical WAV stem",
+        "project. Plan mode is read-only. Execution never separates, shifts,",
+        "pads, stretches, normalizes or musically aligns audio. Compatible",
+        "recorded origins are evidence, not proof of a downbeat or musical",
+        "alignment.",
+        "",
+        "`sunofriend create` and TUI Simple/Studio consume a prepared project",
+        "of synchronized top-level WAV stems to make MIDI, a MIDI-derived",
+        "song-interpretation WAV and a GarageBand handoff. Preparing a folder",
+        "and converting it are separate actions.",
+        "",
+        "Future source separation will estimate stems from one finished mix.",
+        "That workflow is not implemented. No source-preparation command",
+        "downloads music or installs a decoder or model.",
         "",
         "## Product outputs",
         "",

@@ -40,6 +40,21 @@ CHORD_TOKEN_RE = re.compile(
 )
 
 
+def extract_chords(path: str | Path) -> ChordChart:
+    """Read a supported PDF or conservative plain-text chord chart."""
+
+    source = Path(path)
+    suffix = source.suffix.casefold()
+    if suffix == ".pdf":
+        return extract_chords_from_moises_pdf(source)
+    if suffix == ".txt":
+        return extract_chords_from_text(source)
+    raise ValueError(
+        f"Unsupported chord document format {source.suffix!r}; "
+        "expected PDF or plain text"
+    )
+
+
 def extract_chords_from_moises_pdf(path: str | Path) -> ChordChart:
     data = Path(path).read_bytes()
     strings = [_decode_pdf_literal(match.group(1)) for match in re.finditer(rb"\((.*?)\)\s*Tj", data, re.S)]
@@ -62,6 +77,40 @@ def extract_chords_from_moises_pdf(path: str | Path) -> ChordChart:
 
     if not chords:
         raise ValueError(f"No chord names found in {path}")
+    return ChordChart(key=key, chords=chords)
+
+
+def extract_chords_from_text(path: str | Path) -> ChordChart:
+    """Parse optional ``Key:`` metadata and chord-only UTF-8 rows."""
+
+    source = Path(path)
+    try:
+        text = source.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError(
+            f"Plain-text chord document is not UTF-8: {source}"
+        ) from exc
+
+    key: str | None = None
+    chords: list[str] = []
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith(("#", ";")):
+            continue
+        if line.casefold().startswith("key:"):
+            value = line.split(":", 1)[1].strip()
+            key = value or None
+            continue
+        tokens = [
+            _normalize_chord_token(token)
+            for token in re.split(r"[\s|,]+", line)
+            if token
+        ]
+        if tokens and all(_looks_like_chord(token) for token in tokens):
+            chords.extend(tokens)
+
+    if not chords:
+        raise ValueError(f"No chord names found in {source}")
     return ChordChart(key=key, chords=chords)
 
 

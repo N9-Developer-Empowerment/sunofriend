@@ -1,9 +1,9 @@
 ---
 name: sunofriend
-description: Guide beginners and experts through local Sunofriend setup and use. Prepare one authorised local audio asset as immutable original evidence plus canonical PCM24 WAV, or turn authorised synchronized WAV stems into editable MIDI plus a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not perform generic stem separation, music downloading, lyric writing, DAW GUI editing, human-approved release mastering or unapproved dependency/model installation.
+description: Guide beginners and experts through local Sunofriend setup and use. Prepare one authorised audio asset or a folder of 2–64 already-separated supported audio parts as immutable evidence plus canonical PCM24 WAV, then turn synchronized stems into editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not perform generic stem separation, music downloading, lyric writing, DAW GUI editing, human-approved release mastering or unapproved dependency/model installation.
 ---
 
-<!-- sunofriend-interface-contract: 2026-07-29.2 -->
+<!-- sunofriend-interface-contract: 2026-07-29.3 -->
 
 # Sunofriend
 
@@ -45,8 +45,10 @@ report the result, then move on.
   or feedback.
 - Use only music the user owns or is authorised to process.
 - Sunofriend does not download songs or separate a full mix into stems.
-- `source-import` decodes exactly one local asset. It does not align or prepare
-  a folder of stems and it does not make a complete Simple/Studio project.
+- `source-import` decodes exactly one local asset.
+- `source-import-folder` prepares 2–64 existing separated parts as one
+  canonical WAV project. It does not separate, shift, pad, stretch, normalize
+  or align audio, prove a downbeat, or run when the TUI merely loads a folder.
 - The WAV contains rendered MIDI. Source stems provide timing, horizon and
   relative-level evidence but their audio is not mixed into the WAV.
 - Call the WAV a **MIDI-derived song interpretation**, not an exact
@@ -123,10 +125,11 @@ checkout, replace a mismatched SoundFont, or install optional AI checkpoints.
 If Homebrew is missing, explain the official Homebrew prerequisite and ask
 before helping with that separate system change.
 
-FFmpeg and FFprobe are optional prerequisites for `source-import`. Never
-install or upgrade them merely because an import was requested. Run the
-read-only `source-doctor` first; if either executable is missing, explain the
-separate setup change and request approval before performing it.
+FFmpeg and FFprobe are optional prerequisites for `source-import` and
+`source-import-folder`. Never install or upgrade them merely because an import
+was requested. Run the read-only `source-doctor` first; if either executable
+is missing, explain the separate setup change and request approval before
+performing it.
 
 The current alpha preparation resolves the public `main` branch once. Tell the
 user that a tagged end-user release is not available yet. The helper then
@@ -181,35 +184,65 @@ the demo proves the workflow, not transcription accuracy on every real song.
 
 ## Route B: stems the user already has
 
-If the user supplies one non-WAV audio asset, distinguish preparation from
-conversion. Read `source-doctor --help` and `source-import --help`, then run:
-
-```bash
-SUNOFRIEND source-doctor
-SUNOFRIEND source-import "/absolute/path/to/bass.flac" \
-  --out-dir "/absolute/path/to/fresh-bass-import" \
-  --plan
-```
-
-Both actions are read-only. Explain the exact fresh output and require the
-user's authority before executing the same `source-import` command without
-`--plan`. Execution preserves the original bytes and hash, makes no network
-request, writes a non-normalized canonical PCM24 WAV and records its decoder,
-clock and musical context. It handles exactly one asset. Do not silently loop
-over a mixed-format folder or describe separate imports as an aligned stem
-project.
-
-Complete Simple/Studio conversion still starts from synchronized top-level
-WAV stems.
-
 Inventory the source folder read-only. Confirm:
 
-- top-level `.wav` files exist;
+- 2–64 already-separated top-level audio files exist;
 - the key and BPM are known or parseable from the folder name;
 - useful role words are present, such as `kick`, `snare`, `hat`, `bass`,
   `keys`, `strings`, `lead`, `vocals` or `backing vocals`;
 - any chord PDF or metronome is identified as optional evidence; and
 - the proposed output is fresh and outside the source.
+
+If it is already a compatible synchronized top-level WAV project, it can go
+directly to Create or TUI. Never re-import it merely to make the receipt.
+
+If several existing separated parts need preparation, read
+`source-doctor --help` and `source-import-folder --help`, then run:
+
+```bash
+SUNOFRIEND source-doctor
+SUNOFRIEND source-import-folder "/absolute/path/to/source-parts" \
+  --out-dir "/absolute/path/to/fresh-prepared-project" \
+  --rights-category authorised_private_use \
+  --plan
+```
+
+Doctor and plan are read-only. Explain the exact inferred roles, origin
+status, warnings and intended output. Require the user's authority before
+executing the same command without `--plan`. Execution replans current inputs;
+it does not replay a saved plan, so rerun `--plan` after any input, role-map
+or option change.
+
+Role inference is conservative. If required, create a flat JSON object whose
+keys are exact filenames and values are supported roles, then add
+`--role-map "/absolute/path/to/roles.json"` to both plan and execution. Do not
+guess through ambiguity. `hats` normalizes to `hat`, guitars to `rhythm`, and
+percussion to `other_kit`. Only `vocals` and `backing_vocals` may repeat.
+
+Do not use `pads`: production currently synthesizes pads from keys and has no
+observed-pads job. A genuinely string-like sustained part may be mapped to
+`strings`; otherwise leave it unresolved. Preserve composite `drums` as
+evidence and explain that direct composite-drum conversion is pending S2.
+Keep a metronome outside the S1 import folder because it is timing evidence,
+not an accepted observed source role.
+
+If the plan reports `unconfirmed` origin, explain that one or more containers
+lack concrete recorded-origin evidence. Never silently add
+`--accept-unconfirmed-origin`; ask for explicit acknowledgement and make clear
+that it does not prove alignment. A concrete origin conflict blocks execution.
+Different end times are warnings only and are never silently padded or
+trimmed.
+
+Execution preserves original bytes and hashes, makes no network request,
+writes non-normalized canonical PCM24 WAV stems plus per-source and aggregate
+receipts, and publishes one fresh project atomically. It does not recurse,
+separate a finished mix, shift, pad, stretch, normalize or align audio.
+Afterward, use the fresh prepared project as the Create/TUI source.
+
+If the user supplies exactly one standalone non-WAV asset rather than a stem
+project, read `source-import --help` and use its `--plan` then execute flow.
+It does not make a complete Simple/Studio project. Never loop the one-file
+command over a folder now that the bounded folder importer exists.
 
 For an agent-led automatic result, read `sunofriend create --help` and run:
 

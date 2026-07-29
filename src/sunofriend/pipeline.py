@@ -4,11 +4,12 @@ import json
 from pathlib import Path
 
 from .audio import analyze_stem_activity
-from .chords import extract_chords_from_moises_pdf, generate_pad_notes, make_chord_segments, write_chord_csv
+from .chords import extract_chords, generate_pad_notes, make_chord_segments, write_chord_csv
 from .generate import bass_notes_from_activity, drum_notes_from_analysis
 from .metadata import infer_project_metadata
 from .midi import MidiTrack, write_midi_file
 from .models import PipelineResult, StemAnalysis
+from .source_project import load_prepared_project_context
 
 
 def run_remake(
@@ -22,14 +23,26 @@ def run_remake(
     if not folder.is_dir():
         raise ValueError(f"Input folder does not exist: {folder}")
 
-    metadata = infer_project_metadata(folder)
+    prepared_context = load_prepared_project_context(folder)
+    metadata = (
+        prepared_context.metadata
+        if prepared_context is not None
+        else infer_project_metadata(folder)
+    )
     bpm = bpm or metadata.bpm
     key = key or metadata.key
     if bpm is None:
         raise ValueError("BPM was not provided and could not be inferred from the folder name")
 
-    chart_path = _find_chord_pdf(folder)
-    chart = extract_chords_from_moises_pdf(chart_path)
+    if prepared_context is not None:
+        chart_path = prepared_context.chord_document
+        if chart_path is None:
+            raise ValueError(
+                "No chord document declared in INPUT/source-project.json"
+            )
+    else:
+        chart_path = _find_chord_pdf(folder)
+    chart = extract_chords(chart_path)
     key = key or chart.key
 
     drum_parts = ["kick", "snare", "hat", "cymbals", "toms", "other_kit"]

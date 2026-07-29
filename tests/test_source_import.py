@@ -18,6 +18,7 @@ from sunofriend.audio_formats import (
     decoder_capability_report,
     file_sha256,
     probe_audio,
+    probe_stable_audio,
 )
 from sunofriend.source_import import (
     execute_source_import,
@@ -34,6 +35,26 @@ from sunofriend.source_receipt import validate_source_receipt_files
 
 
 class SourceImportTests(unittest.TestCase):
+    def test_stable_probe_rejects_source_mutation_during_probe(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source.wav"
+            _write_pcm24_wav(source)
+            _ffmpeg, ffprobe = _fake_toolchain(root)
+            original_probe = probe_audio(source, ffprobe=ffprobe)
+
+            def mutate_source(*_args, **_kwargs):
+                changed = bytearray(source.read_bytes())
+                changed[-1] ^= 1
+                source.write_bytes(changed)
+                return original_probe
+
+            with patch(
+                "sunofriend.audio_formats.probe_audio",
+                side_effect=mutate_source,
+            ), self.assertRaisesRegex(ValueError, "changed while"):
+                probe_stable_audio(source, ffprobe=ffprobe)
+
     def test_format_policy_uses_suffix_container_and_codec_together(self) -> None:
         flac = classify_audio_format(
             ".flac", container_names=["flac"], codec="flac"

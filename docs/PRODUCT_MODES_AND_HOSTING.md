@@ -45,8 +45,10 @@ The skill:
 4. requires one approval to prepare only the source;
 5. shows the exact prepared commit and requires a separate approval to install
    that same unchanged commit;
-6. can run the deterministic `demo` or `create` command; and
-7. presents the balanced WAV before the implementation evidence.
+6. can read-only plan and then prepare an existing multi-format folder of
+   separated parts when needed;
+7. can run the deterministic `demo` or `create` command; and
+8. presents the balanced WAV before the implementation evidence.
 
 The setup helper uses an isolated local checkout and preserves an existing
 checkout. It does not install Homebrew, optional AI runtimes or checkpoints.
@@ -63,10 +65,15 @@ Simple mode is the default `sunofriend tui` experience.
 
 ### Input
 
-- One local folder of top-level WAV stems.
+- One local folder of synchronized top-level WAV stems, either supplied
+  directly or prepared from 2–64 already-separated supported audio files with
+  `source-import-folder`.
 - Key, BPM and tuning in the folder name.
 - An optional metronome and chord PDF.
 - One fresh output folder outside the source project.
+
+Folder preparation is a distinct, explicit step. It does not separate a
+finished mix, repair alignment or run when the TUI merely loads a path.
 
 ### One-action journey
 

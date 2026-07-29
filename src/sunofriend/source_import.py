@@ -25,7 +25,7 @@ from .audio_formats import (
     decode_timeout_seconds,
     decoder_capability_report,
     file_sha256,
-    probe_audio,
+    probe_stable_audio,
     resolve_executable,
     validate_local_source_path,
 )
@@ -168,7 +168,7 @@ def plan_source_import(
     )
     if not capabilities["policy"]["pcm24_encoder_available"]:
         raise RuntimeError("the selected FFmpeg build does not report pcm_s24le")
-    probe = probe_audio(
+    probe, source_hash = probe_stable_audio(
         source_path,
         ffprobe=ffprobe_path,
         limits=limits,
@@ -179,7 +179,6 @@ def plan_source_import(
             raise ValueError(
                 f"{name} changed while the import plan was being created"
             )
-    source_hash = file_sha256(source_path)
     source_role = normalize_source_role(role, fallback_from=source_path)
     normalized_rights = str(rights_category).strip()
     if normalized_rights not in RIGHTS_CATEGORIES:
@@ -325,34 +324,7 @@ def execute_source_import(plan: SourceImportPlan) -> SourceImportResult:
             **inspect_pcm24_wav(canonical),
             "container_bytes": canonical.stat().st_size,
         }
-        if canonical_geometry["container_bytes"] > plan.limits.maximum_canonical_bytes:
-            raise RuntimeError("decoded canonical asset exceeds its planned size limit")
-        if canonical_geometry["sample_rate"] != plan.probe.sample_rate:
-            raise RuntimeError("canonical decode changed the source sample rate")
-        if canonical_geometry["channels"] != plan.probe.channels:
-            raise RuntimeError("canonical decode changed the source channel count")
-        maximum_declared_frames = (
-            math.ceil(plan.probe.duration_seconds * plan.probe.sample_rate)
-            + 1
-        )
-        minimum_plausible_frames = max(
-            1,
-            math.floor(
-                plan.probe.duration_seconds * plan.probe.sample_rate
-            )
-            - plan.probe.first_retained_source_sample
-            - plan.probe.decoder_padding_samples
-            - 1,
-        )
-        if canonical_geometry["frames"] < minimum_plausible_frames:
-            raise RuntimeError(
-                "canonical decode is shorter than the declared source clock "
-                "and codec-padding evidence allow"
-            )
-        if canonical_geometry["frames"] > maximum_declared_frames:
-            raise RuntimeError(
-                "canonical decode exceeded the declared source duration"
-            )
+        _validate_canonical_geometry(plan, canonical_geometry)
         canonical_hash = file_sha256(canonical)
         receipt = _build_receipt(
             plan,
@@ -595,6 +567,44 @@ def _build_receipt(
             "required_free_bytes": plan.required_free_bytes,
         },
     )
+
+
+def _validate_canonical_geometry(
+    plan: SourceImportPlan,
+    canonical_geometry: Mapping[str, Any],
+) -> None:
+    """Apply the common one-part decoded-size and clock boundary."""
+
+    if (
+        canonical_geometry["container_bytes"]
+        > plan.limits.maximum_canonical_bytes
+    ):
+        raise RuntimeError(
+            "decoded canonical asset exceeds its planned size limit"
+        )
+    if canonical_geometry["sample_rate"] != plan.probe.sample_rate:
+        raise RuntimeError("canonical decode changed the source sample rate")
+    if canonical_geometry["channels"] != plan.probe.channels:
+        raise RuntimeError("canonical decode changed the source channel count")
+    maximum_declared_frames = (
+        math.ceil(plan.probe.duration_seconds * plan.probe.sample_rate) + 1
+    )
+    minimum_plausible_frames = max(
+        1,
+        math.floor(plan.probe.duration_seconds * plan.probe.sample_rate)
+        - plan.probe.first_retained_source_sample
+        - plan.probe.decoder_padding_samples
+        - 1,
+    )
+    if canonical_geometry["frames"] < minimum_plausible_frames:
+        raise RuntimeError(
+            "canonical decode is shorter than the declared source clock "
+            "and codec-padding evidence allow"
+        )
+    if canonical_geometry["frames"] > maximum_declared_frames:
+        raise RuntimeError(
+            "canonical decode exceeded the declared source duration"
+        )
 
 
 def _ffmpeg_decode_arguments(

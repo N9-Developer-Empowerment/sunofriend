@@ -197,6 +197,31 @@ class TuiInteractionTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(app.query_one(TabbedContent).active, "simple")
                 self.assertFalse((state / "workbench.sqlite3").exists())
 
+    async def test_simple_mode_requires_whole_mixed_folder_preparation(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "mixed-source-parts"
+            project.mkdir()
+            (project / "song-bass.wav").touch()
+            (project / "song-keys.flac").touch()
+            output = root / "must-not-exist"
+            app = SunofriendTui(project=project)
+
+            async with app.run_test(size=(150, 50)) as pilot:
+                app.query_one("#simple-output", Input).value = str(output)
+                await pilot.pause()
+
+                create = app.query_one("#create-simple", Button)
+                status = str(
+                    app.query_one("#simple-status", Static).render()
+                ).lower()
+                self.assertTrue(create.disabled)
+                self.assertIn("will not silently ignore", status)
+                self.assertIn("source-import-folder", status)
+                self.assertFalse(output.exists())
+
     async def test_project_load_populates_dashboard_and_midi_map(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             project, candidates = _fixture(Path(temporary))

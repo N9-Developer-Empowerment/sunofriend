@@ -1,7 +1,7 @@
 # Stem access and local separation research
 
-Status: **research and architecture decision complete; S1 one-asset CLI
-import implemented; folder orchestration and separation not implemented**
+Status: **research and architecture decision complete; S1 multi-file source
+preparation accepted; source separation not implemented**
 
 Checked: 29 July 2026
 
@@ -60,10 +60,11 @@ preserve the role, key, BPM, tuning, chord-document and filename context used
 by today's pipeline. It must not replace named stems with anonymous
 `source.wav` files and then ask legacy discovery to guess what they mean.
 
-That bounded one-asset S1 slice is now implemented as `source-doctor` and
-`source-import`. It deliberately stops at prepared `INPUT/` evidence. Simple
-and Studio still require synchronized top-level WAV stems; there is no
-multi-file import orchestration or full-mix separator yet.
+That bounded S1 source-preparation slice is now implemented. `source-doctor`
+and `source-import` inspect and prepare one asset.
+`source-import-folder` prepares 2–64 already-separated, synchronized parts as
+one fresh canonical WAV project that existing Simple and Studio paths can
+consume. There is still no full-mix separator.
 
 The first model increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
@@ -103,19 +104,30 @@ discovery understands kick, snare, hats, cymbals, toms and `other_kit`, but
 not one generic composite `drums` source. A separator's `other.wav` could also
 be mistaken for a coherent synth role when it is normally a mixture.
 
-The separate S1 preparation boundary now provides:
+The accepted S1 preparation boundary now provides:
 
 - `source-doctor`, a read-only report over existing local FFmpeg/FFprobe
   binaries;
 - `source-import SOURCE --out-dir FRESH_OUTPUT`, which executes by default;
+- `source-import-folder SOURCE_FOLDER --out-dir FRESH_OUTPUT`, with separate
+  read-only plan and execute invocations for 2–64 existing separated parts;
 - the explicit read-only `source-import ... --plan` form;
 - immutable original and deterministic PCM24 canonical assets;
-- `INPUT/source-import.json` and `INPUT/source-project.json`; and
+- per-source receipts, `INPUT/source-folder-import.json` and
+  `INPUT/source-project.json`;
 - tested preservation of hash, role, key, BPM, tuning, chord-document and
-  clock evidence without normalization, network access or installation.
+  clock evidence without normalization, alignment correction, network access
+  or installation; and
+- direct compatibility of the prepared top-level canonical WAV files with
+  existing Create, TUI and Workbench discovery.
 
-It accepts exactly one local authorised asset. It does not yet change the
-legacy project discovery paths above.
+Folder import does not recurse, separate a mix, shift, pad, stretch or
+normalize files, prove a downbeat, or repair alignment. Missing recorded-origin
+evidence requires explicit acknowledgement; concrete origin conflicts block
+execution. Execution replans current inputs rather than replaying a stored
+plan. Composite `drums` is preserved for S2 rather than silently treated as
+one drum family. `pads` is not accepted as an observed S1 role because
+production currently synthesizes pads from keys and has no observed-pads job.
 
 ### Reusable foundations
 
@@ -435,9 +447,12 @@ decoding.
 The one-asset implementation fixes and tests this
 `sunofriend.source-import.v1` boundary, including `normalised: false`,
 `network_used: false`, file-only decoder protocols, original/canonical hashes
-and clock evidence. The sibling `sunofriend.source-project.v1` manifest keeps
-musical context. Cross-file origin comparison and a multi-source project
-orchestrator remain S1 follow-up work.
+and clock evidence. `source-import-folder` composes those per-source receipts
+under `sunofriend.source-folder-import.v1`, compares available recorded
+origins and atomically publishes one multi-source
+`sunofriend.source-project.v1` manifest plus canonical top-level WAV stems.
+The aggregate receipt records that audio was not normalized and alignment was
+not corrected.
 
 ## Source-project and separation contracts
 
@@ -760,8 +775,7 @@ separately**
 
 ### S1 — Canonical multi-format import and minimal manifest
 
-Status: **initial one-asset CLI slice implemented; project integration
-pending**
+Status: **accepted**
 
 - [x] Add a central tested suffix/container/codec capability policy.
 - [x] Add the explicit read-only FFmpeg capability doctor.
@@ -773,11 +787,11 @@ pending**
   no-network and no-install.
 - [x] Reject mixed audio/video containers, record lossy packet-edge timing,
   hard-bound decoder output and publish without replacing a raced destination.
-- [ ] Orchestrate several synchronized source parts and compare decoded
+- [x] Orchestrate several synchronized source parts and compare decoded
   origins before claiming alignment.
-- [ ] Make existing WAV-stem behaviour a regression golden across every
+- [x] Make existing WAV-stem behaviour a regression golden across every
   production surface.
-- [ ] Integrate prepared projects with TUI and Workbench catalogue/timeline
+- [x] Integrate prepared projects with TUI and Workbench catalogue/timeline
   paths without changing legacy candidate identities.
 
 Likely modules:
@@ -786,6 +800,8 @@ Likely modules:
 - `audio_formats.py`
 - `source_receipt.py`
 - `source_project.py`
+- `source_folder_import.py`
+- `project_audio_inputs.py`
 
 ### S2 — Source graph and composite roles
 

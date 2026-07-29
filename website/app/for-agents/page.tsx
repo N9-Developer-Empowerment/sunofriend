@@ -134,10 +134,10 @@ export default function ForAgents() {
               <span className="card-number">03 / CHOICE</span>
               <h3>Offer three human routes</h3>
               <p>
-                Ask whether the person has authorised top-level WAV stems,
+                Ask whether the person has authorised separated audio parts,
                 needs help exporting or obtaining stems, or wants the built-in
-                copyright-safe synthetic demo. Sunofriend itself is not a
-                separator.
+                copyright-safe synthetic demo. Supported existing parts can be
+                prepared locally; Sunofriend itself is not a separator.
               </p>
             </div>
             <div className="agent-card">
@@ -204,17 +204,26 @@ export default function ForAgents() {
                 song workflows still require synchronized top-level WAV stems.
               </p>
               <p>
-                A separate, narrow CLI can inspect and prepare{" "}
-                {stemBoundary.sourceImportToday}. Use{" "}
+                A separate CLI can inspect and prepare{" "}
+                {stemBoundary.sourceFolderImportToday}. Use{" "}
                 <code>{stemBoundary.sourceDoctorCommand}</code>, then inspect{" "}
-                <code>{stemBoundary.sourceImportCommand}</code>. Only remove{" "}
+                <code>{stemBoundary.sourceFolderImportCommand}</code>. Only remove{" "}
                 <code>--plan</code> after the user has reviewed the plan.
               </p>
               <p>
-                That command produces {stemBoundary.sourceImportOutput}. It
-                does not align several files, separate a finished mix, create
-                MIDI, or make a non-WAV folder directly usable by Simple or
-                Studio.
+                That command produces {stemBoundary.sourceFolderImportOutput}.
+                Execution replans current inputs, so repeat the plan after any
+                input, role-map or option change. It does not shift, pad,
+                stretch, normalize or align files, prove a downbeat, separate
+                a finished mix, or create MIDI.
+              </p>
+              <p>
+                A role map is a JSON file path keyed by exact filename. Never
+                silently accept missing origin evidence: explain and ask before
+                adding <code>--accept-unconfirmed-origin</code>. Preserve
+                composite <code>drums</code> for S2. Do not invent an observed{" "}
+                <code>pads</code> role; use <code>strings</code> only for a
+                genuinely string-like sustained part.
               </p>
               <div className="journey-links">
                 <Link className="text-link" href="/stems/">

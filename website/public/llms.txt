@@ -1,6 +1,6 @@
 # Sunofriend
 
-> Sunofriend is a local-first macOS alpha that turns authorised top-level WAV stems into editable MIDI, a balanced MIDI-derived song-interpretation WAV and a starter ZIP. Its focused agent create command and TUI Simple mode make an automatic, explicitly unreviewed first result. Studio preserves multiple analytical and AI candidates for explicit listening and choice.
+> Sunofriend is a local-first macOS alpha that prepares authorised folders of already-separated supported audio parts, then turns canonical top-level WAV stems into editable MIDI, a balanced MIDI-derived song-interpretation WAV and a starter ZIP. It does not separate a finished mix. Its focused agent create command and TUI Simple mode make an automatic, explicitly unreviewed first result. Studio preserves multiple analytical and AI candidates for explicit listening and choice.
 
 Sunofriend is an independent Unsigned Media Ltd project. Its name begins with the Hindi सुनो ("listen"). It is not related to or affiliated with Suno Inc.
 
@@ -22,14 +22,14 @@ Sunofriend is an independent Unsigned Media Ltd project. Its name begins with th
 2. Use `$skill-installer` to install and read the official Sunofriend skill first. Do not install the app or audio dependencies in that turn. Confirm the skill is available, then stop.
 3. In a second turn, explicitly use `$sunofriend`. Inspect what is already available and explain every proposed change.
 4. For a new app checkout, use the skill's two-stage bootstrap: ask before preparing source only; rerun the plan and show the exact 40-character commit; then ask separately before applying that same commit. Apply must not fetch or switch it.
-5. Offer exactly three friendly routes: existing authorised WAV stems; help exporting or obtaining authorised stems; or the built-in copyright-safe synthetic demo.
+5. Offer exactly three friendly routes: existing authorised separated audio parts; help exporting or obtaining authorised stems; or the built-in copyright-safe synthetic demo.
 6. For agent-led work with stems, use `sunofriend create PROJECT --out-dir FRESH`. With no stems, use `sunofriend demo --out-dir FRESH`. When the person operates the TUI, prefer Simple / Make my song. These routes use only each exact published production primary and record no human preference.
 7. Require a fresh output path. Keep automatic output labelled unreviewed and review recommended.
 8. Use Studio only when the musician wants multiple-method comparison, explicit choices, feedback or a reviewed GarageBand handoff.
 
 ## Inputs
 
-- One local folder containing top-level WAV stems for one song.
+- One local folder containing synchronized top-level WAV stems for one song, or 2–64 already-separated supported audio parts that the folder importer can prepare first.
 - A stem is a synchronized grouped submix, not necessarily one instrument. A drums stem can contain kick, snare, hats, toms, cymbals and percussion.
 - An AI-separated stem is an estimate of a musical category, not the lost original studio track.
 - Key, BPM and tuning in the folder name are strongly preferred.
@@ -38,13 +38,18 @@ Sunofriend is an independent Unsigned Media Ltd project. Its name begins with th
 
 Sunofriend does not separate a mixed song, download streaming audio or infer processing permission from a public URL.
 
-### Narrow one-asset source import
+### Source preparation
 
 - `sunofriend source-doctor` checks the existing local FFmpeg and FFprobe import toolchain without writing files.
+- `sunofriend source-import-folder SOURCE_FOLDER --out-dir FRESH --rights-category CATEGORY --plan` inspects 2–64 already-separated top-level supported assets without writing.
+- Review inferred roles, recorded-origin status, warnings and outputs. A role map is a JSON file path whose flat object is keyed by exact filename.
+- Execution removes `--plan`, replans current inputs and publishes immutable originals, canonical top-level PCM24 WAV stems, per-source and aggregate receipts, and a source-project manifest. Rerun the plan after any input, role-map or option change.
+- Never silently add `--accept-unconfirmed-origin`: it acknowledges missing concrete origin evidence and does not prove alignment. A concrete origin conflict blocks execution.
+- Folder import does not recurse, separate, shift, pad, stretch, normalize or align audio, prove a downbeat, or create MIDI. A prepared project is directly usable by Create or TUI.
+- `pads` is not an accepted observed role because production currently synthesizes pads from keys. Use `strings` only for a genuinely string-like sustained part; otherwise leave it unresolved. Composite `drums` is preserved pending S2.
 - `sunofriend source-import SOURCE --out-dir FRESH --plan` probes one authorised supported local audio asset and prints the exact read-only plan.
 - After the plan is reviewed, the same command without `--plan` preserves an immutable copy of the original and creates a canonical PCM24 WAV, receipt and source-project manifest in a fresh folder.
 - This is preparation of one asset, not a song-project importer. It does not align a folder, separate a finished mix, transcribe MIDI, or make a non-WAV project directly usable by create, Simple or Studio.
-- Repeat the import deliberately for another asset only after checking its own plan. Do not claim cross-file alignment.
 
 The public provider guide uses neutral ordinary links. Sunofriend currently
 has no affiliate relationship with a listed provider and has not ranked one

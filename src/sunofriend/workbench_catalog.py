@@ -17,6 +17,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 from .clip import read_midi_clips
 from .metadata import infer_project_metadata
+from .source_project import load_prepared_project_context
 from .workbench_privacy import path_free_role, validated_role
 from .workbench_phrase_links import build_workbench_phrase_review_link
 
@@ -112,7 +113,12 @@ def build_workbench_catalog(
 
     project = _existing_directory(project_root, label="project")
     roots = _candidate_roots(project, candidate_roots)
-    metadata = infer_project_metadata(project)
+    prepared_context = load_prepared_project_context(project)
+    metadata = (
+        prepared_context.metadata
+        if prepared_context is not None
+        else infer_project_metadata(project)
+    )
     if catalog_path is not None:
         document_path = _existing_file(catalog_path, label="workbench catalog")
         document = _read_json(document_path)
@@ -135,11 +141,20 @@ def build_workbench_catalog(
         catalog_source = None
 
     project_id = hashlib.sha256(str(project).encode("utf-8")).hexdigest()[:20]
-    setup_files = [
-        _file_record(path)
-        for path in sorted(project.iterdir(), key=lambda item: item.name.lower())
-        if path.is_file() and path.suffix.lower() in {".pdf", ".txt"}
-    ]
+    if prepared_context is not None:
+        setup_files = (
+            [_file_record(prepared_context.chord_document)]
+            if prepared_context.chord_document is not None
+            else []
+        )
+    else:
+        setup_files = [
+            _file_record(path)
+            for path in sorted(
+                project.iterdir(), key=lambda item: item.name.lower()
+            )
+            if path.is_file() and path.suffix.lower() in {".pdf", ".txt"}
+        ]
     return {
         "schema": WORKBENCH_CATALOG_SCHEMA,
         "project_id": project_id,

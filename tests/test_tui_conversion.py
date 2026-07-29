@@ -146,6 +146,44 @@ class _SilentRunner(ProductionFullConversionRunner):
 
 
 class FullConversionPlanTests(unittest.TestCase):
+    def test_all_non_wav_folder_requires_explicit_preparation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "raw-parts"
+            project.mkdir()
+            (project / "song-bass.flac").touch()
+            (project / "song-keys.m4a").touch()
+            output = root / "fresh-output"
+
+            with self.assertRaisesRegex(
+                FullConversionValidationError,
+                "source-import-folder",
+            ):
+                plan_full_conversion(
+                    FullConversionRequest.create(project, output)
+                )
+
+            self.assertFalse(output.exists())
+
+    def test_mixed_format_folder_cannot_silently_drop_non_wav_parts(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "mixed-parts"
+            project.mkdir()
+            (project / "song-bass.wav").touch()
+            (project / "song-keys.flac").touch()
+            output = root / "fresh-output"
+
+            with self.assertRaisesRegex(
+                FullConversionValidationError,
+                "will not silently ignore",
+            ):
+                plan_full_conversion(
+                    FullConversionRequest.create(project, output)
+                )
+
+            self.assertFalse(output.exists())
+
     def test_pupsies_style_sixteen_stems_all_receive_a_planned_route(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

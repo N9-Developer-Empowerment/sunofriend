@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
+from .project_audio_inputs import prepared_project_input_problem
 from .tui_conversion_contract import (
     CancellationPredicate,
     FullConversionBusyError,
@@ -842,10 +843,9 @@ def _validate_request(request: FullConversionRequest) -> None:
         raise FullConversionValidationError(
             "The stem project directory does not exist"
         )
-    if not any(request.project.glob("*.wav")):
-        raise FullConversionValidationError(
-            "The stem project directory contains no WAV stems"
-        )
+    input_problem = prepared_project_input_problem(request.project)
+    if input_problem is not None:
+        raise FullConversionValidationError(input_problem)
     if request.conversion_mode not in _CONVERSION_MODES:
         raise FullConversionValidationError(
             "conversion mode must be exact, repair, or reconstruct"
