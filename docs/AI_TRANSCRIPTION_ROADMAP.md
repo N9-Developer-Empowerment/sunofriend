@@ -181,6 +181,23 @@ or private note. All execution, result, selection, promotion and
 default-changing effects are false. It has no writer, model or audio operation,
 CLI/TUI or registry integration, result, pass or promotion behaviour.
 
+The fifth S3 slice adds the internal, deterministic and read-only
+`sunofriend.separation-backend-preflight.v1` contract. It reverifies the
+complete frozen acceptance, hidden manifest and redacted preparation, then
+inspects one exact arm from the trusted parent without executing its runtime.
+The report binds the worker, dependency lock, checkpoint, complete installed
+package/metadata trees and separate Git provenance while exposing no local
+path. It retains exact read-time facts, includes executable `.pth` and
+undeclared files plus empty-directory markers in owned package roots, rechecks
+every measured file and inventoried directory immediately before reporting,
+and fails closed on changing or symlinked evidence, duplicate identities,
+non-native script launchers and malformed editable metadata.
+`verified_not_run` is deliberately narrow:
+runtime identity/imports/dependencies, external site-startup code, console
+scripts, accelerator availability and offline behaviour are not probed. No
+worker, model, checkpoint or backend is started or loaded; no audio, result,
+score, pass, selection, promotion, default, CLI or TUI operation is added.
+
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
 transcriber. They need independent lineage, model/checkpoint licensing,

@@ -232,6 +232,29 @@ file, result, metric, score, selection, promotion and default-changing effect
 is false; the module has no writer, CLI/TUI, registry, result, pass or
 promotion operation.
 
+`separation_backend_preflight.py` is the fifth internal S3 boundary. Its
+path-free `sunofriend.separation-backend-preflight.v1` report reverifies the
+complete frozen acceptance, hidden manifest and redacted preparation before
+inspecting one exact baseline or candidate arm. The trusted parent reads
+bounded regular non-symlink worker, dependency-lock and checkpoint files,
+checks a stable native-executable header without starting it, and inventories
+the complete package and matching `.dist-info` trees named by the installed
+distribution. The package digest includes directory markers, executable
+`.pth`, bytecode, empty directories and undeclared files inside those owned
+roots; install-path-bearing
+`direct_url.json` is parsed only for separately bound Git provenance. Exact
+read-time file facts are retained and rechecked, so replaced metadata,
+inventories and launchers fail closed. Duplicate identities, intermediate
+symlinks and malformed editable metadata also block. Shared namespace-package
+roots are intentionally over-bound as a whole, so an unrelated neighbour can
+cause a conservative mismatch rather than false verification. A clean report is
+`verified_not_run`, not executable proof: runtime identity, importability,
+dependencies, console scripts, external site-startup code, accelerator
+availability and the offline gate remain explicit limitations. The module
+starts no process, imports no backend, loads no checkpoint, reads no audio or
+result, writes nothing and cannot select, score, promote or change defaults.
+It has no CLI/TUI operation and is not authorisation for a later runner.
+
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a
 starter ZIP. It does not create or mutate Workbench SQLite state. After

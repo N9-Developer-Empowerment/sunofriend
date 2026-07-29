@@ -3,8 +3,8 @@
 Status: **research and architecture decision complete; S1 synchronized source
 preparation and S2 source lineage/composite drums accepted; S3 separation-run,
 controlled-fake harness, acceptance pre-registration and bake-off preparation
-contracts implemented; real source separation, hidden evaluation and promotion
-are not implemented**
+plus backend-preflight contracts implemented; real source separation, hidden
+evaluation and promotion are not implemented**
 
 Checked: 29 July 2026
 
@@ -113,6 +113,26 @@ promotion and default-changing effect is explicitly false. It contains no
 song or source ID; no song, source, ground-truth, checkpoint or worker hash;
 and no path, threshold value, score or private note. It adds no writer,
 model/audio operation, CLI/TUI, registry, result, pass or promotion.
+
+The fifth S3 increment adds the internal, read-only
+`sunofriend.separation-backend-preflight.v1` contract in
+`separation_backend_preflight.py`. It reverifies the complete acceptance,
+hidden-manifest and preparation chain, then statically checks one frozen arm's
+worker, dependency lock, checkpoint and installed backend package from the
+trusted parent process. Package evidence covers every directory marker and
+regular file in the recorded package and distribution-metadata trees,
+including executable `.pth` startup code, empty directories and files absent
+from `RECORD`; Git provenance is bound separately so private install paths
+never enter the report. All measured files and inventoried directories are
+rechecked immediately before the report is built. Symlinks, changing evidence,
+duplicate package identities, scripts masquerading as native launchers and
+malformed editable metadata fail closed. A clean arm is only
+`verified_not_run`: the target interpreter is not executed, and its exact
+identity, imports, dependencies, accelerator and offline behaviour remain
+explicitly unprobed. The module starts no worker, imports no package code,
+loads no checkpoint, reads no audio or result, writes no file and makes no
+quality or promotion claim. It is not execution authorisation and has no
+CLI/TUI action.
 
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
@@ -776,6 +796,14 @@ hashes, aggregate coverage and exact public orchestration IDs, never the
 private evaluation units, threshold values, scores or paths, and every
 execution, result, selection, promotion and default effect remains false.
 
+The separate backend preflight then reverifies both frozen inputs and that
+redacted preparation before inspecting one exact arm. Its path-free report
+contains only hashes, public identities, fixed check states, safe blocker codes
+and explicit limitations. `verified_not_run` means the registered static
+artifacts matched at that instant. It does not mean the runtime imported, the
+checkpoint loaded, the accelerator worked, the network gate passed or the
+separator produced useful audio.
+
 No threshold may be filled in after hidden results are seen. Missing sample
 coverage, missing licence/hash evidence, a blank threshold or a failed gate
 means **no promotion**. Development data may be used to calibrate the numbers,
@@ -969,8 +997,8 @@ Likely modules:
 ### S3 — Separation bake-off harness
 
 Status: **contract, controlled-fake harness, acceptance pre-registration and
-redacted bake-off preparation slices implemented; isolated real
-runner/backends and bake-off execution not implemented**
+redacted bake-off preparation plus backend-preflight slices implemented;
+isolated real runner/backends and bake-off execution not implemented**
 
 - [x] Add a pure backend-neutral `SeparationBackend` contract plus immutable
   request/result DTOs and strict versioned separation-run receipts.
@@ -984,6 +1012,9 @@ runner/backends and bake-off execution not implemented**
 - [x] Add a deterministic, read-only, redacted `prepared_not_run` bake-off
   plan that reverifies both complete frozen inputs, fixes the
   baseline-before-candidate orchestration and declares every effect false.
+- [x] Add a deterministic, parent-only `verified_not_run`/`blocked` backend
+  preflight that binds one frozen arm's worker, lock, checkpoint, installed
+  package tree and Git provenance without executing the runtime or backend.
 - [ ] Generalise the existing AI runtime/checkpoint registry and isolate heavy
   runtimes in a separate worker environment.
 - [ ] Require explicit checkpoint installation, hashes and licences in the
@@ -1001,6 +1032,7 @@ Likely modules:
 - `separation_quality.py`
 - `separation_acceptance.py`
 - `separation_bakeoff.py`
+- `separation_backend_preflight.py`
 
 ### S4 — Experimental broad separation in Studio
 
