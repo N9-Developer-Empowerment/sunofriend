@@ -1,7 +1,7 @@
 # Stem access and local separation research
 
-Status: **research and architecture decision complete; implementation not
-started**
+Status: **research and architecture decision complete; S1 one-asset CLI
+import implemented; folder orchestration and separation not implemented**
 
 Checked: 29 July 2026
 
@@ -60,6 +60,11 @@ preserve the role, key, BPM, tuning, chord-document and filename context used
 by today's pipeline. It must not replace named stems with anonymous
 `source.wav` files and then ask legacy discovery to guess what they mean.
 
+That bounded one-asset S1 slice is now implemented as `source-doctor` and
+`source-import`. It deliberately stops at prepared `INPUT/` evidence. Simple
+and Studio still require synchronized top-level WAV stems; there is no
+multi-file import orchestration or full-mix separator yet.
+
 The first model increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
 unverified candidates until one exact runtime/checkpoint pair has known terms,
@@ -97,6 +102,20 @@ Metadata currently comes mainly from folder and filename conventions. Role
 discovery understands kick, snare, hats, cymbals, toms and `other_kit`, but
 not one generic composite `drums` source. A separator's `other.wav` could also
 be mistaken for a coherent synth role when it is normally a mixture.
+
+The separate S1 preparation boundary now provides:
+
+- `source-doctor`, a read-only report over existing local FFmpeg/FFprobe
+  binaries;
+- `source-import SOURCE --out-dir FRESH_OUTPUT`, which executes by default;
+- the explicit read-only `source-import ... --plan` form;
+- immutable original and deterministic PCM24 canonical assets;
+- `INPUT/source-import.json` and `INPUT/source-project.json`; and
+- tested preservation of hash, role, key, BPM, tuning, chord-document and
+  clock evidence without normalization, network access or installation.
+
+It accepts exactly one local authorised asset. It does not yet change the
+legacy project discovery paths above.
 
 ### Reusable foundations
 
@@ -287,11 +306,11 @@ on the build and exposes them through `-formats`; its
 [format documentation](https://ffmpeg.org/ffmpeg-formats.html) is therefore a
 better capability source than a hard-coded promise that “everything” works.
 
-FFmpeg is not installed by the current newcomer bootstrap. Before import, a
-capability doctor must report the exact `ffmpeg`/`ffprobe` binaries, versions,
-build configuration, licences and tested combinations. Installation must be
-a separately planned and approved step; Sunofriend must not silently install
-or substitute a decoder.
+FFmpeg is not installed by the current newcomer bootstrap. Before import,
+`source-doctor` reports the exact existing local `ffmpeg`/`ffprobe` binaries,
+versions, hashes and declared capability policy without writing files.
+Installation remains a separately planned and approved step; Sunofriend does
+not silently install or substitute a decoder.
 
 The importer should reject:
 
@@ -306,13 +325,22 @@ The importer should reject:
 Video/audio extraction can be a later explicit feature with its own rights and
 stream-selection UX.
 
-Initial safety defaults should reject a file larger than 2 GiB, audio longer
-than 30 minutes, more than eight channels, or a projected canonical asset
-larger than 8 GiB. Require free space of at least twice the projected decoded
-size plus 1 GiB. Bound probing to 30 seconds and decoding to the greater of
-120 seconds or four times declared duration, capped at 30 minutes. These
-limits may become explicit advanced settings, but must remain recorded in the
-receipt and must never expand silently.
+Initial safety defaults reject a file larger than 2 GiB, audio longer than 30
+minutes, more than eight channels, or a projected canonical asset larger than
+8 GiB. Required free space includes the preserved original and chord
+evidence, twice the projected decoded size, and 1 GiB of headroom. FFmpeg is
+also given explicit duration and file-size output limits. Probing is bounded
+to 30 seconds and decoding to the greater of 120 seconds or four times
+declared duration, capped at 30 minutes. These limits may become explicit
+advanced settings, but must remain recorded in the receipt and must never
+expand silently.
+
+The S1 threat model is a trusted local, single-user filesystem namespace.
+Planning and execution reject collisions and detected path/symlink drift, and
+publication is descriptor-anchored and no-replace. Defending against a hostile
+process continually renaming ancestors while FFmpeg is actively reading and
+writing would require descriptor-relative handling throughout the decoder and
+is outside this local preparation boundary.
 
 ### Canonical representation
 
@@ -335,17 +363,19 @@ For every input:
 Float32 can become a later canonical option only after every production,
 Workbench and evaluation consumer has a tested float path.
 
-The clock contract must record the container start time, stream time base,
-codec delay/priming, skip-sample metadata, decoder padding, first retained
-sample and exact decoded frame count. When importing several stems, compare
-their decoded origins and lengths before claiming alignment. Equal duration
-alone is not proof that MP3 or AAC files start on the same musical sample.
+The clock contract records the container start time, stream time base, codec
+delay/priming, skip-sample metadata, decoder padding, first retained sample
+and exact decoded frame count. The implementation reads bounded first and
+tail packet windows because MP3 and AAC priming is not reliably present in
+stream-level metadata. When importing several stems, compare their decoded
+origins and lengths before claiming alignment. Equal duration alone is not
+proof that MP3 or AAC files start on the same musical sample.
 
 The canonical representation should be a processing asset, not a user-facing
 claim that an MP3 became lossless. Lossy input remains lossy evidence after
 decoding.
 
-### Proposed receipt
+### Implemented initial receipt
 
 ```json
 {
@@ -353,27 +383,45 @@ decoding.
   "source_id": "sha256:...",
   "original": {
     "name": "song.m4a",
+    "path": "INPUT/original/song.m4a",
+    "bytes": 123456,
     "sha256": "...",
     "container": "mov,mp4,m4a",
     "codec": "alac",
     "sample_rate": 48000,
-    "channels": 2,
-    "start_time": 0,
-    "codec_delay_samples": 0
+    "channels": 2
   },
   "canonical": {
-    "path": "INPUT/canonical/source.wav",
+    "path": "INPUT/canonical/song.wav",
     "sha256": "...",
     "sample_format": "pcm_s24le",
+    "sample_width_bytes": 3,
     "sample_rate": 48000,
     "channels": 2,
-    "frames": 12345678,
-    "first_retained_source_sample": 0
+    "frames": 12345678
+  },
+  "clock": {
+    "format_start_time_seconds": 0,
+    "stream_start_time_seconds": 0,
+    "first_retained_source_sample": 0,
+    "decoder_padding_samples": 0,
+    "decoded_frame_count": 12345678
   },
   "decoder": {
     "name": "ffmpeg",
-    "version": "...",
-    "arguments": []
+    "ffmpeg": {
+      "path": "/local/path/to/ffmpeg",
+      "sha256": "...",
+      "version": "ffmpeg version ..."
+    },
+    "ffprobe": {
+      "path": "/local/path/to/ffprobe",
+      "sha256": "...",
+      "version": "ffprobe version ..."
+    },
+    "arguments": ["...", "<SOURCE>", "...", "<CANONICAL>"],
+    "network_protocols": ["file"],
+    "normalization_filters": []
   },
   "limits": {
     "maximum_duration_seconds": 1800,
@@ -384,7 +432,12 @@ decoding.
 }
 ```
 
-Exact schema fields should be fixed by tests during implementation.
+The one-asset implementation fixes and tests this
+`sunofriend.source-import.v1` boundary, including `normalised: false`,
+`network_used: false`, file-only decoder protocols, original/canonical hashes
+and clock evidence. The sibling `sunofriend.source-project.v1` manifest keeps
+musical context. Cross-file origin comparison and a multi-source project
+orchestrator remain S1 follow-up work.
 
 ## Source-project and separation contracts
 
@@ -694,7 +747,8 @@ existing transcription phases.
 
 ### S0 — Research and honest documentation
 
-Status: **repository research complete; public-site page pending**
+Status: **repository research complete; public-site delivery tracked
+separately**
 
 - Publish stem definitions, provider choices and affiliate policy.
 - Audit current format and role assumptions.
@@ -706,15 +760,25 @@ Status: **repository research complete; public-site page pending**
 
 ### S1 — Canonical multi-format import and minimal manifest
 
-- Add a central tested suffix/capability policy.
-- Add the explicit FFmpeg capability doctor and approved setup path.
-- Implement `ffprobe` validation and deterministic FFmpeg decode.
-- Preserve original and canonical hashes, geometry and clock metadata.
-- Add a minimal source-project manifest before routing canonical files into
-  legacy discovery; preserve role, key, BPM, tuning, chord-document and
-  original filename context.
-- Make existing WAV-stem behaviour a regression golden.
-- Use the importer in CLI, TUI and Workbench catalogue/timeline paths.
+Status: **initial one-asset CLI slice implemented; project integration
+pending**
+
+- [x] Add a central tested suffix/container/codec capability policy.
+- [x] Add the explicit read-only FFmpeg capability doctor.
+- [x] Implement bounded `ffprobe` validation and deterministic FFmpeg decode.
+- [x] Preserve original and canonical hashes, geometry and clock metadata.
+- [x] Write minimal source-import and source-project manifests preserving
+  role, key, BPM, tuning, chord-document and original filename context.
+- [x] Keep planning read-only and execution local, fresh-output-only,
+  no-network and no-install.
+- [x] Reject mixed audio/video containers, record lossy packet-edge timing,
+  hard-bound decoder output and publish without replacing a raced destination.
+- [ ] Orchestrate several synchronized source parts and compare decoded
+  origins before claiming alignment.
+- [ ] Make existing WAV-stem behaviour a regression golden across every
+  production surface.
+- [ ] Integrate prepared projects with TUI and Workbench catalogue/timeline
+  paths without changing legacy candidate identities.
 
 Likely modules:
 

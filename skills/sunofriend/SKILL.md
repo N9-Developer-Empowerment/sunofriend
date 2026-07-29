@@ -1,9 +1,9 @@
 ---
 name: sunofriend
-description: Guide beginners and experts through local Sunofriend setup and use. Turn authorised separated WAV stems into editable MIDI plus a balanced MIDI-derived song-interpretation WAV and ZIP; offer a copyright-safe built-in demo when no stems are available; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instrument matching and bundles, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded note correction. Use for Sunofriend, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not perform generic stem separation, music downloading, lyric writing, DAW GUI editing, human-approved release mastering or unapproved dependency/model installation.
+description: Guide beginners and experts through local Sunofriend setup and use. Prepare one authorised local audio asset as immutable original evidence plus canonical PCM24 WAV, or turn authorised synchronized WAV stems into editable MIDI plus a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not perform generic stem separation, music downloading, lyric writing, DAW GUI editing, human-approved release mastering or unapproved dependency/model installation.
 ---
 
-<!-- sunofriend-interface-contract: 2026-07-29.1 -->
+<!-- sunofriend-interface-contract: 2026-07-29.2 -->
 
 # Sunofriend
 
@@ -45,6 +45,8 @@ report the result, then move on.
   or feedback.
 - Use only music the user owns or is authorised to process.
 - Sunofriend does not download songs or separate a full mix into stems.
+- `source-import` decodes exactly one local asset. It does not align or prepare
+  a folder of stems and it does not make a complete Simple/Studio project.
 - The WAV contains rendered MIDI. Source stems provide timing, horizon and
   relative-level evidence but their audio is not mixed into the WAV.
 - Call the WAV a **MIDI-derived song interpretation**, not an exact
@@ -121,6 +123,11 @@ checkout, replace a mismatched SoundFont, or install optional AI checkpoints.
 If Homebrew is missing, explain the official Homebrew prerequisite and ask
 before helping with that separate system change.
 
+FFmpeg and FFprobe are optional prerequisites for `source-import`. Never
+install or upgrade them merely because an import was requested. Run the
+read-only `source-doctor` first; if either executable is missing, explain the
+separate setup change and request approval before performing it.
+
 The current alpha preparation resolves the public `main` branch once. Tell the
 user that a tagged end-user release is not available yet. The helper then
 stops, prints the exact local commit and requires that same 40-character
@@ -173,6 +180,27 @@ Open or reveal the WAV first when the environment supports it. Explain that
 the demo proves the workflow, not transcription accuracy on every real song.
 
 ## Route B: stems the user already has
+
+If the user supplies one non-WAV audio asset, distinguish preparation from
+conversion. Read `source-doctor --help` and `source-import --help`, then run:
+
+```bash
+SUNOFRIEND source-doctor
+SUNOFRIEND source-import "/absolute/path/to/bass.flac" \
+  --out-dir "/absolute/path/to/fresh-bass-import" \
+  --plan
+```
+
+Both actions are read-only. Explain the exact fresh output and require the
+user's authority before executing the same `source-import` command without
+`--plan`. Execution preserves the original bytes and hash, makes no network
+request, writes a non-normalized canonical PCM24 WAV and records its decoder,
+clock and musical context. It handles exactly one asset. Do not silently loop
+over a mixed-format folder or describe separate imports as an aligned stem
+project.
+
+Complete Simple/Studio conversion still starts from synchronized top-level
+WAV stems.
 
 Inventory the source folder read-only. Confirm:
 

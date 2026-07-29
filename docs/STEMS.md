@@ -1,8 +1,9 @@
 # Stems: what they are and where to get them
 
-Sunofriend currently starts with a folder of separated WAV files. This guide
-explains what those files are, how to obtain them legitimately, and why a
-file called `drums` or `keys` may still contain several sounds.
+Sunofriend's Simple and Studio journeys currently start with a folder of
+separated WAV files. This guide explains what those files are, how to obtain
+them legitimately, and why a file called `drums` or `keys` may still contain
+several sounds.
 
 Only process music you made or have permission or another lawful basis to use.
 The more formal term **authorised audio** is used elsewhere in the project for
@@ -31,14 +32,15 @@ artefacts are normal.
 
 ## What Sunofriend can do today
 
-> **Today, Sunofriend needs separate, synchronized, top-level WAV files.**
-> It cannot yet turn one finished song into stems, and the production converter
-> does not yet accept MP3, FLAC or other source formats. If you only have a
-> finished song, use the built-in demo or one of the local or cloud options
-> below.
+> **Today, Simple and Studio need separate, synchronized, top-level WAV
+> files.** Sunofriend cannot yet turn one finished song into stems.
 
-The planned importer and local separator are documented, but they have not
-been implemented or accepted as product features.
+The initial Source Import tool can preserve and decode exactly one authorised
+local PCM WAV/AIFF, FLAC, MP3, AAC/ALAC M4A or Vorbis/Opus Ogg asset into a
+canonical PCM24 WAV with receipts. It does not orchestrate a folder, prove
+cross-file alignment, feed the TUI automatically or perform separation. See
+[Prepare one local audio asset](GETTING_STARTED.md#prepare-one-local-audio-asset).
+Local full-mix separation remains research, not a product feature.
 
 ## Which route should I choose?
 
@@ -201,7 +203,10 @@ After exporting or separating a song:
 5. Continue with [Getting started](GETTING_STARTED.md).
 
 FLAC is also lossless, but the current production converter still requires
-WAV. Turning an MP3 into WAV changes its container, not its sound quality.
+WAV. The separate one-asset importer can create a canonical PCM24 WAV and
+receipt from FLAC or supported lossy formats; it does not make a complete
+Simple/Studio project. Turning an MP3 into WAV changes its representation, not
+its sound quality.
 
 ## Rights and privacy checklist
 
@@ -261,9 +266,11 @@ strings, effects and separation artefacts together.
 
 ### Can Sunofriend use MP3 today?
 
-Not in the current production converter. It currently expects top-level WAV
-stems. Multi-format canonical import is the first proposed engineering
-increment. Converting an MP3 to WAV does not restore discarded information.
+The `source-import` command can prepare exactly one local MP3 as canonical
+PCM24 WAV evidence. The Simple and Studio converters still expect a complete
+folder of synchronized top-level WAV stems, and Sunofriend does not yet
+orchestrate several imports into that folder. Decoding an MP3 does not restore
+discarded information.
 
 ### Can I publish AI-separated stems?
 

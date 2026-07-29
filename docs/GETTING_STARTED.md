@@ -2,11 +2,15 @@
 
 This guide is the detailed manual route for a musician who has separated WAV
 stems and wants editable MIDI plus a clean listening version of the song.
+Simple and Studio still require synchronized top-level WAV stems. A separate
+expert command can now prepare exactly one authorised local audio asset from a
+common format, but it does not yet prepare a whole stem folder or separate a
+finished mix.
 
 If “stem” is unfamiliar, or you need legitimate ways to obtain examples, read
 [Stems: what they are and where to get them](STEMS.md) first. Sunofriend does
-not yet separate a finished mix itself. The researched local separation and
-multi-format import programme is documented in
+not yet separate a finished mix itself. The implemented one-asset import
+boundary and the researched local-separation programme are documented in
 [Stem access and separation research](STEM_ACCESS_AND_SEPARATION_RESEARCH.md).
 
 Sunofriend is currently an alpha macOS application presented in the terminal.
@@ -92,6 +96,70 @@ SoundFont.
 
 CoreMIDI is not required to create the files. It is needed only for live MIDI
 playback through a software or hardware MIDI destination.
+
+## Prepare one local audio asset
+
+Source Import S1 is a bounded expert preparation tool for exactly one local
+file. It accepts the tested portable combinations of PCM WAV or AIFF, FLAC,
+MP3, M4A containing AAC or ALAC, and Ogg containing Vorbis or Opus. The
+installed FFmpeg build still decides which encoders and decoders are present.
+AIFC, CAF and WMA require the explicit `--allow-conditional-format` option.
+
+Sunofriend uses an existing local `ffmpeg` and `ffprobe`; it does not install
+them, download anything or access the network. Check that toolchain first:
+
+```bash
+.venv/bin/sunofriend source-doctor
+```
+
+Inspect an exact read-only plan:
+
+```bash
+.venv/bin/sunofriend source-import \
+  "/absolute/path/to/My Song-bass-B minor-113bpm-440hz.flac" \
+  --out-dir "/absolute/path/to/fresh-bass-import" \
+  --role bass \
+  --rights-category authorised_private_use \
+  --plan
+```
+
+`--plan` is the explicit read-only form. Remove only that flag to execute the
+same import:
+
+```bash
+.venv/bin/sunofriend source-import \
+  "/absolute/path/to/My Song-bass-B minor-113bpm-440hz.flac" \
+  --out-dir "/absolute/path/to/fresh-bass-import" \
+  --role bass \
+  --rights-category authorised_private_use
+```
+
+The output must not already exist and must be outside the source file's
+folder:
+
+```text
+fresh-bass-import/
+└── INPUT/
+    ├── original/<unchanged source filename>
+    ├── canonical/<deterministic PCM24 WAV>
+    ├── source-import.json
+    └── source-project.json
+```
+
+Keep the source and output-parent paths unchanged while the command runs.
+Sunofriend rejects ordinary collisions and detected symlink/path changes, but
+this local single-user workflow is not a sandbox against another hostile
+process continually renaming filesystem ancestors during decoding.
+
+The original bytes and SHA-256 identity are preserved. The canonical WAV is
+decoded without loudness normalization, and the receipts record format,
+geometry, clock, decoder and musical context. Lossy MP3 or AAC evidence
+remains lossy after decoding. Packet-edge evidence records codec priming and
+padding, and the canonical WAV is capped to the declared source duration.
+
+This command does **not** split a finished song, align several files, import a
+folder, or launch conversion. The current Simple and Studio journeys below
+still need separate synchronized WAV stems directly inside one folder.
 
 ## Try the built-in demo
 

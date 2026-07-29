@@ -3,8 +3,9 @@
 Status: default Simple automatic MIDI + balanced-WAV bundle implemented;
 Studio orientation, full-project conversion, Workbench bridge and native
 Listening Master operation implemented; wider guided operations, durable job
-recovery and broader feedback remain planned
-Interface contract: `2026-07-27.7`
+recovery and broader feedback remain planned; one-asset Source Import S1 is
+available separately in the CLI but is not yet a TUI project loader
+Interface contract: `2026-07-29.2`
 
 The Guided Local Studio is the preferred human entry point to Sunofriend. It
 puts a clear terminal dashboard in front of the deterministic CLI and provides
@@ -51,6 +52,22 @@ The expert routes remain supported:
 - use the Sunofriend agent skill when conversational orchestration is useful;
 - use `sunofriend workbench` directly when a project is already prepared; or
 - use `sunofriend tui` for the guided human workflow.
+
+The TUI source field still means a folder of synchronized top-level WAV stems.
+It does not accept a finished MP3/FLAC/M4A as a song project and it does not
+run stem separation. To preserve and prepare exactly one authorised local
+audio asset first, use:
+
+```bash
+sunofriend source-doctor
+sunofriend source-import SOURCE --out-dir FRESH_OUTPUT --plan
+sunofriend source-import SOURCE --out-dir FRESH_OUTPUT
+```
+
+The first two commands are read-only. The final command executes by default
+and writes immutable original/canonical evidence plus `INPUT/` receipts. It
+does not prepare a complete TUI project or replace the synchronized-WAV
+requirement.
 
 ## Start the Guided Local Studio
 

@@ -14,6 +14,7 @@ from .interface_contract import PUBLIC_COMMANDS
 from .phrase_guide import GUIDE_KINDS
 from .pipeline import run_remake
 from .product_contract import PRODUCT_SUMMARY
+from .source_project import RIGHTS_CATEGORIES
 
 _COMMANDS = PUBLIC_COMMANDS
 
@@ -559,6 +560,99 @@ def build_parser() -> argparse.ArgumentParser:
         choices=CAPABILITIES,
         default="all",
         help="Exit successfully when this capability is ready (default: all)",
+    )
+
+    source_doctor = sub.add_parser(
+        "source-doctor",
+        help="Inspect the local FFmpeg audio-import toolchain without writing files",
+    )
+    source_doctor.add_argument(
+        "--ffmpeg",
+        default=os.environ.get("SUNOFRIEND_FFMPEG", "ffmpeg"),
+        help="Existing local FFmpeg executable (default: SUNOFRIEND_FFMPEG or ffmpeg)",
+    )
+    source_doctor.add_argument(
+        "--ffprobe",
+        default=os.environ.get("SUNOFRIEND_FFPROBE", "ffprobe"),
+        help="Existing local FFprobe executable (default: SUNOFRIEND_FFPROBE or ffprobe)",
+    )
+    source_doctor.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=30.0,
+        help="Bound for each read-only tool query (default: 30)",
+    )
+
+    source_import = sub.add_parser(
+        "source-import",
+        help=(
+            "Prepare one local audio asset as immutable original evidence plus "
+            "canonical PCM24 WAV"
+        ),
+    )
+    source_import.add_argument("source", help="One authorised local audio file")
+    source_import.add_argument(
+        "--out-dir",
+        required=True,
+        help="Fresh output directory; existing destinations are never replaced",
+    )
+    source_import.add_argument(
+        "--ffmpeg",
+        default=os.environ.get("SUNOFRIEND_FFMPEG", "ffmpeg"),
+        help="Existing local FFmpeg executable (default: SUNOFRIEND_FFMPEG or ffmpeg)",
+    )
+    source_import.add_argument(
+        "--ffprobe",
+        default=os.environ.get("SUNOFRIEND_FFPROBE", "ffprobe"),
+        help="Existing local FFprobe executable (default: SUNOFRIEND_FFPROBE or ffprobe)",
+    )
+    source_import.add_argument(
+        "--role",
+        default=None,
+        help="Musical role override, for example bass, drums, vocals, keys or mix",
+    )
+    source_import.add_argument(
+        "--instrument-label",
+        default=None,
+        help="Optional plain-language source sound, for example buzzing synth bass",
+    )
+    source_import.add_argument("--key", default=None, help='Key override, e.g. "B minor"')
+    source_import.add_argument("--bpm", type=float, default=None, help="Tempo override")
+    source_import.add_argument(
+        "--tuning-hz",
+        type=float,
+        default=None,
+        help="Concert-A tuning override, for example 440",
+    )
+    source_import.add_argument(
+        "--chords",
+        default=None,
+        help="Optional adjacent or explicit local chord PDF/text document",
+    )
+    source_import.add_argument(
+        "--no-discover-chords",
+        action="store_true",
+        help="Do not look for one unambiguous adjacent chords document",
+    )
+    source_import.add_argument(
+        "--rights-category",
+        choices=sorted(RIGHTS_CATEGORIES),
+        default="declined_to_state",
+        help=(
+            "User-declared processing basis; Sunofriend records but does not "
+            "verify it (default: declined_to_state)"
+        ),
+    )
+    source_import.add_argument("--title", default=None, help="Source-project title")
+    source_import.add_argument(
+        "--allow-conditional-format",
+        action="store_true",
+        help="Allow a probed AIFC, CAF or WMA combination outside the portable set",
+    )
+    source_import.add_argument(
+        "--plan",
+        action="store_true",
+        help="Inspect and print the exact read-only plan without creating output",
     )
 
     ai_doctor = sub.add_parser(
@@ -2435,6 +2529,10 @@ def main(argv: list[str] | None = None) -> int:
             return _run_evaluate(args)
         if args.command == "doctor":
             return _run_doctor(args)
+        if args.command == "source-doctor":
+            return _run_source_doctor(args)
+        if args.command == "source-import":
+            return _run_source_import(args)
         if args.command == "ai-doctor":
             return _run_ai_doctor(args)
         if args.command == "ai-transcribe":
@@ -3675,6 +3773,71 @@ def _run_doctor(args) -> int:
     result["requirement_ready"] = capability_ready(result, args.require)
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result["requirement_ready"] else 1
+
+
+def _run_source_doctor(args) -> int:
+    from .audio_formats import decoder_capability_report
+
+    result = decoder_capability_report(
+        ffmpeg=args.ffmpeg,
+        ffprobe=args.ffprobe,
+        timeout_seconds=args.timeout_seconds,
+    )
+    result["requirement_ready"] = bool(
+        result["policy"]["pcm24_encoder_available"]
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0 if result["requirement_ready"] else 1
+
+
+def _run_source_import(args) -> int:
+    from .source_import import execute_source_import, plan_source_import
+
+    plan = plan_source_import(
+        args.source,
+        args.out_dir,
+        ffmpeg=args.ffmpeg,
+        ffprobe=args.ffprobe,
+        role=args.role,
+        instrument_label=args.instrument_label,
+        key=args.key,
+        bpm=args.bpm,
+        tuning_hz=args.tuning_hz,
+        chord_document=args.chords,
+        discover_chords=not args.no_discover_chords,
+        rights_category=args.rights_category,
+        title=args.title,
+        allow_conditional_format=args.allow_conditional_format,
+    )
+    if args.plan:
+        print(json.dumps(plan.to_dict(), indent=2, sort_keys=True))
+        return 0
+    result = execute_source_import(plan)
+    print(
+        json.dumps(
+            {
+                "schema": "sunofriend.source-import-result.v1",
+                "status": "complete",
+                "scope": "one source asset",
+                "root": str(result.root),
+                "original": str(result.original),
+                "canonical": str(result.canonical),
+                "receipt": str(result.receipt),
+                "source_project": str(result.source_project),
+                "chord_document": (
+                    str(result.chord_document)
+                    if result.chord_document is not None
+                    else None
+                ),
+                "source_id": result.source_id,
+                "network_used": False,
+                "normalised": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
 
 
 def _run_ai_doctor(args) -> int:

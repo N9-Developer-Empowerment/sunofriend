@@ -40,6 +40,14 @@ starts Workbench; `tui --no-developer-inspector` keeps it absent. See the
 ## Current execution flow
 
 ```text
+one authorised local audio asset
+        |
+        +--> source-doctor (read-only existing FFmpeg/FFprobe evidence)
+        +--> source-import --plan (read-only exact import plan)
+        +--> source-import (fresh, atomic INPUT/original + canonical + receipts)
+        |
+        |    preparation stops here in S1
+        v
 stem folder / MIDI
         |
         v
@@ -116,6 +124,21 @@ CLI/application services (`cli.py`)
         v
 automatic unreviewed starter result OR reviewed Studio result + provenance
 ```
+
+The initial Source Import S1 boundary is intentionally separate from the
+production flow below it. `audio_formats.py` validates one local
+container-plus-codec combination and the exact existing FFmpeg/FFprobe
+toolchain. `source_import.py` plans or atomically executes one fresh import.
+`source_receipt.py` pins the unchanged original and canonical PCM24 WAV;
+`source_project.py` preserves role, filename, key, BPM, tuning, chord and
+user-declared rights context.
+
+`source-import --plan` is explicitly read-only. Without `--plan`, it executes
+by default, with file-only decoder protocols, no normalization, no network and
+no dependency installation. This slice does not orchestrate a folder, compare
+several source clocks, separate a full mix or make prepared `INPUT/` evidence
+loadable by Simple or Studio. Those journeys still discover synchronized
+top-level WAV stems through the legacy production contract.
 
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a

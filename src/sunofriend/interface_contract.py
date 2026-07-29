@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-07-28.1"
+INTERFACE_CONTRACT_VERSION = "2026-07-29.2"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -17,6 +17,8 @@ PUBLIC_COMMAND_GROUPS: dict[str, tuple[str, ...]] = {
         "demo",
         "tui",
         "doctor",
+        "source-doctor",
+        "source-import",
         "ai-doctor",
         "garageband-info",
         "instrument-inventory",
@@ -141,6 +143,17 @@ def render_skill_interface_reference() -> str:
         "Studio tab without starting work or changing project state. The",
         "expert CLI and agent skill",
         "remain supported and share the public commands below.",
+        "",
+        "## Source preparation",
+        "",
+        "`sunofriend source-doctor` inspects an existing local FFmpeg/FFprobe",
+        "toolchain without writing files. `sunofriend source-import` can then",
+        "preserve and prepare exactly one authorised local audio asset as",
+        "deterministic PCM24 WAV evidence in a fresh output. It does not",
+        "download anything, separate a finished mix, prepare an aligned folder",
+        "of stems or make that asset a complete Simple/Studio project. Direct",
+        "Simple and Studio conversion still starts from synchronized top-level",
+        "WAV stems.",
         "",
         "## Product outputs",
         "",

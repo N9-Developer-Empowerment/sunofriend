@@ -117,20 +117,22 @@ listening master remains comparative rather than a release master.
 
 ## Parallel source-access programme
 
-Sunofriend currently starts from separated WAV stems. Research completed on
-29 July 2026 defines a separate source-preparation programme so a future
-version can accept common authorised audio formats, create broad estimated
-stems locally, refine compound stems such as drums, and then hand only active
-leaf sources to the existing conversion pipeline.
+Sunofriend's Simple and Studio journeys currently start from separated WAV
+stems. Research completed on 29 July 2026 defines a separate
+source-preparation programme. Its first bounded S1 slice is now implemented:
+`source-doctor` inspects an existing local FFmpeg/FFprobe toolchain, while
+`source-import SOURCE --out-dir FRESH_OUTPUT` preserves and prepares exactly
+one local authorised asset as unchanged original evidence, canonical PCM24
+WAV and `INPUT/` receipts. `--plan` is its explicit read-only form.
 
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
 transcriber. They need independent lineage, model/checkpoint licensing,
 residuals, Mac resource measurements and downstream-MIDI gates. No separator
-has been integrated or selected as a default by this research increment.
-The first implementation must pair canonical import with a minimal
-source-project manifest so role, key, BPM, tuning, chord and clock context are
-not lost.
+has been integrated or selected as a default. The delivered importer does not
+orchestrate a folder, compare cross-file alignment, feed Simple/Studio
+automatically or split a finished mix. Those journeys still require
+synchronized top-level WAV stems.
 
 See:
 
