@@ -134,6 +134,21 @@ loads no checkpoint, reads no audio or result, writes no file and makes no
 quality or promotion claim. It is not execution authorisation and has no
 CLI/TUI action.
 
+The sixth S3 increment adds the pure
+`sunofriend.separation-worker-request.v1` and
+`sunofriend.separation-worker-result.v1` contracts in
+`separation_worker_contract.py`. The private request cross-binds the complete
+frozen acceptance identity, verified preflight and backend-neutral separation
+request, including the registered worker, dependency lock, runtime,
+checkpoint, source, role set, settings and seed. The result retains only
+path-free immutable input, output and enforcement evidence and cannot express
+quality, ranking, preference, selection or promotion. Development isolation
+cannot satisfy hidden acceptance: v1 accepts only `private_development` and
+cannot represent `acceptance_ready`. The runtime launcher is separately
+parent-owned, settings compare by canonical JSON type and local path aliases
+fail closed. This pure boundary performs no I/O and starts no process; the
+subprocess transport and real separator remain unimplemented.
+
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
 unverified candidates until one exact runtime/checkpoint pair has known terms,
@@ -228,6 +243,27 @@ limited to a 60-second, 44.1 kHz CPU excerpt and emits one target plus a
 residual. Its checkpoint is recorded as private evaluation because the
 pretrained-weight terms were not sufficiently clear. It proves worker
 isolation and provenance concepts, not public product readiness.
+
+The 29 July 2026 installed-baseline audit found Demucs 4.0.1 and the official
+`htdemucs` `955717e8` checkpoint already present locally. The checkpoint is
+84,141,911 bytes and matches the pinned SHA-256
+`8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4`.
+This establishes byte identity, not permission or acceptance. The code's MIT
+licence is recorded, but no separate pretrained-weight terms were found; the
+training provenance is incomplete for deployment decisions; exact installed
+package source-commit provenance is absent; and no OS-level deny-and-observe
+offline run has passed. The installed pair is therefore a conditional
+private-development candidate and a strict **no-go** for hidden evaluation,
+promotion, redistribution or an automatic profile.
+
+The same audit found `/usr/bin/sandbox-exec` on the development Mac, but its
+local manual marks the mechanism deprecated and the current Codex execution
+context cannot apply even a no-network profile. More importantly,
+`sandbox-exec` does not expose a complete, independently verifiable stream of
+denied connection attempts. Executable presence is not an isolation result.
+A future provider must pass a no-op canary and report separately whether
+network denial, attempted-connection observation and outside-write
+confinement were each enforced.
 
 ## Terminology contract
 
@@ -1015,6 +1051,14 @@ isolated real runner/backends and bake-off execution not implemented**
 - [x] Add a deterministic, parent-only `verified_not_run`/`blocked` backend
   preflight that binds one frozen arm's worker, lock, checkpoint, installed
   package tree and Git provenance without executing the runtime or backend.
+- [x] Audit the already-installed Demucs runtime/checkpoint and record why
+  byte identity and private-development policy do not satisfy the strict
+  licence, provenance or offline gates.
+- [x] Add a strict private worker request/path-free result contract that
+  cross-binds the frozen acceptance identity, static preflight and separation
+  request without starting a process.
+- [ ] Prove a non-bypassable fail-closed subprocess transport with a
+  deterministic fake worker before any real model is allowed to start.
 - [ ] Generalise the existing AI runtime/checkpoint registry and isolate heavy
   runtimes in a separate worker environment.
 - [ ] Require explicit checkpoint installation, hashes and licences in the

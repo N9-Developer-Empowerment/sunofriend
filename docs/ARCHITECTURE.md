@@ -255,6 +255,23 @@ starts no process, imports no backend, loads no checkpoint, reads no audio or
 result, writes nothing and cannot select, score, promote or change defaults.
 It has no CLI/TUI operation and is not authorisation for a later runner.
 
+`separation_worker_contract.py` is the sixth internal S3 boundary. Its private
+`sunofriend.separation-worker-request.v1` is deliberately path-bearing and
+must never be published. The validator requires the trusted complete frozen
+acceptance artifact, the verified static preflight and the original
+`SeparationRequest`; it derives the registered baseline/candidate identity and
+cross-checks worker, dependency lock, runtime, checkpoint, source, roles,
+settings, seed, a separate parent-owned runtime-launcher artifact and the
+canonical `STEMS/<role>.wav` allowlist. Its
+`sunofriend.separation-worker-result.v1` is path-free and binds the same
+trusted inputs, before/after input hashes, exact output hashes/geometry and
+named isolation evidence. It contains no quality, ranking, preference,
+selection or promotion field. V1 accepts only private-development isolation;
+hidden acceptance and `acceptance_ready` are not representable.
+This is a pure contract: it performs no filesystem access and starts no
+process. There is still no approved subprocess transport, platform isolation
+provider, real worker, model execution or artifact publication path.
+
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a
 starter ZIP. It does not create or mutate Workbench SQLite state. After

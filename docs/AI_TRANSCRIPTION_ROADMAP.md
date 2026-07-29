@@ -198,6 +198,35 @@ scripts, accelerator availability and offline behaviour are not probed. No
 worker, model, checkpoint or backend is started or loaded; no audio, result,
 score, pass, selection, promotion, default, CLI or TUI operation is added.
 
+The following installed-baseline audit found the local Demucs 4.0.1 code and
+exact pinned `htdemucs` checkpoint bytes available, but did not clear a real
+S3 run. Separate pretrained-weight terms remain unidentified, the installed
+package lacks exact source-commit provenance, and the required OS-level
+deny-and-observe offline gate has not passed. The deprecated macOS
+`sandbox-exec` command cannot supply complete attempted-connection evidence
+and cannot currently apply a profile from the Codex execution context.
+Sunofriend therefore keeps this pair in a conditional private-development
+lane. No model was executed and no hidden evaluation, pass or promotion
+result exists.
+
+The sixth S3 slice adds the pure
+`sunofriend.separation-worker-request.v1` and
+`sunofriend.separation-worker-result.v1` contracts. A private path-bearing
+request must cross-bind the complete frozen acceptance identity, verified
+static preflight and backend-neutral separation request. This prevents a
+different worker, dependency lock, runtime, checkpoint, source, role set,
+settings or seed from borrowing a valid preflight. The result carries only
+path-free immutable input, output and enforcement evidence; it contains no
+quality, ranking, preference, selection or promotion field. Development-grade
+isolation cannot satisfy hidden acceptance: v1 accepts only the
+`private_development` lane and cannot represent an `acceptance_ready` request
+or result. The exact runtime launcher is a separate parent-owned identity, and
+canonical type-aware settings plus path-alias checks prevent re-signed
+substitutions.
+The module performs no I/O and starts no process. A non-bypassable
+subprocess transport, concrete provider, real worker, model execution and
+artifact publication remain unimplemented.
+
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
 transcriber. They need independent lineage, model/checkpoint licensing,
