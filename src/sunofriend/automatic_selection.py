@@ -50,7 +50,10 @@ def plan_automatic_selection(
         raise AutomaticSelectionError(
             "the verified conversion result folder does not exist"
         )
-    published, summary_records = _published_primary_rows(summary_paths, root)
+    published, summary_records, shadowed_roles = _published_primary_rows(
+        summary_paths,
+        root,
+    )
     if not published:
         raise AutomaticSelectionError(
             "conversion published no exact primary MIDI paths for Simple mode"
@@ -139,11 +142,16 @@ def plan_automatic_selection(
         if stem_id and stem_id not in selected_stem_ids and not any(
             item.get("stem_id") == stem_id for item in omitted
         ):
+            role = str(stem.get("role") or "unclassified")
             omitted.append(
                 {
                     "stem_id": stem_id,
-                    "role": str(stem.get("role") or "unclassified"),
-                    "reason": "no_published_primary",
+                    "role": role,
+                    "reason": (
+                        "shadowed_by_explicit_drum_leaves"
+                        if role in shadowed_roles
+                        else "no_published_primary"
+                    ),
                 }
             )
 
@@ -222,7 +230,7 @@ def plan_automatic_selection(
 def _published_primary_rows(
     summary_paths: Sequence[str | Path],
     result_root: Path,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], set[str]]:
     rows: list[dict[str, Any]] = []
     records: list[dict[str, Any]] = []
     for raw_path in summary_paths:
@@ -275,7 +283,33 @@ def _published_primary_rows(
                 source_path=source_path,
             )
         )
-    return rows, records
+    from .drum_roles import DRUM_PARTS, resolve_drum_role_policy
+
+    drum_policy = resolve_drum_role_policy(
+        str(row.get("role") or "")
+        for row in rows
+        if str(row.get("role") or "") in DRUM_PARTS
+        and _published_midi_has_notes(row)
+    )
+    shadowed_roles = set(drum_policy["shadowed_roles"])
+    if shadowed_roles:
+        rows = [
+            row
+            for row in rows
+            if str(row.get("role") or "") not in shadowed_roles
+        ]
+    return rows, records, shadowed_roles
+
+
+def _published_midi_has_notes(row: Mapping[str, Any]) -> bool:
+    try:
+        clips = read_midi_clips(
+            str(row["midi_path"]),
+            role=str(row.get("role") or "unclassified"),
+        )
+    except Exception:
+        return False
+    return any(getattr(clip, "notes", ()) for clip in clips)
 
 
 def _published_row(

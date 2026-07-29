@@ -20,7 +20,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
-from .project_audio_inputs import prepared_project_input_problem
+from .drum_roles import resolve_drum_role_policy
+from .project_audio_inputs import (
+    inspect_project_audio_inputs,
+    prepared_project_input_problem,
+)
 from .tui_conversion_contract import (
     CancellationPredicate,
     FullConversionBusyError,
@@ -77,6 +81,8 @@ class FullConversionPlan:
     vocal_jobs: tuple[PlannedVocalConversion, ...]
     unsupported_roles: tuple[str, ...]
     proxy_roles: tuple[str, ...]
+    shadowed_roles: tuple[str, ...]
+    warnings: tuple[str, ...]
     source_stem_count: int
 
     @property
@@ -132,12 +138,17 @@ def plan_full_conversion(request: FullConversionRequest) -> FullConversionPlan:
         if keys is not None and pads is None:
             instrumental.append("pads")
 
-    wavs = tuple(sorted(request.project.glob("*.wav")))
+    inventory = inspect_project_audio_inputs(request.project)
     vocal_sources: list[tuple[Path, str, str]] = []
     unsupported: list[str] = []
     source_stem_count = 0
-    for source in wavs:
-        role = infer_role(source.stem) or "unclassified"
+    for source_row in inventory.sources:
+        source = source_row.path
+        role = (
+            source_row.role
+            if inventory.prepared_project
+            else infer_role(source.stem) or "unclassified"
+        )
         if role == "metronome":
             continue
         source_stem_count += 1
@@ -175,6 +186,7 @@ def plan_full_conversion(request: FullConversionRequest) -> FullConversionPlan:
             )
         )
 
+    drum_policy = resolve_drum_role_policy(instrumental)
     return FullConversionPlan(
         project=request.project,
         output_dir=request.output_dir,
@@ -184,6 +196,8 @@ def plan_full_conversion(request: FullConversionRequest) -> FullConversionPlan:
         proxy_roles=tuple(
             role for role in instrumental if role in CONSERVATIVE_ROLE_ENGINES
         ),
+        shadowed_roles=tuple(drum_policy["shadowed_roles"]),
+        warnings=tuple(drum_policy["warnings"]),
         source_stem_count=source_stem_count,
     )
 
@@ -293,16 +307,18 @@ class ProductionFullConversionRunner:
         converted: list[str] = []
         skipped: list[str] = list(plan.unsupported_roles)
         failed: list[str] = []
-        warnings: list[str] = [
+        warnings: list[str] = []
+        warnings.extend(
             f"{role} uses the conservative "
             f"{_proxy_engine(role)} engine and remains review-required"
             for role in plan.proxy_roles
-        ]
+        )
         warnings.extend(
             f"{role} has no guided conversion engine and was not changed"
             for role in plan.unsupported_roles
         )
         summaries: list[Path] = []
+        effective_shadowed_roles: tuple[str, ...] = ()
         completed = 0
 
         if plan.instrumental_roles:
@@ -385,6 +401,7 @@ class ProductionFullConversionRunner:
             instrumental_summary = _read_summary_optional(summary_path)
             if instrumental_summary is not None:
                 summaries.append(summary_path)
+                viable_instrumental_roles: list[str] = []
                 for role in plan.instrumental_roles:
                     item = (
                         instrumental_summary.get("parts", {}).get(role, {})
@@ -397,6 +414,13 @@ class ProductionFullConversionRunner:
                         plan.output_dir,
                     ):
                         _append_unique(converted, role)
+                        note_count = item.get("notes")
+                        if (
+                            isinstance(note_count, int)
+                            and not isinstance(note_count, bool)
+                            and note_count > 0
+                        ):
+                            viable_instrumental_roles.append(role)
                     elif status.startswith("skipped:"):
                         _append_unique(skipped, role)
                     else:
@@ -418,6 +442,12 @@ class ProductionFullConversionRunner:
                                 current_role=role,
                             ),
                         )
+                effective_policy = resolve_drum_role_policy(
+                    viable_instrumental_roles
+                )
+                effective_shadowed_roles = tuple(
+                    effective_policy["shadowed_roles"]
+                )
             else:
                 for role in plan.instrumental_roles:
                     _append_unique(failed, role)
@@ -604,6 +634,7 @@ class ProductionFullConversionRunner:
                 else 0
             ),
             preflight_ready=("transcribe", "convert"),
+            shadowed_roles=effective_shadowed_roles,
         )
         _emit(
             on_progress,
@@ -932,6 +963,7 @@ def _cancelled_result(
         midi_ready_stem_count=0,
         candidate_count=0,
         preflight_ready=("transcribe", "convert"),
+        shadowed_roles=plan.shadowed_roles,
     )
 
 

@@ -59,6 +59,285 @@ class ListenAllContractTests(unittest.TestCase):
             ("Flow Synth Pluck", "Synth Lead"),
         )
 
+    def test_composite_drums_publishes_reviewable_channel_ten_family_midi_only(self):
+        calls: list[tuple[str, str]] = []
+
+        def fake_refine(**kwargs):
+            stem = Path(kwargs["stem_path"])
+            kind = kwargs["kind"]
+            calls.append((stem.name, kind))
+            work = Path(kwargs["out_dir"])
+            work.mkdir(parents=True, exist_ok=True)
+            notes = [
+                NoteEvent(0.0, 0.08, 36, 100),
+                NoteEvent(0.5, 0.58, 38, 92),
+            ]
+            midi = work / f"{kind}_listened.mid"
+            write_midi_file(
+                midi,
+                [MidiTrack(kind.title(), 9, 0, notes)],
+                bpm=119,
+            )
+            provenance = [
+                NoteProvenance.from_note(
+                    notes[0],
+                    origin="observed",
+                    confidence=0.9,
+                    family="kick_deep",
+                    sources=("stem", "listen-other_kit"),
+                ),
+                NoteProvenance.from_note(
+                    notes[1],
+                    origin="observed",
+                    confidence=0.85,
+                    family="snare_body",
+                    sources=("stem", "listen-other_kit"),
+                ),
+            ]
+            return RefineResult(
+                notes=notes,
+                score=0.9,
+                history=[],
+                midi_path=midi,
+                note_provenance=provenance,
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            folder = root / "Composite-B major-119bpm-440hz"
+            folder.mkdir()
+            source = folder / "Composite-drums-B major-119bpm-440hz.wav"
+            source.touch()
+            out = root / "out"
+
+            with patch(
+                "sunofriend.listen_all._is_silent",
+                return_value=False,
+            ), patch(
+                "sunofriend.loop.refine_stem",
+                side_effect=fake_refine,
+            ):
+                summary = run_listen_all(
+                    folder,
+                    out,
+                    evaluate_outputs=False,
+                    progress=lambda _message: None,
+                )
+
+            self.assertEqual(calls, [(source.name, "other_kit")])
+            self.assertEqual(summary["shadowed_roles"], [])
+            self.assertEqual(
+                summary["drum_role_policy"]["precedence"],
+                "composite-review-required",
+            )
+            part = summary["parts"]["drums"]
+            self.assertEqual(part["published_role"], "drums")
+            self.assertEqual(part["processing_kind"], "other_kit")
+            self.assertEqual(part["classifier_alias"], "other_kit")
+            self.assertTrue(part["review_required"])
+            self.assertTrue(part["midi_family_variants_only"])
+            self.assertFalse(part["audio_children_created"])
+            self.assertIn("dominant drum family", part["classification_limitations"][0])
+            primary = read_midi_clips(part["midi"], role="drums")[0]
+            self.assertEqual(primary.instrument.channel, 9)
+            self.assertEqual({note.pitch for note in primary.notes}, {36, 38})
+            self.assertEqual(
+                set(part["variants"]),
+                {"kick_deep", "snare_body"},
+            )
+            self.assertTrue(
+                all(
+                    Path(item["midi"]).suffix == ".mid"
+                    for item in part["variants"].values()
+                )
+            )
+            self.assertEqual(list(folder.glob("*.wav")), [source])
+
+            sidecar = json.loads(
+                Path(part["provenance"]).read_text(encoding="utf-8")
+            )
+            self.assertTrue(
+                all(
+                    note["details"]["published_role"] == "drums"
+                    and note["details"]["processing_kind"] == "other_kit"
+                    for note in sidecar["notes"]
+                )
+            )
+            catalog = build_workbench_catalog(folder, candidate_roots=[out])
+            self.assertEqual(catalog["shadowed_roles"], [])
+            stem = next(
+                row for row in catalog["stems"] if row["role"] == "drums"
+            )
+            self.assertEqual(stem["candidate_count"], 3)
+            self.assertTrue(stem["review_required"])
+            self.assertEqual(stem["source_shape"], "composite")
+            self.assertTrue(
+                all(
+                    candidate["role"] == "drums"
+                    for candidate in stem["candidates"]
+                )
+            )
+
+    def test_explicit_drum_leaf_shadows_composite_only_in_automatic_arrangement(self):
+        def fake_refine(**kwargs):
+            stem = Path(kwargs["stem_path"])
+            kind = kwargs["kind"]
+            work = Path(kwargs["out_dir"])
+            work.mkdir(parents=True, exist_ok=True)
+            pitch = 36 if "-kick-" in stem.name.lower() else 38
+            note = NoteEvent(0.0, 0.08, pitch, 100)
+            midi = work / f"{kind}_listened.mid"
+            write_midi_file(
+                midi,
+                [MidiTrack(kind.title(), 9, 0, [note])],
+                bpm=119,
+            )
+            provenance = NoteProvenance.from_note(
+                note,
+                origin="observed",
+                confidence=0.9,
+                family="kick_deep" if pitch == 36 else "snare_body",
+                sources=("stem", f"listen-{kind}"),
+            )
+            return RefineResult(
+                notes=[note],
+                score=0.9,
+                history=[],
+                midi_path=midi,
+                note_provenance=[provenance],
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            folder = root / "Composite-B major-119bpm-440hz"
+            folder.mkdir()
+            (folder / "Composite-kick-B major-119bpm-440hz.wav").touch()
+            (folder / "Composite-drums-B major-119bpm-440hz.wav").touch()
+            out = root / "out"
+
+            with patch(
+                "sunofriend.listen_all._is_silent",
+                return_value=False,
+            ), patch(
+                "sunofriend.loop.refine_stem",
+                side_effect=fake_refine,
+            ):
+                summary = run_listen_all(
+                    folder,
+                    out,
+                    evaluate_outputs=False,
+                    progress=lambda _message: None,
+                )
+
+            self.assertEqual(summary["shadowed_roles"], ["drums"])
+            self.assertEqual(
+                summary["drum_role_policy"]["explicit_leaf_roles"],
+                ["kick"],
+            )
+            self.assertEqual(
+                summary["parts"]["drums"]["automatic_arrangement_status"],
+                "shadowed_by_explicit_drum_leaves",
+            )
+            self.assertEqual(
+                summary["parts"]["drums"]["arrangement_role"],
+                "shadowed_by_explicit_drum_leaves",
+            )
+            self.assertTrue(Path(summary["parts"]["drums"]["midi"]).is_file())
+            arrangement = read_midi_clips(summary["arrangement"])
+            self.assertEqual(
+                {
+                    note.pitch
+                    for clip in arrangement
+                    for note in clip.notes
+                },
+                {36},
+            )
+
+            catalog = build_workbench_catalog(folder, candidate_roots=[out])
+            self.assertEqual(catalog["shadowed_roles"], ["drums"])
+            broad = next(
+                row for row in catalog["stems"] if row["role"] == "drums"
+            )
+            self.assertGreater(broad["candidate_count"], 0)
+            self.assertEqual(
+                broad["automatic_arrangement_status"],
+                "shadowed_by_explicit_drum_leaves",
+            )
+
+    def test_silent_explicit_leaf_falls_back_to_viable_composite_drums(self):
+        def fake_refine(**kwargs):
+            work = Path(kwargs["out_dir"])
+            work.mkdir(parents=True, exist_ok=True)
+            note = NoteEvent(0.0, 0.08, 38, 100)
+            midi = work / "other_kit_listened.mid"
+            write_midi_file(
+                midi,
+                [MidiTrack("Drums", 9, 0, [note])],
+                bpm=119,
+            )
+            provenance = NoteProvenance.from_note(
+                note,
+                origin="observed",
+                confidence=0.9,
+                family="snare_body",
+                sources=("stem", "listen-other_kit"),
+            )
+            return RefineResult(
+                notes=[note],
+                score=0.9,
+                history=[],
+                midi_path=midi,
+                note_provenance=[provenance],
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            folder = root / "Composite-B major-119bpm-440hz"
+            folder.mkdir()
+            kick = folder / "Composite-kick-B major-119bpm-440hz.wav"
+            drums = folder / "Composite-drums-B major-119bpm-440hz.wav"
+            kick.touch()
+            drums.touch()
+
+            with patch(
+                "sunofriend.listen_all._is_silent",
+                side_effect=lambda path: Path(path).name == kick.name,
+            ), patch(
+                "sunofriend.loop.refine_stem",
+                side_effect=fake_refine,
+            ):
+                summary = run_listen_all(
+                    folder,
+                    root / "out",
+                    evaluate_outputs=False,
+                    progress=lambda _message: None,
+                )
+
+            self.assertEqual(summary["shadowed_roles"], [])
+            self.assertEqual(
+                summary["drum_role_policy"]["precedence"],
+                "composite-review-required",
+            )
+            self.assertEqual(
+                summary["parts"]["drums"]["arrangement_role"],
+                "primary",
+            )
+            self.assertTrue(
+                any(
+                    "automatic arrangement fallback" in warning
+                    for warning in summary["warnings"]
+                )
+            )
+            arrangement = read_midi_clips(summary["arrangement"])
+            self.assertEqual(
+                {
+                    note.pitch
+                    for clip in arrangement
+                    for note in clip.notes
+                },
+                {38},
+            )
+
     def test_full_run_publishes_broad_roles_without_selecting_them(self):
         engines = {
             "wind": "lead",

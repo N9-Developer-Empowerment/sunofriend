@@ -63,6 +63,7 @@ def build_parser() -> argparse.ArgumentParser:
             "cymbals",
             "toms",
             "other_kit",
+            "drums",
             "keys",
             "piano",
             "synth",
@@ -539,6 +540,7 @@ def build_parser() -> argparse.ArgumentParser:
             "cymbals",
             "toms",
             "other_kit",
+            "drums",
             "keys",
             "piano",
             "synth",
@@ -3859,6 +3861,8 @@ def _run_listen_all(args) -> int:
             f"detected average bpm: {summary['bpm_true']} (downbeat at {summary['downbeat_offset']}s)"
         )
     print(f"set GarageBand tempo to: {summary['set_garageband_tempo_to']}")
+    for warning in summary.get("warnings", ()):
+        print(f"warning: {warning}")
     if summary.get("arrangement"):
         print(summary["arrangement"])
     if summary.get("status") in {"failed", "no-output"}:

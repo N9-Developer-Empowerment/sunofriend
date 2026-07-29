@@ -82,6 +82,7 @@ class FullConversionResult:
     midi_ready_stem_count: int
     candidate_count: int
     preflight_ready: tuple[str, ...] = ()
+    shadowed_roles: tuple[str, ...] = ()
 
     @property
     def succeeded(self) -> bool:

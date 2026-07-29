@@ -16,7 +16,15 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
 from .clip import read_midi_clips
+from .drum_roles import (
+    COMPOSITE_DRUM_CLASSIFICATION_LIMITATION,
+    resolve_drum_role_policy,
+)
 from .metadata import infer_project_metadata
+from .project_audio_inputs import (
+    ProjectAudioSource,
+    inspect_project_audio_inputs,
+)
 from .source_project import load_prepared_project_context
 from .workbench_privacy import path_free_role, validated_role
 from .workbench_phrase_links import build_workbench_phrase_review_link
@@ -53,6 +61,7 @@ _REDACTED = object()
 _ROLE_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("backing_vocals", ("backing_vocals", "backing-vocals", "backing vocals")),
     ("other_kit", ("other_kit", "other-kit", "other kit", "percussion")),
+    ("drums", ("drums", "drum-kit", "drum kit", "drumkit")),
     ("cymbals", ("cymbals", "cymbal")),
     ("strings", ("strings", "string")),
     ("vocals", ("vocals", "vocal", "voice")),
@@ -100,6 +109,24 @@ _COMPOUND_ROLE_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "lead vocals",
         ),
     ),
+)
+_COMPOSITE_DRUM_VARIANT_ALIASES = tuple(
+    f"drums{separator}{family.replace('_', separator)}"
+    for family in (
+        "kick_deep",
+        "kick_high",
+        "snare_body",
+        "snare_bright",
+        "hat_closed",
+        "hat_open",
+        "tom_floor",
+        "tom_low",
+        "tom_mid",
+        "tom_high",
+        "crash",
+        "ride",
+    )
+    for separator in ("-", "_", " ")
 )
 
 
@@ -155,6 +182,21 @@ def build_workbench_catalog(
             )
             if path.is_file() and path.suffix.lower() in {".pdf", ".txt"}
         ]
+    drum_role_policy = resolve_drum_role_policy(
+        stem.get("role") for stem in stems
+    )
+    for stem in stems:
+        if stem.get("role") != "drums":
+            continue
+        stem["source_shape"] = "composite"
+        stem["review_required"] = True
+        stem["automatic_arrangement_status"] = (
+            "shadowed_by_explicit_drum_leaves"
+            if "drums" in drum_role_policy["shadowed_roles"]
+            else "included_review_required"
+        )
+        stem["warnings"] = list(drum_role_policy["warnings"])
+
     return {
         "schema": WORKBENCH_CATALOG_SCHEMA,
         "project_id": project_id,
@@ -170,6 +212,9 @@ def build_workbench_catalog(
             "files": setup_files,
         },
         "stems": stems,
+        "drum_role_policy": drum_role_policy,
+        "shadowed_roles": list(drum_role_policy["shadowed_roles"]),
+        "warnings": list(drum_role_policy["warnings"]),
         "privacy": {
             "mode": "local",
             "uploads_enabled": False,
@@ -228,6 +273,9 @@ def public_catalog(catalog: Mapping[str, Any]) -> dict[str, Any]:
         "name": catalog.get("name"),
         "setup": _public_setup(catalog.get("setup", {})),
         "privacy": dict(catalog.get("privacy", {})),
+        "drum_role_policy": dict(catalog.get("drum_role_policy") or {}),
+        "shadowed_roles": list(catalog.get("shadowed_roles") or ()),
+        "warnings": list(catalog.get("warnings") or ()),
         "stems": stems,
     }
 
@@ -254,18 +302,33 @@ def _discover_stems(
     project_bpm: float | None,
     project_key: str | None,
 ) -> list[dict[str, Any]]:
-    source_files = []
-    for path in sorted(project.iterdir(), key=lambda item: item.name.lower()):
-        if not path.is_file() or path.suffix.lower() not in _AUDIO_SUFFIXES:
-            continue
-        resolved = path.resolve()
-        if not _is_within(resolved, project):
-            raise ValueError(f"project source symlink escapes the project: {path}")
-        source_files.append(resolved)
-    if not source_files:
+    inventory = inspect_project_audio_inputs(project)
+    if inventory.prepared_project:
+        source_rows = inventory.sources
+    else:
+        review_sources: list[ProjectAudioSource] = []
+        for path in inventory.audio_files:
+            resolved = path.resolve()
+            if not _is_within(resolved, project):
+                raise ValueError(
+                    f"project source symlink escapes the project: {path}"
+                )
+            review_sources.append(
+                ProjectAudioSource(
+                    path=resolved,
+                    role=None,
+                    node_id=None,
+                    asset_id=None,
+                    shape="unknown",
+                    origin="legacy",
+                )
+            )
+        source_rows = tuple(review_sources)
+    if not source_rows:
         raise ValueError(
-            "project contains no top-level audio stems; use a project directory "
-            "with WAV/AIFF/FLAC stems or provide an explicit catalog"
+            "project contains no active audio stems; use a project directory "
+            "with WAV/AIFF/FLAC stems, prepare a source project, or provide an "
+            "explicit catalog"
         )
 
     midi_files = _discover_midi(candidate_roots)
@@ -285,14 +348,29 @@ def _discover_stems(
         bucket.append(candidate)
 
     stems = []
-    for source in source_files:
-        role = infer_role(source.stem) or "unclassified"
+    for source_row in source_rows:
+        source = source_row.path
+        role = (
+            source_row.role
+            if inventory.prepared_project
+            else infer_role(source.stem) or "unclassified"
+        )
         if role in _IGNORED_SOURCE_ROLES:
             continue
         candidates = _deduplicate_automatic_candidates(
             candidates_by_role.get(role, []),
         )
-        stems.append(_stem_record(source, role=role, candidates=candidates))
+        stems.append(
+            _stem_record(
+                source,
+                role=role,
+                candidates=candidates,
+                source_node_id=source_row.node_id,
+                source_asset_id=source_row.asset_id,
+                source_origin=source_row.origin,
+                source_shape=source_row.shape,
+            )
+        )
     if not stems:
         raise ValueError("project contains no reviewable audio stems")
     return stems
@@ -420,6 +498,10 @@ def _stem_record(
     label: str | None = None,
     review_question: str | None = None,
     listening_focus: Sequence[str] = (),
+    source_node_id: str | None = None,
+    source_asset_id: str | None = None,
+    source_origin: str | None = None,
+    source_shape: str | None = None,
 ) -> dict[str, Any]:
     source_record = _file_record(source)
     review_context = {
@@ -428,6 +510,8 @@ def _stem_record(
     }
     review_context_sha256 = _document_hash(review_context)
     identity_parts = [str(source_record["sha256"]), role, source.name.casefold()]
+    if source_node_id is not None and source_origin not in {None, "original"}:
+        identity_parts.append(source_node_id)
     if review_question is not None or listening_focus:
         identity_parts.append(review_context_sha256)
     stem_identity = "\0".join(identity_parts).encode("utf-8")
@@ -454,6 +538,10 @@ def _stem_record(
         "source_path": str(source),
         "source": source_record,
         "source_media_id": "source-" + source_record["sha256"][:24],
+        "source_node_id": source_node_id,
+        "source_asset_id": source_asset_id,
+        "source_origin": source_origin,
+        "source_shape": source_shape,
         "candidate_count": len(candidate_rows),
         "primary_candidate_count": primary_count,
         "candidates": [
@@ -486,6 +574,8 @@ def _candidate_record(
     preview = preview or _find_preview(midi, candidate_roots)
     preview_record = _file_record(preview) if preview else None
     combined_warnings = list(warnings)
+    if role == "drums":
+        combined_warnings.append(COMPOSITE_DRUM_CLASSIFICATION_LIMITATION)
     if ai_diagnostics:
         combined_warnings.extend(ai_diagnostics["warnings"])
     blocked = bool(ai_diagnostics and not ai_diagnostics["playable"])
@@ -514,6 +604,8 @@ def _candidate_record(
         "preview_policy": (
             "existing-render-not-proven-level-matched" if preview else "not-rendered"
         ),
+        "review_required": role == "drums",
+        "source_shape": "composite" if role == "drums" else "leaf",
     }
 
 
@@ -2020,10 +2112,20 @@ def infer_role(value: str) -> str | None:
     return None
 
 
-def _infer_roles(value: str) -> set[str]:
+def _infer_roles(
+    value: str,
+    *,
+    include_composite_drum_variants: bool = False,
+) -> set[str]:
     lowered = value.lower().replace("%20", " ")
     compound_spans: list[tuple[int, int, str]] = []
-    for role, aliases in _COMPOUND_ROLE_ALIASES:
+    compound_aliases = _COMPOUND_ROLE_ALIASES
+    if include_composite_drum_variants:
+        compound_aliases = (
+            *compound_aliases,
+            ("drums", _COMPOSITE_DRUM_VARIANT_ALIASES),
+        )
+    for role, aliases in compound_aliases:
         for alias in aliases:
             for match in _bounded_alias_matches(lowered, alias):
                 compound_spans.append((match.start(), match.end(), role))
@@ -2070,7 +2172,10 @@ def _automatic_candidate(
     if _ARRANGEMENT_TOKEN.search(midi.stem):
         return None
 
-    basename_roles = _infer_roles(midi.stem)
+    basename_roles = _infer_roles(
+        midi.stem,
+        include_composite_drum_variants=True,
+    )
     if len(basename_roles) == 1:
         role = next(iter(basename_roles))
     elif basename_roles:
@@ -2092,7 +2197,12 @@ def _automatic_candidate(
 
     title_roles: set[str] = set()
     for clip in clips:
-        title_roles.update(_infer_roles(clip.title))
+        title_roles.update(
+            _infer_roles(
+                clip.title,
+                include_composite_drum_variants=True,
+            )
+        )
     # A role-specific basename is authoritative over one stale/generic track
     # title (common in exported MIDI). Multiple distinct titled roles reveal a
     # flattened arrangement even when its filename looks role-specific.

@@ -1748,6 +1748,7 @@ class SunofriendTui(App[None]):
         skipped = tuple(getattr(result, "skipped_roles", ()) or ())
         failed = tuple(getattr(result, "failed_roles", ()) or ())
         proxy = tuple(getattr(result, "proxy_roles", ()) or ())
+        shadowed = tuple(getattr(result, "shadowed_roles", ()) or ())
         warnings = tuple(getattr(result, "warnings", ()) or ())
         detail = (
             f"Verified {ready} of {total} source stems as MIDI-ready"
@@ -1771,6 +1772,12 @@ class SunofriendTui(App[None]):
             disclosures.append(
                 "Review-required proxy role(s): "
                 f"{escape_markup(', '.join(map(str, proxy)))}."
+            )
+        if shadowed:
+            disclosures.append(
+                "Automatic-arrangement shadowed role(s): "
+                f"{escape_markup(', '.join(map(str, shadowed)))}. "
+                "Their MIDI remains available in Studio for comparison."
             )
         for warning in warnings[:5]:
             disclosures.append(

@@ -235,10 +235,22 @@ execution. Supported observed roles are `backing_vocals`, `bass`, `cymbals`,
 `pads` is deliberately not an accepted observed role yet: production
 currently synthesizes pads from keys and has no observed-pads conversion job.
 Map a genuinely string-like sustained part to `strings`; otherwise keep the
-role unresolved rather than mislabelling it. A composite `drums` part is
-preserved as evidence, but direct composite-drum conversion remains planned
-for Source Separation S2. A metronome is timing evidence rather than an S1
-source role, so keep it outside the folder being imported.
+role unresolved rather than mislabelling it.
+
+A composite `drums` part is now usable directly. Sunofriend sends each
+detected onset through the existing mixed-kit spectral family classifier and
+publishes review-required drum MIDI variants. It chooses one dominant family
+per onset, so coincident layered hits can collapse to one MIDI note. This is
+MIDI classification, not audio separation: it does not create kick, snare,
+hat, tom or cymbal WAV files.
+
+If viable explicit drum-family sources such as `kick`, `snare` or `hat` are
+also present, those narrower sources take precedence in the automatic
+arrangement and the composite `drums` MIDI is retained for Studio review.
+This prevents doubled drum hits. If the explicit leaves produce no viable
+primary MIDI, the review-required composite result remains the automatic
+fallback. A metronome is timing evidence rather than an observed source role,
+so keep it outside the folder being imported.
 
 Sunofriend compares recorded start times when the containers expose them.
 Compatible origins are evidence only. If any origin is missing, the plan is
@@ -257,6 +269,14 @@ the TUI:
 
 .venv/bin/sunofriend tui "/absolute/path/to/fresh-prepared-project"
 ```
+
+Prepared projects are resolved through an immutable source graph. A project
+with no saved graph gets the same original sources as a deterministic
+read-only first revision. Later refinements can append child evidence without
+rewriting the import manifest, and the active frontier prevents an original
+parent and its children from both entering one conversion. No current command
+creates refined child audio, so this lineage support does not claim that
+Sunofriend can separate a finished mix.
 
 ## Try the built-in demo
 

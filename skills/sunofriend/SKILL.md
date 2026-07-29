@@ -45,6 +45,8 @@ report the result, then move on.
   or feedback.
 - Use only music the user owns or is authorised to process.
 - Sunofriend does not download songs or separate a full mix into stems.
+- The backend-neutral `separation-run.v1` contract is engineering groundwork,
+  not a usable separator, model installation or finished-song command.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one
   canonical WAV project. It does not separate, shift, pad, stretch, normalize
@@ -221,10 +223,16 @@ percussion to `other_kit`. Only `vocals` and `backing_vocals` may repeat.
 
 Do not use `pads`: production currently synthesizes pads from keys and has no
 observed-pads job. A genuinely string-like sustained part may be mapped to
-`strings`; otherwise leave it unresolved. Preserve composite `drums` as
-evidence and explain that direct composite-drum conversion is pending S2.
-Keep a metronome outside the S1 import folder because it is timing evidence,
-not an accepted observed source role.
+`strings`; otherwise leave it unresolved.
+
+A composite `drums` part can now produce review-required MIDI through the
+mixed-kit family classifier. Explain that it assigns one dominant family per
+detected onset, so coincident layered hits can collapse, and that it creates
+no kick, snare, hat, tom or cymbal audio files. When viable explicit
+drum-family sources also exist, they take precedence in the automatic
+arrangement to avoid doubled hits; the broad candidate remains available for
+Studio review. Keep a metronome outside the import folder because it is timing
+evidence, not an accepted observed source role.
 
 If the plan reports `unconfirmed` origin, explain that one or more containers
 lack concrete recorded-origin evidence. Never silently add

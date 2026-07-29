@@ -44,6 +44,13 @@ does not shift, pad, stretch or normalize audio, prove a downbeat, or repair
 alignment. See
 [Prepare a folder of existing audio parts](GETTING_STARTED.md#prepare-a-folder-of-existing-audio-parts).
 
+One broad `drums` source can now be transcribed directly with Sunofriend's
+mixed-kit family classifier. The result is review-required MIDI, not separated
+audio: one dominant family is assigned to each detected onset, layered hits
+may collapse, and no kick/snare/hat WAV children are created. Explicit
+drum-family source files take automatic-arrangement precedence when they
+produce viable MIDI; the broad result remains available for Studio review.
+
 The narrower `source-import` command remains useful for preserving exactly one
 standalone authorised asset. Local full-mix separation remains research, not
 a product feature.
@@ -195,8 +202,9 @@ links.
 
 No provider is yet labelled “best for Sunofriend MIDI.” Marketing quality and
 pleasant isolated audio do not prove note, onset, octave or alignment
-accuracy. The planned Sunofriend bake-off will measure those downstream
-results.
+accuracy. Sunofriend now has a strict, backend-neutral receipt contract for a
+future local bake-off, but no real separation backend has been connected to
+it. The bake-off still needs to measure those downstream results.
 
 ## What files should I bring back?
 
@@ -281,8 +289,9 @@ restore information discarded by lossy compression.
 Not in the current folder-import contract. Production currently synthesizes
 pads from keys and has no observed-pads conversion job. A genuinely
 string-like sustained part may be mapped to `strings`; otherwise leave it
-unresolved rather than mislabelling it. A broad `drums` part is preserved but
-its direct composite conversion is planned for the next source-input stage.
+unresolved rather than mislabelling it. A broad `drums` part can be converted
+to review-required mixed-kit MIDI, but it is not split into narrower audio
+stems.
 
 ### Can I publish AI-separated stems?
 

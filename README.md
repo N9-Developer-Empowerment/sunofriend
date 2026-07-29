@@ -80,6 +80,8 @@ Already have separate, synchronized parts as MP3, FLAC, M4A, AIFF, Ogg or
 WAV? The local `source-import-folder` command can check and prepare 2–64 files
 as one canonical WAV stem project before Simple or Studio runs. It does not
 separate a finished mix, repair alignment or prove the musical downbeat.
+One broad `drums` part can now produce review-required mixed-kit MIDI; it does
+not create separate kick, snare or cymbal audio files.
 The narrower `source-import` command still prepares one standalone asset.
 See [source preparation](docs/GETTING_STARTED.md#prepare-a-folder-of-existing-audio-parts).
 

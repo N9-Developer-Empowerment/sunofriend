@@ -145,6 +145,39 @@ class DrumFamilyTests(unittest.TestCase):
             ("unknown", GM["unknown"]),
         )
 
+    def test_composite_drums_is_an_exact_mixed_kit_classifier_alias(self):
+        examples = (
+            _feature(
+                dominant_hz=58.0,
+                spectral_centroid_hz=100.0,
+                low_ratio=0.85,
+                mid_ratio=0.14,
+                high_ratio=0.01,
+            ),
+            _feature(
+                dominant_hz=7000.0,
+                spectral_centroid_hz=6500.0,
+                low_ratio=0.01,
+                mid_ratio=0.1,
+                high_ratio=0.89,
+                decay_seconds=0.05,
+            ),
+            _feature(
+                dominant_hz=420.0,
+                spectral_centroid_hz=480.0,
+                low_ratio=0.2,
+                mid_ratio=0.3,
+                high_ratio=0.1,
+                spectral_flatness=0.3,
+            ),
+        )
+        for features in examples:
+            with self.subTest(features=features):
+                self.assertEqual(
+                    _classify_features("drums", features),
+                    _classify_features("other_kit", features),
+                )
+
 
 @unittest.skipUnless(AUDIO, "librosa/numpy/soundfile unavailable")
 class DrumAudioEvidenceTests(unittest.TestCase):

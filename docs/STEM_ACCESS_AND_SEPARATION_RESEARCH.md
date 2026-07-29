@@ -1,7 +1,8 @@
 # Stem access and local separation research
 
-Status: **research and architecture decision complete; S1 multi-file source
-preparation accepted; source separation not implemented**
+Status: **research and architecture decision complete; S1 synchronized source
+preparation and S2 source lineage/composite drums accepted; the first S3 pure
+contract is implemented; source separation is not implemented**
 
 Checked: 29 July 2026
 
@@ -64,9 +65,17 @@ That bounded S1 source-preparation slice is now implemented. `source-doctor`
 and `source-import` inspect and prepare one asset.
 `source-import-folder` prepares 2–64 already-separated, synchronized parts as
 one fresh canonical WAV project that existing Simple and Studio paths can
-consume. There is still no full-mix separator.
+consume.
 
-The first model increment should be a measured bake-off, not a hard-coded
+S2 now adds a canonical role registry and an append-only source graph with an
+active-source frontier. Composite `drums` can use the existing mixed-kit MIDI
+family classifier without pretending that narrower audio stems were created.
+The first S3 increment adds the strict backend-neutral request/result and
+`sunofriend.separation-run.v1` receipt contract. It does not run a model,
+write separation artifacts or make a finished-song route available. There is
+still no full-mix separator.
+
+The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
 unverified candidates until one exact runtime/checkpoint pair has known terms,
 a fixed hash, offline inference, supported-Mac measurements and downstream
@@ -93,16 +102,11 @@ lineage, quality gates, licences, review and cache.
 
 ### Production boundary
 
-The production paths in `listen_all.py`, `tui_conversion.py`, `tui.py`,
-`pipeline.py` and `cli.py` discover top-level lowercase `*.wav` files.
-`workbench_catalog.py` advertises WAV/WAVE, AIFF, FLAC, MP3 and M4A by suffix,
-but `workbench_timeline.py` only extracts waveform evidence from WAV. Format
-support is therefore inconsistent.
-
-Metadata currently comes mainly from folder and filename conventions. Role
-discovery understands kick, snare, hats, cymbals, toms and `other_kit`, but
-not one generic composite `drums` source. A separator's `other.wav` could also
-be mistaken for a coherent synth role when it is normally a mixture.
+Legacy production projects still use top-level lowercase `*.wav` discovery.
+Prepared projects instead resolve their manifest-declared active source-graph
+frontier, so an inactive parent, undeclared file or future refined child is
+not silently mistaken for a production source. Metadata and an optional chord
+document come from the prepared manifest before legacy filename inference.
 
 The accepted S1 preparation boundary now provides:
 
@@ -125,9 +129,28 @@ Folder import does not recurse, separate a mix, shift, pad, stretch or
 normalize files, prove a downbeat, or repair alignment. Missing recorded-origin
 evidence requires explicit acknowledgement; concrete origin conflicts block
 execution. Execution replans current inputs rather than replaying a stored
-plan. Composite `drums` is preserved for S2 rather than silently treated as
-one drum family. `pads` is not accepted as an observed S1 role because
+plan. `pads` is not accepted as an observed role because
 production currently synthesizes pads from keys and has no observed-pads job.
+
+The accepted S2 boundary now provides:
+
+- one canonical role vocabulary and conservative set-valued filename
+  inference;
+- deterministic in-memory source-graph revision 1 for an unchanged prepared
+  project, plus content-addressed append-only revisions when explicitly
+  written;
+- active-parent/active-child mutual exclusion and reversible parent
+  retention;
+- explicit composite semantics for `drums`, `vocals` and `other`;
+- review-required composite-drum MIDI through the existing mixed-kit family
+  classifier; and
+- an explicit leaf-over-composite automatic-arrangement policy that retains
+  the broad result for Studio and prevents doubled drum hits.
+
+Composite-drum processing assigns one dominant family per detected onset, so
+coincident layered hits can collapse. It creates MIDI family variants only,
+not kick/snare/hat/tom/cymbal audio children. No current operation writes
+refined audio nodes into the source graph.
 
 ### Reusable foundations
 
@@ -272,10 +295,11 @@ domain-shift risk. The original DrumSep provenance is incomplete enough that
 Sunofriend must not auto-download it until the archival licence and checksum
 are established.
 
-An earlier, lower-risk improvement is to add a public composite `drums` role
-and route it through Sunofriend's existing mixed-kit MIDI family classifier.
-This does not produce child audio stems, but can create family-aware drum MIDI
-without a second separator.
+The lower-risk composite route is now implemented: public `drums` uses
+Sunofriend's existing mixed-kit MIDI family classifier. It produces
+review-required family-aware drum MIDI without a second separator or any child
+audio stems. It remains the control for evaluating whether a later dedicated
+drum separator actually improves downstream MIDI.
 
 ### Query-based separation
 
@@ -448,29 +472,41 @@ The one-asset implementation fixes and tests this
 `sunofriend.source-import.v1` boundary, including `normalised: false`,
 `network_used: false`, file-only decoder protocols, original/canonical hashes
 and clock evidence. `source-import-folder` composes those per-source receipts
-under `sunofriend.source-folder-import.v1`, compares available recorded
-origins and atomically publishes one multi-source
+under `sunofriend.source-folder-import.v2` while continuing to validate
+existing v1 receipts, compares available recorded origins and atomically
+publishes one multi-source
 `sunofriend.source-project.v1` manifest plus canonical top-level WAV stems.
-The aggregate receipt records that audio was not normalized and alignment was
-not corrected.
+The aggregate receipt records that audio was not normalized, alignment was not
+corrected and any composite-drum precedence warning.
 
 ## Source-project and separation contracts
 
 ### Source part
 
-Each source part needs:
+S2 implements source identity and refinement lineage as a separate
+`sunofriend.source-graph.v1` overlay. The stable
+`INPUT/source-project.json` import manifest is not rewritten. Reading a
+prepared project without a saved graph deterministically synthesizes the
+original source nodes in memory and performs no write. Explicit graph updates
+are content-addressed, append-only and use a compare-and-swap current pointer.
 
-- stable content identity;
-- role and optional instrument label;
-- parent source ID;
-- `original` or `estimated` origin;
+Together, the accepted import receipts, project manifest and graph record:
+
+- stable source and asset identities;
+- canonical role plus the originally declared role;
+- optional parent node and immutable derivation evidence;
+- `original`, `derived` or `view` origin;
 - `composite` or `leaf` shape;
-- active/inactive status;
-- audio geometry and content hash;
-- provider or separator provenance;
-- quality status and warnings; and
-- rights category supplied by the user without pretending Sunofriend verified
-  it.
+- an explicit active-node frontier;
+- canonical audio and receipt references confined to the project;
+- complete, partial or unknown refinement-group coverage plus an optional
+  residual node; and
+- the rights category supplied by the user without pretending Sunofriend
+  verified it.
+
+Backend/checkpoint provenance, output geometry and quality belong to the S3
+separation receipt before a derived graph node can be accepted; the graph does
+not fabricate those facts.
 
 Suggested rights values are `owned`, `licensed`, `authorised_private_use`,
 `statutory_exception`, `unknown` and `declined_to_state`. They are a user
@@ -478,7 +514,13 @@ declaration, not legal adjudication.
 
 ### Separation run
 
-One run should be immutable and contain:
+The first S3 increment implements an immutable, backend-neutral contract in
+`separation_contract.py`. Its local `SeparationRequest` and
+`SeparationResult` DTOs are separate from the shareable
+`sunofriend.separation-run.v1` receipt. Private source, checkpoint and work
+paths remain in the local DTOs and cannot enter that receipt.
+
+A complete receipt binds:
 
 - source and canonical hashes;
 - backend package/version/commit;
@@ -492,8 +534,19 @@ One run should be immutable and contain:
 - network and filesystem side effects; and
 - completion/cancellation state.
 
-An incomplete or cancelled run must never be loadable as completed output.
-No model may download implicitly during inference.
+Only `complete` is loadable. `failed`, `cancelled` and `abandoned` are terminal,
+non-loadable and expose no output or quality artifacts. Target and residual
+roles, hashes and geometry must pair exactly; residuals use the explicit
+persisted-source-minus-persisted-target definition. The quality report is
+hash-bound, reconstruction is explicitly not treated as separation-accuracy
+evidence, settings and measurements must be finite, and artifact paths must
+be safe relative POSIX paths. The canonical receipt hash excludes only its
+own `receipt_sha256` field.
+
+This is a pure contract boundary. It imports no model or audio runtime, reads
+or writes no file, downloads nothing and does not yet have a parent runner,
+worker, backend adapter, persistence service, quality calculator or cache. No
+model may download implicitly when those pieces are added.
 
 ### Nested refinement
 
@@ -805,11 +858,18 @@ Likely modules:
 
 ### S2 — Source graph and composite roles
 
-- Extend the minimal manifest with versioned parent/child lineage.
-- Centralise role inference.
-- Add composite `drums`, `vocals` and `other` semantics.
-- Route composite drums through the existing family-aware MIDI classifier.
-- Enforce parent/child active-leaf exclusivity.
+Status: **accepted**
+
+- [x] Add a separate versioned parent/child lineage overlay without rewriting
+  the minimal import manifest.
+- [x] Centralise role inference and role policy.
+- [x] Add composite `drums`, `vocals` and `other` semantics.
+- [x] Route composite drums through the existing family-aware MIDI classifier
+  as review-required MIDI without creating audio children.
+- [x] Enforce parent/child active-frontier exclusivity and reversible parent
+  retention.
+- [x] Prevent automatic doubled drums by preferring viable explicit family
+  sources while preserving the broad candidate for Studio review.
 
 Likely modules:
 
@@ -818,13 +878,19 @@ Likely modules:
 
 ### S3 — Separation bake-off harness
 
-- Add a backend-neutral `SeparationBackend` contract.
-- Generalise the existing AI runtime/checkpoint registry and isolate heavy
+Status: **contract slice complete; runner, backends and bake-off not
+implemented**
+
+- [x] Add a pure backend-neutral `SeparationBackend` contract plus immutable
+  request/result DTOs and strict `sunofriend.separation-run.v1` receipts.
+- [ ] Generalise the existing AI runtime/checkpoint registry and isolate heavy
   runtimes in a separate worker environment.
-- Require explicit checkpoint installation, hashes and licences.
-- Prove that inference makes no network request after installation.
-- Generate immutable broad candidate runs, residuals and quality reports.
-- Measure downstream MIDI and Mac resource behaviour.
+- [ ] Require explicit checkpoint installation, hashes and licences in the
+  real parent runner.
+- [ ] Prove that inference makes no network request after installation.
+- [ ] Generate and persist immutable broad candidate runs, residuals and
+  quality reports.
+- [ ] Measure downstream MIDI and Mac resource behaviour.
 
 Likely modules:
 

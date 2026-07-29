@@ -146,6 +146,55 @@ class _SilentRunner(ProductionFullConversionRunner):
 
 
 class FullConversionPlanTests(unittest.TestCase):
+    def test_composite_drums_is_supported_and_review_required(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "Song-D minor-120bpm-440hz"
+            project.mkdir()
+            (project / "Song-drums-D minor-120bpm-440hz.wav").touch()
+
+            plan = plan_full_conversion(
+                FullConversionRequest.create(
+                    project,
+                    root / "fresh-output",
+                )
+            )
+
+            self.assertEqual(plan.instrumental_roles, ("drums",))
+            self.assertEqual(plan.unsupported_roles, ())
+            self.assertEqual(plan.shadowed_roles, ())
+            self.assertTrue(
+                any(
+                    "review-required" in warning
+                    and "dominant drum family" in warning
+                    for warning in plan.warnings
+                )
+            )
+
+    def test_explicit_drum_leaf_shadows_broad_role_in_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "Song-D minor-120bpm-440hz"
+            project.mkdir()
+            (project / "Song-kick-D minor-120bpm-440hz.wav").touch()
+            (project / "Song-drums-D minor-120bpm-440hz.wav").touch()
+
+            plan = plan_full_conversion(
+                FullConversionRequest.create(
+                    project,
+                    root / "fresh-output",
+                )
+            )
+
+            self.assertEqual(plan.instrumental_roles, ("kick", "drums"))
+            self.assertEqual(plan.shadowed_roles, ("drums",))
+            self.assertTrue(
+                any(
+                    "prevents doubled drum hits" in warning
+                    for warning in plan.warnings
+                )
+            )
+
     def test_all_non_wav_folder_requires_explicit_preparation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

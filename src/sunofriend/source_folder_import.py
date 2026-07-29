@@ -18,7 +18,7 @@ import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Any, Mapping, Sequence
+from typing import Any, Iterable, Mapping, Sequence
 
 from .audio_formats import (
     DEFAULT_AUDIO_IMPORT_LIMITS,
@@ -31,6 +31,10 @@ from .audio_formats import (
     probe_stable_audio,
     resolve_executable,
     validate_local_source_path,
+)
+from .drum_roles import (
+    resolve_drum_role_policy,
+    validate_drum_role_policy,
 )
 from .source_import import (
     SourceImportPlan,
@@ -59,7 +63,6 @@ from .source_project import (
     SourceMetadata,
     SourcePart,
     build_source_project,
-    normalize_source_role,
     resolve_source_metadata,
     write_source_project,
 )
@@ -70,67 +73,57 @@ from .source_receipt import (
     validate_source_receipt_files,
     write_source_receipt,
 )
+from .source_roles import (
+    canonical_source_role,
+    flat_v1_repeatable_source_role_ids,
+    infer_source_roles,
+    prepared_source_role_ids,
+)
 
 
-SOURCE_FOLDER_IMPORT_SCHEMA = "sunofriend.source-folder-import.v1"
+LEGACY_SOURCE_FOLDER_IMPORT_SCHEMA = "sunofriend.source-folder-import.v1"
+SOURCE_FOLDER_IMPORT_SCHEMA = "sunofriend.source-folder-import.v2"
+SOURCE_FOLDER_IMPORT_PLAN_SCHEMA = "sunofriend.source-folder-import-plan.v2"
+COMPOSITE_DRUM_REFINEMENT_STATUS = "not-run-midi-family-variants-only"
+COMPOSITE_DRUM_CONVERSION_STATUS = "supported-review-required"
 MINIMUM_SOURCE_PARTS = 2
 MAXIMUM_SOURCE_PARTS = 64
-_REPEATABLE_ROLES = frozenset({"vocals", "backing_vocals"})
-_HAT_ROLE_ALIASES = frozenset(
-    {"hat", "hats", "hi_hat", "hi_hats", "hihat", "hihats"}
-)
-_PREPARED_ROLES = frozenset(
+_REPEATABLE_ROLES = flat_v1_repeatable_source_role_ids()
+_PREPARED_ROLES = prepared_source_role_ids()
+_V2_AGGREGATE_FIELDS = frozenset(
     {
-        "backing_vocals",
-        "bass",
-        "cymbals",
-        "drums",
-        "hat",
-        "keys",
-        "kick",
-        "lead",
-        "other",
-        "other_kit",
-        "piano",
-        "rhythm",
-        "snare",
-        "strings",
-        "synth",
-        "toms",
-        "vocals",
-        "wind",
+        "schema",
+        "project_id",
+        "parts",
+        "drum_role_policy",
+        "shadowed_roles",
+        "warnings",
+        "alignment",
+        "decoder",
+        "limits",
+        "normalised",
+        "network_used",
+        "folder_import_id",
     }
 )
-_INFERENCE_ROLE_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("backing_vocals", ("backing vocals", "backing vocal", "bv", "bvox")),
-    ("other_kit", ("other kit", "other drums", "percussion", "perc")),
-    ("cymbals", ("cymbals", "cymbal", "crash", "ride")),
-    ("vocals", ("vocals", "vocal", "voice")),
-    ("drums", ("drums", "drum kit", "drumkit")),
-    ("strings", ("strings", "string")),
-    ("rhythm", ("guitars", "guitar", "rhythm")),
-    ("piano", ("piano",)),
-    ("keys", ("keys", "keyboard")),
-    ("synth", ("synth", "synthesizer")),
-    ("bass", ("bass",)),
-    ("kick", ("kick",)),
-    ("snare", ("snare",)),
-    ("hat", ("hi hat", "hi hats", "hihat", "hihats", "hat", "hats")),
-    ("toms", ("toms", "tom")),
-    ("lead", ("lead",)),
-    ("wind", ("wind", "woodwind", "brass")),
-    ("other", ("other", "residual")),
-)
-_COMPOUND_ROLE_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
-    (
-        "backing_vocals",
-        (
-            "backing vocal",
-            "backing vocals",
-        ),
-    ),
-    ("other_kit", ("other kit", "other drums")),
-    ("vocals", ("lead vocal", "lead vocals")),
+_V2_PART_FIELDS = frozenset(
+    {
+        "source_id",
+        "role",
+        "role_source",
+        "shape",
+        "refinement_status",
+        "conversion_status",
+        "original_name",
+        "original_path",
+        "canonical_path",
+        "receipt_path",
+        "retained_origin_seconds",
+        "retained_origin_basis",
+        "decoded_duration_seconds",
+        "decoded_frames",
+        "sample_rate",
+    }
 )
 
 
@@ -204,13 +197,19 @@ class SourceFolderImportPlan:
             self.origin_status == "unconfirmed"
             and self.accept_unconfirmed_origin
         )
+        drum_role_policy = _drum_role_policy(
+            part.import_plan.role for part in self.parts
+        )
         return {
-            "schema": "sunofriend.source-folder-import-plan.v1",
+            "schema": SOURCE_FOLDER_IMPORT_PLAN_SCHEMA,
             "read_only": True,
             "network_used": False,
             "source_folder": str(self.source_folder),
             "destination": str(self.destination),
             "parts": [part.to_dict() for part in self.parts],
+            "drum_role_policy": drum_role_policy,
+            "shadowed_roles": list(drum_role_policy["shadowed_roles"]),
+            "warnings": list(self.warnings),
             "context": {
                 "title": self.title,
                 "metadata": self.metadata.to_dict(),
@@ -388,6 +387,8 @@ def plan_source_folder_import(
         warnings.append(
             "concrete decoded origins conflict; execution is blocked"
         )
+    drum_role_policy = _drum_role_policy(roles)
+    warnings.extend(drum_role_policy["warnings"])
 
     required_free = (
         sum(probe.source_bytes for probe in probes)
@@ -431,6 +432,9 @@ def plan_source_folder_import(
         receipt_names,
         origins,
     ):
+        shape, refinement_status, conversion_status = (
+            _v2_part_processing_semantics(role)
+        )
         per_part_required = (
             probe.source_bytes
             + 2 * probe.projected_pcm24_bytes
@@ -468,19 +472,9 @@ def plan_source_folder_import(
             SourceFolderPartPlan(
                 import_plan=import_plan,
                 role_source=role_source,
-                shape="composite" if role == "drums" else "leaf",
-                refinement_status=(
-                    "pending-s2-refinement"
-                    if role == "drums"
-                    else "not-requested"
-                ),
-                conversion_status=(
-                    "unsupported-pending-s2-refinement"
-                    if role == "drums"
-                    else "vocal-specialist"
-                    if role in _REPEATABLE_ROLES
-                    else "supported"
-                ),
+                shape=shape,
+                refinement_status=refinement_status,
+                conversion_status=conversion_status,
                 retained_origin_seconds=origin[0],
                 retained_origin_basis=origin[1],
             )
@@ -821,9 +815,15 @@ def _resolve_roles(
     sources_of_roles: list[str] = []
     for source in sources:
         if source.name in mapping:
-            role = _production_role(
-                normalize_source_role(mapping[source.name], fallback_from=source)
-            )
+            try:
+                role = _production_role(mapping[source.name])
+            except ValueError as exc:
+                raise ValueError(
+                    "unsupported prepared source role "
+                    f"{mapping[source.name]!r} for {source.name!r}; "
+                    "provide one unambiguous role from: "
+                    + ", ".join(sorted(_PREPARED_ROLES))
+                ) from exc
             role_source = "exact-role-map"
         else:
             matches = _infer_source_roles(source)
@@ -850,62 +850,13 @@ def _resolve_roles(
 
 
 def _production_role(role: str) -> str:
-    normalized = re.sub(r"[^a-z0-9]+", "_", role.casefold()).strip("_")
-    if normalized in _HAT_ROLE_ALIASES:
-        return "hat"
-    if normalized == "backing_vocal":
-        return "backing_vocals"
-    if normalized in {"lead_vocal", "lead_vocals"}:
-        return "vocals"
-    if normalized in {"guitar", "guitars"}:
-        return "rhythm"
-    if normalized in {"percussion", "perc", "other_drums"}:
-        return "other_kit"
-    if normalized in {"hi_hat", "hi_hats"}:
-        return "hat"
-    if normalized in {"drum_kit", "drumkit"}:
-        return "drums"
-    if normalized == "keyboard":
-        return "keys"
-    if normalized in {"woodwind", "brass"}:
-        return "wind"
-    return normalized
+    return canonical_source_role(role)
 
 
 def _infer_source_roles(source: Path) -> set[str]:
-    """Return every bounded role in a name, protecting compound labels."""
+    """Delegate conservative set-valued inference to the source registry."""
 
-    normalized = re.sub(
-        r"[^a-z0-9]+", " ", source.stem.casefold()
-    ).strip()
-    compound_spans: list[tuple[int, int, str]] = []
-    for role, aliases in _COMPOUND_ROLE_ALIASES:
-        for alias in aliases:
-            for match in _bounded_alias_matches(normalized, alias):
-                compound_spans.append((match.start(), match.end(), role))
-    roles = {role for _start, _end, role in compound_spans}
-    for role, aliases in _INFERENCE_ROLE_ALIASES:
-        for alias in aliases:
-            matches = list(_bounded_alias_matches(normalized, alias))
-            if any(
-                not any(
-                    start <= match.start()
-                    and match.end() <= end
-                    and compound_role != role
-                    for start, end, compound_role in compound_spans
-                )
-                for match in matches
-            ):
-                roles.add(role)
-                break
-    return roles
-
-
-def _bounded_alias_matches(
-    value: str, alias: str
-) -> Sequence[re.Match[str]]:
-    pattern = r"(?<![a-z0-9])" + re.escape(alias) + r"(?![a-z0-9])"
-    return tuple(re.finditer(pattern, value))
+    return set(infer_source_roles(source))
 
 
 def _validate_role_multiplicity(roles: Sequence[str]) -> None:
@@ -922,6 +873,22 @@ def _validate_role_multiplicity(roles: Sequence[str]) -> None:
             "only vocals and backing_vocals may repeat; duplicate role(s): "
             + ", ".join(duplicates)
         )
+
+
+def _v2_part_processing_semantics(role: str) -> tuple[str, str, str]:
+    """Return the immutable v2 shape/refinement/conversion contract."""
+
+    if role == "drums":
+        return (
+            "composite",
+            COMPOSITE_DRUM_REFINEMENT_STATUS,
+            COMPOSITE_DRUM_CONVERSION_STATUS,
+        )
+    return (
+        "leaf",
+        "not-requested",
+        "vocal-specialist" if role in _REPEATABLE_ROLES else "supported",
+    )
 
 
 def _resolve_folder_metadata(
@@ -1151,19 +1118,11 @@ def _validate_execution_plan(plan: SourceFolderImportPlan) -> None:
             if inferred != {item.role}:
                 raise ValueError("filename-derived folder part role changed")
 
-        expected_shape = "composite" if item.role == "drums" else "leaf"
-        expected_refinement = (
-            "pending-s2-refinement"
-            if item.role == "drums"
-            else "not-requested"
-        )
-        expected_conversion = (
-            "unsupported-pending-s2-refinement"
-            if item.role == "drums"
-            else "vocal-specialist"
-            if item.role in _REPEATABLE_ROLES
-            else "supported"
-        )
+        (
+            expected_shape,
+            expected_refinement,
+            expected_conversion,
+        ) = _v2_part_processing_semantics(item.role)
         if (
             part.shape != expected_shape
             or part.refinement_status != expected_refinement
@@ -1288,10 +1247,16 @@ def _build_aggregate_receipt(
             "decoded horizons differ beyond the comparison tolerance; "
             "every part remains unchanged"
         )
+    drum_role_policy = _drum_role_policy(
+        part.import_plan.role for part in plan.parts
+    )
     seed: dict[str, Any] = {
         "schema": SOURCE_FOLDER_IMPORT_SCHEMA,
         "project_id": project_id,
         "parts": parts,
+        "drum_role_policy": drum_role_policy,
+        "shadowed_roles": list(drum_role_policy["shadowed_roles"]),
+        "warnings": warnings,
         "alignment": {
             "origin_status": plan.origin_status,
             "origin_tolerance_seconds": plan.origin_tolerance_seconds,
@@ -1358,8 +1323,19 @@ def validate_source_folder_receipt_document(
 ) -> None:
     """Validate an aggregate folder receipt without reading its assets."""
 
-    if document.get("schema") != SOURCE_FOLDER_IMPORT_SCHEMA:
+    schema = document.get("schema")
+    if schema not in {
+        LEGACY_SOURCE_FOLDER_IMPORT_SCHEMA,
+        SOURCE_FOLDER_IMPORT_SCHEMA,
+    }:
         raise ValueError("unsupported source-folder import receipt schema")
+    if (
+        schema == SOURCE_FOLDER_IMPORT_SCHEMA
+        and set(document) != _V2_AGGREGATE_FIELDS
+    ):
+        raise ValueError(
+            "source-folder v2 aggregate fields do not match its schema"
+        )
     if document.get("normalised") is not False:
         raise ValueError("source-folder import must not be normalized")
     if document.get("network_used") is not False:
@@ -1383,6 +1359,14 @@ def validate_source_folder_receipt_document(
     for index, part in enumerate(parts):
         if not isinstance(part, Mapping):
             raise ValueError(f"folder receipt part {index} must be an object")
+        if (
+            schema == SOURCE_FOLDER_IMPORT_SCHEMA
+            and set(part) != _V2_PART_FIELDS
+        ):
+            raise ValueError(
+                f"folder receipt v2 part {index} fields do not match "
+                "its schema"
+            )
         role = str(part.get("role") or "")
         if role not in _PREPARED_ROLES:
             raise ValueError(f"folder receipt part {index} has invalid role")
@@ -1409,18 +1393,58 @@ def validate_source_folder_receipt_document(
             raise ValueError(
                 "folder canonical paths must be top-level role-marked WAVs"
             )
-        if role == "drums":
+        if schema == SOURCE_FOLDER_IMPORT_SCHEMA:
+            if part.get("role_source") not in {
+                "filename",
+                "exact-role-map",
+            }:
+                raise ValueError(
+                    f"folder receipt v2 part {index} has invalid role_source"
+                )
+            expected_semantics = _v2_part_processing_semantics(role)
+            if (
+                part.get("shape"),
+                part.get("refinement_status"),
+                part.get("conversion_status"),
+            ) != expected_semantics:
+                raise ValueError(
+                    f"folder receipt v2 part {index} processing semantics "
+                    f"do not match role {role}"
+                )
+        elif role == "drums":
             if part.get("conversion_status") != (
                 "unsupported-pending-s2-refinement"
             ):
                 raise ValueError(
-                    "composite drums must remain pending S2 refinement"
+                    "legacy composite drums must remain pending S2 refinement"
                 )
             if part.get("shape") != "composite":
-                raise ValueError("drums source part must be composite")
+                raise ValueError("legacy drums source part must be composite")
     if len(identities) != len(set(identities)):
         raise ValueError("folder receipt source identities must be unique")
     _validate_role_multiplicity(roles)
+    receipt_warnings: list[str] | None = None
+    if schema == SOURCE_FOLDER_IMPORT_SCHEMA:
+        policy = document.get("drum_role_policy")
+        validate_drum_role_policy(policy, roles=roles)
+        if document.get("shadowed_roles") != policy["shadowed_roles"]:
+            raise ValueError(
+                "folder receipt shadowed roles do not match its drum policy"
+            )
+        warning_value = document.get("warnings")
+        if not isinstance(warning_value, list) or not all(
+            isinstance(warning, str) for warning in warning_value
+        ):
+            raise ValueError("folder receipt warnings must be a list of text")
+        receipt_warnings = warning_value
+        if any(
+            warning not in receipt_warnings
+            for warning in policy["warnings"]
+        ):
+            raise ValueError(
+                "folder receipt warnings do not include its recorded policy "
+                "warnings"
+            )
     alignment = document.get("alignment")
     if not isinstance(alignment, Mapping):
         raise ValueError("folder receipt alignment must be an object")
@@ -1441,6 +1465,13 @@ def validate_source_folder_receipt_document(
         raise ValueError("folder import must not claim alignment correction")
     if alignment.get("downbeat_confirmed") is not False:
         raise ValueError("folder import must not claim a confirmed downbeat")
+    if (
+        schema == SOURCE_FOLDER_IMPORT_SCHEMA
+        and alignment.get("warnings") != receipt_warnings
+    ):
+        raise ValueError(
+            "folder receipt alignment warnings must match aggregate warnings"
+        )
     decoder = document.get("decoder")
     if not isinstance(decoder, Mapping):
         raise ValueError("folder receipt decoder must be an object")
@@ -1501,6 +1532,12 @@ def _safe_receipt_path(value: Any, label: str) -> PurePosixPath:
     return path
 
 
+def _drum_role_policy(roles: Iterable[str]) -> dict[str, object]:
+    """Use the production drum policy without changing source-role evidence."""
+
+    return resolve_drum_role_policy(roles)
+
+
 def _resolve_receipt_asset(
     base: Path,
     relative: PurePosixPath,
@@ -1521,9 +1558,13 @@ def _resolve_receipt_asset(
 
 
 __all__ = [
+    "COMPOSITE_DRUM_CONVERSION_STATUS",
+    "COMPOSITE_DRUM_REFINEMENT_STATUS",
+    "LEGACY_SOURCE_FOLDER_IMPORT_SCHEMA",
     "MAXIMUM_SOURCE_PARTS",
     "MINIMUM_SOURCE_PARTS",
     "SOURCE_FOLDER_IMPORT_SCHEMA",
+    "SOURCE_FOLDER_IMPORT_PLAN_SCHEMA",
     "SourceFolderImportPlan",
     "SourceFolderImportResult",
     "SourceFolderPartPlan",

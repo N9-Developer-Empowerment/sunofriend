@@ -50,6 +50,7 @@ authorised local audio
         |         --> immutable originals + per-source receipts
         |         --> aggregate receipt + source-project manifest
         |         --> canonical top-level PCM24 WAV stems
+        |         --> deterministic source-graph revision 1 on read
         |
         +--> source-doctor (read-only existing FFmpeg/FFprobe evidence)
         |
@@ -70,6 +71,7 @@ Guided Local Studio (`tui.py`, `simple_create.py`, `tui_model.py`,
 CLI/application services (`cli.py`)
         |
         +--> folder orchestration (`listen_all.py`)
+        |       --> composite drums: review-required mixed-kit MIDI
         +--> stem refinement (`loop.py`)
         +--> vocal extraction (`vocal.py`)
         +--> lossless MIDI transforms (`midi_tempo.py`, `midi_transform.py`,
@@ -151,6 +153,40 @@ canonical top-level WAV stems, so Create, TUI and Workbench retain their
 existing production discovery and candidate identities. Prepared-project
 metadata and an optional chord document are read from the manifest before
 falling back to legacy filename inference.
+
+Source Access S2 keeps the S1 import manifest stable and adds two independent
+boundaries:
+
+- `source_roles.py` is the canonical role vocabulary and conservative
+  set-valued inference policy. `drums`, `vocals` and `other` may be explicitly
+  represented as composite nodes; imported `vocals` and `other` remain leaves
+  unless refinement evidence says otherwise. Provider labels and General MIDI
+  families do not expand that vocabulary.
+- `source_lineage.py` supplies an immutable append-only
+  `sunofriend.source-graph.v1` overlay. A project without a saved graph gets a
+  deterministic read-only revision 1. Explicit revisions use
+  content-addressed objects and a compare-and-swap current pointer. The active
+  frontier prevents a parent and its children from both feeding production,
+  while the parent remains available for rollback.
+
+`drum_roles.py` and `transcribe_drums.py` route a broad `drums` source through
+the existing mixed-kit spectral classifier. This produces review-required
+MIDI family variants only. One dominant family is selected per onset, so
+coincident layered hits may collapse; no kick, snare, hat, tom or cymbal audio
+children are created. Viable explicit drum-family sources shadow the broad
+candidate in automatic arrangements to prevent doubled hits, but the broad
+candidate remains available in Studio. If the explicit leaves produce no
+viable primary MIDI, the composite result is the review-required fallback.
+
+Source Access S3 currently stops at `separation_contract.py`. It defines
+path-bearing local request/result DTOs, a backend-neutral
+`SeparationBackend` protocol and a path-free, self-hashed
+`sunofriend.separation-run.v1` receipt. The receipt binds source, backend,
+checkpoint, roles, execution, same-clock target/residual pairs, quality and
+side-effect facts; only `complete` is loadable. The module performs no file
+I/O and imports no model or audio runtime. There is no separation runner,
+worker, backend adapter, model installation, artifact persistence, quality
+calculation or finished-song TUI action yet.
 
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a

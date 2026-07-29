@@ -13,12 +13,17 @@ import time
 from dataclasses import replace
 from pathlib import Path
 
+from .drum_roles import (
+    COMPOSITE_DRUM_CLASSIFICATION_LIMITATION,
+    COMPOSITE_DRUM_PROCESSING_KIND,
+    DRUM_PARTS,
+    resolve_drum_role_policy,
+)
 from .metadata import infer_project_metadata
 from .midi import MidiTrack, write_midi_file
 from .models import NoteEvent
+from .project_audio_inputs import inspect_project_audio_inputs
 from .source_project import load_prepared_project_context
-
-DRUM_PARTS = ["kick", "snare", "hat", "cymbals", "toms", "other_kit"]
 CONSERVATIVE_ROLE_ENGINES = {
     # These broad separator roles do not yet have specialist transcribers.
     # Keep their public identity while publishing a deliberately conservative
@@ -38,7 +43,7 @@ PITCHED_PARTS = {  # stem token -> processing kind
 }
 CHANNELS = {  # part -> (channel, GM program)
     "kick": (9, 0), "snare": (9, 0), "hat": (9, 0), "cymbals": (9, 0),
-    "toms": (9, 0), "other_kit": (9, 0),
+    "toms": (9, 0), "other_kit": (9, 0), "drums": (9, 0),
     "bass": (0, 38), "keys": (1, 7), "pads": (6, 89), "piano": (3, 0),
     "strings": (4, 48), "lead": (2, 81), "synth": (5, 81),
     "wind": (7, 71), "rhythm": (8, 27), "other": (10, 81),
@@ -53,6 +58,7 @@ INSTRUMENT_SUGGESTIONS = {
     "cymbals": ("Modern 909", "Electronic Drum Kit"),
     "toms": ("Modern 909", "Electronic Drum Kit"),
     "other_kit": ("Modern 909", "Electronic Drum Kit"),
+    "drums": ("Modern 909", "Electronic Drum Kit"),
     "bass": ("Upright Jazz Bass", "Sub Bass"),
     "keys": ("Different Phases Clav", "Grand Piano"),
     "piano": ("Grand Piano", "Electric Piano"),
@@ -155,7 +161,17 @@ def run_listen_all(
     for part in DRUM_PARTS:
         stem = _find_stem(folder, part)
         if stem and (wanted is None or part in wanted):
-            jobs.append((part, stem, part))
+            jobs.append(
+                (
+                    part,
+                    stem,
+                    (
+                        COMPOSITE_DRUM_PROCESSING_KIND
+                        if part == "drums"
+                        else part
+                    ),
+                )
+            )
     for token, kind in PITCHED_PARTS.items():
         stem = _find_stem(folder, token)
         if stem and (wanted is None or token in wanted):
@@ -170,6 +186,14 @@ def run_listen_all(
             }
         else:
             jobs.append(("pads", keys_stem, "pads"))
+
+    source_drum_role_policy = resolve_drum_role_policy(
+        name for name, _stem, _kind in jobs
+    )
+    summary["drum_source_policy"] = source_drum_role_policy
+    shadowed_roles: set[str] = set()
+    viable_drum_leaf_roles: set[str] = set()
+    viable_composite_drums = False
 
     arrangement_name = (
         f"selected_arrangement_{selection_suffix}.mid" if wanted else "full_arrangement.mid"
@@ -239,22 +263,28 @@ def run_listen_all(
                         result.note_provenance = main_records
                         result.variants["leakage_uncertain"] = uncertain
                         result.variant_provenance["leakage_uncertain"] = uncertain_records
-                elif name == "other_kit" and records:
+                elif name in {"other_kit", "drums"} and records:
                     main, main_records, uncertain, uncertain_records = (
                         partition_uncertain_families(result.notes, records)
                     )
-                    (
-                        main,
-                        main_records,
-                        leakage,
-                        leakage_records,
-                    ) = partition_cross_stem_leakage(
-                        main,
-                        main_records,
-                        drum_context,
-                    )
-                    uncertain.extend(leakage)
-                    uncertain_records.extend(leakage_records)
+                    # A shadowed broad drums source remains a complete
+                    # comparison candidate. Explicit leaf stems take
+                    # precedence only in automatic arrangements; they do not
+                    # destructively remove coincident evidence from the broad
+                    # candidate being reviewed.
+                    if name == "other_kit":
+                        (
+                            main,
+                            main_records,
+                            leakage,
+                            leakage_records,
+                        ) = partition_cross_stem_leakage(
+                            main,
+                            main_records,
+                            drum_context,
+                        )
+                        uncertain.extend(leakage)
+                        uncertain_records.extend(leakage_records)
                     if uncertain:
                         result.notes = main
                         result.note_provenance = main_records
@@ -387,6 +417,12 @@ def run_listen_all(
                         "provenance": str(variant_provenance_path),
                     }
             shutil.rmtree(part_dir, ignore_errors=True)
+            if name == "drums" and result.notes:
+                viable_composite_drums = True
+                effective_policy = resolve_drum_role_policy(
+                    ("drums", *sorted(viable_drum_leaf_roles))
+                )
+                shadowed_roles = set(effective_policy["shadowed_roles"])
             summary["parts"][name] = {
                 "status": "ok",
                 "published_role": name,
@@ -413,6 +449,24 @@ def run_listen_all(
                     str(publish_dir / "instrument_matches" / name),
                 ],
             }
+            if name == "drums":
+                summary["parts"][name].update(
+                    {
+                        "source_shape": "composite",
+                        "review_required": True,
+                        "classifier_alias": COMPOSITE_DRUM_PROCESSING_KIND,
+                        "classification_limitations": [
+                            COMPOSITE_DRUM_CLASSIFICATION_LIMITATION
+                        ],
+                        "midi_family_variants_only": True,
+                        "audio_children_created": False,
+                        "automatic_arrangement_status": (
+                            "shadowed_by_explicit_drum_leaves"
+                            if name in shadowed_roles
+                            else "included_review_required"
+                        ),
+                    }
+                )
             if variants:
                 summary["parts"][name]["variants"] = variants
             if evaluate_outputs:
@@ -512,7 +566,12 @@ def run_listen_all(
             channel, program = CHANNELS.get(name, (5, 0))
             arrangement_notes = result.notes
             arrangement_role = "primary"
-            if conversion_mode == "reconstruct" and name == "keys":
+            if name in DRUM_PARTS and name != "drums" and result.notes:
+                viable_drum_leaf_roles.add(name)
+            if name in shadowed_roles:
+                arrangement_notes = []
+                arrangement_role = "shadowed_by_explicit_drum_leaves"
+            elif conversion_mode == "reconstruct" and name == "keys":
                 arrangement_notes = result.variants.get("melody", [])
                 arrangement_role = "melody_only_with_chart_pads"
             elif conversion_mode == "reconstruct" and name == "strings":
@@ -551,6 +610,28 @@ def run_listen_all(
     summary["successful_parts"] = successful
     summary["failed_parts"] = failed
     summary["library_failed_parts"] = library_failed
+    effective_drum_role_policy = resolve_drum_role_policy(
+        (
+            *sorted(viable_drum_leaf_roles),
+            *(("drums",) if viable_composite_drums else ()),
+        )
+    )
+    effective_warnings = list(effective_drum_role_policy["warnings"])
+    if (
+        source_drum_role_policy["shadowed_roles"]
+        and not effective_drum_role_policy["shadowed_roles"]
+        and viable_composite_drums
+    ):
+        effective_warnings.append(
+            "Explicit drum-family sources produced no viable primary MIDI, "
+            "so the review-required composite drums MIDI remains the automatic "
+            "arrangement fallback."
+        )
+    summary["drum_role_policy"] = effective_drum_role_policy
+    summary["shadowed_roles"] = list(
+        effective_drum_role_policy["shadowed_roles"]
+    )
+    summary["warnings"] = effective_warnings
 
     if merged_tracks:
         write_midi_file(arrangement, merged_tracks, bpm=daw_bpm)
@@ -565,7 +646,17 @@ def run_listen_all(
 
 
 def _find_stem(folder: Path, part: str) -> Path | None:
-    for path in sorted(folder.glob("*.wav")):
+    inventory = inspect_project_audio_inputs(folder)
+    if inventory.prepared_project:
+        return next(
+            (
+                source.path
+                for source in inventory.sources
+                if source.role == part
+            ),
+            None,
+        )
+    for path in inventory.canonical_wavs:
         name = path.name.lower()
         if f"-{part}-" in name or f"_{part}-" in name:
             return path

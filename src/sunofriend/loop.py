@@ -24,7 +24,15 @@ from .models import NoteEvent
 from .note_safety import normalize_note_events
 from .render import render_midi_to_wav
 
-DRUM_KINDS = {"kick", "snare", "hat", "cymbals", "toms", "other_kit"}
+DRUM_KINDS = {
+    "kick",
+    "snare",
+    "hat",
+    "cymbals",
+    "toms",
+    "other_kit",
+    "drums",
+}
 PITCHED_KINDS = {"keys", "synth", "bass", "piano", "lead", "pads"}
 THEORY_GENERATED_KINDS = {"bass", "lead", "synth", "pads"}
 
@@ -748,6 +756,7 @@ def _default_drum_pitch(kind: str) -> int:
         "cymbals": 49,
         "toms": 45,
         "other_kit": 39,
+        "drums": 39,
     }.get(kind, 39)
 
 

@@ -6,17 +6,23 @@ import sys
 import tempfile
 import unittest
 import wave
+from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
 
 from sunofriend.audio_formats import file_sha256
+from sunofriend.drum_roles import DRUM_ROLE_POLICY_SCHEMA
 from sunofriend.source_folder_import import (
     execute_source_folder_import,
     plan_source_folder_import,
+    validate_source_folder_receipt_document,
     validate_source_folder_receipt_files,
 )
 from sunofriend.source_project import load_source_project
-from sunofriend.source_receipt import validate_source_receipt_files
+from sunofriend.source_receipt import (
+    document_sha256,
+    validate_source_receipt_files,
+)
 
 
 class SourceFolderImportTests(unittest.TestCase):
@@ -97,6 +103,7 @@ class SourceFolderImportTests(unittest.TestCase):
                 any("-kick-" in path.name for path in result.canonicals)
             )
             project = load_source_project(result.source_project)
+            self.assertEqual(project["schema"], "sunofriend.source-project.v1")
             self.assertEqual(project["metadata"]["key"], "B major")
             self.assertEqual(project["metadata"]["bpm"], 119.0)
             self.assertEqual(project["metadata"]["tuning_hz"], 440.0)
@@ -111,7 +118,7 @@ class SourceFolderImportTests(unittest.TestCase):
                 result.aggregate_receipt.read_text(encoding="utf-8")
             )
             self.assertEqual(
-                aggregate["schema"], "sunofriend.source-folder-import.v1"
+                aggregate["schema"], "sunofriend.source-folder-import.v2"
             )
             self.assertEqual(
                 aggregate["alignment"]["origin_status"], "compatible"
@@ -331,6 +338,37 @@ class SourceFolderImportTests(unittest.TestCase):
                 [part.import_plan.role for part in plan.parts],
                 ["vocals", "vocals"],
             )
+            self.assertTrue(
+                all(
+                    (
+                        part.shape,
+                        part.refinement_status,
+                        part.conversion_status,
+                    )
+                    == ("leaf", "not-requested", "vocal-specialist")
+                    for part in plan.parts
+                )
+            )
+
+            result = execute_source_folder_import(plan)
+            aggregate = json.loads(
+                result.aggregate_receipt.read_text(encoding="utf-8")
+            )
+            validate_source_folder_receipt_document(aggregate)
+            for field, value in (
+                ("shape", "composite"),
+                ("refinement_status", "pending"),
+                ("conversion_status", "supported"),
+            ):
+                with self.subTest(vocal_semantic=field):
+                    mutated = deepcopy(aggregate)
+                    mutated["parts"][0][field] = value
+                    _rehash_folder_receipt(mutated)
+                    with self.assertRaisesRegex(
+                        ValueError,
+                        "processing semantics",
+                    ):
+                        validate_source_folder_receipt_document(mutated)
 
     def test_duplicate_original_content_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -599,7 +637,7 @@ class SourceFolderImportTests(unittest.TestCase):
                 execute_source_folder_import(plan)
             self.assertFalse((root / "prepared").exists())
 
-    def test_composite_drums_are_marked_for_s2_refinement(self) -> None:
+    def test_composite_drums_are_supported_but_require_review(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             folder = root / "sources"
@@ -628,11 +666,204 @@ class SourceFolderImportTests(unittest.TestCase):
             )
             self.assertEqual(drum_part.shape, "composite")
             self.assertEqual(
-                drum_part.refinement_status, "pending-s2-refinement"
+                drum_part.refinement_status,
+                "not-run-midi-family-variants-only",
             )
             self.assertEqual(
                 drum_part.conversion_status,
-                "unsupported-pending-s2-refinement",
+                "supported-review-required",
+            )
+            plan_document = plan.to_dict()
+            self.assertEqual(
+                plan_document["schema"],
+                "sunofriend.source-folder-import-plan.v2",
+            )
+            self.assertEqual(plan_document["shadowed_roles"], [])
+            self.assertTrue(plan_document["drum_role_policy"]["warnings"])
+            self.assertEqual(
+                plan_document["drum_role_policy"]["schema"],
+                DRUM_ROLE_POLICY_SCHEMA,
+            )
+
+            result = execute_source_folder_import(plan)
+            aggregate = json.loads(
+                result.aggregate_receipt.read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                aggregate["schema"], "sunofriend.source-folder-import.v2"
+            )
+            self.assertEqual(aggregate["shadowed_roles"], [])
+            self.assertEqual(
+                aggregate["drum_role_policy"]["schema"],
+                DRUM_ROLE_POLICY_SCHEMA,
+            )
+            validate_source_folder_receipt_document(aggregate)
+
+            older_warning_wording = deepcopy(aggregate)
+            older_warning_wording["drum_role_policy"]["warnings"] = [
+                "Earlier composite-drum review wording."
+            ]
+            older_warning_wording["warnings"] = [
+                "Earlier composite-drum review wording."
+            ]
+            older_warning_wording["alignment"]["warnings"] = [
+                "Earlier composite-drum review wording."
+            ]
+            _rehash_folder_receipt(older_warning_wording)
+            validate_source_folder_receipt_document(older_warning_wording)
+
+            for field, value in (
+                ("schema", "sunofriend.drum-role-policy.v999"),
+                ("classifier_alias", "kick"),
+                ("precedence", "always-combine"),
+                ("shadowed_roles", ["drums"]),
+                ("audio_children_created", True),
+            ):
+                with self.subTest(policy_field=field):
+                    mutated = deepcopy(aggregate)
+                    mutated["drum_role_policy"][field] = value
+                    _rehash_folder_receipt(mutated)
+                    with self.assertRaisesRegex(
+                        ValueError,
+                        "drum role policy",
+                    ):
+                        validate_source_folder_receipt_document(mutated)
+
+            extra_policy_field = deepcopy(aggregate)
+            extra_policy_field["drum_role_policy"]["future"] = None
+            _rehash_folder_receipt(extra_policy_field)
+            with self.assertRaisesRegex(ValueError, "policy fields"):
+                validate_source_folder_receipt_document(extra_policy_field)
+
+            for field, value in (
+                ("shape", "leaf"),
+                ("refinement_status", "not-requested"),
+                ("conversion_status", "supported"),
+            ):
+                with self.subTest(drum_semantic=field):
+                    mutated = deepcopy(aggregate)
+                    mutated_drum = next(
+                        part
+                        for part in mutated["parts"]
+                        if part["role"] == "drums"
+                    )
+                    mutated_drum[field] = value
+                    _rehash_folder_receipt(mutated)
+                    with self.assertRaisesRegex(
+                        ValueError,
+                        "processing semantics",
+                    ):
+                        validate_source_folder_receipt_document(mutated)
+
+            for field, value in (
+                ("shape", "composite"),
+                ("refinement_status", "pending"),
+                ("conversion_status", "vocal-specialist"),
+            ):
+                with self.subTest(leaf_semantic=field):
+                    mutated = deepcopy(aggregate)
+                    mutated_bass = next(
+                        part
+                        for part in mutated["parts"]
+                        if part["role"] == "bass"
+                    )
+                    mutated_bass[field] = value
+                    _rehash_folder_receipt(mutated)
+                    with self.assertRaisesRegex(
+                        ValueError,
+                        "processing semantics",
+                    ):
+                        validate_source_folder_receipt_document(mutated)
+
+            extra_aggregate_field = deepcopy(aggregate)
+            extra_aggregate_field["future"] = {}
+            _rehash_folder_receipt(extra_aggregate_field)
+            with self.assertRaisesRegex(ValueError, "aggregate fields"):
+                validate_source_folder_receipt_document(
+                    extra_aggregate_field
+                )
+
+            missing_aggregate_field = deepcopy(aggregate)
+            missing_aggregate_field.pop("warnings")
+            _rehash_folder_receipt(missing_aggregate_field)
+            with self.assertRaisesRegex(ValueError, "aggregate fields"):
+                validate_source_folder_receipt_document(
+                    missing_aggregate_field
+                )
+
+            extra_part_field = deepcopy(aggregate)
+            extra_part_field["parts"][0]["future"] = None
+            _rehash_folder_receipt(extra_part_field)
+            with self.assertRaisesRegex(ValueError, "part 0 fields"):
+                validate_source_folder_receipt_document(extra_part_field)
+
+            missing_part_field = deepcopy(aggregate)
+            missing_part_field["parts"][0].pop("original_name")
+            _rehash_folder_receipt(missing_part_field)
+            with self.assertRaisesRegex(ValueError, "part 0 fields"):
+                validate_source_folder_receipt_document(missing_part_field)
+
+            legacy = deepcopy(aggregate)
+            legacy["schema"] = "sunofriend.source-folder-import.v1"
+            legacy.pop("drum_role_policy")
+            legacy.pop("shadowed_roles")
+            legacy.pop("warnings")
+            legacy_drum = next(
+                part for part in legacy["parts"] if part["role"] == "drums"
+            )
+            legacy_drum["refinement_status"] = "pending-s2-refinement"
+            legacy_drum["conversion_status"] = (
+                "unsupported-pending-s2-refinement"
+            )
+            _rehash_folder_receipt(legacy)
+            validate_source_folder_receipt_document(legacy)
+
+    def test_explicit_drum_leaves_shadow_composite_in_automatic_policy(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            folder = root / "sources"
+            drums = folder / "drums.wav"
+            kick = folder / "kick.wav"
+            _write_pcm24_wav(drums, sample=1)
+            _write_pcm24_wav(kick, sample=2)
+            ffmpeg, ffprobe = _fake_toolchain(
+                root,
+                {
+                    drums.name: _probe_document(),
+                    kick.name: _probe_document(),
+                },
+            )
+
+            plan = plan_source_folder_import(
+                folder,
+                root / "prepared",
+                ffmpeg=ffmpeg,
+                ffprobe=ffprobe,
+                discover_chords=False,
+            )
+
+            plan_document = plan.to_dict()
+            self.assertEqual(plan_document["shadowed_roles"], ["drums"])
+            self.assertEqual(
+                plan_document["drum_role_policy"]["precedence"],
+                "explicit-leaves-over-composite",
+            )
+            self.assertTrue(
+                any(
+                    "prevents doubled drum hits" in warning
+                    for warning in plan_document["warnings"]
+                )
+            )
+
+            result = execute_source_folder_import(plan)
+            aggregate = json.loads(
+                result.aggregate_receipt.read_text(encoding="utf-8")
+            )
+            self.assertEqual(aggregate["shadowed_roles"], ["drums"])
+            self.assertFalse(
+                aggregate["drum_role_policy"]["audio_children_created"]
             )
 
 
@@ -649,6 +880,15 @@ def _write_pcm24_wav(
         handle.setsampwidth(3)
         handle.setframerate(8000)
         handle.writeframes(value * frame_count)
+
+
+def _rehash_folder_receipt(document: dict) -> None:
+    seed = {
+        key: value
+        for key, value in document.items()
+        if key != "folder_import_id"
+    }
+    document["folder_import_id"] = f"sha256:{document_sha256(seed)}"
 
 
 def _probe_document(

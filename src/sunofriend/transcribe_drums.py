@@ -52,6 +52,7 @@ _NOTE_DURATION = {
     "snare": 0.09,
     "toms": 0.12,
     "other_kit": 0.08,
+    "drums": 0.08,
 }
 _OPEN_HAT_DECAY_SECONDS = 0.25
 
@@ -147,7 +148,9 @@ def transcribe_drum_stem(path: str, kind: str, delta: float = 0.18) -> list[Note
     """Return conservative observed notes for a separated drum stem.
 
     ``kind`` is normally one of ``kick``, ``snare``, ``hat``, ``cymbals``,
-    ``toms``, or ``other_kit``.  This is the backwards-compatible entry point;
+    ``toms``, ``other_kit``, or the public composite alias ``drums``.  The
+    latter uses the same mixed-kit spectral family classifier as
+    ``other_kit``.  This is the backwards-compatible entry point;
     lower-confidence candidates are available from
     :func:`transcribe_drum_stem_detailed` but are never silently added here.
     """
@@ -714,7 +717,7 @@ def _classify_features(kind: str, features: DrumHitFeatures) -> tuple[str, int]:
     if kind == "toms":
         family = _tom_family(features.dominant_hz)
         return family, GM[family]
-    if kind == "other_kit":
+    if kind in {"other_kit", "drums"}:
         return _classify_other_kit(features)
     return "unknown", GM["unknown"]
 

@@ -125,6 +125,20 @@ top-level WAV stems. Source Access S1 is now accepted:
 as one fresh canonical WAV project. Both import commands have explicit
 read-only `--plan` forms.
 
+Source Access S2 is also accepted. It centralizes the source-role vocabulary,
+adds an append-only source graph and active frontier, and routes a composite
+`drums` source through the mixed-kit family classifier as review-required MIDI.
+That route creates no drum sub-stem audio; viable explicit drum-family sources
+take automatic-arrangement precedence while the broad result remains
+reviewable.
+
+The first S3 slice is a pure backend-neutral separation contract. It defines
+local request/result DTOs and strict path-free
+`sunofriend.separation-run.v1` receipts with source/backend/checkpoint
+identity, target/residual geometry, quality and terminal loadability rules.
+It does not run a separator, load a checkpoint, persist stem artifacts or add
+a finished-song action to Simple or Studio.
+
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
 transcriber. They need independent lineage, model/checkpoint licensing,

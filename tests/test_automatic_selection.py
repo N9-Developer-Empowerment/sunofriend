@@ -153,6 +153,171 @@ class AutomaticSelectionTests(unittest.TestCase):
                     result_root=result,
                 )
 
+    def test_composite_drums_is_not_automatically_doubled_with_explicit_leaf(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "Song-D minor-120bpm-440hz"
+            result = root / "result"
+            project.mkdir()
+            result.mkdir()
+            broad_source = project / "Song-drums-D minor-120bpm-440hz.wav"
+            kick_source = project / "Song-kick-D minor-120bpm-440hz.wav"
+            broad_midi = result / "drums_listened.mid"
+            kick_midi = result / "kick_listened.mid"
+            _write_wav(broad_source)
+            _write_wav(kick_source)
+            _write_midi(broad_midi, pitch=38)
+            _write_midi(kick_midi, pitch=36)
+            broad_summary = result / "listen_all_summary_drums.json"
+            broad_summary.write_text(
+                json.dumps(
+                    {
+                        "parts": {
+                            "drums": {
+                                "status": "ok",
+                                "midi": str(broad_midi),
+                            }
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            leaf_summary = result / "listen_all_summary_kick.json"
+            leaf_summary.write_text(
+                json.dumps(
+                    {
+                        "shadowed_roles": ["drums"],
+                        "parts": {
+                            "kick": {
+                                "status": "ok",
+                                "midi": str(kick_midi),
+                            },
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            catalog = {
+                "project_id": "project-drums",
+                "setup": {
+                    "bpm": 120.0,
+                    "key": "D minor",
+                    "tuning_hz": 440.0,
+                },
+                "stems": [
+                    _stem(
+                        "broad",
+                        "drums",
+                        broad_source,
+                        [_candidate(broad_midi, primary=True)],
+                    ),
+                    _stem(
+                        "kick",
+                        "kick",
+                        kick_source,
+                        [_candidate(kick_midi, primary=True)],
+                    ),
+                ],
+            }
+
+            plan = plan_automatic_selection(
+                catalog,
+                (broad_summary, leaf_summary),
+                result_root=result,
+            )
+
+            self.assertEqual(
+                [row["role"] for row in plan.selected],
+                ["kick"],
+            )
+            self.assertTrue(
+                any(
+                    row.get("stem_id") == "broad"
+                    and row["reason"]
+                    == "shadowed_by_explicit_drum_leaves"
+                    for row in plan.omitted
+                )
+            )
+
+    def test_declared_shadow_does_not_hide_broad_drums_without_viable_leaf(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "Song-D minor-120bpm-440hz"
+            result = root / "result"
+            project.mkdir()
+            result.mkdir()
+            broad_source = project / "Song-drums-D minor-120bpm-440hz.wav"
+            kick_source = project / "Song-kick-D minor-120bpm-440hz.wav"
+            broad_midi = result / "drums_listened.mid"
+            empty_kick_midi = result / "kick_listened.mid"
+            _write_wav(broad_source)
+            _write_wav(kick_source)
+            _write_midi(broad_midi, pitch=38)
+            write_midi_file(
+                empty_kick_midi,
+                [MidiTrack("Kick", 9, 0, [])],
+                bpm=120.0,
+            )
+            summary = result / "listen_all_summary.json"
+            summary.write_text(
+                json.dumps(
+                    {
+                        "shadowed_roles": ["drums", "bass"],
+                        "parts": {
+                            "drums": {
+                                "status": "ok",
+                                "midi": str(broad_midi),
+                            },
+                            "kick": {
+                                "status": "ok",
+                                "midi": str(empty_kick_midi),
+                            },
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            catalog = {
+                "project_id": "project-drums-fallback",
+                "setup": {
+                    "bpm": 120.0,
+                    "key": "D minor",
+                    "tuning_hz": 440.0,
+                },
+                "stems": [
+                    _stem(
+                        "broad",
+                        "drums",
+                        broad_source,
+                        [_candidate(broad_midi, primary=True)],
+                    ),
+                    _stem(
+                        "kick",
+                        "kick",
+                        kick_source,
+                        [_candidate(empty_kick_midi, primary=True)],
+                    ),
+                ],
+            }
+
+            plan = plan_automatic_selection(
+                catalog,
+                (summary,),
+                result_root=result,
+            )
+
+            self.assertEqual(
+                [row["role"] for row in plan.selected],
+                ["drums"],
+            )
+            self.assertTrue(
+                any(
+                    row.get("stem_id") == "kick"
+                    and row["reason"] == "no_playable_notes"
+                    for row in plan.omitted
+                )
+            )
+
     def test_summary_outside_result_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

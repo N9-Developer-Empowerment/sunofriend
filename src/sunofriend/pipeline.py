@@ -128,11 +128,9 @@ def _find_chord_pdf(folder: Path) -> Path:
 
 
 def _find_stem(folder: Path, part: str) -> Path | None:
-    for path in sorted(folder.glob("*.wav")):
-        name = path.name.lower()
-        if f"-{part}-" in name or f"_{part}-" in name:
-            return path
-    return None
+    from .listen_all import _find_stem as find_production_stem
+
+    return find_production_stem(folder, part)
 
 
 def _duration_from_analyses(analyses: dict[str, StemAnalysis]) -> float:
