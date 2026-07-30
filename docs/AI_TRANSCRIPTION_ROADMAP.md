@@ -560,6 +560,27 @@ present. Emergency destructor wait is not bounded, no generic descendant or
 post-leader process-group claim is made, and this remains canary-only rather
 than fake or real execution authority.
 
+The next bounded transport-contract slice is complete without starting a
+worker. `_separation_fake_worker_darwin.py` is a hash- and size-pinned,
+stdlib-only fixed fixture worker: its first effectful module code makes
+FDs 3/4/5 non-inheritable, it accepts only V2 transport magic, reads only
+FD 3 and FD 5 with offset-independent operations, never deserializes the
+checkpoint, creates no process and can write only the deterministic two-frame
+PCM24 fixture to FD 4. Prepared fake launch V3 binds the historical request,
+blocked launches, worker identity and native build-receipt claim while keeping
+the serialized plan non-authoritative and worker-start permission false.
+Complete-only worker Result V2 requires a dedicated `PGID == PID` group and
+keeps model, source-audio, network, selection and publication effects false.
+
+The V2 execution protocol is validation-only at this checkpoint. It has no
+product admitted-envelope encoder or admission issuer, so prepared records
+cannot be turned into permission after a lease closes. Test code alone makes
+synthetic V2 envelope bytes. The next increment must mint one single-use
+authority only under the exact live lease/reservation lock, supervise the
+native owned child to exact reap and add a distinct V2 quarantine verifier
+and parent terminal receipt. No separator model, source audio or public
+command is enabled.
+
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
 transcriber. They need independent lineage, model/checkpoint licensing,

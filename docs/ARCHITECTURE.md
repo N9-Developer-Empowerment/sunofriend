@@ -603,6 +603,25 @@ probes ran; there is no standalone deterministic fake result, checkpoint FD 5
 transport, model execution, audio operation, terminal receipt or user-facing
 separator.
 
+The following prepared-worker boundary keeps execution-era schemas isolated
+from every permanently blocked predecessor. The fixed
+`_separation_fake_worker_darwin.py` script imports only a narrow stdlib set,
+makes FDs 3/4/5 non-inheritable before its remaining imports, performs no path
+open, source-audio, model, network or child-process operation, and emits only
+the role-hash two-frame PCM24 fixture. Its source hash and size are pinned by
+the prepared fake launch V3 record. V3 has support but no start permission and
+is explicitly not serialized authority. Complete-only Result V2 requires a
+dedicated worker process group and remains self-report evidence.
+
+`_separation_fake_execution_protocol.py` validates the new V2 magics and
+canonical bindings but intentionally cannot encode an admitted product
+request or issue an admission. Synthetic envelope creation exists only in
+tests. The later executor must add a nonconstructible, single-use authority
+under the exact live checkpoint lease/reservation lock, supervise the native
+owner through exact reap and perform separate parent quarantine verification.
+The current modules therefore add no process, terminal receipt, separator,
+model, audio read or CLI/TUI capability.
+
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a
 starter ZIP. It does not create or mutate Workbench SQLite state. After

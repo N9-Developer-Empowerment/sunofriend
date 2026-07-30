@@ -498,6 +498,29 @@ Parent `SIGCHLD` incompatibilities fail closed, but no standalone deterministic
 fake transport worker, checkpoint lease transport, source audio, model,
 terminal fake result or user-facing separator ran.
 
+The following prepared-worker increment adds three isolated execution-era
+modules without enabling a launch. A hash- and size-pinned, stdlib-only Darwin
+worker makes FDs 3/4/5 non-inheritable as its first effectful module code,
+accepts only the new V2 envelope magic, hashes but never deserializes FD 5,
+creates no descendants and can emit only code-owned two-frame PCM24 payloads.
+The prepared launch V3 record binds the exact historical V1 and permanently
+blocked V2 hashes, pinned worker source and caller-supplied native build
+receipt hash. It reports fixed-worker support but retains
+`test_only_worker_start_permitted=false`,
+`serialized_plan_is_execution_authority=false` and every real-separation
+permission false. Worker Result V2 is complete-only, requires `PGID == PID`
+and remains worker-report evidence rather than parent verification.
+
+The process-free V2 protocol can validate the new request/result frames but
+intentionally has no product admitted-envelope encoder, admission issuer,
+descriptor operation or spawn surface. Tests alone synthesize envelope bytes
+to exercise parsing. The next live increment must introduce one exact,
+non-copyable, single-use admission under the live checkpoint lease and
+reservation lock, then pass the lease-owned descriptor directly to the native
+launcher. Until that exists, the fixed worker cannot be started by
+Sunofriend. No fake terminal receipt, quarantine V2 verifier, model, source
+audio or user-facing separation route exists.
+
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
 unverified candidates until one exact runtime/checkpoint pair has known terms,
@@ -1465,6 +1488,9 @@ bake-off execution not implemented**
   exact-child owner; prove cached exact wait, post-reap signal rejection,
   last-reference kill/reap and external-reap poisoning without exposing raw
   PID authority.
+- [x] Add the pinned, process-creation-free deterministic worker plus prepared
+  launch V3, complete-only Result V2 and validation-only V2 framing while
+  intentionally withholding any product admission issuer or request encoder.
 - [ ] Remove or explicitly confine extension/runtime/worker path TOCTOU, and
   make the clean outer-supervisor and child signal-state boundaries
   independently observable.
@@ -1508,6 +1534,9 @@ Likely modules:
 - `_separation_fake_transport_records.py`
 - `_separation_fake_worker_protocol.py`
 - `_separation_fake_launch_v2_records.py`
+- `_separation_fake_execution_records.py`
+- `_separation_fake_execution_protocol.py`
+- `_separation_fake_worker_darwin.py`
 - `_separation_native_build_darwin.py`
 - `_separation_native_spawn_darwin.c`
 

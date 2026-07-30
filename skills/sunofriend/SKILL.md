@@ -83,10 +83,15 @@ report the result, then move on.
   required outer `close_fds=True, pass_fds=()` policy from inside the harness,
   prove child signal state after CPython startup, or eliminate
   extension-import, runtime-exec or worker-script path TOCTOU. The canary
-  starts only a fixed test probe: deterministic fake execution, live
-  checkpoint FD 5 transport, model execution and real separation remain
-  unavailable, and no CLI/TUI separator is exposed. The process-free observer
-  starts no child and issues no terminal receipt. The lease is not an
+  starts only a fixed test probe. A separately pinned stdlib-only deterministic
+  worker and prepared launch V3/Result V2 contracts now exist, but launch V3
+  is not serialized authority and retains worker-start permission false. The
+  V2 protocol intentionally has no product admission issuer or admitted
+  request encoder; only tests synthesize its envelope bytes. Deterministic
+  fake execution, live checkpoint FD 5 transport, model execution and real
+  separation therefore remain unavailable, and no CLI/TUI separator is
+  exposed. The process-free observers start no child and issue no terminal
+  receipt. The lease is not an
   immutable snapshot or FD 5 transport, every real-execution blocker remains,
   and real separation execution is disabled.
 - `source-import` decodes exactly one local asset.
