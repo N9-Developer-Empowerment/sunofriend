@@ -640,6 +640,21 @@ reservation lock, supervise the owned child through exact reap, validate
 Result V2 and independently materialize and verify a private quarantine before
 issuing any terminal receipt.
 
+`_separation_fake_execution_quarantine.py` is the twenty-fourth internal S3
+boundary. It revalidates the exact historical request and blocked launches,
+prepared V3 plan and complete Result V2, then observes an existing owner-only
+output tree through a read-only directory descriptor and distinct
+non-inheritable file descriptors. The implementation reuses the audited
+low-level descriptor/entry identity, full-hash and PCM24 geometry functions
+but does not call the historical V1 quarantine wrapper or recast Result V2 as
+V1. Its immutable evidence is path-free and grants no publication, selection,
+acceptance or promotion authority.
+
+This verifier creates and modifies nothing. It does not prove fresh exclusive
+tree creation, persistent ordinary-file immutability, that Result V2 came from
+an actually executed worker, worker lifecycle or checkpoint integrity. Those
+claims belong to the later lease-bound executor and terminal parent receipt.
+
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a
 starter ZIP. It does not create or mutate Workbench SQLite state. After

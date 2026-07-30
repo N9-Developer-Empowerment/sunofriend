@@ -90,7 +90,11 @@ report the result, then move on.
   request encoder; only tests synthesize its envelope bytes. A private
   verified native session now remeasures one fresh launcher across import and
   binds its exact built-in entry point to the measured runtime and pinned
-  worker, but it contains no spawn call and is not execution authority.
+  worker, but it contains no spawn call and is not execution authority. A
+  separate Result V2 verifier can observe exact owner-only quarantine files
+  through read-only descriptors, but it creates no tree, calls no historical
+  V1 wrapper, does not prove that the worker executed and grants no publication
+  or selection authority.
   Deterministic
   fake execution, live checkpoint FD 5 transport, model execution and real
   separation therefore remain unavailable, and no CLI/TUI separator is

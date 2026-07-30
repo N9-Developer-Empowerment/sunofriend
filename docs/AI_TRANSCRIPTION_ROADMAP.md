@@ -593,6 +593,17 @@ runtime/worker remeasurement at spawn, lease-bound single-use admission,
 owned-child supervision, Result V2 verification, quarantine and a parent
 terminal receipt remain outstanding.
 
+The twenty-fourth S3 slice adds a Result V2-specific parent quarantine
+verifier without starting a process or writing a file. It revalidates the
+exact historical request/blocked launches, prepared V3 plan and complete
+Result V2 before checking an already-materialized owner-only directory via
+read-only, non-inheritable descriptors. Exact entry names, distinct file
+objects, full hashes and PCM24 geometry are bound into a path-free immutable
+observation. Only the shared low-level descriptor checks are reused; V2 is
+never adapted into the historical V1 wrapper. Fresh exclusive
+materialization, proof that the worker actually executed, live supervision
+and terminal parent evidence remain the next gate.
+
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
 transcriber. They need independent lineage, model/checkpoint licensing,

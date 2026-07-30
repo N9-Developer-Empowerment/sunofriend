@@ -539,6 +539,24 @@ admission, FD 3/4 transport construction, locked FD 5 handoff, owned-child
 supervision, Result V2 verification, quarantine and a parent terminal receipt
 remain the next gate.
 
+The twenty-fourth S3 increment adds a distinct, process-free Result V2
+quarantine verifier. It first revalidates the exact historical request,
+blocked launch records, prepared V3 plan and complete Result V2, then observes
+an already-materialized owner-only tree entirely through a read-only directory
+descriptor and one distinct read-only, non-inheritable descriptor per output.
+It reuses only the low-level full-hash, descriptor/entry identity and PCM24
+geometry checks beneath the historical V1 wrapper; it never presents V2
+evidence as V1.
+
+The path-free observation binds the V3 and Result V2 hashes, exact entry set,
+file identities, bytes and geometry while keeping publication, selection,
+acceptance and promotion false. It creates or modifies no file and cannot
+prove that the worker executed, who created the tree or that ordinary files
+stay immutable afterward. Result V2 remains worker-reported content until the
+later parent receipt binds it to an exact owned-child lifecycle.
+Exclusive parent materialization, the live worker, exact reap and a terminal
+parent receipt therefore remain outstanding.
+
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
 unverified candidates until one exact runtime/checkpoint pair has known terms,
@@ -1513,6 +1531,9 @@ bake-off execution not implemented**
 - [x] Bind one fresh remeasured native build, imported extension, exact
   built-in entry point, current runtime and pinned worker into an opaque,
   path-free, non-executing private session.
+- [x] Add a distinct Result V2 quarantine verifier that revalidates the exact
+  record chain and observes an owner-only descriptor tree without creating
+  files or adapting V2 evidence into the historical V1 wrapper.
 - [ ] Remove or explicitly confine extension/runtime/worker path TOCTOU, and
   make the clean outer-supervisor and child signal-state boundaries
   independently observable.
@@ -1558,8 +1579,10 @@ Likely modules:
 - `_separation_fake_launch_v2_records.py`
 - `_separation_fake_execution_records.py`
 - `_separation_fake_execution_protocol.py`
+- `_separation_fake_execution_quarantine.py`
 - `_separation_fake_worker_darwin.py`
 - `_separation_native_build_darwin.py`
+- `_separation_native_session_darwin.py`
 - `_separation_native_spawn_darwin.c`
 
 ### S4 — Experimental broad separation in Studio
