@@ -10,6 +10,7 @@ include scripts/setup-rmvpe-model.sh
 include scripts/setup-pesto-model.sh
 include scripts/setup-demucs-model.sh
 include scripts/setup-openl3-model.sh
+include src/sunofriend/_separation_native_spawn_darwin.c
 recursive-include docs *.md
 recursive-include skills *.md *.yaml
 recursive-include assets/brand *.png

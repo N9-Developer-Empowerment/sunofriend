@@ -506,6 +506,28 @@ lifecycle enforcement and parent verification are all absent. State remains
 must never be enabled. A future executor requires new live-authority,
 envelope, result and terminal-receipt schemas.
 
+The twentieth S3 slice packages
+`_separation_native_spawn_darwin.c` as reviewed source only. It is not
+registered as an extension, compiled, imported or reachable from Python,
+CLI, TUI or the fake protocol. Static tests require a private macOS-only
+CPython module, direct `posix_spawn`, `POSIX_SPAWN_CLOEXEC_DEFAULT`, a new
+process group, reset signal state, exact isolated-Python arguments and the
+same three-variable environment as fake-launch V2. The source validates
+non-inheritable, distinct regular-file transports with request/checkpoint
+read-only and result write-only access; performs source-to-scratch mapping
+entirely in child file actions; closes original and scratch copies; and
+replaces standard streams with the null device. It contains no parent FD
+mutator. An incompatible parent `SIGCHLD` disposition is rejected in the
+future entry point, and a post-spawn result-allocation failure has a
+kill-and-exact-reap emergency path so child ownership is not silently lost.
+
+Source review is not executable proof. No compiler, binary, build receipt,
+code signature, native import, descriptor canary or subprocess ran in this
+slice. The next increment must define a reproducible owner-only macOS build
+receipt, compile and verify a private artifact, and use adversarial canaries
+to prove exact child descriptors and an unchanged parent table before any
+fake worker is connected.
+
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
 transcriber. They need independent lineage, model/checkpoint licensing,

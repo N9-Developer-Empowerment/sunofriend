@@ -10,8 +10,9 @@ inspection, trusted-inspection blocked-admission binding and parent-only live
 checkpoint-descriptor lease plus pure path-free worker-request V2 design
 evidence, a private exact-object lease reservation, blocked launch V2,
 fake-only transport records, a process-free framing/quarantine observer and a
-pure permanently blocked native fake-launch V2 contract implemented; an
-audited executable native close-all boundary, real source separation, a
+pure permanently blocked native fake-launch V2 contract plus packaged,
+uncompiled Darwin launcher source implemented; a provenance-bound and
+canary-proven executable native close-all boundary, real source separation, a
 child-process FD 5 transport, hidden evaluation and promotion are not
 implemented**
 
@@ -434,6 +435,21 @@ remeasurement, nonce freshness/single use, exact live authority, executable
 and worker-path TOCTOU closure, child mapping, lifecycle execution and terminal
 verification remain blockers. The record starts no process and every
 capability and effect remains false.
+
+The twentieth S3 increment packages the reviewed macOS-only
+`_separation_native_spawn_darwin.c` source without registering, compiling,
+importing or calling it. Static tests pin its direct Darwin `posix_spawn`
+surface, close-all/process-group/signal flags, fixed `-I -B -S` invocation,
+exact three-variable environment, descriptor access and identity checks,
+child-only collision-safe mapping, original/scratch closure, null standard
+streams, parent `SIGCHLD` compatibility and post-spawn allocation-failure
+kill/reap path. It contains no parent FD-table mutator.
+
+This is source review, not native execution evidence. No binary, build
+receipt, code signature, extension import, canary descriptor set, child,
+worker or terminal receipt exists. The next increment must provenance-bind a
+private owner-only build and run adversarial macOS canaries before the fake
+protocol can advance.
 
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
@@ -1387,9 +1403,12 @@ implemented**
   fixes artifact claims, invocation/environment policy, child-only scratch
   mapping, Darwin close-all and supervised-lifecycle requirements without
   starting a process.
-- [ ] Implement, provenance-bind and audit the private Darwin native close-all
-  boundary, including canary proof that only standard streams and logical FDs
-  3/4/5 reach the child and that the parent descriptor table is unchanged.
+- [x] Package a private macOS-only CPython launcher source with fixed
+  invocation, child-only mapping and static no-fallback checks, while leaving
+  it uncompiled, unimported and unreachable.
+- [ ] Reproducibly build, provenance-bind and canary-audit the private Darwin
+  native close-all boundary, proving that only standard streams and logical
+  FDs 3/4/5 reach the child and that the parent descriptor table is unchanged.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with the
   deterministic fake worker, exact pre-exec remeasurement, validated worker
   result, timeout/reap evidence and parent-verified quarantined outputs before
@@ -1430,6 +1449,7 @@ Likely modules:
 - `_separation_fake_transport_records.py`
 - `_separation_fake_worker_protocol.py`
 - `_separation_fake_launch_v2_records.py`
+- `_separation_native_spawn_darwin.c`
 
 ### S4 — Experimental broad separation in Studio
 

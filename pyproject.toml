@@ -105,6 +105,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 sunofriend = [
+    "_separation_native_spawn_darwin.c",
     "workbench.html",
     "workbench_clips.js",
     "workbench_developer.js",

@@ -1,0 +1,220 @@
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+
+REPOSITORY = Path(__file__).resolve().parents[1]
+SOURCE = (
+    REPOSITORY
+    / "src"
+    / "sunofriend"
+    / "_separation_native_spawn_darwin.c"
+)
+PYPROJECT = REPOSITORY / "pyproject.toml"
+MANIFEST = REPOSITORY / "MANIFEST.in"
+
+
+def _source() -> str:
+    return SOURCE.read_text(encoding="utf-8")
+
+
+def _function_body(source: str, name: str, next_name: str) -> str:
+    start = source.index(name)
+    end = source.index(next_name, start)
+    return source[start:end]
+
+
+def test_native_launcher_is_packaged_as_source_but_not_registered_to_compile() -> None:
+    source_name = SOURCE.name
+    pyproject = PYPROJECT.read_text(encoding="utf-8")
+    manifest = MANIFEST.read_text(encoding="utf-8")
+
+    assert SOURCE.is_file()
+    assert f'"{source_name}",' in pyproject
+    assert f"include src/sunofriend/{source_name}" in manifest.splitlines()
+    assert "[[tool.setuptools.ext-modules]]" not in pyproject
+    assert "Extension(" not in pyproject
+
+
+def test_source_is_mac_only_private_and_has_no_python_runtime_reference() -> None:
+    source = _source()
+    python_sources = list((REPOSITORY / "src" / "sunofriend").glob("*.py"))
+
+    assert "#if !defined(__APPLE__) || !defined(__MACH__)" in source
+    assert (
+        "#error \"Sunofriend's native spawn boundary is supported only on macOS.\""
+        in source
+    )
+    assert "PyInit__separation_native_spawn_darwin" in source
+    assert '"_spawn_bound_fake_worker"' in source
+    assert all(
+        "_separation_native_spawn_darwin" not in path.read_text(encoding="utf-8")
+        for path in python_sources
+    )
+
+
+def test_source_uses_only_direct_darwin_spawn_with_close_all_default() -> None:
+    source = _source()
+
+    assert source.count("status = posix_spawn(") == 1
+    assert "POSIX_SPAWN_CLOEXEC_DEFAULT" in source
+    assert "posix_spawnattr_setflags(attributes, flags)" in source
+    assert "POSIX_SPAWN_SETPGROUP" in source
+    assert "POSIX_SPAWN_SETSIGDEF" in source
+    assert "POSIX_SPAWN_SETSIGMASK" in source
+    assert "posix_spawnattr_setpgroup(attributes, 0)" in source
+    assert "sigfillset(&default_signals)" in source
+    assert "sigdelset(&default_signals, SIGKILL)" in source
+    assert "sigdelset(&default_signals, SIGSTOP)" in source
+    assert "sigemptyset(&empty_mask)" in source
+    assert "posix_spawnattr_setsigdefault(attributes, &default_signals)" in source
+    assert "posix_spawnattr_setsigmask(attributes, &empty_mask)" in source
+    assert "Py_BEGIN_ALLOW_THREADS" not in source
+    assert "Py_END_ALLOW_THREADS" not in source
+
+    forbidden_calls = (
+        "fork",
+        "vfork",
+        "system",
+        "popen",
+        "execl",
+        "execle",
+        "execlp",
+        "execv",
+        "execve",
+        "execvp",
+        "posix_spawnp",
+        "posix_spawn_file_actions_addinherit_np",
+    )
+    for name in forbidden_calls:
+        assert re.search(rf"\b{re.escape(name)}\s*\(", source) is None
+
+
+def test_descriptor_changes_are_child_actions_and_parent_table_is_untouched() -> None:
+    source = _source()
+    actions = _function_body(
+        source,
+        "sunofriend_add_child_file_actions(",
+        "sunofriend_configure_spawn_attributes(",
+    )
+
+    assert "posix_spawn_file_actions_adddup2(" in actions
+    assert "posix_spawn_file_actions_addopen(" in actions
+    assert "posix_spawn_file_actions_addclose(" in actions
+    for direct_mutator in ("open", "close", "dup", "dup2", "pipe", "socket"):
+        assert re.search(rf"\b{direct_mutator}\s*\(", source) is None
+    assert "fcntl(source_fds[left], F_GETFD)" in source
+    assert "fcntl(source_fds[left], F_GETFL)" in source
+    for mutating_fcntl in ("F_DUPFD", "F_DUPFD_CLOEXEC", "F_SETFD", "F_SETFL"):
+        assert mutating_fcntl not in source
+
+    copy_to_scratch = actions.index("source_fds[index],\n            scratch_fds[index]")
+    close_sources = actions.index(
+        "posix_spawn_file_actions_addclose(actions, source_fds[index])"
+    )
+    map_to_target = actions.index(
+        "scratch_fds[index],\n            sunofriend_target_fds[index]"
+    )
+    close_scratch = actions.rindex(
+        "posix_spawn_file_actions_addclose(actions, scratch_fds[index])"
+    )
+    open_stdin = actions.index("SUNOFRIEND_STDIN_FD,\n        \"/dev/null\"")
+    assert (
+        copy_to_scratch
+        < close_sources
+        < map_to_target
+        < close_scratch
+        < open_stdin
+    )
+
+
+def test_scratch_descriptors_exclude_sources_targets_and_each_other() -> None:
+    source = _source()
+    selector = _function_body(
+        source,
+        "sunofriend_fd_is_reserved(",
+        "sunofriend_add_child_file_actions(",
+    )
+
+    assert "#define SUNOFRIEND_SCRATCH_FD_MIN 6" in source
+    assert (
+        "candidate >= SUNOFRIEND_STDIN_FD "
+        "&& candidate <= SUNOFRIEND_CHECKPOINT_FD"
+    ) in selector
+    assert "candidate == source_fds[index]" in selector
+    assert "candidate == scratch_fds[index]" in selector
+    assert "sunofriend_choose_scratch_fds(source_fds, scratch_fds)" in source
+    assert "transport descriptors must be distinct" in source
+    assert "transport descriptors must be at least 3" in source
+    assert "transport descriptors must have distinct backing nodes" in source
+    assert "transport descriptors must reference regular files" in source
+    assert "fcntl(source_fds[left], F_GETFD) != FD_CLOEXEC" in source
+    assert "(status_flags & O_ACCMODE) != required_access_modes[left]" in source
+    assert "(status_flags & (O_APPEND | O_NONBLOCK)) != 0" in source
+    assert "sigaction(SIGCHLD, NULL, &disposition)" in source
+    assert "disposition.sa_handler == SIG_IGN" in source
+    assert "(disposition.sa_flags & SA_NOCLDWAIT) != 0" in source
+    assert "sunofriend_validate_parent_sigchld() != 0" in source
+
+
+def test_child_stdio_environment_and_transport_numbers_are_fixed() -> None:
+    source = _source()
+    environment = _function_body(
+        source,
+        "sunofriend_worker_environment[]",
+        "sunofriend_contains_nul(",
+    )
+
+    assert source.count('"/dev/null"') == 3
+    assert source.count('"/dev/null",\n        O_RDONLY') == 1
+    assert source.count('"/dev/null",\n        O_WRONLY') == 2
+    assert "SUNOFRIEND_REQUEST_FD = 3" in source
+    assert "SUNOFRIEND_RESULT_FD = 4" in source
+    assert "SUNOFRIEND_CHECKPOINT_FD = 5" in source
+    assert "worker must set FD_CLOEXEC on them as its first user-code action" in source
+    assert "sunofriend_worker_environment" in source
+    assert re.findall(r'^\s+"([^"]+)",$', environment, flags=re.MULTILINE) == [
+        "LANG=C",
+        "LC_ALL=C",
+        "TZ=UTC",
+    ]
+    assert '"PATH=' not in source
+    assert '"PYTHON' not in source
+    assert re.search(r"\benviron\b", source) is None
+
+
+def test_executable_and_worker_are_bounded_bytes_with_exact_argv_template() -> None:
+    source = _source()
+
+    assert "value[0] != '/'" in source
+    assert "sunofriend_contains_nul" in source
+    assert "PyBytes_CheckExact(path)" in source
+    assert "char *native_arguments[6]" in source
+    assert 'native_arguments[1] = "-I"' in source
+    assert 'native_arguments[2] = "-B"' in source
+    assert 'native_arguments[3] = "-S"' in source
+    assert (
+        "native_arguments[4] = PyBytes_AS_STRING(bound_worker_entrypoint)"
+        in source
+    )
+    assert "native_arguments[5] = NULL" in source
+    assert "PyBytes_AS_STRING(bound_executable)" in source
+
+
+def test_post_spawn_result_allocation_failure_kills_group_and_reaps_child() -> None:
+    source = _source()
+    cleanup = _function_body(
+        source,
+        "sunofriend_reap_after_result_allocation_failure(",
+        "sunofriend_spawn_bound_fake_worker(",
+    )
+
+    assert "kill(-child_pid, SIGKILL)" in cleanup
+    assert "kill(child_pid, SIGKILL)" in cleanup
+    assert "waitpid(child_pid, &wait_status, 0)" in cleanup
+    assert "if (waited < 0 && errno == EINTR)" in cleanup
+    assert "waited == child_pid || (waited < 0 && errno == ECHILD)" in cleanup
+    assert "could knowingly discard ownership of a live PID" in cleanup
+    assert "if (result == NULL)" in source
+    assert "sunofriend_reap_after_result_allocation_failure(child_pid)" in source

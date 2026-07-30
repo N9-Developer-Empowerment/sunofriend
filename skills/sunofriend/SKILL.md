@@ -61,9 +61,12 @@ report the result, then move on.
   Darwin close-all behaviour and supervised lifecycle rules, but measures no
   artifact, invokes no native code, starts no child and proves no descriptor
   closure. Existing V1 records remain historical and non-authoritative. The
+  reviewed Darwin launcher C file is packaged only as uncompiled source: it
+  is not registered as an extension, imported or reachable from a command,
+  and static source checks are not executable proof. The
   process-free observer starts no child and issues no terminal receipt. The
-  next engineering boundary is a separately built, provenance-bound and
-  canary-tested native close-all implementation. The lease is not an immutable
+  next engineering boundary is a reproducibly built, provenance-bound and
+  canary-tested native close-all artifact. The lease is not an immutable
   snapshot or FD 5 transport, deterministic fake execution is unavailable,
   every real-execution blocker remains, and real separation execution is
   disabled.

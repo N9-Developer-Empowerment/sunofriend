@@ -548,6 +548,23 @@ TOCTOU closure, close-all canaries and lifecycle enforcement remain absent.
 Every capability and effect is false. A separately built and audited native
 boundary is the next increment; this record itself must never be enabled.
 
+`_separation_native_spawn_darwin.c` is the twentieth S3 boundary. The C file
+is packaged as source data but deliberately has no setuptools extension
+registration, Python import or caller. Its static contract is macOS-only and
+contains direct Darwin `posix_spawn` plus close-all, process-group and signal
+attributes. Fixed arguments/environment, read-only validation of three exact
+parent transport descriptors, collision-safe child actions, explicit alias
+closure, null standard streams, compatible parent `SIGCHLD` and a
+post-spawn allocation-failure kill/reap path are visible for source review.
+No parent descriptor is duplicated, closed or reflagged.
+
+This boundary is still inert: packaging source neither compiles nor loads it,
+and static text assertions are not descriptor or lifecycle proof. There is no
+native binary, provenance receipt, signature, canary child, live authority,
+worker result or terminal receipt. A later build-and-canary increment must
+produce and remeasure a private owner-only artifact and prove the macOS
+behavior before an executable fake schema can use it.
+
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a
 starter ZIP. It does not create or mutate Workbench SQLite state. After
