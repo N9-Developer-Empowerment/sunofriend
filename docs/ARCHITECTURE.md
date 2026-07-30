@@ -690,6 +690,17 @@ verified output file identity; it is checked at creation and again before the
 terminal receipt uses it. An isolated outer helper uses bounded reads and
 kills discovered child groups as well as its own process group on timeout.
 
+`_separation_fake_post_lease_failure_records.py` is the separate pure contract
+for a later parent-side failure. It requires exact successful native
+execution, V3 and Result V2 binding, the exact healthy closed
+checkpoint-lease receipt cross-bound to the worker request and checkpoint
+evidence, one code-owned materialization/verification/receipt/root-close
+stage, stage-consistent progress hashes and ordered cleanup events. The
+self-hashed record is path-free and inert. The executor does not issue it yet;
+this keeps the current operational post-lease failure paths explicitly
+receipt-less until primary preservation and descriptor ownership are wired
+together.
+
 This slice still does not complete the failure state machine. Exact-reap native
 failures and exact code-tagged native setup or `posix_spawn` no-start outcomes
 now have disjoint path-free whole-run receipts. Both bind terminal lease

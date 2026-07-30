@@ -593,6 +593,15 @@ quarantine verification and every parent-observed file identity, and is
 revalidated both when created and before the whole-run success receipt binds
 it. A plain, rehashed-but-substituted or cross-bound record is rejected.
 
+A separate pure post-lease failure record now fixes the vocabulary and
+invariants for the next integration slice. It requires an exact self-hashed
+native success observation, V3/Result V2 binding, a healthy closed-lease
+receipt cross-bound to the worker request and checkpoint evidence, one
+parent-side stage, consistent progress hashes, ordered cleanup and all
+publication/selection permissions false. It is not yet issued by the executor,
+so real collision, verifier, receipt-seal and root-close exceptions remain
+receipt-less until ownership-preserving integration is complete.
+
 Private lease orchestration preserves its first primary error and all observed
 cleanup errors instead of silently discarding secondary failures. Exact-reap
 native failures and exact setup or `posix_spawn` no-start outcomes can now be

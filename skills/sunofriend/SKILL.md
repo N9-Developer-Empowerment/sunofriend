@@ -105,7 +105,13 @@ report the result, then move on.
   every ordered cleanup stage. The no-start form claims no child, wait, signal
   or worker result. Unproven start state, unproven reap and post-lease
   materialization failures remain uncovered, so the non-bypassable fake
-  transport gate is not complete. Private failure machinery keeps lease
+  transport gate is not complete. A separate pure post-lease failure schema
+  now requires exact successful native evidence, V3/Result V2 binding, a
+  healthy closed lease cross-bound to the worker request and checkpoint
+  evidence, stage-consistent materialization progress and ordered cleanup while
+  keeping every publication permission false; executor issuance and
+  ownership-preserving cleanup are still pending. Private failure
+  machinery keeps lease
   cleanup stages in observed order, carries a validated lease terminal receipt
   when available, authenticates receipt composition with a lease-issued
   non-copyable one-use capability, snapshots the nested failure state and

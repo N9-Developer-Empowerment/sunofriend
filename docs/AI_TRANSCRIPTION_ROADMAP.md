@@ -629,6 +629,16 @@ The intermediate materialization observation is also exact-type, path-free
 and self-hashed: it cross-binds every result slot to the verified quarantine
 file identity and is revalidated both when created and before the terminal
 receipt binds it.
+
+A separate pure post-lease failure schema now defines the next boundary
+without weakening native exact-reap or no-start records. It accepts only an
+exact, self-hashed native success observation bound to the V3 plan and Result
+V2, the exact healthy closed-lease receipt cross-bound to the worker request
+and checkpoint evidence, one code-owned parent-side stage, consistent
+materialization milestones and ordered cleanup stages. Its receipt is path-free
+and grants no authority. Executor integration is still pending, so actual
+post-lease exceptions remain receipt-less for now.
+
 The successful-path live proof runs with bounded output in an isolated outer
 process group; timeout cleanup discovers and signals child groups before
 killing and reaping the helper.
