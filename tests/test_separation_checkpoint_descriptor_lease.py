@@ -5,7 +5,6 @@ import copy
 import gc
 import os
 import pickle
-import runpy
 import threading
 import weakref
 from concurrent.futures import ThreadPoolExecutor
@@ -26,6 +25,19 @@ from sunofriend.separation_checkpoint_descriptor_lease import (
     close_separation_checkpoint_descriptor_lease,
     recheck_separation_checkpoint_descriptor_lease,
 )
+from tests._separation_checkpoint_fixtures import (
+    canonical_sha256 as _canonical_sha256,
+)
+from tests._separation_checkpoint_fixtures import (
+    checkpoint_fixture as _checkpoint_fixture,
+)
+from tests._separation_checkpoint_fixtures import (
+    inspect_checkpoint as _inspect_checkpoint,
+)
+from tests._separation_checkpoint_fixtures import (
+    inspection_kwargs as _inspection_kwargs,
+)
+from tests._separation_checkpoint_fixtures import torch_zip as _torch_zip
 
 
 def _plain(value: Any) -> Any:
@@ -50,18 +62,174 @@ def _strings(value: Any) -> list[str]:
     return []
 
 
+def _assert_observation_characterization(
+    fixture: dict[str, Any],
+    observation: SeparationCheckpointDescriptorLeaseObservation,
+) -> None:
+    document = _plain(observation)
+    assert set(document) == {
+        "schema",
+        "lease_id",
+        "status",
+        "evidence_scope",
+        "publication_scope",
+        "execution_supported",
+        "execution_permitted",
+        "selection_permitted",
+        "bindings",
+        "classification",
+        "descriptor",
+        "limitations",
+        "effects",
+        "observation_sha256",
+    }
+    assert set(document["bindings"]) == {
+        "worker_request_sha256",
+        "preflight_sha256",
+        "acceptance_artifact_sha256",
+        "trusted_checkpoint_inspection_sha256",
+        "checkpoint_sha256",
+        "checkpoint_bytes",
+        "checkpoint_file_identity_sha256",
+        "classification_evidence_sha256",
+        "archive_evidence_sha256",
+        "pickle_evidence_sha256",
+    }
+    assert set(document["classification"]) == {
+        "container_kind",
+        "confidence",
+        "evidence_equal_to_trusted_inspection",
+    }
+    assert set(document["descriptor"]) == {
+        "retained",
+        "raw_descriptor_exposed",
+        "inheritable",
+        "shared_offset_reset_to_zero",
+        "ancestor_descriptors_closed",
+        "owner_pid_recorded_privately",
+    }
+    assert set(document["effects"]) == {
+        "checkpoint_descriptor_retained",
+        "checkpoint_descriptor_closed",
+        "ancestor_descriptors_closed",
+        "checkpoint_loaded",
+        "checkpoint_deserialized",
+        "model_imported",
+        "process_started",
+        "network_used",
+        "audio_read",
+        "files_written",
+        "publication_permitted",
+        "selection_permitted",
+        "acceptance_eligible",
+        "promotion_eligible",
+    }
+    observation_sha256 = document.pop("observation_sha256")
+    assert observation_sha256 == _canonical_sha256(document)
+
+    inspection = _plain(fixture["checkpoint_inspection"])
+    request = fixture["trusted_request"]
+    expected_bindings = {
+        "worker_request_sha256": request.request_sha256,
+        "preflight_sha256": request.preflight_sha256,
+        "acceptance_artifact_sha256": request.acceptance_artifact_sha256,
+        "trusted_checkpoint_inspection_sha256": inspection["inspection_sha256"],
+        "checkpoint_sha256": inspection["checkpoint"]["sha256"],
+        "checkpoint_bytes": inspection["checkpoint"]["bytes"],
+        "checkpoint_file_identity_sha256": _canonical_sha256(
+            inspection["checkpoint"]["file_identity"]
+        ),
+        "classification_evidence_sha256": inspection["classification"][
+            "classification_evidence_sha256"
+        ],
+        "archive_evidence_sha256": _canonical_sha256(inspection["archive"]),
+        "pickle_evidence_sha256": (
+            None
+            if inspection["pickle"] is None
+            else _canonical_sha256(inspection["pickle"])
+        ),
+    }
+    assert document["bindings"] == expected_bindings
+    assert document["classification"] == {
+        "container_kind": inspection["classification"]["container_kind"],
+        "confidence": inspection["classification"]["confidence"],
+        "evidence_equal_to_trusted_inspection": True,
+    }
+
+
+def _assert_receipt_characterization(
+    observation: SeparationCheckpointDescriptorLeaseObservation,
+    receipt: SeparationCheckpointDescriptorLeaseTerminalReceipt,
+) -> None:
+    document = _plain(receipt)
+    assert set(document) == {
+        "schema",
+        "lease_id",
+        "status",
+        "execution_supported",
+        "execution_permitted",
+        "selection_permitted",
+        "bindings",
+        "integrity",
+        "cleanup",
+        "limitations",
+        "effects",
+        "receipt_sha256",
+    }
+    expected_bindings = {
+        "lease_observation_sha256": observation["observation_sha256"],
+        **_plain(observation["bindings"]),
+    }
+    assert document["bindings"] == expected_bindings
+    assert set(document["bindings"]) == {
+        "lease_observation_sha256",
+        "worker_request_sha256",
+        "preflight_sha256",
+        "acceptance_artifact_sha256",
+        "trusted_checkpoint_inspection_sha256",
+        "checkpoint_sha256",
+        "checkpoint_bytes",
+        "checkpoint_file_identity_sha256",
+        "classification_evidence_sha256",
+        "archive_evidence_sha256",
+        "pickle_evidence_sha256",
+    }
+    assert set(document["integrity"]) == {"status", "reasons"}
+    assert set(document["cleanup"]) == {
+        "status",
+        "reasons",
+        "descriptor_close_attempted",
+        "descriptor_close_call_succeeded",
+    }
+    assert set(document["effects"]) == {
+        "checkpoint_descriptor_retained",
+        "checkpoint_descriptor_close_attempted",
+        "checkpoint_descriptor_close_call_succeeded",
+        "checkpoint_loaded",
+        "checkpoint_deserialized",
+        "model_imported",
+        "process_started",
+        "network_used",
+        "audio_read",
+        "files_written",
+        "publication_permitted",
+        "selection_permitted",
+        "acceptance_eligible",
+        "promotion_eligible",
+    }
+    receipt_sha256 = document.pop("receipt_sha256")
+    assert receipt_sha256 == _canonical_sha256(document)
+
+
 def _fixture(tmp_path: Path) -> dict[str, Any]:
-    namespace = runpy.run_path(
-        str(Path(__file__).with_name("test_separation_checkpoint_inspection.py"))
-    )
-    checkpoint_bytes = namespace["_torch_zip"]()
-    fixture = namespace["_fixture"](tmp_path, checkpoint_bytes)
-    inspection = namespace["_inspect"](fixture)
+    checkpoint_bytes = _torch_zip()
+    fixture = _checkpoint_fixture(tmp_path, checkpoint_bytes)
+    inspection = _inspect_checkpoint(fixture)
     return {
         **fixture,
         "checkpoint_bytes": checkpoint_bytes,
         "checkpoint_inspection": inspection,
-        "lease_kwargs": namespace["_kwargs"](fixture),
+        "lease_kwargs": _inspection_kwargs(fixture),
     }
 
 
@@ -104,6 +272,7 @@ def test_live_lease_is_path_free_non_authorising_and_idempotently_closed(
     )
     assert str(tmp_path) not in repr(lease)
     assert str(tmp_path) not in _strings(observation)
+    _assert_observation_characterization(fixture, observation)
 
     rechecked = recheck_separation_checkpoint_descriptor_lease(lease)
     assert _plain(rechecked) == _plain(observation)
@@ -123,6 +292,7 @@ def test_live_lease_is_path_free_non_authorising_and_idempotently_closed(
         is True
     )
     assert str(tmp_path) not in _strings(receipt)
+    _assert_receipt_characterization(observation, receipt)
 
     repeated = close_separation_checkpoint_descriptor_lease(lease)
     assert _plain(repeated) == _plain(receipt)
@@ -162,7 +332,7 @@ def test_path_replacement_never_substitutes_bytes_and_fails_closed(
     tmp_path: Path,
 ) -> None:
     fixture = _fixture(tmp_path)
-    lease, _observation = _acquire(fixture)
+    lease, observation = _acquire(fixture)
     replacement = fixture["checkpoint"].with_name("replacement.pt")
     replacement.write_bytes(b"x" * len(fixture["checkpoint_bytes"]))
     os.replace(replacement, fixture["checkpoint"])
@@ -175,6 +345,7 @@ def test_path_replacement_never_substitutes_bytes_and_fails_closed(
     assert receipt["integrity"]["reasons"]
     assert receipt["cleanup"]["status"] == "complete"
     assert receipt["effects"]["checkpoint_loaded"] is False
+    _assert_receipt_characterization(observation, receipt)
     assert _plain(close_separation_checkpoint_descriptor_lease(lease)) == (
         _plain(receipt)
     )
@@ -282,7 +453,7 @@ def test_unconfirmed_close_is_recorded_and_never_retried(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     fixture = _fixture(tmp_path)
-    lease, _observation = _acquire(fixture)
+    lease, observation = _acquire(fixture)
     original_close = lease_module.os.close
     attempted: list[int] = []
 
@@ -300,6 +471,7 @@ def test_unconfirmed_close_is_recorded_and_never_retried(
     assert receipt["cleanup"]["descriptor_close_attempted"] is True
     assert receipt["cleanup"]["descriptor_close_call_succeeded"] is False
     assert len(attempted) == 1
+    _assert_receipt_characterization(observation, receipt)
 
     repeated = close_separation_checkpoint_descriptor_lease(lease)
     assert _plain(repeated) == _plain(receipt)

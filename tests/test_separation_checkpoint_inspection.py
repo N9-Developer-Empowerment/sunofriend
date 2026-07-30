@@ -1,12 +1,7 @@
 from __future__ import annotations
 
 import ast
-import copy
-import hashlib
 import os
-import runpy
-import struct
-import zlib
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -17,33 +12,27 @@ import sunofriend.separation_checkpoint_inspection as inspection_module
 from sunofriend.separation_checkpoint_inspection import (
     SeparationCheckpointInspection,
     SeparationCheckpointInspectionRequest,
-    bind_separation_checkpoint_inspection_request,
     inspect_separation_checkpoint,
     separation_checkpoint_inspection_sha256,
     validate_separation_checkpoint_inspection,
 )
-from sunofriend.separation_contract import (
-    SeparationAudioGeometry,
-    SeparationRequest,
+from tests._separation_checkpoint_fixtures import (
+    TORCH_ZIP_FLAGS as _FLAGS,
 )
-from sunofriend.separation_worker_contract import (
-    SEPARATION_WORKER_ISOLATION_POLICY,
-    SeparationRuntimeArtifactIdentity,
-    build_separation_worker_request,
+from tests._separation_checkpoint_fixtures import (
+    canonical_sha256 as _canonical_sha256,
 )
-
-
-_LOCAL = struct.Struct("<4s5H3L2H")
-_DESCRIPTOR = struct.Struct("<4s3L")
-_CENTRAL = struct.Struct("<4s6H3L5H2L")
-_ZIP64_EOCD = struct.Struct("<4sQ2H2L4Q")
-_ZIP64_LOCATOR = struct.Struct("<4sLQL")
-_EOCD = struct.Struct("<4s4H2LH")
-_FLAGS = 0x0808
-
-
-def _sha(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
+from tests._separation_checkpoint_fixtures import (
+    checkpoint_fixture as _fixture,
+)
+from tests._separation_checkpoint_fixtures import (
+    inspect_checkpoint as _inspect,
+)
+from tests._separation_checkpoint_fixtures import (
+    inspection_kwargs as _kwargs,
+)
+from tests._separation_checkpoint_fixtures import model_pickle as _model_pickle
+from tests._separation_checkpoint_fixtures import torch_zip as _torch_zip
 
 
 def _plain(value: Any) -> Any:
@@ -68,271 +57,137 @@ def _strings(value: Any) -> list[str]:
     return []
 
 
-def _model_pickle() -> bytes:
-    return b"\x80\x02cdemucs.htdemucs\nHTDemucs\n)\x81."
-
-
-def _torch_zip(
-    *,
-    pickle_data: bytes | None = None,
-    members: list[tuple[bytes, bytes]] | None = None,
-    local_names: list[bytes] | None = None,
-    flags: int = _FLAGS,
-    compression: int = 0,
-    local_extra: bytes | None = None,
-    central_extra: bytes = b"",
-    central_comment: bytes = b"",
-    external_attr: int = 0,
-    prefix: bytes = b"",
-    gap_before_central: bytes = b"",
-    zip64: bool = False,
-    bad_zip64: bool = False,
-    eocd_comment: bytes = b"",
-    trailer: bytes = b"",
-    descriptor_signature: bytes = b"PK\x07\x08",
-    local_crc: int = 0,
-    local_sizes: tuple[int, int] = (0, 0),
-) -> bytes:
-    """Build the exact small stored Torch ZIP dialect without zipfile."""
-
-    if members is None:
-        members = [
-            (b"archive/data.pkl", pickle_data or b"\x80\x02}."),
-            (b"archive/version", b"3\n"),
-            (b"archive/data/0", b"\x00\x01\x02\x03"),
-        ]
-    if local_names is None:
-        local_names = [name for name, _data in members]
-    if len(local_names) != len(members):
-        raise AssertionError("test fixture local-name count differs")
-
-    local = bytearray(prefix)
-    central_rows: list[bytes] = []
-    for (central_name, data), local_name in zip(members, local_names):
-        offset = len(local)
-        crc = zlib.crc32(data) & 0xFFFFFFFF
-        member_extra = local_extra
-        if member_extra is None:
-            extra_bytes = (-(offset + _LOCAL.size + len(local_name))) % 64
-            if 0 < extra_bytes < 4:
-                extra_bytes += 64
-            member_extra = (
-                b""
-                if extra_bytes == 0
-                else (
-                    struct.pack("<HH", 0x4246, extra_bytes - 4)
-                    + b"Z" * (extra_bytes - 4)
-                )
-            )
-        local.extend(
-            _LOCAL.pack(
-                b"PK\x03\x04",
-                0,
-                flags,
-                compression,
-                0,
-                0,
-                local_crc,
-                local_sizes[0],
-                local_sizes[1],
-                len(local_name),
-                len(member_extra),
-            )
-        )
-        local.extend(local_name)
-        local.extend(member_extra)
-        local.extend(data)
-        local.extend(
-            _DESCRIPTOR.pack(
-                descriptor_signature,
-                crc,
-                len(data),
-                len(data),
-            )
-        )
-        central_rows.append(
-            _CENTRAL.pack(
-                b"PK\x01\x02",
-                0,
-                0,
-                flags,
-                compression,
-                0,
-                0,
-                crc,
-                len(data),
-                len(data),
-                len(central_name),
-                len(central_extra),
-                len(central_comment),
-                0,
-                0,
-                external_attr,
-                offset,
-            )
-            + central_name
-            + central_extra
-            + central_comment
-        )
-
-    local.extend(gap_before_central)
-    central_offset = len(local)
-    central = b"".join(central_rows)
-    count = len(members)
-    result = bytes(local) + central
-    central_end = central_offset + len(central)
-    if zip64:
-        result += _ZIP64_EOCD.pack(
-            b"PK\x06\x06",
-            44,
-            45,
-            45,
-            0,
-            0,
-            count,
-            count,
-            len(central),
-            central_offset,
-        )
-        result += _ZIP64_LOCATOR.pack(
-            b"PK\x06\x07",
-            0,
-            central_end + (1 if bad_zip64 else 0),
-            1,
-        )
-    result += _EOCD.pack(
-        b"PK\x05\x06",
-        0,
-        0,
-        count,
-        count,
-        len(central),
-        central_offset,
-        len(eocd_comment),
-    )
-    return result + eocd_comment + trailer
-
-
-def _fixture(tmp_path: Path, checkpoint_bytes: bytes) -> dict[str, Any]:
-    backend_namespace = runpy.run_path(
-        str(Path(__file__).with_name("test_separation_backend_preflight.py"))
-    )
-    inputs = backend_namespace["_make_inputs"](tmp_path / "preflight")
-    old_checkpoint = inputs["checkpoint"]
-    old_checkpoint.unlink()
-    checkpoint = old_checkpoint.with_suffix(".pt")
-    checkpoint.write_bytes(checkpoint_bytes)
-    inputs["checkpoint"] = checkpoint
-
-    acceptance = copy.deepcopy(inputs["acceptance"])
-    candidate = acceptance["identities"]["candidate_separator"]
-    candidate["backend_id"] = "candidate-separator-backend"
-    candidate["checkpoint"]["checkpoint_id"] = "candidate-checkpoint"
-    candidate["checkpoint"]["format"] = "torch-state-dict"
-    candidate["checkpoint"]["sha256"] = _sha(checkpoint_bytes)
-    candidate["checkpoint"]["bytes"] = len(checkpoint_bytes)
-    backend_namespace["_replace_acceptance"](inputs, acceptance)
-    preflight = backend_namespace["_run"](inputs)
-
-    identity = inputs["acceptance"]["identities"]["candidate_separator"]
-    geometry = SeparationAudioGeometry(
-        sample_rate=44_100,
-        channels=2,
-        frames=88_200,
-        duration_seconds=2.0,
-    )
-    source_sha = _sha(b"source")
-    separation_request = SeparationRequest.create(
-        source_path=tmp_path / "source.wav",
-        output_dir=tmp_path / "worker-output",
-        checkpoint_path=checkpoint,
-        source_id=f"sha256:{source_sha}",
-        source_sha256=source_sha,
-        canonical_sha256=_sha(b"canonical source"),
-        source_geometry=geometry,
-        scope="broad",
-        parent_node_id=None,
-        backend_id=preflight["arm"]["backend_id"],
-        checkpoint_id=preflight["arm"]["checkpoint_id"],
-        checkpoint_sha256=identity["checkpoint"]["sha256"],
-        requested_roles=("bass", "drums"),
-        settings={
-            "overlap": 0.25,
-            "segments": 8,
-            "shifts": 0,
-            "split": True,
-        },
-        seed=17,
-    )
-    isolation = {
-        "policy_id": SEPARATION_WORKER_ISOLATION_POLICY,
-        "evidence_scope": "private_development",
-        "required_status": "development_enforced_observation_unproven",
-        "provider_id": "sandbox-exec",
-        "profile_sha256": _sha(b"profile"),
-        "environment_sha256": _sha(b"environment"),
-        "file_descriptor_policy_sha256": _sha(b"fd-policy"),
-        "canary_sha256": _sha(b"canary"),
-        "observer_id": "sunofriend-parent-observer",
-        "observer_sha256": _sha(b"observer"),
+def _assert_inspection_characterization(
+    fixture: dict[str, Any],
+    result: SeparationCheckpointInspection,
+) -> None:
+    document = _plain(result)
+    assert set(document) == {
+        "schema",
+        "inspection_id",
+        "status",
+        "evidence_scope",
+        "publication_scope",
+        "public_redacted_projection_available",
+        "evidence_authority",
+        "execution_supported",
+        "execution_permitted",
+        "bindings",
+        "checkpoint",
+        "archive",
+        "pickle",
+        "classification",
+        "limitations",
+        "effects",
+        "inspection_sha256",
     }
-    runtime_artifact = SeparationRuntimeArtifactIdentity(
-        path=inputs["launcher"],
-        sha256=_sha(b"runtime launcher"),
-        bytes=1024,
-        verified_launcher_chain_sha256=_sha(b"launcher chain"),
-    )
-    worker_request = build_separation_worker_request(
-        preflight=preflight,
-        trusted_acceptance=inputs["acceptance"],
-        separation_request=separation_request,
-        worker_path=inputs["worker"],
-        trusted_runtime_artifact=runtime_artifact,
-        dependency_lock_path=inputs["dependency_lock"],
-        source_bytes=4096,
-        checkpoint_bytes=identity["checkpoint"]["bytes"],
-        worker_sha256=identity["worker_sha256"],
-        worker_bytes=inputs["worker"].stat().st_size,
-        runtime_id=identity["runtime"]["runtime_id"],
-        runtime_version=identity["runtime"]["runtime_version"],
-        python_version=identity["runtime"]["python_version"],
-        dependency_lock_sha256=identity["runtime"]["dependency_lock_sha256"],
-        dependency_lock_bytes=inputs["dependency_lock"].stat().st_size,
-        isolation=isolation,
-    )
-    trusted_request = bind_separation_checkpoint_inspection_request(
-        worker_request,
-        trusted_preflight=preflight,
-        trusted_acceptance=inputs["acceptance"],
-        trusted_separation_request=separation_request,
-        trusted_runtime_artifact=runtime_artifact,
-    )
-    return {
-        "inputs": inputs,
-        "checkpoint": checkpoint,
-        "preflight": preflight,
-        "acceptance": inputs["acceptance"],
-        "separation_request": separation_request,
-        "runtime_artifact": runtime_artifact,
-        "worker_request": worker_request,
-        "trusted_request": trusted_request,
+    assert set(document["bindings"]) == {
+        "worker_request_sha256",
+        "preflight_sha256",
+        "acceptance_artifact_sha256",
+    }
+    assert set(document["checkpoint"]) == {
+        "checkpoint_id",
+        "declared_format",
+        "sha256",
+        "bytes",
+        "file_identity",
+    }
+    assert set(document["checkpoint"]["file_identity"]) == {
+        "device",
+        "inode",
+        "mode",
+        "links",
+        "bytes",
+        "mtime_ns",
+        "ctime_ns",
+        "uid",
+    }
+    assert set(document["archive"]) == {
+        "kind",
+        "archive_metadata_parsed",
+        "pickle_metadata_parsed",
+        "member_count",
+        "inventory_sha256",
+        "central_directory_sha256",
+        "redundant_single_disk_zip64_terminal_validated",
+        "total_compressed_bytes",
+        "total_uncompressed_bytes",
+        "tensor_data_member_count",
+        "data_pickle_bytes",
+        "data_pickle_sha256",
+        "all_member_payload_crc_verified",
+    }
+    assert set(document["pickle"]) == {
+        "protocol",
+        "opcode_count",
+        "opcode_stream_sha256",
+        "global_count",
+        "globals_sha256",
+        "unresolved_stack_globals",
+        "mapping_root_prefix_observed",
+        "has_tensor_rebuild",
+        "has_persistent_storage",
+        "object_construction_opcodes",
+        "forbidden_state_dict_opcodes",
+        "application_global_count",
+        "application_globals_sha256",
+        "known_htdemucs_application_global_observed",
+        "trailing_bytes",
+    }
+    assert set(document["classification"]) == {
+        "container_kind",
+        "confidence",
+        "reason_codes",
+        "classification_evidence_sha256",
+        "authorizes_loading",
+        "authorizes_execution",
+    }
+    assert set(document["effects"]) == {
+        "filesystem_accessed",
+        "checkpoint_opened",
+        "checkpoint_bytes_read",
+        "checkpoint_descriptor_closed",
+        "archive_metadata_parsed",
+        "pickle_opcodes_parsed",
+        "checkpoint_loaded",
+        "checkpoint_deserialized",
+        "model_imported",
+        "process_started",
+        "network_used",
+        "audio_read",
+        "files_written",
+        "publication_permitted",
+        "selection_permitted",
+        "acceptance_eligible",
+        "promotion_eligible",
     }
 
+    inspection_sha256 = document.pop("inspection_sha256")
+    assert inspection_sha256 == _canonical_sha256(document)
 
-def _kwargs(fixture: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "trusted_request": fixture["trusted_request"],
-        "trusted_preflight": fixture["preflight"],
-        "trusted_acceptance": fixture["acceptance"],
-        "trusted_separation_request": fixture["separation_request"],
-        "trusted_runtime_artifact": fixture["runtime_artifact"],
+    classification = dict(document["classification"])
+    classification_sha256 = classification.pop("classification_evidence_sha256")
+    assert classification.pop("authorizes_loading") is False
+    assert classification.pop("authorizes_execution") is False
+    request = fixture["trusted_request"]
+    assert document["bindings"] == {
+        "worker_request_sha256": request.request_sha256,
+        "preflight_sha256": request.preflight_sha256,
+        "acceptance_artifact_sha256": request.acceptance_artifact_sha256,
     }
-
-
-def _inspect(fixture: dict[str, Any]) -> SeparationCheckpointInspection:
-    return inspect_separation_checkpoint(
-        fixture["worker_request"],
-        **_kwargs(fixture),
+    assert classification_sha256 == _canonical_sha256(
+        {
+            "request_sha256": request.request_sha256,
+            "preflight_sha256": request.preflight_sha256,
+            "acceptance_artifact_sha256": (request.acceptance_artifact_sha256),
+            "checkpoint_sha256": document["checkpoint"]["sha256"],
+            "checkpoint_bytes": document["checkpoint"]["bytes"],
+            "file_identity": document["checkpoint"]["file_identity"],
+            "archive": document["archive"],
+            "pickle": document["pickle"],
+            "classification": classification,
+        }
     )
 
 
@@ -409,6 +264,7 @@ def test_inspection_and_validated_copy_are_deeply_immutable_and_hash_bound(
     assert result["inspection_sha256"] == (
         separation_checkpoint_inspection_sha256(result)
     )
+    _assert_inspection_characterization(fixture, result)
     assert result["pickle"]["mapping_root_prefix_observed"] is True
     assert "has_mapping_root" not in result["pickle"]
     with pytest.raises(TypeError):

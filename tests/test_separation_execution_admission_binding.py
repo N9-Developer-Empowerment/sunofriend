@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import runpy
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -35,6 +34,17 @@ from sunofriend.separation_execution_admission_binding import (
     separation_execution_admission_binding_sha256,
     validate_separation_execution_admission_binding,
 )
+from tests._separation_checkpoint_fixtures import (
+    canonical_sha256 as _canonical_sha256,
+)
+from tests._separation_checkpoint_fixtures import (
+    checkpoint_fixture as _checkpoint_fixture,
+)
+from tests._separation_checkpoint_fixtures import (
+    inspect_checkpoint as _inspect_checkpoint,
+)
+from tests._separation_checkpoint_fixtures import model_pickle as _model_pickle
+from tests._separation_checkpoint_fixtures import torch_zip as _torch_zip
 
 
 def _sha(value: str) -> str:
@@ -150,13 +160,10 @@ def _resources() -> SeparationResourceLimitEvidence:
 
 
 def _fixture(tmp_path: Path, *, model_pickle: bool = False) -> dict[str, Any]:
-    namespace = runpy.run_path(
-        str(Path(__file__).with_name("test_separation_checkpoint_inspection.py"))
-    )
-    pickle_data = namespace["_model_pickle"]() if model_pickle else b"\x80\x02}."
-    checkpoint_bytes = namespace["_torch_zip"](pickle_data=pickle_data)
-    checkpoint = namespace["_fixture"](tmp_path, checkpoint_bytes)
-    inspection = namespace["_inspect"](checkpoint)
+    pickle_data = _model_pickle() if model_pickle else b"\x80\x02}."
+    checkpoint_bytes = _torch_zip(pickle_data=pickle_data)
+    checkpoint = _checkpoint_fixture(tmp_path, checkpoint_bytes)
+    inspection = _inspect_checkpoint(checkpoint)
     policy = _reported_checkpoint_policy(inspection)
     runtime = _runtime()
     isolation = _isolation()
@@ -205,6 +212,79 @@ def _binding_kwargs(fixture: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _assert_binding_characterization(
+    value: SeparationExecutionAdmissionBindingRecord,
+) -> None:
+    document = _plain(value)
+    assert set(document) == {
+        "schema",
+        "policy_id",
+        "evidence_scope",
+        "publication_scope",
+        "public_redacted_projection_available",
+        "evidence_authority",
+        "reported_claims_trusted",
+        "status",
+        "run_status",
+        "real_execution_supported",
+        "execution_permitted",
+        "bindings",
+        "checkpoint_static_inspection",
+        "decision",
+        "effects",
+        "binding_sha256",
+    }
+    assert set(document["bindings"]) == {
+        "execution_admission_sha256",
+        "checkpoint_policy_sha256",
+        "checkpoint_inspection_sha256",
+        "checkpoint_classification_evidence_sha256",
+        "worker_request_sha256",
+        "preflight_sha256",
+        "acceptance_artifact_sha256",
+        "checkpoint_sha256",
+    }
+    assert set(document["checkpoint_static_inspection"]) == {
+        "status",
+        "evidence_authority",
+        "inspection_sha256",
+        "classification_evidence_sha256",
+        "classification_mapping_id",
+        "inspection_container_kind",
+        "policy_container_kind",
+        "checkpoint_descriptor_transport",
+        "checkpoint_path_to_loader_toctou",
+        "authorizes_loading",
+        "authorizes_execution",
+    }
+    assert set(document["decision"]) == {
+        "status",
+        "run_status",
+        "blockers",
+        "advisories",
+    }
+    assert set(document["effects"]) == {
+        "filesystem_accessed",
+        "checkpoint_opened",
+        "checkpoint_loaded",
+        "checkpoint_deserialized",
+        "model_imported",
+        "process_started",
+        "worker_started",
+        "inference_started",
+        "network_used",
+        "audio_read",
+        "outputs_created",
+        "quarantine_created",
+        "files_written",
+        "publication_permitted",
+        "acceptance_eligible",
+        "promotion_eligible",
+    }
+    binding_sha256 = document.pop("binding_sha256")
+    assert binding_sha256 == _canonical_sha256(document)
+
+
 def test_cross_binding_is_private_immutable_blocked_and_additive(
     tmp_path: Path,
 ) -> None:
@@ -239,6 +319,7 @@ def test_cross_binding_is_private_immutable_blocked_and_additive(
     assert value["binding_sha256"] == (
         separation_execution_admission_binding_sha256(value)
     )
+    _assert_binding_characterization(value)
     assert str(tmp_path) not in repr(_plain(value))
 
     checked = validate_separation_execution_admission_binding(
