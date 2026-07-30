@@ -4,9 +4,10 @@ Status: **research and architecture decision complete; S1 synchronized source
 preparation and S2 source lineage/composite drums accepted; S3 includes the
 backend-neutral and blocked-execution groundwork, a fresh private
 provenance-bound Darwin build, and a test-only live descriptor canary for the
-exact physical source FDs 3/4/5. Deterministic fake execution, arbitrary
-source-FD coverage, path-TOCTOU closure, live child-signal-state proof, real
-source separation, hidden evaluation and promotion are not implemented**
+exact physical source FDs 3/4/5 plus representative low, mixed-collision and
+scratch-collision/near-limit layouts. Deterministic fake execution, exhaustive arbitrary
+source-FD proof, path-TOCTOU closure, live child-signal-state proof, real source
+separation, hidden evaluation and promotion are not implemented**
 
 Checked: 30 July 2026
 
@@ -459,11 +460,15 @@ resource.
 
 A separate test-only macOS canary remeasures and imports that private artifact
 inside an isolated harness. Across all six logical permutations of the exact
-physical source FDs 3/4/5, the child observed exactly FDs 0–5, unrelated low
+physical source FDs 3/4/5 and ten fixed representative layouts covering
+ordinary low non-target descriptors, collisions with the launcher's first
+scratch candidates, mixed 3/4/5 collisions and descriptors near the fixed
+scan limit, the child observed exactly FDs 0–5. Unrelated low
 and high inheritable descriptors were absent, and the parent descriptor
 identities, access/inheritability state and offsets were unchanged after spawn
-and reap. This is deliberately narrower than execution authority: arbitrary
-source-FD values are not live-proven; the harness requires an outer
+and reap. This finite matrix is deliberately narrower than execution
+authority: arbitrary source-FD values are not exhaustively live-proven; the
+harness requires an outer
 `close_fds=True, pass_fds=()` launch but cannot observe that policy from
 inside; CPython startup prevents the worker from proving the spawn-time signal
 reset and mask state; and extension-import, runtime-exec and worker-script path
@@ -1430,10 +1435,13 @@ bake-off execution not implemented**
   physical source FDs 3/4/5: the child sees only FDs 0–5, unrelated
   descriptors are closed, and the parent descriptor table, identities,
   relevant flags and offsets remain unchanged.
-- [ ] Extend live proof beyond exact physical source FDs 3/4/5, remove or
-  explicitly confine extension/runtime/worker path TOCTOU, and make the clean
-  outer-supervisor and child signal-state boundaries independently
-  observable.
+- [x] Extend the finite live descriptor matrix beyond exact physical source
+  FDs 3/4/5 with ordinary low non-target, scratch-candidate collision, mixed
+  target-collision and near-limit layouts while retaining a truthful
+  `arbitrary values not proven` boundary.
+- [ ] Remove or explicitly confine extension/runtime/worker path TOCTOU, and
+  make the clean outer-supervisor and child signal-state boundaries
+  independently observable.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with the
   deterministic fake worker, exact pre-exec remeasurement, validated worker
   result, timeout/reap evidence and parent-verified quarantined outputs before

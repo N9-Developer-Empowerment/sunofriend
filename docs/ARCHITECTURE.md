@@ -573,13 +573,16 @@ same measured host must produce the same artifact hash and UUID; their
 per-build receipts retain distinct filesystem identities.
 
 The isolated live canary imports only the remeasured private artifact. It
-proves all six logical permutations of exact physical source FDs 3/4/5,
-exactly FDs 0–5 in the child, closure of unrelated low and high inheritable
-descriptors, and unchanged parent descriptor identities, relevant flags and
-offsets after spawn and reap. Non-default parent `SIGCHLD` states fail closed.
-This narrow evidence does not enable fake-launch V2 or provide live authority:
-arbitrary source-FD values, inside-harness observation of the required clean
-outer supervisor, post-CPython child signal state and
+proves all six logical permutations of exact physical source FDs 3/4/5 and a
+fixed representative matrix of ordinary low non-target, mixed target-collision
+and scratch-candidate/near-limit layouts. Every case has exactly FDs 0–5 in the
+child, closure of
+unrelated low and high inheritable descriptors, and unchanged parent
+descriptor identities, relevant flags and offsets after spawn and reap.
+Non-default parent `SIGCHLD` states fail closed. This finite evidence does not
+enable fake-launch V2 or provide live authority: exhaustive arbitrary
+source-FD values, inside-harness observation of the required clean outer
+supervisor, post-CPython child signal state and
 extension/runtime/worker path TOCTOU closure remain unproven. Only a fixed
 test probe ran; there is no production fake result, checkpoint FD 5
 transport, model execution, audio operation, terminal receipt or

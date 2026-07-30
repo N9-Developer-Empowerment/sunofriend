@@ -537,12 +537,16 @@ An isolated test harness remeasures and imports only that private artifact.
 Across all six logical permutations of exact physical source FDs 3/4/5, it
 observes exactly FDs 0–5 in the child, no unrelated low or high inheritable
 descriptor, and no change to the parent descriptors' identities, relevant
-flags or offsets after spawn and reap. Custom parent `SIGCHLD` handling and
-`SA_NOCLDWAIT` fail before child creation. This does not enable fake-launch
-V2: arbitrary source-FD values, the outer supervisor policy from inside the
-harness, post-CPython signal state and extension/runtime/worker path TOCTOU
-remain unproven. No production fake worker, checkpoint transport, model,
-audio operation, terminal result or user-facing separator ran.
+flags or offsets after spawn and reap. A following finite-matrix increment
+repeats those invariants for ten fixed ordinary low non-target,
+scratch-candidate-collision, mixed 3/4/5-collision and near-limit physical
+layouts. Custom parent `SIGCHLD`
+handling and `SA_NOCLDWAIT` fail before child creation. This does not enable
+fake-launch V2: exhaustive arbitrary source-FD values, the outer supervisor
+policy from inside the harness, post-CPython signal state and
+extension/runtime/worker path TOCTOU remain unproven. No production fake
+worker, checkpoint transport, model, audio operation, terminal result or
+user-facing separator ran.
 
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every

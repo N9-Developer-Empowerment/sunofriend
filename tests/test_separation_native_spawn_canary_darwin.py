@@ -354,12 +354,15 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
     )
 
     assert report["schema"] == ("sunofriend.native-spawn-canary-matrix.v1")
-    assert report["case_count"] == 6
+    expected_layouts = {
+        *itertools.permutations((3, 4, 5)),
+        *harness._REPRESENTATIVE_SOURCE_FD_LAYOUTS,
+    }
+    assert report["case_count"] == len(expected_layouts)
     assert report["all_source_fd_permutations_exercised"] is True
-    assert {tuple(case["source_fds"]) for case in report["cases"]} == set(
-        itertools.permutations((3, 4, 5))
-    )
-    assert len({case["pid"] for case in report["cases"]}) == 6
+    assert report["all_representative_source_fd_layouts_exercised"] is True
+    assert {tuple(case["source_fds"]) for case in report["cases"]} == (expected_layouts)
+    assert len({case["pid"] for case in report["cases"]}) == len(expected_layouts)
     for case in report["cases"]:
         assert case["pid"] == case["pgid"]
         assert case["open_descriptors"] == [0, 1, 2, 3, 4, 5]
@@ -413,6 +416,15 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
     assert report["source_descriptor_scope"] == {
         "exact_physical_descriptors": [3, 4, 5],
         "all_six_permutations_proven": True,
+        "representative_physical_layouts": [
+            list(source_fds) for source_fds in harness._REPRESENTATIVE_SOURCE_FD_LAYOUTS
+        ],
+        "representative_layout_classes": [
+            "ordinary_low_non_target",
+            "scratch_candidate_collision",
+            "mixed_fixed_target_collision",
+            "near_fixed_scan_limit",
+        ],
         "arbitrary_source_descriptor_values_proven": False,
     }
     assert report["parent_status_flag_claim"] == {

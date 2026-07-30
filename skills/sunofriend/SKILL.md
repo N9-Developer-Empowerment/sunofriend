@@ -65,11 +65,14 @@ report the result, then move on.
   An internal macOS-only builder can make a fresh owner-only,
   provenance-bound launcher artifact with split object compilation and direct
   linking. A test-only canary has imported a remeasured artifact and, for
-  every logical permutation of exact physical source FDs 3/4/5, observed only
-  FDs 0–5 in the child while preserving the parent descriptor table. This
-  evidence does not enable native fake-launch V2, which remains permanently
-  `blocked`/`not_run` and still contains only caller-claimed artifact
-  identities. It does not prove arbitrary source-FD values, observe the
+  every logical permutation of exact physical source FDs 3/4/5 plus a fixed
+  representative matrix of ordinary low, scratch-candidate collision, mixed
+  target-collision and near-limit layouts, observed only FDs 0–5 in the child
+  while preserving the
+  parent descriptor table. This evidence does not enable native fake-launch
+  V2, which remains permanently `blocked`/`not_run` and still contains only
+  caller-claimed artifact identities. It does not exhaustively prove arbitrary
+  source-FD values, observe the
   required outer `close_fds=True, pass_fds=()` policy from inside the harness,
   prove child signal state after CPython startup, or eliminate
   extension-import, runtime-exec or worker-script path TOCTOU. The canary

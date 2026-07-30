@@ -117,16 +117,42 @@ def test_canary_worker_is_fixed_stdlib_only_and_has_no_expansive_surface() -> No
     assert "os.write(" not in source
 
 
-def test_harness_enumerates_every_fd345_source_mapping_and_two_canary_tiers() -> None:
-    assert tuple(harness._source_fd_permutations()) == tuple(
+def test_harness_enumerates_target_and_representative_source_layouts() -> None:
+    assert tuple(harness._exact_target_source_fd_permutations()) == tuple(
         itertools.permutations((3, 4, 5))
     )
-    assert len(tuple(harness._source_fd_permutations())) == 6
+    assert len(tuple(harness._exact_target_source_fd_permutations())) == 6
+    layouts = tuple(harness._source_fd_layouts())
+    assert layouts[:6] == tuple(
+        ("exact_target_permutation", source_fds)
+        for source_fds in itertools.permutations((3, 4, 5))
+    )
+    assert layouts[6:] == tuple(
+        ("representative_physical_layout", source_fds)
+        for source_fds in harness._REPRESENTATIVE_SOURCE_FD_LAYOUTS
+    )
+    assert harness._REPRESENTATIVE_SOURCE_FD_LAYOUTS == (
+        (9, 10, 11),
+        (11, 9, 10),
+        (6, 7, 8),
+        (6, 10, 5),
+        (3, 9, 10),
+        (9, 4, 10),
+        (9, 10, 5),
+        (3, 10, 5),
+        (11, 4, 3),
+        (64, 1_024, 4_092),
+    )
     assert harness._LOW_CANARY_FDS == (6, 7, 8)
+    assert harness._ALTERNATE_LOW_CANARY_FDS == (12, 13, 14)
     assert harness._CANARY_SOFT_LIMIT == 4_096
     assert harness._HIGH_CANARY_FDS == (4_093, 4_094, 4_095)
     assert set(harness._LOW_CANARY_FDS).isdisjoint({3, 4, 5})
     assert set(harness._HIGH_CANARY_FDS).isdisjoint({*harness._LOW_CANARY_FDS, 3, 4, 5})
+    for _layout_class, source_fds in layouts:
+        assert len(set(source_fds)) == 3
+        low_canaries = harness._canary_fds_for_source_layout(source_fds)
+        assert set(source_fds).isdisjoint({*low_canaries, *harness._HIGH_CANARY_FDS})
     source = HARNESS.read_text(encoding="utf-8")
     close = source.index("os.closerange(3, original_soft_limit)")
     lower = source.index("resource.setrlimit(")
@@ -181,6 +207,7 @@ def test_harness_asserts_parent_child_access_data_and_process_invariants() -> No
     assert "extension_path_import_toctou_not_eliminated" in source
     assert "clean_outer_supervisor_not_proven_inside_harness" in source
     assert '"arbitrary_source_descriptor_values_proven": False' in source
+    assert '"scratch_candidate_collision"' in source
     assert '"opaque_f_getfl_bits_compared": False' in source
 
 

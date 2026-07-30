@@ -4,7 +4,8 @@ The harness is deliberately independent of the future build module.  Give it
 an absolute path to a provenance-approved extension artifact and an absolute
 temporary directory.  It loads that private artifact, closes every unrelated
 descriptor, and exercises all source-descriptor permutations involving
-logical FD 3, 4 and 5.
+logical FD 3, 4 and 5 plus fixed representative low, mixed-collision and
+near-limit physical layouts.
 
 This script performs no compilation, network access, model import, audio
 operation or separation.
@@ -43,11 +44,24 @@ _WORKER = (
 _LOGICAL_ROLES = ("request", "result", "checkpoint")
 _TARGET_FDS = (3, 4, 5)
 _LOW_CANARY_FDS = (6, 7, 8)
+_ALTERNATE_LOW_CANARY_FDS = (12, 13, 14)
 _CANARY_SOFT_LIMIT = 4_096
 _HIGH_CANARY_FDS = (
     _CANARY_SOFT_LIMIT - 3,
     _CANARY_SOFT_LIMIT - 2,
     _CANARY_SOFT_LIMIT - 1,
+)
+_REPRESENTATIVE_SOURCE_FD_LAYOUTS = (
+    (9, 10, 11),
+    (11, 9, 10),
+    (6, 7, 8),
+    (6, 10, 5),
+    (3, 9, 10),
+    (9, 4, 10),
+    (9, 10, 5),
+    (3, 10, 5),
+    (11, 4, 3),
+    (64, 1_024, _CANARY_SOFT_LIMIT - 4),
 )
 _EXPECTED_ENVIRONMENT = {
     "LANG": "C",
@@ -429,16 +443,24 @@ def _install_transport_descriptors(
     paths["request"].write_bytes(_REQUEST_BYTES)
     paths["result"].write_bytes(b"")
     paths["checkpoint"].write_bytes(_CHECKPOINT_BYTES)
-    role_by_descriptor = dict(zip(source_fds, _LOGICAL_ROLES))
-    for descriptor in _TARGET_FDS:
-        role = role_by_descriptor[descriptor]
+    if (
+        len(set(source_fds)) != len(_LOGICAL_ROLES)
+        or any(descriptor < 3 for descriptor in source_fds)
+        or max(source_fds) >= _soft_descriptor_limit()
+        or set(source_fds)
+        & set((*_canary_fds_for_source_layout(source_fds), *_HIGH_CANARY_FDS))
+    ):
+        raise RuntimeError("canary source descriptor layout is invalid")
+    roles_by_target = sorted(
+        zip(_LOGICAL_ROLES, source_fds),
+        key=lambda item: (item[1] in _TARGET_FDS, item[1]),
+    )
+    for role, descriptor in roles_by_target:
         flags = os.O_WRONLY if role == "result" else os.O_RDONLY
         opened = os.open(paths[role], flags)
-        if opened != descriptor:
-            os.close(opened)
-            raise RuntimeError("isolated transport descriptor order changed")
-        os.set_inheritable(opened, False)
-        os.lseek(opened, _INITIAL_OFFSETS[role], os.SEEK_SET)
+        descriptor = _move_to_exact_descriptor(opened, descriptor)
+        os.set_inheritable(descriptor, False)
+        os.lseek(descriptor, _INITIAL_OFFSETS[role], os.SEEK_SET)
     return paths
 
 
@@ -454,18 +476,22 @@ def _install_regular_canary(path: Path, target: int) -> None:
 def _install_pipe_canary(target: int) -> None:
     reader, writer = os.pipe()
     try:
+        os.close(writer)
+        writer = -1
         descriptor = _move_to_exact_descriptor(reader, target)
         reader = -1
         os.set_inheritable(descriptor, True)
     finally:
         if reader >= 0:
             os.close(reader)
-        os.close(writer)
+        if writer >= 0:
+            os.close(writer)
 
 
 def _install_socket_canary(target: int) -> None:
     local, peer = socket.socketpair()
     try:
+        peer.close()
         source = local.detach()
         descriptor = _move_to_exact_descriptor(source, target)
         os.set_inheritable(descriptor, True)
@@ -474,8 +500,20 @@ def _install_socket_canary(target: int) -> None:
         peer.close()
 
 
-def _install_unrelated_inheritable_canaries(directory: Path) -> None:
-    low_regular, low_pipe, low_socket = _LOW_CANARY_FDS
+def _canary_fds_for_source_layout(
+    source_fds: tuple[int, int, int],
+) -> tuple[int, int, int]:
+    if set(source_fds) & set(_LOW_CANARY_FDS):
+        return _ALTERNATE_LOW_CANARY_FDS
+    return _LOW_CANARY_FDS
+
+
+def _install_unrelated_inheritable_canaries(
+    directory: Path,
+    *,
+    low_canary_fds: tuple[int, int, int],
+) -> None:
+    low_regular, low_pipe, low_socket = low_canary_fds
     high_regular, high_pipe, high_socket = _HIGH_CANARY_FDS
     if _soft_descriptor_limit() <= max(_HIGH_CANARY_FDS):
         raise RuntimeError("descriptor limit is too low for high canaries")
@@ -686,11 +724,16 @@ def _assert_worker_report(
 
 def _assert_canaries_present_in_parent(
     snapshot: tuple[DescriptorSnapshot, ...],
+    *,
+    source_fds: tuple[int, int, int],
+    low_canary_fds: tuple[int, int, int],
 ) -> None:
     by_descriptor = {item.descriptor: item for item in snapshot}
-    expected = (*_LOW_CANARY_FDS, *_HIGH_CANARY_FDS)
+    expected = (*low_canary_fds, *_HIGH_CANARY_FDS)
     if any(descriptor not in by_descriptor for descriptor in expected):
-        raise AssertionError("parent canary descriptor is missing")
+        raise AssertionError(
+            f"parent canary descriptor is missing for source layout {source_fds}"
+        )
     if any(not by_descriptor[item].inheritable for item in expected):
         raise AssertionError("parent canary descriptor is not inheritable")
     expected_kinds = (
@@ -718,8 +761,15 @@ def _null_device_identity() -> dict[str, int]:
     }
 
 
-def _source_fd_permutations() -> Iterator[tuple[int, int, int]]:
+def _exact_target_source_fd_permutations() -> Iterator[tuple[int, int, int]]:
     yield from itertools.permutations(_TARGET_FDS)
+
+
+def _source_fd_layouts() -> Iterator[tuple[str, tuple[int, int, int]]]:
+    for source_fds in _exact_target_source_fd_permutations():
+        yield "exact_target_permutation", source_fds
+    for source_fds in _REPRESENTATIVE_SOURCE_FD_LAYOUTS:
+        yield "representative_physical_layout", source_fds
 
 
 def run_canary_matrix(
@@ -746,14 +796,25 @@ def run_canary_matrix(
         raise RuntimeError("native extension entry point is unavailable")
     null_identity = _null_device_identity()
     cases: list[dict[str, Any]] = []
-    for index, source_fds in enumerate(_source_fd_permutations(), start=1):
+    for index, (layout_class, source_fds) in enumerate(
+        _source_fd_layouts(),
+        start=1,
+    ):
         _close_descriptors_from_three()
         case_directory = temporary_root / f"case-{index}"
         case_directory.mkdir(mode=0o700)
         paths = _install_transport_descriptors(case_directory, source_fds)
-        _install_unrelated_inheritable_canaries(case_directory)
+        low_canary_fds = _canary_fds_for_source_layout(source_fds)
+        _install_unrelated_inheritable_canaries(
+            case_directory,
+            low_canary_fds=low_canary_fds,
+        )
         before = snapshot_parent_descriptors()
-        _assert_canaries_present_in_parent(before)
+        _assert_canaries_present_in_parent(
+            before,
+            source_fds=source_fds,
+            low_canary_fds=low_canary_fds,
+        )
         pid = spawn(
             os.fsencode(runtime_path),
             os.fsencode(worker_path),
@@ -777,7 +838,9 @@ def run_canary_matrix(
             )
             cases.append(
                 {
+                    "layout_class": layout_class,
                     "source_fds": list(source_fds),
+                    "unrelated_low_canary_fds": list(low_canary_fds),
                     "pid": pid,
                     "pgid": report["pgid"],
                     "open_descriptors": report["open_descriptors"],
@@ -842,6 +905,13 @@ def run_canary_matrix(
         "source_descriptor_scope": {
             "exact_physical_descriptors": (3, 4, 5),
             "all_six_permutations_proven": True,
+            "representative_physical_layouts": (_REPRESENTATIVE_SOURCE_FD_LAYOUTS),
+            "representative_layout_classes": (
+                "ordinary_low_non_target",
+                "scratch_candidate_collision",
+                "mixed_fixed_target_collision",
+                "near_fixed_scan_limit",
+            ),
             "arbitrary_source_descriptor_values_proven": False,
         },
         "outer_supervisor_qualification": {
@@ -859,7 +929,18 @@ def run_canary_matrix(
         "complete_descriptor_scan_soft_limit": _CANARY_SOFT_LIMIT,
         "inherited_descriptor_clearance_original_soft_limit": (original_soft_limit),
         "case_count": len(cases),
-        "all_source_fd_permutations_exercised": len(cases) == 6,
+        "all_source_fd_permutations_exercised": (
+            sum(case["layout_class"] == "exact_target_permutation" for case in cases)
+            == 6
+        ),
+        "all_representative_source_fd_layouts_exercised": (
+            {
+                tuple(case["source_fds"])
+                for case in cases
+                if case["layout_class"] == "representative_physical_layout"
+            }
+            == set(_REPRESENTATIVE_SOURCE_FD_LAYOUTS)
+        ),
         "cases": cases,
     }
 
