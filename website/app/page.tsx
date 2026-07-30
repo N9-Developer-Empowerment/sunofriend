@@ -403,6 +403,8 @@ export default function Home() {
           </div>
         </div>
         <div className="footer-links">
+          <Link href="/contact/">Contact</Link>
+          <Link href="/privacy/">Privacy</Link>
           <Link href="/stems/">Stems guide</Link>
           <Link href="/glossary/">Glossary</Link>
           <Link href="/demo/">Demo</Link>
@@ -410,6 +412,7 @@ export default function Home() {
           <a href="/llms.txt">llms.txt</a>
           <ExternalLink href={links.repo}>GitHub ↗</ExternalLink>
           <ExternalLink href={links.license}>Apache 2.0 ↗</ExternalLink>
+          <a href={links.email}>hello@sunofriend.com</a>
         </div>
         <p className="footer-note">
           <span>

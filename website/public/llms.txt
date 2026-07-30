@@ -12,6 +12,9 @@ Sunofriend is an independent Unsigned Media Ltd project. Its name begins with th
 - Human/agent integration guide: https://sunofriend.com/for-agents/
 - Plain-language stems and provider guide: https://sunofriend.com/stems/
 - Shared music terminology: https://sunofriend.com/glossary/
+- Contact and support routes: https://sunofriend.com/contact/
+- Privacy notice: https://sunofriend.com/privacy/
+- General private contact: hello@sunofriend.com
 - Structured capability document: https://sunofriend.com/agent-capabilities.json
 - Repository: https://github.com/N9-Developer-Empowerment/sunofriend
 - Beginner guide: https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/GETTING_STARTED.md

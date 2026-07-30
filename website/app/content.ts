@@ -1,5 +1,10 @@
 export const links = {
+  email: "mailto:hello@sunofriend.com",
+  contact: "https://sunofriend.com/contact/",
+  privacy: "https://sunofriend.com/privacy/",
   repo: "https://github.com/N9-Developer-Empowerment/sunofriend",
+  securityReport:
+    "https://github.com/N9-Developer-Empowerment/sunofriend/security/advisories/new",
   skill:
     "https://github.com/N9-Developer-Empowerment/sunofriend/tree/main/skills/sunofriend",
   rawSkill:

@@ -170,4 +170,15 @@ the
 [DAW / AI compatibility report](https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml),
 or read [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Contact and support
+
+For a private or general enquiry, email
+[hello@sunofriend.com](mailto:hello@sunofriend.com). Please do not email stems,
+vocals, unreleased music, MIDI, project files or private review notes.
+
+Use the public issue forms for reproducible first-song and compatibility
+reports. For a security concern, follow [SECURITY.md](SECURITY.md) and do not
+open a public issue. The full routes and privacy notice are at
+[sunofriend.com/contact](https://sunofriend.com/contact/).
+
 Sunofriend is licensed under [Apache-2.0](LICENSE).

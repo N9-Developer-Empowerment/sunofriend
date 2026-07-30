@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Route 53 records for the Sunofriend website while preserving Hover email.
+Description: Route 53 records for the Sunofriend website, Hover inbound email and Amazon SES outbound email.
 
 Parameters:
   RootDomain:
@@ -8,6 +8,18 @@ Parameters:
   AlternateDomain:
     Type: String
     Default: www.sunofriend.com
+  MailFromDomain:
+    Type: String
+    Default: mail.sunofriend.com
+  SesDkimTokenOne:
+    Type: String
+    Default: lnsrenhfimkn5uezbch4tcpln6qnd2fl
+  SesDkimTokenTwo:
+    Type: String
+    Default: czg5e543jvwpirecvsygf3pyz2ir4ycc
+  SesDkimTokenThree:
+    Type: String
+    Default: 3ejtaxmew5cpflnfat4miek5i5rrvpgg
   CloudFrontDomainName:
     Type: String
     Description: CloudFront distribution hostname without a protocol.
@@ -71,6 +83,41 @@ Resources:
           TTL: "900"
           ResourceRecords:
             - "10 mx.hover.com.cust.hostedemail.com."
+        - Name: !Ref RootDomain
+          Type: TXT
+          TTL: "300"
+          ResourceRecords:
+            - '"v=spf1 include:amazonses.com -all"'
+        - Name: !Sub "_dmarc.${RootDomain}"
+          Type: TXT
+          TTL: "300"
+          ResourceRecords:
+            - '"v=DMARC1; p=none; adkim=r; aspf=r; pct=100"'
+        - Name: !Ref MailFromDomain
+          Type: MX
+          TTL: "300"
+          ResourceRecords:
+            - "10 feedback-smtp.eu-west-2.amazonses.com."
+        - Name: !Ref MailFromDomain
+          Type: TXT
+          TTL: "300"
+          ResourceRecords:
+            - '"v=spf1 include:amazonses.com -all"'
+        - Name: !Sub "${SesDkimTokenOne}._domainkey.${RootDomain}"
+          Type: CNAME
+          TTL: "300"
+          ResourceRecords:
+            - !Sub "${SesDkimTokenOne}.dkim.amazonses.com."
+        - Name: !Sub "${SesDkimTokenTwo}._domainkey.${RootDomain}"
+          Type: CNAME
+          TTL: "300"
+          ResourceRecords:
+            - !Sub "${SesDkimTokenTwo}.dkim.amazonses.com."
+        - Name: !Sub "${SesDkimTokenThree}._domainkey.${RootDomain}"
+          Type: CNAME
+          TTL: "300"
+          ResourceRecords:
+            - !Sub "${SesDkimTokenThree}.dkim.amazonses.com."
         - Name: !Ref RootValidationRecordName
           Type: CNAME
           TTL: "300"
