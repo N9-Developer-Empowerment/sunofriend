@@ -269,6 +269,29 @@ native dynamic-library closure remain unmeasured. A pure checkpoint and
 execution-admission policy is therefore the next safe slice; real execution
 support stays literally false.
 
+The ninth S3 slice adds the pure
+`separation_checkpoint_policy.py` and
+`separation_execution_admission.py` boundaries. Both consume only
+synthetic, reported, private-local evidence and always return
+`blocked`/`not_run`; neither can authorize a worker. The code-owned
+classification for the exact pinned HTDemucs checkpoint hash
+`8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4`
+is an executable PyTorch pickle model package, regardless of a conflicting
+caller-declared format. Its checkpoint terms and allowed-use evidence remain
+unresolved, and unsafe-pickle exception metadata cannot waive the categorical
+deserialization blocker.
+
+All execution, runtime-closure, output-boundary and resource-limit capability
+flags remain false, and the isolation and descendant-policy provider sets
+remain empty. The admission record therefore retains explicit blockers for
+trusted cross-binding, runtime closure, isolation and network-attempt
+observation, input/process/filesystem confinement, transport, output
+verification and quarantine, and hard resource enforcement. These modules
+perform no filesystem, process, model, checkpoint-deserialization, audio or
+network operation. The next safe slice is trusted acceptance/preflight/request
+cross-binding plus a descriptor-pinned, bounded static checkpoint inspector;
+real separation execution remains literally false.
+
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
 transcriber. They need independent lineage, model/checkpoint licensing,

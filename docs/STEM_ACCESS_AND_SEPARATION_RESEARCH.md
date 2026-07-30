@@ -4,8 +4,9 @@ Status: **research and architecture decision complete; S1 synchronized source
 preparation and S2 source lineage/composite drums accepted; S3 separation-run,
 controlled-fake harness, acceptance pre-registration, bake-off preparation,
 backend-preflight, worker, runtime-artifact, read-only runtime measurement and
-non-spawning launch/lifecycle contracts implemented; real source separation,
-hidden evaluation and promotion are not implemented**
+non-spawning launch/lifecycle contracts plus blocked-only checkpoint and
+execution-admission scaffolding implemented; real source separation, hidden
+evaluation and promotion are not implemented**
 
 Checked: 29 July 2026
 
@@ -190,6 +191,31 @@ are not yet measured. Portable checks also cannot distinguish every
 same-device APFS firmlink or mount alias. The module makes no network API
 calls, but a caller must still avoid network-mounted runtime paths. No process,
 model, checkpoint or audio ran.
+
+The ninth S3 increment adds pure checkpoint-policy and execution-admission
+records in `separation_checkpoint_policy.py` and
+`separation_execution_admission.py`. They accept only synthetic, reported,
+private-local evidence and always return `blocked`/`not_run`; they are not
+trusted evidence, runner authority or worker-start permission. The exact
+pinned HTDemucs checkpoint SHA-256
+`8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4`
+is classified by code as an executable PyTorch pickle model package,
+independent of a caller's declared format. Its separate checkpoint terms and
+allowed-use evidence remain unresolved. Unsafe-pickle exception metadata is
+recordable for later design work but is categorically non-waivable in this
+version.
+
+Real execution, complete runtime closure, output-boundary and resource-limit
+capabilities remain false; isolation and model-descendant provider registries
+remain empty. The admission record reports all applicable blockers, including
+missing trusted acceptance/preflight/request/launch cross-binding, runtime
+closure, isolation, network denial and attempted-connection observation,
+model-descendant and filesystem/input confinement, real transport, parent
+output verification and quarantine, and hard resource enforcement. These
+modules perform no filesystem, process, model, checkpoint-deserialization,
+audio or network operation. The next safe increment is trusted cross-binding
+plus a descriptor-pinned, bounded static checkpoint inspector. It is not a
+runner, and real execution remains false.
 
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
@@ -1076,8 +1102,9 @@ Likely modules:
 
 Status: **contract, controlled-fake harness, acceptance pre-registration,
 redacted bake-off preparation, backend-preflight, worker, runtime-artifact and
-non-spawning launch/lifecycle slices implemented; isolated real
-runner/backends and bake-off execution not implemented**
+non-spawning launch/lifecycle plus blocked-only checkpoint/admission slices
+implemented; isolated real runner/backends and bake-off execution not
+implemented**
 
 - [x] Add a pure backend-neutral `SeparationBackend` contract plus immutable
   request/result DTOs and strict versioned separation-run receipts.
@@ -1109,10 +1136,15 @@ runner/backends and bake-off execution not implemented**
 - [x] Add read-only parent runtime measurement and immediate remeasurement
   with descriptor-pinned ancestor/package traversal, stable ancestor identity,
   explicit system-site exclusion and bounded fail-closed reads.
-- [ ] Add a pure execution-admission and checkpoint policy that distinguishes
-  state dictionaries from executable pickle model packages and reports every
-  unavailable isolation/runtime/licence prerequisite without starting a
-  worker.
+- [x] Add pure blocked-only checkpoint and execution-admission records that
+  distinguish reported formats from code-owned executable-pickle
+  classification, preserve unresolved terms/use and non-waivable unsafe
+  deserialization blockers, and report every unavailable
+  isolation/runtime/confinement/transport/output/resource prerequisite
+  without starting a worker.
+- [ ] Cross-bind checkpoint and admission evidence to trusted acceptance,
+  preflight, request and launch authority, and add a descriptor-pinned,
+  bounded static checkpoint inspector without deserializing checkpoint bytes.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with a
   deterministic fake worker, exact pre-exec remeasurement, validated worker
   result and parent-verified quarantined outputs before any real model is

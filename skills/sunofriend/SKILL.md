@@ -45,8 +45,10 @@ report the result, then move on.
   or feedback.
 - Use only music the user owns or is authorised to process.
 - Sunofriend does not download songs or separate a full mix into stems.
-- The backend-neutral `separation-run.v1` contract is engineering groundwork,
-  not a usable separator, model installation or finished-song command.
+- The backend-neutral S3 separation contracts, controlled-fake harness and
+  blocked-only checkpoint/admission records are engineering groundwork, not a
+  usable separator, model installation or finished-song command. Real
+  separation execution remains disabled.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one
   canonical WAV project. It does not separate, shift, pad, stretch, normalize

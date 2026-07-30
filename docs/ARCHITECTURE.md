@@ -316,6 +316,30 @@ TOCTOU-open. Launch uses `-S` to avoid automatic `site` and `.pth` startup, but
 base-standard-library, `pyvenv` home, native dynamic-library and same-device
 APFS alias closure remain later admission/provider boundaries.
 
+`separation_checkpoint_policy.py` and
+`separation_execution_admission.py` form the ninth internal S3 boundary. They
+are pure, private-local policy projections over synthetic, reported evidence,
+not trusted authority. Every checkpoint decision and execution admission is
+therefore `blocked` and `not_run`; private-development eligibility,
+worker-start permission and every execution or publication effect are false.
+The exact pinned HTDemucs SHA-256 is classified in code as an executable
+PyTorch pickle model package even if a caller reports another format.
+Checkpoint terms and allowed use remain unverified, and an unsafe-pickle
+exception record is descriptive only and cannot waive that blocker.
+
+The code-owned runtime-closure, output-boundary, resource-limit and real
+execution capabilities are false, while supported isolation and
+model-descendant provider sets are empty. Admission collects, rather than
+short-circuits, the missing trusted acceptance/preflight/request/launch
+bindings, runtime closure, isolation and outbound-attempt observation,
+input/process/filesystem confinement, real transport, parent output
+verification and quarantine, and hard resource-enforcement blockers. Neither
+module opens a path, inspects or deserializes checkpoint bytes, starts a
+process, imports a model, reads audio, writes a file or makes a network call.
+The next boundary must add trusted cross-binding and a descriptor-pinned,
+bounded static checkpoint inspector before any provider or transport work can
+be considered. `REAL_SEPARATION_EXECUTION_SUPPORTED` remains false.
+
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a
 starter ZIP. It does not create or mutate Workbench SQLite state. After
