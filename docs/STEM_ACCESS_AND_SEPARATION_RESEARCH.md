@@ -521,6 +521,24 @@ launcher. Until that exists, the fixed worker cannot be started by
 Sunofriend. No fake terminal receipt, quarantine V2 verifier, model, source
 audio or user-facing separation route exists.
 
+The twenty-third S3 increment adds a private verified native-launcher session,
+still without a spawn call. It makes one fresh provenance-checked Darwin
+build, remeasures the extension immediately before and after import, verifies
+the compiled source/build-contract identities and binds the exact built-in
+entry point to the measured current Python executable and pinned fixed worker.
+The session identity is parent-issued, opaque, non-copyable and
+non-serializable; its observation is immutable, path-free and explicitly not
+execution authority. A live macOS test proves the import and subsequent full
+remeasurement while every process, checkpoint, model, audio, network and
+publication effect stays false.
+
+This closes the unmeasured extension-import gap for one fresh session, not the
+runtime-exec or worker-script path race at a future spawn. The session module
+deliberately contains no call to the native spawn method. Exact lease-bound
+admission, FD 3/4 transport construction, locked FD 5 handoff, owned-child
+supervision, Result V2 verification, quarantine and a parent terminal receipt
+remain the next gate.
+
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
 unverified candidates until one exact runtime/checkpoint pair has known terms,
@@ -1405,7 +1423,8 @@ Likely modules:
 ### S3 — Separation bake-off harness
 
 Status: **contract, blocked-execution groundwork, a fresh private Darwin
-build/provenance slice and a test-only live descriptor-canary slice
+build/provenance slice, test-only live descriptor-canary slice and private
+verified-import session
 implemented; deterministic fake transport, isolated real runner/backends and
 bake-off execution not implemented**
 
@@ -1491,6 +1510,9 @@ bake-off execution not implemented**
 - [x] Add the pinned, process-creation-free deterministic worker plus prepared
   launch V3, complete-only Result V2 and validation-only V2 framing while
   intentionally withholding any product admission issuer or request encoder.
+- [x] Bind one fresh remeasured native build, imported extension, exact
+  built-in entry point, current runtime and pinned worker into an opaque,
+  path-free, non-executing private session.
 - [ ] Remove or explicitly confine extension/runtime/worker path TOCTOU, and
   make the clean outer-supervisor and child signal-state boundaries
   independently observable.

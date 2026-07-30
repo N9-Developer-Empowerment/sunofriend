@@ -87,7 +87,11 @@ report the result, then move on.
   worker and prepared launch V3/Result V2 contracts now exist, but launch V3
   is not serialized authority and retains worker-start permission false. The
   V2 protocol intentionally has no product admission issuer or admitted
-  request encoder; only tests synthesize its envelope bytes. Deterministic
+  request encoder; only tests synthesize its envelope bytes. A private
+  verified native session now remeasures one fresh launcher across import and
+  binds its exact built-in entry point to the measured runtime and pinned
+  worker, but it contains no spawn call and is not execution authority.
+  Deterministic
   fake execution, live checkpoint FD 5 transport, model execution and real
   separation therefore remain unavailable, and no CLI/TUI separator is
   exposed. The process-free observers start no child and issue no terminal

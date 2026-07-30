@@ -48,7 +48,10 @@ def test_source_is_mac_only_and_referenced_only_by_private_builder() -> None:
     )
     assert "PyInit__separation_native_spawn_darwin" in source
     assert '"_spawn_bound_fake_worker"' in source
-    assert runtime_references == ["_separation_native_build_darwin.py"]
+    assert sorted(runtime_references) == [
+        "_separation_native_build_darwin.py",
+        "_separation_native_session_darwin.py",
+    ]
     assert "_separation_native_build_darwin" not in (
         REPOSITORY / "src" / "sunofriend" / "__init__.py"
     ).read_text(encoding="utf-8")

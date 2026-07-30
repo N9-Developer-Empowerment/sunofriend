@@ -581,6 +581,18 @@ native owned child to exact reap and add a distinct V2 quarantine verifier
 and parent terminal receipt. No separator model, source audio or public
 command is enabled.
 
+The twenty-third S3 slice adds a private verified native-launcher session
+without calling the launcher. It makes one fresh owner-only build, remeasures
+the artifact across extension import, verifies the compiled source and build
+contract, and binds the exact built-in method to full measurements of the
+current Python executable and pinned fake worker. Its opaque, non-copyable,
+non-serializable identity and path-free observation are not execution
+authority. The live Darwin check starts no process and reads no checkpoint or
+audio. Extension import is now measured for this session; immediate
+runtime/worker remeasurement at spawn, lease-bound single-use admission,
+owned-child supervision, Result V2 verification, quarantine and a parent
+terminal receipt remain outstanding.
+
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
 transcriber. They need independent lineage, model/checkpoint licensing,

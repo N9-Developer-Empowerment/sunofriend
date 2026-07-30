@@ -622,6 +622,24 @@ owner through exact reap and perform separate parent quarantine verification.
 The current modules therefore add no process, terminal receipt, separator,
 model, audio read or CLI/TUI capability.
 
+`_separation_native_session_darwin.py` is the twenty-third internal S3
+boundary. It asks the private builder for one fresh artifact, remeasures that
+artifact across `ExtensionFileLoader` import, verifies its embedded
+source/build-contract identities and binds its exact built-in entry point to
+full measurements of the current Python executable and pinned fixed worker.
+Only an opaque, parent-issued, non-copyable session and immutable path-free
+observation leave that boundary. The imported module, method and artifact
+paths remain in a weak private registry. The session is not execution
+authority, contains no native spawn call and starts no process.
+
+This boundary measures extension import but does not close runtime-exec or
+worker-script path TOCTOU at a later launch. A subsequent executor must
+remeasure all three paths immediately around the native call, mint
+single-use admission only while holding the exact checkpoint lease and
+reservation lock, supervise the owned child through exact reap, validate
+Result V2 and independently materialize and verify a private quarantine before
+issuing any terminal receipt.
+
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a
 starter ZIP. It does not create or mutate Workbench SQLite state. After
