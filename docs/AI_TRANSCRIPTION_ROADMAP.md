@@ -625,6 +625,10 @@ The parent then exclusively creates a fresh owner-only quarantine, writes the
 code-owned fixture payloads, reopens them read-only, performs the committed V2
 descriptor verification and closes the checkpoint lease. Only then does a
 strict validator accept the self-hashed, path-free whole-run terminal receipt.
+The intermediate materialization observation is also exact-type, path-free
+and self-hashed: it cross-binds every result slot to the verified quarantine
+file identity and is revalidated both when created and before the terminal
+receipt binds it.
 The successful-path live proof runs with bounded output in an isolated outer
 process group; timeout cleanup discovers and signals child groups before
 killing and reaping the helper.

@@ -86,6 +86,30 @@ _TERMINAL_POLICY_ID = "private-lease-bound-fake-execution-v1"
 _MATERIALIZATION_SCHEMA = (
     "sunofriend.separation-fake-exclusive-materialization.v1"
 )
+_MATERIALIZATION_FIELDS = {
+    "schema",
+    "status",
+    "run_nonce",
+    "fake_worker_result_v2_sha256",
+    "quarantine_verification_sha256",
+    "fresh_private_root_created_exclusively",
+    "fresh_quarantine_created_exclusively",
+    "output_files_created_exclusively",
+    "output_files_created_by_parent",
+    "worker_created_output_files",
+    "owner_only_permissions",
+    "read_only_reopen_verified",
+    "publication_permitted",
+    "selection_permitted",
+    "outputs",
+    "observation_sha256",
+}
+_MATERIALIZATION_OUTPUT_FIELDS = {
+    "slot_id",
+    "sha256",
+    "bytes",
+    "file_identity_sha256",
+}
 _EXECUTION_LOCK = threading.RLock()
 _REGISTRY_LOCK = threading.RLock()
 _USED_NONCES: set[str] = set()
@@ -1194,7 +1218,15 @@ def _materialize_validated_fake_result_v2(
                 }
             )
         )
-        return observation, quarantine
+        return (
+            _validate_fake_execution_materialization_observation(
+                observation,
+                fake_launch_plan_v3=core.fake_launch_plan_v3,
+                fake_worker_result_v2=result,
+                quarantine=quarantine,
+            ),
+            quarantine,
+        )
     finally:
         _close_descriptors_strict(
             (
@@ -1206,6 +1238,119 @@ def _materialize_validated_fake_result_v2(
                 ),
             )
         )
+
+
+def _validate_fake_execution_materialization_observation(
+    value: Any,
+    *,
+    fake_launch_plan_v3: _SeparationFakeLaunchPlanV3Record,
+    fake_worker_result_v2: _SeparationFakeWorkerResultV2Record,
+    quarantine: _SeparationFakeExecutionQuarantineV2Observation,
+) -> _SeparationFakeExecutionMaterializationObservation:
+    """Revalidate exact parent-created output evidence without reading paths."""
+
+    if type(value) is not _SeparationFakeExecutionMaterializationObservation:
+        raise ValueError(
+            "fake execution materialization must be an exact observation"
+        )
+    result = _validate_separation_fake_worker_result_v2_record_shape(
+        fake_worker_result_v2,
+        fake_launch_plan_v3=fake_launch_plan_v3,
+    )
+    checked_quarantine = (
+        _validate_fake_execution_quarantine_v2_observation(
+            quarantine,
+            fake_launch_plan_v3=fake_launch_plan_v3,
+            fake_worker_result_v2=result,
+        )
+    )
+    document = _plain(value)
+    if not isinstance(document, dict) or set(document) != (
+        _MATERIALIZATION_FIELDS
+    ):
+        raise ValueError(
+            "fake execution materialization fields are invalid"
+        )
+    _validate_path_free(
+        document,
+        "fake execution materialization observation",
+    )
+    if (
+        document["schema"] != _MATERIALIZATION_SCHEMA
+        or document["status"] != "exclusive_parent_creation_verified"
+        or document["run_nonce"] != fake_launch_plan_v3["run_nonce"]
+        or document["fake_worker_result_v2_sha256"]
+        != result["result_sha256"]
+        or document["quarantine_verification_sha256"]
+        != checked_quarantine["verification_sha256"]
+        or any(
+            document[key] is not True
+            for key in (
+                "fresh_private_root_created_exclusively",
+                "fresh_quarantine_created_exclusively",
+                "output_files_created_exclusively",
+                "output_files_created_by_parent",
+                "owner_only_permissions",
+                "read_only_reopen_verified",
+            )
+        )
+        or any(
+            document[key] is not False
+            for key in (
+                "worker_created_output_files",
+                "publication_permitted",
+                "selection_permitted",
+            )
+        )
+    ):
+        raise ValueError(
+            "fake execution materialization policy is invalid"
+        )
+    outputs = document["outputs"]
+    quarantine_outputs = list(checked_quarantine["outputs"])
+    if (
+        not isinstance(outputs, list)
+        or len(outputs) != len(result["outputs"])
+        or len(quarantine_outputs) != len(result["outputs"])
+    ):
+        raise ValueError(
+            "fake execution materialization output summary is invalid"
+        )
+    for created, claim, observed in zip(
+        outputs,
+        result["outputs"],
+        quarantine_outputs,
+    ):
+        if (
+            not isinstance(created, dict)
+            or set(created) != _MATERIALIZATION_OUTPUT_FIELDS
+            or any(
+                created[key] != claim[key]
+                for key in ("slot_id", "sha256", "bytes")
+            )
+            or created["file_identity_sha256"]
+            != observed["file_identity_sha256"]
+            or not isinstance(created["file_identity_sha256"], str)
+            or _SHA256_RE.fullmatch(
+                created["file_identity_sha256"]
+            )
+            is None
+        ):
+            raise ValueError(
+                "fake execution materialization output evidence is invalid"
+            )
+    observation_sha256 = document["observation_sha256"]
+    payload = dict(document)
+    payload.pop("observation_sha256")
+    if (
+        not isinstance(observation_sha256, str)
+        or _SHA256_RE.fullmatch(observation_sha256) is None
+        or observation_sha256 != _hash(payload)
+    ):
+        raise ValueError(
+            "fake execution materialization self-hash is invalid"
+        )
+    return value
 
 
 def _terminal_receipt(
@@ -1223,6 +1368,14 @@ def _terminal_receipt(
         quarantine,
         fake_launch_plan_v3=core.fake_launch_plan_v3,
         fake_worker_result_v2=result,
+    )
+    checked_materialization = (
+        _validate_fake_execution_materialization_observation(
+            materialization,
+            fake_launch_plan_v3=core.fake_launch_plan_v3,
+            fake_worker_result_v2=result,
+            quarantine=checked_quarantine,
+        )
     )
     if (
         lease_receipt["status"] != "closed"
@@ -1246,7 +1399,7 @@ def _terminal_receipt(
             "observation_sha256"
         ],
         "lease_terminal_receipt_sha256": lease_receipt["receipt_sha256"],
-        "materialization_observation_sha256": materialization[
+        "materialization_observation_sha256": checked_materialization[
             "observation_sha256"
         ],
         "quarantine_verification_sha256": checked_quarantine[
@@ -1651,7 +1804,7 @@ def _materialization_observation(
     document: Mapping[str, Any],
 ) -> _SeparationFakeExecutionMaterializationObservation:
     value = object.__new__(_SeparationFakeExecutionMaterializationObservation)
-    object.__setattr__(value, "_document", document)
+    object.__setattr__(value, "_document", _freeze(_plain(document)))
     return value
 
 

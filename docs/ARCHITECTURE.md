@@ -683,9 +683,12 @@ Only a complete validated Result V2 can be materialized. The parent creates a
 fresh `0700` quarantine, writes each fixture with `O_EXCL` and `0600`
 permissions, reopens it read-only and runs the committed V2 descriptor
 verifier. A self-hashed, path-free terminal receipt is issued only after
-successful quarantine verification and checkpoint-lease closure. An isolated
-outer helper uses bounded reads and kills discovered child groups as well as
-its own process group on timeout.
+successful quarantine verification and checkpoint-lease closure. Its
+intermediate materialization observation must be the exact private type, pass
+its own self-hash, bind the V3/result/quarantine hashes, and match every
+verified output file identity; it is checked at creation and again before the
+terminal receipt uses it. An isolated outer helper uses bounded reads and
+kills discovered child groups as well as its own process group on timeout.
 
 This slice still does not complete the failure state machine. Exact-reap native
 failures and exact code-tagged native setup or `posix_spawn` no-start outcomes

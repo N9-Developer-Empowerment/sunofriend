@@ -94,7 +94,9 @@ report the result, then move on.
   validates Result V2 and treats its child checkpoint remeasurement as a
   worker report rather than a parent-proven fact,
   exclusively materializes owner-only fixtures, reopens and verifies them, and
-  issues a self-hashed path-free terminal receipt after lease closure. The
+  requires an exact self-hashed materialization observation that cross-binds
+  Result V2, quarantine verification and every verified file identity before
+  issuing a self-hashed path-free terminal receipt after lease closure. The
   isolated live proof uses bounded output and kills discovered child groups as
   well as its helper on an outer timeout. This proves only the successful
   fixture path. Exact-reap native failures and code-tagged native setup or

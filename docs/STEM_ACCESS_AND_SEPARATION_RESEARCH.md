@@ -587,6 +587,12 @@ group with bounded output; timeout cleanup discovers and signals child groups
 before killing and reaping the helper. It checks directory/file modes as well
 as the no-publication fixture result.
 
+The intermediate materialization observation is now an exact private,
+self-hashed and path-free record. It cross-binds the V3 plan, Result V2,
+quarantine verification and every parent-observed file identity, and is
+revalidated both when created and before the whole-run success receipt binds
+it. A plain, rehashed-but-substituted or cross-bound record is rejected.
+
 Private lease orchestration preserves its first primary error and all observed
 cleanup errors instead of silently discarding secondary failures. Exact-reap
 native failures and exact setup or `posix_spawn` no-start outcomes can now be
