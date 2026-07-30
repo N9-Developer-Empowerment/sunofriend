@@ -191,8 +191,8 @@ _RESULT_EFFECT_FIELDS = frozenset(
     """
     process_started worker_started checkpoint_remeasured_in_child
     checkpoint_deserialized model_imported inference_started network_used
-    audio_read outputs_created publication_permitted acceptance_eligible
-    promotion_eligible
+    audio_read output_payloads_generated output_files_created
+    publication_permitted acceptance_eligible promotion_eligible
     """.split()
 )
 
@@ -955,7 +955,8 @@ def _result_effects(status: str) -> dict[str, bool]:
         "inference_started": False,
         "network_used": False,
         "audio_read": False,
-        "outputs_created": complete,
+        "output_payloads_generated": complete,
+        "output_files_created": False,
         "publication_permitted": False,
         "acceptance_eligible": False,
         "promotion_eligible": False,

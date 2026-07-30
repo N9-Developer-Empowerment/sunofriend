@@ -513,8 +513,11 @@ per-slot limits, hashes and PCM24 RIFF geometry.
 The observer reports one path-free observation with selection and publication
 disabled. It does not prove directory freshness, permanent immutable backing,
 process isolation or a completed child lifecycle and issues no terminal
-receipt. The missing audited native close-all launcher remains the next
-boundary before a deterministic fake child can start.
+receipt. FD 4 carries the bounded worker report and its tiny fixture payloads.
+A future parent creates the private quarantine from validated result bytes,
+then reopens it for observation; the child receives no output path or
+directory descriptor. The missing audited native close-all launcher remains
+the next boundary before a deterministic fake child can start.
 
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a

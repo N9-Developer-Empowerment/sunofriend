@@ -260,7 +260,8 @@ def test_complete_result_is_worker_report_only_and_two_frame_pcm24(
             "frames": 2,
             "duration_seconds": 0.00025,
         }
-    assert result["effects"]["outputs_created"] is True
+    assert result["effects"]["output_payloads_generated"] is True
+    assert result["effects"]["output_files_created"] is False
     assert result["effects"]["network_used"] is False
 
     tampered = _plain(result)
@@ -305,7 +306,8 @@ def test_failed_result_has_no_output_and_never_deserializes_checkpoint(
     assert failed["status"] == "failed"
     assert failed["outputs"] == ()
     assert failed["checkpoint_report"]["deserialized"] is False
-    assert failed["effects"]["outputs_created"] is False
+    assert failed["effects"]["output_payloads_generated"] is False
+    assert failed["effects"]["output_files_created"] is False
 
 
 @pytest.mark.parametrize(

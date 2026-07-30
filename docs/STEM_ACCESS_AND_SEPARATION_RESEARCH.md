@@ -401,8 +401,12 @@ offset-independent reads.
 That observer is one descriptor-pinned observation, not launch authority or a
 terminal receipt. It does not prove that a directory was freshly created or
 that ordinary files stay immutable after observation, and it never permits
-selection or publication. No subprocess, FD 5 installation, checkpoint load,
-model operation or user-facing separator exists in either increment.
+selection or publication. FD 4 is the only worker-to-parent transport: its
+bounded result contains the tiny fixture payloads. A future parent, not the
+worker, must materialize those bytes in a fresh private quarantine and reopen
+them for this observer. No output path or directory descriptor enters the
+child. No subprocess, FD 5 installation, checkpoint load, model operation or
+user-facing separator exists in either increment.
 
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are

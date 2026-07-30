@@ -464,6 +464,9 @@ stable identity and independent PCM24 RIFF geometry using `pread`.
 This is deliberately not a terminal receipt, launch authority or exact
 freshness/immutability proof. It starts no child, installs no FD 5, loads no
 checkpoint, runs no model and enables no CLI, TUI or real separation route.
+FD 4 carries the bounded result and tiny fixture payloads. A future parent
+must create the private quarantine from those validated bytes and then invoke
+the observer; the child receives no output path or directory descriptor.
 
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every

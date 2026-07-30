@@ -200,6 +200,8 @@ def test_parent_observes_bound_pcm24_quarantine_without_publication(
         assert evidence["selection_permitted"] is False
         assert evidence["ordinary_file_immutable_backing_proven"] is False
         assert evidence["output_count"] == len(result["outputs"])
+        assert result["effects"]["output_payloads_generated"] is True
+        assert result["effects"]["output_files_created"] is False
         assert all(
             item["pcm24_geometry_verified"]
             and item["code_owned_fixture_bytes_matched"]
