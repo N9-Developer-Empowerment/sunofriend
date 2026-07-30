@@ -688,14 +688,14 @@ outer helper uses bounded reads and kills discovered child groups as well as
 its own process group on timeout.
 
 This slice still does not complete the failure state machine. Exact-reap native
-failures now have a path-free whole-run receipt binding native terminality,
-lease terminality, the original primary stage and every ordered cleanup stage.
-An exact code-tagged native setup or `posix_spawn` nonzero return now has a
-separate no-child-start observation, but it remains without a whole-run
-receipt. Unproven start state, unproven reap and post-lease materialization
-failures also remain receipt-less. Until those paths and the adversarial matrix
-are covered, the non-bypassable deterministic transport checklist item remains
-open.
+failures and exact code-tagged native setup or `posix_spawn` no-start outcomes
+now have disjoint path-free whole-run receipts. Both bind terminal lease
+evidence, the original native observation, the primary stage and every ordered
+cleanup stage; the no-start form contains no child, wait, signal or
+worker-result claim. Unproven start state, unproven reap and post-lease
+materialization failures remain receipt-less. Until those paths and the
+remaining adversarial matrix are covered, the non-bypassable deterministic
+transport checklist item remains open.
 
 The private lease-side groundwork records cleanup stages in observation order
 and attaches the validated checkpoint-lease terminal receipt when available.
@@ -722,13 +722,15 @@ spawn remains a started exact-reap failure. Python exceptions, substituted
 types, invalid tags and unproven reap obtain neither record. Paths, PID, PGID,
 status numbers and exception text are absent from serialized observations.
 
-`_separation_fake_failure_records.py` composes the exact-reap native
-observation, terminal checkpoint-lease receipt and validated fake request/plan
-hashes. Its receipt preserves duplicate cleanup stages in observation order,
-acknowledges possible private transport remnants and grants no authority. The
-private exception retains the original primary, cleanup exception objects,
-native observation, lease receipt and any still-owned root finalizer; none of
-their text, paths, PID or PGID values enters serialized evidence.
+`_separation_fake_failure_records.py` composes either native observation with
+the terminal checkpoint-lease receipt and validated fake request/plan hashes.
+Exact-reap and no-start remain separate receipt types. Both preserve duplicate
+cleanup stages in observation order, acknowledge possible private transport
+remnants and grant no authority; the no-start builder also cross-checks failed
+post-attempt remeasurement against its cleanup stage. The private exception
+retains the code-owned primary, cleanup exception objects, native observation,
+lease receipt and any still-owned root finalizer. None of their text, paths,
+PID, PGID or native status values enters serialized evidence.
 
 The composition boundary revalidates the whole fake request/launch chain
 against the exact reserved worker request and lease observation. A
@@ -736,12 +738,17 @@ lease-issued, non-copyable, single-use failure capability cross-binds the exact
 lease, reservation, worker request, observation and terminal receipt; a
 constructed, borrowed, cross-run or replayed aggregate cannot mint whole-run
 evidence. It also snapshots the full nested failure chain, cleanup tuples and
-exact request/plan object identities and hashes. Whole-run composition itself
-performs the final strict root cleanup retry only after the lease module
-authenticates the bound owner, so a caller-added cleanup suffix cannot forge
-that event and an unissued failure cannot trigger the close. Admitted cleanup
-terminalizes its registry entry before reporting a status mismatch, pre-arms
-an identity-checked owner for every transport descriptor before native start,
+exact request/plan object identities and hashes. Before authenticated cleanup
+or one-use capability consumption, whole-run composition captures the native
+observation and primary and purely builds the only two possible receipts:
+unchanged cleanup, or one failed strict root close. It selects one of those
+immutable receipts after the action, so re-entrant mutation cannot change the
+sealed evidence or consume authority before semantic validation finishes.
+The strict root cleanup retry runs only after the lease module authenticates
+the bound owner, so a caller-added cleanup suffix cannot forge that event and
+an unissued failure cannot trigger the close. Admitted cleanup terminalizes
+its registry entry before reporting a status mismatch, pre-arms an
+identity-checked owner for every transport descriptor before native start,
 attempts every close in order and retains those owners for descriptors whose
 strict close could not be proven.
 

@@ -40,7 +40,9 @@ from ._separation_fake_execution_protocol import (
 )
 from ._separation_fake_failure_records import (
     _SeparationFakeExecutionFailedTerminalReceipt,
+    _SeparationFakeExecutionNoStartReceipt,
     _build_exact_reap_failed_terminal_receipt,
+    _build_no_start_failed_terminal_receipt,
 )
 from ._separation_fake_execution_quarantine import (
     _SeparationFakeExecutionQuarantineV2Observation,
@@ -69,6 +71,7 @@ from ._separation_worker_request_v2_values import _validate_path_free
 from ._separation_native_session_darwin import (
     _VerifiedNativeLauncherExecutionFailure,
     _VerifiedNativeLauncherExecutionObservation,
+    _VerifiedNativeLauncherNoStartFailure,
     _VerifiedNativeLauncherSession,
     _VerifiedNativeLauncherSessionObservation,
     _execute_verified_native_fake_worker,
@@ -248,7 +251,10 @@ class _SeparationFakeExecutionFailed(RuntimeError):
     def __init__(
         self,
         *,
-        receipt: _SeparationFakeExecutionFailedTerminalReceipt,
+        receipt: (
+            _SeparationFakeExecutionFailedTerminalReceipt
+            | _SeparationFakeExecutionNoStartReceipt
+        ),
         primary_error: BaseException,
         cleanup_stages: tuple[str, ...],
         cleanup_errors: tuple[BaseException, ...],
@@ -312,7 +318,7 @@ def _execute_reserved_fake_worker(
                 )
             )
         except _lease_module._FakeExecutionLeaseFailure as failure:
-            failed = _whole_run_exact_reap_failure(
+            failed = _whole_run_native_failure(
                 failure,
                 fake_worker_request=fake_worker_request,
                 fake_launch_plan_v1=fake_launch_plan_v1,
@@ -341,7 +347,7 @@ def _execute_reserved_fake_worker(
             _close_core_private_root_strict(core)
 
 
-def _whole_run_exact_reap_failure(
+def _whole_run_native_failure(
     failure: Any,
     *,
     fake_worker_request: _SeparationFakeWorkerRequestRecord,
@@ -411,8 +417,17 @@ def _whole_run_exact_reap_failure(
     admitted_failure = getattr(failure, "primary_error", None)
     if type(admitted_failure) is not _FakeExecutionAdmittedFailure:
         return reject_unsealed_failure()
+    if getattr(failure, "core", None) is not None:
+        # A sealable native failure precedes successful core transfer.  Keep
+        # that state disjoint rather than allowing top-level core precedence
+        # to select a different authenticated cleanup owner.
+        return reject_unsealed_failure()
     native_failure = admitted_failure.primary_error
-    if type(native_failure) is not _VerifiedNativeLauncherExecutionFailure:
+    native_failure_type = type(native_failure)
+    if native_failure_type not in {
+        _VerifiedNativeLauncherExecutionFailure,
+        _VerifiedNativeLauncherNoStartFailure,
+    }:
         return reject_unsealed_failure()
     if (
         type(admitted_failure.descriptor_owners) is not tuple
@@ -466,6 +481,73 @@ def _whole_run_exact_reap_failure(
             return reject_unsealed_failure()
     if len(base_cleanup_stages) > 31:
         return reject_unsealed_failure()
+    receipt_builder = (
+        _build_exact_reap_failed_terminal_receipt
+        if native_failure_type is _VerifiedNativeLauncherExecutionFailure
+        else _build_no_start_failed_terminal_receipt
+    )
+    native_failure_observation = native_failure.observation
+    native_primary_error = native_failure.primary_error
+    descriptor_owners = admitted_failure.descriptor_owners
+    private_root_owner = admitted_failure.private_root_owner
+    lease_receipt_snapshot = failure.lease_receipt
+    if not isinstance(native_primary_error, BaseException):
+        return reject_unsealed_failure()
+
+    def build_receipt(
+        lease_receipt_value: Any,
+        cleanup_stages_value: tuple[str, ...],
+    ) -> (
+        _SeparationFakeExecutionFailedTerminalReceipt
+        | _SeparationFakeExecutionNoStartReceipt
+    ):
+        return receipt_builder(
+            run_nonce=checked_launch_v3["run_nonce"],
+            fake_worker_request_v1_sha256=(
+                checked_request["request_sha256"]
+            ),
+            fake_launch_plan_v1_sha256=(
+                checked_launch_v1["plan_sha256"]
+            ),
+            blocked_fake_launch_plan_v2_sha256=(
+                checked_launch_v2["plan_sha256"]
+            ),
+            fake_launch_plan_v3_sha256=(
+                checked_launch_v3["plan_sha256"]
+            ),
+            native_failure_observation=native_failure_observation,
+            lease_terminal_receipt_sha256=(
+                lease_receipt_value["receipt_sha256"]
+            ),
+            lease_status=lease_receipt_value["status"],
+            lease_integrity_status=lease_receipt_value["integrity"]["status"],
+            lease_cleanup_status=lease_receipt_value["cleanup"]["status"],
+            cleanup_stages=cleanup_stages_value,
+        )
+
+    try:
+        # Both possible receipts are built from one captured native snapshot
+        # before the authenticated root retry and before consuming the
+        # one-use lease failure authority.  The action can therefore neither
+        # change the evidence being sealed nor burn authority on later
+        # receipt validation.
+        base_receipt = build_receipt(
+            lease_receipt_snapshot,
+            base_cleanup_stages,
+        )
+        root_close_failure_receipt = (
+            None
+            if private_root_owner is None
+            else build_receipt(
+                lease_receipt_snapshot,
+                (
+                    *base_cleanup_stages,
+                    "private_root_descriptor_close",
+                ),
+            )
+        )
+    except (KeyError, TypeError, ValueError):
+        return reject_unsealed_failure()
 
     def retry_authenticated_private_root(
         authenticated_owner: Any,
@@ -483,7 +565,7 @@ def _whole_run_exact_reap_failure(
         return ()
 
     try:
-        lease_receipt, authenticated_cleanup = (
+        _authenticated_lease_receipt, authenticated_cleanup = (
             lease_module
             ._consume_fake_execution_lease_failure_with_authenticated_action(
                 failure,
@@ -502,9 +584,13 @@ def _whole_run_exact_reap_failure(
             type(authenticated_cleanup) is not tuple
             or len(authenticated_cleanup) > 1
             or any(
-                type(stage) is not str
+                stage != "private_root_descriptor_close"
                 or not isinstance(error, BaseException)
                 for stage, error in authenticated_cleanup
+            )
+            or (
+                bool(authenticated_cleanup)
+                and root_close_failure_receipt is None
             )
         ):
             raise ValueError(
@@ -521,32 +607,20 @@ def _whole_run_exact_reap_failure(
         cleanup_stages = tuple(
             stage for stages, _errors in stage_error_pairs for stage in stages
         )
-        receipt = _build_exact_reap_failed_terminal_receipt(
-            run_nonce=checked_launch_v3["run_nonce"],
-            fake_worker_request_v1_sha256=(
-                checked_request["request_sha256"]
-            ),
-            fake_launch_plan_v1_sha256=(
-                checked_launch_v1["plan_sha256"]
-            ),
-            blocked_fake_launch_plan_v2_sha256=(
-                checked_launch_v2["plan_sha256"]
-            ),
-            fake_launch_plan_v3_sha256=(
-                checked_launch_v3["plan_sha256"]
-            ),
-            native_failure_observation=native_failure.observation,
-            lease_terminal_receipt_sha256=(lease_receipt["receipt_sha256"]),
-            lease_status=lease_receipt["status"],
-            lease_integrity_status=lease_receipt["integrity"]["status"],
-            lease_cleanup_status=lease_receipt["cleanup"]["status"],
-            cleanup_stages=cleanup_stages,
+        receipt = (
+            base_receipt
+            if not authenticated_cleanup
+            else root_close_failure_receipt
         )
+        if receipt is None:
+            raise RuntimeError(
+                "authenticated private-root failure receipt is unavailable"
+            )
     except (KeyError, TypeError, ValueError):
         return reject_unsealed_failure()
     return _SeparationFakeExecutionFailed(
         receipt=receipt,
-        primary_error=native_failure.primary_error,
+        primary_error=native_primary_error,
         cleanup_stages=cleanup_stages,
         cleanup_errors=(
             *(
@@ -555,29 +629,13 @@ def _whole_run_exact_reap_failure(
                 for error in errors
             ),
         ),
-        private_root_owner=_private_root_owner_from_lease_failure(failure),
-        descriptor_owners=admitted_failure.descriptor_owners,
-        native_failure_observation=native_failure.observation,
-        lease_terminal_receipt=lease_receipt,
+        private_root_owner=(
+            private_root_owner if authenticated_cleanup else None
+        ),
+        descriptor_owners=descriptor_owners,
+        native_failure_observation=native_failure_observation,
+        lease_terminal_receipt=lease_receipt_snapshot,
     )
-
-
-def _private_root_owner_from_lease_failure(
-    failure: Any,
-) -> _FakeExecutionCore | _OwnedDescriptorCleanupBackstop | None:
-    direct = getattr(failure, "core", None)
-    if type(direct) is _FakeExecutionCore:
-        return direct
-    admitted = getattr(failure, "primary_error", None)
-    if type(admitted) is not _FakeExecutionAdmittedFailure:
-        return None
-    owner = admitted.private_root_owner
-    if type(owner) in {
-        _FakeExecutionCore,
-        _OwnedDescriptorCleanupBackstop,
-    }:
-        return owner
-    return None
 
 
 def _clear_private_root_owner_from_lease_failure(
@@ -592,7 +650,11 @@ def _clear_private_root_owner_from_lease_failure(
         type(admitted) is _FakeExecutionAdmittedFailure
         and admitted.private_root_owner is owner
     ):
+        admitted.private_root_owner = None
         return
+    raise RuntimeError(
+        "authenticated fake execution private root owner changed"
+    )
 
 
 def _execute_admitted_fake_worker_under_lease(

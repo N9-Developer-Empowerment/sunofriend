@@ -429,6 +429,39 @@ def test_admitted_failure_preserves_primary_and_attempts_every_close(
         assert closed.value.errno == errno.EBADF
 
 
+def test_authenticated_root_clear_rejects_replaced_admitted_owner() -> None:
+    authenticated_owner = executor_module._OwnedDescriptorCleanupBackstop(
+        descriptor=41,
+        identity=(1, 41),
+        stage="private_root_descriptor_close",
+    )
+    replacement_owner = executor_module._OwnedDescriptorCleanupBackstop(
+        descriptor=42,
+        identity=(1, 42),
+        stage="private_root_descriptor_close",
+    )
+    admitted = executor_module._FakeExecutionAdmittedFailure(
+        primary_error=ValueError("synthetic native primary"),
+        cleanup_failures=(),
+        private_root_owner=replacement_owner,
+        descriptor_owners=(replacement_owner,),
+    )
+    failure = lease_module._FakeExecutionLeaseFailure(
+        primary_error=admitted,
+        cleanup_failures=(),
+        lease_receipt=None,
+        core=None,
+    )
+
+    with pytest.raises(RuntimeError, match="owner changed"):
+        executor_module._clear_private_root_owner_from_lease_failure(
+            failure,
+            authenticated_owner,
+        )
+
+    assert admitted.private_root_owner is replacement_owner
+
+
 def test_descriptor_backstop_allocation_must_complete_before_native_start(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1060,7 +1093,12 @@ def test_outer_executor_never_closes_unissued_failure_root(
     assert closed.value.errno == errno.EBADF
 
 
-def test_outer_executor_seals_exact_reap_whole_run_failure(
+@pytest.mark.parametrize(
+    "native_kind",
+    ["exact_reap", "no_start", "no_start_bad_plan"],
+)
+def test_outer_executor_seals_whole_run_native_failure(
+    native_kind: str,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1151,41 +1189,87 @@ def test_outer_executor_seals_exact_reap_whole_run_failure(
             native_build_receipt_sha256="4" * 64,
         )
     )
-    native_observation = (
-        native_failure_records._build_exact_reap_failure_observation(
-            native_session_observation_sha256="1" * 64,
-            fake_launch_plan_v3_sha256=fake_launch_plan_v3[
-                "plan_sha256"
-            ],
-            failure_stage="result_decode",
-            wait={
-                "kind": "exited",
-                "exit_code": 0,
-                "signal": None,
-                "core_dumped": False,
-            },
-            timed_out=False,
-            term_sent=False,
-            kill_sent=False,
-            fake_worker_result_v2_sha256=None,
-            worker_reported_identity_matched=None,
-            post_reap_remeasurement_complete=True,
+    if native_kind == "exact_reap":
+        native_observation = (
+            native_failure_records._build_exact_reap_failure_observation(
+                native_session_observation_sha256="1" * 64,
+                fake_launch_plan_v3_sha256=fake_launch_plan_v3[
+                    "plan_sha256"
+                ],
+                failure_stage="result_decode",
+                wait={
+                    "kind": "exited",
+                    "exit_code": 0,
+                    "signal": None,
+                    "core_dumped": False,
+                },
+                timed_out=False,
+                term_sent=False,
+                kill_sent=False,
+                fake_worker_result_v2_sha256=None,
+                worker_reported_identity_matched=None,
+                post_reap_remeasurement_complete=True,
+            )
         )
-    )
+    else:
+        observed_plan_sha256 = (
+            "f" * 64
+            if native_kind == "no_start_bad_plan"
+            else fake_launch_plan_v3["plan_sha256"]
+        )
+        native_observation = (
+            native_failure_records._build_no_start_failure_observation(
+                native_session_observation_sha256="1" * 64,
+                fake_launch_plan_v3_sha256=observed_plan_sha256,
+                failure_stage="posix_spawn",
+                post_attempt_remeasurement_complete=False,
+            )
+        )
     original_primary = ValueError("synthetic private primary text")
     native_cleanup = RuntimeError("synthetic native cleanup text")
     admitted_cleanup = RuntimeError("synthetic admitted cleanup text")
     lease_cleanup = RuntimeError("synthetic lease cleanup text")
-    native_failure = session_module._VerifiedNativeLauncherExecutionFailure(
-        primary_error=original_primary,
-        observation=native_observation,
-        cleanup_failures=(("native_final_supervision", native_cleanup),),
-    )
+    if native_kind == "exact_reap":
+        native_cleanup_stage = "native_final_supervision"
+        native_failure = (
+            session_module._VerifiedNativeLauncherExecutionFailure(
+                primary_error=original_primary,
+                observation=native_observation,  # type: ignore[arg-type]
+                cleanup_failures=((native_cleanup_stage, native_cleanup),),
+            )
+        )
+    else:
+        class FakeNoStartOutcome:
+            pass
+
+        native_cleanup_stage = "native_no_start_remeasurement"
+        native_failure = session_module._VerifiedNativeLauncherNoStartFailure(
+            native_outcome=FakeNoStartOutcome(),
+            no_start_stage="posix_spawn",
+            native_status=2,
+            observation=native_observation,  # type: ignore[arg-type]
+            cleanup_failures=((native_cleanup_stage, native_cleanup),),
+        )
+    expected_primary = native_failure.primary_error
+    root_owner = None
+    if native_kind == "no_start":
+        root_descriptor = os.open(
+            tmp_path,
+            os.O_RDONLY | os.O_DIRECTORY,
+        )
+        os.set_inheritable(root_descriptor, False)
+        root_owner = executor_module._new_owned_descriptor_cleanup_backstop(
+            descriptor=root_descriptor,
+            identity=executor_module._descriptor_object_identity(
+                root_descriptor
+            ),
+            stage="private_root_descriptor_close",
+        )
     admitted_failure = executor_module._FakeExecutionAdmittedFailure(
         primary_error=native_failure,
         cleanup_failures=(("request_descriptor_close", admitted_cleanup),),
-        private_root_owner=None,
-        descriptor_owners=(),
+        private_root_owner=root_owner,
+        descriptor_owners=(() if root_owner is None else (root_owner,)),
     )
     original_finish = lease_module._finish_fake_execution_lease_bridge
 
@@ -1212,9 +1296,42 @@ def test_outer_executor_seals_exact_reap_whole_run_failure(
         "_finish_fake_execution_lease_bridge",
         finish_then_fail,
     )
-    with pytest.raises(
-        executor_module._SeparationFakeExecutionFailed
-    ) as captured:
+    replacement_observation = None
+    replacement_primary = None
+    if native_kind == "no_start":
+        original_close_owner = (
+            executor_module._close_private_root_owner_strict
+        )
+        replacement_observation = (
+            native_failure_records._build_no_start_failure_observation(
+                native_session_observation_sha256="1" * 64,
+                fake_launch_plan_v3_sha256=fake_launch_plan_v3[
+                    "plan_sha256"
+                ],
+                failure_stage="attributes",
+                post_attempt_remeasurement_complete=False,
+            )
+        )
+        replacement_primary = RuntimeError(
+            "synthetic re-entrant replacement primary"
+        )
+
+        def mutate_native_then_close(owner: object) -> None:
+            native_failure.observation = replacement_observation
+            native_failure.primary_error = replacement_primary
+            original_close_owner(owner)  # type: ignore[arg-type]
+
+        monkeypatch.setattr(
+            executor_module,
+            "_close_private_root_owner_strict",
+            mutate_native_then_close,
+        )
+    expected_failure_type = (
+        lease_module._FakeExecutionLeaseFailure
+        if native_kind == "no_start_bad_plan"
+        else executor_module._SeparationFakeExecutionFailed
+    )
+    with pytest.raises(expected_failure_type) as captured:
         executor_module._execute_reserved_fake_worker(
             trusted_lease=lease,
             trusted_reservation=reservation,
@@ -1229,9 +1346,16 @@ def test_outer_executor_seals_exact_reap_whole_run_failure(
             private_root=tmp_path / "unused-root",
         )
     failure = captured.value
-    assert failure.primary_error is original_primary
+    if native_kind == "no_start_bad_plan":
+        assert type(failure) is lease_module._FakeExecutionLeaseFailure
+        assert type(failure._lease_failure_authority) is (
+            lease_module._FakeExecutionLeaseFailureAuthority
+        )
+        assert fixture["checkpoint"].exists()
+        return
+    assert failure.primary_error is expected_primary
     assert failure.cleanup_stages == (
-        "native_final_supervision",
+        native_cleanup_stage,
         "request_descriptor_close",
         "lease_bridge_finish",
     )
@@ -1241,21 +1365,41 @@ def test_outer_executor_seals_exact_reap_whole_run_failure(
         lease_cleanup,
     )
     assert failure.private_root_owner is None
-    assert failure.descriptor_owners == ()
+    assert failure.descriptor_owners == (
+        () if root_owner is None else (root_owner,)
+    )
     assert failure.native_failure_observation is native_observation
     assert failure.lease_terminal_receipt["status"] == "closed"
     assert failure.lease_terminal_receipt["cleanup"]["status"] == "complete"
-    receipt = failure_records._validate_failed_terminal_receipt(
-        failure.receipt
-    )
-    assert receipt["status"] == "failed_terminal_with_cleanup_failures"
+    if native_kind == "exact_reap":
+        receipt = failure_records._validate_failed_terminal_receipt(
+            failure.receipt
+        )
+        assert receipt["status"] == "failed_terminal_with_cleanup_failures"
+        assert receipt["process"]["leader_reaped"] is True
+    else:
+        receipt = (
+            failure_records._validate_no_start_failed_terminal_receipt(
+                failure.receipt
+            )
+        )
+        assert receipt["status"] == (
+            "failed_no_start_with_cleanup_failures"
+        )
+        assert receipt["process"]["state"] == "not_started"
+        assert receipt["process"]["child_created"] is False
+        assert receipt["failure"]["primary"]["stage"] == "posix_spawn"
+        assert admitted_failure.private_root_owner is None
+        assert root_owner is not None
+        assert root_owner.finalizer.alive is False
+        assert native_failure.observation is replacement_observation
+        assert native_failure.primary_error is replacement_primary
     assert [event["stage"] for event in receipt["failure"]["cleanup"]] == [
-        "native_final_supervision",
+        native_cleanup_stage,
         "request_descriptor_close",
         "lease_bridge_finish",
     ]
     assert receipt["lease"]["status"] == "closed"
-    assert receipt["process"]["leader_reaped"] is True
     assert "synthetic" not in repr(receipt)
     assert fixture["checkpoint"].exists()
 

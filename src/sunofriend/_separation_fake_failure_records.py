@@ -1,8 +1,9 @@
 """Pure whole-run failure records for the private fake separator.
 
-Only exact-reap native failure evidence and an already-issued checkpoint lease
-terminal receipt may reach this boundary.  The records are descriptive and
-grant no execution, publication, selection, acceptance or promotion authority.
+Only exact-reap or code-owned no-start native failure evidence plus an
+already-issued checkpoint lease terminal receipt may reach this boundary.
+The records are descriptive and grant no execution, publication, selection,
+acceptance or promotion authority.
 """
 
 from __future__ import annotations
@@ -17,7 +18,9 @@ from ._separation_checkpoint_canonical import (
 )
 from ._separation_native_failure_records import (
     _VerifiedNativeLauncherFailedTerminalObservation,
+    _VerifiedNativeLauncherNoStartObservation,
     _validate_exact_reap_failure_observation,
+    _validate_no_start_failure_observation,
 )
 from ._separation_worker_request_v2_values import _validate_path_free
 
@@ -26,6 +29,8 @@ __all__: tuple[str, ...] = ()
 
 _SCHEMA = "sunofriend.separation-fake-execution-failed-terminal.v1"
 _POLICY_ID = "private-lease-bound-fake-failure-v1"
+_NO_START_SCHEMA = "sunofriend.separation-fake-execution-no-start.v1"
+_NO_START_POLICY_ID = "private-lease-bound-fake-no-start-v1"
 _SHA256 = frozenset("0123456789abcdef")
 _PRIMARY_STAGES = frozenset(
     {
@@ -57,6 +62,14 @@ _CLEANUP_STAGES = frozenset(
         "transport_descriptor_close",
     }
 )
+_NO_START_CLEANUP_STAGES = (
+    _CLEANUP_STAGES
+    - {
+        "native_cached_wait_read",
+        "native_final_supervision",
+        "native_post_reap_remeasurement",
+    }
+) | {"native_no_start_remeasurement"}
 _LEASE_STATUSES = frozenset(
     {
         "closed",
@@ -86,6 +99,22 @@ _FIELDS = {
 @dataclass(frozen=True, init=False)
 class _SeparationFakeExecutionFailedTerminalReceipt(Mapping[str, Any]):
     """Immutable path-free whole-run failure evidence."""
+
+    _document: Mapping[str, Any]
+
+    def __getitem__(self, key: str) -> Any:
+        return self._document[key]
+
+    def __iter__(self) -> Any:
+        return iter(self._document)
+
+    def __len__(self) -> int:
+        return len(self._document)
+
+
+@dataclass(frozen=True, init=False)
+class _SeparationFakeExecutionNoStartReceipt(Mapping[str, Any]):
+    """Immutable path-free whole-run evidence that no child started."""
 
     _document: Mapping[str, Any]
 
@@ -201,7 +230,8 @@ def _build_exact_reap_failed_terminal_receipt(
         },
         "limitations": [
             "exact_reap_native_failures_only",
-            "spawn_failure_and_unproven_reap_have_no_terminal_receipt",
+            "code_owned_no_start_uses_separate_terminal_receipt",
+            "unproven_start_and_unproven_reap_have_no_terminal_receipt",
             "runtime_exec_and_worker_script_path_toctou_not_eliminated",
             "cleanup_events_are_code_owned_stages_not_exception_text",
             "private_transport_files_may_remain_after_failure",
@@ -374,7 +404,8 @@ def _validate_failed_terminal_receipt(
         raise ValueError("fake failed terminal permissions are invalid")
     if document["limitations"] != [
         "exact_reap_native_failures_only",
-        "spawn_failure_and_unproven_reap_have_no_terminal_receipt",
+        "code_owned_no_start_uses_separate_terminal_receipt",
+        "unproven_start_and_unproven_reap_have_no_terminal_receipt",
         "runtime_exec_and_worker_script_path_toctou_not_eliminated",
         "cleanup_events_are_code_owned_stages_not_exception_text",
         "private_transport_files_may_remain_after_failure",
@@ -387,6 +418,314 @@ def _validate_failed_terminal_receipt(
     if not _valid_sha256(receipt_sha256) or receipt_sha256 != _hash(payload):
         raise ValueError("fake failed terminal receipt hash is invalid")
     return value
+
+
+def _build_no_start_failed_terminal_receipt(
+    *,
+    run_nonce: str,
+    fake_worker_request_v1_sha256: str,
+    fake_launch_plan_v1_sha256: str,
+    blocked_fake_launch_plan_v2_sha256: str,
+    fake_launch_plan_v3_sha256: str,
+    native_failure_observation: _VerifiedNativeLauncherNoStartObservation,
+    lease_terminal_receipt_sha256: str,
+    lease_status: str,
+    lease_integrity_status: str,
+    lease_cleanup_status: str,
+    cleanup_stages: Sequence[str],
+) -> _SeparationFakeExecutionNoStartReceipt:
+    """Seal one terminal leased run for which no child was started."""
+
+    native = _validate_no_start_failure_observation(
+        native_failure_observation
+    )
+    native_document = _plain(native)
+    if (
+        native_document["bindings"]["fake_launch_plan_v3_sha256"]
+        != fake_launch_plan_v3_sha256
+    ):
+        raise ValueError("native no-start plan binding changed")
+    remeasurement_failed = (
+        native_document["post_attempt_measurement"]["status"] == "failed"
+    )
+    remeasurement_cleanup_count = sum(
+        stage == "native_no_start_remeasurement"
+        for stage in cleanup_stages
+    )
+    if remeasurement_cleanup_count != (1 if remeasurement_failed else 0):
+        raise ValueError("native no-start remeasurement cleanup is inconsistent")
+    cleanup = [
+        {
+            "ordinal": ordinal,
+            "stage": stage,
+            "reason_code": f"{stage}_failed",
+        }
+        for ordinal, stage in enumerate(cleanup_stages)
+    ]
+    cleanup_failures_present = (
+        bool(cleanup)
+        or lease_status != "closed"
+        or lease_cleanup_status != "complete"
+    )
+    payload = {
+        "schema": _NO_START_SCHEMA,
+        "policy_id": _NO_START_POLICY_ID,
+        "status": (
+            "failed_no_start_with_cleanup_failures"
+            if cleanup_failures_present
+            else "failed_no_start"
+        ),
+        "evidence_scope": "private_deterministic_transport_execution",
+        "run_nonce": run_nonce,
+        "backend_scope": "deterministic_transport_fixture_only",
+        "bindings": {
+            "fake_worker_request_v1_sha256": (fake_worker_request_v1_sha256),
+            "fake_launch_plan_v1_sha256": fake_launch_plan_v1_sha256,
+            "blocked_fake_launch_plan_v2_sha256": (
+                blocked_fake_launch_plan_v2_sha256
+            ),
+            "fake_launch_plan_v3_sha256": fake_launch_plan_v3_sha256,
+            "native_failure_observation_sha256": native_document[
+                "observation_sha256"
+            ],
+            "lease_terminal_receipt_sha256": (lease_terminal_receipt_sha256),
+            "fake_worker_result_v2_sha256": None,
+        },
+        "failure": {
+            "primary": {
+                "scope": "native_no_start",
+                "stage": native_document["failure_stage"],
+                "reason_code": (
+                    f"native_{native_document['failure_stage']}_no_start"
+                ),
+            },
+            "cleanup": cleanup,
+            "cleanup_count": len(cleanup),
+            "exception_text_recorded": False,
+        },
+        "process": native_document["process"],
+        "lease": {
+            "terminal_receipt_present": True,
+            "status": lease_status,
+            "integrity_status": lease_integrity_status,
+            "cleanup_status": lease_cleanup_status,
+        },
+        "outputs": {
+            "worker_result_validated": False,
+            "materialization_started": False,
+            "quarantine_verification_present": False,
+            "private_transport_files_may_remain": True,
+            "publication_created": False,
+        },
+        "permissions": {
+            "serialized_receipt_is_authority": False,
+            "publication_permitted": False,
+            "selection_permitted": False,
+            "acceptance_eligible": False,
+            "promotion_eligible": False,
+        },
+        "limitations": [
+            "code_owned_native_no_start_only",
+            "unproven_start_and_unproven_reap_have_no_terminal_receipt",
+            "native_status_value_retained_privately_not_serialized",
+            "cleanup_events_are_code_owned_stages_not_exception_text",
+            "private_transport_files_may_remain_after_failure",
+            "no_public_cli_tui_selection_or_publication_route",
+        ],
+    }
+    return _validate_no_start_failed_terminal_receipt(
+        _no_start_wrapper(
+            _freeze(
+                {
+                    **payload,
+                    "receipt_sha256": _hash(payload),
+                }
+            )
+        )
+    )
+
+
+def _validate_no_start_failed_terminal_receipt(
+    value: Any,
+) -> _SeparationFakeExecutionNoStartReceipt:
+    """Validate one path-free terminal no-start receipt."""
+
+    if type(value) is not _SeparationFakeExecutionNoStartReceipt:
+        raise ValueError("fake no-start receipt type is invalid")
+    document = _plain(value)
+    if set(document) != _FIELDS:
+        raise ValueError("fake no-start receipt fields are invalid")
+    _validate_path_free(document, "fake no-start receipt")
+    if (
+        document["schema"] != _NO_START_SCHEMA
+        or document["policy_id"] != _NO_START_POLICY_ID
+        or document["status"]
+        not in {
+            "failed_no_start",
+            "failed_no_start_with_cleanup_failures",
+        }
+        or document["evidence_scope"]
+        != "private_deterministic_transport_execution"
+        or document["backend_scope"] != "deterministic_transport_fixture_only"
+        or not _valid_sha256(document["run_nonce"])
+    ):
+        raise ValueError("fake no-start policy is invalid")
+    bindings = document["bindings"]
+    if (
+        not isinstance(bindings, dict)
+        or set(bindings)
+        != {
+            "fake_worker_request_v1_sha256",
+            "fake_launch_plan_v1_sha256",
+            "blocked_fake_launch_plan_v2_sha256",
+            "fake_launch_plan_v3_sha256",
+            "native_failure_observation_sha256",
+            "lease_terminal_receipt_sha256",
+            "fake_worker_result_v2_sha256",
+        }
+        or any(
+            key != "fake_worker_result_v2_sha256" and not _valid_sha256(item)
+            for key, item in bindings.items()
+        )
+        or bindings["fake_worker_result_v2_sha256"] is not None
+    ):
+        raise ValueError("fake no-start bindings are invalid")
+    failure = document["failure"]
+    if not isinstance(failure, dict) or set(failure) != {
+        "primary",
+        "cleanup",
+        "cleanup_count",
+        "exception_text_recorded",
+    }:
+        raise ValueError("fake no-start failure evidence is invalid")
+    primary = failure["primary"]
+    if (
+        not isinstance(primary, dict)
+        or set(primary) != {"scope", "stage", "reason_code"}
+        or primary["scope"] != "native_no_start"
+        or not isinstance(primary["stage"], str)
+        or primary["stage"] not in {
+            "file_actions_init",
+            "file_actions",
+            "attributes_init",
+            "attributes",
+            "posix_spawn",
+        }
+        or primary["reason_code"]
+        != f"native_{primary['stage']}_no_start"
+        or failure["exception_text_recorded"] is not False
+    ):
+        raise ValueError("fake no-start primary evidence is invalid")
+    cleanup = failure["cleanup"]
+    if (
+        not isinstance(cleanup, list)
+        or len(cleanup) > 32
+        or type(failure["cleanup_count"]) is not int
+        or failure["cleanup_count"] != len(cleanup)
+    ):
+        raise ValueError("fake no-start cleanup evidence is invalid")
+    for ordinal, event in enumerate(cleanup):
+        if (
+            not isinstance(event, dict)
+            or set(event) != {"ordinal", "stage", "reason_code"}
+            or type(event["ordinal"]) is not int
+            or event["ordinal"] != ordinal
+            or not isinstance(event["stage"], str)
+            or event["stage"] not in _NO_START_CLEANUP_STAGES
+            or event["reason_code"] != f"{event['stage']}_failed"
+        ):
+            raise ValueError("fake no-start cleanup evidence is invalid")
+    if not _valid_no_start_process(document["process"]):
+        raise ValueError("fake no-start process evidence is invalid")
+    lease = document["lease"]
+    if (
+        not isinstance(lease, dict)
+        or set(lease)
+        != {
+            "terminal_receipt_present",
+            "status",
+            "integrity_status",
+            "cleanup_status",
+        }
+        or lease["terminal_receipt_present"] is not True
+        or lease["status"] not in _LEASE_STATUSES
+        or not isinstance(lease["integrity_status"], str)
+        or lease["cleanup_status"]
+        not in {"complete", "close_not_attempted", "close_unconfirmed"}
+    ):
+        raise ValueError("fake no-start lease evidence is invalid")
+    verified_lease = lease[
+        "integrity_status"
+    ] == "verified_before_close_attempt" and lease["status"] == (
+        "closed" if lease["cleanup_status"] == "complete" else "cleanup_failed"
+    )
+    failed_lease = lease["integrity_status"] == "failed" and lease[
+        "status"
+    ] == (
+        "integrity_failed"
+        if lease["cleanup_status"] == "complete"
+        else "integrity_and_cleanup_failed"
+    )
+    if not (verified_lease or failed_lease):
+        raise ValueError("fake no-start lease status is inconsistent")
+    cleanup_failures_present = (
+        bool(cleanup)
+        or lease["status"] != "closed"
+        or lease["cleanup_status"] != "complete"
+    )
+    expected_status = (
+        "failed_no_start_with_cleanup_failures"
+        if cleanup_failures_present
+        else "failed_no_start"
+    )
+    if document["status"] != expected_status:
+        raise ValueError("fake no-start status is inconsistent")
+    if document["outputs"] != {
+        "worker_result_validated": False,
+        "materialization_started": False,
+        "quarantine_verification_present": False,
+        "private_transport_files_may_remain": True,
+        "publication_created": False,
+    }:
+        raise ValueError("fake no-start output evidence is invalid")
+    if document["permissions"] != {
+        "serialized_receipt_is_authority": False,
+        "publication_permitted": False,
+        "selection_permitted": False,
+        "acceptance_eligible": False,
+        "promotion_eligible": False,
+    }:
+        raise ValueError("fake no-start permissions are invalid")
+    if document["limitations"] != [
+        "code_owned_native_no_start_only",
+        "unproven_start_and_unproven_reap_have_no_terminal_receipt",
+        "native_status_value_retained_privately_not_serialized",
+        "cleanup_events_are_code_owned_stages_not_exception_text",
+        "private_transport_files_may_remain_after_failure",
+        "no_public_cli_tui_selection_or_publication_route",
+    ]:
+        raise ValueError("fake no-start limitations are invalid")
+    receipt_sha256 = document["receipt_sha256"]
+    payload = dict(document)
+    payload.pop("receipt_sha256")
+    if not _valid_sha256(receipt_sha256) or receipt_sha256 != _hash(payload):
+        raise ValueError("fake no-start receipt hash is invalid")
+    return value
+
+
+def _valid_no_start_process(value: Any) -> bool:
+    return value == {
+        "state": "not_started",
+        "native_status_nonzero": True,
+        "child_created": False,
+        "wait_attempted": False,
+        "signal_attempted": False,
+        "leader_reaped": False,
+        "ownership_released": False,
+        "ownership_lost": False,
+        "raw_pid_in_observation": False,
+        "signal_authority_exposed": False,
+    }
 
 
 def _valid_exact_reap_process(value: Any) -> bool:
@@ -454,5 +793,13 @@ def _wrapper(
     document: Mapping[str, Any],
 ) -> _SeparationFakeExecutionFailedTerminalReceipt:
     value = object.__new__(_SeparationFakeExecutionFailedTerminalReceipt)
+    object.__setattr__(value, "_document", document)
+    return value
+
+
+def _no_start_wrapper(
+    document: Mapping[str, Any],
+) -> _SeparationFakeExecutionNoStartReceipt:
+    value = object.__new__(_SeparationFakeExecutionNoStartReceipt)
     object.__setattr__(value, "_document", document)
     return value

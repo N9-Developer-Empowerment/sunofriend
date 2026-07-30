@@ -10,6 +10,8 @@ from typing import Any
 import pytest
 
 import sunofriend._separation_fake_executor_darwin as executor_module
+import sunofriend._separation_native_failure_records as native_records
+import sunofriend._separation_native_session_darwin as session_module
 import sunofriend.separation_checkpoint_descriptor_lease as lease_module
 from tests.test_separation_launch_v2_facade import _prepared
 
@@ -357,6 +359,85 @@ def test_authenticated_action_never_runs_for_mutated_failure(
     failure.cleanup_errors = original_errors
     receipt, action_result = (
         lease_module._consume_fake_execution_lease_failure_with_authenticated_action(
+            failure,
+            trusted_lease=lease,
+            trusted_reservation=reservation,
+            trusted_worker_request_v2=worker,
+            current_lease_observation=observation,
+            authenticated_action=record_action,
+            **chain,
+        )
+    )
+    assert receipt is failure.lease_receipt
+    assert action_result == "ran"
+    assert action_owners == [None]
+    assert fixture["checkpoint"].exists()
+
+
+def test_no_start_observation_mutation_blocks_authenticated_action(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeNoStartOutcome:
+        pass
+
+    original_observation = native_records._build_no_start_failure_observation(
+        native_session_observation_sha256="5" * 64,
+        fake_launch_plan_v3_sha256="4" * 64,
+        failure_stage="posix_spawn",
+        post_attempt_remeasurement_complete=True,
+    )
+    native_failure = session_module._VerifiedNativeLauncherNoStartFailure(
+        native_outcome=FakeNoStartOutcome(),
+        no_start_stage="posix_spawn",
+        native_status=2,
+        observation=original_observation,
+    )
+    admitted = executor_module._FakeExecutionAdmittedFailure(
+        primary_error=native_failure,
+        cleanup_failures=(),
+        private_root_owner=None,
+        descriptor_owners=(),
+    )
+    fixture, lease, reservation, worker, observation, failure, chain = (
+        _issued_failure(
+            tmp_path,
+            monkeypatch,
+            primary_error=admitted,
+        )
+    )
+    replacement = native_records._build_no_start_failure_observation(
+        native_session_observation_sha256="5" * 64,
+        fake_launch_plan_v3_sha256="4" * 64,
+        failure_stage="attributes",
+        post_attempt_remeasurement_complete=True,
+    )
+    action_owners: list[object | None] = []
+
+    def record_action(owner: object | None) -> str:
+        action_owners.append(owner)
+        return "ran"
+
+    native_failure.observation = replacement
+    with pytest.raises(ValueError, match="binding"):
+        (
+            lease_module
+            ._consume_fake_execution_lease_failure_with_authenticated_action(
+                failure,
+                trusted_lease=lease,
+                trusted_reservation=reservation,
+                trusted_worker_request_v2=worker,
+                current_lease_observation=observation,
+                authenticated_action=record_action,
+                **chain,
+            )
+        )
+    assert action_owners == []
+
+    native_failure.observation = original_observation
+    receipt, action_result = (
+        lease_module
+        ._consume_fake_execution_lease_failure_with_authenticated_action(
             failure,
             trusted_lease=lease,
             trusted_reservation=reservation,

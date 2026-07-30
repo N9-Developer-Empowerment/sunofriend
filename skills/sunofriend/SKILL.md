@@ -97,20 +97,24 @@ report the result, then move on.
   issues a self-hashed path-free terminal receipt after lease closure. The
   isolated live proof uses bounded output and kills discovered child groups as
   well as its helper on an outer timeout. This proves only the successful
-  fixture path. Exact-reap native failures now receive a path-free whole-run
-  receipt binding terminal native and lease evidence, the primary stage and
-  every ordered cleanup stage. Exact native setup or `posix_spawn` nonzero
-  returns now have a separate no-child-start observation, but no whole-run
-  receipt yet; unproven start state, unproven reap and post-lease
-  materialization failures also remain uncovered, so the non-bypassable fake
+  fixture path. Exact-reap native failures and code-tagged native setup or
+  `posix_spawn` no-start outcomes now receive disjoint path-free whole-run
+  receipts binding terminal native and lease evidence, the primary stage and
+  every ordered cleanup stage. The no-start form claims no child, wait, signal
+  or worker result. Unproven start state, unproven reap and post-lease
+  materialization failures remain uncovered, so the non-bypassable fake
   transport gate is not complete. Private failure machinery keeps lease
   cleanup stages in observed order, carries a validated lease terminal receipt
   when available, authenticates receipt composition with a lease-issued
   non-copyable one-use capability, snapshots the nested failure state and
-  revalidates the exact full fake request/launch chain. The composer itself
-  performs the final strict root cleanup retry only after authenticating the
-  exact bound owner, so caller mutation cannot invent that event and an
-  unissued failure cannot trigger a supplied descriptor close. It
+  revalidates the exact full fake request/launch chain. Before authenticated
+  cleanup or capability consumption, the composer captures the bound native
+  evidence and purely prebuilds the receipts for both possible root-close
+  results. It selects one afterward, so re-entrant mutation cannot change the
+  sealed evidence or burn authority during later validation. The final strict
+  root cleanup retry runs only after authenticating the exact bound owner, so
+  caller mutation cannot invent that event and an unissued failure cannot
+  trigger a supplied descriptor close. It
   force-terminalizes an otherwise active lease after ordinary
   reservation-release failure, pre-arms identity-checked ownership for every
   transport descriptor before native start, and attempts every admitted
