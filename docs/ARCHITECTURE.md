@@ -336,9 +336,34 @@ input/process/filesystem confinement, real transport, parent output
 verification and quarantine, and hard resource-enforcement blockers. Neither
 module opens a path, inspects or deserializes checkpoint bytes, starts a
 process, imports a model, reads audio, writes a file or makes a network call.
-The next boundary must add trusted cross-binding and a descriptor-pinned,
-bounded static checkpoint inspector before any provider or transport work can
-be considered. `REAL_SEPARATION_EXECUTION_SUPPORTED` remains false.
+
+`separation_checkpoint_inspection.py` is the tenth internal S3 boundary and
+the filesystem-facing counterpart to the pure checkpoint policy. It accepts
+only an exact parent-issued worker request and reverifies the complete trusted
+acceptance, preflight, separation-request and runtime-artifact binding.
+Canonical absolute path components are opened descriptor-relative with
+no-follow, directory-only, close-on-exec and nonblocking flags. Every ancestor
+attachment and the regular single-link checkpoint are checked before and
+after bounded reads, and all descriptors are closed even when validation
+fails.
+
+The module hashes the request-bound bytes, validates a narrow stored-only
+Torch ZIP dialect manually before `zipfile`, then parses only bounded
+`pickletools` opcodes. It recognizes the exact registered HTDemucs whole-file,
+global and opcode profile as a pickle model package. It deliberately leaves
+generic state-dict-like streams `unknown`; it neither executes abstract pickle
+stack/memo semantics nor calls pickle/Torch deserialization. Member names and
+globals are represented by counts and hashes in a private, immutable,
+path-free report. No loading, model import, process, network API, audio, write,
+selection, publication, acceptance or promotion effect is available.
+
+This inspection is evidence, not loader authority. It does not pass the
+verified checkpoint descriptor to a future worker, cannot prove that the
+underlying mount is local and does not recompute every tensor member CRC.
+Path-to-loader TOCTOU therefore remains explicit. The next launch/transport
+boundary must inherit the verified descriptor and bind the inspection into
+admission while keeping real execution disabled.
+`REAL_SEPARATION_EXECUTION_SUPPORTED` remains false.
 
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a

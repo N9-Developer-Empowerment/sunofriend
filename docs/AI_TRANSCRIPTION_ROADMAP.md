@@ -288,9 +288,38 @@ trusted cross-binding, runtime closure, isolation and network-attempt
 observation, input/process/filesystem confinement, transport, output
 verification and quarantine, and hard resource enforcement. These modules
 perform no filesystem, process, model, checkpoint-deserialization, audio or
-network operation. The next safe slice is trusted acceptance/preflight/request
-cross-binding plus a descriptor-pinned, bounded static checkpoint inspector;
-real separation execution remains literally false.
+network operation.
+
+The tenth S3 slice adds the internal
+`sunofriend.separation-checkpoint-inspection.v1` boundary. It accepts only an
+exact parent-issued worker binding and reverifies the trusted acceptance,
+preflight, separation request and runtime-artifact chain. The inspector opens
+the canonical checkpoint descriptor-relative and no-follow, rejects aliases
+and special files, hashes the request-bound bytes, repeatedly rechecks every
+ancestor attachment and closes every descriptor. It manually validates the
+bounded, stored-only Torch ZIP dialect before using the standard ZIP reader,
+including central and local records, signed data descriptors, 64-byte payload
+alignment, canonical member names, contiguous tensor members and the exact
+redundant single-disk ZIP64 terminal used by the installed checkpoint.
+
+Pickle evidence is parsed as bounded `pickletools` opcodes only. No pickle or
+Torch deserialization, model import or worker occurs. Only the exact pinned
+HTDemucs file hash plus its exact global/opcode profile is classified as a
+`torch-zip-pickle-model-package`; generic mapping- or state-dict-looking
+pickles remain `unknown` because stack, memo and persistent-ID semantics are
+not implemented. A read-only diagnostic of the installed 84,141,911-byte
+checkpoint observed 535 ZIP members, 533 tensor payload members and 18,523
+pickle opcodes without loading the model. The immutable path-free report is
+private development evidence and cannot authorize loading, execution,
+selection, publication, acceptance or promotion.
+
+The inspector does not carry its open descriptor into a future loader, cannot
+prove filesystem-mount locality and does not recompute every tensor member's
+declared CRC. The exact whole-file hash still binds the registered diagnostic,
+but path-to-loader TOCTOU remains open. The next safe slice is a launch/worker
+transport revision that inherits the already-verified checkpoint descriptor
+and cross-binds this inspection into blocked admission without enabling a real
+separator. Real separation execution remains literally false.
 
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every

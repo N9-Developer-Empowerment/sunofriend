@@ -5,8 +5,9 @@ preparation and S2 source lineage/composite drums accepted; S3 separation-run,
 controlled-fake harness, acceptance pre-registration, bake-off preparation,
 backend-preflight, worker, runtime-artifact, read-only runtime measurement and
 non-spawning launch/lifecycle contracts plus blocked-only checkpoint and
-execution-admission scaffolding implemented; real source separation, hidden
-evaluation and promotion are not implemented**
+execution-admission scaffolding and descriptor-pinned static checkpoint
+inspection implemented; real source separation, hidden evaluation and
+promotion are not implemented**
 
 Checked: 29 July 2026
 
@@ -213,9 +214,35 @@ closure, isolation, network denial and attempted-connection observation,
 model-descendant and filesystem/input confinement, real transport, parent
 output verification and quarantine, and hard resource enforcement. These
 modules perform no filesystem, process, model, checkpoint-deserialization,
-audio or network operation. The next safe increment is trusted cross-binding
-plus a descriptor-pinned, bounded static checkpoint inspector. It is not a
-runner, and real execution remains false.
+audio or network operation. They deliberately leave trusted byte-level
+checkpoint inspection to a separate boundary.
+
+The tenth S3 increment implements that internal static boundary in
+`separation_checkpoint_inspection.py`. It accepts only a parent-issued exact
+worker request and revalidates the trusted acceptance, preflight, separation
+request and runtime artifact before opening the request-bound checkpoint.
+Descriptor-relative, no-follow path traversal rejects aliases, hardlinks,
+special files and changing ancestor attachments. Reads are bounded, the exact
+checkpoint hash and size must match, and cleanup attempts every descriptor
+even after an error.
+
+A manual parser validates the narrow stored Torch ZIP layout before the
+standard ZIP reader sees it: byte-zero local header, exact central/local
+agreement, signed data descriptors, 64-byte payload alignment, canonical
+single-root names, contiguous decimal tensor members and either an ordinary
+EOCD or the exact consistent redundant ZIP64 terminal observed locally. Only
+`data.pkl` is read through ZIP CRC verification; all tensor CRCs are not
+recomputed, while the exact whole-file hash still binds the registered file.
+`pickletools` walks bounded opcodes without deserializing. The registered
+84,141,911-byte HTDemucs hash and its exact 18,523-opcode/global profile are
+classified as a Torch ZIP pickle model package; all generic or state-dict-like
+profiles remain `unknown`.
+
+The result is immutable, path-free, private-development evidence with every
+load, execution, network-API, audio, write, selection, publication, acceptance
+and promotion effect false. It cannot prove filesystem-mount locality and its
+open descriptor is not carried into a loader, so path-to-loader TOCTOU remains
+unresolved. This is not a runner, and real execution remains false.
 
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
@@ -1142,9 +1169,12 @@ implemented**
   deserialization blockers, and report every unavailable
   isolation/runtime/confinement/transport/output/resource prerequisite
   without starting a worker.
-- [ ] Cross-bind checkpoint and admission evidence to trusted acceptance,
-  preflight, request and launch authority, and add a descriptor-pinned,
-  bounded static checkpoint inspector without deserializing checkpoint bytes.
+- [x] Cross-bind a descriptor-pinned, bounded static checkpoint inspector to
+  trusted acceptance, preflight, request and runtime-artifact authority
+  without deserializing checkpoint bytes or authorizing a worker.
+- [ ] Bind the trusted static inspection into blocked execution admission and
+  revise launch/worker transport so a future loader can inherit the verified
+  checkpoint descriptor rather than reopen its path.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with a
   deterministic fake worker, exact pre-exec remeasurement, validated worker
   result and parent-verified quarantined outputs before any real model is
@@ -1173,6 +1203,7 @@ Likely modules:
 - `separation_launch_contract.py`
 - `separation_checkpoint_policy.py`
 - `separation_execution_admission.py`
+- `separation_checkpoint_inspection.py`
 
 ### S4 — Experimental broad separation in Studio
 
