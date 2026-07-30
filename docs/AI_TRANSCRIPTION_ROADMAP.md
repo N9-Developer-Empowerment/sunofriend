@@ -636,6 +636,17 @@ reap plus terminal lease cleanup. The timeout, spawn, malformed-result,
 checkpoint-mutation, materialization-collision, cleanup and replay matrix
 remains the next S3 increment.
 
+As failure-receipt groundwork, the private lease bridge now records cleanup
+stages in observed order and carries a validated terminal lease receipt when
+one exists. If ordinary FD5 reservation release fails, it revalidates the
+lease, clears only that private logical reservation, detaches and closes the
+owned checkpoint descriptor, and seals the normal lease terminal record.
+Any root descriptor already transferred in a successful execution core is
+strictly closed by the outer executor. If that close fails, ownership remains
+attached to the aggregate failure and a private best-effort finalizer remains
+armed; the fallback is leak containment, never terminal evidence. Catastrophic
+terminalization failure remains receipt-less and therefore cannot be promoted.
+
 This is not a separator result. The worker hashes but never deserializes the
 checkpoint, reads no source audio, imports no model, performs no inference,
 uses no network and creates no output file. Runtime-exec and worker-script

@@ -594,6 +594,17 @@ spawn, malformed-result, checkpoint-mutation, materialization-collision,
 cleanup and replay cases therefore remain required before the
 non-bypassable-transport checklist item can be closed.
 
+The first failure-evidence increment now labels lease cleanup failures in
+observed order and retains a validated terminal lease receipt when available.
+An ordinary reservation-release failure cannot leave the private lease active:
+the fallback revalidates it, clears the logical reservation, detaches and
+closes the owned descriptor, then seals the existing lease receipt contract.
+If a successful core had already transferred its private root descriptor, the
+outer executor strictly closes that exact object before discarding ownership.
+On close failure the aggregate retains the core and its armed best-effort
+finalizer; that backstop is not terminal evidence. This still is not the
+whole-run receipt or adversarial matrix.
+
 The executed worker is still only a code-owned transport fixture: it hashes
 but never deserializes the checkpoint and emits two-frame PCM24 payloads
 without reading source audio or running inference. Runtime-exec and

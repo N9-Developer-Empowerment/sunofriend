@@ -14,7 +14,7 @@ import re
 import stat
 import threading
 import weakref
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -154,6 +154,11 @@ class _FakeExecutionCore:
     native_execution: _VerifiedNativeLauncherExecutionObservation
     private_root_descriptor: int
     private_root_identity: tuple[int, int]
+    private_root_finalizer: weakref.finalize = field(
+        init=False,
+        repr=False,
+        compare=False,
+    )
 
 
 @dataclass(frozen=True, init=False)
@@ -213,21 +218,35 @@ def _execute_reserved_fake_worker(
     with _EXECUTION_LOCK:
         from . import separation_checkpoint_descriptor_lease as _lease_module
 
-        core, lease_receipt = (
-            _lease_module._execute_reserved_fake_worker_under_lock(
-                trusted_lease=trusted_lease,
-                trusted_reservation=trusted_reservation,
-                trusted_worker_request_v2=trusted_worker_request_v2,
-                current_lease_observation=current_lease_observation,
-                fake_worker_request=fake_worker_request,
-                fake_launch_plan_v1=fake_launch_plan_v1,
-                blocked_fake_launch_plan_v2=blocked_fake_launch_plan_v2,
-                fake_launch_plan_v3=fake_launch_plan_v3,
-                trusted_native_session=trusted_native_session,
-                native_session_observation=native_session_observation,
-                private_root=root,
+        try:
+            core, lease_receipt = (
+                _lease_module._execute_reserved_fake_worker_under_lock(
+                    trusted_lease=trusted_lease,
+                    trusted_reservation=trusted_reservation,
+                    trusted_worker_request_v2=trusted_worker_request_v2,
+                    current_lease_observation=current_lease_observation,
+                    fake_worker_request=fake_worker_request,
+                    fake_launch_plan_v1=fake_launch_plan_v1,
+                    blocked_fake_launch_plan_v2=blocked_fake_launch_plan_v2,
+                    fake_launch_plan_v3=fake_launch_plan_v3,
+                    trusted_native_session=trusted_native_session,
+                    native_session_observation=native_session_observation,
+                    private_root=root,
+                )
             )
-        )
+        except _lease_module._FakeExecutionLeaseFailure as failure:
+            failed_core = failure.core
+            if type(failed_core) is _FakeExecutionCore:
+                try:
+                    _close_core_private_root_strict(failed_core)
+                except BaseException as cleanup_error:
+                    failure._record_cleanup(
+                        "private_root_descriptor_close",
+                        cleanup_error,
+                    )
+                else:
+                    failure.core = None
+            raise
         try:
             materialization, quarantine = (
                 _materialize_validated_fake_result_v2(core)
@@ -239,10 +258,7 @@ def _execute_reserved_fake_worker(
                 quarantine=quarantine,
             )
         finally:
-            _close_descriptor_if_same(
-                core.private_root_descriptor,
-                core.private_root_identity,
-            )
+            _close_core_private_root_strict(core)
 
 
 def _execute_admitted_fake_worker_under_lease(
@@ -324,7 +340,7 @@ def _execute_admitted_fake_worker_under_lease(
         descriptors.pop(result_write_descriptor)
         _finish_admission(admission, expected_status="consumed")
         root_identity = descriptors[root_descriptor]
-        core = _FakeExecutionCore(
+        core = _new_fake_execution_core(
             fake_worker_request=fake_worker_request,
             fake_launch_plan_v1=fake_launch_plan_v1,
             blocked_fake_launch_plan_v2=blocked_fake_launch_plan_v2,
@@ -1060,6 +1076,51 @@ def _close_descriptor_if_same(
     if (facts.st_dev, facts.st_ino) != expected_identity:
         raise RuntimeError("owned fake execution descriptor identity changed")
     os.close(descriptor)
+
+
+def _finalize_root_descriptor(
+    descriptor: int,
+    expected_identity: tuple[int, int],
+) -> None:
+    """Best-effort leak backstop; never accepted as terminal evidence."""
+
+    try:
+        facts = os.fstat(descriptor)
+        if (facts.st_dev, facts.st_ino) == expected_identity:
+            os.close(descriptor)
+    except BaseException:
+        pass
+
+
+def _new_fake_execution_core(
+    **values: Any,
+) -> _FakeExecutionCore:
+    core = _FakeExecutionCore(**values)
+    object.__setattr__(
+        core,
+        "private_root_finalizer",
+        weakref.finalize(
+            core,
+            _finalize_root_descriptor,
+            core.private_root_descriptor,
+            core.private_root_identity,
+        ),
+    )
+    return core
+
+
+def _close_core_private_root_strict(core: _FakeExecutionCore) -> None:
+    if (
+        type(core) is not _FakeExecutionCore
+        or not hasattr(core, "private_root_finalizer")
+        or not core.private_root_finalizer.alive
+    ):
+        raise RuntimeError("fake execution private root owner is unavailable")
+    _close_descriptor_if_same(
+        core.private_root_descriptor,
+        core.private_root_identity,
+    )
+    core.private_root_finalizer.detach()
 
 
 def _close_descriptors_strict(descriptors: Any) -> None:

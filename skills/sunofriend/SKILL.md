@@ -99,7 +99,14 @@ report the result, then move on.
   well as its helper on an outer timeout. This proves only the successful
   fixture path: a path-free whole-run failure receipt that preserves primary
   and every cleanup failure is still outstanding, so the non-bypassable fake
-  transport gate is not complete. The worker only
+  transport gate is not complete. Private failure groundwork now keeps lease
+  cleanup stages in observed order, carries a validated lease terminal receipt
+  when available, force-terminalizes an otherwise active lease after ordinary
+  reservation-release failure, and strictly closes a root descriptor already
+  transferred in a failed core. If strict close fails, the aggregate retains
+  its owner and an armed best-effort finalizer that is not terminal evidence.
+  Catastrophic terminalization remains
+  receipt-less and blocked. The worker only
   hashes FD 5; it never deserializes the checkpoint, reads source audio, imports
   a model, performs inference or creates output files. Historical fake V1/V2
   and checkpoint launch V2 remain permanently blocked, the public lease

@@ -694,6 +694,17 @@ native terminality, lease terminality and nullable downstream evidence remains
 outstanding. Until that exists and its failure matrix is tested, the
 non-bypassable deterministic transport checklist item remains open.
 
+The private lease-side groundwork records cleanup stages in observation order
+and attaches the validated checkpoint-lease terminal receipt when available.
+If FD5 reservation release fails, a private fallback revalidates the lease,
+clears that logical reservation, detaches and closes the checkpoint descriptor,
+and uses the existing lease terminal schema. A root descriptor already
+transferred in a successful core is strictly closed before its ownership is
+discarded. If close fails, the aggregate retains the core and an armed private
+best-effort finalizer; that fallback is leak containment rather than terminal
+evidence. If forced terminalization itself cannot establish a receipt, the
+failure stays catastrophic and receipt-less.
+
 This is transport proof, not separation. The fixed worker hashes but never
 deserializes the checkpoint, reads no source audio, imports no model, performs
 no inference, uses no network and creates no output file. Runtime-exec and

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import errno
 import json
 import os
 import pickle
@@ -451,15 +452,24 @@ def test_lease_bridge_preserves_primary_and_all_cleanup_failures(
     original_release = (
         lease_module._release_separation_checkpoint_descriptor_fd5
     )
+    original_finish = lease_module._finish_fake_execution_lease_bridge
 
     def fail_release(*_args: object, **_kwargs: object) -> None:
         raise RuntimeError("synthetic release cleanup failure")
+
+    def fail_finish(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("synthetic bridge cleanup failure")
 
     try:
         monkeypatch.setattr(
             lease_module,
             "_release_separation_checkpoint_descriptor_fd5",
             fail_release,
+        )
+        monkeypatch.setattr(
+            lease_module,
+            "_finish_fake_execution_lease_bridge",
+            fail_finish,
         )
         with pytest.raises(
             lease_module._FakeExecutionLeaseFailure
@@ -479,20 +489,104 @@ def test_lease_bridge_preserves_primary_and_all_cleanup_failures(
             )
         failure = captured.value
         assert isinstance(failure.primary_error, ValueError)
+        assert failure.cleanup_stages == (
+            "lease_bridge_finish",
+            "fd5_reservation_release",
+        )
         assert len(failure.cleanup_errors) == 2
         assert isinstance(failure.cleanup_errors[0], RuntimeError)
-        assert isinstance(failure.cleanup_errors[1], ValueError)
+        assert isinstance(failure.cleanup_errors[1], RuntimeError)
+        assert failure.lease_receipt is not None
+        assert failure.lease_receipt["status"] == "closed"
+        assert failure.lease_receipt["cleanup"]["status"] == "complete"
+        assert failure.core is None
+        assert (
+            lease_module.close_separation_checkpoint_descriptor_lease(lease)[
+                "receipt_sha256"
+            ]
+            == failure.lease_receipt["receipt_sha256"]
+        )
     finally:
         monkeypatch.setattr(
             lease_module,
             "_release_separation_checkpoint_descriptor_fd5",
             original_release,
         )
-        original_release(lease, reservation)
-        assert lease_module.close_separation_checkpoint_descriptor_lease(
-            lease
-        )["status"] == "closed"
+        monkeypatch.setattr(
+            lease_module,
+            "_finish_fake_execution_lease_bridge",
+            original_finish,
+        )
         assert fixture["checkpoint"].exists()
+
+
+def test_outer_executor_closes_failed_core_root_and_records_close_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root_descriptor = os.open(tmp_path, os.O_RDONLY | os.O_DIRECTORY)
+    os.set_inheritable(root_descriptor, False)
+    root_identity = executor_module._descriptor_object_identity(
+        root_descriptor
+    )
+    core = executor_module._new_fake_execution_core(
+        fake_worker_request=object(),  # type: ignore[arg-type]
+        fake_launch_plan_v1=object(),  # type: ignore[arg-type]
+        blocked_fake_launch_plan_v2=object(),  # type: ignore[arg-type]
+        fake_launch_plan_v3=object(),  # type: ignore[arg-type]
+        fake_worker_result_v2=object(),  # type: ignore[arg-type]
+        native_execution=object(),  # type: ignore[arg-type]
+        private_root_descriptor=root_descriptor,
+        private_root_identity=root_identity,
+    )
+    failure = lease_module._FakeExecutionLeaseFailure(
+        primary_error=ValueError("synthetic primary"),
+        cleanup_failures=(),
+        lease_receipt=None,
+        core=core,
+    )
+
+    def fail_under_lock(**_kwargs: object) -> object:
+        raise failure
+
+    def fail_before_close(_core: object) -> None:
+        raise RuntimeError("synthetic root close failure")
+
+    monkeypatch.setattr(
+        lease_module,
+        "_execute_reserved_fake_worker_under_lock",
+        fail_under_lock,
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_close_core_private_root_strict",
+        fail_before_close,
+    )
+    with pytest.raises(lease_module._FakeExecutionLeaseFailure) as captured:
+        executor_module._execute_reserved_fake_worker(
+            trusted_lease=object(),
+            trusted_reservation=object(),
+            trusted_worker_request_v2=object(),  # type: ignore[arg-type]
+            current_lease_observation=object(),
+            fake_worker_request=object(),  # type: ignore[arg-type]
+            fake_launch_plan_v1=object(),  # type: ignore[arg-type]
+            blocked_fake_launch_plan_v2=object(),  # type: ignore[arg-type]
+            fake_launch_plan_v3=object(),  # type: ignore[arg-type]
+            trusted_native_session=object(),  # type: ignore[arg-type]
+            native_session_observation=object(),  # type: ignore[arg-type]
+            private_root=tmp_path / "unused-root",
+        )
+    assert captured.value is failure
+    assert failure.core is core
+    assert failure.cleanup_stages == ("private_root_descriptor_close",)
+    assert isinstance(failure.cleanup_errors[0], RuntimeError)
+    assert os.fstat(root_descriptor).st_ino == root_identity[1]
+    assert core.private_root_finalizer.alive is True
+    core.private_root_finalizer()
+    assert core.private_root_finalizer.alive is False
+    with pytest.raises(OSError) as closed:
+        os.fstat(root_descriptor)
+    assert closed.value.errno == errno.EBADF
 
 
 @pytest.mark.skipif(

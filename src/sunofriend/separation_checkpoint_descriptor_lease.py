@@ -197,11 +197,26 @@ class _FakeExecutionLeaseFailure(RuntimeError):
         self,
         *,
         primary_error: BaseException | None,
-        cleanup_errors: Sequence[BaseException],
+        cleanup_failures: Sequence[tuple[str, BaseException]],
+        lease_receipt: (
+            SeparationCheckpointDescriptorLeaseTerminalReceipt | None
+        ),
+        core: Any | None,
     ) -> None:
         super().__init__("fake execution lease lifecycle failed")
         self.primary_error = primary_error
-        self.cleanup_errors = tuple(cleanup_errors)
+        self.cleanup_stages = tuple(
+            stage for stage, _error in cleanup_failures
+        )
+        self.cleanup_errors = tuple(
+            error for _stage, error in cleanup_failures
+        )
+        self.lease_receipt = lease_receipt
+        self.core = core
+
+    def _record_cleanup(self, stage: str, error: BaseException) -> None:
+        self.cleanup_stages = (*self.cleanup_stages, stage)
+        self.cleanup_errors = (*self.cleanup_errors, error)
 
 
 @dataclass
@@ -584,7 +599,7 @@ def _execute_reserved_fake_worker_under_lock(
 
     lease, state = _known_state(trusted_lease)
     primary_error: BaseException | None = None
-    cleanup_errors: list[BaseException] = []
+    cleanup_failures: list[tuple[str, BaseException]] = []
     core: Any | None = None
     receipt: SeparationCheckpointDescriptorLeaseTerminalReceipt | None = None
     with state.lock:
@@ -657,7 +672,9 @@ def _execute_reserved_fake_worker_under_lock(
                 try:
                     _finish_fake_execution_lease_bridge(bridge_authority)
                 except BaseException as cleanup_error:
-                    cleanup_errors.append(cleanup_error)
+                    cleanup_failures.append(
+                        ("lease_bridge_finish", cleanup_error)
+                    )
         try:
             if _state_phase(lease, state) == "active":
                 if state.fd5_reservation is not None:
@@ -667,19 +684,63 @@ def _execute_reserved_fake_worker_under_lock(
                             trusted_reservation,
                         )
                     except BaseException as cleanup_error:
-                        cleanup_errors.append(cleanup_error)
-                try:
-                    receipt = close_separation_checkpoint_descriptor_lease(
-                        lease
-                    )
-                except BaseException as cleanup_error:
-                    cleanup_errors.append(cleanup_error)
+                        cleanup_failures.append(
+                            ("fd5_reservation_release", cleanup_error)
+                        )
+                        receipt = _lease_receipt_from_error(cleanup_error)
+                if (
+                    receipt is None
+                    and _state_phase(lease, state) == "active"
+                    and state.fd5_reservation is None
+                ):
+                    try:
+                        receipt = close_separation_checkpoint_descriptor_lease(
+                            lease
+                        )
+                    except BaseException as cleanup_error:
+                        cleanup_failures.append(
+                            ("checkpoint_lease_close", cleanup_error)
+                        )
+                        receipt = _lease_receipt_from_error(cleanup_error)
         except BaseException as cleanup_error:
-            cleanup_errors.append(cleanup_error)
-        if primary_error is not None or cleanup_errors:
+            cleanup_failures.append(
+                ("checkpoint_lease_cleanup", cleanup_error)
+            )
+            if receipt is None:
+                receipt = _lease_receipt_from_error(cleanup_error)
+        if receipt is None:
+            try:
+                receipt = _terminalize_fake_execution_lease_after_failure(
+                    lease,
+                    state,
+                )
+            except BaseException as cleanup_error:
+                cleanup_failures.append(
+                    ("checkpoint_lease_forced_terminalization", cleanup_error)
+                )
+                receipt = _lease_receipt_from_error(cleanup_error)
+        if (
+            receipt is not None
+            and (
+                receipt["status"] != "closed"
+                or receipt["cleanup"]["status"] != "complete"
+            )
+            and not cleanup_failures
+        ):
+            cleanup_failures.append(
+                (
+                    "checkpoint_lease_terminal_status",
+                    RuntimeError(
+                        "fake execution lease did not close cleanly"
+                    ),
+                )
+            )
+        if primary_error is not None or cleanup_failures:
             failure = _FakeExecutionLeaseFailure(
                 primary_error=primary_error,
-                cleanup_errors=cleanup_errors,
+                cleanup_failures=cleanup_failures,
+                lease_receipt=receipt,
+                core=core,
             )
             if primary_error is not None:
                 raise failure from primary_error
@@ -689,6 +750,65 @@ def _execute_reserved_fake_worker_under_lock(
                 "fake execution did not produce terminal lease evidence"
             )
         return core, receipt
+
+
+def _lease_receipt_from_error(
+    error: BaseException,
+) -> SeparationCheckpointDescriptorLeaseTerminalReceipt | None:
+    receipt = getattr(error, "receipt", None)
+    if type(receipt) is SeparationCheckpointDescriptorLeaseTerminalReceipt:
+        return receipt
+    return None
+
+
+def _terminalize_fake_execution_lease_after_failure(
+    lease: SeparationCheckpointDescriptorLease,
+    state: _LeaseState,
+) -> SeparationCheckpointDescriptorLeaseTerminalReceipt:
+    """End one admitted private attempt even if reservation release failed."""
+
+    try:
+        phase = _state_phase(lease, state)
+    except _IntegrityFailure as exc:
+        _terminal_failure(lease, state, (exc.reason,))
+    except Exception:
+        _terminal_failure(
+            lease,
+            state,
+            ("lease_state_matrix_invalid",),
+        )
+    if phase == "terminal":
+        return _receipt_wrapper(state)
+    try:
+        _require_owner(state)
+        _validate_state_authority(state)
+        _remeasure(state)
+    except _IntegrityFailure as exc:
+        _terminal_failure(lease, state, (exc.reason,))
+    except Exception:
+        _terminal_failure(
+            lease,
+            state,
+            ("lease_authority_binding_invalid",),
+        )
+    state.fd5_reservation = None
+    cleanup_status, cleanup_reasons = _detach_and_close(lease, state)
+    status = "closed" if cleanup_status == "complete" else "cleanup_failed"
+    _store_terminal(
+        state=state,
+        status=status,
+        integrity_status="verified_before_close_attempt",
+        integrity_reasons=(),
+        cleanup_status=cleanup_status,
+        cleanup_reasons=cleanup_reasons,
+    )
+    receipt = _receipt_wrapper(state)
+    if cleanup_status != "complete":
+        raise SeparationCheckpointDescriptorLeaseError(
+            "checkpoint descriptor close call did not succeed",
+            receipt,
+        )
+    return receipt
 
 
 def _issue_fake_execution_lease_bridge(
