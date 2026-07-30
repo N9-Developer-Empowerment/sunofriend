@@ -5,8 +5,10 @@ preparation and S2 source lineage/composite drums accepted; S3 includes the
 backend-neutral and blocked-execution groundwork, a fresh private
 provenance-bound Darwin build, and a test-only live descriptor canary for the
 exact physical source FDs 3/4/5 plus representative low, mixed-collision and
-scratch-collision/near-limit layouts. Deterministic fake execution, exhaustive arbitrary
-source-FD proof, path-TOCTOU closure, live child-signal-state proof, real source
+scratch-collision/near-limit layouts. The native call now returns a
+preallocated exact-child owner rather than a bare PID. Deterministic fake
+execution, exhaustive arbitrary source-FD proof, path-TOCTOU closure, bounded
+emergency-finalizer proof, live child-signal-state proof, real source
 separation, hidden evaluation and promotion are not implemented**
 
 Checked: 30 July 2026
@@ -466,14 +468,34 @@ scratch candidates, mixed 3/4/5 collisions and descriptors near the fixed
 scan limit, the child observed exactly FDs 0–5. Unrelated low
 and high inheritable descriptors were absent, and the parent descriptor
 identities, access/inheritability state and offsets were unchanged after spawn
-and reap. This finite matrix is deliberately narrower than execution
-authority: arbitrary source-FD values are not exhaustively live-proven; the
-harness requires an outer
+and reap.
+
+The following ownership hardening removes the bare-PID handoff. The extension
+allocates a private, nonconstructible child owner before `posix_spawn`, arms
+that same object after success and returns it without another Python
+allocation. It exposes no raw PID and cannot be copied or pickled. Its native
+nonblocking exact wait caches the wait status before allocating a Python
+result, rejects signalling after reap and poisons itself if another reaper
+steals the child. A test-only blocking worker proves that dropping the last
+live handle sends `SIGKILL` and exact-reaps the child while preserving the
+parent descriptor table. A second adversarial canary externally steals the
+reap and proves the poisoned handle cannot signal a possibly recycled PID or
+group. An owner-process check prevents a fork-cloned destructor from acting,
+but that branch is presently static rather than live proof.
+
+This finite matrix is deliberately narrower than execution authority:
+arbitrary source-FD values are not exhaustively live-proven; the harness
+requires an outer
 `close_fds=True, pass_fds=()` launch but cannot observe that policy from
 inside; CPython startup prevents the worker from proving the spawn-time signal
 reset and mask state; and extension-import, runtime-exec and worker-script path
-TOCTOU are not eliminated. Parent `SIGCHLD` incompatibilities fail closed, but
-no production fake worker, checkpoint lease transport, source audio, model,
+TOCTOU are not eliminated. Emergency last-reference cleanup deliberately uses
+a potentially blocking exact `waitpid` after `SIGKILL`; it is an
+exception-safety backstop, not a bounded terminal receipt. The fixed canary
+workers create no descendants, and the owner makes no numeric process-group
+call after exact leader reap; generic descendant supervision is not claimed.
+Parent `SIGCHLD` incompatibilities fail closed, but no standalone deterministic
+fake transport worker, checkpoint lease transport, source audio, model,
 terminal fake result or user-facing separator ran.
 
 The first model execution increment should be a measured bake-off, not a hard-coded
@@ -1439,6 +1461,10 @@ bake-off execution not implemented**
   FDs 3/4/5 with ordinary low non-target, scratch-candidate collision, mixed
   target-collision and near-limit layouts while retaining a truthful
   `arbitrary values not proven` boundary.
+- [x] Replace the bare-PID return with a preallocated, nonconstructible native
+  exact-child owner; prove cached exact wait, post-reap signal rejection,
+  last-reference kill/reap and external-reap poisoning without exposing raw
+  PID authority.
 - [ ] Remove or explicitly confine extension/runtime/worker path TOCTOU, and
   make the clean outer-supervisor and child signal-state boundaries
   independently observable.

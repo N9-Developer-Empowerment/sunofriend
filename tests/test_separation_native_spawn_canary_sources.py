@@ -15,6 +15,7 @@ from tests import _separation_native_spawn_canary_harness as harness
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 WORKER = REPOSITORY / "tests" / "_separation_native_spawn_canary_worker.py"
+HOLD_WORKER = REPOSITORY / "tests" / "_separation_native_spawn_hold_worker.py"
 HARNESS = REPOSITORY / "tests" / "_separation_native_spawn_canary_harness.py"
 
 
@@ -117,6 +118,42 @@ def test_canary_worker_is_fixed_stdlib_only_and_has_no_expansive_surface() -> No
     assert "os.write(" not in source
 
 
+def test_hold_worker_hardens_descriptors_then_only_blocks_for_owner_canary() -> None:
+    tree = _tree(HOLD_WORKER)
+    main = _function(tree, "main")
+    first = main.body[0]
+
+    assert isinstance(first, ast.Expr)
+    assert _called_name(first.value) == "_harden_transport_descriptors"
+    imports = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imports.update(alias.name.split(".", 1)[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imports.add(node.module.split(".", 1)[0])
+    assert imports == {
+        "__future__",
+        "os",
+        "signal",
+        "time",
+    }
+    source = HOLD_WORKER.read_text(encoding="utf-8")
+    assert "os.pwrite(4, marker, 0)" in source
+    assert "os.ftruncate(4, len(marker))" in source
+    assert "signal.SIGTERM, signal.SIG_IGN" in source
+    assert not any(
+        token in source
+        for token in (
+            "http://",
+            "https://",
+            "subprocess",
+            "os.fork(",
+            "os.posix_spawn(",
+            "os.system(",
+        )
+    )
+
+
 def test_harness_enumerates_target_and_representative_source_layouts() -> None:
     assert tuple(harness._exact_target_source_fd_permutations()) == tuple(
         itertools.permutations((3, 4, 5))
@@ -170,7 +207,7 @@ def test_harness_asserts_parent_child_access_data_and_process_invariants() -> No
 
     assert "snapshot_parent_descriptors()" in source
     assert "_assert_parent_unchanged(before" in source
-    assert source.count("_assert_parent_unchanged(before") == 2
+    assert source.count("_assert_parent_unchanged(before") == 5
     assert '"open_descriptors") != [0, 1, 2, 3, 4, 5]' in source
     assert '"descriptor_scan_soft_limit") != _CANARY_SOFT_LIMIT' in source
     assert '"request_write": errno.EBADF' in source
@@ -179,7 +216,7 @@ def test_harness_asserts_parent_child_access_data_and_process_invariants() -> No
     assert '"stdio_observation"' in WORKER.read_text(encoding="utf-8")
     assert "child stdio is not the fixed null device" in source
     assert 'os.stat("/dev/null")' in source
-    assert 'report.get("pid") != pid or report.get("pgid") != pid' in source
+    assert "native_owner.matches_pid_and_pgid(" in source
     assert '"request_sha256"' in source
     assert '"checkpoint_sha256"' in source
     assert "_measure_artifact(path)" in source
@@ -197,10 +234,17 @@ def test_harness_asserts_parent_child_access_data_and_process_invariants() -> No
     assert "_DARWIN_TEXT_ENCODING_RE.fullmatch(value)" in source
     assert "os.WIFEXITED(status)" in source
     assert "os.WEXITSTATUS(status) != 0" in source
-    assert source.count("except InterruptedError:") >= 3
     assert "deadline = time.monotonic() + 1.0" in source
-    assert "os.waitpid(pid, 0)" not in source
-    assert "with _OwnedCanaryChild(pid) as child:" in source
+    assert source.count("os.waitpid(") == 2
+    assert "os.waitpid(worker_pid, os.WNOHANG)" in source
+    assert "os.waitpid(worker_pid, 0)" in source
+    assert "native_owner.ownership_lost is not True" in source
+    assert "poisoned native owner retained wait authority" in source
+    assert "os.killpg(" not in source
+    assert "with _OwnedCanaryChild(native_owner) as child:" in source
+    assert "native_owner = spawn(" in source
+    assert "native_owner.wait_nohang()" in source
+    assert "native_owner.signal_owned_group(signal.SIGKILL)" in source
     assert "status = child.wait()" in source
     assert '"spawn_attribute_claim_proven": False' in source
     assert "cpython_startup_can_change_signal_state" in source
@@ -384,9 +428,29 @@ def test_owned_child_cleanup_reaps_before_propagating_failure() -> None:
         close_fds=True,
         start_new_session=True,
     )
+
+    class TestNativeOwner:
+        def __init__(self) -> None:
+            self.pid = process.pid
+            self.leader_reaped = False
+            self.ownership_released = False
+            self.ownership_lost = False
+
+        def signal_owned_group(self, signal_number: int) -> None:
+            os.killpg(self.pid, signal_number)
+
+        def wait_nohang(self) -> int | None:
+            return_code = process.poll()
+            if return_code is None:
+                return None
+            self.leader_reaped = True
+            self.ownership_released = True
+            return return_code
+
+    native_owner = TestNativeOwner()
     try:
         with pytest.raises(RuntimeError, match="synthetic post-spawn failure"):
-            with harness._OwnedCanaryChild(process.pid):
+            with harness._OwnedCanaryChild(native_owner):
                 raise RuntimeError("synthetic post-spawn failure")
         with pytest.raises(ChildProcessError):
             os.waitpid(process.pid, os.WNOHANG)

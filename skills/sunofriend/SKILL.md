@@ -69,8 +69,15 @@ report the result, then move on.
   representative matrix of ordinary low, scratch-candidate collision, mixed
   target-collision and near-limit layouts, observed only FDs 0–5 in the child
   while preserving the
-  parent descriptor table. This evidence does not enable native fake-launch
-  V2, which remains permanently `blocked`/`not_run` and still contains only
+  parent descriptor table. The native call preallocates a private exact-child
+  owner before spawn rather than returning a bare PID. That owner exposes no
+  raw PID, cannot be constructed/copied/pickled, caches exact wait, rejects
+  post-reap signals, kills and exact-reaps on last-reference loss, and poisons
+  itself after a stolen external reap. Its emergency destructor wait is not
+  time-bounded; the fixed canaries create no descendants and no generic
+  post-leader process-group claim is made. This evidence does not enable
+  native fake-launch V2, which remains permanently `blocked`/`not_run` and
+  still contains only
   caller-claimed artifact identities. It does not exhaustively prove arbitrary
   source-FD values, observe the
   required outer `close_fds=True, pass_fds=()` policy from inside the harness,

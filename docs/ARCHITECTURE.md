@@ -579,14 +579,29 @@ and scratch-candidate/near-limit layouts. Every case has exactly FDs 0–5 in th
 child, closure of
 unrelated low and high inheritable descriptors, and unchanged parent
 descriptor identities, relevant flags and offsets after spawn and reap.
-Non-default parent `SIGCHLD` states fail closed. This finite evidence does not
-enable fake-launch V2 or provide live authority: exhaustive arbitrary
-source-FD values, inside-harness observation of the required clean outer
-supervisor, post-CPython child signal state and
-extension/runtime/worker path TOCTOU closure remain unproven. Only a fixed
-test probe ran; there is no production fake result, checkpoint FD 5
-transport, model execution, audio operation, terminal receipt or
-user-facing separator.
+Non-default parent `SIGCHLD` states fail closed.
+
+The native entry point no longer returns a bare integer PID. It preallocates a
+nonconstructible, noncopyable exact-child owner before `posix_spawn`, arms and
+returns that same object without a post-spawn Python allocation, hides the raw
+PID and binds destructive methods to the creating process. Exact nonblocking
+wait caches status and releases leader ownership atomically; no signal or
+negative-PID probe is permitted after reap. `ECHILD` poisons the owner, so a
+stolen reap cannot lead to a stale-PID signal. Live canaries cover ordinary
+reap, stable cached wait, signal rejection after reap, last-reference
+`SIGKILL` plus exact reap, and poisoned ownership after a deliberately stolen
+reap.
+
+This finite evidence does not enable fake-launch V2 or provide model-execution
+authority. The emergency destructor's exact wait is not time-bounded, the
+fork-clone check is static rather than live, fixed workers are required to
+create no descendants, and no generic post-leader process-group claim is
+made. Exhaustive arbitrary source-FD values, inside-harness observation of the
+required clean outer supervisor, post-CPython child signal state and
+extension/runtime/worker path TOCTOU closure remain unproven. Only fixed test
+probes ran; there is no standalone deterministic fake result, checkpoint FD 5
+transport, model execution, audio operation, terminal receipt or user-facing
+separator.
 
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a

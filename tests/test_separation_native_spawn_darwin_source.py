@@ -197,19 +197,66 @@ def test_executable_and_worker_are_bounded_bytes_with_exact_argv_template() -> N
     assert "PyBytes_AS_STRING(bound_executable)" in source
 
 
-def test_post_spawn_result_allocation_failure_kills_group_and_reaps_child() -> None:
+def test_child_owner_is_allocated_before_spawn_and_retains_lifecycle() -> None:
+    source = _source()
+    spawn = _function_body(
+        source,
+        "sunofriend_spawn_bound_fake_worker(",
+        "sunofriend_spawn_methods[]",
+    )
+    allocation = spawn.index("owned_child = PyObject_New(")
+    native_spawn = spawn.index("status = posix_spawn(")
+    bind_pid = spawn.index("owned_child->pid = child_pid")
+    returned = spawn.index("return (PyObject *)owned_child")
+
+    assert allocation < native_spawn < bind_pid < returned
+    assert "PyLong_FromLong((long)child_pid)" not in spawn
+    assert "owned_child->spawned = true" in spawn
+    assert "Py_DECREF(owned_child)" in spawn
+    assert '"_OwnedSpawnChild"' in source
+    assert ".tp_new" not in source
+    assert "PyType_Ready(&SunofriendOwnedSpawnChildType)" in source
+
+
+def test_child_owner_exact_wait_signal_release_and_emergency_cleanup() -> None:
     source = _source()
     cleanup = _function_body(
         source,
-        "sunofriend_reap_after_result_allocation_failure(",
-        "sunofriend_spawn_bound_fake_worker(",
+        "sunofriend_emergency_kill_and_reap(",
+        "sunofriend_owned_child_dealloc(",
     )
-
-    assert "kill(-child_pid, SIGKILL)" in cleanup
-    assert "kill(child_pid, SIGKILL)" in cleanup
-    assert "waitpid(child_pid, &wait_status, 0)" in cleanup
-    assert "if (waited < 0 && errno == EINTR)" in cleanup
-    assert "waited == child_pid || (waited < 0 && errno == ECHILD)" in cleanup
-    assert "could knowingly discard ownership of a live PID" in cleanup
-    assert "if (result == NULL)" in source
-    assert "sunofriend_reap_after_result_allocation_failure(child_pid)" in source
+    wait = _function_body(
+        source,
+        "sunofriend_owned_child_wait_nohang(",
+        "sunofriend_owned_child_signal_group(",
+    )
+    assert "kill(-child->pid, SIGKILL)" in cleanup
+    assert "kill(child->pid, SIGKILL)" in cleanup
+    assert "waitpid(child->pid, &observed_wait_status, WNOHANG)" in cleanup
+    assert "waitpid(child->pid, &observed_wait_status, 0)" in cleanup
+    assert cleanup.index("if (child->leader_reaped)") < cleanup.index(
+        "kill(-child->pid, SIGKILL)"
+    )
+    assert "errno == ECHILD" in cleanup
+    assert "Never" in cleanup and "recycled PID" in cleanup
+    assert "waitpid(child->pid, &observed_wait_status, WNOHANG)" in wait
+    assert "child->leader_reaped = true" in wait
+    assert "native child ownership was lost before exact reap" in wait
+    assert "signal_number != SIGTERM && signal_number != SIGKILL" in source
+    signal_group = _function_body(
+        source,
+        "sunofriend_owned_child_signal_group(",
+        "sunofriend_owned_child_matches_identity(",
+    )
+    assert "waitpid(child->pid, &observed_wait_status, WNOHANG)" in signal_group
+    assert signal_group.index("waitpid(") < signal_group.index(
+        "kill(-child->pid, signal_number)"
+    )
+    assert "native child ownership was lost before group signal" in signal_group
+    assert "kill(-child->pid, 0)" not in source
+    assert "child->ownership_released = true" in wait
+    assert "child->ownership_lost = true" in wait
+    assert "|| child->ownership_lost" in source
+    assert "child->owner_pid == getpid()" in source
+    assert "owned_child->owner_pid = getpid()" in source
+    assert source.count("child->owner_pid != getpid()") >= 3

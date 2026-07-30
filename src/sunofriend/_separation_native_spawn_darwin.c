@@ -67,6 +67,19 @@ static char *const sunofriend_worker_environment[] = {
     NULL,
 };
 
+typedef struct {
+    PyObject_HEAD
+    pid_t pid;
+    pid_t owner_pid;
+    int wait_status;
+    bool spawned;
+    bool leader_reaped;
+    bool ownership_released;
+    bool ownership_lost;
+} SunofriendOwnedSpawnChild;
+
+static PyTypeObject SunofriendOwnedSpawnChildType;
+
 static bool
 sunofriend_contains_nul(const char *value, Py_ssize_t size)
 {
@@ -412,36 +425,359 @@ sunofriend_raise_spawn_error(int status, const char *operation)
 }
 
 static void
-sunofriend_reap_after_result_allocation_failure(pid_t child_pid)
+sunofriend_emergency_kill_and_reap(SunofriendOwnedSpawnChild *child)
 {
-    int wait_status;
-    int group_kill_status;
+    int observed_wait_status;
     pid_t waited;
 
     /*
-     * POSIX_SPAWN_SETPGROUP with pgroup 0 makes child_pid the exact new group.
-     * Terminate that owned group, then reap the exact child without replacing
-     * the Python allocation exception.
+     * This is the last-resort object finalizer, not terminal execution
+     * evidence. POSIX_SPAWN_SETPGROUP with pgroup 0 makes pid the exact new
+     * group. Kill that group, then exact-reap its leader if the explicit
+     * lifecycle API has not already done so.
      */
-    group_kill_status = kill(-child_pid, SIGKILL);
-    if (group_kill_status != 0 && errno != ESRCH) {
-        (void)kill(child_pid, SIGKILL);
+    if (!child->leader_reaped) {
+        for (;;) {
+            waited = waitpid(child->pid, &observed_wait_status, WNOHANG);
+            if (waited < 0 && errno == EINTR) {
+                continue;
+            }
+            if (waited == child->pid) {
+                child->wait_status = observed_wait_status;
+                child->leader_reaped = true;
+                child->ownership_released = true;
+            } else if (waited < 0 && errno == ECHILD) {
+                /*
+                 * A competing reaper broke the ownership contract. Never
+                 * signal a potentially recycled PID or process-group ID.
+                 */
+                child->ownership_lost = true;
+                return;
+            } else if (waited < 0) {
+                return;
+            }
+            break;
+        }
+    }
+    if (child->leader_reaped) {
+        return;
+    }
+    while (kill(-child->pid, SIGKILL) != 0) {
+        if (errno == EINTR) {
+            continue;
+        }
+        if (errno != ESRCH) {
+            while (kill(child->pid, SIGKILL) != 0 && errno == EINTR) {
+            }
+        }
+        break;
+    }
+    if (!child->leader_reaped) {
+        for (;;) {
+            waited = waitpid(child->pid, &observed_wait_status, 0);
+            if (waited < 0 && errno == EINTR) {
+                continue;
+            }
+            if (waited == child->pid) {
+                child->wait_status = observed_wait_status;
+                child->leader_reaped = true;
+                child->ownership_released = true;
+            } else if (waited < 0 && errno == ECHILD) {
+                child->ownership_lost = true;
+            }
+            break;
+        }
+    }
+}
+
+static void
+sunofriend_owned_child_dealloc(SunofriendOwnedSpawnChild *child)
+{
+    if (
+        child->spawned
+        && child->pid > 0
+        && child->owner_pid == getpid()
+        && !child->ownership_released
+        && !child->ownership_lost
+    ) {
+        sunofriend_emergency_kill_and_reap(child);
+    }
+    PyObject_Del(child);
+}
+
+static PyObject *
+sunofriend_owned_child_get_leader_reaped(
+    SunofriendOwnedSpawnChild *child,
+    void *closure
+)
+{
+    (void)closure;
+    return PyBool_FromLong(child->leader_reaped);
+}
+
+static PyObject *
+sunofriend_owned_child_get_ownership_released(
+    SunofriendOwnedSpawnChild *child,
+    void *closure
+)
+{
+    (void)closure;
+    return PyBool_FromLong(child->ownership_released);
+}
+
+static PyObject *
+sunofriend_owned_child_get_ownership_lost(
+    SunofriendOwnedSpawnChild *child,
+    void *closure
+)
+{
+    (void)closure;
+    return PyBool_FromLong(child->ownership_lost);
+}
+
+static PyObject *
+sunofriend_owned_child_wait_nohang(
+    SunofriendOwnedSpawnChild *child,
+    PyObject *ignored
+)
+{
+    int observed_wait_status;
+    pid_t waited;
+
+    (void)ignored;
+    if (
+        !child->spawned
+        || child->pid <= 0
+        || child->owner_pid != getpid()
+        || child->ownership_lost
+    ) {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "native child is not owned by this process"
+        );
+        return NULL;
+    }
+    if (child->leader_reaped) {
+        return PyLong_FromLong((long)child->wait_status);
     }
     for (;;) {
-        waited = waitpid(child_pid, &wait_status, 0);
+        waited = waitpid(child->pid, &observed_wait_status, WNOHANG);
         if (waited < 0 && errno == EINTR) {
             continue;
         }
-        if (waited == child_pid || (waited < 0 && errno == ECHILD)) {
-            return;
-        }
-        /*
-         * EINTR is expected. Any other error is retried because returning here
-         * could knowingly discard ownership of a live PID after allocation
-         * failure. This emergency path therefore fails closed.
-         */
+        break;
     }
+    if (waited == 0) {
+        Py_RETURN_NONE;
+    }
+    if (waited == child->pid) {
+        child->wait_status = observed_wait_status;
+        child->leader_reaped = true;
+        child->ownership_released = true;
+        return PyLong_FromLong((long)child->wait_status);
+    }
+    if (waited < 0 && errno == ECHILD) {
+        child->ownership_lost = true;
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "native child ownership was lost before exact reap"
+        );
+        return NULL;
+    }
+    PyErr_SetFromErrno(PyExc_OSError);
+    return NULL;
 }
+
+static PyObject *
+sunofriend_owned_child_signal_group(
+    SunofriendOwnedSpawnChild *child,
+    PyObject *arguments
+)
+{
+    int observed_wait_status;
+    int signal_number;
+    int status;
+    pid_t waited;
+
+    if (!PyArg_ParseTuple(
+        arguments,
+        "i:signal_owned_group",
+        &signal_number
+    )) {
+        return NULL;
+    }
+    if (signal_number != SIGTERM && signal_number != SIGKILL) {
+        PyErr_SetString(
+            PyExc_ValueError,
+            "owned child permits only SIGTERM or SIGKILL"
+        );
+        return NULL;
+    }
+    if (
+        !child->spawned
+        || child->pid <= 0
+        || child->owner_pid != getpid()
+        || child->ownership_released
+        || child->ownership_lost
+    ) {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "native child group is not owned"
+        );
+        return NULL;
+    }
+    for (;;) {
+        waited = waitpid(child->pid, &observed_wait_status, WNOHANG);
+        if (waited < 0 && errno == EINTR) {
+            continue;
+        }
+        break;
+    }
+    if (waited == child->pid) {
+        child->wait_status = observed_wait_status;
+        child->leader_reaped = true;
+        child->ownership_released = true;
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "native child exact-reaped before group signal"
+        );
+        return NULL;
+    }
+    if (waited < 0 && errno == ECHILD) {
+        child->ownership_lost = true;
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "native child ownership was lost before group signal"
+        );
+        return NULL;
+    }
+    if (waited < 0) {
+        PyErr_SetFromErrno(PyExc_OSError);
+        return NULL;
+    }
+    for (;;) {
+        status = kill(-child->pid, signal_number);
+        if (status != 0 && errno == EINTR) {
+            continue;
+        }
+        break;
+    }
+    if (
+        status != 0
+        && errno == ESRCH
+        && !child->leader_reaped
+    ) {
+        for (;;) {
+            status = kill(child->pid, signal_number);
+            if (status != 0 && errno == EINTR) {
+                continue;
+            }
+            break;
+        }
+    }
+    if (status != 0 && errno != ESRCH) {
+        PyErr_SetFromErrno(PyExc_OSError);
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject *
+sunofriend_owned_child_matches_identity(
+    SunofriendOwnedSpawnChild *child,
+    PyObject *arguments
+)
+{
+    long reported_pid;
+    long reported_pgid;
+
+    if (!PyArg_ParseTuple(
+        arguments,
+        "ll:matches_pid_and_pgid",
+        &reported_pid,
+        &reported_pgid
+    )) {
+        return NULL;
+    }
+    if (
+        !child->spawned
+        || child->pid <= 0
+        || child->owner_pid != getpid()
+        || child->ownership_lost
+    ) {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "native child is not owned by this process"
+        );
+        return NULL;
+    }
+    return PyBool_FromLong(
+        reported_pid == (long)child->pid
+        && reported_pgid == (long)child->pid
+    );
+}
+
+static PyMethodDef sunofriend_owned_child_methods[] = {
+    {
+        "wait_nohang",
+        (PyCFunction)sunofriend_owned_child_wait_nohang,
+        METH_NOARGS,
+        PyDoc_STR(
+            "Exact-PID nonblocking wait; retained while running, then cached."
+        ),
+    },
+    {
+        "signal_owned_group",
+        (PyCFunction)sunofriend_owned_child_signal_group,
+        METH_VARARGS,
+        PyDoc_STR("Signal the owned process group with SIGTERM or SIGKILL."),
+    },
+    {
+        "matches_pid_and_pgid",
+        (PyCFunction)sunofriend_owned_child_matches_identity,
+        METH_VARARGS,
+        PyDoc_STR("Confirm reported PID/PGID without exposing child authority."),
+    },
+    {NULL, NULL, 0, NULL},
+};
+
+static PyGetSetDef sunofriend_owned_child_getset[] = {
+    {
+        "leader_reaped",
+        (getter)sunofriend_owned_child_get_leader_reaped,
+        NULL,
+        PyDoc_STR("Whether this owner exact-reaped the child leader."),
+        NULL,
+    },
+    {
+        "ownership_released",
+        (getter)sunofriend_owned_child_get_ownership_released,
+        NULL,
+        PyDoc_STR("Whether exact leader ownership ended by successful reap."),
+        NULL,
+    },
+    {
+        "ownership_lost",
+        (getter)sunofriend_owned_child_get_ownership_lost,
+        NULL,
+        PyDoc_STR("Whether exact child ownership was stolen or invalidated."),
+        NULL,
+    },
+    {NULL, NULL, NULL, NULL, NULL},
+};
+
+static PyTypeObject SunofriendOwnedSpawnChildType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "_separation_native_spawn_darwin._OwnedSpawnChild",
+    .tp_basicsize = sizeof(SunofriendOwnedSpawnChild),
+    .tp_dealloc = (destructor)sunofriend_owned_child_dealloc,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_doc = PyDoc_STR(
+        "Private nonconstructible exact-child ownership handle."
+    ),
+    .tp_methods = sunofriend_owned_child_methods,
+    .tp_getset = sunofriend_owned_child_getset,
+};
 
 static PyObject *
 sunofriend_spawn_bound_fake_worker(PyObject *self, PyObject *arguments)
@@ -456,6 +792,7 @@ sunofriend_spawn_bound_fake_worker(PyObject *self, PyObject *arguments)
     bool file_actions_ready = false;
     bool attributes_ready = false;
     const char *failed_operation = "posix_spawn";
+    SunofriendOwnedSpawnChild *owned_child;
     pid_t child_pid = -1;
     int status;
 
@@ -494,6 +831,21 @@ sunofriend_spawn_bound_fake_worker(PyObject *self, PyObject *arguments)
     native_arguments[3] = "-S";
     native_arguments[4] = PyBytes_AS_STRING(bound_worker_entrypoint);
     native_arguments[5] = NULL;
+
+    owned_child = PyObject_New(
+        SunofriendOwnedSpawnChild,
+        &SunofriendOwnedSpawnChildType
+    );
+    if (owned_child == NULL) {
+        return NULL;
+    }
+    owned_child->pid = -1;
+    owned_child->owner_pid = getpid();
+    owned_child->wait_status = 0;
+    owned_child->spawned = false;
+    owned_child->leader_reaped = false;
+    owned_child->ownership_released = false;
+    owned_child->ownership_lost = false;
 
     status = posix_spawn_file_actions_init(&file_actions);
     if (status != 0) {
@@ -535,16 +887,12 @@ sunofriend_spawn_bound_fake_worker(PyObject *self, PyObject *arguments)
         failed_operation = "posix_spawn";
         goto fail;
     }
+    owned_child->pid = child_pid;
+    owned_child->spawned = true;
 
     (void)posix_spawnattr_destroy(&attributes);
     (void)posix_spawn_file_actions_destroy(&file_actions);
-    {
-        PyObject *result = PyLong_FromLong((long)child_pid);
-        if (result == NULL) {
-            sunofriend_reap_after_result_allocation_failure(child_pid);
-        }
-        return result;
-    }
+    return (PyObject *)owned_child;
 
 fail:
     if (attributes_ready) {
@@ -553,6 +901,7 @@ fail:
     if (file_actions_ready) {
         (void)posix_spawn_file_actions_destroy(&file_actions);
     }
+    Py_DECREF(owned_child);
     return sunofriend_raise_spawn_error(status, failed_operation);
 }
 
@@ -587,6 +936,22 @@ PyInit__separation_native_spawn_darwin(void)
     PyObject *module = PyModule_Create(&sunofriend_spawn_module);
 
     if (module == NULL) {
+        return NULL;
+    }
+    if (PyType_Ready(&SunofriendOwnedSpawnChildType) != 0) {
+        Py_DECREF(module);
+        return NULL;
+    }
+    Py_INCREF(&SunofriendOwnedSpawnChildType);
+    if (
+        PyModule_AddObject(
+            module,
+            "_OwnedSpawnChild",
+            (PyObject *)&SunofriendOwnedSpawnChildType
+        ) != 0
+    ) {
+        Py_DECREF(&SunofriendOwnedSpawnChildType);
+        Py_DECREF(module);
         return NULL;
     }
     if (

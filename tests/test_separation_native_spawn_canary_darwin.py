@@ -236,9 +236,9 @@ elif mode == "sa_nocldwait":
             raise SystemExit(15)
 else:
     raise SystemExit(16)
-pid = None
+owner = None
 try:
-    pid = module._spawn_bound_fake_worker(
+    owner = module._spawn_bound_fake_worker(
         os.fsencode(Path(sys.executable).resolve()),
         os.fsencode(worker),
         *descriptors,
@@ -247,26 +247,18 @@ except ValueError as error:
     rejected = "parent SIGCHLD must be default" in str(error)
 finally:
     restore_sigchld()
-if pid is not None:
-    try:
-        os.killpg(pid, signal.SIGKILL)
-    except ProcessLookupError:
-        pass
+if owner is not None:
+    owner.signal_owned_group(signal.SIGKILL)
     deadline = time.monotonic() + 1.0
     while time.monotonic() < deadline:
-        try:
-            waited, _status = os.waitpid(pid, os.WNOHANG)
-        except InterruptedError:
-            continue
-        except ChildProcessError:
-            break
-        if waited == pid:
+        status = owner.wait_nohang()
+        if status is not None:
             break
         time.sleep(0.005)
     else:
         raise SystemExit(17)
     rejected = False
-process_started = pid is not None
+process_started = owner is not None
 for descriptor in descriptors:
     os.close(descriptor)
 payload = {
@@ -366,6 +358,11 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
     for case in report["cases"]:
         assert case["pid"] == case["pgid"]
         assert case["open_descriptors"] == [0, 1, 2, 3, 4, 5]
+        assert case["native_owner_leader_reaped"] is True
+        assert case["native_owner_ownership_released"] is True
+        assert case["native_owner_ownership_lost"] is False
+        assert case["native_owner_cached_wait_stable"] is True
+        assert case["native_owner_post_reap_signal_rejected"] is True
         assert case["parent_offsets_unchanged_after_spawn"] is True
         assert case["parent_offsets_unchanged_after_reap"] is True
 
@@ -385,7 +382,11 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "expected_suffix": sysconfig.get_config_var("EXT_SUFFIX"),
         "identity_checks_passed": True,
     }
-    for key in ("runtime_executable_identity", "fixed_worker_identity"):
+    for key in (
+        "runtime_executable_identity",
+        "fixed_worker_identity",
+        "fixed_hold_worker_identity",
+    ):
         identity = report[key]
         assert set(identity) == {
             "sha256",
@@ -455,6 +456,27 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
     }
     assert report["extension_path_serialized"] is False
     assert report["worker_path_serialized"] is False
+    assert report["native_owner_type_qualification"] == {
+        "direct_construction_rejected": True,
+        "raw_pid_not_exposed": True,
+        "copy_and_pickle_rejected": True,
+        "fork_clone_destructor_guard_present": True,
+    }
+    assert report["post_spawn_owner_drop_canary"] == {
+        "worker_pid_reported_by_child": True,
+        "owner_identity_confirmed": True,
+        "raw_pid_not_exposed": True,
+        "copy_and_pickle_rejected": True,
+        "drop_forced_exact_reap": True,
+        "parent_descriptors_unchanged": True,
+    }
+    assert report["external_reap_poison_canary"] == {
+        "external_exact_reap_observed": True,
+        "owner_transitioned_to_lost": True,
+        "direct_stale_signal_rejected": True,
+        "poisoned_wait_rejected": True,
+        "drop_after_loss_did_not_touch_parent_descriptors": True,
+    }
 
     _assert_nondefault_sigchld_rejected(
         artifact_path=build.artifact_path,

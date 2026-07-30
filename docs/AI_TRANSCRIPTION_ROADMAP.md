@@ -548,6 +548,18 @@ extension/runtime/worker path TOCTOU remain unproven. No production fake
 worker, checkpoint transport, model, audio operation, terminal result or
 user-facing separator ran.
 
+The next native-ownership increment closes a bare-PID exception gap before any
+transport worker runs. The extension preallocates a nonconstructible owner
+before `posix_spawn`, returns that exact object without another Python
+allocation, hides raw PID authority, caches exact wait status and rejects
+post-reap signalling. Last-reference cleanup of a deliberately blocking
+process-creation-free canary sends `SIGKILL` and exact-reaps it. A deliberately
+stolen external reap moves the owner to a poisoned state and proves later
+signalling is rejected. The owner-process destructor guard is statically
+present. Emergency destructor wait is not bounded, no generic descendant or
+post-leader process-group claim is made, and this remains canary-only rather
+than fake or real execution authority.
+
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
 transcriber. They need independent lineage, model/checkpoint licensing,

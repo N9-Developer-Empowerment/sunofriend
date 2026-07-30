@@ -14,14 +14,17 @@ operation or separation.
 from __future__ import annotations
 
 import argparse
+import copy
 import errno
 import fcntl
+import gc
 import hashlib
 import importlib.machinery
 import importlib.util
 import itertools
 import json
 import os
+import pickle
 import re
 import resource
 import signal
@@ -40,6 +43,9 @@ _MODULE_NAME = "_separation_native_spawn_darwin"
 _METHOD_NAME = "_spawn_bound_fake_worker"
 _WORKER = (
     Path(__file__).with_name("_separation_native_spawn_canary_worker.py").resolve()
+)
+_HOLD_WORKER = (
+    Path(__file__).with_name("_separation_native_spawn_hold_worker.py").resolve()
 )
 _LOGICAL_ROLES = ("request", "result", "checkpoint")
 _TARGET_FDS = (3, 4, 5)
@@ -119,10 +125,8 @@ class BoundFileSnapshot:
 class _OwnedCanaryChild:
     """Exact child ownership with bounded failure cleanup."""
 
-    def __init__(self, pid: int) -> None:
-        if type(pid) is not int or pid <= 0:
-            raise ValueError("owned canary PID is invalid")
-        self.pid = pid
+    def __init__(self, native_owner: Any) -> None:
+        self._native_owner = native_owner
         self._reaped = False
 
     def __enter__(self) -> "_OwnedCanaryChild":
@@ -149,13 +153,8 @@ class _OwnedCanaryChild:
 
     def _wait_until(self, deadline: float) -> int | None:
         while time.monotonic() < deadline:
-            try:
-                waited, status = os.waitpid(self.pid, os.WNOHANG)
-            except InterruptedError:
-                continue
-            except ChildProcessError as error:
-                raise RuntimeError("canary lost exact child ownership") from error
-            if waited == self.pid:
+            status = self._native_owner.wait_nohang()
+            if status is not None:
                 self._reaped = True
                 return status
             time.sleep(0.005)
@@ -166,22 +165,9 @@ class _OwnedCanaryChild:
         *,
         deadline: float,
     ) -> None:
-        while True:
-            try:
-                os.killpg(self.pid, signal.SIGKILL)
-                return
-            except ProcessLookupError:
-                try:
-                    os.kill(self.pid, signal.SIGKILL)
-                    return
-                except ProcessLookupError:
-                    return
-                except InterruptedError:
-                    if time.monotonic() >= deadline:
-                        raise TimeoutError("canary exact-child signal was interrupted")
-            except InterruptedError:
-                if time.monotonic() >= deadline:
-                    raise TimeoutError("canary child-group signal was interrupted")
+        if time.monotonic() >= deadline:
+            raise TimeoutError("canary child-group deadline elapsed")
+        self._native_owner.signal_owned_group(signal.SIGKILL)
 
     def terminate_and_reap(self) -> int:
         if self._reaped:
@@ -609,6 +595,19 @@ def _read_single_json(path: Path) -> dict[str, Any]:
     return document
 
 
+def _read_bounded_pid_marker(path: Path, *, deadline: float) -> int:
+    while time.monotonic() < deadline:
+        raw = path.read_bytes()
+        if raw.endswith(b"\n") and raw[:-1].isdigit():
+            pid = int(raw[:-1])
+            if pid > 0:
+                return pid
+        if len(raw) > 32:
+            raise AssertionError("native owner marker is invalid")
+        time.sleep(0.005)
+    raise TimeoutError("native owner marker was not written")
+
+
 def _assert_parent_unchanged(
     expected: tuple[DescriptorSnapshot, ...],
     observed: tuple[DescriptorSnapshot, ...],
@@ -642,7 +641,7 @@ def _assert_parent_unchanged(
 def _assert_worker_report(
     report: dict[str, Any],
     *,
-    pid: int,
+    native_owner: Any,
     null_identity: dict[str, int],
 ) -> None:
     expected_hashes = {
@@ -653,7 +652,10 @@ def _assert_worker_report(
         raise AssertionError("canary result schema is invalid")
     if report.get("ok") is not True:
         raise AssertionError("canary worker did not complete")
-    if report.get("pid") != pid or report.get("pgid") != pid:
+    if not native_owner.matches_pid_and_pgid(
+        report.get("pid"),
+        report.get("pgid"),
+    ):
         raise AssertionError("canary worker does not own a new PID-matched group")
     if report.get("open_descriptors") != [0, 1, 2, 3, 4, 5]:
         raise AssertionError("child descriptor allowlist is not exact")
@@ -772,6 +774,124 @@ def _source_fd_layouts() -> Iterator[tuple[str, tuple[int, int, int]]]:
         yield "representative_physical_layout", source_fds
 
 
+def _run_owner_drop_canary(
+    *,
+    spawn: Any,
+    runtime_path: Path,
+    temporary_root: Path,
+) -> dict[str, Any]:
+    _close_descriptors_from_three()
+    case_directory = temporary_root / "owner-drop"
+    case_directory.mkdir(mode=0o700)
+    paths = _install_transport_descriptors(case_directory, _TARGET_FDS)
+    before = snapshot_parent_descriptors()
+    native_owner = spawn(
+        os.fsencode(runtime_path),
+        os.fsencode(_HOLD_WORKER),
+        *_TARGET_FDS,
+    )
+    worker_pid = _read_bounded_pid_marker(
+        paths["result"],
+        deadline=time.monotonic() + _WAIT_SECONDS,
+    )
+    if not native_owner.matches_pid_and_pgid(worker_pid, worker_pid):
+        raise AssertionError("native owner marker identity is invalid")
+    if hasattr(native_owner, "pid") or hasattr(native_owner, "__dict__"):
+        raise AssertionError("native owner exposes transferable authority")
+    for operation in (copy.copy, pickle.dumps):
+        try:
+            operation(native_owner)
+        except (TypeError, AttributeError):
+            continue
+        raise AssertionError("native owner can be copied or serialized")
+    after_spawn = snapshot_parent_descriptors()
+    _assert_parent_unchanged(before, after_spawn)
+    del native_owner
+    gc.collect()
+    after_drop = snapshot_parent_descriptors()
+    _assert_parent_unchanged(before, after_drop)
+    try:
+        os.waitpid(worker_pid, os.WNOHANG)
+    except ChildProcessError:
+        exact_reap_observed = True
+    else:
+        exact_reap_observed = False
+    if not exact_reap_observed:
+        raise AssertionError("dropped native owner did not exact-reap its child")
+    return {
+        "worker_pid_reported_by_child": True,
+        "owner_identity_confirmed": True,
+        "raw_pid_not_exposed": True,
+        "copy_and_pickle_rejected": True,
+        "drop_forced_exact_reap": True,
+        "parent_descriptors_unchanged": True,
+    }
+
+
+def _run_external_reap_poison_canary(
+    *,
+    spawn: Any,
+    runtime_path: Path,
+    temporary_root: Path,
+) -> dict[str, Any]:
+    _close_descriptors_from_three()
+    case_directory = temporary_root / "external-reap-poison"
+    case_directory.mkdir(mode=0o700)
+    paths = _install_transport_descriptors(case_directory, _TARGET_FDS)
+    before = snapshot_parent_descriptors()
+    native_owner = spawn(
+        os.fsencode(runtime_path),
+        os.fsencode(_HOLD_WORKER),
+        *_TARGET_FDS,
+    )
+    worker_pid = _read_bounded_pid_marker(
+        paths["result"],
+        deadline=time.monotonic() + _WAIT_SECONDS,
+    )
+    if not native_owner.matches_pid_and_pgid(worker_pid, worker_pid):
+        raise AssertionError("stolen-owner marker identity is invalid")
+    os.kill(worker_pid, signal.SIGKILL)
+    while True:
+        try:
+            waited, status = os.waitpid(worker_pid, 0)
+        except InterruptedError:
+            continue
+        break
+    if waited != worker_pid or not os.WIFSIGNALED(status):
+        raise AssertionError("external reaper did not consume exact child")
+    try:
+        native_owner.signal_owned_group(signal.SIGKILL)
+    except RuntimeError as error:
+        ownership_loss_rejected = "ownership was lost before group signal" in str(error)
+    else:
+        ownership_loss_rejected = False
+    if (
+        not ownership_loss_rejected
+        or native_owner.ownership_lost is not True
+        or native_owner.ownership_released is not False
+    ):
+        raise AssertionError("native owner did not poison stolen ownership")
+    try:
+        native_owner.wait_nohang()
+    except RuntimeError:
+        poisoned_wait_rejected = True
+    else:
+        poisoned_wait_rejected = False
+    if not poisoned_wait_rejected:
+        raise AssertionError("poisoned native owner retained wait authority")
+    del native_owner
+    gc.collect()
+    after_drop = snapshot_parent_descriptors()
+    _assert_parent_unchanged(before, after_drop)
+    return {
+        "external_exact_reap_observed": True,
+        "owner_transitioned_to_lost": True,
+        "direct_stale_signal_rejected": True,
+        "poisoned_wait_rejected": True,
+        "drop_after_loss_did_not_touch_parent_descriptors": True,
+    }
+
+
 def run_canary_matrix(
     *,
     extension_path: Path,
@@ -791,9 +911,19 @@ def run_canary_matrix(
     worker_path = _WORKER.resolve(strict=True)
     runtime_before = _measure_runtime(runtime_path)
     worker_before = _measure_worker(worker_path)
+    hold_worker_before = _measure_worker(_HOLD_WORKER)
     spawn = getattr(extension, _METHOD_NAME, None)
     if not callable(spawn):
         raise RuntimeError("native extension entry point is unavailable")
+    owner_type = getattr(extension, "_OwnedSpawnChild", None)
+    if not isinstance(owner_type, type):
+        raise RuntimeError("native owner type is unavailable")
+    try:
+        owner_type()
+    except TypeError:
+        direct_owner_construction_rejected = True
+    else:
+        raise RuntimeError("native owner type is publicly constructible")
     null_identity = _null_device_identity()
     cases: list[dict[str, Any]] = []
     for index, (layout_class, source_fds) in enumerate(
@@ -815,17 +945,31 @@ def run_canary_matrix(
             source_fds=source_fds,
             low_canary_fds=low_canary_fds,
         )
-        pid = spawn(
+        native_owner = spawn(
             os.fsencode(runtime_path),
             os.fsencode(worker_path),
             *source_fds,
         )
-        if type(pid) is not int or pid <= 0:
-            raise AssertionError("native launcher returned an invalid PID")
-        with _OwnedCanaryChild(pid) as child:
+        if (
+            native_owner.leader_reaped is not False
+            or native_owner.ownership_released is not False
+            or native_owner.ownership_lost is not False
+        ):
+            raise AssertionError("native launcher returned a released owner")
+        with _OwnedCanaryChild(native_owner) as child:
             after_spawn = snapshot_parent_descriptors()
             _assert_parent_unchanged(before, after_spawn)
             status = child.wait()
+            if native_owner.wait_nohang() != status:
+                raise AssertionError("native owner cached wait status changed")
+            try:
+                native_owner.signal_owned_group(signal.SIGKILL)
+            except RuntimeError:
+                post_reap_signal_rejected = True
+            else:
+                post_reap_signal_rejected = False
+            if not post_reap_signal_rejected:
+                raise AssertionError("native owner signalled after exact reap")
             after_reap = snapshot_parent_descriptors()
             _assert_parent_unchanged(before, after_reap)
             if not os.WIFEXITED(status) or os.WEXITSTATUS(status) != 0:
@@ -833,7 +977,7 @@ def run_canary_matrix(
             report = _read_single_json(paths["result"])
             _assert_worker_report(
                 report,
-                pid=pid,
+                native_owner=native_owner,
                 null_identity=null_identity,
             )
             cases.append(
@@ -841,19 +985,39 @@ def run_canary_matrix(
                     "layout_class": layout_class,
                     "source_fds": list(source_fds),
                     "unrelated_low_canary_fds": list(low_canary_fds),
-                    "pid": pid,
+                    "pid": report["pid"],
                     "pgid": report["pgid"],
                     "open_descriptors": report["open_descriptors"],
+                    "native_owner_leader_reaped": (native_owner.leader_reaped),
+                    "native_owner_ownership_released": (
+                        native_owner.ownership_released
+                    ),
+                    "native_owner_ownership_lost": (native_owner.ownership_lost),
+                    "native_owner_cached_wait_stable": True,
+                    "native_owner_post_reap_signal_rejected": True,
                     "parent_offsets_unchanged_after_spawn": True,
                     "parent_offsets_unchanged_after_reap": True,
                 }
             )
+    owner_drop_canary = _run_owner_drop_canary(
+        spawn=spawn,
+        runtime_path=runtime_path,
+        temporary_root=temporary_root,
+    )
+    external_reap_poison_canary = _run_external_reap_poison_canary(
+        spawn=spawn,
+        runtime_path=runtime_path,
+        temporary_root=temporary_root,
+    )
     runtime_after = _measure_runtime(runtime_path)
     worker_after = _measure_worker(worker_path)
+    hold_worker_after = _measure_worker(_HOLD_WORKER)
     if runtime_after != runtime_before:
         raise RuntimeError("bound runtime changed across canary matrix")
     if worker_after != worker_before:
         raise RuntimeError("bound worker changed across canary matrix")
+    if hold_worker_after != hold_worker_before:
+        raise RuntimeError("bound hold worker changed across canary matrix")
     expected_suffix = sysconfig.get_config_var("EXT_SUFFIX")
     return {
         "schema": "sunofriend.native-spawn-canary-matrix.v1",
@@ -875,6 +1039,13 @@ def run_canary_matrix(
         "native_build_contract_sha256": expected_build_contract_sha256,
         "runtime_executable_identity": _path_free_file_identity(runtime_after),
         "fixed_worker_identity": _path_free_file_identity(worker_after),
+        "fixed_hold_worker_identity": _path_free_file_identity(hold_worker_after),
+        "native_owner_type_qualification": {
+            "direct_construction_rejected": direct_owner_construction_rejected,
+            "raw_pid_not_exposed": True,
+            "copy_and_pickle_rejected": True,
+            "fork_clone_destructor_guard_present": True,
+        },
         "runtime_environment_qualification": (
             "exact_three_entry_envp_by_contract_with_one_validated_"
             "post_exec_darwin_cpython_injection"
@@ -941,6 +1112,8 @@ def run_canary_matrix(
             }
             == set(_REPRESENTATIVE_SOURCE_FD_LAYOUTS)
         ),
+        "post_spawn_owner_drop_canary": owner_drop_canary,
+        "external_reap_poison_canary": external_reap_poison_canary,
         "cases": cases,
     }
 
