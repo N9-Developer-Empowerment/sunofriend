@@ -5,12 +5,7 @@ from pathlib import Path
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
-SOURCE = (
-    REPOSITORY
-    / "src"
-    / "sunofriend"
-    / "_separation_native_spawn_darwin.c"
-)
+SOURCE = REPOSITORY / "src" / "sunofriend" / "_separation_native_spawn_darwin.c"
 PYPROJECT = REPOSITORY / "pyproject.toml"
 MANIFEST = REPOSITORY / "MANIFEST.in"
 
@@ -37,21 +32,29 @@ def test_native_launcher_is_packaged_as_source_but_not_registered_to_compile() -
     assert "Extension(" not in pyproject
 
 
-def test_source_is_mac_only_private_and_has_no_python_runtime_reference() -> None:
+def test_source_is_mac_only_and_referenced_only_by_private_builder() -> None:
     source = _source()
     python_sources = list((REPOSITORY / "src" / "sunofriend").glob("*.py"))
+    runtime_references = [
+        path.name
+        for path in python_sources
+        if "_separation_native_spawn_darwin" in path.read_text(encoding="utf-8")
+    ]
 
     assert "#if !defined(__APPLE__) || !defined(__MACH__)" in source
     assert (
-        "#error \"Sunofriend's native spawn boundary is supported only on macOS.\""
+        '#error "Sunofriend\'s native spawn boundary is supported only on macOS."'
         in source
     )
     assert "PyInit__separation_native_spawn_darwin" in source
     assert '"_spawn_bound_fake_worker"' in source
-    assert all(
-        "_separation_native_spawn_darwin" not in path.read_text(encoding="utf-8")
-        for path in python_sources
-    )
+    assert runtime_references == ["_separation_native_build_darwin.py"]
+    assert "_separation_native_build_darwin" not in (
+        REPOSITORY / "src" / "sunofriend" / "__init__.py"
+    ).read_text(encoding="utf-8")
+    assert "_separation_native_build_darwin" not in (
+        REPOSITORY / "src" / "sunofriend" / "cli.py"
+    ).read_text(encoding="utf-8")
 
 
 def test_source_uses_only_direct_darwin_spawn_with_close_all_default() -> None:
@@ -109,7 +112,9 @@ def test_descriptor_changes_are_child_actions_and_parent_table_is_untouched() ->
     for mutating_fcntl in ("F_DUPFD", "F_DUPFD_CLOEXEC", "F_SETFD", "F_SETFL"):
         assert mutating_fcntl not in source
 
-    copy_to_scratch = actions.index("source_fds[index],\n            scratch_fds[index]")
+    copy_to_scratch = actions.index(
+        "source_fds[index],\n            scratch_fds[index]"
+    )
     close_sources = actions.index(
         "posix_spawn_file_actions_addclose(actions, source_fds[index])"
     )
@@ -119,14 +124,8 @@ def test_descriptor_changes_are_child_actions_and_parent_table_is_untouched() ->
     close_scratch = actions.rindex(
         "posix_spawn_file_actions_addclose(actions, scratch_fds[index])"
     )
-    open_stdin = actions.index("SUNOFRIEND_STDIN_FD,\n        \"/dev/null\"")
-    assert (
-        copy_to_scratch
-        < close_sources
-        < map_to_target
-        < close_scratch
-        < open_stdin
-    )
+    open_stdin = actions.index('SUNOFRIEND_STDIN_FD,\n        "/dev/null"')
+    assert copy_to_scratch < close_sources < map_to_target < close_scratch < open_stdin
 
 
 def test_scratch_descriptors_exclude_sources_targets_and_each_other() -> None:
@@ -139,8 +138,7 @@ def test_scratch_descriptors_exclude_sources_targets_and_each_other() -> None:
 
     assert "#define SUNOFRIEND_SCRATCH_FD_MIN 6" in source
     assert (
-        "candidate >= SUNOFRIEND_STDIN_FD "
-        "&& candidate <= SUNOFRIEND_CHECKPOINT_FD"
+        "candidate >= SUNOFRIEND_STDIN_FD && candidate <= SUNOFRIEND_CHECKPOINT_FD"
     ) in selector
     assert "candidate == source_fds[index]" in selector
     assert "candidate == scratch_fds[index]" in selector
@@ -153,7 +151,7 @@ def test_scratch_descriptors_exclude_sources_targets_and_each_other() -> None:
     assert "(status_flags & O_ACCMODE) != required_access_modes[left]" in source
     assert "(status_flags & (O_APPEND | O_NONBLOCK)) != 0" in source
     assert "sigaction(SIGCHLD, NULL, &disposition)" in source
-    assert "disposition.sa_handler == SIG_IGN" in source
+    assert "disposition.sa_handler != SIG_DFL" in source
     assert "(disposition.sa_flags & SA_NOCLDWAIT) != 0" in source
     assert "sunofriend_validate_parent_sigchld() != 0" in source
 
@@ -194,10 +192,7 @@ def test_executable_and_worker_are_bounded_bytes_with_exact_argv_template() -> N
     assert 'native_arguments[1] = "-I"' in source
     assert 'native_arguments[2] = "-B"' in source
     assert 'native_arguments[3] = "-S"' in source
-    assert (
-        "native_arguments[4] = PyBytes_AS_STRING(bound_worker_entrypoint)"
-        in source
-    )
+    assert "native_arguments[4] = PyBytes_AS_STRING(bound_worker_entrypoint)" in source
     assert "native_arguments[5] = NULL" in source
     assert "PyBytes_AS_STRING(bound_executable)" in source
 

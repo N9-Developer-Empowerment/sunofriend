@@ -1,0 +1,367 @@
+from __future__ import annotations
+
+import ast
+import itertools
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+from tests import _separation_native_spawn_canary_harness as harness
+
+
+REPOSITORY = Path(__file__).resolve().parents[1]
+WORKER = REPOSITORY / "tests" / "_separation_native_spawn_canary_worker.py"
+HARNESS = REPOSITORY / "tests" / "_separation_native_spawn_canary_harness.py"
+
+
+def _tree(path: Path) -> ast.Module:
+    return ast.parse(path.read_text(encoding="utf-8"))
+
+
+def _function(tree: ast.Module, name: str) -> ast.FunctionDef:
+    return next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == name
+    )
+
+
+def _called_name(node: ast.AST) -> str:
+    if not isinstance(node, ast.Call):
+        return ""
+    if isinstance(node.func, ast.Name):
+        return node.func.id
+    if isinstance(node.func, ast.Attribute):
+        return node.func.attr
+    return ""
+
+
+def test_canary_worker_hardens_fd345_before_protocol_or_checkpoint_reads() -> None:
+    tree = _tree(WORKER)
+    main = _function(tree, "main")
+    first = main.body[0]
+
+    assert isinstance(first, ast.Expr)
+    assert _called_name(first.value) == "_harden_transport_descriptors"
+    harden = _function(tree, "_harden_transport_descriptors")
+    calls = [node for node in ast.walk(harden) if isinstance(node, ast.Call)]
+    assert [_called_name(node) for node in calls] == ["set_inheritable"]
+    assert not any(
+        _called_name(node) in {"read", "pread", "fstat"}
+        for node in ast.walk(harden)
+        if isinstance(node, ast.Call)
+    )
+
+
+def test_canary_worker_is_fixed_stdlib_only_and_has_no_expansive_surface() -> None:
+    tree = _tree(WORKER)
+    imports = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imports.update(alias.name.split(".", 1)[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imports.add(node.module.split(".", 1)[0])
+    assert imports == {
+        "__future__",
+        "errno",
+        "fcntl",
+        "hashlib",
+        "json",
+        "os",
+        "resource",
+        "stat",
+        "sys",
+        "typing",
+    }
+    assert not imports & {
+        "ctypes",
+        "http",
+        "onnxruntime",
+        "pickle",
+        "requests",
+        "socket",
+        "subprocess",
+        "torch",
+        "urllib",
+    }
+    calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call)]
+    called = {_called_name(node) for node in calls}
+    assert all(
+        isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "re"
+        for node in calls
+        if _called_name(node) == "compile"
+    )
+    called.discard("compile")
+    assert not called & {
+        "compile",
+        "connect",
+        "eval",
+        "exec",
+        "fork",
+        "popen",
+        "system",
+        "urlopen",
+    }
+    source = WORKER.read_text(encoding="utf-8")
+    assert "http://" not in source
+    assert "https://" not in source
+    assert "os.pread(descriptor" in source
+    assert "os.pwrite(descriptor" in source
+    assert "os.read(" not in source
+    assert "os.write(" not in source
+
+
+def test_harness_enumerates_every_fd345_source_mapping_and_two_canary_tiers() -> None:
+    assert tuple(harness._source_fd_permutations()) == tuple(
+        itertools.permutations((3, 4, 5))
+    )
+    assert len(tuple(harness._source_fd_permutations())) == 6
+    assert harness._LOW_CANARY_FDS == (6, 7, 8)
+    assert harness._CANARY_SOFT_LIMIT == 4_096
+    assert harness._HIGH_CANARY_FDS == (4_093, 4_094, 4_095)
+    assert set(harness._LOW_CANARY_FDS).isdisjoint({3, 4, 5})
+    assert set(harness._HIGH_CANARY_FDS).isdisjoint({*harness._LOW_CANARY_FDS, 3, 4, 5})
+    source = HARNESS.read_text(encoding="utf-8")
+    close = source.index("os.closerange(3, original_soft_limit)")
+    lower = source.index("resource.setrlimit(")
+    assert close < lower
+    assert "_assert_descriptor_range_closed(3, original_soft_limit)" in source
+    assert (
+        "_assert_descriptor_range_closed(\n"
+        "        _CANARY_SOFT_LIMIT,\n"
+        "        original_soft_limit,"
+    ) in source
+
+
+def test_harness_asserts_parent_child_access_data_and_process_invariants() -> None:
+    source = HARNESS.read_text(encoding="utf-8")
+
+    assert "snapshot_parent_descriptors()" in source
+    assert "_assert_parent_unchanged(before" in source
+    assert source.count("_assert_parent_unchanged(before") == 2
+    assert '"open_descriptors") != [0, 1, 2, 3, 4, 5]' in source
+    assert '"descriptor_scan_soft_limit") != _CANARY_SOFT_LIMIT' in source
+    assert '"request_write": errno.EBADF' in source
+    assert '"result_read": errno.EBADF' in source
+    assert '"checkpoint_write": errno.EBADF' in source
+    assert '"stdio_observation"' in WORKER.read_text(encoding="utf-8")
+    assert "child stdio is not the fixed null device" in source
+    assert 'os.stat("/dev/null")' in source
+    assert 'report.get("pid") != pid or report.get("pgid") != pid' in source
+    assert '"request_sha256"' in source
+    assert '"checkpoint_sha256"' in source
+    assert "_measure_artifact(path)" in source
+    assert "native extension changed across import" in source
+    assert "_SUNOFRIEND_NATIVE_SOURCE_SHA256" in source
+    assert "_SUNOFRIEND_NATIVE_BUILD_CONTRACT_SHA256" in source
+    assert "importlib.machinery.ExtensionFileLoader" in source
+    assert "module_spec.name != _MODULE_NAME" in source
+    assert "not path.name.endswith(expected_suffix)" in source
+    assert "_measure_runtime(runtime_path)" in source
+    assert "_measure_worker(worker_path)" in source
+    assert "bound runtime changed across canary matrix" in source
+    assert "bound worker changed across canary matrix" in source
+    assert "__CF_USER_TEXT_ENCODING" in source
+    assert "_DARWIN_TEXT_ENCODING_RE.fullmatch(value)" in source
+    assert "os.WIFEXITED(status)" in source
+    assert "os.WEXITSTATUS(status) != 0" in source
+    assert source.count("except InterruptedError:") >= 3
+    assert "deadline = time.monotonic() + 1.0" in source
+    assert "os.waitpid(pid, 0)" not in source
+    assert "with _OwnedCanaryChild(pid) as child:" in source
+    assert "status = child.wait()" in source
+    assert '"spawn_attribute_claim_proven": False' in source
+    assert "cpython_startup_can_change_signal_state" in source
+    assert "extension_path_import_toctou_not_eliminated" in source
+    assert "clean_outer_supervisor_not_proven_inside_harness" in source
+    assert '"arbitrary_source_descriptor_values_proven": False' in source
+    assert '"opaque_f_getfl_bits_compared": False' in source
+
+
+def test_harness_does_not_compile_fetch_model_or_run_separation() -> None:
+    tree = _tree(HARNESS)
+    source = HARNESS.read_text(encoding="utf-8")
+    imports = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imports.update(alias.name.split(".", 1)[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imports.add(node.module.split(".", 1)[0])
+    assert not imports & {
+        "basic_pitch",
+        "http",
+        "onnxruntime",
+        "requests",
+        "subprocess",
+        "torch",
+        "urllib",
+    }
+    calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call)]
+    called = {_called_name(node) for node in calls}
+    assert all(
+        isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "re"
+        for node in calls
+        if _called_name(node) == "compile"
+    )
+    called.discard("compile")
+    assert not called & {
+        "check_call",
+        "check_output",
+        "compile",
+        "connect",
+        "create_connection",
+        "eval",
+        "exec",
+        "fork",
+        "popen",
+        "Popen",
+        "system",
+        "urlopen",
+    }
+    assert "http://" not in source
+    assert "https://" not in source
+    assert "_spawn_bound_fake_worker" in source
+    assert "spec_from_file_location" in source
+    assert "socket.socketpair()" in source
+
+
+def test_snapshot_detects_flags_inheritability_identity_and_offset(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "snapshot.bin"
+    path.write_bytes(b"0123456789")
+    descriptor = path.open("rb", buffering=0)
+    try:
+        descriptor.seek(4)
+        before = harness._snapshot_descriptor(descriptor.fileno())
+        assert before.offset == 4
+        assert before.inheritable is False
+        assert before.device > 0
+        assert before.inode > 0
+        assert before.descriptor_flags >= 0
+        assert before.access_mode == 0
+        assert before.append_enabled is False
+        assert before.nonblocking_enabled is False
+        assert before.async_enabled is False
+        descriptor.seek(5)
+        after = harness._snapshot_descriptor(descriptor.fileno())
+        assert after != before
+        assert after.offset == 5
+        with pytest.raises(AssertionError, match="parent descriptor"):
+            harness._assert_parent_unchanged((before,), (after,))
+    finally:
+        descriptor.close()
+
+
+def test_artifact_measurement_binds_hash_and_full_stable_identity(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "native-extension.bundle"
+    path.write_bytes(b"first artifact bytes")
+    path.chmod(0o500)
+
+    first = harness._measure_artifact(path)
+    assert first.sha256
+    assert first.bytes == len(b"first artifact bytes")
+    assert first.links == 1
+
+    path.chmod(0o700)
+    path.write_bytes(b"changed artifact bytes")
+    path.chmod(0o500)
+    second = harness._measure_artifact(path)
+    assert second != first
+    alias = tmp_path / "native-extension-alias.bundle"
+    os.link(path, alias)
+    with pytest.raises(RuntimeError, match="bound regular file is invalid"):
+        harness._measure_artifact(path)
+
+
+def test_runtime_worker_and_outer_supervisor_contract_are_narrow() -> None:
+    runtime = harness._measure_runtime(Path(sys.executable).resolve())
+    worker = harness._measure_worker(WORKER)
+
+    assert runtime.bytes > 0
+    assert worker.bytes == WORKER.stat().st_size
+    assert harness.supervised_harness_subprocess_policy() == {
+        "close_fds": True,
+        "pass_fds": (),
+    }
+    runtime_identity = harness._path_free_file_identity(runtime)
+    worker_identity = harness._path_free_file_identity(worker)
+    assert set(runtime_identity) == set(worker_identity)
+    assert all(
+        "/" not in str(value)
+        for identity in (runtime_identity, worker_identity)
+        for value in identity.values()
+    )
+
+
+def test_isolated_harness_closes_inherited_fd_above_new_limit() -> None:
+    script = """
+import errno
+import fcntl
+import json
+import os
+from tests import _separation_native_spawn_canary_harness as harness
+
+target = 5000
+source = os.open("/dev/null", os.O_RDONLY)
+os.dup2(source, target, inheritable=True)
+if source != target:
+    os.close(source)
+before = fcntl.fcntl(target, fcntl.F_GETFD)
+original = harness._prepare_isolated_descriptor_limit()
+try:
+    fcntl.fcntl(target, fcntl.F_GETFD)
+except OSError as error:
+    closed = error.errno == errno.EBADF
+else:
+    closed = False
+print(json.dumps({
+    "before": before,
+    "closed": closed,
+    "original_soft_limit": original,
+    "new_soft_limit": harness._soft_descriptor_limit(),
+}))
+"""
+    process = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=REPOSITORY,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    assert process.returncode == 0, process.stderr
+    report = json.loads(process.stdout)
+    assert report["before"] >= 0
+    assert report["closed"] is True
+    assert report["original_soft_limit"] > 5_000
+    assert report["new_soft_limit"] == 4_096
+
+
+def test_owned_child_cleanup_reaps_before_propagating_failure() -> None:
+    process = subprocess.Popen(
+        [sys.executable, "-c", "import time; time.sleep(30)"],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        close_fds=True,
+        start_new_session=True,
+    )
+    try:
+        with pytest.raises(RuntimeError, match="synthetic post-spawn failure"):
+            with harness._OwnedCanaryChild(process.pid):
+                raise RuntimeError("synthetic post-spawn failure")
+        with pytest.raises(ChildProcessError):
+            os.waitpid(process.pid, os.WNOHANG)
+    finally:
+        process.returncode = -9

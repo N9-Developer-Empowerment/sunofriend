@@ -58,18 +58,27 @@ report the result, then move on.
   The fake transport and native fake-launch V2 records permit no execution.
   Native fake-launch V2 permanently remains `blocked`/`not_run`: it seals
   caller-claimed artifact identities and requires child-only FD mapping,
-  Darwin close-all behaviour and supervised lifecycle rules, but measures no
-  artifact, invokes no native code, starts no child and proves no descriptor
-  closure. Existing V1 records remain historical and non-authoritative. The
-  reviewed Darwin launcher C file is packaged only as uncompiled source: it
-  is not registered as an extension, imported or reachable from a command,
-  and static source checks are not executable proof. The
-  process-free observer starts no child and issues no terminal receipt. The
-  next engineering boundary is a reproducibly built, provenance-bound and
-  canary-tested native close-all artifact. The lease is not an immutable
-  snapshot or FD 5 transport, deterministic fake execution is unavailable,
-  every real-execution blocker remains, and real separation execution is
-  disabled.
+  Darwin close-all behaviour and supervised lifecycle rules, but the record
+  itself measures no artifact, invokes no native code, starts no child and
+  proves no descriptor closure. Existing V1 records remain historical and
+  non-authoritative.
+  An internal macOS-only builder can make a fresh owner-only,
+  provenance-bound launcher artifact with split object compilation and direct
+  linking. A test-only canary has imported a remeasured artifact and, for
+  every logical permutation of exact physical source FDs 3/4/5, observed only
+  FDs 0–5 in the child while preserving the parent descriptor table. This
+  evidence does not enable native fake-launch V2, which remains permanently
+  `blocked`/`not_run` and still contains only caller-claimed artifact
+  identities. It does not prove arbitrary source-FD values, observe the
+  required outer `close_fds=True, pass_fds=()` policy from inside the harness,
+  prove child signal state after CPython startup, or eliminate
+  extension-import, runtime-exec or worker-script path TOCTOU. The canary
+  starts only a fixed test probe: deterministic fake execution, live
+  checkpoint FD 5 transport, model execution and real separation remain
+  unavailable, and no CLI/TUI separator is exposed. The process-free observer
+  starts no child and issues no terminal receipt. The lease is not an
+  immutable snapshot or FD 5 transport, every real-execution blocker remains,
+  and real separation execution is disabled.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one
   canonical WAV project. It does not separate, shift, pad, stretch, normalize

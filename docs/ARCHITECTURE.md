@@ -558,12 +558,32 @@ closure, null standard streams, compatible parent `SIGCHLD` and a
 post-spawn allocation-failure kill/reap path are visible for source review.
 No parent descriptor is duplicated, closed or reflagged.
 
-This boundary is still inert: packaging source neither compiles nor loads it,
-and static text assertions are not descriptor or lifecycle proof. There is no
-native binary, provenance receipt, signature, canary child, live authority,
-worker result or terminal receipt. A later build-and-canary increment must
-produce and remeasure a private owner-only artifact and prove the macOS
-behavior before an executable fake schema can use it.
+The twenty-first S3 boundary adds a separate internal macOS-only builder and
+test-only canary without making the C extension publicly reachable. Every
+build uses fresh owner-only storage, a hash-pinned source and recipe, measured
+Apple tools, split Clang object compilation and a direct measured `ld`
+invocation. The recorded artifact-input provenance covers the
+compiler-discovered header closure, compiled object and explicit SDK
+`libSystem.B.tbd` before and after their relevant operations. It deliberately
+does not claim to enumerate dynamic runtime libraries used internally by the
+Apple tools. The final thin host-architecture Mach-O, deployment target,
+linked dylib set, absent RPATH, deterministic `LC_UUID`, strict ad-hoc
+signature and complete artifact hash are revalidated. Two fresh builds on the
+same measured host must produce the same artifact hash and UUID; their
+per-build receipts retain distinct filesystem identities.
+
+The isolated live canary imports only the remeasured private artifact. It
+proves all six logical permutations of exact physical source FDs 3/4/5,
+exactly FDs 0–5 in the child, closure of unrelated low and high inheritable
+descriptors, and unchanged parent descriptor identities, relevant flags and
+offsets after spawn and reap. Non-default parent `SIGCHLD` states fail closed.
+This narrow evidence does not enable fake-launch V2 or provide live authority:
+arbitrary source-FD values, inside-harness observation of the required clean
+outer supervisor, post-CPython child signal state and
+extension/runtime/worker path TOCTOU closure remain unproven. Only a fixed
+test probe ran; there is no production fake result, checkpoint FD 5
+transport, model execution, audio operation, terminal receipt or
+user-facing separator.
 
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a

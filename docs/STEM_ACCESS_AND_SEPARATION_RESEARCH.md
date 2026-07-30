@@ -1,20 +1,12 @@
 # Stem access and local separation research
 
 Status: **research and architecture decision complete; S1 synchronized source
-preparation and S2 source lineage/composite drums accepted; S3 separation-run,
-controlled-fake harness, acceptance pre-registration, bake-off preparation,
-backend-preflight, worker, runtime-artifact, read-only runtime measurement and
-non-spawning launch/lifecycle contracts plus blocked-only checkpoint and
-execution-admission scaffolding and descriptor-pinned static checkpoint
-inspection, trusted-inspection blocked-admission binding and parent-only live
-checkpoint-descriptor lease plus pure path-free worker-request V2 design
-evidence, a private exact-object lease reservation, blocked launch V2,
-fake-only transport records, a process-free framing/quarantine observer and a
-pure permanently blocked native fake-launch V2 contract plus packaged,
-uncompiled Darwin launcher source implemented; a provenance-bound and
-canary-proven executable native close-all boundary, real source separation, a
-child-process FD 5 transport, hidden evaluation and promotion are not
-implemented**
+preparation and S2 source lineage/composite drums accepted; S3 includes the
+backend-neutral and blocked-execution groundwork, a fresh private
+provenance-bound Darwin build, and a test-only live descriptor canary for the
+exact physical source FDs 3/4/5. Deterministic fake execution, arbitrary
+source-FD coverage, path-TOCTOU closure, live child-signal-state proof, real
+source separation, hidden evaluation and promotion are not implemented**
 
 Checked: 30 July 2026
 
@@ -445,11 +437,39 @@ child-only collision-safe mapping, original/scratch closure, null standard
 streams, parent `SIGCHLD` compatibility and post-spawn allocation-failure
 kill/reap path. It contains no parent FD-table mutator.
 
-This is source review, not native execution evidence. No binary, build
-receipt, code signature, extension import, canary descriptor set, child,
-worker or terminal receipt exists. The next increment must provenance-bind a
-private owner-only build and run adversarial macOS canaries before the fake
-protocol can advance.
+At that twentieth-increment boundary, source review was not native execution
+evidence: no binary, build receipt, code signature, extension import, canary
+descriptor set, child, worker or terminal receipt existed. The next increment
+therefore had to provenance-bind a private owner-only build and run
+adversarial macOS canaries before the fake protocol could advance.
+
+The 30 July 2026 twenty-first S3 increment adds an internal macOS-only builder.
+It verifies the hash-pinned C source and build contract, measures the selected
+Xcode tools, SDK, compiler-discovered header closure, compiled object and
+explicit SDK `libSystem` linker input, then uses split Clang object compilation
+and the measured Darwin linker directly. Every call writes a fresh owner-only
+build, validates the thin host-architecture Mach-O bundle, deployment target,
+linked dylib set, absence of RPATH, deterministic `LC_UUID` and strict ad-hoc
+signature, and emits a canonical receipt without transient build paths. Two
+fresh builds on the same measured host must have the same artifact hash and
+UUID. The receipt explicitly does not claim to enumerate dynamic runtime
+libraries used internally by Apple build tools. The builder does not import
+the artifact, start a worker, model or audio operation, or request a network
+resource.
+
+A separate test-only macOS canary remeasures and imports that private artifact
+inside an isolated harness. Across all six logical permutations of the exact
+physical source FDs 3/4/5, the child observed exactly FDs 0–5, unrelated low
+and high inheritable descriptors were absent, and the parent descriptor
+identities, access/inheritability state and offsets were unchanged after spawn
+and reap. This is deliberately narrower than execution authority: arbitrary
+source-FD values are not live-proven; the harness requires an outer
+`close_fds=True, pass_fds=()` launch but cannot observe that policy from
+inside; CPython startup prevents the worker from proving the spawn-time signal
+reset and mask state; and extension-import, runtime-exec and worker-script path
+TOCTOU are not eliminated. Parent `SIGCHLD` incompatibilities fail closed, but
+no production fake worker, checkpoint lease transport, source audio, model,
+terminal fake result or user-facing separator ran.
 
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
@@ -1334,11 +1354,10 @@ Likely modules:
 
 ### S3 — Separation bake-off harness
 
-Status: **contract, controlled-fake harness, acceptance pre-registration,
-redacted bake-off preparation, backend-preflight, worker, runtime-artifact and
-non-spawning launch/lifecycle plus blocked-only checkpoint/admission slices
-implemented; isolated real runner/backends and bake-off execution not
-implemented**
+Status: **contract, blocked-execution groundwork, a fresh private Darwin
+build/provenance slice and a test-only live descriptor-canary slice
+implemented; deterministic fake transport, isolated real runner/backends and
+bake-off execution not implemented**
 
 - [x] Add a pure backend-neutral `SeparationBackend` contract plus immutable
   request/result DTOs and strict versioned separation-run receipts.
@@ -1404,11 +1423,17 @@ implemented**
   mapping, Darwin close-all and supervised-lifecycle requirements without
   starting a process.
 - [x] Package a private macOS-only CPython launcher source with fixed
-  invocation, child-only mapping and static no-fallback checks, while leaving
-  it uncompiled, unimported and unreachable.
-- [ ] Reproducibly build, provenance-bind and canary-audit the private Darwin
-  native close-all boundary, proving that only standard streams and logical
-  FDs 3/4/5 reach the child and that the parent descriptor table is unchanged.
+  invocation, child-only mapping and static no-fallback checks, while keeping
+  it outside every public command.
+- [x] Reproducibly build and provenance-bind the private Darwin launcher on
+  the measured host, then canary-audit all six logical permutations of exact
+  physical source FDs 3/4/5: the child sees only FDs 0–5, unrelated
+  descriptors are closed, and the parent descriptor table, identities,
+  relevant flags and offsets remain unchanged.
+- [ ] Extend live proof beyond exact physical source FDs 3/4/5, remove or
+  explicitly confine extension/runtime/worker path TOCTOU, and make the clean
+  outer-supervisor and child signal-state boundaries independently
+  observable.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with the
   deterministic fake worker, exact pre-exec remeasurement, validated worker
   result, timeout/reap evidence and parent-verified quarantined outputs before
@@ -1449,6 +1474,7 @@ Likely modules:
 - `_separation_fake_transport_records.py`
 - `_separation_fake_worker_protocol.py`
 - `_separation_fake_launch_v2_records.py`
+- `_separation_native_build_darwin.py`
 - `_separation_native_spawn_darwin.c`
 
 ### S4 — Experimental broad separation in Studio

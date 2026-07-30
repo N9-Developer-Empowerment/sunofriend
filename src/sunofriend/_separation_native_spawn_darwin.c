@@ -18,21 +18,28 @@
 #include <unistd.h>
 
 /*
- * SOURCE-ONLY SECURITY BOUNDARY
+ * PRIVATE NATIVE SECURITY BOUNDARY
  *
- * This private CPython extension is deliberately shipped as uncompiled source.
- * It is not registered with setuptools, imported by Python, or reachable from
- * a Sunofriend command. A later increment may compile and expose it only after
- * build provenance, executable identity, lifecycle, and live-authority gates
- * have their own review.
+ * This CPython extension remains outside setuptools and every public
+ * Sunofriend command. The private provenance builder may compile a fresh,
+ * hash-pinned artifact for explicit internal canary checks; production worker
+ * integration still requires its separate authority and lifecycle gates.
  *
- * The future entry point accepts three already-open parent descriptors. It
- * changes no parent descriptor flag or table entry. All descriptor changes
- * below are ordered posix_spawn child file actions.
+ * The entry point accepts three already-open parent descriptors. It changes no
+ * parent descriptor flag or table entry. All descriptor changes below are
+ * ordered posix_spawn child file actions.
  */
 
 #ifndef POSIX_SPAWN_CLOEXEC_DEFAULT
 #error "The audited Darwin POSIX_SPAWN_CLOEXEC_DEFAULT flag is required."
+#endif
+
+#ifndef SUNOFRIEND_NATIVE_SOURCE_SHA256
+#error "The audited native source identity is required."
+#endif
+
+#ifndef SUNOFRIEND_NATIVE_BUILD_CONTRACT_SHA256
+#error "The audited native build-contract identity is required."
 #endif
 
 #define SUNOFRIEND_SCRATCH_FD_MIN 6
@@ -181,12 +188,12 @@ sunofriend_validate_parent_sigchld(void)
         return -1;
     }
     if (
-        disposition.sa_handler == SIG_IGN
+        disposition.sa_handler != SIG_DFL
         || (disposition.sa_flags & SA_NOCLDWAIT) != 0
     ) {
         PyErr_SetString(
             PyExc_ValueError,
-            "parent SIGCHLD disposition cannot preserve an owned child"
+            "parent SIGCHLD must be default and preserve an owned child"
         );
         return -1;
     }
@@ -555,8 +562,8 @@ static PyMethodDef sunofriend_spawn_methods[] = {
         sunofriend_spawn_bound_fake_worker,
         METH_VARARGS,
         PyDoc_STR(
-            "Private future boundary; unavailable until a separately audited "
-            "build and runtime integration exists."
+            "Private audited spawn boundary; production worker integration "
+            "remains unavailable."
         ),
     },
     {NULL, NULL, 0, NULL},
@@ -565,7 +572,7 @@ static PyMethodDef sunofriend_spawn_methods[] = {
 static struct PyModuleDef sunofriend_spawn_module = {
     PyModuleDef_HEAD_INIT,
     "_separation_native_spawn_darwin",
-    "Private source-only Darwin spawn boundary.",
+    "Private provenance-built Darwin spawn boundary.",
     -1,
     sunofriend_spawn_methods,
     NULL,
@@ -577,5 +584,25 @@ static struct PyModuleDef sunofriend_spawn_module = {
 PyMODINIT_FUNC
 PyInit__separation_native_spawn_darwin(void)
 {
-    return PyModule_Create(&sunofriend_spawn_module);
+    PyObject *module = PyModule_Create(&sunofriend_spawn_module);
+
+    if (module == NULL) {
+        return NULL;
+    }
+    if (
+        PyModule_AddStringConstant(
+            module,
+            "_SUNOFRIEND_NATIVE_SOURCE_SHA256",
+            SUNOFRIEND_NATIVE_SOURCE_SHA256
+        ) != 0
+        || PyModule_AddStringConstant(
+            module,
+            "_SUNOFRIEND_NATIVE_BUILD_CONTRACT_SHA256",
+            SUNOFRIEND_NATIVE_BUILD_CONTRACT_SHA256
+        ) != 0
+    ) {
+        Py_DECREF(module);
+        return NULL;
+    }
+    return module;
 }

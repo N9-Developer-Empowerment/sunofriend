@@ -521,12 +521,28 @@ mutator. An incompatible parent `SIGCHLD` disposition is rejected in the
 future entry point, and a post-spawn result-allocation failure has a
 kill-and-exact-reap emergency path so child ownership is not silently lost.
 
-Source review is not executable proof. No compiler, binary, build receipt,
-code signature, native import, descriptor canary or subprocess ran in this
-slice. The next increment must define a reproducible owner-only macOS build
-receipt, compile and verify a private artifact, and use adversarial canaries
-to prove exact child descriptors and an unchanged parent table before any
-fake worker is connected.
+The twenty-first S3 slice adds the separate internal macOS-only build and
+test-only canary boundary. A fresh owner-only build pins the source and recipe,
+measures the chosen Apple tools, compiles one measured object and invokes the
+measured Darwin linker directly with only that object and an explicit measured
+SDK `libSystem.B.tbd` as artifact inputs. The receipt binds the
+compiler-discovered header closure, object and explicit SDK input; it
+explicitly does not claim a complete dynamic runtime-library closure for the
+Apple tools. The final thin Mach-O architecture, minimum macOS and SDK
+versions, dylib allowlist, absent RPATH, deterministic `LC_UUID`, strict
+ad-hoc signature and artifact hash are verified. Two fresh builds on the same
+measured host must have identical artifact hashes and UUIDs.
+
+An isolated test harness remeasures and imports only that private artifact.
+Across all six logical permutations of exact physical source FDs 3/4/5, it
+observes exactly FDs 0–5 in the child, no unrelated low or high inheritable
+descriptor, and no change to the parent descriptors' identities, relevant
+flags or offsets after spawn and reap. Custom parent `SIGCHLD` handling and
+`SA_NOCLDWAIT` fail before child creation. This does not enable fake-launch
+V2: arbitrary source-FD values, the outer supervisor policy from inside the
+harness, post-CPython signal state and extension/runtime/worker path TOCTOU
+remain unproven. No production fake worker, checkpoint transport, model,
+audio operation, terminal result or user-facing separator ran.
 
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
