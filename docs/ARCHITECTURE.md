@@ -459,6 +459,29 @@ hashes and behaviour are unchanged. This refactor adds no separator, FD 5
 installation, process, model load, CLI/TUI route or other user-facing
 capability.
 
+The 29 July 2026 sixteenth S3 boundary is
+`_separation_checkpoint_launch_v2_records.py`. It defines a private, path-free,
+deeply immutable `sunofriend.separation-launch-plan.v2` record. The descriptor
+lease facade may issue that record only while holding the lease lock, after
+full authority validation, checkpoint remeasurement and exact-object checks
+for the current reservation and its V2 request. Issuance leaves the live
+descriptor and reservation unchanged.
+
+The plan describes logical FD 3 request, FD 4 result and FD 5 checkpoint
+requirements plus a future child-creation atomicity sequence. It serializes no
+path, raw descriptor, token or argv. The three V2 values outside lease
+authority remain explicitly sealed but unproven. Its serialized construction
+conditions are requirements rather than evidence that the private facade
+performed them. The record is not liveness or installation authority; a
+duplicated descriptor would share the retained open-file-description offset,
+so an offset-independent child reader or serialized ownership protocol remains
+mandatory. A future worker must also make FD 5 non-inheritable immediately
+after the one intended exec. All process, installation, loading, model,
+inference, result, selection and publication capabilities and effects are
+false. Existing V1 launch records and lifecycles do not import or accept this
+type. A later fake-worker transport needs new executable request and launch
+schemas.
+
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a
 starter ZIP. It does not create or mutate Workbench SQLite state. After

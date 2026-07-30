@@ -411,6 +411,28 @@ facade is 793 rather than 884 lines, while public V1 and reservation types,
 signatures, `__all__`, schemas, hashes, locks, registry, finalizer and behaviour
 remain unchanged. No separator or user-facing capability was added.
 
+The 29 July 2026 sixteenth S3 slice adds only the internal, permanently blocked
+`sunofriend.separation-launch-plan.v2` design record. The lease facade issues
+it under the existing lock after validating the exact live reservation, exact
+V2 request, owner and full checkpoint remeasurement. The path-free record
+copies all 16 sealed request bindings, but identifies execution admission,
+runtime artifact and runtime-parent measurements as sealed but unproven
+rather than promoting them to authority.
+
+The record fixes logical descriptor purposes 3, 4 and 5 and documents the
+requirements for a future child-creation-only checkpoint mapping. It does not
+install or expose a descriptor, mutate parent FD 5, reopen a path, start a
+process or supply argv, source/output transport or a worker protocol. Its
+serialized construction conditions are requirements, not proof that the
+private issuance route ran, and cannot authorize later use. Ordinary mutable
+inode backing, executable-pickle loading, child identity/hash handshake,
+post-exec close-on-exec transition and shared open-file-description offset
+ownership remain explicit requirements or blockers. Every capability and
+effect is false.
+Worker-request and launch-plan V2 are permanently non-executable; a
+deterministic fake-worker proof must use new executable request and launch
+schemas rather than changing V2.
+
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
 transcriber. They need independent lineage, model/checkpoint licensing,

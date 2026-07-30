@@ -42,6 +42,10 @@ from ._separation_checkpoint_lease_records import (
     validate_receipt_document as _records_validate_receipt_document,
     validate_terminal_anchor as _records_validate_terminal_anchor,
 )
+from ._separation_checkpoint_launch_v2_records import (
+    _SeparationLaunchPlanV2Record,
+    _build_blocked_separation_launch_plan_v2_record,
+)
 from ._separation_checkpoint_fd5_reservation import (
     _CheckpointDescriptorFD5Reservation,
     _FD5ReservationBinding,
@@ -431,6 +435,47 @@ def _release_separation_checkpoint_descriptor_fd5(
             binding,
         )
         state.fd5_reservation = None
+
+
+def _issue_blocked_separation_launch_plan_v2_record(
+    trusted_lease: SeparationCheckpointDescriptorLease,
+    *,
+    trusted_reservation: _CheckpointDescriptorFD5Reservation,
+    trusted_worker_request_v2: SeparationWorkerRequestV2Record,
+) -> _SeparationLaunchPlanV2Record:
+    """Issue historical blocked launch evidence for one exact reservation."""
+
+    lease, state = _known_state(trusted_lease)
+    with state.lock:
+        _require_active_state_for_reservation(lease, state)
+        try:
+            _require_owner(state)
+            _validate_state_authority(state)
+            _remeasure(state)
+        except _IntegrityFailure as exc:
+            _terminal_failure(lease, state, (exc.reason,))
+        except Exception:
+            _terminal_failure(
+                lease,
+                state,
+                ("lease_authority_binding_invalid",),
+            )
+        binding = state.fd5_reservation
+        if binding is None:
+            raise ValueError(
+                "checkpoint descriptor lease has no FD5 reservation"
+            )
+        _require_fd5_reservation_authority(
+            trusted_reservation,
+            binding,
+        )
+        if trusted_worker_request_v2 is not binding.worker_request_v2:
+            raise ValueError(
+                "launch V2 request must be the exact reserved record"
+            )
+        return _build_blocked_separation_launch_plan_v2_record(
+            worker_request_v2=trusted_worker_request_v2,
+        )
 
 
 def _require_active_state_for_reservation(

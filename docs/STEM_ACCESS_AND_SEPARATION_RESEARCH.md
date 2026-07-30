@@ -345,6 +345,28 @@ state transitions or finalizer. Public V1 and reservation types, signatures,
 split creates no usable separator, execution authority or user-facing
 capability.
 
+The 29 July 2026 sixteenth S3 increment adds the internal
+`sunofriend.separation-launch-plan.v2` as permanently blocked design evidence.
+The lease facade issues it only under the existing lock after checking the
+exact live reservation, its exact V2 request, owner and a full checkpoint
+remeasurement. The immutable path-free record seals all 16 V2 bindings while
+marking execution admission, runtime artifact and runtime-parent measurements
+as unproven by the lease. It retains every inherited blocker and adds the
+missing atomic FD 5 installation, child identity/hash handshake and runtime
+authority blockers.
+
+Logical FD 3, 4 and 5 rows and a future child-creation sequence are now
+specified, but no descriptor is exposed or installed and parent FD 5 is not
+changed. The serialized construction conditions are requirements, not proof
+that the private facade checked them. The record cannot establish live
+reservation authority, immutable checkpoint backing or safe offset ownership:
+a child duplicate would share the retained descriptor's open-file description.
+The future sequence also requires FD 5 to become non-inheritable immediately
+after the one intended exec. Every capability and effect is false. There is
+still no argv, source/output transport, worker protocol, process, loader,
+model operation or user-facing separation. A fake-worker transport must
+introduce new executable request and launch schemas rather than enabling V2.
+
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
 unverified candidates until one exact runtime/checkpoint pair has known terms,
@@ -1285,12 +1307,12 @@ implemented**
   without exposing or installing FD 5.
 - [x] Separate descriptor-only I/O and pure lease-evidence derivation from the
   live lease facade without changing authority, records or behaviour.
-- [ ] Add blocked launch-plan v2 and atomic read-only FD 5 installation design
+- [x] Add blocked launch-plan v2 and atomic read-only FD 5 installation design
   without enabling a process or model.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with a
-  deterministic fake worker, exact pre-exec remeasurement, validated worker
-  result and parent-verified quarantined outputs before any real model is
-  allowed to start.
+  deterministic fake worker, new executable request/launch schemas, exact
+  pre-exec remeasurement, validated worker result and parent-verified
+  quarantined outputs before any real model is allowed to start.
 - [ ] Generalise the existing AI runtime/checkpoint registry and isolate heavy
   runtimes in a separate worker environment.
 - [ ] Require explicit checkpoint installation, hashes and licences in the
