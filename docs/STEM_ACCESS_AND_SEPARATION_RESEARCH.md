@@ -594,23 +594,32 @@ revalidated both when created and before the whole-run success receipt binds
 it. A plain, rehashed-but-substituted or cross-bound record is rejected.
 
 A separate pure post-lease failure record now fixes the vocabulary and
-invariants for the next integration slice. It requires an exact self-hashed
-native success observation, V3/Result V2 binding, a healthy closed-lease
-receipt cross-bound to the worker request and checkpoint evidence, one
-parent-side stage, consistent progress hashes, ordered cleanup and all
-publication/selection permissions false. It is not yet issued by the executor,
-so real collision, verifier, receipt-seal and root-close exceptions remain
-receipt-less until ownership-preserving integration is complete.
+invariants for ordinary code-owned parent failures. It requires an exact
+self-hashed native success observation, V3/Result V2 binding, a healthy
+closed-lease receipt cross-bound to the worker request and checkpoint
+evidence, one parent-side stage, consistent progress hashes, every ordered
+cleanup event and all publication/selection permissions false.
+
+The private executor now issues this inert record for ordinary result/root
+revalidation, quarantine/output creation, verification,
+materialization-observation sealing, descriptor cleanup, root close and
+whole-run receipt-seal failures. It preserves the first primary, closes each
+write before read reopen, uses LIFO read cleanup, closes the directory before
+the root and snapshots evidence before root cleanup. A known descriptor
+identity is checked before close, including an adversarial replacement-FD
+case. If identity cannot be proven, or evidence snapshot/failure sealing
+breaks, the outcome remains receipt-less and retains safe recovery state.
 
 Private lease orchestration preserves its first primary error and all observed
 cleanup errors instead of silently discarding secondary failures. Exact-reap
-native failures and exact setup or `posix_spawn` no-start outcomes can now be
-converted with terminal lease evidence into separate path-free whole-run
-receipts. The no-start receipt asserts no child, wait, signal or worker result.
-Unproven start state, unproven reap and post-lease materialization failures
-remain uncovered. Timeout, malformed-result, checkpoint-mutation,
-materialization-collision, cleanup and replay cases therefore remain required
-before the non-bypassable-transport checklist item can be closed.
+native failures, exact setup or `posix_spawn` no-start outcomes and ordinary
+code-owned post-lease failures can now be converted with terminal lease
+evidence into separate path-free whole-run receipts. The no-start receipt
+asserts no child, wait, signal or worker result. Unproven start/reap and
+pre-owner, snapshot or seal catastrophes remain uncovered. Runtime/worker
+path-to-exec TOCTOU, checkpoint mutation after core transfer and the remaining
+adversarial ownership/replay cases therefore keep the
+non-bypassable-transport checklist item open.
 
 The first failure-evidence increment now labels lease cleanup failures in
 observed order and retains a validated terminal lease receipt when available.

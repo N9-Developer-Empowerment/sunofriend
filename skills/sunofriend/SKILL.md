@@ -103,14 +103,21 @@ report the result, then move on.
   `posix_spawn` no-start outcomes now receive disjoint path-free whole-run
   receipts binding terminal native and lease evidence, the primary stage and
   every ordered cleanup stage. The no-start form claims no child, wait, signal
-  or worker result. Unproven start state, unproven reap and post-lease
-  materialization failures remain uncovered, so the non-bypassable fake
-  transport gate is not complete. A separate pure post-lease failure schema
-  now requires exact successful native evidence, V3/Result V2 binding, a
-  healthy closed lease cross-bound to the worker request and checkpoint
-  evidence, stage-consistent materialization progress and ordered cleanup while
-  keeping every publication permission false; executor issuance and
-  ownership-preserving cleanup are still pending. Private failure
+  or worker result. Ordinary code-owned post-lease result/root revalidation,
+  quarantine/output creation, verification, observation sealing, descriptor
+  cleanup, root-close and terminal-receipt failures now receive a third
+  disjoint inert receipt. It requires exact successful native evidence,
+  V3/Result V2 binding, a healthy closed lease cross-bound to the worker
+  request and checkpoint evidence, stage-consistent progress and every ordered
+  cleanup event while keeping every publication permission false. The executor
+  preserves the first primary, closes writes before read reopen, closes reads
+  LIFO, then the quarantine directory and private root, snapshots exact
+  evidence before root cleanup and closes the root before building success
+  evidence. Known descriptor identities are rechecked before close so
+  FD-number reuse cannot close an unrelated object. Pre-owner failures without
+  exact identity, evidence-snapshot failures and failure-seal catastrophes
+  remain receipt-less with safe owners/errors retained, so the non-bypassable
+  fake transport gate is not complete. Private failure
   machinery keeps lease
   cleanup stages in observed order, carries a validated lease terminal receipt
   when available, authenticates receipt composition with a lease-issued

@@ -630,28 +630,43 @@ and self-hashed: it cross-binds every result slot to the verified quarantine
 file identity and is revalidated both when created and before the terminal
 receipt binds it.
 
-A separate pure post-lease failure schema now defines the next boundary
-without weakening native exact-reap or no-start records. It accepts only an
-exact, self-hashed native success observation bound to the V3 plan and Result
-V2, the exact healthy closed-lease receipt cross-bound to the worker request
-and checkpoint evidence, one code-owned parent-side stage, consistent
-materialization milestones and ordered cleanup stages. Its receipt is path-free
-and grants no authority. Executor integration is still pending, so actual
-post-lease exceptions remain receipt-less for now.
+A separate pure post-lease failure schema now defines and seals the ordinary
+code-owned parent boundary without weakening native exact-reap or no-start
+records. It accepts only an exact, self-hashed native success observation bound
+to the V3 plan and Result V2, the exact healthy closed-lease receipt cross-bound
+to the worker request and checkpoint evidence, one code-owned parent-side
+stage, consistent materialization milestones and every ordered cleanup stage.
+The executor issues this inert, path-free receipt for result/root
+revalidation, quarantine creation, output creation, descriptor verification,
+materialization-observation sealing, descriptor cleanup, root close and
+whole-run receipt-seal failures. It preserves the first primary, closes
+write descriptors before read reopen, closes read descriptors in LIFO order
+and closes the quarantine directory before the private root. The exact
+evidence core is snapshotted before root cleanup, and the root is closed before
+success receipt construction. No failure receipt permits publication or
+selection.
+
+Failures before an exact descriptor backstop can be armed, evidence-snapshot
+failure and failure-receipt sealing failure remain explicitly receipt-less.
+They preserve the exact owners and errors that are still safe to retain. When
+descriptor identity is unavailable, the executor does not perform an unsafe
+raw close; when identity is known, cleanup is identity-checked so an unrelated
+descriptor reused at the same number is never closed.
 
 The successful-path live proof runs with bounded output in an isolated outer
 process group; timeout cleanup discovers and signals child groups before
 killing and reaping the helper.
 
-The non-bypassable gate is not complete. Exact-reap native failures and
-code-owned native setup or `posix_spawn` no-start outcomes now have disjoint
-path-free whole-run receipts. Each binds its native observation, the terminal
-checkpoint lease, the original primary stage and every observed cleanup stage
-in order. The no-start receipt makes no child, wait, signal or worker-result
-claim. Unproven start state, unproven reap and post-lease materialization
-failures remain receipt-less. The remaining timeout, malformed-result,
-checkpoint-mutation, materialization-collision, cleanup and replay matrix is
-still required.
+The non-bypassable gate is not complete. Exact-reap native failures,
+code-owned native setup or `posix_spawn` no-start outcomes and ordinary
+code-owned post-lease failures now have disjoint path-free whole-run receipts.
+Each binds its native observation, the terminal checkpoint lease, the original
+primary stage and every observed cleanup stage in order. The no-start receipt
+makes no child, wait, signal or worker-result claim. Unproven start/reap and
+pre-owner, evidence-snapshot or receipt-seal catastrophes remain receipt-less.
+Checkpoint mutation after core transfer, runtime/worker path-to-exec TOCTOU,
+the remaining catastrophic ownership boundaries and the wider replay matrix
+are still required before the gate can close.
 
 As failure-receipt groundwork, the private lease bridge now records cleanup
 stages in observed order and carries a validated terminal lease receipt when

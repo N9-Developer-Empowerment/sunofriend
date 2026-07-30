@@ -60,6 +60,12 @@ from ._separation_fake_launch_v2_records import (
     _SeparationFakeLaunchPlanV2Record,
     _validate_blocked_separation_fake_launch_plan_v2_record_shape,
 )
+from ._separation_fake_post_lease_failure_records import (
+    _SeparationFakeExecutionPostLeaseFailedReceipt,
+    _build_post_lease_failed_terminal_receipt,
+    _validate_closed_lease_terminal_receipt,
+    _validate_success_native_execution_observation,
+)
 from ._separation_fake_transport_records import (
     _FAKE_REQUEST_MAXIMUM_FRAME_BYTES,
     _SeparationFakeLaunchPlanRecord,
@@ -208,6 +214,52 @@ class _OwnedDescriptorCleanupBackstop:
     )
 
 
+class _OwnedDescriptorSetupFailure(RuntimeError):
+    """Keep one exact descriptor owner when setup and cleanup both fail."""
+
+    def __init__(
+        self,
+        *,
+        primary_error: BaseException,
+        cleanup_error: BaseException,
+        owner: _OwnedDescriptorCleanupBackstop,
+    ) -> None:
+        super().__init__("owned fake descriptor setup failed")
+        self.primary_error = primary_error
+        self.cleanup_error = cleanup_error
+        self.owner = owner
+
+
+class _OwnedDescriptorPreOwnerFailure(RuntimeError):
+    """Receipt-less catastrophe before identity-checked ownership was armed."""
+
+    def __init__(
+        self,
+        *,
+        primary_error: BaseException,
+        cleanup_error: BaseException,
+        descriptor: int,
+        identity: tuple[int, int] | None,
+        cleanup_stage: str,
+    ) -> None:
+        super().__init__(
+            "fake descriptor setup failed before ownership was armed"
+        )
+        self.primary_error = primary_error
+        self.cleanup_error = cleanup_error
+        self.descriptor = descriptor
+        self.identity = identity
+        self.primary_stage: str | None = None
+        self.materialization_started = False
+        self.cleanup_stages = (cleanup_stage,)
+        self.cleanup_errors = (cleanup_error,)
+        self.descriptor_owners: tuple[
+            _OwnedDescriptorCleanupBackstop, ...
+        ] = ()
+        self.private_root_owner: _FakeExecutionCore | None = None
+        self.receipt = None
+
+
 class _FakeExecutionAdmittedFailure(RuntimeError):
     """Preserve admitted execution primary and ordered cleanup failures."""
 
@@ -235,6 +287,39 @@ class _FakeExecutionAdmittedFailure(RuntimeError):
     def _record_cleanup(self, stage: str, error: BaseException) -> None:
         self.cleanup_stages = (*self.cleanup_stages, stage)
         self.cleanup_errors = (*self.cleanup_errors, error)
+
+
+class _FakeExecutionPostLeaseMaterializationFailure(RuntimeError):
+    """Preserve one parent materialization primary and exact cleanup order."""
+
+    def __init__(
+        self,
+        *,
+        primary_stage: str,
+        primary_error: BaseException,
+        materialization_started: bool,
+        quarantine: (
+            _SeparationFakeExecutionQuarantineV2Observation | None
+        ),
+        materialization: (
+            _SeparationFakeExecutionMaterializationObservation | None
+        ),
+        cleanup_failures: tuple[tuple[str, BaseException], ...],
+        descriptor_owners: tuple[_OwnedDescriptorCleanupBackstop, ...],
+    ) -> None:
+        super().__init__("fake execution materialization failed")
+        self.primary_stage = primary_stage
+        self.primary_error = primary_error
+        self.materialization_started = materialization_started
+        self.quarantine = quarantine
+        self.materialization = materialization
+        self.cleanup_stages = tuple(
+            stage for stage, _error in cleanup_failures
+        )
+        self.cleanup_errors = tuple(
+            error for _stage, error in cleanup_failures
+        )
+        self.descriptor_owners = descriptor_owners
 
 
 @dataclass(frozen=True, init=False)
@@ -278,6 +363,7 @@ class _SeparationFakeExecutionFailed(RuntimeError):
         receipt: (
             _SeparationFakeExecutionFailedTerminalReceipt
             | _SeparationFakeExecutionNoStartReceipt
+            | _SeparationFakeExecutionPostLeaseFailedReceipt
         ),
         primary_error: BaseException,
         cleanup_stages: tuple[str, ...],
@@ -298,6 +384,35 @@ class _SeparationFakeExecutionFailed(RuntimeError):
         self.descriptor_owners = descriptor_owners
         self.native_failure_observation = native_failure_observation
         self.lease_terminal_receipt = lease_terminal_receipt
+
+
+class _SeparationFakeExecutionPostLeaseUnsealedFailure(RuntimeError):
+    """Preserve exact owners when terminal failure evidence cannot be sealed."""
+
+    def __init__(
+        self,
+        *,
+        primary_stage: str,
+        primary_error: BaseException,
+        sealing_error: BaseException,
+        cleanup_stages: tuple[str, ...],
+        cleanup_errors: tuple[BaseException, ...],
+        private_root_owner: _FakeExecutionCore | None,
+        descriptor_owners: tuple[_OwnedDescriptorCleanupBackstop, ...],
+        native_execution_observation: Any,
+        lease_terminal_receipt: Any,
+    ) -> None:
+        super().__init__("post-lease failure evidence could not be sealed")
+        self.primary_stage = primary_stage
+        self.primary_error = primary_error
+        self.sealing_error = sealing_error
+        self.cleanup_stages = cleanup_stages
+        self.cleanup_errors = cleanup_errors
+        self.private_root_owner = private_root_owner
+        self.descriptor_owners = descriptor_owners
+        self.native_execution_observation = native_execution_observation
+        self.lease_terminal_receipt = lease_terminal_receipt
+        self.receipt = None
 
 
 _ADMISSIONS: weakref.WeakKeyDictionary[
@@ -361,14 +476,309 @@ def _execute_reserved_fake_worker(
             materialization, quarantine = (
                 _materialize_validated_fake_result_v2(core)
             )
-            return _terminal_receipt(
+        except _OwnedDescriptorPreOwnerFailure as failure:
+            failure.private_root_owner = core
+            raise
+        except _FakeExecutionPostLeaseMaterializationFailure as failure:
+            failed = _finalize_post_lease_failure(
                 core=core,
+                lease_receipt=lease_receipt,
+                primary_stage=failure.primary_stage,
+                primary_error=failure.primary_error,
+                materialization_started=failure.materialization_started,
+                quarantine=failure.quarantine,
+                materialization=failure.materialization,
+                cleanup_stages=failure.cleanup_stages,
+                cleanup_errors=failure.cleanup_errors,
+                descriptor_owners=failure.descriptor_owners,
+            )
+            raise failed from failed.primary_error
+        try:
+            evidence_core = _snapshot_fake_execution_core(core)
+        except BaseException as snapshot_error:
+            unsealed = _SeparationFakeExecutionPostLeaseUnsealedFailure(
+                primary_stage="whole_run_receipt_seal",
+                primary_error=snapshot_error,
+                sealing_error=snapshot_error,
+                cleanup_stages=(),
+                cleanup_errors=(),
+                private_root_owner=core,
+                descriptor_owners=(),
+                native_execution_observation=core.native_execution,
+                lease_terminal_receipt=lease_receipt,
+            )
+            raise unsealed from snapshot_error
+        _close_completed_post_lease_execution(
+            core=core,
+            evidence_core=evidence_core,
+            lease_receipt=lease_receipt,
+            materialization=materialization,
+            quarantine=quarantine,
+        )
+        try:
+            return _terminal_receipt(
+                core=evidence_core,
                 lease_receipt=lease_receipt,
                 materialization=materialization,
                 quarantine=quarantine,
             )
-        finally:
-            _close_core_private_root_strict(core)
+        except BaseException as error:
+            try:
+                receipt = _build_post_lease_failure_receipt(
+                    core=evidence_core,
+                    lease_receipt=lease_receipt,
+                    primary_stage="whole_run_receipt_seal",
+                    materialization_started=True,
+                    quarantine=quarantine,
+                    materialization=materialization,
+                    cleanup_stages=(),
+                )
+            except BaseException as sealing_error:
+                unsealed = (
+                    _SeparationFakeExecutionPostLeaseUnsealedFailure(
+                        primary_stage="whole_run_receipt_seal",
+                        primary_error=error,
+                        sealing_error=sealing_error,
+                        cleanup_stages=(),
+                        cleanup_errors=(),
+                        private_root_owner=None,
+                        descriptor_owners=(),
+                        native_execution_observation=(
+                            evidence_core.native_execution
+                        ),
+                        lease_terminal_receipt=lease_receipt,
+                    )
+                )
+                raise unsealed from error
+            failed = _SeparationFakeExecutionFailed(
+                receipt=receipt,
+                primary_error=error,
+                cleanup_stages=(),
+                cleanup_errors=(),
+                private_root_owner=None,
+                descriptor_owners=(),
+                native_failure_observation=evidence_core.native_execution,
+                lease_terminal_receipt=lease_receipt,
+            )
+            raise failed from error
+
+
+def _build_post_lease_failure_receipt(
+    *,
+    core: _FakeExecutionCore,
+    lease_receipt: Any,
+    primary_stage: str,
+    materialization_started: bool,
+    quarantine: _SeparationFakeExecutionQuarantineV2Observation | None,
+    materialization: (
+        _SeparationFakeExecutionMaterializationObservation | None
+    ),
+    cleanup_stages: tuple[str, ...],
+) -> _SeparationFakeExecutionPostLeaseFailedReceipt:
+    checked_quarantine = (
+        None
+        if quarantine is None
+        else _validate_fake_execution_quarantine_v2_observation(
+            quarantine,
+            fake_launch_plan_v3=core.fake_launch_plan_v3,
+            fake_worker_result_v2=core.fake_worker_result_v2,
+        )
+    )
+    if materialization is not None and checked_quarantine is None:
+        raise ValueError(
+            "materialization evidence requires quarantine verification"
+        )
+    checked_materialization = (
+        None
+        if materialization is None
+        else _validate_fake_execution_materialization_observation(
+            materialization,
+            fake_launch_plan_v3=core.fake_launch_plan_v3,
+            fake_worker_result_v2=core.fake_worker_result_v2,
+            quarantine=checked_quarantine,
+        )
+    )
+    return _build_post_lease_failed_terminal_receipt(
+        fake_worker_request=core.fake_worker_request,
+        fake_launch_plan_v1=core.fake_launch_plan_v1,
+        blocked_fake_launch_plan_v2=core.blocked_fake_launch_plan_v2,
+        fake_launch_plan_v3=core.fake_launch_plan_v3,
+        fake_worker_result_v2=core.fake_worker_result_v2,
+        native_execution_observation=core.native_execution,
+        lease_terminal_receipt=lease_receipt,
+        primary_stage=primary_stage,
+        materialization_started=materialization_started,
+        quarantine_verification_sha256=(
+            None
+            if checked_quarantine is None
+            else checked_quarantine["verification_sha256"]
+        ),
+        materialization_observation_sha256=(
+            None
+            if checked_materialization is None
+            else checked_materialization["observation_sha256"]
+        ),
+        cleanup_stages=cleanup_stages,
+    )
+
+
+def _finalize_post_lease_failure(
+    *,
+    core: _FakeExecutionCore,
+    lease_receipt: Any,
+    primary_stage: str,
+    primary_error: BaseException,
+    materialization_started: bool,
+    quarantine: _SeparationFakeExecutionQuarantineV2Observation | None,
+    materialization: (
+        _SeparationFakeExecutionMaterializationObservation | None
+    ),
+    cleanup_stages: tuple[str, ...],
+    cleanup_errors: tuple[BaseException, ...],
+    descriptor_owners: tuple[_OwnedDescriptorCleanupBackstop, ...],
+) -> _SeparationFakeExecutionFailed:
+    """Finish root cleanup, then seal the exact final failure snapshot."""
+
+    if (
+        len(cleanup_stages) != len(cleanup_errors)
+        or "private_root_descriptor_close" in cleanup_stages
+    ):
+        raise RuntimeError("post-lease cleanup evidence is inconsistent")
+    try:
+        evidence_core = _snapshot_fake_execution_core(core)
+    except BaseException as snapshot_error:
+        unsealed = _SeparationFakeExecutionPostLeaseUnsealedFailure(
+            primary_stage=primary_stage,
+            primary_error=primary_error,
+            sealing_error=snapshot_error,
+            cleanup_stages=cleanup_stages,
+            cleanup_errors=cleanup_errors,
+            private_root_owner=core,
+            descriptor_owners=descriptor_owners,
+            native_execution_observation=core.native_execution,
+            lease_terminal_receipt=lease_receipt,
+        )
+        raise unsealed from primary_error
+    try:
+        _close_core_private_root_strict(core)
+    except BaseException as cleanup_error:
+        cleanup_stages = (
+            *cleanup_stages,
+            "private_root_descriptor_close",
+        )
+        cleanup_errors = (*cleanup_errors, cleanup_error)
+        private_root_owner: _FakeExecutionCore | None = (
+            core if core.private_root_finalizer.alive else None
+        )
+    else:
+        private_root_owner = None
+    try:
+        receipt = _build_post_lease_failure_receipt(
+            core=evidence_core,
+            lease_receipt=lease_receipt,
+            primary_stage=primary_stage,
+            materialization_started=materialization_started,
+            quarantine=quarantine,
+            materialization=materialization,
+            cleanup_stages=cleanup_stages,
+        )
+    except BaseException as sealing_error:
+        unsealed = _SeparationFakeExecutionPostLeaseUnsealedFailure(
+            primary_stage=primary_stage,
+            primary_error=primary_error,
+            sealing_error=sealing_error,
+            cleanup_stages=cleanup_stages,
+            cleanup_errors=cleanup_errors,
+            private_root_owner=private_root_owner,
+            descriptor_owners=descriptor_owners,
+            native_execution_observation=evidence_core.native_execution,
+            lease_terminal_receipt=lease_receipt,
+        )
+        raise unsealed from primary_error
+    return _SeparationFakeExecutionFailed(
+        receipt=receipt,
+        primary_error=primary_error,
+        cleanup_stages=cleanup_stages,
+        cleanup_errors=cleanup_errors,
+        private_root_owner=private_root_owner,
+        descriptor_owners=descriptor_owners,
+        native_failure_observation=evidence_core.native_execution,
+        lease_terminal_receipt=lease_receipt,
+    )
+
+
+def _close_completed_post_lease_execution(
+    *,
+    core: _FakeExecutionCore,
+    evidence_core: _FakeExecutionCore,
+    lease_receipt: Any,
+    materialization: _SeparationFakeExecutionMaterializationObservation,
+    quarantine: _SeparationFakeExecutionQuarantineV2Observation,
+) -> None:
+    """Close the final root before terminal success can be sealed."""
+
+    try:
+        _close_core_private_root_strict(core)
+    except BaseException as error:
+        try:
+            root_failure_receipt = _build_post_lease_failure_receipt(
+                core=evidence_core,
+                lease_receipt=lease_receipt,
+                primary_stage="private_root_descriptor_close",
+                materialization_started=True,
+                quarantine=quarantine,
+                materialization=materialization,
+                cleanup_stages=(),
+            )
+        except BaseException as sealing_error:
+            unsealed = _SeparationFakeExecutionPostLeaseUnsealedFailure(
+                primary_stage="private_root_descriptor_close",
+                primary_error=error,
+                sealing_error=sealing_error,
+                cleanup_stages=(),
+                cleanup_errors=(),
+                private_root_owner=(
+                    core if core.private_root_finalizer.alive else None
+                ),
+                descriptor_owners=(),
+                native_execution_observation=evidence_core.native_execution,
+                lease_terminal_receipt=lease_receipt,
+            )
+            raise unsealed from error
+        failed = _SeparationFakeExecutionFailed(
+            receipt=root_failure_receipt,
+            primary_error=error,
+            cleanup_stages=(),
+            cleanup_errors=(),
+            private_root_owner=(
+                core if core.private_root_finalizer.alive else None
+            ),
+            descriptor_owners=(),
+            native_failure_observation=evidence_core.native_execution,
+            lease_terminal_receipt=lease_receipt,
+        )
+        raise failed from error
+
+
+def _snapshot_fake_execution_core(
+    core: _FakeExecutionCore,
+) -> _FakeExecutionCore:
+    if (
+        type(core) is not _FakeExecutionCore
+        or not hasattr(core, "private_root_finalizer")
+        or not core.private_root_finalizer.alive
+    ):
+        raise RuntimeError("fake execution evidence core is unavailable")
+    return _FakeExecutionCore(
+        fake_worker_request=core.fake_worker_request,
+        fake_launch_plan_v1=core.fake_launch_plan_v1,
+        blocked_fake_launch_plan_v2=core.blocked_fake_launch_plan_v2,
+        fake_launch_plan_v3=core.fake_launch_plan_v3,
+        fake_worker_result_v2=core.fake_worker_result_v2,
+        native_execution=core.native_execution,
+        private_root_descriptor=core.private_root_descriptor,
+        private_root_identity=core.private_root_identity,
+    )
 
 
 def _whole_run_native_failure(
@@ -1130,26 +1540,24 @@ def _materialize_validated_fake_result_v2(
     _SeparationFakeExecutionMaterializationObservation,
     _SeparationFakeExecutionQuarantineV2Observation,
 ]:
-    result = _validate_separation_fake_worker_result_v2_record_shape(
-        core.fake_worker_result_v2,
-        fake_launch_plan_v3=core.fake_launch_plan_v3,
-    )
-    root_descriptor = core.private_root_descriptor
-    if (
-        _descriptor_object_identity(root_descriptor)
-        != core.private_root_identity
-    ):
-        raise ValueError("fake execution private root identity changed")
-    root_facts = os.fstat(root_descriptor)
-    if (
-        not stat.S_ISDIR(root_facts.st_mode)
-        or root_facts.st_uid != os.geteuid()
-        or stat.S_IMODE(root_facts.st_mode) & 0o077
-    ):
-        raise ValueError("fake execution private root ownership changed")
-    quarantine_descriptor: int | None = None
-    readable: dict[str, int] = {}
+    primary_stage = "result_revalidation"
+    primary_error: BaseException | None = None
+    materialization_started = False
+    quarantine: _SeparationFakeExecutionQuarantineV2Observation | None = None
+    observation: (
+        _SeparationFakeExecutionMaterializationObservation | None
+    ) = None
+    cleanup_failures: list[tuple[str, BaseException]] = []
+    descriptor_owners: list[_OwnedDescriptorCleanupBackstop] = []
+    quarantine_owner: _OwnedDescriptorCleanupBackstop | None = None
+    readable_owners: dict[str, _OwnedDescriptorCleanupBackstop] = {}
+    pre_owner_failure: _OwnedDescriptorPreOwnerFailure | None = None
     try:
+        result = _revalidate_result_for_materialization(core)
+        primary_stage = "private_root_revalidation"
+        root_descriptor = _revalidate_private_root_for_materialization(core)
+        primary_stage = "quarantine_directory_materialization"
+        materialization_started = True
         os.mkdir("quarantine", 0o700, dir_fd=root_descriptor)
         os.chmod(
             "quarantine",
@@ -1157,23 +1565,48 @@ def _materialize_validated_fake_result_v2(
             dir_fd=root_descriptor,
             follow_symlinks=False,
         )
-        quarantine_descriptor = _open_directory_at(
+        quarantine_owner = _open_owned_directory_at(
             root_descriptor,
             "quarantine",
+            stage="quarantine_directory_descriptor_close",
         )
+        quarantine_descriptor = quarantine_owner.descriptor
         created: list[dict[str, Any]] = []
         for output in result["outputs"]:
+            primary_stage = "quarantine_output_materialization"
             slot_id = output["slot_id"]
             name = f"{slot_id}.wav"
             payload = bytes.fromhex(output["payload_hex"])
-            descriptor = _create_file_at(quarantine_descriptor, name)
+            write_owner = _create_owned_file_at(
+                quarantine_descriptor,
+                name,
+                stage="quarantine_output_write_descriptor_close",
+            )
+            descriptor = write_owner.descriptor
+            write_error: BaseException | None = None
             try:
                 _write_all(descriptor, payload)
                 os.fsync(descriptor)
-            finally:
-                os.close(descriptor)
-            readable[slot_id] = _open_read_at(quarantine_descriptor, name)
-            facts = os.fstat(readable[slot_id])
+            except BaseException as error:
+                write_error = error
+            try:
+                _close_owned_descriptor_strict(write_owner)
+            except BaseException as close_error:
+                if write_owner.finalizer.alive:
+                    descriptor_owners.append(write_owner)
+                cleanup_failures.append((write_owner.stage, close_error))
+                if write_error is None:
+                    write_error = close_error
+            if write_error is not None:
+                raise write_error
+            readable_owner = _open_owned_read_at(
+                quarantine_descriptor,
+                name,
+                stage="quarantine_output_read_descriptor_close",
+            )
+            readable_descriptor = readable_owner.descriptor
+            readable_owners[slot_id] = readable_owner
+            facts = os.fstat(readable_descriptor)
             created.append(
                 {
                     "slot_id": slot_id,
@@ -1182,15 +1615,25 @@ def _materialize_validated_fake_result_v2(
                     "file_identity_sha256": _stat_identity_sha256(facts),
                 }
             )
-        quarantine = _verify_fake_execution_quarantine_v2(
+        primary_stage = "quarantine_verification"
+        quarantine_candidate = _verify_fake_execution_quarantine_v2(
             fake_worker_request=core.fake_worker_request,
             fake_launch_plan_v1=core.fake_launch_plan_v1,
             blocked_fake_launch_plan_v2=core.blocked_fake_launch_plan_v2,
             fake_launch_plan_v3=core.fake_launch_plan_v3,
             fake_worker_result_v2=result,
             quarantine_directory_descriptor=quarantine_descriptor,
-            readable_descriptors=readable,
+            readable_descriptors={
+                slot_id: owner.descriptor
+                for slot_id, owner in readable_owners.items()
+            },
         )
+        quarantine = _validate_fake_execution_quarantine_v2_observation(
+            quarantine_candidate,
+            fake_launch_plan_v3=core.fake_launch_plan_v3,
+            fake_worker_result_v2=result,
+        )
+        primary_stage = "materialization_observation_seal"
         payload = {
             "schema": _MATERIALIZATION_SCHEMA,
             "status": "exclusive_parent_creation_verified",
@@ -1210,7 +1653,7 @@ def _materialize_validated_fake_result_v2(
             "selection_permitted": False,
             "outputs": created,
         }
-        observation = _materialization_observation(
+        observation_candidate = _materialization_observation(
             _freeze(
                 {
                     **payload,
@@ -1218,26 +1661,99 @@ def _materialize_validated_fake_result_v2(
                 }
             )
         )
-        return (
+        observation = (
             _validate_fake_execution_materialization_observation(
-                observation,
+                observation_candidate,
                 fake_launch_plan_v3=core.fake_launch_plan_v3,
                 fake_worker_result_v2=result,
                 quarantine=quarantine,
-            ),
-            quarantine,
-        )
-    finally:
-        _close_descriptors_strict(
-            (
-                *readable.values(),
-                *(
-                    ()
-                    if quarantine_descriptor is None
-                    else (quarantine_descriptor,)
-                ),
             )
         )
+    except BaseException as error:
+        if type(error) is _OwnedDescriptorPreOwnerFailure:
+            pre_owner_failure = error
+            primary_error = error.primary_error
+        elif type(error) is _OwnedDescriptorSetupFailure:
+            primary_error = error.primary_error
+            cleanup_failures.append(
+                (error.owner.stage, error.cleanup_error)
+            )
+            if error.owner.finalizer.alive:
+                descriptor_owners.append(error.owner)
+        else:
+            primary_error = error
+    close_failures: list[tuple[str, BaseException]] = []
+    for owner in (
+        *reversed(tuple(readable_owners.values())),
+        *((quarantine_owner,) if quarantine_owner is not None else ()),
+    ):
+        try:
+            _close_owned_descriptor_strict(owner)
+        except BaseException as close_error:
+            close_failures.append((owner.stage, close_error))
+            if owner.finalizer.alive:
+                descriptor_owners.append(owner)
+    if pre_owner_failure is not None:
+        pre_owner_failure.primary_stage = primary_stage
+        pre_owner_failure.materialization_started = materialization_started
+        pre_owner_failure.cleanup_stages = (
+            *pre_owner_failure.cleanup_stages,
+            *(stage for stage, _error in cleanup_failures),
+            *(stage for stage, _error in close_failures),
+        )
+        pre_owner_failure.cleanup_errors = (
+            *pre_owner_failure.cleanup_errors,
+            *(error for _stage, error in cleanup_failures),
+            *(error for _stage, error in close_failures),
+        )
+        pre_owner_failure.descriptor_owners = tuple(descriptor_owners)
+        raise pre_owner_failure from pre_owner_failure.primary_error
+    if primary_error is None and close_failures:
+        _primary_close_stage, primary_error = close_failures[0]
+        primary_stage = "materialization_descriptor_cleanup"
+    cleanup_failures.extend(close_failures)
+    if primary_error is not None:
+        failure = _FakeExecutionPostLeaseMaterializationFailure(
+            primary_stage=primary_stage,
+            primary_error=primary_error,
+            materialization_started=materialization_started,
+            quarantine=quarantine,
+            materialization=observation,
+            cleanup_failures=tuple(cleanup_failures),
+            descriptor_owners=tuple(descriptor_owners),
+        )
+        raise failure from primary_error
+    if observation is None or quarantine is None:
+        raise RuntimeError("fake execution materialization produced no result")
+    return observation, quarantine
+
+
+def _revalidate_result_for_materialization(
+    core: _FakeExecutionCore,
+) -> _SeparationFakeWorkerResultV2Record:
+    return _validate_separation_fake_worker_result_v2_record_shape(
+        core.fake_worker_result_v2,
+        fake_launch_plan_v3=core.fake_launch_plan_v3,
+    )
+
+
+def _revalidate_private_root_for_materialization(
+    core: _FakeExecutionCore,
+) -> int:
+    root_descriptor = core.private_root_descriptor
+    if (
+        _descriptor_object_identity(root_descriptor)
+        != core.private_root_identity
+    ):
+        raise ValueError("fake execution private root identity changed")
+    root_facts = os.fstat(root_descriptor)
+    if (
+        not stat.S_ISDIR(root_facts.st_mode)
+        or root_facts.st_uid != os.geteuid()
+        or stat.S_IMODE(root_facts.st_mode) & 0o077
+    ):
+        raise ValueError("fake execution private root ownership changed")
+    return root_descriptor
 
 
 def _validate_fake_execution_materialization_observation(
@@ -1377,12 +1893,35 @@ def _terminal_receipt(
             quarantine=checked_quarantine,
         )
     )
+    native = _validate_success_native_execution_observation(
+        core.native_execution
+    )
+    checked_lease = _validate_closed_lease_terminal_receipt(lease_receipt)
+    request_bindings = core.fake_worker_request["bindings"]
+    lease_bindings = checked_lease["bindings"]
     if (
-        lease_receipt["status"] != "closed"
-        or lease_receipt["cleanup"]["status"] != "complete"
-        or core.native_execution["status"] != "verified_after_exact_reap"
-        or core.native_execution["wait"]["kind"] != "exited"
-        or core.native_execution["wait"]["exit_code"] != 0
+        native["fake_launch_plan_v3_sha256"]
+        != core.fake_launch_plan_v3["plan_sha256"]
+        or native["fake_worker_result_v2_sha256"]
+        != result["result_sha256"]
+        or any(
+            request_bindings[request_key] != lease_bindings[lease_key]
+            for request_key, lease_key in (
+                ("worker_request_v1_sha256", "worker_request_sha256"),
+                ("lease_observation_sha256", "lease_observation_sha256"),
+                ("preflight_sha256", "preflight_sha256"),
+                (
+                    "checkpoint_inspection_sha256",
+                    "trusted_checkpoint_inspection_sha256",
+                ),
+                ("checkpoint_sha256", "checkpoint_sha256"),
+                ("checkpoint_bytes", "checkpoint_bytes"),
+                (
+                    "checkpoint_file_identity_sha256",
+                    "checkpoint_file_identity_sha256",
+                ),
+            )
+        )
     ):
         raise RuntimeError("fake execution terminal prerequisites are invalid")
     bindings = {
@@ -1395,10 +1934,8 @@ def _terminal_receipt(
         ),
         "fake_launch_plan_v3_sha256": core.fake_launch_plan_v3["plan_sha256"],
         "fake_worker_result_v2_sha256": result["result_sha256"],
-        "native_execution_observation_sha256": core.native_execution[
-            "observation_sha256"
-        ],
-        "lease_terminal_receipt_sha256": lease_receipt["receipt_sha256"],
+        "native_execution_observation_sha256": native["observation_sha256"],
+        "lease_terminal_receipt_sha256": checked_lease["receipt_sha256"],
         "materialization_observation_sha256": checked_materialization[
             "observation_sha256"
         ],
@@ -1655,6 +2192,131 @@ def _open_read_at(directory_descriptor: int, name: str) -> int:
     return descriptor
 
 
+def _open_owned_directory_at(
+    parent_descriptor: int,
+    name: str,
+    *,
+    stage: str,
+) -> _OwnedDescriptorCleanupBackstop:
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
+    if hasattr(os, "O_DIRECTORY"):
+        flags |= os.O_DIRECTORY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(name, flags, dir_fd=parent_descriptor)
+    return _finish_owned_descriptor_open(
+        descriptor=descriptor,
+        stage=stage,
+        setup=lambda value: os.set_inheritable(value, False),
+    )
+
+
+def _create_owned_file_at(
+    directory_descriptor: int,
+    name: str,
+    *,
+    stage: str,
+) -> _OwnedDescriptorCleanupBackstop:
+    flags = (
+        os.O_WRONLY
+        | os.O_CREAT
+        | os.O_EXCL
+        | getattr(os, "O_CLOEXEC", 0)
+    )
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(
+        name,
+        flags,
+        0o600,
+        dir_fd=directory_descriptor,
+    )
+
+    def setup(value: int) -> None:
+        os.set_inheritable(value, False)
+        os.fchmod(value, 0o600)
+
+    return _finish_owned_descriptor_open(
+        descriptor=descriptor,
+        stage=stage,
+        setup=setup,
+    )
+
+
+def _open_owned_read_at(
+    directory_descriptor: int,
+    name: str,
+    *,
+    stage: str,
+) -> _OwnedDescriptorCleanupBackstop:
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(name, flags, dir_fd=directory_descriptor)
+    return _finish_owned_descriptor_open(
+        descriptor=descriptor,
+        stage=stage,
+        setup=lambda value: os.set_inheritable(value, False),
+    )
+
+
+def _finish_owned_descriptor_open(
+    *,
+    descriptor: int,
+    stage: str,
+    setup: Any,
+) -> _OwnedDescriptorCleanupBackstop:
+    identity: tuple[int, int] | None = None
+    try:
+        identity = _descriptor_object_identity(descriptor)
+        owner = _new_owned_descriptor_cleanup_backstop(
+            descriptor=descriptor,
+            identity=identity,
+            stage=stage,
+        )
+    except BaseException as primary_error:
+        if identity is None:
+            cleanup_error = RuntimeError(
+                "fake descriptor identity is unavailable; raw close is "
+                "unsafe and the descriptor is retained without a terminal "
+                "cleanup claim"
+            )
+            failure = _OwnedDescriptorPreOwnerFailure(
+                primary_error=primary_error,
+                cleanup_error=cleanup_error,
+                descriptor=descriptor,
+                identity=None,
+                cleanup_stage=stage,
+            )
+            raise failure from primary_error
+        try:
+            _close_descriptor_if_same(descriptor, identity)
+        except BaseException as cleanup_error:
+            failure = _OwnedDescriptorPreOwnerFailure(
+                primary_error=primary_error,
+                cleanup_error=cleanup_error,
+                descriptor=descriptor,
+                identity=identity,
+                cleanup_stage=stage,
+            )
+            raise failure from primary_error
+        raise
+    try:
+        setup(descriptor)
+    except BaseException as primary_error:
+        try:
+            _close_owned_descriptor_strict(owner)
+        except BaseException as cleanup_error:
+            failure = _OwnedDescriptorSetupFailure(
+                primary_error=primary_error,
+                cleanup_error=cleanup_error,
+                owner=owner,
+            )
+            raise failure from primary_error
+        raise
+    return owner
+
+
 def _write_all(descriptor: int, payload: bytes) -> None:
     offset = 0
     while offset < len(payload):
@@ -1782,6 +2444,19 @@ def _close_private_root_owner_strict(
         or not owner.finalizer.alive
     ):
         raise RuntimeError("fake execution private root owner is unavailable")
+    _close_descriptor_if_same(owner.descriptor, owner.identity)
+    owner.finalizer.detach()
+
+
+def _close_owned_descriptor_strict(
+    owner: _OwnedDescriptorCleanupBackstop,
+) -> None:
+    if (
+        type(owner) is not _OwnedDescriptorCleanupBackstop
+        or not hasattr(owner, "finalizer")
+        or not owner.finalizer.alive
+    ):
+        raise RuntimeError("fake execution descriptor owner is unavailable")
     _close_descriptor_if_same(owner.descriptor, owner.identity)
     owner.finalizer.detach()
 

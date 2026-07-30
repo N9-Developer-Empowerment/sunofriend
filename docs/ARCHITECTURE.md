@@ -691,25 +691,42 @@ terminal receipt uses it. An isolated outer helper uses bounded reads and
 kills discovered child groups as well as its own process group on timeout.
 
 `_separation_fake_post_lease_failure_records.py` is the separate pure contract
-for a later parent-side failure. It requires exact successful native
-execution, V3 and Result V2 binding, the exact healthy closed
-checkpoint-lease receipt cross-bound to the worker request and checkpoint
-evidence, one code-owned materialization/verification/receipt/root-close
-stage, stage-consistent progress hashes and ordered cleanup events. The
-self-hashed record is path-free and inert. The executor does not issue it yet;
-this keeps the current operational post-lease failure paths explicitly
-receipt-less until primary preservation and descriptor ownership are wired
-together.
+for ordinary parent-side failures after successful native execution and
+healthy checkpoint-lease closure. It requires exact V3 and Result V2 binding,
+the exact native success observation, the exact lease receipt cross-bound to
+the worker request and checkpoint evidence, one code-owned
+materialization/verification/receipt/root-close stage, stage-consistent
+progress hashes and every ordered cleanup event. The self-hashed record is
+path-free and inert.
 
-This slice still does not complete the failure state machine. Exact-reap native
-failures and exact code-tagged native setup or `posix_spawn` no-start outcomes
-now have disjoint path-free whole-run receipts. Both bind terminal lease
-evidence, the original native observation, the primary stage and every ordered
-cleanup stage; the no-start form contains no child, wait, signal or
-worker-result claim. Unproven start state, unproven reap and post-lease
-materialization failures remain receipt-less. Until those paths and the
-remaining adversarial matrix are covered, the non-bypassable deterministic
-transport checklist item remains open.
+`_separation_fake_executor_darwin.py` now issues that exact receipt for
+ordinary result/root revalidation, quarantine/output creation, verification,
+materialization-observation sealing, descriptor cleanup, root close and
+whole-run receipt-seal failures. The first primary is immutable. Write owners
+close before read reopen; read owners close in LIFO order, followed by the
+quarantine directory and private root. An immutable evidence-core snapshot
+prevents re-entrant root cleanup from changing receipt evidence, and the root
+must close before a success receipt is built. Every retained descriptor owner
+keeps an armed identity-checked finalizer. A known identity is rechecked before
+close, so descriptor-number reuse cannot close a foreign object.
+
+Pre-owner failure without a provable descriptor identity, evidence-snapshot
+failure and failure-receipt sealing failure remain receipt-less. These
+catastrophic aggregates preserve the primary, cleanup errors and any safe
+owners rather than manufacture terminal evidence. Identity-unavailable
+cleanup deliberately retains the raw descriptor instead of making an unsafe
+close claim.
+
+This slice still does not complete the failure state machine. Exact-reap
+native failures, exact code-tagged native setup or `posix_spawn` no-start
+outcomes and ordinary code-owned post-lease failures now have disjoint
+path-free whole-run receipts. They bind terminal lease evidence, the original
+native observation, the primary stage and every ordered cleanup stage; the
+no-start form contains no child, wait, signal or worker-result claim.
+Unproven start/reap and pre-owner, evidence-snapshot or sealing catastrophes
+remain receipt-less. Runtime/worker path-to-exec TOCTOU, checkpoint mutation
+after core transfer and the remaining adversarial ownership/replay matrix keep
+the non-bypassable deterministic transport checklist item open.
 
 The private lease-side groundwork records cleanup stages in observation order
 and attaches the validated checkpoint-lease terminal receipt when available.
