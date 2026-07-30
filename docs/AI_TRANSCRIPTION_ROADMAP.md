@@ -629,12 +629,13 @@ The successful-path live proof runs with bounded output in an isolated outer
 process group; timeout cleanup discovers and signals child groups before
 killing and reaping the helper.
 
-The non-bypassable gate is not complete. Lease orchestration now retains its
-first primary and all cleanup errors, but failed native attempts do not yet
-produce a path-free whole-run receipt that proves either no child or exact
-reap plus terminal lease cleanup. The timeout, spawn, malformed-result,
-checkpoint-mutation, materialization-collision, cleanup and replay matrix
-remains the next S3 increment.
+The non-bypassable gate is not complete. Exact-reap native failures can now
+produce a path-free whole-run receipt that binds native terminality, the
+checkpoint-lease terminal receipt, the original primary stage and every
+observed cleanup stage in order. No-start, spawn-failure, unproven-reap and
+post-lease materialization failures are not yet covered. The full timeout,
+spawn, malformed-result, checkpoint-mutation, materialization-collision,
+cleanup and replay matrix remains required.
 
 As failure-receipt groundwork, the private lease bridge now records cleanup
 stages in observed order and carries a validated terminal lease receipt when
@@ -654,6 +655,31 @@ reaped timeout, result-close/decode failure, worker identity mismatch and
 post-reap remeasurement failure. It preserves the original exception privately
 but records only a code-owned stage; no PID or exception text enters evidence.
 Spawn failures and any unproven reap deliberately receive no such observation.
+
+`_separation_fake_failure_records.py` now composes that exact-reap observation
+with the terminal lease receipt into an inert whole-run failed receipt. It
+binds the validated request/plan hashes, retains duplicate cleanup events in
+their observed order, records that private transport files may remain, and
+keeps publication, selection, acceptance and promotion false. The raised
+private error retains the original exception and source evidence; no exception
+text, path, PID or PGID enters the receipt.
+
+Receipt construction revalidates the complete fake request/launch chain
+against the exact reserved worker request and lease observation. The lease
+module issues a one-use, non-copyable failure capability only after it
+revalidates the terminal lease document; constructed, borrowed, cross-run and
+second-use failures cannot mint the receipt. The capability binds the exact
+nested primary chain, cleanup tuples and request/plan object identities and
+hashes. A raw tuple mutation therefore cannot claim that an outer cleanup
+retry happened: receipt composition performs that strict retry itself, only
+after authenticating the exact bound owner, and records only its observed
+result. Unissued or mutated failures cannot trigger that descriptor close.
+Admission cleanup always terminalizes its registry entry, pre-arms an
+identity-checked owner for every transport descriptor before native start,
+attempts every owned close in deterministic order and preserves the original
+native error. A descriptor whose strict close fails retains its pre-armed
+finalizer owner; that backstop is private cleanup containment, not successful
+evidence.
 
 This is not a separator result. The worker hashes but never deserializes the
 checkpoint, reads no source audio, imports no model, performs no inference,

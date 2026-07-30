@@ -687,12 +687,12 @@ successful quarantine verification and checkpoint-lease closure. An isolated
 outer helper uses bounded reads and kills discovered child groups as well as
 its own process group on timeout.
 
-This slice proves the successful fixture path, not the complete failure state
-machine. Private aggregation now retains a primary lease error plus every
-observed cleanup error, but a path-free whole-run failed receipt that binds
-native terminality, lease terminality and nullable downstream evidence remains
-outstanding. Until that exists and its failure matrix is tested, the
-non-bypassable deterministic transport checklist item remains open.
+This slice still does not complete the failure state machine. Exact-reap native
+failures now have a path-free whole-run receipt binding native terminality,
+lease terminality, the original primary stage and every ordered cleanup stage.
+No-start, spawn-failure, unproven-reap and post-lease materialization failures
+remain receipt-less. Until those paths and the adversarial matrix are covered,
+the non-bypassable deterministic transport checklist item remains open.
 
 The private lease-side groundwork records cleanup stages in observation order
 and attaches the validated checkpoint-lease terminal receipt when available.
@@ -713,6 +713,29 @@ worker identity mismatch and post-reap remeasurement failure with a code-owned
 stage. The original exception stays on the private error object; paths, PID,
 PGID and exception text are absent from the observation. A spawn error or
 unproven reap cannot obtain this terminal record.
+
+`_separation_fake_failure_records.py` composes the exact-reap native
+observation, terminal checkpoint-lease receipt and validated fake request/plan
+hashes. Its receipt preserves duplicate cleanup stages in observation order,
+acknowledges possible private transport remnants and grants no authority. The
+private exception retains the original primary, cleanup exception objects,
+native observation, lease receipt and any still-owned root finalizer; none of
+their text, paths, PID or PGID values enters serialized evidence.
+
+The composition boundary revalidates the whole fake request/launch chain
+against the exact reserved worker request and lease observation. A
+lease-issued, non-copyable, single-use failure capability cross-binds the exact
+lease, reservation, worker request, observation and terminal receipt; a
+constructed, borrowed, cross-run or replayed aggregate cannot mint whole-run
+evidence. It also snapshots the full nested failure chain, cleanup tuples and
+exact request/plan object identities and hashes. Whole-run composition itself
+performs the final strict root cleanup retry only after the lease module
+authenticates the bound owner, so a caller-added cleanup suffix cannot forge
+that event and an unissued failure cannot trigger the close. Admitted cleanup
+terminalizes its registry entry before reporting a status mismatch, pre-arms
+an identity-checked owner for every transport descriptor before native start,
+attempts every close in order and retains those owners for descriptors whose
+strict close could not be proven.
 
 This is transport proof, not separation. The fixed worker hashes but never
 deserializes the checkpoint, reads no source audio, imports no model, performs

@@ -80,6 +80,12 @@ _RESERVATIONS = 0
 _FAKE_EXECUTION_BRIDGES: weakref.WeakKeyDictionary[
     _FakeExecutionLeaseBridgeAuthority, _FakeExecutionLeaseBridgeBinding
 ] = weakref.WeakKeyDictionary()
+_FAKE_EXECUTION_LEASE_FAILURES: weakref.WeakKeyDictionary[
+    _FakeExecutionLeaseFailureAuthority, _FakeExecutionLeaseFailureBinding
+] = weakref.WeakKeyDictionary()
+_FAKE_EXECUTION_LEASE_FAILURES_EVER_ISSUED: weakref.WeakSet[
+    _FakeExecutionLeaseFailure
+] = weakref.WeakSet()
 
 
 class SeparationCheckpointDescriptorLease:
@@ -128,6 +134,40 @@ class _FakeExecutionLeaseBridgeAuthority:
 
     def __reduce_ex__(self, _protocol: int) -> Any:
         raise TypeError("fake execution lease bridges cannot be serialized")
+
+
+class _FakeExecutionLeaseFailureAuthority:
+    """Opaque one-shot proof that the lease lifecycle issued one failure."""
+
+    __slots__ = ("__weakref__",)
+
+    def __new__(cls, *_args: Any, **_kwargs: Any) -> Any:
+        raise TypeError(
+            "fake execution lease failure authorities are parent-issued only"
+        )
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}()"
+
+    def __copy__(self) -> Any:
+        raise TypeError(
+            "fake execution lease failure authorities cannot be copied"
+        )
+
+    def __deepcopy__(self, _memo: Any) -> Any:
+        raise TypeError(
+            "fake execution lease failure authorities cannot be copied"
+        )
+
+    def __reduce__(self) -> Any:
+        raise TypeError(
+            "fake execution lease failure authorities cannot be serialized"
+        )
+
+    def __reduce_ex__(self, _protocol: int) -> Any:
+        raise TypeError(
+            "fake execution lease failure authorities cannot be serialized"
+        )
 
 
 @dataclass
@@ -213,10 +253,157 @@ class _FakeExecutionLeaseFailure(RuntimeError):
         )
         self.lease_receipt = lease_receipt
         self.core = core
+        self._lease_failure_authority: (
+            _FakeExecutionLeaseFailureAuthority | None
+        ) = None
 
     def _record_cleanup(self, stage: str, error: BaseException) -> None:
         self.cleanup_stages = (*self.cleanup_stages, stage)
         self.cleanup_errors = (*self.cleanup_errors, error)
+
+
+@dataclass
+class _FakeExecutionLeaseFailureBinding:
+    owner_pid: int
+    failure_ref: weakref.ReferenceType[_FakeExecutionLeaseFailure]
+    lease: SeparationCheckpointDescriptorLease
+    lease_state: _LeaseState
+    reservation: _CheckpointDescriptorFD5Reservation
+    worker_request_v2: SeparationWorkerRequestV2Record
+    lease_observation: SeparationCheckpointDescriptorLeaseObservation
+    lease_receipt: SeparationCheckpointDescriptorLeaseTerminalReceipt
+    fake_worker_request: Any
+    fake_launch_plan_v1: Any
+    blocked_fake_launch_plan_v2: Any
+    fake_launch_plan_v3: Any
+    fake_chain_snapshot: tuple[tuple[type[Any], int, str], ...]
+    primary_error_snapshot: tuple[Any, ...]
+    cleanup_stages: tuple[str, ...]
+    cleanup_error_identities: tuple[int, ...]
+    core: Any | None
+    private_root_owner: Any | None
+    status: str
+
+
+def _fake_execution_lease_failure_private_root_owner(
+    value: _FakeExecutionLeaseFailure,
+) -> Any | None:
+    if value.core is not None:
+        return value.core
+    primary = value.primary_error
+    return getattr(primary, "private_root_owner", None)
+
+
+def _fake_execution_failure_snapshot(
+    value: BaseException | None,
+    *,
+    depth: int = 0,
+    seen: tuple[int, ...] = (),
+) -> tuple[Any, ...]:
+    """Capture identity-only nested failure state without exception text."""
+
+    if value is None:
+        return ("none",)
+    if not isinstance(value, BaseException) or depth > 4:
+        raise ValueError("fake execution primary failure chain is invalid")
+    identity = id(value)
+    if identity in seen:
+        raise ValueError("fake execution primary failure chain is cyclic")
+    cleanup_stages = getattr(value, "cleanup_stages", ())
+    cleanup_errors = getattr(value, "cleanup_errors", ())
+    descriptor_owners = getattr(value, "descriptor_owners", ())
+    if (
+        type(cleanup_stages) is not tuple
+        or type(cleanup_errors) is not tuple
+        or len(cleanup_stages) != len(cleanup_errors)
+        or any(type(stage) is not str for stage in cleanup_stages)
+        or any(
+            not isinstance(error, BaseException)
+            for error in cleanup_errors
+        )
+        or type(descriptor_owners) is not tuple
+    ):
+        raise ValueError("fake execution primary failure state is invalid")
+    observation = getattr(value, "observation", None)
+    private_root_owner = getattr(value, "private_root_owner", None)
+    observation_sha256: str | None = None
+    if observation is not None:
+        if not isinstance(observation, Mapping):
+            raise ValueError(
+                "fake execution primary failure observation is invalid"
+            )
+        observation_sha256 = observation.get("observation_sha256")
+        if (
+            type(observation_sha256) is not str
+            or len(observation_sha256) != 64
+        ):
+            raise ValueError(
+                "fake execution primary failure observation is invalid"
+            )
+    child = getattr(value, "primary_error", None)
+    child_snapshot = (
+        ("absent",)
+        if not hasattr(value, "primary_error")
+        else _fake_execution_failure_snapshot(
+            child,
+            depth=depth + 1,
+            seen=(*seen, identity),
+        )
+    )
+    return (
+        type(value),
+        identity,
+        cleanup_stages,
+        tuple(id(error) for error in cleanup_errors),
+        tuple(id(owner) for owner in descriptor_owners),
+        id(private_root_owner) if private_root_owner is not None else None,
+        id(observation) if observation is not None else None,
+        observation_sha256,
+        child_snapshot,
+    )
+
+
+def _fake_execution_chain_snapshot(
+    *,
+    fake_worker_request: Any,
+    fake_launch_plan_v1: Any,
+    blocked_fake_launch_plan_v2: Any,
+    fake_launch_plan_v3: Any,
+) -> tuple[tuple[type[Any], int, str], ...]:
+    values = (
+        (fake_worker_request, "request_sha256"),
+        (fake_launch_plan_v1, "plan_sha256"),
+        (blocked_fake_launch_plan_v2, "plan_sha256"),
+        (fake_launch_plan_v3, "plan_sha256"),
+    )
+    result: list[tuple[type[Any], int, str]] = []
+    for value, field in values:
+        if not isinstance(value, Mapping):
+            raise ValueError("fake execution failure chain is invalid")
+        digest = value.get(field)
+        if (
+            type(digest) is not str
+            or len(digest) != 64
+            or any(character not in "0123456789abcdef" for character in digest)
+        ):
+            raise ValueError("fake execution failure chain is invalid")
+        result.append((type(value), id(value), digest))
+    return tuple(result)
+
+
+def _valid_fake_execution_failure_cleanup_snapshot(
+    value: _FakeExecutionLeaseFailure,
+    binding: _FakeExecutionLeaseFailureBinding,
+) -> bool:
+    stages = value.cleanup_stages
+    errors = value.cleanup_errors
+    return (
+        type(stages) is tuple
+        and type(errors) is tuple
+        and stages == binding.cleanup_stages
+        and tuple(id(error) for error in errors)
+        == binding.cleanup_error_identities
+    )
 
 
 @dataclass
@@ -736,7 +923,16 @@ def _execute_reserved_fake_worker_under_lock(
                 )
             )
         if primary_error is not None or cleanup_failures:
-            failure = _FakeExecutionLeaseFailure(
+            failure = _new_fake_execution_lease_failure(
+                trusted_lease=lease,
+                lease_state=state,
+                trusted_reservation=trusted_reservation,
+                trusted_worker_request_v2=trusted_worker_request_v2,
+                current_lease_observation=current_lease_observation,
+                fake_worker_request=fake_worker_request,
+                fake_launch_plan_v1=fake_launch_plan_v1,
+                blocked_fake_launch_plan_v2=blocked_fake_launch_plan_v2,
+                fake_launch_plan_v3=fake_launch_plan_v3,
                 primary_error=primary_error,
                 cleanup_failures=cleanup_failures,
                 lease_receipt=receipt,
@@ -750,6 +946,279 @@ def _execute_reserved_fake_worker_under_lock(
                 "fake execution did not produce terminal lease evidence"
             )
         return core, receipt
+
+
+def _new_fake_execution_lease_failure(
+    *,
+    trusted_lease: SeparationCheckpointDescriptorLease,
+    lease_state: _LeaseState,
+    trusted_reservation: _CheckpointDescriptorFD5Reservation,
+    trusted_worker_request_v2: SeparationWorkerRequestV2Record,
+    current_lease_observation: SeparationCheckpointDescriptorLeaseObservation,
+    fake_worker_request: Any,
+    fake_launch_plan_v1: Any,
+    blocked_fake_launch_plan_v2: Any,
+    fake_launch_plan_v3: Any,
+    primary_error: BaseException | None,
+    cleanup_failures: Sequence[tuple[str, BaseException]],
+    lease_receipt: (SeparationCheckpointDescriptorLeaseTerminalReceipt | None),
+    core: Any | None,
+) -> _FakeExecutionLeaseFailure:
+    """Create one aggregate and bind it when terminal lease proof is valid."""
+
+    failure = _FakeExecutionLeaseFailure(
+        primary_error=primary_error,
+        cleanup_failures=cleanup_failures,
+        lease_receipt=lease_receipt,
+        core=core,
+    )
+    if lease_receipt is None:
+        return failure
+    try:
+        authority = _issue_fake_execution_lease_failure_authority(
+            failure,
+            trusted_lease=trusted_lease,
+            lease_state=lease_state,
+            trusted_reservation=trusted_reservation,
+            trusted_worker_request_v2=trusted_worker_request_v2,
+            current_lease_observation=current_lease_observation,
+            fake_worker_request=fake_worker_request,
+            fake_launch_plan_v1=fake_launch_plan_v1,
+            blocked_fake_launch_plan_v2=blocked_fake_launch_plan_v2,
+            fake_launch_plan_v3=fake_launch_plan_v3,
+            lease_receipt=lease_receipt,
+        )
+    except BaseException as authentication_error:
+        # Authentication is fail-closed and must not replace the real failure.
+        failure._record_cleanup(
+            "lease_failure_authentication",
+            authentication_error,
+        )
+        return failure
+    failure._lease_failure_authority = authority
+    return failure
+
+
+def _issue_fake_execution_lease_failure_authority(
+    failure: _FakeExecutionLeaseFailure,
+    *,
+    trusted_lease: SeparationCheckpointDescriptorLease,
+    lease_state: _LeaseState,
+    trusted_reservation: _CheckpointDescriptorFD5Reservation,
+    trusted_worker_request_v2: SeparationWorkerRequestV2Record,
+    current_lease_observation: SeparationCheckpointDescriptorLeaseObservation,
+    fake_worker_request: Any,
+    fake_launch_plan_v1: Any,
+    blocked_fake_launch_plan_v2: Any,
+    fake_launch_plan_v3: Any,
+    lease_receipt: SeparationCheckpointDescriptorLeaseTerminalReceipt,
+) -> _FakeExecutionLeaseFailureAuthority:
+    """Bind one failure to exact terminal lease state while its lock is held."""
+
+    if type(failure) is not _FakeExecutionLeaseFailure:
+        raise ValueError("fake execution lease failure type is invalid")
+    lease, known_state = _known_state(trusted_lease)
+    if known_state is not lease_state:
+        raise ValueError("fake execution lease failure state changed")
+    _require_owner(lease_state)
+    if _state_phase(lease, lease_state) != "terminal":
+        raise ValueError("fake execution lease failure is not terminal")
+    if (
+        type(trusted_reservation) is not _CheckpointDescriptorFD5Reservation
+        or type(trusted_worker_request_v2)
+        is not SeparationWorkerRequestV2Record
+        or type(current_lease_observation)
+        is not SeparationCheckpointDescriptorLeaseObservation
+        or current_lease_observation._document
+        is not lease_state.observation_document
+        or type(lease_receipt)
+        is not SeparationCheckpointDescriptorLeaseTerminalReceipt
+        or lease_receipt._document is not lease_state.terminal_document
+        or failure.lease_receipt is not lease_receipt
+    ):
+        raise ValueError("fake execution lease failure binding is invalid")
+    validated_receipt = _receipt_wrapper(lease_state)
+    if (
+        validated_receipt._document is not lease_receipt._document
+        or validated_receipt["receipt_sha256"]
+        != lease_receipt["receipt_sha256"]
+    ):
+        raise ValueError("fake execution lease failure receipt changed")
+    authority = object.__new__(_FakeExecutionLeaseFailureAuthority)
+    primary_error_snapshot = _fake_execution_failure_snapshot(
+        failure.primary_error
+    )
+    fake_chain_snapshot = _fake_execution_chain_snapshot(
+        fake_worker_request=fake_worker_request,
+        fake_launch_plan_v1=fake_launch_plan_v1,
+        blocked_fake_launch_plan_v2=blocked_fake_launch_plan_v2,
+        fake_launch_plan_v3=fake_launch_plan_v3,
+    )
+    binding = _FakeExecutionLeaseFailureBinding(
+        owner_pid=os.getpid(),
+        failure_ref=weakref.ref(failure),
+        lease=lease,
+        lease_state=lease_state,
+        reservation=trusted_reservation,
+        worker_request_v2=trusted_worker_request_v2,
+        lease_observation=current_lease_observation,
+        lease_receipt=lease_receipt,
+        fake_worker_request=fake_worker_request,
+        fake_launch_plan_v1=fake_launch_plan_v1,
+        blocked_fake_launch_plan_v2=blocked_fake_launch_plan_v2,
+        fake_launch_plan_v3=fake_launch_plan_v3,
+        fake_chain_snapshot=fake_chain_snapshot,
+        primary_error_snapshot=primary_error_snapshot,
+        cleanup_stages=failure.cleanup_stages,
+        cleanup_error_identities=tuple(
+            id(error) for error in failure.cleanup_errors
+        ),
+        core=failure.core,
+        private_root_owner=(
+            _fake_execution_lease_failure_private_root_owner(failure)
+        ),
+        status="issued_under_terminal_lease_lock",
+    )
+    with _REGISTRY_LOCK:
+        if (
+            failure in _FAKE_EXECUTION_LEASE_FAILURES_EVER_ISSUED
+            or failure._lease_failure_authority is not None
+            or authority in _FAKE_EXECUTION_LEASE_FAILURES
+        ):
+            raise RuntimeError(
+                "fake execution lease failure authority was already issued"
+            )
+        _FAKE_EXECUTION_LEASE_FAILURES_EVER_ISSUED.add(failure)
+        _FAKE_EXECUTION_LEASE_FAILURES[authority] = binding
+    return authority
+
+
+def _consume_fake_execution_lease_failure(
+    value: Any,
+    *,
+    trusted_lease: SeparationCheckpointDescriptorLease,
+    trusted_reservation: _CheckpointDescriptorFD5Reservation,
+    trusted_worker_request_v2: SeparationWorkerRequestV2Record,
+    current_lease_observation: SeparationCheckpointDescriptorLeaseObservation,
+    fake_worker_request: Any,
+    fake_launch_plan_v1: Any,
+    blocked_fake_launch_plan_v2: Any,
+    fake_launch_plan_v3: Any,
+) -> SeparationCheckpointDescriptorLeaseTerminalReceipt:
+    """Consume exact one-use authority and return revalidated lease evidence."""
+
+    receipt, _action_result = (
+        _consume_fake_execution_lease_failure_with_authenticated_action(
+            value,
+            trusted_lease=trusted_lease,
+            trusted_reservation=trusted_reservation,
+            trusted_worker_request_v2=trusted_worker_request_v2,
+            current_lease_observation=current_lease_observation,
+            fake_worker_request=fake_worker_request,
+            fake_launch_plan_v1=fake_launch_plan_v1,
+            blocked_fake_launch_plan_v2=blocked_fake_launch_plan_v2,
+            fake_launch_plan_v3=fake_launch_plan_v3,
+            authenticated_action=lambda _private_root_owner: None,
+        )
+    )
+    return receipt
+
+
+def _consume_fake_execution_lease_failure_with_authenticated_action(
+    value: Any,
+    *,
+    trusted_lease: SeparationCheckpointDescriptorLease,
+    trusted_reservation: _CheckpointDescriptorFD5Reservation,
+    trusted_worker_request_v2: SeparationWorkerRequestV2Record,
+    current_lease_observation: SeparationCheckpointDescriptorLeaseObservation,
+    fake_worker_request: Any,
+    fake_launch_plan_v1: Any,
+    blocked_fake_launch_plan_v2: Any,
+    fake_launch_plan_v3: Any,
+    authenticated_action: Any,
+) -> tuple[SeparationCheckpointDescriptorLeaseTerminalReceipt, Any]:
+    """Run one action only after exact failure authentication, then consume."""
+
+    if type(value) is not _FakeExecutionLeaseFailure:
+        raise ValueError("fake execution lease failure type is invalid")
+    if not callable(authenticated_action):
+        raise TypeError("fake execution authenticated action is not callable")
+    authority = value._lease_failure_authority
+    if type(authority) is not _FakeExecutionLeaseFailureAuthority:
+        raise ValueError("fake execution lease failure is not lease-issued")
+    lease, state = _known_state(trusted_lease)
+    with state.lock:
+        with _REGISTRY_LOCK:
+            binding = _FAKE_EXECUTION_LEASE_FAILURES.get(authority)
+        if (
+            type(binding) is not _FakeExecutionLeaseFailureBinding
+            or binding.owner_pid != os.getpid()
+            or binding.status != "issued_under_terminal_lease_lock"
+            or binding.failure_ref() is not value
+            or binding.lease is not lease
+            or binding.lease_state is not state
+            or binding.reservation is not trusted_reservation
+            or binding.worker_request_v2 is not trusted_worker_request_v2
+            or binding.lease_observation is not current_lease_observation
+            or binding.lease_receipt is not value.lease_receipt
+            or binding.fake_worker_request is not fake_worker_request
+            or binding.fake_launch_plan_v1 is not fake_launch_plan_v1
+            or binding.blocked_fake_launch_plan_v2
+            is not blocked_fake_launch_plan_v2
+            or binding.fake_launch_plan_v3 is not fake_launch_plan_v3
+            or binding.fake_chain_snapshot
+            != _fake_execution_chain_snapshot(
+                fake_worker_request=fake_worker_request,
+                fake_launch_plan_v1=fake_launch_plan_v1,
+                blocked_fake_launch_plan_v2=blocked_fake_launch_plan_v2,
+                fake_launch_plan_v3=fake_launch_plan_v3,
+            )
+            or binding.primary_error_snapshot
+            != _fake_execution_failure_snapshot(value.primary_error)
+            or not _valid_fake_execution_failure_cleanup_snapshot(
+                value,
+                binding,
+            )
+            or binding.core is not value.core
+            or binding.private_root_owner
+            is not _fake_execution_lease_failure_private_root_owner(value)
+        ):
+            raise ValueError("fake execution lease failure binding changed")
+        _require_owner(state)
+        if _state_phase(lease, state) != "terminal":
+            raise ValueError("fake execution lease failure is not terminal")
+        if (
+            type(trusted_reservation)
+            is not _CheckpointDescriptorFD5Reservation
+            or type(trusted_worker_request_v2)
+            is not SeparationWorkerRequestV2Record
+            or type(current_lease_observation)
+            is not SeparationCheckpointDescriptorLeaseObservation
+            or current_lease_observation._document
+            is not state.observation_document
+            or type(binding.lease_receipt)
+            is not SeparationCheckpointDescriptorLeaseTerminalReceipt
+            or binding.lease_receipt._document is not state.terminal_document
+        ):
+            raise ValueError("fake execution lease failure binding is invalid")
+        validated_receipt = _receipt_wrapper(state)
+        if (
+            validated_receipt._document is not binding.lease_receipt._document
+            or validated_receipt["receipt_sha256"]
+            != binding.lease_receipt["receipt_sha256"]
+        ):
+            raise ValueError("fake execution lease failure receipt changed")
+        action_result = authenticated_action(binding.private_root_owner)
+        with _REGISTRY_LOCK:
+            current = _FAKE_EXECUTION_LEASE_FAILURES.get(authority)
+            if current is not binding:
+                raise ValueError(
+                    "fake execution lease failure authority changed"
+                )
+            binding.status = "consumed"
+            del _FAKE_EXECUTION_LEASE_FAILURES[authority]
+        value._lease_failure_authority = None
+        return binding.lease_receipt, action_result
 
 
 def _lease_receipt_from_error(

@@ -97,14 +97,24 @@ report the result, then move on.
   issues a self-hashed path-free terminal receipt after lease closure. The
   isolated live proof uses bounded output and kills discovered child groups as
   well as its helper on an outer timeout. This proves only the successful
-  fixture path: a path-free whole-run failure receipt that preserves primary
-  and every cleanup failure is still outstanding, so the non-bypassable fake
-  transport gate is not complete. Private failure groundwork now keeps lease
+  fixture path. Exact-reap native failures now receive a path-free whole-run
+  receipt binding terminal native and lease evidence, the primary stage and
+  every ordered cleanup stage. No-start, spawn-failure, unproven-reap and
+  post-lease materialization failures remain uncovered, so the non-bypassable
+  fake transport gate is not complete. Private failure machinery keeps lease
   cleanup stages in observed order, carries a validated lease terminal receipt
-  when available, force-terminalizes an otherwise active lease after ordinary
-  reservation-release failure, and strictly closes a root descriptor already
-  transferred in a failed core. If strict close fails, the aggregate retains
-  its owner and an armed best-effort finalizer that is not terminal evidence.
+  when available, authenticates receipt composition with a lease-issued
+  non-copyable one-use capability, snapshots the nested failure state and
+  revalidates the exact full fake request/launch chain. The composer itself
+  performs the final strict root cleanup retry only after authenticating the
+  exact bound owner, so caller mutation cannot invent that event and an
+  unissued failure cannot trigger a supplied descriptor close. It
+  force-terminalizes an otherwise active lease after ordinary
+  reservation-release failure, pre-arms identity-checked ownership for every
+  transport descriptor before native start, and attempts every admitted
+  transport close in deterministic order. If strict close fails, the
+  aggregate retains the armed best-effort finalizer, which is not terminal
+  evidence.
   Catastrophic terminalization remains
   receipt-less and blocked. Native post-start failures now receive a separate
   path-free observation only after exact reap and ownership release are proven;

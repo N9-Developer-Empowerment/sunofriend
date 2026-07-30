@@ -25,6 +25,7 @@ from ._separation_checkpoint_canonical import (
 )
 from ._separation_checkpoint_launch_v2_records import (
     _SeparationLaunchPlanV2Record,
+    _build_blocked_separation_launch_plan_v2_record,
     _validate_blocked_separation_launch_plan_v2_record_shape,
 )
 from ._separation_checkpoint_transport_records import (
@@ -36,6 +37,10 @@ from ._separation_fake_execution_protocol import (
     _REQUEST_MAGIC_V2,
     _decode_fake_execution_request_frame,
     _encode_frame,
+)
+from ._separation_fake_failure_records import (
+    _SeparationFakeExecutionFailedTerminalReceipt,
+    _build_exact_reap_failed_terminal_receipt,
 )
 from ._separation_fake_execution_quarantine import (
     _SeparationFakeExecutionQuarantineV2Observation,
@@ -62,6 +67,7 @@ from ._separation_fake_transport_records import (
 )
 from ._separation_worker_request_v2_values import _validate_path_free
 from ._separation_native_session_darwin import (
+    _VerifiedNativeLauncherExecutionFailure,
     _VerifiedNativeLauncherExecutionObservation,
     _VerifiedNativeLauncherSession,
     _VerifiedNativeLauncherSessionObservation,
@@ -161,6 +167,49 @@ class _FakeExecutionCore:
     )
 
 
+@dataclass(frozen=True)
+class _OwnedDescriptorCleanupBackstop:
+    """Retain one descriptor after strict cleanup could not prove closure."""
+
+    descriptor: int
+    identity: tuple[int, int]
+    stage: str
+    finalizer: weakref.finalize = field(
+        init=False,
+        repr=False,
+        compare=False,
+    )
+
+
+class _FakeExecutionAdmittedFailure(RuntimeError):
+    """Preserve admitted execution primary and ordered cleanup failures."""
+
+    def __init__(
+        self,
+        *,
+        primary_error: BaseException | None,
+        cleanup_failures: tuple[tuple[str, BaseException], ...],
+        private_root_owner: (
+            _FakeExecutionCore | _OwnedDescriptorCleanupBackstop | None
+        ),
+        descriptor_owners: tuple[_OwnedDescriptorCleanupBackstop, ...],
+    ) -> None:
+        super().__init__("admitted fake execution lifecycle failed")
+        self.primary_error = primary_error
+        self.cleanup_stages = tuple(
+            stage for stage, _error in cleanup_failures
+        )
+        self.cleanup_errors = tuple(
+            error for _stage, error in cleanup_failures
+        )
+        self.private_root_owner = private_root_owner
+        self.descriptor_owners = descriptor_owners
+
+    def _record_cleanup(self, stage: str, error: BaseException) -> None:
+        self.cleanup_stages = (*self.cleanup_stages, stage)
+        self.cleanup_errors = (*self.cleanup_errors, error)
+
+
 @dataclass(frozen=True, init=False)
 class _SeparationFakeExecutionMaterializationObservation(
     Mapping[str, Any]
@@ -191,6 +240,34 @@ class _SeparationFakeExecutionTerminalReceipt(Mapping[str, Any]):
 
     def __len__(self) -> int:
         return len(self._document)
+
+
+class _SeparationFakeExecutionFailed(RuntimeError):
+    """Private whole-run failure carrying path-free terminal evidence."""
+
+    def __init__(
+        self,
+        *,
+        receipt: _SeparationFakeExecutionFailedTerminalReceipt,
+        primary_error: BaseException,
+        cleanup_stages: tuple[str, ...],
+        cleanup_errors: tuple[BaseException, ...],
+        private_root_owner: (
+            _FakeExecutionCore | _OwnedDescriptorCleanupBackstop | None
+        ),
+        descriptor_owners: tuple[_OwnedDescriptorCleanupBackstop, ...],
+        native_failure_observation: Any,
+        lease_terminal_receipt: Any,
+    ) -> None:
+        super().__init__("fake execution failed with terminal evidence")
+        self.receipt = receipt
+        self.primary_error = primary_error
+        self.cleanup_stages = cleanup_stages
+        self.cleanup_errors = cleanup_errors
+        self.private_root_owner = private_root_owner
+        self.descriptor_owners = descriptor_owners
+        self.native_failure_observation = native_failure_observation
+        self.lease_terminal_receipt = lease_terminal_receipt
 
 
 _ADMISSIONS: weakref.WeakKeyDictionary[
@@ -235,17 +312,20 @@ def _execute_reserved_fake_worker(
                 )
             )
         except _lease_module._FakeExecutionLeaseFailure as failure:
-            failed_core = failure.core
-            if type(failed_core) is _FakeExecutionCore:
-                try:
-                    _close_core_private_root_strict(failed_core)
-                except BaseException as cleanup_error:
-                    failure._record_cleanup(
-                        "private_root_descriptor_close",
-                        cleanup_error,
-                    )
-                else:
-                    failure.core = None
+            failed = _whole_run_exact_reap_failure(
+                failure,
+                fake_worker_request=fake_worker_request,
+                fake_launch_plan_v1=fake_launch_plan_v1,
+                blocked_fake_launch_plan_v2=blocked_fake_launch_plan_v2,
+                fake_launch_plan_v3=fake_launch_plan_v3,
+                lease_module=_lease_module,
+                trusted_lease=trusted_lease,
+                trusted_reservation=trusted_reservation,
+                trusted_worker_request_v2=trusted_worker_request_v2,
+                current_lease_observation=current_lease_observation,
+            )
+            if failed is not None:
+                raise failed from failed.primary_error
             raise
         try:
             materialization, quarantine = (
@@ -259,6 +339,260 @@ def _execute_reserved_fake_worker(
             )
         finally:
             _close_core_private_root_strict(core)
+
+
+def _whole_run_exact_reap_failure(
+    failure: Any,
+    *,
+    fake_worker_request: _SeparationFakeWorkerRequestRecord,
+    fake_launch_plan_v1: _SeparationFakeLaunchPlanRecord,
+    blocked_fake_launch_plan_v2: _SeparationFakeLaunchPlanV2Record,
+    fake_launch_plan_v3: _SeparationFakeLaunchPlanV3Record,
+    lease_module: Any,
+    trusted_lease: Any,
+    trusted_reservation: Any,
+    trusted_worker_request_v2: SeparationWorkerRequestV2Record,
+    current_lease_observation: Any,
+) -> _SeparationFakeExecutionFailed | None:
+    outer_cleanup_failures: list[tuple[str, BaseException]] = []
+
+    def reject_unsealed_failure() -> None:
+        if type(failure) is lease_module._FakeExecutionLeaseFailure:
+            for stage, error in outer_cleanup_failures:
+                failure._record_cleanup(stage, error)
+        return None
+
+    if type(failure) is not lease_module._FakeExecutionLeaseFailure:
+        return reject_unsealed_failure()
+    try:
+        request_v2 = _validate_separation_worker_request_v2_record_shape(
+            trusted_worker_request_v2
+        )
+        expected_checkpoint_launch = (
+            _build_blocked_separation_launch_plan_v2_record(
+                worker_request_v2=request_v2
+            )
+        )
+        checked_request = _validate_fake_worker_request_shape(
+            fake_worker_request
+        )
+        checked_launch_v1 = _validate_fake_launch_plan_shape(
+            fake_launch_plan_v1
+        )
+        checked_launch_v2 = (
+            _validate_blocked_separation_fake_launch_plan_v2_record_shape(
+                blocked_fake_launch_plan_v2,
+                fake_worker_request=checked_request,
+                fake_launch_plan_v1=checked_launch_v1,
+            )
+        )
+        checked_launch_v3 = (
+            _validate_prepared_separation_fake_launch_plan_v3_record_shape(
+                fake_launch_plan_v3,
+                fake_worker_request=checked_request,
+                fake_launch_plan_v1=checked_launch_v1,
+                blocked_fake_launch_plan_v2=checked_launch_v2,
+            )
+        )
+        lease_observation = _plain(current_lease_observation)
+    except (KeyError, TypeError, ValueError):
+        return reject_unsealed_failure()
+    if (
+        checked_request["historical_design"]["worker_request_v2_sha256"]
+        != request_v2["request_sha256"]
+        or checked_request["historical_design"][
+            "blocked_launch_plan_v2_sha256"
+        ]
+        != expected_checkpoint_launch["plan_sha256"]
+        or checked_request["bindings"]["lease_observation_sha256"]
+        != lease_observation["observation_sha256"]
+    ):
+        return reject_unsealed_failure()
+    admitted_failure = getattr(failure, "primary_error", None)
+    if type(admitted_failure) is not _FakeExecutionAdmittedFailure:
+        return reject_unsealed_failure()
+    native_failure = admitted_failure.primary_error
+    if type(native_failure) is not _VerifiedNativeLauncherExecutionFailure:
+        return reject_unsealed_failure()
+    if (
+        type(admitted_failure.descriptor_owners) is not tuple
+        or any(
+            type(owner) is not _OwnedDescriptorCleanupBackstop
+            for owner in admitted_failure.descriptor_owners
+        )
+        or (
+            admitted_failure.private_root_owner is not None
+            and type(admitted_failure.private_root_owner)
+            not in {
+                _FakeExecutionCore,
+                _OwnedDescriptorCleanupBackstop,
+            }
+        )
+    ):
+        return reject_unsealed_failure()
+    base_stage_error_pairs = (
+        (native_failure.cleanup_stages, native_failure.cleanup_errors),
+        (
+            admitted_failure.cleanup_stages,
+            admitted_failure.cleanup_errors,
+        ),
+        (failure.cleanup_stages, failure.cleanup_errors),
+    )
+    if any(
+        type(stages) is not tuple
+        or type(errors) is not tuple
+        or len(stages) != len(errors)
+        or any(type(stage) is not str for stage in stages)
+        or any(not isinstance(error, BaseException) for error in errors)
+        for stages, errors in base_stage_error_pairs
+    ):
+        return reject_unsealed_failure()
+    base_cleanup_stages = tuple(
+        stage
+        for stages, _errors in base_stage_error_pairs
+        for stage in stages
+    )
+    if "private_root_descriptor_close" in base_cleanup_stages:
+        owner = admitted_failure.private_root_owner
+        if (
+            type(owner)
+            not in {
+                _FakeExecutionCore,
+                _OwnedDescriptorCleanupBackstop,
+            }
+            or not hasattr(owner, "private_root_finalizer")
+            and not hasattr(owner, "finalizer")
+        ):
+            return reject_unsealed_failure()
+    if len(base_cleanup_stages) > 31:
+        return reject_unsealed_failure()
+
+    def retry_authenticated_private_root(
+        authenticated_owner: Any,
+    ) -> tuple[tuple[str, BaseException], ...]:
+        if authenticated_owner is None:
+            return ()
+        try:
+            _close_private_root_owner_strict(authenticated_owner)
+        except BaseException as cleanup_error:
+            return (("private_root_descriptor_close", cleanup_error),)
+        _clear_private_root_owner_from_lease_failure(
+            failure,
+            authenticated_owner,
+        )
+        return ()
+
+    try:
+        lease_receipt, authenticated_cleanup = (
+            lease_module
+            ._consume_fake_execution_lease_failure_with_authenticated_action(
+                failure,
+                trusted_lease=trusted_lease,
+                trusted_reservation=trusted_reservation,
+                trusted_worker_request_v2=trusted_worker_request_v2,
+                current_lease_observation=current_lease_observation,
+                fake_worker_request=fake_worker_request,
+                fake_launch_plan_v1=fake_launch_plan_v1,
+                blocked_fake_launch_plan_v2=blocked_fake_launch_plan_v2,
+                fake_launch_plan_v3=fake_launch_plan_v3,
+                authenticated_action=retry_authenticated_private_root,
+            )
+        )
+        if (
+            type(authenticated_cleanup) is not tuple
+            or len(authenticated_cleanup) > 1
+            or any(
+                type(stage) is not str
+                or not isinstance(error, BaseException)
+                for stage, error in authenticated_cleanup
+            )
+        ):
+            raise ValueError(
+                "authenticated private-root cleanup result is invalid"
+            )
+        outer_cleanup_failures.extend(authenticated_cleanup)
+        stage_error_pairs = (
+            *base_stage_error_pairs,
+            (
+                tuple(stage for stage, _error in outer_cleanup_failures),
+                tuple(error for _stage, error in outer_cleanup_failures),
+            ),
+        )
+        cleanup_stages = tuple(
+            stage for stages, _errors in stage_error_pairs for stage in stages
+        )
+        receipt = _build_exact_reap_failed_terminal_receipt(
+            run_nonce=checked_launch_v3["run_nonce"],
+            fake_worker_request_v1_sha256=(
+                checked_request["request_sha256"]
+            ),
+            fake_launch_plan_v1_sha256=(
+                checked_launch_v1["plan_sha256"]
+            ),
+            blocked_fake_launch_plan_v2_sha256=(
+                checked_launch_v2["plan_sha256"]
+            ),
+            fake_launch_plan_v3_sha256=(
+                checked_launch_v3["plan_sha256"]
+            ),
+            native_failure_observation=native_failure.observation,
+            lease_terminal_receipt_sha256=(lease_receipt["receipt_sha256"]),
+            lease_status=lease_receipt["status"],
+            lease_integrity_status=lease_receipt["integrity"]["status"],
+            lease_cleanup_status=lease_receipt["cleanup"]["status"],
+            cleanup_stages=cleanup_stages,
+        )
+    except (KeyError, TypeError, ValueError):
+        return reject_unsealed_failure()
+    return _SeparationFakeExecutionFailed(
+        receipt=receipt,
+        primary_error=native_failure.primary_error,
+        cleanup_stages=cleanup_stages,
+        cleanup_errors=(
+            *(
+                error
+                for _stages, errors in stage_error_pairs
+                for error in errors
+            ),
+        ),
+        private_root_owner=_private_root_owner_from_lease_failure(failure),
+        descriptor_owners=admitted_failure.descriptor_owners,
+        native_failure_observation=native_failure.observation,
+        lease_terminal_receipt=lease_receipt,
+    )
+
+
+def _private_root_owner_from_lease_failure(
+    failure: Any,
+) -> _FakeExecutionCore | _OwnedDescriptorCleanupBackstop | None:
+    direct = getattr(failure, "core", None)
+    if type(direct) is _FakeExecutionCore:
+        return direct
+    admitted = getattr(failure, "primary_error", None)
+    if type(admitted) is not _FakeExecutionAdmittedFailure:
+        return None
+    owner = admitted.private_root_owner
+    if type(owner) in {
+        _FakeExecutionCore,
+        _OwnedDescriptorCleanupBackstop,
+    }:
+        return owner
+    return None
+
+
+def _clear_private_root_owner_from_lease_failure(
+    failure: Any,
+    owner: _FakeExecutionCore | _OwnedDescriptorCleanupBackstop,
+) -> None:
+    if getattr(failure, "core", None) is owner:
+        failure.core = None
+        return
+    admitted = getattr(failure, "primary_error", None)
+    if (
+        type(admitted) is _FakeExecutionAdmittedFailure
+        and admitted.private_root_owner is owner
+    ):
+        return
 
 
 def _execute_admitted_fake_worker_under_lease(
@@ -297,6 +631,14 @@ def _execute_admitted_fake_worker_under_lease(
         fake_launch_plan_v3=fake_launch_plan_v3,
     )
     descriptors: dict[int, tuple[int, int]] = {}
+    descriptor_stages: dict[int, str] = {}
+    core: _FakeExecutionCore | None = None
+    primary_error: BaseException | None = None
+    cleanup_failures: list[tuple[str, BaseException]] = []
+    descriptor_owners: list[_OwnedDescriptorCleanupBackstop] = []
+    descriptor_backstops: dict[
+        int, _OwnedDescriptorCleanupBackstop
+    ] = {}
     try:
         frame = _admitted_request_frame(
             admission,
@@ -322,6 +664,27 @@ def _execute_admitted_fake_worker_under_lease(
                 )
             }
         )
+        descriptor_stages.update(
+            {
+                root_descriptor: "private_root_descriptor_close",
+                request_descriptor: "request_descriptor_close",
+                result_write_descriptor: "result_write_descriptor_close",
+                result_read_descriptor: "result_read_descriptor_close",
+            }
+        )
+        for descriptor in (
+            root_descriptor,
+            request_descriptor,
+            result_write_descriptor,
+            result_read_descriptor,
+        ):
+            descriptor_backstops[descriptor] = (
+                _new_owned_descriptor_cleanup_backstop(
+                    descriptor=descriptor,
+                    identity=descriptors[descriptor],
+                    stage=descriptor_stages[descriptor],
+                )
+            )
         if (
             type(checkpoint_descriptor) is not int
             or checkpoint_descriptor < 3
@@ -337,8 +700,8 @@ def _execute_admitted_fake_worker_under_lease(
             result_read_descriptor=result_read_descriptor,
             checkpoint_descriptor=checkpoint_descriptor,
         )
+        descriptor_backstops[result_write_descriptor].finalizer()
         descriptors.pop(result_write_descriptor)
-        _finish_admission(admission, expected_status="consumed")
         root_identity = descriptors[root_descriptor]
         core = _new_fake_execution_core(
             fake_worker_request=fake_worker_request,
@@ -351,15 +714,56 @@ def _execute_admitted_fake_worker_under_lease(
             private_root_identity=root_identity,
         )
         descriptors.pop(root_descriptor)
-        return core
-    except BaseException:
-        _finish_admission(admission, expected_status=None)
-        raise
-    finally:
-        for descriptor, expected_identity in reversed(
-            list(descriptors.items())
-        ):
+        descriptor_backstops[root_descriptor].finalizer.detach()
+    except BaseException as error:
+        primary_error = error
+    try:
+        _finish_admission(
+            admission,
+            expected_status="consumed" if core is not None else None,
+        )
+    except BaseException as cleanup_error:
+        cleanup_failures.append(("admission_finish", cleanup_error))
+    for descriptor, expected_identity in reversed(list(descriptors.items())):
+        stage = descriptor_stages.get(
+            descriptor,
+            "transport_descriptor_close",
+        )
+        try:
             _close_descriptor_if_same(descriptor, expected_identity)
+            owner = descriptor_backstops.get(descriptor)
+            if owner is not None and owner.finalizer.alive:
+                owner.finalizer.detach()
+        except BaseException as cleanup_error:
+            cleanup_failures.append((stage, cleanup_error))
+            owner = descriptor_backstops.get(descriptor)
+            if owner is not None:
+                descriptor_owners.append(owner)
+    if primary_error is not None or cleanup_failures:
+        private_root_owner: (
+            _FakeExecutionCore | _OwnedDescriptorCleanupBackstop | None
+        ) = core
+        if private_root_owner is None:
+            private_root_owner = next(
+                (
+                    owner
+                    for owner in descriptor_owners
+                    if owner.stage == "private_root_descriptor_close"
+                ),
+                None,
+            )
+        failure = _FakeExecutionAdmittedFailure(
+            primary_error=primary_error,
+            cleanup_failures=tuple(cleanup_failures),
+            private_root_owner=private_root_owner,
+            descriptor_owners=tuple(descriptor_owners),
+        )
+        if primary_error is not None:
+            raise failure from primary_error
+        raise failure
+    if core is None:
+        raise RuntimeError("admitted fake execution produced no result")
+    return core
 
 
 def _consume_native_start_admission(
@@ -512,11 +916,14 @@ def _finish_admission(
     with _REGISTRY_LOCK:
         state = _ADMISSIONS.get(admission)
         if type(state) is not _AdmissionState:
-            return
-        if expected_status is not None and state.status != expected_status:
-            raise RuntimeError("fake execution admission was not consumed")
+            raise RuntimeError("fake execution admission is unavailable")
+        status_mismatch = (
+            expected_status is not None and state.status != expected_status
+        )
         state.status = "terminal"
         del _ADMISSIONS[admission]
+    if status_mismatch:
+        raise RuntimeError("fake execution admission was not consumed")
 
 
 def _admitted_request_frame(
@@ -1092,6 +1499,30 @@ def _finalize_root_descriptor(
         pass
 
 
+def _new_owned_descriptor_cleanup_backstop(
+    *,
+    descriptor: int,
+    identity: tuple[int, int],
+    stage: str,
+) -> _OwnedDescriptorCleanupBackstop:
+    owner = _OwnedDescriptorCleanupBackstop(
+        descriptor=descriptor,
+        identity=identity,
+        stage=stage,
+    )
+    object.__setattr__(
+        owner,
+        "finalizer",
+        weakref.finalize(
+            owner,
+            _finalize_root_descriptor,
+            descriptor,
+            identity,
+        ),
+    )
+    return owner
+
+
 def _new_fake_execution_core(
     **values: Any,
 ) -> _FakeExecutionCore:
@@ -1121,6 +1552,23 @@ def _close_core_private_root_strict(core: _FakeExecutionCore) -> None:
         core.private_root_identity,
     )
     core.private_root_finalizer.detach()
+
+
+def _close_private_root_owner_strict(
+    owner: _FakeExecutionCore | _OwnedDescriptorCleanupBackstop,
+) -> None:
+    if type(owner) is _FakeExecutionCore:
+        _close_core_private_root_strict(owner)
+        return
+    if (
+        type(owner) is not _OwnedDescriptorCleanupBackstop
+        or owner.stage != "private_root_descriptor_close"
+        or not hasattr(owner, "finalizer")
+        or not owner.finalizer.alive
+    ):
+        raise RuntimeError("fake execution private root owner is unavailable")
+    _close_descriptor_if_same(owner.descriptor, owner.identity)
+    owner.finalizer.detach()
 
 
 def _close_descriptors_strict(descriptors: Any) -> None:

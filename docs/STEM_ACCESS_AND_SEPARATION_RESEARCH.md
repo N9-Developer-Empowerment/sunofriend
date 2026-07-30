@@ -7,8 +7,9 @@ provenance-bound Darwin build, and a test-only live descriptor canary for the
 exact physical source FDs 3/4/5 plus representative low, mixed-collision and
 scratch-collision/near-limit layouts. The native call now returns a
 preallocated exact-child owner rather than a bare PID. Deterministic fake
-execution now has a private successful-path proof, but whole-run failed
-receipts and the adversarial failure matrix remain incomplete. Exhaustive
+execution now has a private successful-path proof and an exact-reap failed
+whole-run receipt; other failed receipts and the adversarial failure matrix
+remain incomplete. Exhaustive
 arbitrary source-FD proof, path-TOCTOU closure, guaranteed emergency-finalizer
 reap, live child-signal-state proof, real source separation, hidden evaluation
 and promotion are not implemented**
@@ -586,13 +587,14 @@ group with bounded output; timeout cleanup discovers and signals child groups
 before killing and reaping the helper. It checks directory/file modes as well
 as the no-publication fixture result.
 
-This is a successful-path proof. Private lease orchestration now preserves its
-first primary error and all observed cleanup errors instead of silently
-discarding secondary failures. It does not yet convert those facts plus native
-and lease terminality into a path-free whole-run failed receipt. Timeout,
-spawn, malformed-result, checkpoint-mutation, materialization-collision,
-cleanup and replay cases therefore remain required before the
-non-bypassable-transport checklist item can be closed.
+Private lease orchestration preserves its first primary error and all observed
+cleanup errors instead of silently discarding secondary failures. An
+exact-reap native failure can now be converted with terminal lease evidence
+into a path-free whole-run receipt. No-start, spawn-failure, unproven-reap and
+post-lease materialization failures are not covered yet. Timeout, spawn,
+malformed-result, checkpoint-mutation, materialization-collision, cleanup and
+replay cases therefore remain required before the non-bypassable-transport
+checklist item can be closed.
 
 The first failure-evidence increment now labels lease cleanup failures in
 observed order and retains a validated terminal lease receipt when available.
@@ -602,8 +604,7 @@ closes the owned descriptor, then seals the existing lease receipt contract.
 If a successful core had already transferred its private root descriptor, the
 outer executor strictly closes that exact object before discarding ownership.
 On close failure the aggregate retains the core and its armed best-effort
-finalizer; that backstop is not terminal evidence. This still is not the
-whole-run receipt or adversarial matrix.
+finalizer; that backstop is not terminal evidence.
 
 A separate native failed-terminal record now captures post-start failures only
 after the exact owner proves reap, ownership release and no ownership loss.
@@ -612,6 +613,29 @@ worker identity mismatch and post-reap remeasurement failure carry a
 self-hashed path-free observation. The original exception remains private;
 evidence contains only a code-owned stage and no PID or exception text. Spawn
 errors and unproven reap still have no terminal observation.
+
+The pure whole-run failure record combines an exact-reap native observation
+with the existing terminal checkpoint-lease receipt and the validated
+request/plan hashes. Duplicate cleanup stages remain ordered, private transport
+files are acknowledged as possible remnants, and every publication or
+selection permission stays false. The private raised error retains the
+original exception and source evidence, while the receipt contains no
+exception text, path, PID or PGID.
+
+The exact request/launch chain is revalidated against the reserved worker
+request and lease observation before composition. A private one-use capability
+is issued only by the terminal lease state and cross-binds the exact lease,
+reservation, request, observation and receipt, preventing constructed,
+borrowed, cross-run or replayed failures from minting evidence. It snapshots
+the nested primary chain, cleanup tuples and exact fake-chain identities and
+hashes. The receipt composer performs the final root cleanup retry directly;
+the lease module first authenticates the exact bound owner, so mutating an
+error tuple cannot impersonate that retry and an unissued failure cannot close
+a supplied descriptor. Admission cleanup terminalizes its registry entry,
+pre-arms finalizer ownership for all transport descriptors before native
+start, attempts all closes in deterministic order and preserves the native
+primary; any unproven close retains its identity-checked owner as cleanup
+containment only.
 
 The executed worker is still only a code-owned transport fixture: it hashes
 but never deserializes the checkpoint and emits two-frame PCM24 payloads

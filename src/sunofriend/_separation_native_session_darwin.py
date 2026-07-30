@@ -135,12 +135,17 @@ class _VerifiedNativeLauncherExecutionFailure(RuntimeError):
         *,
         primary_error: BaseException,
         observation: _VerifiedNativeLauncherFailedTerminalObservation,
-        cleanup_errors: tuple[BaseException, ...] = (),
+        cleanup_failures: tuple[tuple[str, BaseException], ...] = (),
     ) -> None:
         super().__init__("verified native fake execution failed after exact reap")
         self.primary_error = primary_error
         self.observation = observation
-        self.cleanup_errors = cleanup_errors
+        self.cleanup_stages = tuple(
+            stage for stage, _error in cleanup_failures
+        )
+        self.cleanup_errors = tuple(
+            error for _stage, error in cleanup_failures
+        )
 
 
 class _VerifiedNativeLauncherUnprovenExecutionFailure(RuntimeError):
@@ -150,11 +155,16 @@ class _VerifiedNativeLauncherUnprovenExecutionFailure(RuntimeError):
         self,
         *,
         primary_error: BaseException,
-        cleanup_errors: tuple[BaseException, ...],
+        cleanup_failures: tuple[tuple[str, BaseException], ...],
     ) -> None:
         super().__init__("native fake execution terminality is unproven")
         self.primary_error = primary_error
-        self.cleanup_errors = cleanup_errors
+        self.cleanup_stages = tuple(
+            stage for stage, _error in cleanup_failures
+        )
+        self.cleanup_errors = tuple(
+            error for _stage, error in cleanup_failures
+        )
         self.observation = None
 
 
@@ -450,7 +460,7 @@ def _execute_verified_native_fake_worker(
             raise
         state.run_status = "running"
     primary_error: BaseException | None = None
-    cleanup_errors: list[BaseException] = []
+    cleanup_failures: list[tuple[str, BaseException]] = []
     successful: tuple[
         _SeparationFakeWorkerResultV2Record,
         _VerifiedNativeLauncherExecutionObservation,
@@ -554,7 +564,9 @@ def _execute_verified_native_fake_worker(
                 os.close(owned_result_write_descriptor)
                 result_writer_owned = False
             except OSError as cleanup_error:
-                cleanup_errors.append(cleanup_error)
+                cleanup_failures.append(
+                    ("native_result_writer_close", cleanup_error)
+                )
         if (
             native_owner is not None
             and not _native_owner_has_exact_terminal_state(native_owner)
@@ -580,7 +592,9 @@ def _execute_verified_native_fake_worker(
                 # Dropping the final strong owner outside Python locks invokes
                 # the audited native emergency SIGKILL/exact-wait backstop.
                 # It is never accepted as terminal execution evidence.
-                cleanup_errors.append(cleanup_error)
+                cleanup_failures.append(
+                    ("native_final_supervision", cleanup_error)
+                )
         elif (
             native_owner is not None
             and raw_wait_status is None
@@ -591,7 +605,9 @@ def _execute_verified_native_fake_worker(
                     _normalise_owned_wait_status(cached_wait_status)
                     raw_wait_status = cached_wait_status
             except BaseException as cleanup_error:
-                cleanup_errors.append(cleanup_error)
+                cleanup_failures.append(
+                    ("native_cached_wait_read", cleanup_error)
+                )
     if primary_error is None:
         if successful is None:
             raise RuntimeError(
@@ -616,7 +632,9 @@ def _execute_verified_native_fake_worker(
                 post_reap_remeasurement_complete = True
             except BaseException as cleanup_error:
                 post_reap_remeasurement_complete = False
-                cleanup_errors.append(cleanup_error)
+                cleanup_failures.append(
+                    ("native_post_reap_remeasurement", cleanup_error)
+                )
         if wait is not None and failure_stage in {
             "owner_terminality",
             "post_reap_remeasurement",
@@ -651,13 +669,13 @@ def _execute_verified_native_fake_worker(
             raise _VerifiedNativeLauncherExecutionFailure(
                 primary_error=primary_error,
                 observation=observation,
-                cleanup_errors=tuple(cleanup_errors),
+                cleanup_failures=tuple(cleanup_failures),
             ) from primary_error
     native_owner = None
-    if cleanup_errors:
+    if cleanup_failures:
         raise _VerifiedNativeLauncherUnprovenExecutionFailure(
             primary_error=primary_error,
-            cleanup_errors=tuple(cleanup_errors),
+            cleanup_failures=tuple(cleanup_failures),
         ) from primary_error
     raise primary_error.with_traceback(primary_error.__traceback__)
 

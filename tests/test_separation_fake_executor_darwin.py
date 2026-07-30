@@ -8,6 +8,7 @@ import pickle
 import platform
 import selectors
 import signal
+import stat
 import subprocess
 import sys
 import time
@@ -17,6 +18,8 @@ import pytest
 
 import sunofriend
 import sunofriend._separation_fake_executor_darwin as executor_module
+import sunofriend._separation_fake_failure_records as failure_records
+import sunofriend._separation_native_failure_records as native_failure_records
 import sunofriend._separation_native_session_darwin as session_module
 import sunofriend.separation_checkpoint_descriptor_lease as lease_module
 from sunofriend._separation_native_session_darwin import (
@@ -297,6 +300,469 @@ def test_admission_is_nonconstructible_noncopyable_and_nonserializable() -> None
         )
 
 
+def test_finish_admission_terminalizes_before_reporting_status_mismatch() -> (
+    None
+):
+    admission = object.__new__(
+        executor_module._SeparationFakeExecutionAdmission
+    )
+    executor_module._ADMISSIONS[admission] = executor_module._AdmissionState(
+        owner_pid=os.getpid(),
+        trusted_session=object(),  # type: ignore[arg-type]
+        fake_launch_plan_v3=object(),  # type: ignore[arg-type]
+        run_nonce="a" * 64,
+        status="issued",
+    )
+
+    with pytest.raises(RuntimeError, match="was not consumed"):
+        executor_module._finish_admission(
+            admission,
+            expected_status="consumed",
+        )
+
+    assert admission not in executor_module._ADMISSIONS
+
+
+def test_admitted_failure_preserves_primary_and_attempts_every_close(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    descriptors = tuple(
+        os.open(tmp_path, os.O_RDONLY | os.O_DIRECTORY) for _index in range(4)
+    )
+    for descriptor in descriptors:
+        os.set_inheritable(descriptor, False)
+    root, request, result_write, result_read = descriptors
+    identities = {
+        descriptor: executor_module._descriptor_object_identity(descriptor)
+        for descriptor in descriptors
+    }
+    attempted: list[int] = []
+    original_primary = ValueError("synthetic native primary")
+
+    monkeypatch.setattr(
+        executor_module,
+        "_validate_execution_chain",
+        lambda **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_issue_admission",
+        lambda **_kwargs: object(),
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_admitted_request_frame",
+        lambda *_args, **_kwargs: b"frame",
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_prepare_transport",
+        lambda *_args, **_kwargs: descriptors,
+    )
+
+    def fail_native(*_args: object, **_kwargs: object) -> object:
+        raise original_primary
+
+    monkeypatch.setattr(
+        executor_module,
+        "_execute_verified_native_fake_worker",
+        fail_native,
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_finish_admission",
+        lambda *_args, **_kwargs: None,
+    )
+
+    def close_with_two_failures(
+        descriptor: int,
+        expected_identity: tuple[int, int],
+    ) -> None:
+        assert expected_identity == identities[descriptor]
+        attempted.append(descriptor)
+        if descriptor in {result_read, root}:
+            raise RuntimeError(f"synthetic close failure {descriptor}")
+        os.close(descriptor)
+
+    monkeypatch.setattr(
+        executor_module,
+        "_close_descriptor_if_same",
+        close_with_two_failures,
+    )
+
+    with pytest.raises(
+        executor_module._FakeExecutionAdmittedFailure
+    ) as captured:
+        executor_module._execute_admitted_fake_worker_under_lease(
+            lease_bridge_authority=object(),
+            trusted_worker_request_v2=object(),  # type: ignore[arg-type]
+            current_lease_observation=object(),
+            expected_blocked_launch_v2=object(),  # type: ignore[arg-type]
+            fake_worker_request=object(),  # type: ignore[arg-type]
+            fake_launch_plan_v1=object(),  # type: ignore[arg-type]
+            blocked_fake_launch_plan_v2=object(),  # type: ignore[arg-type]
+            fake_launch_plan_v3=object(),  # type: ignore[arg-type]
+            trusted_native_session=object(),  # type: ignore[arg-type]
+            native_session_observation=object(),  # type: ignore[arg-type]
+            checkpoint_descriptor=99,
+            private_root=tmp_path / "unused",
+        )
+
+    failure = captured.value
+    assert failure.primary_error is original_primary
+    assert attempted == [result_read, result_write, request, root]
+    assert failure.cleanup_stages == (
+        "result_read_descriptor_close",
+        "private_root_descriptor_close",
+    )
+    assert len(failure.cleanup_errors) == 2
+    assert len(failure.descriptor_owners) == 2
+    assert failure.private_root_owner is failure.descriptor_owners[1]
+    assert all(owner.finalizer.alive for owner in failure.descriptor_owners)
+    for owner in failure.descriptor_owners:
+        owner.finalizer()
+        assert owner.finalizer.alive is False
+    for descriptor in descriptors:
+        with pytest.raises(OSError) as closed:
+            os.fstat(descriptor)
+        assert closed.value.errno == errno.EBADF
+
+
+def test_descriptor_backstop_allocation_must_complete_before_native_start(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    descriptors = tuple(
+        os.open(tmp_path, os.O_RDONLY | os.O_DIRECTORY) for _index in range(4)
+    )
+    for descriptor in descriptors:
+        os.set_inheritable(descriptor, False)
+    identities = {
+        descriptor: executor_module._descriptor_object_identity(descriptor)
+        for descriptor in descriptors
+    }
+    attempted: list[int] = []
+    native_started = False
+    owner_error = RuntimeError("synthetic root owner allocation failure")
+
+    monkeypatch.setattr(
+        executor_module,
+        "_validate_execution_chain",
+        lambda **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_issue_admission",
+        lambda **_kwargs: object(),
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_admitted_request_frame",
+        lambda *_args, **_kwargs: b"frame",
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_prepare_transport",
+        lambda *_args, **_kwargs: descriptors,
+    )
+
+    def fail_owner(**_kwargs: object) -> object:
+        raise owner_error
+
+    monkeypatch.setattr(
+        executor_module,
+        "_new_owned_descriptor_cleanup_backstop",
+        fail_owner,
+    )
+
+    def record_native(*_args: object, **_kwargs: object) -> object:
+        nonlocal native_started
+        native_started = True
+        raise AssertionError("native execution must not start")
+
+    monkeypatch.setattr(
+        executor_module,
+        "_execute_verified_native_fake_worker",
+        record_native,
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_finish_admission",
+        lambda *_args, **_kwargs: None,
+    )
+
+    def close_all(
+        descriptor: int,
+        expected_identity: tuple[int, int],
+    ) -> None:
+        assert expected_identity == identities[descriptor]
+        attempted.append(descriptor)
+        os.close(descriptor)
+
+    monkeypatch.setattr(
+        executor_module,
+        "_close_descriptor_if_same",
+        close_all,
+    )
+
+    with pytest.raises(
+        executor_module._FakeExecutionAdmittedFailure
+    ) as captured:
+        executor_module._execute_admitted_fake_worker_under_lease(
+            lease_bridge_authority=object(),
+            trusted_worker_request_v2=object(),  # type: ignore[arg-type]
+            current_lease_observation=object(),
+            expected_blocked_launch_v2=object(),  # type: ignore[arg-type]
+            fake_worker_request=object(),  # type: ignore[arg-type]
+            fake_launch_plan_v1=object(),  # type: ignore[arg-type]
+            blocked_fake_launch_plan_v2=object(),  # type: ignore[arg-type]
+            fake_launch_plan_v3=object(),  # type: ignore[arg-type]
+            trusted_native_session=object(),  # type: ignore[arg-type]
+            native_session_observation=object(),  # type: ignore[arg-type]
+            checkpoint_descriptor=99,
+            private_root=tmp_path / "unused",
+        )
+
+    failure = captured.value
+    assert failure.primary_error is owner_error
+    assert failure.cleanup_stages == ()
+    assert failure.private_root_owner is None
+    assert failure.descriptor_owners == ()
+    assert native_started is False
+    assert attempted == list(reversed(descriptors))
+    for descriptor in descriptors:
+        with pytest.raises(OSError) as closed:
+            os.fstat(descriptor)
+        assert closed.value.errno == errno.EBADF
+
+
+def test_prearmed_root_survives_later_backstop_allocation_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    descriptors = tuple(
+        os.open(tmp_path, os.O_RDONLY | os.O_DIRECTORY) for _index in range(4)
+    )
+    for descriptor in descriptors:
+        os.set_inheritable(descriptor, False)
+    root, _request, _result_write, _result_read = descriptors
+    identities = {
+        descriptor: executor_module._descriptor_object_identity(descriptor)
+        for descriptor in descriptors
+    }
+    attempted: list[int] = []
+    native_started = False
+    owner_error = RuntimeError("synthetic later owner allocation failure")
+    root_close_error = RuntimeError("synthetic root close failure")
+
+    monkeypatch.setattr(
+        executor_module,
+        "_validate_execution_chain",
+        lambda **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_issue_admission",
+        lambda **_kwargs: object(),
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_admitted_request_frame",
+        lambda *_args, **_kwargs: b"frame",
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_prepare_transport",
+        lambda *_args, **_kwargs: descriptors,
+    )
+    original_new_owner = (
+        executor_module._new_owned_descriptor_cleanup_backstop
+    )
+    owner_calls = 0
+
+    def fail_second_owner(**kwargs: object) -> object:
+        nonlocal owner_calls
+        owner_calls += 1
+        if owner_calls == 2:
+            raise owner_error
+        return original_new_owner(**kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(
+        executor_module,
+        "_new_owned_descriptor_cleanup_backstop",
+        fail_second_owner,
+    )
+
+    def record_native(*_args: object, **_kwargs: object) -> object:
+        nonlocal native_started
+        native_started = True
+        raise AssertionError("native execution must not start")
+
+    monkeypatch.setattr(
+        executor_module,
+        "_execute_verified_native_fake_worker",
+        record_native,
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_finish_admission",
+        lambda *_args, **_kwargs: None,
+    )
+
+    def fail_root_close(
+        descriptor: int,
+        expected_identity: tuple[int, int],
+    ) -> None:
+        assert expected_identity == identities[descriptor]
+        attempted.append(descriptor)
+        if descriptor == root:
+            raise root_close_error
+        os.close(descriptor)
+
+    monkeypatch.setattr(
+        executor_module,
+        "_close_descriptor_if_same",
+        fail_root_close,
+    )
+
+    with pytest.raises(
+        executor_module._FakeExecutionAdmittedFailure
+    ) as captured:
+        executor_module._execute_admitted_fake_worker_under_lease(
+            lease_bridge_authority=object(),
+            trusted_worker_request_v2=object(),  # type: ignore[arg-type]
+            current_lease_observation=object(),
+            expected_blocked_launch_v2=object(),  # type: ignore[arg-type]
+            fake_worker_request=object(),  # type: ignore[arg-type]
+            fake_launch_plan_v1=object(),  # type: ignore[arg-type]
+            blocked_fake_launch_plan_v2=object(),  # type: ignore[arg-type]
+            fake_launch_plan_v3=object(),  # type: ignore[arg-type]
+            trusted_native_session=object(),  # type: ignore[arg-type]
+            native_session_observation=object(),  # type: ignore[arg-type]
+            checkpoint_descriptor=99,
+            private_root=tmp_path / "unused",
+        )
+
+    failure = captured.value
+    assert failure.primary_error is owner_error
+    assert failure.cleanup_stages == ("private_root_descriptor_close",)
+    assert failure.cleanup_errors == (root_close_error,)
+    assert native_started is False
+    assert attempted == list(reversed(descriptors))
+    assert len(failure.descriptor_owners) == 1
+    root_owner = failure.descriptor_owners[0]
+    assert failure.private_root_owner is root_owner
+    assert root_owner.descriptor == root
+    assert root_owner.finalizer.alive is True
+    root_owner.finalizer()
+    assert root_owner.finalizer.alive is False
+    for descriptor in descriptors:
+        with pytest.raises(OSError) as closed:
+            os.fstat(descriptor)
+        assert closed.value.errno == errno.EBADF
+
+
+def test_admitted_success_cleanup_failure_retains_completed_core_root(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    descriptors = tuple(
+        os.open(tmp_path, os.O_RDONLY | os.O_DIRECTORY) for _index in range(4)
+    )
+    for descriptor in descriptors:
+        os.set_inheritable(descriptor, False)
+    root, request, result_write, result_read = descriptors
+    identities = {
+        descriptor: executor_module._descriptor_object_identity(descriptor)
+        for descriptor in descriptors
+    }
+
+    monkeypatch.setattr(
+        executor_module,
+        "_validate_execution_chain",
+        lambda **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_issue_admission",
+        lambda **_kwargs: object(),
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_admitted_request_frame",
+        lambda *_args, **_kwargs: b"frame",
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_prepare_transport",
+        lambda *_args, **_kwargs: descriptors,
+    )
+
+    def succeed_native(*_args: object, **_kwargs: object) -> object:
+        os.close(result_write)
+        return object(), object()
+
+    monkeypatch.setattr(
+        executor_module,
+        "_execute_verified_native_fake_worker",
+        succeed_native,
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_finish_admission",
+        lambda *_args, **_kwargs: None,
+    )
+
+    def fail_result_reader_close(
+        descriptor: int,
+        expected_identity: tuple[int, int],
+    ) -> None:
+        assert expected_identity == identities[descriptor]
+        if descriptor == result_read:
+            raise RuntimeError("synthetic result reader close failure")
+        os.close(descriptor)
+
+    monkeypatch.setattr(
+        executor_module,
+        "_close_descriptor_if_same",
+        fail_result_reader_close,
+    )
+
+    with pytest.raises(
+        executor_module._FakeExecutionAdmittedFailure
+    ) as captured:
+        executor_module._execute_admitted_fake_worker_under_lease(
+            lease_bridge_authority=object(),
+            trusted_worker_request_v2=object(),  # type: ignore[arg-type]
+            current_lease_observation=object(),
+            expected_blocked_launch_v2=object(),  # type: ignore[arg-type]
+            fake_worker_request=object(),  # type: ignore[arg-type]
+            fake_launch_plan_v1=object(),  # type: ignore[arg-type]
+            blocked_fake_launch_plan_v2=object(),  # type: ignore[arg-type]
+            fake_launch_plan_v3=object(),  # type: ignore[arg-type]
+            trusted_native_session=object(),  # type: ignore[arg-type]
+            native_session_observation=object(),  # type: ignore[arg-type]
+            checkpoint_descriptor=99,
+            private_root=tmp_path / "unused",
+        )
+
+    failure = captured.value
+    assert failure.primary_error is None
+    assert failure.cleanup_stages == ("result_read_descriptor_close",)
+    assert (
+        type(failure.private_root_owner) is executor_module._FakeExecutionCore
+    )
+    assert failure.private_root_owner.private_root_finalizer.alive is True
+    assert len(failure.descriptor_owners) == 1
+    failure.descriptor_owners[0].finalizer()
+    failure.private_root_owner.private_root_finalizer()
+    for descriptor in descriptors:
+        with pytest.raises(OSError) as closed:
+            os.fstat(descriptor)
+        assert closed.value.errno == errno.EBADF
+
+
 def test_lease_bridge_is_nonconstructible_noncopyable_and_nonserializable() -> None:
     bridge_type = lease_module._FakeExecutionLeaseBridgeAuthority
 
@@ -479,10 +945,10 @@ def test_lease_bridge_preserves_primary_and_all_cleanup_failures(
                 trusted_reservation=reservation,
                 trusted_worker_request_v2=worker_v2,
                 current_lease_observation=observation,
-                fake_worker_request=object(),
-                fake_launch_plan_v1=object(),
-                blocked_fake_launch_plan_v2=object(),
-                fake_launch_plan_v3=object(),
+                fake_worker_request={"request_sha256": "1" * 64},
+                fake_launch_plan_v1={"plan_sha256": "2" * 64},
+                blocked_fake_launch_plan_v2={"plan_sha256": "3" * 64},
+                fake_launch_plan_v3={"plan_sha256": "4" * 64},
                 trusted_native_session=object(),
                 native_session_observation=object(),
                 private_root=tmp_path / "unused",
@@ -520,7 +986,7 @@ def test_lease_bridge_preserves_primary_and_all_cleanup_failures(
         assert fixture["checkpoint"].exists()
 
 
-def test_outer_executor_closes_failed_core_root_and_records_close_failure(
+def test_outer_executor_never_closes_unissued_failure_root(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -549,7 +1015,11 @@ def test_outer_executor_closes_failed_core_root_and_records_close_failure(
     def fail_under_lock(**_kwargs: object) -> object:
         raise failure
 
+    close_attempted = False
+
     def fail_before_close(_core: object) -> None:
+        nonlocal close_attempted
+        close_attempted = True
         raise RuntimeError("synthetic root close failure")
 
     monkeypatch.setattr(
@@ -578,8 +1048,9 @@ def test_outer_executor_closes_failed_core_root_and_records_close_failure(
         )
     assert captured.value is failure
     assert failure.core is core
-    assert failure.cleanup_stages == ("private_root_descriptor_close",)
-    assert isinstance(failure.cleanup_errors[0], RuntimeError)
+    assert failure.cleanup_stages == ()
+    assert failure.cleanup_errors == ()
+    assert close_attempted is False
     assert os.fstat(root_descriptor).st_ino == root_identity[1]
     assert core.private_root_finalizer.alive is True
     core.private_root_finalizer()
@@ -587,6 +1058,206 @@ def test_outer_executor_closes_failed_core_root_and_records_close_failure(
     with pytest.raises(OSError) as closed:
         os.fstat(root_descriptor)
     assert closed.value.errno == errno.EBADF
+
+
+def test_outer_executor_seals_exact_reap_whole_run_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from sunofriend._separation_fake_execution_records import (
+        _EXPECTED_FAKE_WORKER_SOURCE_BYTES,
+        _EXPECTED_FAKE_WORKER_SOURCE_SHA256,
+        _build_prepared_separation_fake_launch_plan_v3_record,
+    )
+    from sunofriend._separation_fake_launch_v2_records import (
+        _build_blocked_separation_fake_launch_plan_v2_record,
+    )
+    from sunofriend._separation_fake_transport_records import (
+        _build_separation_fake_launch_plan,
+        _build_separation_fake_worker_request,
+    )
+    from tests.test_separation_launch_v2_facade import _issue, _prepared
+
+    fixture, lease, observation, worker_v2, reservation = _prepared(
+        tmp_path / "lease"
+    )
+    checkpoint_launch = _issue(
+        lease,
+        reservation,
+        worker_v2,
+    )
+    fake_worker_request = _build_separation_fake_worker_request(
+        worker_request_v2=worker_v2,
+        blocked_launch_plan_v2=checkpoint_launch,
+        run_nonce="a" * 64,
+    )
+    fake_launch_plan_v1 = _build_separation_fake_launch_plan(
+        fake_worker_request=fake_worker_request,
+        runtime_executable_sha256="1" * 64,
+        runtime_executable_bytes=4_096,
+        fake_worker_sha256=_EXPECTED_FAKE_WORKER_SOURCE_SHA256,
+        fake_worker_bytes=_EXPECTED_FAKE_WORKER_SOURCE_BYTES,
+    )
+
+    def stat_identity(
+        *,
+        inode: int,
+        byte_count: int,
+        executable: bool = False,
+    ) -> dict[str, int]:
+        return {
+            "device": 10,
+            "inode": inode,
+            "mode": stat.S_IFREG | (0o755 if executable else 0o600),
+            "links": 1,
+            "owner": 501,
+            "group": 20,
+            "bytes": byte_count,
+            "modified_ns": 1_000_000 + inode,
+            "changed_ns": 2_000_000 + inode,
+        }
+
+    blocked_fake_launch_plan_v2 = (
+        _build_blocked_separation_fake_launch_plan_v2_record(
+            fake_worker_request=fake_worker_request,
+            fake_launch_plan_v1=fake_launch_plan_v1,
+            native_launcher_sha256="3" * 64,
+            native_launcher_bytes=2_048,
+            native_launcher_stat_identity=stat_identity(
+                inode=101,
+                byte_count=2_048,
+                executable=True,
+            ),
+            runtime_executable_sha256="1" * 64,
+            runtime_executable_bytes=4_096,
+            runtime_executable_stat_identity=stat_identity(
+                inode=102,
+                byte_count=4_096,
+                executable=True,
+            ),
+            fake_worker_sha256=_EXPECTED_FAKE_WORKER_SOURCE_SHA256,
+            fake_worker_bytes=_EXPECTED_FAKE_WORKER_SOURCE_BYTES,
+            fake_worker_stat_identity=stat_identity(
+                inode=103,
+                byte_count=_EXPECTED_FAKE_WORKER_SOURCE_BYTES,
+            ),
+        )
+    )
+    fake_launch_plan_v3 = (
+        _build_prepared_separation_fake_launch_plan_v3_record(
+            fake_worker_request=fake_worker_request,
+            fake_launch_plan_v1=fake_launch_plan_v1,
+            blocked_fake_launch_plan_v2=blocked_fake_launch_plan_v2,
+            native_build_receipt_sha256="4" * 64,
+        )
+    )
+    native_observation = (
+        native_failure_records._build_exact_reap_failure_observation(
+            native_session_observation_sha256="1" * 64,
+            fake_launch_plan_v3_sha256=fake_launch_plan_v3[
+                "plan_sha256"
+            ],
+            failure_stage="result_decode",
+            wait={
+                "kind": "exited",
+                "exit_code": 0,
+                "signal": None,
+                "core_dumped": False,
+            },
+            timed_out=False,
+            term_sent=False,
+            kill_sent=False,
+            fake_worker_result_v2_sha256=None,
+            worker_reported_identity_matched=None,
+            post_reap_remeasurement_complete=True,
+        )
+    )
+    original_primary = ValueError("synthetic private primary text")
+    native_cleanup = RuntimeError("synthetic native cleanup text")
+    admitted_cleanup = RuntimeError("synthetic admitted cleanup text")
+    lease_cleanup = RuntimeError("synthetic lease cleanup text")
+    native_failure = session_module._VerifiedNativeLauncherExecutionFailure(
+        primary_error=original_primary,
+        observation=native_observation,
+        cleanup_failures=(("native_final_supervision", native_cleanup),),
+    )
+    admitted_failure = executor_module._FakeExecutionAdmittedFailure(
+        primary_error=native_failure,
+        cleanup_failures=(("request_descriptor_close", admitted_cleanup),),
+        private_root_owner=None,
+        descriptor_owners=(),
+    )
+    original_finish = lease_module._finish_fake_execution_lease_bridge
+
+    def fail_admitted(**kwargs: object) -> object:
+        lease_module._consume_fake_execution_lease_bridge(
+            kwargs["lease_bridge_authority"],
+            trusted_worker_request_v2=worker_v2,
+            current_lease_observation=observation,
+        )
+        raise admitted_failure
+
+    monkeypatch.setattr(
+        executor_module,
+        "_execute_admitted_fake_worker_under_lease",
+        fail_admitted,
+    )
+
+    def finish_then_fail(authority: object) -> None:
+        original_finish(authority)
+        raise lease_cleanup
+
+    monkeypatch.setattr(
+        lease_module,
+        "_finish_fake_execution_lease_bridge",
+        finish_then_fail,
+    )
+    with pytest.raises(
+        executor_module._SeparationFakeExecutionFailed
+    ) as captured:
+        executor_module._execute_reserved_fake_worker(
+            trusted_lease=lease,
+            trusted_reservation=reservation,
+            trusted_worker_request_v2=worker_v2,
+            current_lease_observation=observation,
+            fake_worker_request=fake_worker_request,
+            fake_launch_plan_v1=fake_launch_plan_v1,
+            blocked_fake_launch_plan_v2=blocked_fake_launch_plan_v2,
+            fake_launch_plan_v3=fake_launch_plan_v3,
+            trusted_native_session=object(),  # type: ignore[arg-type]
+            native_session_observation=object(),  # type: ignore[arg-type]
+            private_root=tmp_path / "unused-root",
+        )
+    failure = captured.value
+    assert failure.primary_error is original_primary
+    assert failure.cleanup_stages == (
+        "native_final_supervision",
+        "request_descriptor_close",
+        "lease_bridge_finish",
+    )
+    assert failure.cleanup_errors == (
+        native_cleanup,
+        admitted_cleanup,
+        lease_cleanup,
+    )
+    assert failure.private_root_owner is None
+    assert failure.descriptor_owners == ()
+    assert failure.native_failure_observation is native_observation
+    assert failure.lease_terminal_receipt["status"] == "closed"
+    assert failure.lease_terminal_receipt["cleanup"]["status"] == "complete"
+    receipt = failure_records._validate_failed_terminal_receipt(
+        failure.receipt
+    )
+    assert receipt["status"] == "failed_terminal_with_cleanup_failures"
+    assert [event["stage"] for event in receipt["failure"]["cleanup"]] == [
+        "native_final_supervision",
+        "request_descriptor_close",
+        "lease_bridge_finish",
+    ]
+    assert receipt["lease"]["status"] == "closed"
+    assert receipt["process"]["leader_reaped"] is True
+    assert "synthetic" not in repr(receipt)
+    assert fixture["checkpoint"].exists()
 
 
 @pytest.mark.skipif(
