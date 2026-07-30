@@ -3,9 +3,9 @@
 Status: **research and architecture decision complete; S1 synchronized source
 preparation and S2 source lineage/composite drums accepted; S3 separation-run,
 controlled-fake harness, acceptance pre-registration, bake-off preparation,
-backend-preflight, worker, runtime-artifact and non-spawning launch/lifecycle
-contracts implemented; real source separation, hidden evaluation and promotion
-are not implemented**
+backend-preflight, worker, runtime-artifact, read-only runtime measurement and
+non-spawning launch/lifecycle contracts implemented; real source separation,
+hidden evaluation and promotion are not implemented**
 
 Checked: 29 July 2026
 
@@ -169,6 +169,27 @@ terminal evidence cannot be mistaken for a successful separation:
 post-input immutability, parent output verification, quarantine, publication,
 acceptance and promotion false. No worker, model or audio ran in this
 increment.
+
+The eighth S3 increment adds the filesystem-facing, read-only parent
+measurement in `separation_runtime_measurement.py`. It accepts only a
+parent-issued exact request binding, walks the runtime launcher and complete
+ancestor tree with no-follow read-only descriptors, requires an explicit
+`include-system-site-packages = false`, and hashes the final executable,
+`pyvenv.cfg`, worker, lockfile and a bounded, descriptor-relative
+`site-packages` tree. Immediate remeasurement rejects changed bytes or
+identities. Stable ancestor evidence uses device, inode and mode so unrelated
+sibling activity does not invalidate a long measurement; actual runtime and
+package-tree content retains full mutation checks. Cross-device descendants,
+hardlinks, symlinks, unsafe aliases, devices, sockets and resource-bound
+overruns fail closed.
+
+This remains measurement, not execution authorisation. The launch plan uses
+`-S` so Python does not automatically process `site` or `.pth` startup code,
+but the base standard library, `pyvenv` home and native dynamic-library closure
+are not yet measured. Portable checks also cannot distinguish every
+same-device APFS firmlink or mount alias. The module makes no network API
+calls, but a caller must still avoid network-mounted runtime paths. No process,
+model, checkpoint or audio ran.
 
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
@@ -1085,6 +1106,13 @@ runner/backends and bake-off execution not implemented**
 - [x] Add a pure exact launch plan and supervisor-owned lifecycle with no
   execution surface, separate handle/exec/handshake observations, mandatory
   reap-before-release and explicitly unvalidated cleanup receipts.
+- [x] Add read-only parent runtime measurement and immediate remeasurement
+  with descriptor-pinned ancestor/package traversal, stable ancestor identity,
+  explicit system-site exclusion and bounded fail-closed reads.
+- [ ] Add a pure execution-admission and checkpoint policy that distinguishes
+  state dictionaries from executable pickle model packages and reports every
+  unavailable isolation/runtime/licence prerequisite without starting a
+  worker.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with a
   deterministic fake worker, exact pre-exec remeasurement, validated worker
   result and parent-verified quarantined outputs before any real model is
@@ -1109,7 +1137,10 @@ Likely modules:
 - `separation_backend_preflight.py`
 - `separation_worker_contract.py`
 - `separation_runtime_artifact.py`
+- `separation_runtime_measurement.py`
 - `separation_launch_contract.py`
+- `separation_checkpoint_policy.py`
+- `separation_execution_admission.py`
 
 ### S4 — Experimental broad separation in Studio
 

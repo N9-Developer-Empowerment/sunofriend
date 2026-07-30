@@ -6,6 +6,11 @@ only validates, canonicalises, hashes and deep-freezes that data.  It performs
 no filesystem access, starts no process, imports no backend and uses no
 network.
 
+Ancestor ``lstat`` documents use a stable-identity projection: device, inode
+and mode are observed; size, mtime and ctime are deterministic zeros because
+those directory fields change under unrelated sibling activity.  The
+filesystem parent separately pins every parent-to-child binding.
+
 Static backend preflight v1 does not register a runtime-artifact hash.
 Consequently every v1 document produced here is explicitly private
 development evidence and is never acceptance or promotion evidence.
@@ -30,7 +35,7 @@ from .separation_worker_contract import SeparationRuntimeArtifactIdentity
 SEPARATION_RUNTIME_ARTIFACT_SCHEMA = "sunofriend.separation-runtime-artifact.v1"
 SEPARATION_RUNTIME_ARTIFACT_STATUS = "private_development_unregistered"
 SEPARATION_RUNTIME_LAUNCHER_CHAIN_ALGORITHM = "canonical-launcher-chain-sha256-v1"
-SEPARATION_RUNTIME_PACKAGE_TREE_ALGORITHM = "installed-package-tree-sha256-v1"
+SEPARATION_RUNTIME_PACKAGE_TREE_ALGORITHM = "runtime-site-tree-stability-sha256-v1"
 SEPARATION_RUNTIME_REGISTRATION_REASON = (
     "static-preflight-v1-lacks-runtime-artifact-sha256"
 )
@@ -475,6 +480,10 @@ def _validate_ancestor_directories(
             raise ValueError("every ancestor must be an observed directory")
         facts = _lstat(item["lstat"], f"ancestor directories[{index}].lstat")
         _facts_match_kind(facts, "directory", f"ancestor directories[{index}]")
+        if any(facts[field] != 0 for field in ("size", "mtime_ns", "ctime_ns")):
+            raise ValueError(
+                "ancestor directory volatile facts must use the stable projection"
+            )
         if resolved != path:
             raise ValueError("ancestor directory contains a symlink or resolved alias")
         result.append(
@@ -775,7 +784,7 @@ def _raw_symlink_target(value: Any, label: str) -> str:
     ):
         raise ValueError(f"{label} is unsafe")
     path = PurePosixPath(text)
-    if any(part in {"", ".", ".."} for part in path.parts):
+    if str(path) != text or any(part in {"", ".", ".."} for part in path.parts):
         raise ValueError(f"{label} contains a path alias or upward escape")
     return text
 

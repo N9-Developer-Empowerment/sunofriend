@@ -298,6 +298,24 @@ Exports remain path-free. Normal terminal cleanup is named
 worker result, post-input immutability, parent output verification,
 quarantine, publication, acceptance or promotion has been proved.
 
+`separation_runtime_measurement.py` is the eighth internal S3 boundary and the
+first filesystem-facing counterpart to those pure records. It accepts only an
+exact parent-issued request binding. Read-only, no-follow descriptors measure
+the launcher chain, stable complete ancestor identity, native executable,
+`pyvenv.cfg`, worker, lockfile and a bounded descriptor-relative
+`site-packages` tree. Immediate remeasurement must reproduce the complete
+artifact. Runtime/package files retain full identity and byte checks; ancestor
+directories use a documented stable device/inode/mode projection and pinned
+parent-child bindings so unrelated sibling writes do not create false
+failures. System site packages, cross-device descendants, hardlinks, symlinks,
+unsafe aliases, devices, sockets and resource overruns fail closed.
+
+The measurer starts no process and makes no model, audio, network-API or write
+operation. Its artifact remains unregistered, execution-unproven and
+TOCTOU-open. Launch uses `-S` to avoid automatic `site` and `.pth` startup, but
+base-standard-library, `pyvenv` home, native dynamic-library and same-device
+APFS alias closure remain later admission/provider boundaries.
+
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a
 starter ZIP. It does not create or mutate Workbench SQLite state. After

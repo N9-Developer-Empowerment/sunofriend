@@ -249,6 +249,26 @@ false result, input, output, quarantine, publication, acceptance and promotion
 flags. Real worker execution is a literal false capability and these modules
 contain no filesystem, process, model, audio or network operation.
 
+The eighth S3 slice implements the separate read-only parent measurer.
+`separation_runtime_measurement.py` binds only a parent-issued exact worker
+request, measures the launcher, full ancestor identity chain, native
+executable, virtual-environment configuration, worker, lockfile and bounded
+installed package tree, then can repeat the complete observation immediately
+before a future exec. Directory traversal is descriptor-relative, no-follow
+and read-only; package descendants cannot cross devices or use aliases,
+hardlinks, devices or sockets. `include-system-site-packages` must be present
+and false. Broad ancestor evidence deliberately projects volatile size and
+timestamps away while retaining device/inode/mode and pinned parent-child
+bindings, so unrelated sibling activity cannot create a false runtime change.
+
+The measurer makes no network API call and performs no process, model,
+checkpoint, audio or write operation. It does not close TOCTOU or prove an
+executable runtime. The launch policy now includes `-S` to disable automatic
+`site` and `.pth` processing, while base-standard-library, `pyvenv` home and
+native dynamic-library closure remain unmeasured. A pure checkpoint and
+execution-admission policy is therefore the next safe slice; real execution
+support stays literally false.
+
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
 transcriber. They need independent lineage, model/checkpoint licensing,

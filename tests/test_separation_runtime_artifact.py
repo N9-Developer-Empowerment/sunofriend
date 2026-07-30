@@ -11,6 +11,9 @@ from typing import Any
 import pytest
 import sunofriend.separation_runtime_artifact as runtime_artifact_module
 
+from sunofriend.separation_backend_preflight import (
+    SEPARATION_PACKAGE_SOURCE_HASH_ALGORITHM,
+)
 from sunofriend.separation_runtime_artifact import (
     SEPARATION_RUNTIME_ARTIFACT_STATUS,
     SEPARATION_RUNTIME_PACKAGE_TREE_ALGORITHM,
@@ -30,6 +33,17 @@ def _sha(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def test_runtime_stability_digest_has_a_distinct_algorithm_domain() -> None:
+    assert (
+        SEPARATION_RUNTIME_PACKAGE_TREE_ALGORITHM
+        == "runtime-site-tree-stability-sha256-v1"
+    )
+    assert (
+        SEPARATION_RUNTIME_PACKAGE_TREE_ALGORITHM
+        != SEPARATION_PACKAGE_SOURCE_HASH_ALGORITHM
+    )
+
+
 def _facts(
     *,
     inode: int,
@@ -44,6 +58,17 @@ def _facts(
         "size": size,
         "mtime_ns": mtime_ns,
         "ctime_ns": mtime_ns + 1,
+    }
+
+
+def _ancestor_facts(*, inode: int) -> dict[str, int]:
+    return {
+        "device": 17,
+        "inode": inode,
+        "mode": stat.S_IFDIR | 0o755,
+        "size": 0,
+        "mtime_ns": 0,
+        "ctime_ns": 0,
     }
 
 
@@ -213,11 +238,7 @@ def _inputs(*, multichain: bool = False) -> dict[str, Any]:
         {
             "canonical_path": path,
             "kind": "directory",
-            "lstat": _facts(
-                inode=1000 + index,
-                mode=stat.S_IFDIR | 0o755,
-                size=512,
-            ),
+            "lstat": _ancestor_facts(inode=1000 + index),
             "canonical_resolved_path": path,
         }
         for index, path in enumerate(
@@ -417,6 +438,12 @@ def test_parent_evidence_requires_exact_parent_owned_type() -> None:
         ),
         (
             lambda value: value["launcher_chain"][0].__setitem__(
+                "raw_target", "bin/./python3"
+            ),
+            "path alias",
+        ),
+        (
+            lambda value: value["launcher_chain"][0].__setitem__(
                 "canonical_resolved_target",
                 "/opt/homebrew/other-python",
             ),
@@ -588,6 +615,14 @@ def test_rejects_hardlink_alias_and_incomplete_or_resolved_ancestor() -> None:
     )
     with pytest.raises(ValueError, match="symlink or resolved alias"):
         _build(resolved_alias)
+
+
+def test_ancestor_evidence_requires_stable_identity_projection() -> None:
+    inputs = _inputs()
+    inputs["ancestor_directories"][0]["lstat"]["mtime_ns"] = 1
+
+    with pytest.raises(ValueError, match="stable projection"):
+        _build(inputs)
 
 
 def test_final_facts_and_file_sizes_cannot_drift_inside_document() -> None:

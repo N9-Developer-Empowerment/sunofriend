@@ -157,7 +157,8 @@ def _make_runtime(
     launcher.symlink_to(Path(sys.executable).resolve())
     (runtime_root / "pyvenv.cfg").write_text(
         "home = synthetic\n"
-        f"version = {platform.python_version()}\n",
+        f"version = {platform.python_version()}\n"
+        "include-system-site-packages = false\n",
         encoding="utf-8",
     )
 

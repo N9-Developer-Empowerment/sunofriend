@@ -576,6 +576,7 @@ def _expected_launch_payload(
     argv = [
         paths["runtime_python_path"],
         "-I",
+        "-S",
         "-B",
         paths["worker_path"],
         "--request-fd",

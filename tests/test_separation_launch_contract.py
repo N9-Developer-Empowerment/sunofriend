@@ -153,9 +153,9 @@ def _runtime_ancestors(inputs: Mapping[str, Any]) -> list[dict[str, Any]]:
                 "device": 17,
                 "inode": 5_000 + index,
                 "mode": stat.S_IFDIR | 0o755,
-                "size": 512,
-                "mtime_ns": 1_000_000,
-                "ctime_ns": 1_000_001,
+                "size": 0,
+                "mtime_ns": 0,
+                "ctime_ns": 0,
             },
             "canonical_resolved_path": path,
         }
@@ -425,6 +425,7 @@ def test_plan_is_exact_immutable_and_explicitly_non_executing(
     assert plan["argv"] == (
         request["paths"]["runtime_python_path"],
         "-I",
+        "-S",
         "-B",
         request["paths"]["worker_path"],
         "--request-fd",
