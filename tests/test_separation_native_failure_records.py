@@ -127,6 +127,82 @@ def test_failure_observation_binds_validated_result_without_exposing_pid() -> No
     assert "pgid" not in process
 
 
+def test_no_start_observation_is_separate_path_free_and_self_hashed() -> None:
+    observation = records._build_no_start_failure_observation(
+        native_session_observation_sha256="6" * 64,
+        fake_launch_plan_v3_sha256="7" * 64,
+        failure_stage="posix_spawn",
+        post_attempt_remeasurement_complete=True,
+    )
+    document = plain(observation)
+    observation_sha256 = document.pop("observation_sha256")
+
+    assert type(observation) is records._VerifiedNativeLauncherNoStartObservation
+    assert document["schema"] == records._NO_START_SCHEMA
+    assert document["status"] == "failed_without_child_start"
+    assert document["process"] == {
+        "state": "not_started",
+        "native_status_nonzero": True,
+        "child_created": False,
+        "wait_attempted": False,
+        "signal_attempted": False,
+        "leader_reaped": False,
+        "ownership_released": False,
+        "ownership_lost": False,
+        "raw_pid_in_observation": False,
+        "signal_authority_exposed": False,
+    }
+    assert document["result"]["validated"] is False
+    assert observation_sha256 == canonical_sha256(document)
+    assert not any(
+        isinstance(item, str)
+        and (
+            item.startswith(("/", "~/", "../", "./"))
+            or "://" in item
+        )
+        for item in _values(document)
+    )
+
+
+def test_no_start_observation_rejects_unknown_stage_and_process_mutation() -> None:
+    with pytest.raises(ValueError, match="policy"):
+        records._build_no_start_failure_observation(
+            native_session_observation_sha256="6" * 64,
+            fake_launch_plan_v3_sha256="7" * 64,
+            failure_stage="child_exit",
+            post_attempt_remeasurement_complete=False,
+        )
+
+    observation = records._build_no_start_failure_observation(
+        native_session_observation_sha256="6" * 64,
+        fake_launch_plan_v3_sha256="7" * 64,
+        failure_stage="attributes",
+        post_attempt_remeasurement_complete=False,
+    )
+    document = plain(observation)
+    document["process"]["child_created"] = True
+    document.pop("observation_sha256")
+    document["observation_sha256"] = canonical_sha256(document)
+    tampered = records._no_start_wrapper(deep_freeze(document))
+
+    with pytest.raises(ValueError, match="process evidence"):
+        records._validate_no_start_failure_observation(tampered)
+
+
+def test_exact_reap_and_no_start_observation_types_are_not_interchangeable() -> None:
+    no_start = records._build_no_start_failure_observation(
+        native_session_observation_sha256="6" * 64,
+        fake_launch_plan_v3_sha256="7" * 64,
+        failure_stage="file_actions_init",
+        post_attempt_remeasurement_complete=True,
+    )
+
+    with pytest.raises(ValueError, match="type"):
+        records._validate_exact_reap_failure_observation(no_start)
+    with pytest.raises(ValueError, match="type"):
+        records._validate_no_start_failure_observation(_observation())
+
+
 def _values(value: Any) -> list[Any]:
     if isinstance(value, Mapping):
         return [

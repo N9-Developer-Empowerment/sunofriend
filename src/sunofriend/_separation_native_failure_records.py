@@ -1,9 +1,9 @@
 """Pure path-free failure records for the private Darwin fake launcher.
 
 This module has no process, descriptor, filesystem, model or publication
-authority.  It seals only parent-observed failures after an exact owned-child
-reap.  Pre-spawn and unproven-reap failures intentionally have no constructor
-here.
+authority.  It separately seals parent-observed failures after an exact
+owned-child reap and code-owned native failures that prove no child started.
+Unproven process state intentionally has no constructor here.
 """
 
 from __future__ import annotations
@@ -23,6 +23,8 @@ __all__: tuple[str, ...] = ()
 
 _SCHEMA = "sunofriend.separation-native-launcher-failed-terminal.v1"
 _POLICY_ID = "private-darwin-native-failure-v1"
+_NO_START_SCHEMA = "sunofriend.separation-native-launcher-no-start.v1"
+_NO_START_POLICY_ID = "private-darwin-native-no-start-v1"
 _SHA256 = frozenset("0123456789abcdef")
 _FAILURE_STAGES = frozenset(
     {
@@ -47,6 +49,28 @@ _FIELDS = {
     "limitations",
     "observation_sha256",
 }
+_NO_START_STAGES = frozenset(
+    {
+        "file_actions_init",
+        "file_actions",
+        "attributes_init",
+        "attributes",
+        "posix_spawn",
+    }
+)
+_NO_START_FIELDS = {
+    "schema",
+    "policy_id",
+    "status",
+    "failure_stage",
+    "bindings",
+    "process",
+    "result",
+    "post_attempt_measurement",
+    "permissions",
+    "limitations",
+    "observation_sha256",
+}
 
 
 @dataclass(frozen=True, init=False)
@@ -65,6 +89,198 @@ class _VerifiedNativeLauncherFailedTerminalObservation(
 
     def __len__(self) -> int:
         return len(self._document)
+
+
+@dataclass(frozen=True, init=False)
+class _VerifiedNativeLauncherNoStartObservation(Mapping[str, Any]):
+    """Immutable evidence that the native launcher started no child."""
+
+    _document: Mapping[str, Any]
+
+    def __getitem__(self, key: str) -> Any:
+        return self._document[key]
+
+    def __iter__(self) -> Any:
+        return iter(self._document)
+
+    def __len__(self) -> int:
+        return len(self._document)
+
+
+def _build_no_start_failure_observation(
+    *,
+    native_session_observation_sha256: str,
+    fake_launch_plan_v3_sha256: str,
+    failure_stage: str,
+    post_attempt_remeasurement_complete: bool,
+) -> _VerifiedNativeLauncherNoStartObservation:
+    """Seal one code-owned native outcome that proves no child started."""
+
+    payload = {
+        "schema": _NO_START_SCHEMA,
+        "policy_id": _NO_START_POLICY_ID,
+        "status": "failed_without_child_start",
+        "failure_stage": failure_stage,
+        "bindings": {
+            "native_session_observation_sha256": (
+                native_session_observation_sha256
+            ),
+            "fake_launch_plan_v3_sha256": fake_launch_plan_v3_sha256,
+        },
+        "process": {
+            "state": "not_started",
+            "native_status_nonzero": True,
+            "child_created": False,
+            "wait_attempted": False,
+            "signal_attempted": False,
+            "leader_reaped": False,
+            "ownership_released": False,
+            "ownership_lost": False,
+            "raw_pid_in_observation": False,
+            "signal_authority_exposed": False,
+        },
+        "result": {
+            "validated": False,
+            "fake_worker_result_v2_sha256": None,
+            "private_result_frame_contains_worker_pid": False,
+        },
+        "post_attempt_measurement": {
+            "status": (
+                "complete"
+                if post_attempt_remeasurement_complete
+                else "failed"
+            ),
+            "native_artifact_remeasured": (
+                post_attempt_remeasurement_complete
+            ),
+            "runtime_remeasured": post_attempt_remeasurement_complete,
+            "fake_worker_remeasured": post_attempt_remeasurement_complete,
+        },
+        "permissions": {
+            "publication_permitted": False,
+            "selection_permitted": False,
+            "acceptance_eligible": False,
+            "promotion_eligible": False,
+        },
+        "limitations": [
+            "native_status_value_retained_privately_not_serialized",
+            "nonzero_setup_or_posix_spawn_status_proves_no_child_started",
+            "successful_spawn_followed_by_child_exit_127_is_excluded",
+            "runtime_exec_and_worker_script_path_toctou_not_eliminated",
+            "failure_reason_is_code_owned_stage_not_exception_text",
+            "deterministic_fixture_only_no_source_audio_or_model",
+        ],
+    }
+    return _validate_no_start_failure_observation(
+        _no_start_wrapper(
+            _freeze(
+                {
+                    **payload,
+                    "observation_sha256": _hash(payload),
+                }
+            )
+        )
+    )
+
+
+def _validate_no_start_failure_observation(
+    value: Any,
+) -> _VerifiedNativeLauncherNoStartObservation:
+    """Validate one path-free native no-start observation."""
+
+    if type(value) is not _VerifiedNativeLauncherNoStartObservation:
+        raise ValueError("native no-start observation type is invalid")
+    document = _plain(value)
+    if set(document) != _NO_START_FIELDS:
+        raise ValueError("native no-start observation fields are invalid")
+    _validate_path_free(document, "native no-start observation")
+    if (
+        document["schema"] != _NO_START_SCHEMA
+        or document["policy_id"] != _NO_START_POLICY_ID
+        or document["status"] != "failed_without_child_start"
+        or document["failure_stage"] not in _NO_START_STAGES
+    ):
+        raise ValueError("native no-start policy is invalid")
+    bindings = document["bindings"]
+    if (
+        not isinstance(bindings, dict)
+        or set(bindings)
+        != {
+            "native_session_observation_sha256",
+            "fake_launch_plan_v3_sha256",
+        }
+        or any(not _valid_sha256(item) for item in bindings.values())
+    ):
+        raise ValueError("native no-start bindings are invalid")
+    if document["process"] != {
+        "state": "not_started",
+        "native_status_nonzero": True,
+        "child_created": False,
+        "wait_attempted": False,
+        "signal_attempted": False,
+        "leader_reaped": False,
+        "ownership_released": False,
+        "ownership_lost": False,
+        "raw_pid_in_observation": False,
+        "signal_authority_exposed": False,
+    }:
+        raise ValueError("native no-start process evidence is invalid")
+    if document["result"] != {
+        "validated": False,
+        "fake_worker_result_v2_sha256": None,
+        "private_result_frame_contains_worker_pid": False,
+    }:
+        raise ValueError("native no-start result evidence is invalid")
+    measurement = document["post_attempt_measurement"]
+    if (
+        not isinstance(measurement, dict)
+        or set(measurement)
+        != {
+            "status",
+            "native_artifact_remeasured",
+            "runtime_remeasured",
+            "fake_worker_remeasured",
+        }
+    ):
+        raise ValueError("native no-start remeasurement evidence is invalid")
+    remeasured = measurement["status"] == "complete"
+    if (
+        measurement["status"] not in {"complete", "failed"}
+        or any(
+            measurement[key] is not remeasured
+            for key in (
+                "native_artifact_remeasured",
+                "runtime_remeasured",
+                "fake_worker_remeasured",
+            )
+        )
+    ):
+        raise ValueError("native no-start remeasurement evidence is invalid")
+    if document["permissions"] != {
+        "publication_permitted": False,
+        "selection_permitted": False,
+        "acceptance_eligible": False,
+        "promotion_eligible": False,
+    }:
+        raise ValueError("native no-start permissions are invalid")
+    if document["limitations"] != [
+        "native_status_value_retained_privately_not_serialized",
+        "nonzero_setup_or_posix_spawn_status_proves_no_child_started",
+        "successful_spawn_followed_by_child_exit_127_is_excluded",
+        "runtime_exec_and_worker_script_path_toctou_not_eliminated",
+        "failure_reason_is_code_owned_stage_not_exception_text",
+        "deterministic_fixture_only_no_source_audio_or_model",
+    ]:
+        raise ValueError("native no-start limitations are invalid")
+    observation_sha256 = document["observation_sha256"]
+    payload = dict(document)
+    payload.pop("observation_sha256")
+    if (
+        not _valid_sha256(observation_sha256)
+        or observation_sha256 != _hash(payload)
+    ):
+        raise ValueError("native no-start hash is invalid")
+    return value
 
 
 def _build_exact_reap_failure_observation(
@@ -343,5 +559,13 @@ def _wrapper(
     value = object.__new__(
         _VerifiedNativeLauncherFailedTerminalObservation
     )
+    object.__setattr__(value, "_document", document)
+    return value
+
+
+def _no_start_wrapper(
+    document: Mapping[str, Any],
+) -> _VerifiedNativeLauncherNoStartObservation:
+    value = object.__new__(_VerifiedNativeLauncherNoStartObservation)
     object.__setattr__(value, "_document", document)
     return value

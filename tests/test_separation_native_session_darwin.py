@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import copy
+import errno
 import hashlib
 import os
 import pickle
@@ -42,6 +43,60 @@ def _plain(value: Any) -> Any:
     if isinstance(value, (list, tuple)):
         return [_plain(item) for item in value]
     return value
+
+
+def _registered_test_session(
+    tmp_path: Path,
+    *,
+    owner_type: type[Any],
+    spawn_method: Any,
+) -> tuple[
+    session_module._VerifiedNativeLauncherSession,
+    session_module._SessionState,
+]:
+    module = ModuleType("fake_native_session_test")
+    module._OwnedSpawnChild = owner_type  # type: ignore[attr-defined]
+    session = object.__new__(session_module._VerifiedNativeLauncherSession)
+    state = session_module._SessionState(
+        lock=threading.RLock(),
+        owner_pid=os.getpid(),
+        build=object(),
+        module=module,
+        spawn_method=spawn_method,
+        owner_type=owner_type,
+        artifact_measurement={},
+        runtime_path=tmp_path / "runtime",
+        runtime_measurement={},
+        worker_path=tmp_path / "worker",
+        worker_measurement={},
+        observation_document={"observation_sha256": "1" * 64},
+        run_status="ready",
+    )
+    with session_module._REGISTRY_LOCK:
+        session_module._KNOWN[session] = state
+    return session, state
+
+
+def _execution_descriptors(
+    tmp_path: Path,
+    *,
+    suffix: str,
+) -> tuple[int, int, int, int]:
+    request_path = tmp_path / f"request-{suffix}.frame"
+    result_path = tmp_path / f"result-{suffix}.frame"
+    checkpoint_path = tmp_path / f"checkpoint-{suffix}.bin"
+    request_path.write_bytes(b"request")
+    result_path.write_bytes(b"")
+    checkpoint_path.write_bytes(b"checkpoint")
+    descriptors = (
+        os.open(request_path, os.O_RDONLY),
+        os.open(result_path, os.O_WRONLY),
+        os.open(result_path, os.O_RDONLY),
+        os.open(checkpoint_path, os.O_RDONLY),
+    )
+    for descriptor in descriptors:
+        os.set_inheritable(descriptor, False)
+    return descriptors
 
 
 def test_session_module_has_one_admission_guarded_spawn_and_no_product_route() -> None:
@@ -175,6 +230,9 @@ def test_cleanup_reap_after_primary_failure_carries_terminal_observation(
 ) -> None:
     class FakeOwnedChild:
         def __init__(self) -> None:
+            self.start_state = "started_owned"
+            self.no_start_stage = None
+            self.native_status = None
             self.leader_reaped = False
             self.ownership_released = False
             self.ownership_lost = False
@@ -202,6 +260,7 @@ def test_cleanup_reap_after_primary_failure_carries_terminal_observation(
         build=object(),
         module=module,
         spawn_method=lambda *_args: owner,
+        owner_type=FakeOwnedChild,
         artifact_measurement={},
         runtime_path=tmp_path / "runtime",
         runtime_measurement={},
@@ -306,6 +365,320 @@ def test_cleanup_reap_after_primary_failure_carries_terminal_observation(
             session_module._KNOWN.pop(session, None)
 
 
+def test_code_owned_no_start_outcome_never_enters_supervision(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeNoStart:
+        start_state = "not_started"
+        no_start_stage = "posix_spawn"
+        native_status = 2
+        leader_reaped = False
+        ownership_released = False
+        ownership_lost = False
+
+        def wait_nohang(self) -> None:
+            raise AssertionError("no-start outcome must not be waited")
+
+        def signal_owned_group(self, _signal_number: int) -> None:
+            raise AssertionError("no-start outcome must not be signaled")
+
+    owner = FakeNoStart()
+    session, state = _registered_test_session(
+        tmp_path,
+        owner_type=FakeNoStart,
+        spawn_method=lambda *_args: owner,
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_consume_native_start_admission",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        session_module,
+        "_remeasure_session_state",
+        lambda _state: None,
+    )
+    monkeypatch.setattr(
+        session_module,
+        "_supervise_native_owner",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("no-start outcome reached supervision")
+        ),
+    )
+    descriptors = _execution_descriptors(tmp_path, suffix="no-start")
+    try:
+        with pytest.raises(
+            session_module._VerifiedNativeLauncherNoStartFailure
+        ) as captured:
+            session_module._execute_verified_native_fake_worker(
+                session,
+                trusted_admission=object(),
+                fake_launch_plan_v3={  # type: ignore[arg-type]
+                    "plan_sha256": "2" * 64
+                },
+                request_descriptor=descriptors[0],
+                owned_result_write_descriptor=descriptors[1],
+                result_read_descriptor=descriptors[2],
+                checkpoint_descriptor=descriptors[3],
+            )
+        failure = captured.value
+        assert failure.native_outcome is owner
+        assert failure.no_start_stage == "posix_spawn"
+        assert failure.native_status == 2
+        assert failure.primary_error.stage == "posix_spawn"
+        assert failure.primary_error.native_status == 2
+        assert failure.cleanup_stages == ()
+        observation = (
+            failure_records._validate_no_start_failure_observation(
+                failure.observation
+            )
+        )
+        assert observation["failure_stage"] == "posix_spawn"
+        assert observation["process"]["state"] == "not_started"
+        assert observation["process"]["wait_attempted"] is False
+        assert observation["process"]["signal_attempted"] is False
+        assert observation["post_attempt_measurement"]["status"] == "complete"
+        assert state.run_status == "consumed_no_start"
+        with pytest.raises(OSError):
+            os.fstat(descriptors[1])
+    finally:
+        for descriptor in descriptors:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+        with session_module._REGISTRY_LOCK:
+            session_module._KNOWN.pop(session, None)
+
+
+def test_no_start_preserves_writer_close_then_remeasurement_failures(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeNoStart:
+        start_state = "not_started"
+        no_start_stage = "attributes"
+        native_status = 22
+        leader_reaped = False
+        ownership_released = False
+        ownership_lost = False
+
+    owner = FakeNoStart()
+    session, state = _registered_test_session(
+        tmp_path,
+        owner_type=FakeNoStart,
+        spawn_method=lambda *_args: owner,
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_consume_native_start_admission",
+        lambda *_args, **_kwargs: None,
+    )
+    remeasure_calls = 0
+
+    def fail_second_remeasurement(_state: Any) -> None:
+        nonlocal remeasure_calls
+        remeasure_calls += 1
+        if remeasure_calls == 2:
+            raise RuntimeError("synthetic no-start remeasurement failure")
+
+    monkeypatch.setattr(
+        session_module,
+        "_remeasure_session_state",
+        fail_second_remeasurement,
+    )
+    descriptors = _execution_descriptors(tmp_path, suffix="no-start-cleanup")
+    real_close = os.close
+
+    def fail_result_writer_close(descriptor: int) -> None:
+        if descriptor == descriptors[1]:
+            raise OSError("synthetic no-start writer close failure")
+        real_close(descriptor)
+
+    monkeypatch.setattr(session_module.os, "close", fail_result_writer_close)
+    try:
+        with pytest.raises(
+            session_module._VerifiedNativeLauncherNoStartFailure
+        ) as captured:
+            session_module._execute_verified_native_fake_worker(
+                session,
+                trusted_admission=object(),
+                fake_launch_plan_v3={  # type: ignore[arg-type]
+                    "plan_sha256": "2" * 64
+                },
+                request_descriptor=descriptors[0],
+                owned_result_write_descriptor=descriptors[1],
+                result_read_descriptor=descriptors[2],
+                checkpoint_descriptor=descriptors[3],
+            )
+        failure = captured.value
+        assert failure.cleanup_stages == (
+            "native_result_writer_close",
+            "native_no_start_remeasurement",
+        )
+        assert len(failure.cleanup_errors) == 2
+        assert failure.observation["post_attempt_measurement"]["status"] == (
+            "failed"
+        )
+        assert state.run_status == "consumed_no_start"
+    finally:
+        monkeypatch.setattr(session_module.os, "close", real_close)
+        for descriptor in descriptors:
+            try:
+                real_close(descriptor)
+            except OSError:
+                pass
+        with session_module._REGISTRY_LOCK:
+            session_module._KNOWN.pop(session, None)
+
+
+@pytest.mark.parametrize("kind", ["raised", "wrong_type", "invalid_tag"])
+def test_unproven_start_outcomes_never_claim_no_start(
+    kind: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class ExpectedOwner:
+        start_state = "started_owned"
+        no_start_stage = None
+        native_status = None
+        leader_reaped = False
+        ownership_released = False
+        ownership_lost = False
+
+    if kind == "raised":
+        def spawn(*_args: Any) -> Any:
+            raise OSError("synthetic spawn exception")
+    elif kind == "wrong_type":
+        def spawn(*_args: Any) -> Any:
+            return object()
+    else:
+        invalid = object.__new__(ExpectedOwner)
+        invalid.start_state = "unknown"
+
+        def spawn(*_args: Any) -> Any:
+            return invalid
+    session, state = _registered_test_session(
+        tmp_path,
+        owner_type=ExpectedOwner,
+        spawn_method=spawn,
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_consume_native_start_admission",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        session_module,
+        "_remeasure_session_state",
+        lambda _state: None,
+    )
+    descriptors = _execution_descriptors(tmp_path, suffix=f"unproven-{kind}")
+    try:
+        with pytest.raises(
+            session_module._VerifiedNativeLauncherUnprovenExecutionFailure
+        ) as captured:
+            session_module._execute_verified_native_fake_worker(
+                session,
+                trusted_admission=object(),
+                fake_launch_plan_v3={  # type: ignore[arg-type]
+                    "plan_sha256": "2" * 64
+                },
+                request_descriptor=descriptors[0],
+                owned_result_write_descriptor=descriptors[1],
+                result_read_descriptor=descriptors[2],
+                checkpoint_descriptor=descriptors[3],
+            )
+        assert captured.value.observation is None
+        assert captured.value.cleanup_stages == ()
+        assert state.run_status == "consumed_start_unproven"
+    finally:
+        for descriptor in descriptors:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+        with session_module._REGISTRY_LOCK:
+            session_module._KNOWN.pop(session, None)
+
+
+def test_started_child_exit_127_is_exact_reap_not_no_start(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeStartedOwner:
+        def __init__(self) -> None:
+            self.start_state = "started_owned"
+            self.no_start_stage = None
+            self.native_status = None
+            self.leader_reaped = False
+            self.ownership_released = False
+            self.ownership_lost = False
+
+        def wait_nohang(self) -> int:
+            return 127 << 8
+
+    owner = FakeStartedOwner()
+    session, state = _registered_test_session(
+        tmp_path,
+        owner_type=FakeStartedOwner,
+        spawn_method=lambda *_args: owner,
+    )
+    monkeypatch.setattr(
+        executor_module,
+        "_consume_native_start_admission",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        session_module,
+        "_remeasure_session_state",
+        lambda _state: None,
+    )
+
+    def exact_reap(
+        native_owner: FakeStartedOwner,
+        **_kwargs: Any,
+    ) -> tuple[int, bool, bool, bool]:
+        native_owner.leader_reaped = True
+        native_owner.ownership_released = True
+        return 127 << 8, False, False, False
+
+    monkeypatch.setattr(session_module, "_supervise_native_owner", exact_reap)
+    descriptors = _execution_descriptors(tmp_path, suffix="exit-127")
+    try:
+        with pytest.raises(
+            session_module._VerifiedNativeLauncherExecutionFailure
+        ) as captured:
+            session_module._execute_verified_native_fake_worker(
+                session,
+                trusted_admission=object(),
+                fake_launch_plan_v3={  # type: ignore[arg-type]
+                    "plan_sha256": "2" * 64
+                },
+                request_descriptor=descriptors[0],
+                owned_result_write_descriptor=descriptors[1],
+                result_read_descriptor=descriptors[2],
+                checkpoint_descriptor=descriptors[3],
+            )
+        assert type(captured.value) is (
+            session_module._VerifiedNativeLauncherExecutionFailure
+        )
+        assert captured.value.observation["process"]["state"] == (
+            "started_exact_reaped"
+        )
+        assert captured.value.observation["process"]["wait"]["exit_code"] == 127
+        assert state.run_status == "consumed_failed"
+    finally:
+        for descriptor in descriptors:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+        with session_module._REGISTRY_LOCK:
+            session_module._KNOWN.pop(session, None)
+
+
 @pytest.mark.skipif(
     sys.platform != "darwin" or platform.system() != "Darwin",
     reason="live native launcher sessions require macOS",
@@ -366,6 +739,52 @@ def test_live_session_imports_one_fresh_build_without_starting_worker(
         isinstance(value, str) and value.startswith("/")
         for value in _values(document)
     )
+
+
+@pytest.mark.skipif(
+    sys.platform != "darwin" or platform.system() != "Darwin",
+    reason="live native launcher sessions require macOS",
+)
+def test_live_native_missing_executable_returns_no_start_without_fd_mutation(
+    tmp_path: Path,
+) -> None:
+    session, _observation_value = (
+        session_module._open_verified_native_launcher_session(
+            cache_root=tmp_path / "native-no-start-builds"
+        )
+    )
+    _known, state = session_module._known_state(session)
+    descriptors = _execution_descriptors(tmp_path, suffix="live-no-start")
+    transport = (descriptors[0], descriptors[1], descriptors[3])
+    before = tuple(os.fstat(descriptor) for descriptor in transport)
+    missing_executable = tmp_path / "does-not-exist" / "python"
+    try:
+        outcome = state.spawn_method(
+            os.fsencode(missing_executable),
+            os.fsencode(state.worker_path),
+            *transport,
+        )
+
+        assert type(outcome) is state.owner_type
+        assert outcome.start_state == "not_started"
+        assert outcome.no_start_stage == "posix_spawn"
+        assert outcome.native_status == errno.ENOENT
+        assert outcome.leader_reaped is False
+        assert outcome.ownership_released is False
+        assert outcome.ownership_lost is False
+        assert tuple(os.fstat(descriptor) for descriptor in transport) == before
+        with pytest.raises(RuntimeError, match="not owned"):
+            outcome.wait_nohang()
+        with pytest.raises(RuntimeError, match="not owned"):
+            outcome.signal_owned_group(15)
+        with pytest.raises(RuntimeError, match="not owned"):
+            outcome.matches_pid_and_pgid(1, 1)
+    finally:
+        for descriptor in descriptors:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
 
 
 def _strings(value: Any) -> list[Any]:

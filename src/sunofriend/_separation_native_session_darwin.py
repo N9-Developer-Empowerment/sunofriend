@@ -48,7 +48,9 @@ from ._separation_fake_execution_protocol import (
 )
 from ._separation_native_failure_records import (
     _VerifiedNativeLauncherFailedTerminalObservation,
+    _VerifiedNativeLauncherNoStartObservation,
     _build_exact_reap_failure_observation,
+    _build_no_start_failure_observation,
 )
 
 
@@ -67,6 +69,15 @@ _RUN_TIMEOUT_NS = 5_000_000_000
 _TERM_GRACE_NS = 1_000_000_000
 _KILL_REAP_NS = 1_000_000_000
 _POLL_SECONDS = 0.01
+_NO_START_STAGES = frozenset(
+    {
+        "file_actions_init",
+        "file_actions",
+        "attributes_init",
+        "attributes",
+        "posix_spawn",
+    }
+)
 
 _REGISTRY_LOCK = threading.RLock()
 
@@ -148,6 +159,44 @@ class _VerifiedNativeLauncherExecutionFailure(RuntimeError):
         )
 
 
+class _NativeLauncherNoStartStatus(RuntimeError):
+    """Private code-owned status retained outside serialized evidence."""
+
+    def __init__(self, *, stage: str, native_status: int) -> None:
+        super().__init__("native launcher reported that no child was started")
+        self.stage = stage
+        self.native_status = native_status
+
+
+class _VerifiedNativeLauncherNoStartFailure(RuntimeError):
+    """Private failure carrying proof that no child process was started."""
+
+    def __init__(
+        self,
+        *,
+        native_outcome: Any,
+        no_start_stage: str,
+        native_status: int,
+        observation: _VerifiedNativeLauncherNoStartObservation,
+        cleanup_failures: tuple[tuple[str, BaseException], ...] = (),
+    ) -> None:
+        super().__init__("verified native fake execution started no child")
+        self.native_outcome = native_outcome
+        self.no_start_stage = no_start_stage
+        self.native_status = native_status
+        self.primary_error = _NativeLauncherNoStartStatus(
+            stage=self.no_start_stage,
+            native_status=self.native_status,
+        )
+        self.observation = observation
+        self.cleanup_stages = tuple(
+            stage for stage, _error in cleanup_failures
+        )
+        self.cleanup_errors = tuple(
+            error for _stage, error in cleanup_failures
+        )
+
+
 class _VerifiedNativeLauncherUnprovenExecutionFailure(RuntimeError):
     """Private failure for which exact terminal process evidence is absent."""
 
@@ -175,6 +224,7 @@ class _SessionState:
     build: Any
     module: ModuleType
     spawn_method: Any
+    owner_type: type[Any]
     artifact_measurement: Mapping[str, Any]
     runtime_path: Path
     runtime_measurement: Mapping[str, Any]
@@ -249,6 +299,13 @@ def _open_verified_native_launcher_session(
         or getattr(spawn_method, "__self__", None) is not module
     ):
         raise RuntimeError("native launcher spawn method binding is invalid")
+    owner_type = getattr(module, "_OwnedSpawnChild", None)
+    if (
+        not isinstance(owner_type, type)
+        or getattr(owner_type, "__module__", None) != _MODULE_NAME
+        or getattr(owner_type, "__name__", None) != "_OwnedSpawnChild"
+    ):
+        raise RuntimeError("native launcher owner type binding is invalid")
 
     runtime_after = _measure_bound_file(
         runtime_path,
@@ -332,6 +389,7 @@ def _open_verified_native_launcher_session(
         build=build,
         module=module,
         spawn_method=spawn_method,
+        owner_type=owner_type,
         artifact_measurement=_freeze(artifact_after),
         runtime_path=runtime_path,
         runtime_measurement=_freeze(runtime_after),
@@ -421,6 +479,11 @@ def _execute_verified_native_fake_worker(
     worker_reported_identity_matched: bool | None = None
     post_reap_remeasurement_complete = False
     failure_stage = "worker_exit"
+    start_state: str | None = None
+    no_start_stage: str | None = None
+    native_status: int | None = None
+    start_error: BaseException | None = None
+    start_cleanup_failures: list[tuple[str, BaseException]] = []
     with state.lock:
         _require_owner(state)
         if state.run_status != "ready":
@@ -444,21 +507,101 @@ def _execute_verified_native_fake_worker(
                 owned_result_write_descriptor,
                 checkpoint_descriptor,
             )
-            expected_owner_type = getattr(state.module, "_OwnedSpawnChild", None)
-            if (
-                not isinstance(expected_owner_type, type)
-                or type(native_owner) is not expected_owner_type
-            ):
-                raise RuntimeError("native launcher returned an invalid owner")
-        except BaseException:
-            state.run_status = "start_failed_consumed"
-            try:
-                os.close(owned_result_write_descriptor)
-                result_writer_owned = False
-            except OSError:
-                pass
-            raise
-        state.run_status = "running"
+            (
+                start_state,
+                no_start_stage,
+                native_status,
+            ) = _validate_native_start_outcome(
+                native_owner,
+                expected_owner_type=state.owner_type,
+            )
+        except BaseException as exc:
+            start_error = exc
+            state.run_status = "consumed_start_unproven"
+        else:
+            state.run_status = (
+                "running"
+                if start_state == "started_owned"
+                else "consumed_no_start"
+            )
+    if start_error is not None:
+        # If an exact owner was returned with an invalid tag, dropping the
+        # last local reference invokes its native emergency containment before
+        # slower descriptor cleanup and remeasurement.
+        native_owner = None
+        try:
+            os.close(owned_result_write_descriptor)
+            result_writer_owned = False
+        except OSError as cleanup_error:
+            start_cleanup_failures.append(
+                ("native_result_writer_close", cleanup_error)
+            )
+        try:
+            with state.lock:
+                _require_owner(state)
+                _remeasure_session_state(state)
+        except BaseException as cleanup_error:
+            start_cleanup_failures.append(
+                ("native_start_unproven_remeasurement", cleanup_error)
+            )
+        native_owner = None
+        raise _VerifiedNativeLauncherUnprovenExecutionFailure(
+            primary_error=start_error,
+            cleanup_failures=tuple(start_cleanup_failures),
+        ) from start_error
+    if start_state == "not_started":
+        try:
+            os.close(owned_result_write_descriptor)
+            result_writer_owned = False
+        except OSError as cleanup_error:
+            start_cleanup_failures.append(
+                ("native_result_writer_close", cleanup_error)
+            )
+        post_attempt_remeasurement_complete = False
+        try:
+            with state.lock:
+                _require_owner(state)
+                _remeasure_session_state(state)
+            post_attempt_remeasurement_complete = True
+        except BaseException as cleanup_error:
+            start_cleanup_failures.append(
+                ("native_no_start_remeasurement", cleanup_error)
+            )
+        observation = _build_no_start_failure_observation(
+            native_session_observation_sha256=(
+                state.observation_document["observation_sha256"]
+            ),
+            fake_launch_plan_v3_sha256=fake_launch_plan_v3["plan_sha256"],
+            failure_stage=no_start_stage,
+            post_attempt_remeasurement_complete=(
+                post_attempt_remeasurement_complete
+            ),
+        )
+        failure = _VerifiedNativeLauncherNoStartFailure(
+            native_outcome=native_owner,
+            no_start_stage=no_start_stage,
+            native_status=native_status,
+            observation=observation,
+            cleanup_failures=tuple(start_cleanup_failures),
+        )
+        raise failure from failure.primary_error
+    if start_state != "started_owned":
+        # _validate_native_start_outcome is exhaustive. Keep this boundary
+        # fail-closed if its contract changes later.
+        state.run_status = "consumed_start_unproven"
+        try:
+            os.close(owned_result_write_descriptor)
+            result_writer_owned = False
+        except OSError as cleanup_error:
+            start_cleanup_failures.append(
+                ("native_result_writer_close", cleanup_error)
+            )
+        error = RuntimeError("native launcher start state is unproven")
+        native_owner = None
+        raise _VerifiedNativeLauncherUnprovenExecutionFailure(
+            primary_error=error,
+            cleanup_failures=tuple(start_cleanup_failures),
+        ) from error
     primary_error: BaseException | None = None
     cleanup_failures: list[tuple[str, BaseException]] = []
     successful: tuple[
@@ -672,12 +815,44 @@ def _execute_verified_native_fake_worker(
                 cleanup_failures=tuple(cleanup_failures),
             ) from primary_error
     native_owner = None
-    if cleanup_failures:
-        raise _VerifiedNativeLauncherUnprovenExecutionFailure(
-            primary_error=primary_error,
-            cleanup_failures=tuple(cleanup_failures),
-        ) from primary_error
-    raise primary_error.with_traceback(primary_error.__traceback__)
+    raise _VerifiedNativeLauncherUnprovenExecutionFailure(
+        primary_error=primary_error,
+        cleanup_failures=tuple(cleanup_failures),
+    ) from primary_error
+
+
+def _validate_native_start_outcome(
+    value: Any,
+    *,
+    expected_owner_type: type[Any],
+) -> tuple[str, str | None, int | None]:
+    """Classify only an exact, code-owned native start outcome."""
+
+    if type(value) is not expected_owner_type:
+        raise RuntimeError("native launcher returned an invalid owner")
+    start_state = value.start_state
+    no_start_stage = value.no_start_stage
+    native_status = value.native_status
+    lifecycle = (
+        value.leader_reaped,
+        value.ownership_released,
+        value.ownership_lost,
+    )
+    if lifecycle != (False, False, False):
+        raise RuntimeError("native launcher returned invalid initial lifecycle")
+    if start_state == "started_owned":
+        if no_start_stage is not None or native_status is not None:
+            raise RuntimeError("started native owner carries no-start status")
+        return start_state, None, None
+    if start_state == "not_started":
+        if (
+            no_start_stage not in _NO_START_STAGES
+            or type(native_status) is not int
+            or native_status <= 0
+        ):
+            raise RuntimeError("native no-start outcome is invalid")
+        return start_state, no_start_stage, native_status
+    raise RuntimeError("native launcher returned an unproven start state")
 
 
 def _native_owner_has_exact_terminal_state(native_owner: Any) -> bool:
@@ -905,6 +1080,8 @@ def _remeasure_session_state(state: _SessionState) -> None:
         != _native_build._EXPECTED_BUILD_CONTRACT_SHA256
         or getattr(state.module, _SPAWN_METHOD_NAME, None)
         is not state.spawn_method
+        or getattr(state.module, "_OwnedSpawnChild", None)
+        is not state.owner_type
     ):
         raise RuntimeError("verified native launcher module binding changed")
 

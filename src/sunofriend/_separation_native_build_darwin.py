@@ -51,7 +51,7 @@ _BUILD_POLICY_ID = "private-darwin-source-build-provenance-v1"
 _SOURCE_RESOURCE_NAME = "_separation_native_spawn_darwin.c"
 _NATIVE_MODULE_NAME = "_separation_native_spawn_darwin"
 _EXPECTED_SOURCE_SHA256 = (
-    "bfdaba81483af3f64836c6ef7827e4104e76d02f62546f3b97c58b8a62ac03b1"
+    "fc3569357ce61dcde729894fa31eaf5425f4eaba10a20753004195da18da7bfa"
 )
 _XCRUN = Path("/usr/bin/xcrun")
 _DEPLOYMENT_TARGET = "12.0"
@@ -174,7 +174,7 @@ _BUILD_CONTRACT = _freeze(
     }
 )
 _EXPECTED_BUILD_CONTRACT_SHA256 = (
-    "1eed600cd8d56b08fb0fea564ecc71014f20764f4a970ca28ea0d70812865ea8"
+    "068a51bef51a143dd86b2a754a95ae18b195ddbbc90c6f727a1097592f53fd73"
 )
 
 

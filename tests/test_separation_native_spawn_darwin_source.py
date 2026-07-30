@@ -217,10 +217,68 @@ def test_child_owner_is_allocated_before_spawn_and_retains_lifecycle() -> None:
     assert allocation < native_spawn < bind_pid < returned
     assert "PyLong_FromLong((long)child_pid)" not in spawn
     assert "owned_child->spawned = true" in spawn
-    assert "Py_DECREF(owned_child)" in spawn
+    assert "Py_DECREF(owned_child)" not in spawn
     assert '"_OwnedSpawnChild"' in source
     assert ".tp_new" not in source
     assert "PyType_Ready(&SunofriendOwnedSpawnChildType)" in source
+
+
+def test_no_start_is_a_code_tagged_nonconstructible_owner_not_an_exception() -> None:
+    source = _source()
+    spawn = _function_body(
+        source,
+        "sunofriend_spawn_bound_fake_worker(",
+        "sunofriend_spawn_methods[]",
+    )
+    getters = _function_body(
+        source,
+        "sunofriend_owned_child_get_start_state(",
+        "sunofriend_owned_child_get_leader_reaped(",
+    )
+    failure_tail = spawn[spawn.index("fail:") :]
+
+    assert "SUNOFRIEND_NO_START_FILE_ACTIONS_INIT" in source
+    assert "SUNOFRIEND_NO_START_FILE_ACTIONS" in source
+    assert "SUNOFRIEND_NO_START_ATTRIBUTES_INIT" in source
+    assert "SUNOFRIEND_NO_START_ATTRIBUTES" in source
+    assert "SUNOFRIEND_NO_START_POSIX_SPAWN" in source
+    assert '"started_owned"' in getters
+    assert '"not_started"' in getters
+    assert '"invalid"' in getters
+    assert '"file_actions_init"' in getters
+    assert '"file_actions"' in getters
+    assert '"attributes_init"' in getters
+    assert '"attributes"' in getters
+    assert '"posix_spawn"' in getters
+    assert '"start_state"' in source
+    assert '"no_start_stage"' in source
+    assert '"native_status"' in source
+    assert "owned_child->no_start_stage = no_start_stage" in failure_tail
+    assert "owned_child->native_status = status" in failure_tail
+    assert "return (PyObject *)owned_child" in failure_tail
+    assert "PyErr_" not in failure_tail
+    assert "Py_DECREF(owned_child)" not in failure_tail
+    assert "SpawnNotStarted" not in source
+    assert ".tp_new" not in source
+
+    for enum_name in (
+        "SUNOFRIEND_NO_START_FILE_ACTIONS_INIT",
+        "SUNOFRIEND_NO_START_FILE_ACTIONS",
+        "SUNOFRIEND_NO_START_ATTRIBUTES_INIT",
+        "SUNOFRIEND_NO_START_ATTRIBUTES",
+        "SUNOFRIEND_NO_START_POSIX_SPAWN",
+    ):
+        assert (
+            f"if (status != 0) {{\n"
+            f"        no_start_stage = {enum_name};\n"
+            "        goto fail;\n"
+            "    }"
+        ) in spawn
+
+    status_check = spawn.index("if (status != 0)", spawn.index("status = posix_spawn("))
+    bind_pid = spawn.index("owned_child->pid = child_pid")
+    bind_spawned = spawn.index("owned_child->spawned = true")
+    assert status_check < bind_pid < bind_spawned
 
 
 def test_child_owner_exact_wait_signal_release_and_emergency_cleanup() -> None:

@@ -99,9 +99,11 @@ report the result, then move on.
   well as its helper on an outer timeout. This proves only the successful
   fixture path. Exact-reap native failures now receive a path-free whole-run
   receipt binding terminal native and lease evidence, the primary stage and
-  every ordered cleanup stage. No-start, spawn-failure, unproven-reap and
-  post-lease materialization failures remain uncovered, so the non-bypassable
-  fake transport gate is not complete. Private failure machinery keeps lease
+  every ordered cleanup stage. Exact native setup or `posix_spawn` nonzero
+  returns now have a separate no-child-start observation, but no whole-run
+  receipt yet; unproven start state, unproven reap and post-lease
+  materialization failures also remain uncovered, so the non-bypassable fake
+  transport gate is not complete. Private failure machinery keeps lease
   cleanup stages in observed order, carries a validated lease terminal receipt
   when available, authenticates receipt composition with a lease-issued
   non-copyable one-use capability, snapshots the nested failure state and
@@ -116,10 +118,13 @@ report the result, then move on.
   aggregate retains the armed best-effort finalizer, which is not terminal
   evidence.
   Catastrophic terminalization remains
-  receipt-less and blocked. Native post-start failures now receive a separate
-  path-free observation only after exact reap and ownership release are proven;
-  it contains a code-owned stage, never PID or exception text. Spawn failure
-  and unproven reap still receive no terminal observation. The worker only
+  receipt-less and blocked. Native post-start failures receive a path-free
+  observation only after exact reap and ownership release are proven.
+  Code-tagged native no-start outcomes receive a disjoint observation with no
+  PID, wait, signal or numeric status, and a live missing-executable probe
+  verifies that parent descriptors stay unchanged. Successful spawn plus exit
+  127 remains post-start. Python exceptions, invalid owner tags and unproven
+  reap receive no terminal observation. The worker only
   hashes FD 5; it never deserializes the checkpoint, reads source audio, imports
   a model, performs inference or creates output files. Historical fake V1/V2
   and checkpoint launch V2 remain permanently blocked, the public lease

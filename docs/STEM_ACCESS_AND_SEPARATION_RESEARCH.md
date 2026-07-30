@@ -590,11 +590,13 @@ as the no-publication fixture result.
 Private lease orchestration preserves its first primary error and all observed
 cleanup errors instead of silently discarding secondary failures. An
 exact-reap native failure can now be converted with terminal lease evidence
-into a path-free whole-run receipt. No-start, spawn-failure, unproven-reap and
-post-lease materialization failures are not covered yet. Timeout, spawn,
-malformed-result, checkpoint-mutation, materialization-collision, cleanup and
-replay cases therefore remain required before the non-bypassable-transport
-checklist item can be closed.
+into a path-free whole-run receipt. Exact native setup and `posix_spawn`
+nonzero returns now have a separate path-free no-child-start observation, but
+that observation is not yet composed with the terminal lease. Unproven start
+state, unproven reap and post-lease materialization failures are not covered
+yet. Timeout, spawn, malformed-result, checkpoint-mutation,
+materialization-collision, cleanup and replay cases therefore remain required
+before the non-bypassable-transport checklist item can be closed.
 
 The first failure-evidence increment now labels lease cleanup failures in
 observed order and retains a validated terminal lease receipt when available.
@@ -606,13 +608,16 @@ outer executor strictly closes that exact object before discarding ownership.
 On close failure the aggregate retains the core and its armed best-effort
 finalizer; that backstop is not terminal evidence.
 
-A separate native failed-terminal record now captures post-start failures only
-after the exact owner proves reap, ownership release and no ownership loss.
-Nonzero/signalled exits, exactly reaped timeouts, result close/decode errors,
-worker identity mismatch and post-reap remeasurement failure carry a
-self-hashed path-free observation. The original exception remains private;
-evidence contains only a code-owned stage and no PID or exception text. Spawn
-errors and unproven reap still have no terminal observation.
+Separate native records now capture exact-reap post-start failures and proven
+no-start failures without conflating them. Nonzero/signalled exits, exactly
+reaped timeouts, result close/decode errors, worker identity mismatch and
+post-reap remeasurement failure require exact ownership release. No-start
+requires the exact code-owned native outcome tagged with a setup or
+`posix_spawn` stage and a private positive status; its observation contains no
+numeric status, PID, wait or signal claim. A live missing-executable probe
+returns `ENOENT` with unchanged parent descriptors and no supervision.
+Successful spawn followed by exit 127 is still post-start. Python exceptions,
+wrong types, invalid tags and unproven reap have no terminal observation.
 
 The pure whole-run failure record combines an exact-reap native observation
 with the existing terminal checkpoint-lease receipt and the validated

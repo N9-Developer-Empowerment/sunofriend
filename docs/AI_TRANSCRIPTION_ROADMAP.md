@@ -632,10 +632,12 @@ killing and reaping the helper.
 The non-bypassable gate is not complete. Exact-reap native failures can now
 produce a path-free whole-run receipt that binds native terminality, the
 checkpoint-lease terminal receipt, the original primary stage and every
-observed cleanup stage in order. No-start, spawn-failure, unproven-reap and
-post-lease materialization failures are not yet covered. The full timeout,
-spawn, malformed-result, checkpoint-mutation, materialization-collision,
-cleanup and replay matrix remains required.
+observed cleanup stage in order. Code-owned native setup or `posix_spawn`
+nonzero returns now separately prove that no child started, but that native
+observation is not yet composed into the whole-run receipt. Unproven start
+state, unproven reap and post-lease materialization failures are also not yet
+covered. The full timeout, spawn, malformed-result, checkpoint-mutation,
+materialization-collision, cleanup and replay matrix remains required.
 
 As failure-receipt groundwork, the private lease bridge now records cleanup
 stages in observed order and carries a validated terminal lease receipt when
@@ -648,13 +650,19 @@ attached to the aggregate failure and a private best-effort finalizer remains
 armed; the fallback is leak containment, never terminal evidence. Catastrophic
 terminalization failure remains receipt-less and therefore cannot be promoted.
 
-The native layer now has a separate path-free failed-terminal observation for
-post-start failures only when its exact child owner proves reap, ownership
-release and no ownership loss. It covers nonzero or signalled exit, an exactly
+The native layer now has two disjoint path-free failure observations. The first
+covers post-start failures only when its exact child owner proves reap,
+ownership release and no ownership loss: nonzero or signalled exit, an exactly
 reaped timeout, result-close/decode failure, worker identity mismatch and
-post-reap remeasurement failure. It preserves the original exception privately
-but records only a code-owned stage; no PID or exception text enters evidence.
-Spawn failures and any unproven reap deliberately receive no such observation.
+post-reap remeasurement failure. The second accepts only the exact
+nonconstructible native owner tagged `not_started` with a code-owned setup or
+`posix_spawn` stage and a private positive native status. It records no status
+number, PID, wait or signal event. A live macOS probe verifies that a missing
+executable returns `ENOENT`, mutates no parent descriptor and never enters
+supervision. Successful spawn followed by child exit 127 remains a post-start
+exact-reap failure. Python exceptions, wrong owner types, invalid tags and any
+unproven reap deliberately receive no terminal observation. Both record only
+code-owned stages; exception text stays private.
 
 `_separation_fake_failure_records.py` now composes that exact-reap observation
 with the terminal lease receipt into an inert whole-run failed receipt. It

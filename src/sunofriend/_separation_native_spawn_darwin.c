@@ -57,6 +57,15 @@ enum {
     SUNOFRIEND_TRANSPORT_COUNT = 3,
 };
 
+enum {
+    SUNOFRIEND_NO_START_NONE = 0,
+    SUNOFRIEND_NO_START_FILE_ACTIONS_INIT = 1,
+    SUNOFRIEND_NO_START_FILE_ACTIONS = 2,
+    SUNOFRIEND_NO_START_ATTRIBUTES_INIT = 3,
+    SUNOFRIEND_NO_START_ATTRIBUTES = 4,
+    SUNOFRIEND_NO_START_POSIX_SPAWN = 5,
+};
+
 static const int sunofriend_target_fds[SUNOFRIEND_TRANSPORT_COUNT] = {
     SUNOFRIEND_REQUEST_FD,
     SUNOFRIEND_RESULT_FD,
@@ -75,6 +84,8 @@ typedef struct {
     pid_t pid;
     pid_t owner_pid;
     int wait_status;
+    int no_start_stage;
+    int native_status;
     bool spawned;
     bool leader_reaped;
     bool ownership_released;
@@ -420,20 +431,6 @@ sunofriend_configure_spawn_attributes(posix_spawnattr_t *attributes)
     return posix_spawnattr_setflags(attributes, flags);
 }
 
-static PyObject *
-sunofriend_raise_spawn_error(int status, const char *operation)
-{
-    errno = status;
-    PyErr_Format(
-        PyExc_OSError,
-        "%s failed with errno %d: %s",
-        operation,
-        status,
-        strerror(status)
-    );
-    return NULL;
-}
-
 static void
 sunofriend_emergency_kill_and_reap(SunofriendOwnedSpawnChild *child)
 {
@@ -533,6 +530,69 @@ sunofriend_owned_child_dealloc(SunofriendOwnedSpawnChild *child)
         sunofriend_emergency_kill_and_reap(child);
     }
     PyObject_Del(child);
+}
+
+static PyObject *
+sunofriend_owned_child_get_start_state(
+    SunofriendOwnedSpawnChild *child,
+    void *closure
+)
+{
+    (void)closure;
+    if (child->spawned) {
+        return PyUnicode_FromString("started_owned");
+    }
+    if (
+        child->native_status > 0
+        && child->no_start_stage != SUNOFRIEND_NO_START_NONE
+    ) {
+        return PyUnicode_FromString("not_started");
+    }
+    return PyUnicode_FromString("invalid");
+}
+
+static PyObject *
+sunofriend_owned_child_get_no_start_stage(
+    SunofriendOwnedSpawnChild *child,
+    void *closure
+)
+{
+    const char *stage;
+
+    (void)closure;
+    switch (child->no_start_stage) {
+        case SUNOFRIEND_NO_START_FILE_ACTIONS_INIT:
+            stage = "file_actions_init";
+            break;
+        case SUNOFRIEND_NO_START_FILE_ACTIONS:
+            stage = "file_actions";
+            break;
+        case SUNOFRIEND_NO_START_ATTRIBUTES_INIT:
+            stage = "attributes_init";
+            break;
+        case SUNOFRIEND_NO_START_ATTRIBUTES:
+            stage = "attributes";
+            break;
+        case SUNOFRIEND_NO_START_POSIX_SPAWN:
+            stage = "posix_spawn";
+            break;
+        default:
+            Py_RETURN_NONE;
+    }
+    return PyUnicode_FromString(stage);
+}
+
+static PyObject *
+sunofriend_owned_child_get_native_status(
+    SunofriendOwnedSpawnChild *child,
+    void *closure
+)
+{
+    (void)closure;
+    if (child->native_status <= 0) {
+        Py_RETURN_NONE;
+    }
+    return PyLong_FromLong((long)child->native_status);
 }
 
 static PyObject *
@@ -773,6 +833,27 @@ static PyMethodDef sunofriend_owned_child_methods[] = {
 
 static PyGetSetDef sunofriend_owned_child_getset[] = {
     {
+        "start_state",
+        (getter)sunofriend_owned_child_get_start_state,
+        NULL,
+        PyDoc_STR("Whether native spawn started one exactly owned child."),
+        NULL,
+    },
+    {
+        "no_start_stage",
+        (getter)sunofriend_owned_child_get_no_start_stage,
+        NULL,
+        PyDoc_STR("Code-owned native stage when no child was started."),
+        NULL,
+    },
+    {
+        "native_status",
+        (getter)sunofriend_owned_child_get_native_status,
+        NULL,
+        PyDoc_STR("Private nonzero native status for a no-start outcome."),
+        NULL,
+    },
+    {
         "leader_reaped",
         (getter)sunofriend_owned_child_get_leader_reaped,
         NULL,
@@ -821,7 +902,7 @@ sunofriend_spawn_bound_fake_worker(PyObject *self, PyObject *arguments)
     posix_spawnattr_t attributes;
     bool file_actions_ready = false;
     bool attributes_ready = false;
-    const char *failed_operation = "posix_spawn";
+    int no_start_stage = SUNOFRIEND_NO_START_NONE;
     SunofriendOwnedSpawnChild *owned_child;
     pid_t child_pid = -1;
     int status;
@@ -872,6 +953,8 @@ sunofriend_spawn_bound_fake_worker(PyObject *self, PyObject *arguments)
     owned_child->pid = -1;
     owned_child->owner_pid = getpid();
     owned_child->wait_status = 0;
+    owned_child->no_start_stage = SUNOFRIEND_NO_START_NONE;
+    owned_child->native_status = 0;
     owned_child->spawned = false;
     owned_child->leader_reaped = false;
     owned_child->ownership_released = false;
@@ -879,7 +962,7 @@ sunofriend_spawn_bound_fake_worker(PyObject *self, PyObject *arguments)
 
     status = posix_spawn_file_actions_init(&file_actions);
     if (status != 0) {
-        failed_operation = "posix_spawn_file_actions_init";
+        no_start_stage = SUNOFRIEND_NO_START_FILE_ACTIONS_INIT;
         goto fail;
     }
     file_actions_ready = true;
@@ -889,19 +972,19 @@ sunofriend_spawn_bound_fake_worker(PyObject *self, PyObject *arguments)
         scratch_fds
     );
     if (status != 0) {
-        failed_operation = "posix_spawn_file_actions";
+        no_start_stage = SUNOFRIEND_NO_START_FILE_ACTIONS;
         goto fail;
     }
 
     status = posix_spawnattr_init(&attributes);
     if (status != 0) {
-        failed_operation = "posix_spawnattr_init";
+        no_start_stage = SUNOFRIEND_NO_START_ATTRIBUTES_INIT;
         goto fail;
     }
     attributes_ready = true;
     status = sunofriend_configure_spawn_attributes(&attributes);
     if (status != 0) {
-        failed_operation = "posix_spawnattr";
+        no_start_stage = SUNOFRIEND_NO_START_ATTRIBUTES;
         goto fail;
     }
 
@@ -914,7 +997,7 @@ sunofriend_spawn_bound_fake_worker(PyObject *self, PyObject *arguments)
         sunofriend_worker_environment
     );
     if (status != 0) {
-        failed_operation = "posix_spawn";
+        no_start_stage = SUNOFRIEND_NO_START_POSIX_SPAWN;
         goto fail;
     }
     owned_child->pid = child_pid;
@@ -931,8 +1014,9 @@ fail:
     if (file_actions_ready) {
         (void)posix_spawn_file_actions_destroy(&file_actions);
     }
-    Py_DECREF(owned_child);
-    return sunofriend_raise_spawn_error(status, failed_operation);
+    owned_child->no_start_stage = no_start_stage;
+    owned_child->native_status = status;
+    return (PyObject *)owned_child;
 }
 
 static PyMethodDef sunofriend_spawn_methods[] = {

@@ -690,9 +690,12 @@ its own process group on timeout.
 This slice still does not complete the failure state machine. Exact-reap native
 failures now have a path-free whole-run receipt binding native terminality,
 lease terminality, the original primary stage and every ordered cleanup stage.
-No-start, spawn-failure, unproven-reap and post-lease materialization failures
-remain receipt-less. Until those paths and the adversarial matrix are covered,
-the non-bypassable deterministic transport checklist item remains open.
+An exact code-tagged native setup or `posix_spawn` nonzero return now has a
+separate no-child-start observation, but it remains without a whole-run
+receipt. Unproven start state, unproven reap and post-lease materialization
+failures also remain receipt-less. Until those paths and the adversarial matrix
+are covered, the non-bypassable deterministic transport checklist item remains
+open.
 
 The private lease-side groundwork records cleanup stages in observation order
 and attaches the validated checkpoint-lease terminal receipt when available.
@@ -705,14 +708,19 @@ best-effort finalizer; that fallback is leak containment rather than terminal
 evidence. If forced terminalization itself cannot establish a receipt, the
 failure stays catastrophic and receipt-less.
 
-`_separation_native_failure_records.py` is the pure post-start failure-evidence
-boundary. The native session can seal its record only after the exact child
-owner reports reap, ownership release and no ownership loss. It represents
-nonzero/signalled exit, exactly reaped timeout, result close/decode failure,
-worker identity mismatch and post-reap remeasurement failure with a code-owned
-stage. The original exception stays on the private error object; paths, PID,
-PGID and exception text are absent from the observation. A spawn error or
-unproven reap cannot obtain this terminal record.
+`_separation_native_failure_records.py` is the pure native failure-evidence
+boundary with distinct post-start and no-start types. The post-start record can
+be sealed only after the exact child owner reports reap, ownership release and
+no ownership loss. It represents nonzero/signalled exit, exactly reaped
+timeout, result close/decode failure, worker identity mismatch and post-reap
+remeasurement failure. The no-start record requires the exact nonconstructible
+owner type, a `not_started` tag, one of five code-owned native setup stages and
+a positive status retained only on the private error. It asserts no child,
+wait, signal or PID. A live missing-executable test verifies the `posix_spawn`
+`ENOENT` case without parent-descriptor mutation. Exit 127 after successful
+spawn remains a started exact-reap failure. Python exceptions, substituted
+types, invalid tags and unproven reap obtain neither record. Paths, PID, PGID,
+status numbers and exception text are absent from serialized observations.
 
 `_separation_fake_failure_records.py` composes the exact-reap native
 observation, terminal checkpoint-lease receipt and validated fake request/plan
