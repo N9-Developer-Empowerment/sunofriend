@@ -432,8 +432,19 @@ Its inputs are expected values rather than authority or self-proving
 provenance, the validating V1-to-V2 facade is not implemented, and the V2
 schema is permanently non-executable. It reserves no lease, installs no descriptor,
 opens no file, starts no process and exposes no CLI, TUI, model or separation
-operation. A future executable request needs a new schema; blocked launch v2
-and lease reservation remain separate unfinished boundaries.
+operation. A future executable request needs a new schema.
+
+On 29 July 2026, `_separation_checkpoint_fd5_reservation.py` forms the
+fourteenth internal S3 boundary. Its private zero-field token binds one live
+retained lease to one exact V2 record, the exact V1 inspection request and the
+current observation backing. All lease-provable facts are cross-bound. The
+runtime-artifact document, execution-admission and runtime-parent hashes remain
+sealed by the V2 record but are not proven by the lease. Reserve and release
+remeasure under the existing lease lock. Healthy close refuses while reserved;
+integrity and ownership failures terminalize once. The token exposes and
+installs no FD 5, starts no process, imports or loads no model, and adds no
+user-facing separation. V1 schemas, hashes and APIs remain unchanged. Blocked
+launch V2 and atomic FD 5 installation design are still the next boundary.
 
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a

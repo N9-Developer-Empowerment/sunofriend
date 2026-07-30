@@ -242,6 +242,28 @@ def validate_separation_worker_request_v2_record(
     return actual
 
 
+def _validate_separation_worker_request_v2_record_shape(
+    value: Any,
+) -> SeparationWorkerRequestV2Record:
+    """Revalidate one exact issued V2 value without claiming provenance.
+
+    This private helper exists for parent-owned contracts that already hold
+    an exact ``SeparationWorkerRequestV2Record``.  It re-runs the complete
+    structural, semantic and self-hash validation, but deliberately does not
+    turn the record into execution authority or prove where its projection
+    inputs came from.
+    """
+
+    if type(value) is not SeparationWorkerRequestV2Record:
+        raise ValueError(
+            "worker request v2 must be an exact validated record"
+        )
+    checked = _new_record(value)
+    if not _canonical_equal(dict(value), dict(checked)):
+        raise ValueError("worker request v2 record changed after validation")
+    return value
+
+
 def separation_worker_request_v2_sha256(
     document: Mapping[str, Any],
 ) -> str:

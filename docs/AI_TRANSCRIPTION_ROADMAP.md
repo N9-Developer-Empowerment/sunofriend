@@ -389,8 +389,19 @@ admission blockers, and its expected inputs confer no live authority or
 provenance by themselves. The validating V1-to-V2 facade is still absent. It is
 not a child-executable request, lease reservation, FD 5 installation, launch
 plan, worker protocol, model load or separation feature. Any later executable
-request requires a new schema. The blocked launch-plan v2 and lease-bound
-reservation/install evidence remain the next separate design increments.
+request requires a new schema.
+
+The 29 July 2026 fourteenth S3 slice adds a private zero-field reservation
+token. It binds one live retained lease to one exact V2 record, the exact V1
+inspection request and the current observation backing. All facts the lease
+can prove are cross-bound. The runtime-artifact document, execution-admission
+and runtime-parent hashes remain sealed by the V2 record but unproven by the
+lease. Reserve and release each remeasure under the lease lock; healthy close
+refuses while reserved, while integrity or ownership failures terminalize
+once. No raw descriptor or FD 5 is exposed or installed, and no process,
+model, load or user-facing separation operation exists. V1 schemas and APIs
+are unchanged. The next increment remains the blocked launch V2 and atomic FD
+5 installation design.
 
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every

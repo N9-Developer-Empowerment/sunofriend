@@ -8,9 +8,9 @@ non-spawning launch/lifecycle contracts plus blocked-only checkpoint and
 execution-admission scaffolding and descriptor-pinned static checkpoint
 inspection, trusted-inspection blocked-admission binding and parent-only live
 checkpoint-descriptor lease plus pure path-free worker-request V2 design
-evidence implemented; real source separation, lease reservation, FD 5
-transport, blocked launch V2, hidden evaluation and promotion are not
-implemented**
+evidence and a private exact-object lease reservation implemented; real source
+separation, FD 5 transport, blocked launch V2, hidden evaluation and promotion
+are not implemented**
 
 Checked: 29 July 2026
 
@@ -321,9 +321,19 @@ This V2 schema is permanently blocked design evidence, not an executable child
 request. Every capability and effect is false. It does not reserve the live
 lease, install FD 5, define source/output transport, implement a worker
 protocol, open a file, start a process, load a model or expose a CLI/TUI
-feature. A future executable request must use a new schema. The next bounded
-work is therefore the separately blocked lease-reservation and launch-plan V2
-design, still without enabling execution.
+feature. A future executable request must use a new schema.
+
+The 29 July 2026 fourteenth S3 increment adds a private zero-field reservation
+token that binds one live retained lease to one exact V2 record, the exact V1
+inspection request and the current observation backing. It cross-binds every
+fact the lease can prove. The runtime-artifact document, execution-admission
+and runtime-parent hashes remain sealed by the V2 record but unproven by the
+lease. Reserve and release remeasure under the lease lock. Healthy close
+refuses while reserved; integrity or ownership failures terminalize once. The
+reservation exposes and installs no FD 5, starts no process, imports or loads
+no model, and adds no user-facing separation. V1 schemas, hashes and APIs are
+unchanged. The next work remains the blocked launch V2 and atomic FD 5
+installation design.
 
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
@@ -1261,8 +1271,10 @@ implemented**
 - [x] Add a pure, path-free, permanently blocked worker-request v2
   design-evidence record with logical descriptor requirements and no
   executable child request, lease reservation or FD 5 installation.
-- [ ] Add a lease-bound reservation and blocked launch-plan v2 that describe
-  atomic read-only FD 5 installation without enabling a process or model.
+- [x] Add a private exact-object lease reservation that remeasures under lock
+  without exposing or installing FD 5.
+- [ ] Add blocked launch-plan v2 and atomic read-only FD 5 installation design
+  without enabling a process or model.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with a
   deterministic fake worker, exact pre-exec remeasurement, validated worker
   result and parent-verified quarantined outputs before any real model is

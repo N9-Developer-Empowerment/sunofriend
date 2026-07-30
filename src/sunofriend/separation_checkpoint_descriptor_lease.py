@@ -36,6 +36,16 @@ from ._separation_checkpoint_lease_records import (
     validate_receipt_document as _records_validate_receipt_document,
     validate_terminal_anchor as _records_validate_terminal_anchor,
 )
+from ._separation_checkpoint_fd5_reservation import (
+    _CheckpointDescriptorFD5Reservation,
+    _FD5ReservationBinding,
+    _new_fd5_reservation_binding,
+    _require_fd5_reservation_authority,
+    _validate_fd5_reservation_binding,
+)
+from ._separation_checkpoint_transport_records import (
+    SeparationWorkerRequestV2Record,
+)
 from .separation_checkpoint_inspection import (
     MAX_CHECKPOINT_BYTES,
     SeparationCheckpointInspection,
@@ -146,6 +156,7 @@ class _LeaseState:
     terminal_document: Mapping[str, Any] | None
     finalizer: weakref.finalize
     status: str
+    fd5_reservation: _FD5ReservationBinding | None
 
 
 def acquire_separation_checkpoint_descriptor_lease(
@@ -207,6 +218,7 @@ def acquire_separation_checkpoint_descriptor_lease(
             terminal_document=None,
             finalizer=finalizer,
             status="retained",
+            fd5_reservation=None,
         )
         _register(lease, state)
         reserved = False
@@ -309,6 +321,10 @@ def close_separation_checkpoint_descriptor_lease(
                 state,
                 ("lease_authority_binding_invalid",),
             )
+        if state.fd5_reservation is not None:
+            raise ValueError(
+                "checkpoint descriptor lease has an active FD5 reservation"
+            )
         cleanup_status, cleanup_reasons = _detach_and_close(lease, state)
         status = "closed" if cleanup_status == "complete" else "cleanup_failed"
         _store_terminal(
@@ -326,6 +342,110 @@ def close_separation_checkpoint_descriptor_lease(
                 receipt,
             )
         return receipt
+
+
+def _reserve_separation_checkpoint_descriptor_fd5(
+    trusted_lease: SeparationCheckpointDescriptorLease,
+    *,
+    trusted_worker_request_v2: SeparationWorkerRequestV2Record,
+    trusted_inspection_request: SeparationCheckpointInspectionRequest,
+    current_lease_observation: (
+        SeparationCheckpointDescriptorLeaseObservation
+    ),
+) -> _CheckpointDescriptorFD5Reservation:
+    """Reserve the live lease for a future FD5 policy without installing it."""
+
+    lease, state = _known_state(trusted_lease)
+    if (
+        type(current_lease_observation)
+        is not SeparationCheckpointDescriptorLeaseObservation
+    ):
+        raise ValueError(
+            "current lease observation must be an exact issued record"
+        )
+    with state.lock:
+        _require_active_state_for_reservation(lease, state)
+        try:
+            _require_owner(state)
+            _validate_state_authority(state)
+            _remeasure(state)
+        except _IntegrityFailure as exc:
+            _terminal_failure(lease, state, (exc.reason,))
+        except Exception:
+            _terminal_failure(
+                lease,
+                state,
+                ("lease_authority_binding_invalid",),
+            )
+        if state.fd5_reservation is not None:
+            raise ValueError(
+                "checkpoint descriptor lease already has an FD5 reservation"
+            )
+        binding = _new_fd5_reservation_binding(
+            worker_request_v2=trusted_worker_request_v2,
+            inspection_request=trusted_inspection_request,
+            lease_observation=current_lease_observation,
+            expected_worker_request_v1=state.request.worker_request,
+            expected_inspection_request=state.request,
+            expected_inspection=state.trusted_inspection,
+            expected_lease_observation=state.observation_document,
+        )
+        state.fd5_reservation = binding
+        return binding.authority
+
+
+def _release_separation_checkpoint_descriptor_fd5(
+    trusted_lease: SeparationCheckpointDescriptorLease,
+    trusted_reservation: _CheckpointDescriptorFD5Reservation,
+) -> None:
+    """Release one exact reservation after a final locked remeasurement."""
+
+    lease, state = _known_state(trusted_lease)
+    with state.lock:
+        _require_active_state_for_reservation(lease, state)
+        try:
+            _require_owner(state)
+            _validate_state_authority(state)
+            _remeasure(state)
+        except _IntegrityFailure as exc:
+            _terminal_failure(lease, state, (exc.reason,))
+        except Exception:
+            _terminal_failure(
+                lease,
+                state,
+                ("lease_authority_binding_invalid",),
+            )
+        binding = state.fd5_reservation
+        if binding is None:
+            raise ValueError(
+                "checkpoint descriptor lease has no FD5 reservation"
+            )
+        _require_fd5_reservation_authority(
+            trusted_reservation,
+            binding,
+        )
+        state.fd5_reservation = None
+
+
+def _require_active_state_for_reservation(
+    lease: SeparationCheckpointDescriptorLease,
+    state: _LeaseState,
+) -> None:
+    try:
+        phase = _state_phase(lease, state)
+    except _IntegrityFailure as exc:
+        _terminal_failure(lease, state, (exc.reason,))
+    except Exception:
+        _terminal_failure(
+            lease,
+            state,
+            ("lease_state_matrix_invalid",),
+        )
+    if phase == "terminal":
+        raise SeparationCheckpointDescriptorLeaseError(
+            "checkpoint descriptor lease is already terminal",
+            _receipt_wrapper(state),
+        )
 
 
 def _reserve() -> None:
@@ -381,6 +501,10 @@ def _state_phase(
     with _REGISTRY_LOCK:
         active = lease in _ACTIVE
     finalizer_alive = state.finalizer.alive
+    reservation_shape_valid = (
+        state.fd5_reservation is None
+        or type(state.fd5_reservation) is _FD5ReservationBinding
+    )
     active_matrix = (
         state.status == "retained"
         and state.descriptor is not None
@@ -388,6 +512,7 @@ def _state_phase(
         and state.terminal_document is None
         and finalizer_alive
         and active
+        and reservation_shape_valid
     )
     terminal_matrix = (
         state.status in _TERMINAL_STATUSES
@@ -396,6 +521,7 @@ def _state_phase(
         and state.terminal_document is not None
         and not finalizer_alive
         and not active
+        and state.fd5_reservation is None
     )
     if active_matrix:
         return "active"
@@ -432,6 +558,14 @@ def _validate_state_authority(state: _LeaseState) -> None:
             expected_evidence,
             expected_observation,
         )
+        if state.fd5_reservation is not None:
+            _validate_fd5_reservation_binding(
+                state.fd5_reservation,
+                expected_worker_request_v1=state.request.worker_request,
+                expected_inspection_request=state.request,
+                expected_inspection=state.trusted_inspection,
+                expected_lease_observation=state.observation_document,
+            )
     except (KeyError, TypeError, ValueError) as exc:
         raise _IntegrityFailure("lease_authority_binding_invalid") from exc
     if (
@@ -607,6 +741,7 @@ def _detach_and_close(
         state.finalizer.detach()
     descriptor = state.descriptor
     state.descriptor = None
+    state.fd5_reservation = None
     state.status = "terminalizing"
     if descriptor is None:
         return "close_not_attempted", ("checkpoint_descriptor_ownership_lost",)
