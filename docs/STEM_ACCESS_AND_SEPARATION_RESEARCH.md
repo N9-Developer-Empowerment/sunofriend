@@ -548,9 +548,10 @@ It reuses only the low-level full-hash, descriptor/entry identity and PCM24
 geometry checks beneath the historical V1 wrapper; it never presents V2
 evidence as V1.
 
-The path-free observation binds the V3 and Result V2 hashes, exact entry set,
-file identities, bytes and geometry while keeping publication, selection,
-acceptance and promotion false. It creates or modifies no file and cannot
+The exact typed, revalidatable path-free observation binds the V3 and Result
+V2 hashes, exact entry set, file identities, bytes and geometry while keeping
+publication, selection, acceptance and promotion false. It creates or modifies
+no file and cannot
 prove that the worker executed, who created the tree or that ordinary files
 stay immutable afterward. Result V2 remains worker-reported content until the
 later parent receipt binds it to an exact owned-child lifecycle.

@@ -648,7 +648,8 @@ non-inheritable file descriptors. The implementation reuses the audited
 low-level descriptor/entry identity, full-hash and PCM24 geometry functions
 but does not call the historical V1 quarantine wrapper or recast Result V2 as
 V1. Its immutable evidence is path-free and grants no publication, selection,
-acceptance or promotion authority.
+acceptance or promotion authority. The exact observation type revalidates its
+self-hash and V3/Result V2 bindings without rereading paths.
 
 This verifier creates and modifies nothing. It does not prove fresh exclusive
 tree creation, persistent ordinary-file immutability, that Result V2 came from

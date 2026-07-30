@@ -9,6 +9,8 @@ files, starts no process and grants no publication or selection authority.
 from __future__ import annotations
 
 import os
+import re
+from dataclasses import dataclass
 from typing import Any, Mapping
 
 from ._separation_checkpoint_canonical import (
@@ -43,6 +45,58 @@ _QUARANTINE_V2_SCHEMA = (
     "sunofriend.separation-fake-execution-quarantine-verification.v2"
 )
 _QUARANTINE_V2_POLICY_ID = "parent-descriptor-quarantine-observation-v2"
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_OUTPUT_EVIDENCE_FIELDS = {
+    "slot_id",
+    "role",
+    "artifact_kind",
+    "bytes",
+    "sha256",
+    "file_identity_sha256",
+    "regular_file",
+    "owner_only_permissions",
+    "read_only_verification_descriptor",
+    "descriptor_noninheritable",
+    "identity_stable_during_full_hash",
+    "code_owned_fixture_bytes_matched",
+    "pcm24_geometry_verified",
+}
+_EFFECTS = {
+    "filesystem_accessed": True,
+    "files_created": False,
+    "files_modified": False,
+    "process_started": False,
+    "checkpoint_accessed": False,
+    "model_imported": False,
+    "audio_read": False,
+    "network_used": False,
+    "publication_permitted": False,
+    "selection_permitted": False,
+}
+_LIMITATIONS = [
+    "verification_is_one_parent_observation",
+    "result_v2_is_worker_report_not_execution_or_provenance_evidence",
+    "ordinary_files_can_change_after_verification",
+    "fresh_quarantine_creation_is_not_proven_by_this_verifier",
+    "parent_materializer_must_separately_prove_exclusive_creation",
+    "verification_does_not_authorize_publication_or_selection",
+]
+
+
+@dataclass(frozen=True, init=False)
+class _SeparationFakeExecutionQuarantineV2Observation(Mapping[str, Any]):
+    """Exact immutable evidence returned by the V2 descriptor verifier."""
+
+    _document: Mapping[str, Any]
+
+    def __getitem__(self, key: str) -> Any:
+        return self._document[key]
+
+    def __iter__(self) -> Any:
+        return iter(self._document)
+
+    def __len__(self) -> int:
+        return len(self._document)
 
 
 def _verify_fake_execution_quarantine_v2(
@@ -54,7 +108,7 @@ def _verify_fake_execution_quarantine_v2(
     fake_worker_result_v2: _SeparationFakeWorkerResultV2Record,
     quarantine_directory_descriptor: int,
     readable_descriptors: Mapping[str, int],
-) -> Mapping[str, Any]:
+) -> _SeparationFakeExecutionQuarantineV2Observation:
     """Verify an exact Result V2 tree through already-open descriptors."""
 
     plan = _validate_prepared_separation_fake_launch_plan_v3_record_shape(
@@ -184,30 +238,203 @@ def _verify_fake_execution_quarantine_v2(
         "total_bytes": total_bytes,
         "outputs": verified,
         "parent_outputs": parent_outputs,
-        "effects": {
-            "filesystem_accessed": True,
-            "files_created": False,
-            "files_modified": False,
-            "process_started": False,
-            "checkpoint_accessed": False,
-            "model_imported": False,
-            "audio_read": False,
-            "network_used": False,
-            "publication_permitted": False,
-            "selection_permitted": False,
-        },
-        "limitations": [
-            "verification_is_one_parent_observation",
-            "result_v2_is_worker_report_not_execution_or_provenance_evidence",
-            "ordinary_files_can_change_after_verification",
-            "fresh_quarantine_creation_is_not_proven_by_this_verifier",
-            "parent_materializer_must_separately_prove_exclusive_creation",
-            "verification_does_not_authorize_publication_or_selection",
-        ],
+        "effects": _plain(_EFFECTS),
+        "limitations": list(_LIMITATIONS),
     }
-    return _freeze(
+    return _new_fake_execution_quarantine_v2_observation(
         {
             **payload,
             "verification_sha256": _hash(payload),
-        }
+        },
+        fake_launch_plan_v3=plan,
+        fake_worker_result_v2=result,
     )
+
+
+def _validate_fake_execution_quarantine_v2_observation(
+    value: Any,
+    *,
+    fake_launch_plan_v3: _SeparationFakeLaunchPlanV3Record,
+    fake_worker_result_v2: _SeparationFakeWorkerResultV2Record,
+) -> _SeparationFakeExecutionQuarantineV2Observation:
+    """Revalidate one exact in-process observation without reading paths."""
+
+    if type(value) is not _SeparationFakeExecutionQuarantineV2Observation:
+        raise ValueError("V2 quarantine evidence must be an exact observation")
+    checked = _new_fake_execution_quarantine_v2_observation(
+        value,
+        fake_launch_plan_v3=fake_launch_plan_v3,
+        fake_worker_result_v2=fake_worker_result_v2,
+    )
+    if _plain(checked) != _plain(value):
+        raise ValueError("V2 quarantine evidence changed after verification")
+    return value
+
+
+def _new_fake_execution_quarantine_v2_observation(
+    document: Mapping[str, Any],
+    *,
+    fake_launch_plan_v3: _SeparationFakeLaunchPlanV3Record,
+    fake_worker_result_v2: _SeparationFakeWorkerResultV2Record,
+) -> _SeparationFakeExecutionQuarantineV2Observation:
+    if type(fake_launch_plan_v3) is not _SeparationFakeLaunchPlanV3Record:
+        raise ValueError("V2 quarantine evidence requires an exact V3 plan")
+    result = _validate_separation_fake_worker_result_v2_record_shape(
+        fake_worker_result_v2,
+        fake_launch_plan_v3=fake_launch_plan_v3,
+    )
+    value = _plain(document)
+    required = {
+        "schema",
+        "policy_id",
+        "status",
+        "evidence_scope",
+        "run_nonce",
+        "fake_launch_plan_v3_sha256",
+        "fake_worker_result_v2_sha256",
+        "publication_permitted",
+        "selection_permitted",
+        "acceptance_eligible",
+        "promotion_eligible",
+        "worker_created_output_files",
+        "output_files_observed_by_parent",
+        "ordinary_file_immutable_backing_proven",
+        "quarantine_identity_sha256",
+        "observed_entry_set_sha256",
+        "output_count",
+        "total_bytes",
+        "outputs",
+        "parent_outputs",
+        "effects",
+        "limitations",
+        "verification_sha256",
+    }
+    if not isinstance(value, dict) or set(value) != required:
+        raise ValueError("V2 quarantine observation fields are invalid")
+    if (
+        value["schema"] != _QUARANTINE_V2_SCHEMA
+        or value["policy_id"] != _QUARANTINE_V2_POLICY_ID
+        or value["status"] != "verified"
+        or value["evidence_scope"] != "private_parent_observation"
+        or value["run_nonce"] != fake_launch_plan_v3["run_nonce"]
+        or value["fake_launch_plan_v3_sha256"]
+        != fake_launch_plan_v3["plan_sha256"]
+        or value["fake_worker_result_v2_sha256"] != result["result_sha256"]
+        or any(
+            value[key] is not False
+            for key in (
+                "publication_permitted",
+                "selection_permitted",
+                "acceptance_eligible",
+                "promotion_eligible",
+                "worker_created_output_files",
+                "ordinary_file_immutable_backing_proven",
+            )
+        )
+        or value["output_files_observed_by_parent"] is not True
+    ):
+        raise ValueError("V2 quarantine observation policy is invalid")
+    for key in (
+        "quarantine_identity_sha256",
+        "observed_entry_set_sha256",
+        "verification_sha256",
+    ):
+        if (
+            not isinstance(value[key], str)
+            or _SHA256_RE.fullmatch(value[key]) is None
+        ):
+            raise ValueError("V2 quarantine observation hash is invalid")
+    if value["verification_sha256"] != _self_hash(
+        value,
+        "verification_sha256",
+    ):
+        raise ValueError("V2 quarantine observation self-hash is invalid")
+    expected_parent_outputs = [
+        {
+            key: _plain(claim[key])
+            for key in (
+                "role",
+                "slot_id",
+                "artifact_kind",
+                "sha256",
+                "bytes",
+                "geometry",
+            )
+        }
+        for claim in result["outputs"]
+    ]
+    if value["parent_outputs"] != expected_parent_outputs:
+        raise ValueError("V2 quarantine parent outputs are invalid")
+    if (
+        type(value["output_count"]) is not int
+        or value["output_count"] != len(result["outputs"])
+        or type(value["total_bytes"]) is not int
+        or value["total_bytes"] != sum(
+            item["bytes"] for item in result["outputs"]
+        )
+        or not isinstance(value["outputs"], list)
+        or len(value["outputs"]) != len(result["outputs"])
+    ):
+        raise ValueError("V2 quarantine output summary is invalid")
+    if value["effects"] != _EFFECTS or value["limitations"] != _LIMITATIONS:
+        raise ValueError("V2 quarantine observation effects are invalid")
+    for evidence, claim in zip(value["outputs"], result["outputs"]):
+        if not isinstance(evidence, dict) or set(evidence) != (
+            _OUTPUT_EVIDENCE_FIELDS
+        ):
+            raise ValueError("V2 quarantine output evidence fields are invalid")
+        if any(
+            evidence[key] != claim[key]
+            for key in ("slot_id", "role", "artifact_kind", "bytes", "sha256")
+        ):
+            raise ValueError("V2 quarantine output evidence binding is invalid")
+        if (
+            not isinstance(evidence["file_identity_sha256"], str)
+            or _SHA256_RE.fullmatch(evidence["file_identity_sha256"]) is None
+            or any(
+                evidence[key] is not True
+                for key in _OUTPUT_EVIDENCE_FIELDS
+                - {
+                    "slot_id",
+                    "role",
+                    "artifact_kind",
+                    "bytes",
+                    "sha256",
+                    "file_identity_sha256",
+                }
+            )
+        ):
+            raise ValueError("V2 quarantine output evidence is invalid")
+    if value["observed_entry_set_sha256"] != _hash(
+        [
+            {
+                "entry_name": f"{item['slot_id']}.wav",
+                "file_identity_sha256": item["file_identity_sha256"],
+                "sha256": item["sha256"],
+                "bytes": item["bytes"],
+            }
+            for item in value["outputs"]
+        ]
+    ):
+        raise ValueError("V2 quarantine entry-set hash is invalid")
+    _validate_path_free(value)
+    wrapped = object.__new__(_SeparationFakeExecutionQuarantineV2Observation)
+    object.__setattr__(wrapped, "_document", _freeze(value))
+    return wrapped
+
+
+def _self_hash(value: Mapping[str, Any], key: str) -> str:
+    payload = {name: _plain(item) for name, item in value.items() if name != key}
+    return _hash(payload)
+
+
+def _validate_path_free(value: Any) -> None:
+    stack = [value]
+    while stack:
+        current = stack.pop()
+        if isinstance(current, Mapping):
+            stack.extend(current.values())
+        elif isinstance(current, (list, tuple)):
+            stack.extend(current)
+        elif isinstance(current, str) and current.startswith("/"):
+            raise ValueError("V2 quarantine observation must be path-free")

@@ -599,8 +599,9 @@ exact historical request/blocked launches, prepared V3 plan and complete
 Result V2 before checking an already-materialized owner-only directory via
 read-only, non-inheritable descriptors. Exact entry names, distinct file
 objects, full hashes and PCM24 geometry are bound into a path-free immutable
-observation. Only the shared low-level descriptor checks are reused; V2 is
-never adapted into the historical V1 wrapper. Fresh exclusive
+exact observation that can be revalidated against the same V3/Result V2
+objects. Only the shared low-level descriptor checks are reused; V2 is never
+adapted into the historical V1 wrapper. Fresh exclusive
 materialization, proof that the worker actually executed, live supervision
 and terminal parent evidence remain the next gate.
 

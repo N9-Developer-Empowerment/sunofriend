@@ -12,6 +12,8 @@ import sunofriend._separation_fake_execution_quarantine as quarantine_module
 from sunofriend._separation_checkpoint_canonical import canonical_sha256
 from sunofriend._separation_fake_execution_quarantine import (
     _QUARANTINE_V2_SCHEMA,
+    _SeparationFakeExecutionQuarantineV2Observation,
+    _validate_fake_execution_quarantine_v2_observation,
     _verify_fake_execution_quarantine_v2,
 )
 from tests.test_separation_fake_execution_records import _execution_records
@@ -123,6 +125,15 @@ def test_v2_quarantine_verifies_exact_tree_hashes_geometry_and_policy(
     document = _plain(verified)
     verification_sha256 = document.pop("verification_sha256")
 
+    assert type(verified) is _SeparationFakeExecutionQuarantineV2Observation
+    assert (
+        _validate_fake_execution_quarantine_v2_observation(
+            verified,
+            fake_launch_plan_v3=launch_v3,
+            fake_worker_result_v2=result,
+        )
+        is verified
+    )
     assert verification_sha256 == canonical_sha256(document)
     assert document["schema"] == _QUARANTINE_V2_SCHEMA
     assert document["status"] == "verified"
@@ -149,6 +160,12 @@ def test_v2_quarantine_verifies_exact_tree_hashes_geometry_and_policy(
         isinstance(item, str) and item.startswith("/")
         for item in _walk(document)
     )
+    with pytest.raises(ValueError, match="exact observation"):
+        _validate_fake_execution_quarantine_v2_observation(
+            _plain(verified),
+            fake_launch_plan_v3=launch_v3,
+            fake_worker_result_v2=result,
+        )
 
 
 @pytest.mark.parametrize("mutation", ("extra", "corrupt", "hardlink"))

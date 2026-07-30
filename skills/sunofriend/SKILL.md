@@ -93,8 +93,9 @@ report the result, then move on.
   worker, but it contains no spawn call and is not execution authority. A
   separate Result V2 verifier can observe exact owner-only quarantine files
   through read-only descriptors, but it creates no tree, calls no historical
-  V1 wrapper, does not prove that the worker executed and grants no publication
-  or selection authority.
+  V1 wrapper, returns only exact path-free revalidatable evidence, does not
+  prove that the worker executed and grants no publication or selection
+  authority.
   Deterministic
   fake execution, live checkpoint FD 5 transport, model execution and real
   separation therefore remain unavailable, and no CLI/TUI separator is
