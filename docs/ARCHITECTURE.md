@@ -385,12 +385,31 @@ and adds descriptor-not-carried, path-to-loader-TOCTOU and
 static-inspection-not-load-authority. Its record is path-free, mixed-authority,
 blocked and not run; all operation effects are false.
 
+`separation_checkpoint_descriptor_lease.py` is the twelfth internal S3
+boundary. It reopens and reparses the exact request-bound checkpoint, requires
+equality with the separately retained trusted inspection, closes all
+descriptor-pinned ancestors and retains one non-inheritable read-only leaf
+descriptor in private weak-registry state. Its public handle is opaque,
+non-copyable and non-serializable. The immutable path-free observation exposes
+hashes and classification only; it never exposes the descriptor number or a
+path and is historical evidence rather than current liveness authority.
+
+Recheck and close are serialized per lease and use only the retained
+descriptor. Full hashing plus before/after identity checks fail closed on
+pathname replacement, in-place mutation, inheritance, descriptor ownership
+loss or parent-PID mismatch. Terminal state is one-way: active ownership and
+the finalizer are detached before one close call, and a sealed acquisition
+anchor lets the public receipt preserve integrity and cleanup outcomes even
+when later authority validation fails. Close-call success is reported as such,
+not as post-close content proof; garbage-collection cleanup is best effort.
+
 No inherited checkpoint descriptor is implemented. Launch v1 still contains
-only FDs 3 and 4 and retains a checkpoint path in the private request. A later
-v2 transport must use a live parent-owned lease over the same inspected FD,
-remove the child checkpoint path, install a read-only FD 5 atomically and bind
-child-side identity/hash evidence without changing any current capability to
-true.
+only FDs 3 and 4 and retains a checkpoint path in the private request. The
+ordinary retained inode is not an immutable snapshot and cannot authorize
+unsafe pickle loading. A later v2 transport must remove the child checkpoint
+path, reserve and remeasure the lease under the same lock, atomically install
+read-only FD 5 and bind child-side identity/hash evidence without changing any
+current capability to true.
 
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a

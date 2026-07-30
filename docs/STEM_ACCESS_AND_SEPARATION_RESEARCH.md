@@ -6,8 +6,9 @@ controlled-fake harness, acceptance pre-registration, bake-off preparation,
 backend-preflight, worker, runtime-artifact, read-only runtime measurement and
 non-spawning launch/lifecycle contracts plus blocked-only checkpoint and
 execution-admission scaffolding and descriptor-pinned static checkpoint
-inspection plus trusted-inspection blocked-admission binding implemented; real
-source separation, hidden evaluation and promotion are not implemented**
+inspection, trusted-inspection blocked-admission binding and parent-only live
+checkpoint-descriptor lease implemented; real source separation, FD 5
+transport, hidden evaluation and promotion are not implemented**
 
 Checked: 29 July 2026
 
@@ -262,12 +263,30 @@ retained, and the wrapper adds explicit descriptor-not-carried,
 path-to-loader-TOCTOU and static-inspection-not-load-authority blockers. It
 performs no I/O and every capability/effect is false.
 
-This slice does not add FD 5 or claim the closed inspection descriptor is
-inherited. The next transport design requires a live parent-only descriptor
-lease, inspection and rehashing of that same descriptor, a child request with
-no checkpoint path, atomic read-only FD installation and child-side
-identity/hash evidence. In-place mutation of the retained inode remains a
-separate blocker until loading consumes a verified immutable snapshot.
+The twelfth S3 increment adds a parent-only live checkpoint-descriptor lease.
+It reopens the request-bound checkpoint through the bounded inspector,
+reparses and rehashes that exact descriptor, requires equality with the
+separately retained trusted inspection, closes every ancestor descriptor and
+retains one non-inheritable read-only leaf descriptor at offset zero. The
+opaque handle is non-copyable and non-serializable; the raw descriptor stays
+inside bounded weak-registry state.
+
+Recheck never reopens the pathname. It verifies the same descriptor's identity
+before and after a complete request-bound hash and terminalizes on pathname
+replacement, in-place mutation, inheritance, ownership loss or parent-PID
+mismatch. Terminalization attempts closure once and records integrity
+separately from cleanup; explicit close is idempotent and an unconfirmed close
+is not retried. Garbage-collection cleanup is best effort, and the returned
+observation is historical rather than liveness authority.
+
+This slice does not add FD 5, a loader, worker protocol, model import,
+deserialization or real execution. A read-only descriptor prevents writes
+through that descriptor but does not make the inode immutable or prevent
+another writer from changing it after the last hash. The next transport design
+requires a path-free worker request, one exclusive lease reservation, atomic
+FD 5 installation under the same lease lock, child-side pre/post identity and
+hash evidence, and all existing executable-pickle and immutable-backing
+blockers.
 
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
@@ -1199,9 +1218,12 @@ implemented**
   without deserializing checkpoint bytes or authorizing a worker.
 - [x] Bind the trusted static inspection into a separate blocked v2 admission
   wrapper while retaining every v1 blocker and every false capability.
-- [ ] Add a parent-owned live descriptor lease and revise launch/worker
-  transport so a future loader can inherit the same inspected checkpoint
-  descriptor rather than reopen its path.
+- [x] Add a bounded parent-owned live descriptor lease that reparses,
+  rehashes, retains and rechecks the same inspected checkpoint without
+  exposing the raw descriptor or enabling a loader.
+- [ ] Add path-free worker-request and blocked launch-plan v2 contracts that
+  reserve the lease and describe atomic read-only FD 5 installation without
+  enabling a process or model.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with a
   deterministic fake worker, exact pre-exec remeasurement, validated worker
   result and parent-verified quarantined outputs before any real model is
@@ -1232,6 +1254,7 @@ Likely modules:
 - `separation_execution_admission.py`
 - `separation_checkpoint_inspection.py`
 - `separation_execution_admission_binding.py`
+- `separation_checkpoint_descriptor_lease.py`
 
 ### S4 — Experimental broad separation in Studio
 

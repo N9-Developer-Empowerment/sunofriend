@@ -342,13 +342,35 @@ synthetic. Every v1 blocker is retained, and descriptor-not-carried,
 path-to-loader-TOCTOU and static-inspection-not-load-authority blockers are
 added. All effects and capabilities remain false.
 
+The twelfth S3 slice adds the parent-only
+`sunofriend.separation-checkpoint-descriptor-lease-observation.v1` boundary.
+Acquisition reopens the exact request-bound checkpoint through the bounded
+inspector, hashes and parses that newly opened descriptor, requires exact
+evidence equality with the separately retained trusted inspection, closes all
+ancestor descriptors and retains one non-inheritable read-only leaf descriptor
+at offset zero. The raw descriptor and finalizer exist only in private weak
+registry state; the opaque lease handle cannot be copied or serialized, and
+at most two leases can be live.
+
+Recheck uses only the retained descriptor. It performs before/after identity
+checks and a full request-bound hash, never reopens the path, and fails closed
+on pathname replacement, in-place mutation, inheritance, ownership loss or
+parent-PID mismatch. Terminalisation removes active ownership before one
+close attempt and returns a path-free receipt that keeps integrity and cleanup
+outcomes separate. Explicit close is idempotent; an unconfirmed close is never
+retried, while garbage-collection cleanup remains best effort and produces no
+receipt. The returned observation is historical evidence, not liveness or load
+authority.
+
 Launch v1 is intentionally unchanged and still passes only request/result
-descriptors 3 and 4. A future transport slice needs a parent-owned,
-non-copyable live checkpoint-descriptor lease, same-descriptor inspection and
-rehashing, a path-free worker-request v2 and a launch v2 that installs a
-read-only checkpoint as worker descriptor 5. It must also retain an in-place
-mutation blocker until the child loads one verified immutable byte snapshot.
-No such descriptor transport or worker exists yet.
+descriptors 3 and 4. No FD 5, loader, child request, process, model import,
+deserialization, audio read or file write exists in this slice. A retained
+ordinary inode is not an immutable snapshot: another writer can change it
+after the last measurement. The next transport slice therefore needs a
+path-free worker-request v2 and blocked launch v2 that reserve, remeasure and
+atomically install one lease as read-only worker descriptor 5 while keeping
+the immutable-backing, executable-pickle, worker-protocol and real-execution
+blockers explicit.
 
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every

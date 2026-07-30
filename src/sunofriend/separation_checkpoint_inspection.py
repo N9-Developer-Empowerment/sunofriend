@@ -181,6 +181,24 @@ class _PinnedCheckpoint:
 
 
 @dataclass(frozen=True)
+class _StaticCheckpointEvidence:
+    digest: str
+    byte_count: int
+    classification: Mapping[str, Any]
+    archive: Mapping[str, Any]
+    pickle: Mapping[str, Any] | None
+
+
+@dataclass(frozen=True)
+class _RetainedCheckpointObservation:
+    descriptor: int
+    file_identity: tuple[int, int, int, int, int, int, int, int]
+    request: SeparationCheckpointInspectionRequest
+    trusted_inspection: SeparationCheckpointInspection
+    evidence: Mapping[str, Any]
+
+
+@dataclass(frozen=True)
 class _PickleEvidence:
     protocol: int | None
     opcode_count: int
@@ -270,119 +288,20 @@ def inspect_separation_checkpoint(
         trusted_separation_request=trusted_separation_request,
         trusted_runtime_artifact=trusted_runtime_artifact,
     )
-    request = _validated_request(
+    _validate_worker_against_bound(
         worker_request,
+        bound=bound,
         trusted_preflight=trusted_preflight,
         trusted_acceptance=trusted_acceptance,
         trusted_separation_request=trusted_separation_request,
         trusted_runtime_artifact=trusted_runtime_artifact,
     )
-    if (
-        request["request_sha256"] != bound.request_sha256
-        or _plain(request) != _plain(bound.worker_request)
-    ):
-        raise ValueError("worker request was substituted after parent binding")
-
     pinned = _open_pinned_checkpoint(bound.checkpoint_path)
-    archive_parsed = False
-    pickle_parsed = False
     try:
-        digest, byte_count, header = _hash_descriptor(
-            pinned.descriptor,
-            maximum_bytes=min(MAX_CHECKPOINT_BYTES, bound.checkpoint_bytes + 1),
-        )
-        if byte_count != bound.checkpoint_bytes:
-            raise ValueError("checkpoint size does not bind parent request")
-        if digest != bound.checkpoint_sha256:
-            raise ValueError("checkpoint hash does not bind parent request")
-        classification, archive, pickle = _inspect_container(
-            pinned.descriptor,
-            file_bytes=byte_count,
-            header=header,
-            checkpoint_sha256=digest,
-            declared_format=bound.declared_format,
-        )
-        archive_parsed = archive["archive_metadata_parsed"]
-        pickle_parsed = archive["pickle_metadata_parsed"]
-        _recheck_pinned_checkpoint(pinned)
+        evidence = _observe_pinned_checkpoint(pinned, bound)
     finally:
         _close_pinned_checkpoint(pinned)
-
-    evidence_payload = {
-        "request_sha256": bound.request_sha256,
-        "preflight_sha256": bound.preflight_sha256,
-        "acceptance_artifact_sha256": bound.acceptance_artifact_sha256,
-        "checkpoint_sha256": digest,
-        "checkpoint_bytes": byte_count,
-        "file_identity": _file_identity_document(pinned.before),
-        "archive": archive,
-        "pickle": pickle,
-        "classification": classification,
-    }
-    classification_evidence_sha256 = _hash(evidence_payload)
-    payload = {
-        "schema": SEPARATION_CHECKPOINT_INSPECTION_SCHEMA,
-        "inspection_id": SEPARATION_CHECKPOINT_INSPECTION_ID,
-        "status": "inspected_not_loaded",
-        "evidence_scope": "private_development",
-        "publication_scope": "private_local_contract_evidence",
-        "public_redacted_projection_available": False,
-        "evidence_authority": "parent_issued_static_observation",
-        "execution_supported": CHECKPOINT_STATIC_INSPECTION_EXECUTION_SUPPORTED,
-        "execution_permitted": False,
-        "bindings": {
-            "worker_request_sha256": bound.request_sha256,
-            "preflight_sha256": bound.preflight_sha256,
-            "acceptance_artifact_sha256": (
-                bound.acceptance_artifact_sha256
-            ),
-        },
-        "checkpoint": {
-            "checkpoint_id": bound.checkpoint_id,
-            "declared_format": bound.declared_format,
-            "sha256": digest,
-            "bytes": byte_count,
-            "file_identity": _file_identity_document(pinned.before),
-        },
-        "archive": archive,
-        "pickle": pickle,
-        "classification": {
-            **classification,
-            "classification_evidence_sha256": (
-                classification_evidence_sha256
-            ),
-            "authorizes_loading": False,
-            "authorizes_execution": False,
-        },
-        "limitations": [
-            "checkpoint_descriptor_not_carried_to_loader",
-            "checkpoint_path_to_loader_toctou_unresolved",
-            "checkpoint_filesystem_mount_locality_not_proven",
-            "static_pickle_opcode_analysis_does_not_deserialize",
-        ],
-        "effects": {
-            "filesystem_accessed": True,
-            "checkpoint_opened": True,
-            "checkpoint_bytes_read": True,
-            "checkpoint_descriptor_closed": True,
-            "archive_metadata_parsed": archive_parsed,
-            "pickle_opcodes_parsed": pickle_parsed,
-            "checkpoint_loaded": False,
-            "checkpoint_deserialized": False,
-            "model_imported": False,
-            "process_started": False,
-            "network_used": False,
-            "audio_read": False,
-            "files_written": False,
-            "publication_permitted": False,
-            "selection_permitted": False,
-            "acceptance_eligible": False,
-            "promotion_eligible": False,
-        },
-    }
-    _path_free(payload, "checkpoint inspection")
-    document = {**payload, "inspection_sha256": _hash(payload)}
-    return _new_inspection(document, bound)
+    return _build_checkpoint_inspection(bound, pinned, evidence)
 
 
 def validate_separation_checkpoint_inspection(
@@ -494,6 +413,351 @@ def _validated_request(
         trusted_separation_request=trusted_separation_request,
         trusted_runtime_artifact=trusted_runtime_artifact,
     )
+
+
+def _validate_worker_against_bound(
+    worker_request: Mapping[str, Any],
+    *,
+    bound: SeparationCheckpointInspectionRequest,
+    trusted_preflight: Mapping[str, Any],
+    trusted_acceptance: Mapping[str, Any],
+    trusted_separation_request: Any,
+    trusted_runtime_artifact: SeparationRuntimeArtifactIdentity,
+) -> Mapping[str, Any]:
+    request = _validated_request(
+        worker_request,
+        trusted_preflight=trusted_preflight,
+        trusted_acceptance=trusted_acceptance,
+        trusted_separation_request=trusted_separation_request,
+        trusted_runtime_artifact=trusted_runtime_artifact,
+    )
+    if (
+        request["request_sha256"] != bound.request_sha256
+        or _plain(request) != _plain(bound.worker_request)
+    ):
+        raise ValueError("worker request was substituted after parent binding")
+    return request
+
+
+def _verify_pinned_checkpoint_binding(
+    pinned: _PinnedCheckpoint,
+    request: SeparationCheckpointInspectionRequest,
+) -> tuple[str, int, bytes]:
+    _verify_retained_descriptors(pinned)
+    digest, byte_count, header = _hash_descriptor(
+        pinned.descriptor,
+        maximum_bytes=min(MAX_CHECKPOINT_BYTES, request.checkpoint_bytes + 1),
+    )
+    if byte_count != request.checkpoint_bytes:
+        raise ValueError("checkpoint size does not bind parent request")
+    if digest != request.checkpoint_sha256:
+        raise ValueError("checkpoint hash does not bind parent request")
+    _recheck_pinned_checkpoint(pinned)
+    _verify_retained_descriptors(pinned)
+    _reset_descriptor_offset(pinned.descriptor)
+    return digest, byte_count, header
+
+
+def _verify_retained_descriptors(value: _PinnedCheckpoint) -> None:
+    descriptors = (value.descriptor, *value.ancestor_descriptors)
+    if any(os.get_inheritable(descriptor) for descriptor in descriptors):
+        raise ValueError(
+            "checkpoint descriptor lease contains an inheritable descriptor"
+        )
+
+
+def _require_trusted_inspection_match(
+    inspection: SeparationCheckpointInspection,
+    *,
+    request: SeparationCheckpointInspectionRequest,
+    pinned: _PinnedCheckpoint,
+    evidence: _StaticCheckpointEvidence,
+) -> None:
+    classification = _plain(evidence.classification)
+    expected_classification = {
+        **classification,
+        "classification_evidence_sha256": (
+            _classification_evidence_sha256(request, pinned, evidence)
+        ),
+        "authorizes_loading": False,
+        "authorizes_execution": False,
+    }
+    expected_checkpoint = {
+        "checkpoint_id": request.checkpoint_id,
+        "declared_format": request.declared_format,
+        "sha256": evidence.digest,
+        "bytes": evidence.byte_count,
+        "file_identity": _file_identity_document(pinned.before),
+    }
+    if (
+        _plain(inspection["checkpoint"]) != expected_checkpoint
+        or _plain(inspection["archive"]) != _plain(evidence.archive)
+        or _plain(inspection["pickle"]) != _plain(evidence.pickle)
+        or _plain(inspection["classification"]) != expected_classification
+    ):
+        raise ValueError(
+            "retained checkpoint does not reproduce trusted inspection"
+        )
+
+
+def _classification_evidence_sha256(
+    request: SeparationCheckpointInspectionRequest,
+    pinned: _PinnedCheckpoint,
+    evidence: _StaticCheckpointEvidence,
+) -> str:
+    return _hash(
+        {
+            "request_sha256": request.request_sha256,
+            "preflight_sha256": request.preflight_sha256,
+            "acceptance_artifact_sha256": (
+                request.acceptance_artifact_sha256
+            ),
+            "checkpoint_sha256": evidence.digest,
+            "checkpoint_bytes": evidence.byte_count,
+            "file_identity": _file_identity_document(pinned.before),
+            "archive": _plain(evidence.archive),
+            "pickle": _plain(evidence.pickle),
+            "classification": _plain(evidence.classification),
+        }
+    )
+
+
+def _acquire_retained_checkpoint_observation(
+    worker_request: Mapping[str, Any],
+    *,
+    checkpoint_inspection: SeparationCheckpointInspection,
+    trusted_checkpoint_inspection: SeparationCheckpointInspection,
+    trusted_request: SeparationCheckpointInspectionRequest,
+    trusted_preflight: Mapping[str, Any],
+    trusted_acceptance: Mapping[str, Any],
+    trusted_separation_request: Any,
+    trusted_runtime_artifact: SeparationRuntimeArtifactIdentity,
+) -> _RetainedCheckpointObservation:
+    """Reopen, parse and retain one exact leaf FD for the lease module.
+
+    This is deliberately one narrow private bridge.  It exposes no public raw
+    descriptor API, performs no model loading, and closes every ancestor
+    directory descriptor before returning.
+    """
+
+    request = _trusted_request(
+        trusted_request,
+        trusted_preflight=trusted_preflight,
+        trusted_acceptance=trusted_acceptance,
+        trusted_separation_request=trusted_separation_request,
+        trusted_runtime_artifact=trusted_runtime_artifact,
+    )
+    inspection = validate_separation_checkpoint_inspection(
+        checkpoint_inspection,
+        trusted_inspection=trusted_checkpoint_inspection,
+        trusted_request=request,
+    )
+    _validate_worker_against_bound(
+        worker_request,
+        bound=request,
+        trusted_preflight=trusted_preflight,
+        trusted_acceptance=trusted_acceptance,
+        trusted_separation_request=trusted_separation_request,
+        trusted_runtime_artifact=trusted_runtime_artifact,
+    )
+    pinned: _PinnedCheckpoint | None = _open_pinned_checkpoint(
+        request.checkpoint_path
+    )
+    try:
+        evidence = _observe_pinned_checkpoint(pinned, request)
+        _require_trusted_inspection_match(
+            inspection,
+            request=request,
+            pinned=pinned,
+            evidence=evidence,
+        )
+        _verify_retained_descriptors(pinned)
+        _reset_descriptor_offset(pinned.descriptor)
+        observation_document = {
+            "bindings": {
+                "worker_request_sha256": request.request_sha256,
+                "preflight_sha256": request.preflight_sha256,
+                "acceptance_artifact_sha256": (
+                    request.acceptance_artifact_sha256
+                ),
+                "trusted_checkpoint_inspection_sha256": (
+                    inspection["inspection_sha256"]
+                ),
+                "checkpoint_sha256": evidence.digest,
+                "checkpoint_bytes": evidence.byte_count,
+                "checkpoint_file_identity_sha256": _hash(
+                    _file_identity_document(pinned.before)
+                ),
+                "classification_evidence_sha256": (
+                    inspection["classification"][
+                        "classification_evidence_sha256"
+                    ]
+                ),
+                "archive_evidence_sha256": _hash(
+                    _plain(evidence.archive)
+                ),
+                "pickle_evidence_sha256": (
+                    None
+                    if evidence.pickle is None
+                    else _hash(_plain(evidence.pickle))
+                ),
+            },
+            "classification": {
+                "container_kind": (
+                    inspection["classification"]["container_kind"]
+                ),
+                "confidence": inspection["classification"]["confidence"],
+                "evidence_equal_to_trusted_inspection": True,
+            },
+            "archive_metadata_parsed": evidence.archive[
+                "archive_metadata_parsed"
+            ],
+            "pickle_opcodes_parsed": evidence.archive[
+                "pickle_metadata_parsed"
+            ],
+        }
+        _path_free(
+            observation_document,
+            "retained checkpoint observation",
+        )
+        descriptor = pinned.descriptor
+        file_identity = pinned.before
+        ancestors = tuple(reversed(pinned.ancestor_descriptors))
+        pinned = None
+        try:
+            _close_descriptor_sequence(ancestors, raise_on_error=True)
+        except BaseException:
+            try:
+                os.close(descriptor)
+            finally:
+                raise
+        try:
+            if os.get_inheritable(descriptor):
+                raise ValueError(
+                    "retained checkpoint descriptor is inheritable"
+                )
+            _reset_descriptor_offset(descriptor)
+            return _RetainedCheckpointObservation(
+                descriptor=descriptor,
+                file_identity=file_identity,
+                request=request,
+                trusted_inspection=inspection,
+                evidence=_freeze(observation_document),
+            )
+        except BaseException:
+            os.close(descriptor)
+            raise
+    except BaseException:
+        if pinned is not None:
+            _close_pinned_checkpoint(pinned)
+        raise
+
+
+def _observe_pinned_checkpoint(
+    pinned: _PinnedCheckpoint,
+    request: SeparationCheckpointInspectionRequest,
+) -> _StaticCheckpointEvidence:
+    digest, byte_count, header = _verify_pinned_checkpoint_binding(
+        pinned,
+        request,
+    )
+    classification, archive, pickle = _inspect_container(
+        pinned.descriptor,
+        file_bytes=byte_count,
+        header=header,
+        checkpoint_sha256=digest,
+        declared_format=request.declared_format,
+    )
+    after_digest, after_bytes, _after_header = (
+        _verify_pinned_checkpoint_binding(pinned, request)
+    )
+    if after_digest != digest or after_bytes != byte_count:
+        raise ValueError("checkpoint changed during static inspection")
+    return _StaticCheckpointEvidence(
+        digest=digest,
+        byte_count=byte_count,
+        classification=_freeze(classification),
+        archive=_freeze(archive),
+        pickle=None if pickle is None else _freeze(pickle),
+    )
+
+
+def _build_checkpoint_inspection(
+    request: SeparationCheckpointInspectionRequest,
+    pinned: _PinnedCheckpoint,
+    evidence: _StaticCheckpointEvidence,
+) -> SeparationCheckpointInspection:
+    classification = _plain(evidence.classification)
+    archive = _plain(evidence.archive)
+    pickle = _plain(evidence.pickle)
+    classification_evidence_sha256 = _classification_evidence_sha256(
+        request,
+        pinned,
+        evidence,
+    )
+    payload = {
+        "schema": SEPARATION_CHECKPOINT_INSPECTION_SCHEMA,
+        "inspection_id": SEPARATION_CHECKPOINT_INSPECTION_ID,
+        "status": "inspected_not_loaded",
+        "evidence_scope": "private_development",
+        "publication_scope": "private_local_contract_evidence",
+        "public_redacted_projection_available": False,
+        "evidence_authority": "parent_issued_static_observation",
+        "execution_supported": CHECKPOINT_STATIC_INSPECTION_EXECUTION_SUPPORTED,
+        "execution_permitted": False,
+        "bindings": {
+            "worker_request_sha256": request.request_sha256,
+            "preflight_sha256": request.preflight_sha256,
+            "acceptance_artifact_sha256": (
+                request.acceptance_artifact_sha256
+            ),
+        },
+        "checkpoint": {
+            "checkpoint_id": request.checkpoint_id,
+            "declared_format": request.declared_format,
+            "sha256": evidence.digest,
+            "bytes": evidence.byte_count,
+            "file_identity": _file_identity_document(pinned.before),
+        },
+        "archive": archive,
+        "pickle": pickle,
+        "classification": {
+            **classification,
+            "classification_evidence_sha256": (
+                classification_evidence_sha256
+            ),
+            "authorizes_loading": False,
+            "authorizes_execution": False,
+        },
+        "limitations": [
+            "checkpoint_descriptor_not_carried_to_loader",
+            "checkpoint_path_to_loader_toctou_unresolved",
+            "checkpoint_filesystem_mount_locality_not_proven",
+            "static_pickle_opcode_analysis_does_not_deserialize",
+        ],
+        "effects": {
+            "filesystem_accessed": True,
+            "checkpoint_opened": True,
+            "checkpoint_bytes_read": True,
+            "checkpoint_descriptor_closed": True,
+            "archive_metadata_parsed": archive["archive_metadata_parsed"],
+            "pickle_opcodes_parsed": archive["pickle_metadata_parsed"],
+            "checkpoint_loaded": False,
+            "checkpoint_deserialized": False,
+            "model_imported": False,
+            "process_started": False,
+            "network_used": False,
+            "audio_read": False,
+            "files_written": False,
+            "publication_permitted": False,
+            "selection_permitted": False,
+            "acceptance_eligible": False,
+            "promotion_eligible": False,
+        },
+    }
+    _path_free(payload, "checkpoint inspection")
+    document = {**payload, "inspection_sha256": _hash(payload)}
+    return _new_inspection(document, request)
 
 
 def _open_pinned_checkpoint(path: Path) -> _PinnedCheckpoint:
@@ -692,21 +956,35 @@ def _hash_descriptor(
     *,
     maximum_bytes: int,
 ) -> tuple[str, int, bytes]:
-    os.lseek(descriptor, 0, os.SEEK_SET)
     digest = hashlib.sha256()
     count = 0
     header = b""
-    while True:
-        chunk = os.read(descriptor, min(1024 * 1024, maximum_bytes + 1 - count))
-        if not chunk:
-            break
-        if len(header) < 4:
-            header += chunk[: 4 - len(header)]
-        count += len(chunk)
-        if count > maximum_bytes:
-            raise ValueError("checkpoint exceeds request-bound byte limit")
-        digest.update(chunk)
-    return digest.hexdigest(), count, header
+    try:
+        while True:
+            chunk = os.pread(
+                descriptor,
+                min(1024 * 1024, maximum_bytes + 1 - count),
+                count,
+            )
+            if not chunk:
+                break
+            if len(header) < 4:
+                header += chunk[: 4 - len(header)]
+            count += len(chunk)
+            if count > maximum_bytes:
+                raise ValueError("checkpoint exceeds request-bound byte limit")
+            digest.update(chunk)
+        return digest.hexdigest(), count, header
+    finally:
+        _reset_descriptor_offset(descriptor)
+
+
+def _reset_descriptor_offset(descriptor: int) -> None:
+    try:
+        if os.lseek(descriptor, 0, os.SEEK_SET) != 0:
+            raise ValueError("checkpoint descriptor offset reset failed")
+    except OSError as exc:
+        raise ValueError("checkpoint descriptor offset reset failed") from exc
 
 
 def _inspect_container(
@@ -743,6 +1021,9 @@ def _inspect_container(
 
     duplicate = os.dup(descriptor)
     try:
+        os.set_inheritable(duplicate, False)
+        if os.get_inheritable(duplicate):
+            raise ValueError("checkpoint parser descriptor is inheritable")
         with os.fdopen(duplicate, "rb", closefd=True) as stream:
             duplicate = -1
             return _inspect_torch_zip(
@@ -753,6 +1034,7 @@ def _inspect_container(
     finally:
         if duplicate >= 0:
             os.close(duplicate)
+        _reset_descriptor_offset(descriptor)
 
 
 def _inspect_torch_zip(
