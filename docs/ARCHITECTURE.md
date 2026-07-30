@@ -705,6 +705,15 @@ best-effort finalizer; that fallback is leak containment rather than terminal
 evidence. If forced terminalization itself cannot establish a receipt, the
 failure stays catastrophic and receipt-less.
 
+`_separation_native_failure_records.py` is the pure post-start failure-evidence
+boundary. The native session can seal its record only after the exact child
+owner reports reap, ownership release and no ownership loss. It represents
+nonzero/signalled exit, exactly reaped timeout, result close/decode failure,
+worker identity mismatch and post-reap remeasurement failure with a code-owned
+stage. The original exception stays on the private error object; paths, PID,
+PGID and exception text are absent from the observation. A spawn error or
+unproven reap cannot obtain this terminal record.
+
 This is transport proof, not separation. The fixed worker hashes but never
 deserializes the checkpoint, reads no source audio, imports no model, performs
 no inference, uses no network and creates no output file. Runtime-exec and

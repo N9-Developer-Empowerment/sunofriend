@@ -647,6 +647,14 @@ attached to the aggregate failure and a private best-effort finalizer remains
 armed; the fallback is leak containment, never terminal evidence. Catastrophic
 terminalization failure remains receipt-less and therefore cannot be promoted.
 
+The native layer now has a separate path-free failed-terminal observation for
+post-start failures only when its exact child owner proves reap, ownership
+release and no ownership loss. It covers nonzero or signalled exit, an exactly
+reaped timeout, result-close/decode failure, worker identity mismatch and
+post-reap remeasurement failure. It preserves the original exception privately
+but records only a code-owned stage; no PID or exception text enters evidence.
+Spawn failures and any unproven reap deliberately receive no such observation.
+
 This is not a separator result. The worker hashes but never deserializes the
 checkpoint, reads no source audio, imports no model, performs no inference,
 uses no network and creates no output file. Runtime-exec and worker-script

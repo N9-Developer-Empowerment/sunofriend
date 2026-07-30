@@ -46,6 +46,10 @@ from ._separation_fake_execution_protocol import (
     _decode_fake_execution_result_frame,
     _expected_fake_execution_result_frame_bytes,
 )
+from ._separation_native_failure_records import (
+    _VerifiedNativeLauncherFailedTerminalObservation,
+    _build_exact_reap_failure_observation,
+)
 
 
 __all__: tuple[str, ...] = ()
@@ -121,6 +125,37 @@ class _VerifiedNativeLauncherExecutionObservation(Mapping[str, Any]):
 
     def __len__(self) -> int:
         return len(self._document)
+
+
+class _VerifiedNativeLauncherExecutionFailure(RuntimeError):
+    """Private primary failure carrying exact-reap terminal evidence."""
+
+    def __init__(
+        self,
+        *,
+        primary_error: BaseException,
+        observation: _VerifiedNativeLauncherFailedTerminalObservation,
+        cleanup_errors: tuple[BaseException, ...] = (),
+    ) -> None:
+        super().__init__("verified native fake execution failed after exact reap")
+        self.primary_error = primary_error
+        self.observation = observation
+        self.cleanup_errors = cleanup_errors
+
+
+class _VerifiedNativeLauncherUnprovenExecutionFailure(RuntimeError):
+    """Private failure for which exact terminal process evidence is absent."""
+
+    def __init__(
+        self,
+        *,
+        primary_error: BaseException,
+        cleanup_errors: tuple[BaseException, ...],
+    ) -> None:
+        super().__init__("native fake execution terminality is unproven")
+        self.primary_error = primary_error
+        self.cleanup_errors = cleanup_errors
+        self.observation = None
 
 
 @dataclass
@@ -371,6 +406,11 @@ def _execute_verified_native_fake_worker(
     term_sent = False
     kill_sent = False
     result_writer_owned = True
+    wait: Mapping[str, Any] | None = None
+    result: _SeparationFakeWorkerResultV2Record | None = None
+    worker_reported_identity_matched: bool | None = None
+    post_reap_remeasurement_complete = False
+    failure_stage = "worker_exit"
     with state.lock:
         _require_owner(state)
         if state.run_status != "ready":
@@ -409,6 +449,12 @@ def _execute_verified_native_fake_worker(
                 pass
             raise
         state.run_status = "running"
+    primary_error: BaseException | None = None
+    cleanup_errors: list[BaseException] = []
+    successful: tuple[
+        _SeparationFakeWorkerResultV2Record,
+        _VerifiedNativeLauncherExecutionObservation,
+    ] | None = None
     try:
         (
             raw_wait_status,
@@ -416,8 +462,10 @@ def _execute_verified_native_fake_worker(
             term_sent,
             kill_sent,
         ) = _supervise_native_owner(native_owner)
+        failure_stage = "result_writer_close"
         os.close(owned_result_write_descriptor)
         result_writer_owned = False
+        failure_stage = "worker_exit"
         wait = _normalise_owned_wait_status(raw_wait_status)
         if (
             timed_out
@@ -425,19 +473,23 @@ def _execute_verified_native_fake_worker(
             or wait["exit_code"] != 0
         ):
             raise RuntimeError("fixed fake worker did not exit successfully")
+        failure_stage = "result_decode"
         result = _read_fake_result_v2(
             result_read_descriptor,
             fake_launch_plan_v3=fake_launch_plan_v3,
         )
         process_report = result["process_report"]
-        if (
+        failure_stage = "worker_identity"
+        worker_reported_identity_matched = (
             native_owner.matches_pid_and_pgid(
                 process_report["pid"],
                 process_report["pgid"],
             )
-            is not True
-        ):
+            is True
+        )
+        if worker_reported_identity_matched is not True:
             raise RuntimeError("fixed fake worker identity did not match owner")
+        failure_stage = "owner_terminality"
         with state.lock:
             _require_owner(state)
             if (
@@ -448,7 +500,9 @@ def _execute_verified_native_fake_worker(
                 raise RuntimeError(
                     "native launcher lacks exact terminal ownership"
                 )
+            failure_stage = "post_reap_remeasurement"
             _remeasure_session_state(state)
+            post_reap_remeasurement_complete = True
             state.run_status = "consumed_complete"
         payload = {
             "schema": (
@@ -489,31 +543,134 @@ def _execute_verified_native_fake_worker(
                 }
             )
         )
-        return result, terminal
-    except BaseException:
+        successful = result, terminal
+    except BaseException as exc:
+        primary_error = exc
         with state.lock:
             state.run_status = "consumed_failed"
-        raise
     finally:
         if result_writer_owned:
             try:
                 os.close(owned_result_write_descriptor)
-            except OSError:
-                pass
-        if native_owner is not None and not native_owner.leader_reaped:
+                result_writer_owned = False
+            except OSError as cleanup_error:
+                cleanup_errors.append(cleanup_error)
+        if (
+            native_owner is not None
+            and not _native_owner_has_exact_terminal_state(native_owner)
+        ):
             try:
-                _supervise_native_owner(
+                (
+                    cleanup_wait_status,
+                    cleanup_timed_out,
+                    cleanup_term_sent,
+                    cleanup_kill_sent,
+                ) = _supervise_native_owner(
                     native_owner,
                     timeout_ns=0,
                     term_grace_ns=_TERM_GRACE_NS,
                     kill_reap_ns=_KILL_REAP_NS,
                 )
-            except BaseException:
+                if raw_wait_status is None:
+                    raw_wait_status = cleanup_wait_status
+                timed_out = timed_out or cleanup_timed_out
+                term_sent = term_sent or cleanup_term_sent
+                kill_sent = kill_sent or cleanup_kill_sent
+            except BaseException as cleanup_error:
                 # Dropping the final strong owner outside Python locks invokes
                 # the audited native emergency SIGKILL/exact-wait backstop.
                 # It is never accepted as terminal execution evidence.
-                pass
+                cleanup_errors.append(cleanup_error)
+        elif (
+            native_owner is not None
+            and raw_wait_status is None
+        ):
+            try:
+                cached_wait_status = native_owner.wait_nohang()
+                if cached_wait_status is not None:
+                    _normalise_owned_wait_status(cached_wait_status)
+                    raw_wait_status = cached_wait_status
+            except BaseException as cleanup_error:
+                cleanup_errors.append(cleanup_error)
+    if primary_error is None:
+        if successful is None:
+            raise RuntimeError(
+                "native fake execution completed without terminal evidence"
+            )
         native_owner = None
+        return successful
+    if (
+        native_owner is not None
+        and _native_owner_has_exact_terminal_state(native_owner)
+    ):
+        if wait is None and raw_wait_status is not None:
+            try:
+                wait = _normalise_owned_wait_status(raw_wait_status)
+            except (TypeError, ValueError):
+                wait = None
+        if not post_reap_remeasurement_complete:
+            try:
+                with state.lock:
+                    _require_owner(state)
+                    _remeasure_session_state(state)
+                post_reap_remeasurement_complete = True
+            except BaseException as cleanup_error:
+                post_reap_remeasurement_complete = False
+                cleanup_errors.append(cleanup_error)
+        if wait is not None and failure_stage in {
+            "owner_terminality",
+            "post_reap_remeasurement",
+            "result_decode",
+            "result_writer_close",
+            "worker_exit",
+            "worker_identity",
+        }:
+            observation = _build_exact_reap_failure_observation(
+                native_session_observation_sha256=(
+                    state.observation_document["observation_sha256"]
+                ),
+                fake_launch_plan_v3_sha256=(
+                    fake_launch_plan_v3["plan_sha256"]
+                ),
+                failure_stage=failure_stage,
+                wait=wait,
+                timed_out=timed_out,
+                term_sent=term_sent,
+                kill_sent=kill_sent,
+                fake_worker_result_v2_sha256=(
+                    None if result is None else result["result_sha256"]
+                ),
+                worker_reported_identity_matched=(
+                    worker_reported_identity_matched
+                ),
+                post_reap_remeasurement_complete=(
+                    post_reap_remeasurement_complete
+                ),
+            )
+            native_owner = None
+            raise _VerifiedNativeLauncherExecutionFailure(
+                primary_error=primary_error,
+                observation=observation,
+                cleanup_errors=tuple(cleanup_errors),
+            ) from primary_error
+    native_owner = None
+    if cleanup_errors:
+        raise _VerifiedNativeLauncherUnprovenExecutionFailure(
+            primary_error=primary_error,
+            cleanup_errors=tuple(cleanup_errors),
+        ) from primary_error
+    raise primary_error.with_traceback(primary_error.__traceback__)
+
+
+def _native_owner_has_exact_terminal_state(native_owner: Any) -> bool:
+    try:
+        return (
+            native_owner.leader_reaped is True
+            and native_owner.ownership_released is True
+            and native_owner.ownership_lost is False
+        )
+    except BaseException:
+        return False
 
 
 def _known_state(

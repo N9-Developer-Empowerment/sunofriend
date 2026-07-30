@@ -106,7 +106,10 @@ report the result, then move on.
   transferred in a failed core. If strict close fails, the aggregate retains
   its owner and an armed best-effort finalizer that is not terminal evidence.
   Catastrophic terminalization remains
-  receipt-less and blocked. The worker only
+  receipt-less and blocked. Native post-start failures now receive a separate
+  path-free observation only after exact reap and ownership release are proven;
+  it contains a code-owned stage, never PID or exception text. Spawn failure
+  and unproven reap still receive no terminal observation. The worker only
   hashes FD 5; it never deserializes the checkpoint, reads source audio, imports
   a model, performs inference or creates output files. Historical fake V1/V2
   and checkpoint launch V2 remain permanently blocked, the public lease

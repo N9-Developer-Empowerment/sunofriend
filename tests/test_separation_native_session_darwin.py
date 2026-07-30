@@ -3,18 +3,23 @@ from __future__ import annotations
 import ast
 import copy
 import hashlib
+import os
 import pickle
 import platform
 import stat
 import sys
+import threading
 from collections.abc import Mapping
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 import pytest
 
 import sunofriend
 from sunofriend import _separation_native_session_darwin as session_module
+from sunofriend import _separation_fake_executor_darwin as executor_module
+from sunofriend import _separation_native_failure_records as failure_records
 from sunofriend._separation_checkpoint_canonical import canonical_sha256
 from sunofriend._separation_fake_execution_records import (
     _EXPECTED_FAKE_WORKER_SOURCE_BYTES,
@@ -162,6 +167,143 @@ def test_bound_file_measurement_rejects_aliases_and_unsafe_worker_mode(
             executable=False,
             require_not_group_or_other_writable=True,
         )
+
+
+def test_cleanup_reap_after_primary_failure_carries_terminal_observation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeOwnedChild:
+        def __init__(self) -> None:
+            self.leader_reaped = False
+            self.ownership_released = False
+            self.ownership_lost = False
+
+        def wait_nohang(self) -> int:
+            raise AssertionError("test uses controlled supervision")
+
+        def signal_owned_group(self, _signal_number: int) -> None:
+            raise AssertionError("nonzero test child should not be signaled")
+
+        def matches_pid_and_pgid(
+            self,
+            _process_id: int,
+            _process_group_id: int,
+        ) -> bool:
+            return False
+
+    owner = FakeOwnedChild()
+    module = ModuleType("fake_native_failure_test")
+    module._OwnedSpawnChild = FakeOwnedChild  # type: ignore[attr-defined]
+    session = object.__new__(session_module._VerifiedNativeLauncherSession)
+    state = session_module._SessionState(
+        lock=threading.RLock(),
+        owner_pid=os.getpid(),
+        build=object(),
+        module=module,
+        spawn_method=lambda *_args: owner,
+        artifact_measurement={},
+        runtime_path=tmp_path / "runtime",
+        runtime_measurement={},
+        worker_path=tmp_path / "worker",
+        worker_measurement={},
+        observation_document={"observation_sha256": "1" * 64},
+        run_status="ready",
+    )
+    with session_module._REGISTRY_LOCK:
+        session_module._KNOWN[session] = state
+    monkeypatch.setattr(
+        executor_module,
+        "_consume_native_start_admission",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        session_module,
+        "_remeasure_session_state",
+        lambda _state: None,
+    )
+    supervision_calls = 0
+
+    def fail_then_reap(
+        native_owner: FakeOwnedChild,
+        **_kwargs: object,
+    ) -> tuple[int, bool, bool, bool]:
+        nonlocal supervision_calls
+        supervision_calls += 1
+        if supervision_calls == 1:
+            raise RuntimeError("synthetic initial supervision failure")
+        native_owner.leader_reaped = True
+        native_owner.ownership_released = True
+        return 7 << 8, True, True, True
+
+    monkeypatch.setattr(
+        session_module,
+        "_supervise_native_owner",
+        fail_then_reap,
+    )
+    request_path = tmp_path / "request.frame"
+    result_path = tmp_path / "result.frame"
+    checkpoint_path = tmp_path / "checkpoint.bin"
+    request_path.write_bytes(b"request")
+    result_path.write_bytes(b"")
+    checkpoint_path.write_bytes(b"checkpoint")
+    request_descriptor = os.open(request_path, os.O_RDONLY)
+    result_write_descriptor = os.open(result_path, os.O_WRONLY)
+    result_read_descriptor = os.open(result_path, os.O_RDONLY)
+    checkpoint_descriptor = os.open(checkpoint_path, os.O_RDONLY)
+    for descriptor in (
+        request_descriptor,
+        result_write_descriptor,
+        result_read_descriptor,
+        checkpoint_descriptor,
+    ):
+        os.set_inheritable(descriptor, False)
+    try:
+        with pytest.raises(
+            session_module._VerifiedNativeLauncherExecutionFailure
+        ) as captured:
+            session_module._execute_verified_native_fake_worker(
+                session,
+                trusted_admission=object(),
+                fake_launch_plan_v3={  # type: ignore[arg-type]
+                    "plan_sha256": "2" * 64
+                },
+                request_descriptor=request_descriptor,
+                owned_result_write_descriptor=result_write_descriptor,
+                result_read_descriptor=result_read_descriptor,
+                checkpoint_descriptor=checkpoint_descriptor,
+            )
+        failure = captured.value
+        assert isinstance(failure.primary_error, RuntimeError)
+        assert "initial supervision" in str(failure.primary_error)
+        assert failure.cleanup_errors == ()
+        observation = (
+            failure_records._validate_exact_reap_failure_observation(
+                failure.observation
+            )
+        )
+        assert observation["failure_stage"] == "worker_exit"
+        assert observation["process"]["wait"]["exit_code"] == 7
+        assert observation["process"]["timed_out"] is True
+        assert observation["process"]["term_sent"] is True
+        assert observation["process"]["kill_sent"] is True
+        assert observation["process"]["leader_reaped"] is True
+        assert observation["result"]["validated"] is False
+        assert state.run_status == "consumed_failed"
+        assert supervision_calls == 2
+    finally:
+        for descriptor in (
+            request_descriptor,
+            result_write_descriptor,
+            result_read_descriptor,
+            checkpoint_descriptor,
+        ):
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+        with session_module._REGISTRY_LOCK:
+            session_module._KNOWN.pop(session, None)
 
 
 @pytest.mark.skipif(

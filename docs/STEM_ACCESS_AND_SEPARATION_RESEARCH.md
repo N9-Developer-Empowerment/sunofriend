@@ -605,6 +605,14 @@ On close failure the aggregate retains the core and its armed best-effort
 finalizer; that backstop is not terminal evidence. This still is not the
 whole-run receipt or adversarial matrix.
 
+A separate native failed-terminal record now captures post-start failures only
+after the exact owner proves reap, ownership release and no ownership loss.
+Nonzero/signalled exits, exactly reaped timeouts, result close/decode errors,
+worker identity mismatch and post-reap remeasurement failure carry a
+self-hashed path-free observation. The original exception remains private;
+evidence contains only a code-owned stage and no PID or exception text. Spawn
+errors and unproven reap still have no terminal observation.
+
 The executed worker is still only a code-owned transport fixture: it hashes
 but never deserializes the checkpoint and emits two-frame PCM24 payloads
 without reading source audio or running inference. Runtime-exec and
