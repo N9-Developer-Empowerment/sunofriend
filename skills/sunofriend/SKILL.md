@@ -49,14 +49,16 @@ report the result, then move on.
   blocked-only checkpoint/admission records, private static checkpoint
   inspector, trusted-inspection admission binding and parent-only live
   checkpoint-descriptor lease, path-free request V2, exact lease reservation
-  and blocked launch-plan V2 are engineering groundwork, not a usable
-  separator, model installation or finished-song command. The inspector and
-  lease read, classify, retain and recheck exact local checkpoint bytes
-  without loading a model or exposing the raw descriptor. The launch plan
-  describes logical FD 3/4/5 requirements but installs nothing and carries no
-  live reservation authority. The lease is not an immutable snapshot or FD 5
-  transport, every execution blocker remains, and real separation execution
-  is disabled.
+  and blocked launch-plan V2, plus fake-only request/launch/result records and
+  process-free framing/quarantine observation, are engineering groundwork,
+  not a usable separator, model installation or finished-song command. The
+  inspector and lease read, classify, retain and recheck exact local
+  checkpoint bytes without loading a model or exposing the raw descriptor.
+  The fake transport records permit no execution; their launch remains
+  blocked on an audited native close-all boundary. The process-free observer
+  starts no child and issues no terminal receipt. The lease is not an
+  immutable snapshot or FD 5 transport, every real-execution blocker remains,
+  and real separation execution is disabled.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one
   canonical WAV project. It does not separate, shift, pad, stretch, normalize

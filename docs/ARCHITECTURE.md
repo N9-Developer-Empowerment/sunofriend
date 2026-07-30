@@ -482,6 +482,40 @@ false. Existing V1 launch records and lifecycles do not import or accept this
 type. A later fake-worker transport needs new executable request and launch
 schemas.
 
+The 30 July 2026 seventeenth S3 boundary is
+`_separation_fake_transport_records.py`. It defines new private fake-worker
+request, blocked launch and worker-report result schemas without changing the
+permanently non-executable V1/V2 records. The request and launch bind a
+64-hex run identifier, exact historical V2 hashes, logical descriptors 3/4/5
+and one code-owned two-frame PCM24 fixture per requested role. They contain
+no path, raw descriptor, argv or live token. A same-shaped record is never
+lease, reservation or run authority, and nonce shape does not prove
+freshness or single use. Fake request and launch V1 are permanently
+non-executable; an actual fake executor requires a new launch schema.
+
+The fake launch records platform requirements rather than pretending they
+have run. Its native close-all launcher, child-only mapping, unlisted
+descriptor closure, live lease authority, immediate checkpoint
+remeasurement and parent quarantine verification are all unproven blockers.
+Consequently worker-start permission remains false. The result type is only a
+bounded worker report; it cannot publish output or become parent verification
+evidence.
+
+`_separation_fake_worker_protocol.py` is the eighteenth S3 boundary. It is
+process-free. It frames the exact fake request/launch envelope and result as
+canonical bounded JSON with separate magic values, rejects ambiguous or
+trailing bytes and cross-binds the run nonce and hashes. Its parent observer
+uses only supplied directory and file descriptors, `fstat`, descriptor-
+relative entry observations and `pread` to verify the exact observed entry
+set, stable identity, owner-only permissions, link count, distinct inodes,
+per-slot limits, hashes and PCM24 RIFF geometry.
+
+The observer reports one path-free observation with selection and publication
+disabled. It does not prove directory freshness, permanent immutable backing,
+process isolation or a completed child lifecycle and issues no terminal
+receipt. The missing audited native close-all launcher remains the next
+boundary before a deterministic fake child can start.
+
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a
 starter ZIP. It does not create or mutate Workbench SQLite state. After

@@ -8,11 +8,12 @@ non-spawning launch/lifecycle contracts plus blocked-only checkpoint and
 execution-admission scaffolding and descriptor-pinned static checkpoint
 inspection, trusted-inspection blocked-admission binding and parent-only live
 checkpoint-descriptor lease plus pure path-free worker-request V2 design
-evidence and a private exact-object lease reservation implemented; real source
-separation, FD 5 transport, blocked launch V2, hidden evaluation and promotion
-are not implemented**
+evidence, a private exact-object lease reservation, blocked launch V2,
+fake-only transport records and a process-free framing/quarantine observer
+implemented; real source separation, a child-process FD 5 transport, hidden
+evaluation and promotion are not implemented**
 
-Checked: 29 July 2026
+Checked: 30 July 2026
 
 ## Contents
 
@@ -366,6 +367,42 @@ after the one intended exec. Every capability and effect is false. There is
 still no argv, source/output transport, worker protocol, process, loader,
 model operation or user-facing separation. A fake-worker transport must
 introduce new executable request and launch schemas rather than enabling V2.
+
+The 30 July 2026 seventeenth S3 increment adds private, fake-only request,
+launch and worker-result records. They cross-bind V2 and blocked launch V2 for
+historical continuity, carry a 64-hex run identifier and describe only a
+code-owned two-frame PCM24 fixture. Request and launch records are
+path-free, deeply immutable and explicitly not live authority. Their
+execution-support and permission flags are false. Nonce shape does not prove
+parent-owned freshness or single use. Real separation, source audio,
+checkpoint deserialization, model import, inference, acceptance, selection
+and publication remain false or forbidden.
+
+The fake launch record makes the platform gap explicit. Python's macOS
+`os.posix_spawn` surface cannot prove closure of unrelated inheritable
+descriptors and exposes no close-on-exec-default flag. The record therefore
+requires an audited native close-all launcher, says it is not implemented,
+keeps worker start blocked and records child-only FD mapping, exact pre-exec
+checkpoint remeasurement, live lease authority and parent quarantine
+verification as unresolved blockers. It neither starts a process nor changes
+V1 or V2. Fake request and launch V1 are permanently non-executable; an
+actual fake executor requires a new launch schema.
+
+The eighteenth S3 increment adds a separate process-free protocol boundary.
+It canonically frames the exact fake request/launch envelope and fake result
+with shared 64 KiB and 1 MiB total-frame limits, duplicate-field rejection,
+bounded JSON depth and an exact run-nonce/hash handshake. Its parent observer
+accepts only exact record objects plus read-only, non-inheritable directory
+and output descriptors. It checks the exact observed entry set, owner-only
+files, one link, distinct file identities, per-slot size, full SHA-256,
+stable before/after identity and packed PCM24 RIFF geometry using
+offset-independent reads.
+
+That observer is one descriptor-pinned observation, not launch authority or a
+terminal receipt. It does not prove that a directory was freshly created or
+that ordinary files stay immutable after observation, and it never permits
+selection or publication. No subprocess, FD 5 installation, checkpoint load,
+model operation or user-facing separator exists in either increment.
 
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
@@ -1309,10 +1346,18 @@ implemented**
   live lease facade without changing authority, records or behaviour.
 - [x] Add blocked launch-plan v2 and atomic read-only FD 5 installation design
   without enabling a process or model.
-- [ ] Prove a non-bypassable fail-closed subprocess transport with a
-  deterministic fake worker, new executable request/launch schemas, exact
-  pre-exec remeasurement, validated worker result and parent-verified
-  quarantined outputs before any real model is allowed to start.
+- [x] Add separate fake-only request, blocked launch and worker-result schemas
+  with a run nonce, fixed code-owned PCM24 fixture and no serialized execution
+  authority.
+- [x] Add bounded canonical request/result framing plus a process-free,
+  descriptor-pinned parent quarantine observer without issuing a terminal
+  receipt.
+- [ ] Implement and audit a native macOS close-all launcher that can prove
+  child-only logical FD mapping without mutating parent FD 3, 4 or 5.
+- [ ] Prove a non-bypassable fail-closed subprocess transport with the
+  deterministic fake worker, exact pre-exec remeasurement, validated worker
+  result, timeout/reap evidence and parent-verified quarantined outputs before
+  any real model is allowed to start.
 - [ ] Generalise the existing AI runtime/checkpoint registry and isolate heavy
   runtimes in a separate worker environment.
 - [ ] Require explicit checkpoint installation, hashes and licences in the
@@ -1345,6 +1390,9 @@ Likely modules:
 - `_separation_checkpoint_fd5_reservation.py`
 - `_separation_checkpoint_transport_records.py`
 - `_separation_worker_request_v2_values.py`
+- `_separation_checkpoint_launch_v2_records.py`
+- `_separation_fake_transport_records.py`
+- `_separation_fake_worker_protocol.py`
 
 ### S4 — Experimental broad separation in Studio
 

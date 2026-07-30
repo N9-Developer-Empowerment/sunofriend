@@ -433,6 +433,38 @@ Worker-request and launch-plan V2 are permanently non-executable; a
 deterministic fake-worker proof must use new executable request and launch
 schemas rather than changing V2.
 
+The 30 July 2026 seventeenth S3 slice adds private fake-only request, blocked
+launch and worker-result records. They retain V2 and blocked-launch-V2 hashes
+only as historical design bindings, add an explicit 64-hex run identifier and
+describe a fixed code-owned two-frame PCM24 fixture. Serialized records are
+not live authority: execution and worker-start permission remain false, and
+source audio, checkpoint deserialization, model import, inference, selection,
+acceptance and publication remain unavailable.
+
+Nonce shape does not prove parent-owned freshness or single use. Fake request
+and launch V1 are permanently non-executable protocol/planning records; an
+actual fake executor requires a new launch schema and live run authority.
+
+The blocked fake launch also records a newly verified platform boundary.
+Python's macOS `os.posix_spawn` API cannot prove closure of unrelated
+inheritable descriptors. A reviewed native close-all launcher is therefore a
+required, unimplemented blocker, alongside exact live lease authority,
+immediate checkpoint remeasurement, child-only logical mapping and parent
+quarantine verification. No process is started in this slice.
+
+The eighteenth S3 slice adds process-free canonical framing and a
+descriptor-pinned parent quarantine observer. The request envelope binds the
+exact fake request, blocked fake launch, nonce and hashes. Request and result
+frames share the contract's 64 KiB and 1 MiB total limits and reject
+noncanonical, duplicate, non-finite, over-deep, truncated and trailing JSON.
+The observer verifies one exact directory-entry observation, owner-only
+regular files, one link, distinct identities, per-slot size, full hash,
+stable identity and independent PCM24 RIFF geometry using `pread`.
+
+This is deliberately not a terminal receipt, launch authority or exact
+freshness/immutability proof. It starts no child, installs no FD 5, loads no
+checkpoint, runs no model and enables no CLI, TUI or real separation route.
+
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
 transcriber. They need independent lineage, model/checkpoint licensing,
