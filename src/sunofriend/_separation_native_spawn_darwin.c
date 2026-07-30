@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 
 /*
@@ -43,6 +44,8 @@
 #endif
 
 #define SUNOFRIEND_SCRATCH_FD_MIN 6
+#define SUNOFRIEND_EMERGENCY_REAP_ATTEMPTS 200
+#define SUNOFRIEND_EMERGENCY_REAP_PAUSE_NS 5000000L
 
 enum {
     SUNOFRIEND_STDIN_FD = 0,
@@ -147,7 +150,14 @@ sunofriend_validate_transport_fds(const int source_fds[SUNOFRIEND_TRANSPORT_COUN
             }
             if (
                 (status_flags & O_ACCMODE) != required_access_modes[left]
-                || (status_flags & (O_APPEND | O_NONBLOCK)) != 0
+                || (status_flags & O_APPEND) != 0
+                || (
+                    /* The retained checkpoint is deliberately opened with
+                       O_NONBLOCK by the descriptor inspector.  It is a
+                       regular file and the worker reads it with pread(). */
+                    left != 2
+                    && (status_flags & O_NONBLOCK) != 0
+                )
             ) {
                 PyErr_SetString(
                     PyExc_ValueError,
@@ -428,13 +438,20 @@ static void
 sunofriend_emergency_kill_and_reap(SunofriendOwnedSpawnChild *child)
 {
     int observed_wait_status;
+    int attempt;
     pid_t waited;
+    struct timespec pause = {
+        .tv_sec = 0,
+        .tv_nsec = SUNOFRIEND_EMERGENCY_REAP_PAUSE_NS,
+    };
+    struct timespec remaining_pause;
 
     /*
      * This is the last-resort object finalizer, not terminal execution
      * evidence. POSIX_SPAWN_SETPGROUP with pgroup 0 makes pid the exact new
-     * group. Kill that group, then exact-reap its leader if the explicit
-     * lifecycle API has not already done so.
+     * group. Kill that group, then make a bounded best-effort exact reap if
+     * the explicit lifecycle API has not already done so. This finalizer must
+     * never perform an unbounded wait while CPython holds the GIL.
      */
     if (!child->leader_reaped) {
         for (;;) {
@@ -473,8 +490,12 @@ sunofriend_emergency_kill_and_reap(SunofriendOwnedSpawnChild *child)
         break;
     }
     if (!child->leader_reaped) {
-        for (;;) {
-            waited = waitpid(child->pid, &observed_wait_status, 0);
+        for (
+            attempt = 0;
+            attempt < SUNOFRIEND_EMERGENCY_REAP_ATTEMPTS;
+            attempt++
+        ) {
+            waited = waitpid(child->pid, &observed_wait_status, WNOHANG);
             if (waited < 0 && errno == EINTR) {
                 continue;
             }
@@ -484,8 +505,17 @@ sunofriend_emergency_kill_and_reap(SunofriendOwnedSpawnChild *child)
                 child->ownership_released = true;
             } else if (waited < 0 && errno == ECHILD) {
                 child->ownership_lost = true;
+                break;
+            } else if (waited < 0) {
+                break;
+            } else {
+                remaining_pause = pause;
+                while (
+                    nanosleep(&remaining_pause, &remaining_pause) != 0
+                    && errno == EINTR
+                ) {
+                }
             }
-            break;
         }
     }
 }

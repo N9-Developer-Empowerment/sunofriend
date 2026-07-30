@@ -4,9 +4,11 @@ Acquisition bridges one exact, already-closed V1 static inspection to a newly
 opened and independently parsed descriptor.  Only the checkpoint leaf FD is
 retained; ancestor directory FDs are closed by the inspector bridge.
 
-This is private contract groundwork, not a loader or launch transport.  The
-raw FD exists only in module-private weak registry state.  No public API
-duplicates, inherits, hands off, deserializes or executes it.
+The raw FD exists only in module-private weak registry state.  No public API
+duplicates, inherits, hands off, deserializes or executes it.  One private
+Darwin-only fake-worker proof may pass the exact retained descriptor through a
+one-shot bridge while the lease lock remains held; this does not widen the
+public contract or enable real checkpoint loading.
 """
 
 from __future__ import annotations
@@ -75,6 +77,9 @@ _KNOWN: weakref.WeakKeyDictionary[
 ] = weakref.WeakKeyDictionary()
 _ACTIVE: weakref.WeakSet[SeparationCheckpointDescriptorLease] = weakref.WeakSet()
 _RESERVATIONS = 0
+_FAKE_EXECUTION_BRIDGES: weakref.WeakKeyDictionary[
+    _FakeExecutionLeaseBridgeAuthority, _FakeExecutionLeaseBridgeBinding
+] = weakref.WeakKeyDictionary()
 
 
 class SeparationCheckpointDescriptorLease:
@@ -99,6 +104,40 @@ class SeparationCheckpointDescriptorLease:
 
     def __reduce_ex__(self, _protocol: int) -> Any:
         raise TypeError("checkpoint descriptor leases cannot be serialized")
+
+
+class _FakeExecutionLeaseBridgeAuthority:
+    """Opaque one-shot proof that the exact lease lock admitted execution."""
+
+    __slots__ = ("__weakref__",)
+
+    def __new__(cls, *_args: Any, **_kwargs: Any) -> Any:
+        raise TypeError("fake execution lease bridges are parent-issued only")
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}()"
+
+    def __copy__(self) -> Any:
+        raise TypeError("fake execution lease bridges cannot be copied")
+
+    def __deepcopy__(self, _memo: Any) -> Any:
+        raise TypeError("fake execution lease bridges cannot be copied")
+
+    def __reduce__(self) -> Any:
+        raise TypeError("fake execution lease bridges cannot be serialized")
+
+    def __reduce_ex__(self, _protocol: int) -> Any:
+        raise TypeError("fake execution lease bridges cannot be serialized")
+
+
+@dataclass
+class _FakeExecutionLeaseBridgeBinding:
+    owner_pid: int
+    lease_state: _LeaseState
+    reservation: _CheckpointDescriptorFD5Reservation
+    worker_request_v2: SeparationWorkerRequestV2Record
+    lease_observation: SeparationCheckpointDescriptorLeaseObservation
+    status: str
 
 
 @dataclass(frozen=True, init=False)
@@ -149,6 +188,20 @@ class _IntegrityFailure(ValueError):
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
         self.reason = reason
+
+
+class _FakeExecutionLeaseFailure(RuntimeError):
+    """Private aggregate retaining one primary and every cleanup failure."""
+
+    def __init__(
+        self,
+        *,
+        primary_error: BaseException | None,
+        cleanup_errors: Sequence[BaseException],
+    ) -> None:
+        super().__init__("fake execution lease lifecycle failed")
+        self.primary_error = primary_error
+        self.cleanup_errors = tuple(cleanup_errors)
 
 
 @dataclass
@@ -476,6 +529,233 @@ def _issue_blocked_separation_launch_plan_v2_record(
         return _build_blocked_separation_launch_plan_v2_record(
             worker_request_v2=trusted_worker_request_v2,
         )
+
+
+def _execute_reserved_separation_fake_worker_darwin(
+    trusted_lease: SeparationCheckpointDescriptorLease,
+    *,
+    trusted_reservation: _CheckpointDescriptorFD5Reservation,
+    trusted_worker_request_v2: SeparationWorkerRequestV2Record,
+    current_lease_observation: SeparationCheckpointDescriptorLeaseObservation,
+    fake_worker_request: Any,
+    fake_launch_plan_v1: Any,
+    blocked_fake_launch_plan_v2: Any,
+    fake_launch_plan_v3: Any,
+    trusted_native_session: Any,
+    native_session_observation: Any,
+    private_root: str | os.PathLike[str],
+) -> Any:
+    """Enter the private synchronous fake executor without widening V1 API."""
+
+    from ._separation_fake_executor_darwin import (
+        _execute_reserved_fake_worker,
+    )
+
+    return _execute_reserved_fake_worker(
+        trusted_lease=trusted_lease,
+        trusted_reservation=trusted_reservation,
+        trusted_worker_request_v2=trusted_worker_request_v2,
+        current_lease_observation=current_lease_observation,
+        fake_worker_request=fake_worker_request,
+        fake_launch_plan_v1=fake_launch_plan_v1,
+        blocked_fake_launch_plan_v2=blocked_fake_launch_plan_v2,
+        fake_launch_plan_v3=fake_launch_plan_v3,
+        trusted_native_session=trusted_native_session,
+        native_session_observation=native_session_observation,
+        private_root=private_root,
+    )
+
+
+def _execute_reserved_fake_worker_under_lock(
+    *,
+    trusted_lease: SeparationCheckpointDescriptorLease,
+    trusted_reservation: _CheckpointDescriptorFD5Reservation,
+    trusted_worker_request_v2: SeparationWorkerRequestV2Record,
+    current_lease_observation: SeparationCheckpointDescriptorLeaseObservation,
+    fake_worker_request: Any,
+    fake_launch_plan_v1: Any,
+    blocked_fake_launch_plan_v2: Any,
+    fake_launch_plan_v3: Any,
+    trusted_native_session: Any,
+    native_session_observation: Any,
+    private_root: Any,
+) -> tuple[Any, SeparationCheckpointDescriptorLeaseTerminalReceipt]:
+    """Validate, execute and close while retaining the exact lease lock."""
+
+    lease, state = _known_state(trusted_lease)
+    primary_error: BaseException | None = None
+    cleanup_errors: list[BaseException] = []
+    core: Any | None = None
+    receipt: SeparationCheckpointDescriptorLeaseTerminalReceipt | None = None
+    with state.lock:
+        bridge_authority: _FakeExecutionLeaseBridgeAuthority | None = None
+        try:
+            _require_active_state_for_reservation(lease, state)
+            _require_owner(state)
+            _validate_state_authority(state)
+            _remeasure(state)
+            binding = state.fd5_reservation
+            if binding is None:
+                raise ValueError(
+                    "checkpoint descriptor lease has no FD5 reservation"
+                )
+            _require_fd5_reservation_authority(
+                trusted_reservation,
+                binding,
+            )
+            if trusted_worker_request_v2 is not binding.worker_request_v2:
+                raise ValueError(
+                    "fake execution request must be the exact reserved record"
+                )
+            if (
+                current_lease_observation is not binding.lease_observation
+                or getattr(current_lease_observation, "_document", None)
+                is not state.observation_document
+            ):
+                raise ValueError(
+                    "fake execution requires the exact lease observation"
+                )
+            descriptor = state.descriptor
+            if type(descriptor) is not int or descriptor < 3:
+                raise ValueError(
+                    "checkpoint descriptor lease ownership is invalid"
+                )
+            expected_blocked_launch_v2 = (
+                _build_blocked_separation_launch_plan_v2_record(
+                    worker_request_v2=trusted_worker_request_v2,
+                )
+            )
+            bridge_authority = _issue_fake_execution_lease_bridge(
+                state=state,
+                trusted_reservation=trusted_reservation,
+                trusted_worker_request_v2=trusted_worker_request_v2,
+                current_lease_observation=current_lease_observation,
+            )
+            from ._separation_fake_executor_darwin import (
+                _execute_admitted_fake_worker_under_lease,
+            )
+
+            core = _execute_admitted_fake_worker_under_lease(
+                lease_bridge_authority=bridge_authority,
+                trusted_worker_request_v2=trusted_worker_request_v2,
+                current_lease_observation=current_lease_observation,
+                expected_blocked_launch_v2=expected_blocked_launch_v2,
+                fake_worker_request=fake_worker_request,
+                fake_launch_plan_v1=fake_launch_plan_v1,
+                blocked_fake_launch_plan_v2=blocked_fake_launch_plan_v2,
+                fake_launch_plan_v3=fake_launch_plan_v3,
+                trusted_native_session=trusted_native_session,
+                native_session_observation=native_session_observation,
+                checkpoint_descriptor=descriptor,
+                private_root=private_root,
+            )
+            _remeasure(state)
+        except BaseException as exc:
+            primary_error = exc
+        finally:
+            if bridge_authority is not None:
+                try:
+                    _finish_fake_execution_lease_bridge(bridge_authority)
+                except BaseException as cleanup_error:
+                    cleanup_errors.append(cleanup_error)
+        try:
+            if _state_phase(lease, state) == "active":
+                if state.fd5_reservation is not None:
+                    try:
+                        _release_separation_checkpoint_descriptor_fd5(
+                            lease,
+                            trusted_reservation,
+                        )
+                    except BaseException as cleanup_error:
+                        cleanup_errors.append(cleanup_error)
+                try:
+                    receipt = close_separation_checkpoint_descriptor_lease(
+                        lease
+                    )
+                except BaseException as cleanup_error:
+                    cleanup_errors.append(cleanup_error)
+        except BaseException as cleanup_error:
+            cleanup_errors.append(cleanup_error)
+        if primary_error is not None or cleanup_errors:
+            failure = _FakeExecutionLeaseFailure(
+                primary_error=primary_error,
+                cleanup_errors=cleanup_errors,
+            )
+            if primary_error is not None:
+                raise failure from primary_error
+            raise failure
+        if core is None or receipt is None:
+            raise RuntimeError(
+                "fake execution did not produce terminal lease evidence"
+            )
+        return core, receipt
+
+
+def _issue_fake_execution_lease_bridge(
+    *,
+    state: _LeaseState,
+    trusted_reservation: _CheckpointDescriptorFD5Reservation,
+    trusted_worker_request_v2: SeparationWorkerRequestV2Record,
+    current_lease_observation: SeparationCheckpointDescriptorLeaseObservation,
+) -> _FakeExecutionLeaseBridgeAuthority:
+    authority = object.__new__(_FakeExecutionLeaseBridgeAuthority)
+    binding = _FakeExecutionLeaseBridgeBinding(
+        owner_pid=os.getpid(),
+        lease_state=state,
+        reservation=trusted_reservation,
+        worker_request_v2=trusted_worker_request_v2,
+        lease_observation=current_lease_observation,
+        status="issued_under_lock",
+    )
+    with _REGISTRY_LOCK:
+        if authority in _FAKE_EXECUTION_BRIDGES:
+            raise RuntimeError("fake execution lease bridge registration failed")
+        _FAKE_EXECUTION_BRIDGES[authority] = binding
+    return authority
+
+
+def _consume_fake_execution_lease_bridge(
+    value: Any,
+    *,
+    trusted_worker_request_v2: SeparationWorkerRequestV2Record,
+    current_lease_observation: SeparationCheckpointDescriptorLeaseObservation,
+) -> None:
+    if type(value) is not _FakeExecutionLeaseBridgeAuthority:
+        raise ValueError("fake execution requires an exact lease bridge")
+    with _REGISTRY_LOCK:
+        binding = _FAKE_EXECUTION_BRIDGES.get(value)
+    if type(binding) is not _FakeExecutionLeaseBridgeBinding:
+        raise ValueError("fake execution lease bridge is not registered")
+    state = binding.lease_state
+    with state.lock:
+        _require_owner(state)
+        if (
+            binding.owner_pid != os.getpid()
+            or binding.status != "issued_under_lock"
+            or binding.worker_request_v2 is not trusted_worker_request_v2
+            or binding.lease_observation is not current_lease_observation
+            or state.fd5_reservation is None
+            or state.fd5_reservation.authority is not binding.reservation
+            or state.fd5_reservation.worker_request_v2
+            is not trusted_worker_request_v2
+            or state.fd5_reservation.lease_observation
+            is not current_lease_observation
+        ):
+            raise ValueError("fake execution lease bridge binding changed")
+        _validate_state_authority(state)
+        _remeasure(state)
+        binding.status = "consumed"
+
+
+def _finish_fake_execution_lease_bridge(
+    authority: _FakeExecutionLeaseBridgeAuthority,
+) -> None:
+    with _REGISTRY_LOCK:
+        binding = _FAKE_EXECUTION_BRIDGES.get(authority)
+        if type(binding) is not _FakeExecutionLeaseBridgeBinding:
+            return
+        binding.status = "terminal"
+        del _FAKE_EXECUTION_BRIDGES[authority]
 
 
 def _require_active_state_for_reservation(

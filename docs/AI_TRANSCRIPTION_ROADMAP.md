@@ -572,26 +572,20 @@ the serialized plan non-authoritative and worker-start permission false.
 Complete-only worker Result V2 requires a dedicated `PGID == PID` group and
 keeps model, source-audio, network, selection and publication effects false.
 
-The V2 execution protocol is validation-only at this checkpoint. It has no
+At that checkpoint the V2 execution protocol was validation-only. It had no
 product admitted-envelope encoder or admission issuer, so prepared records
-cannot be turned into permission after a lease closes. Test code alone makes
-synthetic V2 envelope bytes. The next increment must mint one single-use
-authority only under the exact live lease/reservation lock, supervise the
-native owned child to exact reap and add a distinct V2 quarantine verifier
-and parent terminal receipt. No separator model, source audio or public
-command is enabled.
+could not become permission after a lease closed. Test code alone made
+synthetic V2 envelope bytes. Those serialized records remain non-authoritative
+after the later private executor work.
 
-The twenty-third S3 slice adds a private verified native-launcher session
-without calling the launcher. It makes one fresh owner-only build, remeasures
-the artifact across extension import, verifies the compiled source and build
-contract, and binds the exact built-in method to full measurements of the
-current Python executable and pinned fake worker. Its opaque, non-copyable,
-non-serializable identity and path-free observation are not execution
-authority. The live Darwin check starts no process and reads no checkpoint or
-audio. Extension import is now measured for this session; immediate
-runtime/worker remeasurement at spawn, lease-bound single-use admission,
-owned-child supervision, Result V2 verification, quarantine and a parent
-terminal receipt remain outstanding.
+The twenty-third S3 slice adds a private verified native-launcher session. Its
+open and recheck routes make one fresh owner-only build, remeasure the artifact
+across extension import, verify the compiled source and build contract, and
+bind the exact built-in method to full measurements of the current Python
+executable and pinned fake worker without calling it. Its opaque,
+non-copyable, non-serializable identity and path-free observation are not
+execution authority. The same module now contains the later executor-only
+guarded call, which cannot be reached with the session alone.
 
 The twenty-fourth S3 slice adds a Result V2-specific parent quarantine
 verifier without starting a process or writing a file. It revalidates the
@@ -601,9 +595,55 @@ read-only, non-inheritable descriptors. Exact entry names, distinct file
 objects, full hashes and PCM24 geometry are bound into a path-free immutable
 exact observation that can be revalidated against the same V3/Result V2
 objects. Only the shared low-level descriptor checks are reused; V2 is never
-adapted into the historical V1 wrapper. Fresh exclusive
+adapted into the historical V1 wrapper. At that boundary, fresh exclusive
 materialization, proof that the worker actually executed, live supervision
-and terminal parent evidence remain the next gate.
+and terminal parent evidence remained the next gate.
+
+The twenty-fifth S3 slice proves the successful owned-child transport path for
+the deterministic fixture protocol through a private synchronous Darwin
+executor. Historical fake V1/V2 and
+checkpoint-launch V2 remain permanently blocked; prepared V3 is still not
+serialized authority; the public lease execution flag remains false; and no
+CLI or TUI imports the executor.
+
+The call requires the exact live lease, FD5 reservation, worker request,
+current observation, historical record chain, prepared V3 plan and verified
+native session. Under the lease lock a one-shot private bridge is consumed to
+mint a nonconstructible single-use admission immediately before the exact
+native method. Bound artifacts and checkpoint are remeasured, request/result
+files are distinct and owner-only, and the lease-owned checkpoint descriptor
+is passed directly. Monotonic polling, TERM/KILL escalation, exact reap,
+normal exit zero, worker/native PID-PGID agreement and complete Result V2 are
+mandatory.
+
+The validated Result V2 reports that the child remeasured the checkpoint, but
+the terminal receipt scopes that statement as a worker report. Runtime-exec and
+worker-script path TOCTOU remain open, so this slice does not prove that the
+exact measured runtime and worker bytes were the bytes executed.
+
+The parent then exclusively creates a fresh owner-only quarantine, writes the
+code-owned fixture payloads, reopens them read-only, performs the committed V2
+descriptor verification and closes the checkpoint lease. Only then does a
+strict validator accept the self-hashed, path-free whole-run terminal receipt.
+The successful-path live proof runs with bounded output in an isolated outer
+process group; timeout cleanup discovers and signals child groups before
+killing and reaping the helper.
+
+The non-bypassable gate is not complete. Lease orchestration now retains its
+first primary and all cleanup errors, but failed native attempts do not yet
+produce a path-free whole-run receipt that proves either no child or exact
+reap plus terminal lease cleanup. The timeout, spawn, malformed-result,
+checkpoint-mutation, materialization-collision, cleanup and replay matrix
+remains the next S3 increment.
+
+This is not a separator result. The worker hashes but never deserializes the
+checkpoint, reads no source audio, imports no model, performs no inference,
+uses no network and creates no output file. Runtime-exec and worker-script
+path TOCTOU, post-CPython signal-state observation, persistent ordinary-file
+immutability and possible failure of the bounded native emergency fallback to
+prove reap remain explicit. Measured local-backend evaluation begins only
+after the failure-evidence increment; neither step is a public separator
+switch.
 
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
@@ -648,15 +688,15 @@ See:
 
 ## Current programme status
 
-| Phase | State | Outcome |
-| --- | --- | --- |
-| 1. AI Transcription Bake-off v1 | **Complete** | Independent local model candidates, common JSON, repeatable metrics and final role-specific listening decisions; see the close-out report |
-| 2. Phrase Review v2 | **Engineering and human review complete; overall programme preference criterion not demonstrated** | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history. The applied 61-note review won the opening blind loop, the untouched 23-note automatic candidate won none, and both later loops were judged neither |
-| 3. Instrument Intelligence v2 | **Complete** | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection |
-| 4. Cleanup and Neural Timbre Lab | **In progress; first fixed-MIDI listening gate complete** | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control |
+| Phase                                                      | State                                                                                                                                                                                                                                                                                                                                                                                                                        | Outcome                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+|------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1. AI Transcription Bake-off v1                            | **Complete**                                                                                                                                                                                                                                                                                                                                                                                                                 | Independent local model candidates, common JSON, repeatable metrics and final role-specific listening decisions; see the close-out report                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 2. Phrase Review v2                                        | **Engineering and human review complete; overall programme preference criterion not demonstrated**                                                                                                                                                                                                                                                                                                                           | Recognition-first correction using short candidates, hum/tap/contour guidance, repeated-phrase propagation and advisory personal history. The applied 61-note review won the opening blind loop, the untouched 23-note automatic candidate won none, and both later loops were judged neither                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 3. Instrument Intelligence v2                              | **Complete**                                                                                                                                                                                                                                                                                                                                                                                                                 | Reviewable sound matching, source-event and drum-family evidence, explicit sampler choices, blind A/B, DAW confirmation and advisory loop selection                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 4. Cleanup and Neural Timbre Lab                           | **In progress; first fixed-MIDI listening gate complete**                                                                                                                                                                                                                                                                                                                                                                    | Complete GM patch preferred; source-fitted resynthesis retained as useful, source sampler rejected; no generated sound beat the simple complete-patch control                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | 5. Multi-Process MIDI Comparison and Local Result Explorer | **In progress: Phase 5.0–5.2 complete; Phase 5.3 diagnostic and Phase 5.4 explorer slices complete; Phase 5.5–5.9 hardening complete and Phase 5.9 human acceptance passed; Phase 5.10a, full-project conversion, one-action Simple result, the first 5.10c native Listening Master operation, bounded blind quality review and native-level readiness slice implemented; Phase 5.3 gates and remaining guided work remain** | Local Workbench, immutable analytical/AI alternatives, MuScriptor M0–M4 matrices, exact label partitions, measured CPU/cache/setting choices and blind A/B tooling are complete. The Workbench has hash-pinned per-stem and full-song timelines, bounded decoded transports, a separate exact GarageBand pack basket, Project Overview, fail-closed execution provenance, guided exact-pack acceptance and receipt-bound Listening Master reviews. The Textual TUI now opens with a lay-user Simple action that runs the production engines, consumes only exact published primaries, and creates automatic unreviewed MIDI, balanced WAV and ZIP without fabricating Workbench state; Studio retains detailed comparison, diagnostics, feedback, Inspector and reviewed handoff. A durable conversion ledger/restart contract, additional operation forms and broader process/role/instrument/DAW feedback are not yet implemented |
-| 6. Creative Arrangement and Reusable MIDI | **In progress: Increments 6.0, 6.1, 6.2a and 6.3a–e plus the selected-arrangement balance slice complete** | The gated browser, immutable-placement proposal, key/BPM children and bounded recognition-first pitch/attack-velocity/exact-note-removal/existing-note onset and end patches are complete. Ordinary Workbench also creates the MIDI-derived, source-referenced, drum-guarded and sample-peak-protected song-interpretation WAV while retaining its unity controls. One kind per Clip child, zero-write review, immutable parent and restart validation remain mandatory. Note insertion, release velocity/continuous expression, mode remapping, tuning/downbeat and hybrids remain later slices; hybrid construction still waits for the Phase 5.3 gates |
-| 7. Cross-DAW, Hosted Access and Opt-in Community Learning | **Planned, not implemented** | Beginner installation/acceptance evidence first; then compatibility testing, cleared public goldens and consented contextual feedback. Wider access should use a thin authenticated API/control plane with queued CPU/GPU workers and encrypted expiring object storage, not pretend heavy music inference is a request-duration serverless function. Usage metering, per-transaction payment, rights declarations, model/checkpoint licences and deletion policy are design gates; see [Product modes and hosted future](PRODUCT_MODES_AND_HOSTING.md) |
+| 6. Creative Arrangement and Reusable MIDI                  | **In progress: Increments 6.0, 6.1, 6.2a and 6.3a–e plus the selected-arrangement balance slice complete**                                                                                                                                                                                                                                                                                                                   | The gated browser, immutable-placement proposal, key/BPM children and bounded recognition-first pitch/attack-velocity/exact-note-removal/existing-note onset and end patches are complete. Ordinary Workbench also creates the MIDI-derived, source-referenced, drum-guarded and sample-peak-protected song-interpretation WAV while retaining its unity controls. One kind per Clip child, zero-write review, immutable parent and restart validation remain mandatory. Note insertion, release velocity/continuous expression, mode remapping, tuning/downbeat and hybrids remain later slices; hybrid construction still waits for the Phase 5.3 gates                                                                                                                                                                                                                                                                           |
+| 7. Cross-DAW, Hosted Access and Opt-in Community Learning  | **Planned, not implemented**                                                                                                                                                                                                                                                                                                                                                                                                 | Beginner installation/acceptance evidence first; then compatibility testing, cleared public goldens and consented contextual feedback. Wider access should use a thin authenticated API/control plane with queued CPU/GPU workers and encrypted expiring object storage, not pretend heavy music inference is a request-duration serverless function. Usage metering, per-transaction payment, rights declarations, model/checkpoint licences and deletion policy are design gates; see [Product modes and hosted future](PRODUCT_MODES_AND_HOSTING.md)                                                                                                                                                                                                                                                                                                                                                                             |
 
 ## Phase 1: AI Transcription Bake-off v1
 
@@ -684,14 +724,14 @@ See:
 
 ### Candidate backends
 
-| Backend | Initial purpose | Code licence | Checkpoint constraint | Phase 1 position |
-| --- | --- | --- | --- | --- |
-| Existing Sunofriend | Stable baseline | Apache-2.0 plus existing dependencies | Existing Basic Pitch model | Always run |
-| MuScriptor | Full mix and per-instrument MIDI | MIT | CC-BY-NC-4.0, gated | First local challenger; optional personal/research worker |
-| GAME | Vocal pitches and note boundaries | MIT | Official v1.0.3 small ONNX release; component hashes recorded | Implemented independent vocal challenger; local CPU worker |
-| RMVPE | Vocal F0 under bleed/noise | MIT ONNX adapter; Apache-2.0 reference | MIT-labelled canonical ONNX at a pinned revision/hash | Implemented tracker, consensus evidence and boundary repair; retain as F0 oracle |
-| PESTO | Lightweight vocal/instrument F0 | LGPL-3.0 | Pinned `mir-1k_g7` checkpoint/hash | Implemented independent optional worker; retain as vocal F0 oracle, reject for current bass golden |
-| MT3 | Multi-instrument research comparison | Apache-2.0 | Large/brittle T5X environment | Rejected for Phase 1; MuScriptor covers the comparison without a second T5X stack |
+| Backend             | Initial purpose                      | Code licence                           | Checkpoint constraint                                         | Phase 1 position                                                                                   |
+|---------------------|--------------------------------------|----------------------------------------|---------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
+| Existing Sunofriend | Stable baseline                      | Apache-2.0 plus existing dependencies  | Existing Basic Pitch model                                    | Always run                                                                                         |
+| MuScriptor          | Full mix and per-instrument MIDI     | MIT                                    | CC-BY-NC-4.0, gated                                           | First local challenger; optional personal/research worker                                          |
+| GAME                | Vocal pitches and note boundaries    | MIT                                    | Official v1.0.3 small ONNX release; component hashes recorded | Implemented independent vocal challenger; local CPU worker                                         |
+| RMVPE               | Vocal F0 under bleed/noise           | MIT ONNX adapter; Apache-2.0 reference | MIT-labelled canonical ONNX at a pinned revision/hash         | Implemented tracker, consensus evidence and boundary repair; retain as F0 oracle                   |
+| PESTO               | Lightweight vocal/instrument F0      | LGPL-3.0                               | Pinned `mir-1k_g7` checkpoint/hash                            | Implemented independent optional worker; retain as vocal F0 oracle, reject for current bass golden |
+| MT3                 | Multi-instrument research comparison | Apache-2.0                             | Large/brittle T5X environment                                 | Rejected for Phase 1; MuScriptor covers the comparison without a second T5X stack                  |
 
 ### Deliverables
 
@@ -2273,8 +2313,8 @@ Each working day should aim for one narrow vertical improvement:
   retires all outgoing nodes at one Web Audio time. Invalid or partially failed
   switches leave the previous group intact. Current state is checked before
   rendering and again before media registration; a concurrent choice returns
-  409. Current path-free roles, SoundFont and neutral-render policy are pinned,
-  and owner-only snapshots are removed before publication.
+    409. Current path-free roles, SoundFont and neutral-render policy are pinned,
+         and owner-only snapshots are removed before publication.
 - Bounds/effects: at most 24 total tracks, 2 GiB verified input and 64 MiB PCM16
   output; stem and arrangement windows share the 32-entry/256 MiB rebuildable
   cache. Preparation and playback append no event, feedback or ranking and

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import copy
 import hashlib
 import pickle
@@ -38,13 +39,30 @@ def _plain(value: Any) -> Any:
     return value
 
 
-def test_session_module_is_private_and_has_no_spawn_call_or_product_route() -> None:
+def test_session_module_has_one_admission_guarded_spawn_and_no_product_route() -> None:
     source = SOURCE.read_text(encoding="utf-8")
+    tree = ast.parse(source)
 
     assert session_module.__all__ == ()
     assert not hasattr(sunofriend, "_open_verified_native_launcher_session")
     assert "_spawn_bound_fake_worker(" not in source
-    assert ".spawn_method(" not in source
+    spawn_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "spawn_method"
+    ]
+    assert len(spawn_calls) == 1
+    execution = next(
+        node
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == "_execute_verified_native_fake_worker"
+    )
+    assert spawn_calls[0] in ast.walk(execution)
+    assert "_consume_native_start_admission(" in source
+    assert "_VerifiedNativeLauncherRun" not in source
     assert "subprocess" not in source
     assert "socket" not in source
     assert "urllib" not in source

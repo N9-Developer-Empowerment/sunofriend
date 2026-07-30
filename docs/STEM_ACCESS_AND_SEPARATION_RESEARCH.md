@@ -7,9 +7,11 @@ provenance-bound Darwin build, and a test-only live descriptor canary for the
 exact physical source FDs 3/4/5 plus representative low, mixed-collision and
 scratch-collision/near-limit layouts. The native call now returns a
 preallocated exact-child owner rather than a bare PID. Deterministic fake
-execution, exhaustive arbitrary source-FD proof, path-TOCTOU closure, bounded
-emergency-finalizer proof, live child-signal-state proof, real source
-separation, hidden evaluation and promotion are not implemented**
+execution now has a private successful-path proof, but whole-run failed
+receipts and the adversarial failure matrix remain incomplete. Exhaustive
+arbitrary source-FD proof, path-TOCTOU closure, guaranteed emergency-finalizer
+reap, live child-signal-state proof, real source separation, hidden evaluation
+and promotion are not implemented**
 
 Checked: 30 July 2026
 
@@ -489,14 +491,14 @@ requires an outer
 `close_fds=True, pass_fds=()` launch but cannot observe that policy from
 inside; CPython startup prevents the worker from proving the spawn-time signal
 reset and mask state; and extension-import, runtime-exec and worker-script path
-TOCTOU are not eliminated. Emergency last-reference cleanup deliberately uses
-a potentially blocking exact `waitpid` after `SIGKILL`; it is an
-exception-safety backstop, not a bounded terminal receipt. The fixed canary
-workers create no descendants, and the owner makes no numeric process-group
-call after exact leader reap; generic descendant supervision is not claimed.
-Parent `SIGCHLD` incompatibilities fail closed, but no standalone deterministic
-fake transport worker, checkpoint lease transport, source audio, model,
-terminal fake result or user-facing separator ran.
+TOCTOU are not eliminated. Emergency last-reference cleanup sends `SIGKILL`
+and polls exact `waitpid` with `WNOHANG` for a fixed bounded interval; failure
+to reap in that interval is not terminal evidence. The fixed canary workers
+create no descendants, and the owner makes no numeric process-group call after
+exact leader reap; generic descendant supervision is not claimed. Parent
+`SIGCHLD` incompatibilities fail closed, but no standalone deterministic fake
+transport worker, checkpoint lease transport, source audio, model, terminal
+fake result or user-facing separator ran at this boundary.
 
 The following prepared-worker increment adds three isolated execution-era
 modules without enabling a launch. A hash- and size-pinned, stdlib-only Darwin
@@ -511,33 +513,28 @@ receipt hash. It reports fixed-worker support but retains
 permission false. Worker Result V2 is complete-only, requires `PGID == PID`
 and remains worker-report evidence rather than parent verification.
 
-The process-free V2 protocol can validate the new request/result frames but
-intentionally has no product admitted-envelope encoder, admission issuer,
-descriptor operation or spawn surface. Tests alone synthesize envelope bytes
-to exercise parsing. The next live increment must introduce one exact,
-non-copyable, single-use admission under the live checkpoint lease and
-reservation lock, then pass the lease-owned descriptor directly to the native
-launcher. Until that exists, the fixed worker cannot be started by
-Sunofriend. No fake terminal receipt, quarantine V2 verifier, model, source
-audio or user-facing separation route exists.
+At that process-free boundary, the V2 protocol could validate the new
+request/result frames but intentionally had no product admitted-envelope
+encoder, admission issuer, descriptor operation or spawn surface. Tests alone
+synthesized envelope bytes to exercise parsing. This remains important
+historical context: the serialized records themselves have not subsequently
+been promoted to authority.
 
-The twenty-third S3 increment adds a private verified native-launcher session,
-still without a spawn call. It makes one fresh provenance-checked Darwin
-build, remeasures the extension immediately before and after import, verifies
-the compiled source/build-contract identities and binds the exact built-in
-entry point to the measured current Python executable and pinned fixed worker.
-The session identity is parent-issued, opaque, non-copyable and
-non-serializable; its observation is immutable, path-free and explicitly not
-execution authority. A live macOS test proves the import and subsequent full
-remeasurement while every process, checkpoint, model, audio, network and
-publication effect stays false.
+The twenty-third S3 increment adds a private verified native-launcher session.
+Its session-opening and recheck routes make one fresh provenance-checked
+Darwin build, remeasure the extension around import, verify the compiled
+source/build-contract identities and bind the exact built-in entry point to
+the measured current Python executable and pinned fixed worker without
+starting a child. The session identity is parent-issued, opaque, non-copyable
+and non-serializable; its observation is immutable, path-free and explicitly
+not execution authority. The same private module now also contains the later
+executor-only guarded native call, which cannot be reached with the session
+alone.
 
 This closes the unmeasured extension-import gap for one fresh session, not the
-runtime-exec or worker-script path race at a future spawn. The session module
-deliberately contains no call to the native spawn method. Exact lease-bound
-admission, FD 3/4 transport construction, locked FD 5 handoff, owned-child
-supervision, Result V2 verification, quarantine and a parent terminal receipt
-remain the next gate.
+runtime-exec or worker-script path race at launch. The guarded call remeasures
+the bound files immediately before start and after exact reap, while retaining
+that truthful TOCTOU limitation.
 
 The twenty-fourth S3 increment adds a distinct, process-free Result V2
 quarantine verifier. It first revalidates the exact historical request,
@@ -555,8 +552,55 @@ no file and cannot
 prove that the worker executed, who created the tree or that ordinary files
 stay immutable afterward. Result V2 remains worker-reported content until the
 later parent receipt binds it to an exact owned-child lifecycle.
-Exclusive parent materialization, the live worker, exact reap and a terminal
-parent receipt therefore remain outstanding.
+At that twenty-fourth boundary, exclusive parent materialization, the live
+worker, exact reap and a terminal parent receipt remained outstanding.
+
+The twenty-fifth S3 increment supplies the successful owned-child fixture
+transport proof through a private, synchronous Darwin executor. It does not
+change the
+permanently blocked fake V1/V2 or checkpoint-launch V2 schemas, and the public
+checkpoint-lease execution flag remains false. No CLI, TUI, publication or
+selection route imports it.
+
+One exact live lease, reservation, request, observation, historical blocked
+record chain, prepared V3 plan and verified native session are required. A
+one-shot bridge can be issued and consumed only while the checkpoint lease
+lock remains held. That bridge mints one nonconstructible, single-use
+admission immediately before the exact fixed native method. The executor
+passes distinct owner-only request/result files plus the lease-owned
+checkpoint descriptor, applies monotonic wait/TERM/KILL bounds and accepts
+only normal exit zero, exact reap and a Result V2 process identity matching the
+native owner.
+
+The terminal receipt treats the Result V2 statement that the child remeasured
+the checkpoint as worker-reported evidence. Runtime-exec and worker-script
+path TOCTOU remain open, so the receipt does not claim the exact measured
+runtime and worker bytes were the bytes executed.
+
+After the child is reaped, the parent validates Result V2, exclusively creates
+a fresh `0700` quarantine with `0600` output files, reopens those files
+read-only and runs the committed descriptor-level V2 verifier. It issues a
+self-hashed path-free terminal receipt only after verification and healthy
+lease closure. The live integration test runs in an isolated outer process
+group with bounded output; timeout cleanup discovers and signals child groups
+before killing and reaping the helper. It checks directory/file modes as well
+as the no-publication fixture result.
+
+This is a successful-path proof. Private lease orchestration now preserves its
+first primary error and all observed cleanup errors instead of silently
+discarding secondary failures. It does not yet convert those facts plus native
+and lease terminality into a path-free whole-run failed receipt. Timeout,
+spawn, malformed-result, checkpoint-mutation, materialization-collision,
+cleanup and replay cases therefore remain required before the
+non-bypassable-transport checklist item can be closed.
+
+The executed worker is still only a code-owned transport fixture: it hashes
+but never deserializes the checkpoint and emits two-frame PCM24 payloads
+without reading source audio or running inference. Runtime-exec and
+worker-script path TOCTOU, post-CPython child signal-state observation, the
+possible failure of the bounded native emergency fallback to prove reap and
+persistent ordinary-file immutability remain explicit limitations. Those boundaries must
+stay visible when evaluating a real separator backend.
 
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are

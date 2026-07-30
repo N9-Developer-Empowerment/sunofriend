@@ -152,7 +152,9 @@ def test_scratch_descriptors_exclude_sources_targets_and_each_other() -> None:
     assert "transport descriptors must reference regular files" in source
     assert "fcntl(source_fds[left], F_GETFD) != FD_CLOEXEC" in source
     assert "(status_flags & O_ACCMODE) != required_access_modes[left]" in source
-    assert "(status_flags & (O_APPEND | O_NONBLOCK)) != 0" in source
+    assert "(status_flags & O_APPEND) != 0" in source
+    assert "left != 2" in source
+    assert "(status_flags & O_NONBLOCK) != 0" in source
     assert "sigaction(SIGCHLD, NULL, &disposition)" in source
     assert "disposition.sa_handler != SIG_DFL" in source
     assert "(disposition.sa_flags & SA_NOCLDWAIT) != 0" in source
@@ -236,7 +238,10 @@ def test_child_owner_exact_wait_signal_release_and_emergency_cleanup() -> None:
     assert "kill(-child->pid, SIGKILL)" in cleanup
     assert "kill(child->pid, SIGKILL)" in cleanup
     assert "waitpid(child->pid, &observed_wait_status, WNOHANG)" in cleanup
-    assert "waitpid(child->pid, &observed_wait_status, 0)" in cleanup
+    assert "waitpid(child->pid, &observed_wait_status, 0)" not in cleanup
+    assert "SUNOFRIEND_EMERGENCY_REAP_ATTEMPTS" in cleanup
+    assert "nanosleep(&remaining_pause, &remaining_pause)" in cleanup
+    assert "unbounded wait" in cleanup
     assert cleanup.index("if (child->leader_reaped)") < cleanup.index(
         "kill(-child->pid, SIGKILL)"
     )

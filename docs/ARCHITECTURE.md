@@ -593,15 +593,16 @@ reap, stable cached wait, signal rejection after reap, last-reference
 reap.
 
 This finite evidence does not enable fake-launch V2 or provide model-execution
-authority. The emergency destructor's exact wait is not time-bounded, the
-fork-clone check is static rather than live, fixed workers are required to
-create no descendants, and no generic post-leader process-group claim is
-made. Exhaustive arbitrary source-FD values, inside-harness observation of the
-required clean outer supervisor, post-CPython child signal state and
-extension/runtime/worker path TOCTOU closure remain unproven. Only fixed test
-probes ran; there is no standalone deterministic fake result, checkpoint FD 5
-transport, model execution, audio operation, terminal receipt or user-facing
-separator.
+authority. The emergency destructor sends `SIGKILL` and polls `waitpid` with
+`WNOHANG` for a fixed bounded interval; failure to reap in that interval is
+not terminal evidence. The fork-clone check is static rather than live, fixed
+workers are required to create no descendants, and no generic post-leader
+process-group claim is made. Exhaustive arbitrary source-FD values,
+inside-harness observation of the required clean outer supervisor,
+post-CPython child signal state and extension/runtime/worker path TOCTOU
+closure remain unproven. Only fixed test probes ran at this boundary; there
+was no standalone deterministic fake result, checkpoint FD 5 transport, model
+execution, audio operation, terminal receipt or user-facing separator.
 
 The following prepared-worker boundary keeps execution-era schemas isolated
 from every permanently blocked predecessor. The fixed
@@ -619,8 +620,8 @@ request or issue an admission. Synthetic envelope creation exists only in
 tests. The later executor must add a nonconstructible, single-use authority
 under the exact live checkpoint lease/reservation lock, supervise the native
 owner through exact reap and perform separate parent quarantine verification.
-The current modules therefore add no process, terminal receipt, separator,
-model, audio read or CLI/TUI capability.
+At that prepared-worker boundary, the modules added no process, terminal
+receipt, separator, model, audio read or CLI/TUI capability.
 
 `_separation_native_session_darwin.py` is the twenty-third internal S3
 boundary. It asks the private builder for one fresh artifact, remeasures that
@@ -628,17 +629,16 @@ artifact across `ExtensionFileLoader` import, verifies its embedded
 source/build-contract identities and binds its exact built-in entry point to
 full measurements of the current Python executable and pinned fixed worker.
 Only an opaque, parent-issued, non-copyable session and immutable path-free
-observation leave that boundary. The imported module, method and artifact
-paths remain in a weak private registry. The session is not execution
-authority, contains no native spawn call and starts no process.
+observation leave the session-opening route. The imported module, method and
+artifact paths remain in a weak private registry. The session alone is not
+execution authority and opening or rechecking it starts no process. The module
+also contains the later executor-only guarded native call; it cannot be reached
+with the session alone.
 
 This boundary measures extension import but does not close runtime-exec or
-worker-script path TOCTOU at a later launch. A subsequent executor must
-remeasure all three paths immediately around the native call, mint
-single-use admission only while holding the exact checkpoint lease and
-reservation lock, supervise the owned child through exact reap, validate
-Result V2 and independently materialize and verify a private quarantine before
-issuing any terminal receipt.
+worker-script path TOCTOU at a later launch. The guarded call therefore
+remeasures all three paths immediately before start and after exact reap, but
+does not claim path-to-exec or path-to-open atomicity.
 
 `_separation_fake_execution_quarantine.py` is the twenty-fourth internal S3
 boundary. It revalidates the exact historical request and blocked launches,
@@ -655,6 +655,52 @@ This verifier creates and modifies nothing. It does not prove fresh exclusive
 tree creation, persistent ordinary-file immutability, that Result V2 came from
 an actually executed worker, worker lifecycle or checkpoint integrity. Those
 claims belong to the later lease-bound executor and terminal parent receipt.
+
+`_separation_fake_executor_darwin.py` and the private lease bridge are the
+twenty-fifth internal S3 boundary. They prove one synchronous, test-only
+successful owned-child execution of the deterministic fixture protocol without
+enabling any historical launch schema. The public checkpoint-lease execution
+flag remains false and neither the CLI nor TUI imports this executor. The
+native call requests the pinned worker path, but runtime-exec and worker-script
+path TOCTOU remain open, so the boundary does not claim the exact measured
+runtime and worker bytes were the bytes executed.
+
+The executor accepts only the exact live lease, FD5 reservation, worker
+request, lease observation, historical blocked records, prepared V3 plan,
+verified native session and one fresh absolute private root. While the lease
+lock is held, a one-shot bridge is consumed to mint a nonconstructible,
+single-use admission immediately before the fixed native method. Request and
+result use distinct owner-only regular files; the lease-owned checkpoint
+descriptor is passed directly. The native exact-child owner is polled against
+monotonic deadlines, escalated through TERM and KILL when necessary, and must
+report normal exit zero, exact reap and matching worker PID/PGID evidence.
+
+The validated Result V2 statement that the child remeasured the checkpoint is
+carried into the terminal receipt only as worker-reported evidence, not as a
+parent-proven child effect.
+
+Only a complete validated Result V2 can be materialized. The parent creates a
+fresh `0700` quarantine, writes each fixture with `O_EXCL` and `0600`
+permissions, reopens it read-only and runs the committed V2 descriptor
+verifier. A self-hashed, path-free terminal receipt is issued only after
+successful quarantine verification and checkpoint-lease closure. An isolated
+outer helper uses bounded reads and kills discovered child groups as well as
+its own process group on timeout.
+
+This slice proves the successful fixture path, not the complete failure state
+machine. Private aggregation now retains a primary lease error plus every
+observed cleanup error, but a path-free whole-run failed receipt that binds
+native terminality, lease terminality and nullable downstream evidence remains
+outstanding. Until that exists and its failure matrix is tested, the
+non-bypassable deterministic transport checklist item remains open.
+
+This is transport proof, not separation. The fixed worker hashes but never
+deserializes the checkpoint, reads no source audio, imports no model, performs
+no inference, uses no network and creates no output file. Runtime-exec and
+worker-script path TOCTOU, post-CPython signal-state observation, persistent
+ordinary-file immutability and possible failure of the bounded emergency
+destructor fallback to prove reap remain explicit limitations. No fixture is selectable,
+publishable, acceptance-eligible or promotion-eligible.
 
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a

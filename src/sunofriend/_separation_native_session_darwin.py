@@ -6,9 +6,10 @@ remeasures the extension immediately before and after import, binds that exact
 artifact to the current Python executable and the pinned stdlib-only fake
 worker, and retains the imported module only in module-private registry state.
 
-The opaque session is not execution authority.  This module makes no spawn
-call and has no public, CLI or TUI route.  The private registry is part of the
-trusted-parent boundary, not a defence against hostile Python in that process.
+The opaque session is not execution authority.  A separate private executor
+may consume it once through the exact fixed spawn method; there is no public,
+CLI or TUI route.  The private registry is part of the trusted-parent boundary,
+not a defence against hostile Python in that process.
 """
 
 from __future__ import annotations
@@ -16,10 +17,13 @@ from __future__ import annotations
 import hashlib
 import importlib.machinery
 import importlib.util
+import fcntl
 import os
+import signal
 import stat
 import sys
 import threading
+import time
 import weakref
 from dataclasses import dataclass
 from pathlib import Path
@@ -35,6 +39,12 @@ from ._separation_checkpoint_canonical import (
 from ._separation_fake_execution_records import (
     _EXPECTED_FAKE_WORKER_SOURCE_BYTES,
     _EXPECTED_FAKE_WORKER_SOURCE_SHA256,
+    _SeparationFakeLaunchPlanV3Record,
+    _SeparationFakeWorkerResultV2Record,
+)
+from ._separation_fake_execution_protocol import (
+    _decode_fake_execution_result_frame,
+    _expected_fake_execution_result_frame_bytes,
 )
 
 
@@ -48,6 +58,11 @@ _WORKER_RESOURCE_NAME = "_separation_fake_worker_darwin.py"
 _MAXIMUM_RUNTIME_BYTES = 134_217_728
 _MAXIMUM_WORKER_BYTES = 65_536
 _READ_CHUNK_BYTES = 1_048_576
+_RESULT_HEADER_BYTES = 16
+_RUN_TIMEOUT_NS = 5_000_000_000
+_TERM_GRACE_NS = 1_000_000_000
+_KILL_REAP_NS = 1_000_000_000
+_POLL_SECONDS = 0.01
 
 _REGISTRY_LOCK = threading.RLock()
 
@@ -92,6 +107,22 @@ class _VerifiedNativeLauncherSessionObservation(Mapping[str, Any]):
         return len(self._document)
 
 
+@dataclass(frozen=True, init=False)
+class _VerifiedNativeLauncherExecutionObservation(Mapping[str, Any]):
+    """Immutable path-free evidence after one exact native reap."""
+
+    _document: Mapping[str, Any]
+
+    def __getitem__(self, key: str) -> Any:
+        return self._document[key]
+
+    def __iter__(self) -> Any:
+        return iter(self._document)
+
+    def __len__(self) -> int:
+        return len(self._document)
+
+
 @dataclass
 class _SessionState:
     lock: Any
@@ -105,6 +136,7 @@ class _SessionState:
     worker_path: Path
     worker_measurement: Mapping[str, Any]
     observation_document: Mapping[str, Any]
+    run_status: str
 
 
 _KNOWN: weakref.WeakKeyDictionary[
@@ -233,7 +265,9 @@ def _open_verified_native_launcher_session(
         },
         "limitations": [
             "opaque_session_is_not_execution_authority",
-            "no_direct_spawn_call_or_public_route_exists_in_this_module",
+            "session_open_and_recheck_routes_do_not_start_a_process",
+            "guarded_native_call_requires_private_executor_admission",
+            "no_public_route_exists_in_this_module",
             "trusted_parent_python_can_inspect_private_process_state",
             "runtime_and_worker_path_toctou_remain_until_live_remeasurement",
             "no_checkpoint_descriptor_admission_result_or_terminal_receipt",
@@ -259,6 +293,7 @@ def _open_verified_native_launcher_session(
         worker_path=worker_path,
         worker_measurement=_freeze(worker_after),
         observation_document=document,
+        run_status="ready",
     )
     with _REGISTRY_LOCK:
         if session in _KNOWN:
@@ -275,46 +310,210 @@ def _recheck_verified_native_launcher_session(
     _session, state = _known_state(trusted_session)
     with state.lock:
         _require_owner(state)
-        receipt = state.build.receipt.to_dict()
-        artifact = _remeasure_build_artifact(state.build, receipt=receipt)
-        runtime = _measure_bound_file(
-            state.runtime_path,
-            label="bound Python runtime",
-            maximum_bytes=_MAXIMUM_RUNTIME_BYTES,
-            executable=True,
-            require_not_group_or_other_writable=True,
-        )
-        worker = _measure_bound_file(
-            state.worker_path,
-            label="bound fixed fake worker",
-            maximum_bytes=_MAXIMUM_WORKER_BYTES,
-            executable=False,
-            require_not_group_or_other_writable=True,
-        )
-        if (
-            artifact != _plain(state.artifact_measurement)
-            or runtime != _plain(state.runtime_measurement)
-            or worker != _plain(state.worker_measurement)
-        ):
-            raise RuntimeError("verified native launcher session binding changed")
-        if (
-            getattr(
-                state.module,
-                "_SUNOFRIEND_NATIVE_SOURCE_SHA256",
-                None,
-            )
-            != _native_build._EXPECTED_SOURCE_SHA256
-            or getattr(
-                state.module,
-                "_SUNOFRIEND_NATIVE_BUILD_CONTRACT_SHA256",
-                None,
-            )
-            != _native_build._EXPECTED_BUILD_CONTRACT_SHA256
-            or getattr(state.module, _SPAWN_METHOD_NAME, None)
-            is not state.spawn_method
-        ):
-            raise RuntimeError("verified native launcher module binding changed")
+        _remeasure_session_state(state)
         return _observation(state.observation_document)
+
+
+def _validate_verified_native_launcher_session_observation(
+    trusted_session: _VerifiedNativeLauncherSession,
+    value: Any,
+) -> _VerifiedNativeLauncherSessionObservation:
+    """Require the exact observation issued with one exact live session."""
+
+    _session, state = _known_state(trusted_session)
+    with state.lock:
+        _require_owner(state)
+        if (
+            type(value) is not _VerifiedNativeLauncherSessionObservation
+            or getattr(value, "_document", None) is not state.observation_document
+        ):
+            raise ValueError(
+                "native launcher observation must be the exact issued object"
+            )
+        _remeasure_session_state(state)
+        return value
+
+
+def _execute_verified_native_fake_worker(
+    trusted_session: _VerifiedNativeLauncherSession,
+    *,
+    trusted_admission: Any,
+    fake_launch_plan_v3: _SeparationFakeLaunchPlanV3Record,
+    request_descriptor: int,
+    owned_result_write_descriptor: int,
+    result_read_descriptor: int,
+    checkpoint_descriptor: int,
+) -> tuple[
+    _SeparationFakeWorkerResultV2Record,
+    _VerifiedNativeLauncherExecutionObservation,
+]:
+    """Synchronously run the fixed worker through one consumed admission."""
+
+    _session, state = _known_state(trusted_session)
+    descriptors = (
+        request_descriptor,
+        owned_result_write_descriptor,
+        result_read_descriptor,
+        checkpoint_descriptor,
+    )
+    if (
+        any(type(item) is not int or item < 3 for item in descriptors)
+        or len(set(descriptors)) != 4
+    ):
+        raise ValueError("native launcher execution descriptors are invalid")
+    _validate_result_descriptor_pair(
+        owned_result_write_descriptor,
+        result_read_descriptor,
+    )
+    native_owner: Any | None = None
+    raw_wait_status: int | None = None
+    timed_out = False
+    term_sent = False
+    kill_sent = False
+    result_writer_owned = True
+    with state.lock:
+        _require_owner(state)
+        if state.run_status != "ready":
+            raise RuntimeError("verified native launcher session is single-use")
+        _remeasure_session_state(state)
+        from ._separation_fake_executor_darwin import (
+            _consume_native_start_admission,
+        )
+
+        _consume_native_start_admission(
+            trusted_admission,
+            trusted_session=trusted_session,
+            fake_launch_plan_v3=fake_launch_plan_v3,
+        )
+        state.run_status = "starting"
+        try:
+            native_owner = state.spawn_method(
+                os.fsencode(state.runtime_path),
+                os.fsencode(state.worker_path),
+                request_descriptor,
+                owned_result_write_descriptor,
+                checkpoint_descriptor,
+            )
+            expected_owner_type = getattr(state.module, "_OwnedSpawnChild", None)
+            if (
+                not isinstance(expected_owner_type, type)
+                or type(native_owner) is not expected_owner_type
+            ):
+                raise RuntimeError("native launcher returned an invalid owner")
+        except BaseException:
+            state.run_status = "start_failed_consumed"
+            try:
+                os.close(owned_result_write_descriptor)
+                result_writer_owned = False
+            except OSError:
+                pass
+            raise
+        state.run_status = "running"
+    try:
+        (
+            raw_wait_status,
+            timed_out,
+            term_sent,
+            kill_sent,
+        ) = _supervise_native_owner(native_owner)
+        os.close(owned_result_write_descriptor)
+        result_writer_owned = False
+        wait = _normalise_owned_wait_status(raw_wait_status)
+        if (
+            timed_out
+            or wait["kind"] != "exited"
+            or wait["exit_code"] != 0
+        ):
+            raise RuntimeError("fixed fake worker did not exit successfully")
+        result = _read_fake_result_v2(
+            result_read_descriptor,
+            fake_launch_plan_v3=fake_launch_plan_v3,
+        )
+        process_report = result["process_report"]
+        if (
+            native_owner.matches_pid_and_pgid(
+                process_report["pid"],
+                process_report["pgid"],
+            )
+            is not True
+        ):
+            raise RuntimeError("fixed fake worker identity did not match owner")
+        with state.lock:
+            _require_owner(state)
+            if (
+                native_owner.leader_reaped is not True
+                or native_owner.ownership_released is not True
+                or native_owner.ownership_lost is not False
+            ):
+                raise RuntimeError(
+                    "native launcher lacks exact terminal ownership"
+                )
+            _remeasure_session_state(state)
+            state.run_status = "consumed_complete"
+        payload = {
+            "schema": (
+                "sunofriend.separation-native-launcher-execution.v1"
+            ),
+            "status": "verified_after_exact_reap",
+            "native_session_observation_sha256": state.observation_document[
+                "observation_sha256"
+            ],
+            "fake_launch_plan_v3_sha256": fake_launch_plan_v3["plan_sha256"],
+            "fake_worker_result_v2_sha256": result["result_sha256"],
+            "wait": _plain(wait),
+            "timed_out": False,
+            "term_sent": term_sent,
+            "kill_sent": kill_sent,
+            "leader_reaped": True,
+            "ownership_released": True,
+            "ownership_lost": False,
+            "worker_reported_identity_matched": True,
+            "native_artifact_remeasured_after_reap": True,
+            "runtime_remeasured_after_reap": True,
+            "fake_worker_remeasured_after_reap": True,
+            "raw_pid_in_execution_observation": False,
+            "private_result_frame_contains_worker_pid": True,
+            "signal_authority_exposed": False,
+            "limitations": [
+                "runtime_exec_and_worker_script_path_toctou_not_eliminated",
+                "destructor_backstop_is_not_terminal_evidence",
+                "outer_one_shot_supervisor_required_for_strict_hard_timeout",
+                "deterministic_fixture_only_no_source_audio_or_model",
+            ],
+        }
+        terminal = _execution_observation(
+            _freeze(
+                {
+                    **payload,
+                    "observation_sha256": _canonical_sha256(payload),
+                }
+            )
+        )
+        return result, terminal
+    except BaseException:
+        with state.lock:
+            state.run_status = "consumed_failed"
+        raise
+    finally:
+        if result_writer_owned:
+            try:
+                os.close(owned_result_write_descriptor)
+            except OSError:
+                pass
+        if native_owner is not None and not native_owner.leader_reaped:
+            try:
+                _supervise_native_owner(
+                    native_owner,
+                    timeout_ns=0,
+                    term_grace_ns=_TERM_GRACE_NS,
+                    kill_reap_ns=_KILL_REAP_NS,
+                )
+            except BaseException:
+                # Dropping the final strong owner outside Python locks invokes
+                # the audited native emergency SIGKILL/exact-wait backstop.
+                # It is never accepted as terminal execution evidence.
+                pass
+        native_owner = None
 
 
 def _known_state(
@@ -327,6 +526,212 @@ def _known_state(
     if type(state) is not _SessionState:
         raise ValueError("native launcher session is not registered")
     return value, state
+
+
+def _validate_result_descriptor_pair(
+    write_descriptor: int,
+    read_descriptor: int,
+) -> None:
+    try:
+        write_flags = fcntl.fcntl(write_descriptor, fcntl.F_GETFL)
+        read_flags = fcntl.fcntl(read_descriptor, fcntl.F_GETFL)
+        write_stat = os.fstat(write_descriptor)
+        read_stat = os.fstat(read_descriptor)
+    except OSError as exc:
+        raise ValueError("native result descriptors are unavailable") from exc
+    if (
+        write_flags & os.O_ACCMODE != os.O_WRONLY
+        or read_flags & os.O_ACCMODE != os.O_RDONLY
+        or os.get_inheritable(write_descriptor)
+        or os.get_inheritable(read_descriptor)
+        or not stat.S_ISREG(write_stat.st_mode)
+        or not stat.S_ISREG(read_stat.st_mode)
+        or (write_stat.st_dev, write_stat.st_ino)
+        != (read_stat.st_dev, read_stat.st_ino)
+    ):
+        raise ValueError("native result descriptor pair is invalid")
+
+
+def _supervise_native_owner(
+    native_owner: Any,
+    *,
+    timeout_ns: int = _RUN_TIMEOUT_NS,
+    term_grace_ns: int = _TERM_GRACE_NS,
+    kill_reap_ns: int = _KILL_REAP_NS,
+) -> tuple[int, bool, bool, bool]:
+    """Bound TERM/KILL polling around one exact native owner."""
+
+    for value in (timeout_ns, term_grace_ns, kill_reap_ns):
+        if type(value) is not int or value < 0:
+            raise ValueError("native supervision deadline is invalid")
+    timed_out = False
+    term_sent = False
+    kill_sent = False
+    status = _poll_native_owner_until(
+        native_owner,
+        time.monotonic_ns() + timeout_ns,
+    )
+    if status is not None:
+        return status, timed_out, term_sent, kill_sent
+    timed_out = True
+    term_sent = _signal_native_owner(native_owner, signal.SIGTERM)
+    status = _poll_native_owner_until(
+        native_owner,
+        time.monotonic_ns() + term_grace_ns,
+    )
+    if status is not None:
+        return status, timed_out, term_sent, kill_sent
+    kill_sent = _signal_native_owner(native_owner, signal.SIGKILL)
+    status = _poll_native_owner_until(
+        native_owner,
+        time.monotonic_ns() + kill_reap_ns,
+    )
+    if status is None:
+        raise RuntimeError("native child did not exact-reap within bounds")
+    return status, timed_out, term_sent, kill_sent
+
+
+def _poll_native_owner_until(native_owner: Any, deadline_ns: int) -> int | None:
+    while True:
+        status = native_owner.wait_nohang()
+        if status is not None:
+            if type(status) is not int or status < 0:
+                raise RuntimeError("native launcher wait status is invalid")
+            return status
+        if time.monotonic_ns() >= deadline_ns:
+            return None
+        time.sleep(_POLL_SECONDS)
+
+
+def _signal_native_owner(native_owner: Any, signal_number: int) -> bool:
+    try:
+        native_owner.signal_owned_group(signal_number)
+        return True
+    except RuntimeError:
+        if native_owner.ownership_lost:
+            raise RuntimeError("native child ownership was lost")
+        if native_owner.leader_reaped and native_owner.ownership_released:
+            return False
+        raise
+
+
+def _normalise_owned_wait_status(raw_status: int) -> Mapping[str, Any]:
+    """Return a path-free exact interpretation of one waitpid status."""
+
+    if type(raw_status) is not int or raw_status < 0 or raw_status > 0xFFFF:
+        raise ValueError("native wait status is invalid")
+    if os.WIFEXITED(raw_status):
+        return _freeze(
+            {
+                "kind": "exited",
+                "exit_code": os.WEXITSTATUS(raw_status),
+                "signal": None,
+                "core_dumped": False,
+            }
+        )
+    if os.WIFSIGNALED(raw_status):
+        core_dumped = (
+            bool(os.WCOREDUMP(raw_status))
+            if hasattr(os, "WCOREDUMP")
+            else False
+        )
+        return _freeze(
+            {
+                "kind": "signaled",
+                "exit_code": None,
+                "signal": os.WTERMSIG(raw_status),
+                "core_dumped": core_dumped,
+            }
+        )
+    raise ValueError("native wait status is not terminal")
+
+
+def _read_fake_result_v2(
+    descriptor: int,
+    *,
+    fake_launch_plan_v3: _SeparationFakeLaunchPlanV3Record,
+) -> _SeparationFakeWorkerResultV2Record:
+    try:
+        if os.get_inheritable(descriptor):
+            raise ValueError("fake result descriptor must be non-inheritable")
+        flags = fcntl.fcntl(descriptor, fcntl.F_GETFL)
+        before = os.fstat(descriptor)
+    except OSError as exc:
+        raise ValueError("fake result descriptor is unavailable") from exc
+    if (
+        flags & os.O_ACCMODE != os.O_RDONLY
+        or not stat.S_ISREG(before.st_mode)
+        or before.st_size <= _RESULT_HEADER_BYTES
+    ):
+        raise ValueError("fake result descriptor is invalid")
+    header = _pread_exact(descriptor, _RESULT_HEADER_BYTES, 0)
+    expected = _expected_fake_execution_result_frame_bytes(header)
+    if before.st_size != expected:
+        raise ValueError("fake result frame is truncated or has trailing bytes")
+    frame = _pread_exact(descriptor, expected, 0)
+    after = os.fstat(descriptor)
+    if _stat_identity(after) != _stat_identity(before):
+        raise ValueError("fake result descriptor changed during read")
+    return _decode_fake_execution_result_frame(
+        frame,
+        fake_launch_plan_v3=fake_launch_plan_v3,
+    )
+
+
+def _pread_exact(descriptor: int, byte_count: int, offset: int) -> bytes:
+    chunks: list[bytes] = []
+    position = offset
+    remaining = byte_count
+    while remaining:
+        chunk = os.pread(descriptor, remaining, position)
+        if not chunk:
+            raise ValueError("descriptor read is truncated")
+        chunks.append(chunk)
+        position += len(chunk)
+        remaining -= len(chunk)
+    return b"".join(chunks)
+
+
+def _remeasure_session_state(state: _SessionState) -> None:
+    receipt = state.build.receipt.to_dict()
+    artifact = _remeasure_build_artifact(state.build, receipt=receipt)
+    runtime = _measure_bound_file(
+        state.runtime_path,
+        label="bound Python runtime",
+        maximum_bytes=_MAXIMUM_RUNTIME_BYTES,
+        executable=True,
+        require_not_group_or_other_writable=True,
+    )
+    worker = _measure_bound_file(
+        state.worker_path,
+        label="bound fixed fake worker",
+        maximum_bytes=_MAXIMUM_WORKER_BYTES,
+        executable=False,
+        require_not_group_or_other_writable=True,
+    )
+    if (
+        artifact != _plain(state.artifact_measurement)
+        or runtime != _plain(state.runtime_measurement)
+        or worker != _plain(state.worker_measurement)
+    ):
+        raise RuntimeError("verified native launcher session binding changed")
+    if (
+        getattr(
+            state.module,
+            "_SUNOFRIEND_NATIVE_SOURCE_SHA256",
+            None,
+        )
+        != _native_build._EXPECTED_SOURCE_SHA256
+        or getattr(
+            state.module,
+            "_SUNOFRIEND_NATIVE_BUILD_CONTRACT_SHA256",
+            None,
+        )
+        != _native_build._EXPECTED_BUILD_CONTRACT_SHA256
+        or getattr(state.module, _SPAWN_METHOD_NAME, None)
+        is not state.spawn_method
+    ):
+        raise RuntimeError("verified native launcher module binding changed")
 
 
 def _remeasure_build_artifact(
@@ -355,6 +760,8 @@ def _remeasure_build_artifact(
 
 
 def _load_extension(path: Path) -> ModuleType:
+    if _MODULE_NAME in sys.modules:
+        raise RuntimeError("native launcher module name is already registered")
     spec = importlib.util.spec_from_file_location(_MODULE_NAME, path)
     if (
         spec is None
@@ -363,7 +770,13 @@ def _load_extension(path: Path) -> ModuleType:
     ):
         raise RuntimeError("native launcher extension specification is invalid")
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        if sys.modules.get(_MODULE_NAME) is module:
+            del sys.modules[_MODULE_NAME]
+    if _MODULE_NAME in sys.modules:
+        raise RuntimeError("native launcher import polluted module registry")
     module_spec = module.__spec__
     if (
         type(module) is not ModuleType
@@ -515,5 +928,13 @@ def _observation(
     document: Mapping[str, Any],
 ) -> _VerifiedNativeLauncherSessionObservation:
     value = object.__new__(_VerifiedNativeLauncherSessionObservation)
+    object.__setattr__(value, "_document", document)
+    return value
+
+
+def _execution_observation(
+    document: Mapping[str, Any],
+) -> _VerifiedNativeLauncherExecutionObservation:
+    value = object.__new__(_VerifiedNativeLauncherExecutionObservation)
     object.__setattr__(value, "_document", document)
     return value

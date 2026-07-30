@@ -73,8 +73,9 @@ report the result, then move on.
   owner before spawn rather than returning a bare PID. That owner exposes no
   raw PID, cannot be constructed/copied/pickled, caches exact wait, rejects
   post-reap signals, kills and exact-reaps on last-reference loss, and poisons
-  itself after a stolen external reap. Its emergency destructor wait is not
-  time-bounded; the fixed canaries create no descendants and no generic
+  itself after a stolen external reap. Its emergency destructor sends
+  `SIGKILL` and uses a bounded best-effort nonblocking reap; that fallback is
+  never terminal evidence. The fixed canaries create no descendants and no generic
   post-leader process-group claim is made. This evidence does not enable
   native fake-launch V2, which remains permanently `blocked`/`not_run` and
   still contains only
@@ -82,27 +83,33 @@ report the result, then move on.
   source-FD values, observe the
   required outer `close_fds=True, pass_fds=()` policy from inside the harness,
   prove child signal state after CPython startup, or eliminate
-  extension-import, runtime-exec or worker-script path TOCTOU. The canary
-  starts only a fixed test probe. A separately pinned stdlib-only deterministic
-  worker and prepared launch V3/Result V2 contracts now exist, but launch V3
-  is not serialized authority and retains worker-start permission false. The
-  V2 protocol intentionally has no product admission issuer or admitted
-  request encoder; only tests synthesize its envelope bytes. A private
-  verified native session now remeasures one fresh launcher across import and
-  binds its exact built-in entry point to the measured runtime and pinned
-  worker, but it contains no spawn call and is not execution authority. A
-  separate Result V2 verifier can observe exact owner-only quarantine files
-  through read-only descriptors, but it creates no tree, calls no historical
-  V1 wrapper, returns only exact path-free revalidatable evidence, does not
-  prove that the worker executed and grants no publication or selection
-  authority.
-  Deterministic
-  fake execution, live checkpoint FD 5 transport, model execution and real
-  separation therefore remain unavailable, and no CLI/TUI separator is
-  exposed. The process-free observers start no child and issue no terminal
-  receipt. The lease is not an
-  immutable snapshot or FD 5 transport, every real-execution blocker remains,
-  and real separation execution is disabled.
+  extension-import, runtime-exec or worker-script path TOCTOU. A separately
+  pinned stdlib-only deterministic worker and prepared launch V3/Result V2
+  contracts exist, but launch V3 is not serialized authority and retains
+  worker-start permission false. On Darwin, one private, synchronous test-only
+  executor can now mint a non-copyable admission only while holding the exact
+  live checkpoint lease/reservation lock. It remeasures the launcher, runtime,
+  worker and checkpoint, asks the audited native owner to start the pinned
+  fake-worker path, supervises the owned child to an exact successful reap,
+  validates Result V2 and treats its child checkpoint remeasurement as a
+  worker report rather than a parent-proven fact,
+  exclusively materializes owner-only fixtures, reopens and verifies them, and
+  issues a self-hashed path-free terminal receipt after lease closure. The
+  isolated live proof uses bounded output and kills discovered child groups as
+  well as its helper on an outer timeout. This proves only the successful
+  fixture path: a path-free whole-run failure receipt that preserves primary
+  and every cleanup failure is still outstanding, so the non-bypassable fake
+  transport gate is not complete. The worker only
+  hashes FD 5; it never deserializes the checkpoint, reads source audio, imports
+  a model, performs inference or creates output files. Historical fake V1/V2
+  and checkpoint launch V2 remain permanently blocked, the public lease
+  execution flag remains false, and no CLI/TUI separator, publication or
+  selection route is exposed. Because runtime-exec and worker-script path
+  TOCTOU remain open, this slice does not prove that the exact measured
+  runtime/worker bytes were the bytes executed. Child signal-state observation
+  and possible failure of the bounded emergency
+  fallback to prove reap remain explicit limitations. Real separation execution is
+  still disabled.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one
   canonical WAV project. It does not separate, shift, pad, stretch, normalize
