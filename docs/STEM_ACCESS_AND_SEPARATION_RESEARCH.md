@@ -9,9 +9,11 @@ execution-admission scaffolding and descriptor-pinned static checkpoint
 inspection, trusted-inspection blocked-admission binding and parent-only live
 checkpoint-descriptor lease plus pure path-free worker-request V2 design
 evidence, a private exact-object lease reservation, blocked launch V2,
-fake-only transport records and a process-free framing/quarantine observer
-implemented; real source separation, a child-process FD 5 transport, hidden
-evaluation and promotion are not implemented**
+fake-only transport records, a process-free framing/quarantine observer and a
+pure permanently blocked native fake-launch V2 contract implemented; an
+audited executable native close-all boundary, real source separation, a
+child-process FD 5 transport, hidden evaluation and promotion are not
+implemented**
 
 Checked: 30 July 2026
 
@@ -407,6 +409,31 @@ worker, must materialize those bytes in a fresh private quarantine and reopen
 them for this observer. No output path or directory descriptor enters the
 child. No subprocess, FD 5 installation, checkpoint load, model operation or
 user-facing separator exists in either increment.
+
+The nineteenth S3 increment adds the pure, private and permanently blocked
+`sunofriend.separation-fake-launch-plan.v2` contract. It seals the exact fake
+request and blocked-launch V1 hashes as historical inputs plus caller-supplied
+native-launcher, runtime and fake-worker identity claims. It observes no path
+or file, verifies no build and carries no live authority.
+
+The contract fixes an isolated `-I -B -S` worker invocation, the exact
+`LANG=C`, `LC_ALL=C`, `TZ=UTC` replacement environment, null standard streams
+and a child-only source-to-scratch-to-3/4/5 action sequence with explicit
+original and scratch closure. It requires Darwin close-all behavior but does
+not invoke it. FDs 3/4/5 must cross the intended exec inheritable; first
+worker code must make them non-inheritable before parsing or checkpoint
+access. It also makes clear that isolated Python ignores configuration
+environment variables, leaves hash randomisation enabled and cannot rely on
+`PYTHONHASHSEED` for deterministic fixture output.
+
+Process-group ownership, monotonic timeout, TERM/grace/KILL, exact reap,
+nonterminal unreaped supervision, bounded error handling and parent-owned FD4
+payload materialisation are declarative requirements. Existing fake envelope
+and result V1 schemas do not bind the plan. Build provenance, artifact
+remeasurement, nonce freshness/single use, exact live authority, executable
+and worker-path TOCTOU closure, child mapping, lifecycle execution and terminal
+verification remain blockers. The record starts no process and every
+capability and effect remains false.
 
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
@@ -1356,8 +1383,13 @@ implemented**
 - [x] Add bounded canonical request/result framing plus a process-free,
   descriptor-pinned parent quarantine observer without issuing a terminal
   receipt.
-- [ ] Implement and audit a native macOS close-all launcher that can prove
-  child-only logical FD mapping without mutating parent FD 3, 4 or 5.
+- [x] Add a pure, permanently blocked native fake-launch V2 contract that
+  fixes artifact claims, invocation/environment policy, child-only scratch
+  mapping, Darwin close-all and supervised-lifecycle requirements without
+  starting a process.
+- [ ] Implement, provenance-bind and audit the private Darwin native close-all
+  boundary, including canary proof that only standard streams and logical FDs
+  3/4/5 reach the child and that the parent descriptor table is unchanged.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with the
   deterministic fake worker, exact pre-exec remeasurement, validated worker
   result, timeout/reap evidence and parent-verified quarantined outputs before
@@ -1397,6 +1429,7 @@ Likely modules:
 - `_separation_checkpoint_launch_v2_records.py`
 - `_separation_fake_transport_records.py`
 - `_separation_fake_worker_protocol.py`
+- `_separation_fake_launch_v2_records.py`
 
 ### S4 — Experimental broad separation in Studio
 

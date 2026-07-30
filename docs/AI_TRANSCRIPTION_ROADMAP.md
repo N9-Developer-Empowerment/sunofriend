@@ -468,6 +468,44 @@ FD 4 carries the bounded result and tiny fixture payloads. A future parent
 must create the private quarantine from those validated bytes and then invoke
 the observer; the child receives no output path or directory descriptor.
 
+The nineteenth S3 slice adds the private, pure and permanently blocked
+`sunofriend.separation-fake-launch-plan.v2` contract in
+`_separation_fake_launch_v2_records.py`. It accepts the exact fake request and
+blocked fake launch V1 only as historical bindings, then seals caller-supplied
+hash, size and stat-identity claims for a native launcher, Python runtime and
+fixed fake worker. These are claims, not filesystem measurements, build
+provenance or proof of the bytes that would execute.
+
+The contract fixes the abstract invocation
+`bound_runtime_executable -I -B -S bound_fake_worker_entrypoint`, an exact
+replacement environment containing only `LANG=C`, `LC_ALL=C` and `TZ=UTC`,
+and a child-only descriptor plan. All three sources are first copied to
+collision-free scratch descriptors, the original child copies are closed,
+scratch is mapped to request/result/checkpoint descriptors 3/4/5, and scratch
+is closed. Standard streams must be replaced with the native null device and
+Darwin `POSIX_SPAWN_CLOEXEC_DEFAULT` must close every unlisted inherited
+descriptor. None of those actions is attempted here. FDs 3/4/5 necessarily
+remain inheritable across the one intended exec; the fixed worker must make
+them non-inheritable as its first user-code action before parsing a request or
+reading the checkpoint. Birth-time or pre-CPython noninheritability is not
+claimed. Isolated mode ignores Python configuration environment variables,
+so hash randomisation remains enabled and fixture determinism cannot depend
+on `PYTHONHASHSEED`.
+
+The same record defines parent-owned process-group supervision, one monotonic
+deadline, TERM/grace/KILL escalation, exact-PID reap, a nonterminal supervised
+unreaped state, bounded worker and parent error taxonomies, and the FD4-only
+payload boundary. The child receives no output path or directory descriptor
+and creates no files; a future parent must validate the complete result before
+materialising and reopening a private quarantine. Current envelope and result
+V1 schemas do not bind this V2 plan. Nonce freshness and single use, exact
+non-copyable live authority, native build provenance, immediate artifact
+remeasurement, runtime and worker path TOCTOU closure, child mapping,
+lifecycle enforcement and parent verification are all absent. State remains
+`blocked`/`not_run`; every capability and effect is false. This V2 contract
+must never be enabled. A future executor requires new live-authority,
+envelope, result and terminal-receipt schemas.
+
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
 transcriber. They need independent lineage, model/checkpoint licensing,

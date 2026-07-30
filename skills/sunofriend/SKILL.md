@@ -50,15 +50,23 @@ report the result, then move on.
   inspector, trusted-inspection admission binding and parent-only live
   checkpoint-descriptor lease, path-free request V2, exact lease reservation
   and blocked launch-plan V2, plus fake-only request/launch/result records and
-  process-free framing/quarantine observation, are engineering groundwork,
-  not a usable separator, model installation or finished-song command. The
+  process-free framing/quarantine observation and native fake-launch V2
+  contract, are engineering groundwork, not a usable separator, model
+  installation or finished-song command. The
   inspector and lease read, classify, retain and recheck exact local
   checkpoint bytes without loading a model or exposing the raw descriptor.
-  The fake transport records permit no execution; their launch remains
-  blocked on an audited native close-all boundary. The process-free observer
-  starts no child and issues no terminal receipt. The lease is not an
-  immutable snapshot or FD 5 transport, every real-execution blocker remains,
-  and real separation execution is disabled.
+  The fake transport and native fake-launch V2 records permit no execution.
+  Native fake-launch V2 permanently remains `blocked`/`not_run`: it seals
+  caller-claimed artifact identities and requires child-only FD mapping,
+  Darwin close-all behaviour and supervised lifecycle rules, but measures no
+  artifact, invokes no native code, starts no child and proves no descriptor
+  closure. Existing V1 records remain historical and non-authoritative. The
+  process-free observer starts no child and issues no terminal receipt. The
+  next engineering boundary is a separately built, provenance-bound and
+  canary-tested native close-all implementation. The lease is not an immutable
+  snapshot or FD 5 transport, deterministic fake execution is unavailable,
+  every real-execution blocker remains, and real separation execution is
+  disabled.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one
   canonical WAV project. It does not separate, shift, pad, stretch, normalize

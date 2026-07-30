@@ -519,6 +519,35 @@ then reopens it for observation; the child receives no output path or
 directory descriptor. The missing audited native close-all launcher remains
 the next boundary before a deterministic fake child can start.
 
+`_separation_fake_launch_v2_records.py` is the nineteenth S3 boundary. It
+defines a pure, private and permanently non-executable
+`sunofriend.separation-fake-launch-plan.v2` record. Existing fake request and
+blocked-launch V1 records are exact historical bindings only; they supply no
+live nonce, lease, reservation or run authority. Native-launcher, runtime and
+worker hashes, sizes and stat identities are sealed as caller claims rather
+than measured artifacts or build provenance.
+
+The contract fixes a no-shell, no-path-search isolated Python invocation, an
+exact three-variable replacement environment and a child-only descriptor
+action plan. It requires scratch-first copies, explicit closure of the
+original child descriptors, scratch-to-3/4/5 mapping, scratch closure, null
+standard streams and Darwin close-all behavior while leaving the parent FD
+table unchanged. FDs 3/4/5 must be inheritable across the intended exec and
+the fixed worker must set them non-inheritable before protocol parsing,
+checkpoint access or any possible later exec; noninheritability before
+CPython starts is neither possible under this design nor claimed.
+
+New-process-group ownership, a monotonic timeout, TERM/KILL escalation,
+exact-PID reap, nonterminal unreaped supervision, split worker/parent errors
+and parent-owned FD4 payload materialisation are requirements only. Current
+fake envelope and result V1 schemas do not bind the new plan. The record
+measures no artifact, loads no extension, invokes no native function, creates
+no descriptor action, starts no child and creates no file. Build provenance,
+live remeasurement, nonce freshness, exact live authority, path-to-exec/open
+TOCTOU closure, close-all canaries and lifecycle enforcement remain absent.
+Every capability and effect is false. A separately built and audited native
+boundary is the next increment; this record itself must never be enabled.
+
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a
 starter ZIP. It does not create or mutate Workbench SQLite state. After
