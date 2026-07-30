@@ -73,6 +73,12 @@ for integration results. Include:
 Use a normal issue for code defects. Keep one independently reproducible
 problem per issue.
 
+For private context, email
+[hello@sunofriend.com](mailto:hello@sunofriend.com). Do not send stems,
+vocals, unreleased music, MIDI, project files, credentials or private review
+notes. Report security concerns through the private route in
+[SECURITY.md](SECURITY.md), not a public issue.
+
 ## Code contributions
 
 Before opening a pull request:

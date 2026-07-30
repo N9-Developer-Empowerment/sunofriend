@@ -17,6 +17,8 @@ The website and the music engine have deliberately different boundaries:
 
 - this website is a static build served from private Amazon S3 through
   CloudFront;
+- private contact arrives at `hello@sunofriend.com` through Hover forwarding,
+  and authenticated replies are sent through Amazon SES from Gmail;
 - first-song and compatibility feedback goes to the repository's explicit
   GitHub issue forms; and
 - Sunofriend audio processing remains local. The site has no stem upload,
@@ -125,7 +127,8 @@ npm run deploy:aws
 
 `infra/domain-zone.yaml` is the optional Route 53 authority for an apex domain.
 It creates A and AAAA alias records for the root and `www` while preserving the
-Hover mailbox MX record and both ACM validation CNAMEs for certificate renewal.
+Hover inbound-mail MX record and both ACM validation CNAMEs for certificate
+renewal.
 After the validation CNAMEs have been added at the current DNS provider and the
 certificate is issued:
 

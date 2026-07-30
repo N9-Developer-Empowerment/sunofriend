@@ -66,6 +66,10 @@ test("rewrites clean website routes to their static index files", async () => {
   assert.equal(rewrite("/stems/"), "/stems/index.html");
   assert.equal(rewrite("/glossary"), "/glossary/index.html");
   assert.equal(rewrite("/glossary/"), "/glossary/index.html");
+  assert.equal(rewrite("/contact"), "/contact/index.html");
+  assert.equal(rewrite("/contact/"), "/contact/index.html");
+  assert.equal(rewrite("/privacy"), "/privacy/index.html");
+  assert.equal(rewrite("/privacy/"), "/privacy/index.html");
   assert.equal(rewrite("/llms.txt"), "/llms.txt");
   assert.equal(
     rewrite("/_next/static/chunks/app.js"),
@@ -105,8 +109,37 @@ test("server-renders an approachable skill-first musician page", async () => {
   assert.match(html, /SoftwareApplication/);
   assert.match(html, /Unsigned Media Ltd/);
   assert.match(html, /not related to or affiliated/);
+  assert.match(html, /hello@sunofriend\.com/);
   assert.doesNotMatch(html, /brew install|git clone/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Starter Project/);
+});
+
+test("publishes clear contact, support, security and privacy routes", async () => {
+  const contactResponse = await render("/contact/");
+  assert.equal(contactResponse.status, 200);
+  const contactHtml = await contactResponse.text();
+
+  assert.match(contactHtml, /CONTACT SUNOFRIEND/);
+  assert.match(contactHtml, /hello@sunofriend\.com/);
+  assert.match(contactHtml, /up to two working days/);
+  assert.match(contactHtml, /Do not send stems or private music/);
+  assert.match(contactHtml, /Report a vulnerability privately/);
+  assert.match(contactHtml, /security\/advisories\/new/);
+
+  const privacyResponse = await render("/privacy/");
+  assert.equal(privacyResponse.status, 200);
+  const privacyHtml = await privacyResponse.text();
+
+  assert.match(privacyHtml, /PRIVACY NOTICE/);
+  assert.match(privacyHtml, /Unsigned Media Ltd/);
+  assert.match(privacyHtml, /company number 17046305/);
+  assert.match(privacyHtml, /Hover/);
+  assert.match(privacyHtml, /Google Gmail/);
+  assert.match(privacyHtml, /Amazon Web Services/);
+  assert.match(privacyHtml, /do not sell contact information/);
+  assert.match(privacyHtml, /process information outside the UK/);
+  assert.match(privacyHtml, /Your right to object/);
+  assert.match(privacyHtml, /Information Commissioner/);
 });
 
 test("publishes a canonical developer and agent integration page", async () => {
@@ -341,6 +374,10 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(data.stem_inputs.cloud_privacy_check_required, true);
   assert.equal(data.canonical_pages.stems, "https://sunofriend.com/stems/");
   assert.equal(data.canonical_pages.glossary, "https://sunofriend.com/glossary/");
+  assert.equal(data.canonical_pages.contact, "https://sunofriend.com/contact/");
+  assert.equal(data.canonical_pages.privacy, "https://sunofriend.com/privacy/");
+  assert.equal(data.contact.email, "hello@sunofriend.com");
+  assert.equal(data.contact.accepts_audio_attachments, false);
   assert.equal(data.newcomer_routes.length, 3);
   assert.match(data.newcomer_routes[0].action, /sunofriend create/);
   assert.equal(data.advanced_capabilities.length >= 6, true);
@@ -381,10 +418,16 @@ test("keeps public discovery and the AWS boundary explicit", async () => {
   assert.match(sitemap, /sunofriend\.com\/for-agents/);
   assert.match(sitemap, /sunofriend\.com\/stems/);
   assert.match(sitemap, /sunofriend\.com\/glossary/);
+  assert.match(sitemap, /sunofriend\.com\/contact/);
+  assert.match(sitemap, /sunofriend\.com\/privacy/);
   assert.match(sitemap, /sunofriend\.com\/llms\.txt/);
   assert.match(domainTemplate, /RootValidationRecordName/);
   assert.match(domainTemplate, /AlternateValidationRecordName/);
   assert.match(domainTemplate, /mx\.hover\.com\.cust\.hostedemail\.com/);
+  assert.match(domainTemplate, /include:amazonses\.com/);
+  assert.match(domainTemplate, /v=DMARC1; p=none/);
+  assert.match(domainTemplate, /feedback-smtp\.eu-west-2\.amazonses\.com/);
+  assert.match(domainTemplate, /_domainkey/);
   assert.match(template, /AWS::CloudFront::Distribution/);
   assert.match(template, /AWS::CloudFront::Function/);
   assert.match(template, /EventType: viewer-request/);
