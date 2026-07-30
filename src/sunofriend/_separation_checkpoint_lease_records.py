@@ -8,7 +8,7 @@ process authority.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 from ._separation_checkpoint_canonical import (
     canonical_sha256 as _hash,
@@ -82,6 +82,56 @@ class _TerminalOutcome:
 @dataclass(frozen=True)
 class _TerminalAnchor:
     bindings: Mapping[str, Any]
+
+
+def expected_acquisition_evidence(
+    *,
+    file_identity: Mapping[str, Any],
+    request: Any,
+    trusted_inspection: Mapping[str, Any],
+    hash_value: Callable[[Any], str] = _hash,
+) -> dict[str, Any]:
+    """Derive path-free acquisition evidence from already-trusted values."""
+
+    inspection = trusted_inspection
+    checkpoint = inspection["checkpoint"]
+    classification = inspection["classification"]
+    archive = inspection["archive"]
+    pickle = inspection["pickle"]
+    identity = _plain(file_identity)
+    if (
+        _plain(checkpoint["file_identity"]) != identity
+        or checkpoint["sha256"] != request.checkpoint_sha256
+        or checkpoint["bytes"] != request.checkpoint_bytes
+    ):
+        raise ValueError("retained checkpoint identity authority changed")
+    return {
+        "bindings": {
+            "worker_request_sha256": request.request_sha256,
+            "preflight_sha256": request.preflight_sha256,
+            "acceptance_artifact_sha256": request.acceptance_artifact_sha256,
+            "trusted_checkpoint_inspection_sha256": inspection[
+                "inspection_sha256"
+            ],
+            "checkpoint_sha256": request.checkpoint_sha256,
+            "checkpoint_bytes": request.checkpoint_bytes,
+            "checkpoint_file_identity_sha256": hash_value(identity),
+            "classification_evidence_sha256": classification[
+                "classification_evidence_sha256"
+            ],
+            "archive_evidence_sha256": hash_value(_plain(archive)),
+            "pickle_evidence_sha256": (
+                None if pickle is None else hash_value(_plain(pickle))
+            ),
+        },
+        "classification": {
+            "container_kind": classification["container_kind"],
+            "confidence": classification["confidence"],
+            "evidence_equal_to_trusted_inspection": True,
+        },
+        "archive_metadata_parsed": archive["archive_metadata_parsed"],
+        "pickle_opcodes_parsed": archive["pickle_metadata_parsed"],
+    }
 
 
 def observation_document(evidence: Mapping[str, Any]) -> Mapping[str, Any]:

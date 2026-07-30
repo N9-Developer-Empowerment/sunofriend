@@ -446,6 +446,19 @@ installs no FD 5, starts no process, imports or loads no model, and adds no
 user-facing separation. V1 schemas, hashes and APIs remain unchanged. Blocked
 launch V2 and atomic FD 5 installation design are still the next boundary.
 
+The 29 July 2026 fifteenth S3 increment is a behaviour-preserving
+maintainability split rather than another capability boundary. Descriptor-only
+`fstat`, `pread`, `lseek` and owned-close helpers now live in
+`_separation_checkpoint_descriptor_io.py`, while pure acquisition-evidence
+derivation lives with the observation and receipt policy in
+`_separation_checkpoint_lease_records.py`. The live
+`separation_checkpoint_descriptor_lease.py` facade is reduced from 884 to 793
+lines and still owns every lock, registry entry, state transition and
+finalizer. Public V1 and reservation types, signatures, `__all__`, schemas,
+hashes and behaviour are unchanged. This refactor adds no separator, FD 5
+installation, process, model load, CLI/TUI route or other user-facing
+capability.
+
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a
 starter ZIP. It does not create or mutate Workbench SQLite state. After

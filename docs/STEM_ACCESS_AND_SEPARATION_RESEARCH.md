@@ -335,6 +335,16 @@ no model, and adds no user-facing separation. V1 schemas, hashes and APIs are
 unchanged. The next work remains the blocked launch V2 and atomic FD 5
 installation design.
 
+The 29 July 2026 fifteenth S3 increment changes structure only. Descriptor-only
+`fstat`, `pread`, `lseek` and owned-close helpers moved to
+`_separation_checkpoint_descriptor_io.py`; pure acquisition-evidence
+derivation moved to `_separation_checkpoint_lease_records.py`. The live lease
+facade fell from 884 to 793 lines without moving its locks, weak registries,
+state transitions or finalizer. Public V1 and reservation types, signatures,
+`__all__`, schemas, hashes and behaviour remain unchanged. This maintainability
+split creates no usable separator, execution authority or user-facing
+capability.
+
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
 unverified candidates until one exact runtime/checkpoint pair has known terms,
@@ -1273,6 +1283,8 @@ implemented**
   executable child request, lease reservation or FD 5 installation.
 - [x] Add a private exact-object lease reservation that remeasures under lock
   without exposing or installing FD 5.
+- [x] Separate descriptor-only I/O and pure lease-evidence derivation from the
+  live lease facade without changing authority, records or behaviour.
 - [ ] Add blocked launch-plan v2 and atomic read-only FD 5 installation design
   without enabling a process or model.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with a
@@ -1306,6 +1318,9 @@ Likely modules:
 - `separation_checkpoint_inspection.py`
 - `separation_execution_admission_binding.py`
 - `separation_checkpoint_descriptor_lease.py`
+- `_separation_checkpoint_descriptor_io.py`
+- `_separation_checkpoint_lease_records.py`
+- `_separation_checkpoint_fd5_reservation.py`
 - `_separation_checkpoint_transport_records.py`
 - `_separation_worker_request_v2_values.py`
 

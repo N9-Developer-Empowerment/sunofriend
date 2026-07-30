@@ -403,6 +403,14 @@ model, load or user-facing separation operation exists. V1 schemas and APIs
 are unchanged. The next increment remains the blocked launch V2 and atomic FD
 5 installation design.
 
+The 29 July 2026 fifteenth S3 slice is maintainability-only. Descriptor
+`fstat`, `pread`, `lseek` and owned-close helpers moved to
+`_separation_checkpoint_descriptor_io.py`, and pure acquisition-evidence
+derivation moved to `_separation_checkpoint_lease_records.py`. The live lease
+facade is 793 rather than 884 lines, while public V1 and reservation types,
+signatures, `__all__`, schemas, hashes, locks, registry, finalizer and behaviour
+remain unchanged. No separator or user-facing capability was added.
+
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
 transcriber. They need independent lineage, model/checkpoint licensing,

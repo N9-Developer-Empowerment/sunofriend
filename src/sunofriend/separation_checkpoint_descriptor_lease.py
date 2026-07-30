@@ -11,7 +11,6 @@ duplicates, inherits, hands off, deserializes or executes it.
 
 from __future__ import annotations
 
-import hashlib
 import os
 import threading
 import weakref
@@ -22,6 +21,12 @@ from ._separation_checkpoint_canonical import (
     canonical_sha256 as _checkpoint_canonical_sha256,
     plain as _plain,
 )
+from ._separation_checkpoint_descriptor_io import (
+    _close_if_owned as _close_if_owned,
+    _file_identity as _file_identity,
+    _file_identity_document as _file_identity_document,
+    _hash_descriptor as _hash_descriptor,
+)
 from ._separation_checkpoint_lease_records import (
     SEPARATION_CHECKPOINT_DESCRIPTOR_LEASE_ID,
     SEPARATION_CHECKPOINT_DESCRIPTOR_LEASE_OBSERVATION_SCHEMA,
@@ -29,6 +34,7 @@ from ._separation_checkpoint_lease_records import (
     _TERMINAL_STATUSES,
     _TerminalAnchor,
     _TerminalOutcome,
+    expected_acquisition_evidence as _records_expected_acquisition_evidence,
     expected_observation_document as _expected_observation_document,
     new_terminal_anchor as _records_new_terminal_anchor,
     observation_document as _observation_document,
@@ -579,47 +585,12 @@ def _validate_state_authority(state: _LeaseState) -> None:
 def _expected_acquisition_evidence(
     state: _LeaseState,
 ) -> dict[str, Any]:
-    inspection = state.trusted_inspection
-    checkpoint = inspection["checkpoint"]
-    classification = inspection["classification"]
-    archive = inspection["archive"]
-    pickle = inspection["pickle"]
-    identity = _file_identity_document(state.file_identity)
-    if (
-        _plain(checkpoint["file_identity"]) != identity
-        or checkpoint["sha256"] != state.request.checkpoint_sha256
-        or checkpoint["bytes"] != state.request.checkpoint_bytes
-    ):
-        raise ValueError("retained checkpoint identity authority changed")
-    return {
-        "bindings": {
-            "worker_request_sha256": state.request.request_sha256,
-            "preflight_sha256": state.request.preflight_sha256,
-            "acceptance_artifact_sha256": (
-                state.request.acceptance_artifact_sha256
-            ),
-            "trusted_checkpoint_inspection_sha256": inspection[
-                "inspection_sha256"
-            ],
-            "checkpoint_sha256": state.request.checkpoint_sha256,
-            "checkpoint_bytes": state.request.checkpoint_bytes,
-            "checkpoint_file_identity_sha256": _hash(identity),
-            "classification_evidence_sha256": classification[
-                "classification_evidence_sha256"
-            ],
-            "archive_evidence_sha256": _hash(_plain(archive)),
-            "pickle_evidence_sha256": (
-                None if pickle is None else _hash(_plain(pickle))
-            ),
-        },
-        "classification": {
-            "container_kind": classification["container_kind"],
-            "confidence": classification["confidence"],
-            "evidence_equal_to_trusted_inspection": True,
-        },
-        "archive_metadata_parsed": archive["archive_metadata_parsed"],
-        "pickle_opcodes_parsed": archive["pickle_metadata_parsed"],
-    }
+    return _records_expected_acquisition_evidence(
+        file_identity=_file_identity_document(state.file_identity),
+        request=state.request,
+        trusted_inspection=state.trusted_inspection,
+        hash_value=_hash,
+    )
 
 
 def _remeasure(state: _LeaseState) -> None:
@@ -657,28 +628,6 @@ def _remeasure(state: _LeaseState) -> None:
         raise _IntegrityFailure("checkpoint_byte_count_changed")
     if digest != state.request.checkpoint_sha256:
         raise _IntegrityFailure("checkpoint_hash_changed")
-
-
-def _hash_descriptor(descriptor: int, maximum_bytes: int) -> tuple[str, int]:
-    digest = hashlib.sha256()
-    count = 0
-    try:
-        while True:
-            chunk = os.pread(
-                descriptor,
-                min(1024 * 1024, maximum_bytes + 1 - count),
-                count,
-            )
-            if not chunk:
-                break
-            count += len(chunk)
-            if count > maximum_bytes or count > MAX_CHECKPOINT_BYTES:
-                raise ValueError("checkpoint exceeds retained byte limit")
-            digest.update(chunk)
-        return digest.hexdigest(), count
-    finally:
-        if os.lseek(descriptor, 0, os.SEEK_SET) != 0:
-            raise ValueError("checkpoint descriptor offset reset failed")
 
 
 def _terminal_failure(
@@ -817,51 +766,11 @@ def _receipt_wrapper(
     return value
 
 
-def _file_identity(value: os.stat_result) -> tuple[int, ...]:
-    return (
-        value.st_dev,
-        value.st_ino,
-        value.st_mode,
-        value.st_nlink,
-        value.st_size,
-        value.st_mtime_ns,
-        value.st_ctime_ns,
-        value.st_uid,
-    )
-
-
-def _file_identity_document(
-    value: tuple[int, ...],
-) -> dict[str, int]:
-    return {
-        "device": value[0],
-        "inode": value[1],
-        "mode": value[2],
-        "links": value[3],
-        "bytes": value[4],
-        "mtime_ns": value[5],
-        "ctime_ns": value[6],
-        "uid": value[7],
-    }
-
-
 def _finalize_owned_descriptor(
     descriptor: int,
     expected_devino: tuple[int, ...],
 ) -> None:
     _close_if_owned(descriptor, expected_devino)
-
-
-def _close_if_owned(
-    descriptor: int,
-    expected_devino: tuple[int, ...],
-) -> None:
-    try:
-        observed = os.fstat(descriptor)
-        if (observed.st_dev, observed.st_ino) == expected_devino:
-            os.close(descriptor)
-    except OSError:
-        pass
 
 
 def _hash(value: Any) -> str:
