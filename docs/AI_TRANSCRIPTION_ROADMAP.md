@@ -366,11 +366,31 @@ Launch v1 is intentionally unchanged and still passes only request/result
 descriptors 3 and 4. No FD 5, loader, child request, process, model import,
 deserialization, audio read or file write exists in this slice. A retained
 ordinary inode is not an immutable snapshot: another writer can change it
-after the last measurement. The next transport slice therefore needs a
-path-free worker-request v2 and blocked launch v2 that reserve, remeasure and
-atomically install one lease as read-only worker descriptor 5 while keeping
-the immutable-backing, executable-pickle, worker-protocol and real-execution
+after the last measurement. This established requirements for a path-free
+request, a blocked launch revision, lease reservation, remeasurement and
+atomic read-only worker descriptor 5 installation while keeping the
+immutable-backing, executable-pickle, worker-protocol and real-execution
 blockers explicit.
+
+The thirteenth S3 slice adds only the pure, private
+`sunofriend.separation-worker-request.v2` design-evidence record. It validates
+a bounded, canonical, path-free logical request plus 16 expected binding
+values supplied by a future facade. It is deliberately a stricter admitted
+and inspected subset of V1, not a claim that every valid V1 request projects
+unchanged. The logical request retains the verified
+preflight projection, source/checkpoint/worker/runtime/lock identities,
+canonical roles, type-aware settings, seed and isolation policy. Code derives
+logical output slots and records descriptor purposes 3, 4 and 5 without
+carrying paths or raw descriptor numbers.
+
+This V2 schema is permanently `blocked`/`not_run`: every capability and effect
+is false, the required v2 transport blockers are combined with the inherited
+admission blockers, and its expected inputs confer no live authority or
+provenance by themselves. The validating V1-to-V2 facade is still absent. It is
+not a child-executable request, lease reservation, FD 5 installation, launch
+plan, worker protocol, model load or separation feature. Any later executable
+request requires a new schema. The blocked launch-plan v2 and lease-bound
+reservation/install evidence remain the next separate design increments.
 
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every

@@ -406,10 +406,34 @@ not as post-close content proof; garbage-collection cleanup is best effort.
 No inherited checkpoint descriptor is implemented. Launch v1 still contains
 only FDs 3 and 4 and retains a checkpoint path in the private request. The
 ordinary retained inode is not an immutable snapshot and cannot authorize
-unsafe pickle loading. A later v2 transport must remove the child checkpoint
-path, reserve and remeasure the lease under the same lock, atomically install
-read-only FD 5 and bind child-side identity/hash evidence without changing any
-current capability to true.
+unsafe pickle loading. A later transport design must remove the child
+checkpoint path, reserve and remeasure the lease under the same lock,
+atomically install read-only FD 5 and bind child-side identity/hash evidence
+without changing any current capability to true.
+
+`_separation_checkpoint_transport_records.py` and
+`_separation_worker_request_v2_values.py` form the thirteenth internal S3
+boundary. They define and validate the pure, private, path-free
+`sunofriend.separation-worker-request.v2` design-evidence record without
+importing the V1 production boundary. It accepts only the stricter admitted
+and inspected V1 subset defined by this internal schema. The record carries a
+canonical logical
+projection of preflight, identities, roles, settings, seed and isolation,
+plus 16 expected hashes or sizes supplied by a future facade. It derives
+role-specific logical output slots and describes the purposes of descriptors
+3, 4 and 5, but contains no path or raw descriptor number.
+
+Canonical type comparison prevents boolean/integer/float substitution; value,
+depth, item, checkpoint-size and sealed-request-size bounds fail closed. The
+record inherits the mandatory admission blockers, adds the code-owned source,
+output, protocol, FD 5, child-remeasurement, immutable-backing, unsafe-pickle
+and real-execution blockers, and fixes every capability and effect to false.
+Its inputs are expected values rather than authority or self-proving
+provenance, the validating V1-to-V2 facade is not implemented, and the V2
+schema is permanently non-executable. It reserves no lease, installs no descriptor,
+opens no file, starts no process and exposes no CLI, TUI, model or separation
+operation. A future executable request needs a new schema; blocked launch v2
+and lease reservation remain separate unfinished boundaries.
 
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a

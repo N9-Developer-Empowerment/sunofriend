@@ -7,8 +7,10 @@ backend-preflight, worker, runtime-artifact, read-only runtime measurement and
 non-spawning launch/lifecycle contracts plus blocked-only checkpoint and
 execution-admission scaffolding and descriptor-pinned static checkpoint
 inspection, trusted-inspection blocked-admission binding and parent-only live
-checkpoint-descriptor lease implemented; real source separation, FD 5
-transport, hidden evaluation and promotion are not implemented**
+checkpoint-descriptor lease plus pure path-free worker-request V2 design
+evidence implemented; real source separation, lease reservation, FD 5
+transport, blocked launch V2, hidden evaluation and promotion are not
+implemented**
 
 Checked: 29 July 2026
 
@@ -282,11 +284,46 @@ observation is historical rather than liveness authority.
 This slice does not add FD 5, a loader, worker protocol, model import,
 deserialization or real execution. A read-only descriptor prevents writes
 through that descriptor but does not make the inode immutable or prevent
-another writer from changing it after the last hash. The next transport design
-requires a path-free worker request, one exclusive lease reservation, atomic
-FD 5 installation under the same lease lock, child-side pre/post identity and
-hash evidence, and all existing executable-pickle and immutable-backing
-blockers.
+another writer from changing it after the last hash. This established
+requirements for a path-free worker request, one exclusive lease reservation,
+atomic FD 5 installation under the same lease lock, child-side pre/post
+identity and hash evidence, and all existing executable-pickle and
+immutable-backing blockers.
+
+The thirteenth S3 increment adds the internal
+`sunofriend.separation-worker-request.v2` design-evidence record in
+`_separation_checkpoint_transport_records.py`, with pure value validation in
+`_separation_worker_request_v2_values.py`. It accepts expected values from a
+future facade, not trusted live objects, and produces one bounded, canonical,
+deeply immutable, path-free record. The accepted domain is deliberately the
+stricter admitted and inspected V1 subset; a validating V1-to-V2 facade is not
+yet implemented, so the record does not prove the provenance of its expected
+inputs. Sixteen binding fields retain the earlier
+worker, acceptance, preflight, separation, allowlist, admission, inspection,
+classification, lease, checkpoint and runtime evidence hashes and sizes. The
+logical request retains the complete verified preflight projection,
+source/checkpoint/worker/runtime/lock identities, canonical role set,
+type-aware settings, seed and fixed private-development isolation policy.
+
+Output slots are derived from roles rather than paths. Descriptor rows 3, 4
+and 5 describe only logical purpose, direction and access; raw descriptors,
+path fields, URLs and path-like strings are rejected. Ordinary model settings
+may still use the exact generic names `fd` or `descriptor`; transport-shaped
+names such as `checkpoint_fd` and `raw_fd` remain forbidden. Canonical comparisons reject
+type substitutions, and JSON depth/item, checkpoint-size and
+sealed-request-size limits are explicit.
+Mandatory admission blockers are preserved alongside the undefined
+source/output transport, missing worker protocol, unattempted FD 5
+installation, missing child remeasurement, unproven immutable backing,
+unauthorised executable-pickle loading and unsupported real execution.
+
+This V2 schema is permanently blocked design evidence, not an executable child
+request. Every capability and effect is false. It does not reserve the live
+lease, install FD 5, define source/output transport, implement a worker
+protocol, open a file, start a process, load a model or expose a CLI/TUI
+feature. A future executable request must use a new schema. The next bounded
+work is therefore the separately blocked lease-reservation and launch-plan V2
+design, still without enabling execution.
 
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
@@ -1221,9 +1258,11 @@ implemented**
 - [x] Add a bounded parent-owned live descriptor lease that reparses,
   rehashes, retains and rechecks the same inspected checkpoint without
   exposing the raw descriptor or enabling a loader.
-- [ ] Add path-free worker-request and blocked launch-plan v2 contracts that
-  reserve the lease and describe atomic read-only FD 5 installation without
-  enabling a process or model.
+- [x] Add a pure, path-free, permanently blocked worker-request v2
+  design-evidence record with logical descriptor requirements and no
+  executable child request, lease reservation or FD 5 installation.
+- [ ] Add a lease-bound reservation and blocked launch-plan v2 that describe
+  atomic read-only FD 5 installation without enabling a process or model.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with a
   deterministic fake worker, exact pre-exec remeasurement, validated worker
   result and parent-verified quarantined outputs before any real model is
@@ -1255,6 +1294,8 @@ Likely modules:
 - `separation_checkpoint_inspection.py`
 - `separation_execution_admission_binding.py`
 - `separation_checkpoint_descriptor_lease.py`
+- `_separation_checkpoint_transport_records.py`
+- `_separation_worker_request_v2_values.py`
 
 ### S4 — Experimental broad separation in Studio
 
