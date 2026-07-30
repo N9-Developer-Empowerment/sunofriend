@@ -2,9 +2,10 @@
 
 Status: **research and architecture decision complete; S1 synchronized source
 preparation and S2 source lineage/composite drums accepted; S3 separation-run,
-controlled-fake harness, acceptance pre-registration and bake-off preparation
-plus backend-preflight contracts implemented; real source separation, hidden
-evaluation and promotion are not implemented**
+controlled-fake harness, acceptance pre-registration, bake-off preparation,
+backend-preflight, worker, runtime-artifact and non-spawning launch/lifecycle
+contracts implemented; real source separation, hidden evaluation and promotion
+are not implemented**
 
 Checked: 29 July 2026
 
@@ -148,6 +149,26 @@ cannot represent `acceptance_ready`. The runtime launcher is separately
 parent-owned, settings compare by canonical JSON type and local path aliases
 fail closed. This pure boundary performs no I/O and starts no process; the
 subprocess transport and real separator remain unimplemented.
+
+The seventh S3 increment adds a pure measured-runtime artifact and an exact
+non-spawning launch/lifecycle contract. The runtime artifact binds the full
+bounded Python launcher and ancestor chain, native executable, virtual
+environment configuration, installed package tree, worker and lockfile to
+separate parent-owned request, preflight and measurement identities. It is
+explicitly private-development and unregistered: it neither proves execution
+nor closes replacement between measurement and exec, so remeasurement is
+mandatory.
+
+The launch plan revalidates that artifact and fixes exact argv, environment,
+file-descriptor, isolation, process and staging policies without offering an
+execution function. Its lifecycle consumes only parent/supervisor
+observations, records handle acquisition before exec and handshake, and
+requires any acquired process to be reaped before lease release. Path-free
+terminal evidence cannot be mistaken for a successful separation:
+`execution_finished_unvalidated` explicitly leaves worker-result validation,
+post-input immutability, parent output verification, quarantine, publication,
+acceptance and promotion false. No worker, model or audio ran in this
+increment.
 
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
@@ -1032,9 +1053,10 @@ Likely modules:
 
 ### S3 — Separation bake-off harness
 
-Status: **contract, controlled-fake harness, acceptance pre-registration and
-redacted bake-off preparation plus backend-preflight slices implemented;
-isolated real runner/backends and bake-off execution not implemented**
+Status: **contract, controlled-fake harness, acceptance pre-registration,
+redacted bake-off preparation, backend-preflight, worker, runtime-artifact and
+non-spawning launch/lifecycle slices implemented; isolated real
+runner/backends and bake-off execution not implemented**
 
 - [x] Add a pure backend-neutral `SeparationBackend` contract plus immutable
   request/result DTOs and strict versioned separation-run receipts.
@@ -1057,8 +1079,16 @@ isolated real runner/backends and bake-off execution not implemented**
 - [x] Add a strict private worker request/path-free result contract that
   cross-binds the frozen acceptance identity, static preflight and separation
   request without starting a process.
+- [x] Bind the exact runtime launcher chain, ancestors, executable, virtual
+  environment, installed package tree, worker and lockfile to separate
+  parent-owned measurements without claiming execution or TOCTOU closure.
+- [x] Add a pure exact launch plan and supervisor-owned lifecycle with no
+  execution surface, separate handle/exec/handshake observations, mandatory
+  reap-before-release and explicitly unvalidated cleanup receipts.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with a
-  deterministic fake worker before any real model is allowed to start.
+  deterministic fake worker, exact pre-exec remeasurement, validated worker
+  result and parent-verified quarantined outputs before any real model is
+  allowed to start.
 - [ ] Generalise the existing AI runtime/checkpoint registry and isolate heavy
   runtimes in a separate worker environment.
 - [ ] Require explicit checkpoint installation, hashes and licences in the
@@ -1077,6 +1107,9 @@ Likely modules:
 - `separation_acceptance.py`
 - `separation_bakeoff.py`
 - `separation_backend_preflight.py`
+- `separation_worker_contract.py`
+- `separation_runtime_artifact.py`
+- `separation_launch_contract.py`
 
 ### S4 — Experimental broad separation in Studio
 
@@ -1140,6 +1173,14 @@ Likely modules:
 - explicit model-missing result with no download;
 - installed-model offline inference with network access denied;
 - cancellation and partial-run cleanup;
+- complete launcher/ancestor evidence, alias rejection and exact parent-bound
+  runtime remeasurement;
+- cancellation before spawn, between handle/exec/handshake and after process
+  exit, with every acquired handle reaped before release;
+- forged/reordered supervisor events, resigned launch policy and false
+  result-success claims;
+- static proof that the pure runtime/launch contracts expose no filesystem,
+  process, network or dynamic-execution surface;
 - cache key includes source, model, checkpoint and settings;
 - duration/alignment/residual checks;
 - non-finite, silent and clipped outputs;

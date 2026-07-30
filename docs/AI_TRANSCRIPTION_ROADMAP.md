@@ -227,6 +227,28 @@ The module performs no I/O and starts no process. A non-bypassable
 subprocess transport, concrete provider, real worker, model execution and
 artifact publication remain unimplemented.
 
+The seventh S3 slice adds two more pure, non-executing boundaries.
+`sunofriend.separation-runtime-artifact.v1` binds the complete bounded Python
+launcher chain and ancestor evidence, final native executable, virtual
+environment configuration, installed package-tree digest, worker and lockfile
+to separate parent-owned request, preflight and measurement identities. It
+rejects symlink escape, case/Unicode aliases and duplicate filesystem
+identities. It is explicitly private-development, unregistered measurement
+evidence: execution is unproven, TOCTOU is not closed and exact pre-exec
+remeasurement remains mandatory.
+
+`sunofriend.separation-launch-plan.v1` then validates that runtime artifact
+again and fixes the exact no-shell argv, replacement environment, descriptor,
+isolation, process and output-staging policies. Its companion lifecycle
+accepts only exact parent/supervisor observations. Process-handle acquisition,
+exec and worker handshake are separate, so cancellation or failure between
+them cannot lose a live child; every acquired handle must be reaped before its
+lease is released. Public events and the terminal receipt are path-free. A
+normal close is deliberately `execution_finished_unvalidated` with explicit
+false result, input, output, quarantine, publication, acceptance and promotion
+flags. Real worker execution is a literal false capability and these modules
+contain no filesystem, process, model, audio or network operation.
+
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
 transcriber. They need independent lineage, model/checkpoint licensing,

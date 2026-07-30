@@ -272,6 +272,32 @@ This is a pure contract: it performs no filesystem access and starts no
 process. There is still no approved subprocess transport, platform isolation
 provider, real worker, model execution or artifact publication path.
 
+`separation_runtime_artifact.py` is the seventh internal S3 boundary. Its pure
+`sunofriend.separation-runtime-artifact.v1` document binds a bounded, acyclic
+launcher chain, every relevant ancestor directory, the final native
+executable, `pyvenv.cfg`, installed package-tree digest, worker and dependency
+lock to separate parent-owned request, preflight and measurement identities.
+It rejects upward relative symlink targets, incomplete or resolved ancestor
+evidence, case/Unicode path aliases and duplicate device/inode identities.
+The document is always `private_development_unregistered`; it says that
+execution is unproven, TOCTOU is open and a pre-exec remeasurement is
+required.
+
+`separation_launch_contract.py` composes that artifact into an exact pure
+launch plan and supervisor-owned lifecycle. The plan fixes a no-shell,
+no-path-search argv, replacement environment, closed descriptor allowlist,
+isolation template, process policy and private output staging. The module
+cannot spawn: `REAL_WORKER_EXECUTION_SUPPORTED` is literally false and AST
+tests exclude process, filesystem, network and dynamic-execution surfaces.
+Lifecycle events are cross-checked against a separate in-memory exact-type
+supervisor ledger. Handle acquisition, exec observation and worker handshake
+are distinct; a created process cannot be reclassified as not started, and
+reap plus empty-process-tree evidence is required before lease release.
+Exports remain path-free. Normal terminal cleanup is named
+`execution_finished_unvalidated`, not success, and explicitly records that no
+worker result, post-input immutability, parent output verification,
+quarantine, publication, acceptance or promotion has been proved.
+
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a
 starter ZIP. It does not create or mutate Workbench SQLite state. After
