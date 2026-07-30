@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import sunofriend._separation_checkpoint_lease_records as records_module
 import sunofriend.separation_checkpoint_inspection as inspection_module
 import sunofriend.separation_checkpoint_descriptor_lease as lease_module
 
@@ -685,8 +686,6 @@ def _qualified_name(node: ast.AST) -> str:
 
 def test_lease_module_has_no_path_reopen_model_process_network_or_write_api(
 ) -> None:
-    source = Path(lease_module.__file__).read_text(encoding="utf-8")
-    tree = ast.parse(source)
     forbidden_imports = {
         "asyncio",
         "ctypes",
@@ -732,15 +731,30 @@ def test_lease_module_has_no_path_reopen_model_process_network_or_write_api(
         "Path.write_bytes",
         "Path.write_text",
     }
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            assert not {
-                alias.name.split(".", 1)[0] for alias in node.names
-            }.intersection(forbidden_imports)
-        elif isinstance(node, ast.ImportFrom):
-            assert (node.module or "").split(".", 1)[0] not in forbidden_imports
-        elif isinstance(node, ast.Call):
-            assert _qualified_name(node.func) not in forbidden_calls
+    pure_record_imports = {
+        "__future__",
+        "_separation_checkpoint_canonical",
+        "dataclasses",
+        "typing",
+    }
+    for module in (lease_module, records_module):
+        source = Path(module.__file__).read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                roots = {
+                    alias.name.split(".", 1)[0] for alias in node.names
+                }
+                assert not roots.intersection(forbidden_imports)
+                if module is records_module:
+                    assert roots <= pure_record_imports
+            elif isinstance(node, ast.ImportFrom):
+                root = (node.module or "").split(".", 1)[0]
+                assert root not in forbidden_imports
+                if module is records_module:
+                    assert root in pure_record_imports
+            elif isinstance(node, ast.Call):
+                assert _qualified_name(node.func) not in forbidden_calls
 
 
 def test_v1_binding_and_launch_modules_do_not_import_live_lease() -> None:

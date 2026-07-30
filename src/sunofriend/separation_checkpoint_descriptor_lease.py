@@ -20,8 +20,21 @@ from typing import Any, Mapping, Sequence
 
 from ._separation_checkpoint_canonical import (
     canonical_sha256 as _checkpoint_canonical_sha256,
-    deep_freeze as _freeze,
     plain as _plain,
+)
+from ._separation_checkpoint_lease_records import (
+    SEPARATION_CHECKPOINT_DESCRIPTOR_LEASE_ID,
+    SEPARATION_CHECKPOINT_DESCRIPTOR_LEASE_OBSERVATION_SCHEMA,
+    SEPARATION_CHECKPOINT_DESCRIPTOR_LEASE_RECEIPT_SCHEMA,
+    _TERMINAL_STATUSES,
+    _TerminalAnchor,
+    _TerminalOutcome,
+    expected_observation_document as _expected_observation_document,
+    new_terminal_anchor as _records_new_terminal_anchor,
+    observation_document as _observation_document,
+    receipt_document as _receipt_document,
+    validate_receipt_document as _records_validate_receipt_document,
+    validate_terminal_anchor as _records_validate_terminal_anchor,
 )
 from .separation_checkpoint_inspection import (
     MAX_CHECKPOINT_BYTES,
@@ -32,16 +45,6 @@ from .separation_checkpoint_inspection import (
 )
 from .separation_worker_contract import SeparationRuntimeArtifactIdentity
 
-
-SEPARATION_CHECKPOINT_DESCRIPTOR_LEASE_OBSERVATION_SCHEMA = (
-    "sunofriend.separation-checkpoint-descriptor-lease-observation.v1"
-)
-SEPARATION_CHECKPOINT_DESCRIPTOR_LEASE_RECEIPT_SCHEMA = (
-    "sunofriend.separation-checkpoint-descriptor-lease-terminal-receipt.v1"
-)
-SEPARATION_CHECKPOINT_DESCRIPTOR_LEASE_ID = (
-    "private-parent-checkpoint-descriptor-lease-v1"
-)
 CHECKPOINT_DESCRIPTOR_LEASE_EXECUTION_SUPPORTED = False
 MAX_ACTIVE_CHECKPOINT_DESCRIPTOR_LEASES = 2
 MAX_KNOWN_CHECKPOINT_DESCRIPTOR_LEASES = 64
@@ -52,47 +55,6 @@ _KNOWN: weakref.WeakKeyDictionary[
 ] = weakref.WeakKeyDictionary()
 _ACTIVE: weakref.WeakSet[SeparationCheckpointDescriptorLease] = weakref.WeakSet()
 _RESERVATIONS = 0
-_FALSE_EFFECTS = (
-    "checkpoint_loaded",
-    "checkpoint_deserialized",
-    "model_imported",
-    "process_started",
-    "network_used",
-    "audio_read",
-    "files_written",
-    "publication_permitted",
-    "selection_permitted",
-    "acceptance_eligible",
-    "promotion_eligible",
-)
-_TERMINAL_STATUSES = frozenset(
-    {
-        "closed",
-        "cleanup_failed",
-        "integrity_failed",
-        "integrity_and_cleanup_failed",
-    }
-)
-_INTEGRITY_REASONS = frozenset(
-    {
-        "checkpoint_byte_count_changed",
-        "checkpoint_descriptor_became_inheritable",
-        "checkpoint_descriptor_ownership_lost",
-        "checkpoint_descriptor_remeasurement_failed",
-        "checkpoint_file_identity_changed",
-        "checkpoint_file_identity_changed_during_remeasurement",
-        "checkpoint_hash_changed",
-        "lease_authority_binding_invalid",
-        "lease_live_ownership_invalid",
-        "lease_state_matrix_invalid",
-        "trusted_parent_pid_convention_violated",
-    }
-)
-_CLEANUP_OUTCOMES = {
-    "complete": (),
-    "close_not_attempted": ("checkpoint_descriptor_ownership_lost",),
-    "close_unconfirmed": ("checkpoint_descriptor_close_failed",),
-}
 
 
 class SeparationCheckpointDescriptorLease:
@@ -167,20 +129,6 @@ class _IntegrityFailure(ValueError):
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
         self.reason = reason
-
-
-@dataclass(frozen=True)
-class _TerminalOutcome:
-    status: str
-    integrity_status: str
-    integrity_reasons: tuple[str, ...]
-    cleanup_status: str
-    cleanup_reasons: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class _TerminalAnchor:
-    bindings: Mapping[str, Any]
 
 
 @dataclass
@@ -675,179 +623,22 @@ def _detach_and_close(
     return "complete", ()
 
 
-def _observation_document(evidence: Mapping[str, Any]) -> Mapping[str, Any]:
-    document = _expected_observation_document(evidence)
-    _validate_observation_document(document, evidence)
-    return _freeze(document)
-
-
-def _expected_observation_document(
-    evidence: Mapping[str, Any],
-) -> dict[str, Any]:
-    payload = _observation_payload(evidence)
-    return {**payload, "observation_sha256": _hash(payload)}
-
-
-def _observation_payload(evidence: Mapping[str, Any]) -> dict[str, Any]:
-    return {
-        "schema": SEPARATION_CHECKPOINT_DESCRIPTOR_LEASE_OBSERVATION_SCHEMA,
-        "lease_id": SEPARATION_CHECKPOINT_DESCRIPTOR_LEASE_ID,
-        "status": "retained_not_loaded",
-        "evidence_scope": "private_development",
-        "publication_scope": "private_local_contract_evidence",
-        "execution_supported": False,
-        "execution_permitted": False,
-        "selection_permitted": False,
-        "bindings": _plain(evidence["bindings"]),
-        "classification": _plain(evidence["classification"]),
-        "descriptor": {
-            "retained": True,
-            "raw_descriptor_exposed": False,
-            "inheritable": False,
-            "shared_offset_reset_to_zero": True,
-            "ancestor_descriptors_closed": True,
-            "owner_pid_recorded_privately": True,
-        },
-        "limitations": [
-            "checkpoint_descriptor_not_handed_to_loader",
-            "checkpoint_descriptor_registry_state_is_in_process_convention",
-            "checkpoint_immutable_snapshot_not_enforced",
-            "checkpoint_in_place_mutation_remains_possible",
-            "checkpoint_content_may_change_after_last_remeasurement",
-            "lease_observation_is_historical_not_liveness_authority",
-            "future_handoff_requires_remeasure_and_install_under_same_lease_lock",
-            "trusted_parent_pid_convention_not_kernel_enforced",
-        ],
-        "effects": {
-            "checkpoint_descriptor_retained": True,
-            "checkpoint_descriptor_closed": False,
-            "ancestor_descriptors_closed": True,
-            **{key: False for key in _FALSE_EFFECTS},
-        },
-    }
-
-
-def _validate_observation_document(
-    document: Mapping[str, Any],
-    evidence: Mapping[str, Any],
-) -> None:
-    value = _plain(document)
-    expected = _expected_observation_document(evidence)
-    if value != expected:
-        raise ValueError("checkpoint descriptor lease observation is invalid")
-    _path_free(value)
-
-
 def _new_terminal_anchor(
     evidence: Mapping[str, Any],
     observation: Mapping[str, Any],
 ) -> _TerminalAnchor:
-    anchor = _TerminalAnchor(
-        bindings=_freeze(
-            {
-                "lease_observation_sha256": observation[
-                    "observation_sha256"
-                ],
-                **_plain(evidence["bindings"]),
-            }
-        )
+    return _records_new_terminal_anchor(
+        evidence,
+        observation,
+        maximum_checkpoint_bytes=MAX_CHECKPOINT_BYTES,
     )
-    _validate_terminal_anchor(anchor)
-    return anchor
 
 
 def _validate_terminal_anchor(anchor: _TerminalAnchor) -> None:
-    if type(anchor) is not _TerminalAnchor:
-        raise ValueError("checkpoint descriptor terminal anchor is invalid")
-    bindings = _plain(anchor.bindings)
-    expected_keys = {
-        "acceptance_artifact_sha256",
-        "archive_evidence_sha256",
-        "checkpoint_bytes",
-        "checkpoint_file_identity_sha256",
-        "checkpoint_sha256",
-        "classification_evidence_sha256",
-        "lease_observation_sha256",
-        "pickle_evidence_sha256",
-        "preflight_sha256",
-        "trusted_checkpoint_inspection_sha256",
-        "worker_request_sha256",
-    }
-    if set(bindings) != expected_keys:
-        raise ValueError("checkpoint descriptor terminal bindings are invalid")
-    for key, value in bindings.items():
-        if key == "checkpoint_bytes":
-            if (
-                type(value) is not int
-                or value <= 0
-                or value > MAX_CHECKPOINT_BYTES
-            ):
-                raise ValueError(
-                    "checkpoint descriptor terminal byte binding is invalid"
-                )
-        elif key == "pickle_evidence_sha256" and value is None:
-            continue
-        elif (
-            not isinstance(value, str)
-            or len(value) != 64
-            or any(character not in "0123456789abcdef" for character in value)
-        ):
-            raise ValueError(
-                "checkpoint descriptor terminal hash binding is invalid"
-            )
-    _path_free(bindings)
-
-
-def _receipt_document(
-    anchor: _TerminalAnchor,
-    outcome: _TerminalOutcome,
-) -> Mapping[str, Any]:
-    payload = _receipt_payload(anchor, outcome)
-    document = {**payload, "receipt_sha256": _hash(payload)}
-    return _freeze(document)
-
-
-def _receipt_payload(
-    anchor: _TerminalAnchor,
-    outcome: _TerminalOutcome,
-) -> dict[str, Any]:
-    return {
-        "schema": SEPARATION_CHECKPOINT_DESCRIPTOR_LEASE_RECEIPT_SCHEMA,
-        "lease_id": SEPARATION_CHECKPOINT_DESCRIPTOR_LEASE_ID,
-        "status": outcome.status,
-        "execution_supported": False,
-        "execution_permitted": False,
-        "selection_permitted": False,
-        "bindings": _plain(anchor.bindings),
-        "integrity": {
-            "status": outcome.integrity_status,
-            "reasons": list(outcome.integrity_reasons),
-        },
-        "cleanup": {
-            "status": outcome.cleanup_status,
-            "reasons": list(outcome.cleanup_reasons),
-            "descriptor_close_attempted": (
-                outcome.cleanup_status != "close_not_attempted"
-            ),
-            "descriptor_close_call_succeeded": (
-                outcome.cleanup_status == "complete"
-            ),
-        },
-        "limitations": [
-            "checkpoint_content_may_change_after_last_remeasurement",
-            "descriptor_close_call_success_is_not_post_close_proof",
-        ],
-        "effects": {
-            "checkpoint_descriptor_retained": False,
-            "checkpoint_descriptor_close_attempted": (
-                outcome.cleanup_status != "close_not_attempted"
-            ),
-            "checkpoint_descriptor_close_call_succeeded": (
-                outcome.cleanup_status == "complete"
-            ),
-            **{key: False for key in _FALSE_EFFECTS},
-        },
-    }
+    _records_validate_terminal_anchor(
+        anchor,
+        maximum_checkpoint_bytes=MAX_CHECKPOINT_BYTES,
+    )
 
 
 def _validate_receipt_document(
@@ -856,49 +647,12 @@ def _validate_receipt_document(
     anchor: _TerminalAnchor,
     outcome: _TerminalOutcome,
 ) -> None:
-    _validate_terminal_anchor(anchor)
-    _validate_terminal_outcome(outcome)
-    value = _plain(document)
-    payload = _receipt_payload(anchor, outcome)
-    expected = {**payload, "receipt_sha256": _hash(payload)}
-    if value != expected:
-        raise ValueError("checkpoint descriptor lease receipt is invalid")
-    _path_free(value)
-
-
-def _validate_terminal_outcome(outcome: _TerminalOutcome) -> None:
-    integrity_reasons = outcome.integrity_reasons
-    cleanup_reasons = outcome.cleanup_reasons
-    if (
-        outcome.status not in _TERMINAL_STATUSES
-        or integrity_reasons != tuple(sorted(set(integrity_reasons)))
-        or cleanup_reasons != tuple(sorted(set(cleanup_reasons)))
-        or any(reason not in _INTEGRITY_REASONS for reason in integrity_reasons)
-        or _CLEANUP_OUTCOMES.get(outcome.cleanup_status) != cleanup_reasons
-    ):
-        raise ValueError("checkpoint descriptor terminal outcome is invalid")
-    verified = (
-        outcome.integrity_status == "verified_before_close_attempt"
-        and not integrity_reasons
-        and outcome.status
-        == (
-            "closed"
-            if outcome.cleanup_status == "complete"
-            else "cleanup_failed"
-        )
+    _records_validate_receipt_document(
+        document,
+        anchor=anchor,
+        outcome=outcome,
+        maximum_checkpoint_bytes=MAX_CHECKPOINT_BYTES,
     )
-    failed = (
-        outcome.integrity_status == "failed"
-        and bool(integrity_reasons)
-        and outcome.status
-        == (
-            "integrity_failed"
-            if outcome.cleanup_status == "complete"
-            else "integrity_and_cleanup_failed"
-        )
-    )
-    if not (verified or failed):
-        raise ValueError("checkpoint descriptor terminal state is inconsistent")
 
 
 def _observation_wrapper(
@@ -977,21 +731,6 @@ def _close_if_owned(
 
 def _hash(value: Any) -> str:
     return _checkpoint_canonical_sha256(value)
-
-
-def _path_free(value: Any) -> None:
-    if isinstance(value, Mapping):
-        for item in value.values():
-            _path_free(item)
-    elif isinstance(value, (tuple, list)):
-        for item in value:
-            _path_free(item)
-    elif isinstance(value, str) and (
-        value.startswith(("/", "~/", "../", "./"))
-        or "://" in value
-        or "\x00" in value
-    ):
-        raise ValueError("checkpoint lease evidence must be path-free")
 
 
 __all__ = [
