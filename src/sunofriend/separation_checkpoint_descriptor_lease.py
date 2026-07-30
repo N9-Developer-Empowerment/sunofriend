@@ -851,7 +851,16 @@ def _execute_reserved_fake_worker_under_lock(
                 checkpoint_descriptor=descriptor,
                 private_root=private_root,
             )
-            _remeasure(state)
+            try:
+                _remeasure(state)
+            except _IntegrityFailure as exc:
+                _terminal_failure(lease, state, (exc.reason,))
+            except Exception:
+                _terminal_failure(
+                    lease,
+                    state,
+                    ("checkpoint_descriptor_remeasurement_failed",),
+                )
         except BaseException as exc:
             primary_error = exc
         finally:
@@ -912,6 +921,7 @@ def _execute_reserved_fake_worker_under_lock(
                 receipt["status"] != "closed"
                 or receipt["cleanup"]["status"] != "complete"
             )
+            and primary_error is None
             and not cleanup_failures
         ):
             cleanup_failures.append(

@@ -710,6 +710,27 @@ must close before a success receipt is built. Every retained descriptor owner
 keeps an armed identity-checked finalizer. A known identity is rechecked before
 close, so descriptor-number reuse cannot close a foreign object.
 
+`_separation_fake_post_core_checkpoint_failure_records.py` is a separate,
+narrower pure boundary for a checkpoint mismatch detected immediately after
+the exactly reaped fixed worker returns an execution core. The parent
+remeasures the same retained lease-owned descriptor under the live lease lock;
+the lease normalizes an integrity mismatch into its failed terminal receipt.
+The inert path-free whole-run receipt requires exact request V1, fake launch
+V1, blocked launch V2, prepared launch V3, Result V2, native-success and failed
+lease cross-binding. It admits exactly one identity, byte-count or hash reason,
+requires that materialization never started, and records at most one cleanup
+event: a failed `private_root_descriptor_close`.
+
+The composer snapshots and validates the exact core and lease failure, purely
+prebuilds the no-cleanup and failed-root-cleanup receipts, then consumes the
+lease-issued one-use authority. A successful root close discards the owner; a
+failed strict close retains the exact armed owner. Replaying the composer
+cannot invoke that authenticated owner again. The receipt deliberately says
+that the child's checkpoint hash is a worker report and that a post-core
+mismatch proves neither the bytes executed nor whether deserialization
+occurred. It is historical after descriptor close and cannot exclude
+transient changes outside the observed stat/hash windows.
+
 Pre-owner failure without a provable descriptor identity, evidence-snapshot
 failure and failure-receipt sealing failure remain receipt-less. These
 catastrophic aggregates preserve the primary, cleanup errors and any safe
@@ -724,9 +745,12 @@ path-free whole-run receipts. They bind terminal lease evidence, the original
 native observation, the primary stage and every ordered cleanup stage; the
 no-start form contains no child, wait, signal or worker-result claim.
 Unproven start/reap and pre-owner, evidence-snapshot or sealing catastrophes
-remain receipt-less. Runtime/worker path-to-exec TOCTOU, checkpoint mutation
-after core transfer and the remaining adversarial ownership/replay matrix keep
-the non-bypassable deterministic transport checklist item open.
+remain receipt-less. Immediate post-core checkpoint mutation has a disjoint
+receipt, but release-window mutation, mutation combined with bridge-finish
+failure, checkpoint integrity combined with checkpoint-lease descriptor
+cleanup or terminalization failure, runtime/worker path-to-exec TOCTOU and the
+remaining adversarial ownership, inheritability, I/O, authority and replay
+matrix keep the non-bypassable deterministic transport checklist item open.
 
 The private lease-side groundwork records cleanup stages in observation order
 and attaches the validated checkpoint-lease terminal receipt when available.

@@ -646,6 +646,27 @@ evidence core is snapshotted before root cleanup, and the root is closed before
 success receipt construction. No failure receipt permits publication or
 selection.
 
+The next bounded failure slice covers one earlier boundary without widening
+that post-lease schema. Immediately after a successful, exactly reaped fake
+worker returns its execution core, the parent remeasures the same live
+lease-owned checkpoint descriptor while the lease lock is still held. One
+identity, byte-count or hash mismatch terminalizes the lease and can produce
+the disjoint
+`sunofriend.separation-fake-post-core-checkpoint-failure.v1` receipt. That
+inert, path-free receipt cross-binds the complete fake request/V1/blocked
+V2/prepared V3/Result V2 chain, exact native-success observation and exact
+failed lease receipt. It requires exactly one admitted integrity reason, no
+materialization, and either no cleanup event or one failed
+`private_root_descriptor_close`; authenticated root cleanup is prevalidated
+for both outcomes and cannot be replayed. A failed strict close retains the
+exact armed owner.
+
+This receipt is historical failure evidence, not checkpoint-execution proof.
+The child hash remains a worker report, the post-core mismatch cannot identify
+which checkpoint bytes were executed or deserialized, transient mutation
+outside the observed stat/hash windows is not excluded, and later mutation
+after descriptor close cannot change or invalidate an already sealed receipt.
+
 Failures before an exact descriptor backstop can be armed, evidence-snapshot
 failure and failure-receipt sealing failure remain explicitly receipt-less.
 They preserve the exact owners and errors that are still safe to retain. When
@@ -664,9 +685,13 @@ Each binds its native observation, the terminal checkpoint lease, the original
 primary stage and every observed cleanup stage in order. The no-start receipt
 makes no child, wait, signal or worker-result claim. Unproven start/reap and
 pre-owner, evidence-snapshot or receipt-seal catastrophes remain receipt-less.
-Checkpoint mutation after core transfer, runtime/worker path-to-exec TOCTOU,
-the remaining catastrophic ownership boundaries and the wider replay matrix
-are still required before the gate can close.
+Immediate post-core checkpoint mutation now has its own conservative receipt.
+Mutation in the later reservation-release window, mutation combined with
+bridge-finish failure, checkpoint integrity combined with checkpoint-lease
+descriptor-cleanup or terminalization failure, runtime/worker path-to-exec
+TOCTOU and the remaining catastrophic ownership, inheritability, I/O and
+authority boundaries are still receipt-less. Those boundaries and the wider
+replay matrix keep the gate open.
 
 As failure-receipt groundwork, the private lease bridge now records cleanup
 stages in observed order and carries a validated terminal lease receipt when

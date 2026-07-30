@@ -114,10 +114,24 @@ report the result, then move on.
   LIFO, then the quarantine directory and private root, snapshots exact
   evidence before root cleanup and closes the root before building success
   evidence. Known descriptor identities are rechecked before close so
-  FD-number reuse cannot close an unrelated object. Pre-owner failures without
-  exact identity, evidence-snapshot failures and failure-seal catastrophes
-  remain receipt-less with safe owners/errors retained, so the non-bypassable
-  fake transport gate is not complete. Private failure
+  FD-number reuse cannot close an unrelated object. One earlier boundary also
+  has a separate narrow receipt: immediately after exact worker reap, the
+  parent remeasures the same live lease-owned checkpoint descriptor under the
+  lease lock. Exactly one admitted identity, byte-count or hash mismatch can
+  seal a path-free inert post-core receipt that cross-binds the complete
+  request/launch/result chain, exact native success and exact failed lease,
+  while proving that materialization never started. Its authenticated root
+  cleanup is one-use and records either no cleanup event or one failed strict
+  root close; a close failure retains the exact armed owner. The child hash
+  remains a worker report: this mismatch does not prove which checkpoint bytes
+  were executed or deserialized, exclude transient mutation outside observed
+  windows or prove immutability after descriptor close. Pre-owner failures
+  without exact identity, evidence-snapshot failures, failure-seal
+  catastrophes, later reservation-release-window mutation, mutation combined
+  with bridge-finish failure, and checkpoint integrity combined with
+  checkpoint-lease descriptor cleanup or terminalization failure remain
+  receipt-less with safe owners/errors retained, so the non-bypassable fake
+  transport gate is not complete. Private failure
   machinery keeps lease
   cleanup stages in observed order, carries a validated lease terminal receipt
   when available, authenticates receipt composition with a lease-issued
@@ -150,8 +164,9 @@ report the result, then move on.
   execution flag remains false, and no CLI/TUI separator, publication or
   selection route is exposed. Because runtime-exec and worker-script path
   TOCTOU remain open, this slice does not prove that the exact measured
-  runtime/worker bytes were the bytes executed. Child signal-state observation
-  and possible failure of the bounded emergency
+  runtime/worker bytes were the bytes executed. Later release-window mutation,
+  broader descriptor ownership/inheritability/I/O/authority failures, child
+  signal-state observation and possible failure of the bounded emergency
   fallback to prove reap remain explicit limitations. Real separation execution is
   still disabled.
 - `source-import` decodes exactly one local asset.

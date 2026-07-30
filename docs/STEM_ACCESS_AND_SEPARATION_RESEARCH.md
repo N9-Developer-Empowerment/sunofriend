@@ -8,13 +8,17 @@ exact physical source FDs 3/4/5 plus representative low, mixed-collision and
 scratch-collision/near-limit layouts. The native call now returns a
 preallocated exact-child owner rather than a bare PID. Deterministic fake
 execution now has a private successful-path proof plus disjoint exact-reap and
-proven-no-start whole-run failure receipts; unproven and post-materialization
-failures plus the remaining adversarial matrix are incomplete. Exhaustive
-arbitrary source-FD proof, path-TOCTOU closure, guaranteed emergency-finalizer
-reap, live child-signal-state proof, real source separation, hidden evaluation
-and promotion are not implemented**
+proven-no-start whole-run failure receipts, an ordinary post-lease failure
+receipt and a narrow immediate post-core checkpoint-integrity receipt.
+Unproven start/reap, later release-window mutation, checkpoint integrity
+combined with checkpoint-lease descriptor-cleanup/terminalization failure and
+the remaining adversarial matrix are incomplete. Exhaustive arbitrary
+source-FD proof, path-TOCTOU
+closure, guaranteed emergency-finalizer reap, live child-signal-state proof,
+public or real source separation, hidden evaluation and promotion are not
+implemented**
 
-Checked: 30 July 2026
+Checked: 30 July 2026 after the post-core checkpoint-integrity receipt
 
 ## Contents
 
@@ -610,6 +614,23 @@ identity is checked before close, including an adversarial replacement-FD
 case. If identity cannot be proven, or evidence snapshot/failure sealing
 breaks, the outcome remains receipt-less and retains safe recovery state.
 
+The next disjoint record covers an integrity mismatch at the immediate
+post-core boundary. After the fixed worker succeeds and is exactly reaped, the
+parent remeasures the same retained checkpoint descriptor under the live lease
+lock before any materialization begins. Exactly one admitted identity,
+byte-count or hash reason can seal
+`sunofriend.separation-fake-post-core-checkpoint-failure.v1`, cross-bound to
+the complete fake request/launch/result chain, exact native-success
+observation and exact failed lease receipt. Authenticated root cleanup is
+prebuilt for both possible outcomes, consumed once and recorded as either no
+cleanup event or one failed `private_root_descriptor_close`; failed cleanup
+retains the armed owner.
+
+This is inert historical evidence. It does not turn the child's hash report
+into parent proof of the bytes executed or deserialized, exclude transient
+changes outside the observed windows, or prove continued immutability after
+descriptor close.
+
 Private lease orchestration preserves its first primary error and all observed
 cleanup errors instead of silently discarding secondary failures. Exact-reap
 native failures, exact setup or `posix_spawn` no-start outcomes and ordinary
@@ -617,9 +638,11 @@ code-owned post-lease failures can now be converted with terminal lease
 evidence into separate path-free whole-run receipts. The no-start receipt
 asserts no child, wait, signal or worker result. Unproven start/reap and
 pre-owner, snapshot or seal catastrophes remain uncovered. Runtime/worker
-path-to-exec TOCTOU, checkpoint mutation after core transfer and the remaining
-adversarial ownership/replay cases therefore keep the
-non-bypassable-transport checklist item open.
+path-to-exec TOCTOU, mutation in the later reservation-release window,
+mutation combined with bridge-finish failure, checkpoint-lease descriptor
+cleanup or terminalization failure during checkpoint-integrity handling, and
+the remaining adversarial ownership, inheritability, I/O, authority and replay
+cases therefore keep the non-bypassable-transport checklist item open.
 
 The first failure-evidence increment now labels lease cleanup failures in
 observed order and retains a validated terminal lease receipt when available.
@@ -1563,11 +1586,11 @@ Likely modules:
 
 ### S3 — Separation bake-off harness
 
-Status: **contract, blocked-execution groundwork, a fresh private Darwin
-build/provenance slice, test-only live descriptor-canary slice and private
-verified-import session
-implemented; deterministic fake transport, isolated real runner/backends and
-bake-off execution not implemented**
+Status: **contract, blocked public-execution groundwork, a fresh private
+Darwin build/provenance slice, test-only live descriptor canaries, private
+verified-import session and private deterministic-fixture transport success
+and failure evidence implemented; public separator transport, isolated real
+runner/backends and bake-off execution not implemented**
 
 - [x] Add a pure backend-neutral `SeparationBackend` contract plus immutable
   request/result DTOs and strict versioned separation-run receipts.
@@ -1657,6 +1680,9 @@ bake-off execution not implemented**
 - [x] Add a distinct Result V2 quarantine verifier that revalidates the exact
   record chain and observes an owner-only descriptor tree without creating
   files or adapting V2 evidence into the historical V1 wrapper.
+- [x] Add a disjoint inert whole-run receipt for an immediate post-core
+  checkpoint identity, byte-count or hash mismatch, with exact failed-lease
+  binding and one-use authenticated root cleanup.
 - [ ] Remove or explicitly confine extension/runtime/worker path TOCTOU, and
   make the clean outer-supervisor and child signal-state boundaries
   independently observable.
