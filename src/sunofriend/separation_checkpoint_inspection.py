@@ -17,7 +17,6 @@ module authorizes loading or execution.
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 import pickletools
 import re
@@ -27,9 +26,14 @@ import unicodedata
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
-from types import MappingProxyType
 from typing import Any, BinaryIO, Mapping, Sequence
 
+from ._separation_checkpoint_canonical import (
+    canonical_json_bytes as _checkpoint_canonical_json_bytes,
+    canonical_sha256 as _checkpoint_canonical_sha256,
+    deep_freeze as _freeze,
+    plain as _plain,
+)
 from .separation_worker_contract import (
     SeparationRuntimeArtifactIdentity,
     validate_separation_worker_request,
@@ -1919,7 +1923,10 @@ def _json_object(value: Any, label: str) -> dict[str, Any]:
 
 
 def _hash(value: Any) -> str:
-    return hashlib.sha256(_canonical_json(value)).hexdigest()
+    return _checkpoint_canonical_sha256(
+        value,
+        error_message="checkpoint inspection is not canonical JSON",
+    )
 
 
 def _sha_text(value: str) -> str:
@@ -1927,34 +1934,10 @@ def _sha_text(value: str) -> str:
 
 
 def _canonical_json(value: Any) -> bytes:
-    try:
-        return json.dumps(
-            value,
-            sort_keys=True,
-            separators=(",", ":"),
-            ensure_ascii=True,
-            allow_nan=False,
-        ).encode("ascii")
-    except (TypeError, ValueError) as exc:
-        raise ValueError("checkpoint inspection is not canonical JSON") from exc
-
-
-def _plain(value: Any) -> Any:
-    if isinstance(value, Mapping):
-        return {key: _plain(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_plain(item) for item in value]
-    return value
-
-
-def _freeze(value: Any) -> Any:
-    if isinstance(value, dict):
-        return MappingProxyType(
-            {key: _freeze(item) for key, item in value.items()}
-        )
-    if isinstance(value, list):
-        return tuple(_freeze(item) for item in value)
-    return value
+    return _checkpoint_canonical_json_bytes(
+        value,
+        error_message="checkpoint inspection is not canonical JSON",
+    )
 
 
 def _path_free(value: Any, label: str) -> None:

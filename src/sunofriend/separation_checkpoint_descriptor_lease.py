@@ -12,14 +12,17 @@ duplicates, inherits, hands off, deserializes or executes it.
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 import threading
 import weakref
 from dataclasses import dataclass
-from types import MappingProxyType
 from typing import Any, Mapping, Sequence
 
+from ._separation_checkpoint_canonical import (
+    canonical_sha256 as _checkpoint_canonical_sha256,
+    deep_freeze as _freeze,
+    plain as _plain,
+)
 from .separation_checkpoint_inspection import (
     MAX_CHECKPOINT_BYTES,
     SeparationCheckpointInspection,
@@ -973,33 +976,7 @@ def _close_if_owned(
 
 
 def _hash(value: Any) -> str:
-    return hashlib.sha256(
-        json.dumps(
-            value,
-            sort_keys=True,
-            separators=(",", ":"),
-            ensure_ascii=True,
-            allow_nan=False,
-        ).encode("ascii")
-    ).hexdigest()
-
-
-def _plain(value: Any) -> Any:
-    if isinstance(value, Mapping):
-        return {key: _plain(item) for key, item in value.items()}
-    if isinstance(value, (tuple, list)):
-        return [_plain(item) for item in value]
-    return value
-
-
-def _freeze(value: Any) -> Any:
-    if isinstance(value, dict):
-        return MappingProxyType(
-            {key: _freeze(item) for key, item in value.items()}
-        )
-    if isinstance(value, list):
-        return tuple(_freeze(item) for item in value)
-    return value
+    return _checkpoint_canonical_sha256(value)
 
 
 def _path_free(value: Any) -> None:
