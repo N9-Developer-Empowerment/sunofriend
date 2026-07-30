@@ -365,6 +365,33 @@ boundary must inherit the verified descriptor and bind the inspection into
 admission while keeping real execution disabled.
 `REAL_SEPARATION_EXECUTION_SUPPORTED` remains false.
 
+`separation_execution_admission_binding.py` is the eleventh internal S3
+boundary. It leaves the pure synthetic v1 admission and all v1 launch hashes
+untouched, then wraps one completely revalidated v1 record with the exact
+parent-observed checkpoint inspection. Authority requires the candidate and a
+separately retained trusted inspection to be the same object; class identity,
+canonical hashes and copied module-private tokens are not sufficient. This
+prevents a rehashed classification forgery from borrowing a valid inspection
+request.
+
+The v2 wrapper binds the v1 admission and checkpoint policy to inspection,
+classification, worker-request, preflight, acceptance and checkpoint hashes.
+A code-owned vocabulary map is required because inspection calls the exact
+HTDemucs artifact a `torch-zip-pickle-model-package` while policy calls the
+same load risk a `torch-pickle-model-package`. Only that static checkpoint
+observation is trusted. Runtime, isolation, output, resources, terms and
+loader reports remain synthetic, so the wrapper preserves every v1 blocker
+and adds descriptor-not-carried, path-to-loader-TOCTOU and
+static-inspection-not-load-authority. Its record is path-free, mixed-authority,
+blocked and not run; all operation effects are false.
+
+No inherited checkpoint descriptor is implemented. Launch v1 still contains
+only FDs 3 and 4 and retains a checkpoint path in the private request. A later
+v2 transport must use a live parent-owned lease over the same inspected FD,
+remove the child checkpoint path, install a read-only FD 5 atomically and bind
+child-side identity/hash evidence without changing any current capability to
+true.
+
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a
 starter ZIP. It does not create or mutate Workbench SQLite state. After

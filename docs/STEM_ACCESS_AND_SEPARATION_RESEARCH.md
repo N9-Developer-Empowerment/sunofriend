@@ -6,8 +6,8 @@ controlled-fake harness, acceptance pre-registration, bake-off preparation,
 backend-preflight, worker, runtime-artifact, read-only runtime measurement and
 non-spawning launch/lifecycle contracts plus blocked-only checkpoint and
 execution-admission scaffolding and descriptor-pinned static checkpoint
-inspection implemented; real source separation, hidden evaluation and
-promotion are not implemented**
+inspection plus trusted-inspection blocked-admission binding implemented; real
+source separation, hidden evaluation and promotion are not implemented**
 
 Checked: 29 July 2026
 
@@ -243,6 +243,31 @@ load, execution, network-API, audio, write, selection, publication, acceptance
 and promotion effect false. It cannot prove filesystem-mount locality and its
 open descriptor is not carried into a loader, so path-to-loader TOCTOU remains
 unresolved. This is not a runner, and real execution remains false.
+
+The eleventh S3 increment adds
+`sunofriend.separation-execution-admission-binding.v2` as a new pure wrapper;
+the existing v1 admission and launch schemas remain unchanged. It rebuilds the
+complete canonical v1 admission and validates the checkpoint inspection
+against a separately retained exact parent object. Requiring candidate and
+trusted inspection object identity prevents a caller from changing static
+classification evidence, rehashing it and copying the genuine record's
+private token/request into a forged exact-class object.
+
+The wrapper binds admission, policy, inspection, classification, worker,
+preflight, acceptance and checkpoint hashes through a fixed mapping between
+the inspection and checkpoint-policy container vocabularies. It does not
+upgrade the rest of the synthetic evidence: terms, loader, runtime closure,
+isolation, output and resource claims remain untrusted. Every v1 blocker is
+retained, and the wrapper adds explicit descriptor-not-carried,
+path-to-loader-TOCTOU and static-inspection-not-load-authority blockers. It
+performs no I/O and every capability/effect is false.
+
+This slice does not add FD 5 or claim the closed inspection descriptor is
+inherited. The next transport design requires a live parent-only descriptor
+lease, inspection and rehashing of that same descriptor, a child request with
+no checkpoint path, atomic read-only FD installation and child-side
+identity/hash evidence. In-place mutation of the retained inode remains a
+separate blocker until loading consumes a verified immutable snapshot.
 
 The first model execution increment should be a measured bake-off, not a hard-coded
 winner. HTDemucs, BS-RoFormer, MelBand-RoFormer and other systems are
@@ -1172,9 +1197,11 @@ implemented**
 - [x] Cross-bind a descriptor-pinned, bounded static checkpoint inspector to
   trusted acceptance, preflight, request and runtime-artifact authority
   without deserializing checkpoint bytes or authorizing a worker.
-- [ ] Bind the trusted static inspection into blocked execution admission and
-  revise launch/worker transport so a future loader can inherit the verified
-  checkpoint descriptor rather than reopen its path.
+- [x] Bind the trusted static inspection into a separate blocked v2 admission
+  wrapper while retaining every v1 blocker and every false capability.
+- [ ] Add a parent-owned live descriptor lease and revise launch/worker
+  transport so a future loader can inherit the same inspected checkpoint
+  descriptor rather than reopen its path.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with a
   deterministic fake worker, exact pre-exec remeasurement, validated worker
   result and parent-verified quarantined outputs before any real model is
@@ -1204,6 +1231,7 @@ Likely modules:
 - `separation_checkpoint_policy.py`
 - `separation_execution_admission.py`
 - `separation_checkpoint_inspection.py`
+- `separation_execution_admission_binding.py`
 
 ### S4 — Experimental broad separation in Studio
 

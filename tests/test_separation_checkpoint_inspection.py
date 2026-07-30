@@ -400,6 +400,7 @@ def test_inspection_and_validated_copy_are_deeply_immutable_and_hash_bound(
     result = _inspect(fixture)
     validated = validate_separation_checkpoint_inspection(
         result,
+        trusted_inspection=result,
         trusted_request=fixture["trusted_request"],
     )
 
@@ -424,9 +425,10 @@ def test_serialized_mappings_and_forged_records_have_no_authority(
     fixture = _fixture(tmp_path, _torch_zip())
     result = _inspect(fixture)
 
-    with pytest.raises(ValueError, match="exact parent-issued record"):
+    with pytest.raises(ValueError, match="exact trusted parent observation"):
         validate_separation_checkpoint_inspection(
             _plain(result),  # type: ignore[arg-type]
+            trusted_inspection=result,
             trusted_request=fixture["trusted_request"],
         )
     forged = object.__new__(SeparationCheckpointInspectionRequest)
@@ -497,9 +499,10 @@ def test_validator_rejects_rehashed_binding_and_identity_tampering(
         result._authority,  # noqa: SLF001
     )
 
-    with pytest.raises(ValueError, match="bind parent request"):
+    with pytest.raises(ValueError, match="exact trusted parent observation"):
         validate_separation_checkpoint_inspection(
             forged,
+            trusted_inspection=result,
             trusted_request=fixture["trusted_request"],
         )
 

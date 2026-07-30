@@ -46,11 +46,12 @@ report the result, then move on.
 - Use only music the user owns or is authorised to process.
 - Sunofriend does not download songs or separate a full mix into stems.
 - The backend-neutral S3 separation contracts, controlled-fake harness,
-  blocked-only checkpoint/admission records and private static checkpoint
-  inspector are engineering groundwork, not a usable separator, model
-  installation or finished-song command. The inspector reads and classifies
-  exact local checkpoint bytes without loading a model; real separation
-  execution remains disabled.
+  blocked-only checkpoint/admission records, private static checkpoint
+  inspector and trusted-inspection admission binding are engineering
+  groundwork, not a usable separator, model installation or finished-song
+  command. The inspector reads and classifies exact local checkpoint bytes
+  without loading a model; the binding deliberately preserves every execution
+  blocker, and real separation execution remains disabled.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one
   canonical WAV project. It does not separate, shift, pad, stretch, normalize

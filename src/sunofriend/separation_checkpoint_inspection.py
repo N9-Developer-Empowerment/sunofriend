@@ -388,18 +388,35 @@ def inspect_separation_checkpoint(
 def validate_separation_checkpoint_inspection(
     value: SeparationCheckpointInspection,
     *,
+    trusted_inspection: SeparationCheckpointInspection,
     trusted_request: SeparationCheckpointInspectionRequest,
 ) -> SeparationCheckpointInspection:
-    """Validate one already-issued immutable inspection without rereading."""
+    """Validate an inspection against a separately trusted parent record.
+
+    Exact object identity is intentional.  A caller can construct an exact
+    Python type and copy module-private token values from a genuine record, so
+    the candidate cannot declare itself to be the trusted observation.
+    """
 
     request = _issued_request(trusted_request)
-    if type(value) is not SeparationCheckpointInspection:
-        raise ValueError("inspection must be an exact parent-issued record")
-    if getattr(value, "_authority", None) is not _INSPECTION_AUTHORITY:
-        raise ValueError("inspection lacks parent observation authority")
-    if value._request is not request:
-        raise ValueError("inspection does not bind the exact parent request")
-    return _new_inspection(_plain(value), request)
+    if type(trusted_inspection) is not SeparationCheckpointInspection:
+        raise ValueError(
+            "trusted inspection must be an exact parent-issued record"
+        )
+    if getattr(trusted_inspection, "_authority", None) is not (
+        _INSPECTION_AUTHORITY
+    ):
+        raise ValueError("trusted inspection lacks parent observation authority")
+    if trusted_inspection._request is not request:
+        raise ValueError(
+            "trusted inspection does not bind the exact parent request"
+        )
+    _new_inspection(_plain(trusted_inspection), request)
+    if value is not trusted_inspection:
+        raise ValueError(
+            "inspection must be the exact trusted parent observation"
+        )
+    return trusted_inspection
 
 
 def separation_checkpoint_inspection_sha256(

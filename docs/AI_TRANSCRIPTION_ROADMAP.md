@@ -321,6 +321,35 @@ transport revision that inherits the already-verified checkpoint descriptor
 and cross-binds this inspection into blocked admission without enabling a real
 separator. Real separation execution remains literally false.
 
+The eleventh S3 slice adds the pure
+`sunofriend.separation-execution-admission-binding.v2` wrapper without
+changing the existing v1 admission or launch schemas. It recomputes the
+complete canonical blocked v1 admission, then requires both the candidate
+checkpoint inspection and the separately retained exact parent-issued
+inspection object. This exact-object anchor closes the copied-authority-token
+gap found during adversarial review: an exact-class record with changed
+classification fields, a recomputed hash and copied private attributes cannot
+declare itself trusted.
+
+The wrapper cross-binds admission, checkpoint-policy, inspection,
+classification, worker-request, preflight, acceptance and checkpoint hashes.
+A fixed code-owned map translates the inspector's
+`torch-zip-pickle-model-package` to the policy's
+`torch-pickle-model-package` and `unknown` to `uninspected`. Only checkpoint
+identity and static classification have parent-observation authority; terms,
+loader, runtime closure, isolation, output and resource evidence remain
+synthetic. Every v1 blocker is retained, and descriptor-not-carried,
+path-to-loader-TOCTOU and static-inspection-not-load-authority blockers are
+added. All effects and capabilities remain false.
+
+Launch v1 is intentionally unchanged and still passes only request/result
+descriptors 3 and 4. A future transport slice needs a parent-owned,
+non-copyable live checkpoint-descriptor lease, same-descriptor inspection and
+rehashing, a path-free worker-request v2 and a launch v2 that installs a
+read-only checkpoint as worker descriptor 5. It must also retain an in-place
+mutation blocker until the child loads one verified immutable byte snapshot.
+No such descriptor transport or worker exists yet.
+
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
 transcriber. They need independent lineage, model/checkpoint licensing,
