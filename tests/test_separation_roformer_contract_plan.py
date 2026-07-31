@@ -27,6 +27,9 @@ def test_roformer_contract_reuses_bounded_non_authorising_safety_schemas() -> No
     inspection = plan["checkpoint_inspection"]
     worker = plan["worker"]
     assert plan["status"] == "defined_not_implemented"
+    assert plan["source_boundary"]["fixed_files"] == 3
+    assert plan["source_boundary"]["verified_checkout_present"] is False
+    assert plan["source_boundary"]["model_import_permitted_by_verification"] is False
     assert inspection["schema"] == SEPARATION_CHECKPOINT_INSPECTION_SCHEMA
     assert inspection["limits"]["checkpoint_bytes"] == MAX_CHECKPOINT_BYTES
     assert inspection["published_checkpoint_within_byte_limit"] is True

@@ -17,6 +17,10 @@ from typing import Any
 from ._separation_roformer_contract_plan import (
     _build_private_roformer_contract_plan,
 )
+from ._separation_roformer_source import (
+    SOURCE_MANIFEST,
+    SOURCE_MANIFEST_SHA256,
+)
 
 
 PLAN_SCHEMA = "sunofriend.private-roformer-challenger-plan.v1"
@@ -116,6 +120,13 @@ def _build_private_roformer_challenger_plan(
             "license_added_revision": LICENSE_ADDED_REVISION,
             "license_sha256_at_release": LICENSE_SHA256_AT_RELEASE,
             "code_identity_pinned": True,
+            "runtime_source_manifest": {
+                "path": SOURCE_MANIFEST,
+                "sha256": SOURCE_MANIFEST_SHA256,
+                "fixed_files": 3,
+                "local_tree_verified": False,
+                "model_import_permitted": False,
+            },
         },
         "config": {
             "release_asset_id": CONFIG_ASSET_ID,

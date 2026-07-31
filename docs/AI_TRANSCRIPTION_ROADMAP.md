@@ -1818,6 +1818,18 @@ safety contracts already used by private separation development, not a new
 RoFormer worker: no candidate checkpoint has been inspected and no runner has
 been implemented.
 
+The two-module source boundary is now independently enforceable. A tracked
+manifest binds `attend.py` at SHA-256
+`0459d799ade55541df2994b0becf7aec12214491360c5a06e346f6d615eaed15`,
+`bs_roformer.py` at
+`93408c7254c60c48e47be0657a64745065396b0b1c6da4e02c75aca57eb62bf3`
+and the release MIT licence at
+`3282dc057695ef5b9a64909a7092ca40b2c292c232580fc6ace6e5d665cc0207`.
+The read-only verifier passed on the exact temporary release checkout while
+making no imports, writes, network calls or process launches. A future worker
+must repeat that check on its own source tree; the current plan does not claim
+that a durable runtime checkout exists.
+
 ### 2026-07-31 — Second authorised separation-to-MIDI repeat
 
 - Goal: test whether the first real-song observations repeat on different

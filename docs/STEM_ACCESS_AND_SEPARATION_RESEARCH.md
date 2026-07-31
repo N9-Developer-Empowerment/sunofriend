@@ -1987,6 +1987,10 @@ promotion are not implemented**
   exact-version licence evidence suitable for private local evaluation;
   redistribution notices remain a later product concern. Do not infer weight
   permission from the repository's MIT code licence.
+- [x] Pin the future RoFormer adapter to exact source bytes rather than a broad
+  checkout. The fixed manifest and descriptor-based verifier cover only the
+  two required BS-RoFormer modules and the MIT licence; the verifier passed on
+  the exact temporary `v1.0.12` checkout without importing or executing code.
 - [ ] Consider a deterministic role-specific ensemble only after its members
   have separate held-out evidence; never infer a winner from popularity or a
   model-runner catalogue.

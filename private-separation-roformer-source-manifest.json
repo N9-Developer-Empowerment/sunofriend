@@ -1,0 +1,52 @@
+{
+  "schema": "sunofriend.private-roformer-source-manifest.v1",
+  "repository": "https://github.com/ZFTurbo/Music-Source-Separation-Training",
+  "release_tag": "v1.0.12",
+  "revision": "aef04b2e52fb3beaf25e333199f5a7236e628e7b",
+  "runtime_boundary": "exact two-module BS-RoFormer loader",
+  "package_initializer_permitted": false,
+  "model_import_permitted_by_manifest": false,
+  "files": [
+    {
+      "path": "LICENSE",
+      "kind": "license",
+      "bytes": 1081,
+      "sha256": "3282dc057695ef5b9a64909a7092ca40b2c292c232580fc6ace6e5d665cc0207",
+      "license": "MIT"
+    },
+    {
+      "path": "models/bs_roformer/attend.py",
+      "kind": "runtime_module",
+      "bytes": 3681,
+      "sha256": "0459d799ade55541df2994b0becf7aec12214491360c5a06e346f6d615eaed15",
+      "direct_import_roots": [
+        "collections",
+        "einops",
+        "functools",
+        "os",
+        "packaging",
+        "torch"
+      ]
+    },
+    {
+      "path": "models/bs_roformer/bs_roformer.py",
+      "kind": "runtime_module",
+      "bytes": 18561,
+      "sha256": "93408c7254c60c48e47be0657a64745065396b0b1c6da4e02c75aca57eb62bf3",
+      "direct_import_roots": [
+        "beartype",
+        "einops",
+        "functools",
+        "models",
+        "rotary_embedding_torch",
+        "torch"
+      ]
+    }
+  ],
+  "excluded_runtime_files": [
+    "models/bs_roformer/__init__.py",
+    "models/bs_roformer/mel_band_roformer.py",
+    "inference.py",
+    "utils.py"
+  ]
+}

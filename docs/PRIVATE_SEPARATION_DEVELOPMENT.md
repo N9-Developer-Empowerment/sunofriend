@@ -649,6 +649,23 @@ private quarantine, denied network and child processes, and parent-verified
 WAV hashes, geometry and source horizon. The contract is defined; it has not
 been applied to this checkpoint, and the RoFormer worker does not exist.
 
+The future isolated loader also has an exact source manifest rather than a
+trust-on-path boundary. `private-separation-roformer-source-manifest.json`
+records the sizes, SHA-256 values and direct imports of only `attend.py` and
+`bs_roformer.py`, plus the exact MIT licence bytes at the pinned release
+revision. Inspect an already-present source checkout with:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/private-roformer-source.py \
+  --source-tree /absolute/path/to/exact-v1.0.12-checkout
+```
+
+The verifier walks only fixed directory components with non-following,
+non-inheritable descriptors and hashes three regular files. It does not invoke
+Git, trust a mutable revision label, execute `__init__.py`, import the model or
+write a report. It passed against the temporary exact release checkout used for
+the source audit. The future runtime must independently pass it again.
+
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
 resource, downstream-MIDI and human listening acceptance.

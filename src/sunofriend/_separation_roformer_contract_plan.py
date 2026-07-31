@@ -9,6 +9,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from ._separation_roformer_source import (
+    SOURCE_MANIFEST,
+    SOURCE_MANIFEST_SHA256,
+    SOURCE_REVISION,
+)
 from .separation_checkpoint_inspection import (
     CHECKPOINT_STATIC_INSPECTION_EXECUTION_SUPPORTED,
     MAX_CHECKPOINT_BYTES,
@@ -39,6 +44,21 @@ def _build_private_roformer_contract_plan(*, checkpoint_bytes: int) -> dict[str,
         "contract_id": ROFORMER_CONTRACT_PLAN_ID,
         "status": "defined_not_implemented",
         "read_only": True,
+        "source_boundary": {
+            "implementation": (
+                "sunofriend._separation_roformer_source."
+                "_verify_private_roformer_source_tree"
+            ),
+            "revision": SOURCE_REVISION,
+            "manifest": {
+                "path": SOURCE_MANIFEST,
+                "sha256": SOURCE_MANIFEST_SHA256,
+            },
+            "fixed_files": 3,
+            "package_initializer_permitted": False,
+            "model_import_permitted_by_verification": False,
+            "verified_checkout_present": False,
+        },
         "checkpoint_inspection": {
             "implementation": (
                 "sunofriend.separation_checkpoint_inspection."
@@ -114,6 +134,8 @@ def _build_private_roformer_contract_plan(*, checkpoint_bytes: int) -> dict[str,
             "execution_permitted": False,
         },
         "readiness": {
+            "exact_source_manifest_defined": True,
+            "source_tree_verified": False,
             "checkpoint_inspection_contract_defined": True,
             "worker_request_result_contract_defined": True,
             "candidate_static_inspection_completed": False,
