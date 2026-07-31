@@ -1981,9 +1981,10 @@ promotion are not implemented**
   a tested no-network plan. The plan correctly remains `blocked`/`not_run`.
 - [ ] Before any RoFormer download or installation, obtain checkpoint-specific
   allowed-use evidence and an independently verifiable official checkpoint
-  SHA-256, create an exact Apple-silicon dependency lock, add bounded static
-  inspection and worker contracts, and request separate approval. Do not infer
-  weight permission from the repository's MIT code licence.
+  SHA-256, audit every package licence in the completed exact Apple-silicon
+  wheel/hash lock, add bounded static inspection and worker contracts, and
+  request separate approval. Do not infer weight permission from the
+  repository's MIT code licence.
 - [ ] Consider a deterministic role-specific ensemble only after its members
   have separate held-out evidence; never infer a winner from popularity or a
   model-runner catalogue.

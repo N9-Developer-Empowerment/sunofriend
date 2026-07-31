@@ -39,6 +39,15 @@ CHECKPOINT_NAME = "model_bs_roformer_ep_17_sdr_9.6568.ckpt"
 CHECKPOINT_BYTES = 527_385_512
 CHECKPOINT_URL = f"{REPOSITORY}/releases/download/{RELEASE_TAG}/{CHECKPOINT_NAME}"
 
+RUNTIME_DEPENDENCY_INPUT = "requirements-private-separation-roformer-macos.in"
+RUNTIME_DEPENDENCY_INPUT_SHA256 = (
+    "034bef56d62aebee8f0d41d61d8192928eb4430366acd38ee43964e519d1b619"
+)
+RUNTIME_DEPENDENCY_LOCK = "requirements-private-separation-roformer-macos.txt"
+RUNTIME_DEPENDENCY_LOCK_SHA256 = (
+    "f757e96989fa1c2ea8085546cb6ad19f29a5ab2cf55a2cc495d1cd9056ec1610"
+)
+
 _BLOCKERS = (
     "apple_runtime_resource_bounds_unmeasured",
     "checkpoint_allowed_use_unverified",
@@ -46,7 +55,7 @@ _BLOCKERS = (
     "checkpoint_static_inspection_not_completed",
     "checkpoint_terms_unverified",
     "explicit_private_evaluation_approval_missing",
-    "runtime_dependency_lock_missing",
+    "runtime_dependency_licenses_unverified",
     "runtime_worker_not_implemented",
 )
 
@@ -130,12 +139,45 @@ def _build_private_roformer_challenger_plan(
             "local_observation": local_checkpoint,
         },
         "runtime": {
-            "environment": "separate private AI worker environment",
+            "environment": "fresh .venv-roformer-private after separate approval",
+            "existing_ai_environment_may_be_modified": False,
             "source_revision_pinned": True,
             "dependency_requirements_sha256_at_release": (
                 "cd957de7a9f89c85488560ddd1f8c233602212f75728bdccc50ffd67806050fc"
             ),
-            "dependency_versions_fully_pinned": False,
+            "upstream_broad_requirements_used_for_install": False,
+            "adapter_boundary": (
+                "exact BS-RoFormer model modules plus a future bounded "
+                "Sunofriend inference adapter"
+            ),
+            "excluded_dependency_groups": [
+                "training",
+                "GUI",
+                "experiment tracking",
+                "other separator architectures",
+                "optional validation metrics",
+                "upstream broad inference utility",
+            ],
+            "dependency_input": {
+                "path": RUNTIME_DEPENDENCY_INPUT,
+                "sha256": RUNTIME_DEPENDENCY_INPUT_SHA256,
+                "direct_packages": 8,
+            },
+            "dependency_lock": {
+                "path": RUNTIME_DEPENDENCY_LOCK,
+                "sha256": RUNTIME_DEPENDENCY_LOCK_SHA256,
+                "resolved_packages": 38,
+                "versions_fully_pinned": True,
+                "distribution_hashes_required": True,
+                "binary_distributions_only": True,
+                "resolver": "uv",
+                "resolution_python": "CPython 3.12.10",
+                "resolution_platform": "this Darwin arm64 Mac",
+                "minimum_macos_observed_for_torch_wheel": "14.0",
+                "dry_run_resolved": True,
+                "installed": False,
+            },
+            "dependency_licenses_verified": False,
             "installation_command": None,
             "installation_permitted": False,
             "network_destinations_if_later_approved": [
@@ -177,7 +219,7 @@ def _build_private_roformer_challenger_plan(
             "next_safe_actions": [
                 "obtain checkpoint-specific terms or an explicit upstream clarification",
                 "obtain and independently verify a published checkpoint SHA-256",
-                "build an exact Apple-silicon dependency lock without installing it",
+                "audit every package licence in the exact Apple-silicon lock",
                 "define static checkpoint inspection and bounded worker contracts",
                 "request separate approval only after every preceding blocker closes",
             ],

@@ -1794,10 +1794,13 @@ sizes, exact configuration SHA-256 and fixed roles. A read-only command records
 the planned comparison against the sealed Demucs excerpts and makes no network,
 installation, import, deserialisation, worker or product-surface change. It
 fails closed because the release does not publish a checkpoint SHA-256 or
-checkpoint-specific allowed-use terms, its dependencies are not exactly
-locked for Apple silicon, and static-inspection/resource/worker contracts are
-not yet complete. No download or approval request is appropriate until those
-preconditions close.
+checkpoint-specific allowed-use terms, and static-inspection/resource/worker
+contracts are not yet complete. The broad upstream requirements were reduced
+to the actual model-module import surface; a 38-package, wheel-only,
+version-and-hash lock now resolves for CPython 3.12.10 on this Darwin arm64 Mac
+without installation. It is reserved for a fresh environment, not `.venv-ai`,
+and every package licence still needs audit. No download or approval request is
+appropriate until those preconditions close.
 
 ### 2026-07-31 — Second authorised separation-to-MIDI repeat
 

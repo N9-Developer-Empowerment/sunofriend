@@ -601,11 +601,29 @@ the candidate eligible by itself.
 The plan remains `blocked`/`not_run`. The repository's MIT licence covers its
 software and associated documentation, but the release does not state
 checkpoint-specific terms and Sunofriend does not project the code licence
-onto the weights. The checkpoint hash is unpublished, the release dependency
-file is not an exact reproducible lock, Apple-silicon resource behaviour is
-unmeasured, and static checkpoint inspection plus a bounded worker do not yet
-exist. No package or checkpoint was installed, no new approval was inferred,
-and no CLI, TUI, Simple, Studio, source-graph or public route was added.
+onto the weights. The checkpoint hash is unpublished, Apple-silicon resource
+behaviour is unmeasured, and static checkpoint inspection plus a bounded worker
+do not yet exist. No package or checkpoint was installed, no new approval was
+inferred, and no CLI, TUI, Simple, Studio, source-graph or public route was
+added.
+
+The exact source import audit also found that upstream's broad inference
+utility imports configuration and metric dependencies that the BS-RoFormer
+model itself does not need. Its pinned OmegaConf path requires an sdist-only
+ANTLR runtime, while the full requirements also include training, GUI,
+experiment-tracking and unrelated architecture packages. Sunofriend therefore
+does not use that requirements file as an installation plan.
+
+`requirements-private-separation-roformer-macos.in` now describes a future
+bounded adapter around only the exact model modules. A wheel-only `uv`
+resolution for CPython 3.12.10 on this Darwin arm64 Mac produced the fully
+pinned, hash-required 38-package
+`requirements-private-separation-roformer-macos.txt` lock at SHA-256
+`f757e96989fa1c2ea8085546cb6ad19f29a5ab2cf55a2cc495d1cd9056ec1610`.
+A dry run resolved successfully and changed no environment. The lock must
+target a fresh `.venv-roformer-private`, never the existing `.venv-ai`; it is
+still not approved for installation. Package-licence review remains open, and
+the selected PyTorch wheel requires macOS 14 or later.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
