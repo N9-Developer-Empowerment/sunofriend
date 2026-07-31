@@ -42,6 +42,8 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
     assert plan["safety_contract"]["readiness"] == {
         "exact_source_manifest_defined": True,
         "source_tree_verified": False,
+        "code_runtime_admission_implemented": True,
+        "code_runtime_admission_applied": False,
         "checkpoint_inspection_contract_defined": True,
         "worker_request_result_contract_defined": True,
         "candidate_static_inspection_completed": False,

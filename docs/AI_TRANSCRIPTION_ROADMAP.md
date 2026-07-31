@@ -1835,6 +1835,17 @@ checkpoint-specific terms. A future worker must repeat the source check on its
 own source tree; the current plan does not claim that a durable runtime
 checkout exists, that the checkpoint is approved or that it has been loaded.
 
+A separate private admission command now cross-binds that source verification
+to the exact source manifest, six-package input, 15-package wheel/hash lock and
+exact-version licence audit. It semantically verifies lock coverage and the
+audit's private-local-use, no-installation and no-checkpoint-terms findings,
+then emits a self-hashed path-free result. The result remains `blocked` and
+explicitly records false checkpoint-open, download, deserialisation, model-
+import, process and product-route effects. It closes only the code/runtime-plan
+integrity increment; checkpoint terms, a published checkpoint hash, static
+checkpoint inspection, runtime installation approval and the bounded worker
+remain open.
+
 ### 2026-07-31 — Second authorised separation-to-MIDI repeat
 
 - Goal: test whether the first real-song observations repeat on different

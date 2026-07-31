@@ -34,6 +34,8 @@ from .separation_worker_contract import (
 
 ROFORMER_CONTRACT_PLAN_SCHEMA = "sunofriend.private-roformer-safety-contract-plan.v1"
 ROFORMER_CONTRACT_PLAN_ID = "private-bs-roformer-four-stem-contract-v1"
+ROFORMER_ADMISSION_SCHEMA = "sunofriend.private-roformer-admission.v1"
+ROFORMER_ADMISSION_POLICY = "private-bs-roformer-code-runtime-admission-v1"
 
 
 def _build_private_roformer_contract_plan(*, checkpoint_bytes: int) -> dict[str, Any]:
@@ -58,6 +60,20 @@ def _build_private_roformer_contract_plan(*, checkpoint_bytes: int) -> dict[str,
             "package_initializer_permitted": False,
             "model_import_permitted_by_verification": False,
             "verified_checkout_present": False,
+        },
+        "code_runtime_admission": {
+            "implementation": (
+                "sunofriend._separation_roformer_admission."
+                "_build_private_roformer_admission"
+            ),
+            "schema": ROFORMER_ADMISSION_SCHEMA,
+            "policy": ROFORMER_ADMISSION_POLICY,
+            "path_free": True,
+            "implemented": True,
+            "applied_to_durable_runtime": False,
+            "authorizes_installation": False,
+            "authorizes_checkpoint_access": False,
+            "authorizes_execution": False,
         },
         "checkpoint_inspection": {
             "implementation": (
@@ -136,6 +152,8 @@ def _build_private_roformer_contract_plan(*, checkpoint_bytes: int) -> dict[str,
         "readiness": {
             "exact_source_manifest_defined": True,
             "source_tree_verified": False,
+            "code_runtime_admission_implemented": True,
+            "code_runtime_admission_applied": False,
             "checkpoint_inspection_contract_defined": True,
             "worker_request_result_contract_defined": True,
             "candidate_static_inspection_completed": False,

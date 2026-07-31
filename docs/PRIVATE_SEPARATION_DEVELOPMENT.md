@@ -672,6 +672,24 @@ label, execute `__init__.py`, import the model or write a report. It passed
 against the temporary exact release checkout used for the source audit. The
 future runtime must independently pass it again.
 
+The source and tracked runtime planning evidence can now be checked together:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/private-roformer-admission.py \
+  --repository-root /absolute/path/to/Sunofriend \
+  --source-tree /absolute/path/to/exact-v1.0.12-checkout
+```
+
+This read-only command descriptor-pins and verifies the source manifest,
+six-package input, 15-package hash lock and exact-version licence audit. It
+also checks that every direct package is in the lock, every locked package is
+covered by the licence evidence, the audit did not perform or authorise an
+installation, and checkpoint terms remain outside its scope. The self-hashed
+report deliberately omits both supplied absolute paths. A successful evidence
+check still returns `blocked`: it verifies only that the code and runtime plan
+are intact. It does not inspect or open a checkpoint, install the runtime,
+import model code, start a worker or make private evaluation eligible.
+
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
 resource, downstream-MIDI and human listening acceptance.

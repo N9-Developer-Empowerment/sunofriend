@@ -222,8 +222,11 @@ report the result, then move on.
   evaluation. A bounded static-inspection and four-role excerpt-worker contract
   is defined but has not been applied or implemented. Its future loader is
   pinned to exact hashes for two model modules and must bypass the upstream
-  package initializer. None of this approves installation or covers the
-  checkpoint. Do not offer or run it through this skill.
+  package initializer. A private read-only admission command can now bind an
+  exact source checkout to the four tracked runtime planning artifacts and
+  their package/licence relationships, but its result remains path-free,
+  `blocked` and non-authorising. None of this approves installation or covers
+  the checkpoint. Do not offer or run it through this skill.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one
   canonical WAV project. It does not separate, shift, pad, stretch, normalize
