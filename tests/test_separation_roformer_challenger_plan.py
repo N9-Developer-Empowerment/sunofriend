@@ -33,15 +33,22 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
     assert plan["checkpoint"]["published_sha256"] is None
     assert plan["checkpoint"]["download_permitted"] is False
     assert plan["runtime"]["installation_command"] is None
-    assert plan["runtime"]["dependency_lock"]["resolved_packages"] == 38
+    assert plan["runtime"]["dependency_lock"]["resolved_packages"] == 15
     assert plan["runtime"]["dependency_lock"]["installed"] is False
+    assert plan["runtime"]["dependency_license_audit"] == {
+        "path": roformer.RUNTIME_LICENSE_AUDIT,
+        "sha256": roformer.RUNTIME_LICENSE_AUDIT_SHA256,
+        "all_locked_packages_accounted_for": True,
+        "private_local_evaluation_compatible": True,
+        "redistribution_review_required": True,
+        "checkpoint_terms_covered": False,
+    }
     assert plan["decision"]["candidate_registered"] is True
     assert plan["decision"]["worker_start_permitted"] is False
     assert {
         "checkpoint_terms_unverified",
         "checkpoint_allowed_use_unverified",
         "checkpoint_sha256_unpublished",
-        "runtime_dependency_licenses_unverified",
         "runtime_worker_not_implemented",
     }.issubset(plan["decision"]["blockers"])
     assert "runtime_dependency_lock_missing" not in plan["decision"]["blockers"]
@@ -100,6 +107,7 @@ def test_dependency_input_and_lock_are_exact_and_exclude_broad_runtime() -> None
     root = Path(__file__).parents[1]
     dependency_input = root / roformer.RUNTIME_DEPENDENCY_INPUT
     dependency_lock = root / roformer.RUNTIME_DEPENDENCY_LOCK
+    license_audit_path = root / roformer.RUNTIME_LICENSE_AUDIT
 
     assert hashlib.sha256(dependency_input.read_bytes()).hexdigest() == (
         roformer.RUNTIME_DEPENDENCY_INPUT_SHA256
@@ -107,11 +115,14 @@ def test_dependency_input_and_lock_are_exact_and_exclude_broad_runtime() -> None
     assert hashlib.sha256(dependency_lock.read_bytes()).hexdigest() == (
         roformer.RUNTIME_DEPENDENCY_LOCK_SHA256
     )
+    assert hashlib.sha256(license_audit_path.read_bytes()).hexdigest() == (
+        roformer.RUNTIME_LICENSE_AUDIT_SHA256
+    )
     input_text = dependency_input.read_text(encoding="utf-8")
     lock_text = dependency_lock.read_text(encoding="utf-8")
     assert (
         sum(1 for line in input_text.splitlines() if line and not line.startswith("#"))
-        == 8
+        == 6
     )
     assert (
         sum(
@@ -119,13 +130,34 @@ def test_dependency_input_and_lock_are_exact_and_exclude_broad_runtime() -> None
             for line in lock_text.splitlines()
             if "==" in line and not line.startswith((" ", "#"))
         )
-        == 38
+        == 15
+    )
+    license_audit = json.loads(license_audit_path.read_text(encoding="utf-8"))
+    locked_packages = {
+        line.split("==", maxsplit=1)[0]
+        for line in lock_text.splitlines()
+        if "==" in line and not line.startswith((" ", "#"))
+    }
+    audited_packages = {entry["name"] for entry in license_audit["packages"]}
+    assert audited_packages == locked_packages
+    assert license_audit["scope"]["requirements_input_sha256"] == (
+        roformer.RUNTIME_DEPENDENCY_INPUT_SHA256
+    )
+    assert license_audit["scope"]["requirements_lock_sha256"] == (
+        roformer.RUNTIME_DEPENDENCY_LOCK_SHA256
+    )
+    assert (
+        license_audit["finding"]["runtime_installation_permitted_by_this_audit"]
+        is False
     )
     for excluded in (
         "accelerate",
         "bitsandbytes",
+        "librosa",
         "ml-collections",
         "omegaconf",
+        "soundfile",
+        "soxr",
         "torchaudio",
         "wandb",
         "wxpython",

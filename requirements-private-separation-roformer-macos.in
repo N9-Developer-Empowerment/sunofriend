@@ -1,8 +1,15 @@
 # Resolution input for the blocked private BS-RoFormer v1.0.12 challenger.
 #
 # This is not an installer or a product dependency. It contains only packages
-# needed by a future bounded adapter around the exact BS-RoFormer model modules
-# at ZFTurbo source revision aef04b2e52fb3beaf25e333199f5a7236e628e7b.
+# needed by a future bounded adapter around the exact `attend.py` and
+# `bs_roformer.py` model modules at ZFTurbo source revision
+# aef04b2e52fb3beaf25e333199f5a7236e628e7b. The adapter must load those two
+# files through an isolated synthetic package so Python does not execute the
+# upstream `models/bs_roformer/__init__.py`: that initializer also imports the
+# unrelated MelBand model and would otherwise introduce librosa and its broad
+# audio-analysis dependency tree. Canonical PCM WAV I/O belongs to the bounded
+# adapter and must use Python's standard library rather than the optional
+# SoundFile wheel and its bundled LGPL media libraries.
 # Training, GUI, experiment tracking, the broad upstream inference utility,
 # other architectures and optional metric packages are intentionally excluded.
 # The generated lock remains unapproved and must not be installed until the
@@ -10,9 +17,7 @@
 
 beartype==0.14.1
 einops==0.6.1
-librosa==0.11.0
 numpy==2.3.5
 packaging==26.2
 rotary-embedding-torch==0.3.5
-soundfile==0.14.0
 torch==2.13.0

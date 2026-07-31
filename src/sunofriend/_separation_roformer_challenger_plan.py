@@ -41,11 +41,15 @@ CHECKPOINT_URL = f"{REPOSITORY}/releases/download/{RELEASE_TAG}/{CHECKPOINT_NAME
 
 RUNTIME_DEPENDENCY_INPUT = "requirements-private-separation-roformer-macos.in"
 RUNTIME_DEPENDENCY_INPUT_SHA256 = (
-    "034bef56d62aebee8f0d41d61d8192928eb4430366acd38ee43964e519d1b619"
+    "3dd80522744c40ef2eca66a0109a76e5a117a266851805b59f7bdbb0399c7cee"
 )
 RUNTIME_DEPENDENCY_LOCK = "requirements-private-separation-roformer-macos.txt"
 RUNTIME_DEPENDENCY_LOCK_SHA256 = (
-    "f757e96989fa1c2ea8085546cb6ad19f29a5ab2cf55a2cc495d1cd9056ec1610"
+    "7b8ade3828d75cca47cacc447dfa90e733c9425eccd0e341d5a6ba220a81ba65"
+)
+RUNTIME_LICENSE_AUDIT = "requirements-private-separation-roformer-macos.licenses.json"
+RUNTIME_LICENSE_AUDIT_SHA256 = (
+    "ecc5b6a012e5c8e1c97dba0426b6f0f172e17b765c94382e14477f005766e4d8"
 )
 
 _BLOCKERS = (
@@ -55,7 +59,6 @@ _BLOCKERS = (
     "checkpoint_static_inspection_not_completed",
     "checkpoint_terms_unverified",
     "explicit_private_evaluation_approval_missing",
-    "runtime_dependency_licenses_unverified",
     "runtime_worker_not_implemented",
 )
 
@@ -147,9 +150,12 @@ def _build_private_roformer_challenger_plan(
             ),
             "upstream_broad_requirements_used_for_install": False,
             "adapter_boundary": (
-                "exact BS-RoFormer model modules plus a future bounded "
-                "Sunofriend inference adapter"
+                "exact attend.py and bs_roformer.py modules loaded through "
+                "an isolated synthetic package plus a future bounded "
+                "Sunofriend PCM-WAV inference adapter"
             ),
+            "upstream_package_initializer_executed": False,
+            "canonical_pcm_wav_io": "Python standard library",
             "excluded_dependency_groups": [
                 "training",
                 "GUI",
@@ -157,16 +163,18 @@ def _build_private_roformer_challenger_plan(
                 "other separator architectures",
                 "optional validation metrics",
                 "upstream broad inference utility",
+                "unrelated MelBand package initializer and librosa tree",
+                "SoundFile and bundled media libraries",
             ],
             "dependency_input": {
                 "path": RUNTIME_DEPENDENCY_INPUT,
                 "sha256": RUNTIME_DEPENDENCY_INPUT_SHA256,
-                "direct_packages": 8,
+                "direct_packages": 6,
             },
             "dependency_lock": {
                 "path": RUNTIME_DEPENDENCY_LOCK,
                 "sha256": RUNTIME_DEPENDENCY_LOCK_SHA256,
-                "resolved_packages": 38,
+                "resolved_packages": 15,
                 "versions_fully_pinned": True,
                 "distribution_hashes_required": True,
                 "binary_distributions_only": True,
@@ -177,7 +185,15 @@ def _build_private_roformer_challenger_plan(
                 "dry_run_resolved": True,
                 "installed": False,
             },
-            "dependency_licenses_verified": False,
+            "dependency_license_audit": {
+                "path": RUNTIME_LICENSE_AUDIT,
+                "sha256": RUNTIME_LICENSE_AUDIT_SHA256,
+                "all_locked_packages_accounted_for": True,
+                "private_local_evaluation_compatible": True,
+                "redistribution_review_required": True,
+                "checkpoint_terms_covered": False,
+            },
+            "dependency_licenses_verified_for_private_local_evaluation": True,
             "installation_command": None,
             "installation_permitted": False,
             "network_destinations_if_later_approved": [
@@ -219,7 +235,6 @@ def _build_private_roformer_challenger_plan(
             "next_safe_actions": [
                 "obtain checkpoint-specific terms or an explicit upstream clarification",
                 "obtain and independently verify a published checkpoint SHA-256",
-                "audit every package licence in the exact Apple-silicon lock",
                 "define static checkpoint inspection and bounded worker contracts",
                 "request separate approval only after every preceding blocker closes",
             ],

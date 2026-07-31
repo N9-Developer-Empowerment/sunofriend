@@ -1796,11 +1796,16 @@ installation, import, deserialisation, worker or product-surface change. It
 fails closed because the release does not publish a checkpoint SHA-256 or
 checkpoint-specific allowed-use terms, and static-inspection/resource/worker
 contracts are not yet complete. The broad upstream requirements were reduced
-to the actual model-module import surface; a 38-package, wheel-only,
-version-and-hash lock now resolves for CPython 3.12.10 on this Darwin arm64 Mac
-without installation. It is reserved for a fresh environment, not `.venv-ai`,
-and every package licence still needs audit. No download or approval request is
-appropriate until those preconditions close.
+to the actual two-file model import surface. The future adapter must bypass the
+package initializer that imports an unrelated MelBand model, and it will use
+standard-library PCM WAV I/O. That removes librosa, SciPy, scikit-learn, Numba,
+SoXR, SoundFile and bundled media libraries from the plan. A 15-package,
+wheel-only, version-and-hash lock now resolves for CPython 3.12.10 on this
+Darwin arm64 Mac without installation. All 15 exact releases have an attached
+licence audit and permit private local evaluation; binary redistribution still
+requires notice review. The lock is reserved for a fresh environment, not
+`.venv-ai`. No download or approval request is appropriate while checkpoint,
+static-inspection, worker and resource preconditions remain open.
 
 ### 2026-07-31 — Second authorised separation-to-MIDI repeat
 

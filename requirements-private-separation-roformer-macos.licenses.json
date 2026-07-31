@@ -1,0 +1,155 @@
+{
+  "schema": "sunofriend.private-runtime-license-audit.v1",
+  "audit_date": "2026-07-31",
+  "scope": {
+    "requirements_input": "requirements-private-separation-roformer-macos.in",
+    "requirements_input_sha256": "3dd80522744c40ef2eca66a0109a76e5a117a266851805b59f7bdbb0399c7cee",
+    "requirements_lock": "requirements-private-separation-roformer-macos.txt",
+    "requirements_lock_sha256": "7b8ade3828d75cca47cacc447dfa90e733c9425eccd0e341d5a6ba220a81ba65",
+    "target": "CPython 3.12.10 on Darwin arm64",
+    "resolved_packages": 15,
+    "installation_performed": false
+  },
+  "finding": {
+    "status": "complete_for_private_local_evaluation",
+    "all_locked_packages_accounted_for": true,
+    "all_primary_licenses_allow_private_local_evaluation": true,
+    "runtime_installation_permitted_by_this_audit": false,
+    "checkpoint_terms_covered": false,
+    "redistribution_review_required": true,
+    "reason": "Every locked release has licence evidence, but binary redistribution must preserve notices and review the composite NumPy and PyTorch wheel terms. The model checkpoint remains a separate unresolved asset."
+  },
+  "evidence_policy": {
+    "primary": "Exact-version publisher metadata from PyPI",
+    "fallback": "Exact upstream release-tag licence when PyPI omits a precise expression",
+    "legal_advice": false
+  },
+  "packages": [
+    {
+      "name": "beartype",
+      "version": "0.14.1",
+      "license": "MIT",
+      "evidence": "https://pypi.org/project/beartype/0.14.1/",
+      "source_license": "https://github.com/beartype/beartype/blob/v0.14.1/LICENSE",
+      "source_license_sha256": "f1b3df9bbc89bfb1437cb16fcfab8f99ffa3edfd30343f538f35d2d7941a0eba",
+      "private_local_evaluation_compatible": true
+    },
+    {
+      "name": "einops",
+      "version": "0.6.1",
+      "license": "MIT",
+      "evidence": "https://pypi.org/project/einops/0.6.1/",
+      "source_license": "https://github.com/arogozhnikov/einops/blob/v0.6.1/LICENSE",
+      "source_license_sha256": "30d984364296f51ffaecad4b01ee127e95250c5068918d4b66fc96206723e434",
+      "private_local_evaluation_compatible": true
+    },
+    {
+      "name": "filelock",
+      "version": "3.32.2",
+      "license": "MIT",
+      "evidence": "https://pypi.org/project/filelock/3.32.2/",
+      "private_local_evaluation_compatible": true
+    },
+    {
+      "name": "fsspec",
+      "version": "2026.7.0",
+      "license": "BSD-3-Clause",
+      "evidence": "https://pypi.org/project/fsspec/2026.7.0/",
+      "source_license": "https://github.com/fsspec/filesystem_spec/blob/2026.7.0/LICENSE",
+      "source_revision": "9e22b60ea6e96fbe8635e88cc71909bdd2850e60",
+      "source_license_sha256": "2dc35496ce53a7307915c008a844aad53e772b49b34cdd00445067691407ec94",
+      "private_local_evaluation_compatible": true
+    },
+    {
+      "name": "jinja2",
+      "version": "3.1.6",
+      "license": "BSD-3-Clause",
+      "evidence": "https://pypi.org/project/Jinja2/3.1.6/",
+      "source_license": "https://github.com/pallets/jinja/blob/3.1.6/LICENSE.txt",
+      "source_revision": "15206881c006c79667fe5154fe80c01c65410679",
+      "source_license_sha256": "3b49dcee4105eb37bac10faf1be260408fe85d252b8e9df2e0979fc1e094437b",
+      "private_local_evaluation_compatible": true
+    },
+    {
+      "name": "markupsafe",
+      "version": "3.0.3",
+      "license": "BSD-3-Clause",
+      "evidence": "https://pypi.org/project/MarkupSafe/3.0.3/",
+      "private_local_evaluation_compatible": true
+    },
+    {
+      "name": "mpmath",
+      "version": "1.3.0",
+      "license": "BSD-3-Clause",
+      "evidence": "https://pypi.org/project/mpmath/1.3.0/",
+      "source_license": "https://github.com/fredrik-johansson/mpmath/blob/1.3.0/LICENSE",
+      "source_revision": "b5c04506ef0cd4a1f1213f8389ee21c9c3551582",
+      "source_license_sha256": "c26cae81da4508e5e249985777a33821f183223ebb74d7f8cfbf90fe7eef2fb7",
+      "private_local_evaluation_compatible": true
+    },
+    {
+      "name": "networkx",
+      "version": "3.6.1",
+      "license": "BSD-3-Clause",
+      "evidence": "https://pypi.org/project/networkx/3.6.1/",
+      "private_local_evaluation_compatible": true
+    },
+    {
+      "name": "numpy",
+      "version": "2.3.5",
+      "license": "BSD-3-Clause",
+      "evidence": "https://pypi.org/project/numpy/2.3.5/",
+      "private_local_evaluation_compatible": true,
+      "binary_notice_review": "The publisher metadata also records bundled MIT, Zlib, BSD OpenBLAS/LAPACK and GPL-3.0-or-later WITH GCC-exception-3.1 components. Preserve the wheel notices if redistributed."
+    },
+    {
+      "name": "packaging",
+      "version": "26.2",
+      "license": "Apache-2.0 OR BSD-2-Clause",
+      "evidence": "https://pypi.org/project/packaging/26.2/",
+      "private_local_evaluation_compatible": true
+    },
+    {
+      "name": "rotary-embedding-torch",
+      "version": "0.3.5",
+      "license": "MIT",
+      "evidence": "https://pypi.org/project/rotary-embedding-torch/0.3.5/",
+      "source_license": "https://github.com/lucidrains/rotary-embedding-torch/blob/0.3.5/LICENSE",
+      "source_revision": "2cab6c4d94edabcbc00e450477b88ce22ea73bf2",
+      "source_license_sha256": "fe74654058fe2ba069808dbf36defd6e207baf8859f36366a6a3ceae5aa6ecc5",
+      "private_local_evaluation_compatible": true
+    },
+    {
+      "name": "setuptools",
+      "version": "83.0.0",
+      "license": "MIT",
+      "evidence": "https://pypi.org/project/setuptools/83.0.0/",
+      "private_local_evaluation_compatible": true
+    },
+    {
+      "name": "sympy",
+      "version": "1.14.0",
+      "license": "BSD-3-Clause",
+      "evidence": "https://pypi.org/project/sympy/1.14.0/",
+      "source_license": "https://github.com/sympy/sympy/blob/sympy-1.14.0/LICENSE",
+      "source_revision": "16fa855354eb7bcabd3fe10993841e03b1382692",
+      "source_license_sha256": "07a5e9819f727b4986ad2829c7a29a6320d42575f720eb24d71b7fef573a0286",
+      "private_local_evaluation_compatible": true
+    },
+    {
+      "name": "torch",
+      "version": "2.13.0",
+      "license": "Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT",
+      "evidence": "https://pypi.org/project/torch/2.13.0/",
+      "private_local_evaluation_compatible": true,
+      "binary_notice_review": "Preserve all publisher-provided component notices if the wheel or a derived runtime is redistributed."
+    },
+    {
+      "name": "typing-extensions",
+      "version": "4.16.0",
+      "license": "PSF-2.0",
+      "evidence": "https://pypi.org/project/typing-extensions/4.16.0/",
+      "private_local_evaluation_compatible": true
+    }
+  ]
+}

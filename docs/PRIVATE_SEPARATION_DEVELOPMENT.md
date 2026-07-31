@@ -615,15 +615,28 @@ experiment-tracking and unrelated architecture packages. Sunofriend therefore
 does not use that requirements file as an installation plan.
 
 `requirements-private-separation-roformer-macos.in` now describes a future
-bounded adapter around only the exact model modules. A wheel-only `uv`
-resolution for CPython 3.12.10 on this Darwin arm64 Mac produced the fully
-pinned, hash-required 38-package
+bounded adapter around only `attend.py` and `bs_roformer.py`. It must load those
+files through an isolated synthetic package rather than execute upstream's
+`models/bs_roformer/__init__.py`, whose unrelated MelBand import was the only
+reason librosa appeared. Canonical PCM WAV I/O will use Python's standard
+library, so SoundFile and its bundled LGPL media libraries are also outside the
+runtime. This reduces the resolution from 38 packages to 15.
+
+A wheel-only `uv` resolution for CPython 3.12.10 on this Darwin arm64 Mac
+produced the fully pinned, hash-required
 `requirements-private-separation-roformer-macos.txt` lock at SHA-256
-`f757e96989fa1c2ea8085546cb6ad19f29a5ab2cf55a2cc495d1cd9056ec1610`.
-A dry run resolved successfully and changed no environment. The lock must
-target a fresh `.venv-roformer-private`, never the existing `.venv-ai`; it is
-still not approved for installation. Package-licence review remains open, and
-the selected PyTorch wheel requires macOS 14 or later.
+`7b8ade3828d75cca47cacc447dfa90e733c9425eccd0e341d5a6ba220a81ba65`.
+The exact-version audit in
+`requirements-private-separation-roformer-macos.licenses.json` accounts for
+all 15 packages and is bound to that lock at SHA-256
+`ecc5b6a012e5c8e1c97dba0426b6f0f172e17b765c94382e14477f005766e4d8`.
+Their primary terms allow private local evaluation. NumPy and PyTorch binary
+component notices still need retention review before runtime redistribution;
+the audit is not legal advice and does not cover the checkpoint. A dry run
+resolved successfully and changed no environment. The lock must target a fresh
+`.venv-roformer-private`, never the existing `.venv-ai`; it is still not
+approved for installation. The selected PyTorch wheel requires macOS 14 or
+later.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
