@@ -171,7 +171,95 @@
         "duration_seconds": 275.92,
         "corresponding_decoded_pcm_differs": true
       },
-      "evaluation_state": "ready_for_excerpt_selection"
+      "evaluation_excerpt": {
+        "start_seconds": 219.0,
+        "end_seconds": 234.0,
+        "selection_policy": "deterministic one-second decoded group-energy scan; maximise 0.65 times the cross-pack/role normalised-activity 25th percentile plus 0.35 times its median over a 15-second window, with at least five seconds of boundary margin",
+        "provider_packs": [
+          {
+            "id": "moises",
+            "directory": "MOISES",
+            "exclude_filename_contains": [
+              "metronome"
+            ]
+          },
+          {
+            "id": "suno-a",
+            "directory": "SUNO/I am a Alien - 18_07_2026, 17.02 x I am a Alien - 18_07_2026, 17.02 (Mashup) Stems"
+          },
+          {
+            "id": "suno-b",
+            "directory": "SUNO/I am a Alien - 18_07_2026, 17.02 x I am a Alien - 18_07_2026, 17.02 (Mashup) Stems (1)"
+          }
+        ],
+        "role_group_proposals": {
+          "moises": {
+            "bass": [
+              "-bass-"
+            ],
+            "drums": [
+              "-kick-",
+              "-snare-",
+              "-hat-",
+              "-cymbals-",
+              "-toms-",
+              "-other_kit-"
+            ],
+            "other": [
+              "-keys-",
+              "-lead-",
+              "-other-",
+              "-piano-",
+              "-rhythm-",
+              "-strings-",
+              "-wind-"
+            ],
+            "vocals": [
+              "-vocals-",
+              "-backing_vocals-"
+            ]
+          },
+          "suno-a": {
+            "bass": [
+              "3 Bass.wav"
+            ],
+            "drums": [
+              "2 Drums.wav",
+              "6 Percussion.wav"
+            ],
+            "other": [
+              "4 Guitar.wav",
+              "5 Keyboard.wav",
+              "7 Synth.wav",
+              "8 Other.wav"
+            ],
+            "vocals": [
+              "0 Lead Vocals.wav",
+              "1 Backing Vocals.wav"
+            ]
+          },
+          "suno-b": {
+            "bass": [
+              "3 Bass.wav"
+            ],
+            "drums": [
+              "2 Drums.wav",
+              "6 Percussion.wav"
+            ],
+            "other": [
+              "4 Guitar.wav",
+              "5 Keyboard.wav",
+              "7 Synth.wav",
+              "8 Other.wav"
+            ],
+            "vocals": [
+              "0 Lead Vocals.wav",
+              "1 Backing Vocals.wav"
+            ]
+          }
+        }
+      },
+      "evaluation_state": "private_excerpt_staged"
     },
     {
       "id": "in-the-way",

@@ -1861,6 +1861,11 @@ bake-off, downstream-MIDI acceptance and promotion are not implemented**
   for local HTDemucs, Moises and two distinct Suno packs, retaining every
   result as inactive evidence. Human listening and cross-song repetition
   remain open.
+- [x] Repeat the complete excerpt, role-mapping and identical downstream-MIDI
+  chain on a second authorised song (`I am a Alien mashup`, 219–234 seconds).
+  Drum timing and broad-`other` instability repeated; bass remained variable,
+  while dominant-vocal agreement was materially stronger on the second song.
+  Human listening remains open and no role/provider is promoted.
 - [x] Stage the first authorised real excerpt, prove provider-pack clock
   alignment, preserve native-rate evidence, record the 44.1 kHz model-input
   derivative and run the pinned local separator without activation.

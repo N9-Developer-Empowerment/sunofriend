@@ -1695,6 +1695,43 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-07-31 — Second authorised separation-to-MIDI repeat
+
+- Goal: test whether the first real-song observations repeat on different
+  authorised music before considering any separator or role mapping usable by
+  default.
+- Change or experiment: selected a 15-second window with a deterministic
+  cross-pack/role activity scan, then repeated the exact self-hashed excerpt,
+  local HTDemucs, provider alignment, four-role mapping, production repair,
+  vocal contour, independent evaluation and dry-render chain.
+- Inputs: Ezzye `I am a Alien mashup`, original seconds 219–234, Eb minor,
+  114 BPM, A=440 Hz; one detailed Moises pack and two distinct nine-stem Suno
+  packs.
+- Model/runtime/checkpoint: unchanged from the first authorised run; the same
+  pinned private HTDemucs 4.0.1 checkpoint and existing Sunofriend production
+  MIDI components were used.
+- Evidence and metrics: all provider sums had zero envelope lag; recorded-zero
+  correlation was 0.99952 for Moises, 0.92357 for Suno A and 0.91953 for Suno
+  B. All twelve roles ranked first, but broad-`other` mapping margins were only
+  +0.119/+0.055/+0.132. Provider-to-local drum onset F1 was
+  0.861/0.874/0.819; bass exact-pitch/onset F1 0.462/0.190/0.273;
+  broad-`other` exact-pitch/onset F1 0.243/0.164/0.188; dominant-vocal
+  exact-pitch/onset F1 0.844/0.864/0.791.
+- Listening result: pending. The first song's four blind screening choices are
+  still open; no second review burden is added before those are returned.
+- Decision: the first pattern partly repeats. Drum timing is stable and
+  composite `other` is not instrument-specific enough. Bass remains
+  separator-dependent. Vocal agreement is passage-dependent and substantially
+  stronger here. Keep every role/provider inactive and make future evaluation
+  and selection role-specific.
+- Problems/risks: no score truth exists; the provider-to-local metric measures
+  agreement rather than correctness; full-mix reference listening is still
+  required; the current four broad roles cannot answer which instrument owns
+  notes inside `other`.
+- Next smallest step: collect the existing four blind choices, then design one
+  narrower `other` hypothesis using already-separated keys/guitar/synth parts
+  rather than adding more broad-role review pages.
+
 ### 2026-07-31 — First authorised separation-to-MIDI parity run
 
 - Goal: determine whether the first real authorised excerpt remains musically

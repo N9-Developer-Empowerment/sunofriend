@@ -45,7 +45,7 @@ clock, duration, level and provider naming are part of the evidence.
 | Track | Original | Moises | Suno A/B | Initial state |
 | --- | --- | --- | --- | --- |
 | Be Alone | 262.56 s, 48 kHz | 17 files | 8 + 8 files, 262.36 s | First 191–206 s private excerpt staged |
-| I am a Alien mashup | 276.12 s, 48 kHz | 17 files | 9 + 9 files, 275.92 s | Ready for excerpt selection |
+| I am a Alien mashup | 276.12 s, 48 kHz | 17 files | 9 + 9 files, 275.92 s | 219–234 s private excerpt staged and compared |
 | In the way | 225.88 s, 44.1 kHz | 17 files, about 160.72 s | 8 + 8 files, 160.52 s | Investigate source/provider horizon before comparison |
 | Tell Me That I Do It Bitch | 186.36 s, 48 kHz | 17 files | 7 + 7 files, 186.36 s | Ready for excerpt selection |
 
@@ -76,6 +76,21 @@ was low (0.161–0.252 F1). This is useful negative evidence: provider names and
 four-way audio similarity are not enough to make composite `other` behave as
 one instrument. The result remains private, unselected and unsuitable for
 automatic promotion until listening and a second-song repeat are complete.
+
+The second-song repeat is now complete on `I am a Alien mashup`, original
+seconds 219–234. The fixed window was selected by a decoded group-energy scan,
+not a provider name or a presumed chorus: it maximised a weighted lower
+quartile and median of normalised activity across all twelve combinations of
+three packs and four roles. All twelve proposed roles again ranked first, but
+`other` was only weakly separated from the next role in the audio comparison.
+
+The identical downstream MIDI repeat confirms that this matters. Provider
+drum onset agreement against local HTDemucs MIDI remained high
+(0.819–0.874 F1), while broad `other` exact-pitch/onset agreement remained low
+(0.164–0.243). Bass was also variable (0.190–0.462), whereas dominant-vocal
+agreement was substantially higher on this passage (0.791–0.864). This argues
+for role-specific evidence and decisions, not one global separator winner.
+Human listening remains required.
 
 ## Intended evaluation
 

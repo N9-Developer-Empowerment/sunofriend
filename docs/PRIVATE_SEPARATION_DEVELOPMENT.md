@@ -291,6 +291,38 @@ accurate provider. The unchanged original mix is the common, unlevelled
 reference. Each page accepts candidate A, candidate B, equivalent, neither or
 cannot tell, and cannot change a MIDI result or product default.
 
+## Second authorised-song repeat
+
+The same chain has completed on `I am a Alien mashup`, original seconds
+219–234 at 114 BPM and A=440 Hz. The excerpt was selected with a deterministic
+one-second group-energy scan over every bass, drums, other and vocal group in
+all three provider packs. Of the eligible 15-second windows, 219–234 seconds
+maximised 0.65 times the normalised-activity lower quartile plus 0.35 times its
+median, with five seconds reserved at both song boundaries.
+
+All provider sums had zero 10 ms envelope lag. Moises correlation at recorded
+zero was 0.99952 with a gain-matched residual of -45.47 dBFS. Suno A/B
+correlations were 0.92357 and 0.91953 with residuals of -23.63 and
+-23.41 dBFS. These remain alignment observations, not role-quality scores.
+
+Every proposed role again ranked first against the corresponding local
+HTDemucs role. Bass, drums and vocals had clear margins. Broad `other` was
+weaker: Moises similarity/margin was 0.605/+0.119, Suno A 0.531/+0.055 and
+Suno B 0.609/+0.132. The identical production MIDI comparison then produced:
+
+| Provider | Bass exact/onset F1 | Drums onset / broad-family F1 | Other exact / chroma / onset F1 | Vocals exact / onset F1 |
+| --- | ---: | ---: | ---: | ---: |
+| Moises | 0.462 | 0.861 / 0.672 | 0.243 / 0.340 / 0.495 | 0.844 / 0.933 |
+| Suno A | 0.190 | 0.874 / 0.742 | 0.164 / 0.251 / 0.406 | 0.864 / 0.909 |
+| Suno B | 0.273 | 0.819 / 0.597 | 0.188 / 0.257 / 0.406 | 0.791 / 0.884 |
+
+The local groups produced 21 bass notes, 74 drum hits, 108 `other` notes and
+22 vocal notes. The second run retained 204 hashed artifacts and occupied
+about 230 MB. Across both songs, drum event timing is consistently the most
+stable result and broad `other` is consistently unsuitable as a single
+instrument role. Bass varies materially. Vocal stability is passage-dependent,
+which is exactly why cross-song and human evidence must precede a default.
+
 The next bounded development increment uses this evidence to:
 
 1. compare the finished mix, broad estimates and any supplied stems without
@@ -298,7 +330,7 @@ The next bounded development increment uses this evidence to:
 2. listen to the now-staged level-matched bass, drums, other and vocal groups;
 3. listen to the completed MIDI and dry audition evidence rather than promote
    it from metrics alone;
-4. repeat the identical comparison on a second authorised song/excerpt;
+4. retain the completed second-song repeat as cross-song evidence;
 5. split broad `other` and, where useful, composite drums into narrower
    hypotheses before expecting instrument-specific MIDI; and
 6. keep every result private and inactive before considering a Studio
@@ -309,8 +341,9 @@ under [`../stem_examples`](../stem_examples/README.md). It contains four
 Ezzye originals, one detailed Moises export and two distinct Suno exports per
 song. The 5.4 GB of WAV evidence is intentionally ignored by Git; the tracked
 corpus index records permission, credit, geometry and readiness without
-publishing provider-derived audio. `Be Alone` has its first staged excerpt;
-two more songs are ready for excerpt selection. `In the way` remains blocked
+publishing provider-derived audio. `Be Alone` and `I am a Alien mashup` now
+have staged and compared excerpts; one more song is ready for excerpt
+selection. `In the way` remains blocked
 because its 225.88-second original
 does not share the roughly 160.5-second provider horizon.
 
