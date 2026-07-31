@@ -822,9 +822,9 @@ stem WAV arrays exactly. The clipped-capable audition sum WAV is not used for
 that calculation. This proves arithmetic accounting rather than correct role
 assignment.
 
-The next private slice now runs the same existing seed transcriber and
+The first private downstream slice runs the same existing seed transcriber and
 explicit settings on each clean reference and matching estimate. It does not
-yet exercise `refine_stem`, rendering, iterative repair or variants. Its
+itself exercise `refine_stem`, rendering, iterative repair or variants. Its
 self-hashed report persists inactive reference/estimate MIDI and note
 evidence. On the same synthetic fixture, bass exact-pitch/onset F1 was 0.556,
 `other` was 0.889 and drum onset F1 was 0.815 at a 40 ms tolerance matching
@@ -834,14 +834,26 @@ MIDI note. These are relative transcription observations, not score truth or
 acceptance thresholds. They show that onset survival and correct role/timbre
 classification must be evaluated separately.
 
+Production-refinement parity is now also complete for bass, composite drums
+and broad `other`, the three synthetic roles actually handled by
+`refine_stem`. The repair loop, production dry-GM renderer, generated variants
+and independent semantic evaluator all ran on both clean and estimated input.
+Clean-to-estimate exact-pitch/onset F1 was 0.625 for bass and 0.909 for
+`other`; drum onset F1 was 0.815 but broad-family F1 was 0.296. Independent
+strong-onset F1 for `other` fell from 0.813 to 0.471 and supported-note ratio
+from 0.800 to 0.646 even though the loop's internal estimate score increased.
+Acceptance must therefore combine independent evidence and listening rather
+than trust the self-comparison score. Vocal parity remains separately named
+because the production vocal melody path does not call `refine_stem`.
+
 This real-model experiment deliberately bypasses neither the fake-only product
 gate nor any acceptance contract. It has no CLI/TUI/Simple/Workbench import,
 does not update source lineage, cannot select or promote a result and records
 network denial, attempted-connection observation, outside-write confinement
 and complete descendant supervision as unproven. Public real-separation and
-checkpoint-lease execution flags remain false. Full production-refinement
-parity, then authorised real-excerpt listening and cross-song MIDI comparison,
-are the next private evidence increments.
+checkpoint-lease execution flags remain false. Authorised real-excerpt
+listening and cross-song MIDI comparison are now the next private evidence
+increments.
 
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every

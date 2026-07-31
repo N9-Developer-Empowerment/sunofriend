@@ -43,7 +43,7 @@ of quality on real songs.
 
 The same clean references and estimated stems were then passed through the
 same existing Sunofriend seed-transcriber settings. This first MIDI
-observation does not yet run the full render/listen/refine loop. At a 40 ms
+observation is retained as the pre-refinement baseline. At a 40 ms
 event-onset tolerance matching the independent evaluator's default, it
 observed:
 
@@ -61,6 +61,28 @@ although both happened to score 0.296 on this fixture. The broad `other`
 result contains keys plus lead and therefore does not prove ownership of
 either instrument. Clean-reference transcription is a relative baseline, not
 the original musical score.
+
+The three broad roles supported by `refine_stem` have now also completed the
+exact production repair loop, FluidSynth/GeneralUser GM rendering and the
+independent stem-to-MIDI evaluator. Every primary and every generated variant
+was rendered and retained. Vocals are not described as `refine_stem` parity:
+their production melody path is separate and remains a later, explicit parity
+increment.
+
+| Role | Refined clean / estimate notes | Clean-to-estimate MIDI result | Independent clean / estimate observation |
+| --- | ---: | --- | --- |
+| bass | 8 / 8 | exact-pitch/onset F1 0.625 | strong-onset F1 0.092 / 0.121; chroma 0.705 / 0.726; supported-note ratio 1.000 / 1.000 |
+| drums | 32 / 22 | onset F1 0.815; broad-family F1 0.296 | strong-onset F1 0.638 / 0.483; inclusive possible-onset F1 0.667 / 0.821 |
+| other | 40 / 48 | exact-pitch/onset F1 0.909 | strong-onset F1 0.813 / 0.471; chroma 0.996 / 0.994; supported-note ratio 0.800 / 0.646 |
+
+The loop's own score was higher on the estimated input for bass and `other`.
+That is not evidence that separation improved those parts: the independent
+onset/support evidence shows losses that a self-comparison score can miss.
+Separator acceptance cannot use the refinement score alone. Broad `other`
+retained pitch-class content especially well but added eight events and lost
+onset/support evidence; drums retained event timing much better than
+instrument-family identity; bass remains the weakest transcription. These are
+observations, not thresholds.
 
 The four model outputs differed additively from the source by -24.87 dB RMS.
 Sunofriend separately persisted `source - estimated sum`; the float64 sum of
@@ -101,6 +123,21 @@ exist:
 It writes inactive reference and estimate MIDI plus JSON note evidence under
 `REFERENCE/` and `ESTIMATE/`. It does not add either side to a Sunofriend
 project.
+
+Run production-refinement parity only after the fixture and experiment exist,
+again using a fresh output path:
+
+```bash
+.venv/bin/python scripts/private-demucs-production-refinement-canary.py \
+  --fixture work/separation-bakeoff/demo-fixture-v2/private-demucs-demo-fixture.json \
+  --experiment work/separation-bakeoff/demo-run-v2/private-separation-experiment.json \
+  --out work/separation-bakeoff/demo-production-refinement-v2
+```
+
+This is deliberately slower than seed transcription. It writes private
+primary/variant MIDI, note evidence, dry proxy WAV auditions, internal
+iteration histories, independent evaluations and a self-hashed report. It
+does not activate or select any result.
 
 ## Evidence produced
 
@@ -144,11 +181,9 @@ This private experiment:
 
 ## Next evidence
 
-The synthetic audio, resource and seed-transcriber MIDI observations are
-complete. The next bounded development increment first repeats the pair
-through Sunofriend's exact production `refine_stem` settings, renderer and
-independent audio-to-MIDI evaluator. It then prepares review evidence on
-authorised, representative real excerpts:
+The synthetic audio, resource, seed-transcriber and production-refinement
+observations are complete. The next bounded development increment prepares
+review evidence on authorised, representative real excerpts:
 
 1. compare the finished mix, broad estimates and any supplied stems without
    silently selecting a winner;

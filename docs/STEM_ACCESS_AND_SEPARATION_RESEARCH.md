@@ -887,21 +887,32 @@ complete descendant supervision also remain unproven. The reproducible command
 and exact boundary are documented in
 [Private stem-separation development](PRIVATE_SEPARATION_DEVELOPMENT.md).
 
-The paired private downstream-MIDI canary now runs identical existing
-Sunofriend seed-transcription settings on every clean reference and matching
-estimate. It does not yet run full production refinement. On this one
+The paired private downstream-MIDI canary runs identical existing Sunofriend
+seed-transcription settings on every clean reference and matching estimate.
+On this one
 synthetic fixture, exact-pitch/onset F1 was 0.556 for
 bass and 0.889 for broad `other`; drum onset F1 was 0.815 but broad and exact
 articulation-family onset F1 were both 0.296. The silent vocal estimate
 produced one false MIDI note. All onset figures use the independent
-evaluator's default 40 ms tolerance, although that evaluator itself remains
-part of the next full-production-parity slice.
+evaluator's default 40 ms tolerance.
 
 The report retains owner-only inactive MIDI, JSON note evidence, hashes and
 transcriber/model identities. Exact round-trip note times and per-hit drum
 family/timing evidence make the pair metrics recomputable from those hashed
 artifacts. Clean-reference MIDI is a relative baseline, not score truth, and
 no threshold or backend has been accepted.
+
+The following private parity increment runs bass, composite drums and broad
+`other` through the production `refine_stem` repair loop, renders every primary
+and variant with the production dry GM proxy, and runs the independent semantic
+evaluator against each input stem. Clean-to-estimate exact-pitch onset F1 was
+0.625 for bass and 0.909 for `other`; drum onset F1 remained 0.815 while
+broad-family F1 remained 0.296. The independent evaluator found that estimated
+`other` preserved chroma (0.994) while strong-onset F1 fell from 0.813 on the
+clean input to 0.471 and supported-note ratio fell from 0.800 to 0.646. The
+loop's higher internal estimate score therefore cannot be used alone as
+separator evidence. Vocal parity remains separate because the production
+vocal path does not use `refine_stem`.
 
 The first authorised real-song corpus is indexed in
 [`stem_examples/corpus.json`](../stem_examples/corpus.json). Four Ezzye
@@ -1818,8 +1829,10 @@ bake-off, downstream-MIDI acceptance and promotion are not implemented**
 - [ ] Generalise the first immutable synthetic broad candidate, residual and
   quality report into a cross-song, multi-backend bake-off corpus.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
-- [ ] Repeat the clean/estimate comparison through exact production
-  `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation.
+- [x] Repeat the clean/estimate comparison through exact production
+  `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation
+  for the three roles actually handled by `refine_stem`; keep the separate
+  vocal production path explicit.
 - [ ] Repeat downstream MIDI and listening evaluation across authorised real
   excerpts and at least one independent separator/runtime candidate.
 - [x] Inventory the first four-song authorised Moises/Suno comparison corpus,
