@@ -137,6 +137,16 @@ _HTDEMUCS_PICKLE_OPCODE_STREAM_SHA256 = (
     "e6576ee1885c9dc48404f216ed8ac4f4573a14a2c37f3d19898f99005415082a"
 )
 _HTDEMUCS_PICKLE_OPCODE_COUNT = 18_523
+_HTDEMUCS_6S_CHECKPOINT_SHA256 = (
+    "34c22ccb381c6f9fdbf324f04e1e2fe21aaaf293f5ded163a162697ff9a02ddd"
+)
+_HTDEMUCS_6S_PICKLE_GLOBALS_SHA256 = (
+    "1bed360c74c00dde69f0493154c687d2483ba38155196a5ae966c2f7c22d711d"
+)
+_HTDEMUCS_6S_PICKLE_OPCODE_STREAM_SHA256 = (
+    "616432e5889e143e3f1f09b502412cc114c649cb947d3c8ea063a7facd198a94"
+)
+_HTDEMUCS_6S_PICKLE_OPCODE_COUNT = 17_488
 
 
 @dataclass(frozen=True, init=False)
@@ -1662,12 +1672,32 @@ def _classify_pickle(
             _OBJECT_CONSTRUCTION_OPCODES
         )
     )
+    exact_htdemucs_6s_profile = bool(
+        checkpoint_sha256 == _HTDEMUCS_6S_CHECKPOINT_SHA256
+        and _HTDEMUCS_GLOBAL in evidence.application_globals
+        and evidence.globals_sha256 == _HTDEMUCS_6S_PICKLE_GLOBALS_SHA256
+        and evidence.opcode_stream_sha256
+        == _HTDEMUCS_6S_PICKLE_OPCODE_STREAM_SHA256
+        and evidence.opcode_count == _HTDEMUCS_6S_PICKLE_OPCODE_COUNT
+        and evidence.protocol == 2
+        and set(evidence.object_construction_opcodes).intersection(
+            _OBJECT_CONSTRUCTION_OPCODES
+        )
+    )
     if exact_htdemucs_profile:
         return {
             "container_kind": "torch-zip-pickle-model-package",
             "confidence": "strong_static_evidence",
             "reason_codes": [
                 "exact_htdemucs_hash_global_and_construction_profile_observed"
+            ],
+        }
+    if exact_htdemucs_6s_profile:
+        return {
+            "container_kind": "torch-zip-pickle-model-package",
+            "confidence": "strong_static_evidence",
+            "reason_codes": [
+                "exact_htdemucs_6s_hash_global_and_construction_profile_observed"
             ],
         }
     state_globals_only = set(evidence.globals).issubset(_STATE_DICT_GLOBALS)

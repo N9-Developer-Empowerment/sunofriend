@@ -1982,6 +1982,10 @@ promotion are not implemented**
   source order and six complete arrays, seal reconstruction/immutability
   evidence and prove all activation/publication effects false with a fake
   worker before any checkpoint installation.
+- [x] After explicit private-evaluation acceptance, install the exact
+  six-source checkpoint, verify its 54,996,327-byte/full-SHA-256 identity and
+  register its bounded 527-member ZIP/17,488-opcode static profile without
+  deserialisation. Keep static loading/execution authority false.
 - [x] Stage the first authorised real excerpt, prove provider-pack clock
   alignment, preserve native-rate evidence, record the 44.1 kHz model-input
   derivative and run the pinned local separator without activation.

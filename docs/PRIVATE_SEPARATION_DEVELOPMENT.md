@@ -378,8 +378,7 @@ truth. The official six-source configuration is experimental and its piano
 bleed warning remains part of the gate. Installation, exact checkpoint hash,
 terms, offline behaviour and runtime evidence must be recorded before it runs.
 
-The separate private registry and installer are prepared but no checkpoint is
-downloaded without explicit acceptance:
+The separate private registry and installer require explicit acceptance:
 
 ```bash
 SUNOFRIEND_ACCEPT_DEMUCS_6S_PRIVATE_EVALUATION=1 \
@@ -392,6 +391,17 @@ The installer fetches the official 54,996,327-byte
 before publishing it with private permissions. The resolver never downloads,
 the challenger is excluded from normal `ai-doctor --require all`, and model
 installation alone enables no separator surface.
+
+On 31 July 2026 the owner explicitly accepted the private-evaluation terms.
+The installer downloaded that exact file to the external owner-only model
+directory and both byte-count and full-hash checks passed. Before any
+deserialisation, the bounded static inspector validated a 527-member stored
+Torch ZIP with 525 tensor members, protocol-2 pickle, 17,488 opcodes, no
+trailing bytes and the expected sole application global
+`demucs.htdemucs.HTDemucs`. Sunofriend now recognizes only that exact
+checkpoint hash plus exact globals/opcode profile as strong static package
+evidence. Static inspection still authorizes neither loading nor execution;
+the separately accepted private canary remains the only intended runner.
 
 The private parent/worker contract is also prepared without a real model run.
 It retains the existing four-source schemas unchanged and adds disjoint

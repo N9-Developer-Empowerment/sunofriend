@@ -718,6 +718,45 @@ def test_known_htdemucs_static_profile_is_classified_only_for_exact_hash() -> No
     assert other["container_kind"] == "unknown"
 
 
+def test_known_htdemucs_6s_static_profile_is_classified_only_for_exact_hash() -> None:
+    observed = inspection_module._inspect_pickle_opcodes(  # noqa: SLF001
+        _model_pickle()
+    )
+    evidence = replace(
+        observed,
+        globals_sha256=(  # noqa: SLF001
+            inspection_module._HTDEMUCS_6S_PICKLE_GLOBALS_SHA256
+        ),
+        opcode_stream_sha256=(  # noqa: SLF001
+            inspection_module._HTDEMUCS_6S_PICKLE_OPCODE_STREAM_SHA256
+        ),
+        opcode_count=(  # noqa: SLF001
+            inspection_module._HTDEMUCS_6S_PICKLE_OPCODE_COUNT
+        ),
+    )
+    exact = inspection_module._classify_pickle(  # noqa: SLF001
+        evidence,
+        tensor_data_members=1,
+        checkpoint_sha256=(  # noqa: SLF001
+            inspection_module._HTDEMUCS_6S_CHECKPOINT_SHA256
+        ),
+    )
+    other = inspection_module._classify_pickle(  # noqa: SLF001
+        evidence,
+        tensor_data_members=1,
+        checkpoint_sha256="0" * 64,
+    )
+
+    assert exact == {
+        "container_kind": "torch-zip-pickle-model-package",
+        "confidence": "strong_static_evidence",
+        "reason_codes": [
+            "exact_htdemucs_6s_hash_global_and_construction_profile_observed"
+        ],
+    }
+    assert other["container_kind"] == "unknown"
+
+
 def test_all_descriptors_close_when_archive_or_pickle_validation_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

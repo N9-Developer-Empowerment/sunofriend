@@ -191,9 +191,11 @@ report the result, then move on.
   and it is imported by no CLI, TUI, Simple or Workbench path. The first run
   is one synthetic observation, not an accepted separator. A separate exact
   six-source private-development request/worker/result path is prepared for
-  the experimental `htdemucs_6s` guitar/piano challenger. It has passed only
-  deterministic fake-worker contract tests: the real checkpoint has not been
-  downloaded or run, no quality result exists, and no CLI, TUI, Simple,
+  the experimental `htdemucs_6s` guitar/piano challenger. After explicit user
+  acceptance, the exact 54,996,327-byte checkpoint was downloaded privately,
+  full-hash verified and recognized by its exact bounded ZIP/pickle-opcode
+  profile without deserialisation. It has not yet been run, no quality result
+  exists, and no CLI, TUI, Simple,
   Studio, Workbench, source-graph or publication route is enabled. Network
   denial, connection-attempt observation, outside-write confinement and
   complete descendant supervision remain unproven; the checkpoint stays under
