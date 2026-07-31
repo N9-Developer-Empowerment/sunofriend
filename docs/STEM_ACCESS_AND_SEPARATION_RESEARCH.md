@@ -1073,7 +1073,7 @@ commercially redistributable.
 | Candidate | Outputs and evidence | Mac position | Licence/provenance position | Programme position |
 | --- | --- | --- | --- | --- |
 | [Demucs / HTDemucs](https://github.com/facebookresearch/demucs) | Stable four-source vocabulary: drums, bass, vocals, other. Experimental `htdemucs_6s` adds guitar and piano, but the official README warns that piano has substantial bleed. | Original project supports MPS but is no longer actively maintained. [Demucs-MLX](https://github.com/ssmall256/demucs-mlx) and [demucs-infer](https://github.com/openmirlab/demucs-infer) are possible adapters to test. Demucs-MLX's first-use download behaviour must be disabled or preinstalled and then verified offline. | Code is MIT; checkpoint terms and hashes still require an explicit registry entry. | Unverified broad-baseline candidate. |
-| [BS-RoFormer architecture](https://arxiv.org/abs/2309.02612) | Strong four-stem research result, particularly relevant to the bass problem. | PyTorch and emerging MLX adapters exist; no runtime/checkpoint pair is selected here. | Architecture/runtime licences do not establish community-checkpoint rights. | Unverified quality candidate, especially for bass. |
+| [BS-RoFormer architecture](https://arxiv.org/abs/2309.02612) | Strong four-stem research result, particularly relevant to the bass problem. | The exact [ZFTurbo `v1.0.12` MUSDB18HQ release](https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.12) is now the registered private challenger; it remains uninstalled and unrunnable. | The repository code is MIT, but the release provides no checkpoint-specific terms or published checkpoint SHA-256. Sunofriend does not project the code licence onto the weights. | Exact fail-closed candidate, especially for bass and composite `other`; not an available separator. |
 | [MelBand-RoFormer architecture](https://arxiv.org/abs/2310.01809) | Competitive vocals, drums and other; specialised checkpoints could complement a broad model. | Active MLX and PyTorch ecosystems exist; no runtime/checkpoint pair is selected here. | Every checkpoint needs a separate licence, hash and provenance record. | Unverified role-specific candidate. |
 | [SCNet](https://github.com/starrytong/SCNet) | Official sparse-compression four-stem model with released MUSDB checkpoint. | PyTorch path; Apple runtime and memory need measurement. | Official code is MIT; record the release asset terms/hash separately. | Useful independent architecture in the bake-off. |
 | [Spleeter](https://github.com/deezer/spleeter) | Two, four and five source configurations; five-source adds piano. | Older TensorFlow stack has known Apple-silicon friction. | MIT code, last formal release in 2021. | Historical speed/reproducibility control only. |
@@ -1974,12 +1974,16 @@ promotion are not implemented**
   vocal production path explicit.
 - [ ] Repeat downstream MIDI and listening evaluation across authorised real
   excerpts and at least one independent separator/runtime candidate.
-- [ ] If the pinned six-source challenger does not meet the usable-quality
-  gate, measure same-checkpoint Demucs-MLX parity before changing architecture,
-  then register one exact, licence-audited RoFormer candidate. The read-only
-  licence/install plan and no-download in-memory parity harness are complete;
-  separate approval to install the five exact MIT packages and the two-window
-  real run remain outstanding.
+- [x] After the six-source quality failure, measure same-checkpoint Demucs-MLX
+  parity before changing architecture, then register one exact RoFormer
+  challenger. The exact ZFTurbo `v1.0.12` BS-RoFormer release, source revision,
+  asset IDs/sizes, configuration hash and evaluation gates are now recorded by
+  a tested no-network plan. The plan correctly remains `blocked`/`not_run`.
+- [ ] Before any RoFormer download or installation, obtain checkpoint-specific
+  allowed-use evidence and an independently verifiable official checkpoint
+  SHA-256, create an exact Apple-silicon dependency lock, add bounded static
+  inspection and worker contracts, and request separate approval. Do not infer
+  weight permission from the repository's MIT code licence.
 - [ ] Consider a deterministic role-specific ensemble only after its members
   have separate held-out evidence; never infer a winner from popularity or a
   model-runner catalogue.

@@ -573,6 +573,40 @@ local evaluation on 31 July 2026; repository distribution and public-demo use
 remain false. `Monkey Man` declares A=446 Hz and also requires an explicit
 tuning plan before downstream MIDI comparison.
 
+### Exact BS-RoFormer challenger registration
+
+The independent-architecture step now names one exact candidate rather than a
+model family or runner catalogue: ZFTurbo's four-stem BS-RoFormer MUSDB18HQ
+[release `v1.0.12`](https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.12), source revision
+`aef04b2e52fb3beaf25e333199f5a7236e628e7b`. The release contains a
+527,385,512-byte checkpoint and a 4,566-byte configuration; Sunofriend records
+the configuration's independently observed SHA-256 as
+`d8afb980318d0c08b9c2e24a7adc00d4f3150320c127a7e4de861800d1321939`.
+The proposed comparison is bounded to the existing two 15-second sealed
+excerpts and must improve composite `other` and downstream MIDI without harming
+drum timing or inferring a winner from SDR alone.
+
+Inspect the static plan with:
+
+```bash
+.venv/bin/python scripts/private-roformer-challenger.py --plan
+```
+
+The command performs no network access, installation, download, model import,
+deserialisation or worker launch. An optional `--checkpoint /absolute/path`
+only hashes an already-present non-symlink regular file; because the upstream
+release has no published checkpoint SHA-256, that observation can never make
+the candidate eligible by itself.
+
+The plan remains `blocked`/`not_run`. The repository's MIT licence covers its
+software and associated documentation, but the release does not state
+checkpoint-specific terms and Sunofriend does not project the code licence
+onto the weights. The checkpoint hash is unpublished, the release dependency
+file is not an exact reproducible lock, Apple-silicon resource behaviour is
+unmeasured, and static checkpoint inspection plus a bounded worker do not yet
+exist. No package or checkpoint was installed, no new approval was inferred,
+and no CLI, TUI, Simple, Studio, source-graph or public route was added.
+
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
 resource, downstream-MIDI and human listening acceptance.

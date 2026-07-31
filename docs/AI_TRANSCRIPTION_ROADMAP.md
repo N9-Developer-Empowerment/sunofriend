@@ -1763,7 +1763,7 @@ remains review-required and inactive.
 
 The quality escalation after that experiment is now explicit. First measure
 same-checkpoint Demucs-MLX parity so runtime speed is not confused with model
-quality. If the local quality gap remains, add one fixed, licence-audited
+quality. If the local quality gap remains, register one fixed, licence-audited
 RoFormer candidate and only then test a deterministic role-specific ensemble.
 Fine-tuning is reserved for a repeated named failure and requires owned or
 licensed finished-mixture plus actual clean-target pairs, a frozen baseline
@@ -1786,6 +1786,18 @@ full split-pipeline numerical parity failed. Bass/drums correlation remained
 0.363–0.376. No role met the borrowed direct-model `1e-4` relative-maximum
 reference. MLX therefore remains a private inactive runtime challenger, not an
 accepted accelerator or separator-quality improvement.
+
+The next architecture is now exact but deliberately unavailable. ZFTurbo's
+four-stem BS-RoFormer [`v1.0.12` release](https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.12) is registered at source revision
+`aef04b2e52fb3beaf25e333199f5a7236e628e7b` with its release asset IDs and
+sizes, exact configuration SHA-256 and fixed roles. A read-only command records
+the planned comparison against the sealed Demucs excerpts and makes no network,
+installation, import, deserialisation, worker or product-surface change. It
+fails closed because the release does not publish a checkpoint SHA-256 or
+checkpoint-specific allowed-use terms, its dependencies are not exactly
+locked for Apple silicon, and static-inspection/resource/worker contracts are
+not yet complete. No download or approval request is appropriate until those
+preconditions close.
 
 ### 2026-07-31 — Second authorised separation-to-MIDI repeat
 

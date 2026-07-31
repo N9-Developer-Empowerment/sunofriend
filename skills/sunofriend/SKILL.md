@@ -214,6 +214,11 @@ report the result, then move on.
   signal-state observation and possible failure of the bounded emergency
   fallback to prove reap remain explicit limitations. Real separation execution is
   still disabled.
+- One exact ZFTurbo BS-RoFormer `v1.0.12` private challenger is registered by a
+  read-only internal plan, but remains `blocked`/`not_run`: checkpoint-specific
+  terms and a published checkpoint SHA-256 are absent, dependencies are not
+  exactly locked, and no installer, downloader, worker or product route exists.
+  Do not offer or run it through this skill.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one
   canonical WAV project. It does not separate, shift, pad, stretch, normalize
