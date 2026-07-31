@@ -69,6 +69,14 @@ first for its matching local role. This validates the partition as a useful
 comparison hypothesis only; neither provider nor HTDemucs is treated as
 ground truth, and no mapping has been automatically accepted.
 
+The same production MIDI settings have also been applied to every four-role
+group in the first excerpt. Drum onset agreement against the local HTDemucs
+MIDI was high (0.890–0.939 F1), but broad `other` exact-pitch/onset agreement
+was low (0.161–0.252 F1). This is useful negative evidence: provider names and
+four-way audio similarity are not enough to make composite `other` behave as
+one instrument. The result remains private, unselected and unsuitable for
+automatic promotion until listening and a second-song repeat are complete.
+
 ## Intended evaluation
 
 For each eligible track Sunofriend will:

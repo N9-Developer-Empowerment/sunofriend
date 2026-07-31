@@ -1695,6 +1695,45 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-07-31 — First authorised separation-to-MIDI parity run
+
+- Goal: determine whether the first real authorised excerpt remains musically
+  comparable after local and provider separation are passed through identical
+  Sunofriend MIDI processing, without using any separator as score truth.
+- Change or experiment: added a private-only runner that validates the
+  self-hashed role-mapping receipt and all artifacts, applies the production
+  repair loop to bass, drums and broad `other`, applies the separate production
+  pYIN dominant contour to vocals, independently evaluates and dry-renders
+  every non-empty primary and variant, and compares provider primary MIDI with
+  local HTDemucs primary MIDI. No product surface imports the runner.
+- Inputs: the authorised Ezzye `Be Alone` excerpt at original seconds 191–206,
+  provisional four-role Moises and two Suno packs, and the pinned local
+  HTDemucs groups; 136 BPM and A=440 Hz.
+- Model/runtime/checkpoint: existing Sunofriend production Basic Pitch,
+  drum-classification, pYIN, refinement, evaluator, FluidSynth and GeneralUser
+  GM paths; local separation remains the pinned private HTDemucs 4.0.1
+  checkpoint recorded by the upstream receipt.
+- Evidence and metrics: local MIDI contained 16 bass notes, 99 drum hits, 74
+  broad-`other` notes and 13 dominant-vocal notes. Provider-to-local drum onset
+  F1 was 0.939/0.890/0.900 for Moises/Suno A/Suno B; bass exact-pitch/onset F1
+  was 0.526/0.545/0.200; broad-`other` exact-pitch/onset F1 was
+  0.225/0.252/0.161; vocal exact-pitch/onset F1 was 0.483/0.417/0.400. The
+  report binds 231 artifacts and all selection, activation and product
+  permissions remain false.
+- Listening result: pending. Dry primary and variant auditions exist for all
+  four local/provider packs, but metrics do not choose a winner.
+- Decision: retain the four-way partition as useful comparison evidence, not
+  a production mapping. Drum timing is comparatively stable; broad `other`,
+  bass and dominant vocals remain separator-dependent. Do not globally rank
+  providers or enable a separator from this one excerpt.
+- Problems/risks: local HTDemucs is only a relative baseline; broad `other`
+  contains multiple instruments; a 15-second passage cannot establish
+  full-song or cross-song quality; General MIDI auditions do not test final
+  GarageBand instruments.
+- Next smallest step: prepare a short human listening review from the existing
+  evidence, then repeat the same receipt chain on a second authorised song and
+  test narrower `other`/drum hypotheses.
+
 ### 2026-07-27 — Stage 4 keys functional preflight and fixed-MIDI A/B
 
 - Goal: extend the existing bass instrument review to keys without publishing

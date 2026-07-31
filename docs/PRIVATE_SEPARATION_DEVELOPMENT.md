@@ -173,6 +173,25 @@ to the provider sum, then ranks every provider group against every local role
 using spectral shape, envelope and absolute waveform evidence. Names propose
 the partition; they do not contribute to its audio score.
 
+Run the same production MIDI paths over every four-role pack only after the
+mapping report has verified all proposed diagonal rankings:
+
+```bash
+.venv/bin/python scripts/private-authorised-midi-comparison.py \
+  --role-mapping work/separation-bakeoff/be-alone-role-mapping-191-206-v1/authorised-role-mapping.json \
+  --out work/separation-bakeoff/be-alone-midi-comparison-191-206-v1 \
+  --bpm 136 \
+  --tuning-hz 440
+```
+
+For bass, drums and `other`, this calls the existing production
+`refine_stem(..., conversion_mode="repair")` path. Vocals use the separate
+production pYIN dominant-contour path. Every primary and variant receives
+JSON note evidence, independent evaluation and, when non-empty, MIDI plus a
+dry FluidSynth audition. The local HTDemucs MIDI is a relative comparison
+baseline, not score truth. The command cannot accept, select, activate or
+import any result.
+
 ## Evidence produced
 
 The private run keeps:
@@ -243,14 +262,34 @@ shows that the provisional four-way partitions are coherent enough for an
 inactive, identical downstream-MIDI comparison. It does not prove that a
 group is clean, complete or preferable by ear.
 
+That first identical-settings MIDI comparison is now complete. The local
+HTDemucs groups produced 16 bass notes, 99 drum hits, 74 `other` notes and 13
+vocal notes. Relative to that local MIDI, the provider results were:
+
+| Provider | Bass exact/onset F1 | Drums onset / broad-family F1 | Other exact / chroma / onset F1 | Vocals exact/onset F1 |
+| --- | ---: | ---: | ---: | ---: |
+| Moises | 0.526 | 0.939 / 0.776 | 0.225 / 0.318 / 0.397 | 0.483 |
+| Suno A | 0.545 | 0.890 / 0.716 | 0.252 / 0.326 / 0.533 | 0.417 |
+| Suno B | 0.200 | 0.900 / 0.701 | 0.161 / 0.274 / 0.371 | 0.400 |
+
+The provider note/hit counts were Moises 22/97/77/16, Suno A
+17/119/61/11 and Suno B 14/112/50/12 in bass/drums/other/vocals order. This
+does not rank a provider globally. It does show that event timing is most
+stable for drums, while the composite `other` group is not a sufficiently
+specific musical role for equivalent MIDI. Bass and dominant-vocal lines also
+remain materially separator-dependent. The 15-second run retained 231 hashed
+artifacts, occupied about 240 MB and left every permission false.
+
 The next bounded development increment uses this evidence to:
 
 1. compare the finished mix, broad estimates and any supplied stems without
    silently selecting a winner;
 2. listen to the now-staged level-matched bass, drums, other and vocal groups;
-3. compare MIDI made from the three provider groups with MIDI made from local
-   estimates under identical settings;
-5. record where broad `other` or composite drums need narrower refinement; and
+3. listen to the completed MIDI and dry audition evidence rather than promote
+   it from metrics alone;
+4. repeat the identical comparison on a second authorised song/excerpt;
+5. split broad `other` and, where useful, composite drums into narrower
+   hypotheses before expecting instrument-specific MIDI; and
 6. keep every result private and inactive before considering a Studio
    importer.
 

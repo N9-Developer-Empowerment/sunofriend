@@ -1856,6 +1856,11 @@ bake-off, downstream-MIDI acceptance and promotion are not implemented**
   vocal production path explicit.
 - [ ] Repeat downstream MIDI and listening evaluation across authorised real
   excerpts and at least one independent separator/runtime candidate.
+- [x] Run the first authorised real excerpt through identical production
+  repair-loop, vocal-contour, independent-evaluation and dry-render settings
+  for local HTDemucs, Moises and two distinct Suno packs, retaining every
+  result as inactive evidence. Human listening and cross-song repetition
+  remain open.
 - [x] Stage the first authorised real excerpt, prove provider-pack clock
   alignment, preserve native-rate evidence, record the 44.1 kHz model-input
   derivative and run the pinned local separator without activation.

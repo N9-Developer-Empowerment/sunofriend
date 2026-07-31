@@ -4,6 +4,7 @@ import json
 import hashlib
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -19,6 +20,12 @@ from sunofriend._separation_authorised_role_mapping import (
     _document_sha256 as _role_mapping_document_sha256,
     _map_authorised_excerpt_roles,
 )
+from sunofriend._separation_authorised_midi_comparison import (
+    __all__ as midi_comparison_exports,
+    _compare_authorised_role_midi,
+    _document_sha256 as _midi_comparison_document_sha256,
+)
+from sunofriend.models import NoteEvent
 
 
 def _write_wave(path: Path, value: np.ndarray, sample_rate: int = 8_000) -> None:
@@ -156,6 +163,66 @@ def _fake_separator(
     }
 
 
+def _fake_midi_refiner(**kwargs: object) -> SimpleNamespace:
+    kind = str(kwargs["kind"])
+    base_pitch = {"bass": 36, "drums": 36, "synth": 60}[kind]
+    notes = [
+        NoteEvent(0.0, 0.4, base_pitch, 96),
+        NoteEvent(0.5, 0.9, base_pitch + (0 if kind == "drums" else 4), 84),
+    ]
+    out_dir = Path(str(kwargs["out_dir"]))
+    out_dir.mkdir(parents=True)
+    return SimpleNamespace(
+        notes=notes,
+        score=0.75,
+        history=[
+            SimpleNamespace(
+                iteration=0,
+                score=0.75,
+                note_count=len(notes),
+                detail={"test": True},
+            )
+        ],
+        variants={"possible": [NoteEvent(0.25, 0.35, base_pitch, 60)]},
+    )
+
+
+def _fake_midi_renderer(_midi: Path, output: Path) -> Path:
+    output.write_bytes(b"RIFF" + b"\0" * 64)
+    return output
+
+
+def _fake_midi_evaluator(
+    _source: Path,
+    notes: list[NoteEvent] | tuple[NoteEvent, ...],
+    **kwargs: object,
+) -> dict:
+    return {
+        "schema": "test-independent-evaluation.v1",
+        "kind": kwargs["kind"],
+        "note_count": len(notes),
+        "drum_family_map_supplied": kwargs.get("pitch_family_map") is not None,
+    }
+
+
+def _fake_vocal_transcriber(_source: Path) -> SimpleNamespace:
+    primary = [
+        NoteEvent(0.0, 0.4, 64, 90),
+        NoteEvent(0.5, 0.9, 67, 82),
+    ]
+    return SimpleNamespace(
+        notes=primary,
+        primary_variant="phrase_repaired",
+        variants={
+            "phrase_repaired": primary,
+            "contour_clean": [NoteEvent(0.0, 0.9, 64, 72)],
+        },
+        diagnostics=SimpleNamespace(
+            to_dict=lambda: {"tracker": "test", "warnings": []}
+        ),
+    )
+
+
 def test_authorised_excerpt_stages_aligned_packs_and_private_local_run() -> None:
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
@@ -271,8 +338,10 @@ def test_authorised_excerpt_has_no_product_import_and_exports_nothing() -> None:
         source = (root / relative).read_text(encoding="utf-8")
         assert "_separation_authorised_excerpt" not in source
         assert "_separation_authorised_role_mapping" not in source
+        assert "_separation_authorised_midi_comparison" not in source
     assert __all__ == ()
     assert role_mapping_exports == ()
+    assert midi_comparison_exports == ()
 
 
 def test_authorised_role_mapping_partitions_and_ranks_synthetic_roles() -> None:
@@ -310,9 +379,7 @@ def test_authorised_role_mapping_partitions_and_ranks_synthetic_roles() -> None:
 
         report = Path(result["report"])
         persisted = json.loads(report.read_text())
-        assert persisted["document_sha256"] == _role_mapping_document_sha256(
-            persisted
-        )
+        assert persisted["document_sha256"] == _role_mapping_document_sha256(persisted)
         for relative, artifact in persisted["artifacts"].items():
             path = report.parent / relative
             assert path.is_file()
@@ -348,3 +415,122 @@ def test_authorised_role_mapping_rejects_changed_source_artifact() -> None:
                 out_dir=root / "mapping",
             )
         assert not (root / "mapping").exists()
+
+
+def _synthetic_role_mapping(root: Path) -> dict:
+    corpus = _corpus(root)
+    checkpoint = root / "checkpoint.th"
+    checkpoint.write_bytes(b"private-test-checkpoint")
+    excerpt = _run_authorised_separation_excerpt(
+        corpus,
+        "example",
+        out_dir=root / "excerpt",
+        checkpoint_path=checkpoint,
+        separator_runner=_fake_separator,
+        python="fake-python",
+    )
+    return _map_authorised_excerpt_roles(
+        excerpt["report"],
+        out_dir=root / "mapping",
+    )
+
+
+def test_authorised_midi_comparison_runs_identical_inactive_paths() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        mapping = _synthetic_role_mapping(root)
+        result = _compare_authorised_role_midi(
+            mapping["report"],
+            out_dir=root / "midi-comparison",
+            bpm=120.0,
+            tuning_hz=440.0,
+            max_iterations=4,
+            refiner=_fake_midi_refiner,
+            renderer=_fake_midi_renderer,
+            evaluator=_fake_midi_evaluator,
+            vocal_transcriber=_fake_vocal_transcriber,
+        )
+
+        assert result["status"] == "complete_observation_not_acceptance"
+        assert result["components"]["mode"] == "test_injected"
+        assert (
+            result["policy"]["same_role_uses_identical_settings_across_every_pack"]
+            is True
+        )
+        assert result["permissions"] == {
+            "accepted": False,
+            "production_eligible": False,
+            "automatic_selection": False,
+            "automatic_promotion": False,
+            "source_graph_activation": False,
+            "public_result": False,
+            "simple_mode_available": False,
+            "studio_import_available": False,
+        }
+        assert set(result["packs"]) == {
+            "local-htdemucs",
+            "pack-a",
+            "pack-b",
+        }
+        for pack in result["packs"].values():
+            assert set(pack) == {"bass", "drums", "other", "vocals"}
+            assert pack["bass"]["primary"]["note_count"] == 2
+            assert pack["vocals"]["primary"]["note_count"] == 2
+            assert (
+                pack["drums"]["primary"]["independent_evaluation"][
+                    "drum_family_map_supplied"
+                ]
+                is True
+            )
+        for pack in ("pack-a", "pack-b"):
+            comparison = result["comparisons_to_local_htdemucs"][pack]
+            assert comparison["bass"]["comparison"]["exact_pitch_onset"]["f1"] == 1.0
+            assert comparison["drums"]["comparison"]["broad_family_onset"]["f1"] == 1.0
+
+        report = Path(result["report"])
+        persisted = json.loads(report.read_text())
+        assert persisted["document_sha256"] == _midi_comparison_document_sha256(
+            persisted
+        )
+        for relative, artifact in persisted["artifacts"].items():
+            path = report.parent / relative
+            assert path.is_file()
+            assert path.stat().st_size == artifact["bytes"]
+
+
+def test_authorised_midi_comparison_requires_complete_injection() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        mapping = _synthetic_role_mapping(root)
+        with pytest.raises(ValueError, match="must all be injected together"):
+            _compare_authorised_role_midi(
+                mapping["report"],
+                out_dir=root / "midi-comparison",
+                bpm=120.0,
+                tuning_hz=440.0,
+                refiner=_fake_midi_refiner,
+            )
+        assert not (root / "midi-comparison").exists()
+
+
+def test_authorised_midi_comparison_rejects_changed_mapping_artifact() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        mapping = _synthetic_role_mapping(root)
+        report = json.loads(Path(mapping["report"]).read_text())
+        relative = next(iter(report["artifacts"]))
+        changed = Path(mapping["report"]).parent / relative
+        changed.write_bytes(changed.read_bytes() + b"tampered")
+
+        with pytest.raises(ValueError, match="hash changed"):
+            _compare_authorised_role_midi(
+                mapping["report"],
+                out_dir=root / "midi-comparison",
+                bpm=120.0,
+                tuning_hz=440.0,
+                refiner=_fake_midi_refiner,
+                renderer=_fake_midi_renderer,
+                evaluator=_fake_midi_evaluator,
+                vocal_transcriber=_fake_vocal_transcriber,
+            )
+        assert not (root / "midi-comparison").exists()
