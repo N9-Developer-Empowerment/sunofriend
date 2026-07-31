@@ -1,0 +1,130 @@
+{
+  "schema": "sunofriend.private-reference-separation-corpus.v1",
+  "status": "local_audio_not_committed_inventory_only",
+  "checked_on": "2026-07-31",
+  "permission": {
+    "status": "not_recorded_in_manifest",
+    "directory_presence_is_not_processing_authority": true,
+    "repository_distribution": false,
+    "public_demo_use": false,
+    "required_before_evaluation": "record track-specific authority for private local processing"
+  },
+  "provider_derived_audio": {
+    "repository_distribution": false,
+    "provider": "Moises",
+    "local_evaluation_enabled": false
+  },
+  "inventory": {
+    "tracks": 5,
+    "audio_files": 90,
+    "audio_bytes": 3230739520,
+    "original_files": 5,
+    "moises_files": 85,
+    "suno_packs": 0,
+    "exact_hashes_deferred_to_evaluation_receipts": true
+  },
+  "common_geometry": {
+    "sample_rate_hz": 44100,
+    "channels": 2,
+    "sample_format": "s16",
+    "original_container": "FLAC",
+    "provider_container": "WAV"
+  },
+  "tracks": [
+    {
+      "id": "mauvais-djo-pile",
+      "directory": "Mauvais djo - 06. Pile\u0301-Bbm-90bpm-440hz-Bb minor-90bpm-440hz",
+      "display_name": "Mauvais djo - 06. Pilé",
+      "key": "Bb minor",
+      "bpm": 90,
+      "tuning_hz": 440,
+      "original": {
+        "files": 1,
+        "duration_seconds": 156.076916
+      },
+      "moises": {
+        "files": 17,
+        "musical_stem_duration_seconds": 225.439365,
+        "metronome_duration_seconds": 222.66
+      },
+      "chord_pdf_present": true,
+      "evaluation_state": "blocked_original_provider_horizon_mismatch"
+    },
+    {
+      "id": "silva-bumpa-on-2nite",
+      "directory": "Silva Bumpa - 01. On 2nite-G# minor-136bpm-440hz",
+      "display_name": "Silva Bumpa - 01. On 2nite",
+      "key": "G# minor",
+      "bpm": 136,
+      "tuning_hz": 440,
+      "original": {
+        "files": 1,
+        "duration_seconds": 158.848549
+      },
+      "moises": {
+        "files": 17,
+        "musical_stem_duration_seconds": 158.848549,
+        "metronome_duration_seconds": 156.66
+      },
+      "chord_pdf_present": false,
+      "evaluation_state": "awaiting_private_processing_authority"
+    },
+    {
+      "id": "slayyyter-dance-edit",
+      "directory": "Slayyyter - 01. DANCE... (Edit)-B minor-113bpm-440hz",
+      "display_name": "Slayyyter - 01. DANCE... (Edit)",
+      "key": "B minor",
+      "bpm": 113,
+      "tuning_hz": 440,
+      "original": {
+        "files": 1,
+        "duration_seconds": 236.041383
+      },
+      "moises": {
+        "files": 17,
+        "musical_stem_duration_seconds": 236.041383,
+        "metronome_duration_seconds": 233.81
+      },
+      "chord_pdf_present": false,
+      "evaluation_state": "awaiting_private_processing_authority"
+    },
+    {
+      "id": "sombr-12-to-12",
+      "directory": "sombr - 01. 12 to 12-E minor-124bpm-440hz",
+      "display_name": "sombr - 01. 12 to 12",
+      "key": "E minor",
+      "bpm": 124,
+      "tuning_hz": 440,
+      "original": {
+        "files": 1,
+        "duration_seconds": 242.90322
+      },
+      "moises": {
+        "files": 17,
+        "musical_stem_duration_seconds": 242.90322,
+        "metronome_duration_seconds": 234.69
+      },
+      "chord_pdf_present": false,
+      "evaluation_state": "awaiting_private_processing_authority"
+    },
+    {
+      "id": "toots-and-the-maytals-monkey-man",
+      "directory": "Toots & The Maytals - 03. Monkey Man-Bb major-128bpm-446hz",
+      "display_name": "Toots & The Maytals - 03. Monkey Man",
+      "key": "Bb major",
+      "bpm": 128,
+      "tuning_hz": 446,
+      "original": {
+        "files": 1,
+        "duration_seconds": 175.533333
+      },
+      "moises": {
+        "files": 17,
+        "musical_stem_duration_seconds": 175.533333,
+        "metronome_duration_seconds": 173.429977
+      },
+      "chord_pdf_present": false,
+      "evaluation_state": "awaiting_private_processing_authority_and_tuning_plan"
+    }
+  ]
+}

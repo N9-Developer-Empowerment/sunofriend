@@ -945,6 +945,17 @@ and the smallest diagonal margin over the best other role was +0.397. This is
 enough to run an inactive identical-settings MIDI bake-off; it is not human
 acceptance or proof that HTDemucs is ground truth.
 
+A separate
+[`private-reference-corpus.json`](../stem_examples/private-reference-corpus.json)
+now inventories five additional source-plus-Moises packs without adding them
+to the authorised runner. Together they contain 90 stereo 44.1 kHz files and
+no Suno packs. Four original/musical-stem horizons match; `Mauvais djo - Pilé`
+does not (156.08 versus 225.44 seconds), and `Monkey Man` declares nonstandard
+A=446 Hz tuning. Because directory presence is not a rights claim, every pack
+remains inventory-only until track-specific private-processing authority is
+recorded. None may become a public example, distributed artifact or automatic
+separator acceptance input from this inventory alone.
+
 The next private leaf-level comparison retained every item provisionally
 inside broad `other`, normalized only its audition geometry and calculated all
 cross-provider rankings in both directions. Names were reported but did not
@@ -2003,6 +2014,10 @@ promotion are not implemented**
   accepting or activating a mapping.
 - [x] Inventory the first four-song authorised Moises/Suno comparison corpus,
   preserve its credit terms and exclude its 5.4 GB of audio from Git.
+- [x] Inventory five additional source-plus-Moises private-reference packs as
+  a disjoint, non-authorising manifest; exclude all audio and chord evidence,
+  record the one source/provider horizon mismatch and retain zero public,
+  runner or acceptance authority.
 
 Likely modules:
 

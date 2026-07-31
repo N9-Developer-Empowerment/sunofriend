@@ -1,13 +1,20 @@
-# Authorised separation examples
+# Separation examples
 
-This directory is Sunofriend's first authorised real-song separation corpus.
-It currently contains four original songs, one Moises stem pack and two
-distinct Suno stem packs for each song.
+This directory contains two deliberately separate local collections:
 
-The WAV files remain local and are ignored by Git. At roughly 5.4 GB they are
+1. Sunofriend's first **owner-authorised real-song development corpus**: four
+   Ezzye originals, one Moises stem pack and two distinct Suno stem packs per
+   song; and
+2. a **private-reference inventory**: five additional originals with one
+   detailed Moises pack each. Their folder names include third-party artist
+   names, so presence here is not an ownership, reuse or redistribution claim.
+
+The audio and chord PDFs remain local and are ignored by Git. They are
 development evidence, not repository assets. The tracked
-[`corpus.json`](corpus.json) records only the bounded inventory needed to plan
-repeatable evaluation. Exact hashes belong in fresh evaluation receipts.
+[`corpus.json`](corpus.json) records the owner-authorised four-song inventory.
+[`private-reference-corpus.json`](private-reference-corpus.json) records the
+additional metadata without granting it to the authorised runner. Exact hashes
+belong in fresh evaluation receipts.
 
 ## Permission and credit
 
@@ -22,6 +29,12 @@ Use this credit unless the individual track page gives a more specific form:
 Prefer a link to the individual SoundCloud track when one is available. The
 permission recorded here applies to the four named original tracks in this
 corpus; it is not a claim about every historical upload on the profile.
+
+The five private-reference folders have no ownership or reuse permission
+record in their manifest. They must not be published, redistributed, used as
+public demos or processed by the authorised-corpus runner merely because they
+are present. A track-specific private-processing authority must be recorded
+before an evaluation uses one.
 
 Moises and Suno are independent providers. Their derived stem packs are kept
 local for comparison until the applicable export-redistribution terms are
@@ -53,6 +66,22 @@ Every corresponding Suno A/B WAV differed after decoding to PCM. The two
 packs are therefore retained as distinct separator outcomes. Moises metronome
 files end slightly earlier than their musical stems and are timing evidence,
 not source roles for MIDI conversion.
+
+## Additional private-reference inventory
+
+| Reference | Original and musical stems | Moises | Initial state |
+| --- | --- | --- | --- |
+| Mauvais djo - Pilé | Original 156.08 s; stems 225.44 s | 17 files | Blocked: source/provider horizon mismatch |
+| Silva Bumpa - On 2nite | 158.85 s | 17 files | Geometry ready; authority required before evaluation |
+| Slayyyter - DANCE... (Edit) | 236.04 s | 17 files | Geometry ready; authority required before evaluation |
+| sombr - 12 to 12 | 242.90 s | 17 files | Geometry ready; authority required before evaluation |
+| Toots & The Maytals - Monkey Man | 175.53 s; folder declares A=446 Hz | 17 files | Geometry ready; authority and tuning handling required |
+
+All 90 private-reference audio files decode as stereo 44.1 kHz audio. Each
+original is FLAC and each Moises export is PCM16 WAV. Four musical stem packs
+match their original duration; the metronomes are shorter and remain timing
+evidence only. No Suno pack is present, so these are not direct replacements
+for the original three-provider comparison design.
 
 The first `Be Alone` observation uses 191–206 seconds. All three provider
 packs measured zero 10 ms envelope lag against the original. The Moises

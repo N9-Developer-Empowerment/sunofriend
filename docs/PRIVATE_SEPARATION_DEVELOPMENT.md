@@ -470,6 +470,17 @@ selection. `In the way` remains blocked
 because its 225.88-second original
 does not share the roughly 160.5-second provider horizon.
 
+Five additional source-plus-Moises folders are now indexed separately in
+[`../stem_examples/private-reference-corpus.json`](../stem_examples/private-reference-corpus.json).
+They add 90 stereo 44.1 kHz audio files (about 3.23 GB) but no Suno packs.
+Their artist-labelled directory names are not treated as ownership or reuse
+claims, and the authorised-corpus runner cannot select them. Four have exact
+original/musical-stem horizons and can become private robustness evidence only
+after track-specific processing authority is recorded. `Mauvais djo - Pilé`
+is additionally blocked because the 156.08-second original and 225.44-second
+musical stems do not share a horizon. `Monkey Man` declares A=446 Hz and also
+requires an explicit tuning plan before downstream MIDI comparison.
+
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
 resource, downstream-MIDI and human listening acceptance.
