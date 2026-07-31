@@ -190,13 +190,18 @@ report the result, then move on.
   update source lineage, activate MIDI, accept, select or promote anything,
   and it is imported by no CLI, TUI, Simple or Workbench path. The first run
   is one synthetic observation, not an accepted separator. A separate exact
-  six-source private-development request/worker/result path is prepared for
-  the experimental `htdemucs_6s` guitar/piano challenger. After explicit user
+  six-source private-development request/worker/result path evaluates the
+  experimental `htdemucs_6s` guitar/piano challenger. After explicit user
   acceptance, the exact 54,996,327-byte checkpoint was downloaded privately,
   full-hash verified and recognized by its exact bounded ZIP/pickle-opcode
-  profile without deserialisation. It has not yet been run, no quality result
-  exists, and no CLI, TUI, Simple,
-  Studio, Workbench, source-graph or publication route is enabled. Network
+  profile before deserialisation. It then ran on two exact 15-second
+  authorised windows and produced all six estimates with exact persisted
+  sum-plus-residual accounting closure. An identically configured neutral
+  transcription/rendering comparison found very quiet or inconsistent
+  guitar/piano evidence while broad `other` retained the strongest
+  keyboard/synth match. This does not meet the activation gate: no CLI, TUI,
+  Simple, Studio, Workbench, source-graph or publication route is enabled.
+  Network
   denial, connection-attempt observation, outside-write confinement and
   complete descendant supervision remain unproven; the checkpoint stays under
   the private-evaluation-only policy. Historical fake V1/V2 and checkpoint launch

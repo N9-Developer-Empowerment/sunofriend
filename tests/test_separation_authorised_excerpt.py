@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import shutil
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -29,6 +30,15 @@ from sunofriend._separation_authorised_narrow_other import (
     __all__ as narrow_other_exports,
     _compare_authorised_other_leaves,
     _document_sha256 as _narrow_other_document_sha256,
+)
+from sunofriend._separation_demucs_private_run import (
+    PRIVATE_DEMUCS_6S_EXPERIMENT_SCHEMA,
+    _document_sha256 as _six_source_experiment_document_sha256,
+)
+from sunofriend._separation_demucs_six_source_evaluation import (
+    __all__ as six_source_evaluation_exports,
+    _document_sha256 as _six_source_evaluation_document_sha256,
+    _evaluate_private_demucs_six_source_provider_midi,
 )
 from sunofriend.models import NoteEvent
 
@@ -228,6 +238,13 @@ def _fake_vocal_transcriber(_source: Path) -> SimpleNamespace:
     )
 
 
+def _fake_neutral_transcriber(_source: Path) -> list[NoteEvent]:
+    return [
+        NoteEvent(0.0, 0.4, 60, 90),
+        NoteEvent(0.5, 0.9, 64, 82),
+    ]
+
+
 def test_authorised_excerpt_stages_aligned_packs_and_private_local_run() -> None:
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
@@ -345,10 +362,12 @@ def test_authorised_excerpt_has_no_product_import_and_exports_nothing() -> None:
         assert "_separation_authorised_role_mapping" not in source
         assert "_separation_authorised_midi_comparison" not in source
         assert "_separation_authorised_narrow_other" not in source
+        assert "_separation_demucs_six_source_evaluation" not in source
     assert __all__ == ()
     assert role_mapping_exports == ()
     assert midi_comparison_exports == ()
     assert narrow_other_exports == ()
+    assert six_source_evaluation_exports == ()
 
 
 def test_authorised_role_mapping_partitions_and_ranks_synthetic_roles() -> None:
@@ -499,6 +518,182 @@ def test_authorised_narrow_other_rejects_changed_mapping_artifact() -> None:
                 out_dir=root / "narrow-other",
             )
         assert not (root / "narrow-other").exists()
+
+
+def _synthetic_six_source_experiment(root: Path, mapping: dict) -> Path:
+    mapping_report = json.loads(Path(mapping["report"]).read_text())
+    excerpt_path = Path(mapping_report["source_excerpt"]["report_path"])
+    model_input = excerpt_path.parent / "LOCAL-MODEL-INPUT" / "source-44100.wav"
+    value, rate = soundfile.read(model_input, dtype="float64", always_2d=True)
+
+    experiment_root = root / "six-source"
+    stems = experiment_root / "ESTIMATED-STEMS"
+    reconstruction = experiment_root / "RECONSTRUCTION"
+    stems.mkdir(parents=True)
+    reconstruction.mkdir()
+    shutil.copyfile(model_input, experiment_root / "source-excerpt.wav")
+    estimated = {}
+    for index, role in enumerate(("bass", "drums", "guitar", "other", "piano", "vocals"), 1):
+        path = stems / f"{role}.wav"
+        soundfile.write(path, value * (0.05 * index), rate, subtype="PCM_24")
+        estimated[role] = {
+            "path": path.relative_to(experiment_root).as_posix(),
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        }
+    residual = reconstruction / "source-minus-estimated-sum.wav"
+    soundfile.write(residual, value * 0.01, rate, subtype="PCM_24")
+
+    artifacts = {}
+    for path in sorted(experiment_root.rglob("*")):
+        if path.is_file():
+            artifacts[path.relative_to(experiment_root).as_posix()] = {
+                "bytes": path.stat().st_size,
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            }
+    source_hash = hashlib.sha256(model_input.read_bytes()).hexdigest()
+    source_info = soundfile.info(model_input)
+    report = {
+        "schema": PRIVATE_DEMUCS_6S_EXPERIMENT_SCHEMA,
+        "status": "complete_review_required",
+        "source": {
+            "sha256": source_hash,
+            "sample_rate": source_info.samplerate,
+            "channels": source_info.channels,
+            "frames": source_info.frames,
+        },
+        "estimated_stems": estimated,
+        "additive_accounting": {
+            "source_minus_estimated_sum": {
+                "path": residual.relative_to(experiment_root).as_posix(),
+                "sha256": hashlib.sha256(residual.read_bytes()).hexdigest(),
+                "pcm24_persisted": True,
+            }
+        },
+        "permissions": {
+            "accepted": False,
+            "production_eligible": False,
+            "automatic_selection": False,
+            "automatic_promotion": False,
+            "source_graph_activation": False,
+            "public_result": False,
+            "simple_mode_available": False,
+            "studio_import_available": False,
+        },
+        "artifacts": artifacts,
+    }
+    report["document_sha256"] = _six_source_experiment_document_sha256(report)
+    report_path = experiment_root / "private-separation-experiment.json"
+    report_path.write_text(json.dumps(report) + "\n")
+    return report_path
+
+
+def test_six_source_provider_midi_evaluation_is_inactive_and_hash_bound() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        mapping = _synthetic_role_mapping(root)
+        narrow = _compare_authorised_other_leaves(
+            mapping["report"], out_dir=root / "narrow-other"
+        )
+        experiment = _synthetic_six_source_experiment(root, mapping)
+        result = _evaluate_private_demucs_six_source_provider_midi(
+            experiment,
+            narrow["report"],
+            out_dir=root / "six-source-evaluation",
+            bpm=120.0,
+            transcriber=_fake_neutral_transcriber,
+            renderer=_fake_midi_renderer,
+        )
+
+        assert result["status"] == "complete_observation_not_acceptance"
+        assert result["components"] == {"mode": "test_injected"}
+        assert set(result["rankings"]) == {"guitar", "piano", "other", "residual"}
+        assert result["permissions"]["accepted"] is False
+        assert result["effects"]["midi_candidates_activated"] is False
+        assert result["review"]["review_recorded"] is False
+        for role in result["rankings"]:
+            assert result["rankings"][role]["accepted"] is False
+            for metrics in result["midi_comparisons"][role].values():
+                assert metrics["exact_pitch_onset"]["f1"] == 1.0
+
+        report = Path(result["report"])
+        persisted = json.loads(report.read_text())
+        assert persisted["document_sha256"] == _six_source_evaluation_document_sha256(
+            persisted
+        )
+        assert (report.parent / "six_source_provider_midi_review.html").is_file()
+
+
+def test_six_source_provider_midi_evaluation_rejects_partial_injection() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        mapping = _synthetic_role_mapping(root)
+        narrow = _compare_authorised_other_leaves(
+            mapping["report"], out_dir=root / "narrow-other"
+        )
+        experiment = _synthetic_six_source_experiment(root, mapping)
+        with pytest.raises(ValueError, match="must be injected together"):
+            _evaluate_private_demucs_six_source_provider_midi(
+                experiment,
+                narrow["report"],
+                out_dir=root / "six-source-evaluation",
+                bpm=120.0,
+                transcriber=_fake_neutral_transcriber,
+            )
+
+
+def test_six_source_provider_midi_evaluation_rejects_changed_leaf() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        mapping = _synthetic_role_mapping(root)
+        narrow = _compare_authorised_other_leaves(
+            mapping["report"], out_dir=root / "narrow-other"
+        )
+        experiment = _synthetic_six_source_experiment(root, mapping)
+        narrow_document = json.loads(Path(narrow["report"]).read_text())
+        relative = next(iter(narrow_document["artifacts"]))
+        changed = Path(narrow["report"]).parent / relative
+        changed.write_bytes(changed.read_bytes() + b"tampered")
+        with pytest.raises(ValueError, match="hash changed"):
+            _evaluate_private_demucs_six_source_provider_midi(
+                experiment,
+                narrow["report"],
+                out_dir=root / "six-source-evaluation",
+                bpm=120.0,
+                transcriber=_fake_neutral_transcriber,
+                renderer=_fake_midi_renderer,
+            )
+        assert not (root / "six-source-evaluation").exists()
+
+
+def test_six_source_provider_midi_evaluation_rejects_rebound_source_copy() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        mapping = _synthetic_role_mapping(root)
+        narrow = _compare_authorised_other_leaves(
+            mapping["report"], out_dir=root / "narrow-other"
+        )
+        experiment_path = _synthetic_six_source_experiment(root, mapping)
+        experiment = json.loads(experiment_path.read_text())
+        source_copy = experiment_path.parent / "source-excerpt.wav"
+        source_copy.write_bytes(source_copy.read_bytes() + b"different-source-copy")
+        artifact = experiment["artifacts"]["source-excerpt.wav"]
+        artifact["bytes"] = source_copy.stat().st_size
+        artifact["sha256"] = hashlib.sha256(source_copy.read_bytes()).hexdigest()
+        experiment["document_sha256"] = _six_source_experiment_document_sha256(
+            experiment
+        )
+        experiment_path.write_text(json.dumps(experiment) + "\n")
+
+        with pytest.raises(ValueError, match="not the authorised model derivative"):
+            _evaluate_private_demucs_six_source_provider_midi(
+                experiment_path,
+                narrow["report"],
+                out_dir=root / "six-source-evaluation",
+                bpm=120.0,
+                transcriber=_fake_neutral_transcriber,
+                renderer=_fake_midi_renderer,
+            )
+        assert not (root / "six-source-evaluation").exists()
 
 
 def test_authorised_midi_comparison_runs_identical_inactive_paths() -> None:

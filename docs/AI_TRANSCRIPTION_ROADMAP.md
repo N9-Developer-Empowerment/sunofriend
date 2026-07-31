@@ -1725,12 +1725,13 @@ Each working day should aim for one narrow vertical improvement:
 - Problems/risks: provider outputs are estimates rather than multitrack ground
   truth; nearest-neighbour audio similarity cannot prove instrument identity;
   silence and leakage can make a relative rank look cleaner than it sounds.
-- Next smallest step: run the now installed and statically inspected official
-  experimental six-source Demucs guitar/piano challenger only on these two
-  fixed windows, then compare every
-  estimate plus residual and downstream MIDI without trusting labels.
+- Next smallest step: completed below. The installed and statically inspected
+  official experimental six-source Demucs challenger ran only on these two
+  fixed windows; every guitar/piano/other estimate plus residual was compared
+  with every provider leaf and downstream neutral MIDI without trusting
+  labels.
 
-The preparation portion is complete and the model remains unrun:
+The preparation and two private runs are complete:
 the private registry pins official signature `5c90dfd2`, byte count
 54,996,327 and full SHA-256
 `34c22ccb381c6f9fdbf324f04e1e2fe21aaaf293f5ded163a162697ff9a02ddd`.
@@ -1738,16 +1739,27 @@ The separate installer required explicit private-evaluation acceptance, and
 the offline resolver is excluded from ordinary AI readiness. On 31 July 2026
 the accepted install passed its exact size/full-hash checks, and bounded static
 inspection registered the exact 527-member ZIP and 17,488-opcode profile
-without deserialisation. The remaining step is the two-window private
-experiment; no product surface is enabled.
+without deserialisation. The accepted private runner then produced all six
+estimates on both fixed 15-second windows. Exact re-read PCM24
+sum-plus-residual accounting passed on both runs; no product surface is
+enabled.
 
-The exact private six-source request/worker/result path is now implemented and
-tested with a deterministic fake worker. It preserves the four-source schemas,
-requires one model application and exactly six role arrays, revalidates the
-source/checkpoint/worker/runtime, seals reconstruction and resource evidence,
-and keeps acceptance, source-graph, Simple, Studio and publication permissions
-false. The real checkpoint is installed and statically inspected but has still
-not been deserialised or run.
+The exact private six-source request/worker/result path is implemented and
+tested with both a deterministic fake worker and the real pinned checkpoint.
+It preserves the four-source schemas, requires one model application and
+exactly six role arrays, revalidates source/checkpoint/worker/runtime, seals
+reconstruction and resource evidence, and keeps acceptance, source-graph,
+Simple, Studio and publication permissions false.
+
+The same neutral transcription and rendering path then compared guitar,
+piano, broad `other` and the accounting residual with every supplied provider
+leaf. `Be Alone` produced guitar/piano RMS 0.01595/0.000364; broad `other`, not
+the new piano lane, was the strong Suno `Synth` audio match at 0.933. `I am a
+Alien mashup` produced guitar/piano RMS 0.000563/0.000494; broad `other` was
+closest to Moises `keys` at 0.857. Audio-nearest and MIDI-nearest leaves also
+did not consistently agree. This is not ground truth, but it fails the current
+usable-quality case for activating six-source guitar/piano. The challenger
+remains review-required and inactive.
 
 The quality escalation after that experiment is now explicit. First measure
 same-checkpoint Demucs-MLX parity so runtime speed is not confused with model

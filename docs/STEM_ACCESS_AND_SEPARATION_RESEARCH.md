@@ -1986,6 +1986,15 @@ promotion are not implemented**
   six-source checkpoint, verify its 54,996,327-byte/full-SHA-256 identity and
   register its bounded 527-member ZIP/17,488-opcode static profile without
   deserialisation. Keep static loading/execution authority false.
+- [x] Run the accepted checkpoint on both exact 15-second authorised windows,
+  retain all six estimates and the source-minus-sum residual, and prove exact
+  re-read PCM24 accounting closure without activating a result.
+- [x] Compare six-source guitar, piano, broad `other` and residual with every
+  supplied provider leaf through identical audio evidence and neutral Basic
+  Pitch/MIDI rendering. The added guitar/piano lanes were very quiet or did
+  not align consistently with same-role leaves; broad `other` retained the
+  strongest keyboard/synth evidence. Keep the challenger inactive and move to
+  same-checkpoint runtime parity before a licence-audited RoFormer test.
 - [x] Stage the first authorised real excerpt, prove provider-pack clock
   alignment, preserve native-rate evidence, record the 44.1 kHz model-input
   derivative and run the pinned local separator without activation.

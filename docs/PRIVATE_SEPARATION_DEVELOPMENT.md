@@ -403,16 +403,15 @@ checkpoint hash plus exact globals/opcode profile as strong static package
 evidence. Static inspection still authorizes neither loading nor execution;
 the separately accepted private canary remains the only intended runner.
 
-The private parent/worker contract is also prepared without a real model run.
-It retains the existing four-source schemas unchanged and adds disjoint
-six-source request, worker-result and experiment schemas. The worker requires
-the exact `htdemucs_6s` signature, checkpoint hash, package version, CPU/zero-
-shift settings and official source order; the parent accepts exactly bass,
-drums, guitar, other, piano and vocals arrays. A complete fake-worker test
-proves fresh owner-only output, per-array and PCM24 hashes, reconstruction
-accounting, input revalidation and all-false activation/publication effects.
-This is execution preparation, not evidence about the model's audio quality.
-No CLI, TUI, Simple or Workbench route imports it.
+The private parent/worker contract retains the existing four-source schemas
+unchanged and adds disjoint six-source request, worker-result and experiment
+schemas. The worker requires the exact `htdemucs_6s` signature, checkpoint
+hash, package version, CPU/zero-shift settings and official source order;
+the parent accepts exactly bass, drums, guitar, other, piano and vocals
+arrays. A complete fake-worker test proves fresh owner-only output, per-array
+and PCM24 hashes, reconstruction accounting, input revalidation and all-false
+activation/publication effects. No CLI, TUI, Simple or Workbench route imports
+it.
 
 After explicit acceptance and installation, the private-only entry point is:
 
@@ -426,6 +425,39 @@ SUNOFRIEND_ACCEPT_DEMUCS_6S_PRIVATE_EVALUATION=1 \
 The script refuses to start without the same acceptance environment variable,
 accepts only a fresh output, resolves the exact local checkpoint without a
 download and publishes no candidate or source-graph operation.
+
+The real checkpoint was then run once on each fixed 15-second authorised
+window. Both runs produced all six expected 44.1 kHz stereo estimates from one
+model application. `Be Alone` finished in about 15.6 seconds and recorded a
+raw model-sum error of -21.26 dB to the source; `I am a Alien mashup` finished
+in about 16.1 seconds and recorded -24.28 dB. The separately persisted
+source-minus-estimate residual closed the re-read PCM24 accounting sum exactly
+on both runs. This closure proves accounting, not separation accuracy.
+
+An additional private evaluator now hash-binds each six-source run to its
+authorised model input and existing provider-leaf evidence. It transcribes
+`guitar`, `piano`, `other`, residual and every provider leaf with the same
+neutral Basic Pitch settings, creates same-patch MIDI previews and writes a
+self-contained listening page. Labels do not contribute to the ranking and
+all selection, activation, production and publication permissions remain
+false.
+
+The two-window evidence does not support promoting the six-source challenger.
+On `Be Alone`, guitar RMS was 0.01595 and piano RMS only 0.000364; guitar's
+nearest audio leaf was Moises `keys`, piano's was Moises `other`, and their
+nearest MIDI leaves also differed. The broad `other` estimate was the strong
+match to a Suno `Synth` leaf (audio similarity 0.933). On `I am a Alien
+mashup`, guitar and piano were both near-silent at RMS 0.000563 and 0.000494,
+while broad `other` matched Moises `keys` most closely (audio similarity
+0.857). These are descriptive comparisons against imperfect provider outputs,
+not ground truth, but they show that the new lanes did not reliably isolate
+the musical material needed by downstream MIDI. Human listening remains
+available in each local `six_source_provider_midi_review.html`; no listening
+choice has been recorded.
+
+The next bounded experiment is same-checkpoint Demucs-MLX parity, followed by
+one exact licence-audited RoFormer challenger if the quality gap remains.
+Runtime parity must not be mistaken for model-quality improvement.
 
 The first authorised real-song development corpus is now available locally
 under [`../stem_examples`](../stem_examples/README.md). It contains four
