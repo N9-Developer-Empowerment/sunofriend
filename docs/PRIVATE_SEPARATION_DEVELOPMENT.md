@@ -601,12 +601,35 @@ the candidate eligible by itself.
 The plan remains `blocked`/`not_run`. The repository's MIT licence covers its
 software and associated documentation, but the release does not state
 checkpoint-specific terms and Sunofriend does not project the code licence
-onto the weights. A 31 July 2026 recheck of the official GitHub release API
+onto the weights. A 1 August 2026 recheck of the official GitHub release API
 still returned a null asset digest. Apple-silicon resource behaviour is
 unmeasured, the actual checkpoint has not passed the existing static
 inspection contract, and a bounded RoFormer worker does not exist. No package
 or checkpoint was installed, no new approval was inferred, and no CLI, TUI,
 Simple, Studio, source-graph or public route was added.
+
+That recheck is now reproducible evidence rather than prose alone.
+`private-separation-roformer-upstream-evidence.json` retains a bounded subset
+of the official release API, tag-ref API and pinned-revision licence evidence
+at SHA-256
+`7767d27d2b4e75f0780560e1510ca835af35a0f5600c200add5654b9cf875bd8`.
+It records that tag `v1.0.12` resolves to
+`aef04b2e52fb3beaf25e333199f5a7236e628e7b`, the release body only identifies
+the MUSDB18HQ model, and both release asset `digest` fields are null. Capturing
+the observation used the public GitHub network endpoints but downloaded
+neither release asset. Verify the already-tracked snapshot locally with:
+
+```bash
+PYTHONPATH=src .venv/bin/python \
+  scripts/private-roformer-upstream-evidence.py \
+  --repository-root /absolute/path/to/Sunofriend
+```
+
+The verifier is descriptor-pinned, path-free and read-only. It performs no
+network request, asset open, installation, model import, deserialisation or
+process launch. It returns `verified_no_checkpoint_authority`, not approval:
+absence of terms is not permission, a null digest is not checkpoint identity,
+and the repository code licence remains scoped separately from the weights.
 
 The exact source import audit also found that upstream's broad inference
 utility imports configuration and metric dependencies that the BS-RoFormer
@@ -699,10 +722,13 @@ PYTHONPATH=src .venv/bin/python scripts/private-roformer-admission.py \
 ```
 
 This read-only command descriptor-pins and verifies the source manifest,
-six-package input, 15-package hash lock and exact-version licence audit. It
+six-package input, 15-package hash lock, exact-version licence audit and exact
+official upstream-evidence snapshot. It
 also checks that every direct package is in the lock, every locked package is
 covered by the licence evidence, the audit did not perform or authorise an
-installation, and checkpoint terms remain outside its scope. The self-hashed
+installation, and checkpoint terms remain outside its scope. The upstream
+subreport confirms the official snapshot but keeps digest, terms, allowed use,
+identity and private-evaluation readiness false. The self-hashed
 report deliberately omits both supplied absolute paths. A successful evidence
 check still returns `blocked`: it verifies only that the code and runtime plan
 are intact. It does not inspect or open a checkpoint, install the runtime,

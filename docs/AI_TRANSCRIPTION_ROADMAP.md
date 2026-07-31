@@ -1831,9 +1831,17 @@ The read-only verifier passed on the exact temporary release checkout while
 making no imports, writes, network calls or process launches. The verifier now
 also caps each module at 64 KiB and parses its AST without execution. Exact
 direct-import roots are manifest-bound; relative and wildcard imports,
-dynamic-import calls and runtime code-generation calls fail closed. A 31 July
+dynamic-import calls and runtime code-generation calls fail closed. A 1 August
 2026 official release-API recheck still found no checkpoint digest or
-checkpoint-specific terms. A future worker must repeat the source check on its
+checkpoint-specific terms. The exact release, tag-ref and pinned-revision
+licence fields from that observation are retained in a tracked 3,362-byte
+snapshot with SHA-256
+`7767d27d2b4e75f0780560e1510ca835af35a0f5600c200add5654b9cf875bd8`.
+Its no-network verifier returns `verified_no_checkpoint_authority`: it proves
+the recorded tag/revision and missing release evidence without converting
+absence into permission. The private admission now verifies this fifth
+repository artifact alongside the source/runtime/licence evidence. A future
+worker must repeat the source check on its
 own source tree; the current plan does not claim that a durable runtime
 checkout exists, that the checkpoint is approved or that it has been loaded.
 

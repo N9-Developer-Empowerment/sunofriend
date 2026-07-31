@@ -34,6 +34,12 @@ from ._separation_roformer_source import (
     SOURCE_REVISION,
     _verify_private_roformer_source_tree,
 )
+from ._separation_roformer_upstream_evidence import (
+    UPSTREAM_EVIDENCE,
+    UPSTREAM_EVIDENCE_BYTES,
+    UPSTREAM_EVIDENCE_SHA256,
+    _report_from_verified_contents,
+)
 
 
 _EXPECTED_FILES = {
@@ -56,6 +62,11 @@ _EXPECTED_FILES = {
         "bytes": 6_598,
         "sha256": RUNTIME_LICENSE_AUDIT_SHA256,
         "maximum_bytes": 512 * 1024,
+    },
+    UPSTREAM_EVIDENCE: {
+        "bytes": UPSTREAM_EVIDENCE_BYTES,
+        "sha256": UPSTREAM_EVIDENCE_SHA256,
+        "maximum_bytes": 64 * 1024,
     },
 }
 _PACKAGE_LINE = re.compile(r"^([A-Za-z0-9][A-Za-z0-9._-]*)==([^\s\\]+)")
@@ -91,6 +102,7 @@ def _build_private_roformer_admission(
     locked_packages = _parse_requirement_packages(
         contents[RUNTIME_DEPENDENCY_LOCK], "dependency lock"
     )
+    upstream = _report_from_verified_contents(contents[UPSTREAM_EVIDENCE])
     _verify_source_manifest(manifest, source)
     _verify_runtime_evidence(
         dependency_audit,
@@ -118,6 +130,7 @@ def _build_private_roformer_admission(
             "runtime_installation_permitted_by_this_admission": False,
             "checkpoint_terms_covered": False,
             "redistribution_review_required": True,
+            "upstream_release": upstream,
         },
         "readiness": {
             "exact_source_tree_verified": True,
@@ -125,6 +138,7 @@ def _build_private_roformer_admission(
             "runtime_input_verified": True,
             "runtime_lock_verified": True,
             "runtime_licence_audit_verified": True,
+            "official_upstream_release_evidence_verified": True,
             "code_and_runtime_plan_ready": True,
             "checkpoint_identity_verified": False,
             "checkpoint_terms_verified": False,

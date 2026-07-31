@@ -21,11 +21,16 @@ from ._separation_roformer_source import (
     SOURCE_MANIFEST,
     SOURCE_MANIFEST_SHA256,
 )
+from ._separation_roformer_upstream_evidence import (
+    UPSTREAM_EVIDENCE,
+    UPSTREAM_EVIDENCE_BYTES,
+    UPSTREAM_EVIDENCE_SHA256,
+)
 
 
 PLAN_SCHEMA = "sunofriend.private-roformer-challenger-plan.v1"
 POLICY_ID = "private-bs-roformer-musdb18hq-v1.0.12-plan-v1"
-AUDITED_AT = "2026-07-31"
+AUDITED_AT = "2026-08-01"
 
 REPOSITORY = "https://github.com/ZFTurbo/Music-Source-Separation-Training"
 RELEASE_TAG = "v1.0.12"
@@ -155,6 +160,23 @@ def _build_private_roformer_challenger_plan(
             "deserialization_permitted": False,
             "redistribution_allowed_by_sunofriend": False,
             "local_observation": local_checkpoint,
+        },
+        "upstream_release_evidence": {
+            "path": UPSTREAM_EVIDENCE,
+            "bytes": UPSTREAM_EVIDENCE_BYTES,
+            "sha256": UPSTREAM_EVIDENCE_SHA256,
+            "observed_at": AUDITED_AT,
+            "official_primary_sources_only": True,
+            "release_tag_resolves_to_pinned_revision": True,
+            "checkpoint_digest_published_by_release_api": False,
+            "checkpoint_terms_stated_in_release_body": False,
+            "checkpoint_allowed_use_verified": False,
+            "checkpoint_identity_verified": False,
+            "verified_in_this_call": False,
+            "verification_command": (
+                "scripts/private-roformer-upstream-evidence.py "
+                "--repository-root /absolute/path/to/Sunofriend"
+            ),
         },
         "runtime": {
             "environment": "fresh .venv-roformer-private after separate approval",

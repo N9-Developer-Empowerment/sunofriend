@@ -220,7 +220,13 @@ report the result, then move on.
   downloader, worker or product route exists. Its narrowed 15-package
   wheel/hash runtime has exact-version licence evidence for private local
   evaluation. A bounded static-inspection contract is defined but has not been
-  applied. The separate non-executable worker protocol is implemented and
+  applied. The official release/API/tag/licence evidence observed on 1 August
+  2026 is retained as an exact tracked snapshot with a separate read-only,
+  path-free verifier. It confirms that the tag resolves to the pinned source
+  revision while the checkpoint asset digest remains null and the release body
+  still supplies no checkpoint terms. The snapshot does not authorize the
+  checkpoint; its verifier itself uses no network. The separate non-executable
+  worker protocol is implemented and
   tested: it accepts only one or two path-free canonical stereo 44.1 kHz PCM24
   excerpt identities of at most 15 seconds, uses canonical sorted roles
   `bass`, `drums`, `other`, `vocals`, and fixes output geometry and the generic
@@ -229,8 +235,9 @@ report the result, then move on.
   adapter does not exist. Its future loader is
   pinned to exact hashes for two model modules and must bypass the upstream
   package initializer. A private read-only admission command can now bind an
-  exact source checkout to the four tracked runtime planning artifacts and
-  their package/licence relationships, but its result remains path-free,
+  exact source checkout to the five tracked source/runtime/upstream-evidence
+  artifacts and their package/licence relationships, but its result remains
+  path-free,
   `blocked` and non-authorising. None of this approves installation or covers
   the checkpoint. Do not offer or run it through this skill.
 - `source-import` decodes exactly one local asset.

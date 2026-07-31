@@ -32,6 +32,23 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
     assert plan["checkpoint"]["published_bytes"] == 527_385_512
     assert plan["checkpoint"]["published_sha256"] is None
     assert plan["checkpoint"]["download_permitted"] is False
+    assert plan["upstream_release_evidence"] == {
+        "path": roformer.UPSTREAM_EVIDENCE,
+        "bytes": roformer.UPSTREAM_EVIDENCE_BYTES,
+        "sha256": roformer.UPSTREAM_EVIDENCE_SHA256,
+        "observed_at": "2026-08-01",
+        "official_primary_sources_only": True,
+        "release_tag_resolves_to_pinned_revision": True,
+        "checkpoint_digest_published_by_release_api": False,
+        "checkpoint_terms_stated_in_release_body": False,
+        "checkpoint_allowed_use_verified": False,
+        "checkpoint_identity_verified": False,
+        "verified_in_this_call": False,
+        "verification_command": (
+            "scripts/private-roformer-upstream-evidence.py "
+            "--repository-root /absolute/path/to/Sunofriend"
+        ),
+    }
     assert plan["runtime"]["installation_command"] is None
     assert plan["runtime"]["dependency_lock"]["resolved_packages"] == 15
     assert plan["runtime"]["dependency_lock"]["installed"] is False

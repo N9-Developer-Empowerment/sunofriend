@@ -104,12 +104,17 @@ def test_admission_binds_source_runtime_and_licence_without_enabling(
     assert result["admission_sha256"] == admission._admission_sha256(result)
     assert result["repository_evidence"]["direct_package_count"] == 6
     assert result["repository_evidence"]["locked_package_count"] == 15
+    upstream = result["repository_evidence"]["upstream_release"]
+    assert upstream["status"] == "verified_no_checkpoint_authority"
+    assert upstream["checkpoint"]["published_digest"] is None
+    assert upstream["checkpoint"]["allowed_use_verified"] is False
     assert result["readiness"] == {
         "exact_source_tree_verified": True,
         "exact_import_surface_verified": True,
         "runtime_input_verified": True,
         "runtime_lock_verified": True,
         "runtime_licence_audit_verified": True,
+        "official_upstream_release_evidence_verified": True,
         "code_and_runtime_plan_ready": True,
         "checkpoint_identity_verified": False,
         "checkpoint_terms_verified": False,
