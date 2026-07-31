@@ -1981,9 +1981,10 @@ promotion are not implemented**
   a tested no-network plan. The plan correctly remains `blocked`/`not_run`.
 - [ ] Before any RoFormer download or installation, obtain checkpoint-specific
   allowed-use evidence and an independently verifiable official checkpoint
-  SHA-256, add bounded static inspection and worker contracts, and request
-  separate approval. The narrowed 15-package Apple-silicon wheel/hash lock now
-  has exact-version licence evidence suitable for private local evaluation;
+  SHA-256, apply the now-defined bounded static-inspection contract, implement
+  the now-defined four-role excerpt-worker contract, and request separate
+  approval. The narrowed 15-package Apple-silicon wheel/hash lock now has
+  exact-version licence evidence suitable for private local evaluation;
   redistribution notices remain a later product concern. Do not infer weight
   permission from the repository's MIT code licence.
 - [ ] Consider a deterministic role-specific ensemble only after its members

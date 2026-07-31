@@ -35,6 +35,13 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
     assert plan["runtime"]["installation_command"] is None
     assert plan["runtime"]["dependency_lock"]["resolved_packages"] == 15
     assert plan["runtime"]["dependency_lock"]["installed"] is False
+    assert plan["safety_contract"]["readiness"] == {
+        "checkpoint_inspection_contract_defined": True,
+        "worker_request_result_contract_defined": True,
+        "candidate_static_inspection_completed": False,
+        "worker_implemented": False,
+        "private_evaluation_eligible": False,
+    }
     assert plan["runtime"]["dependency_license_audit"] == {
         "path": roformer.RUNTIME_LICENSE_AUDIT,
         "sha256": roformer.RUNTIME_LICENSE_AUDIT_SHA256,

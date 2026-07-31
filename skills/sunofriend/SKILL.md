@@ -219,8 +219,10 @@ report the result, then move on.
   terms and a published checkpoint SHA-256 are absent, and no installer,
   downloader, worker or product route exists. Its narrowed 15-package
   wheel/hash runtime has exact-version licence evidence for private local
-  evaluation, but that does not approve installation or cover the checkpoint.
-  Do not offer or run it through this skill.
+  evaluation. A bounded static-inspection and four-role excerpt-worker contract
+  is defined but has not been applied or implemented. None of this approves
+  installation or covers the checkpoint. Do not offer or run it through this
+  skill.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one
   canonical WAV project. It does not separate, shift, pad, stretch, normalize

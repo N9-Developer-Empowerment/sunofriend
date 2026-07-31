@@ -14,6 +14,10 @@ import stat
 from pathlib import Path
 from typing import Any
 
+from ._separation_roformer_contract_plan import (
+    _build_private_roformer_contract_plan,
+)
+
 
 PLAN_SCHEMA = "sunofriend.private-roformer-challenger-plan.v1"
 POLICY_ID = "private-bs-roformer-musdb18hq-v1.0.12-plan-v1"
@@ -205,6 +209,9 @@ def _build_private_roformer_challenger_plan(
             "apple_device_path_reported_by_source": "mps",
             "apple_device_path_verified_for_candidate": False,
         },
+        "safety_contract": _build_private_roformer_contract_plan(
+            checkpoint_bytes=CHECKPOINT_BYTES
+        ),
         "evaluation_contract": {
             "control": "pinned local PyTorch HTDemucs",
             "first_authorised_evidence": (
@@ -235,7 +242,8 @@ def _build_private_roformer_challenger_plan(
             "next_safe_actions": [
                 "obtain checkpoint-specific terms or an explicit upstream clarification",
                 "obtain and independently verify a published checkpoint SHA-256",
-                "define static checkpoint inspection and bounded worker contracts",
+                "apply the existing static inspector to an exact local checkpoint",
+                "implement the bounded four-role excerpt worker",
                 "request separate approval only after every preceding blocker closes",
             ],
         },

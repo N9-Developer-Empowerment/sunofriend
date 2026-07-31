@@ -1807,6 +1807,17 @@ requires notice review. The lock is reserved for a fresh environment, not
 `.venv-ai`. No download or approval request is appropriate while checkpoint,
 static-inspection, worker and resource preconditions remain open.
 
+The candidate is now bound on paper to Sunofriend's existing parent-issued
+checkpoint inspection and worker request/result schemas. The inspector caps
+checkpoint, ZIP and pickle work, pins a non-inheritable descriptor, inventories
+pickle opcodes without deserialising them and never authorises loading. The
+future excerpt worker is limited to two canonical 15-second stereo 44.1 kHz
+inputs, four exact output roles, a fresh quarantine, no network or child
+processes, and parent-verified output hashes and geometry. These are executable
+safety contracts already used by private separation development, not a new
+RoFormer worker: no candidate checkpoint has been inspected and no runner has
+been implemented.
+
 ### 2026-07-31 — Second authorised separation-to-MIDI repeat
 
 - Goal: test whether the first real-song observations repeat on different

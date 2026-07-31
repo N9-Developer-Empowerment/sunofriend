@@ -638,6 +638,17 @@ resolved successfully and changed no environment. The lock must target a fresh
 approved for installation. The selected PyTorch wheel requires macOS 14 or
 later.
 
+The next execution boundary is also defined without making the candidate
+runnable. `_separation_roformer_contract_plan.py` binds a future adapter to the
+existing `separation_checkpoint_inspection` and `separation_worker_contract`
+schemas. Static inspection must hash a descriptor-pinned checkpoint, validate
+the bounded stored-only Torch ZIP inventory and parse pickle opcodes without
+deserialisation. It cannot authorise loading. A later worker request is limited
+to two 15-second canonical PCM24 excerpts, the four exact roles, a fresh
+private quarantine, denied network and child processes, and parent-verified
+WAV hashes, geometry and source horizon. The contract is defined; it has not
+been applied to this checkpoint, and the RoFormer worker does not exist.
+
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
 resource, downstream-MIDI and human listening acceptance.
