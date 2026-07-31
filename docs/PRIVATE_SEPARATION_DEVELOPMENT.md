@@ -378,6 +378,21 @@ truth. The official six-source configuration is experimental and its piano
 bleed warning remains part of the gate. Installation, exact checkpoint hash,
 terms, offline behaviour and runtime evidence must be recorded before it runs.
 
+The separate private registry and installer are prepared but no checkpoint is
+downloaded without explicit acceptance:
+
+```bash
+SUNOFRIEND_ACCEPT_DEMUCS_6S_PRIVATE_EVALUATION=1 \
+  sh scripts/setup-demucs-6s-model.sh
+```
+
+The installer fetches the official 54,996,327-byte
+`5c90dfd2-34c22ccb.th` file only when it is absent, then requires full SHA-256
+`34c22ccb381c6f9fdbf324f04e1e2fe21aaaf293f5ded163a162697ff9a02ddd`
+before publishing it with private permissions. The resolver never downloads,
+the challenger is excluded from normal `ai-doctor --require all`, and model
+installation alone enables no separator surface.
+
 The first authorised real-song development corpus is now available locally
 under [`../stem_examples`](../stem_examples/README.md). It contains four
 Ezzye originals, one detailed Moises export and two distinct Suno exports per

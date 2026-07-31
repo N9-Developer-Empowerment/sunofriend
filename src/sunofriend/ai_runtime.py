@@ -45,6 +45,9 @@ PESTO_MODEL_SHA256 = "16c32e06ddd950e3e4866dfa3c7f8a87c4988f8adf43e57977b189f031
 DEMUCS_HTDEMUCS_SHA256 = (
     "8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4"
 )
+DEMUCS_HTDEMUCS_6S_SHA256 = (
+    "34c22ccb381c6f9fdbf324f04e1e2fe21aaaf293f5ded163a162697ff9a02ddd"
+)
 
 
 @dataclass(frozen=True)
@@ -146,6 +149,31 @@ AI_CLEANUP_MODEL_MANIFESTS: dict[str, AIModelManifest] = {
             "Keep the exact official checkpoint external, hash-verify before "
             "deserialisation, never vendor or redistribute it, and do not "
             "promote its output without a listening review."
+        ),
+    ),
+}
+
+
+# Challengers in this registry are intentionally excluded from ordinary
+# ai-doctor readiness and the ``all`` requirement. They exist only so private
+# evaluation code shares the same licence/provenance representation and local
+# checkpoint resolver as the supported optional workers.
+AI_PRIVATE_EVALUATION_MODEL_MANIFESTS: dict[str, AIModelManifest] = {
+    "demucs-6s": AIModelManifest(
+        backend="demucs-6s",
+        name="Demucs htdemucs_6s (experimental)",
+        tasks=("private-six-source-separation-evaluation",),
+        code_license="MIT",
+        weights_license=(
+            "No separate pretrained-checkpoint licence identified in the "
+            "official repository; private local evaluation only"
+        ),
+        package="demucs",
+        homepage="https://github.com/facebookresearch/demucs",
+        distribution_policy=(
+            "Keep the exact official checkpoint external, hash-verify before "
+            "deserialisation, never vendor or redistribute it, and retain the "
+            "official warning that piano has substantial bleed and artifacts."
         ),
     ),
 }
@@ -544,6 +572,39 @@ def resolve_demucs_model(value: str | Path | None = None) -> Path:
     return candidate.absolute()
 
 
+def _default_demucs_6s_model() -> Path:
+    return (
+        Path.home()
+        / ".local"
+        / "share"
+        / "sunofriend"
+        / "models"
+        / "demucs-4.0.1-htdemucs-6s"
+        / "5c90dfd2-34c22ccb.th"
+    )
+
+
+def resolve_demucs_6s_model(value: str | Path | None = None) -> Path:
+    """Resolve the pinned experimental six-source checkpoint without networking."""
+
+    configured = value or os.environ.get("SUNOFRIEND_DEMUCS_6S_MODEL")
+    candidate = (
+        Path(configured).expanduser()
+        if configured
+        else _default_demucs_6s_model()
+    )
+    if not candidate.is_file():
+        source = "SUNOFRIEND_DEMUCS_6S_MODEL" if configured else "default path"
+        raise FileNotFoundError(
+            "Demucs htdemucs_6s checkpoint was not found via "
+            f"{source}: {candidate}; run scripts/setup-demucs-6s-model.sh "
+            "after accepting its private-evaluation notice"
+        )
+    if candidate.suffix.lower() != ".th":
+        raise ValueError("Demucs six-source checkpoint must be a .th file")
+    return candidate.absolute()
+
+
 def _sha256_file(path: Path) -> str:
     import hashlib
 
@@ -767,6 +828,50 @@ def collect_demucs_model() -> dict[str, Any]:
         "configuration": {
             "model_env": "SUNOFRIEND_DEMUCS_MODEL",
             "default_path": str(_default_demucs_model()),
+        },
+    }
+
+
+def collect_demucs_6s_model() -> dict[str, Any]:
+    """Report the exact private six-source challenger; never download it."""
+
+    configured = os.environ.get("SUNOFRIEND_DEMUCS_6S_MODEL")
+    try:
+        model = resolve_demucs_6s_model(configured)
+    except (FileNotFoundError, ValueError) as exc:
+        return {
+            "checkpoint_ready": False,
+            "checkpoint_error": str(exc),
+            "configuration": {
+                "model_env": "SUNOFRIEND_DEMUCS_6S_MODEL",
+                "default_path": str(_default_demucs_6s_model()),
+            },
+        }
+
+    sha256 = _sha256_file(model)
+    return {
+        "checkpoint_ready": sha256 == DEMUCS_HTDEMUCS_6S_SHA256,
+        "checkpoint": str(model),
+        "checkpoint_bytes": model.stat().st_size,
+        "checkpoint_sha256": sha256,
+        "expected_checkpoint_sha256": DEMUCS_HTDEMUCS_6S_SHA256,
+        "checkpoint_error": (
+            None
+            if sha256 == DEMUCS_HTDEMUCS_6S_SHA256
+            else (
+                "Demucs checkpoint hash does not match the pinned official "
+                "htdemucs_6s model"
+            )
+        ),
+        "variant": "demucs-4.0.1/htdemucs_6s/5c90dfd2",
+        "evaluation_scope": "private_development_only",
+        "official_quality_warning": (
+            "Experimental six-source model; piano has substantial bleed and "
+            "artifacts."
+        ),
+        "configuration": {
+            "model_env": "SUNOFRIEND_DEMUCS_6S_MODEL",
+            "default_path": str(_default_demucs_6s_model()),
         },
     }
 
@@ -1054,6 +1159,7 @@ def ai_requirement_ready(report: Mapping[str, Any], requirement: str) -> bool:
 __all__ = [
     "AI_CANDIDATE_SCHEMA",
     "AI_CLEANUP_MODEL_MANIFESTS",
+    "AI_PRIVATE_EVALUATION_MODEL_MANIFESTS",
     "AI_MODEL_MANIFESTS",
     "AI_REQUEST_SCHEMA",
     "AI_REQUIREMENTS",
@@ -1062,6 +1168,7 @@ __all__ = [
     "RMVPE_MODEL_SHA256",
     "PESTO_MODEL_SHA256",
     "DEMUCS_HTDEMUCS_SHA256",
+    "DEMUCS_HTDEMUCS_6S_SHA256",
     "AIModelManifest",
     "AITranscriptionBackend",
     "AITranscriptionCandidate",
@@ -1073,6 +1180,7 @@ __all__ = [
     "collect_rmvpe_model",
     "collect_pesto_model",
     "collect_demucs_model",
+    "collect_demucs_6s_model",
     "collect_ai_diagnostics",
     "collect_ai_runtime_fingerprint",
     "resolve_ai_python",
@@ -1081,4 +1189,5 @@ __all__ = [
     "resolve_rmvpe_model",
     "resolve_pesto_model",
     "resolve_demucs_model",
+    "resolve_demucs_6s_model",
 ]

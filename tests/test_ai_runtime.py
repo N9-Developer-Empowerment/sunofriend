@@ -13,6 +13,7 @@ from unittest.mock import patch
 from sunofriend.ai_runtime import (
     AI_CANDIDATE_SCHEMA,
     AI_CLEANUP_MODEL_MANIFESTS,
+    AI_PRIVATE_EVALUATION_MODEL_MANIFESTS,
     AI_MODEL_MANIFESTS,
     AI_REQUEST_SCHEMA,
     AI_RUNTIME_SCHEMA,
@@ -22,12 +23,14 @@ from sunofriend.ai_runtime import (
     ai_requirement_ready,
     collect_ai_diagnostics,
     collect_demucs_model,
+    collect_demucs_6s_model,
     collect_game_model,
     collect_muscriptor_checkpoint,
     collect_pesto_model,
     collect_rmvpe_model,
     resolve_ai_python,
     resolve_demucs_model,
+    resolve_demucs_6s_model,
     resolve_game_model,
     resolve_muscriptor_checkpoint,
     resolve_pesto_model,
@@ -52,6 +55,10 @@ class AIProtocolTests(unittest.TestCase):
         self.assertEqual(demucs.code_license, "MIT")
         self.assertIn("private local evaluation", demucs.weights_license)
         self.assertIn("never vendor", demucs.distribution_policy)
+        demucs_6s = AI_PRIVATE_EVALUATION_MODEL_MANIFESTS["demucs-6s"]
+        self.assertEqual(demucs_6s.code_license, "MIT")
+        self.assertIn("private local evaluation", demucs_6s.weights_license)
+        self.assertIn("piano", demucs_6s.distribution_policy)
 
     def test_request_requires_absolute_existing_audio(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -262,6 +269,30 @@ class AIRuntimeTests(unittest.TestCase):
             model.write_bytes(b"checkpoint")
             with self.assertRaisesRegex(ValueError, r"\.th"):
                 resolve_demucs_model(model)
+
+    def test_demucs_6s_is_a_separate_private_hash_pinned_challenger(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            model = Path(directory) / "5c90dfd2-34c22ccb.th"
+            model.write_bytes(b"not the canonical six-source checkpoint")
+            with patch.dict(
+                os.environ,
+                {"SUNOFRIEND_DEMUCS_6S_MODEL": str(model)},
+            ):
+                self.assertEqual(resolve_demucs_6s_model(), model)
+                report = collect_demucs_6s_model()
+
+            self.assertFalse(report["checkpoint_ready"])
+            self.assertEqual(len(report["checkpoint_sha256"]), 64)
+            self.assertEqual(report["evaluation_scope"], "private_development_only")
+            self.assertIn("htdemucs_6s", report["checkpoint_error"])
+            self.assertIn("piano", report["official_quality_warning"])
+
+    def test_demucs_6s_rejects_non_th_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            model = Path(directory) / "htdemucs-6s.pt"
+            model.write_bytes(b"checkpoint")
+            with self.assertRaisesRegex(ValueError, r"\.th"):
+                resolve_demucs_6s_model(model)
 
     def test_missing_runtime_is_machine_readable(self) -> None:
         report = collect_ai_diagnostics("/definitely/missing/sunofriend-ai-python")

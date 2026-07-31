@@ -23,15 +23,16 @@ the copyright-safe demo, and a second private evaluator measures their effect
 on the existing MIDI transcribers. Public separation, source-graph import,
 hidden/cross-song acceptance and promotion are not implemented**
 
-Checked: 31 July 2026 after the first private four-stem HTDemucs run,
-synthetic ground-truth evaluation, seed-transcriber MIDI comparison and
-inventory of the first four-song authorised provider corpus
+Checked: 31 July 2026 after the private four-stem HTDemucs run, synthetic
+ground-truth evaluation, two authorised provider comparisons, cross-song
+narrow-`other` evidence and preparation of the pinned six-source challenger
 
 ## Contents
 
 - [Decision and current boundary](#executive-decision)
 - [Terms and ways to obtain stems](#terminology-contract)
 - [Local model landscape](#open-source-and-local-model-landscape)
+- [Quality escalation ladder](#quality-escalation-ladder)
 - [Input and source-project contracts](#input-format-contract)
 - [Quality and bake-off](#quality-and-bake-off-contract)
 - [TUI and Workbench experience](#tui-and-workbench-experience)
@@ -958,6 +959,17 @@ experimental six-source Demucs guitar/piano output on these same two windows,
 with explicit checkpoint, terms, offline, bleed, residual and downstream-MIDI
 evidence before any acceptance.
 
+Preparation for that challenger is now explicit and still non-executing. The
+installed Demucs 4.0.1 metadata names official signature `5c90dfd2`, remote
+filename `5c90dfd2-34c22ccb.th` and six-role order drums, bass, other, vocals,
+piano, guitar. Sunofriend pins its 54,996,327 bytes and full SHA-256
+`34c22ccb381c6f9fdbf324f04e1e2fe21aaaf293f5ded163a162697ff9a02ddd`.
+The official project calls the model experimental and warns that piano has
+substantial bleed and artifacts. A separate private-evaluation manifest,
+resolver and opt-in installer exist; ordinary AI readiness deliberately does
+not include this challenger, and neither installation nor resolution can run
+or activate separation.
+
 The same audit found `/usr/bin/sandbox-exec` on the development Mac, but its
 local manual marks the mechanism deprecated and the current Codex execution
 context cannot apply even a no-network profile. More importantly,
@@ -1050,6 +1062,68 @@ The same rule applies to
 and [Ultimate Vocal Remover](https://github.com/Anjok07/ultimatevocalremovergui):
 they are useful model runners and comparison tools, not one uniformly licensed
 model.
+
+## Quality escalation ladder
+
+Sunofriend's target is not the separator with the most impressive isolated
+benchmark number. It is **usable local stems that improve editable MIDI and a
+musical interpretation WAV**, confirmed by aligned measurements and blind
+listening on held-out songs. Separation quality, downstream transcription and
+the final mix must therefore be evaluated together.
+
+Use the following order. Do not jump directly from one disappointing excerpt
+to training a model or uploading a song:
+
+1. **Pinned local baseline.** Compare the current four-source HTDemucs result
+   and the experimental six-source guitar/piano challenger on the same fixed
+   windows. Preserve residuals, timings, resource use, MIDI and listening
+   evidence.
+2. **Apple-silicon runtime parity.** Test Demucs-MLX with the same exact model
+   only after its weights can be preinstalled, hashed and used offline. This
+   separates a speed improvement from a quality change. A benchmark from one
+   M4 Max configuration is not a promise for every M4 Mac.
+3. **Independent local architecture.** If the quality gap remains, register
+   one fixed, licence-audited BS-RoFormer or MelBand-RoFormer checkpoint. The
+   active Music Source Separation Training project and
+   `python-audio-separator` are candidate runners, but neither makes all of its
+   downloadable weights safe or equivalent.
+4. **Deterministic role-specific ensemble.** Consider an ensemble only after
+   each component has independent evidence. A preregistered role may use a
+   different best model, but the ensemble must beat the best single candidate
+   on held-out downstream MIDI and listening, not merely average its outputs.
+5. **Targeted fine-tuning.** Fine-tune only after the same concrete failure is
+   reproduced across songs. Prefer one target plus residual, a frozen
+   baseline and a held-out split. The official
+   [Demucs training guide](https://github.com/facebookresearch/demucs/blob/main/docs/training.md)
+   supports continuing from an existing model; the Music Source Separation
+   Training project supports checkpoints and LoRA, but its published
+   configurations assume much larger GPUs, so M4 memory, duration and operator
+   support must be measured rather than presumed. PyTorch's
+   [MPS backend](https://docs.pytorch.org/docs/stable/notes/mps.html) supports
+   GPU training on macOS, but that does not guarantee every architecture or
+   operation will run there.
+6. **Optional provider API.** If local candidates still miss the usable gate,
+   offer a separate opt-in cloud profile. It must state which audio is
+   uploaded, quote or cap the estimated charge, declare rights, record
+   provider/workflow/version provenance, explain retention/deletion and never
+   upload as a silent fallback. Its outputs enter the same immutable bake-off
+   as local candidates.
+
+Fine-tuning data has a stricter contract than evaluation data. An authorised
+finished mix paired with the actual clean multitrack target is useful training
+truth. Moises, Suno or another separator's estimates are **not** clean target
+truth; they may be retained as teacher candidates or comparison evidence, but
+training on them would also learn their bleed and artefacts. Start with a
+single repeated problem such as bass continuity, piano bleed or drum-family
+confusion, and keep whole songs from the same production out of both training
+and validation when constructing the held-out test set.
+
+No cloud adapter is selected yet. Music AI documents an asynchronous
+[upload/workflow/job API](https://music.ai/docs/getting-started/quick-start/)
+and is a concrete integration candidate; AudioShake, LALAL.AI and hosted
+Demucs services remain commercial research candidates until current pricing,
+privacy, deletion, output roles, terms and test access are verified. Provider
+commission must never affect a quality result.
 
 ### Wide-taxonomy models
 
@@ -1872,6 +1946,18 @@ promotion are not implemented**
   vocal production path explicit.
 - [ ] Repeat downstream MIDI and listening evaluation across authorised real
   excerpts and at least one independent separator/runtime candidate.
+- [ ] If the pinned six-source challenger does not meet the usable-quality
+  gate, measure same-checkpoint Demucs-MLX parity before changing architecture,
+  then register one exact, licence-audited RoFormer candidate.
+- [ ] Consider a deterministic role-specific ensemble only after its members
+  have separate held-out evidence; never infer a winner from popularity or a
+  model-runner catalogue.
+- [ ] Open a targeted fine-tuning experiment only for a repeated, named
+  failure and only with owned/licensed mixture plus actual clean target pairs,
+  a frozen baseline and a song-disjoint held-out set.
+- [ ] Treat provider APIs as an S7 opt-in profile with upload, privacy,
+  retention, rights and cost confirmation; never use a cloud fallback
+  implicitly.
 - [x] Run the first authorised real excerpt through identical production
   repair-loop, vocal-contour, independent-evaluation and dry-render settings
   for local HTDemucs, Moises and two distinct Suno packs, retaining every
@@ -1887,6 +1973,10 @@ promotion are not implemented**
   labels remain observations only. Keyboard was the only stable Suno pair on
   both songs; Moises/Suno semantic labels did not establish a dependable
   mapping, so no narrow source was accepted or activated.
+- [x] Register the exact experimental six-source Demucs checkpoint as a
+  separate private-evaluation challenger and add an explicit-acceptance,
+  byte-count/full-hash-verifying installer. Keep it outside ordinary
+  `ai-doctor` readiness and every separator surface.
 - [x] Stage the first authorised real excerpt, prove provider-pack clock
   alignment, preserve native-rate evidence, record the 44.1 kHz model-input
   derivative and run the pinned local separator without activation.
@@ -1961,6 +2051,9 @@ Likely modules:
   metering and payment design.
 - Add provider APIs only when privacy, terms and failure semantics are
   documented.
+- Return cloud results through the same immutable source/checkpoint-or-workflow
+  provenance, comparison, downstream-MIDI and listening contracts as local
+  results.
 
 ## Tests required by implementation
 

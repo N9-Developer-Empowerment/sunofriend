@@ -1730,6 +1730,28 @@ Each working day should aim for one narrow vertical improvement:
   offline receipt, then run only these two fixed windows and compare every
   estimate plus residual and downstream MIDI without trusting labels.
 
+The preparation portion is complete without downloading or running the model:
+the private registry pins official signature `5c90dfd2`, byte count
+54,996,327 and full SHA-256
+`34c22ccb381c6f9fdbf324f04e1e2fe21aaaf293f5ded163a162697ff9a02ddd`.
+The separate installer requires explicit private-evaluation acceptance, and
+the offline resolver is excluded from ordinary AI readiness. The remaining
+step is user acceptance followed by a private install, static checkpoint
+inspection and two-window experiment; no product surface is enabled.
+
+The quality escalation after that experiment is now explicit. First measure
+same-checkpoint Demucs-MLX parity so runtime speed is not confused with model
+quality. If the local quality gap remains, add one fixed, licence-audited
+RoFormer candidate and only then test a deterministic role-specific ensemble.
+Fine-tuning is reserved for a repeated named failure and requires owned or
+licensed finished-mixture plus actual clean-target pairs, a frozen baseline
+and a song-disjoint held-out set; provider estimates are comparison evidence,
+not supervised ground truth. A provider API belongs to S7 and must be an
+explicitly consented, costed upload with retention/deletion and provenance,
+never a hidden local fallback. All routes must improve downstream MIDI and the
+interpretation WAV under the same listening gate, not separation metrics
+alone.
+
 ### 2026-07-31 — Second authorised separation-to-MIDI repeat
 
 - Goal: test whether the first real-song observations repeat on different
