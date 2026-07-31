@@ -44,7 +44,7 @@ clock, duration, level and provider naming are part of the evidence.
 
 | Track | Original | Moises | Suno A/B | Initial state |
 | --- | --- | --- | --- | --- |
-| Be Alone | 262.56 s, 48 kHz | 17 files | 8 + 8 files, 262.36 s | Ready for excerpt selection |
+| Be Alone | 262.56 s, 48 kHz | 17 files | 8 + 8 files, 262.36 s | First 191–206 s private excerpt staged |
 | I am a Alien mashup | 276.12 s, 48 kHz | 17 files | 9 + 9 files, 275.92 s | Ready for excerpt selection |
 | In the way | 225.88 s, 44.1 kHz | 17 files, about 160.72 s | 8 + 8 files, 160.52 s | Investigate source/provider horizon before comparison |
 | Tell Me That I Do It Bitch | 186.36 s, 48 kHz | 17 files | 7 + 7 files, 186.36 s | Ready for excerpt selection |
@@ -53,6 +53,15 @@ Every corresponding Suno A/B WAV differed after decoding to PCM. The two
 packs are therefore retained as distinct separator outcomes. Moises metronome
 files end slightly earlier than their musical stems and are timing evidence,
 not source roles for MIDI conversion.
+
+The first `Be Alone` observation uses 191–206 seconds. All three provider
+packs measured zero 10 ms envelope lag against the original. The Moises
+non-metronome sum correlated 0.9985 with the original excerpt; the two Suno
+sums correlated 0.9305 and 0.9306. This establishes a usable common clock for
+that excerpt, not correct instrument assignment. In particular, the two Suno
+files labelled `Keyboard` were effectively silent in this passage while their
+`Synth` files were active. Role mapping must therefore use sound evidence as
+well as provider names before downstream MIDI comparison.
 
 ## Intended evaluation
 

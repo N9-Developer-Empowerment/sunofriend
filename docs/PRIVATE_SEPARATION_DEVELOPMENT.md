@@ -139,6 +139,25 @@ primary/variant MIDI, note evidence, dry proxy WAV auditions, internal
 iteration histories, independent evaluations and a self-hashed report. It
 does not activate or select any result.
 
+Run an excerpt already declared in the authorised corpus with a fresh output
+path:
+
+```bash
+.venv/bin/python scripts/private-authorised-separation-excerpt.py \
+  --corpus stem_examples/corpus.json \
+  --track-id be-alone \
+  --out work/separation-bakeoff/be-alone-authorised-191-206-v2 \
+  --checkpoint ~/.local/share/sunofriend/models/demucs-4.0.1-htdemucs/955717e8-8726e21a.th \
+  --python .venv-ai/bin/python
+```
+
+The command hashes every unchanged source, creates private PCM24 provider
+excerpts, measures each provider pack sum against the native-rate original and
+runs the local model only after those checks. A 48 kHz source is preserved at
+48 kHz for provider comparison and given an explicit, recorded
+`scipy.signal.resample_poly` 44.1 kHz derivative for the current Demucs
+contract.
+
 ## Evidence produced
 
 The private run keeps:
@@ -182,16 +201,30 @@ This private experiment:
 ## Next evidence
 
 The synthetic audio, resource, seed-transcriber and production-refinement
-observations are complete. The next bounded development increment prepares
-review evidence on authorised, representative real excerpts:
+observations are complete. The first authorised real excerpt is also staged:
+`Be Alone` 191–206 seconds. The three provider sums all measured zero 10 ms
+envelope lag. Moises correlation at recorded zero was 0.9985 with a
+gain-matched residual of -38.93 dBFS; Suno A/B correlations were 0.9305 and
+0.9306 with residuals of -22.29 and -22.30 dBFS. These values establish usable
+alignment, not stem correctness.
+
+The pinned local HTDemucs run completed the 15-second 44.1 kHz derivative in
+11.16 seconds of inference, reporting about 2.13 GB maximum resident memory.
+None of its four broad outputs clipped; their raw sum differed from the source
+by -32.62 dB RMS and the separately persisted accounting residual closed the
+re-read PCM sum exactly. Again, arithmetic closure is not separation quality.
+
+The next bounded development increment uses this evidence to:
 
 1. compare the finished mix, broad estimates and any supplied stems without
    silently selecting a winner;
-2. listen to source-aligned, level-matched passages for bass, drums, other and
-   vocals;
-3. compare MIDI made from supplied stems with MIDI made from estimates;
-4. record where broad `other` or composite drums need narrower refinement; and
-5. keep every result private and inactive before considering a Studio
+2. map equivalent roles by audio evidence rather than provider name (both
+   Suno `Keyboard` stems are effectively silent in this excerpt while `Synth`
+   is active);
+3. listen to level-matched bass, drums, other and vocal passages;
+4. compare MIDI made from supplied stems with MIDI made from local estimates;
+5. record where broad `other` or composite drums need narrower refinement; and
+6. keep every result private and inactive before considering a Studio
    importer.
 
 The first authorised real-song development corpus is now available locally
@@ -199,8 +232,9 @@ under [`../stem_examples`](../stem_examples/README.md). It contains four
 Ezzye originals, one detailed Moises export and two distinct Suno exports per
 song. The 5.4 GB of WAV evidence is intentionally ignored by Git; the tracked
 corpus index records permission, credit, geometry and readiness without
-publishing provider-derived audio. Three songs are ready for excerpt
-selection. `In the way` remains blocked because its 225.88-second original
+publishing provider-derived audio. `Be Alone` has its first staged excerpt;
+two more songs are ready for excerpt selection. `In the way` remains blocked
+because its 225.88-second original
 does not share the roughly 160.5-second provider horizon.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple

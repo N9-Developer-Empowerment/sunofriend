@@ -923,6 +923,18 @@ back pending investigation of its roughly 65-second horizon mismatch. These
 are development examples, not a hidden acceptance set or ground-truth
 multitracks.
 
+The first real observation now stages `Be Alone` 191–206 seconds. Provider
+pack sums all measured zero 10 ms envelope lag against the original. The
+Moises non-metronome sum correlated 0.9985 at recorded zero; Suno A and B
+correlated 0.9305 and 0.9306. The private runner preserves the native 48 kHz
+comparison excerpt and records a deterministic 44.1 kHz model-input derivative.
+Pinned local HTDemucs then completed in 11.16 seconds of inference with about
+2.13 GB reported maximum resident memory and no clipped stems. The output sum
+plus its accounting residual closed exactly, which proves arithmetic handling
+only. Both Suno `Keyboard` excerpts were effectively silent while `Synth` was
+active, so the next MIDI comparison must establish role equivalence from audio
+rather than names.
+
 The same audit found `/usr/bin/sandbox-exec` on the development Mac, but its
 local manual marks the mechanism deprecated and the current Codex execution
 context cannot apply even a no-network profile. More importantly,
@@ -1835,6 +1847,9 @@ bake-off, downstream-MIDI acceptance and promotion are not implemented**
   vocal production path explicit.
 - [ ] Repeat downstream MIDI and listening evaluation across authorised real
   excerpts and at least one independent separator/runtime candidate.
+- [x] Stage the first authorised real excerpt, prove provider-pack clock
+  alignment, preserve native-rate evidence, record the 44.1 kHz model-input
+  derivative and run the pinned local separator without activation.
 - [x] Inventory the first four-song authorised Moises/Suno comparison corpus,
   preserve its credit terms and exclude its 5.4 GB of audio from Git.
 

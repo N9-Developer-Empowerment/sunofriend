@@ -55,7 +55,29 @@
         "duration_seconds": 262.36,
         "corresponding_decoded_pcm_differs": true
       },
-      "evaluation_state": "ready_for_excerpt_selection"
+      "evaluation_excerpt": {
+        "start_seconds": 191.0,
+        "end_seconds": 206.0,
+        "selection_policy": "15-second high-activity window chosen across bass, keys and lead-vocal evidence from all three provider packs; provider-sum alignment must be measured before transcription",
+        "provider_packs": [
+          {
+            "id": "moises",
+            "directory": "MOISES",
+            "exclude_filename_contains": [
+              "metronome"
+            ]
+          },
+          {
+            "id": "suno-a",
+            "directory": "SUNO/Be Alone - 16_07_2026, 22.45 Stems"
+          },
+          {
+            "id": "suno-b",
+            "directory": "SUNO/Be Alone - 16_07_2026, 22.45 Stems (1)"
+          }
+        ]
+      },
+      "evaluation_state": "private_excerpt_staged"
     },
     {
       "id": "i-am-a-alien-mashup",

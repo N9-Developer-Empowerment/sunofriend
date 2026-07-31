@@ -846,6 +846,17 @@ Acceptance must therefore combine independent evidence and listening rather
 than trust the self-comparison score. Vocal parity remains separately named
 because the production vocal melody path does not call `refine_stem`.
 
+The first authorised real slice is now staged from `Be Alone`, 191–206
+seconds. The Moises and two Suno pack sums all measured zero 10 ms envelope
+lag against the original; their recorded-zero correlations were 0.9985,
+0.9305 and 0.9306. The native 48 kHz evidence remains unchanged and the local
+runner records its deterministic 44.1 kHz model-input derivative. Pinned local
+HTDemucs completed in 11.16 seconds of inference with about 2.13 GB reported
+maximum resident memory, no clipped stem and exact sum-plus-residual PCM
+accounting closure. Both Suno stems labelled `Keyboard` were effectively
+silent in this passage while `Synth` was active, demonstrating that provider
+labels cannot define the downstream comparison groups.
+
 This real-model experiment deliberately bypasses neither the fake-only product
 gate nor any acceptance contract. It has no CLI/TUI/Simple/Workbench import,
 does not update source lineage, cannot select or promote a result and records
