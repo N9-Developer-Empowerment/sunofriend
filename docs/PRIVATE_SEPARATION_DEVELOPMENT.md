@@ -280,6 +280,17 @@ specific musical role for equivalent MIDI. Bass and dominant-vocal lines also
 remain materially separator-dependent. The 15-second run retained 231 hashed
 artifacts, occupied about 240 MB and left every permission false.
 
+A first bounded human screen is ready under
+`work/separation-bakeoff/be-alone-midi-listening-screen-v1`. It contains one
+blind, pairwise level-matched 15-second review for each role. Each compares
+the local primary with the provider primary having the highest relative match
+metric for that role: Suno A for bass and `other`, Moises for drums and
+vocals. This choice only reduces the first listening task to four decisions;
+it does not assert that the comparison partner is the best-sounding or most
+accurate provider. The unchanged original mix is the common, unlevelled
+reference. Each page accepts candidate A, candidate B, equivalent, neither or
+cannot tell, and cannot change a MIDI result or product default.
+
 The next bounded development increment uses this evidence to:
 
 1. compare the finished mix, broad estimates and any supplied stems without

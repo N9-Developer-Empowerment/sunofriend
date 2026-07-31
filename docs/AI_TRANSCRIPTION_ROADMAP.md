@@ -1721,7 +1721,11 @@ Each working day should aim for one narrow vertical improvement:
   report binds 231 artifacts and all selection, activation and product
   permissions remain false.
 - Listening result: pending. Dry primary and variant auditions exist for all
-  four local/provider packs, but metrics do not choose a winner.
+  four local/provider packs, but metrics do not choose a winner. A four-choice
+  blind screening package is ready locally: one full-excerpt decision each for
+  bass, drums, broad `other` and dominant vocals. Candidate pairs are
+  level-matched; the original mix remains an unlevelled common reference;
+  equivalent, neither and cannot-tell outcomes are valid.
 - Decision: retain the four-way partition as useful comparison evidence, not
   a production mapping. Drum timing is comparatively stable; broad `other`,
   bass and dominant vocals remain separator-dependent. Do not globally rank
