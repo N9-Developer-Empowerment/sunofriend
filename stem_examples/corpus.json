@@ -1,0 +1,151 @@
+{
+  "schema": "sunofriend.authorised-separation-corpus.v1",
+  "status": "local_audio_not_committed",
+  "checked_on": "2026-07-31",
+  "artist": {
+    "name": "Ezzye",
+    "soundcloud_profile": "https://soundcloud.com/ezzye-1"
+  },
+  "permission": {
+    "authority": "creator_and_copyright_holder",
+    "scope": "the four named original tracks in this corpus",
+    "allowed_use": "download, study, transform and reuse",
+    "condition": "credit Ezzye and link to the individual track when available, otherwise the artist profile",
+    "recorded_on": "2026-07-31"
+  },
+  "provider_derived_audio": {
+    "repository_distribution": "not_yet_confirmed",
+    "local_evaluation": true,
+    "providers": [
+      "Moises",
+      "Suno"
+    ]
+  },
+  "inventory": {
+    "wav_files": 136,
+    "approximate_local_bytes": "5.4 GB",
+    "exact_hashes_deferred_to_evaluation_receipts": true
+  },
+  "tracks": [
+    {
+      "id": "be-alone",
+      "directory": "Be Alone - 16_07_2026, 22.45-G# minor-136bpm-440hz",
+      "title": "Be Alone",
+      "key": "G# minor",
+      "bpm": 136,
+      "tuning_hz": 440,
+      "original": {
+        "files": 1,
+        "sample_rate_hz": 48000,
+        "channels": 2,
+        "sample_format": "s16",
+        "duration_seconds": 262.56
+      },
+      "moises": {
+        "files": 17,
+        "musical_stem_duration_seconds": 262.56,
+        "metronome_duration_seconds": 262.18
+      },
+      "suno": {
+        "packs": 2,
+        "files_per_pack": [
+          8,
+          8
+        ],
+        "duration_seconds": 262.36,
+        "corresponding_decoded_pcm_differs": true
+      },
+      "evaluation_state": "ready_for_excerpt_selection"
+    },
+    {
+      "id": "i-am-a-alien-mashup",
+      "directory": "I am a Alien - 18_07_2026, 17.02 x I am a Alien - 18_07_2026, 17.02 (Mashup)-Eb minor-114bpm-440hz",
+      "title": "I am a Alien mashup",
+      "key": "Eb minor",
+      "bpm": 114,
+      "tuning_hz": 440,
+      "original": {
+        "files": 1,
+        "sample_rate_hz": 48000,
+        "channels": 2,
+        "sample_format": "s16",
+        "duration_seconds": 276.12
+      },
+      "moises": {
+        "files": 17,
+        "musical_stem_duration_seconds": 276.12,
+        "metronome_duration_seconds": 275.35
+      },
+      "suno": {
+        "packs": 2,
+        "files_per_pack": [
+          9,
+          9
+        ],
+        "duration_seconds": 275.92,
+        "corresponding_decoded_pcm_differs": true
+      },
+      "evaluation_state": "ready_for_excerpt_selection"
+    },
+    {
+      "id": "in-the-way",
+      "directory": "In the way - 22_07_2026, 17.43-Bb minor-90bpm-440hz",
+      "title": "In the way",
+      "key": "Bb minor",
+      "bpm": 90,
+      "tuning_hz": 440,
+      "original": {
+        "files": 1,
+        "sample_rate_hz": 44100,
+        "channels": 2,
+        "sample_format": "s32",
+        "duration_seconds": 225.880726
+      },
+      "moises": {
+        "files": 17,
+        "musical_stem_duration_seconds": 160.72,
+        "metronome_duration_seconds": 160.03
+      },
+      "suno": {
+        "packs": 2,
+        "files_per_pack": [
+          8,
+          8
+        ],
+        "duration_seconds": 160.520021,
+        "corresponding_decoded_pcm_differs": true
+      },
+      "evaluation_state": "blocked_source_provider_horizon_mismatch"
+    },
+    {
+      "id": "tell-me-that-i-do-it-bitch",
+      "directory": "Tell Me That I Do It Bitch - 19_07_2026, 11.20-Cm-130bpm-441hz (1)-C# minor-129bpm-440hz",
+      "title": "Tell Me That I Do It Bitch",
+      "key": "C# minor",
+      "bpm": 129,
+      "tuning_hz": 440,
+      "original": {
+        "files": 1,
+        "sample_rate_hz": 48000,
+        "channels": 2,
+        "sample_format": "s16",
+        "duration_seconds": 186.36
+      },
+      "moises": {
+        "files": 17,
+        "musical_stem_duration_seconds": 186.36,
+        "metronome_duration_seconds": 185.6
+      },
+      "suno": {
+        "packs": 2,
+        "files_per_pack": [
+          7,
+          7
+        ],
+        "duration_seconds": 186.360021,
+        "corresponding_decoded_pcm_differs": true
+      },
+      "evaluation_state": "ready_for_excerpt_selection"
+    }
+  ]
+}

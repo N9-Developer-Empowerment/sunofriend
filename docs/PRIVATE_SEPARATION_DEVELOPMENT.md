@@ -159,6 +159,15 @@ authorised, representative real excerpts:
 5. keep every result private and inactive before considering a Studio
    importer.
 
+The first authorised real-song development corpus is now available locally
+under [`../stem_examples`](../stem_examples/README.md). It contains four
+Ezzye originals, one detailed Moises export and two distinct Suno exports per
+song. The 5.4 GB of WAV evidence is intentionally ignored by Git; the tracked
+corpus index records permission, credit, geometry and readiness without
+publishing provider-derived audio. Three songs are ready for excerpt
+selection. `In the way` remains blocked because its 225.88-second original
+does not share the roughly 160.5-second provider horizon.
+
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
 resource, downstream-MIDI and human listening acceptance.

@@ -24,7 +24,8 @@ on the existing MIDI transcribers. Public separation, source-graph import,
 hidden/cross-song acceptance and promotion are not implemented**
 
 Checked: 31 July 2026 after the first private four-stem HTDemucs run,
-synthetic ground-truth evaluation and seed-transcriber MIDI comparison
+synthetic ground-truth evaluation, seed-transcriber MIDI comparison and
+inventory of the first four-song authorised provider corpus
 
 ## Contents
 
@@ -901,6 +902,15 @@ transcriber/model identities. Exact round-trip note times and per-hit drum
 family/timing evidence make the pair metrics recomputable from those hashed
 artifacts. Clean-reference MIDI is a relative baseline, not score truth, and
 no threshold or backend has been accepted.
+
+The first authorised real-song corpus is indexed in
+[`stem_examples/corpus.json`](../stem_examples/corpus.json). Four Ezzye
+originals each have one Moises pack and two decoded-audio-distinct Suno packs.
+The audio remains local and ignored by Git. Three tracks have sufficiently
+close provider/source horizons for bounded excerpt work; `In the way` is held
+back pending investigation of its roughly 65-second horizon mismatch. These
+are development examples, not a hidden acceptance set or ground-truth
+multitracks.
 
 The same audit found `/usr/bin/sandbox-exec` on the development Mac, but its
 local manual marks the mechanism deprecated and the current Codex execution
@@ -1812,6 +1822,8 @@ bake-off, downstream-MIDI acceptance and promotion are not implemented**
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation.
 - [ ] Repeat downstream MIDI and listening evaluation across authorised real
   excerpts and at least one independent separator/runtime candidate.
+- [x] Inventory the first four-song authorised Moises/Suno comparison corpus,
+  preserve its credit terms and exclude its 5.4 GB of audio from Git.
 
 Likely modules:
 

@@ -10,3 +10,14 @@ tmp/
 *.egg-info/
 work/
 .idea
+
+# Authorised local separation corpora can be several gigabytes. Track their
+# manifests and documentation, but keep provider/source audio out of Git.
+stem_examples/**/*.wav
+stem_examples/**/*.aif
+stem_examples/**/*.aiff
+stem_examples/**/*.flac
+stem_examples/**/*.mp3
+stem_examples/**/*.m4a
+stem_examples/**/*.ogg
+stem_examples/**/*.opus
