@@ -22,6 +22,7 @@ from typing import Any, Callable, Mapping, Sequence
 
 AUTHORISED_EXCERPT_SCHEMA = "sunofriend.private-authorised-separation-excerpt.v1"
 _CORPUS_SCHEMA = "sunofriend.authorised-separation-corpus.v1"
+_PRIVATE_REFERENCE_CORPUS_SCHEMA = "sunofriend.private-reference-separation-corpus.v1"
 _REPORT_NAME = "authorised-separation-excerpt.json"
 
 
@@ -42,24 +43,16 @@ def _run_authorised_separation_excerpt(
     manifest_path = _regular_json(corpus_manifest_path, "corpus manifest")
     manifest_sha256 = _sha256(manifest_path)
     corpus = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if corpus.get("schema") != _CORPUS_SCHEMA:
+    corpus_schema = corpus.get("schema")
+    if corpus_schema not in {_CORPUS_SCHEMA, _PRIVATE_REFERENCE_CORPUS_SCHEMA}:
         raise ValueError("unsupported authorised separation corpus schema")
-    permission = corpus.get("permission")
-    if not isinstance(permission, Mapping):
-        raise ValueError("corpus permission record is missing")
-    artist = corpus.get("artist")
-    if not isinstance(artist, Mapping):
-        raise ValueError("corpus artist record is missing")
-    artist_name = str(artist.get("name", "")).strip()
-    artist_profile = str(artist.get("soundcloud_profile", "")).strip()
-    if not artist_name or not artist_profile:
-        raise ValueError("corpus artist name and profile are required")
     track = _track(corpus, track_id)
-    if track.get("evaluation_state") not in {
-        "ready_for_excerpt_selection",
-        "private_excerpt_staged",
-    }:
-        raise ValueError(f"track is not ready for excerpt selection: {track_id}")
+    corpus_evidence = _authorised_corpus_evidence(
+        corpus,
+        track,
+        manifest_path=manifest_path,
+        manifest_sha256=manifest_sha256,
+    )
     plan = _excerpt_plan(track)
     start = float(plan["start_seconds"])
     end = float(plan["end_seconds"])
@@ -80,9 +73,9 @@ def _run_authorised_separation_excerpt(
         "track directory",
         require_directory=True,
     )
-    original_files = _wav_files(track_root / "ORIGINAL")
+    original_files = _original_audio_files(track_root / "ORIGINAL")
     if len(original_files) != 1:
-        raise ValueError("track must contain exactly one ORIGINAL WAV")
+        raise ValueError("track must contain exactly one supported ORIGINAL audio file")
     original = original_files[0]
 
     pack_specs: list[tuple[str, Path, tuple[str, ...]]] = []
@@ -196,7 +189,9 @@ def _run_authorised_separation_excerpt(
                     raise ValueError(
                         f"{pack_id} provider excerpt geometry does not match original"
                     )
-                excluded = any(token in source.name.lower() for token in excluded_tokens)
+                excluded = any(
+                    token in source.name.lower() for token in excluded_tokens
+                )
                 if not excluded:
                     sum_inputs.append(excerpt.astype("float64"))
                 items.append(
@@ -209,7 +204,9 @@ def _run_authorised_separation_excerpt(
                     }
                 )
             if not sum_inputs:
-                raise ValueError(f"provider pack has no sources eligible for sum: {pack_id}")
+                raise ValueError(
+                    f"provider pack has no sources eligible for sum: {pack_id}"
+                )
             provider_sum = np.sum(np.stack(sum_inputs, axis=0), axis=0, dtype="float64")
             provider_evidence[pack_id] = {
                 "source_count": len(items),
@@ -253,15 +250,7 @@ def _run_authorised_separation_excerpt(
             "schema": AUTHORISED_EXCERPT_SCHEMA,
             "status": "complete_review_required",
             "evidence_scope": "private_development_only",
-            "corpus": {
-                "manifest_path": str(manifest_path),
-                "manifest_sha256": manifest_sha256,
-                "track_id": track["id"],
-                "track_title": track["title"],
-                "artist": dict(artist),
-                "permission": dict(permission),
-                "preferred_credit": f"Music by {artist_name} — {artist_profile}",
-            },
+            "corpus": corpus_evidence,
             "excerpt": {
                 "start_seconds": start,
                 "end_seconds": end,
@@ -301,6 +290,13 @@ def _run_authorised_separation_excerpt(
                 "This one authorised excerpt is not a hidden test set or acceptance threshold.",
                 "No MIDI candidate, separator result or provider pack is selected here.",
                 "Provider-derived audio remains local pending redistribution-term review.",
+                *(
+                    [
+                        "Track-specific private authority does not grant public-demo or repository-distribution permission."
+                    ]
+                    if corpus_schema == _PRIVATE_REFERENCE_CORPUS_SCHEMA
+                    else []
+                ),
             ],
             "next": {
                 "provider_role_mapping_required": True,
@@ -348,6 +344,94 @@ def _track(corpus: Mapping[str, Any], track_id: str) -> Mapping[str, Any]:
     return matches[0]
 
 
+def _authorised_corpus_evidence(
+    corpus: Mapping[str, Any],
+    track: Mapping[str, Any],
+    *,
+    manifest_path: Path,
+    manifest_sha256: str,
+) -> dict[str, Any]:
+    schema = corpus.get("schema")
+    if schema == _CORPUS_SCHEMA:
+        permission = corpus.get("permission")
+        artist = corpus.get("artist")
+        if not isinstance(permission, Mapping):
+            raise ValueError("corpus permission record is missing")
+        if not isinstance(artist, Mapping):
+            raise ValueError("corpus artist record is missing")
+        artist_name = str(artist.get("name", "")).strip()
+        artist_profile = str(artist.get("soundcloud_profile", "")).strip()
+        if not artist_name or not artist_profile:
+            raise ValueError("corpus artist name and profile are required")
+        if track.get("evaluation_state") not in {
+            "ready_for_excerpt_selection",
+            "private_excerpt_staged",
+        }:
+            raise ValueError(
+                f"track is not ready for excerpt selection: {track.get('id')}"
+            )
+        title = str(track.get("title", "")).strip()
+        if not title:
+            raise ValueError("authorised corpus track title is missing")
+        return {
+            "manifest_path": str(manifest_path),
+            "manifest_sha256": manifest_sha256,
+            "manifest_schema": schema,
+            "track_id": track["id"],
+            "track_title": title,
+            "artist": dict(artist),
+            "permission": dict(permission),
+            "preferred_credit": f"Music by {artist_name} — {artist_profile}",
+            "authority_scope": "owner-authorised development corpus",
+        }
+
+    if schema != _PRIVATE_REFERENCE_CORPUS_SCHEMA:
+        raise ValueError("unsupported authorised separation corpus schema")
+    manifest_permission = corpus.get("permission")
+    authority = track.get("private_processing_authority")
+    if not isinstance(manifest_permission, Mapping):
+        raise ValueError("private-reference manifest permission record is missing")
+    if (
+        manifest_permission.get("directory_presence_is_not_processing_authority")
+        is not True
+    ):
+        raise ValueError("private-reference manifest weakens the authority boundary")
+    if (
+        not isinstance(authority, Mapping)
+        or authority.get("status") != "user_authorised"
+    ):
+        raise ValueError("track-specific private processing authority is missing")
+    if authority.get("scope") != "private_local_evaluation_only":
+        raise ValueError("track-specific private processing scope is unsupported")
+    if authority.get("repository_distribution") is not False:
+        raise ValueError("private-reference repository distribution must remain false")
+    if authority.get("public_demo_use") is not False:
+        raise ValueError("private-reference public-demo use must remain false")
+    if not str(authority.get("recorded_on", "")).strip():
+        raise ValueError("track-specific private processing date is missing")
+    if track.get("evaluation_state") not in {
+        "ready_for_private_excerpt_selection",
+        "private_excerpt_staged",
+    }:
+        raise ValueError(
+            f"track is not ready for private excerpt selection: {track.get('id')}"
+        )
+    title = str(track.get("display_name", "")).strip()
+    if not title:
+        raise ValueError("private-reference display name is missing")
+    return {
+        "manifest_path": str(manifest_path),
+        "manifest_sha256": manifest_sha256,
+        "manifest_schema": schema,
+        "track_id": track["id"],
+        "track_title": title,
+        "artist": None,
+        "permission": dict(authority),
+        "preferred_credit": None,
+        "authority_scope": "track-specific private local evaluation only",
+    }
+
+
 def _excerpt_plan(track: Mapping[str, Any]) -> Mapping[str, Any]:
     plan = track.get("evaluation_excerpt")
     if not isinstance(plan, Mapping):
@@ -385,9 +469,9 @@ def _role_group_proposals(
             ):
                 raise ValueError(f"{pack_id} {role} proposal must contain patterns")
             normalized = [str(pattern).strip() for pattern in patterns]
-            if any(not pattern for pattern in normalized) or len(set(normalized)) != len(
-                normalized
-            ):
+            if any(not pattern for pattern in normalized) or len(
+                set(normalized)
+            ) != len(normalized):
                 raise ValueError(
                     f"{pack_id} {role} proposal patterns must be non-empty and unique"
                 )
@@ -488,13 +572,19 @@ def _write_model_input(
     }
 
 
-def _alignment_metrics(reference: Any, candidate: Any, *, sample_rate: int, np: Any) -> dict[str, Any]:
+def _alignment_metrics(
+    reference: Any, candidate: Any, *, sample_rate: int, np: Any
+) -> dict[str, Any]:
     reference_mono = reference.mean(axis=1)
     candidate_mono = candidate.mean(axis=1)
     reference_rms = _rms(reference_mono, np=np)
     candidate_rms = _rms(candidate_mono, np=np)
     denominator = float(np.dot(candidate_mono, candidate_mono))
-    gain = float(np.dot(reference_mono, candidate_mono) / denominator) if denominator else 0.0
+    gain = (
+        float(np.dot(reference_mono, candidate_mono) / denominator)
+        if denominator
+        else 0.0
+    )
     residual = reference_mono - gain * candidate_mono
     sample_correlation = _correlation(reference_mono, candidate_mono, np=np)
 
@@ -542,7 +632,10 @@ def _correlation(left: Any, right: Any, *, np: Any) -> float:
     left_centered = left - float(np.mean(left))
     right_centered = right - float(np.mean(right))
     denominator = float(
-        np.sqrt(np.dot(left_centered, left_centered) * np.dot(right_centered, right_centered))
+        np.sqrt(
+            np.dot(left_centered, left_centered)
+            * np.dot(right_centered, right_centered)
+        )
     )
     if denominator <= 1e-30:
         return 0.0
@@ -565,12 +658,27 @@ def _wav_files(directory: Path) -> list[Path]:
     if not directory.is_dir() or directory.is_symlink():
         raise ValueError(f"expected a regular directory: {directory}")
     result = []
-    for path in sorted(directory.glob("*.wav"), key=lambda value: value.name.casefold()):
+    for path in sorted(
+        directory.glob("*.wav"), key=lambda value: value.name.casefold()
+    ):
         result.append(_regular_file(path, f"WAV in {directory.name}"))
     return result
 
 
-def _inside(root: Path, relative: str, label: str, *, require_directory: bool = False) -> Path:
+def _original_audio_files(directory: Path) -> list[Path]:
+    if not directory.is_dir() or directory.is_symlink():
+        raise ValueError(f"expected a regular directory: {directory}")
+    supported = {".wav", ".flac", ".aif", ".aiff"}
+    return [
+        _regular_file(path, f"original audio in {directory.name}")
+        for path in sorted(directory.iterdir(), key=lambda value: value.name.casefold())
+        if path.is_file() and path.suffix.lower() in supported
+    ]
+
+
+def _inside(
+    root: Path, relative: str, label: str, *, require_directory: bool = False
+) -> Path:
     if not relative or Path(relative).is_absolute():
         raise ValueError(f"{label} must be a relative path")
     root_resolved = root.resolve(strict=True)
@@ -596,8 +704,14 @@ def _regular_file(value: str | Path, label: str) -> Path:
     try:
         details = path.lstat()
     except OSError as error:
-        raise ValueError(f"{label} must be a non-empty regular non-link file") from error
-    if stat.S_ISLNK(details.st_mode) or not stat.S_ISREG(details.st_mode) or details.st_size <= 0:
+        raise ValueError(
+            f"{label} must be a non-empty regular non-link file"
+        ) from error
+    if (
+        stat.S_ISLNK(details.st_mode)
+        or not stat.S_ISREG(details.st_mode)
+        or details.st_size <= 0
+    ):
         raise ValueError(f"{label} must be a non-empty regular non-link file")
     return path
 

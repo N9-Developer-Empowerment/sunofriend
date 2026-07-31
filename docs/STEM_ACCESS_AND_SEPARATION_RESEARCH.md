@@ -961,6 +961,18 @@ other four remain unauthorised for processing, and none may become a public
 example, distributed artifact or automatic separator acceptance input from
 this inventory alone.
 
+The first private-reference repeat is now sealed on seconds 33–48 of that
+corrected pack. Its Moises sum remained aligned to the original at recorded
+zero (sample correlation 0.994250; best 10 ms envelope lag 0 ms). Every broad
+Moises role ranked first against the corresponding pinned four-source
+HTDemucs output. The `other` result was much less distinct than bass, drums or
+vocals, with only a +0.075 similarity margin over the next role. Downstream
+MIDI likewise showed strong drum-onset agreement (0.872 F1), moderate bass
+exact-pitch/onset agreement (0.545) and weaker broad-`other` exact agreement
+(0.407). The dominant-contour vocal route emitted no notes from either vocal
+group on this window. These remain private observations against an imperfect
+provider reference, not a separator acceptance result.
+
 The next private leaf-level comparison retained every item provisionally
 inside broad `other`, normalized only its audition geometry and calculated all
 cross-provider rankings in both directions. Names were reported but did not

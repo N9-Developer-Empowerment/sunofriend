@@ -125,6 +125,41 @@ def _corpus(root: Path, *, mismatched_provider_rate: bool = False) -> Path:
     return path
 
 
+def _private_corpus(root: Path, *, authorised: bool = True) -> Path:
+    path = _corpus(root)
+    document = json.loads(path.read_text())
+    track = document["tracks"][0]
+    original_wav = path.parent / track["directory"] / "ORIGINAL" / "song.wav"
+    value, rate = soundfile.read(original_wav, dtype="float32", always_2d=True)
+    original_flac = original_wav.with_suffix(".flac")
+    soundfile.write(original_flac, value, rate, subtype="PCM_24")
+    original_wav.unlink()
+
+    document["schema"] = "sunofriend.private-reference-separation-corpus.v1"
+    document.pop("artist")
+    document["permission"] = {
+        "status": "not_recorded_in_manifest",
+        "directory_presence_is_not_processing_authority": True,
+        "repository_distribution": False,
+        "public_demo_use": False,
+        "required_before_evaluation": (
+            "record track-specific authority for private local processing"
+        ),
+    }
+    track["display_name"] = track.pop("title")
+    track["evaluation_state"] = "ready_for_private_excerpt_selection"
+    if authorised:
+        track["private_processing_authority"] = {
+            "status": "user_authorised",
+            "scope": "private_local_evaluation_only",
+            "recorded_on": "2026-07-31",
+            "repository_distribution": False,
+            "public_demo_use": False,
+        }
+    path.write_text(json.dumps(document) + "\n")
+    return path
+
+
 def _fake_separator(
     audio: Path,
     *,
@@ -262,6 +297,9 @@ def test_authorised_excerpt_stages_aligned_packs_and_private_local_run() -> None
 
         assert result["status"] == "complete_review_required"
         assert result["corpus"]["track_id"] == "example"
+        assert result["corpus"]["authority_scope"] == (
+            "owner-authorised development corpus"
+        )
         assert result["corpus"]["preferred_credit"] == (
             "Music by Owner — https://example.test"
         )
@@ -301,6 +339,93 @@ def test_authorised_excerpt_stages_aligned_packs_and_private_local_run() -> None
                 assert (path.stat().st_mode & 0o777) == 0o600
             elif path.is_dir():
                 assert (path.stat().st_mode & 0o777) == 0o700
+
+
+def test_private_reference_excerpt_accepts_authorised_flac() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        corpus = _private_corpus(root)
+        checkpoint = root / "checkpoint.th"
+        checkpoint.write_bytes(b"private-test-checkpoint")
+        result = _run_authorised_separation_excerpt(
+            corpus,
+            "example",
+            out_dir=root / "evaluation",
+            checkpoint_path=checkpoint,
+            python="fake-python",
+            separator_runner=_fake_separator,
+        )
+
+        evidence = result["corpus"]
+        assert evidence["manifest_schema"] == (
+            "sunofriend.private-reference-separation-corpus.v1"
+        )
+        assert evidence["authority_scope"] == (
+            "track-specific private local evaluation only"
+        )
+        assert evidence["artist"] is None
+        assert evidence["preferred_credit"] is None
+        assert evidence["permission"]["repository_distribution"] is False
+        assert result["original"]["source_path"].endswith("song.flac")
+        assert result["permissions"]["public_result"] is False
+
+
+def test_private_reference_excerpt_rejects_missing_authority_before_run() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        corpus = _private_corpus(root, authorised=False)
+        checkpoint = root / "checkpoint.th"
+        checkpoint.write_bytes(b"private-test-checkpoint")
+        called = False
+
+        def separator(*_args: object, **_kwargs: object) -> dict:
+            nonlocal called
+            called = True
+            return {}
+
+        with pytest.raises(ValueError, match="private processing authority is missing"):
+            _run_authorised_separation_excerpt(
+                corpus,
+                "example",
+                out_dir=root / "evaluation",
+                checkpoint_path=checkpoint,
+                separator_runner=separator,
+            )
+        assert called is False
+        assert not (root / "evaluation").exists()
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("repository_distribution", True, "distribution must remain false"),
+        ("public_demo_use", True, "public-demo use must remain false"),
+        ("scope", "public", "processing scope is unsupported"),
+    ],
+)
+def test_private_reference_excerpt_rejects_widened_authority(
+    field: str,
+    value: object,
+    message: str,
+) -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        corpus = _private_corpus(root)
+        document = json.loads(corpus.read_text())
+        document["tracks"][0]["private_processing_authority"][field] = value
+        corpus.write_text(json.dumps(document) + "\n")
+        checkpoint = root / "checkpoint.th"
+        checkpoint.write_bytes(b"private-test-checkpoint")
+
+        with pytest.raises(ValueError, match=message):
+            _run_authorised_separation_excerpt(
+                corpus,
+                "example",
+                out_dir=root / "evaluation",
+                checkpoint_path=checkpoint,
+                separator_runner=_fake_separator,
+            )
+        assert not (root / "evaluation").exists()
 
 
 def test_authorised_excerpt_rejects_geometry_mismatch_before_model_run() -> None:
@@ -494,9 +619,7 @@ def test_authorised_narrow_other_ranks_leaves_without_accepting() -> None:
 
         report = Path(result["report"])
         persisted = json.loads(report.read_text())
-        assert persisted["document_sha256"] == _narrow_other_document_sha256(
-            persisted
-        )
+        assert persisted["document_sha256"] == _narrow_other_document_sha256(persisted)
         for relative, artifact in persisted["artifacts"].items():
             path = report.parent / relative
             assert path.is_file()
@@ -533,7 +656,9 @@ def _synthetic_six_source_experiment(root: Path, mapping: dict) -> Path:
     reconstruction.mkdir()
     shutil.copyfile(model_input, experiment_root / "source-excerpt.wav")
     estimated = {}
-    for index, role in enumerate(("bass", "drums", "guitar", "other", "piano", "vocals"), 1):
+    for index, role in enumerate(
+        ("bass", "drums", "guitar", "other", "piano", "vocals"), 1
+    ):
         path = stems / f"{role}.wav"
         soundfile.write(path, value * (0.05 * index), rate, subtype="PCM_24")
         estimated[role] = {

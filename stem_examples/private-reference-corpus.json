@@ -64,8 +64,62 @@
         "repository_distribution": false,
         "public_demo_use": false
       },
+      "evaluation_excerpt": {
+        "start_seconds": 33.0,
+        "end_seconds": 48.0,
+        "selection_policy": "Earliest 15-second interval tied for the highest deterministic four-group activity score after five-second edge margins; score = 0.65 * lower quartile plus 0.35 * median of one-second bass, drums, other and vocals activity.",
+        "selection_evidence": {
+          "activity_score": 0.644693,
+          "lower_quartile_activity": 0.553807,
+          "median_activity": 0.81348,
+          "group_mean_activity": {
+            "bass": 0.433445,
+            "drums": 0.787232,
+            "other": 0.801165,
+            "vocals": 0.885918
+          },
+          "human_listening_selection": false
+        },
+        "provider_packs": [
+          {
+            "id": "moises",
+            "directory": "MOISES",
+            "exclude_filename_contains": [
+              "metronome"
+            ]
+          }
+        ],
+        "role_group_proposals": {
+          "moises": {
+            "bass": [
+              "-bass-"
+            ],
+            "drums": [
+              "-kick-",
+              "-snare-",
+              "-hat-",
+              "-cymbals-",
+              "-toms-",
+              "-other_kit-"
+            ],
+            "other": [
+              "-keys-",
+              "-lead-",
+              "-other-",
+              "-piano-",
+              "-rhythm-",
+              "-strings-",
+              "-wind-"
+            ],
+            "vocals": [
+              "-vocals-",
+              "-backing_vocals-"
+            ]
+          }
+        }
+      },
       "chord_pdf_present": true,
-      "evaluation_state": "ready_for_private_excerpt_selection"
+      "evaluation_state": "private_excerpt_staged"
     },
     {
       "id": "silva-bumpa-on-2nite",

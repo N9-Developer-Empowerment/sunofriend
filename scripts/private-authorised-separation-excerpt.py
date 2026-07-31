@@ -15,7 +15,8 @@ from sunofriend.ai_runtime import resolve_ai_python, resolve_demucs_model
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Prepare the excerpt declared in an authorised local corpus, "
+            "Prepare the excerpt declared in an owner-authorised corpus or a "
+            "track-specifically authorised private-reference corpus, "
             "measure provider-pack alignment and run the existing private "
             "hash-pinned HTDemucs experiment. No result is activated."
         )

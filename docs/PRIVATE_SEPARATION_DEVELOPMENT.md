@@ -518,6 +518,35 @@ worst relative maximum was 3.4146. The runtime port is therefore fast evidence,
 not a safe drop-in replacement. It remains private and inactive while the
 conversion/full-pipeline difference is investigated.
 
+### First track-specific private-reference repeat
+
+The authorised-excerpt bridge now also accepts a FLAC original from the
+private-reference manifest, but only when the selected track contains an exact
+`user_authorised` / `private_local_evaluation_only` record with repository and
+public-demo permission both false. Directory presence is still rejected as
+authority. Tests cover the positive FLAC path and rejection before the model
+runner when that track record is absent.
+
+The corrected `Mauvais djo - Pilé` pack was exercised at seconds 33–48 using
+the pinned PyTorch four-source checkpoint. The deterministic activity scan,
+not song recognition, selected the window. The original and non-metronome
+Moises sum had 0.994250 recorded-zero sample correlation, 0 ms best envelope
+lag and 0.997934 envelope correlation. HTDemucs inference took 10.15 seconds
+with about 2.12 GB reported peak resident memory; source, checkpoint, launcher
+and worker identities remained unchanged and PCM accounting closure passed.
+
+All four proposed Moises groups ranked first against their matching local role.
+Bass, drums and vocals had similarities 0.978, 0.997 and 0.942. Broad `other`
+was only 0.597 with a +0.075 margin over vocals, so it remains an especially
+important target for narrower separation. The identical inactive production
+MIDI comparison produced local/Moises note counts of 25/19 for bass, 48/46 for
+drums and 127/109 for `other`. Drum onset F1 was 0.872, bass exact-pitch/onset
+F1 0.545 and `other` exact-pitch/onset F1 0.407. Both broad vocal inputs yielded
+zero notes through the current dominant-contour path. That result does not
+show that the source is silent; it identifies a transcription failure to
+address. No result was accepted, selected, imported, published or exposed in
+Simple/Studio mode.
+
 The first authorised real-song development corpus is now available locally
 under [`../stem_examples`](../stem_examples/README.md). It contains four
 Ezzye originals, one detailed Moises export and two distinct Suno exports per
@@ -533,9 +562,9 @@ Five additional source-plus-Moises folders are now indexed separately in
 [`../stem_examples/private-reference-corpus.json`](../stem_examples/private-reference-corpus.json).
 They add 90 stereo 44.1 kHz audio files (about 3.02 GB) but no Suno packs.
 Their artist-labelled directory names are not treated as ownership or reuse
-claims, and the authorised-corpus runner cannot select them. All five now have
-exact original/musical-stem horizons and can become private robustness
-evidence only after track-specific processing authority is recorded. The
+claims, and the runner rejects any track without exact track-specific private
+authority. All five now have exact original/musical-stem horizons and can
+become private robustness evidence only after that authority is recorded. The
 redone `Mauvais djo - Pilé` original and 16 musical stems share an exact
 6,882,992-frame horizon, their sum has 0.997537 recorded-zero correlation and
 its best 10 ms envelope lag is 0.00 seconds. This removes the former

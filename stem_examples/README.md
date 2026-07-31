@@ -13,8 +13,9 @@ The audio and chord PDFs remain local and are ignored by Git. They are
 development evidence, not repository assets. The tracked
 [`corpus.json`](corpus.json) records the owner-authorised four-song inventory.
 [`private-reference-corpus.json`](private-reference-corpus.json) records the
-additional metadata without granting it to the authorised runner. Exact hashes
-belong in fresh evaluation receipts.
+additional metadata without granting blanket processing authority. The private
+runner can use only a track carrying the exact user-authorised private-local
+record; exact hashes belong in fresh evaluation receipts.
 
 ## Permission and credit
 
@@ -72,7 +73,7 @@ not source roles for MIDI conversion.
 
 | Reference | Original and musical stems | Moises | Initial state |
 | --- | --- | --- | --- |
-| Mauvais djo - Pilé | 156.08 s | 17 files | Authorised for private local evaluation; ready for excerpt selection |
+| Mauvais djo - Pilé | 156.08 s | 17 files | Authorised; 33–48 s private excerpt staged and compared |
 | Silva Bumpa - On 2nite | 158.85 s | 17 files | Geometry ready; authority required before evaluation |
 | Slayyyter - DANCE... (Edit) | 236.04 s | 17 files | Geometry ready; authority required before evaluation |
 | sombr - 12 to 12 | 242.90 s | 17 files | Geometry ready; authority required before evaluation |
@@ -93,6 +94,24 @@ make the provider estimates ground truth. On 31 July 2026 the user separately
 authorised this track for private local evaluation only. That authority permits
 the next bounded experiment but does not permit repository distribution or
 public-demo use.
+
+That bounded experiment now uses seconds 33–48, selected by a deterministic
+four-group activity scan rather than by recognising a chorus. The Moises stem
+sum and original remained aligned at recorded zero: sample correlation was
+0.994250, best-envelope lag was 0 ms and envelope correlation was 0.997934.
+Pinned four-source HTDemucs took 10.15 seconds of inference and about 2.12 GB
+reported peak resident memory. Its bass, drums, other and vocals outputs each
+ranked closest to the matching proposed Moises group, but broad `other` was
+weakly separated from vocals: similarity 0.5973 with only a +0.0753 margin.
+
+The identical inactive MIDI comparison found strong drum timing agreement
+(onset F1 0.8723), moderate bass agreement (exact-pitch/onset F1 0.5455) and
+weaker composite-`other` agreement (exact-pitch/onset F1 0.4068). Neither broad
+vocal signal produced notes through the current dominant-contour path on this
+window, despite audible/energy evidence in the vocal groups. This is useful
+negative evidence for improving vocal transcription and narrowing `other`, not
+an acceptance decision. All excerpts, stems, MIDI and auditions remain local,
+private, ignored by Git and inactive.
 
 The first `Be Alone` observation uses 191–206 seconds. All three provider
 packs measured zero 10 ms envelope lag against the original. The Moises
