@@ -1739,6 +1739,13 @@ the offline resolver is excluded from ordinary AI readiness. The remaining
 step is user acceptance followed by a private install, static checkpoint
 inspection and two-window experiment; no product surface is enabled.
 
+The exact private six-source request/worker/result path is now implemented and
+tested with a deterministic fake worker. It preserves the four-source schemas,
+requires one model application and exactly six role arrays, revalidates the
+source/checkpoint/worker/runtime, seals reconstruction and resource evidence,
+and keeps acceptance, source-graph, Simple, Studio and publication permissions
+false. The real checkpoint has still not been downloaded, deserialised or run.
+
 The quality escalation after that experiment is now explicit. First measure
 same-checkpoint Demucs-MLX parity so runtime speed is not confused with model
 quality. If the local quality gap remains, add one fixed, licence-audited

@@ -189,10 +189,15 @@ report the result, then move on.
   production-ineligible and inactive. It does not use the fake receipt,
   update source lineage, activate MIDI, accept, select or promote anything,
   and it is imported by no CLI, TUI, Simple or Workbench path. The first run
-  is one synthetic observation, not an accepted separator. Network denial,
-  connection-attempt observation, outside-write confinement and complete
-  descendant supervision remain unproven; the checkpoint stays under the
-  private-evaluation-only policy. Historical fake V1/V2 and checkpoint launch
+  is one synthetic observation, not an accepted separator. A separate exact
+  six-source private-development request/worker/result path is prepared for
+  the experimental `htdemucs_6s` guitar/piano challenger. It has passed only
+  deterministic fake-worker contract tests: the real checkpoint has not been
+  downloaded or run, no quality result exists, and no CLI, TUI, Simple,
+  Studio, Workbench, source-graph or publication route is enabled. Network
+  denial, connection-attempt observation, outside-write confinement and
+  complete descendant supervision remain unproven; the checkpoint stays under
+  the private-evaluation-only policy. Historical fake V1/V2 and checkpoint launch
   V2 remain permanently blocked, the public lease execution flag and real
   backend flag remain false, and no CLI/TUI separator, publication or
   selection route is exposed. Because runtime-exec and worker-script path

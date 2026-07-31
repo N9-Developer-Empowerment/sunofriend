@@ -1977,6 +1977,11 @@ promotion are not implemented**
   separate private-evaluation challenger and add an explicit-acceptance,
   byte-count/full-hash-verifying installer. Keep it outside ordinary
   `ai-doctor` readiness and every separator surface.
+- [x] Generalise the private four-source parent/worker only as far as an exact
+  disjoint six-source protocol. Preserve the old schemas, require the fixed
+  source order and six complete arrays, seal reconstruction/immutability
+  evidence and prove all activation/publication effects false with a fake
+  worker before any checkpoint installation.
 - [x] Stage the first authorised real excerpt, prove provider-pack clock
   alignment, preserve native-rate evidence, record the 44.1 kHz model-input
   derivative and run the pinned local separator without activation.

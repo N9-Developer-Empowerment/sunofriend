@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -12,9 +14,21 @@ import pytest
 import soundfile
 
 from sunofriend._separation_demucs_private_run import (
+    PRIVATE_DEMUCS_6S_EXPERIMENT_SCHEMA,
+    PRIVATE_DEMUCS_6S_REQUEST_SCHEMA,
+    PRIVATE_DEMUCS_6S_WORKER_RESULT_SCHEMA,
     _PrivateDemucsExperimentError,
     _document_sha256,
     _run_private_demucs_four_stem_experiment,
+    _run_private_demucs_six_source_experiment,
+)
+from sunofriend.ai_cleanup_worker import (
+    SIX_SOURCE_CHECKPOINT_SHA256,
+    SIX_SOURCE_MODEL_ORDER,
+    SIX_SOURCE_REQUEST_SCHEMA,
+    SIX_SOURCE_TARGETS,
+    _model_configuration,
+    _validate_request,
 )
 from sunofriend.interface_contract import DIRECT_TUI_COMMANDS, PUBLIC_COMMANDS
 from sunofriend.separation import REAL_SEPARATION_BACKENDS_SUPPORTED
@@ -98,6 +112,29 @@ Path(args.result).write_text(json.dumps(result, sort_keys=True) + "\n")
 print(json.dumps(result, sort_keys=True))
 """
 
+FAKE_SIX_SOURCE_WORKER = (
+    FAKE_FOUR_STEM_WORKER.replace(
+        'fractions = {"bass": 0.20, "drums": 0.30, '
+        '"other": 0.40, "vocals": 0.10}',
+        'fractions = {"bass": 0.15, "drums": 0.20, "guitar": 0.10, '
+        '"other": 0.20, "piano": 0.25, "vocals": 0.10}',
+    )
+    .replace(
+        'for role in ("bass", "drums", "other", "vocals"):',
+        'for role in ("bass", "drums", "guitar", "other", "piano", "vocals"):',
+    )
+    .replace(
+        '"sunofriend.private-ai-separation-worker-result.v1"',
+        '"sunofriend.private-ai-six-source-separation-worker-result.v1"',
+    )
+    .replace('"model_variant": "htdemucs"', '"model_variant": "htdemucs_6s"')
+    .replace('"model_signature": "955717e8"', '"model_signature": "5c90dfd2"')
+    .replace(
+        '"targets": ["bass", "drums", "other", "vocals"]',
+        '"targets": ["bass", "drums", "guitar", "other", "piano", "vocals"]',
+    )
+)
+
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -147,6 +184,36 @@ def _run(
             end_seconds=1.5,
             python=sys.executable,
             worker_path=worker or default_worker,
+        )
+    return report, destination, audio, checkpoint
+
+
+def _run_six(root: Path) -> tuple[dict, Path, Path, Path]:
+    root.mkdir(parents=True, exist_ok=True)
+    audio, _, _, _ = _fixtures(root)
+    checkpoint = root / "5c90dfd2-34c22ccb.th"
+    checkpoint.write_bytes(b"trusted private-test six-source checkpoint")
+    worker = root / "fake_six_source_worker.py"
+    worker.write_text(FAKE_SIX_SOURCE_WORKER, encoding="utf-8")
+    checkpoint_hash = _sha256(checkpoint)
+    destination = root / "six-source-run"
+    with (
+        patch(
+            "sunofriend._separation_demucs_private_run.DEMUCS_HTDEMUCS_6S_SHA256",
+            checkpoint_hash,
+        ),
+        patch(
+            "sunofriend._separation_demucs_private_run.collect_ai_diagnostics",
+            return_value={"runtime_ready": True, "test": True},
+        ),
+    ):
+        report = _run_private_demucs_six_source_experiment(
+            audio,
+            out_dir=destination,
+            checkpoint_path=checkpoint,
+            end_seconds=1.5,
+            python=sys.executable,
+            worker_path=worker,
         )
     return report, destination, audio, checkpoint
 
@@ -216,6 +283,113 @@ def test_private_four_stem_run_is_repeatable_for_same_fake_worker() -> None:
             assert _sha256(first_root / "ESTIMATED-STEMS" / f"{role}.wav") == (
                 _sha256(second_root / "ESTIMATED-STEMS" / f"{role}.wav")
             )
+
+
+def test_private_six_source_run_is_separate_accounted_and_inactive() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        report, destination, audio, checkpoint = _run_six(Path(directory))
+
+        expected_roles = {"bass", "drums", "guitar", "other", "piano", "vocals"}
+        assert report["schema"] == PRIVATE_DEMUCS_6S_EXPERIMENT_SCHEMA
+        assert report["operation"] == "private-demucs-six-source-experiment"
+        assert report["status"] == "complete_review_required"
+        assert set(report["estimated_stems"]) == expected_roles
+        assert report["worker_result"]["schema"] == (
+            PRIVATE_DEMUCS_6S_WORKER_RESULT_SCHEMA
+        )
+        assert report["worker_result"]["targets"] == [
+            "bass",
+            "drums",
+            "guitar",
+            "other",
+            "piano",
+            "vocals",
+        ]
+        assert report["backend"]["model_variant"] == "htdemucs_6s"
+        assert report["backend"]["manifest"]["backend"] == "demucs-6s"
+        assert report["permissions"]["accepted"] is False
+        assert report["permissions"]["production_eligible"] is False
+        assert report["permissions"]["simple_mode_available"] is False
+        assert report["permissions"]["studio_import_available"] is False
+        assert report["additive_accounting"]["persisted_sum_plus_residual"][
+            "passed"
+        ] is True
+        assert _sha256(audio) == report["source"]["sha256"]
+        assert _sha256(checkpoint) == report["backend"]["checkpoint_sha256"]
+        for role in expected_roles:
+            stem = destination / "ESTIMATED-STEMS" / f"{role}.wav"
+            assert stem.is_file() and stem.stat().st_size > 0
+            assert report["estimated_stems"][role]["sha256"] == _sha256(stem)
+        persisted = json.loads(
+            (destination / "private-separation-experiment.json").read_text()
+        )
+        assert persisted["document_sha256"] == _document_sha256(persisted)
+        request = json.loads((destination / "request.json").read_text())
+        assert request["schema"] == PRIVATE_DEMUCS_6S_REQUEST_SCHEMA
+        assert request["permissions"]["public_result"] is False
+
+
+def test_six_source_worker_contract_is_exact_without_loading_a_model() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        audio, checkpoint, _, _ = _fixtures(root)
+        request = {
+            "schema": SIX_SOURCE_REQUEST_SCHEMA,
+            "backend": "demucs",
+            "model": {
+                "variant": "htdemucs_6s",
+                "signature": "5c90dfd2",
+                "package_version": "4.0.1",
+                "checkpoint_path": str(checkpoint),
+                "checkpoint_sha256": SIX_SOURCE_CHECKPOINT_SHA256,
+            },
+            "source_excerpt": {
+                "path": str(audio),
+                "sha256": "0" * 64,
+                "sample_rate": 44_100,
+                "channels": 2,
+                "frames": 88_200,
+            },
+            "targets": list(SIX_SOURCE_TARGETS),
+            "inference": {
+                "device": "cpu",
+                "shifts": 0,
+                "overlap": 0.25,
+                "split": True,
+                "num_workers": 0,
+            },
+        }
+        _validate_request(request)
+        configuration = _model_configuration(SIX_SOURCE_REQUEST_SCHEMA)
+        assert configuration["source_order"] == SIX_SOURCE_MODEL_ORDER
+
+        request["targets"] = ["bass", "drums", "other", "vocals"]
+        with pytest.raises(ValueError, match="targets are not exact"):
+            _validate_request(request)
+
+
+def test_private_six_source_script_requires_explicit_acceptance() -> None:
+    root = Path(__file__).resolve().parents[1]
+    environment = os.environ.copy()
+    environment.pop("SUNOFRIEND_ACCEPT_DEMUCS_6S_PRIVATE_EVALUATION", None)
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(root / "scripts" / "private-demucs-six-source-canary.py"),
+            "/does/not/exist.wav",
+            "--out",
+            "/does/not/exist-output",
+        ],
+        cwd=root,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode != 0
+    assert "SUNOFRIEND_ACCEPT_DEMUCS_6S_PRIVATE_EVALUATION=1" in (
+        completed.stderr
+    )
 
 
 def test_checkpoint_hash_is_rejected_before_output_creation() -> None:
@@ -430,6 +604,7 @@ def test_private_runner_has_no_public_or_tui_route() -> None:
     root = Path(__file__).resolve().parents[1]
     forbidden = {
         "private-demucs-four-stem",
+        "private-demucs-six-source",
         "private-separation-experiment",
     }
     assert REAL_SEPARATION_BACKENDS_SUPPORTED is False

@@ -393,6 +393,30 @@ before publishing it with private permissions. The resolver never downloads,
 the challenger is excluded from normal `ai-doctor --require all`, and model
 installation alone enables no separator surface.
 
+The private parent/worker contract is also prepared without a real model run.
+It retains the existing four-source schemas unchanged and adds disjoint
+six-source request, worker-result and experiment schemas. The worker requires
+the exact `htdemucs_6s` signature, checkpoint hash, package version, CPU/zero-
+shift settings and official source order; the parent accepts exactly bass,
+drums, guitar, other, piano and vocals arrays. A complete fake-worker test
+proves fresh owner-only output, per-array and PCM24 hashes, reconstruction
+accounting, input revalidation and all-false activation/publication effects.
+This is execution preparation, not evidence about the model's audio quality.
+No CLI, TUI, Simple or Workbench route imports it.
+
+After explicit acceptance and installation, the private-only entry point is:
+
+```bash
+SUNOFRIEND_ACCEPT_DEMUCS_6S_PRIVATE_EVALUATION=1 \
+  .venv/bin/python scripts/private-demucs-six-source-canary.py \
+  "/absolute/44.1-kHz-excerpt.wav" \
+  --out "/absolute/fresh-private-six-source-run"
+```
+
+The script refuses to start without the same acceptance environment variable,
+accepts only a fresh output, resolves the exact local checkpoint without a
+download and publishes no candidate or source-graph operation.
+
 The first authorised real-song development corpus is now available locally
 under [`../stem_examples`](../stem_examples/README.md). It contains four
 Ezzye originals, one detailed Moises export and two distinct Suno exports per

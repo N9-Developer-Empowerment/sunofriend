@@ -1,4 +1,4 @@
-"""Private four-stem HTDemucs development experiment.
+"""Private hash-pinned HTDemucs development experiments.
 
 This module is intentionally not imported by the CLI, TUI, Simple workflow,
 Workbench or public separation contract.  It exercises one already-installed,
@@ -16,6 +16,7 @@ import os
 import stat
 import subprocess
 import time
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
@@ -30,7 +31,9 @@ from .ai_cleanup import (
 )
 from .ai_runtime import (
     AI_CLEANUP_MODEL_MANIFESTS,
+    AI_PRIVATE_EVALUATION_MODEL_MANIFESTS,
     DEMUCS_HTDEMUCS_SHA256,
+    DEMUCS_HTDEMUCS_6S_SHA256,
     collect_ai_diagnostics,
     resolve_ai_python,
 )
@@ -43,17 +46,70 @@ PRIVATE_DEMUCS_WORKER_RESULT_SCHEMA = (
 )
 PRIVATE_DEMUCS_EXPERIMENT_SCHEMA = "sunofriend.private-demucs-four-stem-experiment.v1"
 PRIVATE_DEMUCS_POLICY_ID = "private-demucs-four-stem-development-v1"
+PRIVATE_DEMUCS_6S_REQUEST_SCHEMA = (
+    "sunofriend.private-ai-six-source-separation-request.v1"
+)
+PRIVATE_DEMUCS_6S_WORKER_RESULT_SCHEMA = (
+    "sunofriend.private-ai-six-source-separation-worker-result.v1"
+)
+PRIVATE_DEMUCS_6S_EXPERIMENT_SCHEMA = (
+    "sunofriend.private-demucs-six-source-experiment.v1"
+)
+PRIVATE_DEMUCS_6S_POLICY_ID = "private-demucs-six-source-development-v1"
+DEMUCS_6S_MODEL_VARIANT = "htdemucs_6s"
+DEMUCS_6S_MODEL_SIGNATURE = "5c90dfd2"
+DEMUCS_6S_TARGETS = ("bass", "drums", "guitar", "other", "piano", "vocals")
 _REPORT_NAME = "private-separation-experiment.json"
 _ARRAY_DIRECTORY = "MODEL-ARRAYS"
 _STEM_DIRECTORY = "ESTIMATED-STEMS"
 _RECONSTRUCTION_DIRECTORY = "RECONSTRUCTION"
-_EXPECTED_ARRAY_NAMES = frozenset(f"{role}.float32.npy" for role in DEMUCS_TARGETS)
 _OFFLINE_ENVIRONMENT_HINTS = {
     "HF_HUB_OFFLINE": "1",
     "TRANSFORMERS_OFFLINE": "1",
     "PIP_NO_INDEX": "1",
     "PYTHONNOUSERSITE": "1",
 }
+
+
+@dataclass(frozen=True)
+class _PrivateDemucsConfiguration:
+    request_schema: str
+    worker_result_schema: str
+    experiment_schema: str
+    policy_id: str
+    operation: str
+    model_variant: str
+    model_signature: str
+    checkpoint_sha256: str
+    targets: tuple[str, ...]
+    manifest_registry: str
+
+
+_FOUR_STEM_CONFIGURATION = _PrivateDemucsConfiguration(
+    request_schema=PRIVATE_DEMUCS_REQUEST_SCHEMA,
+    worker_result_schema=PRIVATE_DEMUCS_WORKER_RESULT_SCHEMA,
+    experiment_schema=PRIVATE_DEMUCS_EXPERIMENT_SCHEMA,
+    policy_id=PRIVATE_DEMUCS_POLICY_ID,
+    operation="private-demucs-four-stem-experiment",
+    model_variant=DEMUCS_MODEL_VARIANT,
+    model_signature=DEMUCS_MODEL_SIGNATURE,
+    checkpoint_sha256=DEMUCS_HTDEMUCS_SHA256,
+    targets=DEMUCS_TARGETS,
+    manifest_registry="cleanup",
+)
+
+_SIX_STEM_CONFIGURATION = _PrivateDemucsConfiguration(
+    request_schema=PRIVATE_DEMUCS_6S_REQUEST_SCHEMA,
+    worker_result_schema=PRIVATE_DEMUCS_6S_WORKER_RESULT_SCHEMA,
+    experiment_schema=PRIVATE_DEMUCS_6S_EXPERIMENT_SCHEMA,
+    policy_id=PRIVATE_DEMUCS_6S_POLICY_ID,
+    operation="private-demucs-six-source-experiment",
+    model_variant=DEMUCS_6S_MODEL_VARIANT,
+    model_signature=DEMUCS_6S_MODEL_SIGNATURE,
+    checkpoint_sha256=DEMUCS_HTDEMUCS_6S_SHA256,
+    targets=DEMUCS_6S_TARGETS,
+    manifest_registry="private_evaluation",
+)
 
 
 class _PrivateDemucsExperimentError(RuntimeError):
@@ -83,6 +139,69 @@ def _run_private_demucs_four_stem_experiment(
     this function never installs or downloads a model.
     """
 
+    return _run_private_demucs_experiment(
+        audio_path,
+        out_dir=out_dir,
+        checkpoint_path=checkpoint_path,
+        start_seconds=start_seconds,
+        end_seconds=end_seconds,
+        overlap=overlap,
+        python=python,
+        worker_path=worker_path,
+        timeout_seconds=timeout_seconds,
+        configuration=replace(
+            _FOUR_STEM_CONFIGURATION,
+            checkpoint_sha256=DEMUCS_HTDEMUCS_SHA256,
+        ),
+    )
+
+
+def _run_private_demucs_six_source_experiment(
+    audio_path: str | Path,
+    *,
+    out_dir: str | Path,
+    checkpoint_path: str | Path,
+    start_seconds: float = 0.0,
+    end_seconds: float | None = None,
+    overlap: float = 0.25,
+    python: str | Path | None = None,
+    worker_path: str | Path | None = None,
+    timeout_seconds: float = 1800.0,
+) -> dict[str, Any]:
+    """Run one bounded, private six-source development experiment."""
+
+    return _run_private_demucs_experiment(
+        audio_path,
+        out_dir=out_dir,
+        checkpoint_path=checkpoint_path,
+        start_seconds=start_seconds,
+        end_seconds=end_seconds,
+        overlap=overlap,
+        python=python,
+        worker_path=worker_path,
+        timeout_seconds=timeout_seconds,
+        configuration=replace(
+            _SIX_STEM_CONFIGURATION,
+            checkpoint_sha256=DEMUCS_HTDEMUCS_6S_SHA256,
+        ),
+    )
+
+
+def _run_private_demucs_experiment(
+    audio_path: str | Path,
+    *,
+    out_dir: str | Path,
+    checkpoint_path: str | Path,
+    start_seconds: float,
+    end_seconds: float | None,
+    overlap: float,
+    python: str | Path | None,
+    worker_path: str | Path | None,
+    timeout_seconds: float,
+    configuration: _PrivateDemucsConfiguration,
+) -> dict[str, Any]:
+    """Run one exact private model configuration without installing it."""
+
     import numpy as np
     import soundfile
 
@@ -101,10 +220,11 @@ def _run_private_demucs_four_stem_experiment(
     checkpoint_sha256 = _sha256(checkpoint)
     source_identity = _file_identity(audio)
     checkpoint_identity = _file_identity(checkpoint)
-    if checkpoint_sha256 != DEMUCS_HTDEMUCS_SHA256:
+    if checkpoint_sha256 != configuration.checkpoint_sha256:
         raise ValueError(
-            "Demucs checkpoint hash does not match the pinned htdemucs "
-            f"checkpoint: expected {DEMUCS_HTDEMUCS_SHA256}, "
+            "Demucs checkpoint hash does not match the pinned "
+            f"{configuration.model_variant} checkpoint: expected "
+            f"{configuration.checkpoint_sha256}, "
             f"got {checkpoint_sha256}"
         )
 
@@ -169,13 +289,13 @@ def _run_private_demucs_four_stem_experiment(
     source_excerpt_sha256 = _sha256(source_output)
     source_excerpt_identity = _file_identity(source_output)
     request: dict[str, Any] = {
-        "schema": PRIVATE_DEMUCS_REQUEST_SCHEMA,
-        "policy_id": PRIVATE_DEMUCS_POLICY_ID,
+        "schema": configuration.request_schema,
+        "policy_id": configuration.policy_id,
         "evidence_scope": "private_development_only",
         "backend": "demucs",
         "model": {
-            "variant": DEMUCS_MODEL_VARIANT,
-            "signature": DEMUCS_MODEL_SIGNATURE,
+            "variant": configuration.model_variant,
+            "signature": configuration.model_signature,
             "package_version": DEMUCS_PACKAGE_VERSION,
             "checkpoint_path": str(checkpoint),
             "checkpoint_sha256": checkpoint_sha256,
@@ -187,7 +307,7 @@ def _run_private_demucs_four_stem_experiment(
             "channels": channels,
             "frames": int(len(persisted_source)),
         },
-        "targets": list(DEMUCS_TARGETS),
+        "targets": list(configuration.targets),
         "inference": {
             "device": "cpu",
             "shifts": 0,
@@ -259,11 +379,11 @@ def _run_private_demucs_four_stem_experiment(
         _make_private_file(stderr_path)
 
     base_report: dict[str, Any] = {
-        "schema": PRIVATE_DEMUCS_EXPERIMENT_SCHEMA,
-        "policy_id": PRIVATE_DEMUCS_POLICY_ID,
+        "schema": configuration.experiment_schema,
+        "policy_id": configuration.policy_id,
         "status": "failed" if error else "validating",
         "evidence_scope": "private_development_only",
-        "operation": "private-demucs-four-stem-experiment",
+        "operation": configuration.operation,
         "started_at": started_at,
         "completed_at": _utc_now(),
         "elapsed_seconds": round(time.monotonic() - started_clock, 6),
@@ -291,14 +411,14 @@ def _run_private_demucs_four_stem_experiment(
             },
         },
         "backend": {
-            "manifest": _manifest_document(),
-            "model_variant": DEMUCS_MODEL_VARIANT,
-            "model_signature": DEMUCS_MODEL_SIGNATURE,
+            "manifest": _manifest_document(configuration),
+            "model_variant": configuration.model_variant,
+            "model_signature": configuration.model_signature,
             "package_version": DEMUCS_PACKAGE_VERSION,
             "checkpoint": str(checkpoint),
             "checkpoint_sha256": checkpoint_sha256,
             "checkpoint_identity": checkpoint_identity,
-            "expected_checkpoint_sha256": DEMUCS_HTDEMUCS_SHA256,
+            "expected_checkpoint_sha256": configuration.checkpoint_sha256,
             "checkpoint_hash_verified_before_output": True,
             "worker": str(worker),
             "worker_sha256": worker_sha256,
@@ -380,11 +500,12 @@ def _run_private_demucs_four_stem_experiment(
             request=request,
             array_dir=array_dir,
             expected_source_shape=persisted_source.shape,
+            configuration=configuration,
         )
         estimates: dict[str, Any] = {}
         stem_evidence: dict[str, Any] = {}
         persisted_estimates: list[Any] = []
-        for role in DEMUCS_TARGETS:
+        for role in configuration.targets:
             array_path = array_dir / f"{role}.float32.npy"
             _make_private_file(array_path)
             estimate = np.load(array_path, allow_pickle=False)
@@ -417,7 +538,7 @@ def _run_private_demucs_four_stem_experiment(
             }
 
         raw_sum = np.zeros_like(persisted_source, dtype="float64")
-        for role in DEMUCS_TARGETS:
+        for role in configuration.targets:
             raw_sum += estimates[role].astype("float64")
         raw_error = persisted_source.astype("float64") - raw_sum
         persisted_stem_sum = np.zeros_like(persisted_source, dtype="float64")
@@ -538,7 +659,8 @@ def _run_private_demucs_four_stem_experiment(
                     "error_to_source_db": _relative_db(raw_error_rms, source_rms),
                     "meaning": (
                         "Difference between the persisted source excerpt and "
-                        "the four unpersisted float32 model estimates."
+                        f"the {len(configuration.targets)} unpersisted float32 "
+                        "model estimates."
                     ),
                 },
                 "persisted_sum": {
@@ -550,8 +672,8 @@ def _run_private_demucs_four_stem_experiment(
                     "purpose": "audition_only",
                     "used_for_accounting": False,
                     "meaning": (
-                        "A PCM24 audition rendering of the four persisted "
-                        "stem arrays. It can clip and is never used to "
+                        "A PCM24 audition rendering of the persisted stem "
+                        "arrays. It can clip and is never used to "
                         "calculate the residual or accounting closure."
                     ),
                 },
@@ -576,7 +698,8 @@ def _run_private_demucs_four_stem_experiment(
                     ),
                     "meaning": (
                         "PCM accounting closure of the float64 sum of the "
-                        "four re-read persisted stem WAV arrays plus the "
+                        f"{len(configuration.targets)} re-read persisted stem "
+                        "WAV arrays plus the "
                         "persisted residual; this does not measure "
                         "separation accuracy. The audition sum WAV is not "
                         "used."
@@ -736,23 +859,24 @@ def _validate_worker_result(
     request: Mapping[str, Any],
     array_dir: Path,
     expected_source_shape: tuple[int, ...],
+    configuration: _PrivateDemucsConfiguration,
 ) -> None:
-    if result.get("schema") != PRIVATE_DEMUCS_WORKER_RESULT_SCHEMA:
-        raise ValueError("worker returned an unsupported four-stem result schema")
+    if result.get("schema") != configuration.worker_result_schema:
+        raise ValueError("worker returned an unsupported private result schema")
     if result.get("status") != "complete" or result.get("backend") != "demucs":
         raise ValueError("worker result is not a complete Demucs result")
     if result.get("package_version") != DEMUCS_PACKAGE_VERSION:
         raise ValueError("worker Demucs package version changed")
-    if result.get("model_variant") != DEMUCS_MODEL_VARIANT:
+    if result.get("model_variant") != configuration.model_variant:
         raise ValueError("worker model variant changed")
-    if result.get("model_signature") != DEMUCS_MODEL_SIGNATURE:
+    if result.get("model_signature") != configuration.model_signature:
         raise ValueError("worker model signature changed")
     if result.get("checkpoint_sha256") != request["model"]["checkpoint_sha256"]:
         raise ValueError("worker checkpoint hash does not match the request")
     if result.get("source_excerpt_sha256") != request["source_excerpt"]["sha256"]:
         raise ValueError("worker source hash does not match the request")
-    if result.get("targets") != list(DEMUCS_TARGETS):
-        raise ValueError("worker targets are not the exact four-role set")
+    if result.get("targets") != list(configuration.targets):
+        raise ValueError("worker targets are not the exact configured role set")
     if result.get("model_applications") != 1:
         raise ValueError("worker did not report exactly one model application")
     if (
@@ -780,7 +904,7 @@ def _validate_worker_result(
     ):
         raise ValueError("worker result geometry does not match the source")
     arrays = result.get("arrays")
-    if not isinstance(arrays, Mapping) or set(arrays) != set(DEMUCS_TARGETS):
+    if not isinstance(arrays, Mapping) or set(arrays) != set(configuration.targets):
         raise ValueError("worker array evidence is incomplete")
     entries = list(array_dir.iterdir())
     for path in entries:
@@ -790,11 +914,14 @@ def _validate_worker_result(
                 "worker array directory must contain only regular non-link files"
             )
     actual_names = {path.name for path in entries}
-    if actual_names != _EXPECTED_ARRAY_NAMES:
+    expected_array_names = frozenset(
+        f"{role}.float32.npy" for role in configuration.targets
+    )
+    if actual_names != expected_array_names:
         raise ValueError("worker array directory is incomplete or contains extras")
     expected_payload_bytes = math.prod(expected_source_shape) * 4
     maximum_npy_bytes = expected_payload_bytes + 1024 * 1024
-    for role in DEMUCS_TARGETS:
+    for role in configuration.targets:
         evidence = arrays[role]
         path = array_dir / f"{role}.float32.npy"
         if not isinstance(evidence, Mapping):
@@ -848,8 +975,15 @@ def _validate_estimate(
         raise ValueError(f"{role} model array contains non-finite samples")
 
 
-def _manifest_document() -> dict[str, Any]:
-    manifest = AI_CLEANUP_MODEL_MANIFESTS["demucs"]
+def _manifest_document(
+    configuration: _PrivateDemucsConfiguration,
+) -> dict[str, Any]:
+    if configuration.manifest_registry == "cleanup":
+        manifest = AI_CLEANUP_MODEL_MANIFESTS["demucs"]
+    elif configuration.manifest_registry == "private_evaluation":
+        manifest = AI_PRIVATE_EVALUATION_MODEL_MANIFESTS["demucs-6s"]
+    else:  # pragma: no cover - closed construction above
+        raise ValueError("unknown private Demucs manifest registry")
     return {
         "backend": manifest.backend,
         "name": manifest.name,

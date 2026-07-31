@@ -1,8 +1,8 @@
 """Isolated Demucs worker for private learned-separation experiments.
 
 The original v1 target/residual request remains supported unchanged. The
-separate private four-stem request runs the same pinned model once and
-persists all four broad HTDemucs estimates for a parent-owned bake-off.
+separate private multi-source requests run one exact pinned model once and
+persist every configured HTDemucs estimate for a parent-owned bake-off.
 Neither request is a product admission, publication, selection or promotion
 boundary.
 """
@@ -25,6 +25,10 @@ REQUEST_SCHEMA = "sunofriend.ai-cleanup-request.v1"
 RESULT_SCHEMA = "sunofriend.ai-cleanup-worker-result.v1"
 FOUR_STEM_REQUEST_SCHEMA = "sunofriend.private-ai-separation-request.v1"
 FOUR_STEM_RESULT_SCHEMA = "sunofriend.private-ai-separation-worker-result.v1"
+SIX_SOURCE_REQUEST_SCHEMA = "sunofriend.private-ai-six-source-separation-request.v1"
+SIX_SOURCE_RESULT_SCHEMA = (
+    "sunofriend.private-ai-six-source-separation-worker-result.v1"
+)
 EXPECTED_PACKAGE_VERSION = "4.0.1"
 EXPECTED_MODEL_VARIANT = "htdemucs"
 EXPECTED_MODEL_SIGNATURE = "955717e8"
@@ -33,6 +37,35 @@ EXPECTED_CHECKPOINT_SHA256 = (
 )
 TARGETS = ("bass", "drums", "other", "vocals")
 MODEL_SOURCE_ORDER = ("drums", "bass", "other", "vocals")
+SIX_SOURCE_MODEL_VARIANT = "htdemucs_6s"
+SIX_SOURCE_MODEL_SIGNATURE = "5c90dfd2"
+SIX_SOURCE_CHECKPOINT_SHA256 = (
+    "34c22ccb381c6f9fdbf324f04e1e2fe21aaaf293f5ded163a162697ff9a02ddd"
+)
+SIX_SOURCE_TARGETS = ("bass", "drums", "guitar", "other", "piano", "vocals")
+SIX_SOURCE_MODEL_ORDER = ("drums", "bass", "other", "vocals", "piano", "guitar")
+
+
+def _model_configuration(schema: str) -> dict[str, Any]:
+    if schema == SIX_SOURCE_REQUEST_SCHEMA:
+        return {
+            "variant": SIX_SOURCE_MODEL_VARIANT,
+            "signature": SIX_SOURCE_MODEL_SIGNATURE,
+            "checkpoint_sha256": SIX_SOURCE_CHECKPOINT_SHA256,
+            "targets": SIX_SOURCE_TARGETS,
+            "source_order": SIX_SOURCE_MODEL_ORDER,
+            "result_schema": SIX_SOURCE_RESULT_SCHEMA,
+        }
+    if schema in {REQUEST_SCHEMA, FOUR_STEM_REQUEST_SCHEMA}:
+        return {
+            "variant": EXPECTED_MODEL_VARIANT,
+            "signature": EXPECTED_MODEL_SIGNATURE,
+            "checkpoint_sha256": EXPECTED_CHECKPOINT_SHA256,
+            "targets": TARGETS,
+            "source_order": MODEL_SOURCE_ORDER,
+            "result_schema": FOUR_STEM_RESULT_SCHEMA,
+        }
+    raise ValueError("unknown private Demucs request schema")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -47,11 +80,16 @@ def main(argv: list[str] | None = None) -> int:
     result_path = Path(args.result).expanduser().absolute()
     request = json.loads(request_path.read_text(encoding="utf-8"))
     _validate_request(request)
-    four_stem = request["schema"] == FOUR_STEM_REQUEST_SCHEMA
-    if four_stem:
+    multi_source = request["schema"] in {
+        FOUR_STEM_REQUEST_SCHEMA,
+        SIX_SOURCE_REQUEST_SCHEMA,
+    }
+    configuration = _model_configuration(request["schema"])
+    if multi_source:
         if args.target_array is not None or args.stems_dir is None:
             raise ValueError(
-                "four-stem requests require --stems-dir and forbid --target-array"
+                "multi-source requests require --stems-dir and forbid "
+                "--target-array"
             )
         stems_dir = Path(args.stems_dir).expanduser().absolute()
         target_array_path = None
@@ -72,8 +110,8 @@ def main(argv: list[str] | None = None) -> int:
         raise ValueError("source excerpt changed after the request was written")
     if checkpoint_hash != request["model"]["checkpoint_sha256"]:
         raise ValueError("checkpoint changed after the request was written")
-    if checkpoint_hash != EXPECTED_CHECKPOINT_SHA256:
-        raise ValueError("checkpoint is not the pinned official htdemucs model")
+    if checkpoint_hash != configuration["checkpoint_sha256"]:
+        raise ValueError("checkpoint is not the pinned configured Demucs model")
 
     # PyTorch checkpoints use pickle. Import and deserialise only after the
     # complete official checkpoint hash has matched the pinned value above.
@@ -110,8 +148,9 @@ def main(argv: list[str] | None = None) -> int:
             f"model sample rate is {getattr(model, 'samplerate', None)}, "
             f"source is {sample_rate}"
         )
-    if tuple(model.sources) != MODEL_SOURCE_ORDER:
-        raise ValueError(f"unexpected htdemucs source roles: {model.sources}")
+    source_order = tuple(configuration["source_order"])
+    if tuple(model.sources) != source_order:
+        raise ValueError(f"unexpected Demucs source roles: {model.sources}")
 
     original_channels = source.shape[1]
     inference_source = source
@@ -140,7 +179,7 @@ def main(argv: list[str] | None = None) -> int:
     inference_seconds = time.monotonic() - inference_started
     separated = separated * std + mean
     estimates: dict[str, Any] = {}
-    for index, role in enumerate(MODEL_SOURCE_ORDER):
+    for index, role in enumerate(source_order):
         estimate = separated[index].detach().cpu().numpy().T.astype("float32")
         if original_channels == 1:
             estimate = estimate.mean(axis=1, keepdims=True, dtype="float32")
@@ -152,15 +191,16 @@ def main(argv: list[str] | None = None) -> int:
             raise ValueError(f"model {role} estimate contains non-finite samples")
         estimates[role] = estimate
 
-    if four_stem:
+    if multi_source:
         assert stems_dir is not None
         arrays: dict[str, dict[str, Any]] = {}
-        for role in TARGETS:
+        targets = tuple(configuration["targets"])
+        for role in targets:
             path = stems_dir / f"{role}.float32.npy"
             _write_array(path, estimates[role], np=np)
             arrays[role] = _array_evidence(path, estimates[role], np=np)
         result = {
-            "schema": FOUR_STEM_RESULT_SCHEMA,
+            "schema": configuration["result_schema"],
             "status": "complete",
             "backend": "demucs",
             "package_version": package_version,
@@ -168,7 +208,7 @@ def main(argv: list[str] | None = None) -> int:
             "model_signature": request["model"]["signature"],
             "checkpoint_sha256": checkpoint_hash,
             "source_excerpt_sha256": source_hash,
-            "targets": list(TARGETS),
+            "targets": list(targets),
             "arrays": arrays,
             "frames": int(source.shape[0]),
             "channels": int(source.shape[1]),
@@ -229,10 +269,15 @@ def main(argv: list[str] | None = None) -> int:
 
 def _validate_request(request: Mapping[str, Any]) -> None:
     schema = request.get("schema")
-    if schema not in {REQUEST_SCHEMA, FOUR_STEM_REQUEST_SCHEMA}:
+    if schema not in {
+        REQUEST_SCHEMA,
+        FOUR_STEM_REQUEST_SCHEMA,
+        SIX_SOURCE_REQUEST_SCHEMA,
+    }:
         raise ValueError(
-            f"request schema must be {REQUEST_SCHEMA} or {FOUR_STEM_REQUEST_SCHEMA}"
+            "request schema must be an exact supported private Demucs schema"
         )
+    configuration = _model_configuration(str(schema))
     if request.get("backend") != "demucs":
         raise ValueError("worker backend must be demucs")
     model = request.get("model")
@@ -242,9 +287,9 @@ def _validate_request(request: Mapping[str, Any]) -> None:
         raise ValueError("request model and source_excerpt must be objects")
     if not isinstance(inference, Mapping):
         raise ValueError("request inference must be an object")
-    if model.get("variant") != EXPECTED_MODEL_VARIANT:
-        raise ValueError("request model variant is not htdemucs")
-    if model.get("signature") != EXPECTED_MODEL_SIGNATURE:
+    if model.get("variant") != configuration["variant"]:
+        raise ValueError("request model variant is not the configured Demucs model")
+    if model.get("signature") != configuration["signature"]:
         raise ValueError("request model signature is not pinned")
     if model.get("package_version") != EXPECTED_PACKAGE_VERSION:
         raise ValueError("request demucs package version is not pinned")
@@ -254,13 +299,20 @@ def _validate_request(request: Mapping[str, Any]) -> None:
         raise ValueError("checkpoint_path must be an existing absolute file")
     if not audio.is_absolute() or not audio.is_file():
         raise ValueError("source excerpt path must be an existing absolute file")
-    if model.get("checkpoint_sha256") != EXPECTED_CHECKPOINT_SHA256:
+    if model.get("checkpoint_sha256") != configuration["checkpoint_sha256"]:
+        if schema == SIX_SOURCE_REQUEST_SCHEMA:
+            raise ValueError(
+                "request checkpoint hash is not the pinned htdemucs_6s hash"
+            )
         raise ValueError("request checkpoint hash is not the pinned htdemucs hash")
     if schema == REQUEST_SCHEMA:
         if request.get("target") not in TARGETS or "targets" in request:
             raise ValueError("unsupported target role")
-    elif request.get("targets") != list(TARGETS) or "target" in request:
-        raise ValueError("four-stem request targets are not exact")
+    elif (
+        request.get("targets") != list(configuration["targets"])
+        or "target" in request
+    ):
+        raise ValueError("multi-source request targets are not exact")
     if source.get("sample_rate") != 44100:
         raise ValueError("htdemucs worker requires 44100 Hz audio")
     if source.get("channels") not in (1, 2):
