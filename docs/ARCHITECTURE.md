@@ -856,6 +856,46 @@ ordinary-file immutability and possible failure of the bounded emergency
 destructor fallback to prove reap remain explicit limitations. No fixture is selectable,
 publishable, acceptance-eligible or promotion-eligible.
 
+The first real-model experiment is intentionally disjoint from that transport
+proof. `_separation_demucs_private_run.py` is an underscore-prefixed,
+private-development parent for the already-installed, hash-pinned Demucs
+4.0.1 `htdemucs` checkpoint. `ai_cleanup_worker.py` retains its original
+single-target v1 protocol and now accepts a separate private four-stem request that
+applies the model once and persists all four float32 estimates: bass, drums,
+other and vocals. The parent revalidates exact role, shape, hash, finite-value,
+source, checkpoint, worker and runtime-launcher evidence before writing PCM24
+estimated stems.
+
+The private result is self-hashed, fresh-only and
+`complete_review_required`. It records model-sum error separately from a
+source-minus-estimated-sum accounting remainder; only the latter can establish
+PCM additive closure against the float64 sum of all four re-read persisted
+stem WAV arrays. The separately written sum WAV is audition-only and never
+used for closure because PCM clipping could conceal oversummed samples. The
+report explicitly says that closure is not separation accuracy. A remainder
+outside PCM range is retained as a non-loadable float array rather than
+silently clipped into a reconstructable WAV claim. Network-denial enforcement,
+connection-attempt observation, outside-write confinement and complete
+descendant supervision remain unproven.
+
+`_separation_demucs_demo_fixture.py` derives a copyright-safe stereo mixture
+and exact broad-role references from the existing mathematical demo:
+drums is kick plus snare plus hat, bass is bass, other is keys plus lead and
+vocals is exact silence. `_separation_demucs_demo_evaluation.py` revalidates
+both self-hashed documents and every persisted audio hash before computing
+role SI-SDR, gain error, 10 ms envelope lag and four-quarter drift, silent
+vocal false-positive energy and aggregate energy diagnostics. Its status is
+`complete_observation_not_acceptance`; downstream MIDI remains separately
+required.
+
+No public module imports the private runner. It does not create
+`SeparationRunReceipt`, write the source graph, produce a loadable candidate,
+or change `REAL_SEPARATION_BACKENDS_SUPPORTED` or the public checkpoint-lease
+flag from false. The reproducible developer canary is
+`scripts/private-demucs-four-stem-canary.py`; its detailed boundary and first
+measurements are in
+[Private stem-separation development](PRIVATE_SEPARATION_DEVELOPMENT.md).
+
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a
 starter ZIP. It does not create or mutate Workbench SQLite state. After

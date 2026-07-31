@@ -1,4 +1,11 @@
-"""Isolated Demucs worker for the experimental learned-cleanup boundary."""
+"""Isolated Demucs worker for private learned-separation experiments.
+
+The original v1 target/residual request remains supported unchanged. The
+separate private four-stem request runs the same pinned model once and
+persists all four broad HTDemucs estimates for a parent-owned bake-off.
+Neither request is a product admission, publication, selection or promotion
+boundary.
+"""
 
 from __future__ import annotations
 
@@ -7,12 +14,17 @@ import hashlib
 import importlib.metadata
 import json
 import os
+import resource
+import sys
+import time
 from pathlib import Path
 from typing import Any, Mapping
 
 
 REQUEST_SCHEMA = "sunofriend.ai-cleanup-request.v1"
 RESULT_SCHEMA = "sunofriend.ai-cleanup-worker-result.v1"
+FOUR_STEM_REQUEST_SCHEMA = "sunofriend.private-ai-separation-request.v1"
+FOUR_STEM_RESULT_SCHEMA = "sunofriend.private-ai-separation-worker-result.v1"
 EXPECTED_PACKAGE_VERSION = "4.0.1"
 EXPECTED_MODEL_VARIANT = "htdemucs"
 EXPECTED_MODEL_SIGNATURE = "955717e8"
@@ -20,20 +32,37 @@ EXPECTED_CHECKPOINT_SHA256 = (
     "8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4"
 )
 TARGETS = ("bass", "drums", "other", "vocals")
+MODEL_SOURCE_ORDER = ("drums", "bass", "other", "vocals")
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--request", required=True)
-    parser.add_argument("--target-array", required=True)
+    parser.add_argument("--target-array")
+    parser.add_argument("--stems-dir")
     parser.add_argument("--result", required=True)
     args = parser.parse_args(argv)
 
     request_path = Path(args.request).expanduser().absolute()
-    target_array_path = Path(args.target_array).expanduser().absolute()
     result_path = Path(args.result).expanduser().absolute()
     request = json.loads(request_path.read_text(encoding="utf-8"))
     _validate_request(request)
+    four_stem = request["schema"] == FOUR_STEM_REQUEST_SCHEMA
+    if four_stem:
+        if args.target_array is not None or args.stems_dir is None:
+            raise ValueError(
+                "four-stem requests require --stems-dir and forbid --target-array"
+            )
+        stems_dir = Path(args.stems_dir).expanduser().absolute()
+        target_array_path = None
+        _validate_stems_dir(stems_dir)
+    else:
+        if args.target_array is None or args.stems_dir is not None:
+            raise ValueError(
+                "target requests require --target-array and forbid --stems-dir"
+            )
+        target_array_path = Path(args.target_array).expanduser().absolute()
+        stems_dir = None
 
     source_path = Path(request["source_excerpt"]["path"])
     checkpoint_path = Path(request["model"]["checkpoint_path"])
@@ -81,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
             f"model sample rate is {getattr(model, 'samplerate', None)}, "
             f"source is {sample_rate}"
         )
-    if list(model.sources) != ["drums", "bass", "other", "vocals"]:
+    if tuple(model.sources) != MODEL_SOURCE_ORDER:
         raise ValueError(f"unexpected htdemucs source roles: {model.sources}")
 
     original_channels = source.shape[1]
@@ -96,6 +125,7 @@ def main(argv: list[str] | None = None) -> int:
         raise ValueError("source excerpt has no usable variance")
     normalized = (waveform - mean) / std
     settings = request["inference"]
+    inference_started = time.monotonic()
     with torch.inference_mode():
         separated = apply_model(
             model,
@@ -107,51 +137,102 @@ def main(argv: list[str] | None = None) -> int:
             progress=False,
             num_workers=0,
         )[0]
+    inference_seconds = time.monotonic() - inference_started
     separated = separated * std + mean
-    target_index = list(model.sources).index(request["target"])
-    target = separated[target_index].detach().cpu().numpy().T.astype("float32")
-    if original_channels == 1:
-        target = target.mean(axis=1, keepdims=True, dtype="float32")
-    if target.shape != source.shape:
-        raise ValueError(f"target shape {target.shape} does not match {source.shape}")
-    if not np.all(np.isfinite(target)):
-        raise ValueError("model target contains non-finite samples")
+    estimates: dict[str, Any] = {}
+    for index, role in enumerate(MODEL_SOURCE_ORDER):
+        estimate = separated[index].detach().cpu().numpy().T.astype("float32")
+        if original_channels == 1:
+            estimate = estimate.mean(axis=1, keepdims=True, dtype="float32")
+        if estimate.shape != source.shape:
+            raise ValueError(
+                f"{role} shape {estimate.shape} does not match {source.shape}"
+            )
+        if not np.all(np.isfinite(estimate)):
+            raise ValueError(f"model {role} estimate contains non-finite samples")
+        estimates[role] = estimate
 
-    target_array_path.parent.mkdir(parents=True, exist_ok=True)
-    with target_array_path.open("wb") as handle:
-        np.save(handle, target, allow_pickle=False)
-        handle.flush()
-        os.fsync(handle.fileno())
-    result: dict[str, Any] = {
-        "schema": RESULT_SCHEMA,
-        "status": "complete",
-        "backend": "demucs",
-        "package_version": package_version,
-        "model_variant": request["model"]["variant"],
-        "model_signature": request["model"]["signature"],
-        "checkpoint_sha256": checkpoint_hash,
-        "source_excerpt_sha256": source_hash,
-        "target": request["target"],
-        "target_array_sha256": _sha256(target_array_path),
-        "frames": int(target.shape[0]),
-        "channels": int(target.shape[1]),
-        "sample_rate": sample_rate,
-        "device": "cpu",
-        "shifts": 0,
-        "overlap": float(settings["overlap"]),
-        "minimum": float(np.min(target)),
-        "maximum": float(np.max(target)),
-        "rms": float(np.sqrt(np.mean(np.square(target.astype("float64"))))),
-        "checkpoint_hash_verified_before_deserialisation": True,
-    }
+    if four_stem:
+        assert stems_dir is not None
+        arrays: dict[str, dict[str, Any]] = {}
+        for role in TARGETS:
+            path = stems_dir / f"{role}.float32.npy"
+            _write_array(path, estimates[role], np=np)
+            arrays[role] = _array_evidence(path, estimates[role], np=np)
+        result = {
+            "schema": FOUR_STEM_RESULT_SCHEMA,
+            "status": "complete",
+            "backend": "demucs",
+            "package_version": package_version,
+            "model_variant": request["model"]["variant"],
+            "model_signature": request["model"]["signature"],
+            "checkpoint_sha256": checkpoint_hash,
+            "source_excerpt_sha256": source_hash,
+            "targets": list(TARGETS),
+            "arrays": arrays,
+            "frames": int(source.shape[0]),
+            "channels": int(source.shape[1]),
+            "sample_rate": sample_rate,
+            "device": "cpu",
+            "shifts": 0,
+            "overlap": float(settings["overlap"]),
+            "model_applications": 1,
+            "inference_seconds": round(inference_seconds, 6),
+            "maximum_resident_set_size_native_units": int(
+                resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            ),
+            "resource_platform": sys.platform,
+            "source_unchanged_after_inference": _sha256(source_path) == source_hash,
+            "checkpoint_unchanged_after_inference": (
+                _sha256(checkpoint_path) == checkpoint_hash
+            ),
+            "checkpoint_hash_verified_before_deserialisation": True,
+            "effects": {
+                "network_denial_enforced": False,
+                "network_attempt_observation_available": False,
+                "automatic_selection": False,
+                "automatic_promotion": False,
+                "public_result": False,
+            },
+        }
+    else:
+        assert target_array_path is not None
+        target = estimates[request["target"]]
+        target_array_path.parent.mkdir(parents=True, exist_ok=True)
+        _write_array(target_array_path, target, np=np)
+        result = {
+            "schema": RESULT_SCHEMA,
+            "status": "complete",
+            "backend": "demucs",
+            "package_version": package_version,
+            "model_variant": request["model"]["variant"],
+            "model_signature": request["model"]["signature"],
+            "checkpoint_sha256": checkpoint_hash,
+            "source_excerpt_sha256": source_hash,
+            "target": request["target"],
+            "target_array_sha256": _sha256(target_array_path),
+            "frames": int(target.shape[0]),
+            "channels": int(target.shape[1]),
+            "sample_rate": sample_rate,
+            "device": "cpu",
+            "shifts": 0,
+            "overlap": float(settings["overlap"]),
+            "minimum": float(np.min(target)),
+            "maximum": float(np.max(target)),
+            "rms": float(np.sqrt(np.mean(np.square(target.astype("float64"))))),
+            "checkpoint_hash_verified_before_deserialisation": True,
+        }
     _write_json(result_path, result)
     print(json.dumps(result, sort_keys=True))
     return 0
 
 
 def _validate_request(request: Mapping[str, Any]) -> None:
-    if request.get("schema") != REQUEST_SCHEMA:
-        raise ValueError(f"request schema must be {REQUEST_SCHEMA}")
+    schema = request.get("schema")
+    if schema not in {REQUEST_SCHEMA, FOUR_STEM_REQUEST_SCHEMA}:
+        raise ValueError(
+            f"request schema must be {REQUEST_SCHEMA} or {FOUR_STEM_REQUEST_SCHEMA}"
+        )
     if request.get("backend") != "demucs":
         raise ValueError("worker backend must be demucs")
     model = request.get("model")
@@ -175,8 +256,11 @@ def _validate_request(request: Mapping[str, Any]) -> None:
         raise ValueError("source excerpt path must be an existing absolute file")
     if model.get("checkpoint_sha256") != EXPECTED_CHECKPOINT_SHA256:
         raise ValueError("request checkpoint hash is not the pinned htdemucs hash")
-    if request.get("target") not in TARGETS:
-        raise ValueError("unsupported target role")
+    if schema == REQUEST_SCHEMA:
+        if request.get("target") not in TARGETS or "targets" in request:
+            raise ValueError("unsupported target role")
+    elif request.get("targets") != list(TARGETS) or "target" in request:
+        raise ValueError("four-stem request targets are not exact")
     if source.get("sample_rate") != 44100:
         raise ValueError("htdemucs worker requires 44100 Hz audio")
     if source.get("channels") not in (1, 2):
@@ -188,6 +272,33 @@ def _validate_request(request: Mapping[str, Any]) -> None:
     overlap = float(inference.get("overlap", -1))
     if not 0 <= overlap < 1:
         raise ValueError("inference overlap must be in the range 0 <= overlap < 1")
+
+
+def _validate_stems_dir(path: Path) -> None:
+    if not path.is_dir() or path.is_symlink():
+        raise ValueError("stems directory must be an existing non-symlink directory")
+    if any(path.iterdir()):
+        raise ValueError("stems directory must be empty")
+
+
+def _write_array(path: Path, value: Any, *, np: Any) -> None:
+    if path.exists():
+        raise FileExistsError(f"model array already exists: {path.name}")
+    with path.open("xb") as handle:
+        np.save(handle, value, allow_pickle=False)
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+def _array_evidence(path: Path, value: Any, *, np: Any) -> dict[str, Any]:
+    return {
+        "file": path.name,
+        "sha256": _sha256(path),
+        "bytes": path.stat().st_size,
+        "minimum": float(np.min(value)),
+        "maximum": float(np.max(value)),
+        "rms": float(np.sqrt(np.mean(np.square(value.astype("float64"))))),
+    }
 
 
 def _sha256(path: Path) -> str:

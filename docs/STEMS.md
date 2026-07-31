@@ -68,7 +68,11 @@ a product feature.
 
 Sunofriend's own local separator is planned but not yet available. If privacy
 is essential today, use an established local tool rather than waiting for an
-unimplemented feature.
+unimplemented feature. Developers can follow the first private, non-product
+HTDemucs experiment in
+[Private stem-separation development](PRIVATE_SEPARATION_DEVELOPMENT.md);
+it does not yet accept a user's finished song through Simple, Studio, CLI or
+TUI.
 
 ## Glossary
 

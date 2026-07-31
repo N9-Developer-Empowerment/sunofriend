@@ -174,9 +174,23 @@ report the result, then move on.
   127 remains post-start. Python exceptions, invalid owner tags and unproven
   reap receive no terminal observation. The worker only
   hashes FD 5; it never deserializes the checkpoint, reads source audio, imports
-  a model, performs inference or creates output files. Historical fake V1/V2
-  and checkpoint launch V2 remain permanently blocked, the public lease
-  execution flag remains false, and no CLI/TUI separator, publication or
+  a model, performs inference or creates output files. A disjoint
+  private-development canary now runs the already-installed, hash-pinned
+  Demucs 4.0.1 `htdemucs` checkpoint on Sunofriend's copyright-safe
+  eight-second stereo fixture. One model application preserves bass, drums,
+  other and vocals estimates plus source-minus-sum accounting evidence; a
+  separate evaluator revalidates every hash and records synthetic-reference
+  SI-SDR, level, envelope lag/drift, silent-vocal false-positive energy and
+  resource observations. Its result is always review-required,
+  production-ineligible and inactive. It does not use the fake receipt, update
+  source lineage, produce MIDI, accept, select or promote anything, and it is
+  imported by no CLI, TUI, Simple or Workbench path. The first run is one
+  synthetic observation, not an accepted separator. Network denial,
+  connection-attempt observation, outside-write confinement and complete
+  descendant supervision remain unproven; the checkpoint stays under the
+  private-evaluation-only policy. Historical fake V1/V2 and checkpoint launch
+  V2 remain permanently blocked, the public lease execution flag and real
+  backend flag remain false, and no CLI/TUI separator, publication or
   selection route is exposed. Because runtime-exec and worker-script path
   TOCTOU remain open, this slice does not prove that the exact measured
   runtime/worker bytes were the bytes executed. Mixed lifecycle failures,

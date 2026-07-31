@@ -797,9 +797,38 @@ checkpoint, reads no source audio, imports no model, performs no inference,
 uses no network and creates no output file. Runtime-exec and worker-script
 path TOCTOU, post-CPython signal-state observation, persistent ordinary-file
 immutability and possible failure of the bounded native emergency fallback to
-prove reap remain explicit. Measured local-backend evaluation begins only
-after the failure-evidence increment; neither step is a public separator
-switch.
+prove reap remain explicit.
+
+Measured local-backend evaluation has now started in a separate private
+development lane. `_separation_demucs_private_run.py` extends the existing
+isolated cleanup worker with a disjoint four-stem request/result mode. It
+hash-verifies the already-installed Demucs 4.0.1 `htdemucs` checkpoint before
+deserialisation, applies the model once, and preserves bass, drums, other and
+vocals estimates plus source-minus-sum accounting evidence. A fixed
+copyright-safe stereo fixture derives exact broad-role references from the
+built-in demo, and a separate evaluator revalidates all hashes before
+measuring SI-SDR, level error, 10 ms envelope lag/drift, silent-vocal
+false-positive energy and aggregate energy.
+
+The first eight-second run completed on 31 July 2026. Bass, drums and other
+measured 19.75, 4.13 and 14.01 dB SI-SDR respectively, with no measured lag or
+drift; the deliberately silent vocal reference produced -62.95 dBFS. These
+are observations on one synthetic fixture, not frozen acceptance thresholds.
+The worker reported one model application, 6.82 seconds of inference and
+about 2.10 GB maximum resident memory on this Mac. No stem clipped. The four
+model estimates differed from the source by -24.87 dB RMS; the separately
+persisted accounting remainder closed the float64 sum of the four re-read
+stem WAV arrays exactly. The clipped-capable audition sum WAV is not used for
+that calculation. This proves arithmetic accounting rather than correct role
+assignment.
+
+This real-model experiment deliberately bypasses neither the fake-only product
+gate nor any acceptance contract. It has no CLI/TUI/Simple/Workbench import,
+does not update source lineage, cannot select or promote a result and records
+network denial, attempted-connection observation, outside-write confinement
+and complete descendant supervision as unproven. Public real-separation and
+checkpoint-lease execution flags remain false. Downstream MIDI comparison is
+the next private evidence increment.
 
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
@@ -815,6 +844,7 @@ See:
 
 - [Stems: what they are and where to get them](STEMS.md); and
 - [Stem access and local separation research](STEM_ACCESS_AND_SEPARATION_RESEARCH.md).
+- [Private stem-separation development](PRIVATE_SEPARATION_DEVELOPMENT.md).
 
 ## Principles and guardrails
 

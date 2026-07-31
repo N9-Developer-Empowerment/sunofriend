@@ -16,13 +16,14 @@ combined with bridge or release failure, checkpoint integrity combined with
 checkpoint-lease descriptor-cleanup/terminalization failure, clean
 remeasurement followed by unconfirmed descriptor close and the remaining
 adversarial matrix are incomplete. Exhaustive arbitrary source-FD proof,
-path-TOCTOU
-closure, guaranteed emergency-finalizer reap, live child-signal-state proof,
-public or real source separation, hidden evaluation and promotion are not
-implemented**
+path-TOCTOU closure, guaranteed emergency-finalizer reap and live
+child-signal-state proof remain incomplete. A separate private-development
+HTDemucs runner now produces and measures four real broad estimated stems on
+the copyright-safe demo, but public separation, source-graph import, hidden
+evaluation, downstream-MIDI acceptance and promotion are not implemented**
 
-Checked: 31 July 2026 after the post-core, reservation-release and lease-close
-checkpoint-integrity receipts
+Checked: 31 July 2026 after the first private four-stem HTDemucs run and
+synthetic ground-truth evaluation
 
 ## Contents
 
@@ -847,6 +848,43 @@ offline run has passed. The installed pair is therefore a conditional
 private-development candidate and a strict **no-go** for hidden evaluation,
 promotion, redistribution or an automatic profile.
 
+That conditional private evaluation has now started without changing the
+public gate. `_separation_demucs_private_run.py` uses the existing isolated
+worker and exact checkpoint but adds a disjoint four-stem protocol: one model
+application returns bass, drums, other and vocals float32 arrays. The parent
+revalidates the fixed roles, geometry, hashes and finite samples, writes fresh
+PCM24 estimated stems, measures their additive sum and retains
+`source - estimated sum` as explicit accounting evidence. It preserves source,
+checkpoint, worker and runtime-launcher identities before and after the run.
+The result is always private, review-required, production-ineligible and
+inactive; no public separation receipt, source-graph node, MIDI candidate,
+selection or promotion is created.
+
+The first canary used the built-in eight-second mathematical demo. Its exact
+stereo references were drums = kick + snare + hat, bass = bass,
+other = keys + lead and vocals = silence. One real run observed:
+
+| Role | SI-SDR | Level difference | Envelope correlation | Lag/drift |
+| --- | ---: | ---: | ---: | ---: |
+| bass | 19.75 dB | +0.06 dB | 0.957 | 0 ms / 0 ms |
+| drums | 4.13 dB | -2.22 dB | 0.910 | 0 ms / 0 ms |
+| other | 14.01 dB | +0.14 dB | 0.959 | 0 ms / 0 ms |
+
+The silent-vocal false positive measured -62.95 dBFS. Inference took 6.82
+seconds and the worker reported about 2.10 GB maximum resident memory on this
+Mac. No output stem clipped. The four estimates' raw additive error was
+-24.87 dB RMS relative to the source; their separately retained remainder
+closed the float64 sum of the four re-read persisted stem WAV arrays exactly.
+The audition sum WAV is not used for closure. This is one synthetic
+observation and accounting proof, not an acceptance threshold or proof of
+perceptual quality.
+
+The runner sets common offline environment hints but does not claim OS network
+denial or attempted-connection observation. Outside-write confinement and
+complete descendant supervision also remain unproven. The reproducible command
+and exact boundary are documented in
+[Private stem-separation development](PRIVATE_SEPARATION_DEVELOPMENT.md).
+
 The same audit found `/usr/bin/sandbox-exec` on the development Mac, but its
 local manual marks the mechanism deprecated and the current Codex execution
 context cannot apply even a no-network profile. More importantly,
@@ -1626,8 +1664,10 @@ Likely modules:
 Status: **contract, blocked public-execution groundwork, a fresh private
 Darwin build/provenance slice, test-only live descriptor canaries, private
 verified-import session and private deterministic-fixture transport success
-and failure evidence implemented; public separator transport, isolated real
-runner/backends and bake-off execution not implemented**
+and failure evidence implemented. One disjoint private-development real
+HTDemucs runner and one copyright-safe synthetic ground-truth evaluation are
+implemented; public separator transport, source-lineage import, cross-song
+bake-off, downstream-MIDI acceptance and promotion are not implemented**
 
 - [x] Add a pure backend-neutral `SeparationBackend` contract plus immutable
   request/result DTOs and strict versioned separation-run receipts.
@@ -1726,6 +1766,13 @@ runner/backends and bake-off execution not implemented**
 - [x] Add a third disjoint receipt for an exact checkpoint mutation detected
   by the final clean checkpoint-lease-close remeasurement after successful
   post-core and FD5-release checks.
+- [x] Add a disjoint private-development HTDemucs runner that applies the
+  already-installed hash-pinned model once, preserves four broad estimated
+  stems plus additive accounting evidence, and has no public CLI/TUI/Simple,
+  source-graph, selection or promotion route.
+- [x] Add a copyright-safe stereo four-role fixture plus a separate
+  hash-revalidating ground-truth evaluator for SI-SDR, level, envelope
+  lag/drift, silent-vocal false-positive energy and resource observations.
 - [ ] Remove or explicitly confine extension/runtime/worker path TOCTOU, and
   make the clean outer-supervisor and child signal-state boundaries
   independently observable.
@@ -1738,8 +1785,8 @@ runner/backends and bake-off execution not implemented**
 - [ ] Require explicit checkpoint installation, hashes and licences in the
   real parent runner.
 - [ ] Prove that inference makes no network request after installation.
-- [ ] Generate and persist immutable broad candidate runs, residuals and
-  quality reports.
+- [ ] Generalise the first immutable synthetic broad candidate, residual and
+  quality report into a cross-song, multi-backend bake-off corpus.
 - [ ] Measure downstream MIDI and Mac resource behaviour.
 
 Likely modules:
