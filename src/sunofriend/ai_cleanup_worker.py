@@ -43,7 +43,7 @@ SIX_SOURCE_CHECKPOINT_SHA256 = (
     "34c22ccb381c6f9fdbf324f04e1e2fe21aaaf293f5ded163a162697ff9a02ddd"
 )
 SIX_SOURCE_TARGETS = ("bass", "drums", "guitar", "other", "piano", "vocals")
-SIX_SOURCE_MODEL_ORDER = ("drums", "bass", "other", "vocals", "piano", "guitar")
+SIX_SOURCE_MODEL_ORDER = ("drums", "bass", "other", "vocals", "guitar", "piano")
 
 
 def _model_configuration(schema: str) -> dict[str, Any]:

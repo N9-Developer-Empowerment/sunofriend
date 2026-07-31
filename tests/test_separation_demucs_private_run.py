@@ -362,6 +362,14 @@ def test_six_source_worker_contract_is_exact_without_loading_a_model() -> None:
         _validate_request(request)
         configuration = _model_configuration(SIX_SOURCE_REQUEST_SCHEMA)
         assert configuration["source_order"] == SIX_SOURCE_MODEL_ORDER
+        assert configuration["source_order"] == (
+            "drums",
+            "bass",
+            "other",
+            "vocals",
+            "guitar",
+            "piano",
+        )
 
         request["targets"] = ["bass", "drums", "other", "vocals"]
         with pytest.raises(ValueError, match="targets are not exact"):
