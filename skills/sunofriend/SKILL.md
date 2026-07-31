@@ -133,10 +133,17 @@ report the result, then move on.
   terminal document, complete checkpoint descriptor cleanup, no
   materialization and the same one-use root handling. It records that the
   release check failed without locating the mutation or proving executed or
-  deserialized bytes. Pre-owner failures without exact identity,
+  deserialized bytes. A third disjoint receipt covers the final clean
+  checkpoint-lease-close window after successful post-core and FD5-release
+  checks. It requires the lease-issued aggregate's sole exact close error and
+  shared terminal document, complete checkpoint descriptor cleanup and one
+  admitted mutation reason. The same prebuilt, one-use root handling clears
+  the owner only on strict-close success. It records that both earlier checks
+  matched and the final check did not, without locating the mutation or proving
+  executed/deserialized bytes. Pre-owner failures without exact identity,
   evidence-snapshot failures, failure-seal catastrophes, mutation combined
-  with bridge-finish failure, mutation after FD5 release during lease close,
-  and checkpoint integrity combined with
+  with bridge-finish or release failure, clean remeasurement followed by
+  unconfirmed descriptor close, and checkpoint integrity combined with
   checkpoint-lease descriptor cleanup or terminalization failure remain
   receipt-less with safe owners/errors retained, so the non-bypassable fake
   transport gate is not complete. Private failure
@@ -172,10 +179,9 @@ report the result, then move on.
   execution flag remains false, and no CLI/TUI separator, publication or
   selection route is exposed. Because runtime-exec and worker-script path
   TOCTOU remain open, this slice does not prove that the exact measured
-  runtime/worker bytes were the bytes executed. Mutation during the later
-  checkpoint-lease close window, broader descriptor
-  ownership/inheritability/I/O/authority failures, child signal-state
-  observation and possible failure of the bounded emergency
+  runtime/worker bytes were the bytes executed. Mixed lifecycle failures,
+  broader descriptor ownership/inheritability/I/O/authority failures, child
+  signal-state observation and possible failure of the bounded emergency
   fallback to prove reap remain explicit limitations. Real separation execution is
   still disabled.
 - `source-import` decodes exactly one local asset.
