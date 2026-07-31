@@ -64,6 +64,10 @@ from ._separation_fake_post_core_checkpoint_failure_records import (
     _SeparationFakeExecutionPostCoreCheckpointFailedReceipt,
     _build_post_core_checkpoint_failed_terminal_receipt,
 )
+from ._separation_fake_reservation_release_checkpoint_failure_records import (
+    _SeparationFakeExecutionReservationReleaseCheckpointFailedReceipt,
+    _build_reservation_release_checkpoint_failed_terminal_receipt,
+)
 from ._separation_fake_post_lease_failure_records import (
     _SeparationFakeExecutionPostLeaseFailedReceipt,
     _build_post_lease_failed_terminal_receipt,
@@ -368,6 +372,7 @@ class _SeparationFakeExecutionFailed(RuntimeError):
             _SeparationFakeExecutionFailedTerminalReceipt
             | _SeparationFakeExecutionNoStartReceipt
             | _SeparationFakeExecutionPostCoreCheckpointFailedReceipt
+            | _SeparationFakeExecutionReservationReleaseCheckpointFailedReceipt
             | _SeparationFakeExecutionPostLeaseFailedReceipt
         ),
         primary_error: BaseException,
@@ -474,6 +479,19 @@ def _execute_reserved_fake_worker(
                 trusted_worker_request_v2=trusted_worker_request_v2,
                 current_lease_observation=current_lease_observation,
             )
+            if failed is None:
+                failed = _whole_run_reservation_release_checkpoint_failure(
+                    failure,
+                    fake_worker_request=fake_worker_request,
+                    fake_launch_plan_v1=fake_launch_plan_v1,
+                    blocked_fake_launch_plan_v2=blocked_fake_launch_plan_v2,
+                    fake_launch_plan_v3=fake_launch_plan_v3,
+                    lease_module=_lease_module,
+                    trusted_lease=trusted_lease,
+                    trusted_reservation=trusted_reservation,
+                    trusted_worker_request_v2=trusted_worker_request_v2,
+                    current_lease_observation=current_lease_observation,
+                )
             if failed is None:
                 failed = _whole_run_native_failure(
                     failure,
@@ -974,6 +992,200 @@ def _whole_run_post_core_checkpoint_failure(
         primary_error=primary_error,
         cleanup_stages=cleanup_stages,
         cleanup_errors=cleanup_errors,
+        private_root_owner=core if authenticated_cleanup else None,
+        descriptor_owners=(),
+        native_failure_observation=evidence_core.native_execution,
+        lease_terminal_receipt=lease_receipt,
+    )
+
+
+def _whole_run_reservation_release_checkpoint_failure(
+    failure: Any,
+    *,
+    fake_worker_request: _SeparationFakeWorkerRequestRecord,
+    fake_launch_plan_v1: _SeparationFakeLaunchPlanRecord,
+    blocked_fake_launch_plan_v2: _SeparationFakeLaunchPlanV2Record,
+    fake_launch_plan_v3: _SeparationFakeLaunchPlanV3Record,
+    lease_module: Any,
+    trusted_lease: Any,
+    trusted_reservation: Any,
+    trusted_worker_request_v2: SeparationWorkerRequestV2Record,
+    current_lease_observation: Any,
+) -> _SeparationFakeExecutionFailed | None:
+    """Seal one narrow checkpoint mutation detected during FD5 release."""
+
+    if type(failure) is not lease_module._FakeExecutionLeaseFailure:
+        return None
+    core = getattr(failure, "core", None)
+    lease_receipt = getattr(failure, "lease_receipt", None)
+    cleanup_errors = getattr(failure, "cleanup_errors", None)
+    if (
+        type(core) is not _FakeExecutionCore
+        or not hasattr(core, "private_root_finalizer")
+        or not core.private_root_finalizer.alive
+        or getattr(failure, "primary_error", None) is not None
+        or getattr(failure, "cleanup_stages", None)
+        != ("fd5_reservation_release",)
+        or type(cleanup_errors) is not tuple
+        or len(cleanup_errors) != 1
+    ):
+        return None
+    release_error = cleanup_errors[0]
+    release_receipt = getattr(release_error, "receipt", None)
+    if (
+        type(release_error)
+        is not lease_module.SeparationCheckpointDescriptorLeaseError
+        or type(release_receipt)
+        is not lease_module.SeparationCheckpointDescriptorLeaseTerminalReceipt
+        or type(lease_receipt)
+        is not lease_module.SeparationCheckpointDescriptorLeaseTerminalReceipt
+        or getattr(release_receipt, "_document", None)
+        is not getattr(lease_receipt, "_document", None)
+    ):
+        return None
+    try:
+        request_v2 = _validate_separation_worker_request_v2_record_shape(
+            trusted_worker_request_v2
+        )
+        expected_checkpoint_launch = (
+            _build_blocked_separation_launch_plan_v2_record(
+                worker_request_v2=request_v2
+            )
+        )
+        checked_request = _validate_fake_worker_request_shape(
+            fake_worker_request
+        )
+        checked_launch_v1 = _validate_fake_launch_plan_shape(
+            fake_launch_plan_v1
+        )
+        checked_launch_v2 = (
+            _validate_blocked_separation_fake_launch_plan_v2_record_shape(
+                blocked_fake_launch_plan_v2,
+                fake_worker_request=checked_request,
+                fake_launch_plan_v1=checked_launch_v1,
+            )
+        )
+        checked_launch_v3 = (
+            _validate_prepared_separation_fake_launch_plan_v3_record_shape(
+                fake_launch_plan_v3,
+                fake_worker_request=checked_request,
+                fake_launch_plan_v1=checked_launch_v1,
+                blocked_fake_launch_plan_v2=checked_launch_v2,
+            )
+        )
+        lease_observation = _plain(current_lease_observation)
+        if (
+            checked_request["historical_design"][
+                "worker_request_v2_sha256"
+            ]
+            != request_v2["request_sha256"]
+            or checked_request["historical_design"][
+                "blocked_launch_plan_v2_sha256"
+            ]
+            != expected_checkpoint_launch["plan_sha256"]
+            or checked_request["bindings"]["lease_observation_sha256"]
+            != lease_observation["observation_sha256"]
+        ):
+            return None
+        evidence_core = _snapshot_fake_execution_core(core)
+        if (
+            evidence_core.fake_worker_request is not fake_worker_request
+            or evidence_core.fake_launch_plan_v1 is not fake_launch_plan_v1
+            or evidence_core.blocked_fake_launch_plan_v2
+            is not blocked_fake_launch_plan_v2
+            or evidence_core.fake_launch_plan_v3 is not fake_launch_plan_v3
+        ):
+            return None
+
+        def build_receipt(
+            cleanup_stages: tuple[str, ...],
+        ) -> (
+            _SeparationFakeExecutionReservationReleaseCheckpointFailedReceipt
+        ):
+            return (
+                _build_reservation_release_checkpoint_failed_terminal_receipt(
+                    fake_worker_request=checked_request,
+                    fake_launch_plan_v1=checked_launch_v1,
+                    blocked_fake_launch_plan_v2=checked_launch_v2,
+                    fake_launch_plan_v3=checked_launch_v3,
+                    fake_worker_result_v2=evidence_core.fake_worker_result_v2,
+                    native_execution_observation=evidence_core.native_execution,
+                    lease_terminal_receipt=lease_receipt,
+                    cleanup_stages=cleanup_stages,
+                )
+            )
+
+        base_receipt = build_receipt(())
+        root_close_failure_receipt = build_receipt(
+            ("private_root_descriptor_close",)
+        )
+    except (KeyError, RuntimeError, TypeError, ValueError):
+        return None
+
+    def close_authenticated_private_root(
+        authenticated_owner: Any,
+    ) -> tuple[tuple[str, BaseException], ...]:
+        if authenticated_owner is not core:
+            raise ValueError(
+                "reservation-release checkpoint failure root owner changed"
+            )
+        try:
+            _close_private_root_owner_strict(authenticated_owner)
+        except BaseException as cleanup_error:
+            return (("private_root_descriptor_close", cleanup_error),)
+        _clear_private_root_owner_from_lease_failure(
+            failure,
+            authenticated_owner,
+        )
+        return ()
+
+    try:
+        authenticated_receipt, authenticated_cleanup = (
+            lease_module
+            ._consume_fake_execution_lease_failure_with_authenticated_action(
+                failure,
+                trusted_lease=trusted_lease,
+                trusted_reservation=trusted_reservation,
+                trusted_worker_request_v2=trusted_worker_request_v2,
+                current_lease_observation=current_lease_observation,
+                fake_worker_request=fake_worker_request,
+                fake_launch_plan_v1=fake_launch_plan_v1,
+                blocked_fake_launch_plan_v2=blocked_fake_launch_plan_v2,
+                fake_launch_plan_v3=fake_launch_plan_v3,
+                authenticated_action=close_authenticated_private_root,
+            )
+        )
+        if (
+            authenticated_receipt is not lease_receipt
+            or type(authenticated_cleanup) is not tuple
+            or len(authenticated_cleanup) > 1
+            or any(
+                stage != "private_root_descriptor_close"
+                or not isinstance(error, BaseException)
+                for stage, error in authenticated_cleanup
+            )
+        ):
+            raise ValueError(
+                "reservation-release checkpoint authenticated cleanup is "
+                "invalid"
+            )
+    except (KeyError, RuntimeError, TypeError, ValueError):
+        return None
+    returned_cleanup_stages = tuple(
+        stage for stage, _error in authenticated_cleanup
+    )
+    returned_cleanup_errors = tuple(
+        error for _stage, error in authenticated_cleanup
+    )
+    return _SeparationFakeExecutionFailed(
+        receipt=(
+            root_close_failure_receipt
+            if authenticated_cleanup
+            else base_receipt
+        ),
+        primary_error=release_error,
+        cleanup_stages=returned_cleanup_stages,
+        cleanup_errors=returned_cleanup_errors,
         private_root_owner=core if authenticated_cleanup else None,
         descriptor_owners=(),
         native_failure_observation=evidence_core.native_execution,

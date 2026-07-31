@@ -9,16 +9,18 @@ scratch-collision/near-limit layouts. The native call now returns a
 preallocated exact-child owner rather than a bare PID. Deterministic fake
 execution now has a private successful-path proof plus disjoint exact-reap and
 proven-no-start whole-run failure receipts, an ordinary post-lease failure
-receipt and a narrow immediate post-core checkpoint-integrity receipt.
-Unproven start/reap, later release-window mutation, checkpoint integrity
-combined with checkpoint-lease descriptor-cleanup/terminalization failure and
-the remaining adversarial matrix are incomplete. Exhaustive arbitrary
-source-FD proof, path-TOCTOU
+receipt, a narrow immediate post-core checkpoint-integrity receipt and a
+disjoint clean FD5 reservation-release integrity receipt. Unproven start/reap,
+mutation combined with bridge finish, mutation during the later lease-close
+window, checkpoint integrity combined with checkpoint-lease
+descriptor-cleanup/terminalization failure and the remaining adversarial
+matrix are incomplete. Exhaustive arbitrary source-FD proof, path-TOCTOU
 closure, guaranteed emergency-finalizer reap, live child-signal-state proof,
 public or real source separation, hidden evaluation and promotion are not
 implemented**
 
-Checked: 30 July 2026 after the post-core checkpoint-integrity receipt
+Checked: 31 July 2026 after the post-core and reservation-release
+checkpoint-integrity receipts
 
 ## Contents
 
@@ -631,6 +633,24 @@ into parent proof of the bytes executed or deserialized, exclude transient
 changes outside the observed windows, or prove continued immutability after
 descriptor close.
 
+The next exact window has a separate receipt rather than changing that
+post-core schema. If the immediate post-core remeasurement matched, bridge
+finish returned normally and the FD5 reservation-release remeasurement found
+one admitted identity, byte-count or hash mutation, the lease-issued aggregate
+has no primary and exactly one `fd5_reservation_release` lease error sharing
+the terminal document. The executor normalizes that release mismatch into the
+primary of
+`sunofriend.separation-fake-reservation-release-checkpoint-failure.v1`,
+cross-binds the exact request/launch/result/native/lease chain and proves that
+materialization did not start. Authenticated root cleanup is prebuilt for the
+no-error and single-close-error outcomes, consumed once and retains the exact
+armed owner on failure.
+
+The receipt records that the post-core check matched and the release check did
+not. It cannot locate the mutation time, prove which checkpoint bytes executed
+or were deserialized, exclude transient mutation outside observed windows or
+prove immutability after close.
+
 Private lease orchestration preserves its first primary error and all observed
 cleanup errors instead of silently discarding secondary failures. Exact-reap
 native failures, exact setup or `posix_spawn` no-start outcomes and ordinary
@@ -638,10 +658,10 @@ code-owned post-lease failures can now be converted with terminal lease
 evidence into separate path-free whole-run receipts. The no-start receipt
 asserts no child, wait, signal or worker result. Unproven start/reap and
 pre-owner, snapshot or seal catastrophes remain uncovered. Runtime/worker
-path-to-exec TOCTOU, mutation in the later reservation-release window,
-mutation combined with bridge-finish failure, checkpoint-lease descriptor
-cleanup or terminalization failure during checkpoint-integrity handling, and
-the remaining adversarial ownership, inheritability, I/O, authority and replay
+path-to-exec TOCTOU, mutation combined with bridge-finish failure, mutation
+after FD5 release during checkpoint-lease close, checkpoint integrity combined
+with checkpoint-lease descriptor cleanup or terminalization failure and the
+remaining adversarial ownership, inheritability, I/O, authority and replay
 cases therefore keep the non-bypassable-transport checklist item open.
 
 The first failure-evidence increment now labels lease cleanup failures in
@@ -1683,6 +1703,9 @@ runner/backends and bake-off execution not implemented**
 - [x] Add a disjoint inert whole-run receipt for an immediate post-core
   checkpoint identity, byte-count or hash mismatch, with exact failed-lease
   binding and one-use authenticated root cleanup.
+- [x] Add a second disjoint receipt for an exact checkpoint mutation detected
+  during clean FD5 reservation release after a successful post-core check,
+  retaining mixed and later lease-close failures as receipt-less.
 - [ ] Remove or explicitly confine extension/runtime/worker path TOCTOU, and
   make the clean outer-supervisor and child signal-state boundaries
   independently observable.

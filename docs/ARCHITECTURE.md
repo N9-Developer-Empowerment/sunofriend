@@ -731,6 +731,26 @@ mismatch proves neither the bytes executed nor whether deserialization
 occurred. It is historical after descriptor close and cannot exclude
 transient changes outside the observed stat/hash windows.
 
+`_separation_fake_reservation_release_checkpoint_failure_records.py` is a
+second disjoint pure integrity boundary. It applies only when the immediate
+post-core check succeeded, the bridge finished normally and the later FD5
+reservation-release remeasurement found exactly one admitted identity,
+byte-count or hash mismatch. The lease-issued aggregate must have no primary,
+exactly one `fd5_reservation_release` error of the exact checkpoint-lease type,
+and that error must carry the same terminal lease document. The record
+cross-binds the same exact fake chain, native success and failed lease while
+stating that the post-core check matched, the release check did not and
+materialization never started.
+
+The executor composer purely prebuilds the no-root-error and failed-root-close
+receipts before consuming the existing one-use authority. It authenticates and
+strictly closes the exact live core owner, clears it only on success, retains it
+on close failure and cannot replay that action. The internal aggregate's
+release-stage cleanup error is normalized into the returned whole-run primary;
+only a failed `private_root_descriptor_close` remains cleanup. The receipt
+cannot locate the mutation, prove executed or deserialized checkpoint bytes,
+exclude unobserved transient mutation or prove post-close immutability.
+
 Pre-owner failure without a provable descriptor identity, evidence-snapshot
 failure and failure-receipt sealing failure remain receipt-less. These
 catastrophic aggregates preserve the primary, cleanup errors and any safe
@@ -745,12 +765,14 @@ path-free whole-run receipts. They bind terminal lease evidence, the original
 native observation, the primary stage and every ordered cleanup stage; the
 no-start form contains no child, wait, signal or worker-result claim.
 Unproven start/reap and pre-owner, evidence-snapshot or sealing catastrophes
-remain receipt-less. Immediate post-core checkpoint mutation has a disjoint
-receipt, but release-window mutation, mutation combined with bridge-finish
-failure, checkpoint integrity combined with checkpoint-lease descriptor
-cleanup or terminalization failure, runtime/worker path-to-exec TOCTOU and the
-remaining adversarial ownership, inheritability, I/O, authority and replay
-matrix keep the non-bypassable deterministic transport checklist item open.
+remain receipt-less. Immediate post-core mutation and the exact clean FD5
+reservation-release mutation path have disjoint receipts, but mutation
+combined with bridge-finish failure, mutation after FD5 release during
+checkpoint-lease close, checkpoint integrity combined with checkpoint-lease
+descriptor cleanup or terminalization failure, runtime/worker path-to-exec
+TOCTOU and the remaining adversarial ownership, inheritability, I/O, authority
+and replay matrix keep the non-bypassable deterministic transport checklist
+item open.
 
 The private lease-side groundwork records cleanup stages in observation order
 and attaches the validated checkpoint-lease terminal receipt when available.

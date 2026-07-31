@@ -667,6 +667,27 @@ which checkpoint bytes were executed or deserialized, transient mutation
 outside the observed stat/hash windows is not excluded, and later mutation
 after descriptor close cannot change or invalidate an already sealed receipt.
 
+The following disjoint slice covers the next clean lifecycle window. When the
+immediate post-core remeasurement matched, bridge finish completed normally
+and the FD5 reservation-release remeasurement detects exactly one admitted
+identity, byte-count or hash mutation, the executor can issue
+`sunofriend.separation-fake-reservation-release-checkpoint-failure.v1`.
+Its exact aggregate shape is lease-authenticated: there is no execution
+primary, the sole lifecycle error is the exact
+`fd5_reservation_release` lease error, and that error carries the same terminal
+lease document. The new inert receipt records the release mismatch as its
+primary rather than mislabelling it as cleanup, requires complete checkpoint
+descriptor cleanup and no materialization, and permits only zero or one failed
+private-root close. Both root outcomes are prebuilt before the one-use
+authority is consumed; success clears the owner and strict-close failure keeps
+it armed.
+
+This second receipt remains historical and conservative. It records that the
+earlier post-core check matched and the later release check did not, but cannot
+locate the mutation time, prove which checkpoint bytes were executed or
+deserialized, exclude transient mutation outside measured windows, or prove
+immutability after descriptor close.
+
 Failures before an exact descriptor backstop can be armed, evidence-snapshot
 failure and failure-receipt sealing failure remain explicitly receipt-less.
 They preserve the exact owners and errors that are still safe to retain. When
@@ -685,13 +706,14 @@ Each binds its native observation, the terminal checkpoint lease, the original
 primary stage and every observed cleanup stage in order. The no-start receipt
 makes no child, wait, signal or worker-result claim. Unproven start/reap and
 pre-owner, evidence-snapshot or receipt-seal catastrophes remain receipt-less.
-Immediate post-core checkpoint mutation now has its own conservative receipt.
-Mutation in the later reservation-release window, mutation combined with
-bridge-finish failure, checkpoint integrity combined with checkpoint-lease
-descriptor-cleanup or terminalization failure, runtime/worker path-to-exec
-TOCTOU and the remaining catastrophic ownership, inheritability, I/O and
-authority boundaries are still receipt-less. Those boundaries and the wider
-replay matrix keep the gate open.
+Immediate post-core mutation and the exact clean FD5 reservation-release
+mutation path now have separate conservative receipts. Mutation combined with
+bridge-finish failure, mutation after FD5 release during checkpoint-lease
+close, checkpoint integrity combined with checkpoint-lease descriptor-cleanup
+or terminalization failure, runtime/worker path-to-exec TOCTOU and the
+remaining catastrophic ownership, inheritability, I/O and authority
+boundaries are still receipt-less. Those boundaries and the wider replay
+matrix keep the gate open.
 
 As failure-receipt groundwork, the private lease bridge now records cleanup
 stages in observed order and carries a validated terminal lease receipt when

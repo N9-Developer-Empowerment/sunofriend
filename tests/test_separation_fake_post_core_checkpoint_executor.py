@@ -10,6 +10,10 @@ import pytest
 import sunofriend._separation_fake_executor_darwin as executor
 import sunofriend._separation_fake_post_core_checkpoint_failure_records as records
 import sunofriend.separation_checkpoint_descriptor_lease as lease_module
+from sunofriend import (
+    _separation_fake_reservation_release_checkpoint_failure_records
+    as release_records,
+)
 from sunofriend._separation_fake_execution_records import (
     _EXPECTED_FAKE_WORKER_SOURCE_BYTES,
     _EXPECTED_FAKE_WORKER_SOURCE_SHA256,
@@ -412,7 +416,7 @@ def test_mutation_plus_bridge_finish_failure_remains_receiptless(
     executor._close_core_private_root_strict(failure.core)
 
 
-def test_mutation_before_release_remeasurement_remains_receiptless(
+def test_mutation_before_release_remeasurement_uses_release_window_receipt(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -433,16 +437,23 @@ def test_mutation_before_release_remeasurement_remains_receiptless(
         finish_then_mutate,
     )
 
-    with pytest.raises(lease_module._FakeExecutionLeaseFailure) as captured:
+    with pytest.raises(executor._SeparationFakeExecutionFailed) as captured:
         _execute(values)
 
     failure = captured.value
-    assert failure.core is values["core"]
-    assert failure.primary_error is None
-    assert failure.cleanup_stages == ("fd5_reservation_release",)
-    assert failure.lease_receipt["integrity"]["status"] == "failed"
-    assert failure.core.private_root_finalizer.alive is True
-    executor._close_core_private_root_strict(failure.core)
+    receipt = (
+        release_records
+        ._validate_reservation_release_checkpoint_failed_terminal_receipt(
+            failure.receipt
+        )
+    )
+    assert receipt["failure"]["primary"]["stage"] == (
+        "fd5_reservation_release_checkpoint_remeasurement"
+    )
+    assert receipt["checkpoint"]["parent_post_core_integrity_matched"] is True
+    assert failure.cleanup_stages == ()
+    assert failure.private_root_owner is None
+    assert values["core"].private_root_finalizer.alive is False
 
 
 def test_healthy_control_keeps_existing_success_schema_and_is_historical(
