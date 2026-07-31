@@ -41,6 +41,27 @@ estimate at -62.95 dBFS, or -47.81 dB relative to the mixture. These are
 observations from one synthetic fixture, not promotion thresholds or proof
 of quality on real songs.
 
+The same clean references and estimated stems were then passed through the
+same existing Sunofriend seed-transcriber settings. This first MIDI
+observation does not yet run the full render/listen/refine loop. At a 40 ms
+event-onset tolerance matching the independent evaluator's default, it
+observed:
+
+| Role | Clean-reference MIDI | Estimated-stem MIDI | Main relative result |
+| --- | ---: | ---: | --- |
+| bass | 10 notes | 8 notes | exact-pitch/onset F1 0.556 |
+| drums | 32 hits | 22 hits | onset F1 0.815; broad and articulation-family/onset F1 0.296 |
+| other | 40 notes | 50 notes | exact-pitch/onset F1 0.889 |
+| vocals | 0 notes | 1 note | one false positive against silence |
+
+The drum difference is important: the separator preserved many event times,
+but the current classifier often heard the resulting sound as a different
+drum family. Broad family and exact articulation are recorded separately,
+although both happened to score 0.296 on this fixture. The broad `other`
+result contains keys plus lead and therefore does not prove ownership of
+either instrument. Clean-reference transcription is a relative baseline, not
+the original musical score.
+
 The four model outputs differed additively from the source by -24.87 dB RMS.
 Sunofriend separately persisted `source - estimated sum`; the float64 sum of
 the four re-read persisted stem WAV arrays plus that accounting remainder
@@ -67,6 +88,20 @@ The command never installs or downloads a model. It rejects a checkpoint
 whose SHA-256 is not
 `8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4`.
 
+Run the downstream MIDI observation only after the two fresh reports above
+exist:
+
+```bash
+.venv/bin/python scripts/private-demucs-downstream-midi-canary.py \
+  --fixture work/separation-bakeoff/demo-fixture-v2/private-demucs-demo-fixture.json \
+  --experiment work/separation-bakeoff/demo-run-v2/private-separation-experiment.json \
+  --out work/separation-bakeoff/demo-midi-evaluation-v2
+```
+
+It writes inactive reference and estimate MIDI plus JSON note evidence under
+`REFERENCE/` and `ESTIMATE/`. It does not add either side to a Sunofriend
+project.
+
 ## Evidence produced
 
 The private run keeps:
@@ -80,9 +115,16 @@ The private run keeps:
 - geometry, clipping, energy, reconstruction and resource observations; and
 - a self-hashed, review-required experiment report.
 
-The separate synthetic evaluation revalidates both reports and every stem
-hash before computing SI-SDR, level error, envelope lag, quarter-to-quarter
-drift, silent-vocal leakage and energy ratios.
+The separate synthetic evaluations revalidate both reports and every stem
+hash. The audio evaluator computes SI-SDR, level error, envelope lag,
+quarter-to-quarter drift, silent-vocal leakage and energy ratios. The MIDI
+evaluator runs identical existing seed-transcription APIs on each
+clean/estimated pair, persists their exact settings and implementation/model
+identities, then computes note and drum onset, pitch, register, duration,
+family and silent-reference observations. Saved note times retain JSON
+round-trip precision, and the drum evidence retains every hit time, family,
+GM pitch, velocity, strength, tier and provenance so the reported pair
+metrics can be recomputed from the hashed artifacts.
 
 ## Deliberate boundary
 
@@ -102,14 +144,20 @@ This private experiment:
 
 ## Next evidence
 
-The next bounded development increment is a downstream MIDI comparison:
+The synthetic audio, resource and seed-transcriber MIDI observations are
+complete. The next bounded development increment first repeats the pair
+through Sunofriend's exact production `refine_stem` settings, renderer and
+independent audio-to-MIDI evaluator. It then prepares review evidence on
+authorised, representative real excerpts:
 
-1. transcribe each exact clean reference and matching estimated stem with
-   identical production settings;
-2. compare note/onset coverage, pitch, octave, duration and drift;
-3. test drum-family onsets separately;
-4. retain all candidates without activating the source graph; and
-5. repeat on authorised real excerpts before considering a Studio importer.
+1. compare the finished mix, broad estimates and any supplied stems without
+   silently selecting a winner;
+2. listen to source-aligned, level-matched passages for bass, drums, other and
+   vocals;
+3. compare MIDI made from supplied stems with MIDI made from estimates;
+4. record where broad `other` or composite drums need narrower refinement; and
+5. keep every result private and inactive before considering a Studio
+   importer.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,

@@ -181,11 +181,15 @@ report the result, then move on.
   other and vocals estimates plus source-minus-sum accounting evidence; a
   separate evaluator revalidates every hash and records synthetic-reference
   SI-SDR, level, envelope lag/drift, silent-vocal false-positive energy and
-  resource observations. Its result is always review-required,
-  production-ineligible and inactive. It does not use the fake receipt, update
-  source lineage, produce MIDI, accept, select or promote anything, and it is
-  imported by no CLI, TUI, Simple or Workbench path. The first run is one
-  synthetic observation, not an accepted separator. Network denial,
+  resource observations. A second private canary runs the same existing
+  seed-transcription settings on each clean reference and matching estimate,
+  retaining inactive MIDI/note evidence and relative note, timing, pitch,
+  register, duration and drum-family observations. It does not yet run the
+  full render/listen/refine loop. Its result is always review-required,
+  production-ineligible and inactive. It does not use the fake receipt,
+  update source lineage, activate MIDI, accept, select or promote anything,
+  and it is imported by no CLI, TUI, Simple or Workbench path. The first run
+  is one synthetic observation, not an accepted separator. Network denial,
   connection-attempt observation, outside-write confinement and complete
   descendant supervision remain unproven; the checkpoint stays under the
   private-evaluation-only policy. Historical fake V1/V2 and checkpoint launch

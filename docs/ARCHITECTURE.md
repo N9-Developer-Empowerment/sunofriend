@@ -885,8 +885,26 @@ vocals is exact silence. `_separation_demucs_demo_evaluation.py` revalidates
 both self-hashed documents and every persisted audio hash before computing
 role SI-SDR, gain error, 10 ms envelope lag and four-quarter drift, silent
 vocal false-positive energy and aggregate energy diagnostics. Its status is
-`complete_observation_not_acceptance`; downstream MIDI remains separately
-required.
+`complete_observation_not_acceptance`.
+
+`_separation_demucs_midi_evaluation.py` is the next disjoint private boundary.
+It revalidates the fixture, experiment and every input hash, then invokes the
+same existing seed-transcription API and explicit settings for each
+clean-reference and estimated-stem pair.
+`_separation_demucs_midi_metrics.py` is pure and I/O-free: it reports
+maximum-cardinality exact-pitch, chroma and onset-only coverage,
+duration/timing observations, drum-family stability and explicit false
+positives against a silent reference. Nested polyphonic accuracies use
+alignment-count ratios rather than arbitrary same-onset pair ordering. The
+orchestrator writes owner-only inactive MIDI and note JSON, captures
+transcriber implementation/model identity and never imports into a source
+graph. Note times retain round-trip JSON precision; drum JSON also retains the
+per-hit time/family/GM-pitch evidence required to recompute the published
+metrics. `scripts/private-demucs-downstream-midi-canary.py` is its only command
+surface; it is developer evidence, not a product command or acceptance result.
+It does not run `refine_stem`, FluidSynth rendering, iterative repair,
+candidate variants or the independent audio-to-MIDI evaluator. A later
+private parity layer must cover those exact production components.
 
 No public module imports the private runner. It does not create
 `SeparationRunReceipt`, write the source graph, produce a loadable candidate,

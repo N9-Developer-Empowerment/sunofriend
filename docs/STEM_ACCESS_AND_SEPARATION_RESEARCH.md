@@ -19,11 +19,12 @@ adversarial matrix are incomplete. Exhaustive arbitrary source-FD proof,
 path-TOCTOU closure, guaranteed emergency-finalizer reap and live
 child-signal-state proof remain incomplete. A separate private-development
 HTDemucs runner now produces and measures four real broad estimated stems on
-the copyright-safe demo, but public separation, source-graph import, hidden
-evaluation, downstream-MIDI acceptance and promotion are not implemented**
+the copyright-safe demo, and a second private evaluator measures their effect
+on the existing MIDI transcribers. Public separation, source-graph import,
+hidden/cross-song acceptance and promotion are not implemented**
 
-Checked: 31 July 2026 after the first private four-stem HTDemucs run and
-synthetic ground-truth evaluation
+Checked: 31 July 2026 after the first private four-stem HTDemucs run,
+synthetic ground-truth evaluation and seed-transcriber MIDI comparison
 
 ## Contents
 
@@ -884,6 +885,22 @@ denial or attempted-connection observation. Outside-write confinement and
 complete descendant supervision also remain unproven. The reproducible command
 and exact boundary are documented in
 [Private stem-separation development](PRIVATE_SEPARATION_DEVELOPMENT.md).
+
+The paired private downstream-MIDI canary now runs identical existing
+Sunofriend seed-transcription settings on every clean reference and matching
+estimate. It does not yet run full production refinement. On this one
+synthetic fixture, exact-pitch/onset F1 was 0.556 for
+bass and 0.889 for broad `other`; drum onset F1 was 0.815 but broad and exact
+articulation-family onset F1 were both 0.296. The silent vocal estimate
+produced one false MIDI note. All onset figures use the independent
+evaluator's default 40 ms tolerance, although that evaluator itself remains
+part of the next full-production-parity slice.
+
+The report retains owner-only inactive MIDI, JSON note evidence, hashes and
+transcriber/model identities. Exact round-trip note times and per-hit drum
+family/timing evidence make the pair metrics recomputable from those hashed
+artifacts. Clean-reference MIDI is a relative baseline, not score truth, and
+no threshold or backend has been accepted.
 
 The same audit found `/usr/bin/sandbox-exec` on the development Mac, but its
 local manual marks the mechanism deprecated and the current Codex execution
@@ -1773,6 +1790,9 @@ bake-off, downstream-MIDI acceptance and promotion are not implemented**
 - [x] Add a copyright-safe stereo four-role fixture plus a separate
   hash-revalidating ground-truth evaluator for SI-SDR, level, envelope
   lag/drift, silent-vocal false-positive energy and resource observations.
+- [x] Measure the first synthetic downstream-MIDI effect with identical
+  existing seed-transcriber settings, inactive paired MIDI/note evidence and
+  explicit note/onset/pitch/register/duration/drum-family metrics.
 - [ ] Remove or explicitly confine extension/runtime/worker path TOCTOU, and
   make the clean outer-supervisor and child signal-state boundaries
   independently observable.
@@ -1787,7 +1807,11 @@ bake-off, downstream-MIDI acceptance and promotion are not implemented**
 - [ ] Prove that inference makes no network request after installation.
 - [ ] Generalise the first immutable synthetic broad candidate, residual and
   quality report into a cross-song, multi-backend bake-off corpus.
-- [ ] Measure downstream MIDI and Mac resource behaviour.
+- [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
+- [ ] Repeat the clean/estimate comparison through exact production
+  `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation.
+- [ ] Repeat downstream MIDI and listening evaluation across authorised real
+  excerpts and at least one independent separator/runtime candidate.
 
 Likely modules:
 
