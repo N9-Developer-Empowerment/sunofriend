@@ -870,8 +870,10 @@ does not update source lineage, cannot select or promote a result and records
 network denial, attempted-connection observation, outside-write confinement
 and complete descendant supervision as unproven. Public real-separation and
 checkpoint-lease execution flags remain false. Authorised real-excerpt
-listening and cross-song MIDI comparison are now the next private evidence
-increments.
+cross-song MIDI and leaf-level `other` comparisons are now complete on two
+songs. Human listening remains open. The next private evidence increment is a
+pinned six-source guitar/piano challenger on the same windows; it is not a
+product integration or a default.
 
 This work is deliberately parallel to the numbered transcription phases:
 input import and source separation change the evidence supplied to every
@@ -1694,6 +1696,39 @@ Each working day should aim for one narrow vertical improvement:
 ```
 
 ## Daily log
+
+### 2026-07-31 — Cross-song narrow `other` evidence
+
+- Goal: determine whether provider leaves inside composite `other` are stable
+  enough to define instrument-specific audio or MIDI targets.
+- Change or experiment: added a private-only, fresh-output analyzer that
+  revalidates every upstream report and artifact, stages each `other` leaf at
+  44.1 kHz stereo, calculates full pairwise spectral/envelope/waveform
+  rankings in both directions, and records exact/semantic label observations
+  without using names in the score.
+- Inputs: the existing `Be Alone` 191–206 and `I am a Alien mashup` 219–234
+  authorised reports; seven Moises leaves per song and three/four leaves in
+  each Suno pack.
+- Model/runtime/checkpoint: no new model. The analyzer is deterministic NumPy,
+  SciPy resampling and SoundFile evidence over already-staged excerpts.
+- Evidence and metrics: on `Be Alone`, all three Suno same-label pairs ranked
+  first both ways, but only `Synth` had strong combined similarity (0.936);
+  `Keyboard` was 0.461 and Moises `keys` ranked Suno `Keyboard` third. On `I
+  am a Alien mashup`, only `Keyboard` ranked first both ways (0.937). Guitar,
+  synth and residual `Other` failed the bidirectional check, and Moises/Suno
+  semantic keys/other matches failed on both songs.
+- Listening result: pending; common-rate private leaf WAVs are retained, but
+  no additional human burden is required before the existing four blind MIDI
+  choices are returned.
+- Decision: reject automatic filename- or provider-label-based narrow source
+  activation. Keep broad parents and all leaf evidence immutable and inactive.
+- Problems/risks: provider outputs are estimates rather than multitrack ground
+  truth; nearest-neighbour audio similarity cannot prove instrument identity;
+  silence and leakage can make a relative rank look cleaner than it sounds.
+- Next smallest step: prepare the official experimental six-source Demucs
+  guitar/piano challenger with an exact installed checkpoint, terms and
+  offline receipt, then run only these two fixed windows and compare every
+  estimate plus residual and downstream MIDI without trusting labels.
 
 ### 2026-07-31 — Second authorised separation-to-MIDI repeat
 

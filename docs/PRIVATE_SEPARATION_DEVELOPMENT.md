@@ -173,6 +173,21 @@ to the provider sum, then ranks every provider group against every local role
 using spectral shape, envelope and absolute waveform evidence. Names propose
 the partition; they do not contribute to its audio score.
 
+Inspect the individual provider leaves that were provisionally placed inside
+the broad `other` group, again using a fresh private output path:
+
+```bash
+.venv/bin/python scripts/private-authorised-narrow-other.py \
+  --role-mapping work/separation-bakeoff/be-alone-role-mapping-191-206-v1/authorised-role-mapping.json \
+  --out work/separation-bakeoff/be-alone-narrow-other-191-206-v2
+```
+
+This writes common-rate leaf auditions and full pairwise audio rankings in
+both directions. It also reports exact and semantic provider-label matches,
+but names never contribute to similarity and are never accepted as ground
+truth. The result cannot select a leaf, activate source lineage, create MIDI
+or enter Studio/Simple mode.
+
 Run the same production MIDI paths over every four-role pack only after the
 mapping report has verified all proposed diagonal rankings:
 
@@ -335,6 +350,33 @@ The next bounded development increment uses this evidence to:
    hypotheses before expecting instrument-specific MIDI; and
 6. keep every result private and inactive before considering a Studio
    importer.
+
+## Narrow `other` evidence
+
+Leaf-level comparison is now complete on both authorised excerpts. It is
+deliberately negative evidence against splitting by provider filename alone.
+
+On `Be Alone`, the three Suno A/B same-label pairs each ranked first in both
+directions, but only the `Synth` pair was a strong full signal match
+(similarity 0.936). `Keyboard` ranked first largely by spectral shape at only
+0.461 similarity, while the Moises `keys` leaf ranked the matching Suno
+`Keyboard` leaf third in both packs and instead matched Suno `Synth` most
+closely. A tidy label-level result inside one provider is therefore not an
+instrument identity.
+
+On `I am a Alien mashup`, only the Suno `Keyboard` pair ranked first in both
+directions, at 0.937 similarity. Same-label `Guitar`, `Synth` and `Other`
+failed the bidirectional rank-one test. Moises `keys` ranked Suno `Keyboard`
+fourth/second for A and third/second for B; Moises `other` also did not align
+with Suno `Other`. No observation was accepted or activated.
+
+The next local candidate is consequently a private, pinned six-source Demucs
+experiment limited to its added guitar and piano estimates plus residual
+accounting. It must be compared on both exact windows against every supplied
+leaf and its downstream MIDI, without assuming that a provider label is score
+truth. The official six-source configuration is experimental and its piano
+bleed warning remains part of the gate. Installation, exact checkpoint hash,
+terms, offline behaviour and runtime evidence must be recorded before it runs.
 
 The first authorised real-song development corpus is now available locally
 under [`../stem_examples`](../stem_examples/README.md). It contains four

@@ -944,6 +944,20 @@ and the smallest diagonal margin over the best other role was +0.397. This is
 enough to run an inactive identical-settings MIDI bake-off; it is not human
 acceptance or proof that HTDemucs is ground truth.
 
+The next private leaf-level comparison retained every item provisionally
+inside broad `other`, normalized only its audition geometry and calculated all
+cross-provider rankings in both directions. Names were reported but did not
+enter the score. On `Be Alone`, Suno A/B `Keyboard`, `Synth` and `Other` each
+ranked the same-label counterpart first, although `Keyboard` similarity was
+only 0.461 and Moises `keys` instead matched Suno `Synth`. On `I am a Alien
+mashup`, only Suno `Keyboard` was bidirectionally stable (0.937); `Guitar`,
+`Synth` and `Other` were not. Moises `keys` and `other` also failed to align
+with their Suno semantic counterparts. Provider names therefore cannot define
+active narrow source nodes. The smallest next local challenger is the
+experimental six-source Demucs guitar/piano output on these same two windows,
+with explicit checkpoint, terms, offline, bleed, residual and downstream-MIDI
+evidence before any acceptance.
+
 The same audit found `/usr/bin/sandbox-exec` on the development Mac, but its
 local manual marks the mechanism deprecated and the current Codex execution
 context cannot apply even a no-network profile. More importantly,
@@ -1725,8 +1739,10 @@ Darwin build/provenance slice, test-only live descriptor canaries, private
 verified-import session and private deterministic-fixture transport success
 and failure evidence implemented. One disjoint private-development real
 HTDemucs runner and one copyright-safe synthetic ground-truth evaluation are
-implemented; public separator transport, source-lineage import, cross-song
-bake-off, downstream-MIDI acceptance and promotion are not implemented**
+implemented. Two authorised cross-song excerpt/MIDI repeats and inactive
+leaf-level `other` comparisons are complete; an independent local backend,
+human acceptance, public separator transport, source-lineage import and
+promotion are not implemented**
 
 - [x] Add a pure backend-neutral `SeparationBackend` contract plus immutable
   request/result DTOs and strict versioned separation-run receipts.
@@ -1866,6 +1882,11 @@ bake-off, downstream-MIDI acceptance and promotion are not implemented**
   Drum timing and broad-`other` instability repeated; bass remained variable,
   while dominant-vocal agreement was materially stronger on the second song.
   Human listening remains open and no role/provider is promoted.
+- [x] Compare every supplied leaf inside composite `other` across both
+  authorised excerpts using bidirectional audio rankings. Exact and semantic
+  labels remain observations only. Keyboard was the only stable Suno pair on
+  both songs; Moises/Suno semantic labels did not establish a dependable
+  mapping, so no narrow source was accepted or activated.
 - [x] Stage the first authorised real excerpt, prove provider-pack clock
   alignment, preserve native-rate evidence, record the 44.1 kHz model-input
   derivative and run the pinned local separator without activation.
@@ -1909,6 +1930,7 @@ Likely modules:
 - `_separation_native_build_darwin.py`
 - `_separation_native_session_darwin.py`
 - `_separation_native_spawn_darwin.c`
+- `_separation_authorised_narrow_other.py`
 
 ### S4 — Experimental broad separation in Studio
 

@@ -25,6 +25,11 @@ from sunofriend._separation_authorised_midi_comparison import (
     _compare_authorised_role_midi,
     _document_sha256 as _midi_comparison_document_sha256,
 )
+from sunofriend._separation_authorised_narrow_other import (
+    __all__ as narrow_other_exports,
+    _compare_authorised_other_leaves,
+    _document_sha256 as _narrow_other_document_sha256,
+)
 from sunofriend.models import NoteEvent
 
 
@@ -339,9 +344,11 @@ def test_authorised_excerpt_has_no_product_import_and_exports_nothing() -> None:
         assert "_separation_authorised_excerpt" not in source
         assert "_separation_authorised_role_mapping" not in source
         assert "_separation_authorised_midi_comparison" not in source
+        assert "_separation_authorised_narrow_other" not in source
     assert __all__ == ()
     assert role_mapping_exports == ()
     assert midi_comparison_exports == ()
+    assert narrow_other_exports == ()
 
 
 def test_authorised_role_mapping_partitions_and_ranks_synthetic_roles() -> None:
@@ -433,6 +440,65 @@ def _synthetic_role_mapping(root: Path) -> dict:
         excerpt["report"],
         out_dir=root / "mapping",
     )
+
+
+def test_authorised_narrow_other_ranks_leaves_without_accepting() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        mapping = _synthetic_role_mapping(root)
+        result = _compare_authorised_other_leaves(
+            mapping["report"],
+            out_dir=root / "narrow-other",
+        )
+
+        assert result["status"] == "complete_observation_not_acceptance"
+        assert result["observations"]["leaf_counts"] == {
+            "pack-a": 1,
+            "pack-b": 1,
+        }
+        assert (
+            result["observations"][
+                "all_same_label_counterparts_rank_first_both_directions"
+            ]
+            is True
+        )
+        assert result["permissions"]["accepted"] is False
+        assert result["effects"]["source_graph_mutated"] is False
+        comparison = result["pairwise_audio_comparisons"]["pack-a__pack-b"]
+        assert comparison["left_to_right_rankings"]["leaf-01"] == {
+            "ranked_leaf_ids": ["leaf-01"],
+            "nearest_leaf_id": "leaf-01",
+            "nearest_evidence_similarity": 1.0,
+            "margin_over_runner_up": 1.0,
+            "accepted": False,
+        }
+
+        report = Path(result["report"])
+        persisted = json.loads(report.read_text())
+        assert persisted["document_sha256"] == _narrow_other_document_sha256(
+            persisted
+        )
+        for relative, artifact in persisted["artifacts"].items():
+            path = report.parent / relative
+            assert path.is_file()
+            assert path.stat().st_size == artifact["bytes"]
+
+
+def test_authorised_narrow_other_rejects_changed_mapping_artifact() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        mapping = _synthetic_role_mapping(root)
+        report = json.loads(Path(mapping["report"]).read_text())
+        relative = next(iter(report["artifacts"]))
+        changed = Path(mapping["report"]).parent / relative
+        changed.write_bytes(changed.read_bytes() + b"tampered")
+
+        with pytest.raises(ValueError, match="hash changed"):
+            _compare_authorised_other_leaves(
+                mapping["report"],
+                out_dir=root / "narrow-other",
+            )
+        assert not (root / "narrow-other").exists()
 
 
 def test_authorised_midi_comparison_runs_identical_inactive_paths() -> None:

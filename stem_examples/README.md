@@ -92,6 +92,16 @@ agreement was substantially higher on this passage (0.791–0.864). This argues
 for role-specific evidence and decisions, not one global separator winner.
 Human listening remains required.
 
+The individual provider leaves inside broad `other` have also been compared
+across both excerpts using audio-only, bidirectional rankings. On `Be Alone`,
+all three Suno A/B labels ranked their counterpart first, but Moises `keys`
+did not align with Suno `Keyboard`; the strongest stable pair was Suno
+`Synth`. On `I am a Alien mashup`, only Suno `Keyboard` was stable in both
+directions. Guitar, synth and residual `Other` labels were not repeatable.
+This rules out automatic filename-based leaf activation. Every result remains
+private and inactive while a pinned six-source guitar/piano challenger is
+prepared.
+
 ## Intended evaluation
 
 For each eligible track Sunofriend will:
