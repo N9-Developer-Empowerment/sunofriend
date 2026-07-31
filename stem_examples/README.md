@@ -63,6 +63,12 @@ files labelled `Keyboard` were effectively silent in this passage while their
 `Synth` files were active. Role mapping must therefore use sound evidence as
 well as provider names before downstream MIDI comparison.
 
+The provisional four-role groups have now been tested against all four local
+HTDemucs outputs. Every proposed bass, drums, other and vocals group ranked
+first for its matching local role. This validates the partition as a useful
+comparison hypothesis only; neither provider nor HTDemucs is treated as
+ground truth, and no mapping has been automatically accepted.
+
 ## Intended evaluation
 
 For each eligible track Sunofriend will:

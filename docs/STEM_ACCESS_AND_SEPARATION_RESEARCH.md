@@ -935,6 +935,15 @@ only. Both Suno `Keyboard` excerpts were effectively silent while `Synth` was
 active, so the next MIDI comparison must establish role equivalence from audio
 rather than names.
 
+That provisional broad-role mapping now exists as a separate, review-only
+receipt. Every non-metronome provider item was assigned exactly once and each
+four-group sum closed to its provider pack. All twelve proposed role groups
+ranked first against the corresponding local HTDemucs role using a fixed
+spectral/envelope/waveform comparison. Similarities ranged from 0.863 to 0.998
+and the smallest diagonal margin over the best other role was +0.397. This is
+enough to run an inactive identical-settings MIDI bake-off; it is not human
+acceptance or proof that HTDemucs is ground truth.
+
 The same audit found `/usr/bin/sandbox-exec` on the development Mac, but its
 local manual marks the mechanism deprecated and the current Codex execution
 context cannot apply even a no-network profile. More importantly,
@@ -1850,6 +1859,9 @@ bake-off, downstream-MIDI acceptance and promotion are not implemented**
 - [x] Stage the first authorised real excerpt, prove provider-pack clock
   alignment, preserve native-rate evidence, record the 44.1 kHz model-input
   derivative and run the pinned local separator without activation.
+- [x] Partition the first excerpt into four provisional provider roles, prove
+  exact partition accounting and record full cross-role audio rankings without
+  accepting or activating a mapping.
 - [x] Inventory the first four-song authorised Moises/Suno comparison corpus,
   preserve its credit terms and exclude its 5.4 GB of audio from Git.
 

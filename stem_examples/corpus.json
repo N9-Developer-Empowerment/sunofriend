@@ -75,7 +75,71 @@
             "id": "suno-b",
             "directory": "SUNO/Be Alone - 16_07_2026, 22.45 Stems (1)"
           }
-        ]
+        ],
+        "role_group_proposals": {
+          "moises": {
+            "bass": [
+              "-bass-"
+            ],
+            "drums": [
+              "-kick-",
+              "-snare-",
+              "-hat-",
+              "-cymbals-",
+              "-toms-",
+              "-other_kit-"
+            ],
+            "other": [
+              "-keys-",
+              "-lead-",
+              "-other-",
+              "-piano-",
+              "-rhythm-",
+              "-strings-",
+              "-wind-"
+            ],
+            "vocals": [
+              "-vocals-",
+              "-backing_vocals-"
+            ]
+          },
+          "suno-a": {
+            "bass": [
+              "3 Bass.wav"
+            ],
+            "drums": [
+              "2 Drums.wav",
+              "5 Percussion.wav"
+            ],
+            "other": [
+              "4 Keyboard.wav",
+              "6 Synth.wav",
+              "7 Other.wav"
+            ],
+            "vocals": [
+              "0 Lead Vocals.wav",
+              "1 Backing Vocals.wav"
+            ]
+          },
+          "suno-b": {
+            "bass": [
+              "3 Bass.wav"
+            ],
+            "drums": [
+              "2 Drums.wav",
+              "5 Percussion.wav"
+            ],
+            "other": [
+              "4 Keyboard.wav",
+              "6 Synth.wav",
+              "7 Other.wav"
+            ],
+            "vocals": [
+              "0 Lead Vocals.wav",
+              "1 Backing Vocals.wav"
+            ]
+          }
+        }
       },
       "evaluation_state": "private_excerpt_staged"
     },

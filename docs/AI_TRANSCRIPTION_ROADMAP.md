@@ -857,6 +857,13 @@ accounting closure. Both Suno stems labelled `Keyboard` were effectively
 silent in this passage while `Synth` was active, demonstrating that provider
 labels cannot define the downstream comparison groups.
 
+The separate role-mapping receipt now assigns every non-metronome provider
+item exactly once, writes common-rate four-role auditions and compares every
+provider group with every local HTDemucs group. All twelve proposed diagonals
+ranked first; similarities ranged from 0.863 to 0.998 and the smallest margin
+over the best other role was +0.397. These observations permit an inactive
+identical-settings MIDI comparison, not automatic mapping acceptance.
+
 This real-model experiment deliberately bypasses neither the fake-only product
 gate nor any acceptance contract. It has no CLI/TUI/Simple/Workbench import,
 does not update source lineage, cannot select or promote a result and records

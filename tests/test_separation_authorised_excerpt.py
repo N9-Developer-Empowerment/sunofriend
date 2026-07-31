@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import tempfile
 from pathlib import Path
 
@@ -13,6 +14,11 @@ from sunofriend._separation_authorised_excerpt import (
     _document_sha256,
     _run_authorised_separation_excerpt,
 )
+from sunofriend._separation_authorised_role_mapping import (
+    __all__ as role_mapping_exports,
+    _document_sha256 as _role_mapping_document_sha256,
+    _map_authorised_excerpt_roles,
+)
 
 
 def _write_wave(path: Path, value: np.ndarray, sample_rate: int = 8_000) -> None:
@@ -24,29 +30,33 @@ def _corpus(root: Path, *, mismatched_provider_rate: bool = False) -> Path:
     track = root / "corpus" / "example-song"
     sample_rate = 8_000
     times = np.arange(sample_rate * 2, dtype=np.float64) / sample_rate
-    first = 0.2 * np.sin(2.0 * np.pi * 110.0 * times)
-    second = 0.1 * np.sin(2.0 * np.pi * 220.0 * times)
-    original = np.column_stack((first + second, first + second))
+    roles = {
+        "bass": 0.20 * np.sin(2.0 * np.pi * 110.0 * times),
+        "drums": 0.08 * np.sin(2.0 * np.pi * 440.0 * times),
+        "other": 0.10 * np.sin(2.0 * np.pi * 220.0 * times),
+        "vocals": 0.06 * np.sin(2.0 * np.pi * 330.0 * times),
+    }
+    mixture = sum(roles.values())
+    original = np.column_stack((mixture, mixture))
     _write_wave(track / "ORIGINAL" / "song.wav", original, sample_rate)
     for pack in ("PACK-A", "PACK-B"):
         rate = 8_100 if mismatched_provider_rate and pack == "PACK-B" else sample_rate
         if rate != sample_rate:
             other_times = np.arange(rate * 2, dtype=np.float64) / rate
-            pack_first = 0.2 * np.sin(2.0 * np.pi * 110.0 * other_times)
-            pack_second = 0.1 * np.sin(2.0 * np.pi * 220.0 * other_times)
+            pack_roles = {
+                "bass": 0.20 * np.sin(2.0 * np.pi * 110.0 * other_times),
+                "drums": 0.08 * np.sin(2.0 * np.pi * 440.0 * other_times),
+                "other": 0.10 * np.sin(2.0 * np.pi * 220.0 * other_times),
+                "vocals": 0.06 * np.sin(2.0 * np.pi * 330.0 * other_times),
+            }
         else:
-            pack_first = first
-            pack_second = second
-        _write_wave(
-            track / pack / "bass.wav",
-            np.column_stack((pack_first, pack_first)),
-            rate,
-        )
-        _write_wave(
-            track / pack / "other.wav",
-            np.column_stack((pack_second, pack_second)),
-            rate,
-        )
+            pack_roles = roles
+        for role, values in pack_roles.items():
+            _write_wave(
+                track / pack / f"{role}.wav",
+                np.column_stack((values, values)),
+                rate,
+            )
     document = {
         "schema": "sunofriend.authorised-separation-corpus.v1",
         "artist": {"name": "Owner", "soundcloud_profile": "https://example.test"},
@@ -70,6 +80,20 @@ def _corpus(root: Path, *, mismatched_provider_rate: bool = False) -> Path:
                         {"id": "pack-a", "directory": "PACK-A"},
                         {"id": "pack-b", "directory": "PACK-B"},
                     ],
+                    "role_group_proposals": {
+                        "pack-a": {
+                            "bass": ["bass.wav"],
+                            "drums": ["drums.wav"],
+                            "other": ["other.wav"],
+                            "vocals": ["vocals.wav"],
+                        },
+                        "pack-b": {
+                            "bass": ["bass.wav"],
+                            "drums": ["drums.wav"],
+                            "other": ["other.wav"],
+                            "vocals": ["vocals.wav"],
+                        },
+                    },
                 },
             }
         ],
@@ -95,6 +119,24 @@ def _fake_separator(
     assert python == "fake-python"
     root = Path(out_dir)
     root.mkdir(parents=True)
+    stem_dir = root / "ESTIMATED-STEMS"
+    stem_dir.mkdir()
+    sample_rate = 44_100
+    times = np.arange(sample_rate, dtype=np.float64) / sample_rate
+    estimates = {}
+    for role, amplitude, frequency in (
+        ("bass", 0.20, 110.0),
+        ("drums", 0.08, 440.0),
+        ("other", 0.10, 220.0),
+        ("vocals", 0.06, 330.0),
+    ):
+        values = amplitude * np.sin(2.0 * np.pi * frequency * times)
+        path = stem_dir / f"{role}.wav"
+        _write_wave(path, np.column_stack((values, values)), sample_rate)
+        estimates[role] = {
+            "path": f"ESTIMATED-STEMS/{role}.wav",
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        }
     report = root / "private-separation-experiment.json"
     report.write_text(
         json.dumps(
@@ -102,6 +144,7 @@ def _fake_separator(
                 "schema": "test-private-separator.v1",
                 "status": "complete_review_required",
                 "document_sha256": "a" * 64,
+                "estimated_stems": estimates,
             }
         )
         + "\n"
@@ -145,13 +188,16 @@ def test_authorised_excerpt_stages_aligned_packs_and_private_local_run() -> None
         assert model_input["geometry"]["sample_rate"] == 44_100
         assert model_input["geometry"]["frames"] == 44_100
         assert "resample_poly" in model_input["derivation"]["algorithm"]
+        assert set(result["excerpt"]["role_group_proposals"]) == {
+            "pack-a",
+            "pack-b",
+        }
         for pack in ("pack-a", "pack-b"):
             evidence = result["provider_packs"][pack]
-            assert evidence["source_count"] == 2
-            assert evidence["summed_source_count"] == 2
+            assert evidence["source_count"] == 4
+            assert evidence["summed_source_count"] == 4
             alignment = evidence["pack_sum_alignment"]
             assert alignment["sample_correlation_at_recorded_zero"] > 0.999999
-            assert alignment["envelope_best_lag_ms"] == 0.0
 
         report = Path(result["report"])
         persisted = json.loads(report.read_text())
@@ -224,4 +270,81 @@ def test_authorised_excerpt_has_no_product_import_and_exports_nothing() -> None:
     ):
         source = (root / relative).read_text(encoding="utf-8")
         assert "_separation_authorised_excerpt" not in source
+        assert "_separation_authorised_role_mapping" not in source
     assert __all__ == ()
+    assert role_mapping_exports == ()
+
+
+def test_authorised_role_mapping_partitions_and_ranks_synthetic_roles() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        corpus = _corpus(root)
+        checkpoint = root / "checkpoint.th"
+        checkpoint.write_bytes(b"private-test-checkpoint")
+        excerpt = _run_authorised_separation_excerpt(
+            corpus,
+            "example",
+            out_dir=root / "excerpt",
+            checkpoint_path=checkpoint,
+            python="fake-python",
+            separator_runner=_fake_separator,
+        )
+        result = _map_authorised_excerpt_roles(
+            excerpt["report"],
+            out_dir=root / "mapping",
+        )
+
+        assert result["status"] == "complete_review_required"
+        assert result["observations"]["all_proposed_roles_rank_first"] is True
+        assert result["permissions"]["accepted"] is False
+        assert result["effects"]["midi_created"] is False
+        for pack in ("pack-a", "pack-b"):
+            assert result["provider_partition_closure"][pack]["passed"] is True
+            observations = result["comparisons_to_local_htdemucs"][pack][
+                "proposed_role_observations"
+            ]
+            for role in ("bass", "drums", "other", "vocals"):
+                assert observations[role]["rank"] == 1
+                assert observations[role]["accepted"] is False
+                assert result["groups"][pack][role]["artifact"]["bytes"] > 0
+
+        report = Path(result["report"])
+        persisted = json.loads(report.read_text())
+        assert persisted["document_sha256"] == _role_mapping_document_sha256(
+            persisted
+        )
+        for relative, artifact in persisted["artifacts"].items():
+            path = report.parent / relative
+            assert path.is_file()
+            assert path.stat().st_size == artifact["bytes"]
+
+
+def test_authorised_role_mapping_rejects_changed_source_artifact() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        corpus = _corpus(root)
+        checkpoint = root / "checkpoint.th"
+        checkpoint.write_bytes(b"private-test-checkpoint")
+        excerpt = _run_authorised_separation_excerpt(
+            corpus,
+            "example",
+            out_dir=root / "excerpt",
+            checkpoint_path=checkpoint,
+            separator_runner=_fake_separator,
+            python="fake-python",
+        )
+        report = json.loads(Path(excerpt["report"]).read_text())
+        relative = next(
+            path
+            for path in report["artifacts"]
+            if path.startswith("PROVIDER-EXCERPTS/")
+        )
+        changed = Path(excerpt["report"]).parent / relative
+        changed.write_bytes(changed.read_bytes() + b"tampered")
+
+        with pytest.raises(ValueError, match="hash changed"):
+            _map_authorised_excerpt_roles(
+                excerpt["report"],
+                out_dir=root / "mapping",
+            )
+        assert not (root / "mapping").exists()

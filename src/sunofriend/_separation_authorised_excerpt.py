@@ -106,6 +106,7 @@ def _run_authorised_separation_excerpt(
             if str(value).strip()
         )
         pack_specs.append((pack_id, pack_dir, excluded))
+    role_group_proposals = _role_group_proposals(plan, seen_pack_ids)
 
     source_paths = [original]
     provider_inputs: dict[str, list[Path]] = {}
@@ -266,6 +267,7 @@ def _run_authorised_separation_excerpt(
                 "end_seconds": end,
                 "selection_policy": plan["selection_policy"],
                 "geometry": geometry,
+                "role_group_proposals": role_group_proposals,
             },
             "original": original_evidence,
             "provider_packs": provider_evidence,
@@ -356,6 +358,41 @@ def _excerpt_plan(track: Mapping[str, Any]) -> Mapping[str, Any]:
     if not str(plan.get("selection_policy", "")).strip():
         raise ValueError("evaluation excerpt selection policy is missing")
     return plan
+
+
+def _role_group_proposals(
+    plan: Mapping[str, Any],
+    pack_ids: set[str],
+) -> dict[str, dict[str, list[str]]]:
+    raw = plan.get("role_group_proposals")
+    if not isinstance(raw, Mapping) or set(raw) != pack_ids:
+        raise ValueError("role group proposals must match provider pack ids exactly")
+    expected_roles = {"bass", "drums", "other", "vocals"}
+    result: dict[str, dict[str, list[str]]] = {}
+    for pack_id in sorted(pack_ids):
+        groups = raw[pack_id]
+        if not isinstance(groups, Mapping) or set(groups) != expected_roles:
+            raise ValueError(
+                f"{pack_id} role group proposals must contain bass, drums, other and vocals"
+            )
+        result[pack_id] = {}
+        for role in sorted(expected_roles):
+            patterns = groups[role]
+            if (
+                not isinstance(patterns, Sequence)
+                or isinstance(patterns, (str, bytes))
+                or not patterns
+            ):
+                raise ValueError(f"{pack_id} {role} proposal must contain patterns")
+            normalized = [str(pattern).strip() for pattern in patterns]
+            if any(not pattern for pattern in normalized) or len(set(normalized)) != len(
+                normalized
+            ):
+                raise ValueError(
+                    f"{pack_id} {role} proposal patterns must be non-empty and unique"
+                )
+            result[pack_id][role] = normalized
+    return result
 
 
 def _write_excerpt(

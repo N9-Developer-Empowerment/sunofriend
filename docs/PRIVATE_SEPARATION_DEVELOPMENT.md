@@ -158,6 +158,21 @@ runs the local model only after those checks. A 48 kHz source is preserved at
 `scipy.signal.resample_poly` 44.1 kHz derivative for the current Demucs
 contract.
 
+Build the four provisional provider groups and compare them with every local
+HTDemucs role:
+
+```bash
+.venv/bin/python scripts/private-authorised-role-mapping.py \
+  --excerpt-report work/separation-bakeoff/be-alone-authorised-191-206-v2/authorised-separation-excerpt.json \
+  --out work/separation-bakeoff/be-alone-role-mapping-191-206-v2
+```
+
+Each non-metronome provider excerpt must match exactly one proposed group.
+The command writes common-rate group WAVs, proves that the four groups close
+to the provider sum, then ranks every provider group against every local role
+using spectral shape, envelope and absolute waveform evidence. Names propose
+the partition; they do not contribute to its audio score.
+
 ## Evidence produced
 
 The private run keeps:
@@ -214,15 +229,27 @@ None of its four broad outputs clipped; their raw sum differed from the source
 by -32.62 dB RMS and the separately persisted accounting residual closed the
 re-read PCM sum exactly. Again, arithmetic closure is not separation quality.
 
+The first broad-role mapping observation is also complete. Every proposed
+role ranked first against the matching local role, but remains unaccepted:
+
+| Provider | Bass similarity / margin | Drums | Other | Vocals |
+| --- | --- | --- | --- | --- |
+| Moises | 0.992 / +0.472 | 0.998 / +0.491 | 0.922 / +0.534 | 0.974 / +0.609 |
+| Suno A | 0.985 / +0.463 | 0.985 / +0.466 | 0.893 / +0.432 | 0.879 / +0.527 |
+| Suno B | 0.982 / +0.459 | 0.987 / +0.472 | 0.863 / +0.397 | 0.871 / +0.502 |
+
+Similarity is descriptive, not a calibrated probability. The diagonal result
+shows that the provisional four-way partitions are coherent enough for an
+inactive, identical downstream-MIDI comparison. It does not prove that a
+group is clean, complete or preferable by ear.
+
 The next bounded development increment uses this evidence to:
 
 1. compare the finished mix, broad estimates and any supplied stems without
    silently selecting a winner;
-2. map equivalent roles by audio evidence rather than provider name (both
-   Suno `Keyboard` stems are effectively silent in this excerpt while `Synth`
-   is active);
-3. listen to level-matched bass, drums, other and vocal passages;
-4. compare MIDI made from supplied stems with MIDI made from local estimates;
+2. listen to the now-staged level-matched bass, drums, other and vocal groups;
+3. compare MIDI made from the three provider groups with MIDI made from local
+   estimates under identical settings;
 5. record where broad `other` or composite drums need narrower refinement; and
 6. keep every result private and inactive before considering a Studio
    importer.
