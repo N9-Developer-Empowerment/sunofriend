@@ -1,11 +1,19 @@
 {
-  "schema": "sunofriend.private-roformer-source-manifest.v1",
+  "schema": "sunofriend.private-roformer-source-manifest.v2",
   "repository": "https://github.com/ZFTurbo/Music-Source-Separation-Training",
   "release_tag": "v1.0.12",
   "revision": "aef04b2e52fb3beaf25e333199f5a7236e628e7b",
   "runtime_boundary": "exact two-module BS-RoFormer loader",
   "package_initializer_permitted": false,
   "model_import_permitted_by_manifest": false,
+  "static_source_policy": {
+    "maximum_file_bytes": 65536,
+    "exact_direct_import_roots_required": true,
+    "relative_imports_permitted": false,
+    "wildcard_imports_permitted": false,
+    "dynamic_import_or_codegen_calls_permitted": false,
+    "analysis_executes_source": false
+  },
   "files": [
     {
       "path": "LICENSE",

@@ -601,11 +601,12 @@ the candidate eligible by itself.
 The plan remains `blocked`/`not_run`. The repository's MIT licence covers its
 software and associated documentation, but the release does not state
 checkpoint-specific terms and Sunofriend does not project the code licence
-onto the weights. The checkpoint hash is unpublished, Apple-silicon resource
-behaviour is unmeasured, and static checkpoint inspection plus a bounded worker
-do not yet exist. No package or checkpoint was installed, no new approval was
-inferred, and no CLI, TUI, Simple, Studio, source-graph or public route was
-added.
+onto the weights. A 31 July 2026 recheck of the official GitHub release API
+still returned a null asset digest. Apple-silicon resource behaviour is
+unmeasured, the actual checkpoint has not passed the existing static
+inspection contract, and a bounded RoFormer worker does not exist. No package
+or checkpoint was installed, no new approval was inferred, and no CLI, TUI,
+Simple, Studio, source-graph or public route was added.
 
 The exact source import audit also found that upstream's broad inference
 utility imports configuration and metric dependencies that the BS-RoFormer
@@ -661,10 +662,15 @@ PYTHONPATH=src .venv/bin/python scripts/private-roformer-source.py \
 ```
 
 The verifier walks only fixed directory components with non-following,
-non-inheritable descriptors and hashes three regular files. It does not invoke
-Git, trust a mutable revision label, execute `__init__.py`, import the model or
-write a report. It passed against the temporary exact release checkout used for
-the source audit. The future runtime must independently pass it again.
+non-inheritable descriptors and hashes three regular files. The two Python
+modules are capped at 64 KiB each and parsed with the standard-library AST
+without execution. Their direct import roots must exactly match the manifest;
+relative imports, wildcard imports, dynamic-import calls and runtime code
+generation calls fail closed. The verification report records the observed
+empty unsafe-call surfaces. It does not invoke Git, trust a mutable revision
+label, execute `__init__.py`, import the model or write a report. It passed
+against the temporary exact release checkout used for the source audit. The
+future runtime must independently pass it again.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,

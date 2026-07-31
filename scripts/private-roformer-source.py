@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify an existing exact RoFormer source checkout without importing it."""
+"""Hash and statically audit an exact RoFormer checkout without importing it."""
 
 from __future__ import annotations
 

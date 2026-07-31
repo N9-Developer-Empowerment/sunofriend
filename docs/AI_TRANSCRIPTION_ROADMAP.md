@@ -1826,9 +1826,14 @@ manifest binds `attend.py` at SHA-256
 and the release MIT licence at
 `3282dc057695ef5b9a64909a7092ca40b2c292c232580fc6ace6e5d665cc0207`.
 The read-only verifier passed on the exact temporary release checkout while
-making no imports, writes, network calls or process launches. A future worker
-must repeat that check on its own source tree; the current plan does not claim
-that a durable runtime checkout exists.
+making no imports, writes, network calls or process launches. The verifier now
+also caps each module at 64 KiB and parses its AST without execution. Exact
+direct-import roots are manifest-bound; relative and wildcard imports,
+dynamic-import calls and runtime code-generation calls fail closed. A 31 July
+2026 official release-API recheck still found no checkpoint digest or
+checkpoint-specific terms. A future worker must repeat the source check on its
+own source tree; the current plan does not claim that a durable runtime
+checkout exists, that the checkpoint is approved or that it has been loaded.
 
 ### 2026-07-31 — Second authorised separation-to-MIDI repeat
 
