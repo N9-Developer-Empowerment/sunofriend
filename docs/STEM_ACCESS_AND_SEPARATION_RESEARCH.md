@@ -954,10 +954,12 @@ no Suno packs. All five original/musical-stem horizons now match after the
 stems share 6,882,992 frames; the stem sum has 0.997537 recorded-zero sample
 correlation and a best 10 ms envelope lag of 0.00 seconds. `Monkey Man`
 declares nonstandard A=446 Hz tuning. Because directory presence is not a
-rights claim, every pack remains inventory-only until track-specific
-private-processing authority is recorded. None may become a public example,
-distributed artifact or automatic separator acceptance input from this
-inventory alone.
+rights claim, a pack remains inventory-only until track-specific
+private-processing authority is recorded. The user supplied that authority for
+`Mauvais djo - Pilé` on 31 July 2026, for private local evaluation only. The
+other four remain unauthorised for processing, and none may become a public
+example, distributed artifact or automatic separator acceptance input from
+this inventory alone.
 
 The next private leaf-level comparison retained every item provisionally
 inside broad `other`, normalized only its audition geometry and calculated all
@@ -2016,8 +2018,13 @@ promotion are not implemented**
   preserve exact package/artifact/revision/licence evidence, and implement a
   tested private parity plan/worker/runner that converts only the verified
   local checkpoint in memory. It creates no cache, named-model lookup,
-  downloader, selection, activation or public route. Runtime installation and
-  real inference remain separately approval-gated.
+  downloader, selection, activation or public route.
+- [x] After explicit approval, install the five exact MIT packages only in
+  `.venv-ai` and run the same-checkpoint comparison on both sealed references.
+  Record the 1.94x first-case and 16.72x process-local second-case speed factors
+  but reject drop-in parity: no role met the borrowed direct-model `1e-4`
+  relative-maximum reference, and low-energy guitar/piano diverged materially.
+  Keep MLX inactive.
 - [x] Stage the first authorised real excerpt, prove provider-pack clock
   alignment, preserve native-rate evidence, record the 44.1 kHz model-input
   derivative and run the pinned local separator without activation.
@@ -2030,7 +2037,9 @@ promotion are not implemented**
   a disjoint, non-authorising manifest; exclude all audio and chord evidence,
   retain zero public, runner or acceptance authority, and record that the
   redone `Mauvais djo - Pilé` pack clears its former horizon/clock mismatch
-  without weakening the separate processing-authority gate.
+  without weakening the separate processing-authority gate. After the user's
+  explicit follow-up, record private-local-evaluation authority for that track
+  only while repository distribution and public-demo use remain false.
 
 Likely modules:
 

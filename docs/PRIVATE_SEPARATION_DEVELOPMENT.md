@@ -472,7 +472,7 @@ It requires the already-accepted 54,996,327-byte checkpoint at the same full
 SHA-256 and reports exactly five missing MIT-licensed packages:
 `demucs-mlx==1.4.4`, `mlx==0.31.2`, `mlx-metal==0.31.2`,
 `mlx-audio-io==1.3.11` and `mlx-spectro==0.7.0`. Installation is deliberately
-separate from the ordinary AI runtime and remains approval-required. The plan
+separate from the ordinary AI runtime and required explicit approval. The plan
 names PyPI/files.pythonhosted.org plus a possibly varying PyPI mirror/CDN as
 setup network destinations and changes only `.venv-ai`; it installs no model
 and no system package.
@@ -483,11 +483,12 @@ deserialises that exact checkpoint, converts it to MLX in memory once and runs
 1–8 sealed reference excerpts. It records conversion and per-excerpt timing,
 compares every float32 sample for all six roles, and writes private listening
 WAVs. The harness keeps selection, promotion, source-graph activation, Simple,
-Studio and publication false. The runtime package is not yet installed, so no
-real MLX inference has occurred.
+Studio and publication false. The user approved the five exact packages on
+31 July 2026; they were installed into `.venv-ai` with no model or system
+package change.
 
-After a separate installation approval and a successful re-run of `--plan`,
-the two fixed-window comparison will be:
+After installation, `--plan` reported every exact package and checkpoint match.
+The two fixed-window comparison then ran as:
 
 ```bash
 SUNOFRIEND_ACCEPT_DEMUCS_MLX_PRIVATE_EVALUATION=1 \
@@ -504,6 +505,18 @@ converter's direct random-input verification reference. Sunofriend applies it
 descriptively to split full-pipeline output; it is not an automatic acceptance
 gate. First-case compilation and later process-local reuse are reported
 separately so a warm result cannot be presented as an ordinary first run.
+
+The real result is `complete_review_required`, not parity acceptance. MLX took
+5.106 seconds on its first 15-second case versus the sealed PyTorch CPU run's
+9.905 seconds (1.94x observed), then 0.623 seconds versus 10.423 seconds on the
+second process-local case (16.72x observed). Reported peak resident memory was
+about 604 MB for the MLX process versus 2.10–2.14 GB in the two historical
+PyTorch processes. Bass and drums correlated 0.99994–0.99999 with the PyTorch
+arrays, but low-energy guitar fell to 0.743 on one case and piano was only
+0.363–0.376. No role met the borrowed `1e-4` relative-maximum reference and the
+worst relative maximum was 3.4146. The runtime port is therefore fast evidence,
+not a safe drop-in replacement. It remains private and inactive while the
+conversion/full-pipeline difference is investigated.
 
 The first authorised real-song development corpus is now available locally
 under [`../stem_examples`](../stem_examples/README.md). It contains four
@@ -526,8 +539,10 @@ evidence only after track-specific processing authority is recorded. The
 redone `Mauvais djo - Pilé` original and 16 musical stems share an exact
 6,882,992-frame horizon, their sum has 0.997537 recorded-zero correlation and
 its best 10 ms envelope lag is 0.00 seconds. This removes the former
-geometry/clock blocker, not the authority gate. `Monkey Man` declares A=446 Hz
-and also requires an explicit tuning plan before downstream MIDI comparison.
+geometry/clock blocker. The user then authorised that one track for private
+local evaluation on 31 July 2026; repository distribution and public-demo use
+remain false. `Monkey Man` declares A=446 Hz and also requires an explicit
+tuning plan before downstream MIDI comparison.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,

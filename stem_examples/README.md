@@ -31,10 +31,11 @@ permission recorded here applies to the four named original tracks in this
 corpus; it is not a claim about every historical upload on the profile.
 
 The five private-reference folders have no ownership or reuse permission
-record in their manifest. They must not be published, redistributed, used as
-public demos or processed by the authorised-corpus runner merely because they
-are present. A track-specific private-processing authority must be recorded
-before an evaluation uses one.
+record in their manifest. They must not be published, redistributed or used as
+public demos merely because they are present. `Mauvais djo - Pilé` now has a
+separate user-authorised private-local-evaluation record; the other four need
+their own track-specific processing authority before an evaluation uses one.
+None belongs to the public authorised-corpus runner.
 
 Moises and Suno are independent providers. Their derived stem packs are kept
 local for comparison until the applicable export-redistribution terms are
@@ -71,7 +72,7 @@ not source roles for MIDI conversion.
 
 | Reference | Original and musical stems | Moises | Initial state |
 | --- | --- | --- | --- |
-| Mauvais djo - Pilé | 156.08 s | 17 files | Geometry and recorded-zero clock ready; authority required before evaluation |
+| Mauvais djo - Pilé | 156.08 s | 17 files | Authorised for private local evaluation; ready for excerpt selection |
 | Silva Bumpa - On 2nite | 158.85 s | 17 files | Geometry ready; authority required before evaluation |
 | Slayyyter - DANCE... (Edit) | 236.04 s | 17 files | Geometry ready; authority required before evaluation |
 | sombr - 12 to 12 | 242.90 s | 17 files | Geometry ready; authority required before evaluation |
@@ -88,7 +89,10 @@ exact 6,882,992-frame horizon. Its float64 musical-stem sum has 0.997537
 sample correlation with the original at recorded zero, a best 10 ms envelope
 lag of 0.00 seconds, 0.998738 envelope correlation and only -0.059 dB level
 difference. This clears the former geometry/clock blocker; it does not itself
-grant processing authority or make the provider estimates ground truth.
+make the provider estimates ground truth. On 31 July 2026 the user separately
+authorised this track for private local evaluation only. That authority permits
+the next bounded experiment but does not permit repository distribution or
+public-demo use.
 
 The first `Be Alone` observation uses 191–206 seconds. All three provider
 packs measured zero 10 ms envelope lag against the original. The Moises

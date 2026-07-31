@@ -41,6 +41,11 @@ def test_private_reference_manifest_cannot_imply_processing_authority() -> None:
     assert len(directories) == len(set(directories))
     assert all(
         track["evaluation_state"].startswith(("awaiting_", "blocked_"))
+        or (
+            track["evaluation_state"] == "ready_for_private_excerpt_selection"
+            and track.get("private_processing_authority", {}).get("status")
+            == "user_authorised"
+        )
         for track in document["tracks"]
     )
     assert all("evaluation_excerpt" not in track for track in document["tracks"])
@@ -48,11 +53,18 @@ def test_private_reference_manifest_cannot_imply_processing_authority() -> None:
     mauvais = next(
         track for track in document["tracks"] if track["id"] == "mauvais-djo-pile"
     )
-    assert mauvais["directory"] == "Mauvais djo - 06. Pilé-Bb minor-130bpm-440hz "
+    assert mauvais["directory"] == "Mauvais djo - 06. Pilé-Bb minor-130bpm-440hz"
     assert mauvais["bpm"] == 130
     assert mauvais["original"]["duration_seconds"] == 156.076916
     assert mauvais["moises"]["musical_stem_duration_seconds"] == 156.076916
-    assert mauvais["evaluation_state"] == "awaiting_private_processing_authority"
+    assert mauvais["evaluation_state"] == "ready_for_private_excerpt_selection"
+    assert mauvais["private_processing_authority"] == {
+        "status": "user_authorised",
+        "scope": "private_local_evaluation_only",
+        "recorded_on": "2026-07-31",
+        "repository_distribution": False,
+        "public_demo_use": False,
+    }
     assert mauvais["read_only_alignment_audit"] == {
         "checked_on": "2026-07-31",
         "musical_stems_geometry_matches_original": True,

@@ -1774,17 +1774,18 @@ never a hidden local fallback. All routes must improve downstream MIDI and the
 interpretation WAV under the same listening gate, not separation metrics
 alone.
 
-The Demucs-MLX step has reached its explicit installation gate. A private
-read-only plan now verifies the existing six-source checkpoint, probes the
-isolated Python environment without importing MLX, records the MIT licences,
-exact package versions and resolved PyPI artifacts, and states every expected
-network/machine change. A tested runner is ready to convert only those verified
-local checkpoint bytes in memory and compare all six raw float32 estimates on
-the two sealed 15-second references. It forbids named-model resolution, model
-cache use, automatic download and every product activation route. The five MLX
-packages are not installed yet; real parity timing and numerical evidence are
-therefore still pending separate approval, not silently inferred from the
-adapter's published M4 Max benchmark.
+The Demucs-MLX step passed its explicit installation gate after user approval.
+The five exact MIT packages were installed only in `.venv-ai`; no model or
+system package changed. The runner converted the verified local checkpoint in
+memory and compared all six raw float32 estimates on the two sealed 15-second
+references without named-model resolution, model-cache use, automatic download
+or a product route. MLX observed a 1.94x first-case and 16.72x process-local
+second-case speed factor with about 604 MB reported peak resident memory, but
+full split-pipeline numerical parity failed. Bass/drums correlation remained
+0.99994–0.99999, while one low-energy guitar case fell to 0.743 and piano was
+0.363–0.376. No role met the borrowed direct-model `1e-4` relative-maximum
+reference. MLX therefore remains a private inactive runtime challenger, not an
+accepted accelerator or separator-quality improvement.
 
 ### 2026-07-31 — Second authorised separation-to-MIDI repeat
 
