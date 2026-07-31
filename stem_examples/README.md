@@ -71,17 +71,24 @@ not source roles for MIDI conversion.
 
 | Reference | Original and musical stems | Moises | Initial state |
 | --- | --- | --- | --- |
-| Mauvais djo - Pilé | Original 156.08 s; stems 225.44 s | 17 files | Blocked: source/provider horizon mismatch |
+| Mauvais djo - Pilé | 156.08 s | 17 files | Geometry and recorded-zero clock ready; authority required before evaluation |
 | Silva Bumpa - On 2nite | 158.85 s | 17 files | Geometry ready; authority required before evaluation |
 | Slayyyter - DANCE... (Edit) | 236.04 s | 17 files | Geometry ready; authority required before evaluation |
 | sombr - 12 to 12 | 242.90 s | 17 files | Geometry ready; authority required before evaluation |
 | Toots & The Maytals - Monkey Man | 175.53 s; folder declares A=446 Hz | 17 files | Geometry ready; authority and tuning handling required |
 
 All 90 private-reference audio files decode as stereo 44.1 kHz audio. Each
-original is FLAC and each Moises export is PCM16 WAV. Four musical stem packs
-match their original duration; the metronomes are shorter and remain timing
-evidence only. No Suno pack is present, so these are not direct replacements
-for the original three-provider comparison design.
+original is FLAC and each Moises export is PCM16 WAV. All five musical stem
+packs now match their original duration; the metronomes are shorter and remain
+timing evidence only. No Suno pack is present, so these are not direct
+replacements for the original three-provider comparison design.
+
+The redone `Mauvais djo - Pilé` pack has 16 musical stems with the original's
+exact 6,882,992-frame horizon. Its float64 musical-stem sum has 0.997537
+sample correlation with the original at recorded zero, a best 10 ms envelope
+lag of 0.00 seconds, 0.998738 envelope correlation and only -0.059 dB level
+difference. This clears the former geometry/clock blocker; it does not itself
+grant processing authority or make the provider estimates ground truth.
 
 The first `Be Alone` observation uses 191–206 seconds. All three provider
 packs measured zero 10 ms envelope lag against the original. The Moises

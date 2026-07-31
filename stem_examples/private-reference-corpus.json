@@ -17,7 +17,7 @@
   "inventory": {
     "tracks": 5,
     "audio_files": 90,
-    "audio_bytes": 3230739520,
+    "audio_bytes": 3022887544,
     "original_files": 5,
     "moises_files": 85,
     "suno_packs": 0,
@@ -33,10 +33,10 @@
   "tracks": [
     {
       "id": "mauvais-djo-pile",
-      "directory": "Mauvais djo - 06. Pile\u0301-Bbm-90bpm-440hz-Bb minor-90bpm-440hz",
+      "directory": "Mauvais djo - 06. Pile\u0301-Bb minor-130bpm-440hz ",
       "display_name": "Mauvais djo - 06. Pilé",
       "key": "Bb minor",
-      "bpm": 90,
+      "bpm": 130,
       "tuning_hz": 440,
       "original": {
         "files": 1,
@@ -44,11 +44,21 @@
       },
       "moises": {
         "files": 17,
-        "musical_stem_duration_seconds": 225.439365,
-        "metronome_duration_seconds": 222.66
+        "musical_stem_duration_seconds": 156.076916,
+        "metronome_duration_seconds": 154.16
+      },
+      "read_only_alignment_audit": {
+        "checked_on": "2026-07-31",
+        "musical_stems_geometry_matches_original": true,
+        "recorded_zero_sum_correlation": 0.997537,
+        "best_10ms_envelope_lag_seconds": 0.0,
+        "best_10ms_envelope_correlation": 0.998738,
+        "stem_sum_level_delta_db": -0.059,
+        "source_minus_sum_snr_db": 23.064,
+        "metronome_is_timing_evidence_only": true
       },
       "chord_pdf_present": true,
-      "evaluation_state": "blocked_original_provider_horizon_mismatch"
+      "evaluation_state": "awaiting_private_processing_authority"
     },
     {
       "id": "silva-bumpa-on-2nite",

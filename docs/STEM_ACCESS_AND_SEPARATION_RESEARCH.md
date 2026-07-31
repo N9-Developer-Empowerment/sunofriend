@@ -949,12 +949,15 @@ A separate
 [`private-reference-corpus.json`](../stem_examples/private-reference-corpus.json)
 now inventories five additional source-plus-Moises packs without adding them
 to the authorised runner. Together they contain 90 stereo 44.1 kHz files and
-no Suno packs. Four original/musical-stem horizons match; `Mauvais djo - Pilé`
-does not (156.08 versus 225.44 seconds), and `Monkey Man` declares nonstandard
-A=446 Hz tuning. Because directory presence is not a rights claim, every pack
-remains inventory-only until track-specific private-processing authority is
-recorded. None may become a public example, distributed artifact or automatic
-separator acceptance input from this inventory alone.
+no Suno packs. All five original/musical-stem horizons now match after the
+`Mauvais djo - Pilé` pack was redone at 130 BPM. Its original and 16 musical
+stems share 6,882,992 frames; the stem sum has 0.997537 recorded-zero sample
+correlation and a best 10 ms envelope lag of 0.00 seconds. `Monkey Man`
+declares nonstandard A=446 Hz tuning. Because directory presence is not a
+rights claim, every pack remains inventory-only until track-specific
+private-processing authority is recorded. None may become a public example,
+distributed artifact or automatic separator acceptance input from this
+inventory alone.
 
 The next private leaf-level comparison retained every item provisionally
 inside broad `other`, normalized only its audition geometry and calculated all
@@ -2025,8 +2028,9 @@ promotion are not implemented**
   preserve its credit terms and exclude its 5.4 GB of audio from Git.
 - [x] Inventory five additional source-plus-Moises private-reference packs as
   a disjoint, non-authorising manifest; exclude all audio and chord evidence,
-  record the one source/provider horizon mismatch and retain zero public,
-  runner or acceptance authority.
+  retain zero public, runner or acceptance authority, and record that the
+  redone `Mauvais djo - Pilé` pack clears its former horizon/clock mismatch
+  without weakening the separate processing-authority gate.
 
 Likely modules:
 

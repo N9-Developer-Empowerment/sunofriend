@@ -30,6 +30,7 @@ def test_private_reference_manifest_cannot_imply_processing_authority() -> None:
     assert document["provider_derived_audio"]["local_evaluation_enabled"] is False
     assert document["inventory"]["tracks"] == len(document["tracks"])
     assert document["inventory"]["audio_files"] == 90
+    assert document["inventory"]["audio_bytes"] == 3022887544
     assert document["inventory"]["original_files"] == 5
     assert document["inventory"]["moises_files"] == 85
     assert document["inventory"]["suno_packs"] == 0
@@ -43,6 +44,25 @@ def test_private_reference_manifest_cannot_imply_processing_authority() -> None:
         for track in document["tracks"]
     )
     assert all("evaluation_excerpt" not in track for track in document["tracks"])
+
+    mauvais = next(
+        track for track in document["tracks"] if track["id"] == "mauvais-djo-pile"
+    )
+    assert mauvais["directory"] == "Mauvais djo - 06. Pilé-Bb minor-130bpm-440hz "
+    assert mauvais["bpm"] == 130
+    assert mauvais["original"]["duration_seconds"] == 156.076916
+    assert mauvais["moises"]["musical_stem_duration_seconds"] == 156.076916
+    assert mauvais["evaluation_state"] == "awaiting_private_processing_authority"
+    assert mauvais["read_only_alignment_audit"] == {
+        "checked_on": "2026-07-31",
+        "musical_stems_geometry_matches_original": True,
+        "recorded_zero_sum_correlation": 0.997537,
+        "best_10ms_envelope_lag_seconds": 0.0,
+        "best_10ms_envelope_correlation": 0.998738,
+        "stem_sum_level_delta_db": -0.059,
+        "source_minus_sum_snr_db": 23.064,
+        "metronome_is_timing_evidence_only": True,
+    }
 
 
 def test_authorised_and_private_reference_manifests_are_disjoint() -> None:
