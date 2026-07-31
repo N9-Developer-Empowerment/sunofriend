@@ -4,6 +4,8 @@ include PYPI.md
 include README.md
 include constraints-audio-macos.txt
 include requirements-ai-macos.txt
+include requirements-private-separation-mlx-macos.txt
+include scripts/private-demucs-mlx-parity.py
 include scripts/setup-ai-runtime.sh
 include scripts/setup-game-model.sh
 include scripts/setup-rmvpe-model.sh

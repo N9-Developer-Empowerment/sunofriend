@@ -1959,7 +1959,10 @@ promotion are not implemented**
   excerpts and at least one independent separator/runtime candidate.
 - [ ] If the pinned six-source challenger does not meet the usable-quality
   gate, measure same-checkpoint Demucs-MLX parity before changing architecture,
-  then register one exact, licence-audited RoFormer candidate.
+  then register one exact, licence-audited RoFormer candidate. The read-only
+  licence/install plan and no-download in-memory parity harness are complete;
+  separate approval to install the five exact MIT packages and the two-window
+  real run remain outstanding.
 - [ ] Consider a deterministic role-specific ensemble only after its members
   have separate held-out evidence; never infer a winner from popularity or a
   model-runner catalogue.
@@ -2006,6 +2009,12 @@ promotion are not implemented**
   not align consistently with same-role leaves; broad `other` retained the
   strongest keyboard/synth evidence. Keep the challenger inactive and move to
   same-checkpoint runtime parity before a licence-audited RoFormer test.
+- [x] Audit Demucs-MLX 1.4.4 and its resolved Apple-silicon dependency set,
+  preserve exact package/artifact/revision/licence evidence, and implement a
+  tested private parity plan/worker/runner that converts only the verified
+  local checkpoint in memory. It creates no cache, named-model lookup,
+  downloader, selection, activation or public route. Runtime installation and
+  real inference remain separately approval-gated.
 - [x] Stage the first authorised real excerpt, prove provider-pack clock
   alignment, preserve native-rate evidence, record the 44.1 kHz model-input
   derivative and run the pinned local separator without activation.

@@ -459,6 +459,52 @@ The next bounded experiment is same-checkpoint Demucs-MLX parity, followed by
 one exact licence-audited RoFormer challenger if the quality gap remains.
 Runtime parity must not be mistaken for model-quality improvement.
 
+The parity plan and runner are now implemented without installing MLX. The
+read-only plan is:
+
+```bash
+.venv/bin/python scripts/private-demucs-mlx-parity.py --plan \
+  --checkpoint ~/.local/share/sunofriend/models/demucs-4.0.1-htdemucs-6s/5c90dfd2-34c22ccb.th \
+  --python .venv-ai/bin/python
+```
+
+It requires the already-accepted 54,996,327-byte checkpoint at the same full
+SHA-256 and reports exactly five missing MIT-licensed packages:
+`demucs-mlx==1.4.4`, `mlx==0.31.2`, `mlx-metal==0.31.2`,
+`mlx-audio-io==1.3.11` and `mlx-spectro==0.7.0`. Installation is deliberately
+separate from the ordinary AI runtime and remains approval-required. The plan
+names PyPI/files.pythonhosted.org plus a possibly varying PyPI mirror/CDN as
+setup network destinations and changes only `.venv-ai`; it installs no model
+and no system package.
+
+The eventual worker does not use demucs-mlx's named-model loader, first-run
+download or model cache. It verifies the caller-supplied `.th` bytes first,
+deserialises that exact checkpoint, converts it to MLX in memory once and runs
+1–8 sealed reference excerpts. It records conversion and per-excerpt timing,
+compares every float32 sample for all six roles, and writes private listening
+WAVs. The harness keeps selection, promotion, source-graph activation, Simple,
+Studio and publication false. The runtime package is not yet installed, so no
+real MLX inference has occurred.
+
+After a separate installation approval and a successful re-run of `--plan`,
+the two fixed-window comparison will be:
+
+```bash
+SUNOFRIEND_ACCEPT_DEMUCS_MLX_PRIVATE_EVALUATION=1 \
+  .venv/bin/python scripts/private-demucs-mlx-parity.py \
+  --reference-run work/separation-bakeoff/be-alone-six-source-191-206-v2 \
+  --reference-run work/separation-bakeoff/i-am-a-alien-six-source-219-234-v1 \
+  --checkpoint ~/.local/share/sunofriend/models/demucs-4.0.1-htdemucs-6s/5c90dfd2-34c22ccb.th \
+  --python .venv-ai/bin/python \
+  --out work/separation-bakeoff/demucs-mlx-six-source-parity-v1
+```
+
+The `1e-4` relative-maximum threshold shown in the report is the upstream
+converter's direct random-input verification reference. Sunofriend applies it
+descriptively to split full-pipeline output; it is not an automatic acceptance
+gate. First-case compilation and later process-local reuse are reported
+separately so a warm result cannot be presented as an ordinary first run.
+
 The first authorised real-song development corpus is now available locally
 under [`../stem_examples`](../stem_examples/README.md). It contains four
 Ezzye originals, one detailed Moises export and two distinct Suno exports per
