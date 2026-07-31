@@ -219,8 +219,14 @@ report the result, then move on.
   terms and a published checkpoint SHA-256 are absent, and no installer,
   downloader, worker or product route exists. Its narrowed 15-package
   wheel/hash runtime has exact-version licence evidence for private local
-  evaluation. A bounded static-inspection and four-role excerpt-worker contract
-  is defined but has not been applied or implemented. Its future loader is
+  evaluation. A bounded static-inspection contract is defined but has not been
+  applied. The separate non-executable worker protocol is implemented and
+  tested: it accepts only one or two path-free canonical stereo 44.1 kHz PCM24
+  excerpt identities of at most 15 seconds, uses canonical sorted roles
+  `bass`, `drums`, `other`, `vocals`, and fixes output geometry and the generic
+  request/result binding. Every install, checkpoint, model, process,
+  publication and product-route permission remains false; the executable
+  adapter does not exist. Its future loader is
   pinned to exact hashes for two model modules and must bypass the upstream
   package initializer. A private read-only admission command can now bind an
   exact source checkout to the four tracked runtime planning artifacts and

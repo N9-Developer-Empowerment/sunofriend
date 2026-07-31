@@ -1807,16 +1807,18 @@ requires notice review. The lock is reserved for a fresh environment, not
 `.venv-ai`. No download or approval request is appropriate while checkpoint,
 static-inspection, worker and resource preconditions remain open.
 
-The candidate is now bound on paper to Sunofriend's existing parent-issued
-checkpoint inspection and worker request/result schemas. The inspector caps
+The candidate is now bound to Sunofriend's existing parent-issued checkpoint
+inspection and worker request/result schemas. The inspector caps
 checkpoint, ZIP and pickle work, pins a non-inheritable descriptor, inventories
 pickle opcodes without deserialising them and never authorises loading. The
-future excerpt worker is limited to two canonical 15-second stereo 44.1 kHz
-inputs, four exact output roles, a fresh quarantine, no network or child
-processes, and parent-verified output hashes and geometry. These are executable
-safety contracts already used by private separation development, not a new
-RoFormer worker: no candidate checkpoint has been inspected and no runner has
-been implemented.
+non-executable RoFormer protocol now validates one or two path-free canonical
+15-second stereo 44.1 kHz PCM24 case identities, canonical sorted
+`bass`/`drums`/`other`/`vocals` outputs, one fresh worker and quarantine per
+case, no network or child processes, and parent-verified hashes plus exact
+source-frame geometry. It is self-hashed, immutable and deliberately cannot
+materialise the private request. These are safety contracts, not a new model
+runner: no candidate checkpoint has been inspected and no executable adapter
+has been implemented.
 
 The two-module source boundary is now independently enforceable. A tracked
 manifest binds `attend.py` at SHA-256

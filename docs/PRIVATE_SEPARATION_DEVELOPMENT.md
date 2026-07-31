@@ -647,8 +647,26 @@ the bounded stored-only Torch ZIP inventory and parse pickle opcodes without
 deserialisation. It cannot authorise loading. A later worker request is limited
 to two 15-second canonical PCM24 excerpts, the four exact roles, a fresh
 private quarantine, denied network and child processes, and parent-verified
-WAV hashes, geometry and source horizon. The contract is defined; it has not
-been applied to this checkpoint, and the RoFormer worker does not exist.
+WAV hashes, geometry and source horizon. The static/checkpoint contract has not
+been applied to this checkpoint, and the executable RoFormer worker does not
+exist.
+
+The request/result boundary is now concrete rather than only prose.
+`_separation_roformer_worker_protocol.py` builds a self-hashed, immutable,
+path-free protocol for one or two cases. Each case must be a distinct canonical
+stereo 44.1 kHz PCM24 WAV identity of at most 661,500 frames, 15 seconds and
+4 MiB. The protocol fixes the generic worker schemas, source revision and
+manifest, configuration and dependency-lock hashes, checkpoint asset identity,
+serial fresh-worker/fresh-quarantine lifecycle, seed 0, canonical sorted roles
+`bass`, `drums`, `other`, `vocals` and the corresponding `STEMS/*.wav`
+allowlist. Result geometry must have the exact source frame horizon and every
+hash and geometry must be parent-verified. The validator rejects extra fields,
+path-like IDs, duplicate or unsorted cases, repeated canonical audio, invalid
+or oversized geometry, permission changes and hash tampering. It performs no
+filesystem, network or process operation and has no CLI/TUI route. This is
+protocol validation only: request materialisation, checkpoint access,
+deserialisation, model import, worker start, inference, selection, publication
+and product routing all remain explicitly forbidden.
 
 The future isolated loader also has an exact source manifest rather than a
 trust-on-path boundary. `private-separation-roformer-source-manifest.json`

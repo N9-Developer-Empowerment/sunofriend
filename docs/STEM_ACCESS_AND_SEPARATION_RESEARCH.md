@@ -1982,8 +1982,11 @@ promotion are not implemented**
 - [ ] Before any RoFormer download or installation, obtain checkpoint-specific
   allowed-use evidence and an independently verifiable official checkpoint
   SHA-256, apply the now-defined bounded static-inspection contract, implement
-  the now-defined four-role excerpt-worker contract, and request separate
-  approval. The narrowed 15-package Apple-silicon wheel/hash lock now has
+  the executable adapter behind the now-tested non-executable four-role worker
+  protocol, and request separate approval. The protocol binds at most two
+  path-free canonical 15-second PCM24 cases to sorted
+  `bass`/`drums`/`other`/`vocals` outputs while every execution permission
+  remains false. The narrowed 15-package Apple-silicon wheel/hash lock now has
   exact-version licence evidence suitable for private local evaluation;
   redistribution notices remain a later product concern. Do not infer weight
   permission from the repository's MIT code licence.

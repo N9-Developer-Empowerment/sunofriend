@@ -6,6 +6,9 @@ from sunofriend._separation_roformer_challenger_plan import CHECKPOINT_BYTES
 from sunofriend._separation_roformer_contract_plan import (
     _build_private_roformer_contract_plan,
 )
+from sunofriend._separation_roformer_worker_protocol import (
+    ROFORMER_WORKER_PROTOCOL_SCHEMA,
+)
 from sunofriend.separation_checkpoint_inspection import (
     MAX_CHECKPOINT_BYTES,
     SEPARATION_CHECKPOINT_INSPECTION_SCHEMA,
@@ -46,15 +49,17 @@ def test_roformer_contract_reuses_bounded_non_authorising_safety_schemas() -> No
     assert inspection["authorizes_execution"] is False
     assert worker["request_schema"] == SEPARATION_WORKER_REQUEST_SCHEMA
     assert worker["result_schema"] == SEPARATION_WORKER_RESULT_SCHEMA
-    assert worker["roles"] == ["drums", "bass", "other", "vocals"]
+    assert worker["protocol_schema"] == ROFORMER_WORKER_PROTOCOL_SCHEMA
+    assert worker["roles"] == ["bass", "drums", "other", "vocals"]
     assert worker["output_allowlist"] == [
-        "STEMS/drums.wav",
         "STEMS/bass.wav",
+        "STEMS/drums.wav",
         "STEMS/other.wav",
         "STEMS/vocals.wav",
     ]
     assert worker["source"]["maximum_seconds"] == 15.0
-    assert worker["implemented"] is False
+    assert worker["protocol_implemented"] is True
+    assert worker["executable_adapter_implemented"] is False
     assert worker["execution_permitted"] is False
     assert all(value is False for value in plan["effects"].values())
 
