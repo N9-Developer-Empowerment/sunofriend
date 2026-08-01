@@ -1774,6 +1774,37 @@ Each working day should aim for one narrow vertical improvement:
   numerical operations, overlap handling or inference output.
 - Next smallest step: completed by the BF16 runtime output observation above.
 
+### 2026-08-01 — complete Python import-closure binding
+
+- Goal: replace the authorised worker's unbounded Python import assumption
+  with exact, independently verified evidence without expanding any product
+  permission.
+- Change or experiment: the child captured every post-inference `sys.modules`
+  entry, opened file-backed modules without following symlinks, sealed hashes
+  and per-root manifests, then proved that the module-name set stayed stable.
+  The parent independently reopened and rehashed every claimed file and
+  emitted only path-free evidence. Shared checkpoint inspection was moved to a
+  small artifact module so the plan no longer hashes itself recursively.
+- Inputs: the unchanged authorised `Be Alone` 191–206 second excerpt, pinned
+  MLX overlay/runtime, repository Python sources and exact Kim Vocal 2
+  checkpoint. No network or additional audio was used.
+- Evidence and metrics: 320 Python modules, 277 file-backed modules,
+  18,067,576 aggregate file bytes and zero unclassified modules. Closure
+  evidence SHA-256 is `ce187b7b…c74f`; complete worker evidence is
+  `3de1b71e…0a8f`; the owner-only 92,670-byte observation file hashes to
+  `230aa5b8…8e6`.
+- Listening result: not applicable; this run verifies execution provenance,
+  not musical preference.
+- Decision: close only `complete_worker_import_closure_not_bound`. Keep every
+  product, publication, Simple, Studio and source-graph permission false.
+- Problems/risks: `sys.modules` does not enumerate native libraries loaded
+  outside Python's module registry. Path-to-execution TOCTOU, arbitrary
+  outbound-attempt observation, mutable post-observation files and human
+  listening remain open.
+- Next smallest step: close path-to-execution TOCTOU and add bounded
+  outbound-attempt observation before resolving the prepared listening
+  reviews.
+
 ### 2026-08-01 — second-song MelRoFormer vocal-MIDI evidence
 
 - Goal: close the cross-song downstream-MIDI blocker without changing the
@@ -1801,12 +1832,14 @@ Each working day should aim for one narrow vertical improvement:
   activation, publication and every product permission false because the
   controls are estimated, not score truth.
 - Problems/risks: both observations are short and monophonic. Exact BF16
-  runtime parity now passes, but the original-FP32-to-published-BF16 precision
-  effect, complete import-closure binding, hash-before-exec TOCTOU and human
-  listening remain open.
-- Next smallest step: have the user complete and export both sealed blind
-  reviews, resolve them only after completion, then compare their cross-song
-  listening evidence before reconsidering any default.
+  runtime parity now passes. The complete post-inference Python `sys.modules`
+  closure is bound for one exact authorised worker run, but native non-module
+  loads, the original-FP32-to-published-BF16 precision effect,
+  hash-before-exec TOCTOU and human listening remain open.
+- Next smallest step: close the path-to-execution TOCTOU window and add bounded
+  outbound-attempt observation, then have the user complete and export the
+  sealed blind reviews. Resolve them only after completion before
+  reconsidering any default.
 
 ### 2026-08-01 — authorised vocal worker to downstream MIDI
 
@@ -1854,9 +1887,11 @@ Each working day should aim for one narrow vertical improvement:
 - Listening result: not applicable; the files contain a mathematical canary.
 - Decision: the isolation and persistence rules can coexist in one synthetic
   worker. Do not transfer that result to the model worker yet.
-- Problems/risks: the profile provider is deprecated; arbitrary attempt
-  observation, hash-before-exec path TOCTOU and complete Python import closure
-  remain open. Ordinary output bytes can change after the parent observation.
+- Problems/risks: at this synthetic stage the profile provider was deprecated;
+  arbitrary-attempt observation, hash-before-exec path TOCTOU and complete
+  Python import closure were still open. The later authorised closure run above
+  closes only the Python-import item. Ordinary output bytes can change after
+  the parent observation.
 - Next smallest step: add the real authorised-excerpt action to this exact
   worker, bind all model/source/checkpoint evidence, then run it once under the
   same profile and reverify its PCM24 outputs.

@@ -8,6 +8,7 @@ import errno
 import json
 import os
 import socket
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -22,6 +23,11 @@ from sunofriend._separation_melroformer_real_bridge import (
     _load_private_melroformer_model,
 )
 from sunofriend._separation_melroformer_worker_sandbox import _synthetic_arrays
+from sunofriend._separation_python_import_closure import (
+    _capture_python_import_closure_claim,
+    _mark_python_import_closure_stable,
+    _melroformer_python_import_roots,
+)
 
 
 def main() -> int:
@@ -36,6 +42,8 @@ def main() -> int:
     parser.add_argument("--checkpoint", type=Path)
     parser.add_argument("--companion-root", type=Path)
     parser.add_argument("--device", choices=("gpu", "cpu"), default="gpu")
+    parser.add_argument("--bind-python-import-closure", action="store_true")
+    parser.add_argument("--repository-root", type=Path)
     args = parser.parse_args()
 
     real_values = (
@@ -51,6 +59,15 @@ def main() -> int:
         )
     if args.synthetic_canary and any(value is not None for value in real_values):
         parser.error("real-model arguments are invalid with --synthetic-canary")
+    if args.bind_python_import_closure and (
+        args.synthetic_canary or args.repository_root is None
+    ):
+        parser.error(
+            "--bind-python-import-closure requires an authorised excerpt and "
+            "--repository-root"
+        )
+    if not args.bind_python_import_closure and args.repository_root is not None:
+        parser.error("--repository-root requires --bind-python-import-closure")
 
     network = _network_canary()
     fork = _fork_canary()
@@ -109,7 +126,25 @@ def main() -> int:
     }
     if model_evidence is not None:
         result["model"] = model_evidence
-    print(json.dumps(result, sort_keys=True, separators=(",", ":")))
+    closure = None
+    if args.bind_python_import_closure:
+        roots = _melroformer_python_import_roots(
+            repository_root=args.repository_root,
+            source_root=args.source_root,
+            runtime_environment_root=sys.prefix,
+            base_runtime_root=sys.base_prefix,
+        )
+        closure = _capture_python_import_closure_claim(roots=roots)
+        result["schema"] = (
+            "sunofriend.private-melroformer-authorised-worker-import-closure-child.v1"
+        )
+        result["import_closure"] = plain(closure)
+    encoded = json.dumps(result, sort_keys=True, separators=(",", ":"))
+    if closure is not None:
+        stable = _mark_python_import_closure_stable(closure)
+        result["import_closure"] = plain(stable)
+        encoded = json.dumps(result, sort_keys=True, separators=(",", ":"))
+    print(encoded)
     return 0
 
 

@@ -5,7 +5,9 @@ import importlib.util
 import json
 import stat
 import subprocess
+import types
 from pathlib import Path
+from types import MappingProxyType, SimpleNamespace
 
 import numpy as np
 import pytest
@@ -19,12 +21,20 @@ from sunofriend._separation_melroformer_upstream_evidence import (
     CONVERSION_CHECKPOINT_BYTES,
     CONVERSION_CHECKPOINT_SHA256,
 )
+from sunofriend._separation_python_import_closure import (
+    _capture_python_import_closure_claim,
+    _mark_python_import_closure_stable,
+    _verify_python_import_closure_claim,
+)
 from sunofriend.interface_contract import DIRECT_TUI_COMMANDS, PUBLIC_COMMANDS
 from sunofriend.separation_contract import _canonical_json_bytes
 
 
+@pytest.mark.parametrize("bind_python_import_closure", [False, True])
 def test_parent_binds_authorised_worker_denials_and_pcm24(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    bind_python_import_closure: bool,
 ) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()
@@ -76,6 +86,12 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
         "_load_private_authorised_excerpt_pcm24",
         lambda *_, **__: (source, authorisation),
     )
+    verified_closure = _verified_import_closure(tmp_path / "closure-fixture")
+    monkeypatch.setattr(
+        worker,
+        "_verify_python_import_closure_claim",
+        lambda *_, **__: verified_closure,
+    )
 
     def fake_run(command: list[str], **_: object) -> subprocess.CompletedProcess[str]:
         output = Path(command[command.index("--destination") + 1])
@@ -86,8 +102,13 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
             instrumental=instrumental,
             np=np,
         )
+        closure_requested = "--bind-python-import-closure" in command
         child = {
-            "schema": worker.CHILD_SCHEMA,
+            "schema": (
+                worker.IMPORT_CLOSURE_CHILD_SCHEMA
+                if closure_requested
+                else worker.CHILD_SCHEMA
+            ),
             "status": "complete",
             "canaries": {
                 "network_connect_ex": 1,
@@ -133,6 +154,8 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
             },
             "quarantine": plain(quarantine),
         }
+        if closure_requested:
+            child["import_closure"] = {"fixture": True}
         return subprocess.CompletedProcess(command, 0, json.dumps(child), "")
 
     monkeypatch.setattr(worker.subprocess, "run", fake_run)
@@ -145,6 +168,7 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
         authorisation_report_path=report,
         expected_authorisation_report_sha256="a" * 64,
         staging_directory=tmp_path / "staging",
+        bind_python_import_closure=bind_python_import_closure,
     )
 
     assert evidence["status"] == "authorised_model_worker_complete_parent_verified"
@@ -153,6 +177,15 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
     assert evidence["quarantine"]["evidence_identical"] is True
     assert all(value is False for value in evidence["permissions"].values())
     assert "/Users/" not in repr(evidence)
+    assert evidence["artifacts"]["complete_python_import_closure_bound"] is (
+        bind_python_import_closure
+    )
+    if bind_python_import_closure:
+        assert evidence["schema"] == worker.IMPORT_CLOSURE_SCHEMA
+        assert evidence["import_closure"] == verified_closure
+    else:
+        assert evidence["schema"] == worker.SCHEMA
+        assert "import_closure" not in evidence
 
     resigned = plain(evidence)
     resigned["permissions"]["publication_permitted"] = True
@@ -216,3 +249,33 @@ def _identity(label: str) -> dict[str, object]:
         "bytes": len(label),
         "sha256": hashlib.sha256(label.encode()).hexdigest(),
     }
+
+
+def _verified_import_closure(root: Path) -> object:
+    root.mkdir()
+    root_ids = (
+        "source_overlay",
+        "runtime_environment",
+        "repository",
+        "base_runtime",
+        "system_library",
+        "system_usr_lib",
+    )
+    roots = {}
+    for name in root_ids:
+        directory = root / name
+        directory.mkdir()
+        roots[name] = directory
+    checked_roots = MappingProxyType(roots)
+    module_path = roots["repository"] / "worker_module.py"
+    module_path.write_text("VALUE = 1\n", encoding="utf-8")
+    file_module = types.ModuleType("fixture.file")
+    file_module.__file__ = str(module_path)
+    built_in = types.ModuleType("fixture_builtin")
+    built_in.__spec__ = SimpleNamespace(origin="built-in")
+    modules = {"fixture.file": file_module, "fixture_builtin": built_in}
+    claim = _capture_python_import_closure_claim(
+        roots=checked_roots, modules=modules
+    )
+    stable = _mark_python_import_closure_stable(claim, modules=modules)
+    return _verify_python_import_closure_claim(stable, roots=checked_roots)

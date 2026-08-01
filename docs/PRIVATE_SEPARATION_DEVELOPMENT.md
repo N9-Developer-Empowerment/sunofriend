@@ -879,7 +879,7 @@ PYTHONPATH=src .venv/bin/python scripts/private-melroformer-challenger.py \
   --companion-root /absolute/private/cache/checkpoint-directory
 ```
 
-The current v14 plan has `artifact_preflight_complete: true` while retaining
+The current v15 plan has `artifact_preflight_complete: true` while retaining
 `worker_start_permitted: false`.
 
 `_separation_melroformer_worker_protocol.py` fixes one or two path-free,
@@ -1015,13 +1015,24 @@ GPU output is allowed to vary only under the measured per-run reconstruction
 policy, so every run records its actual hashes.
 
 This closes the earlier model-worker network-denial, outside-write and PCM24
-binding blockers. It does not observe arbitrary outbound-attempt history,
-bind the complete Python import closure, close hash-before-exec path TOCTOU,
-independently verify PyTorch-versus-MLX inference output or complete human
-listening. Exact weight-conversion parity is now verified separately. The
-ordinary private output files can also change after the parent's final
-observation. Every Simple, Studio, source-graph, selection and publication
-permission remains false.
+binding blockers. A later run of the same authorised `Be Alone` excerpt also
+bound the complete post-inference Python `sys.modules` closure for that exact
+worker execution. It classified 320 modules, independently reopened and
+rehashed all 277 file-backed modules totalling 18,067,576 bytes, and found zero
+unclassified modules. Its path-free closure evidence SHA-256 is
+`ce187b7b154269cc3dd7c542db2573bce7194a142aecd3796193d7fb0db2c74f`;
+the complete worker evidence is
+`3de1b71ef552cd46d1bff1784c4843b7709eeaf945cf3778e53737ca08f350a8`.
+The persisted owner-only observation file is 92,670 bytes and hashes to
+`230aa5b873e3b81e110bff187ed71d86a7859bec843b9eb71a28f3ca1d0328e6`.
+
+This Python binding is deliberately narrower than a complete executable-image
+proof. It does not bind native libraries loaded outside `sys.modules`, close
+hash-before-exec path TOCTOU, observe arbitrary outbound-attempt history or
+complete human listening. Exact PyTorch-versus-MLX runtime parity is now
+verified separately. Ordinary private output files can also change after the
+parent's final observation. Every Simple, Studio, source-graph, selection and
+publication permission remains false.
 
 The development-only command is:
 
@@ -1036,6 +1047,7 @@ PYTHONPATH=src .venv-ai/bin/python \
   --authorised-excerpt /absolute/private/authorised-separation-excerpt.json \
   --authorisation-report-sha256 <exact-report-sha256> \
   --staging-directory /absolute/fresh/private-output \
+  --bind-python-import-closure \
   --device gpu
 ```
 

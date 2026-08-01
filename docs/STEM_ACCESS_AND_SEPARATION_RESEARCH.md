@@ -2066,8 +2066,9 @@ promotion are not implemented**
   `-21.093168` dBFS fixed-window sample RMS; the mixed source is unlevelled,
   identity is absent from the page and the answer key remains unopened.
 - [ ] Complete and resolve that precision review before deciding whether an
-  FP32 MLX conversion is worth its doubled artifact size. Complete
-  import-closure and hash-before-exec TOCTOU also remain open.
+  FP32 MLX conversion is worth its doubled artifact size. The complete Python
+  `sys.modules` closure is now bound for one exact authorised worker run;
+  native non-module loads and hash-before-exec TOCTOU remain open.
 - [ ] Consider a deterministic role-specific ensemble only after its members
   have separate held-out evidence; never infer a winner from popularity or a
   model-runner catalogue.

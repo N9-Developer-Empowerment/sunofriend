@@ -88,8 +88,15 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
         plan["runtime"]["authorised_worker_sandbox_latest_observation"][
             "evidence_sha256"
         ]
-        == "53b6fd72797e127c4582d29e9c4454cf3c9afe247daf84279e92710abffb00e1"
+        == "3de1b71ef552cd46d1bff1784c4843b7709eeaf945cf3778e53737ca08f350a8"
     )
+    assert plan["runtime"]["complete_python_import_closure_bound"] is True
+    closure = plan["runtime"]["authorised_worker_sandbox_latest_observation"]
+    assert closure["complete_python_import_closure_bound"] is True
+    assert closure["python_module_count"] == 320
+    assert closure["python_module_file_count"] == 277
+    assert closure["python_unclassified_module_count"] == 0
+    assert closure["native_non_module_loads_bound"] is False
     assert (
         plan["runtime"]["authorised_worker_sandbox_latest_observation"][
             "observation_persisted_owner_only"
@@ -179,12 +186,14 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
         "checkpoint_local_hash_unverified",
         "checkpoint_companion_files_unverified",
         "runtime_source_materialisation_missing",
-        "complete_worker_import_closure_not_bound",
         "equal_level_human_listening_not_completed",
         "fp32_bf16_precision_listening_not_completed",
         "model_worker_hash_before_exec_path_toctou_not_closed",
         "outbound_model_attempt_observation_not_implemented",
     }.issubset(plan["decision"]["blockers"])
+    assert "complete_worker_import_closure_not_bound" not in plan["decision"][
+        "blockers"
+    ]
     assert (
         "conversion_parity_not_independently_verified"
         not in plan["decision"]["blockers"]
@@ -306,7 +315,8 @@ def test_private_plan_script_outputs_json_without_public_route() -> None:
     )
     plan = json.loads(completed.stdout)
     assert plan["decision"]["run_status"] == (
-        "bf16_runtime_parity_verified_precision_and_midi_reviews_pending"
+        "bf16_runtime_parity_and_python_import_closure_verified_"
+        "reviews_and_safety_pending"
     )
     assert plan["effects"]["network_used"] is False
     assert "private-melroformer-challenger" not in PUBLIC_COMMANDS

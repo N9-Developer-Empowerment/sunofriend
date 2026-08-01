@@ -9,9 +9,6 @@ installer, downloader or product route is provided here.
 
 from __future__ import annotations
 
-import hashlib
-import os
-import stat
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +27,17 @@ from ._separation_melroformer_inference_parity import (
     EVIDENCE_SHA256 as INFERENCE_PARITY_EVIDENCE_SHA256,
     POLICY_ID as INFERENCE_PARITY_POLICY_ID,
     SCHEMA as INFERENCE_PARITY_SCHEMA,
+)
+from ._separation_melroformer_artifacts import (
+    APPROVAL_RECORDED_AT,
+    CONFIG_BYTES,
+    CONFIG_NAME,
+    CONFIG_SHA256,
+    LICENSE_BYTES,
+    LICENSE_NAME,
+    LICENSE_SHA256,
+    _inspect_companion_files as _inspect_exact_companion_files,
+    _inspect_local_checkpoint as _inspect_exact_local_checkpoint,
 )
 from ._separation_melroformer_precision_review import (
     POLICY_ID as PRECISION_REVIEW_POLICY_ID,
@@ -70,28 +78,20 @@ from ._separation_safetensors_inspection import (
 
 
 AUTHORISED_WORKER_SANDBOX_SCHEMA = (
-    "sunofriend.private-melroformer-authorised-worker-sandbox.v1"
+    "sunofriend.private-melroformer-authorised-worker-sandbox.v2"
 )
 
 
-PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v14"
-POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v14"
+PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v15"
+POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v15"
 AUDITED_AT = "2026-08-01"
-APPROVAL_RECORDED_AT = "2026-08-01"
 CHECKPOINT_NAME = "model.safetensors"
 CHECKPOINT_URL = (
     "https://huggingface.co/mlx-community/"
     "mel-roformer-kim-vocal-2-mlx/resolve/"
     f"{CONVERSION_REVISION}/{CHECKPOINT_NAME}"
 )
-CONFIG_NAME = "config.json"
-CONFIG_BYTES = 833
-CONFIG_SHA256 = "3300eacac960ab46933ef6df6b838eb35de1f0321db9242c1b06e6d2a6a62b58"
-LICENSE_NAME = "LICENSE"
-LICENSE_BYTES = 1_500
-LICENSE_SHA256 = "1aa245b55067df5c63c847894e7040f76fa79ddde83e9e5ed8a5c29ef1865c14"
 _BASE_BLOCKERS = (
-    "complete_worker_import_closure_not_bound",
     "equal_level_human_listening_not_completed",
     "fp32_bf16_precision_listening_not_completed",
     "model_worker_hash_before_exec_path_toctou_not_closed",
@@ -447,31 +447,37 @@ def _build_private_melroformer_challenger_plan(
             "authorised_worker_sandbox_latest_observation": {
                 "observed_at": "2026-08-01",
                 "evidence_sha256": (
-                    "53b6fd72797e127c4582d29e9c4454cf3c9afe247daf84279e92710abffb00e1"
+                    "3de1b71ef552cd46d1bff1784c4843b7709eeaf945cf3778e53737ca08f350a8"
                 ),
                 "persisted_observation_file_sha256": (
-                    "bf331358c526773c9722169c691a6eaded1b6b1c2052bef4eed9192877cb38f0"
+                    "230aa5b873e3b81e110bff187ed71d86a7859bec843b9eb71a28f3ca1d0328e6"
                 ),
                 "authorisation_report_sha256": (
-                    "9f98d864601ef66ed9d7a06c5a95aeee1c0969b39c70a65078ef2da6f86d982d"
+                    "00685db1ba4d5ac0927c25a5ef40792ab36c56cdb36dcc20cc5f926fb9774e90"
                 ),
-                "track_id": "i-am-a-alien-mashup",
+                "track_id": "be-alone",
                 "network_denial_canary": "EPERM",
                 "child_process_denial_canary": "EPERM",
                 "outside_write_denial_canary": "EPERM",
                 "child_and_parent_pcm24_evidence_identical": True,
                 "pcm24_reconstruction_maximum_integer_error_lsb": 1,
-                "vocal_pcm24_sha256": (
-                    "6076f011db09f1b0ed781a718c95ea984762ee2d0be06872340d1c61ecbd7f83"
-                ),
-                "instrumental_pcm24_sha256": (
-                    "31b9b1319f23680fdb90ccc5bef9b44aba4a82bddd63334c2fa2cd4c40271ef2"
-                ),
                 "observation_persisted_owner_only": True,
-                "complete_python_import_closure_bound": False,
+                "complete_python_import_closure_bound": True,
+                "python_import_closure_schema": (
+                    "sunofriend.private-python-import-closure-verified.v1"
+                ),
+                "python_import_closure_evidence_sha256": (
+                    "ce187b7b154269cc3dd7c542db2573bce7194a142aecd3796193d7fb0db2c74f"
+                ),
+                "python_module_count": 320,
+                "python_module_file_count": 277,
+                "python_module_file_bytes": 18_067_576,
+                "python_unclassified_module_count": 0,
+                "native_non_module_loads_bound": False,
                 "hash_before_exec_path_toctou_closed": False,
                 "product_route_permitted": False,
             },
+            "complete_python_import_closure_bound": True,
             "model_worker_implemented": True,
             "apple_resource_bounds_measured": True,
             "resource_measurement_host": "Apple silicon Mac with 36 GB RAM",
@@ -680,7 +686,8 @@ def _build_private_melroformer_challenger_plan(
         "decision": {
             "status": "blocked",
             "run_status": (
-                "bf16_runtime_parity_verified_precision_and_midi_reviews_pending"
+                "bf16_runtime_parity_and_python_import_closure_verified_"
+                "reviews_and_safety_pending"
             ),
             "candidate_registered": True,
             "checkpoint_published_identity_pinned": True,
@@ -693,6 +700,8 @@ def _build_private_melroformer_challenger_plan(
             "worker_start_permitted": False,
             "blockers": blockers,
             "next_safe_actions": [
+                "close the model-worker hash-before-exec path TOCTOU without weakening the sandbox or descriptor policy",
+                "add bounded observation for every model-process outbound socket attempt rather than relying only on the deliberate denial canary",
                 "compare original-FP32 and published-BF16 vocal outputs in an equal-level blind review before deciding whether a larger FP32 MLX artifact is justified",
                 "complete both prepared equal-level blind Kim-Vocal-2-versus-Moises MIDI listening reviews without opening either answer key",
                 "resolve only the user-exported complete reviews and compare cross-song listening evidence before reconsidering any default",
@@ -716,121 +725,20 @@ def _build_private_melroformer_challenger_plan(
 
 
 def _inspect_companion_files(value: str | Path) -> dict[str, Any]:
-    root = Path(value).expanduser().absolute()
-    if not root.is_dir() or root.is_symlink():
-        raise ValueError("MelBand-RoFormer companion root must be a directory")
-    files = {
-        CONFIG_NAME: _inspect_file_identity(
-            root / CONFIG_NAME,
-            expected_bytes=CONFIG_BYTES,
-            expected_sha256=CONFIG_SHA256,
-        ),
-        LICENSE_NAME: _inspect_file_identity(
-            root / LICENSE_NAME,
-            expected_bytes=LICENSE_BYTES,
-            expected_sha256=LICENSE_SHA256,
-        ),
-    }
-    return {
-        "root": str(root),
-        "files": files,
-        "all_cryptographic_identities_verified": all(
-            item["cryptographic_identity_verified"] for item in files.values()
-        ),
-    }
-
-
-def _inspect_file_identity(
-    path: Path, *, expected_bytes: int, expected_sha256: str
-) -> dict[str, Any]:
-    before = path.lstat()
-    if (
-        stat.S_ISLNK(before.st_mode)
-        or not stat.S_ISREG(before.st_mode)
-        or before.st_nlink != 1
-    ):
-        raise ValueError(
-            "MelBand-RoFormer companion must be a single-link regular file"
-        )
-    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
-    descriptor = os.open(path, flags)
-    try:
-        os.set_inheritable(descriptor, False)
-        opened = os.fstat(descriptor)
-        if os.get_inheritable(descriptor) or _identity(opened) != _identity(before):
-            raise ValueError("MelBand-RoFormer companion changed before hashing")
-        digest = hashlib.sha256()
-        while block := os.read(descriptor, 1024 * 1024):
-            digest.update(block)
-        after = os.fstat(descriptor)
-    finally:
-        os.close(descriptor)
-    rebound = path.lstat()
-    if _identity(after) != _identity(opened) or _identity(rebound) != _identity(opened):
-        raise ValueError("MelBand-RoFormer companion changed during hashing")
-    sha256 = digest.hexdigest()
-    size_match = opened.st_size == expected_bytes
-    hash_match = sha256 == expected_sha256
-    return {
-        "path": str(path),
-        "bytes": opened.st_size,
-        "sha256": sha256,
-        "published_size_match": size_match,
-        "published_sha256_match": hash_match,
-        "cryptographic_identity_verified": size_match and hash_match,
-    }
+    return _inspect_exact_companion_files(
+        value,
+        config_bytes=CONFIG_BYTES,
+        config_sha256=CONFIG_SHA256,
+        license_bytes=LICENSE_BYTES,
+        license_sha256=LICENSE_SHA256,
+    )
 
 
 def _inspect_local_checkpoint(value: str | Path) -> dict[str, Any]:
-    path = Path(value).expanduser().absolute()
-    before = path.lstat()
-    if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
-        raise ValueError(
-            "MelBand-RoFormer checkpoint must be a non-symlink regular file"
-        )
-    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
-    flags |= getattr(os, "O_CLOEXEC", 0)
-    descriptor = os.open(path, flags)
-    try:
-        os.set_inheritable(descriptor, False)
-        opened = os.fstat(descriptor)
-        if (
-            os.get_inheritable(descriptor)
-            or not stat.S_ISREG(opened.st_mode)
-            or _identity(opened) != _identity(before)
-        ):
-            raise ValueError("MelBand-RoFormer checkpoint changed before hashing")
-        digest = hashlib.sha256()
-        while block := os.read(descriptor, 1024 * 1024):
-            digest.update(block)
-        after = os.fstat(descriptor)
-    finally:
-        os.close(descriptor)
-    rebound = path.lstat()
-    if _identity(after) != _identity(opened) or _identity(rebound) != _identity(opened):
-        raise ValueError("MelBand-RoFormer checkpoint changed during hashing")
-    sha256 = digest.hexdigest()
-    size_match = opened.st_size == CONVERSION_CHECKPOINT_BYTES
-    hash_match = sha256 == CONVERSION_CHECKPOINT_SHA256
-    return {
-        "provided": True,
-        "path": str(path),
-        "bytes": opened.st_size,
-        "sha256": sha256,
-        "published_size_match": size_match,
-        "published_sha256_match": hash_match,
-        "cryptographic_identity_verified": size_match and hash_match,
-    }
-
-
-def _identity(value: os.stat_result) -> tuple[int, int, int, int, int, int]:
-    return (
-        value.st_dev,
-        value.st_ino,
-        value.st_mode,
-        value.st_nlink,
-        value.st_size,
-        value.st_mtime_ns,
+    return _inspect_exact_local_checkpoint(
+        value,
+        expected_bytes=CONVERSION_CHECKPOINT_BYTES,
+        expected_sha256=CONVERSION_CHECKPOINT_SHA256,
     )
 
 

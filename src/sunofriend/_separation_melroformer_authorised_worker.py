@@ -20,7 +20,7 @@ from ._separation_macos_sandbox_probe import (
     SANDBOX_EXEC_PATH,
     _regular_file_identity,
 )
-from ._separation_melroformer_challenger_plan import (
+from ._separation_melroformer_artifacts import (
     _inspect_companion_files,
     _inspect_local_checkpoint,
 )
@@ -47,14 +47,28 @@ from ._separation_melroformer_worker_sandbox import (
     _sandbox_profile,
     _validate_child_canaries,
 )
+from ._separation_python_import_closure import (
+    _melroformer_python_import_roots,
+    _validate_verified_python_import_closure,
+    _verify_python_import_closure_claim,
+)
 from .separation_contract import _canonical_json_bytes, _freeze_json
 
 
 SCHEMA = "sunofriend.private-melroformer-authorised-worker-sandbox.v1"
 POLICY_ID = "private-melroformer-authorised-worker-sandbox-v1"
 CHILD_SCHEMA = "sunofriend.private-melroformer-authorised-worker-child.v1"
+IMPORT_CLOSURE_SCHEMA = (
+    "sunofriend.private-melroformer-authorised-worker-sandbox.v2"
+)
+IMPORT_CLOSURE_POLICY_ID = (
+    "private-melroformer-authorised-worker-sandbox-import-closure-v2"
+)
+IMPORT_CLOSURE_CHILD_SCHEMA = (
+    "sunofriend.private-melroformer-authorised-worker-import-closure-child.v1"
+)
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
-_MAXIMUM_STDOUT_BYTES = 256 * 1024
+_MAXIMUM_STDOUT_BYTES = 2 * 1024 * 1024
 
 
 def _run_private_melroformer_authorised_worker(
@@ -68,6 +82,7 @@ def _run_private_melroformer_authorised_worker(
     expected_authorisation_report_sha256: str,
     staging_directory: str | Path,
     device: str = "gpu",
+    bind_python_import_closure: bool = False,
 ) -> Mapping[str, Any]:
     """Run and parent-verify one exact, bounded authorised worker on Darwin."""
 
@@ -122,8 +137,7 @@ def _run_private_melroformer_authorised_worker(
         "TMPDIR": "/var/empty",
         "TRANSFORMERS_OFFLINE": "1",
     }
-    completed = subprocess.run(
-        [
+    command = [
             artifacts_before["provider"]["resolved_path"],
             "-p",
             profile,
@@ -146,7 +160,17 @@ def _run_private_melroformer_authorised_worker(
             str(output),
             "--outside-write-canary",
             str(outside),
-        ],
+        ]
+    if bind_python_import_closure:
+        command.extend(
+            [
+                "--bind-python-import-closure",
+                "--repository-root",
+                str(repository),
+            ]
+        )
+    completed = subprocess.run(
+        command,
         check=False,
         capture_output=True,
         text=True,
@@ -170,7 +194,22 @@ def _run_private_melroformer_authorised_worker(
         child = json.loads(completed.stdout)
     except json.JSONDecodeError as error:
         raise RuntimeError("MelRoFormer authorised worker returned invalid JSON") from error
-    _validate_authorised_child(child)
+    _validate_authorised_child(
+        child, require_import_closure=bind_python_import_closure
+    )
+    import_closure = None
+    if bind_python_import_closure:
+        roots = _melroformer_python_import_roots(
+            repository_root=repository,
+            source_root=source,
+            runtime_environment_root=runtime_launch_path.parent.parent,
+            base_runtime_root=Path(
+                artifacts_before["runtime"]["resolved_path"]
+            ).parent.parent,
+        )
+        import_closure = _verify_python_import_closure_claim(
+            child["import_closure"], roots=roots
+        )
     child_quarantine = _validate_private_melroformer_pcm24_quarantine(
         child["quarantine"]
     )
@@ -217,8 +256,10 @@ def _run_private_melroformer_authorised_worker(
     bridge = child["model"]["bridge"]
     inference = child["model"]["inference"]
     payload = {
-        "schema": SCHEMA,
-        "policy_id": POLICY_ID,
+        "schema": IMPORT_CLOSURE_SCHEMA if import_closure else SCHEMA,
+        "policy_id": (
+            IMPORT_CLOSURE_POLICY_ID if import_closure else POLICY_ID
+        ),
         "status": "authorised_model_worker_complete_parent_verified",
         "artifacts": {
             "provider": _path_free_identity(artifacts_before["provider"]),
@@ -232,7 +273,7 @@ def _run_private_melroformer_authorised_worker(
             "authorised_audio_sha256": authorisation_before["audio_sha256"],
             "unchanged_after_worker": True,
             "hash_before_exec_path_toctou_closed": False,
-            "complete_python_import_closure_bound": False,
+            "complete_python_import_closure_bound": import_closure is not None,
         },
         "isolation": {
             "profile_sha256": hashlib.sha256(profile.encode("utf-8")).hexdigest(),
@@ -246,6 +287,7 @@ def _run_private_melroformer_authorised_worker(
             "allowed_write_scope": "fresh_private_staging_tree_only",
         },
         "canaries": child["canaries"],
+        **({"import_closure": import_closure} if import_closure else {}),
         "authorisation": dict(authorisation_before),
         "model": {
             "candidate_id": bridge["candidate_id"],
@@ -321,7 +363,7 @@ def _run_private_melroformer_authorised_worker(
             "private_development_observation_only": True,
             "arbitrary_model_attempt_stream_observed": False,
             "hash_before_exec_path_toctou_closed": False,
-            "complete_python_import_closure_bound": False,
+            "complete_python_import_closure_bound": import_closure is not None,
             "ordinary_outputs_can_change_after_parent_verification": True,
             "conversion_parity_independently_verified": False,
             "human_listening_completed": False,
@@ -382,11 +424,18 @@ def _artifacts_equal(before: Mapping[str, Any], after: Mapping[str, Any]) -> boo
     )
 
 
-def _validate_authorised_child(value: Any) -> None:
+def _validate_authorised_child(
+    value: Any, *, require_import_closure: bool = False
+) -> None:
+    expected_fields = {"schema", "status", "canaries", "model", "quarantine"}
+    expected_schema = CHILD_SCHEMA
+    if require_import_closure:
+        expected_fields.add("import_closure")
+        expected_schema = IMPORT_CLOSURE_CHILD_SCHEMA
     if (
         not isinstance(value, dict)
-        or set(value) != {"schema", "status", "canaries", "model", "quarantine"}
-        or value.get("schema") != CHILD_SCHEMA
+        or set(value) != expected_fields
+        or value.get("schema") != expected_schema
         or value.get("status") != "complete"
         or not isinstance(value.get("model"), dict)
         or set(value["model"]) != {"authorisation", "bridge", "inference"}
@@ -415,6 +464,80 @@ def _validate_authorised_child(value: Any) -> None:
 
 
 def _validate_private_melroformer_authorised_worker(
+    document: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """Validate either the historical v1 or import-closure-bound v2 record."""
+
+    schema = document.get("schema") if isinstance(document, Mapping) else None
+    if schema == SCHEMA:
+        return _validate_private_melroformer_authorised_worker_v1(document)
+    if schema == IMPORT_CLOSURE_SCHEMA:
+        return _validate_private_melroformer_authorised_worker_v2(document)
+    raise ValueError("MelRoFormer authorised worker evidence identity differs")
+
+
+def _validate_private_melroformer_authorised_worker_v2(
+    document: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    value = _plain(document)
+    digest = value.pop("evidence_sha256", None) if isinstance(value, dict) else None
+    if not _is_sha(digest) or digest != hashlib.sha256(
+        _canonical_json_bytes(value)
+    ).hexdigest():
+        raise ValueError("MelRoFormer authorised worker evidence self-hash differs")
+    if (
+        value.get("schema") != IMPORT_CLOSURE_SCHEMA
+        or value.get("policy_id") != IMPORT_CLOSURE_POLICY_ID
+        or value.get("status")
+        != "authorised_model_worker_complete_parent_verified"
+        or set(value)
+        != {
+            "schema",
+            "policy_id",
+            "status",
+            "artifacts",
+            "isolation",
+            "canaries",
+            "import_closure",
+            "authorisation",
+            "model",
+            "inference",
+            "quarantine",
+            "conclusion",
+            "permissions",
+            "effects",
+            "limitations",
+        }
+    ):
+        raise ValueError("MelRoFormer authorised worker import-closure fields differ")
+    _validate_verified_python_import_closure(value["import_closure"])
+    if (
+        value["artifacts"].get("complete_python_import_closure_bound") is not True
+        or value["limitations"].get("complete_python_import_closure_bound")
+        is not True
+        or value["artifacts"].get("hash_before_exec_path_toctou_closed") is not False
+        or value["limitations"].get("hash_before_exec_path_toctou_closed") is not False
+    ):
+        raise ValueError("MelRoFormer authorised worker import-closure claim differs")
+
+    legacy = _plain(value)
+    legacy.pop("import_closure")
+    legacy["schema"] = SCHEMA
+    legacy["policy_id"] = POLICY_ID
+    legacy["artifacts"]["complete_python_import_closure_bound"] = False
+    legacy["limitations"]["complete_python_import_closure_bound"] = False
+    legacy["evidence_sha256"] = hashlib.sha256(
+        _canonical_json_bytes(legacy)
+    ).hexdigest()
+    _validate_private_melroformer_authorised_worker_v1(legacy)
+    checked = {**value, "evidence_sha256": digest}
+    encoded = json.dumps(checked, sort_keys=True, separators=(",", ":"))
+    if "/Users/" in encoded or "file://" in encoded or "://" in encoded:
+        raise ValueError("MelRoFormer authorised worker evidence is not path-free")
+    return _freeze_json(checked)
+
+
+def _validate_private_melroformer_authorised_worker_v1(
     document: Mapping[str, Any],
 ) -> Mapping[str, Any]:
     value = _plain(document)

@@ -294,10 +294,16 @@ report the result, then move on.
   excerpt at its own sealed 114 BPM. The two inactive observations contain 14
   and 23 notes, and each has a prepared equal-level blind Kim-versus-Moises
   review whose answer key remains unopened. Their provider/local controls are
-  estimates rather than ground truth, so they select no winner. The worker does
-  not observe every arbitrary connection attempt, bind the complete Python
-  import closure, close hash-before-exec path TOCTOU or make mutable output
-  files immutable. Cross-song downstream MIDI is complete. The exact
+  estimates rather than ground truth, so they select no winner. The latest
+  authorised `Be Alone` worker run also bound the complete post-inference
+  `sys.modules` Python import closure: 320 modules backed by 277 regular files
+  totalling 18,067,576 bytes, with zero unclassified modules. The child sealed
+  path-free file hashes and root manifests; the parent independently reopened
+  and rehashed every file. This covers Python imports for that exact run only.
+  It does not bind native libraries loaded outside `sys.modules`, close the
+  path-to-execution TOCTOU window, observe every arbitrary connection attempt
+  or make mutable output files immutable. Cross-song downstream MIDI is
+  complete. The exact
   913,106,900-byte author-hosted source checkpoint has also been privately
   re-hashed and loaded through restricted PyTorch `weights_only=True`; all 708
   converted BF16 tensors, including 12 packed Q/K/V splits, match bit-for-bit.

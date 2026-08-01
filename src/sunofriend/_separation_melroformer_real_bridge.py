@@ -34,7 +34,7 @@ from ._separation_melroformer_adapter_contract import (
     _RealMelRoFormerEngineResult,
     _accept_private_melroformer_real_result,
 )
-from ._separation_melroformer_challenger_plan import (
+from ._separation_melroformer_artifacts import (
     APPROVAL_RECORDED_AT,
     CONFIG_NAME,
     _inspect_companion_files,

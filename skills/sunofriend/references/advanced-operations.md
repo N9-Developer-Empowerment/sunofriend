@@ -1524,6 +1524,13 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   JSON. Resolve only that complete export. A precision preference still cannot
   enable or promote the separator, change a default or justify a public route
   without the remaining cross-song MIDI and safety gates.
+- The latest authorised Kim Vocal 2 `Be Alone` worker observation binds the
+  complete post-inference Python `sys.modules` closure for that exact run: 320
+  modules, 277 independently reopened regular files, 18,067,576 aggregate
+  bytes and zero unclassified modules. Its path-free closure evidence SHA-256
+  is `ce187b7b154269cc3dd7c542db2573bce7194a142aecd3796193d7fb0db2c74f`.
+  This is not a native-loader audit and does not close path-to-execution TOCTOU,
+  observe arbitrary outbound-attempt history or enable a product route.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,
