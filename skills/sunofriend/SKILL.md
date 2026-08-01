@@ -313,10 +313,19 @@ report the result, then move on.
   worker-only shared attenuation was applied equally to source, vocals and
   instrumental before PCM24 quarantine; strict rejection remains the default.
   Local HTDemucs, Moises and Kim Vocal 2 all produced zero primary vocal notes,
-  and Kim produced no register hypothesis. The private evaluator accepts two
+  and Kim produced no register hypothesis. A follow-up private leaf evaluator
+  ran both unchanged adapters on both Moises vocal leaves without using labels
+  to choose an algorithm. The backing-vocal leaf yielded 25 backing-adapter
+  notes, while the vocal leaf yielded 15 lead-adapter and 23 backing-adapter
+  notes. The broad Moises sum still had zero. This is evidence that summing
+  separate vocal candidates before transcription can erase usable melody, not
+  proof that every leaf note or label is correct. Basic Pitch must be actually
+  available for this diagnostic; a missing runtime fails instead of silently
+  accepting a degraded comparison. The private evaluator accepts two
   to four known controls only when local HTDemucs and at least one provider are
-  present. Keep this as a vocal-tracker/confidence failure and do not promote a
-  separator or lower production thresholds from it. The latest
+  present. Keep the 52 generated leaf artifacts inactive, preserve separate
+  lead/backing candidates in future separator design, and do not promote a
+  separator or lower production thresholds from one excerpt. The latest
   authorised `Be Alone` worker run also bound the complete post-inference
   `sys.modules` Python import closure: 320 modules backed by 277 regular files
   totalling 18,067,782 bytes, with zero unclassified modules. The child sealed

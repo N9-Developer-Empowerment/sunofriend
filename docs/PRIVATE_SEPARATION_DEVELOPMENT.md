@@ -571,8 +571,8 @@ notes. The existing polyphonic vocal path also produced no register
 hypotheses. The self-hashed inactive MIDI-evaluation document is
 `6491f749e1e2ad3311c24fefa2f60e42858c24d460a095c3a800f0aa9cd99615`.
 Kim therefore did not recover this excerpt's vocal MIDI; the next bounded
-quality experiment belongs at the vocal tracker/confidence boundary, not in
-separator promotion.
+diagnostic keeps production thresholds unchanged and tests the already
+separate vocal leaves before changing a tracker or promoting a separator.
 
 The first authorised real-song development corpus is now available locally
 under [`../stem_examples`](../stem_examples/README.md). It contains four
@@ -1139,6 +1139,44 @@ and still rejects unknown or single-control sets. Local HTDemucs, Moises and
 Kim Vocal 2 each produced zero primary notes on this window, and Kim produced
 no polyphonic register hypothesis. This is a cross-song failure observation,
 not an agreement score or evidence of silence.
+
+The follow-up leaf evaluation explains where usable evidence was lost. It ran
+both unchanged production vocal adapters on each of the two Moises leaves;
+provider filenames were retained for review but did not select an adapter.
+The complete Basic Pitch runtime was required rather than silently accepting
+an environment-degraded pYIN fallback. The leaf named backing vocals produced
+25 notes through the backing adapter and zero through the lead adapter. The
+leaf named vocals produced 23 backing-adapter notes and 15 lead-adapter notes.
+Thus the same Moises pack has a zero-note broad vocal sum while each separate
+vocal leaf has a non-empty primary candidate. This does not prove every note
+or provider label correct, but it does show that summing lead and backing
+before transcription can discard usable melody evidence on this window.
+
+All 52 MIDI/note/render artifacts remain inactive in
+`work/separation-bakeoff/mauvais-djo-pile-vocal-leaves-33-48-v4`. The report's
+canonical document SHA-256 is
+`f323c020690de4cac0f00594dd6eb6f25b69a47e6195a726f640961205dd87ed`;
+the owner-only report file hashes to
+`102a1bdaefe3130228a4f75144ac0f915a370b2bd06b742da8cd8e004660ccb1`.
+The next separator design must preserve separately auditionable lead/backing
+candidate leaves when available; it must not force them into one broad vocal
+source before MIDI conversion.
+
+Reproduce this private diagnostic with the full audio environment, not the
+minimal model environment:
+
+```bash
+PYTHONPATH=src .venv/bin/python \
+  scripts/private-authorised-vocal-leaf-midi-evaluation.py \
+  --role-mapping /absolute/private/authorised-role-mapping.json \
+  --control-comparison /absolute/private/authorised-midi-comparison.json \
+  --melroformer-evaluation /absolute/private/private-melroformer-vocal-midi-evaluation.json \
+  --out /absolute/fresh/private-vocal-leaf-evaluation
+```
+
+The command changes no source audio, active candidate, source graph, Simple or
+Studio route. It fails if Basic Pitch is unavailable, writes only to a fresh
+owner-only output, and makes no winner or singer-identity claim.
 
 Equal-level blind Kim-Vocal-2-versus-Moises MIDI reviews were prepared for both
 songs with each original mixed excerpt as the source, identical General MIDI
