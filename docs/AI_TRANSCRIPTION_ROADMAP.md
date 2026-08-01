@@ -1697,6 +1697,56 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-01 — Kim Vocal 2 BF16 runtime output parity
+
+- Goal: distinguish MLX implementation error from the effect of publishing the
+  converted checkpoint at BF16 precision.
+- Change or experiment: installed the exact MIT `BS-RoFormer==0.3.10` reference
+  and its pinned pure-Python dependencies in the private AI environment, then
+  ran original-FP32 PyTorch, BF16-roundtrip PyTorch and published-BF16 MLX on
+  the same authorised eight-second music window with no overlap.
+- Inputs: `Be Alone`, original seconds 191–199, exact sealed PCM24 source.
+- Model/runtime/checkpoint: PyTorch 2.13.0 CPU and MLX 0.31.2 CPU. The three new
+  wheel identities are retained; checkpoint loading remained restricted and
+  hash-bound.
+- Evidence and metrics: BF16-roundtrip PyTorch versus BF16 MLX reached 117.70
+  dB SDR, 1.15e-7 RMS difference and 1.67e-6 maximum difference. Original FP32
+  versus BF16 MLX reached 29.14 dB; original FP32 versus BF16-roundtrip PyTorch
+  also reached 29.14 dB. The tracked report SHA-256 is `a85939af…b389`.
+- Listening result: not performed; no output audio was retained.
+- Decision: verify the converted BF16 runtime implementation, while explicitly
+  retaining the source-precision fidelity concern. Do not claim independent
+  reproduction of the upstream 66.08 dB result or separator quality.
+- Problems/risks: the upstream parity clip is unavailable and the 29.14 dB
+  precision delta may or may not be musically important. Product permissions
+  remain false.
+- Next smallest step: equal-level blind comparison of original-FP32 and
+  published-BF16 vocal output before considering a larger FP32 MLX artifact.
+
+### 2026-08-01 — exact Kim Vocal 2 weight-conversion parity
+
+- Goal: independently verify that the pinned MLX checkpoint contains the same
+  weights as the exact author-hosted PyTorch checkpoint after the published
+  BF16 conversion, without treating a model-card parity number as evidence.
+- Change or experiment: privately downloaded the exact 913,106,900-byte source
+  checkpoint, verified its published SHA-256, loaded it with PyTorch
+  `weights_only=True`, reproduced converter revision `8380ab8` and compared
+  every Safetensors payload through a descriptor-pinned reader.
+- Inputs: no audio. The exact source checkpoint at SHA-256 `87201f4d…559e` and
+  exact MLX Safetensors checkpoint at SHA-256 `312c38e5…7fe5`.
+- Model/runtime/checkpoint: PyTorch performed restricted checkpoint loading;
+  no model class was imported and no inference ran.
+- Evidence and metrics: 684 retained source tensors became 708 BF16 tensors,
+  including 12 packed Q/K/V splits. Names, shapes and every BF16 payload were
+  bit-exact. The tracked report SHA-256 is `7386eaa1…a4c` and its tensor
+  manifest SHA-256 is `ce0c29ff…e8ba`.
+- Listening result: not applicable; no audio was read or produced.
+- Decision: close only the weight-conversion blocker. Keep all model selection,
+  product, publication, Simple, Studio and source-graph permissions false.
+- Problems/risks: equivalent weights do not prove equivalent preprocessing,
+  numerical operations, overlap handling or inference output.
+- Next smallest step: completed by the BF16 runtime output observation above.
+
 ### 2026-08-01 — second-song MelRoFormer vocal-MIDI evidence
 
 - Goal: close the cross-song downstream-MIDI blocker without changing the
@@ -1723,8 +1773,9 @@ Each working day should aim for one narrow vertical improvement:
 - Decision: close only the cross-song downstream-MIDI blocker. Keep selection,
   activation, publication and every product permission false because the
   controls are estimated, not score truth.
-- Problems/risks: both observations are short and monophonic. Conversion
-  parity, complete import-closure binding, hash-before-exec TOCTOU and human
+- Problems/risks: both observations are short and monophonic. Exact BF16
+  runtime parity now passes, but the original-FP32-to-published-BF16 precision
+  effect, complete import-closure binding, hash-before-exec TOCTOU and human
   listening remain open.
 - Next smallest step: have the user complete and export both sealed blind
   reviews, resolve them only after completion, then compare their cross-song
@@ -1750,7 +1801,8 @@ Each working day should aim for one narrow vertical improvement:
 - Decision: keep all product, selection and publication permissions false.
   Agreement with estimated controls is not ground truth and selects no winner.
 - Problems/risks: one short excerpt cannot establish recognition, cross-song
-  reliability or conversion parity. The dominant contour remains monophonic.
+  reliability or the musical impact of the later-observed FP32-to-BF16
+  precision delta. The dominant contour remains monophonic.
 - Next smallest step: the exact contract has now repeated on a second
   authorised song; complete and export both blind human reviews before
   reconsidering the gate.
@@ -2042,9 +2094,13 @@ config, licence and checkpoint. A separate private loader probe now re-verifies
 those artifacts at execution time, bypasses all upstream package initializers
 and `from_pretrained`, pins the checkpoint descriptor, and independently proves
 the 708-raw-key to 696-model-parameter sanitizer mapping. The real probe
-completed with zero missing, unexpected or shape-mismatched tensors and about
-458 MB peak MLX memory, without audio inference. Independent parity and
-worker-bound operating-system network denial remain open. A separate
+  completed with zero missing, unexpected or shape-mismatched tensors and about
+  458 MB peak MLX memory, without audio inference. Exact source-to-BF16
+  weight-conversion parity now passes for all 708 converted tensors, including
+  12 packed Q/K/V splits. The BF16-roundtrip PyTorch implementation and BF16
+  MLX runtime subsequently reached 117.70 dB SDR on the same authorised music
+  frames. Original FP32 versus BF16 MLX reached 29.14 dB, localising the
+  remaining observed difference to publication precision. A separate
 model-free macOS canary has observed `EPERM` for an identical loopback
 connection that returned `ECONNREFUSED` without the profile, but it does not
 observe arbitrary model attempts or authorize the worker. Bounded single-call

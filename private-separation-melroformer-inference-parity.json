@@ -1,0 +1,109 @@
+{
+  "authorisation": {
+    "report_sha256": "00685db1ba4d5ac0927c25a5ef40792ab36c56cdb36dcc20cc5f926fb9774e90",
+    "source_pcm24_sha256": "807fbfa4b37b2ad102d7bba6f973c4b9e2c6922908267a3e9465c525199e642e",
+    "source_start_seconds": 191.0,
+    "source_window_seconds": 8.0,
+    "track_id": "be-alone"
+  },
+  "claims": {
+    "bf16_publication_precision_delta_measured": true,
+    "converted_bf16_runtime_output_parity_above_threshold": true,
+    "original_fp32_source_to_converted_mlx_output_above_threshold": false,
+    "same_audio_as_upstream_published_parity_test": false,
+    "separator_quality_measured": false,
+    "upstream_reported_66_08_db_independently_reproduced": false,
+    "winner_selected": false
+  },
+  "comparisons": {
+    "pytorch_bf16_roundtrip_vs_mlx_published_bf16": {
+      "maximum_absolute_difference": 1.6689300537109375e-06,
+      "root_mean_square_difference": 1.1517608278129293e-07,
+      "sdr_db": 117.70021782500807
+    },
+    "pytorch_original_fp32_vs_mlx_published_bf16": {
+      "maximum_absolute_difference": 0.04804801940917969,
+      "root_mean_square_difference": 0.0030780372256861608,
+      "sdr_db": 29.141354808391004
+    },
+    "pytorch_original_fp32_vs_pytorch_bf16_roundtrip": {
+      "maximum_absolute_difference": 0.04804699122905731,
+      "root_mean_square_difference": 0.0030779572904500916,
+      "sdr_db": 29.141580379949556
+    }
+  },
+  "document_sha256": "fd6b5d035ec579ffff1f3ee901d4b71b28f7816f2db50094a00c313cdeb29b93",
+  "effects": {
+    "audio_read": true,
+    "audio_written": false,
+    "checkpoint_deserialized": true,
+    "filesystem_written": false,
+    "model_inference": true,
+    "network_used": false,
+    "product_route_changed": false
+  },
+  "geometry": {
+    "alignment": "same exact source frames; single model chunk; no overlap",
+    "channels": 2,
+    "frames": 352800,
+    "sample_rate": 44100,
+    "seconds": 8.0
+  },
+  "outputs": {
+    "input": {
+      "float32_sha256": "b849c9b33c127f10b8b1177771060db4a0e169f25c32f5211a1c1e1d5e0f0056",
+      "root_mean_square": 0.19853766682596893
+    },
+    "mlx_published_bf16": {
+      "float32_sha256": "8e04d9be3f4bdd77afb4128902e38d4903b0c44325ea21f03fcb06ced264d1b0",
+      "root_mean_square": 0.08885479932280435
+    },
+    "pytorch_bf16_roundtrip": {
+      "float32_sha256": "40b923f3bcc283a6550b278593115be4a93f65a2c4ffd0f90f31a317daf4df58",
+      "root_mean_square": 0.08885478085980243
+    },
+    "pytorch_original_fp32": {
+      "float32_sha256": "a7b30e052f43d5633928bcd571316a56040bbffe1f1a5396a1296f9100c78f20",
+      "root_mean_square": 0.08817421629672416
+    }
+  },
+  "permissions": {
+    "automatic_promotion": false,
+    "automatic_selection": false,
+    "checkpoint_publication": false,
+    "simple_mode": false,
+    "source_graph": false,
+    "studio_mode": false
+  },
+  "policy_id": "kim-vocal-2-bf16-runtime-output-parity-v1",
+  "reference": {
+    "converted_checkpoint_sha256": "312c38e5b698f8dfaa4d6064e8f79010744825828917871a9d22673a43eb7fe5",
+    "device": "cpu",
+    "implementation": "bs_roformer.MelBandRoformer==0.3.10",
+    "pinned_wheel_sha256": {
+      "BS_RoFormer-0.3.10-py3-none-any.whl": "9a08d7ec6112ed0a5ab29740046fbcfee023484f697f1c6b646fa6d0706c5b9d",
+      "beartype-0.22.9-py3-none-any.whl": "d16c9bbc61ea14637596c5f6fbff2ee99cbe3573e46a716401734ef50c3060c2",
+      "rotary_embedding_torch-0.9.1-py3-none-any.whl": "489ef53e21ab4c4eb35c0c97b551d724f5eea71c2bca39acb8fee8d88b142a76"
+    },
+    "runtime_versions": {
+      "BS-RoFormer": "0.3.10",
+      "beartype": "0.22.9",
+      "einops": "0.8.2",
+      "librosa": "0.11.0",
+      "numpy": "2.3.5",
+      "packaging": "26.2",
+      "rotary-embedding-torch": "0.9.1",
+      "torch": "2.13.0"
+    },
+    "source_checkpoint_sha256": "87201f4d31afb5bc79993230fc49446918425574db48c01c405e44f365c7559e"
+  },
+  "schema": "sunofriend.private-melroformer-inference-parity.v1",
+  "status": "verified_bf16_runtime_parity_source_precision_delta_recorded",
+  "threshold_sdr_db": 40.0,
+  "timings": {
+    "mlx_bf16_seconds": 9.067453916883096,
+    "mlx_peak_memory_bytes": 3581510326,
+    "pytorch_bf16_roundtrip_seconds": 3.197328792186454,
+    "pytorch_original_fp32_seconds": 3.526680791983381
+  }
+}

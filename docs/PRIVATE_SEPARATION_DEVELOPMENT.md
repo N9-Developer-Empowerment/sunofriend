@@ -784,6 +784,35 @@ the repository. Their published byte counts and SHA-256 identities all match.
 The checkpoint is not redistributed and Simple, Studio and the source graph
 remain unchanged.
 
+The exact 913,106,900-byte author-hosted source checkpoint was then downloaded
+to the private cache and verified at SHA-256
+`87201f4d31afb5bc79993230fc49446918425574db48c01c405e44f365c7559e`.
+Sunofriend loaded it only through PyTorch's restricted `weights_only=True`
+path and reproduced the pinned converter at revision `8380ab8`: all 684
+retained source tensors account for all 708 converted tensors, including 12
+packed Q/K/V splits. Every tensor name, shape and BF16 payload was bit-exact.
+The path-free observation is retained in
+`private-separation-melroformer-weight-conversion-parity.json`; its report
+SHA-256 is
+`7386eaa1d6e93f6b638e60780a589597737ffd3d7bcd48db5586ce93d8080a4c`.
+This closes weight-conversion parity only. It does not establish identical
+PyTorch-versus-MLX inference output, separator quality or product eligibility.
+
+The next CPU-only, single-chunk comparison used the exact first eight seconds
+of the authorised `Be Alone` excerpt. PyTorch `bs_roformer==0.3.10` with the
+source weights rounded through BF16 and the published MLX BF16 model reached
+117.70 dB SDR, comfortably above the 40 dB implementation-parity gate. The
+original FP32 PyTorch checkpoint versus published BF16 MLX reached only 29.14
+dB; original FP32 versus BF16-rounded PyTorch was also 29.14 dB. This localises
+the observed difference to publication precision rather than the MLX port.
+It does not reproduce the upstream 66.08 dB claim because Sunofriend does not
+have the upstream test audio and deliberately used a different authorised
+song. The path-free observation is in
+`private-separation-melroformer-inference-parity.json`, SHA-256
+`a85939af317bdff203de02116b8d2e773bb9e1f392f49b601d3bb2ff1233b389`.
+No output audio was retained and this gate measures implementation fidelity,
+not separator quality.
+
 The exact non-executable runtime boundary is now defined. MLX-Audio `v0.4.3`
 resolves to source revision
 `41092c02db18efd5b9d8281b2fcc41d84801757a`; the five required source/runtime
@@ -968,7 +997,8 @@ policy, so every run records its actual hashes.
 This closes the earlier model-worker network-denial, outside-write and PCM24
 binding blockers. It does not observe arbitrary outbound-attempt history,
 bind the complete Python import closure, close hash-before-exec path TOCTOU,
-independently verify conversion parity or complete human listening. The
+independently verify PyTorch-versus-MLX inference output or complete human
+listening. Exact weight-conversion parity is now verified separately. The
 ordinary private output files can also change after the parent's final
 observation. Every Simple, Studio, source-graph, selection and publication
 permission remains false.
@@ -1017,9 +1047,10 @@ program and SoundFont for both candidates, explicit zero alignment and a
 `11a05fad5752c44025c018603ed4c21dd9003f7a201118ab0a716d95dadb794c`
 and
 `dab62596f47a13f05a10a96db1e06b8ab39c98b43899f5978b52ad32348655d8`.
-The developer has not opened either answer key. Cross-song downstream MIDI is
-complete, while human listening, conversion parity and every public route
-remain blocked; no winner has been selected or promoted.
+The developer has not opened either answer key. Cross-song downstream MIDI and
+exact weight-conversion parity are complete, while human listening,
+the musical effect of the observed FP32-to-BF16 precision delta and every
+public route remain blocked; no winner has been selected or promoted.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,

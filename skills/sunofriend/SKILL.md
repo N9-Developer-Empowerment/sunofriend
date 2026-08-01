@@ -297,9 +297,18 @@ report the result, then move on.
   estimates rather than ground truth, so they select no winner. The worker does
   not observe every arbitrary connection attempt, bind the complete Python
   import closure, close hash-before-exec path TOCTOU or make mutable output
-  files immutable. Cross-song downstream MIDI is complete; independent
-  conversion parity and human listening remain incomplete. The checkpoint is
-  not redistributed. Do not offer or run this challenger through the skill.
+  files immutable. Cross-song downstream MIDI is complete. The exact
+  913,106,900-byte author-hosted source checkpoint has also been privately
+  re-hashed and loaded through restricted PyTorch `weights_only=True`; all 708
+  converted BF16 tensors, including 12 packed Q/K/V splits, match bit-for-bit.
+  The same authorised eight-second music frames then reached 117.70 dB SDR
+  between BF16-roundtrip PyTorch and BF16 MLX, verifying the converted runtime.
+  Original FP32 PyTorch versus BF16 MLX reached only 29.14 dB, with the same
+  delta inside PyTorch after BF16 rounding; retain this as a publication-
+  precision concern rather than hiding it behind the runtime-parity pass. The
+  upstream 66.08 dB result used unavailable test audio and is not independently
+  reproduced. Human listening remains incomplete. The checkpoint is not
+  redistributed. Do not offer or run this challenger through the skill.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one
   canonical WAV project. It does not separate, shift, pad, stretch, normalize

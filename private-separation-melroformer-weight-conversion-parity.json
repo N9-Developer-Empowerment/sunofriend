@@ -1,0 +1,56 @@
+{
+  "claims": {
+    "bf16_tensor_payloads_bit_exact": true,
+    "every_converted_weight_accounted_for": true,
+    "every_retained_source_weight_accounted_for": true,
+    "inference_output_parity_independently_verified": false,
+    "separator_quality_measured": false,
+    "tensor_names_exact": true,
+    "tensor_shapes_exact": true,
+    "weight_conversion_parity_independently_verified": true,
+    "winner_selected": false
+  },
+  "conversion_tool_revision": "8380ab8",
+  "converted": {
+    "bf16_payload_bytes": 456406344,
+    "bytes": 456483463,
+    "qkv_split_count": 12,
+    "sha256": "312c38e5b698f8dfaa4d6064e8f79010744825828917871a9d22673a43eb7fe5",
+    "tensor_count": 708,
+    "tensor_payload_manifest_sha256": "ce0c29ffbe67266e5d42f143afad430a4dd107f6a8c086477dfdc300feede8ba"
+  },
+  "document_sha256": "c5edf50929a73261d6d2cceb20163793f3d44f1c7e31c6a1f75b3b2ae1ed158e",
+  "effects": {
+    "audio_read": false,
+    "audio_written": false,
+    "checkpoint_deserialized": true,
+    "filesystem_accessed": true,
+    "filesystem_written": false,
+    "model_imported": false,
+    "model_inference": false,
+    "network_used": false,
+    "process_started": false,
+    "product_route_changed": false,
+    "restricted_weights_only_load": true
+  },
+  "permissions": {
+    "automatic_promotion": false,
+    "automatic_selection": false,
+    "checkpoint_publication": false,
+    "simple_mode": false,
+    "source_graph": false,
+    "studio_mode": false
+  },
+  "policy_id": "kim-vocal-2-exact-bf16-weight-conversion-parity-v1",
+  "schema": "sunofriend.private-melroformer-weight-conversion-parity.v1",
+  "source": {
+    "bytes": 913106900,
+    "float32_payload_bytes": 912812688,
+    "load_policy": "torch-load-weights-only-true-from-verified-open-file",
+    "normalized_key_count": 684,
+    "retained_key_count": 684,
+    "sha256": "87201f4d31afb5bc79993230fc49446918425574db48c01c405e44f365c7559e",
+    "state_dict_key_count": 684
+  },
+  "status": "verified_exact_bf16_weight_conversion"
+}

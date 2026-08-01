@@ -147,6 +147,22 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
     assert not any(item["winner_selected"] for item in downstream)
     assert plan["source"]["upstream_from_pretrained_permitted"] is False
     assert plan["runtime"]["reported_parity_is_model_ground_truth_score"] is False
+    conversion = plan["runtime"]["weight_conversion_parity"]
+    assert conversion["status"] == "verified_exact_bf16_weight_conversion"
+    assert conversion["source_state_dict_key_count"] == 684
+    assert conversion["converted_tensor_count"] == 708
+    assert conversion["packed_qkv_split_count"] == 12
+    assert conversion["every_tensor_name_shape_and_bf16_payload_bit_exact"] is True
+    assert conversion["inference_output_parity_independently_verified"] is False
+    assert conversion["product_route_changed"] is False
+    inference = plan["runtime"]["inference_output_parity"]
+    assert inference["converted_bf16_runtime_output_parity_above_threshold"] is True
+    assert inference["original_fp32_source_to_converted_mlx_above_threshold"] is False
+    assert inference["pytorch_bf16_roundtrip_vs_mlx_bf16_sdr_db"] > 100.0
+    assert inference["pytorch_original_fp32_vs_mlx_bf16_sdr_db"] < 40.0
+    assert inference["upstream_reported_66_08_db_independently_reproduced"] is False
+    assert inference["separator_quality_measured_by_this_gate"] is False
+    assert inference["product_route_changed"] is False
     assert plan["decision"]["checkpoint_published_identity_pinned"] is True
     assert plan["decision"]["checkpoint_local_identity_verified"] is False
     assert plan["decision"]["worker_start_permitted"] is False
@@ -160,6 +176,9 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
         "model_worker_hash_before_exec_path_toctou_not_closed",
         "outbound_model_attempt_observation_not_implemented",
     }.issubset(plan["decision"]["blockers"])
+    assert "conversion_parity_not_independently_verified" not in plan["decision"][
+        "blockers"
+    ]
     assert all(value is False for value in plan["effects"].values())
 
 
@@ -276,7 +295,7 @@ def test_private_plan_script_outputs_json_without_public_route() -> None:
     )
     plan = json.loads(completed.stdout)
     assert plan["decision"]["run_status"] == (
-        "two_authorised_excerpts_downstream_midi_complete_human_reviews_pending"
+        "bf16_runtime_parity_verified_source_precision_delta_and_human_reviews_pending"
     )
     assert plan["effects"]["network_used"] is False
     assert "private-melroformer-challenger" not in PUBLIC_COMMANDS

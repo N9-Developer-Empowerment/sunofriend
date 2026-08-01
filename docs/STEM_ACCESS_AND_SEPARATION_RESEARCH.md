@@ -1108,7 +1108,7 @@ commercially redistributable.
 | --- | --- | --- | --- | --- |
 | [Demucs / HTDemucs](https://github.com/facebookresearch/demucs) | Stable four-source vocabulary: drums, bass, vocals, other. Experimental `htdemucs_6s` adds guitar and piano, but the official README warns that piano has substantial bleed. | Original project supports MPS but is no longer actively maintained. [Demucs-MLX](https://github.com/ssmall256/demucs-mlx) and [demucs-infer](https://github.com/openmirlab/demucs-infer) are possible adapters to test. Demucs-MLX's first-use download behaviour must be disabled or preinstalled and then verified offline. | Code is MIT; checkpoint terms and hashes still require an explicit registry entry. | Unverified broad-baseline candidate. |
 | [BS-RoFormer architecture](https://arxiv.org/abs/2309.02612) | Strong four-stem research result, particularly relevant to the bass problem. | The exact [ZFTurbo `v1.0.12` MUSDB18HQ release](https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.12) is now the registered private challenger; it remains uninstalled and unrunnable. An exact tracked 1 August 2026 release/tag/licence snapshot has a no-network verifier. | The repository code is MIT, but the release provides no checkpoint-specific terms or published checkpoint SHA-256. The checkpoint asset `digest` remains null. Sunofriend does not project the code licence onto the weights. | Exact fail-closed candidate, especially for bass and composite `other`; not an available separator. |
-| [MelBand-RoFormer architecture](https://arxiv.org/abs/2310.01809) | Competitive role-specific models could complement a broad separator. The exact Kim Vocal 2 candidate produces vocals; instrumental is mixture minus vocals. | The [MLX conversion](https://huggingface.co/mlx-community/mel-roformer-kim-vocal-2-mlx) is pinned at revision `64cbfcb…` with a 456,483,463-byte Safetensors SHA-256. Its exact minimal MLX source/runtime is audited. Eight-second model chunks and a 15-second overlapped private route measured about 2.42 GB peak on the development Mac. Fast GPU and repeatable CPU modes are now distinguished explicitly. | The [original owner repository](https://huggingface.co/KimberleyJSN/melbandroformer) changed the exact checkpoint metadata from GPL-3.0 to MIT in verified commit `ac9b061…`; the conversion licence names the original weights. Two independent LFS records reproduce the source hash. | Exact, licence-audited **vocal-only** private challenger. Synthetic/no-output checks, isolated PCM24 authorised workers and unchanged downstream vocal-MIDI observations pass on two authorised songs without selecting a winner. Two blind human reviews, independent conversion parity and public routes remain blocked. |
+| [MelBand-RoFormer architecture](https://arxiv.org/abs/2310.01809) | Competitive role-specific models could complement a broad separator. The exact Kim Vocal 2 candidate produces vocals; instrumental is mixture minus vocals. | The [MLX conversion](https://huggingface.co/mlx-community/mel-roformer-kim-vocal-2-mlx) is pinned at revision `64cbfcb…` with a 456,483,463-byte Safetensors SHA-256. Its exact minimal MLX source/runtime is audited. Eight-second model chunks and a 15-second overlapped private route measured about 2.42 GB peak on the development Mac. Fast GPU and repeatable CPU modes are distinguished explicitly. All 708 BF16 tensors match their source conversion. On one authorised eight-second music window, BF16-rounded PyTorch versus BF16 MLX reached 117.70 dB SDR, while original FP32 versus BF16 MLX reached 29.14 dB. | The [original owner repository](https://huggingface.co/KimberleyJSN/melbandroformer) changed the exact checkpoint metadata from GPL-3.0 to MIT in verified commit `ac9b061…`; the conversion licence names the original weights. Two independent LFS records reproduce the source hash. | Exact, licence-audited **vocal-only** private challenger. The converted runtime is faithful to identical BF16 weights, but the observed FP32-to-BF16 precision delta needs musical review. Two blind MIDI reviews, that precision review and public routes remain blocked. |
 | [SCNet](https://github.com/starrytong/SCNet) | Official sparse-compression four-stem model with released MUSDB checkpoint. | PyTorch path; Apple runtime and memory need measurement. | Official code is MIT; record the release asset terms/hash separately. | Useful independent architecture in the bake-off. |
 | [Spleeter](https://github.com/deezer/spleeter) | Two, four and five source configurations; five-source adds piano. | Older TensorFlow stack has known Apple-silicon friction. | MIT code, last formal release in 2021. | Historical speed/reproducibility control only. |
 | [Open-Unmix](https://github.com/sigsep/open-unmix-pytorch) | Established four-stem reference implementation. | Generic PyTorch CPU/GPU rather than a first-class current Mac route. | MIT code; default UMXL weights are CC BY-NC-SA 4.0. | Non-commercial reference baseline, not public default. |
@@ -2038,8 +2038,9 @@ promotion are not implemented**
 - [x] Register one separately licensed role-specific alternative. Kim Vocal 2
   now has exact author-repository relicense history, original and converted
   checkpoint hashes, two independent source-hash corroborations and a
-  no-network tracked-evidence verifier. The Safetensors conversion remains
-  `blocked`/`not_run`; this closes identity and checkpoint-terms research only.
+  no-network tracked-evidence verifier. This completed identity and
+  checkpoint-terms research before private evaluation; exact weight-conversion
+  parity is now recorded separately below.
 - [x] Audit, approve and privately materialise the exact Kim Vocal 2 runtime.
   The MLX source surface, minimal dependency identities, Safetensors inspector,
   fixed config, complete 708-to-696 key binding and maximum 15-second overlap
@@ -2049,10 +2050,20 @@ promotion are not implemented**
   controls without persistence, ranking or selection. All four descriptive
   similarities were above 0.92. GPU/CPU repeat behaviour and the fast versus
   repeatable device policy are now explicit.
-- [ ] Independently reproduce conversion parity before considering vocal MIDI
-  or listening-quality promotion. Operating-system network/process/write
-  denial and verified PCM24 persistence now pass on two authorised excerpts,
-  but complete import-closure and hash-before-exec TOCTOU remain open.
+- [x] Independently reproduce exact weight-conversion parity. The
+  913,106,900-byte original checkpoint was loaded with restricted
+  `weights_only=True`; all 708 MLX tensors, including 12 Q/K/V splits, match
+  the pinned conversion bit-for-bit at BF16. This does not establish
+  inference-output parity.
+- [x] Compare exact PyTorch and MLX output on the same authorised eight-second
+  window. Identically BF16-rounded weights reached 117.70 dB SDR; original FP32
+  versus the published BF16 model reached 29.14 dB, with the same delta visible
+  inside PyTorch. This verifies converted-runtime fidelity while recording a
+  separate publication-precision concern. It does not reproduce the upstream
+  66.08 dB result because the original test audio is unavailable.
+- [ ] Blind-listen to original-FP32 versus published-BF16 vocal output before
+  deciding whether an FP32 MLX conversion is worth its doubled artifact size.
+  Complete import-closure and hash-before-exec TOCTOU also remain open.
 - [ ] Consider a deterministic role-specific ensemble only after its members
   have separate held-out evidence; never infer a winner from popularity or a
   model-runner catalogue.
