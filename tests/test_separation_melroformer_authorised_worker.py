@@ -43,6 +43,10 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
 ) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()
+    worker_path = repository / worker.WORKER_RELATIVE_PATH
+    worker_path.parent.mkdir()
+    worker_source_bytes = b"# exact private worker fixture\n"
+    worker_path.write_bytes(worker_source_bytes)
     runtime = tmp_path / "python"
     source_root = tmp_path / "source"
     checkpoint = tmp_path / "model.safetensors"
@@ -72,7 +76,7 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
     artifacts = {
         "provider": _identity("provider"),
         "runtime": _identity("runtime"),
-        "worker": _identity("worker"),
+        "worker": worker._regular_non_symlink_file_identity(worker_path),
         "checkpoint": {
             **_identity("checkpoint"),
             "bytes": CONVERSION_CHECKPOINT_BYTES,
@@ -97,8 +101,12 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
         "_verify_python_import_closure_claim",
         lambda *_, **__: verified_closure,
     )
+    monkeypatch.setattr(worker, "_verify_worker_import_identity", lambda *_, **__: None)
 
-    def fake_run(command: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+    def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        assert command[command.index("-B") + 1] == "-"
+        source_stream = kwargs["stdin"]
+        assert source_stream.read() == worker_source_bytes
         output = Path(command[command.index("--destination") + 1])
         quarantine = _materialize_private_melroformer_pcm24_quarantine(
             destination=output,
@@ -168,7 +176,7 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
     def fake_observed_run(**kwargs: object) -> tuple[object, object]:
         command = kwargs["command"]
         assert isinstance(command, list)
-        completed = fake_run(command)
+        completed = fake_run(command, stdin=kwargs["stdin"])
         event = {
             "eventType": "logEvent",
             "senderImagePath": network_observer.SENDER_IMAGE_PATH,
@@ -223,7 +231,7 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
         bind_python_import_closure
     )
     if observe_outbound_attempts:
-        assert evidence["schema"] == worker.NETWORK_OBSERVATION_SCHEMA
+        assert evidence["schema"] == worker.DESCRIPTOR_WORKER_SCHEMA
         assert evidence["network_observation"]["observation"][
             "deliberate_canary_denial_count"
         ] == 1
@@ -236,6 +244,17 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
     else:
         assert evidence["schema"] == worker.SCHEMA
         assert "import_closure" not in evidence
+    if observe_outbound_attempts:
+        assert evidence["artifacts"][
+            "worker_script_path_to_execution_toctou_closed"
+        ] is True
+        assert evidence["artifacts"][
+            "provider_runtime_path_to_execution_toctou_closed"
+        ] is False
+    else:
+        assert "worker_script_path_to_execution_toctou_closed" not in evidence[
+            "artifacts"
+        ]
 
     resigned = plain(evidence)
     resigned["permissions"]["publication_permitted"] = True
@@ -246,6 +265,27 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
     ).hexdigest()
     with pytest.raises(ValueError, match="grants a product permission"):
         worker._validate_private_melroformer_authorised_worker(resigned)
+
+
+def test_worker_import_identity_must_match_the_descriptor_source() -> None:
+    expected = {"bytes": 12, "sha256": "a" * 64}
+    closure = {
+        "files": [
+            {
+                "root_id": "repository",
+                "relative_path": worker.WORKER_RELATIVE_PATH,
+                "bytes": 12,
+                "sha256": "a" * 64,
+                "module_names": ["__main__"],
+            }
+        ]
+    }
+    worker._verify_worker_import_identity(closure, expected_identity=expected)
+
+    closure["files"][0]["sha256"] = "b" * 64
+    with pytest.raises(ValueError, match="executed worker import identity"):
+        worker._verify_worker_import_identity(closure, expected_identity=expected)
+
 
 
 def test_authorised_worker_has_no_public_route() -> None:

@@ -83,6 +83,7 @@ def _run_with_macos_sandbox_network_observer(
     environment: Mapping[str, str],
     timeout_seconds: float,
     expected_canary_port: int = 9,
+    stdin: Any = subprocess.DEVNULL,
 ) -> tuple[subprocess.CompletedProcess[str], Mapping[str, Any]]:
     """Run one child while observing kernel Sandbox network denials."""
 
@@ -92,6 +93,7 @@ def _run_with_macos_sandbox_network_observer(
     try:
         target = subprocess.Popen(
             list(command),
+            stdin=stdin,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,

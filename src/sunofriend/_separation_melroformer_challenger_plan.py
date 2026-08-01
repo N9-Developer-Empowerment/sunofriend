@@ -78,15 +78,15 @@ from ._separation_safetensors_inspection import (
 
 
 AUTHORISED_WORKER_SANDBOX_SCHEMA = (
-    "sunofriend.private-melroformer-authorised-worker-sandbox.v3"
+    "sunofriend.private-melroformer-authorised-worker-sandbox.v4"
 )
 NETWORK_OBSERVATION_SCHEMA = (
     "sunofriend.private-macos-sandbox-network-observation.v1"
 )
 
 
-PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v17"
-POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v17"
+PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v18"
+POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v18"
 AUDITED_AT = "2026-08-01"
 CHECKPOINT_NAME = "model.safetensors"
 CHECKPOINT_URL = (
@@ -95,8 +95,8 @@ CHECKPOINT_URL = (
     f"{CONVERSION_REVISION}/{CHECKPOINT_NAME}"
 )
 _BASE_BLOCKERS = (
-    "equal_level_human_listening_not_completed",
-    "model_worker_hash_before_exec_path_toctou_not_closed",
+    "cross_song_lead_vocal_midi_quality_not_accepted",
+    "provider_runtime_path_to_execution_toctou_not_closed",
 )
 
 
@@ -461,10 +461,10 @@ def _build_private_melroformer_challenger_plan(
             "authorised_worker_sandbox_latest_observation": {
                 "observed_at": "2026-08-01",
                 "evidence_sha256": (
-                    "11e10ca1dbb372e63f785c4a935a554d1c036232b539cf66552e6e4c53f6c534"
+                    "e074e3da5bc836fe2da104095d375f0ed626a49e133c6438b0ffb14e8a5a34ca"
                 ),
                 "persisted_observation_file_sha256": (
-                    "f623c2e1a99dabfbe3c2f9be16f5116ac8555c2dc89300dff9f6a017381336dd"
+                    "5d59bfa00272b173cb71e34ad4b951f4640807ba155a51bdc6bdbef896101909"
                 ),
                 "authorisation_report_sha256": (
                     "00685db1ba4d5ac0927c25a5ef40792ab36c56cdb36dcc20cc5f926fb9774e90"
@@ -481,11 +481,11 @@ def _build_private_melroformer_challenger_plan(
                     "sunofriend.private-python-import-closure-verified.v1"
                 ),
                 "python_import_closure_evidence_sha256": (
-                    "ce187b7b154269cc3dd7c542db2573bce7194a142aecd3796193d7fb0db2c74f"
+                    "1c071f0e3f5231280eade16949af9ed7c478751960c9b86061263cacbbe106c2"
                 ),
                 "python_module_count": 320,
                 "python_module_file_count": 277,
-                "python_module_file_bytes": 18_067_576,
+                "python_module_file_bytes": 18_067_782,
                 "python_unclassified_module_count": 0,
                 "kernel_network_observation_schema": NETWORK_OBSERVATION_SCHEMA,
                 "kernel_network_observation_evidence_sha256": (
@@ -498,6 +498,15 @@ def _build_private_melroformer_challenger_plan(
                 "kernel_network_unrelated_denial_count": 0,
                 "kernel_network_final_summary_verified": True,
                 "kernel_network_raw_log_persisted": False,
+                "worker_script_bytes": 6_730,
+                "worker_script_sha256": (
+                    "372ef11b14898726b578cd9bbe0088ce5db5fde12e13934afb63b3b95e286a35"
+                ),
+                "worker_script_execution_transport": (
+                    "verified-open-descriptor-to-python-stdin"
+                ),
+                "worker_script_path_to_execution_toctou_closed": True,
+                "provider_runtime_path_to_execution_toctou_closed": False,
                 "native_non_module_loads_bound": False,
                 "hash_before_exec_path_toctou_closed": False,
                 "product_route_permitted": False,
@@ -708,7 +717,19 @@ def _build_private_melroformer_challenger_plan(
                     "equal_level_blind_review_audio_manifest_sha256": (
                         "dab62596f47a13f05a10a96db1e06b8ab39c98b43899f5978b52ad32348655d8"
                     ),
-                    "equal_level_blind_review_complete": False,
+                    "equal_level_blind_review_complete": True,
+                    "equal_level_blind_review_sha256": (
+                        "b289ec5d097aea43d4fae22f1a0a6f29069e9ee788f61a58e55d5516d752b167"
+                    ),
+                    "equal_level_blind_result_sha256": (
+                        "62320a755caa1057da3be16210398db3ed3fdf8496ac0fed1dbeb7574368e83e"
+                    ),
+                    "equal_level_blind_choice": "neither",
+                    "equal_level_blind_resolved_identity": "neither",
+                    "quality_observation": (
+                        "both candidates followed the female backing vocal rather "
+                        "than the male lead heard in the source reference"
+                    ),
                     "answer_key_opened_by_developer": False,
                 },
             ],
@@ -716,8 +737,8 @@ def _build_private_melroformer_challenger_plan(
         "decision": {
             "status": "blocked",
             "run_status": (
-                "bf16_runtime_parity_import_closure_and_network_observation_"
-                "verified_precision_equivalent_midi_reviews_and_toctou_pending"
+                "bf16_runtime_parity_worker_descriptor_bound_reviews_complete_"
+                "quality_and_provider_runtime_toctou_blocked"
             ),
             "candidate_registered": True,
             "checkpoint_published_identity_pinned": True,
@@ -730,9 +751,9 @@ def _build_private_melroformer_challenger_plan(
             "worker_start_permitted": False,
             "blockers": blockers,
             "next_safe_actions": [
-                "close the model-worker hash-before-exec path TOCTOU without weakening the sandbox or descriptor policy",
-                "complete the prepared I am a Alien mashup Kim-Vocal-2-versus-Moises MIDI listening review without opening its answer key",
-                "resolve only the user-exported complete reviews and compare cross-song listening evidence before reconsidering any default",
+                "close the sandbox provider and Python runtime path-to-execution TOCTOU without weakening the sandbox or descriptor policy",
+                "treat lead-versus-backing vocal assignment as a separate quality problem before any future cross-song candidate reconsideration",
+                "retain Kim Vocal 2 as an inactive private challenger because the completed second review selected neither candidate",
             ],
         },
         "effects": {

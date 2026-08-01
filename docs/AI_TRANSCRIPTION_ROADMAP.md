@@ -1697,6 +1697,41 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-01 — final MIDI review and exact worker-script descriptor
+
+- Goal: close the last Kim Vocal 2 listening gate and remove the worker-script
+  pathname race without weakening the existing macOS Sandbox boundary.
+- Change or experiment: resolved only the user's complete `I am a Alien
+  mashup` export, then changed the authorised parent to hash and execute one
+  already-open worker descriptor through Python standard input. The child
+  binds `__main__` back to the same repository identity for the independently
+  verified import closure.
+- Inputs: the unchanged 0–15 second blind MIDI package and the already
+  authorised `Be Alone` 191–206 second worker case.
+- Model/runtime/checkpoint: exact published BF16 Kim Vocal 2 MLX checkpoint on
+  GPU; unchanged audited source, offline profile and write confinement.
+- Evidence and metrics: the reviewed export is `b289ec5d…2b167` and resolver
+  result is `62320a75…e83e`. The 6,730-byte worker
+  (`372ef11b…286a35`) was executed from its verified descriptor. The final
+  record is `e074e3da…a34ca`; 320 modules, 277 files and 18,067,782 bytes were
+  rebound. Inference took 2.93 seconds with 2,419,165,306 peak bytes. The
+  kernel observer again saw one deliberate denied canary and no other worker
+  denial.
+- Listening result: `neither`. Both candidate MIDIs mainly followed the female
+  backing vocal instead of the male lead heard in the mixed source.
+- Decision: close the worker-script TOCTOU and human-review checklist items,
+  but add an explicit lead-versus-backing quality blocker. Keep the candidate
+  inactive, private and unavailable to every CLI, TUI, Simple, Studio,
+  Workbench and source-graph route.
+- Problems/risks: `sandbox-exec` and the Python virtual-environment runtime
+  still launch by pathname. Native non-module loads and post-observation
+  ordinary-file mutability remain open. The review also shows that a single
+  vocal output is not sufficient when lead and backing singers overlap.
+- Next smallest step: investigate a non-bypassable provider/runtime launch or
+  an in-process sandbox transition, while designing lead/backing vocal
+  assignment as a separate quality experiment rather than promoting this
+  checkpoint.
+
 ### 2026-08-01 — Kim Vocal 2 FP32/BF16 listening gate resolved
 
 - Goal: make the measured FP32-to-BF16 output delta reviewable by ear before
@@ -1830,8 +1865,8 @@ Each working day should aim for one narrow vertical improvement:
   23-note MIDI is `776a07c4…47e5`. Exact-pitch/onset F1 at 40 ms was 0.913
   versus Moises, 0.889 versus HTDemucs, 0.844 versus Suno A and 0.773 versus
   Suno B.
-- Listening result: pending. A second blind review is prepared; neither this
-  nor the first review's answer key has been opened by the developer.
+- Listening result: pending at this increment. The later entry above records
+  the complete `neither` result; neither answer key was opened manually.
 - Decision: close only the cross-song downstream-MIDI blocker. Keep selection,
   activation, publication and every product permission false because the
   controls are estimated, not score truth.
@@ -1869,8 +1904,8 @@ Each working day should aim for one narrow vertical improvement:
   reliability or the musical impact of the later-observed FP32-to-BF16
   precision delta. The dominant contour remains monophonic.
 - Next smallest step: the exact contract has now repeated on a second
-  authorised song; complete and export the remaining `I am a Alien mashup`
-  blind review before reconsidering the gate.
+  authorised song. The later entry above completes its blind review and keeps
+  the gate blocked on quality.
 
 ### 2026-08-01 — exact-worker macOS Sandbox network-denial observation
 
@@ -1902,8 +1937,9 @@ Each working day should aim for one narrow vertical improvement:
   records denied Sandbox acquisitions, not successful network traffic. The
   runtime and worker are still executed by pathname; native non-module load
   closure and path-to-execution TOCTOU remain open.
-- Next smallest step: close the pathname-to-execution race without weakening
-  the sandbox, then complete the remaining `I am a Alien mashup` MIDI review.
+- Next smallest step: the later entry above closes the worker-script portion
+  of the race and completes the MIDI review. Provider/runtime path execution
+  and lead/backing assignment remain blocked.
 
 ### 2026-08-01 — isolated synthetic two-role worker
 

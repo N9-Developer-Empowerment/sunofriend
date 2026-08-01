@@ -1049,6 +1049,22 @@ or packet capture. Unified logging is not described as a packet monitor. The
 executable path-to-execution race and native non-module load closure remain
 open blockers.
 
+A fourth authorised `Be Alone` observation closes only the worker-script part
+of that race. The parent opens the exact non-symlink, single-link worker once,
+verifies its 6,730 bytes and SHA-256
+`372ef11b14898726b578cd9bbe0088ce5db5fde12e13934afb63b3b95e286a35`,
+rewinds the same file description and gives it to Python as the standard-input
+script. A pathname replacement after that open cannot change the executed
+bytes. The import closure independently reopens the repository path and binds
+`__main__` to the same identity. The path-free worker evidence is
+`e074e3da5bc836fe2da104095d375f0ed626a49e133c6438b0ffb14e8a5a34ca`;
+the owner-only 94,873-byte file hashes to
+`5d59bfa00272b173cb71e34ad4b951f4640807ba155a51bdc6bdbef896101909`.
+It retained 320 modules, 277 files, 18,067,782 bytes and the same one denied
+network canary with zero other worker denials. `/usr/bin/sandbox-exec` and the
+Python virtual-environment runtime remain pathname-launched, so complete
+path-to-execution TOCTOU is not closed.
+
 The development-only command is:
 
 ```bash
@@ -1098,12 +1114,16 @@ and
 The completed `Be Alone` review resolved to `equivalent`; its reviewed export
 SHA-256 is
 `8146d04d963b2bd2405a665915bf849e4b75158d591006d2f20237f3ec99d96c`.
-The `I am a Alien mashup` review remains unreviewed. The developer has not
-opened either MIDI answer key manually. Cross-song downstream MIDI, exact
-weight-conversion parity and the FP32/BF16 precision review are complete. The
-user heard both the precision candidates and the first MIDI pair as
-equivalent, but the second song-level MIDI review, execution-path safety and
-every public route remain blocked; no separator has been selected or promoted.
+The completed `I am a Alien mashup` review export hashes to
+`b289ec5d097aea43d4fae22f1a0a6f29069e9ee788f61a58e55d5516d752b167`;
+its verified result hashes to
+`62320a755caa1057da3be16210398db3ed3fdf8496ac0fed1dbeb7574368e83e`
+and resolved to `neither`. The user heard a male lead and female backing vocal
+in the source, while both candidate MIDIs mainly captured the female backing.
+The developer has not opened either MIDI answer key manually. Cross-song
+downstream MIDI, exact weight-conversion parity and human review are complete,
+but lead-versus-backing assignment quality, remaining runtime/provider
+execution safety and every public route remain blocked.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
@@ -1111,15 +1131,10 @@ resource, downstream-MIDI and human listening acceptance.
 
 ### Current private human-review queue
 
-As of 1 August 2026, only one review is required for the current Kim Vocal 2
-decision: open
-`work/separation-bakeoff/i-am-a-alien-melroformer-vs-moises-vocal-midi-review-v1/midi_ab_review.html`,
-hear the source plus both candidates, mark all three heard, choose an outcome
-and export the reviewed JSON. The separate answer key must remain unopened
-until the complete export is resolved.
-
-The `Be Alone` FP32/BF16 precision review and `Be Alone` Kim-versus-Moises MIDI
-review are complete; both resolved to `equivalent`. The user also confirmed
+As of 1 August 2026, no prepared Kim Vocal 2 human review is outstanding. The
+FP32/BF16 precision review and `Be Alone` Kim-versus-Moises MIDI review both
+resolved to `equivalent`; `I am a Alien mashup` resolved to `neither`. The
+user also confirmed
 listening to the current `Be Alone` six-source diagnostic page. That page is a
 static evidence browser with no export form, so no further action is required
 from it. Historical `be-alone-midi-listening-screen-v1` and earlier

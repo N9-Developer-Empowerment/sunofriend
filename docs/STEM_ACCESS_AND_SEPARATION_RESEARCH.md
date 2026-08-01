@@ -1108,7 +1108,7 @@ commercially redistributable.
 | --- | --- | --- | --- | --- |
 | [Demucs / HTDemucs](https://github.com/facebookresearch/demucs) | Stable four-source vocabulary: drums, bass, vocals, other. Experimental `htdemucs_6s` adds guitar and piano, but the official README warns that piano has substantial bleed. | Original project supports MPS but is no longer actively maintained. [Demucs-MLX](https://github.com/ssmall256/demucs-mlx) and [demucs-infer](https://github.com/openmirlab/demucs-infer) are possible adapters to test. Demucs-MLX's first-use download behaviour must be disabled or preinstalled and then verified offline. | Code is MIT; checkpoint terms and hashes still require an explicit registry entry. | Unverified broad-baseline candidate. |
 | [BS-RoFormer architecture](https://arxiv.org/abs/2309.02612) | Strong four-stem research result, particularly relevant to the bass problem. | The exact [ZFTurbo `v1.0.12` MUSDB18HQ release](https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.12) is now the registered private challenger; it remains uninstalled and unrunnable. An exact tracked 1 August 2026 release/tag/licence snapshot has a no-network verifier. | The repository code is MIT, but the release provides no checkpoint-specific terms or published checkpoint SHA-256. The checkpoint asset `digest` remains null. Sunofriend does not project the code licence onto the weights. | Exact fail-closed candidate, especially for bass and composite `other`; not an available separator. |
-| [MelBand-RoFormer architecture](https://arxiv.org/abs/2310.01809) | Competitive role-specific models could complement a broad separator. The exact Kim Vocal 2 candidate produces vocals; instrumental is mixture minus vocals. | The [MLX conversion](https://huggingface.co/mlx-community/mel-roformer-kim-vocal-2-mlx) is pinned at revision `64cbfcb…` with a 456,483,463-byte Safetensors SHA-256. Its exact minimal MLX source/runtime is audited. Eight-second model chunks and a 15-second overlapped private route measured about 2.42 GB peak on the development Mac. Fast GPU and repeatable CPU modes are distinguished explicitly. All 708 BF16 tensors match their source conversion. On one authorised eight-second music window, BF16-rounded PyTorch versus BF16 MLX reached 117.70 dB SDR, while original FP32 versus BF16 MLX reached 29.14 dB. In the sealed equal-level review, the user heard the original-FP32 and published-BF16 vocal outputs as equivalent. | The [original owner repository](https://huggingface.co/KimberleyJSN/melbandroformer) changed the exact checkpoint metadata from GPL-3.0 to MIT in verified commit `ac9b061…`; the conversion licence names the original weights. Two independent LFS records reproduce the source hash. | Exact, licence-audited **vocal-only** private challenger. The converted runtime is faithful to identical BF16 weights and the one-window review does not justify a doubled FP32 artifact. The first cross-song blind MIDI comparison also resolved equivalent; the second MIDI review, path-to-execution safety and public routes remain blocked. |
+| [MelBand-RoFormer architecture](https://arxiv.org/abs/2310.01809) | Competitive role-specific models could complement a broad separator. The exact Kim Vocal 2 candidate produces vocals; instrumental is mixture minus vocals. | The [MLX conversion](https://huggingface.co/mlx-community/mel-roformer-kim-vocal-2-mlx) is pinned at revision `64cbfcb…` with a 456,483,463-byte Safetensors SHA-256. Its exact minimal MLX source/runtime is audited. Eight-second model chunks and a 15-second overlapped private route measured about 2.42 GB peak on the development Mac. Fast GPU and repeatable CPU modes are distinguished explicitly. All 708 BF16 tensors match their source conversion. On one authorised eight-second music window, BF16-rounded PyTorch versus BF16 MLX reached 117.70 dB SDR, while original FP32 versus BF16 MLX reached 29.14 dB. In the sealed equal-level review, the user heard the original-FP32 and published-BF16 vocal outputs as equivalent. | The [original owner repository](https://huggingface.co/KimberleyJSN/melbandroformer) changed the exact checkpoint metadata from GPL-3.0 to MIT in verified commit `ac9b061…`; the conversion licence names the original weights. Two independent LFS records reproduce the source hash. | Exact, licence-audited **vocal-only** private challenger. The converted runtime is faithful to identical BF16 weights and the one-window review does not justify a doubled FP32 artifact. Cross-song MIDI reviews resolved equivalent and neither; the second exposed a lead-versus-backing assignment failure. The worker-script pathname race is closed for one exact run, but provider/runtime execution safety and all public routes remain blocked. |
 | [SCNet](https://github.com/starrytong/SCNet) | Official sparse-compression four-stem model with released MUSDB checkpoint. | PyTorch path; Apple runtime and memory need measurement. | Official code is MIT; record the release asset terms/hash separately. | Useful independent architecture in the bake-off. |
 | [Spleeter](https://github.com/deezer/spleeter) | Two, four and five source configurations; five-source adds piano. | Older TensorFlow stack has known Apple-silicon friction. | MIT code, last formal release in 2021. | Historical speed/reproducibility control only. |
 | [Open-Unmix](https://github.com/sigsep/open-unmix-pytorch) | Established four-stem reference implementation. | Generic PyTorch CPU/GPU rather than a first-class current Mac route. | MIT code; default UMXL weights are CC BY-NC-SA 4.0. | Non-commercial reference baseline, not public default. |
@@ -1987,9 +1987,13 @@ promotion are not implemented**
 - [x] Measure the first synthetic downstream-MIDI effect with identical
   existing seed-transcriber settings, inactive paired MIDI/note evidence and
   explicit note/onset/pitch/register/duration/drum-family metrics.
-- [ ] Remove or explicitly confine extension/runtime/worker path TOCTOU, and
+- [ ] Remove or explicitly confine extension/runtime path TOCTOU, and
   make the clean outer-supervisor and child signal-state boundaries
   independently observable.
+  The exact Kim Vocal 2 worker-script subproblem is now closed for one real
+  authorised observation by executing the already-open verified descriptor as
+  Python standard input. The sandbox provider and Python runtime remain
+  pathname-launched.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with the
   deterministic fake worker, exact pre-exec remeasurement, validated worker
   result, timeout/reap evidence and parent-verified quarantined outputs before
@@ -2011,10 +2015,11 @@ promotion are not implemented**
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation
   for the three roles actually handled by `refine_stem`; keep the separate
   vocal production path explicit.
-- [ ] Complete downstream MIDI listening evaluation across authorised real
+- [x] Complete downstream MIDI listening evaluation across authorised real
   excerpts. Kim Vocal 2 now has sealed 14-note and 23-note observations on two
-  songs with prepared blind reviews. `Be Alone` resolved to equivalent; only
-  the `I am a Alien mashup` human review and resolution remain outstanding.
+  songs with resolved blind reviews. `Be Alone` resolved to equivalent;
+  `I am a Alien mashup` resolved to neither because both candidates followed
+  the female backing rather than the male lead.
 - [x] After the six-source quality failure, measure same-checkpoint Demucs-MLX
   parity before changing architecture, then register one exact RoFormer
   challenger. The exact ZFTurbo `v1.0.12` BS-RoFormer release, source revision,
@@ -2100,10 +2105,10 @@ promotion are not implemented**
   production vocal-MIDI contract on both authorised songs. The inactive
   candidates contain 14 and 23 notes; each has a sealed equal-level blind
   Kim-versus-Moises review. Estimated-control agreement is not score truth.
-- [ ] Complete and resolve the remaining `I am a Alien mashup`
-  Kim-versus-Moises MIDI review without opening its answer key first; compare
-  it with the `Be Alone` equivalent result before changing any default or
-  product route.
+- [x] Complete and resolve the `I am a Alien mashup` Kim-versus-Moises MIDI
+  review without opening its answer key manually. The result was `neither`,
+  so no default or product route changes and lead/backing assignment becomes a
+  named future quality problem.
 - [x] Compare every supplied leaf inside composite `other` across both
   authorised excerpts using bidirectional audio rankings. Exact and semantic
   labels remain observations only. Keyboard was the only stable Suno pair on

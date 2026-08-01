@@ -1526,15 +1526,23 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   cross-song MIDI and safety gates.
 - The latest authorised Kim Vocal 2 `Be Alone` worker observation binds the
   complete post-inference Python `sys.modules` closure for that exact run: 320
-  modules, 277 independently reopened regular files, 18,067,576 aggregate
+  modules, 277 independently reopened regular files, 18,067,782 aggregate
   bytes and zero unclassified modules. Its path-free closure evidence SHA-256
-  is `ce187b7b154269cc3dd7c542db2573bce7194a142aecd3796193d7fb0db2c74f`.
+  is `1c071f0e3f5231280eade16949af9ed7c478751960c9b86061263cacbbe106c2`.
   A later authorised repeat also bound a bounded macOS kernel-Sandbox denial
   stream to the exact worker PID. It was ready before the worker, verified the
   final event count, observed the one deliberate outbound canary and zero other
-  worker denials, then discarded raw records, PID and destinations. This is not
-  a packet monitor or native-loader audit and does not close path-to-execution
-  TOCTOU or enable a product route.
+  worker denials, then discarded raw records, PID and destinations. The exact
+  6,730-byte worker was opened once without following links, hash-verified,
+  rewound and executed through that same descriptor as Python standard input.
+  Its worker-script pathname race is therefore closed for that observation.
+  This is not a packet monitor or native-loader audit; `sandbox-exec` and the
+  Python runtime still execute by pathname, and no product route is enabled.
+- Both Kim-Vocal-2-versus-Moises MIDI reviews are complete. `Be Alone`
+  resolved to `equivalent`; `I am a Alien mashup` resolved to `neither` because
+  both candidates followed the female backing vocal rather than the male lead
+  in the source reference. Treat this as a lead-versus-backing assignment
+  quality failure, not permission to merge candidates or promote a separator.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,

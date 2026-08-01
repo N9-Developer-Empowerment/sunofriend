@@ -292,16 +292,20 @@ report the result, then move on.
   model run. The same isolated worker and unchanged downstream production
   vocal-MIDI contract now also pass on the authorised `I am a Alien mashup`
   excerpt at its own sealed 114 BPM. The two inactive observations contain 14
-  and 23 notes, and each has a prepared equal-level blind Kim-versus-Moises
-  review whose answer key remains unopened. Their provider/local controls are
-  estimates rather than ground truth, so they select no winner. The latest
+  and 23 notes, and both equal-level blind Kim-versus-Moises reviews are now
+  complete. `Be Alone` resolved to `equivalent`; `I am a Alien mashup`
+  resolved to `neither` because both candidate MIDIs followed the female
+  backing vocal rather than the male lead heard in the mixed source. The
+  resolver alone opened each answer key after the complete user export. Their
+  provider/local controls are estimates rather than ground truth, so they
+  select no winner and the second result is an explicit quality blocker. The latest
   authorised `Be Alone` worker run also bound the complete post-inference
   `sys.modules` Python import closure: 320 modules backed by 277 regular files
-  totalling 18,067,576 bytes, with zero unclassified modules. The child sealed
+  totalling 18,067,782 bytes, with zero unclassified modules. The child sealed
   path-free file hashes and root manifests; the parent independently reopened
   and rehashed every file. This covers Python imports for that exact run only.
-  It does not bind native libraries loaded outside `sys.modules`, close the
-  path-to-execution TOCTOU window or make mutable output files immutable. A
+  It does not bind native libraries loaded outside `sys.modules` or make
+  mutable output files immutable. A
   later authorised repeat added a bounded macOS kernel-Sandbox denial stream
   that was ready before the worker, filtered its exact PID and verified the
   final stream count. It saw the one deliberate `network-outbound` canary and
@@ -319,9 +323,14 @@ report the result, then move on.
   upstream 66.08 dB result used unavailable test audio and is not independently
   reproduced. The user's complete equal-level blind precision review resolved
   to `equivalent`, so this one window does not justify a roughly doubled FP32
-  MLX artifact. The first cross-song Kim-versus-Moises MIDI review also
-  resolved to `equivalent`; the `I am a Alien mashup` MIDI review and
-  path-to-execution safety remain incomplete. The checkpoint is not
+  MLX artifact. A final authorised repeat executed the exact hashed worker
+  script from the same already-open, non-following descriptor supplied as
+  Python standard input. That closes the worker-script pathname race and is
+  bound to the complete import closure and network-denial observation. The
+  deprecated `sandbox-exec` provider and Python virtual-environment runtime
+  are still launched by pathname, so their path-to-execution identity remains
+  open. Native non-module loads and post-observation output mutability also
+  remain explicit. The checkpoint is not
   redistributed. Do not offer or run this challenger through the skill.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one

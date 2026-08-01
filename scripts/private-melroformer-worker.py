@@ -22,7 +22,10 @@ from sunofriend._separation_melroformer_real_bridge import (
     _load_private_authorised_excerpt,
     _load_private_melroformer_model,
 )
-from sunofriend._separation_melroformer_worker_sandbox import _synthetic_arrays
+from sunofriend._separation_melroformer_worker_sandbox import (
+    WORKER_RELATIVE_PATH,
+    _synthetic_arrays,
+)
 from sunofriend._separation_python_import_closure import (
     _capture_python_import_closure_claim,
     _mark_python_import_closure_stable,
@@ -128,6 +131,10 @@ def main() -> int:
         result["model"] = model_evidence
     closure = None
     if args.bind_python_import_closure:
+        main_module = sys.modules["__main__"]
+        main_module.__file__ = str(
+            (args.repository_root / WORKER_RELATIVE_PATH).resolve(strict=True)
+        )
         roots = _melroformer_python_import_roots(
             repository_root=args.repository_root,
             source_root=args.source_root,

@@ -97,14 +97,20 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
         plan["runtime"]["authorised_worker_sandbox_latest_observation"][
             "evidence_sha256"
         ]
-        == "11e10ca1dbb372e63f785c4a935a554d1c036232b539cf66552e6e4c53f6c534"
+        == "e074e3da5bc836fe2da104095d375f0ed626a49e133c6438b0ffb14e8a5a34ca"
     )
     assert plan["runtime"]["complete_python_import_closure_bound"] is True
     closure = plan["runtime"]["authorised_worker_sandbox_latest_observation"]
     assert closure["complete_python_import_closure_bound"] is True
     assert closure["python_module_count"] == 320
     assert closure["python_module_file_count"] == 277
+    assert closure["python_module_file_bytes"] == 18_067_782
     assert closure["python_unclassified_module_count"] == 0
+    assert closure["worker_script_path_to_execution_toctou_closed"] is True
+    assert closure["provider_runtime_path_to_execution_toctou_closed"] is False
+    assert closure["worker_script_execution_transport"] == (
+        "verified-open-descriptor-to-python-stdin"
+    )
     assert closure["native_non_module_loads_bound"] is False
     assert (
         plan["runtime"]["authorised_worker_sandbox_latest_observation"][
@@ -156,10 +162,13 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
     assert all(item["equal_level_blind_review_prepared"] for item in downstream)
     assert [item["equal_level_blind_review_complete"] for item in downstream] == [
         True,
-        False,
+        True,
     ]
     assert downstream[0]["equal_level_blind_choice"] == "equivalent"
     assert downstream[0]["equal_level_blind_resolved_identity"] == "equivalent"
+    assert downstream[1]["equal_level_blind_choice"] == "neither"
+    assert downstream[1]["equal_level_blind_resolved_identity"] == "neither"
+    assert "female backing vocal" in downstream[1]["quality_observation"]
     assert not any(item["answer_key_opened_by_developer"] for item in downstream)
     assert not any(item["winner_selected"] for item in downstream)
     assert plan["source"]["upstream_from_pretrained_permitted"] is False
@@ -204,8 +213,8 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
         "checkpoint_local_hash_unverified",
         "checkpoint_companion_files_unverified",
         "runtime_source_materialisation_missing",
-        "equal_level_human_listening_not_completed",
-        "model_worker_hash_before_exec_path_toctou_not_closed",
+        "cross_song_lead_vocal_midi_quality_not_accepted",
+        "provider_runtime_path_to_execution_toctou_not_closed",
     }.issubset(plan["decision"]["blockers"])
     assert "outbound_model_attempt_observation_not_implemented" not in plan[
         "decision"
@@ -337,8 +346,8 @@ def test_private_plan_script_outputs_json_without_public_route() -> None:
     )
     plan = json.loads(completed.stdout)
     assert plan["decision"]["run_status"] == (
-        "bf16_runtime_parity_import_closure_and_network_observation_"
-        "verified_precision_equivalent_midi_reviews_and_toctou_pending"
+        "bf16_runtime_parity_worker_descriptor_bound_reviews_complete_"
+        "quality_and_provider_runtime_toctou_blocked"
     )
     assert plan["effects"]["network_used"] is False
     assert "private-melroformer-challenger" not in PUBLIC_COMMANDS
