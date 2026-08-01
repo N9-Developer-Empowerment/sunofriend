@@ -144,6 +144,7 @@ and explore its compact [worked MIDI pack](examples/the-aisle-at-lidl/).
 | Compare results visually | [Workbench](docs/WORKBENCH.md) |
 | Understand the WAV and mix boundary | [Musical rendering](docs/MUSICAL_RENDERING_AND_MASTERING.md) |
 | Work with vocal melody | [Vocal melody](docs/VOCAL_MELODY.md) |
+| Review the future vocal-comping design | [Vocal comping design](docs/VOCAL_COMPING_DESIGN.md) and [implementation plan](docs/VOCAL_COMPING_IMPLEMENTATION_PLAN.md) |
 | Match or build instruments | [Instruments](docs/INSTRUMENTS.md) |
 | Review the architecture and code | [Technical tour](docs/TECHNICAL_TOUR.md) |
 | Use every expert command | Run `sunofriend --help` and read the [skill interface contract](skills/sunofriend/references/interface-contract.md) |
