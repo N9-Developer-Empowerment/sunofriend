@@ -20,6 +20,10 @@ from ._separation_macos_sandbox_probe import (
     SANDBOX_EXEC_PATH,
     _regular_file_identity,
 )
+from ._separation_macos_sandbox_network_observer import (
+    _run_with_macos_sandbox_network_observer,
+    _validate_macos_sandbox_network_observation,
+)
 from ._separation_melroformer_artifacts import (
     _inspect_companion_files,
     _inspect_local_checkpoint,
@@ -67,6 +71,12 @@ IMPORT_CLOSURE_POLICY_ID = (
 IMPORT_CLOSURE_CHILD_SCHEMA = (
     "sunofriend.private-melroformer-authorised-worker-import-closure-child.v1"
 )
+NETWORK_OBSERVATION_SCHEMA = (
+    "sunofriend.private-melroformer-authorised-worker-sandbox.v3"
+)
+NETWORK_OBSERVATION_POLICY_ID = (
+    "private-melroformer-authorised-worker-network-observation-v3"
+)
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 _MAXIMUM_STDOUT_BYTES = 2 * 1024 * 1024
 
@@ -83,6 +93,7 @@ def _run_private_melroformer_authorised_worker(
     staging_directory: str | Path,
     device: str = "gpu",
     bind_python_import_closure: bool = False,
+    observe_outbound_attempts: bool = False,
 ) -> Mapping[str, Any]:
     """Run and parent-verify one exact, bounded authorised worker on Darwin."""
 
@@ -92,6 +103,10 @@ def _run_private_melroformer_authorised_worker(
         raise ValueError("MelRoFormer authorised worker device must be gpu or cpu")
     if not _is_sha(expected_authorisation_report_sha256):
         raise ValueError("MelRoFormer authorisation report hash is invalid")
+    if observe_outbound_attempts and not bind_python_import_closure:
+        raise ValueError(
+            "MelRoFormer network observation requires the Python import closure"
+        )
 
     repository = Path(repository_root).expanduser().resolve(strict=True)
     if not repository.is_dir() or repository.is_symlink():
@@ -169,15 +184,27 @@ def _run_private_melroformer_authorised_worker(
                 str(repository),
             ]
         )
-    completed = subprocess.run(
-        command,
-        check=False,
-        capture_output=True,
-        text=True,
-        cwd=repository,
-        env=environment,
-        timeout=120.0,
-    )
+    network_observation = None
+    if observe_outbound_attempts:
+        completed, network_observation = (
+            _run_with_macos_sandbox_network_observer(
+                command=command,
+                cwd=repository,
+                environment=environment,
+                timeout_seconds=120.0,
+                expected_canary_port=9,
+            )
+        )
+    else:
+        completed = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=repository,
+            env=environment,
+            timeout=120.0,
+        )
     stdout_bytes = completed.stdout.encode("utf-8")
     stderr_bytes = completed.stderr.encode("utf-8")
     if (
@@ -256,9 +283,19 @@ def _run_private_melroformer_authorised_worker(
     bridge = child["model"]["bridge"]
     inference = child["model"]["inference"]
     payload = {
-        "schema": IMPORT_CLOSURE_SCHEMA if import_closure else SCHEMA,
+        "schema": (
+            NETWORK_OBSERVATION_SCHEMA
+            if network_observation
+            else IMPORT_CLOSURE_SCHEMA
+            if import_closure
+            else SCHEMA
+        ),
         "policy_id": (
-            IMPORT_CLOSURE_POLICY_ID if import_closure else POLICY_ID
+            NETWORK_OBSERVATION_POLICY_ID
+            if network_observation
+            else IMPORT_CLOSURE_POLICY_ID
+            if import_closure
+            else POLICY_ID
         ),
         "status": "authorised_model_worker_complete_parent_verified",
         "artifacts": {
@@ -283,11 +320,16 @@ def _run_private_melroformer_authorised_worker(
             "network_denial": "enforced_canary_observed",
             "child_process_denial": "enforced_canary_observed",
             "outside_write_denial": "enforced_canary_observed",
-            "arbitrary_attempt_stream_observed": False,
+            "arbitrary_attempt_stream_observed": network_observation is not None,
             "allowed_write_scope": "fresh_private_staging_tree_only",
         },
         "canaries": child["canaries"],
         **({"import_closure": import_closure} if import_closure else {}),
+        **(
+            {"network_observation": network_observation}
+            if network_observation
+            else {}
+        ),
         "authorisation": dict(authorisation_before),
         "model": {
             "candidate_id": bridge["candidate_id"],
@@ -337,6 +379,13 @@ def _run_private_melroformer_authorised_worker(
             "outside_write_denial_bound_to_model_worker": True,
             "pcm24_quarantine_bound_to_model_worker": True,
             "authorised_excerpt_bound_to_model_worker": True,
+            **(
+                {
+                    "kernel_sandbox_network_denial_stream_bound_to_model_worker": True
+                }
+                if network_observation
+                else {}
+            ),
             "worker_authorized_for_product": False,
         },
         "permissions": {
@@ -361,7 +410,7 @@ def _run_private_melroformer_authorised_worker(
         },
         "limitations": {
             "private_development_observation_only": True,
-            "arbitrary_model_attempt_stream_observed": False,
+            "arbitrary_model_attempt_stream_observed": network_observation is not None,
             "hash_before_exec_path_toctou_closed": False,
             "complete_python_import_closure_bound": import_closure is not None,
             "ordinary_outputs_can_change_after_parent_verification": True,
@@ -466,14 +515,95 @@ def _validate_authorised_child(
 def _validate_private_melroformer_authorised_worker(
     document: Mapping[str, Any],
 ) -> Mapping[str, Any]:
-    """Validate either the historical v1 or import-closure-bound v2 record."""
+    """Validate a historical v1, import-bound v2 or network-observed v3 record."""
 
     schema = document.get("schema") if isinstance(document, Mapping) else None
     if schema == SCHEMA:
         return _validate_private_melroformer_authorised_worker_v1(document)
     if schema == IMPORT_CLOSURE_SCHEMA:
         return _validate_private_melroformer_authorised_worker_v2(document)
+    if schema == NETWORK_OBSERVATION_SCHEMA:
+        return _validate_private_melroformer_authorised_worker_v3(document)
     raise ValueError("MelRoFormer authorised worker evidence identity differs")
+
+
+def _validate_private_melroformer_authorised_worker_v3(
+    document: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    value = _plain(document)
+    digest = value.pop("evidence_sha256", None) if isinstance(value, dict) else None
+    if not _is_sha(digest) or digest != hashlib.sha256(
+        _canonical_json_bytes(value)
+    ).hexdigest():
+        raise ValueError("MelRoFormer authorised worker evidence self-hash differs")
+    if (
+        value.get("schema") != NETWORK_OBSERVATION_SCHEMA
+        or value.get("policy_id") != NETWORK_OBSERVATION_POLICY_ID
+        or value.get("status")
+        != "authorised_model_worker_complete_parent_verified"
+        or set(value)
+        != {
+            "schema",
+            "policy_id",
+            "status",
+            "artifacts",
+            "isolation",
+            "canaries",
+            "import_closure",
+            "network_observation",
+            "authorisation",
+            "model",
+            "inference",
+            "quarantine",
+            "conclusion",
+            "permissions",
+            "effects",
+            "limitations",
+        }
+    ):
+        raise ValueError("MelRoFormer authorised worker network fields differ")
+    _validate_macos_sandbox_network_observation(value["network_observation"])
+    if (
+        value["isolation"].get("arbitrary_attempt_stream_observed") is not True
+        or value["limitations"].get("arbitrary_model_attempt_stream_observed")
+        is not True
+        or value["conclusion"].get(
+            "kernel_sandbox_network_denial_stream_bound_to_model_worker"
+        )
+        is not True
+        or value["network_observation"]["observation"].get(
+            "target_pid_bound"
+        )
+        is not True
+        or value["network_observation"]["observation"].get(
+            "deliberate_canary_denial_count"
+        )
+        < 1
+        or value["network_observation"]["limitations"].get(
+            "executable_path_toctou_closed"
+        )
+        is not False
+    ):
+        raise ValueError("MelRoFormer authorised worker network claim differs")
+
+    import_bound = _plain(value)
+    import_bound.pop("network_observation")
+    import_bound["schema"] = IMPORT_CLOSURE_SCHEMA
+    import_bound["policy_id"] = IMPORT_CLOSURE_POLICY_ID
+    import_bound["isolation"]["arbitrary_attempt_stream_observed"] = False
+    import_bound["limitations"]["arbitrary_model_attempt_stream_observed"] = False
+    import_bound["conclusion"].pop(
+        "kernel_sandbox_network_denial_stream_bound_to_model_worker"
+    )
+    import_bound["evidence_sha256"] = hashlib.sha256(
+        _canonical_json_bytes(import_bound)
+    ).hexdigest()
+    _validate_private_melroformer_authorised_worker_v2(import_bound)
+    checked = {**value, "evidence_sha256": digest}
+    encoded = json.dumps(checked, sort_keys=True, separators=(",", ":"))
+    if "/Users/" in encoded or "file://" in encoded or "://" in encoded:
+        raise ValueError("MelRoFormer authorised worker evidence is not path-free")
+    return _freeze_json(checked)
 
 
 def _validate_private_melroformer_authorised_worker_v2(
@@ -785,6 +915,8 @@ def _plain(value: Any) -> Any:
 
 
 __all__ = [
+    "NETWORK_OBSERVATION_POLICY_ID",
+    "NETWORK_OBSERVATION_SCHEMA",
     "POLICY_ID",
     "SCHEMA",
     "_run_private_melroformer_authorised_worker",

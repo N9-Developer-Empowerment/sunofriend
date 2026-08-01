@@ -813,25 +813,22 @@ song. The path-free observation is in
 No output audio was retained and this gate measures implementation fidelity,
 not separator quality.
 
-The required listening gate is now prepared at
-`work/separation-bakeoff/be-alone-kim-fp32-vs-bf16-vocal-review-v1/`.
-It repeats the original FP32 PyTorch and published BF16 MLX inference on the
+The required listening gate at
+`work/separation-bakeoff/be-alone-kim-fp32-vs-bf16-vocal-review-v1/`
+repeats the original FP32 PyTorch and published BF16 MLX inference on the
 same authorised 191–199 second frames, keeps the mixed source as an unlevelled
 reference and attenuates only the louder candidate before applying any shared
 sample-peak guard. Both final PCM24 candidates measure `-21.093168` dBFS
 fixed-window sample RMS with zero reported mismatch. The audio-manifest
 SHA-256 is
 `202b5e6d91478321b40f276e90ae25f2c7dc8449c1071a2d42d11462932c97d9`.
-The answer key is separate, owner-only, absent from the HTML and unopened by
-the developer. The package is unreviewed and enables no separator or product
-route.
-
-Open only `melroformer_precision_review.html`, listen to the source and both
-anonymous candidates, mark all three as heard, choose A, B, equivalent,
-neither or cannot tell, then export
-`melroformer_precision_review.reviewed.json`. Do not open
-`melroformer_precision_answer_key.json` first. Resolution is a separate
-developer-only action and still cannot promote a checkpoint.
+The answer key remained separate, owner-only and absent from the HTML until
+the user's complete export was passed to the verified resolver. The blind
+choice was `equivalent`: candidate A was original FP32 PyTorch and candidate B
+was published BF16 MLX. The reviewed export SHA-256 is
+`aa95d0dc6df8a698864aae34c1c345bddf299b56d82117da0612bb8924693d3c`.
+This one-window result does not justify maintaining a roughly doubled FP32 MLX
+artifact. It also does not enable, select or promote the BF16 separator.
 
 The exact non-executable runtime boundary is now defined. MLX-Audio `v0.4.3`
 resolves to source revision
@@ -986,7 +983,7 @@ byte-identical vocals and instrumental hashes, but each took about 23.4 seconds
 and peaked at about 3.58 GB. The future writer must hash every actual artifact;
 GPU mode cannot promise cross-run byte identity.
 
-The fixed two-role worker has now passed two separate authorised observations.
+The fixed two-role worker has now passed three separate authorised observations.
 The parent remeasured the exact runtime, worker, source manifest, checkpoint,
 companions, authorisation report and source PCM24 before and after the run. It
 launched the worker through the exact hashed macOS `sandbox-exec` provider with
@@ -1028,11 +1025,29 @@ The persisted owner-only observation file is 92,670 bytes and hashes to
 
 This Python binding is deliberately narrower than a complete executable-image
 proof. It does not bind native libraries loaded outside `sys.modules`, close
-hash-before-exec path TOCTOU, observe arbitrary outbound-attempt history or
-complete human listening. Exact PyTorch-versus-MLX runtime parity is now
-verified separately. Ordinary private output files can also change after the
-parent's final observation. Every Simple, Studio, source-graph, selection and
-publication permission remains false.
+hash-before-exec path TOCTOU or complete human listening. Exact
+PyTorch-versus-MLX runtime parity is now verified separately. Ordinary private
+output files can also change after the parent's final observation. Every
+Simple, Studio, source-graph, selection and publication permission remains
+false.
+
+The third `Be Alone` observation adds a bounded macOS kernel-Sandbox denial
+stream around the same real model execution. `/usr/bin/log stream` was hashed
+and ready before the worker began. The observer accepted only NDJSON events
+from the kernel Sandbox extension, verified the final stream count, filtered
+the exact worker PID in memory and then discarded every raw event, PID and
+destination. It saw exactly one worker denial: the deliberate
+`network-outbound` port-9 canary. It saw zero other worker denials and zero
+unrelated denials. The path-free network evidence SHA-256 is
+`393bc04ec7247c415dd83d1732cbd84f47f5b5cb99b98c35206a2b6bc891ce5c`;
+the complete worker evidence is
+`11e10ca1dbb372e63f785c4a935a554d1c036232b539cf66552e6e4c53f6c534`.
+The owner-only observation file is 94,545 bytes and hashes to
+`f623c2e1a99dabfbe3c2f9be16f5116ac8555c2dc89300dff9f6a017381336dd`.
+This records sandbox-denied `network-*` acquisitions, not successful traffic
+or packet capture. Unified logging is not described as a packet monitor. The
+executable path-to-execution race and native non-module load closure remain
+open blockers.
 
 The development-only command is:
 
@@ -1048,6 +1063,7 @@ PYTHONPATH=src .venv-ai/bin/python \
   --authorisation-report-sha256 <exact-report-sha256> \
   --staging-directory /absolute/fresh/private-output \
   --bind-python-import-closure \
+  --observe-outbound-attempts \
   --device gpu
 ```
 
@@ -1072,18 +1088,39 @@ the candidate MIDI is bound as
 These controls are not score truth, and all values are agreement measurements
 rather than rankings.
 
-Equal-level blind Kim-Vocal-2-versus-Moises MIDI reviews are prepared for both
+Equal-level blind Kim-Vocal-2-versus-Moises MIDI reviews were prepared for both
 songs with each original mixed excerpt as the source, identical General MIDI
 program and SoundFont for both candidates, explicit zero alignment and a
 0–15 second window. Their audio-manifest SHA-256 values are
 `11a05fad5752c44025c018603ed4c21dd9003f7a201118ab0a716d95dadb794c`
 and
 `dab62596f47a13f05a10a96db1e06b8ab39c98b43899f5978b52ad32348655d8`.
-The developer has not opened either answer key. Cross-song downstream MIDI and
-exact weight-conversion parity are complete, while human listening,
-the musical effect of the observed FP32-to-BF16 precision delta and every
-public route remain blocked; no winner has been selected or promoted.
+The completed `Be Alone` review resolved to `equivalent`; its reviewed export
+SHA-256 is
+`8146d04d963b2bd2405a665915bf849e4b75158d591006d2f20237f3ec99d96c`.
+The `I am a Alien mashup` review remains unreviewed. The developer has not
+opened either MIDI answer key manually. Cross-song downstream MIDI, exact
+weight-conversion parity and the FP32/BF16 precision review are complete. The
+user heard both the precision candidates and the first MIDI pair as
+equivalent, but the second song-level MIDI review, execution-path safety and
+every public route remain blocked; no separator has been selected or promoted.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
 resource, downstream-MIDI and human listening acceptance.
+
+### Current private human-review queue
+
+As of 1 August 2026, only one review is required for the current Kim Vocal 2
+decision: open
+`work/separation-bakeoff/i-am-a-alien-melroformer-vs-moises-vocal-midi-review-v1/midi_ab_review.html`,
+hear the source plus both candidates, mark all three heard, choose an outcome
+and export the reviewed JSON. The separate answer key must remain unopened
+until the complete export is resolved.
+
+The `Be Alone` FP32/BF16 precision review and `Be Alone` Kim-versus-Moises MIDI
+review are complete; both resolved to `equivalent`. The user also confirmed
+listening to the current `Be Alone` six-source diagnostic page. That page is a
+static evidence browser with no export form, so no further action is required
+from it. Historical `be-alone-midi-listening-screen-v1` and earlier
+six-source-v1 pages are superseded diagnostics, not current acceptance gates.

@@ -1697,7 +1697,7 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
-### 2026-08-01 — Kim Vocal 2 FP32/BF16 listening gate prepared
+### 2026-08-01 — Kim Vocal 2 FP32/BF16 listening gate resolved
 
 - Goal: make the measured FP32-to-BF16 output delta reviewable by ear before
   deciding whether a second, roughly doubled-size FP32 MLX artifact is useful.
@@ -1712,17 +1712,21 @@ Each working day should aim for one narrow vertical improvement:
 - Evidence and metrics: both anonymous final PCM24 candidates measure
   `-21.093168` dBFS fixed-window sample RMS with zero reported mismatch. The
   audio-manifest SHA-256 is `202b5e6d…c97d9`; all package files are owner-only.
-  The complete repository suite passes with 2,668 tests, one platform skip and
+  The complete repository suite passes with 2,679 tests, one platform skip and
   the existing third-party `resampy` deprecation warning.
-- Listening result: pending. The HTML contains no precision identity, the
-  answer key is separate and the developer has not opened it.
-- Decision: prepare the listening gate only. Keep separator enablement,
-  selection, promotion, defaults and every product route false.
+- Listening result: the user's complete blind export resolved to
+  `equivalent`. Candidate A was original FP32 PyTorch and candidate B was
+  published BF16 MLX. The reviewed export SHA-256 is
+  `aa95d0dc6df8a698864aae34c1c345bddf299b56d82117da0612bb8924693d3c`.
+- Decision: do not create a roughly doubled FP32 MLX artifact on this evidence.
+  Continue evaluating the exact published BF16 candidate privately, while
+  keeping separator enablement, selection, promotion, defaults and every
+  product route false.
 - Problems/risks: sample RMS is not perceived loudness; one eight-second song
   excerpt cannot establish universal precision equivalence.
-- Next smallest step: complete and export the sealed precision review, then
-  resolve it separately before deciding whether an FP32 MLX challenger is
-  justified.
+- Next smallest step: complete the two prepared cross-song Kim-Vocal-2-versus-
+  Moises MIDI reviews and close the worker path-to-execution race before any
+  promotion decision.
 
 ### 2026-08-01 — Kim Vocal 2 BF16 runtime output parity
 
@@ -1856,16 +1860,50 @@ Each working day should aim for one narrow vertical improvement:
   `ff086359…7b0`; the downstream report is `e2ae906d…3a0c`. The candidate has
   14 notes. Exact-pitch/onset F1 at 40 ms was 0.600 versus Moises, 0.560 versus
   Suno A, 0.519 versus HTDemucs and 0.462 versus Suno B.
-- Listening result: pending. A blind Kim-versus-Moises review is prepared; its
-  answer key has not been opened by the developer.
+- Listening result: the complete blind Kim-versus-Moises export resolved to
+  `equivalent`. Its reviewed-export SHA-256 is `8146d04d…d96c`; no MIDI,
+  selection or default changed.
 - Decision: keep all product, selection and publication permissions false.
   Agreement with estimated controls is not ground truth and selects no winner.
 - Problems/risks: one short excerpt cannot establish recognition, cross-song
   reliability or the musical impact of the later-observed FP32-to-BF16
   precision delta. The dominant contour remains monophonic.
 - Next smallest step: the exact contract has now repeated on a second
-  authorised song; complete and export both blind human reviews before
-  reconsidering the gate.
+  authorised song; complete and export the remaining `I am a Alien mashup`
+  blind review before reconsidering the gate.
+
+### 2026-08-01 — exact-worker macOS Sandbox network-denial observation
+
+- Goal: replace reliance on one self-reported connection canary with a bounded
+  parent observation of kernel Sandbox `network-*` denials for the exact real
+  model-worker PID.
+- Change or experiment: added a private macOS unified-log observer that hashes
+  `/usr/bin/log`, becomes ready before the worker starts, consumes NDJSON under
+  a fixed kernel-Sandbox predicate, verifies the stream's final count and
+  rejects malformed, excessive or unexpected records. Raw events are bounded
+  in memory and discarded; the durable evidence contains counts only, without
+  PID, destination or message text.
+- Inputs: the already authorised `Be Alone` 191–206 second PCM24 excerpt, exact
+  Kim Vocal 2 Safetensors checkpoint, audited MLX source and the existing
+  import-closure-bound worker. No new model or network access.
+- Evidence and metrics: the observer was ready before the model process and
+  bound one `network-outbound` denial to its exact PID. That event was the
+  deliberate port-9 canary; there were zero other worker denials and zero
+  unrelated denials. The final stream summary matched one parsed event, with no
+  malformed record or byte/event overflow. Network evidence is sealed as
+  `393bc04ec7247c415dd83d1732cbd84f47f5b5cb99b98c35206a2b6bc891ce5c`;
+  the complete worker record is
+  `11e10ca1dbb372e63f785c4a935a554d1c036232b539cf66552e6e4c53f6c534`.
+- Listening result: not applicable; the musical outputs and review identities
+  are unchanged, and no blind answer key was opened.
+- Decision: close the plan blocker for bounded observation of sandbox-denied
+  model-process network acquisitions. Keep all product routes false.
+- Problems/risks: unified logging is not a packet monitor and this evidence
+  records denied Sandbox acquisitions, not successful network traffic. The
+  runtime and worker are still executed by pathname; native non-module load
+  closure and path-to-execution TOCTOU remain open.
+- Next smallest step: close the pathname-to-execution race without weakening
+  the sandbox, then complete the remaining `I am a Alien mashup` MIDI review.
 
 ### 2026-08-01 — isolated synthetic two-role worker
 

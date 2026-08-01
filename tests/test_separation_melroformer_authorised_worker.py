@@ -13,6 +13,7 @@ import numpy as np
 import pytest
 
 import sunofriend._separation_melroformer_authorised_worker as worker
+import sunofriend._separation_macos_sandbox_network_observer as network_observer
 from sunofriend._separation_checkpoint_canonical import plain
 from sunofriend._separation_melroformer_pcm24_quarantine import (
     _materialize_private_melroformer_pcm24_quarantine,
@@ -30,11 +31,15 @@ from sunofriend.interface_contract import DIRECT_TUI_COMMANDS, PUBLIC_COMMANDS
 from sunofriend.separation_contract import _canonical_json_bytes
 
 
-@pytest.mark.parametrize("bind_python_import_closure", [False, True])
+@pytest.mark.parametrize(
+    ("bind_python_import_closure", "observe_outbound_attempts"),
+    [(False, False), (True, False), (True, True)],
+)
 def test_parent_binds_authorised_worker_denials_and_pcm24(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     bind_python_import_closure: bool,
+    observe_outbound_attempts: bool,
 ) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()
@@ -159,6 +164,42 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
         return subprocess.CompletedProcess(command, 0, json.dumps(child), "")
 
     monkeypatch.setattr(worker.subprocess, "run", fake_run)
+
+    def fake_observed_run(**kwargs: object) -> tuple[object, object]:
+        command = kwargs["command"]
+        assert isinstance(command, list)
+        completed = fake_run(command)
+        event = {
+            "eventType": "logEvent",
+            "senderImagePath": network_observer.SENDER_IMAGE_PATH,
+            "eventMessage": (
+                "Sandbox: Python(123) deny(1) network-outbound remote:*:9"
+            ),
+        }
+        raw = (
+            json.dumps(event)
+            + "\n"
+            + json.dumps({"count": 1, "finished": 1})
+            + "\n"
+        ).encode()
+        observation = network_observer._build_observation(
+            raw_stdout=raw,
+            stdout_bytes=len(raw),
+            target_pid=123,
+            expected_canary_port=9,
+            identity={
+                "resolved_path": "/usr/bin/log",
+                "bytes": 1_024,
+                "sha256": "1" * 64,
+            },
+        )
+        return completed, observation
+
+    monkeypatch.setattr(
+        worker,
+        "_run_with_macos_sandbox_network_observer",
+        fake_observed_run,
+    )
     evidence = worker._run_private_melroformer_authorised_worker(
         repository_root=repository,
         runtime_path=runtime,
@@ -169,6 +210,7 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
         expected_authorisation_report_sha256="a" * 64,
         staging_directory=tmp_path / "staging",
         bind_python_import_closure=bind_python_import_closure,
+        observe_outbound_attempts=observe_outbound_attempts,
     )
 
     assert evidence["status"] == "authorised_model_worker_complete_parent_verified"
@@ -180,7 +222,15 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
     assert evidence["artifacts"]["complete_python_import_closure_bound"] is (
         bind_python_import_closure
     )
-    if bind_python_import_closure:
+    if observe_outbound_attempts:
+        assert evidence["schema"] == worker.NETWORK_OBSERVATION_SCHEMA
+        assert evidence["network_observation"]["observation"][
+            "deliberate_canary_denial_count"
+        ] == 1
+        assert evidence["limitations"][
+            "arbitrary_model_attempt_stream_observed"
+        ] is True
+    elif bind_python_import_closure:
         assert evidence["schema"] == worker.IMPORT_CLOSURE_SCHEMA
         assert evidence["import_closure"] == verified_closure
     else:

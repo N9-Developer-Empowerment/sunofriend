@@ -1108,7 +1108,7 @@ commercially redistributable.
 | --- | --- | --- | --- | --- |
 | [Demucs / HTDemucs](https://github.com/facebookresearch/demucs) | Stable four-source vocabulary: drums, bass, vocals, other. Experimental `htdemucs_6s` adds guitar and piano, but the official README warns that piano has substantial bleed. | Original project supports MPS but is no longer actively maintained. [Demucs-MLX](https://github.com/ssmall256/demucs-mlx) and [demucs-infer](https://github.com/openmirlab/demucs-infer) are possible adapters to test. Demucs-MLX's first-use download behaviour must be disabled or preinstalled and then verified offline. | Code is MIT; checkpoint terms and hashes still require an explicit registry entry. | Unverified broad-baseline candidate. |
 | [BS-RoFormer architecture](https://arxiv.org/abs/2309.02612) | Strong four-stem research result, particularly relevant to the bass problem. | The exact [ZFTurbo `v1.0.12` MUSDB18HQ release](https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.12) is now the registered private challenger; it remains uninstalled and unrunnable. An exact tracked 1 August 2026 release/tag/licence snapshot has a no-network verifier. | The repository code is MIT, but the release provides no checkpoint-specific terms or published checkpoint SHA-256. The checkpoint asset `digest` remains null. Sunofriend does not project the code licence onto the weights. | Exact fail-closed candidate, especially for bass and composite `other`; not an available separator. |
-| [MelBand-RoFormer architecture](https://arxiv.org/abs/2310.01809) | Competitive role-specific models could complement a broad separator. The exact Kim Vocal 2 candidate produces vocals; instrumental is mixture minus vocals. | The [MLX conversion](https://huggingface.co/mlx-community/mel-roformer-kim-vocal-2-mlx) is pinned at revision `64cbfcb…` with a 456,483,463-byte Safetensors SHA-256. Its exact minimal MLX source/runtime is audited. Eight-second model chunks and a 15-second overlapped private route measured about 2.42 GB peak on the development Mac. Fast GPU and repeatable CPU modes are distinguished explicitly. All 708 BF16 tensors match their source conversion. On one authorised eight-second music window, BF16-rounded PyTorch versus BF16 MLX reached 117.70 dB SDR, while original FP32 versus BF16 MLX reached 29.14 dB. A sealed, owner-only, equal-level precision review is prepared on those exact frames. | The [original owner repository](https://huggingface.co/KimberleyJSN/melbandroformer) changed the exact checkpoint metadata from GPL-3.0 to MIT in verified commit `ac9b061…`; the conversion licence names the original weights. Two independent LFS records reproduce the source hash. | Exact, licence-audited **vocal-only** private challenger. The converted runtime is faithful to identical BF16 weights, but musical review remains pending. The precision answer key has not been opened. Two blind MIDI reviews, the precision review and public routes remain blocked. |
+| [MelBand-RoFormer architecture](https://arxiv.org/abs/2310.01809) | Competitive role-specific models could complement a broad separator. The exact Kim Vocal 2 candidate produces vocals; instrumental is mixture minus vocals. | The [MLX conversion](https://huggingface.co/mlx-community/mel-roformer-kim-vocal-2-mlx) is pinned at revision `64cbfcb…` with a 456,483,463-byte Safetensors SHA-256. Its exact minimal MLX source/runtime is audited. Eight-second model chunks and a 15-second overlapped private route measured about 2.42 GB peak on the development Mac. Fast GPU and repeatable CPU modes are distinguished explicitly. All 708 BF16 tensors match their source conversion. On one authorised eight-second music window, BF16-rounded PyTorch versus BF16 MLX reached 117.70 dB SDR, while original FP32 versus BF16 MLX reached 29.14 dB. In the sealed equal-level review, the user heard the original-FP32 and published-BF16 vocal outputs as equivalent. | The [original owner repository](https://huggingface.co/KimberleyJSN/melbandroformer) changed the exact checkpoint metadata from GPL-3.0 to MIT in verified commit `ac9b061…`; the conversion licence names the original weights. Two independent LFS records reproduce the source hash. | Exact, licence-audited **vocal-only** private challenger. The converted runtime is faithful to identical BF16 weights and the one-window review does not justify a doubled FP32 artifact. The first cross-song blind MIDI comparison also resolved equivalent; the second MIDI review, path-to-execution safety and public routes remain blocked. |
 | [SCNet](https://github.com/starrytong/SCNet) | Official sparse-compression four-stem model with released MUSDB checkpoint. | PyTorch path; Apple runtime and memory need measurement. | Official code is MIT; record the release asset terms/hash separately. | Useful independent architecture in the bake-off. |
 | [Spleeter](https://github.com/deezer/spleeter) | Two, four and five source configurations; five-source adds piano. | Older TensorFlow stack has known Apple-silicon friction. | MIT code, last formal release in 2021. | Historical speed/reproducibility control only. |
 | [Open-Unmix](https://github.com/sigsep/open-unmix-pytorch) | Established four-stem reference implementation. | Generic PyTorch CPU/GPU rather than a first-class current Mac route. | MIT code; default UMXL weights are CC BY-NC-SA 4.0. | Non-commercial reference baseline, not public default. |
@@ -1998,7 +1998,12 @@ promotion are not implemented**
   runtimes in a separate worker environment.
 - [ ] Require explicit checkpoint installation, hashes and licences in the
   real parent runner.
-- [ ] Prove that inference makes no network request after installation.
+- [x] Observe the exact authorised Kim Vocal 2 worker's sandbox-denied network
+  acquisitions after installation. A bounded kernel-Sandbox unified-log stream
+  was ready before the process, bound records to its exact PID and verified its
+  final count. It saw the one deliberate port-9 canary and zero other worker
+  denials. Raw records, destinations and PID were discarded. This is denial
+  evidence, not packet capture; path-to-execution TOCTOU remains open.
 - [ ] Generalise the first immutable synthetic broad candidate, residual and
   quality report into a cross-song, multi-backend bake-off corpus.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
@@ -2006,10 +2011,10 @@ promotion are not implemented**
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation
   for the three roles actually handled by `refine_stem`; keep the separate
   vocal production path explicit.
-- [ ] Repeat downstream MIDI and listening evaluation across authorised real
-  excerpts. One independent Kim Vocal 2 separator/runtime candidate now has a
-  sealed 14-note downstream observation and a prepared blind review; human
-  completion and a second song remain outstanding.
+- [ ] Complete downstream MIDI listening evaluation across authorised real
+  excerpts. Kim Vocal 2 now has sealed 14-note and 23-note observations on two
+  songs with prepared blind reviews. `Be Alone` resolved to equivalent; only
+  the `I am a Alien mashup` human review and resolution remain outstanding.
 - [x] After the six-source quality failure, measure same-checkpoint Demucs-MLX
   parity before changing architecture, then register one exact RoFormer
   challenger. The exact ZFTurbo `v1.0.12` BS-RoFormer release, source revision,
@@ -2065,10 +2070,13 @@ promotion are not implemented**
   exact authorised 191–199 second window. Candidate A/B PCM24 files match at
   `-21.093168` dBFS fixed-window sample RMS; the mixed source is unlevelled,
   identity is absent from the page and the answer key remains unopened.
-- [ ] Complete and resolve that precision review before deciding whether an
-  FP32 MLX conversion is worth its doubled artifact size. The complete Python
-  `sys.modules` closure is now bound for one exact authorised worker run;
-  native non-module loads and hash-before-exec TOCTOU remain open.
+- [x] Complete and resolve the precision review before deciding whether an
+  FP32 MLX conversion is worth its doubled artifact size. The blind choice was
+  `equivalent`, so this evidence does not justify creating that artifact. The
+  complete Python `sys.modules` closure is bound for one exact authorised
+  worker run; a later repeat also bound the kernel Sandbox denial stream to the
+  exact worker PID and saw only its deliberate canary. Native non-module loads
+  and hash-before-exec TOCTOU remain open.
 - [ ] Consider a deterministic role-specific ensemble only after its members
   have separate held-out evidence; never infer a winner from popularity or a
   model-runner catalogue.
@@ -2092,9 +2100,10 @@ promotion are not implemented**
   production vocal-MIDI contract on both authorised songs. The inactive
   candidates contain 14 and 23 notes; each has a sealed equal-level blind
   Kim-versus-Moises review. Estimated-control agreement is not score truth.
-- [ ] Complete and resolve both blind Kim-versus-Moises MIDI reviews without
-  opening either answer key first; compare the cross-song human evidence
-  before changing any default or product route.
+- [ ] Complete and resolve the remaining `I am a Alien mashup`
+  Kim-versus-Moises MIDI review without opening its answer key first; compare
+  it with the `Be Alone` equivalent result before changing any default or
+  product route.
 - [x] Compare every supplied leaf inside composite `other` across both
   authorised excerpts using bidirectional audio rankings. Exact and semantic
   labels remain observations only. Keyboard was the only stable Suno pair on

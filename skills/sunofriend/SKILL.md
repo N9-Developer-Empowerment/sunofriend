@@ -301,9 +301,13 @@ report the result, then move on.
   path-free file hashes and root manifests; the parent independently reopened
   and rehashed every file. This covers Python imports for that exact run only.
   It does not bind native libraries loaded outside `sys.modules`, close the
-  path-to-execution TOCTOU window, observe every arbitrary connection attempt
-  or make mutable output files immutable. Cross-song downstream MIDI is
-  complete. The exact
+  path-to-execution TOCTOU window or make mutable output files immutable. A
+  later authorised repeat added a bounded macOS kernel-Sandbox denial stream
+  that was ready before the worker, filtered its exact PID and verified the
+  final stream count. It saw the one deliberate `network-outbound` canary and
+  zero other worker denials; raw events, PID and destinations were discarded.
+  This records sandbox-denied acquisitions, not successful traffic or packet
+  capture. Cross-song downstream MIDI is complete. The exact
   913,106,900-byte author-hosted source checkpoint has also been privately
   re-hashed and loaded through restricted PyTorch `weights_only=True`; all 708
   converted BF16 tensors, including 12 packed Q/K/V splits, match bit-for-bit.
@@ -313,7 +317,11 @@ report the result, then move on.
   delta inside PyTorch after BF16 rounding; retain this as a publication-
   precision concern rather than hiding it behind the runtime-parity pass. The
   upstream 66.08 dB result used unavailable test audio and is not independently
-  reproduced. Human listening remains incomplete. The checkpoint is not
+  reproduced. The user's complete equal-level blind precision review resolved
+  to `equivalent`, so this one window does not justify a roughly doubled FP32
+  MLX artifact. The first cross-song Kim-versus-Moises MIDI review also
+  resolved to `equivalent`; the `I am a Alien mashup` MIDI review and
+  path-to-execution safety remain incomplete. The checkpoint is not
   redistributed. Do not offer or run this challenger through the skill.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one

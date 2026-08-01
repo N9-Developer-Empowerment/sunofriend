@@ -78,12 +78,15 @@ from ._separation_safetensors_inspection import (
 
 
 AUTHORISED_WORKER_SANDBOX_SCHEMA = (
-    "sunofriend.private-melroformer-authorised-worker-sandbox.v2"
+    "sunofriend.private-melroformer-authorised-worker-sandbox.v3"
+)
+NETWORK_OBSERVATION_SCHEMA = (
+    "sunofriend.private-macos-sandbox-network-observation.v1"
 )
 
 
-PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v15"
-POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v15"
+PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v17"
+POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v17"
 AUDITED_AT = "2026-08-01"
 CHECKPOINT_NAME = "model.safetensors"
 CHECKPOINT_URL = (
@@ -93,9 +96,7 @@ CHECKPOINT_URL = (
 )
 _BASE_BLOCKERS = (
     "equal_level_human_listening_not_completed",
-    "fp32_bf16_precision_listening_not_completed",
     "model_worker_hash_before_exec_path_toctou_not_closed",
-    "outbound_model_attempt_observation_not_implemented",
 )
 
 
@@ -358,7 +359,7 @@ def _build_private_melroformer_challenger_plan(
                 "schema": PRECISION_REVIEW_SCHEMA,
                 "policy_id": PRECISION_REVIEW_POLICY_ID,
                 "observed_at": "2026-08-01",
-                "status": "prepared_unreviewed",
+                "status": "complete_equivalent_no_promotion",
                 "authorised_track_id": "be-alone",
                 "source_seconds": [191.0, 199.0],
                 "sample_rate": 44_100,
@@ -378,8 +379,18 @@ def _build_private_melroformer_challenger_plan(
                 ),
                 "answer_key_embedded_in_html": False,
                 "answer_key_opened_by_developer": False,
-                "human_listening_complete": False,
+                "answer_key_opened_by_verified_resolver": True,
+                "review_sha256": (
+                    "aa95d0dc6df8a698864aae34c1c345bddf299b56d82117da0612bb8924693d3c"
+                ),
+                "seed_sha256": (
+                    "97fefd727ed13b590c769d18dde8e1d5f6e18901f04a0862f4d69a2262d49495"
+                ),
+                "choice": "equivalent",
+                "resolved_precision": "equivalent",
+                "human_listening_complete": True,
                 "winner_selected": False,
+                "fp32_mlx_artifact_justified_by_human_review": False,
                 "separator_enabled": False,
                 "product_route_changed": False,
             },
@@ -417,7 +428,10 @@ def _build_private_melroformer_challenger_plan(
                 "model_or_checkpoint_loaded": False,
             },
             "network_denial_bound_to_model_worker": True,
-            "outbound_model_attempt_observation_implemented": False,
+            "outbound_model_attempt_observation_implemented": True,
+            "outbound_model_attempt_observation_schema": (
+                NETWORK_OBSERVATION_SCHEMA
+            ),
             "pcm24_quarantine_schema": PCM24_QUARANTINE_SCHEMA,
             "pcm24_quarantine_implemented": True,
             "pcm24_quarantine_synthetic_full_excerpt_passed": True,
@@ -447,10 +461,10 @@ def _build_private_melroformer_challenger_plan(
             "authorised_worker_sandbox_latest_observation": {
                 "observed_at": "2026-08-01",
                 "evidence_sha256": (
-                    "3de1b71ef552cd46d1bff1784c4843b7709eeaf945cf3778e53737ca08f350a8"
+                    "11e10ca1dbb372e63f785c4a935a554d1c036232b539cf66552e6e4c53f6c534"
                 ),
                 "persisted_observation_file_sha256": (
-                    "230aa5b873e3b81e110bff187ed71d86a7859bec843b9eb71a28f3ca1d0328e6"
+                    "f623c2e1a99dabfbe3c2f9be16f5116ac8555c2dc89300dff9f6a017381336dd"
                 ),
                 "authorisation_report_sha256": (
                     "00685db1ba4d5ac0927c25a5ef40792ab36c56cdb36dcc20cc5f926fb9774e90"
@@ -473,6 +487,17 @@ def _build_private_melroformer_challenger_plan(
                 "python_module_file_count": 277,
                 "python_module_file_bytes": 18_067_576,
                 "python_unclassified_module_count": 0,
+                "kernel_network_observation_schema": NETWORK_OBSERVATION_SCHEMA,
+                "kernel_network_observation_evidence_sha256": (
+                    "393bc04ec7247c415dd83d1732cbd84f47f5b5cb99b98c35206a2b6bc891ce5c"
+                ),
+                "kernel_network_observer_ready_before_worker": True,
+                "kernel_network_observation_bound_to_exact_worker_pid": True,
+                "kernel_network_deliberate_canary_count": 1,
+                "kernel_network_other_worker_denial_count": 0,
+                "kernel_network_unrelated_denial_count": 0,
+                "kernel_network_final_summary_verified": True,
+                "kernel_network_raw_log_persisted": False,
                 "native_non_module_loads_bound": False,
                 "hash_before_exec_path_toctou_closed": False,
                 "product_route_permitted": False,
@@ -643,7 +668,12 @@ def _build_private_melroformer_challenger_plan(
                     "equal_level_blind_review_audio_manifest_sha256": (
                         "11a05fad5752c44025c018603ed4c21dd9003f7a201118ab0a716d95dadb794c"
                     ),
-                    "equal_level_blind_review_complete": False,
+                    "equal_level_blind_review_complete": True,
+                    "equal_level_blind_review_sha256": (
+                        "8146d04d963b2bd2405a665915bf849e4b75158d591006d2f20237f3ec99d96c"
+                    ),
+                    "equal_level_blind_choice": "equivalent",
+                    "equal_level_blind_resolved_identity": "equivalent",
                     "answer_key_opened_by_developer": False,
                 },
                 {
@@ -686,8 +716,8 @@ def _build_private_melroformer_challenger_plan(
         "decision": {
             "status": "blocked",
             "run_status": (
-                "bf16_runtime_parity_and_python_import_closure_verified_"
-                "reviews_and_safety_pending"
+                "bf16_runtime_parity_import_closure_and_network_observation_"
+                "verified_precision_equivalent_midi_reviews_and_toctou_pending"
             ),
             "candidate_registered": True,
             "checkpoint_published_identity_pinned": True,
@@ -701,9 +731,7 @@ def _build_private_melroformer_challenger_plan(
             "blockers": blockers,
             "next_safe_actions": [
                 "close the model-worker hash-before-exec path TOCTOU without weakening the sandbox or descriptor policy",
-                "add bounded observation for every model-process outbound socket attempt rather than relying only on the deliberate denial canary",
-                "compare original-FP32 and published-BF16 vocal outputs in an equal-level blind review before deciding whether a larger FP32 MLX artifact is justified",
-                "complete both prepared equal-level blind Kim-Vocal-2-versus-Moises MIDI listening reviews without opening either answer key",
+                "complete the prepared I am a Alien mashup Kim-Vocal-2-versus-Moises MIDI listening review without opening its answer key",
                 "resolve only the user-exported complete reviews and compare cross-song listening evidence before reconsidering any default",
             ],
         },
