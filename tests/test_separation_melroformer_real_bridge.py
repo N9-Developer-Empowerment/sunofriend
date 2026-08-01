@@ -1,10 +1,23 @@
 from __future__ import annotations
 
+import hashlib
+import io
+import json
+import wave
 from dataclasses import dataclass
+from pathlib import Path
 
+import numpy as np
 import pytest
 
 from sunofriend._separation_melroformer_real_bridge import (
+    MAXIMUM_EXCERPT_FRAMES,
+    NOMINAL_CHUNK_FRAMES,
+    NOMINAL_HOP_FRAMES,
+    _PrivateMelRoFormerHandle,
+    _chunk_crossfade_weights,
+    _load_private_authorised_excerpt,
+    _plan_excerpt_chunks,
     _transform_checkpoint_keys,
     _validate_weight_inventory,
 )
@@ -90,3 +103,170 @@ def test_rejects_sanitizer_drift_shape_drift_and_dtype_drift() -> None:
 def test_private_bridge_has_no_public_cli_or_tui_route() -> None:
     assert "private-melroformer-bridge" not in PUBLIC_COMMANDS
     assert "private-melroformer-bridge" not in DIRECT_TUI_COMMANDS
+
+
+def test_plans_nominal_half_overlap_for_full_initial_excerpt() -> None:
+    assert _plan_excerpt_chunks(NOMINAL_CHUNK_FRAMES) == ((0, NOMINAL_CHUNK_FRAMES),)
+    assert _plan_excerpt_chunks(MAXIMUM_EXCERPT_FRAMES) == (
+        (0, 352_800),
+        (176_400, 529_200),
+        (352_800, 661_500),
+    )
+
+
+def test_crossfade_pair_has_unit_weight_through_overlap() -> None:
+    first = _chunk_crossfade_weights(
+        NOMINAL_CHUNK_FRAMES,
+        fade_in=False,
+        fade_out=True,
+        np=np,
+    )
+    second = _chunk_crossfade_weights(
+        NOMINAL_CHUNK_FRAMES,
+        fade_in=True,
+        fade_out=False,
+        np=np,
+    )
+
+    np.testing.assert_allclose(
+        first[-NOMINAL_HOP_FRAMES:] + second[:NOMINAL_HOP_FRAMES],
+        1.0,
+        rtol=0.0,
+        atol=1e-12,
+    )
+
+
+@pytest.mark.parametrize("frames", [0, MAXIMUM_EXCERPT_FRAMES + 1])
+def test_rejects_excerpt_plan_outside_initial_bound(frames: int) -> None:
+    with pytest.raises(ValueError, match="outside bounds"):
+        _plan_excerpt_chunks(frames)
+
+
+def test_loads_only_report_bound_private_pcm24_excerpt(tmp_path: Path) -> None:
+    report, report_sha256 = _authorised_excerpt(tmp_path)
+    handle = _PrivateMelRoFormerHandle(
+        model=None,
+        mx=None,
+        np=np,
+        config=None,
+        sanitized_weight_keys=(),
+        expected_model_keys=(),
+        dropped_raw_weight_keys=(),
+        evidence={},
+    )
+
+    audio, evidence = _load_private_authorised_excerpt(
+        handle,
+        report_path=report,
+        expected_report_sha256=report_sha256,
+    )
+
+    assert audio.shape == (4_096, 2)
+    assert audio.dtype == np.float32
+    assert np.count_nonzero(audio) == 0
+    assert evidence["track_id"] == "owned-example"
+    assert evidence["audio_persisted_by_bridge"] is False
+    assert "path" not in repr(evidence).lower()
+
+
+def test_authorised_excerpt_rejects_report_hash_or_product_permission(
+    tmp_path: Path,
+) -> None:
+    report, report_sha256 = _authorised_excerpt(tmp_path)
+    handle = _PrivateMelRoFormerHandle(
+        model=None,
+        mx=None,
+        np=np,
+        config=None,
+        sanitized_weight_keys=(),
+        expected_model_keys=(),
+        dropped_raw_weight_keys=(),
+        evidence={},
+    )
+    with pytest.raises(ValueError, match="hash differs"):
+        _load_private_authorised_excerpt(
+            handle,
+            report_path=report,
+            expected_report_sha256="0" * 64,
+        )
+
+    document = json.loads(report.read_text())
+    document["permissions"]["public_result"] = True
+    _write_self_hashed_report(report, document)
+    changed_sha256 = hashlib.sha256(report.read_bytes()).hexdigest()
+    with pytest.raises(ValueError, match="product permissions differ"):
+        _load_private_authorised_excerpt(
+            handle,
+            report_path=report,
+            expected_report_sha256=changed_sha256,
+        )
+
+
+def _authorised_excerpt(root: Path) -> tuple[Path, str]:
+    audio_directory = root / "LOCAL-MODEL-INPUT"
+    audio_directory.mkdir()
+    audio_path = audio_directory / "source-44100.wav"
+    payload = io.BytesIO()
+    with wave.open(payload, "wb") as writer:
+        writer.setnchannels(2)
+        writer.setsampwidth(3)
+        writer.setframerate(44_100)
+        writer.writeframes(b"\0" * 4_096 * 2 * 3)
+    audio_path.write_bytes(payload.getvalue())
+    audio_sha256 = hashlib.sha256(audio_path.read_bytes()).hexdigest()
+    duration = 4_096 / 44_100
+    document = {
+        "schema": "sunofriend.private-authorised-separation-excerpt.v1",
+        "status": "complete_review_required",
+        "evidence_scope": "private_development_only",
+        "corpus": {
+            "track_id": "owned-example",
+            "track_title": "Owned example",
+            "permission": {
+                "authority": "creator_and_copyright_holder",
+                "allowed_use": "download, study, transform and reuse",
+            },
+        },
+        "excerpt": {"start_seconds": 10.0, "end_seconds": 10.0 + duration},
+        "original": {
+            "local_model_input": {
+                "artifact": {
+                    "path": "LOCAL-MODEL-INPUT/source-44100.wav",
+                    "bytes": audio_path.stat().st_size,
+                    "sha256": audio_sha256,
+                },
+                "geometry": {
+                    "channels": 2,
+                    "duration_seconds": duration,
+                    "frames": 4_096,
+                    "sample_rate": 44_100,
+                },
+            }
+        },
+        "permissions": {
+            "accepted": False,
+            "automatic_promotion": False,
+            "automatic_selection": False,
+            "production_eligible": False,
+            "public_result": False,
+            "simple_mode_available": False,
+            "source_graph_activation": False,
+            "studio_import_available": False,
+        },
+    }
+    report = root / "authorised-separation-excerpt.json"
+    _write_self_hashed_report(report, document)
+    return report, hashlib.sha256(report.read_bytes()).hexdigest()
+
+
+def _write_self_hashed_report(path: Path, document: dict[str, object]) -> None:
+    document.pop("document_sha256", None)
+    payload = json.dumps(
+        document,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode()
+    document["document_sha256"] = hashlib.sha256(payload).hexdigest()
+    path.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n")

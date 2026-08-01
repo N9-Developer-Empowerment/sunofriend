@@ -68,14 +68,23 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
     assert plan["runtime"]["real_model_bridge_probe_implemented"] is True
     assert plan["runtime"]["real_adapter_implemented"] is True
     assert plan["runtime"]["synthetic_real_model_smoke_passed"] is True
+    assert plan["runtime"]["real_adapter_maximum_probe_seconds"] == 8.0
+    assert plan["runtime"]["full_excerpt_chunk_transport_implemented"] is True
+    assert plan["runtime"]["synthetic_full_excerpt_smoke_passed"] is True
+    assert plan["runtime"]["full_excerpt_smoke_measurement"]["chunk_count"] == 3
+    assert plan["runtime"]["authorised_excerpt_smoke_passed"] is True
+    assert (
+        plan["evaluation_contract"]["latest_private_observation"][
+            "quality_comparison_completed"
+        ]
+        is False
+    )
     assert plan["source"]["upstream_from_pretrained_permitted"] is False
     assert plan["runtime"]["reported_parity_is_model_ground_truth_score"] is False
     assert plan["decision"]["checkpoint_published_identity_pinned"] is True
     assert plan["decision"]["checkpoint_local_identity_verified"] is False
     assert plan["decision"]["worker_start_permitted"] is False
-    assert plan["decision"]["blockers"] == sorted(
-        plan["decision"]["blockers"]
-    )
+    assert plan["decision"]["blockers"] == sorted(plan["decision"]["blockers"])
     assert {
         "checkpoint_local_hash_unverified",
         "checkpoint_companion_files_unverified",
@@ -156,19 +165,22 @@ def test_materialised_artifacts_complete_preflight_without_authorizing_worker(
 
     assert plan["checkpoint"]["static_inspection_completed"] is True
     assert plan["checkpoint"]["static_inspection"]["tensor_count"] == 1
-    assert plan["checkpoint"]["static_inspection"][
-        "mlx_null_metadata_compatibility_applied"
-    ] is True
+    assert (
+        plan["checkpoint"]["static_inspection"][
+            "mlx_null_metadata_compatibility_applied"
+        ]
+        is True
+    )
     assert plan["source"]["runtime_source_materialised"] is True
-    assert plan["companion_files"][
-        "all_cryptographic_identities_verified"
-    ] is True
+    assert plan["companion_files"]["all_cryptographic_identities_verified"] is True
     assert plan["decision"]["artifact_preflight_complete"] is True
     assert plan["decision"]["private_evaluation_eligible"] is True
     assert plan["decision"]["worker_start_permitted"] is False
-    assert "full_excerpt_chunk_transport_not_implemented" in plan["decision"][
-        "blockers"
-    ]
+    assert (
+        "full_excerpt_chunk_transport_not_implemented"
+        not in plan["decision"]["blockers"]
+    )
+    assert "pcm24_output_persistence_not_implemented" in plan["decision"]["blockers"]
     assert "runtime_worker_not_implemented" in plan["decision"]["blockers"]
 
 
@@ -178,9 +190,7 @@ def test_optional_local_observation_rejects_symlink(tmp_path: Path) -> None:
     target.write_bytes(b"checkpoint")
     link.symlink_to(target)
     with pytest.raises(ValueError, match="non-symlink regular file"):
-        melroformer._build_private_melroformer_challenger_plan(
-            checkpoint_path=link
-        )
+        melroformer._build_private_melroformer_challenger_plan(checkpoint_path=link)
 
 
 def test_private_plan_script_outputs_json_without_public_route() -> None:
@@ -194,7 +204,9 @@ def test_private_plan_script_outputs_json_without_public_route() -> None:
         env={**os.environ, "PYTHONPATH": str(repository / "src")},
     )
     plan = json.loads(completed.stdout)
-    assert plan["decision"]["run_status"] == "not_run"
+    assert plan["decision"]["run_status"] == (
+        "one_authorised_excerpt_validated_not_persisted"
+    )
     assert plan["effects"]["network_used"] is False
     assert "private-melroformer-challenger" not in PUBLIC_COMMANDS
     assert "private-melroformer-challenger" not in DIRECT_TUI_COMMANDS

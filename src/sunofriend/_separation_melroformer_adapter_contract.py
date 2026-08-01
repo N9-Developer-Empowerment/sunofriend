@@ -26,6 +26,8 @@ REAL_ENGINE_SCHEMA = "sunofriend.private-melroformer-real-engine-result.v1"
 SAMPLE_RATE = 44_100
 CHANNELS = 2
 MAXIMUM_FRAMES = 661_500
+NOMINAL_CHUNK_FRAMES = 352_800
+NOMINAL_HOP_FRAMES = 176_400
 MAXIMUM_ABSOLUTE_MODEL_SAMPLE = 16.0
 MAXIMUM_WEIGHT_KEYS = 100_000
 MAXIMUM_WEIGHT_KEY_BYTES = 1024
@@ -91,6 +93,9 @@ class _RealMelRoFormerEngineResult:
     dropped_raw_weight_keys: Sequence[str]
     inference_seconds: float
     peak_memory_bytes: int
+    chunk_count: int
+    chunk_frames: int
+    hop_frames: int
     effects: Mapping[str, bool]
 
 
@@ -200,6 +205,18 @@ def _accept_private_melroformer_real_result(
         or not 1 <= engine_result.peak_memory_bytes <= 64 * 1024**3
     ):
         raise ValueError("MelRoFormer peak memory is invalid")
+    if (
+        isinstance(engine_result.chunk_count, bool)
+        or not isinstance(engine_result.chunk_count, int)
+        or not 1 <= engine_result.chunk_count <= 8
+        or isinstance(engine_result.chunk_frames, bool)
+        or not isinstance(engine_result.chunk_frames, int)
+        or not 1 <= engine_result.chunk_frames <= MAXIMUM_FRAMES
+        or isinstance(engine_result.hop_frames, bool)
+        or not isinstance(engine_result.hop_frames, int)
+        or not 1 <= engine_result.hop_frames <= engine_result.chunk_frames
+    ):
+        raise ValueError("MelRoFormer chunk transport is invalid")
     effects = _validate_real_effects(engine_result.effects)
     (
         source_frames,
@@ -208,9 +225,27 @@ def _accept_private_melroformer_real_result(
         coverage,
         accounting,
     ) = _validate_and_derive(source, engine_result)
+    if engine_result.chunk_count == 1:
+        if engine_result.chunk_frames != len(
+            source_frames
+        ) or engine_result.hop_frames != len(source_frames):
+            raise ValueError("MelRoFormer single-chunk transport differs")
+    elif (
+        len(source_frames) <= NOMINAL_CHUNK_FRAMES
+        or engine_result.chunk_count
+        != 1
+        + math.ceil((len(source_frames) - NOMINAL_CHUNK_FRAMES) / NOMINAL_HOP_FRAMES)
+        or engine_result.chunk_frames != NOMINAL_CHUNK_FRAMES
+        or engine_result.hop_frames != NOMINAL_HOP_FRAMES
+    ):
+        raise ValueError("MelRoFormer overlap transport differs")
     evidence = {
         "schema": SCHEMA,
-        "status": "private_real_single_chunk_validated_not_persisted",
+        "status": (
+            "private_real_single_chunk_validated_not_persisted"
+            if engine_result.chunk_count == 1
+            else "private_real_overlapped_excerpt_validated_not_persisted"
+        ),
         "engine": {
             "schema": REAL_ENGINE_SCHEMA,
             "kind": "private_real_kim_vocal_2",
@@ -233,6 +268,13 @@ def _accept_private_melroformer_real_result(
         "measurement": {
             "inference_seconds": float(engine_result.inference_seconds),
             "peak_memory_bytes": engine_result.peak_memory_bytes,
+        },
+        "transport": {
+            "chunk_count": engine_result.chunk_count,
+            "chunk_frames": engine_result.chunk_frames,
+            "hop_frames": engine_result.hop_frames,
+            "overlap_frames": engine_result.chunk_frames - engine_result.hop_frames,
+            "weighted_overlap_add": engine_result.chunk_count > 1,
         },
         "permissions": {
             "runtime_installation_permitted": False,

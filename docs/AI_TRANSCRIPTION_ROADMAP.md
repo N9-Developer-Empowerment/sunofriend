@@ -1905,14 +1905,21 @@ and `from_pretrained`, pins the checkpoint descriptor, and independently proves
 the 708-raw-key to 696-model-parameter sanitizer mapping. The real probe
 completed with zero missing, unexpected or shape-mismatched tensors and about
 458 MB peak MLX memory, without audio inference. Independent parity and
-inference resource/offline bounds were still open at that point. Bounded
-single-chunk inference is now implemented with a temporary two-second ceiling.
-Its one-second instrumental-only synthetic smoke test preserved the exact frame
-horizon, returned finite audio, completed in about 0.27 seconds after warm-up,
-used about 2.50 GB peak MLX memory and passed additive residual accounting at
-`7.45e-9` maximum float32 error. No output was persisted. The next increment is
-the two-second resource point and bounded full-excerpt chunk transport, not a
-public separator or automatic selection route.
+operating-system network denial remain open. Bounded single-call inference is
+now measured through eight seconds. The 15-second transport uses three
+eight-second chunks at a four-second hop, returned the exact 661,500-frame
+horizon in about 2.6 seconds, reported about 2.42 GB peak MLX memory and passed
+additive residual accounting at `7.45e-9` maximum float32 error. No output was
+persisted.
+
+The same adapter then accepted the exact self-hashed `Be Alone` 191–206 second
+authorisation receipt and its hash-bound PCM24 model input. The real-song run
+completed in about 2.78 seconds with the same measured peak, produced active
+vocal and instrumental arrays and closed additive accounting at `2.98e-8`.
+Only path-free hashes and measurements were returned. This proves bounded real
+transport, not separation quality. The next increment compares the in-memory
+estimate against the sealed HTDemucs and provider vocal controls before any
+PCM24 worker, MIDI comparison, selection or public route.
 
 The intervening model-independent adapter contract is now implemented and
 tested with injected synthetic result data only. It invokes no engine. The
@@ -1920,8 +1927,8 @@ contract rejects wrong audio geometry, non-finite or unbounded samples,
 incomplete post-sanitisation model-key coverage, arbitrary dropped weights or
 any claimed operational side effect. It derives the instrumental residual,
 hashes both float32 outputs and proves additive closure. The same core now
-accepts only the exact private real-engine record, and the one-second smoke test
-passed through it. PCM24 persistence and the worker remain absent. This
+accepts only the exact private real-engine record, and both full-excerpt smoke
+tests passed through it. PCM24 persistence and the worker remain absent. This
 reduces the amount of new logic that must be trusted after approval without
 weakening the download, install, checkpoint or product-route gates.
 

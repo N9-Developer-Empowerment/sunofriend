@@ -67,6 +67,9 @@ def _real_result(**changes: object) -> _RealMelRoFormerEngineResult:
         "dropped_raw_weight_keys": ["transformer.0.rotary_embed.freqs"],
         "inference_seconds": 1.25,
         "peak_memory_bytes": 2_500_000_000,
+        "chunk_count": 1,
+        "chunk_frames": 3,
+        "hop_frames": 3,
         "effects": dict(REAL_EFFECTS),
     }
     values.update(changes)
@@ -110,6 +113,8 @@ def test_real_result_uses_same_validation_core_without_persisting() -> None:
     assert evidence["additive_accounting"]["passed"] is True
     assert evidence["additive_accounting"]["pcm24_persistence_verified"] is False
     assert evidence["measurement"]["peak_memory_bytes"] == 2_500_000_000
+    assert evidence["transport"]["chunk_count"] == 1
+    assert evidence["transport"]["weighted_overlap_add"] is False
     assert evidence["permissions"]["private_inference_permitted"] is True
     assert evidence["permissions"]["worker_start_permitted"] is False
     assert evidence["effects"]["audio_inference_called"] is True
@@ -121,6 +126,9 @@ def test_real_result_uses_same_validation_core_without_persisting() -> None:
         ({"engine_kind": "synthetic_test_double"}, "identity differs"),
         ({"inference_seconds": 0.0}, "duration is invalid"),
         ({"peak_memory_bytes": 0}, "peak memory is invalid"),
+        ({"chunk_count": 0}, "chunk transport is invalid"),
+        ({"hop_frames": 4}, "chunk transport is invalid"),
+        ({"chunk_frames": 4, "hop_frames": 4}, "single-chunk transport differs"),
         (
             {"effects": {**REAL_EFFECTS, "filesystem_written": True}},
             "effects differ",
@@ -134,6 +142,35 @@ def test_real_result_rejects_identity_measurement_or_effect_drift(
         _accept_private_melroformer_real_result(
             _source(), sample_rate=44_100, engine_result=_real_result(**changes)
         )
+
+
+def test_real_overlap_result_has_distinct_status_and_exact_transport() -> None:
+    source = [[0.0, 0.0]] * 4
+    with (
+        patch(
+            "sunofriend._separation_melroformer_adapter_contract.NOMINAL_CHUNK_FRAMES",
+            3,
+        ),
+        patch(
+            "sunofriend._separation_melroformer_adapter_contract.NOMINAL_HOP_FRAMES",
+            2,
+        ),
+    ):
+        observation = _accept_private_melroformer_real_result(
+            source,
+            sample_rate=44_100,
+            engine_result=_real_result(
+                vocals=source,
+                chunk_count=2,
+                chunk_frames=3,
+                hop_frames=2,
+            ),
+        )
+
+    assert observation.evidence["status"] == (
+        "private_real_overlapped_excerpt_validated_not_persisted"
+    )
+    assert observation.evidence["transport"]["weighted_overlap_add"] is True
 
 
 def test_observation_is_deterministic_and_path_free() -> None:

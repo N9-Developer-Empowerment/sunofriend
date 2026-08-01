@@ -1,15 +1,17 @@
 """Fail-closed private bridge for the exact Kim Vocal 2 MLX checkpoint.
 
 This module has no public route and imports no tensor runtime at module import
-time.  The explicit loader re-verifies every local artifact, constructs only
+time. The explicit loader re-verifies every local artifact, constructs only
 the fixed audited source overlay, binds the checkpoint through an already-open
-descriptor, and proves complete sanitizer/key/shape coverage before returning
-an internal handle.  Audio inference is deliberately a later increment.
+descriptor, and proves complete sanitizer/key/shape coverage. Bounded private
+audio inference remains separate from every product route and persists no
+audio.
 """
 
 from __future__ import annotations
 
 import hashlib
+import io
 import importlib.metadata
 import json
 import os
@@ -19,6 +21,7 @@ import stat
 import sys
 import time
 import types
+import wave
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -81,8 +84,11 @@ _MASK_MLP_RE = re.compile(
     r"^(mask_estimators\.\d+\.to_freqs\.\d+)\.0\.(\d+)\.(weight|bias)$"
 )
 _PERMITTED_DROPPED_SUFFIX = ".rotary_embed.freqs"
-MAXIMUM_PROBE_FRAMES = 88_200
+MAXIMUM_PROBE_FRAMES = 352_800
 MINIMUM_PROBE_FRAMES = 4_096
+MAXIMUM_EXCERPT_FRAMES = 661_500
+NOMINAL_CHUNK_FRAMES = 352_800
+NOMINAL_HOP_FRAMES = 176_400
 _REAL_INFERENCE_EFFECTS = {
     "filesystem_accessed": True,
     "filesystem_written": False,
@@ -94,6 +100,8 @@ _REAL_INFERENCE_EFFECTS = {
     "process_started": False,
     "audio_inference_called": True,
 }
+_AUTHORISED_EXCERPT_SCHEMA = "sunofriend.private-authorised-separation-excerpt.v1"
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 @dataclass
@@ -108,6 +116,90 @@ class _PrivateMelRoFormerHandle:
     expected_model_keys: tuple[str, ...]
     dropped_raw_weight_keys: tuple[str, ...]
     evidence: Mapping[str, Any]
+
+
+def _load_private_authorised_excerpt(
+    handle: _PrivateMelRoFormerHandle,
+    *,
+    report_path: str | Path,
+    expected_report_sha256: str,
+) -> tuple[Any, Mapping[str, Any]]:
+    """Load one report-bound PCM24 excerpt without exposing its path."""
+
+    if type(handle) is not _PrivateMelRoFormerHandle:
+        raise ValueError("MelRoFormer excerpt loading requires an exact private handle")
+    if not isinstance(expected_report_sha256, str) or not _SHA256_RE.fullmatch(
+        expected_report_sha256
+    ):
+        raise ValueError("MelRoFormer authorisation report hash is invalid")
+    report = Path(report_path).expanduser().absolute()
+    attached = report.lstat()
+    if attached.st_size > 2 * 1024 * 1024:
+        raise ValueError("MelRoFormer authorisation report is too large")
+    raw_report = _read_exact_regular_file(
+        report,
+        expected_sha256=expected_report_sha256,
+        expected_bytes=attached.st_size,
+    )
+    document = json.loads(
+        raw_report,
+        object_pairs_hook=_reject_duplicate_json_object,
+    )
+    if not isinstance(document, dict):
+        raise ValueError("MelRoFormer authorisation report is not an object")
+    self_hash = document.get("document_sha256")
+    canonical = dict(document)
+    canonical.pop("document_sha256", None)
+    encoded = json.dumps(
+        canonical,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    if self_hash != hashlib.sha256(encoded).hexdigest():
+        raise ValueError("MelRoFormer authorisation report self-hash differs")
+    _validate_authorisation_document(document)
+    local_input = document["original"]["local_model_input"]
+    artifact = local_input["artifact"]
+    relative = artifact["path"]
+    if relative != "LOCAL-MODEL-INPUT/source-44100.wav":
+        raise ValueError("MelRoFormer authorised excerpt path differs")
+    excerpt_path = report.parent / relative
+    if (
+        report.parent.resolve(strict=True)
+        not in excerpt_path.resolve(strict=True).parents
+    ):
+        raise ValueError("MelRoFormer authorised excerpt escapes its report root")
+    raw_audio = _read_exact_regular_file(
+        excerpt_path,
+        expected_sha256=artifact["sha256"],
+        expected_bytes=artifact["bytes"],
+    )
+    audio = _decode_pcm24_excerpt(handle.np, raw_audio)
+    geometry = local_input["geometry"]
+    if (
+        audio.shape != (geometry["frames"], geometry["channels"])
+        or geometry["sample_rate"] != 44_100
+        or not MINIMUM_PROBE_FRAMES <= len(audio) <= MAXIMUM_EXCERPT_FRAMES
+    ):
+        raise ValueError("MelRoFormer authorised excerpt geometry differs")
+    evidence = {
+        "schema": "sunofriend.private-melroformer-authorised-input.v1",
+        "track_id": document["corpus"]["track_id"],
+        "track_title": document["corpus"]["track_title"],
+        "report_sha256": expected_report_sha256,
+        "audio_sha256": artifact["sha256"],
+        "source_start_seconds": document["excerpt"]["start_seconds"],
+        "source_end_seconds": document["excerpt"]["end_seconds"],
+        "sample_rate": geometry["sample_rate"],
+        "channels": geometry["channels"],
+        "frames": geometry["frames"],
+        "rights_authority": document["corpus"]["permission"]["authority"],
+        "evidence_scope": document["evidence_scope"],
+        "audio_persisted_by_bridge": False,
+    }
+    return audio, MappingProxyType(evidence)
 
 
 def _load_private_melroformer_model(
@@ -271,37 +363,249 @@ def _infer_private_melroformer_probe(
 ) -> _RealMelRoFormerAdapterObservation:
     """Run one bounded in-memory chunk and validate it without persistence."""
 
+    _require_sample_rate(sample_rate)
+    audio = _validate_source_array(handle, source, maximum_frames=MAXIMUM_PROBE_FRAMES)
+    vocals, elapsed, peak_memory = _run_model_chunk_array(handle, audio)
+    return _validate_real_inference(
+        handle,
+        audio,
+        vocals,
+        sample_rate=sample_rate,
+        inference_seconds=elapsed,
+        peak_memory_bytes=peak_memory,
+        chunk_count=1,
+        chunk_frames=len(audio),
+        hop_frames=len(audio),
+    )
+
+
+def _infer_private_melroformer_excerpt(
+    handle: _PrivateMelRoFormerHandle,
+    source: Any,
+    *,
+    sample_rate: int,
+) -> _RealMelRoFormerAdapterObservation:
+    """Run up to 15 seconds using fixed eight-second 50%-overlap chunks."""
+
+    _require_sample_rate(sample_rate)
+    audio = _validate_source_array(
+        handle, source, maximum_frames=MAXIMUM_EXCERPT_FRAMES
+    )
+    if len(audio) <= MAXIMUM_PROBE_FRAMES:
+        return _infer_private_melroformer_probe(handle, audio, sample_rate=sample_rate)
+    np = handle.np
+    accumulator = np.zeros(audio.shape, dtype=np.float64)
+    weight_sum = np.zeros((len(audio),), dtype=np.float64)
+    chunks = _plan_excerpt_chunks(len(audio))
+    total_seconds = 0.0
+    maximum_peak_memory = 0
+    for start, end in chunks:
+        vocals, elapsed, peak_memory = _run_model_chunk_array(handle, audio[start:end])
+        weights = _chunk_crossfade_weights(
+            end - start,
+            fade_in=start > 0,
+            fade_out=end < len(audio),
+            np=np,
+        )
+        accumulator[start:end] += vocals.astype(np.float64) * weights[:, None]
+        weight_sum[start:end] += weights
+        total_seconds += elapsed
+        maximum_peak_memory = max(maximum_peak_memory, peak_memory)
+        handle.mx.clear_cache()
+    if not bool((weight_sum > 0).all()):
+        raise ValueError("MelRoFormer excerpt overlap weights left an uncovered frame")
+    vocals = (accumulator / weight_sum[:, None]).astype(np.float32)
+    return _validate_real_inference(
+        handle,
+        audio,
+        vocals,
+        sample_rate=sample_rate,
+        inference_seconds=total_seconds,
+        peak_memory_bytes=maximum_peak_memory,
+        chunk_count=len(chunks),
+        chunk_frames=NOMINAL_CHUNK_FRAMES,
+        hop_frames=NOMINAL_HOP_FRAMES,
+    )
+
+
+def _validate_source_array(
+    handle: _PrivateMelRoFormerHandle, source: Any, *, maximum_frames: int
+) -> Any:
     if type(handle) is not _PrivateMelRoFormerHandle:
         raise ValueError("MelRoFormer inference requires an exact private handle")
-    if type(sample_rate) is not int or sample_rate != 44_100:
-        raise ValueError("MelRoFormer inference requires exact 44.1 kHz audio")
     np = handle.np
-    mx = handle.mx
     audio = np.asarray(source)
     if audio.dtype != np.float32:
         raise ValueError("MelRoFormer inference source must be float32")
     if (
         audio.ndim != 2
         or audio.shape[1] != 2
-        or not MINIMUM_PROBE_FRAMES <= audio.shape[0] <= MAXIMUM_PROBE_FRAMES
+        or not MINIMUM_PROBE_FRAMES <= audio.shape[0] <= maximum_frames
     ):
         raise ValueError(
             "MelRoFormer inference source geometry is outside probe bounds"
         )
     if not bool(np.isfinite(audio).all()) or float(np.max(np.abs(audio))) > 1.0:
         raise ValueError("MelRoFormer inference source samples are outside bounds")
-    audio = np.ascontiguousarray(audio)
+    return np.ascontiguousarray(audio)
+
+
+def _validate_authorisation_document(document: Mapping[str, Any]) -> None:
+    try:
+        permission = document["corpus"]["permission"]
+        local_input = document["original"]["local_model_input"]
+        artifact = local_input["artifact"]
+        geometry = local_input["geometry"]
+        excerpt = document["excerpt"]
+        product_permissions = document["permissions"]
+    except (KeyError, TypeError) as exc:
+        raise ValueError("MelRoFormer authorisation report is incomplete") from exc
+    if not all(
+        isinstance(value, Mapping)
+        for value in (
+            document.get("corpus"),
+            permission,
+            document.get("original"),
+            local_input,
+            artifact,
+            geometry,
+            excerpt,
+            product_permissions,
+        )
+    ):
+        raise ValueError("MelRoFormer authorisation report is incomplete")
+    if (
+        document.get("schema") != _AUTHORISED_EXCERPT_SCHEMA
+        or document.get("status") != "complete_review_required"
+        or document.get("evidence_scope") != "private_development_only"
+        or permission.get("authority") != "creator_and_copyright_holder"
+        or permission.get("allowed_use") != "download, study, transform and reuse"
+        or not isinstance(document["corpus"].get("track_id"), str)
+        or not document["corpus"]["track_id"]
+        or not isinstance(document["corpus"].get("track_title"), str)
+        or not document["corpus"]["track_title"]
+    ):
+        raise ValueError("MelRoFormer authorisation scope differs")
+    if (
+        type(artifact.get("bytes")) is not int
+        or not 1 <= artifact["bytes"] <= 8 * 1024 * 1024
+        or not isinstance(artifact.get("sha256"), str)
+        or not _SHA256_RE.fullmatch(artifact["sha256"])
+        or type(geometry.get("frames")) is not int
+        or geometry
+        != {
+            "channels": 2,
+            "duration_seconds": geometry.get("frames", 0) / 44_100,
+            "frames": geometry.get("frames"),
+            "sample_rate": 44_100,
+        }
+        or not MINIMUM_PROBE_FRAMES
+        <= geometry.get("frames", 0)
+        <= MAXIMUM_EXCERPT_FRAMES
+    ):
+        raise ValueError("MelRoFormer authorised model input differs")
+    if (
+        isinstance(excerpt.get("start_seconds"), bool)
+        or not isinstance(excerpt.get("start_seconds"), (int, float))
+        or isinstance(excerpt.get("end_seconds"), bool)
+        or not isinstance(excerpt.get("end_seconds"), (int, float))
+        or excerpt["end_seconds"] <= excerpt["start_seconds"]
+        or abs(
+            (excerpt["end_seconds"] - excerpt["start_seconds"])
+            - geometry["duration_seconds"]
+        )
+        > 1e-9
+    ):
+        raise ValueError("MelRoFormer authorised excerpt clock differs")
+    denied = (
+        "accepted",
+        "automatic_promotion",
+        "automatic_selection",
+        "production_eligible",
+        "public_result",
+        "simple_mode_available",
+        "source_graph_activation",
+        "studio_import_available",
+    )
+    if any(product_permissions.get(name) is not False for name in denied):
+        raise ValueError("MelRoFormer authorisation product permissions differ")
+
+
+def _decode_pcm24_excerpt(np: Any, contents: bytes) -> Any:
+    with wave.open(io.BytesIO(contents), "rb") as reader:
+        if (
+            reader.getnchannels() != 2
+            or reader.getframerate() != 44_100
+            or reader.getsampwidth() != 3
+            or reader.getcomptype() != "NONE"
+            or not MINIMUM_PROBE_FRAMES <= reader.getnframes() <= MAXIMUM_EXCERPT_FRAMES
+        ):
+            raise ValueError("MelRoFormer authorised WAV format differs")
+        frames = reader.getnframes()
+        raw = reader.readframes(frames)
+        if len(raw) != frames * 2 * 3 or reader.readframes(1):
+            raise ValueError("MelRoFormer authorised WAV payload differs")
+    packed = np.frombuffer(raw, dtype=np.uint8).reshape(-1, 3)
+    samples = (
+        packed[:, 0].astype(np.int32)
+        | packed[:, 1].astype(np.int32) << 8
+        | packed[:, 2].astype(np.int32) << 16
+    )
+    samples = np.where(samples & 0x800000, samples - 0x1000000, samples)
+    return np.ascontiguousarray(
+        samples.astype(np.float32).reshape(frames, 2) / np.float32(8_388_608.0)
+    )
+
+
+def _reject_duplicate_json_object(
+    pairs: list[tuple[str, Any]],
+) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("MelRoFormer authorisation report has duplicate keys")
+        result[key] = value
+    return result
+
+
+def _require_sample_rate(sample_rate: int) -> None:
+    if type(sample_rate) is not int or sample_rate != 44_100:
+        raise ValueError("MelRoFormer inference requires exact 44.1 kHz audio")
+
+
+def _run_model_chunk_array(
+    handle: _PrivateMelRoFormerHandle, audio: Any
+) -> tuple[Any, float, int]:
+    np = handle.np
+    mx = handle.mx
+    if not MINIMUM_PROBE_FRAMES <= len(audio) <= NOMINAL_CHUNK_FRAMES:
+        raise ValueError("MelRoFormer model chunk is outside the measured bound")
     mx.reset_peak_memory()
     started = time.perf_counter()
     output = handle.model(mx.array(audio.T[None, :, :]))
     mx.eval(output)
     elapsed = time.perf_counter() - started
-    vocals = np.asarray(output[0]).T.astype(np.float32, copy=False)
+    vocals = np.array(output[0], copy=True).T.astype(np.float32, copy=False)
     if vocals.shape != audio.shape:
         raise ValueError("MelRoFormer inference output geometry differs")
     if not bool(np.isfinite(vocals).all()):
         raise ValueError("MelRoFormer inference output contains non-finite samples")
-    peak_memory = int(mx.get_peak_memory())
+    return vocals, elapsed, int(mx.get_peak_memory())
+
+
+def _validate_real_inference(
+    handle: _PrivateMelRoFormerHandle,
+    audio: Any,
+    vocals: Any,
+    *,
+    sample_rate: int,
+    inference_seconds: float,
+    peak_memory_bytes: int,
+    chunk_count: int,
+    chunk_frames: int,
+    hop_frames: int,
+) -> _RealMelRoFormerAdapterObservation:
+    _require_sample_rate(sample_rate)
     engine_result = _RealMelRoFormerEngineResult(
         schema=REAL_ENGINE_SCHEMA,
         engine_kind="private_real_kim_vocal_2",
@@ -309,13 +613,54 @@ def _infer_private_melroformer_probe(
         sanitized_weight_keys=handle.sanitized_weight_keys,
         expected_model_keys=handle.expected_model_keys,
         dropped_raw_weight_keys=handle.dropped_raw_weight_keys,
-        inference_seconds=elapsed,
-        peak_memory_bytes=peak_memory,
+        inference_seconds=inference_seconds,
+        peak_memory_bytes=peak_memory_bytes,
+        chunk_count=chunk_count,
+        chunk_frames=chunk_frames,
+        hop_frames=hop_frames,
         effects=dict(_REAL_INFERENCE_EFFECTS),
     )
     return _accept_private_melroformer_real_result(
         audio.tolist(), sample_rate=sample_rate, engine_result=engine_result
     )
+
+
+def _plan_excerpt_chunks(total_frames: int) -> tuple[tuple[int, int], ...]:
+    if (
+        isinstance(total_frames, bool)
+        or not isinstance(total_frames, int)
+        or not MINIMUM_PROBE_FRAMES <= total_frames <= MAXIMUM_EXCERPT_FRAMES
+    ):
+        raise ValueError("MelRoFormer excerpt frame count is outside bounds")
+    if total_frames <= NOMINAL_CHUNK_FRAMES:
+        return ((0, total_frames),)
+    chunks: list[tuple[int, int]] = []
+    start = 0
+    while start < total_frames:
+        end = min(start + NOMINAL_CHUNK_FRAMES, total_frames)
+        chunks.append((start, end))
+        if end == total_frames:
+            break
+        start += NOMINAL_HOP_FRAMES
+    return tuple(chunks)
+
+
+def _chunk_crossfade_weights(
+    frames: int, *, fade_in: bool, fade_out: bool, np: Any
+) -> Any:
+    if isinstance(frames, bool) or not isinstance(frames, int) or frames < 1:
+        raise ValueError("MelRoFormer chunk weight frame count is invalid")
+    weights = np.ones((frames,), dtype=np.float64)
+    fade_frames = min(NOMINAL_CHUNK_FRAMES - NOMINAL_HOP_FRAMES, frames)
+    if fade_in:
+        weights[:fade_frames] *= np.linspace(
+            0.0, 1.0, fade_frames, endpoint=False, dtype=np.float64
+        )
+    if fade_out:
+        weights[-fade_frames:] *= np.linspace(
+            1.0, 0.0, fade_frames, endpoint=False, dtype=np.float64
+        )
+    return weights
 
 
 def _verify_runtime() -> dict[str, Any]:
@@ -573,12 +918,18 @@ def _identity(value: os.stat_result) -> tuple[int, int, int, int, int, int]:
 
 
 __all__ = [
+    "MAXIMUM_EXCERPT_FRAMES",
     "MAXIMUM_PROBE_FRAMES",
     "MINIMUM_PROBE_FRAMES",
+    "NOMINAL_CHUNK_FRAMES",
+    "NOMINAL_HOP_FRAMES",
     "SCHEMA",
     "_PrivateMelRoFormerHandle",
+    "_load_private_authorised_excerpt",
     "_load_private_melroformer_model",
     "_infer_private_melroformer_probe",
+    "_infer_private_melroformer_excerpt",
+    "_plan_excerpt_chunks",
     "_transform_checkpoint_keys",
     "_validate_weight_inventory",
 ]

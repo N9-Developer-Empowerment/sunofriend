@@ -2,8 +2,9 @@
 
 This candidate has stronger checkpoint identity and licence evidence than the
 blocked broad BS-RoFormer release, but it is intentionally narrower: it
-separates vocals and derives instrumental as the residual.  No installer,
-downloader, model import, worker or product route is provided here.
+separates vocals and derives instrumental as the residual. Its private loader
+and bounded excerpt adapter exist; no installer, downloader, worker or product
+route is provided here.
 """
 
 from __future__ import annotations
@@ -44,8 +45,8 @@ from ._separation_safetensors_inspection import (
 )
 
 
-PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v3"
-POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v3"
+PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v4"
+POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v4"
 AUDITED_AT = "2026-08-01"
 APPROVAL_RECORDED_AT = "2026-08-01"
 CHECKPOINT_NAME = "model.safetensors"
@@ -61,9 +62,9 @@ LICENSE_NAME = "LICENSE"
 LICENSE_BYTES = 1_500
 LICENSE_SHA256 = "1aa245b55067df5c63c847894e7040f76fa79ddde83e9e5ed8a5c29ef1865c14"
 _BASE_BLOCKERS = (
-    "apple_runtime_resource_bounds_unmeasured",
     "conversion_parity_not_independently_verified",
-    "full_excerpt_chunk_transport_not_implemented",
+    "operating_system_network_denial_not_verified",
+    "pcm24_output_persistence_not_implemented",
     "runtime_worker_not_implemented",
 )
 
@@ -104,9 +105,7 @@ def _build_private_melroformer_challenger_plan(
         else None
     )
     companion_observation = (
-        _inspect_companion_files(companion_root)
-        if companion_root is not None
-        else None
+        _inspect_companion_files(companion_root) if companion_root is not None else None
     )
     source_ready = source_observation is not None
     companions_ready = bool(
@@ -283,10 +282,13 @@ def _build_private_melroformer_challenger_plan(
             "minimal_packages": ["mlx", "mlx-metal", "numpy"],
             "upstream_mlx_audio_distribution_required": False,
             "installed": False,
+            "installed_state_verified_in_this_call": False,
+            "private_evaluation_environment_materialised_on_development_host": True,
             "installation_command": None,
             "installation_permitted": False,
             "network_denial_verified": False,
-            "apple_resource_bounds_measured": False,
+            "apple_resource_bounds_measured": True,
+            "resource_measurement_host": "Apple silicon Mac with 36 GB RAM",
             "worker_protocol_schema": WORKER_PROTOCOL_SCHEMA,
             "worker_protocol_defined": True,
             "adapter_observation_schema": ADAPTER_OBSERVATION_SCHEMA,
@@ -296,8 +298,22 @@ def _build_private_melroformer_challenger_plan(
             ),
             "real_model_bridge_probe_implemented": True,
             "real_adapter_implemented": True,
-            "real_adapter_maximum_probe_seconds": 2.0,
+            "real_adapter_maximum_probe_seconds": 8.0,
+            "full_excerpt_chunk_transport_implemented": True,
+            "maximum_full_excerpt_seconds": 15.0,
+            "nominal_chunk_seconds": 8.0,
+            "nominal_hop_seconds": 4.0,
             "synthetic_real_model_smoke_passed": True,
+            "synthetic_full_excerpt_smoke_passed": True,
+            "full_excerpt_smoke_measurement": {
+                "duration_seconds": 15.0,
+                "chunk_count": 3,
+                "inference_seconds": 2.573881250107661,
+                "peak_memory_bytes": 2_419_165_306,
+                "maximum_absolute_reconstruction_error": (7.450580596923828e-09),
+                "filesystem_written": False,
+            },
+            "authorised_excerpt_smoke_passed": True,
             "worker_implemented": False,
         },
         "evaluation_contract": {
@@ -317,10 +333,34 @@ def _build_private_melroformer_challenger_plan(
                 "record runtime, peak memory and offline behaviour",
                 "produce no automatic winner, selection or public result",
             ],
+            "latest_private_observation": {
+                "observed_at": "2026-08-01",
+                "status": "validated_not_persisted_quality_not_decided",
+                "track_id": "be-alone",
+                "source_seconds": [191.0, 206.0],
+                "authorisation_report_sha256": (
+                    "00685db1ba4d5ac0927c25a5ef40792ab36c56cdb36dcc20cc5f926fb9774e90"
+                ),
+                "source_pcm24_sha256": (
+                    "807fbfa4b37b2ad102d7bba6f973c4b9e2c6922908267a3e9465c525199e642e"
+                ),
+                "vocal_float32_sha256": (
+                    "f470918cf7bf4d1c62a3ba9717c292961543c8ff69fea7ca08146e2a48965ce7"
+                ),
+                "instrumental_float32_sha256": (
+                    "592e8e11d58ad45511b7bb6fd21b716b5b87b4578e75ff53e63cb6daf713d1af"
+                ),
+                "inference_seconds": 2.778583916835487,
+                "peak_memory_bytes": 2_419_165_306,
+                "chunk_count": 3,
+                "maximum_absolute_reconstruction_error": (2.9802322387695312e-08),
+                "audio_persisted": False,
+                "quality_comparison_completed": False,
+            },
         },
         "decision": {
             "status": "blocked",
-            "run_status": "not_run",
+            "run_status": "one_authorised_excerpt_validated_not_persisted",
             "candidate_registered": True,
             "checkpoint_published_identity_pinned": True,
             "checkpoint_local_identity_verified": local_checkpoint[
@@ -332,9 +372,9 @@ def _build_private_melroformer_challenger_plan(
             "worker_start_permitted": False,
             "blockers": blockers,
             "next_safe_actions": [
-                "measure the two-second ceiling before designing bounded full-excerpt chunks",
+                "compare the in-memory vocal estimate with sealed local and provider controls",
                 "implement the two-role excerpt worker behind the existing non-executable protocol",
-                "measure resource and offline bounds before any wider evaluation",
+                "prove operating-system network denial and PCM24 reconstruction before any wider evaluation",
             ],
         },
         "effects": {
@@ -360,7 +400,9 @@ def _inspect_companion_files(value: str | Path) -> dict[str, Any]:
         raise ValueError("MelBand-RoFormer companion root must be a directory")
     files = {
         CONFIG_NAME: _inspect_file_identity(
-            root / CONFIG_NAME, expected_bytes=CONFIG_BYTES, expected_sha256=CONFIG_SHA256
+            root / CONFIG_NAME,
+            expected_bytes=CONFIG_BYTES,
+            expected_sha256=CONFIG_SHA256,
         ),
         LICENSE_NAME: _inspect_file_identity(
             root / LICENSE_NAME,
@@ -386,7 +428,9 @@ def _inspect_file_identity(
         or not stat.S_ISREG(before.st_mode)
         or before.st_nlink != 1
     ):
-        raise ValueError("MelBand-RoFormer companion must be a single-link regular file")
+        raise ValueError(
+            "MelBand-RoFormer companion must be a single-link regular file"
+        )
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
     descriptor = os.open(path, flags)
     try:

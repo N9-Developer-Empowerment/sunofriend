@@ -885,20 +885,43 @@ HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 PYTHONNOUSERSITE=1 PYTHONPATH=src \
   --companion-root /absolute/private/cache/checkpoint-directory
 ```
 
-Bounded in-memory inference and its synthetic smoke test now pass. The current
-private ceiling is two seconds; the first maintained case uses one second of
-generated stereo tones. It returned exactly 44,100 finite frames, completed in
-about 0.27 seconds after shader warm-up and used about 2.50 GB peak MLX memory.
-The vocal estimate was appropriately near-silent for the instrumental-only
-input. The shared adapter derived the instrumental residual and proved
-additive reconstruction with maximum float32 error about `7.45e-9`. Nothing
-was persisted and worker/public-route permission remained false.
+Bounded in-memory inference now passes from one through eight seconds per model
+call. The maintained full-excerpt transport divides a maximum 15-second input
+into eight-second chunks with a four-second hop, then performs normalized
+weighted overlap-add. A 15-second synthetic smoke used three chunks, completed
+in about 2.6 seconds and reported about 2.42 GB peak MLX memory. It returned
+exactly 661,500 finite frames and proved additive reconstruction with maximum
+float32 error about `7.45e-9`. No audio was persisted.
 
-Run that exact no-output smoke test by replacing `--probe` above with
-`--synthetic-smoke`. The next increment is a two-second resource measurement,
-then bounded overlapping full-excerpt transport. Only after those pass may one
-sealed authorised excerpt be processed. PCM24 persistence, operating-system
-network denial, the two-role worker and every public route remain blocked.
+Run the no-output single-chunk smoke by replacing `--probe` above with
+`--synthetic-smoke`. Add `--synthetic-seconds 15` to exercise the overlap
+transport.
+
+The first report-bound authorised input also passed. The private bridge
+verified the self-hashed `Be Alone` 191–206 second receipt, creator authority,
+exact PCM24 SHA-256 and 44.1 kHz stereo geometry before inference. Kim Vocal 2
+returned active vocal and instrumental arrays over all 661,500 frames in about
+2.78 seconds with the same approximately 2.42 GB peak. Its maximum additive
+reconstruction error was `2.98e-8`. The bridge persisted no output and returned
+only path-free hashes and measurements. This proves transport and accounting,
+not separation quality.
+
+The private receipt-bound route requires the exact report-byte SHA-256:
+
+```bash
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 PYTHONNOUSERSITE=1 PYTHONPATH=src \
+  .venv-ai/bin/python scripts/private-melroformer-bridge.py \
+  --authorised-excerpt /absolute/private/authorised-separation-excerpt.json \
+  --authorisation-report-sha256 <exact-report-sha256> \
+  --source-root /absolute/private/cache/mlx-audio-source \
+  --checkpoint /absolute/private/cache/model.safetensors \
+  --companion-root /absolute/private/cache/checkpoint-directory
+```
+
+The next increment is an in-memory comparison with the sealed local HTDemucs
+and provider vocal controls. PCM24 output persistence, operating-system network
+denial, the two-role worker, independent conversion parity and every public
+route remain blocked.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
