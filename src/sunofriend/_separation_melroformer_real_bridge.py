@@ -111,6 +111,7 @@ class _PrivateMelRoFormerHandle:
     model: Any
     mx: Any
     np: Any
+    device: str
     config: Any
     sanitized_weight_keys: tuple[str, ...]
     expected_model_keys: tuple[str, ...]
@@ -207,9 +208,12 @@ def _load_private_melroformer_model(
     source_root: str | Path,
     checkpoint_path: str | Path,
     companion_root: str | Path,
+    device: str = "gpu",
 ) -> _PrivateMelRoFormerHandle:
     """Load the exact model without calling upstream ``from_pretrained``."""
 
+    if device not in {"gpu", "cpu"}:
+        raise ValueError("MelRoFormer device must be gpu or cpu")
     runtime = _verify_runtime()
     source = Path(source_root).expanduser().absolute()
     checkpoint = Path(checkpoint_path).expanduser().absolute()
@@ -231,6 +235,10 @@ def _load_private_melroformer_model(
     import mlx.core as mx
     import numpy as np
     from mlx.utils import tree_flatten
+
+    mx.set_default_device(mx.gpu if device == "gpu" else mx.cpu)
+    if str(mx.default_device()) != f"Device({device}, 0)":
+        raise RuntimeError("MelRoFormer MLX device selection differs")
 
     source_manifest = _expected_source_manifest()
     manifest_files = {item["path"]: item for item in source_manifest["files"]}
@@ -302,7 +310,7 @@ def _load_private_melroformer_model(
             "static_tensor_count": static_inspection["tensor_count"],
             "descriptor_pinned_during_tensor_load": True,
         },
-        "runtime": runtime,
+        "runtime": {**runtime, "mlx_device": device},
         "config": {
             "family": config.checkpoint_family,
             "sample_rate": config.sample_rate,
@@ -347,6 +355,7 @@ def _load_private_melroformer_model(
         model=model,
         mx=mx,
         np=np,
+        device=device,
         config=config,
         sanitized_weight_keys=tuple(sorted(sanitized)),
         expected_model_keys=tuple(sorted(expected)),
@@ -615,6 +624,7 @@ def _validate_real_inference(
         dropped_raw_weight_keys=handle.dropped_raw_weight_keys,
         inference_seconds=inference_seconds,
         peak_memory_bytes=peak_memory_bytes,
+        device=handle.device,
         chunk_count=chunk_count,
         chunk_frames=chunk_frames,
         hop_frames=hop_frames,

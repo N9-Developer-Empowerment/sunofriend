@@ -1917,9 +1917,19 @@ authorisation receipt and its hash-bound PCM24 model input. The real-song run
 completed in about 2.78 seconds with the same measured peak, produced active
 vocal and instrumental arrays and closed additive accounting at `2.98e-8`.
 Only path-free hashes and measurements were returned. This proves bounded real
-transport, not separation quality. The next increment compares the in-memory
-estimate against the sealed HTDemucs and provider vocal controls before any
-PCM24 worker, MIDI comparison, selection or public route.
+transport, not separation quality.
+
+The no-output control comparison then bound the exact role-mapping report and
+four PCM24 vocal controls to that same receipt. Candidate similarity was
+`0.9948` to Moises, `0.9736` to HTDemucs and about `0.92` to each Suno control.
+The controls also disagreed with one another, so no source was treated as
+ground truth and no ranking or winner was emitted. Repeated GPU runs varied by
+at most one projected PCM24 least-significant bit. Two explicit CPU-mode
+15-second synthetic runs were byte-identical, but took about 23.4 seconds each
+and used about 3.58 GB peak versus roughly 2.8 seconds and 2.42 GB for GPU. The
+future worker policy therefore names `fast_gpu` as the default and
+`repeatable_cpu` as the optional deterministic mode; every actual artifact must
+still receive its own hash and per-run reconstruction check.
 
 The intervening model-independent adapter contract is now implemented and
 tested with injected synthetic result data only. It invokes no engine. The

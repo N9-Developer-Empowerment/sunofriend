@@ -17,6 +17,7 @@ from sunofriend._separation_melroformer_real_bridge import (
     _PrivateMelRoFormerHandle,
     _chunk_crossfade_weights,
     _load_private_authorised_excerpt,
+    _load_private_melroformer_model,
     _plan_excerpt_chunks,
     _transform_checkpoint_keys,
     _validate_weight_inventory,
@@ -105,6 +106,16 @@ def test_private_bridge_has_no_public_cli_or_tui_route() -> None:
     assert "private-melroformer-bridge" not in DIRECT_TUI_COMMANDS
 
 
+def test_private_loader_rejects_unpinned_device_before_artifact_access() -> None:
+    with pytest.raises(ValueError, match="device must be gpu or cpu"):
+        _load_private_melroformer_model(
+            source_root="missing",
+            checkpoint_path="missing",
+            companion_root="missing",
+            device="auto",
+        )
+
+
 def test_plans_nominal_half_overlap_for_full_initial_excerpt() -> None:
     assert _plan_excerpt_chunks(NOMINAL_CHUNK_FRAMES) == ((0, NOMINAL_CHUNK_FRAMES),)
     assert _plan_excerpt_chunks(MAXIMUM_EXCERPT_FRAMES) == (
@@ -148,6 +159,7 @@ def test_loads_only_report_bound_private_pcm24_excerpt(tmp_path: Path) -> None:
         model=None,
         mx=None,
         np=np,
+        device="gpu",
         config=None,
         sanitized_weight_keys=(),
         expected_model_keys=(),
@@ -177,6 +189,7 @@ def test_authorised_excerpt_rejects_report_hash_or_product_permission(
         model=None,
         mx=None,
         np=np,
+        device="gpu",
         config=None,
         sanitized_weight_keys=(),
         expected_model_keys=(),

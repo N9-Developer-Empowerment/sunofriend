@@ -270,11 +270,15 @@ report the result, then move on.
   one-to-eight-second model calls and a three-chunk, 50%-overlapped 15-second
   synthetic smoke with exact finite output, about 2.42 GB peak MLX memory and
   additive residual accounting. The first self-hashed authorised `Be Alone`
-  excerpt also passed in memory over all 661,500 frames; it persisted no audio
-  and does not establish quality. Control comparison, PCM24 persistence, the
-  worker, independent parity and operating-system network-denial evidence do
-  not yet exist. The checkpoint is not redistributed. Do not offer or run this
-  challenger through the skill.
+  excerpt also passed in memory over all 661,500 frames; it persisted no audio.
+  Its descriptive similarity was 0.995 to Moises, 0.974 to HTDemucs and about
+  0.92 to both Suno controls, with no ground-truth claim or winner. Explicit GPU
+  mode is fast but showed at most one PCM24-LSB repeat variation; explicit CPU
+  mode repeated byte-identically over 15 seconds but took about 23.4 seconds.
+  PCM24 persistence, the worker, independent parity, downstream MIDI, human
+  listening and operating-system network-denial evidence do not yet exist. The
+  checkpoint is not redistributed. Do not offer or run this challenger through
+  the skill.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one
   canonical WAV project. It does not separate, shift, pad, stretch, normalize

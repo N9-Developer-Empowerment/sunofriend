@@ -913,15 +913,33 @@ HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 PYTHONNOUSERSITE=1 PYTHONPATH=src \
   .venv-ai/bin/python scripts/private-melroformer-bridge.py \
   --authorised-excerpt /absolute/private/authorised-separation-excerpt.json \
   --authorisation-report-sha256 <exact-report-sha256> \
+  --control-report /absolute/private/authorised-role-mapping.json \
+  --control-report-sha256 <exact-control-report-sha256> \
+  --device gpu \
   --source-root /absolute/private/cache/mlx-audio-source \
   --checkpoint /absolute/private/cache/model.safetensors \
   --companion-root /absolute/private/cache/checkpoint-directory
 ```
 
-The next increment is an in-memory comparison with the sealed local HTDemucs
-and provider vocal controls. PCM24 output persistence, operating-system network
-denial, the two-role worker, independent conversion parity and every public
-route remain blocked.
+The no-output comparison against the sealed controls now passes. Kim Vocal 2's
+descriptive evidence similarity was `0.9948` to Moises, `0.9736` to local
+HTDemucs, `0.9263` to Suno A and `0.9215` to Suno B. The controls also differed
+from one another. These scores establish that the candidate is within the
+existing vocal-estimate family; they do not make any control ground truth or
+select a winner. Names did not contribute to the scores.
+
+MLX device choice is explicit. `--device gpu` is the private default and took
+about 2.8 seconds for the authorised 15-second case at about 2.42 GB peak.
+Repeated GPU inference varied by at most `8.94e-8` float32, which projected to
+one PCM24 least-significant bit in about 1.19% of samples. `--device cpu` is an
+optional repeatable mode: two separate 15-second synthetic runs produced
+byte-identical vocals and instrumental hashes, but each took about 23.4 seconds
+and peaked at about 3.58 GB. The future writer must hash every actual artifact;
+GPU mode cannot promise cross-run byte identity.
+
+PCM24 output persistence, operating-system network denial, the two-role
+worker, independent conversion parity, downstream vocal MIDI, human listening
+and every public route remain blocked.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,

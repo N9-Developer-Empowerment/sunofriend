@@ -93,6 +93,7 @@ class _RealMelRoFormerEngineResult:
     dropped_raw_weight_keys: Sequence[str]
     inference_seconds: float
     peak_memory_bytes: int
+    device: str
     chunk_count: int
     chunk_frames: int
     hop_frames: int
@@ -205,6 +206,8 @@ def _accept_private_melroformer_real_result(
         or not 1 <= engine_result.peak_memory_bytes <= 64 * 1024**3
     ):
         raise ValueError("MelRoFormer peak memory is invalid")
+    if engine_result.device not in {"gpu", "cpu"}:
+        raise ValueError("MelRoFormer inference device is invalid")
     if (
         isinstance(engine_result.chunk_count, bool)
         or not isinstance(engine_result.chunk_count, int)
@@ -266,6 +269,7 @@ def _accept_private_melroformer_real_result(
         },
         "additive_accounting": accounting,
         "measurement": {
+            "device": engine_result.device,
             "inference_seconds": float(engine_result.inference_seconds),
             "peak_memory_bytes": engine_result.peak_memory_bytes,
         },

@@ -45,8 +45,8 @@ from ._separation_safetensors_inspection import (
 )
 
 
-PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v4"
-POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v4"
+PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v5"
+POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v5"
 AUDITED_AT = "2026-08-01"
 APPROVAL_RECORDED_AT = "2026-08-01"
 CHECKPOINT_NAME = "model.safetensors"
@@ -289,6 +289,9 @@ def _build_private_melroformer_challenger_plan(
             "network_denial_verified": False,
             "apple_resource_bounds_measured": True,
             "resource_measurement_host": "Apple silicon Mac with 36 GB RAM",
+            "supported_private_devices": ["gpu", "cpu"],
+            "default_private_device": "gpu",
+            "device_selection_explicitly_pinned": True,
             "worker_protocol_schema": WORKER_PROTOCOL_SCHEMA,
             "worker_protocol_defined": True,
             "adapter_observation_schema": ADAPTER_OBSERVATION_SCHEMA,
@@ -306,6 +309,7 @@ def _build_private_melroformer_challenger_plan(
             "synthetic_real_model_smoke_passed": True,
             "synthetic_full_excerpt_smoke_passed": True,
             "full_excerpt_smoke_measurement": {
+                "device": "gpu",
                 "duration_seconds": 15.0,
                 "chunk_count": 3,
                 "inference_seconds": 2.573881250107661,
@@ -314,6 +318,50 @@ def _build_private_melroformer_challenger_plan(
                 "filesystem_written": False,
             },
             "authorised_excerpt_smoke_passed": True,
+            "numeric_repeatability_observation": {
+                "gpu_authorised_excerpt_same_process": {
+                    "duration_seconds": 15.0,
+                    "byte_identical": False,
+                    "differing_float32_samples": 597_663,
+                    "maximum_absolute_float32_difference": (8.940696716308594e-08),
+                    "root_mean_square_float32_difference": (4.4276054481828306e-09),
+                    "pcm24_projection_differing_sample_fraction": (
+                        0.011880574452003023
+                    ),
+                    "pcm24_projection_maximum_integer_difference": 1,
+                },
+                "cpu_full_excerpt_separate_processes": {
+                    "duration_seconds": 15.0,
+                    "byte_identical": True,
+                    "differing_float32_samples": 0,
+                    "maximum_absolute_float32_difference": 0.0,
+                    "first_inference_seconds": 23.409394500078633,
+                    "second_inference_seconds": 23.439723541028798,
+                    "peak_memory_bytes": 3_581_510_326,
+                },
+                "interpretation": (
+                    "GPU is faster but varied within one PCM24 least-significant bit; "
+                    "CPU was bit-identical across two full 15-second synthetic processes"
+                ),
+            },
+            "output_repeatability_policy": {
+                "defined": True,
+                "default_mode": "fast_gpu",
+                "fast_gpu": {
+                    "device": "gpu",
+                    "cross_run_byte_identity_required": False,
+                    "each_actual_artifact_must_be_hashed": True,
+                    "additive_reconstruction_must_pass_per_run": True,
+                    "observed_pcm24_variation_upper_bound_lsb": 1,
+                    "observation_is_not_a_universal_model_guarantee": True,
+                },
+                "repeatable_cpu": {
+                    "device": "cpu",
+                    "cross_run_byte_identity_required": True,
+                    "full_excerpt_repeat_observed": True,
+                    "slower_than_fast_gpu": True,
+                },
+            },
             "worker_implemented": False,
         },
         "evaluation_contract": {
@@ -335,7 +383,7 @@ def _build_private_melroformer_challenger_plan(
             ],
             "latest_private_observation": {
                 "observed_at": "2026-08-01",
-                "status": "validated_not_persisted_quality_not_decided",
+                "status": "descriptive_controls_compared_no_winner",
                 "track_id": "be-alone",
                 "source_seconds": [191.0, 206.0],
                 "authorisation_report_sha256": (
@@ -344,23 +392,35 @@ def _build_private_melroformer_challenger_plan(
                 "source_pcm24_sha256": (
                     "807fbfa4b37b2ad102d7bba6f973c4b9e2c6922908267a3e9465c525199e642e"
                 ),
-                "vocal_float32_sha256": (
+                "observed_vocal_float32_sha256_single_run": (
                     "f470918cf7bf4d1c62a3ba9717c292961543c8ff69fea7ca08146e2a48965ce7"
                 ),
-                "instrumental_float32_sha256": (
+                "observed_instrumental_float32_sha256_single_run": (
                     "592e8e11d58ad45511b7bb6fd21b716b5b87b4578e75ff53e63cb6daf713d1af"
                 ),
                 "inference_seconds": 2.778583916835487,
+                "device": "gpu",
                 "peak_memory_bytes": 2_419_165_306,
                 "chunk_count": 3,
                 "maximum_absolute_reconstruction_error": (2.9802322387695312e-08),
                 "audio_persisted": False,
-                "quality_comparison_completed": False,
+                "quality_comparison_completed": True,
+                "control_report_sha256": (
+                    "4e83d7c80923ad0b148f6b1d75e2a121d6a3261ce6368f7babf44d2ece36b10c"
+                ),
+                "descriptive_similarity": {
+                    "local-htdemucs": 0.973562363,
+                    "moises": 0.994807696,
+                    "suno-a": 0.926349629,
+                    "suno-b": 0.921463681,
+                },
+                "controls_are_estimated_not_ground_truth": True,
+                "winner_selected": False,
             },
         },
         "decision": {
             "status": "blocked",
-            "run_status": "one_authorised_excerpt_validated_not_persisted",
+            "run_status": "one_authorised_excerpt_controls_compared_no_winner",
             "candidate_registered": True,
             "checkpoint_published_identity_pinned": True,
             "checkpoint_local_identity_verified": local_checkpoint[
@@ -372,7 +432,6 @@ def _build_private_melroformer_challenger_plan(
             "worker_start_permitted": False,
             "blockers": blockers,
             "next_safe_actions": [
-                "compare the in-memory vocal estimate with sealed local and provider controls",
                 "implement the two-role excerpt worker behind the existing non-executable protocol",
                 "prove operating-system network denial and PCM24 reconstruction before any wider evaluation",
             ],

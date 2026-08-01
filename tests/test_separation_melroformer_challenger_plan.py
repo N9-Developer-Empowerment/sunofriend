@@ -77,6 +77,26 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
         plan["evaluation_contract"]["latest_private_observation"][
             "quality_comparison_completed"
         ]
+        is True
+    )
+    assert (
+        plan["runtime"]["numeric_repeatability_observation"][
+            "gpu_authorised_excerpt_same_process"
+        ]["pcm24_projection_maximum_integer_difference"]
+        == 1
+    )
+    assert (
+        plan["runtime"]["numeric_repeatability_observation"][
+            "cpu_full_excerpt_separate_processes"
+        ]["byte_identical"]
+        is True
+    )
+    assert plan["runtime"]["output_repeatability_policy"]["defined"] is True
+    assert plan["runtime"]["output_repeatability_policy"]["default_mode"] == (
+        "fast_gpu"
+    )
+    assert (
+        plan["evaluation_contract"]["latest_private_observation"]["winner_selected"]
         is False
     )
     assert plan["source"]["upstream_from_pretrained_permitted"] is False
@@ -205,7 +225,7 @@ def test_private_plan_script_outputs_json_without_public_route() -> None:
     )
     plan = json.loads(completed.stdout)
     assert plan["decision"]["run_status"] == (
-        "one_authorised_excerpt_validated_not_persisted"
+        "one_authorised_excerpt_controls_compared_no_winner"
     )
     assert plan["effects"]["network_used"] is False
     assert "private-melroformer-challenger" not in PUBLIC_COMMANDS

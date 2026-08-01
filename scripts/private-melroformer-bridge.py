@@ -14,6 +14,9 @@ from sunofriend._separation_melroformer_real_bridge import (
     _load_private_authorised_excerpt,
     _load_private_melroformer_model,
 )
+from sunofriend._separation_melroformer_control_comparison import (
+    _compare_private_melroformer_vocals,
+)
 from sunofriend._separation_checkpoint_canonical import plain
 
 
@@ -32,6 +35,12 @@ def main() -> int:
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--companion-root", type=Path, required=True)
     parser.add_argument(
+        "--device",
+        choices=("gpu", "cpu"),
+        default="gpu",
+        help="pinned MLX inference device; GPU is fast, CPU is repeatable but slower",
+    )
+    parser.add_argument(
         "--synthetic-seconds",
         type=int,
         choices=(1, 2, 4, 8, 15),
@@ -42,6 +51,15 @@ def main() -> int:
         "--authorisation-report-sha256",
         help="expected SHA-256 of --authorised-excerpt report bytes",
     )
+    parser.add_argument(
+        "--control-report",
+        type=Path,
+        help="optional sealed role-mapping report for no-output vocal comparison",
+    )
+    parser.add_argument(
+        "--control-report-sha256",
+        help="expected SHA-256 of --control-report bytes",
+    )
     args = parser.parse_args()
     if not args.synthetic_smoke and args.synthetic_seconds != 1:
         parser.error("--synthetic-seconds is only valid with --synthetic-smoke")
@@ -49,10 +67,17 @@ def main() -> int:
         parser.error(
             "--authorised-excerpt and --authorisation-report-sha256 are required together"
         )
+    if bool(args.control_report) != bool(args.control_report_sha256):
+        parser.error(
+            "--control-report and --control-report-sha256 are required together"
+        )
+    if args.control_report and not args.authorised_excerpt:
+        parser.error("--control-report is only valid with --authorised-excerpt")
     handle = _load_private_melroformer_model(
         source_root=args.source_root,
         checkpoint_path=args.checkpoint,
         companion_root=args.companion_root,
+        device=args.device,
     )
     if args.probe:
         result = dict(handle.evidence)
@@ -70,6 +95,17 @@ def main() -> int:
             "bridge": dict(handle.evidence),
             "inference": plain(observation.evidence),
         }
+        if args.control_report:
+            result["control_comparison"] = plain(
+                _compare_private_melroformer_vocals(
+                    handle,
+                    source=source,
+                    candidate_vocals=observation.vocals,
+                    source_authorisation=authorisation,
+                    control_report_path=args.control_report,
+                    expected_control_report_sha256=args.control_report_sha256,
+                )
+            )
     else:
         np = handle.np
         frames = args.synthetic_seconds * 44_100

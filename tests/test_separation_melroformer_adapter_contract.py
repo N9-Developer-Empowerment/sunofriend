@@ -67,6 +67,7 @@ def _real_result(**changes: object) -> _RealMelRoFormerEngineResult:
         "dropped_raw_weight_keys": ["transformer.0.rotary_embed.freqs"],
         "inference_seconds": 1.25,
         "peak_memory_bytes": 2_500_000_000,
+        "device": "gpu",
         "chunk_count": 1,
         "chunk_frames": 3,
         "hop_frames": 3,
@@ -113,6 +114,7 @@ def test_real_result_uses_same_validation_core_without_persisting() -> None:
     assert evidence["additive_accounting"]["passed"] is True
     assert evidence["additive_accounting"]["pcm24_persistence_verified"] is False
     assert evidence["measurement"]["peak_memory_bytes"] == 2_500_000_000
+    assert evidence["measurement"]["device"] == "gpu"
     assert evidence["transport"]["chunk_count"] == 1
     assert evidence["transport"]["weighted_overlap_add"] is False
     assert evidence["permissions"]["private_inference_permitted"] is True
@@ -126,6 +128,7 @@ def test_real_result_uses_same_validation_core_without_persisting() -> None:
         ({"engine_kind": "synthetic_test_double"}, "identity differs"),
         ({"inference_seconds": 0.0}, "duration is invalid"),
         ({"peak_memory_bytes": 0}, "peak memory is invalid"),
+        ({"device": "mps"}, "device is invalid"),
         ({"chunk_count": 0}, "chunk transport is invalid"),
         ({"hop_frames": 4}, "chunk transport is invalid"),
         ({"chunk_frames": 4, "hop_frames": 4}, "single-chunk transport differs"),
