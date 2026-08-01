@@ -240,6 +240,18 @@ report the result, then move on.
   path-free,
   `blocked` and non-authorising. None of this approves installation or covers
   the checkpoint. Do not offer or run it through this skill.
+- One exact MLX MelBand-RoFormer Kim Vocal 2 candidate is now registered as a
+  separate **vocal-only** private plan. Its author-hosted source checkpoint was
+  explicitly relicensed to MIT, and both the original checkpoint and the
+  pinned BF16 Safetensors conversion have published SHA-256 identities. Two
+  independent source-file records reproduce the original hash. A user-supplied
+  evidence pack was reviewed as a secondary lead only; its downloader was not
+  executed, and its hash-stable ViperX alternatives remain rejected because
+  their creator-authorised terms are unverified. Kim Vocal 2 is still
+  `blocked`/`not_run`: no user approval, runtime/source lock, Safetensors
+  inspection, worker, independent parity or Mac resource/offline evidence
+  exists. No package or model was downloaded. Do not offer or run it through
+  this skill.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one
   canonical WAV project. It does not separate, shift, pad, stretch, normalize

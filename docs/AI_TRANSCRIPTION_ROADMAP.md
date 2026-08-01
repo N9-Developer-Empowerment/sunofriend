@@ -1856,6 +1856,28 @@ integrity increment; checkpoint terms, a published checkpoint hash, static
 checkpoint inspection, runtime installation approval and the bounded worker
 remain open.
 
+The separate role-specific path now has a stronger identity and licence
+starting point. The exact
+[`mlx-community/mel-roformer-kim-vocal-2-mlx`](https://huggingface.co/mlx-community/mel-roformer-kim-vocal-2-mlx)
+revision `64cbfcb004e39430e5f584552c05949440ec39ce` publishes a
+456,483,463-byte Safetensors file with SHA-256
+`312c38e5b698f8dfaa4d6064e8f79010744825828917871a9d22673a43eb7fe5`.
+Its original author-hosted Kim Vocal 2 checkpoint was explicitly changed from
+GPL-3.0 to MIT at revision
+`ac9b0614ab3cd7f77219e18ba494dfd93956c348`, and two independent LFS
+records reproduce its 913,106,900-byte source hash. A tracked, no-network
+verifier preserves those facts and records two hash-stable ViperX alternatives
+as rejected because their creator-authorised terms remain unverified.
+
+This is a vocal-only registration, not a broad separator and not an executed
+experiment. A supplied evidence ZIP was reviewed as a secondary lead; its
+download helper was not run. The model, MLX runtime and packages were not
+downloaded or installed. Exact runtime source, dependency and licence locks,
+bounded Safetensors inspection, a no-network worker protocol, independent
+parity, resource bounds and explicit private-evaluation approval all remain
+open. The next increment is those non-executable runtime and inspection
+contracts, not a model run.
+
 ### 2026-07-31 — Second authorised separation-to-MIDI repeat
 
 - Goal: test whether the first real-song observations repeat on different

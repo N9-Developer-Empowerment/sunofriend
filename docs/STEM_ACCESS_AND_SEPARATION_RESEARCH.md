@@ -1074,7 +1074,7 @@ commercially redistributable.
 | --- | --- | --- | --- | --- |
 | [Demucs / HTDemucs](https://github.com/facebookresearch/demucs) | Stable four-source vocabulary: drums, bass, vocals, other. Experimental `htdemucs_6s` adds guitar and piano, but the official README warns that piano has substantial bleed. | Original project supports MPS but is no longer actively maintained. [Demucs-MLX](https://github.com/ssmall256/demucs-mlx) and [demucs-infer](https://github.com/openmirlab/demucs-infer) are possible adapters to test. Demucs-MLX's first-use download behaviour must be disabled or preinstalled and then verified offline. | Code is MIT; checkpoint terms and hashes still require an explicit registry entry. | Unverified broad-baseline candidate. |
 | [BS-RoFormer architecture](https://arxiv.org/abs/2309.02612) | Strong four-stem research result, particularly relevant to the bass problem. | The exact [ZFTurbo `v1.0.12` MUSDB18HQ release](https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.12) is now the registered private challenger; it remains uninstalled and unrunnable. An exact tracked 1 August 2026 release/tag/licence snapshot has a no-network verifier. | The repository code is MIT, but the release provides no checkpoint-specific terms or published checkpoint SHA-256. The checkpoint asset `digest` remains null. Sunofriend does not project the code licence onto the weights. | Exact fail-closed candidate, especially for bass and composite `other`; not an available separator. |
-| [MelBand-RoFormer architecture](https://arxiv.org/abs/2310.01809) | Competitive vocals, drums and other; specialised checkpoints could complement a broad model. | Active MLX and PyTorch ecosystems exist; no runtime/checkpoint pair is selected here. | Every checkpoint needs a separate licence, hash and provenance record. | Unverified role-specific candidate. |
+| [MelBand-RoFormer architecture](https://arxiv.org/abs/2310.01809) | Competitive role-specific models could complement a broad separator. The exact Kim Vocal 2 candidate produces vocals; instrumental is mixture minus vocals. | The [MLX conversion](https://huggingface.co/mlx-community/mel-roformer-kim-vocal-2-mlx) is pinned at revision `64cbfcb…` with a 456,483,463-byte Safetensors SHA-256. Runtime source, dependencies, offline behaviour and resources remain unaudited. | The [original owner repository](https://huggingface.co/KimberleyJSN/melbandroformer) changed the exact checkpoint metadata from GPL-3.0 to MIT in verified commit `ac9b061…`; the conversion licence names the original weights. Two independent LFS records reproduce the source hash. | Exact, licence-audited **vocal-only** private plan; blocked and not installed or runnable. |
 | [SCNet](https://github.com/starrytong/SCNet) | Official sparse-compression four-stem model with released MUSDB checkpoint. | PyTorch path; Apple runtime and memory need measurement. | Official code is MIT; record the release asset terms/hash separately. | Useful independent architecture in the bake-off. |
 | [Spleeter](https://github.com/deezer/spleeter) | Two, four and five source configurations; five-source adds piano. | Older TensorFlow stack has known Apple-silicon friction. | MIT code, last formal release in 2021. | Historical speed/reproducibility control only. |
 | [Open-Unmix](https://github.com/sigsep/open-unmix-pytorch) | Established four-stem reference implementation. | Generic PyTorch CPU/GPU rather than a first-class current Mac route. | MIT code; default UMXL weights are CC BY-NC-SA 4.0. | Non-commercial reference baseline, not public default. |
@@ -1999,6 +1999,17 @@ promotion are not implemented**
   checkout. The fixed manifest and descriptor-based verifier cover only the
   two required BS-RoFormer modules and the MIT licence; the verifier passed on
   the exact temporary `v1.0.12` checkout without importing or executing code.
+- [x] Register one separately licensed role-specific alternative. Kim Vocal 2
+  now has exact author-repository relicense history, original and converted
+  checkpoint hashes, two independent source-hash corroborations and a
+  no-network tracked-evidence verifier. The Safetensors conversion remains
+  `blocked`/`not_run`; this closes identity and checkpoint-terms research only.
+- [ ] Before any Kim Vocal 2 download or installation, audit and pin the exact
+  MLX source surface, produce a wheel-only dependency/hash/licence lock, define
+  bounded Safetensors header/tensor inspection and a two-output excerpt
+  protocol, then request explicit private-evaluation approval. Independently
+  reproduce the published conversion parity and measure offline/resource
+  behaviour before comparing vocal MIDI or listening quality.
 - [ ] Consider a deterministic role-specific ensemble only after its members
   have separate held-out evidence; never infer a winner from popularity or a
   model-runner catalogue.

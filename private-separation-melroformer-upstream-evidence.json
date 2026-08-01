@@ -1,0 +1,168 @@
+{
+  "schema": "sunofriend.private-melroformer-upstream-evidence.v1",
+  "observed_at": "2026-08-01",
+  "observation": {
+    "official_primary_sources_only": true,
+    "conversion_model_api_url": "https://huggingface.co/api/models/mlx-community/mel-roformer-kim-vocal-2-mlx",
+    "conversion_tree_api_url": "https://huggingface.co/api/models/mlx-community/mel-roformer-kim-vocal-2-mlx/tree/64cbfcb004e39430e5f584552c05949440ec39ce?recursive=true&expand=true",
+    "conversion_readme_url": "https://huggingface.co/mlx-community/mel-roformer-kim-vocal-2-mlx/raw/64cbfcb004e39430e5f584552c05949440ec39ce/README.md",
+    "conversion_license_url": "https://huggingface.co/mlx-community/mel-roformer-kim-vocal-2-mlx/raw/64cbfcb004e39430e5f584552c05949440ec39ce/LICENSE",
+    "conversion_config_url": "https://huggingface.co/mlx-community/mel-roformer-kim-vocal-2-mlx/raw/64cbfcb004e39430e5f584552c05949440ec39ce/config.json",
+    "source_model_api_url": "https://huggingface.co/api/models/KimberleyJSN/melbandroformer",
+    "source_tree_api_url": "https://huggingface.co/api/models/KimberleyJSN/melbandroformer/tree/ac9b0614ab3cd7f77219e18ba494dfd93956c348?recursive=true&expand=true",
+    "source_readme_url": "https://huggingface.co/KimberleyJSN/melbandroformer/raw/ac9b0614ab3cd7f77219e18ba494dfd93956c348/README.md",
+    "source_license_commit_url": "https://huggingface.co/KimberleyJSN/melbandroformer/commit/ac9b0614ab3cd7f77219e18ba494dfd93956c348",
+    "source_license_discussion_url": "https://huggingface.co/KimberleyJSN/melbandroformer/discussions/2",
+    "network_used_to_observe": true,
+    "conversion_checkpoint_downloaded": false,
+    "source_checkpoint_downloaded": false
+  },
+  "conversion_repository": {
+    "id": "mlx-community/mel-roformer-kim-vocal-2-mlx",
+    "revision": "64cbfcb004e39430e5f584552c05949440ec39ce",
+    "last_modified": "2026-05-01T15:37:43.000Z",
+    "public": true,
+    "gated": false,
+    "disabled": false,
+    "license": "mit",
+    "base_model": "KimberleyJSN/melbandroformer",
+    "files": {
+      "README.md": {
+        "bytes": 8846,
+        "git_oid": "567b788a8810cb348bcb18c6f31d72cf66cd507a",
+        "sha256": "2bcb814963a9f0057259ee7736dea03c1346586d4124eebd75673fef13b30f55"
+      },
+      "LICENSE": {
+        "bytes": 1500,
+        "git_oid": "fe7d79957141c5a1c3e3840c9c1189b68145cde0",
+        "sha256": "1aa245b55067df5c63c847894e7040f76fa79ddde83e9e5ed8a5c29ef1865c14"
+      },
+      "config.json": {
+        "bytes": 833,
+        "git_oid": "4e7f9ed2cfcb2b3232166a5c803adf20d6816031",
+        "sha256": "3300eacac960ab46933ef6df6b838eb35de1f0321db9242c1b06e6d2a6a62b58"
+      },
+      "model.safetensors": {
+        "bytes": 456483463,
+        "git_oid": "a7aee57f5a6b2f1f92fd5781651311a0cac4796b",
+        "lfs_sha256": "312c38e5b698f8dfaa4d6064e8f79010744825828917871a9d22673a43eb7fe5",
+        "xet_hash": "a0cf3a6749f1a3f5f225eb13c230f16ec94ef26855497cbe34ab9e0c9e03a81f"
+      }
+    }
+  },
+  "source_repository": {
+    "id": "KimberleyJSN/melbandroformer",
+    "revision": "ac9b0614ab3cd7f77219e18ba494dfd93956c348",
+    "last_modified": "2026-04-22T12:30:27.000Z",
+    "public": true,
+    "gated": false,
+    "disabled": false,
+    "license": "mit",
+    "files": {
+      "README.md": {
+        "bytes": 20,
+        "git_oid": "acb132c8f50ba394d4f63c298904c290319877a2",
+        "sha256": "5c1b3fd193f37b9dcdd947a12e566189f1c9d2664f4e5e95548e6a4b9fc7adab"
+      },
+      "MelBandRoformer.ckpt": {
+        "bytes": 913106900,
+        "git_oid": "e9269937826d8cedf1855096bc9c1d49298bb4f8",
+        "lfs_sha256": "87201f4d31afb5bc79993230fc49446918425574db48c01c405e44f365c7559e",
+        "xet_hash": "05f6ab10ff7f425b7713f992332ec8c5851395f9af68e3f28107ef17f73eea2a"
+      }
+    },
+    "independent_identity_corroboration": [
+      {
+        "repository": "KitsuneX07/Music_Source_Sepetration_Models",
+        "revision": "b7b7daa869684790fb1704a050f737fefc77e469",
+        "path": "vocal_models/Kim_MelBandRoformer.ckpt",
+        "bytes": 913106900,
+        "lfs_sha256": "87201f4d31afb5bc79993230fc49446918425574db48c01c405e44f365c7559e"
+      },
+      {
+        "repository": "FunAudioLLM/Fun-CineForge",
+        "revision": "b01378e640d426b08c1cccb12339bf0f449ddfa5",
+        "path": "MelBandRoformer.ckpt",
+        "bytes": 913106900,
+        "lfs_sha256": "87201f4d31afb5bc79993230fc49446918425574db48c01c405e44f365c7559e"
+      }
+    ]
+  },
+  "licensing": {
+    "checkpoint_owner": "Kimberley Jensen",
+    "owner_permission_comment_date": "2025-06-03T23:42:59.000Z",
+    "owner_permission_comment_scope": "use it any way you like",
+    "gpl_assignment_date": "2025-06-17T17:10:21.000Z",
+    "gpl_revision": "f45f9e3d8570a406c94ac34b29f49ce43fda3bc8",
+    "gpl_readme_sha256": "0b6ea463a516d9c7b8a0bc5522e66765e18707a549e2c369daa487d88233550e",
+    "mit_relicense_date": "2026-04-22T12:30:27.000Z",
+    "mit_relicense_revision": "ac9b0614ab3cd7f77219e18ba494dfd93956c348",
+    "mit_relicense_diff": {
+      "path": "README.md",
+      "from": "license: gpl-3.0",
+      "to": "license: mit",
+      "author": "KimberleyJSN"
+    },
+    "conversion_license": "MIT",
+    "conversion_license_names_original_weights": true,
+    "conversion_performed_after_mit_relicense": true
+  },
+  "secondary_lead_review": {
+    "archive_sha256": "8f0e06928eea399648e0b30df5e41f415b72b411aecf96a5e1f017c223d3924f",
+    "archive_bytes": 8405,
+    "regular_files_reviewed": 5,
+    "checkpoint_files_present": false,
+    "download_helper_executed": false,
+    "model_download_started": false,
+    "admission_authority_inferred_from_pack": false,
+    "viperx_alternatives": [
+      {
+        "filename": "model_bs_roformer_ep_317_sdr_12.9755.ckpt",
+        "bytes": 639331213,
+        "sha256": "5b84f37e8d444c8cb30c79d77f613a41c05868ff9c9ac6c7049c00aefae115aa",
+        "identity_independently_corroborated": true,
+        "checkpoint_terms_authoritatively_verified": false,
+        "admitted": false
+      },
+      {
+        "filename": "model_mel_band_roformer_ep_3005_sdr_11.4360.ckpt",
+        "bytes": 1007816988,
+        "sha256": "21b9d0958e35b8ebfbe2afe69bbd5444e5ffe2f5d80ae0d583b833d2f3c0d139",
+        "identity_independently_corroborated": true,
+        "checkpoint_terms_authoritatively_verified": false,
+        "admitted": false
+      }
+    ]
+  },
+  "lineage": {
+    "architecture": "Mel-Band-RoFormer",
+    "checkpoint_family": "Kim Vocal 2",
+    "target": "vocals",
+    "derived_residual": "instrumental = mixture - vocals",
+    "sample_rate": 44100,
+    "channels": 2,
+    "chunk_frames": 352800,
+    "overlap": 2,
+    "parameter_count_reported": 228000000,
+    "conversion_tool_revision": "8380ab8",
+    "mlx_version_reported": "0.31.0",
+    "output_dtype": "bfloat16",
+    "config_source_sha256_matches_source_repository": true,
+    "parity_sdr_db_reported": 66.08,
+    "parity_claim_independently_verified_by_sunofriend": false
+  },
+  "findings": {
+    "checkpoint_specific_terms_verified": true,
+    "checkpoint_allowed_use_verified_for_private_local_evaluation": true,
+    "conversion_checkpoint_published_sha256": true,
+    "source_checkpoint_published_sha256": true,
+    "conversion_checkpoint_format": "safetensors",
+    "conversion_checkpoint_pickle_deserialization_required": false,
+    "conversion_checkpoint_local_identity_verified": false,
+    "runtime_source_audited_by_sunofriend": false,
+    "runtime_dependencies_locked_by_sunofriend": false,
+    "apple_runtime_resource_bounds_measured_by_sunofriend": false,
+    "private_evaluation_authorized": false,
+    "private_evaluation_eligible": false
+  }
+}

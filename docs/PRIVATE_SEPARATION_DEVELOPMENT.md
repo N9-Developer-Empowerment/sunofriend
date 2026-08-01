@@ -734,6 +734,58 @@ check still returns `blocked`: it verifies only that the code and runtime plan
 are intact. It does not inspect or open a checkpoint, install the runtime,
 import model code, start a worker or make private evaluation eligible.
 
+### Exact MelBand-RoFormer vocal challenger registration
+
+The first candidate with both checkpoint-specific terms and published content
+identity is now registered separately from the blocked broad model. It is
+[`mlx-community/mel-roformer-kim-vocal-2-mlx`](https://huggingface.co/mlx-community/mel-roformer-kim-vocal-2-mlx)
+at revision `64cbfcb004e39430e5f584552c05949440ec39ce`: a 456,483,463-byte
+BF16 Safetensors conversion with published SHA-256
+`312c38e5b698f8dfaa4d6064e8f79010744825828917871a9d22673a43eb7fe5`.
+It is a **vocal-only** MelBand-RoFormer, not a broad replacement for Demucs.
+The instrumental output would be the exact mixture-minus-vocals residual.
+
+The source checkpoint is Kimberley Jensen's author-hosted Kim Vocal 2 at
+revision `ac9b0614ab3cd7f77219e18ba494dfd93956c348`. Its 913,106,900-byte
+LFS object has SHA-256
+`87201f4d31afb5bc79993230fc49446918425574db48c01c405e44f365c7559e`.
+The owner first granted broad use permission in the repository discussion,
+then assigned GPL-3.0, and later changed that exact repository metadata from
+GPL-3.0 to MIT in the verified 22 April 2026 commit. The conversion repository
+also includes a full MIT licence naming both the conversion and original
+weights. Two independent Hugging Face file records reproduce the source size
+and SHA-256. This is sufficient checkpoint-specific evidence for planning a
+private local evaluation; it is not legal advice and does not approve a run.
+
+A user-supplied 8,405-byte RoFormer evidence pack at SHA-256
+`8f0e06928eea399648e0b30df5e41f415b72b411aecf96a5e1f017c223d3924f`
+was reviewed only as a secondary lead. It contained no model bytes. Its
+optional download helper was read but not executed. Primary Hugging Face file
+metadata independently corroborated its Kim checkpoint identity and the byte
+identities of two ViperX alternatives. Those ViperX candidates remain
+inadmissible because repeated hashes prove integrity, not creator-authorised
+terms.
+
+Inspect the new static plan and tracked evidence with:
+
+```bash
+.venv/bin/python scripts/private-melroformer-challenger.py --plan
+
+PYTHONPATH=src .venv/bin/python \
+  scripts/private-melroformer-upstream-evidence.py \
+  --repository-root /absolute/path/to/Sunofriend
+```
+
+Both commands are read-only and have no public CLI/TUI route. The plan remains
+`blocked`/`not_run`: no explicit approval has been recorded for this model,
+the local Safetensors identity and bounded tensor inventory are unverified,
+the MLX source surface and dependency set are not yet pinned, published 66.08
+dB conversion parity is not Sunofriend-verified, no bounded worker exists, and
+Mac resource/offline behaviour is unmeasured. No package or checkpoint was
+installed or downloaded, and Simple, Studio and the source graph are
+unchanged. The next safe increment is the exact source/dependency and
+Safetensors-inspection contract, followed by a separate approval request.
+
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
 resource, downstream-MIDI and human listening acceptance.
