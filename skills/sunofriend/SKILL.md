@@ -278,17 +278,21 @@ report the result, then move on.
   A separate model-free macOS canary now proves that the exact hashed
   `sandbox-exec` provider returns `EPERM` for one deliberate IPv4 loopback
   connection that is not permission-denied outside its `(deny network*)`
-  profile. This is OS denial evidence for the canary only: it is not bound to
-  a model worker, does not observe arbitrary model attempts and does not
-  confine writes or descendants or close hash-before-exec path TOCTOU. PCM24
-  persistence is separately implemented and parent-verified for precomputed
-  synthetic arrays through the maximum 15-second geometry, but is not bound to
-  the model worker. A separate synthetic child has successfully combined
+  profile. A separate synthetic child has successfully combined
   network, fork and outside-write `EPERM` canaries with the two-file PCM24
   quarantine and an identical parent re-read. It loaded no model, checkpoint
-  or authorised audio, does not bind the full Python import closure and cannot
-  authorize the model worker. The model worker, independent parity, downstream
-  MIDI and human listening do not yet exist. The
+  or authorised audio. The fixed real worker has now passed one additional
+  private authorised observation: the same three deliberate attempts all
+  returned `EPERM` in the process that loaded the exact checkpoint and inferred
+  the sealed 15-second `Be Alone` excerpt. It wrote only the fixed vocals and
+  instrumental PCM24 files inside a fresh owner-only staging tree; the parent
+  independently reopened them, matched the child's evidence and observed at
+  most one PCM24 least-significant bit of additive reconstruction error. This
+  binds OS denial, outside-write confinement and PCM quarantine to one real
+  model run. It does not observe every arbitrary connection attempt, bind the
+  complete Python import closure, close hash-before-exec path TOCTOU or make
+  mutable output files immutable. Independent parity, downstream MIDI and
+  human listening remain incomplete. The
   checkpoint is not redistributed. Do not offer or run this challenger through
   the skill.
 - `source-import` decodes exactly one local asset.

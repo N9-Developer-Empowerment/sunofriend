@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fixed private MelRoFormer worker; currently synthetic canary only."""
+"""Fixed private MelRoFormer worker for synthetic or authorised evaluation."""
 
 from __future__ import annotations
 
@@ -16,22 +16,77 @@ from sunofriend._separation_checkpoint_canonical import plain
 from sunofriend._separation_melroformer_pcm24_quarantine import (
     _materialize_private_melroformer_pcm24_quarantine,
 )
+from sunofriend._separation_melroformer_real_bridge import (
+    _infer_private_melroformer_excerpt,
+    _load_private_authorised_excerpt,
+    _load_private_melroformer_model,
+)
 from sunofriend._separation_melroformer_worker_sandbox import _synthetic_arrays
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--synthetic-canary", action="store_true", required=True)
+    action = parser.add_mutually_exclusive_group(required=True)
+    action.add_argument("--synthetic-canary", action="store_true")
+    action.add_argument("--authorised-excerpt", type=Path, metavar="REPORT")
     parser.add_argument("--destination", type=Path, required=True)
     parser.add_argument("--outside-write-canary", type=Path, required=True)
+    parser.add_argument("--authorisation-report-sha256")
+    parser.add_argument("--source-root", type=Path)
+    parser.add_argument("--checkpoint", type=Path)
+    parser.add_argument("--companion-root", type=Path)
+    parser.add_argument("--device", choices=("gpu", "cpu"), default="gpu")
     args = parser.parse_args()
+
+    real_values = (
+        args.authorisation_report_sha256,
+        args.source_root,
+        args.checkpoint,
+        args.companion_root,
+    )
+    if args.authorised_excerpt and any(value is None for value in real_values):
+        parser.error(
+            "--authorised-excerpt requires --authorisation-report-sha256, "
+            "--source-root, --checkpoint and --companion-root"
+        )
+    if args.synthetic_canary and any(value is not None for value in real_values):
+        parser.error("real-model arguments are invalid with --synthetic-canary")
 
     network = _network_canary()
     fork = _fork_canary()
     outside_write = _outside_write_canary(args.outside_write_canary)
     if any(value != errno.EPERM for value in (network, fork, outside_write)):
-        raise RuntimeError("synthetic worker isolation canary did not return EPERM")
-    source, vocals, instrumental = _synthetic_arrays(np)
+        raise RuntimeError("MelRoFormer worker isolation canary did not return EPERM")
+
+    if args.synthetic_canary:
+        source, vocals, instrumental = _synthetic_arrays(np)
+        schema = "sunofriend.private-melroformer-synthetic-worker-child.v1"
+        model_evidence = None
+    else:
+        handle = _load_private_melroformer_model(
+            source_root=args.source_root,
+            checkpoint_path=args.checkpoint,
+            companion_root=args.companion_root,
+            device=args.device,
+        )
+        source, authorisation = _load_private_authorised_excerpt(
+            handle,
+            report_path=args.authorised_excerpt,
+            expected_report_sha256=args.authorisation_report_sha256,
+        )
+        observation = _infer_private_melroformer_excerpt(
+            handle,
+            source,
+            sample_rate=44_100,
+        )
+        vocals = observation.vocals
+        instrumental = observation.instrumental
+        schema = "sunofriend.private-melroformer-authorised-worker-child.v1"
+        model_evidence = {
+            "authorisation": plain(authorisation),
+            "bridge": plain(handle.evidence),
+            "inference": plain(observation.evidence),
+        }
     quarantine = _materialize_private_melroformer_pcm24_quarantine(
         destination=args.destination,
         source=source,
@@ -40,7 +95,7 @@ def main() -> int:
         np=np,
     )
     result = {
-        "schema": "sunofriend.private-melroformer-synthetic-worker-child.v1",
+        "schema": schema,
         "status": "complete",
         "canaries": {
             "network_connect_ex": network,
@@ -52,6 +107,8 @@ def main() -> int:
         },
         "quarantine": plain(quarantine),
     }
+    if model_evidence is not None:
+        result["model"] = model_evidence
     print(json.dumps(result, sort_keys=True, separators=(",", ":")))
     return 0
 

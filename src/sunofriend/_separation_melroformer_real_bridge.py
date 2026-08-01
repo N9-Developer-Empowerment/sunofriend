@@ -129,6 +129,21 @@ def _load_private_authorised_excerpt(
 
     if type(handle) is not _PrivateMelRoFormerHandle:
         raise ValueError("MelRoFormer excerpt loading requires an exact private handle")
+    return _load_private_authorised_excerpt_pcm24(
+        handle.np,
+        report_path=report_path,
+        expected_report_sha256=expected_report_sha256,
+    )
+
+
+def _load_private_authorised_excerpt_pcm24(
+    np: Any,
+    *,
+    report_path: str | Path,
+    expected_report_sha256: str,
+) -> tuple[Any, Mapping[str, Any]]:
+    """Load one report-bound PCM24 excerpt without requiring a model handle."""
+
     if not isinstance(expected_report_sha256, str) or not _SHA256_RE.fullmatch(
         expected_report_sha256
     ):
@@ -177,7 +192,7 @@ def _load_private_authorised_excerpt(
         expected_sha256=artifact["sha256"],
         expected_bytes=artifact["bytes"],
     )
-    audio = _decode_pcm24_excerpt(handle.np, raw_audio)
+    audio = _decode_pcm24_excerpt(np, raw_audio)
     geometry = local_input["geometry"]
     if (
         audio.shape != (geometry["frames"], geometry["channels"])
@@ -936,6 +951,7 @@ __all__ = [
     "SCHEMA",
     "_PrivateMelRoFormerHandle",
     "_load_private_authorised_excerpt",
+    "_load_private_authorised_excerpt_pcm24",
     "_load_private_melroformer_model",
     "_infer_private_melroformer_probe",
     "_infer_private_melroformer_excerpt",

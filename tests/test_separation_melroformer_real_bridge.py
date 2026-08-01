@@ -17,6 +17,7 @@ from sunofriend._separation_melroformer_real_bridge import (
     _PrivateMelRoFormerHandle,
     _chunk_crossfade_weights,
     _load_private_authorised_excerpt,
+    _load_private_authorised_excerpt_pcm24,
     _load_private_melroformer_model,
     _plan_excerpt_chunks,
     _transform_checkpoint_keys,
@@ -179,6 +180,14 @@ def test_loads_only_report_bound_private_pcm24_excerpt(tmp_path: Path) -> None:
     assert evidence["track_id"] == "owned-example"
     assert evidence["audio_persisted_by_bridge"] is False
     assert "path" not in repr(evidence).lower()
+
+    model_free_audio, model_free_evidence = _load_private_authorised_excerpt_pcm24(
+        np,
+        report_path=report,
+        expected_report_sha256=report_sha256,
+    )
+    np.testing.assert_array_equal(model_free_audio, audio)
+    assert model_free_evidence == evidence
 
 
 def test_authorised_excerpt_rejects_report_hash_or_product_permission(

@@ -52,8 +52,13 @@ from ._separation_safetensors_inspection import (
 )
 
 
-PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v8"
-POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v8"
+AUTHORISED_WORKER_SANDBOX_SCHEMA = (
+    "sunofriend.private-melroformer-authorised-worker-sandbox.v1"
+)
+
+
+PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v9"
+POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v9"
 AUDITED_AT = "2026-08-01"
 APPROVAL_RECORDED_AT = "2026-08-01"
 CHECKPOINT_NAME = "model.safetensors"
@@ -69,11 +74,10 @@ LICENSE_NAME = "LICENSE"
 LICENSE_BYTES = 1_500
 LICENSE_SHA256 = "1aa245b55067df5c63c847894e7040f76fa79ddde83e9e5ed8a5c29ef1865c14"
 _BASE_BLOCKERS = (
+    "complete_worker_import_closure_not_bound",
     "conversion_parity_not_independently_verified",
-    "operating_system_network_denial_not_bound_to_model_worker",
+    "model_worker_hash_before_exec_path_toctou_not_closed",
     "outbound_model_attempt_observation_not_implemented",
-    "pcm24_output_quarantine_not_bound_to_worker",
-    "runtime_worker_not_implemented",
 )
 
 
@@ -313,15 +317,15 @@ def _build_private_melroformer_challenger_plan(
                 "external_destination_contacted": False,
                 "model_or_checkpoint_loaded": False,
             },
-            "network_denial_bound_to_model_worker": False,
+            "network_denial_bound_to_model_worker": True,
             "outbound_model_attempt_observation_implemented": False,
             "pcm24_quarantine_schema": PCM24_QUARANTINE_SCHEMA,
             "pcm24_quarantine_implemented": True,
             "pcm24_quarantine_synthetic_full_excerpt_passed": True,
             "pcm24_quarantine_deterministic_bytes_observed": True,
             "pcm24_quarantine_maximum_reconstruction_error_lsb": 2,
-            "pcm24_quarantine_bound_to_worker": False,
-            "pcm24_quarantine_outside_write_denial_proven": False,
+            "pcm24_quarantine_bound_to_worker": True,
+            "pcm24_quarantine_outside_write_denial_proven": True,
             "synthetic_worker_sandbox_schema": SYNTHETIC_WORKER_SANDBOX_SCHEMA,
             "synthetic_worker_sandbox_implemented": True,
             "synthetic_worker_sandbox_passed_on_development_host": True,
@@ -338,7 +342,27 @@ def _build_private_melroformer_challenger_plan(
                 "complete_python_import_closure_bound": False,
             },
             "synthetic_worker_implemented": True,
-            "model_worker_implemented": False,
+            "authorised_worker_sandbox_schema": AUTHORISED_WORKER_SANDBOX_SCHEMA,
+            "authorised_worker_sandbox_implemented": True,
+            "authorised_worker_sandbox_passed_on_development_host": True,
+            "authorised_worker_sandbox_latest_observation": {
+                "observed_at": "2026-08-01",
+                "evidence_sha256": (
+                    "70847a06c5c44fccd3c43d8af695aaa97f7befede315b496b6ddf7ef544917aa"
+                ),
+                "authorisation_report_sha256": (
+                    "00685db1ba4d5ac0927c25a5ef40792ab36c56cdb36dcc20cc5f926fb9774e90"
+                ),
+                "network_denial_canary": "EPERM",
+                "child_process_denial_canary": "EPERM",
+                "outside_write_denial_canary": "EPERM",
+                "child_and_parent_pcm24_evidence_identical": True,
+                "pcm24_reconstruction_maximum_integer_error_lsb": 1,
+                "complete_python_import_closure_bound": False,
+                "hash_before_exec_path_toctou_closed": False,
+                "product_route_permitted": False,
+            },
+            "model_worker_implemented": True,
             "apple_resource_bounds_measured": True,
             "resource_measurement_host": "Apple silicon Mac with 36 GB RAM",
             "supported_private_devices": ["gpu", "cpu"],
@@ -414,7 +438,7 @@ def _build_private_melroformer_challenger_plan(
                     "slower_than_fast_gpu": True,
                 },
             },
-            "worker_implemented": False,
+            "worker_implemented": True,
         },
         "evaluation_contract": {
             "controls": [
@@ -472,7 +496,9 @@ def _build_private_melroformer_challenger_plan(
         },
         "decision": {
             "status": "blocked",
-            "run_status": "one_authorised_excerpt_controls_compared_no_winner",
+            "run_status": (
+                "one_authorised_excerpt_model_worker_quarantined_review_pending"
+            ),
             "candidate_registered": True,
             "checkpoint_published_identity_pinned": True,
             "checkpoint_local_identity_verified": local_checkpoint[
@@ -484,8 +510,8 @@ def _build_private_melroformer_challenger_plan(
             "worker_start_permitted": False,
             "blockers": blockers,
             "next_safe_actions": [
-                "bind the proven network-denial profile and PCM24 quarantine to the fixed two-role worker without treating the canary as model-attempt observation",
-                "prove outside-write and descendant denial before any wider evaluation",
+                "evaluate quarantined vocals with the unchanged downstream vocal-MIDI process against existing controls",
+                "prepare an equal-level blind listening comparison without selecting or promoting a winner",
             ],
         },
         "effects": {

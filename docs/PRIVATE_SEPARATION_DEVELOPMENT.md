@@ -830,7 +830,7 @@ PYTHONPATH=src .venv/bin/python scripts/private-melroformer-challenger.py \
   --companion-root /absolute/private/cache/checkpoint-directory
 ```
 
-The current v3 result has `artifact_preflight_complete: true` while retaining
+The current v9 plan has `artifact_preflight_complete: true` while retaining
 `worker_start_permitted: false`.
 
 `_separation_melroformer_worker_protocol.py` fixes one or two path-free,
@@ -872,7 +872,7 @@ BF16 keys; 12 permitted rotary-frequency keys were dropped and the remaining
 mapping exactly covered 696 model parameters with no missing, unexpected or
 shape-mismatched tensors. Model construction plus binding took about 0.42
 seconds and MLX reported approximately 458 MB peak memory. No audio inference
-or file output occurred, and operating-system network denial is not yet proven.
+or file output occurred in that loader-only probe.
 
 Reproduce that private probe only in the pinned `.venv-ai` runtime:
 
@@ -937,9 +937,54 @@ byte-identical vocals and instrumental hashes, but each took about 23.4 seconds
 and peaked at about 3.58 GB. The future writer must hash every actual artifact;
 GPU mode cannot promise cross-run byte identity.
 
-PCM24 output persistence, operating-system network denial, the two-role
-worker, independent conversion parity, downstream vocal MIDI, human listening
-and every public route remain blocked.
+The fixed two-role worker has now passed one separate authorised observation.
+The parent remeasured the exact runtime, worker, source manifest, checkpoint,
+companions, authorisation report and source PCM24 before and after the run. It
+launched the worker through the exact hashed macOS `sandbox-exec` provider with
+network access, child forks and every write outside one fresh private staging
+tree denied. Deliberate network, fork and outside-write attempts each returned
+`EPERM` in the same process that deserialized Kim Vocal 2 and inferred the
+authorised 15-second excerpt.
+
+The worker wrote exactly `STEMS/vocals.wav` and
+`STEMS/instrumental.wav` as 44.1 kHz stereo PCM24. Each file is 3,969,044
+bytes. The child verified the fresh owner-only quarantine; the parent reopened
+the files read-only, verified their hashes and geometry, and reproduced the
+same quarantine evidence SHA-256
+`3d849c19eadbf149fd20c68f9b8bed67c4d3131bfbbaa7c4a912a4bb902f2078`.
+The persisted vocals-plus-instrumental reconstruction differed from the source
+projection by no more than one PCM24 least-significant bit. The complete
+path-free worker observation has SHA-256
+`70847a06c5c44fccd3c43d8af695aaa97f7befede315b496b6ddf7ef544917aa`.
+
+This closes the earlier model-worker network-denial, outside-write and PCM24
+binding blockers. It does not observe arbitrary outbound-attempt history,
+bind the complete Python import closure, close hash-before-exec path TOCTOU,
+independently verify conversion parity, evaluate downstream vocal MIDI or
+complete human listening. The ordinary private output files can also change
+after the parent's final observation. Every Simple, Studio, source-graph,
+selection and publication permission remains false.
+
+The development-only command is:
+
+```bash
+PYTHONPATH=src .venv-ai/bin/python \
+  scripts/private-melroformer-authorised-worker.py \
+  --repository-root /absolute/path/to/Sunofriend \
+  --runtime /absolute/path/to/Sunofriend/.venv-ai/bin/python \
+  --source-root /absolute/private/cache/mlx-audio-source \
+  --checkpoint /absolute/private/cache/model.safetensors \
+  --companion-root /absolute/private/cache/checkpoint-directory \
+  --authorised-excerpt /absolute/private/authorised-separation-excerpt.json \
+  --authorisation-report-sha256 <exact-report-sha256> \
+  --staging-directory /absolute/fresh/private-output \
+  --device gpu
+```
+
+Independent conversion parity, downstream vocal MIDI, equal-level human
+listening and every public route remain blocked. The next evaluation uses the
+quarantined vocal output with the unchanged downstream MIDI process and
+existing controls; it must not select or promote a winner automatically.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,

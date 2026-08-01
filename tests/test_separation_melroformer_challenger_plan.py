@@ -71,7 +71,7 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
     assert plan["runtime"]["network_denial_canary_latest_observation"][
         "evidence_sha256"
     ] == "ff64dca9e59a8862b68202842ed1ede67e39bbcfb824bb97427620c23c658b86"
-    assert plan["runtime"]["network_denial_bound_to_model_worker"] is False
+    assert plan["runtime"]["network_denial_bound_to_model_worker"] is True
     assert (
         plan["runtime"]["outbound_model_attempt_observation_implemented"] is False
     )
@@ -79,7 +79,7 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
     assert (
         plan["runtime"]["pcm24_quarantine_synthetic_full_excerpt_passed"] is True
     )
-    assert plan["runtime"]["pcm24_quarantine_bound_to_worker"] is False
+    assert plan["runtime"]["pcm24_quarantine_bound_to_worker"] is True
     assert plan["runtime"]["synthetic_worker_sandbox_implemented"] is True
     assert (
         plan["runtime"]["synthetic_worker_sandbox_latest_observation"][
@@ -88,7 +88,14 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
         == "8b1a91a95609d09175be6240af2a9d44f5bd8161249ebab01b9878e7cb406cb4"
     )
     assert plan["runtime"]["synthetic_worker_implemented"] is True
-    assert plan["runtime"]["model_worker_implemented"] is False
+    assert plan["runtime"]["authorised_worker_sandbox_implemented"] is True
+    assert (
+        plan["runtime"]["authorised_worker_sandbox_latest_observation"][
+            "evidence_sha256"
+        ]
+        == "70847a06c5c44fccd3c43d8af695aaa97f7befede315b496b6ddf7ef544917aa"
+    )
+    assert plan["runtime"]["model_worker_implemented"] is True
     assert plan["runtime"]["synthetic_adapter_contract_defined"] is True
     assert plan["runtime"]["real_model_bridge_probe_implemented"] is True
     assert plan["runtime"]["real_adapter_implemented"] is True
@@ -134,8 +141,8 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
         "checkpoint_local_hash_unverified",
         "checkpoint_companion_files_unverified",
         "runtime_source_materialisation_missing",
-        "runtime_worker_not_implemented",
-        "operating_system_network_denial_not_bound_to_model_worker",
+        "complete_worker_import_closure_not_bound",
+        "model_worker_hash_before_exec_path_toctou_not_closed",
         "outbound_model_attempt_observation_not_implemented",
     }.issubset(plan["decision"]["blockers"])
     assert all(value is False for value in plan["effects"].values())
@@ -227,10 +234,10 @@ def test_materialised_artifacts_complete_preflight_without_authorizing_worker(
         "full_excerpt_chunk_transport_not_implemented"
         not in plan["decision"]["blockers"]
     )
-    assert "pcm24_output_quarantine_not_bound_to_worker" in plan["decision"][
+    assert "pcm24_output_quarantine_not_bound_to_worker" not in plan["decision"][
         "blockers"
     ]
-    assert "runtime_worker_not_implemented" in plan["decision"]["blockers"]
+    assert "runtime_worker_not_implemented" not in plan["decision"]["blockers"]
 
 
 def test_optional_local_observation_rejects_symlink(tmp_path: Path) -> None:
@@ -254,7 +261,7 @@ def test_private_plan_script_outputs_json_without_public_route() -> None:
     )
     plan = json.loads(completed.stdout)
     assert plan["decision"]["run_status"] == (
-        "one_authorised_excerpt_controls_compared_no_winner"
+        "one_authorised_excerpt_model_worker_quarantined_review_pending"
     )
     assert plan["effects"]["network_used"] is False
     assert "private-melroformer-challenger" not in PUBLIC_COMMANDS
