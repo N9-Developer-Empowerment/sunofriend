@@ -863,13 +863,32 @@ PYTHONPATH=src .venv/bin/python \
   --repository-root /absolute/path/to/Sunofriend
 ```
 
-The next increment is the isolated real-model bridge. It must reverify the
-source and checkpoint immediately before import, bypass the upstream package
-initialisers and network-capable convenience loader, prove complete
-post-sanitisation model-key coverage, and produce evidence accepted by the
-synthetic-tested core. Only then may a single private synthetic smoke test and
-one sealed authorised excerpt run. Resource and offline behaviour remain
-unmeasured, so the two-role worker and every public route are still blocked.
+The isolated real-model loader bridge is now implemented and has passed one
+private probe. It reverified source and checkpoint immediately before import,
+bypassed every upstream package initializer and the network-capable convenience
+loader, loaded through a descriptor-pinned stream, and reproduced every
+sanitizer transformation independently. The real checkpoint contained 708
+BF16 keys; 12 permitted rotary-frequency keys were dropped and the remaining
+mapping exactly covered 696 model parameters with no missing, unexpected or
+shape-mismatched tensors. Model construction plus binding took about 0.42
+seconds and MLX reported approximately 458 MB peak memory. No audio inference
+or file output occurred, and operating-system network denial is not yet proven.
+
+Reproduce that private probe only in the pinned `.venv-ai` runtime:
+
+```bash
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 PYTHONNOUSERSITE=1 PYTHONPATH=src \
+  .venv-ai/bin/python scripts/private-melroformer-bridge.py \
+  --probe \
+  --source-root /absolute/private/cache/mlx-audio-source \
+  --checkpoint /absolute/private/cache/model.safetensors \
+  --companion-root /absolute/private/cache/checkpoint-directory
+```
+
+The next increment is bounded single-chunk inference followed by the
+synthetic smoke test. Only after that passes may one sealed authorised excerpt
+run. Full-excerpt chunk transport, resource/offline evidence, the two-role
+worker and every public route remain blocked.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,

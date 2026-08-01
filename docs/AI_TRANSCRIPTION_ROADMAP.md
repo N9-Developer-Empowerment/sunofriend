@@ -1898,11 +1898,16 @@ conformance. The inspection does not deserialize tensors or import a
 tensor/model runtime. A separate
 self-hashed protocol fixes one or two maximum-15-second canonical inputs and
 exactly two outputs, vocals plus mixture-minus-vocals instrumental, including
-PCM reconstruction accounting. Artifact preflight now passes for the exact
-source, config, licence and checkpoint, but model import, tensor loading and
-worker start remain false. Independent parity and resource/offline bounds are
-still open. The next increment is an isolated, fail-closed real-model bridge,
-not a public separator or automatic selection route.
+PCM reconstruction accounting. Artifact preflight passes for the exact source,
+config, licence and checkpoint. A separate private loader probe now re-verifies
+those artifacts at execution time, bypasses all upstream package initializers
+and `from_pretrained`, pins the checkpoint descriptor, and independently proves
+the 708-raw-key to 696-model-parameter sanitizer mapping. The real probe
+completed with zero missing, unexpected or shape-mismatched tensors and about
+458 MB peak MLX memory, without audio inference. Independent parity and
+inference resource/offline bounds are still open. The next increment is
+bounded single-chunk inference, not a public separator or automatic selection
+route.
 
 The intervening model-independent adapter contract is now implemented and
 tested with injected synthetic result data only. It invokes no engine. The
@@ -1910,8 +1915,8 @@ contract rejects wrong audio geometry, non-finite or unbounded samples,
 incomplete post-sanitisation model-key coverage, arbitrary dropped weights or
 any claimed operational side effect. It derives the instrumental residual,
 hashes both float32 outputs and proves additive closure. PCM24 persistence,
-the real-model bridge and the worker remain absent. This reduces the amount
-of new logic that must be trusted after approval without weakening the
+the audio-inference adapter and the worker remain absent. This reduces the
+amount of new logic that must be trusted after approval without weakening the
 download, install, checkpoint, model-import or product-route gates.
 
 ### 2026-07-31 — Second authorised separation-to-MIDI repeat

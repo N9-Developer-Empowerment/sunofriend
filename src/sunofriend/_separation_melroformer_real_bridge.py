@@ -1,0 +1,506 @@
+"""Fail-closed private bridge for the exact Kim Vocal 2 MLX checkpoint.
+
+This module has no public route and imports no tensor runtime at module import
+time.  The explicit loader re-verifies every local artifact, constructs only
+the fixed audited source overlay, binds the checkpoint through an already-open
+descriptor, and proves complete sanitizer/key/shape coverage before returning
+an internal handle.  Audio inference is deliberately a later increment.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import importlib.metadata
+import json
+import os
+import platform
+import re
+import stat
+import sys
+import time
+import types
+from contextlib import contextmanager
+from dataclasses import dataclass
+from pathlib import Path
+from types import MappingProxyType
+from typing import Any, BinaryIO, Iterator, Mapping, Sequence
+
+from ._separation_melroformer_challenger_plan import (
+    APPROVAL_RECORDED_AT,
+    CONFIG_NAME,
+    _inspect_companion_files,
+)
+from ._separation_melroformer_runtime_evidence import (
+    SOURCE_MANIFEST_SHA256,
+    SOURCE_REVISION,
+    _expected_source_manifest,
+    _read_exact_regular_file,
+    _verify_private_melroformer_source_tree,
+)
+from ._separation_melroformer_upstream_evidence import (
+    CONVERSION_CHECKPOINT_BYTES,
+    CONVERSION_CHECKPOINT_SHA256,
+)
+from ._separation_safetensors_inspection import _inspect_private_safetensors
+
+
+SCHEMA = "sunofriend.private-melroformer-real-bridge-probe.v1"
+CANDIDATE_ID = "mlx-melroformer-kim-vocal-2"
+_RUNTIME_VERSIONS = {
+    "mlx": "0.31.2",
+    "mlx-metal": "0.31.2",
+    "numpy": "2.3.5",
+}
+_PACKAGE_PATHS = {
+    "mlx_audio": "mlx_audio",
+    "mlx_audio.sts": "mlx_audio/sts",
+    "mlx_audio.sts.models": "mlx_audio/sts/models",
+    "mlx_audio.sts.models.mel_roformer": "mlx_audio/sts/models/mel_roformer",
+}
+_MODULE_PATHS = {
+    "mlx_audio.dsp": "mlx_audio/dsp.py",
+    "mlx_audio.sts.models.mel_roformer.config": (
+        "mlx_audio/sts/models/mel_roformer/config.py"
+    ),
+    "mlx_audio.sts.models.mel_roformer.model": (
+        "mlx_audio/sts/models/mel_roformer/model.py"
+    ),
+}
+_OFFLINE_ENVIRONMENT = {
+    "HF_HUB_OFFLINE": "1",
+    "TRANSFORMERS_OFFLINE": "1",
+    "PYTHONNOUSERSITE": "1",
+}
+_MASK_MLP_RE = re.compile(
+    r"^(mask_estimators\.\d+\.to_freqs\.\d+)\.0\.(\d+)\.(weight|bias)$"
+)
+_PERMITTED_DROPPED_SUFFIX = ".rotary_embed.freqs"
+
+
+@dataclass
+class _PrivateMelRoFormerHandle:
+    """Internal loaded model plus path-free probe evidence."""
+
+    model: Any
+    mx: Any
+    np: Any
+    config: Any
+    sanitized_weight_keys: tuple[str, ...]
+    expected_model_keys: tuple[str, ...]
+    dropped_raw_weight_keys: tuple[str, ...]
+    evidence: Mapping[str, Any]
+
+
+def _load_private_melroformer_model(
+    *,
+    source_root: str | Path,
+    checkpoint_path: str | Path,
+    companion_root: str | Path,
+) -> _PrivateMelRoFormerHandle:
+    """Load the exact model without calling upstream ``from_pretrained``."""
+
+    runtime = _verify_runtime()
+    source = Path(source_root).expanduser().absolute()
+    checkpoint = Path(checkpoint_path).expanduser().absolute()
+    companions = Path(companion_root).expanduser().absolute()
+    source_observation = _verify_private_melroformer_source_tree(source)
+    companion_observation = _inspect_companion_files(companions)
+    static_inspection = _inspect_private_safetensors(
+        checkpoint,
+        expected_bytes=CONVERSION_CHECKPOINT_BYTES,
+        expected_sha256=CONVERSION_CHECKPOINT_SHA256,
+    )
+    if not companion_observation["all_cryptographic_identities_verified"]:
+        raise ValueError("MelRoFormer companion identities differ")
+    _require_clean_source_namespace()
+    _apply_offline_environment()
+
+    started = time.perf_counter()
+    import mlx.core as mx
+    import numpy as np
+    from mlx.utils import tree_flatten
+
+    source_manifest = _expected_source_manifest()
+    manifest_files = {item["path"]: item for item in source_manifest["files"]}
+    _install_namespace_packages(source)
+    try:
+        _execute_audited_module(
+            "mlx_audio.dsp",
+            source=source,
+            item=manifest_files[_MODULE_PATHS["mlx_audio.dsp"]],
+        )
+        config_module = _execute_audited_module(
+            "mlx_audio.sts.models.mel_roformer.config",
+            source=source,
+            item=manifest_files[
+                _MODULE_PATHS["mlx_audio.sts.models.mel_roformer.config"]
+            ],
+        )
+        model_module = _execute_audited_module(
+            "mlx_audio.sts.models.mel_roformer.model",
+            source=source,
+            item=manifest_files[
+                _MODULE_PATHS["mlx_audio.sts.models.mel_roformer.model"]
+            ],
+        )
+        config = config_module.MelRoFormerConfig.kim_vocal_2()
+        _verify_fixed_config(config, companions / CONFIG_NAME)
+        model = model_module.MelRoFormer(config)
+        expected = dict(tree_flatten(model.parameters()))
+
+        with _verified_checkpoint_stream(checkpoint) as stream:
+            weights = dict(mx.load(stream, format="safetensors"))
+        sanitized = model.sanitize(weights)
+        coverage = _validate_weight_inventory(
+            raw=weights,
+            sanitized=sanitized,
+            expected=expected,
+        )
+        model.load_weights(list(sanitized.items()), strict=False)
+        mx.eval(model.parameters())
+        model.eval()
+        peak_memory = int(mx.get_peak_memory())
+    except BaseException:
+        _remove_source_namespace()
+        raise
+
+    elapsed = time.perf_counter() - started
+    evidence = {
+        "schema": SCHEMA,
+        "status": "verified_model_constructed_and_weights_bound_not_inferred",
+        "candidate_id": CANDIDATE_ID,
+        "approval": {
+            "recorded": True,
+            "recorded_at": APPROVAL_RECORDED_AT,
+            "scope": "exact checkpoint for private local evaluation only",
+            "redistribution_permitted": False,
+        },
+        "source": {
+            "revision": SOURCE_REVISION,
+            "manifest_sha256": SOURCE_MANIFEST_SHA256,
+            "verified": source_observation["status"] == "verified_not_imported",
+            "package_initializers_executed": [],
+            "executed_modules": sorted(_MODULE_PATHS),
+            "upstream_from_pretrained_called": False,
+        },
+        "checkpoint": {
+            "bytes": CONVERSION_CHECKPOINT_BYTES,
+            "sha256": CONVERSION_CHECKPOINT_SHA256,
+            "static_inspection_schema": static_inspection["schema"],
+            "static_tensor_count": static_inspection["tensor_count"],
+            "descriptor_pinned_during_tensor_load": True,
+        },
+        "runtime": runtime,
+        "config": {
+            "family": config.checkpoint_family,
+            "sample_rate": config.sample_rate,
+            "channels": 2,
+            "chunk_frames": config.chunk_size,
+            "overlap": config.num_overlap,
+        },
+        "weight_coverage": coverage,
+        "measurement": {
+            "load_seconds": elapsed,
+            "mlx_peak_memory_bytes": peak_memory,
+            "audio_inference_called": False,
+        },
+        "isolation": {
+            "offline_environment_applied": True,
+            "network_denial_os_enforced": False,
+            "network_used": False,
+            "child_process_started": False,
+            "fresh_process_required_for_inference": True,
+        },
+        "permissions": {
+            "private_probe_permitted": True,
+            "private_inference_permitted": False,
+            "worker_start_permitted": False,
+            "publication_permitted": False,
+            "automatic_selection_permitted": False,
+            "product_route_permitted": False,
+        },
+        "effects": {
+            "filesystem_accessed": True,
+            "filesystem_written": False,
+            "checkpoint_opened": True,
+            "tensor_deserialized": True,
+            "model_imported": True,
+            "audio_inference_called": False,
+            "network_used": False,
+            "package_installed": False,
+            "process_started": False,
+        },
+    }
+    return _PrivateMelRoFormerHandle(
+        model=model,
+        mx=mx,
+        np=np,
+        config=config,
+        sanitized_weight_keys=tuple(sorted(sanitized)),
+        expected_model_keys=tuple(sorted(expected)),
+        dropped_raw_weight_keys=tuple(coverage["dropped_raw_weight_keys"]),
+        evidence=MappingProxyType(evidence),
+    )
+
+
+def _verify_runtime() -> dict[str, Any]:
+    if (
+        sys.version_info[:2] != (3, 12)
+        or platform.system() != "Darwin"
+        or platform.machine() != "arm64"
+    ):
+        raise RuntimeError("MelRoFormer bridge requires Python 3.12 on Apple silicon")
+    observed: dict[str, str] = {}
+    for name, expected in _RUNTIME_VERSIONS.items():
+        actual = importlib.metadata.version(name)
+        if actual != expected:
+            raise RuntimeError(f"MelRoFormer runtime version differs: {name}")
+        observed[name] = actual
+    try:
+        importlib.metadata.version("mlx-audio")
+    except importlib.metadata.PackageNotFoundError:
+        pass
+    else:
+        raise RuntimeError("MelRoFormer bridge forbids the mlx-audio distribution")
+    return {
+        "python": platform.python_version(),
+        "platform": "macOS arm64",
+        "packages": observed,
+        "mlx_audio_distribution_installed": False,
+    }
+
+
+def _apply_offline_environment() -> None:
+    for name, expected in _OFFLINE_ENVIRONMENT.items():
+        current = os.environ.get(name)
+        if current not in {None, expected}:
+            raise RuntimeError(f"MelRoFormer offline environment differs: {name}")
+        os.environ[name] = expected
+
+
+def _require_clean_source_namespace() -> None:
+    collisions = sorted(
+        name
+        for name in sys.modules
+        if name == "mlx_audio" or name.startswith("mlx_audio.")
+    )
+    if collisions:
+        raise RuntimeError("MelRoFormer bridge requires a fresh mlx_audio namespace")
+
+
+def _install_namespace_packages(source: Path) -> None:
+    for name, relative in _PACKAGE_PATHS.items():
+        module = types.ModuleType(name)
+        module.__package__ = name
+        module.__path__ = [str(source / relative)]
+        module.__file__ = None
+        sys.modules[name] = module
+
+
+def _execute_audited_module(
+    name: str, *, source: Path, item: Mapping[str, Any]
+) -> types.ModuleType:
+    relative = item["path"]
+    path = source / relative
+    attached = path.lstat()
+    if attached.st_nlink != 1:
+        raise ValueError("MelRoFormer source module must be a single-link file")
+    contents = _read_exact_regular_file(
+        path,
+        expected_sha256=item["sha256"],
+        expected_bytes=item["bytes"],
+    )
+    module = types.ModuleType(name)
+    module.__file__ = str(path)
+    module.__package__ = name.rpartition(".")[0]
+    sys.modules[name] = module
+    code = compile(contents, str(path), "exec", dont_inherit=True, optimize=0)
+    exec(code, module.__dict__)
+    return module
+
+
+def _remove_source_namespace() -> None:
+    for name in list(sys.modules):
+        if name == "mlx_audio" or name.startswith("mlx_audio."):
+            sys.modules.pop(name, None)
+
+
+def _verify_fixed_config(config: Any, path: Path) -> None:
+    attached = path.lstat()
+    if attached.st_nlink != 1:
+        raise ValueError("MelRoFormer config must be a single-link file")
+    contents = _read_exact_regular_file(
+        path,
+        expected_sha256=(
+            "3300eacac960ab46933ef6df6b838eb35de1f0321db9242c1b06e6d2a6a62b58"
+        ),
+        expected_bytes=833,
+    )
+    published = json.loads(contents)
+    fields = (
+        "dim",
+        "depth",
+        "heads",
+        "dim_head",
+        "num_bands",
+        "num_stems",
+        "ff_mult",
+        "mlp_expansion_factor",
+        "mask_estimator_depth",
+        "n_fft",
+        "hop_length",
+        "win_length",
+        "sample_rate",
+        "chunk_size",
+        "num_overlap",
+        "checkpoint_family",
+    )
+    observed = {name: getattr(config, name) for name in fields}
+    expected = {name: published[name] for name in fields}
+    if observed != expected:
+        raise ValueError("MelRoFormer fixed config differs from pinned companion")
+
+
+@contextmanager
+def _verified_checkpoint_stream(path: Path) -> Iterator[BinaryIO]:
+    attached = path.lstat()
+    if (
+        stat.S_ISLNK(attached.st_mode)
+        or not stat.S_ISREG(attached.st_mode)
+        or attached.st_nlink != 1
+        or attached.st_size != CONVERSION_CHECKPOINT_BYTES
+    ):
+        raise ValueError("MelRoFormer checkpoint descriptor identity differs")
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+    descriptor = os.open(path, flags)
+    try:
+        os.set_inheritable(descriptor, False)
+        opened = os.fstat(descriptor)
+        if os.get_inheritable(descriptor) or _identity(opened) != _identity(attached):
+            raise ValueError("MelRoFormer checkpoint changed before tensor load")
+        digest = hashlib.sha256()
+        while block := os.read(descriptor, 1024 * 1024):
+            digest.update(block)
+        if digest.hexdigest() != CONVERSION_CHECKPOINT_SHA256:
+            raise ValueError("MelRoFormer checkpoint changed before tensor load")
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        duplicate = os.dup(descriptor)
+        os.set_inheritable(duplicate, False)
+        with os.fdopen(duplicate, "rb") as stream:
+            yield stream
+        if _identity(os.fstat(descriptor)) != _identity(opened) or _identity(
+            path.lstat()
+        ) != _identity(opened):
+            raise ValueError("MelRoFormer checkpoint changed during tensor load")
+    finally:
+        os.close(descriptor)
+
+
+def _validate_weight_inventory(
+    *, raw: Mapping[str, Any], sanitized: Mapping[str, Any], expected: Mapping[str, Any]
+) -> dict[str, Any]:
+    raw_keys = _checked_keys(raw, "raw checkpoint")
+    sanitized_keys = _checked_keys(sanitized, "sanitized")
+    expected_keys = _checked_keys(expected, "model parameter")
+    transformed, dropped = _transform_checkpoint_keys(raw_keys)
+    if transformed != sanitized_keys:
+        raise ValueError("MelRoFormer sanitizer mapping differs from audited mapping")
+    missing = sorted(set(expected_keys) - set(sanitized_keys))
+    unexpected = sorted(set(sanitized_keys) - set(expected_keys))
+    if missing or unexpected:
+        raise ValueError("MelRoFormer post-sanitisation model-key coverage differs")
+    shape_mismatches = sorted(
+        key
+        for key in expected_keys
+        if tuple(expected[key].shape) != tuple(sanitized[key].shape)
+    )
+    if shape_mismatches:
+        raise ValueError("MelRoFormer post-sanitisation tensor shapes differ")
+    dtypes = sorted({str(value.dtype) for value in raw.values()})
+    if dtypes != ["mlx.core.bfloat16"]:
+        raise ValueError("MelRoFormer checkpoint runtime dtype differs")
+    return {
+        "raw_checkpoint_key_count": len(raw_keys),
+        "raw_checkpoint_keys_sha256": _sequence_sha256(raw_keys),
+        "sanitized_key_count": len(sanitized_keys),
+        "sanitized_keys_sha256": _sequence_sha256(sanitized_keys),
+        "expected_model_key_count": len(expected_keys),
+        "expected_model_keys_sha256": _sequence_sha256(expected_keys),
+        "dropped_raw_weight_key_count": len(dropped),
+        "dropped_raw_weight_keys": list(dropped),
+        "dropped_raw_weight_keys_sha256": _sequence_sha256(dropped),
+        "permitted_dropped_suffix": _PERMITTED_DROPPED_SUFFIX,
+        "missing_model_keys": [],
+        "unexpected_sanitized_keys": [],
+        "shape_mismatches": [],
+        "checkpoint_dtypes": dtypes,
+        "complete": True,
+    }
+
+
+def _checked_keys(value: Mapping[str, Any], label: str) -> tuple[str, ...]:
+    if not isinstance(value, Mapping) or not 1 <= len(value) <= 100_000:
+        raise ValueError(f"MelRoFormer {label} key set is invalid")
+    keys = tuple(sorted(value))
+    if any(
+        not isinstance(key, str) or not key or len(key.encode()) > 1024 for key in keys
+    ):
+        raise ValueError(f"MelRoFormer {label} key is invalid")
+    return keys
+
+
+def _transform_checkpoint_keys(
+    raw_keys: Sequence[str],
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    transformed: list[str] = []
+    dropped: list[str] = []
+    for original in sorted(raw_keys):
+        if original.endswith(_PERMITTED_DROPPED_SUFFIX):
+            dropped.append(original)
+            continue
+        if "to_qkv.weight" in original:
+            prefix = original.replace("to_qkv.weight", "")
+            transformed.extend(
+                f"{prefix}{suffix}.weight" for suffix in ("to_q", "to_k", "to_v")
+            )
+            continue
+        key = original
+        match = _MASK_MLP_RE.match(key)
+        if match:
+            prefix, sequence_index, kind = match.groups()
+            key = f"{prefix}.{int(sequence_index) // 2}.0.{kind}"
+        if key.endswith("to_out.0.weight"):
+            key = key[: -len(".0.weight")] + ".weight"
+        if key.endswith(".gamma"):
+            key = key[: -len(".gamma")] + ".weight"
+        transformed.append(key)
+    if len(transformed) != len(set(transformed)):
+        raise ValueError("MelRoFormer sanitizer mapping contains a key collision")
+    return tuple(sorted(transformed)), tuple(sorted(dropped))
+
+
+def _sequence_sha256(values: Sequence[str]) -> str:
+    payload = json.dumps(
+        list(values), ensure_ascii=False, separators=(",", ":")
+    ).encode()
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _identity(value: os.stat_result) -> tuple[int, int, int, int, int, int]:
+    return (
+        value.st_dev,
+        value.st_ino,
+        value.st_mode,
+        value.st_nlink,
+        value.st_size,
+        value.st_mtime_ns,
+    )
+
+
+__all__ = [
+    "SCHEMA",
+    "_PrivateMelRoFormerHandle",
+    "_load_private_melroformer_model",
+    "_transform_checkpoint_keys",
+    "_validate_weight_inventory",
+]

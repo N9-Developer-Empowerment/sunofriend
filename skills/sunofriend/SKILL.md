@@ -263,9 +263,13 @@ report the result, then move on.
   config and licence now live in an owner-only non-repository cache and pass
   their pinned identities. Header-only inspection found 708 BF16 tensors and
   a non-canonical null metadata value, which is reported explicitly and treated
-  only as empty MLX metadata. The real-model bridge, worker, independent parity
-  and Mac resource/offline evidence do not yet exist. The checkpoint is not
-  redistributed. Do not offer or run this challenger through the skill.
+  only as empty MLX metadata. A private real-model loader probe now binds its
+  708 raw keys to exactly 696 model parameters with no missing, unexpected or
+  shape-mismatched tensors while bypassing package initializers and the
+  upstream downloader. It has not performed audio inference. The inference
+  adapter, worker, independent parity and Mac inference/offline evidence do not
+  yet exist. The checkpoint is not redistributed. Do not offer or run this
+  challenger through the skill.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one
   canonical WAV project. It does not separate, shift, pad, stretch, normalize
