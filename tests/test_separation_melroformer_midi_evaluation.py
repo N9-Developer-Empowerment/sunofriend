@@ -33,11 +33,13 @@ def test_applies_unchanged_vocal_policy_and_keeps_result_inactive(
         primary_variant="consensus",
         diagnostics=SimpleNamespace(to_dict=lambda: {"fixture": True}),
     )
-    monkeypatch.setattr(
-        evaluation,
-        "transcribe_vocal_melody",
-        lambda path, *, config: transcription,
-    )
+    observed_configs = []
+
+    def transcribe(path: Path, *, config: object) -> object:
+        observed_configs.append(config)
+        return transcription
+
+    monkeypatch.setattr(evaluation, "transcribe_vocal_melody", transcribe)
     monkeypatch.setattr(
         production_evaluate,
         "evaluate_stem_midi",
@@ -69,6 +71,8 @@ def test_applies_unchanged_vocal_policy_and_keeps_result_inactive(
         "suno-b",
     }
     assert result["policy"]["tracker_mode"] == "pyin"
+    assert result["policy"]["bpm"] == 136.0
+    assert observed_configs[0].bpm == 136.0
     assert result["policy"]["same_production_vocal_settings_as_controls"] is True
     assert all(value is False for value in result["permissions"].values())
     assert result["effects"]["worker_rerun"] is False
@@ -99,6 +103,30 @@ def test_rejects_a_changed_worker_vocal_before_transcription(
 def test_private_melroformer_midi_evaluation_has_no_public_route() -> None:
     assert "private-melroformer-vocal-midi-evaluation" not in PUBLIC_COMMANDS
     assert "private-melroformer-vocal-midi-evaluation" not in DIRECT_TUI_COMMANDS
+
+
+def test_control_policy_accepts_a_distinct_sealed_song_tempo() -> None:
+    assert evaluation._validated_control_policy(
+        {
+            "bpm": 114.0,
+            "tuning_hz": 440.0,
+            "vocal_role_uses_separate_production_dominant_contour": True,
+            "same_role_uses_identical_settings_across_every_pack": True,
+        }
+    ) == (114.0, 440.0)
+
+
+@pytest.mark.parametrize("bpm", [True, float("nan"), 19.9, 400.1])
+def test_control_policy_rejects_invalid_tempo(bpm: object) -> None:
+    with pytest.raises(ValueError, match="policy differs"):
+        evaluation._validated_control_policy(
+            {
+                "bpm": bpm,
+                "tuning_hz": 440.0,
+                "vocal_role_uses_separate_production_dominant_contour": True,
+                "same_role_uses_identical_settings_across_every_pack": True,
+            }
+        )
 
 
 def _worker_fixture(root: Path) -> tuple[Path, dict[str, object]]:

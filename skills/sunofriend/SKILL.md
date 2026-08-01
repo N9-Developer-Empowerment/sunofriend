@@ -289,14 +289,17 @@ report the result, then move on.
   independently reopened them, matched the child's evidence and observed at
   most one PCM24 least-significant bit of additive reconstruction error. This
   binds OS denial, outside-write confinement and PCM quarantine to one real
-  model run. It does not observe every arbitrary connection attempt, bind the
-  complete Python import closure, close hash-before-exec path TOCTOU or make
-  mutable output files immutable. The first unchanged downstream vocal-MIDI
-  observation produced 14 notes and has a prepared equal-level blind review,
-  but its controls are estimates rather than ground truth. Independent parity,
-  cross-song repetition and human listening remain incomplete. The
-  checkpoint is not redistributed. Do not offer or run this challenger through
-  the skill.
+  model run. The same isolated worker and unchanged downstream production
+  vocal-MIDI contract now also pass on the authorised `I am a Alien mashup`
+  excerpt at its own sealed 114 BPM. The two inactive observations contain 14
+  and 23 notes, and each has a prepared equal-level blind Kim-versus-Moises
+  review whose answer key remains unopened. Their provider/local controls are
+  estimates rather than ground truth, so they select no winner. The worker does
+  not observe every arbitrary connection attempt, bind the complete Python
+  import closure, close hash-before-exec path TOCTOU or make mutable output
+  files immutable. Cross-song downstream MIDI is complete; independent
+  conversion parity and human listening remain incomplete. The checkpoint is
+  not redistributed. Do not offer or run this challenger through the skill.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one
   canonical WAV project. It does not separate, shift, pad, stretch, normalize

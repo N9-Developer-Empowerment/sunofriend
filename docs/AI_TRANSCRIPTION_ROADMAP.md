@@ -1697,6 +1697,39 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-01 — second-song MelRoFormer vocal-MIDI evidence
+
+- Goal: close the cross-song downstream-MIDI blocker without changing the
+  separator, transcription settings or inactive/private product boundary.
+- Change or experiment: repeated the exact offline/write-confined Kim Vocal 2
+  worker on a second sealed authorised excerpt, generalised the downstream
+  evaluator to consume validated per-song BPM/tuning policy, ran the unchanged
+  production pYIN dominant-contour path and prepared a second equal-level blind
+  Kim-versus-Moises review.
+- Inputs: Ezzye `I am a Alien mashup`, original seconds 219–234, 114 BPM,
+  A=440 Hz, plus the existing local HTDemucs, Moises and two Suno vocal
+  controls.
+- Model/runtime/checkpoint: the exact approved Kim Vocal 2 MLX checkpoint on
+  GPU; three 50%-overlapped chunks, offline and confined to a fresh owner-only
+  staging tree.
+- Evidence and metrics: the worker evidence is `53b6fd72…00e1`; its persisted
+  observation file is `bf331358…38f0`. PCM24 reconstruction stayed within one
+  least-significant bit. The downstream report is `36599d2b…9f18`; its
+  23-note MIDI is `776a07c4…47e5`. Exact-pitch/onset F1 at 40 ms was 0.913
+  versus Moises, 0.889 versus HTDemucs, 0.844 versus Suno A and 0.773 versus
+  Suno B.
+- Listening result: pending. A second blind review is prepared; neither this
+  nor the first review's answer key has been opened by the developer.
+- Decision: close only the cross-song downstream-MIDI blocker. Keep selection,
+  activation, publication and every product permission false because the
+  controls are estimated, not score truth.
+- Problems/risks: both observations are short and monophonic. Conversion
+  parity, complete import-closure binding, hash-before-exec TOCTOU and human
+  listening remain open.
+- Next smallest step: have the user complete and export both sealed blind
+  reviews, resolve them only after completion, then compare their cross-song
+  listening evidence before reconsidering any default.
+
 ### 2026-08-01 — authorised vocal worker to downstream MIDI
 
 - Goal: determine whether the isolated Kim Vocal 2 output survives the exact
@@ -1718,8 +1751,9 @@ Each working day should aim for one narrow vertical improvement:
   Agreement with estimated controls is not ground truth and selects no winner.
 - Problems/risks: one short excerpt cannot establish recognition, cross-song
   reliability or conversion parity. The dominant contour remains monophonic.
-- Next smallest step: complete the blind human review, then repeat the exact
-  contract on a second authorised song before reconsidering the gate.
+- Next smallest step: the exact contract has now repeated on a second
+  authorised song; complete and export both blind human reviews before
+  reconsidering the gate.
 
 ### 2026-08-01 — isolated synthetic two-role worker
 

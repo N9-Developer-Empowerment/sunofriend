@@ -93,7 +93,7 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
         plan["runtime"]["authorised_worker_sandbox_latest_observation"][
             "evidence_sha256"
         ]
-        == "ff086359cce141f906a090b5b5edbc21d102a909660b189399bc50a18ce457b0"
+        == "53b6fd72797e127c4582d29e9c4454cf3c9afe247daf84279e92710abffb00e1"
     )
     assert plan["runtime"]["authorised_worker_sandbox_latest_observation"][
         "observation_persisted_owner_only"
@@ -134,14 +134,17 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
         plan["evaluation_contract"]["latest_private_observation"]["winner_selected"]
         is False
     )
+    assert plan["evaluation_contract"][
+        "cross_song_downstream_vocal_midi_complete"
+    ] is True
     downstream = plan["evaluation_contract"][
-        "downstream_vocal_midi_observation"
+        "downstream_vocal_midi_observations"
     ]
-    assert downstream["note_count"] == 14
-    assert downstream["equal_level_blind_review_prepared"] is True
-    assert downstream["equal_level_blind_review_complete"] is False
-    assert downstream["answer_key_opened_by_developer"] is False
-    assert downstream["winner_selected"] is False
+    assert [item["note_count"] for item in downstream] == [14, 23]
+    assert all(item["equal_level_blind_review_prepared"] for item in downstream)
+    assert not any(item["equal_level_blind_review_complete"] for item in downstream)
+    assert not any(item["answer_key_opened_by_developer"] for item in downstream)
+    assert not any(item["winner_selected"] for item in downstream)
     assert plan["source"]["upstream_from_pretrained_permitted"] is False
     assert plan["runtime"]["reported_parity_is_model_ground_truth_score"] is False
     assert plan["decision"]["checkpoint_published_identity_pinned"] is True
@@ -153,7 +156,6 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
         "checkpoint_companion_files_unverified",
         "runtime_source_materialisation_missing",
         "complete_worker_import_closure_not_bound",
-        "cross_song_downstream_vocal_midi_not_evaluated",
         "equal_level_human_listening_not_completed",
         "model_worker_hash_before_exec_path_toctou_not_closed",
         "outbound_model_attempt_observation_not_implemented",
@@ -274,7 +276,7 @@ def test_private_plan_script_outputs_json_without_public_route() -> None:
     )
     plan = json.loads(completed.stdout)
     assert plan["decision"]["run_status"] == (
-        "one_authorised_excerpt_downstream_midi_complete_human_review_pending"
+        "two_authorised_excerpts_downstream_midi_complete_human_reviews_pending"
     )
     assert plan["effects"]["network_used"] is False
     assert "private-melroformer-challenger" not in PUBLIC_COMMANDS

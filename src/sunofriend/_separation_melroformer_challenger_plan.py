@@ -57,8 +57,8 @@ AUTHORISED_WORKER_SANDBOX_SCHEMA = (
 )
 
 
-PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v10"
-POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v10"
+PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v11"
+POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v11"
 AUDITED_AT = "2026-08-01"
 APPROVAL_RECORDED_AT = "2026-08-01"
 CHECKPOINT_NAME = "model.safetensors"
@@ -76,7 +76,6 @@ LICENSE_SHA256 = "1aa245b55067df5c63c847894e7040f76fa79ddde83e9e5ed8a5c29ef1865c
 _BASE_BLOCKERS = (
     "complete_worker_import_closure_not_bound",
     "conversion_parity_not_independently_verified",
-    "cross_song_downstream_vocal_midi_not_evaluated",
     "equal_level_human_listening_not_completed",
     "model_worker_hash_before_exec_path_toctou_not_closed",
     "outbound_model_attempt_observation_not_implemented",
@@ -350,24 +349,25 @@ def _build_private_melroformer_challenger_plan(
             "authorised_worker_sandbox_latest_observation": {
                 "observed_at": "2026-08-01",
                 "evidence_sha256": (
-                    "ff086359cce141f906a090b5b5edbc21d102a909660b189399bc50a18ce457b0"
+                    "53b6fd72797e127c4582d29e9c4454cf3c9afe247daf84279e92710abffb00e1"
                 ),
                 "persisted_observation_file_sha256": (
-                    "f41977a3c18f73a60dabd74162f78ca7abe13598d72cf18c7003cf740cd7dcfa"
+                    "bf331358c526773c9722169c691a6eaded1b6b1c2052bef4eed9192877cb38f0"
                 ),
                 "authorisation_report_sha256": (
-                    "00685db1ba4d5ac0927c25a5ef40792ab36c56cdb36dcc20cc5f926fb9774e90"
+                    "9f98d864601ef66ed9d7a06c5a95aeee1c0969b39c70a65078ef2da6f86d982d"
                 ),
+                "track_id": "i-am-a-alien-mashup",
                 "network_denial_canary": "EPERM",
                 "child_process_denial_canary": "EPERM",
                 "outside_write_denial_canary": "EPERM",
                 "child_and_parent_pcm24_evidence_identical": True,
                 "pcm24_reconstruction_maximum_integer_error_lsb": 1,
                 "vocal_pcm24_sha256": (
-                    "f7ec73ead74de5e008489eab098c75d1a541b0f0e0af068c4d6c7e5e1de5e2cc"
+                    "6076f011db09f1b0ed781a718c95ea984762ee2d0be06872340d1c61ecbd7f83"
                 ),
                 "instrumental_pcm24_sha256": (
-                    "af34d208bc10e59fd3fb174c69c68508c43305c2093ddd8f8cbd6a91f4f04386"
+                    "31b9b1319f23680fdb90ccc5bef9b44aba4a82bddd63334c2fa2cd4c40271ef2"
                 ),
                 "observation_persisted_owner_only": True,
                 "complete_python_import_closure_bound": False,
@@ -505,45 +505,84 @@ def _build_private_melroformer_challenger_plan(
                 "controls_are_estimated_not_ground_truth": True,
                 "winner_selected": False,
             },
-            "downstream_vocal_midi_observation": {
-                "observed_at": "2026-08-01",
-                "status": "complete_observation_not_acceptance",
-                "report_document_sha256": (
-                    "e2ae906d872d55369d4dc658e63669b63e6a310f0498e0a000991db7facb3a0c"
-                ),
-                "worker_evidence_sha256": (
-                    "ff086359cce141f906a090b5b5edbc21d102a909660b189399bc50a18ce457b0"
-                ),
-                "production_pipeline": "production_vocal_dominant_contour",
-                "tracker_mode": "pyin",
-                "phrase_repair": True,
-                "bpm": 136.0,
-                "tuning_hz": 440.0,
-                "note_count": 14,
-                "midi_sha256": (
-                    "65111b1dadbc9daaa7ea015a542a256510bd1b8f3ecbb88a36f55dc63dd5dcc1"
-                ),
-                "exact_pitch_onset_f1_against_estimated_controls": {
-                    "local-htdemucs": 0.518518519,
-                    "moises": 0.6,
-                    "suno-a": 0.56,
-                    "suno-b": 0.461538462,
+            "cross_song_downstream_vocal_midi_complete": True,
+            "downstream_vocal_midi_observations": [
+                {
+                    "observed_at": "2026-08-01",
+                    "status": "complete_observation_not_acceptance",
+                    "track_id": "be-alone",
+                    "source_seconds": [191.0, 206.0],
+                    "report_document_sha256": (
+                        "e2ae906d872d55369d4dc658e63669b63e6a310f0498e0a000991db7facb3a0c"
+                    ),
+                    "worker_evidence_sha256": (
+                        "ff086359cce141f906a090b5b5edbc21d102a909660b189399bc50a18ce457b0"
+                    ),
+                    "production_pipeline": "production_vocal_dominant_contour",
+                    "tracker_mode": "pyin",
+                    "phrase_repair": True,
+                    "bpm": 136.0,
+                    "tuning_hz": 440.0,
+                    "note_count": 14,
+                    "midi_sha256": (
+                        "65111b1dadbc9daaa7ea015a542a256510bd1b8f3ecbb88a36f55dc63dd5dcc1"
+                    ),
+                    "exact_pitch_onset_f1_against_estimated_controls": {
+                        "local-htdemucs": 0.518518519,
+                        "moises": 0.6,
+                        "suno-a": 0.56,
+                        "suno-b": 0.461538462,
+                    },
+                    "controls_are_estimated_not_ground_truth": True,
+                    "winner_selected": False,
+                    "equal_level_blind_review_prepared": True,
+                    "equal_level_blind_review_audio_manifest_sha256": (
+                        "11a05fad5752c44025c018603ed4c21dd9003f7a201118ab0a716d95dadb794c"
+                    ),
+                    "equal_level_blind_review_complete": False,
+                    "answer_key_opened_by_developer": False,
                 },
-                "controls_are_estimated_not_ground_truth": True,
-                "winner_selected": False,
-                "cross_song_repetition_complete": False,
-                "equal_level_blind_review_prepared": True,
-                "equal_level_blind_review_audio_manifest_sha256": (
-                    "11a05fad5752c44025c018603ed4c21dd9003f7a201118ab0a716d95dadb794c"
-                ),
-                "equal_level_blind_review_complete": False,
-                "answer_key_opened_by_developer": False,
-            },
+                {
+                    "observed_at": "2026-08-01",
+                    "status": "complete_observation_not_acceptance",
+                    "track_id": "i-am-a-alien-mashup",
+                    "source_seconds": [219.0, 234.0],
+                    "report_document_sha256": (
+                        "36599d2b139320ea4d48a0805630ca5e7acf619746aec39fbfcd77cca7098f18"
+                    ),
+                    "worker_evidence_sha256": (
+                        "53b6fd72797e127c4582d29e9c4454cf3c9afe247daf84279e92710abffb00e1"
+                    ),
+                    "production_pipeline": "production_vocal_dominant_contour",
+                    "tracker_mode": "pyin",
+                    "phrase_repair": True,
+                    "bpm": 114.0,
+                    "tuning_hz": 440.0,
+                    "note_count": 23,
+                    "midi_sha256": (
+                        "776a07c43bdddbde585736e039f202ab8df13ed50d54750e6e83969aa39747e5"
+                    ),
+                    "exact_pitch_onset_f1_against_estimated_controls": {
+                        "local-htdemucs": 0.888888889,
+                        "moises": 0.913043478,
+                        "suno-a": 0.844444444,
+                        "suno-b": 0.772727273,
+                    },
+                    "controls_are_estimated_not_ground_truth": True,
+                    "winner_selected": False,
+                    "equal_level_blind_review_prepared": True,
+                    "equal_level_blind_review_audio_manifest_sha256": (
+                        "dab62596f47a13f05a10a96db1e06b8ab39c98b43899f5978b52ad32348655d8"
+                    ),
+                    "equal_level_blind_review_complete": False,
+                    "answer_key_opened_by_developer": False,
+                },
+            ],
         },
         "decision": {
             "status": "blocked",
             "run_status": (
-                "one_authorised_excerpt_downstream_midi_complete_human_review_pending"
+                "two_authorised_excerpts_downstream_midi_complete_human_reviews_pending"
             ),
             "candidate_registered": True,
             "checkpoint_published_identity_pinned": True,
@@ -556,8 +595,8 @@ def _build_private_melroformer_challenger_plan(
             "worker_start_permitted": False,
             "blockers": blockers,
             "next_safe_actions": [
-                "complete the prepared equal-level blind Kim-Vocal-2-versus-Moises MIDI listening review without opening its answer key",
-                "repeat the same worker and downstream vocal-MIDI contract on an independent authorised song excerpt",
+                "complete both prepared equal-level blind Kim-Vocal-2-versus-Moises MIDI listening reviews without opening either answer key",
+                "resolve only the user-exported complete reviews and compare cross-song listening evidence before reconsidering any default",
             ],
         },
         "effects": {

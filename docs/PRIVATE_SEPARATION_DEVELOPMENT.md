@@ -989,26 +989,37 @@ PYTHONPATH=src .venv-ai/bin/python \
   --device gpu
 ```
 
-The first unchanged downstream production vocal-MIDI observation is complete.
-The production pYIN dominant-contour path, lead role, phrase repair, 136 BPM
-and A=440 Hz produced 14 notes from the quarantined Kim Vocal 2 output. At a
-40 ms onset tolerance its exact-pitch/onset F1 against the existing estimated
-controls was 0.600 for Moises, 0.560 for Suno A, 0.519 for local HTDemucs and
-0.462 for Suno B. These controls are not score truth, and the values are
-agreement measurements rather than a ranking. The inactive observation is
-self-hashed as
+Two unchanged downstream production vocal-MIDI observations are complete.
+For `Be Alone`, the production pYIN dominant-contour path, lead role, phrase
+repair, 136 BPM and A=440 Hz produced 14 notes from the quarantined Kim Vocal
+2 output. At a 40 ms onset tolerance its exact-pitch/onset F1 against the
+existing estimated controls was 0.600 for Moises, 0.560 for Suno A, 0.519 for
+local HTDemucs and 0.462 for Suno B. The inactive report is self-hashed as
 `e2ae906d872d55369d4dc658e63669b63e6a310f0498e0a000991db7facb3a0c`;
 the candidate MIDI is bound as
 `65111b1dadbc9daaa7ea015a542a256510bd1b8f3ecbb88a36f55dc63dd5dcc1`.
 
-An equal-level blind Kim-Vocal-2-versus-Moises MIDI review is prepared with
-the original mixed excerpt as the source, identical General MIDI program and
-SoundFont for both candidates, explicit zero alignment and a 0–15 second
-window. Its audio manifest SHA-256 is
-`11a05fad5752c44025c018603ed4c21dd9003f7a201118ab0a716d95dadb794c`.
-The developer has not opened its answer key. Human listening, independent
-cross-song repetition, conversion parity and every public route remain
-blocked; no winner has been selected or promoted.
+The identical sealed-settings contract was then repeated on `I am a Alien
+mashup`, original seconds 219–234, at its own authorised 114 BPM and A=440 Hz.
+Kim Vocal 2 produced 23 notes. Exact-pitch/onset F1 was 0.913 against Moises,
+0.889 against local HTDemucs, 0.844 against Suno A and 0.773 against Suno B.
+Its inactive report is self-hashed as
+`36599d2b139320ea4d48a0805630ca5e7acf619746aec39fbfcd77cca7098f18`;
+the candidate MIDI is bound as
+`776a07c43bdddbde585736e039f202ab8df13ed50d54750e6e83969aa39747e5`.
+These controls are not score truth, and all values are agreement measurements
+rather than rankings.
+
+Equal-level blind Kim-Vocal-2-versus-Moises MIDI reviews are prepared for both
+songs with each original mixed excerpt as the source, identical General MIDI
+program and SoundFont for both candidates, explicit zero alignment and a
+0–15 second window. Their audio-manifest SHA-256 values are
+`11a05fad5752c44025c018603ed4c21dd9003f7a201118ab0a716d95dadb794c`
+and
+`dab62596f47a13f05a10a96db1e06b8ab39c98b43899f5978b52ad32348655d8`.
+The developer has not opened either answer key. Cross-song downstream MIDI is
+complete, while human listening, conversion parity and every public route
+remain blocked; no winner has been selected or promoted.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,

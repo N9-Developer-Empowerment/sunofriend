@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import shutil
 import tempfile
@@ -73,16 +74,7 @@ def _evaluate_private_melroformer_vocal_midi(
     if control.get("document_sha256") != _document_sha256(control):
         raise ValueError("authorised MIDI comparison document hash changed")
     _verify_artifacts(control_root, control.get("artifacts"))
-    policy = control.get("policy", {})
-    if (
-        policy.get("bpm") != 136.0
-        or policy.get("tuning_hz") != 440.0
-        or policy.get("vocal_role_uses_separate_production_dominant_contour")
-        is not True
-        or policy.get("same_role_uses_identical_settings_across_every_pack")
-        is not True
-    ):
-        raise ValueError("authorised MIDI control policy differs")
+    bpm, tuning_hz = _validated_control_policy(control.get("policy"))
     controls = _load_control_notes(control_root, control)
 
     destination = Path(out_dir).expanduser().absolute()
@@ -103,9 +95,9 @@ def _evaluate_private_melroformer_vocal_midi(
             vocals_path,
             config=VocalConfig(
                 role="lead",
-                tuning_hz=440.0,
+                tuning_hz=tuning_hz,
                 tuning_source="authorised-midi-comparison-explicit",
-                bpm=136.0,
+                bpm=bpm,
                 tracker_mode="pyin",
                 phrase_repair=True,
             ),
@@ -121,7 +113,7 @@ def _evaluate_private_melroformer_vocal_midi(
             source=vocals_path,
             role="vocals",
             notes=notes,
-            bpm=136.0,
+            bpm=bpm,
             render=render_midi_to_wav,
             evaluate=evaluate_stem_midi,
         )
@@ -179,8 +171,8 @@ def _evaluate_private_melroformer_vocal_midi(
                 },
             },
             "policy": {
-                "bpm": 136.0,
-                "tuning_hz": 440.0,
+                "bpm": bpm,
+                "tuning_hz": tuning_hz,
                 "role": "lead",
                 "tracker_mode": "pyin",
                 "phrase_repair": True,
@@ -247,6 +239,29 @@ def _evaluate_private_melroformer_vocal_midi(
         raise
 
 
+def _validated_control_policy(value: object) -> tuple[float, float]:
+    if not isinstance(value, Mapping):
+        raise ValueError("authorised MIDI control policy differs")
+    bpm = value.get("bpm")
+    tuning_hz = value.get("tuning_hz")
+    if (
+        isinstance(bpm, bool)
+        or not isinstance(bpm, (int, float))
+        or not math.isfinite(float(bpm))
+        or not 20.0 <= float(bpm) <= 400.0
+        or isinstance(tuning_hz, bool)
+        or not isinstance(tuning_hz, (int, float))
+        or not math.isfinite(float(tuning_hz))
+        or not 400.0 <= float(tuning_hz) <= 480.0
+        or value.get("vocal_role_uses_separate_production_dominant_contour")
+        is not True
+        or value.get("same_role_uses_identical_settings_across_every_pack")
+        is not True
+    ):
+        raise ValueError("authorised MIDI control policy differs")
+    return float(bpm), float(tuning_hz)
+
+
 def _load_control_notes(
     root: Path, document: Mapping[str, Any]
 ) -> dict[str, tuple[NoteEvent, ...]]:
@@ -283,4 +298,8 @@ def _load_control_notes(
     return result
 
 
-__all__ = ["SCHEMA", "_evaluate_private_melroformer_vocal_midi"]
+__all__ = [
+    "SCHEMA",
+    "_evaluate_private_melroformer_vocal_midi",
+    "_validated_control_policy",
+]
