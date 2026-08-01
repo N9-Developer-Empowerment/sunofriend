@@ -1162,6 +1162,32 @@ The next separator design must preserve separately auditionable lead/backing
 candidate leaves when available; it must not force them into one broad vocal
 source before MIDI conversion.
 
+That observation has now been repeated on two disjoint authorised excerpts.
+On `I am a Alien mashup`, all three provider packs retained non-empty broad
+vocal MIDI, and all six separate provider leaves produced a non-empty primary
+candidate through at least one unchanged adapter. Primary counts ranged from
+3 to 30 notes; the largest count did not establish correctness or identify a
+singer. On `Be Alone`, every broad vocal control was also non-empty. Four of
+six leaves produced candidates, while the two additional Suno leaves produced
+zero notes through both adapters. The useful cross-song result is therefore
+narrow: preserving leaves prevents a demonstrated loss on `Pilé`, but leaf
+separation alone neither guarantees a complete melody nor defines a safe
+lead/backing rule. Production tracker thresholds remain unchanged.
+
+The `I am a Alien mashup` leaf report contains 170 inactive artifacts. Its
+canonical document SHA-256 is
+`1ed12395799ae28bc70ab04ba6895a05ab2eb0d175dcda48e0d108ba7d880b3d`
+and its report file hashes to
+`885b5cd5ee2d1f35d553d37849ec6f9dfc52209304b8bccee2d6bcd6f6e0c9c1`.
+The `Be Alone` report contains 136 inactive artifacts. Its canonical document
+SHA-256 is
+`c1b2c1d3cff8278494eff52bd418e627fd0171b97d24d2b3a896147d4b951509`
+and its report file hashes to
+`ec62d7ab576c1a83cc02cdd8fc88f75fd8914887b6c4b6aebb5c8def79214835`.
+The evaluator accepts the exact historical v1 and current v2 Kim downstream
+MIDI schemas so already-sealed evidence need not be regenerated; every other
+schema remains rejected.
+
 Reproduce this private diagnostic with the full audio environment, not the
 minimal model environment:
 
@@ -1199,8 +1225,8 @@ downstream MIDI, exact weight-conversion parity and human review are complete,
 but lead-versus-backing assignment quality, remaining runtime/provider
 execution safety and every public route remain blocked.
 
-The next bounded experiment keeps the unchanged 23-note primary candidate and
-adds four audition-only hypotheses from the existing polyphonic vocal path:
+The completed bounded experiment kept the unchanged 23-note primary candidate
+and added four audition-only hypotheses from the existing polyphonic vocal path:
 lowest line (16 notes), dominant line (28), top line (22) and the complete
 harmony stack (80). Their exact inactive evaluation is retained at
 `work/separation-bakeoff/i-am-a-alien-kim-vocal-register-hypotheses-219-234-v1`.
@@ -1208,22 +1234,31 @@ No register is called a singer identity: a lane may switch singer or harmony
 inside the excerpt, and low pitch does not by itself establish the male lead.
 The control comparisons remain estimated-reference agreement only.
 
+The subsequent one-unit blind primary-versus-lowest review was corrected after
+the listener recognised that its stated focus was specifically the male lead.
+The final browser export preferred anonymous candidate B and noted that it was
+useful for the male lead. Resolver-only disclosure identified B as the 16-note
+lowest-register hypothesis and A as the unchanged 23-note primary contour.
+The corrected export hashes to
+`ced9ec0a6a7475deebe9c9bb27d2cc38deb58b314e74440084d0bed661159859`;
+the corrected resolved evidence file hashes to
+`ac7be09e2a9589ad1dde9661fab01e3fee305a4def8d1a5c29cbdd3e7d666eea`.
+Earlier exports made before the listening focus was understood are superseded
+and are not the final result. This supports retaining a lowest-register
+hypothesis for audition on this excerpt, not a universal singer-identity or
+automatic-selection rule. No default, MIDI, selection or promotion changed.
+
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
 resource, downstream-MIDI and human listening acceptance.
 
 ### Current private human-review queue
 
-As of 1 August 2026, one prepared Kim Vocal 2 review is outstanding. It is a
-single blind, equal-level comparison of the unchanged primary contour against
-the lowest-register hypothesis, asking which follows the male lead melody more
-recognisably:
-`work/separation-bakeoff/i-am-a-alien-kim-vocal-primary-vs-lowest-lead-review-v1/midi_ab_review.html`.
-Its answer key must remain unopened until the reviewed JSON is exported. The
-read-only `midi-ab-status` command can match a browser export to this package
-without opening the answer key; it does not resolve or reveal the assignment.
-The
-FP32/BF16 precision review and `Be Alone` Kim-versus-Moises MIDI review both
+As of 1 August 2026, there is no outstanding prepared private review. The
+corrected primary-versus-lowest review preferred the lowest-register
+hypothesis for the male lead; its answer key was opened only by the resolver
+after the complete matching browser export was found.
+The FP32/BF16 precision review and `Be Alone` Kim-versus-Moises MIDI review both
 resolved to `equivalent`; the earlier `I am a Alien mashup` comparison resolved
 to `neither`. The user also confirmed
 listening to the current `Be Alone` six-source diagnostic page. That page is a

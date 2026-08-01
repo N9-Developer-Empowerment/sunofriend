@@ -144,6 +144,31 @@ def test_requires_exact_private_inactive_permissions() -> None:
         vocal_leaves._require_private_inactive(document, "fixture")
 
 
+@pytest.mark.parametrize(
+    "schema",
+    (
+        "sunofriend.private-melroformer-downstream-vocal-midi-evaluation.v1",
+        "sunofriend.private-melroformer-downstream-vocal-midi-evaluation.v2",
+    ),
+)
+def test_accepts_exact_historical_and_current_melroformer_midi_schemas(
+    schema: str,
+) -> None:
+    vocal_leaves._require_supported_melroformer_schema({"schema": schema})
+
+
+def test_rejects_unknown_melroformer_midi_schema() -> None:
+    with pytest.raises(ValueError, match="unsupported MelRoFormer"):
+        vocal_leaves._require_supported_melroformer_schema(
+            {
+                "schema": (
+                    "sunofriend.private-melroformer-downstream-vocal-midi-"
+                    "evaluation.v3"
+                )
+            }
+        )
+
+
 def _input_bundle(root: Path) -> dict[str, object]:
     excerpt_root = root / "excerpt"
     excerpt_root.mkdir()

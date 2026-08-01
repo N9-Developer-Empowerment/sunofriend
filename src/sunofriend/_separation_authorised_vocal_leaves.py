@@ -48,6 +48,12 @@ from .vocal import VocalConfig, VocalTranscription, transcribe_vocal_melody
 
 SCHEMA = "sunofriend.private-authorised-vocal-leaf-midi-evaluation.v1"
 _REPORT_NAME = "authorised-vocal-leaf-midi-evaluation.json"
+_LEGACY_MELROFORMER_MIDI_SCHEMA = (
+    "sunofriend.private-melroformer-downstream-vocal-midi-evaluation.v1"
+)
+_SUPPORTED_MELROFORMER_MIDI_SCHEMAS = frozenset(
+    (_LEGACY_MELROFORMER_MIDI_SCHEMA, MELROFORMER_MIDI_SCHEMA)
+)
 _ONSET_TOLERANCE_SECONDS = 0.040
 _INACTIVE_PERMISSIONS = {
     "accepted": False,
@@ -438,9 +444,9 @@ def _load_inputs(
     melroformer_root = melroformer_path.parent
     melroformer_sha256 = _sha256(melroformer_path)
     melroformer = json.loads(melroformer_path.read_text(encoding="utf-8"))
+    _require_supported_melroformer_schema(melroformer)
     if (
-        melroformer.get("schema") != MELROFORMER_MIDI_SCHEMA
-        or melroformer.get("document_sha256") != _document_sha256(melroformer)
+        melroformer.get("document_sha256") != _document_sha256(melroformer)
         or melroformer.get("controls", {}).get("comparison_sha256")
         != control_sha256
         or melroformer.get("controls", {}).get("document_sha256")
@@ -494,6 +500,12 @@ def _load_inputs(
         "provider_packs": provider_packs,
         "proposals": proposals,
     }
+
+
+def _require_supported_melroformer_schema(document: Mapping[str, Any]) -> None:
+    schema = document.get("schema")
+    if schema not in _SUPPORTED_MELROFORMER_MIDI_SCHEMAS:
+        raise ValueError("unsupported MelRoFormer MIDI evaluation schema")
 
 
 def _load_notes(

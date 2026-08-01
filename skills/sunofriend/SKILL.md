@@ -298,10 +298,13 @@ report the result, then move on.
   backing vocal rather than the male lead heard in the mixed source. A later
   inactive evaluation keeps the unchanged primary and adds lowest, dominant,
   top and full-stack register hypotheses without claiming that register
-  identifies a singer. One owner-only blind primary-versus-lowest review is
-  pending under the repository's ignored `work/separation-bakeoff` tree; it is
-  development evidence, not a normal skill route, and its answer key must stay
-  unopened until the reviewed JSON is exported. The read-only public
+  identifies a singer. The owner-only blind primary-versus-lowest review is
+  now complete. After the listener understood that the question focused on
+  the male lead, the corrected blind export preferred the 16-note
+  lowest-register hypothesis over the unchanged 23-note primary contour. It
+  is development evidence, not a singer-identity rule or normal skill route;
+  its answer key was opened only by the resolver after the complete matching
+  JSON export. The read-only public
   `midi-ab-status` command may match an explicitly named export or one bounded,
   non-recursive download directory without opening the answer key; it cannot
   resolve or reveal A/B. The
@@ -323,10 +326,14 @@ report the result, then move on.
   available for this diagnostic; a missing runtime fails instead of silently
   accepting a degraded comparison. The private evaluator accepts two
   to four known controls only when local HTDemucs and at least one provider are
-  present. Keep the 52 generated leaf artifacts inactive, preserve separate
-  lead/backing candidates in future separator design, and do not promote a
-  separator or lower production thresholds from one excerpt. The latest
-  authorised `Be Alone` worker run also bound the complete post-inference
+  present. Two disjoint repeats found non-empty broad vocal MIDI: all six `I
+  am a Alien mashup` provider leaves and four of six `Be Alone` leaves
+  produced at least one non-empty primary candidate. Keep every generated
+  artifact inactive, preserve separate lead/backing candidates in future
+  separator design, and do not promote a separator, leaf rule, register rule
+  or lower production thresholds from these excerpts. The evaluator accepts
+  only the exact historical v1 and current v2 Kim MIDI evidence schemas. The
+  latest authorised `Be Alone` worker run also bound the complete post-inference
   `sys.modules` Python import closure: 320 modules backed by 277 regular files
   totalling 18,067,782 bytes, with zero unclassified modules. The child sealed
   path-free file hashes and root manifests; the parent independently reopened
