@@ -1898,6 +1898,16 @@ checkpoint inspection and explicit private-evaluation approval remain open.
 The next increment is an approval-gated materialisation and isolated worker,
 not a public separator or automatic selection route.
 
+The intervening model-independent adapter contract is now implemented and
+tested with injected synthetic result data only. It invokes no engine. The
+contract rejects wrong audio geometry, non-finite or unbounded samples,
+incomplete post-sanitisation model-key coverage, arbitrary dropped weights or
+any claimed operational side effect. It derives the instrumental residual,
+hashes both float32 outputs and proves additive closure. PCM24 persistence,
+the real-model bridge and the worker remain absent. This reduces the amount
+of new logic that must be trusted after approval without weakening the
+download, install, checkpoint, model-import or product-route gates.
+
 ### 2026-07-31 — Second authorised separation-to-MIDI repeat
 
 - Goal: test whether the first real-song observations repeat on different

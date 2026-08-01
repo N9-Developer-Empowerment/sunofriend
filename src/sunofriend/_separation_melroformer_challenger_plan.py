@@ -14,6 +14,9 @@ import stat
 from pathlib import Path
 from typing import Any
 
+from ._separation_melroformer_adapter_contract import (
+    SCHEMA as ADAPTER_OBSERVATION_SCHEMA,
+)
 from ._separation_melroformer_runtime_evidence import (
     RUNTIME_LOCK,
     RUNTIME_LOCK_SHA256,
@@ -234,6 +237,9 @@ def _build_private_melroformer_challenger_plan(
             "apple_resource_bounds_measured": False,
             "worker_protocol_schema": WORKER_PROTOCOL_SCHEMA,
             "worker_protocol_defined": True,
+            "adapter_observation_schema": ADAPTER_OBSERVATION_SCHEMA,
+            "synthetic_adapter_contract_defined": True,
+            "real_adapter_implemented": False,
             "worker_implemented": False,
         },
         "evaluation_contract": {
@@ -271,7 +277,8 @@ def _build_private_melroformer_challenger_plan(
                 "after approval, materialise and verify the exact source and runtime without using the upstream convenience loader",
                 "after approval, acquire and hash the exact local checkpoint without importing the model",
                 "apply the bounded Safetensors header and tensor inventory inspection before any tensor load",
-                "implement the isolated two-role excerpt worker behind the existing non-executable protocol",
+                "implement the isolated real-model bridge behind the synthetic-only adapter contract",
+                "implement the two-role excerpt worker behind the existing non-executable protocol",
                 "measure resource and offline bounds before any wider evaluation",
             ],
         },

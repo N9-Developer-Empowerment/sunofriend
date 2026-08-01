@@ -6,6 +6,9 @@ import hashlib
 import re
 from typing import Any, Mapping, Sequence
 
+from ._separation_melroformer_adapter_contract import (
+    SCHEMA as ADAPTER_OBSERVATION_SCHEMA,
+)
 from ._separation_melroformer_runtime_evidence import (
     RUNTIME_LOCK_SHA256,
     SOURCE_MANIFEST_SHA256,
@@ -95,6 +98,7 @@ def _payload(cases: list[dict[str, Any]]) -> dict[str, Any]:
             "checkpoint_bytes": CONVERSION_CHECKPOINT_BYTES,
             "checkpoint_sha256": CONVERSION_CHECKPOINT_SHA256,
             "safetensors_inspection_schema": SAFETENSORS_INSPECTION_SCHEMA,
+            "adapter_observation_schema": ADAPTER_OBSERVATION_SCHEMA,
             "generic_request_schema": SEPARATION_WORKER_REQUEST_SCHEMA,
             "generic_result_schema": SEPARATION_WORKER_RESULT_SCHEMA,
             "isolation_policy": SEPARATION_WORKER_ISOLATION_POLICY,
@@ -132,6 +136,8 @@ def _payload(cases: list[dict[str, Any]]) -> dict[str, Any]:
             "child_process_denial_required": True,
             "upstream_from_pretrained_permitted": False,
             "fixed_config": "MelRoFormerConfig.kim_vocal_2()",
+            "synthetic_adapter_contract_defined": True,
+            "real_adapter_implemented": False,
             "post_sanitisation_model_key_coverage_required": True,
             "missing_model_keys_permitted": False,
             "unexpected_sanitised_keys_permitted": False,

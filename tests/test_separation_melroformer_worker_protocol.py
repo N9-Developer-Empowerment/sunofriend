@@ -42,6 +42,8 @@ def test_builds_hash_bound_non_executable_two_output_protocol() -> None:
     assert first["status"] == "protocol_defined_worker_absent"
     assert list(first["request_shape"]["roles"]) == ["vocals", "instrumental"]
     assert first["request_shape"]["upstream_from_pretrained_permitted"] is False
+    assert first["request_shape"]["synthetic_adapter_contract_defined"] is True
+    assert first["request_shape"]["real_adapter_implemented"] is False
     assert first["request_shape"][
         "post_sanitisation_model_key_coverage_required"
     ] is True

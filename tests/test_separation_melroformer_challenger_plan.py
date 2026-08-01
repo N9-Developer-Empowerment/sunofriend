@@ -61,6 +61,8 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
     assert plan["runtime"]["dependency_lock_defined"] is True
     assert plan["runtime"]["dependency_license_audit_defined"] is True
     assert plan["runtime"]["worker_protocol_defined"] is True
+    assert plan["runtime"]["synthetic_adapter_contract_defined"] is True
+    assert plan["runtime"]["real_adapter_implemented"] is False
     assert plan["source"]["upstream_from_pretrained_permitted"] is False
     assert plan["runtime"]["reported_parity_is_model_ground_truth_score"] is False
     assert plan["decision"]["checkpoint_published_identity_pinned"] is True

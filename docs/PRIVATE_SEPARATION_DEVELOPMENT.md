@@ -823,6 +823,20 @@ is a required result check. Every install, download, checkpoint, import,
 process, inference, publication, automatic-selection and product-route
 permission remains false; this is a protocol, not a worker.
 
+The model-independent adapter core is now executable only as a synthetic
+contract test. `_separation_melroformer_adapter_contract.py` accepts a
+precomputed result labelled `synthetic_test_double`; it does not accept or
+invoke a callable engine. It validates exact 44.1 kHz stereo geometry, the
+15-second frame bound, finite/bounded samples, complete post-sanitisation
+model-key coverage and the one permitted upstream dropped-key suffix
+`.rotary_embed.freqs`. It then derives `instrumental = source - vocals`,
+records deterministic float32 hashes and proves
+`source = vocals + instrumental` within a fixed numerical tolerance. It does
+not persist PCM24 audio, so persisted reconstruction remains explicitly
+unverified. Any claimed file, network, package, checkpoint, tensor, model or
+process effect is rejected. This tests the future bridge's validation logic;
+it is not the real bridge, a model call or a worker.
+
 Verify the tracked source/runtime records with:
 
 ```bash
@@ -834,7 +848,9 @@ PYTHONPATH=src .venv/bin/python \
 The next gated increment requires a separate explicit approval for this exact
 Kim Vocal 2 private evaluation. Only after that approval may the exact source,
 runtime and checkpoint be materialised; the local checkpoint must then pass
-the bounded static inspection before any model import or tensor load.
+the bounded static inspection before any model import or tensor load. The
+real-model bridge must produce evidence accepted by the synthetic-tested core
+before the two-role worker can be enabled for a private excerpt.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,

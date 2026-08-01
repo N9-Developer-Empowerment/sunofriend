@@ -255,10 +255,13 @@ report the result, then move on.
   later immutable MIT evidence. A bounded standard-library Safetensors header
   inspector and a non-executable one-or-two-excerpt vocals/instrumental worker
   protocol are implemented and tested. They do not deserialize tensors, import
-  a model or start a worker. No user approval for this exact candidate, local
-  checkpoint inspection, worker, independent parity or Mac resource/offline
-  evidence exists. No package or model was downloaded. Do not offer or run it
-  through this skill.
+  a model or start a worker. A separate synthetic-only adapter contract now
+  validates stereo geometry, finite audio, complete post-sanitisation model-key
+  coverage and vocals-plus-instrumental accounting from precomputed fake data;
+  it cannot invoke an engine or persist outputs. No user approval for this
+  exact candidate, local checkpoint inspection, real-model bridge, worker,
+  independent parity or Mac resource/offline evidence exists. No package or
+  model was downloaded. Do not offer or run it through this skill.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one
   canonical WAV project. It does not separate, shift, pad, stretch, normalize
