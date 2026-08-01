@@ -62,8 +62,8 @@ LICENSE_BYTES = 1_500
 LICENSE_SHA256 = "1aa245b55067df5c63c847894e7040f76fa79ddde83e9e5ed8a5c29ef1865c14"
 _BASE_BLOCKERS = (
     "apple_runtime_resource_bounds_unmeasured",
-    "audio_inference_adapter_not_implemented",
     "conversion_parity_not_independently_verified",
+    "full_excerpt_chunk_transport_not_implemented",
     "runtime_worker_not_implemented",
 )
 
@@ -295,7 +295,9 @@ def _build_private_melroformer_challenger_plan(
                 "sunofriend.private-melroformer-real-bridge-probe.v1"
             ),
             "real_model_bridge_probe_implemented": True,
-            "real_adapter_implemented": False,
+            "real_adapter_implemented": True,
+            "real_adapter_maximum_probe_seconds": 2.0,
+            "synthetic_real_model_smoke_passed": True,
             "worker_implemented": False,
         },
         "evaluation_contract": {
@@ -330,7 +332,7 @@ def _build_private_melroformer_challenger_plan(
             "worker_start_permitted": False,
             "blockers": blockers,
             "next_safe_actions": [
-                "add bounded single-chunk inference behind the verified real-model loader",
+                "measure the two-second ceiling before designing bounded full-excerpt chunks",
                 "implement the two-role excerpt worker behind the existing non-executable protocol",
                 "measure resource and offline bounds before any wider evaluation",
             ],

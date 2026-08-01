@@ -266,8 +266,11 @@ report the result, then move on.
   only as empty MLX metadata. A private real-model loader probe now binds its
   708 raw keys to exactly 696 model parameters with no missing, unexpected or
   shape-mismatched tensors while bypassing package initializers and the
-  upstream downloader. It has not performed audio inference. The inference
-  adapter, worker, independent parity and Mac inference/offline evidence do not
+  upstream downloader. A bounded private inference adapter now passes a
+  one-second instrumental-only synthetic smoke test with exact finite output,
+  about 2.50 GB peak MLX memory and additive residual accounting. Its temporary
+  ceiling is two seconds and it persists nothing. Full-excerpt chunks, the
+  worker, independent parity and complete Mac inference/offline evidence do not
   yet exist. The checkpoint is not redistributed. Do not offer or run this
   challenger through the skill.
 - `source-import` decodes exactly one local asset.

@@ -1905,19 +1905,25 @@ and `from_pretrained`, pins the checkpoint descriptor, and independently proves
 the 708-raw-key to 696-model-parameter sanitizer mapping. The real probe
 completed with zero missing, unexpected or shape-mismatched tensors and about
 458 MB peak MLX memory, without audio inference. Independent parity and
-inference resource/offline bounds are still open. The next increment is
-bounded single-chunk inference, not a public separator or automatic selection
-route.
+inference resource/offline bounds were still open at that point. Bounded
+single-chunk inference is now implemented with a temporary two-second ceiling.
+Its one-second instrumental-only synthetic smoke test preserved the exact frame
+horizon, returned finite audio, completed in about 0.27 seconds after warm-up,
+used about 2.50 GB peak MLX memory and passed additive residual accounting at
+`7.45e-9` maximum float32 error. No output was persisted. The next increment is
+the two-second resource point and bounded full-excerpt chunk transport, not a
+public separator or automatic selection route.
 
 The intervening model-independent adapter contract is now implemented and
 tested with injected synthetic result data only. It invokes no engine. The
 contract rejects wrong audio geometry, non-finite or unbounded samples,
 incomplete post-sanitisation model-key coverage, arbitrary dropped weights or
 any claimed operational side effect. It derives the instrumental residual,
-hashes both float32 outputs and proves additive closure. PCM24 persistence,
-the audio-inference adapter and the worker remain absent. This reduces the
-amount of new logic that must be trusted after approval without weakening the
-download, install, checkpoint, model-import or product-route gates.
+hashes both float32 outputs and proves additive closure. The same core now
+accepts only the exact private real-engine record, and the one-second smoke test
+passed through it. PCM24 persistence and the worker remain absent. This
+reduces the amount of new logic that must be trusted after approval without
+weakening the download, install, checkpoint or product-route gates.
 
 ### 2026-07-31 — Second authorised separation-to-MIDI repeat
 

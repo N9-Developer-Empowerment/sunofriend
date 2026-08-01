@@ -885,10 +885,20 @@ HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 PYTHONNOUSERSITE=1 PYTHONPATH=src \
   --companion-root /absolute/private/cache/checkpoint-directory
 ```
 
-The next increment is bounded single-chunk inference followed by the
-synthetic smoke test. Only after that passes may one sealed authorised excerpt
-run. Full-excerpt chunk transport, resource/offline evidence, the two-role
-worker and every public route remain blocked.
+Bounded in-memory inference and its synthetic smoke test now pass. The current
+private ceiling is two seconds; the first maintained case uses one second of
+generated stereo tones. It returned exactly 44,100 finite frames, completed in
+about 0.27 seconds after shader warm-up and used about 2.50 GB peak MLX memory.
+The vocal estimate was appropriately near-silent for the instrumental-only
+input. The shared adapter derived the instrumental residual and proved
+additive reconstruction with maximum float32 error about `7.45e-9`. Nothing
+was persisted and worker/public-route permission remained false.
+
+Run that exact no-output smoke test by replacing `--probe` above with
+`--synthetic-smoke`. The next increment is a two-second resource measurement,
+then bounded overlapping full-excerpt transport. Only after those pass may one
+sealed authorised excerpt be processed. PCM24 persistence, operating-system
+network denial, the two-role worker and every public route remain blocked.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,

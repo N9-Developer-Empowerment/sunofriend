@@ -66,7 +66,8 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
     assert plan["runtime"]["worker_protocol_defined"] is True
     assert plan["runtime"]["synthetic_adapter_contract_defined"] is True
     assert plan["runtime"]["real_model_bridge_probe_implemented"] is True
-    assert plan["runtime"]["real_adapter_implemented"] is False
+    assert plan["runtime"]["real_adapter_implemented"] is True
+    assert plan["runtime"]["synthetic_real_model_smoke_passed"] is True
     assert plan["source"]["upstream_from_pretrained_permitted"] is False
     assert plan["runtime"]["reported_parity_is_model_ground_truth_score"] is False
     assert plan["decision"]["checkpoint_published_identity_pinned"] is True
@@ -165,7 +166,7 @@ def test_materialised_artifacts_complete_preflight_without_authorizing_worker(
     assert plan["decision"]["artifact_preflight_complete"] is True
     assert plan["decision"]["private_evaluation_eligible"] is True
     assert plan["decision"]["worker_start_permitted"] is False
-    assert "audio_inference_adapter_not_implemented" in plan["decision"][
+    assert "full_excerpt_chunk_transport_not_implemented" in plan["decision"][
         "blockers"
     ]
     assert "runtime_worker_not_implemented" in plan["decision"]["blockers"]

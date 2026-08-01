@@ -7,7 +7,10 @@ import pytest
 
 from sunofriend._separation_melroformer_adapter_contract import (
     ENGINE_SCHEMA,
+    REAL_ENGINE_SCHEMA,
+    _RealMelRoFormerEngineResult,
     _SyntheticMelRoFormerEngineResult,
+    _accept_private_melroformer_real_result,
     _exercise_private_melroformer_adapter_contract,
 )
 from sunofriend.interface_contract import DIRECT_TUI_COMMANDS, PUBLIC_COMMANDS
@@ -22,6 +25,17 @@ NO_EFFECTS = {
     "tensor_deserialized": False,
     "model_imported": False,
     "process_started": False,
+}
+REAL_EFFECTS = {
+    "filesystem_accessed": True,
+    "filesystem_written": False,
+    "network_used": False,
+    "package_installed": False,
+    "checkpoint_opened": True,
+    "tensor_deserialized": True,
+    "model_imported": True,
+    "process_started": False,
+    "audio_inference_called": True,
 }
 
 
@@ -41,6 +55,22 @@ def _result(**changes: object) -> _SyntheticMelRoFormerEngineResult:
     }
     values.update(changes)
     return _SyntheticMelRoFormerEngineResult(**values)  # type: ignore[arg-type]
+
+
+def _real_result(**changes: object) -> _RealMelRoFormerEngineResult:
+    values: dict[str, object] = {
+        "schema": REAL_ENGINE_SCHEMA,
+        "engine_kind": "private_real_kim_vocal_2",
+        "vocals": [[0.125, -0.0625], [0.0625, -0.125], [0.0, 0.03125]],
+        "sanitized_weight_keys": ["mask.weight", "transformer.0.weight"],
+        "expected_model_keys": ["transformer.0.weight", "mask.weight"],
+        "dropped_raw_weight_keys": ["transformer.0.rotary_embed.freqs"],
+        "inference_seconds": 1.25,
+        "peak_memory_bytes": 2_500_000_000,
+        "effects": dict(REAL_EFFECTS),
+    }
+    values.update(changes)
+    return _RealMelRoFormerEngineResult(**values)  # type: ignore[arg-type]
 
 
 def test_synthetic_contract_derives_residual_and_proves_accounting() -> None:
@@ -67,6 +97,45 @@ def test_synthetic_contract_derives_residual_and_proves_accounting() -> None:
     assert evidence["effects"]["filesystem_accessed"] is False
 
 
+def test_real_result_uses_same_validation_core_without_persisting() -> None:
+    observation = _accept_private_melroformer_real_result(
+        _source(), sample_rate=44_100, engine_result=_real_result()
+    )
+
+    assert observation.vocals[0] == (0.125, -0.0625)
+    assert observation.instrumental[0] == (0.375, -0.1875)
+    evidence = observation.evidence
+    assert evidence["status"] == "private_real_single_chunk_validated_not_persisted"
+    assert evidence["weight_coverage"]["complete"] is True
+    assert evidence["additive_accounting"]["passed"] is True
+    assert evidence["additive_accounting"]["pcm24_persistence_verified"] is False
+    assert evidence["measurement"]["peak_memory_bytes"] == 2_500_000_000
+    assert evidence["permissions"]["private_inference_permitted"] is True
+    assert evidence["permissions"]["worker_start_permitted"] is False
+    assert evidence["effects"]["audio_inference_called"] is True
+
+
+@pytest.mark.parametrize(
+    ("changes", "message"),
+    [
+        ({"engine_kind": "synthetic_test_double"}, "identity differs"),
+        ({"inference_seconds": 0.0}, "duration is invalid"),
+        ({"peak_memory_bytes": 0}, "peak memory is invalid"),
+        (
+            {"effects": {**REAL_EFFECTS, "filesystem_written": True}},
+            "effects differ",
+        ),
+    ],
+)
+def test_real_result_rejects_identity_measurement_or_effect_drift(
+    changes: dict[str, object], message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        _accept_private_melroformer_real_result(
+            _source(), sample_rate=44_100, engine_result=_real_result(**changes)
+        )
+
+
 def test_observation_is_deterministic_and_path_free() -> None:
     first = _exercise_private_melroformer_adapter_contract(
         _source(), sample_rate=44_100, engine_result=_result()
@@ -75,8 +144,9 @@ def test_observation_is_deterministic_and_path_free() -> None:
         _source(), sample_rate=44_100, engine_result=_result()
     )
     assert first == second
-    assert first.evidence["outputs"]["vocals"]["sha256"] == (
-        second.evidence["outputs"]["vocals"]["sha256"]
+    assert (
+        first.evidence["outputs"]["vocals"]["sha256"]
+        == (second.evidence["outputs"]["vocals"]["sha256"])
     )
     assert "path" not in repr(first.evidence).lower()
 

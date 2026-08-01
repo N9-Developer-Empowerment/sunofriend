@@ -25,6 +25,12 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, BinaryIO, Iterator, Mapping, Sequence
 
+from ._separation_melroformer_adapter_contract import (
+    REAL_ENGINE_SCHEMA,
+    _RealMelRoFormerAdapterObservation,
+    _RealMelRoFormerEngineResult,
+    _accept_private_melroformer_real_result,
+)
 from ._separation_melroformer_challenger_plan import (
     APPROVAL_RECORDED_AT,
     CONFIG_NAME,
@@ -75,6 +81,19 @@ _MASK_MLP_RE = re.compile(
     r"^(mask_estimators\.\d+\.to_freqs\.\d+)\.0\.(\d+)\.(weight|bias)$"
 )
 _PERMITTED_DROPPED_SUFFIX = ".rotary_embed.freqs"
+MAXIMUM_PROBE_FRAMES = 88_200
+MINIMUM_PROBE_FRAMES = 4_096
+_REAL_INFERENCE_EFFECTS = {
+    "filesystem_accessed": True,
+    "filesystem_written": False,
+    "network_used": False,
+    "package_installed": False,
+    "checkpoint_opened": True,
+    "tensor_deserialized": True,
+    "model_imported": True,
+    "process_started": False,
+    "audio_inference_called": True,
+}
 
 
 @dataclass
@@ -110,6 +129,7 @@ def _load_private_melroformer_model(
         expected_bytes=CONVERSION_CHECKPOINT_BYTES,
         expected_sha256=CONVERSION_CHECKPOINT_SHA256,
     )
+
     if not companion_observation["all_cryptographic_identities_verified"]:
         raise ValueError("MelRoFormer companion identities differ")
     _require_clean_source_namespace()
@@ -240,6 +260,61 @@ def _load_private_melroformer_model(
         expected_model_keys=tuple(sorted(expected)),
         dropped_raw_weight_keys=tuple(coverage["dropped_raw_weight_keys"]),
         evidence=MappingProxyType(evidence),
+    )
+
+
+def _infer_private_melroformer_probe(
+    handle: _PrivateMelRoFormerHandle,
+    source: Any,
+    *,
+    sample_rate: int,
+) -> _RealMelRoFormerAdapterObservation:
+    """Run one bounded in-memory chunk and validate it without persistence."""
+
+    if type(handle) is not _PrivateMelRoFormerHandle:
+        raise ValueError("MelRoFormer inference requires an exact private handle")
+    if type(sample_rate) is not int or sample_rate != 44_100:
+        raise ValueError("MelRoFormer inference requires exact 44.1 kHz audio")
+    np = handle.np
+    mx = handle.mx
+    audio = np.asarray(source)
+    if audio.dtype != np.float32:
+        raise ValueError("MelRoFormer inference source must be float32")
+    if (
+        audio.ndim != 2
+        or audio.shape[1] != 2
+        or not MINIMUM_PROBE_FRAMES <= audio.shape[0] <= MAXIMUM_PROBE_FRAMES
+    ):
+        raise ValueError(
+            "MelRoFormer inference source geometry is outside probe bounds"
+        )
+    if not bool(np.isfinite(audio).all()) or float(np.max(np.abs(audio))) > 1.0:
+        raise ValueError("MelRoFormer inference source samples are outside bounds")
+    audio = np.ascontiguousarray(audio)
+    mx.reset_peak_memory()
+    started = time.perf_counter()
+    output = handle.model(mx.array(audio.T[None, :, :]))
+    mx.eval(output)
+    elapsed = time.perf_counter() - started
+    vocals = np.asarray(output[0]).T.astype(np.float32, copy=False)
+    if vocals.shape != audio.shape:
+        raise ValueError("MelRoFormer inference output geometry differs")
+    if not bool(np.isfinite(vocals).all()):
+        raise ValueError("MelRoFormer inference output contains non-finite samples")
+    peak_memory = int(mx.get_peak_memory())
+    engine_result = _RealMelRoFormerEngineResult(
+        schema=REAL_ENGINE_SCHEMA,
+        engine_kind="private_real_kim_vocal_2",
+        vocals=vocals.tolist(),
+        sanitized_weight_keys=handle.sanitized_weight_keys,
+        expected_model_keys=handle.expected_model_keys,
+        dropped_raw_weight_keys=handle.dropped_raw_weight_keys,
+        inference_seconds=elapsed,
+        peak_memory_bytes=peak_memory,
+        effects=dict(_REAL_INFERENCE_EFFECTS),
+    )
+    return _accept_private_melroformer_real_result(
+        audio.tolist(), sample_rate=sample_rate, engine_result=engine_result
     )
 
 
@@ -498,9 +573,12 @@ def _identity(value: os.stat_result) -> tuple[int, int, int, int, int, int]:
 
 
 __all__ = [
+    "MAXIMUM_PROBE_FRAMES",
+    "MINIMUM_PROBE_FRAMES",
     "SCHEMA",
     "_PrivateMelRoFormerHandle",
     "_load_private_melroformer_model",
+    "_infer_private_melroformer_probe",
     "_transform_checkpoint_keys",
     "_validate_weight_inventory",
 ]
