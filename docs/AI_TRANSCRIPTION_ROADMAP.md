@@ -1869,10 +1869,12 @@ records reproduce its 913,106,900-byte source hash. A tracked, no-network
 verifier preserves those facts and records two hash-stable ViperX alternatives
 as rejected because their creator-authorised terms remain unverified.
 
-This is a vocal-only registration, not a broad separator and not an executed
-experiment. A supplied evidence ZIP was reviewed as a secondary lead; its
-download helper was not run. The model, MLX runtime and packages were not
-downloaded or installed.
+This is a vocal-only private challenger, not a broad separator or public
+feature. A supplied evidence ZIP was reviewed as a secondary lead; its
+download helper was not run. On 1 August 2026 the user explicitly approved
+private local evaluation of the exact Kim Vocal 2 checkpoint. The exact
+checkpoint and audited source were subsequently placed in an owner-only cache
+outside the repository; no model is redistributed.
 
 The exact non-executable runtime and inspection slice is now complete. The
 five required MLX-Audio `v0.4.3` source/runtime files are pinned to revision
@@ -1886,16 +1888,20 @@ MIT relicense evidence.
 The future adapter must additionally turn the upstream non-strict load into a
 fail-closed boundary by proving complete post-sanitisation model-key coverage.
 
-A bounded standard-library Safetensors parser now validates header size, unique
-JSON keys, string-only metadata, dtype/shape/offset agreement and complete
-non-overlapping data coverage while hashing tensor bytes as opaque data. It
-does not deserialize tensors or import a tensor/model runtime. A separate
+A bounded standard-library Safetensors parser validates header size, unique
+JSON keys, metadata shape, dtype/shape/offset agreement and complete
+non-overlapping data coverage while hashing tensor bytes as opaque data. The
+exact 456,483,463-byte checkpoint passed with 708 BF16 tensors. Its MLX
+conversion contains non-canonical null metadata; the result calls that out as
+a specific compatibility exception rather than claiming Safetensors metadata
+conformance. The inspection does not deserialize tensors or import a
+tensor/model runtime. A separate
 self-hashed protocol fixes one or two maximum-15-second canonical inputs and
 exactly two outputs, vocals plus mixture-minus-vocals instrumental, including
-PCM reconstruction accounting. All execution permissions remain false and no
-worker exists. Independent parity, resource/offline bounds, local static
-checkpoint inspection and explicit private-evaluation approval remain open.
-The next increment is an approval-gated materialisation and isolated worker,
+PCM reconstruction accounting. Artifact preflight now passes for the exact
+source, config, licence and checkpoint, but model import, tensor loading and
+worker start remain false. Independent parity and resource/offline bounds are
+still open. The next increment is an isolated, fail-closed real-model bridge,
 not a public separator or automatic selection route.
 
 The intervening model-independent adapter contract is now implemented and

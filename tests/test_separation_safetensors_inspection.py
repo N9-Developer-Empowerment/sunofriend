@@ -48,6 +48,9 @@ def test_validates_header_and_hash_without_tensor_runtime(tmp_path: Path) -> Non
     assert result["tensor_count"] == 2
     assert result["dtype_counts"] == {"BF16": 1, "F32": 1}
     assert result["metadata_keys"] == ["format"]
+    assert result["metadata_encoding"] == "string_to_string_map"
+    assert result["metadata_spec_conformant"] is True
+    assert result["mlx_null_metadata_compatibility_applied"] is False
     assert result["metadata_values_observed"] is False
     assert result["tensor_values_observed"] is False
     assert result["authorises_loading"] is False
@@ -71,6 +74,27 @@ def test_accepts_scalar_empty_tensor_and_space_padding(tmp_path: Path) -> None:
     result = _inspect(tmp_path / "model.safetensors", contents)
     assert result["tensor_count"] == 2
     assert result["data_bytes"] == 1
+
+
+def test_reports_mlx_null_metadata_as_noncanonical_compatibility(
+    tmp_path: Path,
+) -> None:
+    contents = _container(
+        {
+            "weight": {"dtype": "BF16", "shape": [2], "data_offsets": [0, 4]},
+            "__metadata__": None,
+        },
+        b"1234",
+    )
+
+    result = _inspect(tmp_path / "model.safetensors", contents)
+
+    assert result["metadata_keys"] == []
+    assert result["metadata_encoding"] == (
+        "json_null_treated_as_empty_for_mlx_compatibility"
+    )
+    assert result["metadata_spec_conformant"] is False
+    assert result["mlx_null_metadata_compatibility_applied"] is True
 
 
 @pytest.mark.parametrize(
@@ -109,7 +133,8 @@ def test_accepts_scalar_empty_tensor_and_space_padding(tmp_path: Path) -> None:
             b"12",
             "not entirely indexed",
         ),
-        ({"__metadata__": {"bad": 1}}, b"", "map strings to strings"),
+        ({"__metadata__": {"bad": 1}}, b"", "map strings to strings or be null"),
+        ({"__metadata__": "bad"}, b"", "map strings to strings or be null"),
     ],
 )
 def test_rejects_invalid_tensor_inventory(

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
+import struct
 import subprocess
 import sys
 from pathlib import Path
@@ -37,7 +39,8 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
     assert plan["checkpoint"]["checkpoint_specific_terms_verified"] is True
     assert plan["checkpoint"]["download_permitted"] is False
     assert plan["checkpoint"]["static_inspection_contract_defined"] is True
-    assert plan["licensing"]["explicit_user_approval_recorded"] is False
+    assert plan["licensing"]["explicit_user_approval_recorded"] is True
+    assert plan["licensing"]["checkpoint_redistribution_approved"] is False
     assert plan["alternatives_reviewed"][0]["admitted"] is False
     assert plan["alternatives_reviewed"][1]["admitted"] is False
     assert plan["upstream_evidence"] == {
@@ -73,7 +76,7 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
     )
     assert {
         "checkpoint_local_hash_unverified",
-        "explicit_private_evaluation_approval_missing",
+        "checkpoint_companion_files_unverified",
         "runtime_source_materialisation_missing",
         "runtime_worker_not_implemented",
     }.issubset(plan["decision"]["blockers"])
@@ -97,6 +100,72 @@ def test_optional_local_observation_hashes_without_authorizing(tmp_path: Path) -
     assert plan["decision"]["private_evaluation_eligible"] is False
     assert plan["effects"]["local_checkpoint_opened"] is True
     assert plan["effects"]["model_imported"] is False
+
+
+def test_materialised_artifacts_complete_preflight_without_authorizing_worker(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    encoded = json.dumps(
+        {
+            "weight": {"dtype": "BF16", "shape": [2], "data_offsets": [0, 4]},
+            "__metadata__": None,
+        },
+        separators=(",", ":"),
+    ).encode()
+    checkpoint_contents = struct.pack("<Q", len(encoded)) + encoded + b"1234"
+    checkpoint = tmp_path / melroformer.CHECKPOINT_NAME
+    checkpoint.write_bytes(checkpoint_contents)
+    companion_root = tmp_path / "companions"
+    companion_root.mkdir()
+    config = companion_root / melroformer.CONFIG_NAME
+    license_file = companion_root / melroformer.LICENSE_NAME
+    config.write_bytes(b"config")
+    license_file.write_bytes(b"license")
+    source_root = tmp_path / "source"
+    source_root.mkdir()
+
+    monkeypatch.setattr(
+        melroformer, "CONVERSION_CHECKPOINT_BYTES", len(checkpoint_contents)
+    )
+    monkeypatch.setattr(
+        melroformer,
+        "CONVERSION_CHECKPOINT_SHA256",
+        hashlib.sha256(checkpoint_contents).hexdigest(),
+    )
+    monkeypatch.setattr(melroformer, "CONFIG_BYTES", len(b"config"))
+    monkeypatch.setattr(
+        melroformer, "CONFIG_SHA256", hashlib.sha256(b"config").hexdigest()
+    )
+    monkeypatch.setattr(melroformer, "LICENSE_BYTES", len(b"license"))
+    monkeypatch.setattr(
+        melroformer, "LICENSE_SHA256", hashlib.sha256(b"license").hexdigest()
+    )
+    monkeypatch.setattr(
+        melroformer,
+        "_verify_private_melroformer_source_tree",
+        lambda value: {"status": "verified_not_imported", "source_root": str(value)},
+    )
+
+    plan = melroformer._build_private_melroformer_challenger_plan(
+        checkpoint_path=checkpoint,
+        source_root=source_root,
+        companion_root=companion_root,
+    )
+
+    assert plan["checkpoint"]["static_inspection_completed"] is True
+    assert plan["checkpoint"]["static_inspection"]["tensor_count"] == 1
+    assert plan["checkpoint"]["static_inspection"][
+        "mlx_null_metadata_compatibility_applied"
+    ] is True
+    assert plan["source"]["runtime_source_materialised"] is True
+    assert plan["companion_files"][
+        "all_cryptographic_identities_verified"
+    ] is True
+    assert plan["decision"]["artifact_preflight_complete"] is True
+    assert plan["decision"]["private_evaluation_eligible"] is True
+    assert plan["decision"]["worker_start_permitted"] is False
+    assert "real_model_adapter_not_implemented" in plan["decision"]["blockers"]
+    assert "runtime_worker_not_implemented" in plan["decision"]["blockers"]
 
 
 def test_optional_local_observation_rejects_symlink(tmp_path: Path) -> None:

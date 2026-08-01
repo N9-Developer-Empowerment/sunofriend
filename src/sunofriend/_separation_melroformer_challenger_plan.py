@@ -23,6 +23,7 @@ from ._separation_melroformer_runtime_evidence import (
     SOURCE_MANIFEST,
     SOURCE_MANIFEST_SHA256,
     SOURCE_REVISION as RUNTIME_SOURCE_REVISION,
+    _verify_private_melroformer_source_tree,
 )
 from ._separation_melroformer_upstream_evidence import (
     CONVERSION_CHECKPOINT_BYTES,
@@ -37,12 +38,16 @@ from ._separation_melroformer_upstream_evidence import (
     UPSTREAM_EVIDENCE_SHA256,
 )
 from ._separation_melroformer_worker_protocol import SCHEMA as WORKER_PROTOCOL_SCHEMA
-from ._separation_safetensors_inspection import SCHEMA as SAFETENSORS_INSPECTION_SCHEMA
+from ._separation_safetensors_inspection import (
+    SCHEMA as SAFETENSORS_INSPECTION_SCHEMA,
+    _inspect_private_safetensors,
+)
 
 
-PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v2"
-POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v2"
+PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v3"
+POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v3"
 AUDITED_AT = "2026-08-01"
+APPROVAL_RECORDED_AT = "2026-08-01"
 CHECKPOINT_NAME = "model.safetensors"
 CHECKPOINT_URL = (
     "https://huggingface.co/mlx-community/"
@@ -58,15 +63,16 @@ LICENSE_SHA256 = "1aa245b55067df5c63c847894e7040f76fa79ddde83e9e5ed8a5c29ef1865c
 _BASE_BLOCKERS = (
     "apple_runtime_resource_bounds_unmeasured",
     "conversion_parity_not_independently_verified",
-    "explicit_private_evaluation_approval_missing",
-    "runtime_source_materialisation_missing",
+    "real_model_adapter_not_implemented",
     "runtime_worker_not_implemented",
-    "safetensors_static_inspection_not_completed",
 )
 
 
 def _build_private_melroformer_challenger_plan(
-    *, checkpoint_path: str | Path | None = None
+    *,
+    checkpoint_path: str | Path | None = None,
+    source_root: str | Path | None = None,
+    companion_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Return one deterministic plan without network, imports or execution."""
 
@@ -83,9 +89,46 @@ def _build_private_melroformer_challenger_plan(
             "cryptographic_identity_verified": False,
         }
     )
+    static_inspection = (
+        _inspect_private_safetensors(
+            local_checkpoint["path"],
+            expected_bytes=CONVERSION_CHECKPOINT_BYTES,
+            expected_sha256=CONVERSION_CHECKPOINT_SHA256,
+        )
+        if local_checkpoint["cryptographic_identity_verified"]
+        else None
+    )
+    source_observation = (
+        _verify_private_melroformer_source_tree(source_root)
+        if source_root is not None
+        else None
+    )
+    companion_observation = (
+        _inspect_companion_files(companion_root)
+        if companion_root is not None
+        else None
+    )
+    source_ready = source_observation is not None
+    companions_ready = bool(
+        companion_observation
+        and companion_observation["all_cryptographic_identities_verified"]
+    )
+    inspection_ready = static_inspection is not None
+    artifact_preflight_complete = bool(
+        local_checkpoint["cryptographic_identity_verified"]
+        and source_ready
+        and companions_ready
+        and inspection_ready
+    )
     blockers = list(_BASE_BLOCKERS)
     if not local_checkpoint["cryptographic_identity_verified"]:
         blockers.append("checkpoint_local_hash_unverified")
+    if not source_ready:
+        blockers.append("runtime_source_materialisation_missing")
+    if not companions_ready:
+        blockers.append("checkpoint_companion_files_unverified")
+    if not inspection_ready:
+        blockers.append("safetensors_static_inspection_not_completed")
     blockers.sort()
     return {
         "schema": PLAN_SCHEMA,
@@ -123,7 +166,8 @@ def _build_private_melroformer_challenger_plan(
             "runtime_source_manifest": SOURCE_MANIFEST,
             "runtime_source_manifest_sha256": SOURCE_MANIFEST_SHA256,
             "runtime_source_audited_by_sunofriend": True,
-            "runtime_source_materialised": False,
+            "runtime_source_materialised": source_ready,
+            "runtime_source_observation": source_observation,
             "upstream_from_pretrained_permitted": False,
             "stale_runtime_gpl_comment_recorded": True,
         },
@@ -149,22 +193,27 @@ def _build_private_melroformer_challenger_plan(
             "download_permitted": False,
             "static_inspection_contract": SAFETENSORS_INSPECTION_SCHEMA,
             "static_inspection_contract_defined": True,
-            "static_inspection_completed": False,
+            "static_inspection_completed": inspection_ready,
+            "static_inspection": static_inspection,
             "model_loading_permitted": False,
             "redistribution_approved_by_sunofriend": False,
             "local_observation": local_checkpoint,
         },
         "companion_files": {
-            CONFIG_NAME: {
-                "bytes": CONFIG_BYTES,
-                "sha256": CONFIG_SHA256,
-                "identity_pinned": True,
+            "published": {
+                CONFIG_NAME: {
+                    "bytes": CONFIG_BYTES,
+                    "sha256": CONFIG_SHA256,
+                    "identity_pinned": True,
+                },
+                LICENSE_NAME: {
+                    "bytes": LICENSE_BYTES,
+                    "sha256": LICENSE_SHA256,
+                    "identity_pinned": True,
+                },
             },
-            LICENSE_NAME: {
-                "bytes": LICENSE_BYTES,
-                "sha256": LICENSE_SHA256,
-                "identity_pinned": True,
-            },
+            "local_observation": companion_observation,
+            "all_cryptographic_identities_verified": companions_ready,
         },
         "licensing": {
             "original_checkpoint_owner": "Kimberley Jensen",
@@ -174,7 +223,10 @@ def _build_private_melroformer_challenger_plan(
             "conversion_license_names_original_weights": True,
             "private_local_evaluation_allowed_by_published_terms": True,
             "legal_advice": False,
-            "explicit_user_approval_recorded": False,
+            "explicit_user_approval_recorded": True,
+            "approval_recorded_at": APPROVAL_RECORDED_AT,
+            "approval_scope": "exact checkpoint for private local evaluation only",
+            "checkpoint_redistribution_approved": False,
         },
         "alternatives_reviewed": [
             {
@@ -269,14 +321,11 @@ def _build_private_melroformer_challenger_plan(
                 "cryptographic_identity_verified"
             ],
             "checkpoint_terms_verified": True,
-            "private_evaluation_eligible": False,
+            "artifact_preflight_complete": artifact_preflight_complete,
+            "private_evaluation_eligible": artifact_preflight_complete,
             "worker_start_permitted": False,
             "blockers": blockers,
             "next_safe_actions": [
-                "request explicit private-evaluation approval before any download or install",
-                "after approval, materialise and verify the exact source and runtime without using the upstream convenience loader",
-                "after approval, acquire and hash the exact local checkpoint without importing the model",
-                "apply the bounded Safetensors header and tensor inventory inspection before any tensor load",
                 "implement the isolated real-model bridge behind the synthetic-only adapter contract",
                 "implement the two-role excerpt worker behind the existing non-executable protocol",
                 "measure resource and offline bounds before any wider evaluation",
@@ -285,6 +334,8 @@ def _build_private_melroformer_challenger_plan(
         "effects": {
             "filesystem_written": False,
             "local_checkpoint_opened": local_checkpoint["provided"],
+            "runtime_source_opened": source_ready,
+            "checkpoint_companions_opened": companion_root is not None,
             "network_used": False,
             "package_installed": False,
             "checkpoint_downloaded": False,
@@ -294,6 +345,68 @@ def _build_private_melroformer_challenger_plan(
             "source_graph_changed": False,
             "simple_or_studio_availability_changed": False,
         },
+    }
+
+
+def _inspect_companion_files(value: str | Path) -> dict[str, Any]:
+    root = Path(value).expanduser().absolute()
+    if not root.is_dir() or root.is_symlink():
+        raise ValueError("MelBand-RoFormer companion root must be a directory")
+    files = {
+        CONFIG_NAME: _inspect_file_identity(
+            root / CONFIG_NAME, expected_bytes=CONFIG_BYTES, expected_sha256=CONFIG_SHA256
+        ),
+        LICENSE_NAME: _inspect_file_identity(
+            root / LICENSE_NAME,
+            expected_bytes=LICENSE_BYTES,
+            expected_sha256=LICENSE_SHA256,
+        ),
+    }
+    return {
+        "root": str(root),
+        "files": files,
+        "all_cryptographic_identities_verified": all(
+            item["cryptographic_identity_verified"] for item in files.values()
+        ),
+    }
+
+
+def _inspect_file_identity(
+    path: Path, *, expected_bytes: int, expected_sha256: str
+) -> dict[str, Any]:
+    before = path.lstat()
+    if (
+        stat.S_ISLNK(before.st_mode)
+        or not stat.S_ISREG(before.st_mode)
+        or before.st_nlink != 1
+    ):
+        raise ValueError("MelBand-RoFormer companion must be a single-link regular file")
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+    descriptor = os.open(path, flags)
+    try:
+        os.set_inheritable(descriptor, False)
+        opened = os.fstat(descriptor)
+        if os.get_inheritable(descriptor) or _identity(opened) != _identity(before):
+            raise ValueError("MelBand-RoFormer companion changed before hashing")
+        digest = hashlib.sha256()
+        while block := os.read(descriptor, 1024 * 1024):
+            digest.update(block)
+        after = os.fstat(descriptor)
+    finally:
+        os.close(descriptor)
+    rebound = path.lstat()
+    if _identity(after) != _identity(opened) or _identity(rebound) != _identity(opened):
+        raise ValueError("MelBand-RoFormer companion changed during hashing")
+    sha256 = digest.hexdigest()
+    size_match = opened.st_size == expected_bytes
+    hash_match = sha256 == expected_sha256
+    return {
+        "path": str(path),
+        "bytes": opened.st_size,
+        "sha256": sha256,
+        "published_size_match": size_match,
+        "published_sha256_match": hash_match,
+        "cryptographic_identity_verified": size_match and hash_match,
     }
 
 
@@ -339,11 +452,12 @@ def _inspect_local_checkpoint(value: str | Path) -> dict[str, Any]:
     }
 
 
-def _identity(value: os.stat_result) -> tuple[int, int, int, int, int]:
+def _identity(value: os.stat_result) -> tuple[int, int, int, int, int, int]:
     return (
         value.st_dev,
         value.st_ino,
         value.st_mode,
+        value.st_nlink,
         value.st_size,
         value.st_mtime_ns,
     )
@@ -351,9 +465,11 @@ def _identity(value: os.stat_result) -> tuple[int, int, int, int, int]:
 
 __all__ = [
     "AUDITED_AT",
+    "APPROVAL_RECORDED_AT",
     "CHECKPOINT_NAME",
     "CHECKPOINT_URL",
     "PLAN_SCHEMA",
     "_build_private_melroformer_challenger_plan",
     "_inspect_local_checkpoint",
+    "_inspect_companion_files",
 ]

@@ -247,8 +247,9 @@ report the result, then move on.
   independent source-file records reproduce the original hash. A user-supplied
   evidence pack was reviewed as a secondary lead only; its downloader was not
   executed, and its hash-stable ViperX alternatives remain rejected because
-  their creator-authorised terms are unverified. Kim Vocal 2 is still
-  `blocked`/`not_run`. Its exact MLX-Audio `v0.4.3` source surface and minimal
+  their creator-authorised terms are unverified. The user explicitly approved
+  the exact Kim Vocal 2 checkpoint for private local evaluation on 1 August
+  2026. Its exact MLX-Audio `v0.4.3` source surface and minimal
   MLX/MLX-Metal/NumPy runtime are now size/hash pinned and licence audited. The
   network-capable upstream convenience loader is forbidden; a stale GPL
   source comment is recorded but checkpoint terms remain bound to the owner's
@@ -258,10 +259,13 @@ report the result, then move on.
   a model or start a worker. A separate synthetic-only adapter contract now
   validates stereo geometry, finite audio, complete post-sanitisation model-key
   coverage and vocals-plus-instrumental accounting from precomputed fake data;
-  it cannot invoke an engine or persist outputs. No user approval for this
-  exact candidate, local checkpoint inspection, real-model bridge, worker,
-  independent parity or Mac resource/offline evidence exists. No package or
-  model was downloaded. Do not offer or run it through this skill.
+  it cannot invoke an engine or persist outputs. The exact source, checkpoint,
+  config and licence now live in an owner-only non-repository cache and pass
+  their pinned identities. Header-only inspection found 708 BF16 tensors and
+  a non-canonical null metadata value, which is reported explicitly and treated
+  only as empty MLX metadata. The real-model bridge, worker, independent parity
+  and Mac resource/offline evidence do not yet exist. The checkpoint is not
+  redistributed. Do not offer or run this challenger through the skill.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one
   canonical WAV project. It does not separate, shift, pad, stretch, normalize

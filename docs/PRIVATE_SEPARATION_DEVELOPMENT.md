@@ -776,13 +776,13 @@ PYTHONPATH=src .venv/bin/python \
   --repository-root /absolute/path/to/Sunofriend
 ```
 
-Both commands are read-only and have no public CLI/TUI route. The plan remains
-`blocked`/`not_run`: no explicit approval has been recorded for this model and
-the local Safetensors identity and tensor inventory are therefore still
-unverified. Published 66.08 dB conversion parity is not Sunofriend-verified,
-no executable worker exists, and Mac resource/offline behaviour is unmeasured.
-No package or checkpoint was installed or downloaded, and Simple, Studio and
-the source graph are unchanged.
+Both commands are read-only and have no public CLI/TUI route. Explicit approval
+for the exact Kim Vocal 2 checkpoint's private local evaluation was recorded on
+1 August 2026. The exact checkpoint, `config.json`, `LICENSE` and audited
+MLX-Audio source slice were then materialised under an owner-only cache outside
+the repository. Their published byte counts and SHA-256 identities all match.
+The checkpoint is not redistributed and Simple, Studio and the source graph
+remain unchanged.
 
 The exact non-executable runtime boundary is now defined. MLX-Audio `v0.4.3`
 resolves to source revision
@@ -806,14 +806,32 @@ GPL-3.0 even though the checkpoint owner had already published the immutable
 MIT relicense before MLX-Audio `v0.4.3` was released. It is recorded as stale
 runtime documentation; it is not used as the source of checkpoint terms.
 
-`_separation_safetensors_inspection.py` now implements a pure-standard-library,
+`_separation_safetensors_inspection.py` implements a pure-standard-library,
 descriptor-pinned inspection contract. It bounds and parses only the UTF-8
 JSON header, rejects duplicate keys, unsupported metadata, invalid dtype/shape
 geometry, holes, overlaps, trailing polyglot bytes, symlinks and hash changes,
 then hashes tensor data as opaque bytes. It never imports Safetensors, NumPy,
-MLX or a model and never interprets tensor values. The contract has not been
-applied to the 456 MB checkpoint because that checkpoint is not local and no
-download is approved.
+MLX or a model and never interprets tensor values. The real checkpoint passed:
+its 77,111-byte header indexes 708 BF16 tensors and 456,406,344 opaque data
+bytes, with tensor-name-set SHA-256
+`2b55335e7522351a36feda283dedb8b44deb7f51a932b289e68a816c11328d59`.
+Its converter wrote `__metadata__: null`, which is not the Safetensors
+string-to-string-map form. The inspector accepts only that one null-as-empty
+compatibility case and reports `metadata_spec_conformant: false`; it continues
+to reject every other unsupported metadata shape.
+
+Reproduce the private, non-deserialising artifact preflight with:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/private-melroformer-challenger.py \
+  --plan \
+  --checkpoint /absolute/private/cache/model.safetensors \
+  --source-root /absolute/private/cache/mlx-audio-source \
+  --companion-root /absolute/private/cache/checkpoint-directory
+```
+
+The current v3 result has `artifact_preflight_complete: true` while retaining
+`worker_start_permitted: false`.
 
 `_separation_melroformer_worker_protocol.py` fixes one or two path-free,
 canonical stereo 44.1 kHz PCM24 excerpts of at most 15 seconds, serial
@@ -845,12 +863,13 @@ PYTHONPATH=src .venv/bin/python \
   --repository-root /absolute/path/to/Sunofriend
 ```
 
-The next gated increment requires a separate explicit approval for this exact
-Kim Vocal 2 private evaluation. Only after that approval may the exact source,
-runtime and checkpoint be materialised; the local checkpoint must then pass
-the bounded static inspection before any model import or tensor load. The
-real-model bridge must produce evidence accepted by the synthetic-tested core
-before the two-role worker can be enabled for a private excerpt.
+The next increment is the isolated real-model bridge. It must reverify the
+source and checkpoint immediately before import, bypass the upstream package
+initialisers and network-capable convenience loader, prove complete
+post-sanitisation model-key coverage, and produce evidence accepted by the
+synthetic-tested core. Only then may a single private synthetic smoke test and
+one sealed authorised excerpt run. Resource and offline behaviour remain
+unmeasured, so the two-role worker and every public route are still blocked.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,

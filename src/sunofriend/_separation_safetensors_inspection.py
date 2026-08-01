@@ -135,6 +135,11 @@ def _inspect_private_safetensors(
         "tensor_names_sha256": inventory["tensor_names_sha256"],
         "dtype_counts": inventory["dtype_counts"],
         "metadata_keys": inventory["metadata_keys"],
+        "metadata_encoding": inventory["metadata_encoding"],
+        "metadata_spec_conformant": inventory["metadata_spec_conformant"],
+        "mlx_null_metadata_compatibility_applied": inventory[
+            "mlx_null_metadata_compatibility_applied"
+        ],
         "metadata_values_observed": False,
         "tensor_values_observed": False,
         "tensor_library_imported": False,
@@ -180,12 +185,26 @@ def _parse_unique_json(contents: bytes) -> dict[str, Any]:
 
 
 def _validate_inventory(header: dict[str, Any], *, data_bytes: int) -> dict[str, Any]:
-    metadata = header.get("__metadata__", {})
-    if not isinstance(metadata, dict) or not all(
+    metadata_value = header.get("__metadata__", {})
+    if metadata_value is None:
+        # The MLX conversion used by the pinned Kim Vocal 2 checkpoint writes
+        # JSON null here.  Safetensors documents a string-to-string map, so do
+        # not disguise this as standards-conformant metadata.  Treating null as
+        # an empty map cannot enlarge or reinterpret the tensor inventory.
+        metadata: dict[str, str] = {}
+        metadata_encoding = "json_null_treated_as_empty_for_mlx_compatibility"
+        metadata_spec_conformant = False
+        mlx_null_metadata_compatibility_applied = True
+    elif isinstance(metadata_value, dict) and all(
         isinstance(key, str) and isinstance(value, str)
-        for key, value in metadata.items()
+        for key, value in metadata_value.items()
     ):
-        raise ValueError("Safetensors metadata must map strings to strings")
+        metadata = metadata_value
+        metadata_encoding = "string_to_string_map"
+        metadata_spec_conformant = True
+        mlx_null_metadata_compatibility_applied = False
+    else:
+        raise ValueError("Safetensors metadata must map strings to strings or be null")
     tensor_items = [(key, value) for key, value in header.items() if key != "__metadata__"]
     if len(tensor_items) > MAX_TENSORS:
         raise ValueError("Safetensors tensor count exceeds the inspection bound")
@@ -251,6 +270,11 @@ def _validate_inventory(header: dict[str, Any], *, data_bytes: int) -> dict[str,
         "tensor_names_sha256": hashlib.sha256(names_bytes).hexdigest(),
         "dtype_counts": dict(sorted(dtype_counts.items())),
         "metadata_keys": sorted(metadata),
+        "metadata_encoding": metadata_encoding,
+        "metadata_spec_conformant": metadata_spec_conformant,
+        "mlx_null_metadata_compatibility_applied": (
+            mlx_null_metadata_compatibility_applied
+        ),
     }
 
 

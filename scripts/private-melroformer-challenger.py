@@ -28,13 +28,23 @@ def main() -> int:
     parser.add_argument(
         "--checkpoint",
         help=(
-            "optionally hash an already-present local Safetensors file; this "
-            "does not inspect tensors or permit execution"
+            "optionally hash and statically inspect the already-present exact "
+            "Safetensors file; this does not deserialize tensors or permit execution"
         ),
+    )
+    parser.add_argument(
+        "--source-root",
+        help="optionally verify the materialised exact audited MLX-Audio source tree",
+    )
+    parser.add_argument(
+        "--companion-root",
+        help="optionally verify the checkpoint config.json and LICENSE directory",
     )
     args = parser.parse_args()
     result = _build_private_melroformer_challenger_plan(
-        checkpoint_path=args.checkpoint
+        checkpoint_path=args.checkpoint,
+        source_root=args.source_root,
+        companion_root=args.companion_root,
     )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0
