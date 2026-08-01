@@ -281,7 +281,9 @@ report the result, then move on.
   profile. This is OS denial evidence for the canary only: it is not bound to
   a model worker, does not observe arbitrary model attempts and does not
   confine writes or descendants or close hash-before-exec path TOCTOU. PCM24
-  persistence, the worker, independent
+  persistence is separately implemented and parent-verified for precomputed
+  synthetic arrays through the maximum 15-second geometry, but is not bound to
+  the worker and does not prove outside-write denial. The worker, independent
   parity, downstream MIDI and human listening do not yet exist. The
   checkpoint is not redistributed. Do not offer or run this challenger through
   the skill.

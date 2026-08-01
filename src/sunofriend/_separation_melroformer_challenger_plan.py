@@ -19,6 +19,9 @@ from ._separation_melroformer_adapter_contract import (
     SCHEMA as ADAPTER_OBSERVATION_SCHEMA,
 )
 from ._separation_macos_sandbox_probe import SCHEMA as SANDBOX_CANARY_SCHEMA
+from ._separation_melroformer_pcm24_quarantine import (
+    SCHEMA as PCM24_QUARANTINE_SCHEMA,
+)
 from ._separation_melroformer_runtime_evidence import (
     RUNTIME_LOCK,
     RUNTIME_LOCK_SHA256,
@@ -46,8 +49,8 @@ from ._separation_safetensors_inspection import (
 )
 
 
-PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v6"
-POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v6"
+PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v7"
+POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v7"
 AUDITED_AT = "2026-08-01"
 APPROVAL_RECORDED_AT = "2026-08-01"
 CHECKPOINT_NAME = "model.safetensors"
@@ -66,7 +69,7 @@ _BASE_BLOCKERS = (
     "conversion_parity_not_independently_verified",
     "operating_system_network_denial_not_bound_to_model_worker",
     "outbound_model_attempt_observation_not_implemented",
-    "pcm24_output_persistence_not_implemented",
+    "pcm24_output_quarantine_not_bound_to_worker",
     "runtime_worker_not_implemented",
 )
 
@@ -309,6 +312,13 @@ def _build_private_melroformer_challenger_plan(
             },
             "network_denial_bound_to_model_worker": False,
             "outbound_model_attempt_observation_implemented": False,
+            "pcm24_quarantine_schema": PCM24_QUARANTINE_SCHEMA,
+            "pcm24_quarantine_implemented": True,
+            "pcm24_quarantine_synthetic_full_excerpt_passed": True,
+            "pcm24_quarantine_deterministic_bytes_observed": True,
+            "pcm24_quarantine_maximum_reconstruction_error_lsb": 2,
+            "pcm24_quarantine_bound_to_worker": False,
+            "pcm24_quarantine_outside_write_denial_proven": False,
             "apple_resource_bounds_measured": True,
             "resource_measurement_host": "Apple silicon Mac with 36 GB RAM",
             "supported_private_devices": ["gpu", "cpu"],
@@ -454,8 +464,8 @@ def _build_private_melroformer_challenger_plan(
             "worker_start_permitted": False,
             "blockers": blockers,
             "next_safe_actions": [
-                "bind the proven network-denial profile to the two-role excerpt worker without treating the canary as model-attempt observation",
-                "confine, persist and parent-verify PCM24 reconstruction before any wider evaluation",
+                "bind the proven network-denial profile and PCM24 quarantine to the fixed two-role worker without treating the canary as model-attempt observation",
+                "prove outside-write and descendant denial before any wider evaluation",
             ],
         },
         "effects": {

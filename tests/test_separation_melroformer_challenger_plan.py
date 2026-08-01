@@ -75,6 +75,11 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
     assert (
         plan["runtime"]["outbound_model_attempt_observation_implemented"] is False
     )
+    assert plan["runtime"]["pcm24_quarantine_implemented"] is True
+    assert (
+        plan["runtime"]["pcm24_quarantine_synthetic_full_excerpt_passed"] is True
+    )
+    assert plan["runtime"]["pcm24_quarantine_bound_to_worker"] is False
     assert plan["runtime"]["synthetic_adapter_contract_defined"] is True
     assert plan["runtime"]["real_model_bridge_probe_implemented"] is True
     assert plan["runtime"]["real_adapter_implemented"] is True
@@ -213,7 +218,9 @@ def test_materialised_artifacts_complete_preflight_without_authorizing_worker(
         "full_excerpt_chunk_transport_not_implemented"
         not in plan["decision"]["blockers"]
     )
-    assert "pcm24_output_persistence_not_implemented" in plan["decision"]["blockers"]
+    assert "pcm24_output_quarantine_not_bound_to_worker" in plan["decision"][
+        "blockers"
+    ]
     assert "runtime_worker_not_implemented" in plan["decision"]["blockers"]
 
 

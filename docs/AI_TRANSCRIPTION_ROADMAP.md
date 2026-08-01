@@ -1697,6 +1697,33 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-01 — deterministic PCM24 quarantine boundary
+
+- Goal: prove the exact two-file persistence and parent-verification logic
+  independently of the model process.
+- Change or experiment: added a standard-library deterministic PCM24 encoder
+  and fresh owner-only quarantine for fixed `vocals.wav` and
+  `instrumental.wav` outputs. The parent reopens both files read-only, verifies
+  the exact entry allowlist, permissions, hashes, canonical 44.1 kHz stereo
+  geometry and integer-domain source reconstruction.
+- Inputs: precomputed synthetic arrays only, including the maximum 661,500
+  frame, 15-second geometry. No model, checkpoint or authorised song audio.
+- Evidence and metrics: two identical materializations produced identical
+  hashes and self-hashed path-free evidence. The full-length files were
+  3,969,044 bytes each. Reconstruction passed the fixed maximum two-LSB policy;
+  the silent full-length canary was exact at zero LSB.
+- Listening result: not applicable; this tests encoding and evidence, not
+  separation quality.
+- Decision: replace “PCM24 persistence not implemented” with the narrower
+  blocker “PCM24 quarantine not bound to worker.” Keep product and publication
+  permissions false.
+- Problems/risks: the writer currently receives precomputed arrays in-process;
+  outside-write denial, worker provenance, descendant denial and immutability
+  after the parent observation remain unproven.
+- Next smallest step: bind this exact boundary and the proven network-denial
+  profile to one fixed private worker, then verify the real authorised excerpt
+  before downstream MIDI evaluation.
+
 ### 2026-08-01 — macOS network-denial canary
 
 - Goal: replace the MelRoFormer plan's executable-presence assumption with an
@@ -1941,7 +1968,10 @@ three
 eight-second chunks at a four-second hop, returned the exact 661,500-frame
 horizon in about 2.6 seconds, reported about 2.42 GB peak MLX memory and passed
 additive residual accounting at `7.45e-9` maximum float32 error. No output was
-persisted.
+persisted by that run. A separate model-independent PCM24 boundary now writes
+and parent-verifies exact deterministic vocals/instrumental files from
+precomputed arrays, including the full 15-second geometry, but it is not yet
+bound to the worker or authorised excerpt.
 
 The same adapter then accepted the exact self-hashed `Be Alone` 191–206 second
 authorisation receipt and its hash-bound PCM24 model input. The real-song run

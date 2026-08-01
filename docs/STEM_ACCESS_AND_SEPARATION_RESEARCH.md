@@ -1018,6 +1018,17 @@ hash-before-exec does not close provider/runtime path TOCTOU. The next
 worker must preserve separate evidence for network denial, attempted-
 connection observation, descendant control and outside-write confinement.
 
+The output side is now independently executable without a model. A fixed
+two-role materializer accepts only bounded finite stereo 44.1 kHz arrays,
+creates a fresh owner-only quarantine containing exactly `vocals.wav` and
+`instrumental.wav`, encodes deterministic PCM24, then reopens both files
+read-only and verifies hashes, canonical geometry and integer-domain additive
+reconstruction. The maximum 15-second synthetic geometry passed at 3,969,044
+bytes per output, and two identical runs produced identical hashes. This
+closes the encoder/parent-verifier contract only. It does not prove worker
+execution, outside-write denial, post-observation immutability or model
+quality, and it grants no activation, selection, publication or product route.
+
 ## Terminology contract
 
 The user-facing definitions are in [Stems](STEMS.md). The implementation must
