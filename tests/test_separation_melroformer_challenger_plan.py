@@ -80,6 +80,15 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
         plan["runtime"]["pcm24_quarantine_synthetic_full_excerpt_passed"] is True
     )
     assert plan["runtime"]["pcm24_quarantine_bound_to_worker"] is False
+    assert plan["runtime"]["synthetic_worker_sandbox_implemented"] is True
+    assert (
+        plan["runtime"]["synthetic_worker_sandbox_latest_observation"][
+            "evidence_sha256"
+        ]
+        == "8b1a91a95609d09175be6240af2a9d44f5bd8161249ebab01b9878e7cb406cb4"
+    )
+    assert plan["runtime"]["synthetic_worker_implemented"] is True
+    assert plan["runtime"]["model_worker_implemented"] is False
     assert plan["runtime"]["synthetic_adapter_contract_defined"] is True
     assert plan["runtime"]["real_model_bridge_probe_implemented"] is True
     assert plan["runtime"]["real_adapter_implemented"] is True

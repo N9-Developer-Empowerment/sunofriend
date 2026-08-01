@@ -1029,6 +1029,18 @@ closes the encoder/parent-verifier contract only. It does not prove worker
 execution, outside-write denial, post-observation immutability or model
 quality, and it grants no activation, selection, publication or product route.
 
+The first combined boundary is also complete without a model. A fixed
+synthetic worker ran under one profile that denies `network*`, `process-fork`
+and every file write outside its fresh private staging tree. Deliberate network,
+fork and outside-tree write canaries each returned `EPERM`; the child wrote
+only the two allowed PCM24 files, and its quarantine evidence matched the
+parent's independent re-read exactly. The path-free run evidence SHA-256 is
+`8b1a91a95609d09175be6240af2a9d44f5bd8161249ebab01b9878e7cb406cb4`.
+This proves the controls can coexist for a code-owned synthetic worker, not
+for MLX/model execution. The full imported Python closure and
+hash-before-exec path identity are not sealed, and arbitrary denied attempts
+are not streamed to an independent observer.
+
 ## Terminology contract
 
 The user-facing definitions are in [Stems](STEMS.md). The implementation must

@@ -22,6 +22,9 @@ from ._separation_macos_sandbox_probe import SCHEMA as SANDBOX_CANARY_SCHEMA
 from ._separation_melroformer_pcm24_quarantine import (
     SCHEMA as PCM24_QUARANTINE_SCHEMA,
 )
+from ._separation_melroformer_worker_sandbox import (
+    SCHEMA as SYNTHETIC_WORKER_SANDBOX_SCHEMA,
+)
 from ._separation_melroformer_runtime_evidence import (
     RUNTIME_LOCK,
     RUNTIME_LOCK_SHA256,
@@ -49,8 +52,8 @@ from ._separation_safetensors_inspection import (
 )
 
 
-PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v7"
-POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v7"
+PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v8"
+POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v8"
 AUDITED_AT = "2026-08-01"
 APPROVAL_RECORDED_AT = "2026-08-01"
 CHECKPOINT_NAME = "model.safetensors"
@@ -319,6 +322,23 @@ def _build_private_melroformer_challenger_plan(
             "pcm24_quarantine_maximum_reconstruction_error_lsb": 2,
             "pcm24_quarantine_bound_to_worker": False,
             "pcm24_quarantine_outside_write_denial_proven": False,
+            "synthetic_worker_sandbox_schema": SYNTHETIC_WORKER_SANDBOX_SCHEMA,
+            "synthetic_worker_sandbox_implemented": True,
+            "synthetic_worker_sandbox_passed_on_development_host": True,
+            "synthetic_worker_sandbox_latest_observation": {
+                "observed_at": "2026-08-01",
+                "evidence_sha256": (
+                    "8b1a91a95609d09175be6240af2a9d44f5bd8161249ebab01b9878e7cb406cb4"
+                ),
+                "network_denial_canary": "EPERM",
+                "child_process_denial_canary": "EPERM",
+                "outside_write_denial_canary": "EPERM",
+                "child_and_parent_pcm24_evidence_identical": True,
+                "model_or_checkpoint_loaded": False,
+                "complete_python_import_closure_bound": False,
+            },
+            "synthetic_worker_implemented": True,
+            "model_worker_implemented": False,
             "apple_resource_bounds_measured": True,
             "resource_measurement_host": "Apple silicon Mac with 36 GB RAM",
             "supported_private_devices": ["gpu", "cpu"],

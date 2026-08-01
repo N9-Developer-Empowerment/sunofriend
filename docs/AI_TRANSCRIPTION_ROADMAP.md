@@ -1697,6 +1697,33 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-01 — isolated synthetic two-role worker
+
+- Goal: bind the denial and PCM24 boundaries to one child process before
+  loading the real checkpoint.
+- Change or experiment: added a fixed private synthetic worker launched by the
+  parent through `sandbox-exec`. The profile denies all network operations,
+  process forks and writes outside one fresh owner-only staging tree. The child
+  deliberately attempts one operation in each denied class, writes the two
+  deterministic PCM24 outputs, and returns path-free evidence; the parent
+  independently reopens and verifies the output tree.
+- Inputs: the exact `.venv-ai` launcher and code-owned 4,096-frame synthetic
+  arrays. No authorised audio, model or checkpoint.
+- Evidence and metrics: network connect, `fork()` and outside-tree create each
+  returned `EPERM`. Child and parent PCM24 evidence matched at SHA-256
+  `6e7b30431e9b01e8e3802876508d3e07d7fbe94150cbe5284c924de81355d784`;
+  the complete run is sealed as
+  `8b1a91a95609d09175be6240af2a9d44f5bd8161249ebab01b9878e7cb406cb4`.
+- Listening result: not applicable; the files contain a mathematical canary.
+- Decision: the isolation and persistence rules can coexist in one synthetic
+  worker. Do not transfer that result to the model worker yet.
+- Problems/risks: the profile provider is deprecated; arbitrary attempt
+  observation, hash-before-exec path TOCTOU and complete Python import closure
+  remain open. Ordinary output bytes can change after the parent observation.
+- Next smallest step: add the real authorised-excerpt action to this exact
+  worker, bind all model/source/checkpoint evidence, then run it once under the
+  same profile and reverify its PCM24 outputs.
+
 ### 2026-08-01 — deterministic PCM24 quarantine boundary
 
 - Goal: prove the exact two-file persistence and parent-verification logic

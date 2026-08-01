@@ -283,8 +283,12 @@ report the result, then move on.
   confine writes or descendants or close hash-before-exec path TOCTOU. PCM24
   persistence is separately implemented and parent-verified for precomputed
   synthetic arrays through the maximum 15-second geometry, but is not bound to
-  the worker and does not prove outside-write denial. The worker, independent
-  parity, downstream MIDI and human listening do not yet exist. The
+  the model worker. A separate synthetic child has successfully combined
+  network, fork and outside-write `EPERM` canaries with the two-file PCM24
+  quarantine and an identical parent re-read. It loaded no model, checkpoint
+  or authorised audio, does not bind the full Python import closure and cannot
+  authorize the model worker. The model worker, independent parity, downstream
+  MIDI and human listening do not yet exist. The
   checkpoint is not redistributed. Do not offer or run this challenger through
   the skill.
 - `source-import` decodes exactly one local asset.
