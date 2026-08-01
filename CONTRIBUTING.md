@@ -96,10 +96,14 @@ Add a deterministic regression test for behaviour changes. Preserve existing
 golden outputs unless the change is intentional and explained with updated
 stem-to-MIDI metrics.
 
-GitHub Actions runs the portable suite on Linux and macOS and the complete
-audio/ML stack on macOS. Tests marked `trusted_local` are live security probes
-for a locally owned macOS compiler and Python runtime; hosted runners cannot
-satisfy those ownership guarantees. Run them on a trusted Mac with:
+GitHub Actions runs the broad non-separation suite on Linux, the complete
+Python suite on macOS, and a second macOS audio/ML job with FluidSynth. The
+separation launch contracts intentionally bind Apple Silicon and macOS
+security behaviour, so they are not treated as Linux portability tests.
+
+Tests marked `trusted_local` are live security probes for a locally owned
+macOS compiler and Python runtime; hosted runners cannot satisfy those
+ownership guarantees. Run them on a trusted Mac with:
 
 ```bash
 python -m pytest -m trusted_local

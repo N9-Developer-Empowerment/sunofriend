@@ -197,6 +197,36 @@ class TuiInteractionTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(app.query_one(TabbedContent).active, "simple")
                 self.assertFalse((state / "workbench.sqlite3").exists())
 
+    async def test_unmount_discards_a_slow_project_refresh(self) -> None:
+        from sunofriend.tui_model import load_tui_project as real_load
+
+        with tempfile.TemporaryDirectory() as temporary:
+            project, candidates = _fixture(Path(temporary))
+            calls = 0
+
+            def delayed_second_load(config):
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    time.sleep(0.25)
+                return real_load(config)
+
+            app = SunofriendTui(project=project, candidate_roots=(candidates,))
+            with patch(
+                "sunofriend.tui.load_tui_project",
+                side_effect=delayed_second_load,
+            ):
+                async with app.run_test(size=(150, 50)) as pilot:
+                    for _ in range(100):
+                        await pilot.pause(0.02)
+                        if app.snapshot is not None:
+                            break
+                    self.assertIsNotNone(app.snapshot)
+                    app.action_refresh_project()
+                    await pilot.pause(0.01)
+
+            self.assertEqual(calls, 2)
+
     async def test_simple_mode_requires_whole_mixed_folder_preparation(
         self,
     ) -> None:

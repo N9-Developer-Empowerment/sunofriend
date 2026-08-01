@@ -1165,6 +1165,7 @@ class SunofriendTui(App[None]):
         # background load must not try to update an already unmounted screen.
         self._project_load_sequence += 1
         self._project_loading = False
+        self.workers.cancel_group(self, "project-load")
         await self._stop_simple_create(notify_timeout=False)
         await self._stop_full_conversion(notify_timeout=False)
         await self._wait_for_listening_master(notify_timeout=False)
@@ -1228,7 +1229,10 @@ class SunofriendTui(App[None]):
         try:
             snapshot = await asyncio.to_thread(load_tui_project, config)
         except Exception as exc:
-            if sequence != self._project_load_sequence:
+            if (
+                sequence != self._project_load_sequence
+                or not self.query("#load-project").nodes
+            ):
                 return
             self._project_loading = False
             self._simple_start_after_load = False
@@ -1246,7 +1250,10 @@ class SunofriendTui(App[None]):
             self._activity("error", _safe_exception_message(exc))
             self.notify(_safe_exception_message(exc), severity="error", timeout=8)
             return
-        if sequence != self._project_load_sequence:
+        if (
+            sequence != self._project_load_sequence
+            or not self.query("#load-project").nodes
+        ):
             return
         self._apply_snapshot(snapshot)
 

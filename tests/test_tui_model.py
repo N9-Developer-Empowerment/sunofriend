@@ -111,6 +111,8 @@ class TuiModelTests(unittest.TestCase):
                 path.relative_to(state): path.read_bytes()
                 for path in state.rglob("*")
                 if path.is_file()
+                and path.name
+                not in {"workbench.sqlite3-wal", "workbench.sqlite3-shm"}
             }
 
             snapshot = load_tui_project(
@@ -132,6 +134,8 @@ class TuiModelTests(unittest.TestCase):
                 path.relative_to(state): path.read_bytes()
                 for path in state.rglob("*")
                 if path.is_file()
+                and path.name
+                not in {"workbench.sqlite3-wal", "workbench.sqlite3-shm"}
             }
             self.assertEqual(state_after, state_before)
             self.assertEqual(len(store.events(catalog["project_id"])), before)

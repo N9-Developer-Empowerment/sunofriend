@@ -460,7 +460,13 @@ class WorkbenchDecodedArrangementArtifactTests(unittest.TestCase):
 
             first_stem = catalog["stems"][0]
             first_candidate = first_stem["candidates"][0]
-            with patch.object(module, "_DECODED_LOOP_CACHE_MAXIMUM_ENTRIES", 1):
+            with (
+                patch(
+                    "sunofriend.workbench_artifacts.render_midi_to_wav",
+                    side_effect=_render_preview,
+                ),
+                patch.object(module, "_DECODED_LOOP_CACHE_MAXIMUM_ENTRIES", 1),
+            ):
                 stem_loop = artifacts.prepare_decoded_stem_loop(
                     catalog,
                     first_stem["stem_id"],

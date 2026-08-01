@@ -28,8 +28,14 @@ jobs:
           python -m pip install -e '.[all,dev]'
       - name: Lint
         run: python -m ruff check src tests
-      - name: Test
+      - name: Test the complete macOS suite
+        if: runner.os == 'macOS'
         run: python -m pytest -q -m 'not trusted_local'
+      - name: Test the portable Linux suite
+        if: runner.os == 'Linux'
+        run: >-
+          python -m pytest -q -m 'not trusted_local'
+          --ignore-glob='tests/test_separation_*'
 
   package:
     name: Build and inspect distributions
