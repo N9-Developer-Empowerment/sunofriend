@@ -1697,6 +1697,30 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-01 — authorised vocal worker to downstream MIDI
+
+- Goal: determine whether the isolated Kim Vocal 2 output survives the exact
+  production vocal-to-MIDI path before considering any product integration.
+- Change or experiment: retained the complete owner-only worker observation,
+  revalidated its vocal PCM24 hash, ran the unchanged pYIN dominant-contour
+  lead-vocal process, and prepared a blind equal-level MIDI listening review.
+- Inputs: the sealed authorised `Be Alone` 191–206 second mixed excerpt and
+  the existing local HTDemucs, Moises and two Suno vocal control MIDIs.
+- Model/runtime/checkpoint: exact approved Kim Vocal 2 MLX checkpoint on GPU;
+  the model worker remained offline and write-confined.
+- Evidence and metrics: the retained worker observation is
+  `ff086359…7b0`; the downstream report is `e2ae906d…3a0c`. The candidate has
+  14 notes. Exact-pitch/onset F1 at 40 ms was 0.600 versus Moises, 0.560 versus
+  Suno A, 0.519 versus HTDemucs and 0.462 versus Suno B.
+- Listening result: pending. A blind Kim-versus-Moises review is prepared; its
+  answer key has not been opened by the developer.
+- Decision: keep all product, selection and publication permissions false.
+  Agreement with estimated controls is not ground truth and selects no winner.
+- Problems/risks: one short excerpt cannot establish recognition, cross-song
+  reliability or conversion parity. The dominant contour remains monophonic.
+- Next smallest step: complete the blind human review, then repeat the exact
+  contract on a second authorised song before reconsidering the gate.
+
 ### 2026-08-01 — isolated synthetic two-role worker
 
 - Goal: bind the denial and PCM24 boundaries to one child process before

@@ -2,9 +2,9 @@
 
 This candidate has stronger checkpoint identity and licence evidence than the
 blocked broad BS-RoFormer release, but it is intentionally narrower: it
-separates vocals and derives instrumental as the residual. Its private loader
-and bounded excerpt adapter exist; no installer, downloader, worker or product
-route is provided here.
+separates vocals and derives instrumental as the residual. Its private loader,
+bounded adapter, isolated worker and downstream-MIDI evaluator exist; no
+installer, downloader or product route is provided here.
 """
 
 from __future__ import annotations
@@ -57,8 +57,8 @@ AUTHORISED_WORKER_SANDBOX_SCHEMA = (
 )
 
 
-PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v9"
-POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v9"
+PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v10"
+POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v10"
 AUDITED_AT = "2026-08-01"
 APPROVAL_RECORDED_AT = "2026-08-01"
 CHECKPOINT_NAME = "model.safetensors"
@@ -76,6 +76,8 @@ LICENSE_SHA256 = "1aa245b55067df5c63c847894e7040f76fa79ddde83e9e5ed8a5c29ef1865c
 _BASE_BLOCKERS = (
     "complete_worker_import_closure_not_bound",
     "conversion_parity_not_independently_verified",
+    "cross_song_downstream_vocal_midi_not_evaluated",
+    "equal_level_human_listening_not_completed",
     "model_worker_hash_before_exec_path_toctou_not_closed",
     "outbound_model_attempt_observation_not_implemented",
 )
@@ -348,7 +350,10 @@ def _build_private_melroformer_challenger_plan(
             "authorised_worker_sandbox_latest_observation": {
                 "observed_at": "2026-08-01",
                 "evidence_sha256": (
-                    "70847a06c5c44fccd3c43d8af695aaa97f7befede315b496b6ddf7ef544917aa"
+                    "ff086359cce141f906a090b5b5edbc21d102a909660b189399bc50a18ce457b0"
+                ),
+                "persisted_observation_file_sha256": (
+                    "f41977a3c18f73a60dabd74162f78ca7abe13598d72cf18c7003cf740cd7dcfa"
                 ),
                 "authorisation_report_sha256": (
                     "00685db1ba4d5ac0927c25a5ef40792ab36c56cdb36dcc20cc5f926fb9774e90"
@@ -358,6 +363,13 @@ def _build_private_melroformer_challenger_plan(
                 "outside_write_denial_canary": "EPERM",
                 "child_and_parent_pcm24_evidence_identical": True,
                 "pcm24_reconstruction_maximum_integer_error_lsb": 1,
+                "vocal_pcm24_sha256": (
+                    "f7ec73ead74de5e008489eab098c75d1a541b0f0e0af068c4d6c7e5e1de5e2cc"
+                ),
+                "instrumental_pcm24_sha256": (
+                    "af34d208bc10e59fd3fb174c69c68508c43305c2093ddd8f8cbd6a91f4f04386"
+                ),
+                "observation_persisted_owner_only": True,
                 "complete_python_import_closure_bound": False,
                 "hash_before_exec_path_toctou_closed": False,
                 "product_route_permitted": False,
@@ -493,11 +505,45 @@ def _build_private_melroformer_challenger_plan(
                 "controls_are_estimated_not_ground_truth": True,
                 "winner_selected": False,
             },
+            "downstream_vocal_midi_observation": {
+                "observed_at": "2026-08-01",
+                "status": "complete_observation_not_acceptance",
+                "report_document_sha256": (
+                    "e2ae906d872d55369d4dc658e63669b63e6a310f0498e0a000991db7facb3a0c"
+                ),
+                "worker_evidence_sha256": (
+                    "ff086359cce141f906a090b5b5edbc21d102a909660b189399bc50a18ce457b0"
+                ),
+                "production_pipeline": "production_vocal_dominant_contour",
+                "tracker_mode": "pyin",
+                "phrase_repair": True,
+                "bpm": 136.0,
+                "tuning_hz": 440.0,
+                "note_count": 14,
+                "midi_sha256": (
+                    "65111b1dadbc9daaa7ea015a542a256510bd1b8f3ecbb88a36f55dc63dd5dcc1"
+                ),
+                "exact_pitch_onset_f1_against_estimated_controls": {
+                    "local-htdemucs": 0.518518519,
+                    "moises": 0.6,
+                    "suno-a": 0.56,
+                    "suno-b": 0.461538462,
+                },
+                "controls_are_estimated_not_ground_truth": True,
+                "winner_selected": False,
+                "cross_song_repetition_complete": False,
+                "equal_level_blind_review_prepared": True,
+                "equal_level_blind_review_audio_manifest_sha256": (
+                    "11a05fad5752c44025c018603ed4c21dd9003f7a201118ab0a716d95dadb794c"
+                ),
+                "equal_level_blind_review_complete": False,
+                "answer_key_opened_by_developer": False,
+            },
         },
         "decision": {
             "status": "blocked",
             "run_status": (
-                "one_authorised_excerpt_model_worker_quarantined_review_pending"
+                "one_authorised_excerpt_downstream_midi_complete_human_review_pending"
             ),
             "candidate_registered": True,
             "checkpoint_published_identity_pinned": True,
@@ -510,8 +556,8 @@ def _build_private_melroformer_challenger_plan(
             "worker_start_permitted": False,
             "blockers": blockers,
             "next_safe_actions": [
-                "evaluate quarantined vocals with the unchanged downstream vocal-MIDI process against existing controls",
-                "prepare an equal-level blind listening comparison without selecting or promoting a winner",
+                "complete the prepared equal-level blind Kim-Vocal-2-versus-Moises MIDI listening review without opening its answer key",
+                "repeat the same worker and downstream vocal-MIDI contract on an independent authorised song excerpt",
             ],
         },
         "effects": {

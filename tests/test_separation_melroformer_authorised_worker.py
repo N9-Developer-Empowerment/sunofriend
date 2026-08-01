@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
+import stat
 import subprocess
 from pathlib import Path
 
@@ -166,6 +168,33 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
 def test_authorised_worker_has_no_public_route() -> None:
     assert "private-melroformer-authorised-worker" not in PUBLIC_COMMANDS
     assert "private-melroformer-authorised-worker" not in DIRECT_TUI_COMMANDS
+
+
+def test_authorised_worker_script_persists_exclusive_owner_only_observation(
+    tmp_path: Path,
+) -> None:
+    script = (
+        Path(__file__).parents[1]
+        / "scripts"
+        / "private-melroformer-authorised-worker.py"
+    )
+    specification = importlib.util.spec_from_file_location(
+        "private_melroformer_authorised_worker_script",
+        script,
+    )
+    assert specification is not None and specification.loader is not None
+    module = importlib.util.module_from_spec(specification)
+    specification.loader.exec_module(module)
+    observation = tmp_path / "authorised-worker-observation.json"
+
+    module._write_private_observation(observation, {"status": "fixture"})
+
+    assert stat.S_IMODE(observation.stat().st_mode) == 0o600
+    assert json.loads(observation.read_text(encoding="utf-8")) == {
+        "status": "fixture"
+    }
+    with pytest.raises(FileExistsError):
+        module._write_private_observation(observation, {"status": "replaced"})
 
 
 def _arrays() -> tuple[np.ndarray, np.ndarray, np.ndarray]:

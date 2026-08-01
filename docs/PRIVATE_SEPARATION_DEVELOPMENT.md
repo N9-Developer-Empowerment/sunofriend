@@ -830,7 +830,7 @@ PYTHONPATH=src .venv/bin/python scripts/private-melroformer-challenger.py \
   --companion-root /absolute/private/cache/checkpoint-directory
 ```
 
-The current v9 plan has `artifact_preflight_complete: true` while retaining
+The current v10 plan has `artifact_preflight_complete: true` while retaining
 `worker_start_permitted: false`.
 
 `_separation_melroformer_worker_protocol.py` fixes one or two path-free,
@@ -937,7 +937,7 @@ byte-identical vocals and instrumental hashes, but each took about 23.4 seconds
 and peaked at about 3.58 GB. The future writer must hash every actual artifact;
 GPU mode cannot promise cross-run byte identity.
 
-The fixed two-role worker has now passed one separate authorised observation.
+The fixed two-role worker has now passed two separate authorised observations.
 The parent remeasured the exact runtime, worker, source manifest, checkpoint,
 companions, authorisation report and source PCM24 before and after the run. It
 launched the worker through the exact hashed macOS `sandbox-exec` provider with
@@ -946,24 +946,32 @@ tree denied. Deliberate network, fork and outside-write attempts each returned
 `EPERM` in the same process that deserialized Kim Vocal 2 and inferred the
 authorised 15-second excerpt.
 
-The worker wrote exactly `STEMS/vocals.wav` and
+The latest worker run wrote exactly `STEMS/vocals.wav` and
 `STEMS/instrumental.wav` as 44.1 kHz stereo PCM24. Each file is 3,969,044
 bytes. The child verified the fresh owner-only quarantine; the parent reopened
 the files read-only, verified their hashes and geometry, and reproduced the
 same quarantine evidence SHA-256
-`3d849c19eadbf149fd20c68f9b8bed67c4d3131bfbbaa7c4a912a4bb902f2078`.
+`83e31cad81cd61e7c6860054dce55b311a2e76b98fdb1f4e9d38e0f1e85b0ed1`.
 The persisted vocals-plus-instrumental reconstruction differed from the source
 projection by no more than one PCM24 least-significant bit. The complete
 path-free worker observation has SHA-256
-`70847a06c5c44fccd3c43d8af695aaa97f7befede315b496b6ddf7ef544917aa`.
+`ff086359cce141f906a090b5b5edbc21d102a909660b189399bc50a18ce457b0`.
+It is retained inside the owner-only quarantine as
+`authorised-worker-observation.json`; the exact file SHA-256 is
+`f41977a3c18f73a60dabd74162f78ca7abe13598d72cf18c7003cf740cd7dcfa`.
+The actual vocal and instrumental files are respectively bound as
+`f7ec73ead74de5e008489eab098c75d1a541b0f0e0af068c4d6c7e5e1de5e2cc`
+and `af34d208bc10e59fd3fb174c69c68508c43305c2093ddd8f8cbd6a91f4f04386`.
+GPU output is allowed to vary only under the measured per-run reconstruction
+policy, so every run records its actual hashes.
 
 This closes the earlier model-worker network-denial, outside-write and PCM24
 binding blockers. It does not observe arbitrary outbound-attempt history,
 bind the complete Python import closure, close hash-before-exec path TOCTOU,
-independently verify conversion parity, evaluate downstream vocal MIDI or
-complete human listening. The ordinary private output files can also change
-after the parent's final observation. Every Simple, Studio, source-graph,
-selection and publication permission remains false.
+independently verify conversion parity or complete human listening. The
+ordinary private output files can also change after the parent's final
+observation. Every Simple, Studio, source-graph, selection and publication
+permission remains false.
 
 The development-only command is:
 
@@ -981,10 +989,26 @@ PYTHONPATH=src .venv-ai/bin/python \
   --device gpu
 ```
 
-Independent conversion parity, downstream vocal MIDI, equal-level human
-listening and every public route remain blocked. The next evaluation uses the
-quarantined vocal output with the unchanged downstream MIDI process and
-existing controls; it must not select or promote a winner automatically.
+The first unchanged downstream production vocal-MIDI observation is complete.
+The production pYIN dominant-contour path, lead role, phrase repair, 136 BPM
+and A=440 Hz produced 14 notes from the quarantined Kim Vocal 2 output. At a
+40 ms onset tolerance its exact-pitch/onset F1 against the existing estimated
+controls was 0.600 for Moises, 0.560 for Suno A, 0.519 for local HTDemucs and
+0.462 for Suno B. These controls are not score truth, and the values are
+agreement measurements rather than a ranking. The inactive observation is
+self-hashed as
+`e2ae906d872d55369d4dc658e63669b63e6a310f0498e0a000991db7facb3a0c`;
+the candidate MIDI is bound as
+`65111b1dadbc9daaa7ea015a542a256510bd1b8f3ecbb88a36f55dc63dd5dcc1`.
+
+An equal-level blind Kim-Vocal-2-versus-Moises MIDI review is prepared with
+the original mixed excerpt as the source, identical General MIDI program and
+SoundFont for both candidates, explicit zero alignment and a 0–15 second
+window. Its audio manifest SHA-256 is
+`11a05fad5752c44025c018603ed4c21dd9003f7a201118ab0a716d95dadb794c`.
+The developer has not opened its answer key. Human listening, independent
+cross-song repetition, conversion parity and every public route remain
+blocked; no winner has been selected or promoted.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,

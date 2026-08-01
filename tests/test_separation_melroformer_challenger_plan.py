@@ -93,8 +93,11 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
         plan["runtime"]["authorised_worker_sandbox_latest_observation"][
             "evidence_sha256"
         ]
-        == "70847a06c5c44fccd3c43d8af695aaa97f7befede315b496b6ddf7ef544917aa"
+        == "ff086359cce141f906a090b5b5edbc21d102a909660b189399bc50a18ce457b0"
     )
+    assert plan["runtime"]["authorised_worker_sandbox_latest_observation"][
+        "observation_persisted_owner_only"
+    ] is True
     assert plan["runtime"]["model_worker_implemented"] is True
     assert plan["runtime"]["synthetic_adapter_contract_defined"] is True
     assert plan["runtime"]["real_model_bridge_probe_implemented"] is True
@@ -131,6 +134,14 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
         plan["evaluation_contract"]["latest_private_observation"]["winner_selected"]
         is False
     )
+    downstream = plan["evaluation_contract"][
+        "downstream_vocal_midi_observation"
+    ]
+    assert downstream["note_count"] == 14
+    assert downstream["equal_level_blind_review_prepared"] is True
+    assert downstream["equal_level_blind_review_complete"] is False
+    assert downstream["answer_key_opened_by_developer"] is False
+    assert downstream["winner_selected"] is False
     assert plan["source"]["upstream_from_pretrained_permitted"] is False
     assert plan["runtime"]["reported_parity_is_model_ground_truth_score"] is False
     assert plan["decision"]["checkpoint_published_identity_pinned"] is True
@@ -142,6 +153,8 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
         "checkpoint_companion_files_unverified",
         "runtime_source_materialisation_missing",
         "complete_worker_import_closure_not_bound",
+        "cross_song_downstream_vocal_midi_not_evaluated",
+        "equal_level_human_listening_not_completed",
         "model_worker_hash_before_exec_path_toctou_not_closed",
         "outbound_model_attempt_observation_not_implemented",
     }.issubset(plan["decision"]["blockers"])
@@ -261,7 +274,7 @@ def test_private_plan_script_outputs_json_without_public_route() -> None:
     )
     plan = json.loads(completed.stdout)
     assert plan["decision"]["run_status"] == (
-        "one_authorised_excerpt_model_worker_quarantined_review_pending"
+        "one_authorised_excerpt_downstream_midi_complete_human_review_pending"
     )
     assert plan["effects"]["network_used"] is False
     assert "private-melroformer-challenger" not in PUBLIC_COMMANDS

@@ -291,8 +291,10 @@ report the result, then move on.
   binds OS denial, outside-write confinement and PCM quarantine to one real
   model run. It does not observe every arbitrary connection attempt, bind the
   complete Python import closure, close hash-before-exec path TOCTOU or make
-  mutable output files immutable. Independent parity, downstream MIDI and
-  human listening remain incomplete. The
+  mutable output files immutable. The first unchanged downstream vocal-MIDI
+  observation produced 14 notes and has a prepared equal-level blind review,
+  but its controls are estimates rather than ground truth. Independent parity,
+  cross-song repetition and human listening remain incomplete. The
   checkpoint is not redistributed. Do not offer or run this challenger through
   the skill.
 - `source-import` decodes exactly one local asset.

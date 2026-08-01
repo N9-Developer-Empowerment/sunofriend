@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from sunofriend._separation_checkpoint_canonical import plain
@@ -36,8 +37,29 @@ def main() -> int:
         staging_directory=args.staging_directory,
         device=args.device,
     )
-    print(json.dumps(plain(evidence), indent=2, sort_keys=True))
+    document = plain(evidence)
+    _write_private_observation(
+        args.staging_directory / "authorised-worker-observation.json",
+        document,
+    )
+    print(json.dumps(document, indent=2, sort_keys=True))
     return 0
+
+
+def _write_private_observation(path: Path, document: object) -> None:
+    payload = (json.dumps(document, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0)
+    descriptor = os.open(path, flags, 0o600)
+    try:
+        os.set_inheritable(descriptor, False)
+        offset = 0
+        while offset < len(payload):
+            offset += os.write(descriptor, payload[offset:])
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+    if path.stat().st_mode & 0o777 != 0o600 or path.read_bytes() != payload:
+        raise RuntimeError("MelRoFormer worker observation persistence differs")
 
 
 if __name__ == "__main__":
