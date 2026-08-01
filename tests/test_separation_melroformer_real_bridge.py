@@ -190,6 +190,84 @@ def test_loads_only_report_bound_private_pcm24_excerpt(tmp_path: Path) -> None:
     assert model_free_evidence == evidence
 
 
+def test_loads_track_specific_private_reference_excerpt(tmp_path: Path) -> None:
+    report, _ = _authorised_excerpt(tmp_path)
+    document = json.loads(report.read_text())
+    document["corpus"] = {
+        "artist": None,
+        "authority_scope": "track-specific private local evaluation only",
+        "manifest_schema": "sunofriend.private-reference-separation-corpus.v1",
+        "preferred_credit": None,
+        "track_id": "private-example",
+        "track_title": "Private example",
+        "permission": {
+            "public_demo_use": False,
+            "recorded_on": "2026-07-31",
+            "repository_distribution": False,
+            "scope": "private_local_evaluation_only",
+            "status": "user_authorised",
+        },
+    }
+    _write_self_hashed_report(report, document)
+    report_sha256 = hashlib.sha256(report.read_bytes()).hexdigest()
+
+    audio, evidence = _load_private_authorised_excerpt_pcm24(
+        np,
+        report_path=report,
+        expected_report_sha256=report_sha256,
+    )
+
+    assert audio.shape == (4_096, 2)
+    assert evidence["track_id"] == "private-example"
+    assert evidence["rights_authority"] == (
+        "user_authorised_private_local_evaluation"
+    )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("status", "not_recorded_in_manifest"),
+        ("scope", "private_research"),
+        ("repository_distribution", True),
+        ("public_demo_use", True),
+        ("recorded_on", ""),
+    ],
+)
+def test_rejects_incomplete_or_broadened_private_reference_authority(
+    tmp_path: Path,
+    field: str,
+    value: object,
+) -> None:
+    report, _ = _authorised_excerpt(tmp_path)
+    document = json.loads(report.read_text())
+    document["corpus"] = {
+        "artist": None,
+        "authority_scope": "track-specific private local evaluation only",
+        "manifest_schema": "sunofriend.private-reference-separation-corpus.v1",
+        "preferred_credit": None,
+        "track_id": "private-example",
+        "track_title": "Private example",
+        "permission": {
+            "public_demo_use": False,
+            "recorded_on": "2026-07-31",
+            "repository_distribution": False,
+            "scope": "private_local_evaluation_only",
+            "status": "user_authorised",
+        },
+    }
+    document["corpus"]["permission"][field] = value
+    _write_self_hashed_report(report, document)
+    report_sha256 = hashlib.sha256(report.read_bytes()).hexdigest()
+
+    with pytest.raises(ValueError, match="authorisation scope differs"):
+        _load_private_authorised_excerpt_pcm24(
+            np,
+            report_path=report,
+            expected_report_sha256=report_sha256,
+        )
+
+
 def test_authorised_excerpt_rejects_report_hash_or_product_permission(
     tmp_path: Path,
 ) -> None:

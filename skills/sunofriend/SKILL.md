@@ -291,8 +291,8 @@ report the result, then move on.
   binds OS denial, outside-write confinement and PCM quarantine to one real
   model run. The same isolated worker and unchanged downstream production
   vocal-MIDI contract now also pass on the authorised `I am a Alien mashup`
-  excerpt at its own sealed 114 BPM. The two inactive observations contain 14
-  and 23 notes, and both equal-level blind Kim-versus-Moises reviews are now
+  excerpt at its own sealed 114 BPM. Those two inactive observations contain
+  14 and 23 notes, and both equal-level blind Kim-versus-Moises reviews are now
   complete. `Be Alone` resolved to `equivalent`; `I am a Alien mashup`
   resolved to `neither` because both candidate MIDIs followed the female
   backing vocal rather than the male lead heard in the mixed source. A later
@@ -307,7 +307,16 @@ report the result, then move on.
   resolve or reveal A/B. The
   resolver alone opened each answer key after the complete user export. Their
   provider/local controls are estimates rather than ground truth, so they
-  select no winner and the second result is an explicit quality blocker. The latest
+  select no winner and the second result is an explicit quality blocker. The
+  independently authorised private-reference repeat uses `Mauvais djo - Pilé`
+  seconds 33–48. Its additive residual exceeded PCM range, so an explicit
+  worker-only shared attenuation was applied equally to source, vocals and
+  instrumental before PCM24 quarantine; strict rejection remains the default.
+  Local HTDemucs, Moises and Kim Vocal 2 all produced zero primary vocal notes,
+  and Kim produced no register hypothesis. The private evaluator accepts two
+  to four known controls only when local HTDemucs and at least one provider are
+  present. Keep this as a vocal-tracker/confidence failure and do not promote a
+  separator or lower production thresholds from it. The latest
   authorised `Be Alone` worker run also bound the complete post-inference
   `sys.modules` Python import closure: 320 modules backed by 277 regular files
   totalling 18,067,782 bytes, with zero unclassified modules. The child sealed

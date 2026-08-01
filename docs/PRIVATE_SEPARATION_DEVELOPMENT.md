@@ -547,6 +547,33 @@ show that the source is silent; it identifies a transcription failure to
 address. No result was accepted, selected, imported, published or exposed in
 Simple/Studio mode.
 
+The same window has now exercised the isolated Kim Vocal 2 worker without
+weakening that conclusion. The bridge accepts this second, track-specific
+authority form only when the private-reference manifest records
+`user_authorised` / `private_local_evaluation_only`, a non-empty recorded date,
+and both repository-distribution and public-demo permission as false. The
+worker's default PCM24 quarantine remains strict. This input's additive
+instrumental residual reached a raw peak of `1.0516957`, so the explicitly
+enabled worker-only headroom path applied one shared linear gain of
+`0.9413369246` to source, vocal and instrumental before PCM24 persistence.
+That is common attenuation, not independent stem normalization. Re-read
+vocal plus instrumental audio reconstructed the equally attenuated source
+within two PCM24 least-significant bits.
+
+The run retained verified-open-descriptor worker-script execution, the
+complete Python import closure and the kernel-Sandbox denial observation. Its
+path-free evidence SHA-256 is
+`92bcc2e3ebd631398177cbc7e71795928b10e37328e055634a616e3f71f635f3`;
+the owner-only observation file hashes to
+`733b3e03b5fa1e365aad6fcb972018e098b3140cacce2aa4cd979aeeb03ed1ea`.
+The unchanged 130 BPM, A=440 Hz production pYIN contour again produced zero
+notes. The existing polyphonic vocal path also produced no register
+hypotheses. The self-hashed inactive MIDI-evaluation document is
+`6491f749e1e2ad3311c24fefa2f60e42858c24d460a095c3a800f0aa9cd99615`.
+Kim therefore did not recover this excerpt's vocal MIDI; the next bounded
+quality experiment belongs at the vocal tracker/confidence boundary, not in
+separator promotion.
+
 The first authorised real-song development corpus is now available locally
 under [`../stem_examples`](../stem_examples/README.md). It contains four
 Ezzye originals, one detailed Moises export and two distinct Suno exports per
@@ -1083,7 +1110,7 @@ PYTHONPATH=src .venv-ai/bin/python \
   --device gpu
 ```
 
-Two unchanged downstream production vocal-MIDI observations are complete.
+Three unchanged downstream production vocal-MIDI observations are complete.
 For `Be Alone`, the production pYIN dominant-contour path, lead role, phrase
 repair, 136 BPM and A=440 Hz produced 14 notes from the quarantined Kim Vocal
 2 output. At a 40 ms onset tolerance its exact-pitch/onset F1 against the
@@ -1103,6 +1130,15 @@ the candidate MIDI is bound as
 `776a07c43bdddbde585736e039f202ab8df13ed50d54750e6e83969aa39747e5`.
 These controls are not score truth, and all values are agreement measurements
 rather than rankings.
+
+The third observation used the independently authorised `Mauvais djo - Pilé`
+33–48 second window and the two controls present in its sealed comparison:
+local HTDemucs and Moises. The evaluator now accepts two to four known control
+packs in canonical order, requires local HTDemucs plus at least one provider,
+and still rejects unknown or single-control sets. Local HTDemucs, Moises and
+Kim Vocal 2 each produced zero primary notes on this window, and Kim produced
+no polyphonic register hypothesis. This is a cross-song failure observation,
+not an agreement score or evidence of silence.
 
 Equal-level blind Kim-Vocal-2-versus-Moises MIDI reviews were prepared for both
 songs with each original mixed excerpt as the source, identical General MIDI

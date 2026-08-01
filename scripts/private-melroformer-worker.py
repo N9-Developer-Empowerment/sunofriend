@@ -113,6 +113,7 @@ def main() -> int:
         vocals=vocals,
         instrumental=instrumental,
         np=np,
+        allow_shared_attenuation=not args.synthetic_canary,
     )
     result = {
         "schema": schema,

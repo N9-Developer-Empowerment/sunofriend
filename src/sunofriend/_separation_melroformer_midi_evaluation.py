@@ -35,7 +35,7 @@ from .vocal import VocalConfig, transcribe_vocal_melody
 
 SCHEMA = "sunofriend.private-melroformer-downstream-vocal-midi-evaluation.v2"
 _REPORT_NAME = "private-melroformer-vocal-midi-evaluation.json"
-_CONTROL_PACKS = ("local-htdemucs", "moises", "suno-a", "suno-b")
+_SUPPORTED_CONTROL_PACKS = ("local-htdemucs", "moises", "suno-a", "suno-b")
 _REGISTER_HYPOTHESES = (
     "lowest_line",
     "dominant_line",
@@ -193,7 +193,7 @@ def _evaluate_private_melroformer_vocal_midi(
             "controls": {
                 "comparison_sha256": control_sha256,
                 "document_sha256": control["document_sha256"],
-                "packs": list(_CONTROL_PACKS),
+                "packs": list(controls),
                 "note_counts": {
                     pack_id: len(control_notes)
                     for pack_id, control_notes in controls.items()
@@ -335,10 +335,19 @@ def _load_control_notes(
     root: Path, document: Mapping[str, Any]
 ) -> dict[str, tuple[NoteEvent, ...]]:
     packs = document.get("packs")
-    if not isinstance(packs, Mapping) or set(packs) != set(_CONTROL_PACKS):
+    if not isinstance(packs, Mapping):
+        raise ValueError("authorised MIDI controls differ")
+    pack_ids = set(packs)
+    if (
+        len(pack_ids) < 2
+        or not pack_ids.issubset(_SUPPORTED_CONTROL_PACKS)
+        or "local-htdemucs" not in pack_ids
+    ):
         raise ValueError("authorised MIDI controls differ")
     result = {}
-    for pack_id in _CONTROL_PACKS:
+    for pack_id in _SUPPORTED_CONTROL_PACKS:
+        if pack_id not in pack_ids:
+            continue
         try:
             raw = packs[pack_id]["vocals"]["primary"]["notes"]
         except (KeyError, TypeError) as error:

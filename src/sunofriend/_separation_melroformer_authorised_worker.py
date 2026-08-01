@@ -29,10 +29,13 @@ from ._separation_melroformer_artifacts import (
     _inspect_local_checkpoint,
 )
 from ._separation_melroformer_pcm24_quarantine import (
+    ATTENUATED_SCHEMA,
+    _shared_level_management,
     _validate_private_melroformer_pcm24_quarantine,
     _verify_private_melroformer_pcm24_quarantine,
 )
 from ._separation_melroformer_real_bridge import (
+    _PERMITTED_RIGHTS_AUTHORITIES,
     _load_private_authorised_excerpt_pcm24,
 )
 from ._separation_melroformer_runtime_evidence import (
@@ -83,6 +86,12 @@ DESCRIPTOR_WORKER_SCHEMA = (
 )
 DESCRIPTOR_WORKER_POLICY_ID = (
     "private-melroformer-authorised-worker-descriptor-script-v4"
+)
+HEADROOM_WORKER_SCHEMA = (
+    "sunofriend.private-melroformer-authorised-worker-sandbox.v5"
+)
+HEADROOM_WORKER_POLICY_ID = (
+    "private-melroformer-authorised-worker-shared-headroom-v5"
 )
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 _MAXIMUM_STDOUT_BYTES = 2 * 1024 * 1024
@@ -257,6 +266,33 @@ def _run_private_melroformer_authorised_worker(
     child_quarantine = _validate_private_melroformer_pcm24_quarantine(
         child["quarantine"]
     )
+    bridge = child["model"]["bridge"]
+    inference = child["model"]["inference"]
+    level_management = None
+    if child_quarantine["schema"] == ATTENUATED_SCHEMA:
+        if network_observation is None or import_closure is None:
+            raise RuntimeError(
+                "MelRoFormer shared-headroom persistence requires the complete "
+                "descriptor, import-closure and network-observation boundary"
+            )
+        output_peaks = inference.get("outputs")
+        if not isinstance(output_peaks, Mapping):
+            raise RuntimeError("MelRoFormer output peaks are missing")
+        peaks = [float(np.max(np.abs(source_audio)))]
+        for role in ("vocals", "instrumental"):
+            item = output_peaks.get(role)
+            peak = item.get("peak") if isinstance(item, Mapping) else None
+            if (
+                isinstance(peak, bool)
+                or not isinstance(peak, (int, float))
+                or not 0.0 <= float(peak) <= 4.0
+            ):
+                raise RuntimeError("MelRoFormer output peak evidence differs")
+            peaks.append(float(peak))
+        expected_level = _shared_level_management(max(peaks))
+        level_management = child_quarantine["level_management"]
+        if _plain(level_management) != _plain(expected_level):
+            raise RuntimeError("MelRoFormer shared-headroom evidence differs")
     if outside.exists() or outside.is_symlink():
         raise RuntimeError("MelRoFormer outside-write canary unexpectedly persisted")
     if sorted(item.name for item in staging.iterdir()) != ["output"]:
@@ -274,6 +310,7 @@ def _run_private_melroformer_authorised_worker(
         source=source_audio,
         claims=claims,
         np=np,
+        level_management=level_management,
     )
     if parent_quarantine["evidence_sha256"] != child_quarantine["evidence_sha256"]:
         raise RuntimeError("MelRoFormer child and parent quarantine evidence differ")
@@ -297,18 +334,20 @@ def _run_private_melroformer_authorised_worker(
     if dict(child["model"]["authorisation"]) != dict(authorisation_before):
         raise RuntimeError("MelRoFormer child authorisation evidence differs")
 
-    bridge = child["model"]["bridge"]
-    inference = child["model"]["inference"]
     payload = {
         "schema": (
-            DESCRIPTOR_WORKER_SCHEMA
+            HEADROOM_WORKER_SCHEMA
+            if level_management
+            else DESCRIPTOR_WORKER_SCHEMA
             if network_observation
             else IMPORT_CLOSURE_SCHEMA
             if import_closure
             else SCHEMA
         ),
         "policy_id": (
-            DESCRIPTOR_WORKER_POLICY_ID
+            HEADROOM_WORKER_POLICY_ID
+            if level_management
+            else DESCRIPTOR_WORKER_POLICY_ID
             if network_observation
             else IMPORT_CLOSURE_POLICY_ID
             if import_closure
@@ -400,6 +439,11 @@ def _run_private_melroformer_authorised_worker(
             "maximum_integer_reconstruction_error_lsb": parent_quarantine[
                 "additive_reconstruction"
             ]["maximum_integer_error_lsb"],
+            **(
+                {"level_management": _plain(level_management)}
+                if level_management
+                else {}
+            ),
         },
         "conclusion": {
             "network_denial_bound_to_model_worker": True,
@@ -551,7 +595,7 @@ def _validate_authorised_child(
 def _validate_private_melroformer_authorised_worker(
     document: Mapping[str, Any],
 ) -> Mapping[str, Any]:
-    """Validate historical v1-v3 or descriptor-script-bound v4 evidence."""
+    """Validate historical v1-v3, descriptor v4 or headroom-bound v5 evidence."""
 
     schema = document.get("schema") if isinstance(document, Mapping) else None
     if schema == SCHEMA:
@@ -562,7 +606,59 @@ def _validate_private_melroformer_authorised_worker(
         return _validate_private_melroformer_authorised_worker_v3(document)
     if schema == DESCRIPTOR_WORKER_SCHEMA:
         return _validate_private_melroformer_authorised_worker_v4(document)
+    if schema == HEADROOM_WORKER_SCHEMA:
+        return _validate_private_melroformer_authorised_worker_v5(document)
     raise ValueError("MelRoFormer authorised worker evidence identity differs")
+
+
+def _validate_private_melroformer_authorised_worker_v5(
+    document: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    value = _plain(document)
+    digest = value.pop("evidence_sha256", None) if isinstance(value, dict) else None
+    if not _is_sha(digest) or digest != hashlib.sha256(
+        _canonical_json_bytes(value)
+    ).hexdigest():
+        raise ValueError("MelRoFormer authorised worker evidence self-hash differs")
+    quarantine = value.get("quarantine")
+    if (
+        value.get("schema") != HEADROOM_WORKER_SCHEMA
+        or value.get("policy_id") != HEADROOM_WORKER_POLICY_ID
+        or not isinstance(quarantine, dict)
+        or "level_management" not in quarantine
+    ):
+        raise ValueError("MelRoFormer authorised worker headroom fields differ")
+    level_management = _validate_private_melroformer_pcm24_quarantine_level(
+        quarantine["level_management"]
+    )
+    if level_management["applied"] is not True:
+        raise ValueError("MelRoFormer authorised worker headroom was not applied")
+
+    descriptor_bound = _plain(value)
+    descriptor_bound["schema"] = DESCRIPTOR_WORKER_SCHEMA
+    descriptor_bound["policy_id"] = DESCRIPTOR_WORKER_POLICY_ID
+    descriptor_bound["quarantine"].pop("level_management")
+    descriptor_bound["evidence_sha256"] = hashlib.sha256(
+        _canonical_json_bytes(descriptor_bound)
+    ).hexdigest()
+    _validate_private_melroformer_authorised_worker_v4(descriptor_bound)
+    checked = {**value, "evidence_sha256": digest}
+    encoded = json.dumps(checked, sort_keys=True, separators=(",", ":"))
+    if "/Users/" in encoded or "file://" in encoded or "://" in encoded:
+        raise ValueError("MelRoFormer authorised worker evidence is not path-free")
+    return _freeze_json(checked)
+
+
+def _validate_private_melroformer_pcm24_quarantine_level(
+    level_management: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    peak = level_management.get("original_maximum_absolute_peak")
+    if isinstance(peak, bool) or not isinstance(peak, (int, float)):
+        raise ValueError("MelRoFormer authorised worker headroom peak differs")
+    expected = _shared_level_management(float(peak))
+    if _plain(level_management) != _plain(expected):
+        raise ValueError("MelRoFormer authorised worker headroom evidence differs")
+    return expected
 
 
 def _validate_private_melroformer_authorised_worker_v4(
@@ -885,7 +981,7 @@ def _validate_private_melroformer_authorised_worker_v1(
         != artifacts["authorisation_report_sha256"]
         or authorisation.get("audio_sha256") != artifacts["authorised_audio_sha256"]
         or authorisation.get("rights_authority")
-        != "creator_and_copyright_holder"
+        not in _PERMITTED_RIGHTS_AUTHORITIES
         or authorisation.get("evidence_scope") != "private_development_only"
         or authorisation.get("sample_rate") != 44_100
         or authorisation.get("channels") != 2
@@ -1031,6 +1127,8 @@ def _plain(value: Any) -> Any:
 
 
 __all__ = [
+    "HEADROOM_WORKER_POLICY_ID",
+    "HEADROOM_WORKER_SCHEMA",
     "NETWORK_OBSERVATION_POLICY_ID",
     "NETWORK_OBSERVATION_SCHEMA",
     "POLICY_ID",

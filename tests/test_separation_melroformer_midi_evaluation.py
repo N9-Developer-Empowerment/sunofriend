@@ -144,6 +144,36 @@ def test_control_policy_accepts_a_distinct_sealed_song_tempo() -> None:
     ) == (114.0, 440.0)
 
 
+def test_control_notes_accept_two_known_independent_packs(tmp_path: Path) -> None:
+    report = _control_fixture(
+        tmp_path / "controls",
+        pack_ids=("local-htdemucs", "moises"),
+    )
+    document = json.loads(report.read_text(encoding="utf-8"))
+
+    result = evaluation._load_control_notes(report.parent, document)
+
+    assert list(result) == ["local-htdemucs", "moises"]
+
+
+@pytest.mark.parametrize(
+    "pack_ids",
+    [
+        ("local-htdemucs",),
+        ("moises", "suno-a"),
+        ("local-htdemucs", "unknown"),
+    ],
+)
+def test_control_notes_reject_insufficient_or_unknown_control_sets(
+    tmp_path: Path, pack_ids: tuple[str, ...]
+) -> None:
+    report = _control_fixture(tmp_path / "controls", pack_ids=pack_ids)
+    document = json.loads(report.read_text(encoding="utf-8"))
+
+    with pytest.raises(ValueError, match="controls differ"):
+        evaluation._load_control_notes(report.parent, document)
+
+
 @pytest.mark.parametrize("bpm", [True, float("nan"), 19.9, 400.1])
 def test_control_policy_rejects_invalid_tempo(bpm: object) -> None:
     with pytest.raises(ValueError, match="policy differs"):
@@ -185,13 +215,20 @@ def _worker_fixture(root: Path) -> tuple[Path, dict[str, object]]:
     return report, document
 
 
-def _control_fixture(root: Path) -> Path:
+def _control_fixture(
+    root: Path,
+    *,
+    pack_ids: tuple[str, ...] = (
+        "local-htdemucs",
+        "moises",
+        "suno-a",
+        "suno-b",
+    ),
+) -> Path:
     root.mkdir()
     packs = {}
     artifacts = {}
-    for index, pack_id in enumerate(
-        ("local-htdemucs", "moises", "suno-a", "suno-b")
-    ):
+    for index, pack_id in enumerate(pack_ids):
         relative = f"{pack_id}/vocals/primary.notes.json"
         path = root / relative
         path.parent.mkdir(parents=True)

@@ -26,6 +26,10 @@ from .separation_contract import _canonical_json_bytes, _freeze_json
 
 SCHEMA = "sunofriend.private-melroformer-pcm24-quarantine.v1"
 POLICY_ID = "private-melroformer-fixed-two-role-pcm24-quarantine-v1"
+ATTENUATED_SCHEMA = "sunofriend.private-melroformer-pcm24-quarantine.v2"
+ATTENUATED_POLICY_ID = (
+    "private-melroformer-shared-headroom-two-role-pcm24-quarantine-v2"
+)
 SAMPLE_RATE = 44_100
 CHANNELS = 2
 BITS_PER_SAMPLE = 24
@@ -34,6 +38,8 @@ MINIMUM_PROBE_FRAMES = 4_096
 MAXIMUM_EXCERPT_FRAMES = 661_500
 _MAXIMUM_FILE_BYTES = 4 * 1024 * 1024
 _MAXIMUM_RECONSTRUCTION_ERROR_LSB = 2
+_SHARED_HEADROOM_TARGET_PEAK = 0.99
+_MAXIMUM_PRE_ATTENUATION_PEAK = 4.0
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -44,14 +50,18 @@ def _materialize_private_melroformer_pcm24_quarantine(
     vocals: Any,
     instrumental: Any,
     np: Any,
+    allow_shared_attenuation: bool = False,
 ) -> Mapping[str, Any]:
     """Create and independently verify one fresh, private two-role quarantine."""
 
-    arrays = _validate_arrays(
+    if type(allow_shared_attenuation) is not bool:
+        raise ValueError("MelRoFormer shared attenuation flag must be boolean")
+    arrays, level_management = _prepare_arrays(
         source=source,
         vocals=vocals,
         instrumental=instrumental,
         np=np,
+        allow_shared_attenuation=allow_shared_attenuation,
     )
     root = Path(destination).expanduser().absolute()
     root.mkdir(mode=0o700, parents=False, exist_ok=False)
@@ -83,9 +93,10 @@ def _materialize_private_melroformer_pcm24_quarantine(
         os.close(root_descriptor)
     return _verify_private_melroformer_pcm24_quarantine(
         destination=root,
-        source=arrays["source"],
+        source=source,
         claims=claims,
         np=np,
+        level_management=level_management,
     )
 
 
@@ -95,10 +106,20 @@ def _verify_private_melroformer_pcm24_quarantine(
     source: Any,
     claims: Mapping[str, Mapping[str, Any]],
     np: Any,
+    level_management: Mapping[str, Any] | None = None,
 ) -> Mapping[str, Any]:
     """Reopen the exact quarantine and return path-free parent evidence."""
 
-    source_array = _validate_one_array(source, "source", np=np)
+    checked_level = _validate_level_management(level_management)
+    if checked_level is None:
+        source_array = _validate_one_array(source, "source", np=np)
+    else:
+        source_array = _validate_pre_attenuation_array(source, "source", np=np)
+        source_array = _validate_one_array(
+            source_array * np.float32(checked_level["shared_linear_gain"]),
+            "attenuated source",
+            np=np,
+        )
     if set(claims) != set(ROLES):
         raise ValueError("MelRoFormer PCM24 claims must cover both fixed roles")
     root = Path(destination).expanduser().absolute()
@@ -147,8 +168,8 @@ def _verify_private_melroformer_pcm24_quarantine(
     if maximum > _MAXIMUM_RECONSTRUCTION_ERROR_LSB:
         raise ValueError("MelRoFormer persisted PCM24 reconstruction exceeds tolerance")
     payload = {
-        "schema": SCHEMA,
-        "policy_id": POLICY_ID,
+        "schema": ATTENUATED_SCHEMA if checked_level else SCHEMA,
+        "policy_id": ATTENUATED_POLICY_ID if checked_level else POLICY_ID,
         "status": "verified_quarantine_not_worker_bound",
         "source": {
             "sample_rate": SAMPLE_RATE,
@@ -205,6 +226,7 @@ def _verify_private_melroformer_pcm24_quarantine(
             "ordinary_files_can_change_after_verification": True,
             "publication_or_selection_authorized": False,
         },
+        **({"level_management": checked_level} if checked_level else {}),
     }
     document = {
         **payload,
@@ -232,6 +254,9 @@ def _validate_private_melroformer_pcm24_quarantine(
         "limitations",
         "evidence_sha256",
     }
+    attenuated = value.get("schema") == ATTENUATED_SCHEMA
+    if attenuated:
+        required.add("level_management")
     if not isinstance(value, dict) or set(value) != required:
         raise ValueError("MelRoFormer PCM24 quarantine evidence fields differ")
     digest = value.pop("evidence_sha256")
@@ -240,8 +265,9 @@ def _validate_private_melroformer_pcm24_quarantine(
     if digest != hashlib.sha256(_canonical_json_bytes(value)).hexdigest():
         raise ValueError("MelRoFormer PCM24 quarantine evidence self-hash differs")
     if (
-        value["schema"] != SCHEMA
-        or value["policy_id"] != POLICY_ID
+        value["schema"] != (ATTENUATED_SCHEMA if attenuated else SCHEMA)
+        or value["policy_id"]
+        != (ATTENUATED_POLICY_ID if attenuated else POLICY_ID)
         or value["status"] != "verified_quarantine_not_worker_bound"
     ):
         raise ValueError("MelRoFormer PCM24 quarantine evidence identity differs")
@@ -357,11 +383,111 @@ def _validate_private_melroformer_pcm24_quarantine(
         "publication_or_selection_authorized": False,
     }:
         raise ValueError("MelRoFormer PCM24 quarantine limitations differ")
+    if attenuated:
+        _validate_level_management(value["level_management"])
     checked = {**value, "evidence_sha256": digest}
     if "/Users/" in json.dumps(checked, sort_keys=True) or "://" in json.dumps(
         checked, sort_keys=True
     ):
         raise ValueError("MelRoFormer PCM24 quarantine evidence is not path-free")
+    return _freeze_json(checked)
+
+
+def _prepare_arrays(
+    *,
+    source: Any,
+    vocals: Any,
+    instrumental: Any,
+    np: Any,
+    allow_shared_attenuation: bool,
+) -> tuple[dict[str, Any], Mapping[str, Any] | None]:
+    if not allow_shared_attenuation:
+        return (
+            _validate_arrays(
+                source=source,
+                vocals=vocals,
+                instrumental=instrumental,
+                np=np,
+            ),
+            None,
+        )
+
+    originals = {
+        "source": _validate_pre_attenuation_array(source, "source", np=np),
+        "vocals": _validate_pre_attenuation_array(vocals, "vocals", np=np),
+        "instrumental": _validate_pre_attenuation_array(
+            instrumental, "instrumental", np=np
+        ),
+    }
+    _validate_array_geometry_and_accounting(originals, np=np)
+    peak = max(float(np.max(np.abs(value))) for value in originals.values())
+    if peak < 1.0:
+        return _validate_arrays(np=np, **originals), None
+
+    level_management = _shared_level_management(peak)
+    gain = np.float32(level_management["shared_linear_gain"])
+    scaled = {name: value * gain for name, value in originals.items()}
+    return _validate_arrays(np=np, **scaled), level_management
+
+
+def _shared_level_management(original_peak: float) -> Mapping[str, Any]:
+    if (
+        isinstance(original_peak, bool)
+        or not isinstance(original_peak, (int, float))
+        or not math.isfinite(float(original_peak))
+        or not 1.0 <= float(original_peak) <= _MAXIMUM_PRE_ATTENUATION_PEAK
+    ):
+        raise ValueError("MelRoFormer pre-attenuation peak is outside bounds")
+    peak = float(original_peak)
+    gain = _SHARED_HEADROOM_TARGET_PEAK / peak
+    return _freeze_json(
+        {
+            "policy": "shared_linear_attenuation_if_pcm_range_exceeded",
+            "applied": True,
+            "original_maximum_absolute_peak": peak,
+            "target_maximum_absolute_peak": _SHARED_HEADROOM_TARGET_PEAK,
+            "shared_linear_gain": gain,
+            "source_reference_scaled_for_pcm24_accounting": True,
+        }
+    )
+
+
+def _validate_level_management(
+    value: Mapping[str, Any] | None,
+) -> Mapping[str, Any] | None:
+    if value is None:
+        return None
+    checked = _plain(value)
+    if not isinstance(checked, dict) or set(checked) != {
+        "policy",
+        "applied",
+        "original_maximum_absolute_peak",
+        "target_maximum_absolute_peak",
+        "shared_linear_gain",
+        "source_reference_scaled_for_pcm24_accounting",
+    }:
+        raise ValueError("MelRoFormer PCM24 level-management fields differ")
+    peak = checked["original_maximum_absolute_peak"]
+    gain = checked["shared_linear_gain"]
+    if (
+        checked["policy"]
+        != "shared_linear_attenuation_if_pcm_range_exceeded"
+        or checked["applied"] is not True
+        or checked["target_maximum_absolute_peak"]
+        != _SHARED_HEADROOM_TARGET_PEAK
+        or checked["source_reference_scaled_for_pcm24_accounting"] is not True
+        or isinstance(peak, bool)
+        or not isinstance(peak, (int, float))
+        or not math.isfinite(float(peak))
+        or not 1.0 <= float(peak) <= _MAXIMUM_PRE_ATTENUATION_PEAK
+        or isinstance(gain, bool)
+        or not isinstance(gain, (int, float))
+        or not math.isfinite(float(gain))
+        or not 0.0 < float(gain) < 1.0
+        or abs(float(gain) - _SHARED_HEADROOM_TARGET_PEAK / float(peak))
+        > 1e-12
+    ):
+        raise ValueError("MelRoFormer PCM24 level management differs")
     return _freeze_json(checked)
 
 
@@ -375,6 +501,13 @@ def _validate_arrays(
             instrumental, "instrumental", np=np
         ),
     }
+    _validate_array_geometry_and_accounting(arrays, np=np)
+    return arrays
+
+
+def _validate_array_geometry_and_accounting(
+    arrays: Mapping[str, Any], *, np: Any
+) -> None:
     if any(value.shape != arrays["source"].shape for value in arrays.values()):
         raise ValueError("MelRoFormer PCM24 arrays must share exact geometry")
     residual = arrays["source"].astype(np.float64) - (
@@ -383,7 +516,20 @@ def _validate_arrays(
     )
     if float(np.max(np.abs(residual))) > 1e-6:
         raise ValueError("MelRoFormer PCM24 arrays fail additive accounting")
-    return arrays
+
+
+def _validate_pre_attenuation_array(value: Any, label: str, *, np: Any) -> Any:
+    array = np.asarray(value)
+    if (
+        array.ndim != 2
+        or array.shape[1] != CHANNELS
+        or not MINIMUM_PROBE_FRAMES <= len(array) <= MAXIMUM_EXCERPT_FRAMES
+        or array.dtype not in (np.dtype("float32"), np.dtype("float64"))
+        or not bool(np.isfinite(array).all())
+        or float(np.max(np.abs(array))) > _MAXIMUM_PRE_ATTENUATION_PEAK
+    ):
+        raise ValueError(f"MelRoFormer PCM24 {label} array is invalid")
+    return np.ascontiguousarray(array.astype(np.float32, copy=False))
 
 
 def _validate_one_array(value: Any, label: str, *, np: Any) -> Any:

@@ -32,14 +32,32 @@ from sunofriend.separation_contract import _canonical_json_bytes
 
 
 @pytest.mark.parametrize(
-    ("bind_python_import_closure", "observe_outbound_attempts"),
-    [(False, False), (True, False), (True, True)],
+    (
+        "bind_python_import_closure",
+        "observe_outbound_attempts",
+        "shared_headroom",
+    ),
+    [
+        (False, False, False),
+        (True, False, False),
+        (True, True, False),
+        (True, True, True),
+    ],
+)
+@pytest.mark.parametrize(
+    "rights_authority",
+    [
+        "creator_and_copyright_holder",
+        "user_authorised_private_local_evaluation",
+    ],
 )
 def test_parent_binds_authorised_worker_denials_and_pcm24(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     bind_python_import_closure: bool,
     observe_outbound_attempts: bool,
+    shared_headroom: bool,
+    rights_authority: str,
 ) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()
@@ -58,6 +76,10 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
     companions.mkdir()
 
     source, vocals, instrumental = _arrays()
+    if shared_headroom:
+        source[0, 0] = np.float32(0.75)
+        vocals[0, 0] = np.float32(-0.35)
+        instrumental[0, 0] = np.float32(1.10)
     authorisation = {
         "schema": "sunofriend.private-melroformer-authorised-input.v1",
         "track_id": "owned-example",
@@ -69,7 +91,7 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
         "sample_rate": 44_100,
         "channels": 2,
         "frames": len(source),
-        "rights_authority": "creator_and_copyright_holder",
+        "rights_authority": rights_authority,
         "evidence_scope": "private_development_only",
         "audio_persisted_by_bridge": False,
     }
@@ -114,6 +136,7 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
             vocals=vocals,
             instrumental=instrumental,
             np=np,
+            allow_shared_attenuation=True,
         )
         closure_requested = "--bind-python-import-closure" in command
         child = {
@@ -156,8 +179,14 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
                         "peak_memory_bytes": 1_000,
                     },
                     "outputs": {
-                        "vocals": {"sha256": "e" * 64},
-                        "instrumental": {"sha256": "f" * 64},
+                        "vocals": {
+                            "sha256": "e" * 64,
+                            "peak": float(np.max(np.abs(vocals))),
+                        },
+                        "instrumental": {
+                            "sha256": "f" * 64,
+                            "peak": float(np.max(np.abs(instrumental))),
+                        },
                     },
                     "additive_accounting": {
                         "passed": True,
@@ -225,13 +254,20 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
     assert evidence["conclusion"]["network_denial_bound_to_model_worker"] is True
     assert evidence["conclusion"]["pcm24_quarantine_bound_to_model_worker"] is True
     assert evidence["quarantine"]["evidence_identical"] is True
+    if shared_headroom:
+        assert evidence["schema"] == worker.HEADROOM_WORKER_SCHEMA
+        assert evidence["quarantine"]["level_management"]["applied"] is True
     assert all(value is False for value in evidence["permissions"].values())
     assert "/Users/" not in repr(evidence)
     assert evidence["artifacts"]["complete_python_import_closure_bound"] is (
         bind_python_import_closure
     )
     if observe_outbound_attempts:
-        assert evidence["schema"] == worker.DESCRIPTOR_WORKER_SCHEMA
+        assert evidence["schema"] == (
+            worker.HEADROOM_WORKER_SCHEMA
+            if shared_headroom
+            else worker.DESCRIPTOR_WORKER_SCHEMA
+        )
         assert evidence["network_observation"]["observation"][
             "deliberate_canary_denial_count"
         ] == 1

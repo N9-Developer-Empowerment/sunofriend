@@ -93,6 +93,40 @@ def test_existing_destination_and_non_additive_or_out_of_range_arrays_fail(
         )
 
 
+def test_explicit_shared_attenuation_preserves_loud_additive_pair(
+    tmp_path: Path,
+) -> None:
+    source, vocals, instrumental = _arrays()
+    source[0, 0] = np.float32(0.75)
+    vocals[0, 0] = np.float32(-0.35)
+    instrumental[0, 0] = np.float32(1.10)
+
+    with pytest.raises(ValueError, match="instrumental array is invalid"):
+        _materialize_private_melroformer_pcm24_quarantine(
+            destination=tmp_path / "strict",
+            source=source,
+            vocals=vocals,
+            instrumental=instrumental,
+            np=np,
+        )
+
+    evidence = _materialize_private_melroformer_pcm24_quarantine(
+        destination=tmp_path / "attenuated",
+        source=source,
+        vocals=vocals,
+        instrumental=instrumental,
+        np=np,
+        allow_shared_attenuation=True,
+    )
+
+    level = evidence["level_management"]
+    assert evidence["schema"] == "sunofriend.private-melroformer-pcm24-quarantine.v2"
+    assert level["applied"] is True
+    assert level["original_maximum_absolute_peak"] == pytest.approx(1.10)
+    assert level["shared_linear_gain"] == pytest.approx(0.99 / 1.10)
+    assert evidence["additive_reconstruction"]["maximum_integer_error_lsb"] <= 1
+
+
 def test_parent_reverification_rejects_modified_output(tmp_path: Path) -> None:
     source, vocals, instrumental = _arrays()
     root = tmp_path / "quarantine"

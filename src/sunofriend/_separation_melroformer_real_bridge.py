@@ -101,6 +101,16 @@ _REAL_INFERENCE_EFFECTS = {
     "audio_inference_called": True,
 }
 _AUTHORISED_EXCERPT_SCHEMA = "sunofriend.private-authorised-separation-excerpt.v1"
+_PRIVATE_REFERENCE_CORPUS_SCHEMA = (
+    "sunofriend.private-reference-separation-corpus.v1"
+)
+_CREATOR_RIGHTS_AUTHORITY = "creator_and_copyright_holder"
+_PRIVATE_REFERENCE_RIGHTS_AUTHORITY = (
+    "user_authorised_private_local_evaluation"
+)
+_PERMITTED_RIGHTS_AUTHORITIES = frozenset(
+    {_CREATOR_RIGHTS_AUTHORITY, _PRIVATE_REFERENCE_RIGHTS_AUTHORITY}
+)
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -175,7 +185,7 @@ def _load_private_authorised_excerpt_pcm24(
     ).encode("utf-8")
     if self_hash != hashlib.sha256(encoded).hexdigest():
         raise ValueError("MelRoFormer authorisation report self-hash differs")
-    _validate_authorisation_document(document)
+    rights_authority = _validate_authorisation_document(document)
     local_input = document["original"]["local_model_input"]
     artifact = local_input["artifact"]
     relative = artifact["path"]
@@ -211,7 +221,7 @@ def _load_private_authorised_excerpt_pcm24(
         "sample_rate": geometry["sample_rate"],
         "channels": geometry["channels"],
         "frames": geometry["frames"],
-        "rights_authority": document["corpus"]["permission"]["authority"],
+        "rights_authority": rights_authority,
         "evidence_scope": document["evidence_scope"],
         "audio_persisted_by_bridge": False,
     }
@@ -474,7 +484,7 @@ def _validate_source_array(
     return np.ascontiguousarray(audio)
 
 
-def _validate_authorisation_document(document: Mapping[str, Any]) -> None:
+def _validate_authorisation_document(document: Mapping[str, Any]) -> str:
     try:
         permission = document["corpus"]["permission"]
         local_input = document["original"]["local_model_input"]
@@ -502,14 +512,13 @@ def _validate_authorisation_document(document: Mapping[str, Any]) -> None:
         document.get("schema") != _AUTHORISED_EXCERPT_SCHEMA
         or document.get("status") != "complete_review_required"
         or document.get("evidence_scope") != "private_development_only"
-        or permission.get("authority") != "creator_and_copyright_holder"
-        or permission.get("allowed_use") != "download, study, transform and reuse"
         or not isinstance(document["corpus"].get("track_id"), str)
         or not document["corpus"]["track_id"]
         or not isinstance(document["corpus"].get("track_title"), str)
         or not document["corpus"]["track_title"]
     ):
         raise ValueError("MelRoFormer authorisation scope differs")
+    rights_authority = _validated_rights_authority(document["corpus"], permission)
     if (
         type(artifact.get("bytes")) is not int
         or not 1 <= artifact["bytes"] <= 8 * 1024 * 1024
@@ -553,6 +562,43 @@ def _validate_authorisation_document(document: Mapping[str, Any]) -> None:
     )
     if any(product_permissions.get(name) is not False for name in denied):
         raise ValueError("MelRoFormer authorisation product permissions differ")
+    return rights_authority
+
+
+def _validated_rights_authority(
+    corpus: Mapping[str, Any], permission: Mapping[str, Any]
+) -> str:
+    if (
+        permission.get("authority") == _CREATOR_RIGHTS_AUTHORITY
+        and permission.get("allowed_use")
+        == "download, study, transform and reuse"
+    ):
+        return _CREATOR_RIGHTS_AUTHORITY
+
+    expected_private_permission_fields = {
+        "public_demo_use",
+        "recorded_on",
+        "repository_distribution",
+        "scope",
+        "status",
+    }
+    if (
+        corpus.get("manifest_schema") == _PRIVATE_REFERENCE_CORPUS_SCHEMA
+        and corpus.get("authority_scope")
+        == "track-specific private local evaluation only"
+        and corpus.get("artist") is None
+        and corpus.get("preferred_credit") is None
+        and set(permission) == expected_private_permission_fields
+        and permission.get("status") == "user_authorised"
+        and permission.get("scope") == "private_local_evaluation_only"
+        and permission.get("repository_distribution") is False
+        and permission.get("public_demo_use") is False
+        and isinstance(permission.get("recorded_on"), str)
+        and permission["recorded_on"].strip()
+    ):
+        return _PRIVATE_REFERENCE_RIGHTS_AUTHORITY
+
+    raise ValueError("MelRoFormer authorisation scope differs")
 
 
 def _decode_pcm24_excerpt(np: Any, contents: bytes) -> Any:
