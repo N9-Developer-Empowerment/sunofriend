@@ -1255,10 +1255,21 @@ class SunofriendTui(App[None]):
             or not self.query("#load-project").nodes
         ):
             return
-        self._apply_snapshot(snapshot)
+        try:
+            self._apply_snapshot(snapshot)
+        except Exception:
+            # Textual may remove the screen between the availability check
+            # above and a later widget update during application shutdown.
+            # Preserve real errors while mounted, but do not turn a completed
+            # background read into a shutdown-time WorkerFailed exception.
+            if (
+                sequence != self._project_load_sequence
+                or not self.query("#load-project").nodes
+            ):
+                return
+            raise
 
     def _apply_snapshot(self, snapshot: TuiProjectSnapshot) -> None:
-        self._project_loading = False
         self.snapshot = snapshot
         document = snapshot.document
         project = document["project"]
@@ -1333,20 +1344,13 @@ class SunofriendTui(App[None]):
             self._workbench_launching or self._workbench_process is not None
         )
         self._set_project_controls_locked(studio_active)
-        self.query_one("#open-studio", Button).disabled = studio_active
+        self.query_one("#open-studio", Button).disabled = (
+            studio_active or self._project_loading
+        )
         self._set_status(
             f"Loaded {counts['stem_count']} source stems · "
             f"{midi_ready} MIDI-ready · {missing_midi} missing MIDI · "
             f"{counts['selected_part_count']} selected MIDI · local only"
-        )
-        self._sync_conversion_controls(
-            update_status=not self._preserve_conversion_status
-        )
-        self._sync_simple_controls(
-            update_status=not self._preserve_simple_status
-        )
-        self._sync_listening_master_controls(
-            update_status=not self._preserve_listening_master_status
         )
         self._activity(
             "project",
@@ -1375,6 +1379,19 @@ class SunofriendTui(App[None]):
                 "Use the Convert tab's Convert all stems action. Project "
                 "loading and the visual studio only review existing results."
             )
+        # Readiness becomes externally visible only after the complete
+        # snapshot has reached every project widget.  Simple/Convert actions
+        # must not be enabled while this method can still mutate the screen.
+        self._project_loading = False
+        self._sync_conversion_controls(
+            update_status=not self._preserve_conversion_status
+        )
+        self._sync_simple_controls(
+            update_status=not self._preserve_simple_status
+        )
+        self._sync_listening_master_controls(
+            update_status=not self._preserve_listening_master_status
+        )
         if self._simple_start_after_load:
             self.call_after_refresh(self.action_create_simple)
 
@@ -2438,7 +2455,12 @@ class SunofriendTui(App[None]):
         log.write(f"[{colour}]{stamp} {kind.upper():7}[/] {message}")
 
     def _set_status(self, message: str) -> None:
-        self.query_one("#status-line", Static).update(message)
+        try:
+            self.query_one("#status-line", Static).update(message)
+        except Exception:
+            # Background workers may finish after Textual has begun removing
+            # the screen. Status is transient UI, so shutdown must win.
+            return
 
     def _set_project_controls_locked(self, locked: bool) -> None:
         self.query_one("#project-path", Input).disabled = locked

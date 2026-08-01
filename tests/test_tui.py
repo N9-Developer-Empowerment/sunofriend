@@ -174,8 +174,9 @@ class TuiInteractionTests(unittest.IsolatedAsyncioTestCase):
             async with app.run_test(size=(150, 50)) as pilot:
                 for _ in range(100):
                     await pilot.pause(0.02)
-                    if app.snapshot is not None:
+                    if app.snapshot is not None and not app._project_loading:
                         break
+                self.assertFalse(app._project_loading)
                 app.query_one("#simple-output", Input).value = str(output)
                 await pilot.pause()
                 create = app.query_one("#create-simple", Button)
