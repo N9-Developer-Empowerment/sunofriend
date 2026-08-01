@@ -18,6 +18,7 @@ from typing import Any
 from ._separation_melroformer_adapter_contract import (
     SCHEMA as ADAPTER_OBSERVATION_SCHEMA,
 )
+from ._separation_macos_sandbox_probe import SCHEMA as SANDBOX_CANARY_SCHEMA
 from ._separation_melroformer_runtime_evidence import (
     RUNTIME_LOCK,
     RUNTIME_LOCK_SHA256,
@@ -45,8 +46,8 @@ from ._separation_safetensors_inspection import (
 )
 
 
-PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v5"
-POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v5"
+PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v6"
+POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v6"
 AUDITED_AT = "2026-08-01"
 APPROVAL_RECORDED_AT = "2026-08-01"
 CHECKPOINT_NAME = "model.safetensors"
@@ -63,7 +64,8 @@ LICENSE_BYTES = 1_500
 LICENSE_SHA256 = "1aa245b55067df5c63c847894e7040f76fa79ddde83e9e5ed8a5c29ef1865c14"
 _BASE_BLOCKERS = (
     "conversion_parity_not_independently_verified",
-    "operating_system_network_denial_not_verified",
+    "operating_system_network_denial_not_bound_to_model_worker",
+    "outbound_model_attempt_observation_not_implemented",
     "pcm24_output_persistence_not_implemented",
     "runtime_worker_not_implemented",
 )
@@ -286,7 +288,27 @@ def _build_private_melroformer_challenger_plan(
             "private_evaluation_environment_materialised_on_development_host": True,
             "installation_command": None,
             "installation_permitted": False,
-            "network_denial_verified": False,
+            "network_denial_canary_schema": SANDBOX_CANARY_SCHEMA,
+            "network_denial_canary_implemented": True,
+            "network_denial_canary_passed_on_development_host": True,
+            "network_denial_canary_latest_observation": {
+                "observed_at": "2026-08-01",
+                "evidence_sha256": (
+                    "ff64dca9e59a8862b68202842ed1ede67e39bbcfb824bb97427620c23c658b86"
+                ),
+                "provider_sha256": (
+                    "8857d087219f0f39d3e3c163e5d0a0aed690cc22f34b50c7eee3d74f93e69688"
+                ),
+                "runtime_sha256": (
+                    "d4f152f2a753c94e0e7935c8ebbe6b2609979e1df7898422b577d0076383d08b"
+                ),
+                "control_errno": "ECONNREFUSED",
+                "sandboxed_errno": "EPERM",
+                "external_destination_contacted": False,
+                "model_or_checkpoint_loaded": False,
+            },
+            "network_denial_bound_to_model_worker": False,
+            "outbound_model_attempt_observation_implemented": False,
             "apple_resource_bounds_measured": True,
             "resource_measurement_host": "Apple silicon Mac with 36 GB RAM",
             "supported_private_devices": ["gpu", "cpu"],
@@ -432,8 +454,8 @@ def _build_private_melroformer_challenger_plan(
             "worker_start_permitted": False,
             "blockers": blockers,
             "next_safe_actions": [
-                "implement the two-role excerpt worker behind the existing non-executable protocol",
-                "prove operating-system network denial and PCM24 reconstruction before any wider evaluation",
+                "bind the proven network-denial profile to the two-role excerpt worker without treating the canary as model-attempt observation",
+                "confine, persist and parent-verify PCM24 reconstruction before any wider evaluation",
             ],
         },
         "effects": {

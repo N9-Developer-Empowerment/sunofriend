@@ -1697,6 +1697,33 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-01 — macOS network-denial canary
+
+- Goal: replace the MelRoFormer plan's executable-presence assumption with an
+  observed OS-level network-denial fact before any private worker writes audio.
+- Change or experiment: added a bounded model-free canary that hashes the exact
+  `sandbox-exec` provider and Python runtime, runs identical isolated-mode
+  standard-library loopback probes with and without `(deny network*)`, and
+  returns self-hashed path-free evidence.
+- Inputs: no audio, checkpoint, model or external network destination. The
+  deliberate target is local IPv4 loopback port 9.
+- Evidence and metrics: the unsandboxed control returned `ECONNREFUSED`; the
+  sandboxed child returned `EPERM`; both completed the same arithmetic probe.
+  The exact `.venv-ai` observation is sealed as SHA-256
+  `ff64dca9e59a8862b68202842ed1ede67e39bbcfb824bb97427620c23c658b86`.
+  Tests also reject a modified conclusion whose self-hash was not recomputed.
+- Listening result: not applicable; no audio was read or written.
+- Decision: record OS network denial as verified for this exact canary only.
+  Keep worker start, checkpoint access, model import, output persistence and
+  every product route false.
+- Problems/risks: `sandbox-exec` is deprecated; the canary does not provide a
+  complete stream of arbitrary model connection attempts, test IPv6/DNS,
+  confine writes or deny descendants, and it is not yet bound to the model
+  worker. Hash-before-exec does not yet close provider/runtime path TOCTOU.
+- Next smallest step: launch the fixed two-role worker under the proven profile
+  while separately confining PCM24 outputs to a fresh private quarantine and
+  parent-verifying their hashes, geometry and additive reconstruction.
+
 ### 2026-07-31 — Cross-song narrow `other` evidence
 
 - Goal: determine whether provider leaves inside composite `other` are stable
@@ -1905,8 +1932,12 @@ and `from_pretrained`, pins the checkpoint descriptor, and independently proves
 the 708-raw-key to 696-model-parameter sanitizer mapping. The real probe
 completed with zero missing, unexpected or shape-mismatched tensors and about
 458 MB peak MLX memory, without audio inference. Independent parity and
-operating-system network denial remain open. Bounded single-call inference is
-now measured through eight seconds. The 15-second transport uses three
+worker-bound operating-system network denial remain open. A separate
+model-free macOS canary has observed `EPERM` for an identical loopback
+connection that returned `ECONNREFUSED` without the profile, but it does not
+observe arbitrary model attempts or authorize the worker. Bounded single-call
+inference is now measured through eight seconds. The 15-second transport uses
+three
 eight-second chunks at a four-second hop, returned the exact 661,500-frame
 horizon in about 2.6 seconds, reported about 2.42 GB peak MLX memory and passed
 additive residual accounting at `7.45e-9` maximum float32 error. No output was

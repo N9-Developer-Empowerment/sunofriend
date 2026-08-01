@@ -275,8 +275,14 @@ report the result, then move on.
   0.92 to both Suno controls, with no ground-truth claim or winner. Explicit GPU
   mode is fast but showed at most one PCM24-LSB repeat variation; explicit CPU
   mode repeated byte-identically over 15 seconds but took about 23.4 seconds.
-  PCM24 persistence, the worker, independent parity, downstream MIDI, human
-  listening and operating-system network-denial evidence do not yet exist. The
+  A separate model-free macOS canary now proves that the exact hashed
+  `sandbox-exec` provider returns `EPERM` for one deliberate IPv4 loopback
+  connection that is not permission-denied outside its `(deny network*)`
+  profile. This is OS denial evidence for the canary only: it is not bound to
+  a model worker, does not observe arbitrary model attempts and does not
+  confine writes or descendants or close hash-before-exec path TOCTOU. PCM24
+  persistence, the worker, independent
+  parity, downstream MIDI and human listening do not yet exist. The
   checkpoint is not redistributed. Do not offer or run this challenger through
   the skill.
 - `source-import` decodes exactly one local asset.

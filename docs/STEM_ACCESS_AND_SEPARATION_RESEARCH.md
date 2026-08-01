@@ -23,9 +23,10 @@ the copyright-safe demo, and a second private evaluator measures their effect
 on the existing MIDI transcribers. Public separation, source-graph import,
 hidden/cross-song acceptance and promotion are not implemented**
 
-Checked: 31 July 2026 after the private four-stem HTDemucs run, synthetic
+Checked: 1 August 2026 after the private four-stem HTDemucs run, synthetic
 ground-truth evaluation, two authorised provider comparisons, cross-song
-narrow-`other` evidence and preparation of the pinned six-source challenger
+narrow-`other` evidence, the six-source challenger, the MelRoFormer vocal
+comparison and its model-free macOS network-denial canary
 
 ## Contents
 
@@ -998,14 +999,24 @@ resolver and opt-in installer exist; ordinary AI readiness deliberately does
 not include this challenger, and neither installation nor resolution can run
 or activate separation.
 
-The same audit found `/usr/bin/sandbox-exec` on the development Mac, but its
-local manual marks the mechanism deprecated and the current Codex execution
-context cannot apply even a no-network profile. More importantly,
-`sandbox-exec` does not expose a complete, independently verifiable stream of
-denied connection attempts. Executable presence is not an isolation result.
-A future provider must pass a no-op canary and report separately whether
-network denial, attempted-connection observation and outside-write
-confinement were each enforced.
+The same audit found `/usr/bin/sandbox-exec` on the development Mac, and its
+local manual marks the mechanism deprecated. A model-free code-owned canary
+now hashes the exact provider and Python runtime, runs the same isolated-mode
+standard-library loopback connection with and without
+`(deny network*)`, and seals a path-free self-hashed result. On 1 August 2026
+the control returned `ECONNREFUSED` while the sandboxed child returned
+`EPERM`; normal arithmetic also completed inside the profile. This is genuine
+OS denial evidence for that canary, not merely executable presence. The exact
+`.venv-ai` result is sealed as SHA-256
+`ff64dca9e59a8862b68202842ed1ede67e39bbcfb824bb97427620c23c658b86`.
+
+It still does not expose a complete independently verifiable stream of model
+connection attempts, bind the profile to the model worker, confine outside
+writes, deny descendants or authorize execution. The provider is deprecated,
+only one IPv4 loopback operation has been exercised so far, and
+hash-before-exec does not close provider/runtime path TOCTOU. The next
+worker must preserve separate evidence for network denial, attempted-
+connection observation, descendant control and outside-write confinement.
 
 ## Terminology contract
 

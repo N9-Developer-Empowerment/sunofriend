@@ -64,6 +64,17 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
     assert plan["runtime"]["dependency_lock_defined"] is True
     assert plan["runtime"]["dependency_license_audit_defined"] is True
     assert plan["runtime"]["worker_protocol_defined"] is True
+    assert plan["runtime"]["network_denial_canary_implemented"] is True
+    assert (
+        plan["runtime"]["network_denial_canary_passed_on_development_host"] is True
+    )
+    assert plan["runtime"]["network_denial_canary_latest_observation"][
+        "evidence_sha256"
+    ] == "ff64dca9e59a8862b68202842ed1ede67e39bbcfb824bb97427620c23c658b86"
+    assert plan["runtime"]["network_denial_bound_to_model_worker"] is False
+    assert (
+        plan["runtime"]["outbound_model_attempt_observation_implemented"] is False
+    )
     assert plan["runtime"]["synthetic_adapter_contract_defined"] is True
     assert plan["runtime"]["real_model_bridge_probe_implemented"] is True
     assert plan["runtime"]["real_adapter_implemented"] is True
@@ -110,6 +121,8 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
         "checkpoint_companion_files_unverified",
         "runtime_source_materialisation_missing",
         "runtime_worker_not_implemented",
+        "operating_system_network_denial_not_bound_to_model_worker",
+        "outbound_model_attempt_observation_not_implemented",
     }.issubset(plan["decision"]["blockers"])
     assert all(value is False for value in plan["effects"].values())
 
