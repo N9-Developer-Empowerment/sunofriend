@@ -304,7 +304,14 @@ report the result, then move on.
   lowest-register hypothesis over the unchanged 23-note primary contour. It
   is development evidence, not a singer-identity rule or normal skill route;
   its answer key was opened only by the resolver after the complete matching
-  JSON export. The read-only public
+  JSON export. A subsequent private activity-only diagnostic gives each of
+  four distinct provider groups one vote after unioning its broad and leaf
+  evidence. The lowest line adds 1.533801 seconds of two-provider-supported
+  activity missed by the primary, but the primary covers 4.392423 seconds
+  missed by the lowest and their union still misses 2.199476 seconds. This
+  supports keeping both available for audition; it does not rank, merge,
+  identify a singer or change a default. A song-disjoint repeat remains
+  required. The read-only public
   `midi-ab-status` command may match an explicitly named export or one bounded,
   non-recursive download directory without opening the answer key; it cannot
   resolve or reveal A/B. The

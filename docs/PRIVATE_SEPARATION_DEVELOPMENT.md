@@ -1248,6 +1248,43 @@ and are not the final result. This supports retaining a lowest-register
 hypothesis for audition on this excerpt, not a universal singer-identity or
 automatic-selection rule. No default, MIDI, selection or promotion changed.
 
+The next inactive diagnostic now measures **time activity only** against four
+distinct provider groups. Each group receives at most one vote: its broad
+vocal primary and every separately preserved leaf primary are unioned before
+voting. A consensus interval requires activity from at least two groups. This
+does not claim that the groups are statistically independent, that their pitch
+is correct or that agreement is score truth. On the same 15-second `I am a
+Alien mashup` excerpt, the provider consensus contains 8.206970 seconds across
+24 intervals and five phrase groups. The unchanged 23-note primary covers
+4.473693 seconds (54.51%) across three phrases; 97.31% of its own activity lies
+inside the consensus. The 16-note lowest line covers 1.615071 seconds (19.68%)
+across two phrases. Importantly, it contributes 1.533801 seconds in seven
+reportable spans that the primary misses, while the primary contributes
+4.392423 seconds that the lowest line misses. Together they still omit
+2.199476 seconds of consensus activity.
+
+That result agrees with the corrected listening observation in a narrow way:
+the lower line contains complementary male-lead evidence, but it is not a
+replacement for the broader primary contour. The diagnostic creates no MIDI,
+audio, review, merge, ranking or selection. Its canonical document SHA-256 is
+`34507e2650c038baf8cbbecb0e870eff570969d5f1015c96749e58c45e6849df`;
+the report file hashes to
+`a01a974538699e5c5f011cfaad7d76d7224767d0fc92a7935f307aa38f479410`.
+Reproduce it only from the three exact private evidence reports and a fresh
+owner-only output directory:
+
+```bash
+PYTHONPATH=src .venv/bin/python \
+  scripts/private-vocal-phrase-completeness.py \
+  --control-comparison /absolute/private/authorised-midi-comparison.json \
+  --melroformer-evaluation /absolute/private/private-melroformer-vocal-midi-evaluation.json \
+  --vocal-leaf-evaluation /absolute/private/authorised-vocal-leaf-midi-evaluation.json \
+  --out /absolute/fresh/private-vocal-phrase-completeness
+```
+
+The next evidence step is a song-disjoint repeat of this metric, not a new
+listening page or an automatic primary-plus-lowest merge.
+
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
 resource, downstream-MIDI and human listening acceptance.
