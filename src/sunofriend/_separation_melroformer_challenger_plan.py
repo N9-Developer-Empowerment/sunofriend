@@ -31,6 +31,10 @@ from ._separation_melroformer_inference_parity import (
     POLICY_ID as INFERENCE_PARITY_POLICY_ID,
     SCHEMA as INFERENCE_PARITY_SCHEMA,
 )
+from ._separation_melroformer_precision_review import (
+    POLICY_ID as PRECISION_REVIEW_POLICY_ID,
+    REVIEW_SCHEMA as PRECISION_REVIEW_SCHEMA,
+)
 from ._separation_macos_sandbox_probe import SCHEMA as SANDBOX_CANARY_SCHEMA
 from ._separation_melroformer_pcm24_quarantine import (
     SCHEMA as PCM24_QUARANTINE_SCHEMA,
@@ -70,8 +74,8 @@ AUTHORISED_WORKER_SANDBOX_SCHEMA = (
 )
 
 
-PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v13"
-POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v13"
+PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v14"
+POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v14"
 AUDITED_AT = "2026-08-01"
 APPROVAL_RECORDED_AT = "2026-08-01"
 CHECKPOINT_NAME = "model.safetensors"
@@ -89,6 +93,7 @@ LICENSE_SHA256 = "1aa245b55067df5c63c847894e7040f76fa79ddde83e9e5ed8a5c29ef1865c
 _BASE_BLOCKERS = (
     "complete_worker_import_closure_not_bound",
     "equal_level_human_listening_not_completed",
+    "fp32_bf16_precision_listening_not_completed",
     "model_worker_hash_before_exec_path_toctou_not_closed",
     "outbound_model_attempt_observation_not_implemented",
 )
@@ -315,9 +320,7 @@ def _build_private_melroformer_challenger_plan(
                 "report_document_sha256": (
                     "c5edf50929a73261d6d2cceb20163793f3d44f1c7e31c6a1f75b3b2ae1ed158e"
                 ),
-                "persisted_report_sha256": (
-                    CONVERSION_PARITY_EVIDENCE_SHA256
-                ),
+                "persisted_report_sha256": (CONVERSION_PARITY_EVIDENCE_SHA256),
                 "tracked_evidence": CONVERSION_PARITY_EVIDENCE,
                 "restricted_weights_only_load": True,
                 "every_tensor_name_shape_and_bf16_payload_bit_exact": True,
@@ -336,15 +339,9 @@ def _build_private_melroformer_challenger_plan(
                 "source_window_seconds": 8.0,
                 "device": "cpu",
                 "threshold_sdr_db": 40.0,
-                "pytorch_bf16_roundtrip_vs_mlx_bf16_sdr_db": (
-                    117.70021782500807
-                ),
-                "pytorch_original_fp32_vs_mlx_bf16_sdr_db": (
-                    29.141354808391004
-                ),
-                "pytorch_original_fp32_vs_bf16_roundtrip_sdr_db": (
-                    29.141580379949556
-                ),
+                "pytorch_bf16_roundtrip_vs_mlx_bf16_sdr_db": (117.70021782500807),
+                "pytorch_original_fp32_vs_mlx_bf16_sdr_db": (29.141354808391004),
+                "pytorch_original_fp32_vs_bf16_roundtrip_sdr_db": (29.141580379949556),
                 "converted_bf16_runtime_output_parity_above_threshold": True,
                 "original_fp32_source_to_converted_mlx_above_threshold": False,
                 "upstream_reported_66_08_db_independently_reproduced": False,
@@ -355,6 +352,35 @@ def _build_private_melroformer_challenger_plan(
                 "tracked_evidence": INFERENCE_PARITY_EVIDENCE,
                 "persisted_report_sha256": INFERENCE_PARITY_EVIDENCE_SHA256,
                 "separator_quality_measured_by_this_gate": False,
+                "product_route_changed": False,
+            },
+            "precision_listening_review": {
+                "schema": PRECISION_REVIEW_SCHEMA,
+                "policy_id": PRECISION_REVIEW_POLICY_ID,
+                "observed_at": "2026-08-01",
+                "status": "prepared_unreviewed",
+                "authorised_track_id": "be-alone",
+                "source_seconds": [191.0, 199.0],
+                "sample_rate": 44_100,
+                "channels": 2,
+                "frames": 352_800,
+                "candidate_level_method": (
+                    "pairwise-fixed-window-rms-attenuation-plus-common-peak-guard-v1"
+                ),
+                "candidate_a_rms_dbfs": -21.093168,
+                "candidate_b_rms_dbfs": -21.093168,
+                "final_pcm24_rms_mismatch_db": 0.0,
+                "audio_manifest_sha256": (
+                    "202b5e6d91478321b40f276e90ae25f2c7dc8449c1071a2d42d11462932c97d9"
+                ),
+                "answer_key_sha256": (
+                    "298d5f174dc79223772f3e64ebfb3761c3a028230a7d57abc4a4419e52b6998f"
+                ),
+                "answer_key_embedded_in_html": False,
+                "answer_key_opened_by_developer": False,
+                "human_listening_complete": False,
+                "winner_selected": False,
+                "separator_enabled": False,
                 "product_route_changed": False,
             },
             "exact_source_manifest_defined": True,
@@ -654,7 +680,7 @@ def _build_private_melroformer_challenger_plan(
         "decision": {
             "status": "blocked",
             "run_status": (
-                "bf16_runtime_parity_verified_source_precision_delta_and_human_reviews_pending"
+                "bf16_runtime_parity_verified_precision_and_midi_reviews_pending"
             ),
             "candidate_registered": True,
             "checkpoint_published_identity_pinned": True,

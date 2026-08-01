@@ -1697,6 +1697,33 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-01 — Kim Vocal 2 FP32/BF16 listening gate prepared
+
+- Goal: make the measured FP32-to-BF16 output delta reviewable by ear before
+  deciding whether a second, roughly doubled-size FP32 MLX artifact is useful.
+- Change or experiment: factored the exact three-output inference into a
+  reusable private gate, added a sealed single-unit audio review and resolver,
+  and reran original-FP32 PyTorch plus published-BF16 MLX on the same authorised
+  eight-second source window.
+- Inputs: `Be Alone`, original seconds 191–199, exact sealed PCM24 source.
+- Model/runtime/checkpoint: exact author-hosted FP32 PyTorch checkpoint and
+  published BF16 MLX checkpoint, both on CPU; the existing BF16-roundtrip to
+  MLX parity gate had to remain above 40 dB before review publication.
+- Evidence and metrics: both anonymous final PCM24 candidates measure
+  `-21.093168` dBFS fixed-window sample RMS with zero reported mismatch. The
+  audio-manifest SHA-256 is `202b5e6d…c97d9`; all package files are owner-only.
+  The complete repository suite passes with 2,668 tests, one platform skip and
+  the existing third-party `resampy` deprecation warning.
+- Listening result: pending. The HTML contains no precision identity, the
+  answer key is separate and the developer has not opened it.
+- Decision: prepare the listening gate only. Keep separator enablement,
+  selection, promotion, defaults and every product route false.
+- Problems/risks: sample RMS is not perceived loudness; one eight-second song
+  excerpt cannot establish universal precision equivalence.
+- Next smallest step: complete and export the sealed precision review, then
+  resolve it separately before deciding whether an FP32 MLX challenger is
+  justified.
+
 ### 2026-08-01 — Kim Vocal 2 BF16 runtime output parity
 
 - Goal: distinguish MLX implementation error from the effect of publishing the

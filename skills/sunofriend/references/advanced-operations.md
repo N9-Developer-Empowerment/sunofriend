@@ -1516,6 +1516,14 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   Demucs code is MIT, but its official repository does not state separate
   pretrained-checkpoint terms; keep the model and outputs private, do not
   vendor or redistribute them, and retain failed-run request/log evidence.
+- The exact Kim Vocal 2 FP32/BF16 precision review is owner-only developer
+  evidence, not a public Sunofriend command. Open only
+  `melroformer_precision_review.html`; do not inspect the separate answer key
+  before the user hears the mixed source plus A/B, marks all three heard,
+  chooses A, B, equivalent, neither or cannot tell and exports the reviewed
+  JSON. Resolve only that complete export. A precision preference still cannot
+  enable or promote the separator, change a default or justify a public route
+  without the remaining cross-song MIDI and safety gates.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,

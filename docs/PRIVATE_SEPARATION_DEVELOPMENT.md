@@ -813,6 +813,26 @@ song. The path-free observation is in
 No output audio was retained and this gate measures implementation fidelity,
 not separator quality.
 
+The required listening gate is now prepared at
+`work/separation-bakeoff/be-alone-kim-fp32-vs-bf16-vocal-review-v1/`.
+It repeats the original FP32 PyTorch and published BF16 MLX inference on the
+same authorised 191–199 second frames, keeps the mixed source as an unlevelled
+reference and attenuates only the louder candidate before applying any shared
+sample-peak guard. Both final PCM24 candidates measure `-21.093168` dBFS
+fixed-window sample RMS with zero reported mismatch. The audio-manifest
+SHA-256 is
+`202b5e6d91478321b40f276e90ae25f2c7dc8449c1071a2d42d11462932c97d9`.
+The answer key is separate, owner-only, absent from the HTML and unopened by
+the developer. The package is unreviewed and enables no separator or product
+route.
+
+Open only `melroformer_precision_review.html`, listen to the source and both
+anonymous candidates, mark all three as heard, choose A, B, equivalent,
+neither or cannot tell, then export
+`melroformer_precision_review.reviewed.json`. Do not open
+`melroformer_precision_answer_key.json` first. Resolution is a separate
+developer-only action and still cannot promote a checkpoint.
+
 The exact non-executable runtime boundary is now defined. MLX-Audio `v0.4.3`
 resolves to source revision
 `41092c02db18efd5b9d8281b2fcc41d84801757a`; the five required source/runtime
@@ -859,7 +879,7 @@ PYTHONPATH=src .venv/bin/python scripts/private-melroformer-challenger.py \
   --companion-root /absolute/private/cache/checkpoint-directory
 ```
 
-The current v10 plan has `artifact_preflight_complete: true` while retaining
+The current v14 plan has `artifact_preflight_complete: true` while retaining
 `worker_start_permitted: false`.
 
 `_separation_melroformer_worker_protocol.py` fixes one or two path-free,

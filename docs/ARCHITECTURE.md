@@ -914,6 +914,16 @@ flag from false. The reproducible developer canary is
 measurements are in
 [Private stem-separation development](PRIVATE_SEPARATION_DEVELOPMENT.md).
 
+The separate Kim Vocal 2 precision gate follows the same non-product rule.
+`_separation_melroformer_inference_parity.py` now exposes one internal
+in-memory three-output helper so numeric parity and listening evidence use the
+same exact inference path. `_separation_melroformer_precision_review.py`
+creates a fresh owner-only, fixed-window sample-RMS-matched A/B package with a
+separate random-nonce answer key; only its resolver reads that key after a
+user-exported complete review. The developer script is
+`scripts/private-melroformer-precision-review.py`. None of these files is a
+public CLI, TUI, source-graph or separator route.
+
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a
 starter ZIP. It does not create or mutate Workbench SQLite state. After

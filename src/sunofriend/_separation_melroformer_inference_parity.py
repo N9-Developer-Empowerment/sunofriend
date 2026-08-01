@@ -35,9 +35,7 @@ SCHEMA = "sunofriend.private-melroformer-inference-parity.v1"
 POLICY_ID = "kim-vocal-2-bf16-runtime-output-parity-v1"
 EVIDENCE_NAME = "private-separation-melroformer-inference-parity.json"
 EVIDENCE_BYTES = 4_201
-EVIDENCE_SHA256 = (
-    "a85939af317bdff203de02116b8d2e773bb9e1f392f49b601d3bb2ff1233b389"
-)
+EVIDENCE_SHA256 = "a85939af317bdff203de02116b8d2e773bb9e1f392f49b601d3bb2ff1233b389"
 PARITY_THRESHOLD_DB = 40.0
 PARITY_FRAMES = 352_800
 SAMPLE_RATE = 44_100
@@ -76,6 +74,40 @@ def _run_private_melroformer_inference_parity(
 ) -> dict[str, Any]:
     """Run one exact eight-second CPU parity observation without audio output."""
 
+    outputs = _run_private_melroformer_inference_outputs(
+        mlx_source_root=mlx_source_root,
+        source_checkpoint=source_checkpoint,
+        converted_checkpoint=converted_checkpoint,
+        companion_root=companion_root,
+        authorisation_report=authorisation_report,
+        authorisation_report_sha256=authorisation_report_sha256,
+    )
+    return _build_inference_parity_report(
+        audio=outputs["audio"],
+        original=outputs["original"],
+        rounded=outputs["rounded"],
+        converted=outputs["converted"],
+        runtime_versions=outputs["runtime_versions"],
+        authorisation=outputs["authorisation"],
+        timings=outputs["timings"],
+    )
+
+
+def _run_private_melroformer_inference_outputs(
+    *,
+    mlx_source_root: str | Path,
+    source_checkpoint: str | Path,
+    converted_checkpoint: str | Path,
+    companion_root: str | Path,
+    authorisation_report: str | Path,
+    authorisation_report_sha256: str,
+) -> dict[str, Any]:
+    """Return the three exact eight-second outputs for bounded private gates.
+
+    The caller may compute numeric evidence or create an owner-only listening
+    package.  This helper itself persists no audio and exposes no product route.
+    """
+
     from ._separation_melroformer_real_bridge import (
         _load_private_authorised_excerpt,
         _load_private_melroformer_model,
@@ -108,17 +140,13 @@ def _run_private_melroformer_inference_parity(
         if len(source) < PARITY_FRAMES:
             raise ValueError("authorised excerpt is shorter than the parity window")
         audio = mlx_handle.np.ascontiguousarray(source[:PARITY_FRAMES])
-        mlx_output, mlx_seconds, mlx_peak = _run_model_chunk_array(
-            mlx_handle, audio
-        )
+        mlx_output, mlx_seconds, mlx_peak = _run_model_chunk_array(mlx_handle, audio)
 
         started = time.perf_counter()
         with torch.inference_mode():
             original_output = model(torch.from_numpy(audio.T[None]))
         original_seconds = time.perf_counter() - started
-        original = (
-            original_output[0].detach().cpu().numpy().T.astype("float32")
-        )
+        original = original_output[0].detach().cpu().numpy().T.astype("float32")
 
         rounded_state = {
             key: (
@@ -134,26 +162,26 @@ def _run_private_melroformer_inference_parity(
             rounded_output = model(torch.from_numpy(audio.T[None]))
         rounded_seconds = time.perf_counter() - started
         rounded = rounded_output[0].detach().cpu().numpy().T.astype("float32")
-        report = _build_inference_parity_report(
-            audio=audio,
-            original=original,
-            rounded=rounded,
-            converted=mlx_output,
-            runtime_versions=versions,
-            authorisation={
+        result = {
+            "audio": audio,
+            "original": original,
+            "rounded": rounded,
+            "converted": mlx_output,
+            "runtime_versions": versions,
+            "authorisation": {
                 "track_id": authorisation["track_id"],
                 "source_start_seconds": authorisation["source_start_seconds"],
                 "source_window_seconds": PARITY_FRAMES / SAMPLE_RATE,
                 "report_sha256": authorisation_report_sha256,
                 "source_pcm24_sha256": authorisation["audio_sha256"],
             },
-            timings={
+            "timings": {
                 "pytorch_original_fp32_seconds": original_seconds,
                 "pytorch_bf16_roundtrip_seconds": rounded_seconds,
                 "mlx_bf16_seconds": mlx_seconds,
                 "mlx_peak_memory_bytes": mlx_peak,
             },
-        )
+        }
         _revalidate_open_file(
             source_fd,
             source_path,
@@ -161,7 +189,7 @@ def _run_private_melroformer_inference_parity(
             expected_sha256=SOURCE_CHECKPOINT_SHA256,
             label="source checkpoint",
         )
-        return report
+        return result
     finally:
         os.close(source_fd)
 
@@ -227,9 +255,15 @@ def _build_inference_parity_report(
     shapes = {tuple(value.shape) for value in arrays.values()}
     if shapes != {(PARITY_FRAMES, 2)}:
         raise ValueError("inference parity audio geometry differs")
-    original_to_mlx = _metrics(arrays["pytorch_original_fp32"], arrays["mlx_published_bf16"], np=np)
-    rounded_to_mlx = _metrics(arrays["pytorch_bf16_roundtrip"], arrays["mlx_published_bf16"], np=np)
-    original_to_rounded = _metrics(arrays["pytorch_original_fp32"], arrays["pytorch_bf16_roundtrip"], np=np)
+    original_to_mlx = _metrics(
+        arrays["pytorch_original_fp32"], arrays["mlx_published_bf16"], np=np
+    )
+    rounded_to_mlx = _metrics(
+        arrays["pytorch_bf16_roundtrip"], arrays["mlx_published_bf16"], np=np
+    )
+    original_to_rounded = _metrics(
+        arrays["pytorch_original_fp32"], arrays["pytorch_bf16_roundtrip"], np=np
+    )
     runtime_parity = rounded_to_mlx["sdr_db"] > PARITY_THRESHOLD_DB
     source_precision_parity = original_to_mlx["sdr_db"] > PARITY_THRESHOLD_DB
     report: dict[str, Any] = {
@@ -260,7 +294,9 @@ def _build_inference_parity_report(
         "outputs": {
             name: {
                 "float32_sha256": _array_sha256(value, np=np),
-                "root_mean_square": float(np.sqrt(np.mean(value.astype(np.float64) ** 2))),
+                "root_mean_square": float(
+                    np.sqrt(np.mean(value.astype(np.float64) ** 2))
+                ),
             }
             for name, value in arrays.items()
         },
@@ -402,6 +438,7 @@ __all__ = [
     "RUNTIME_VERSIONS",
     "SCHEMA",
     "_build_inference_parity_report",
+    "_run_private_melroformer_inference_outputs",
     "_run_private_melroformer_inference_parity",
     "_verify_tracked_inference_parity_evidence",
     "_verify_runtime_versions",
