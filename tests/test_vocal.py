@@ -246,7 +246,9 @@ class VocalVariantTests(unittest.TestCase):
             all(note.end - note.start >= 0.065 for note in quantized)
         )
 
-    def test_backing_variants_select_dominant_top_and_full_stack(self) -> None:
+    def test_backing_variants_select_dominant_register_extremes_and_full_stack(
+        self,
+    ) -> None:
         candidates: list[VocalCandidate] = []
         for start, pitches in ((0.0, (60, 64, 67)), (1.0, (62, 65, 69))):
             for pitch, confidence, velocity in zip(
@@ -269,6 +271,9 @@ class VocalVariantTests(unittest.TestCase):
 
         self.assertEqual(
             [note.pitch for note in result.variants["dominant_line"]], [64, 65]
+        )
+        self.assertEqual(
+            [note.pitch for note in result.variants["lowest_line"]], [60, 62]
         )
         self.assertEqual(
             [note.pitch for note in result.variants["top_line"]], [67, 69]
@@ -429,6 +434,7 @@ class VocalAudioAdapterTests(unittest.TestCase):
             )
 
         self.assertEqual(result.variants["dominant_line"], fallback_notes)
+        self.assertEqual(result.variants["lowest_line"], fallback_notes)
         self.assertEqual(result.variants["harmony_stack"], fallback_notes)
 
 

@@ -295,7 +295,13 @@ report the result, then move on.
   and 23 notes, and both equal-level blind Kim-versus-Moises reviews are now
   complete. `Be Alone` resolved to `equivalent`; `I am a Alien mashup`
   resolved to `neither` because both candidate MIDIs followed the female
-  backing vocal rather than the male lead heard in the mixed source. The
+  backing vocal rather than the male lead heard in the mixed source. A later
+  inactive evaluation keeps the unchanged primary and adds lowest, dominant,
+  top and full-stack register hypotheses without claiming that register
+  identifies a singer. One owner-only blind primary-versus-lowest review is
+  pending under the repository's ignored `work/separation-bakeoff` tree; it is
+  development evidence, not a normal skill route, and its answer key must stay
+  unopened until the reviewed JSON is exported. The
   resolver alone opened each answer key after the complete user export. Their
   provider/local controls are estimates rather than ground truth, so they
   select no winner and the second result is an explicit quality blocker. The latest

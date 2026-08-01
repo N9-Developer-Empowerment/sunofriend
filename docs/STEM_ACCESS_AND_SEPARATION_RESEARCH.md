@@ -2109,6 +2109,13 @@ promotion are not implemented**
   review without opening its answer key manually. The result was `neither`,
   so no default or product route changes and lead/backing assignment becomes a
   named future quality problem.
+- [x] Preserve low, dominant, high and full-stack polyphonic vocal hypotheses
+  beside the unchanged production contour. The second-song observation has
+  16, 28, 22 and 80 notes respectively, remains inactive and makes no singer-
+  identity claim from register.
+- [ ] Complete the one-unit blind primary-versus-lowest review for the second
+  song, then resolve its answer key. Treat `neither` as a valid blocker; do not
+  promote a register rule from one excerpt even if the lowest lane wins.
 - [x] Compare every supplied leaf inside composite `other` across both
   authorised excerpts using bidirectional audio rankings. Exact and semantic
   labels remain observations only. Keyboard was the only stable Suno pair on

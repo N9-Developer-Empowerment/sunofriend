@@ -405,9 +405,10 @@ def select_backing_vocal_variants(
     """Separate polyphonic backing-vocal hypotheses into useful choices.
 
     ``dominant_line`` is the strongest continuous monophonic voice and is the
-    recommended backing melody.  ``top_line`` is useful when the recognizable
-    harmony sits above it.  ``harmony_stack`` retains every supported voice.
-    No chord-derived notes are invented.
+    recommended backing melody.  ``lowest_line`` and ``top_line`` expose the
+    register extremes when the recognizable line is not the strongest voice.
+    ``harmony_stack`` retains every supported voice.  No chord-derived notes
+    are invented.
     """
 
     supported, uncertain = _prepare_backing_candidates(candidates, config)
@@ -424,17 +425,22 @@ def select_backing_vocal_variants(
         ordered_by_register = sorted(
             range(len(voices)), key=lambda index: _median_voice_pitch(voices[index])
         )
+        lowest_index = ordered_by_register[0]
         top_index = ordered_by_register[-1]
         dominant_candidates = _make_backing_voice_monophonic(
             voices[dominant_index]
         )
+        lowest_candidates = _make_backing_voice_monophonic(voices[lowest_index])
         top_candidates = _make_backing_voice_monophonic(voices[top_index])
         dominant = [candidate.note for candidate in dominant_candidates]
+        lowest = [candidate.note for candidate in lowest_candidates]
         top = [candidate.note for candidate in top_candidates]
     else:
         dominant_candidates = []
+        lowest_candidates = []
         top_candidates = []
         dominant = []
+        lowest = []
         top = []
 
     harmony = sorted(
@@ -443,6 +449,7 @@ def select_backing_vocal_variants(
     )
     variants: dict[str, list[NoteEvent]] = {
         "dominant_line": dominant,
+        "lowest_line": lowest,
         "top_line": top,
         "harmony_stack": harmony,
     }
@@ -455,6 +462,7 @@ def select_backing_vocal_variants(
             *supported,
             *uncertain,
             *dominant_candidates,
+            *lowest_candidates,
             *top_candidates,
         ]
     }
@@ -501,6 +509,7 @@ def select_backing_vocal_variants(
         diagnostics=diagnostics,
         descriptions={
             "dominant_line": "Recommended strongest continuous monophonic backing voice.",
+            "lowest_line": "Lowest continuous backing voice; an audition alternative, not an inferred lead.",
             "top_line": "Highest continuous backing voice.",
             "harmony_stack": "All supported backing voices as a polyphonic track.",
             "uncertain": "Weak or excess hypotheses quarantined for audition.",

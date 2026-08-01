@@ -1125,16 +1125,30 @@ downstream MIDI, exact weight-conversion parity and human review are complete,
 but lead-versus-backing assignment quality, remaining runtime/provider
 execution safety and every public route remain blocked.
 
+The next bounded experiment keeps the unchanged 23-note primary candidate and
+adds four audition-only hypotheses from the existing polyphonic vocal path:
+lowest line (16 notes), dominant line (28), top line (22) and the complete
+harmony stack (80). Their exact inactive evaluation is retained at
+`work/separation-bakeoff/i-am-a-alien-kim-vocal-register-hypotheses-219-234-v1`.
+No register is called a singer identity: a lane may switch singer or harmony
+inside the excerpt, and low pitch does not by itself establish the male lead.
+The control comparisons remain estimated-reference agreement only.
+
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
 resource, downstream-MIDI and human listening acceptance.
 
 ### Current private human-review queue
 
-As of 1 August 2026, no prepared Kim Vocal 2 human review is outstanding. The
+As of 1 August 2026, one prepared Kim Vocal 2 review is outstanding. It is a
+single blind, equal-level comparison of the unchanged primary contour against
+the lowest-register hypothesis, asking which follows the male lead melody more
+recognisably:
+`work/separation-bakeoff/i-am-a-alien-kim-vocal-primary-vs-lowest-lead-review-v1/midi_ab_review.html`.
+Its answer key must remain unopened until the reviewed JSON is exported. The
 FP32/BF16 precision review and `Be Alone` Kim-versus-Moises MIDI review both
-resolved to `equivalent`; `I am a Alien mashup` resolved to `neither`. The
-user also confirmed
+resolved to `equivalent`; the earlier `I am a Alien mashup` comparison resolved
+to `neither`. The user also confirmed
 listening to the current `Be Alone` six-source diagnostic page. That page is a
 static evidence browser with no export form, so no further action is required
 from it. Historical `be-alone-midi-listening-screen-v1` and earlier

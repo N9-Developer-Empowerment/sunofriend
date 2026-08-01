@@ -33,9 +33,15 @@ from .models import NoteEvent
 from .vocal import VocalConfig, transcribe_vocal_melody
 
 
-SCHEMA = "sunofriend.private-melroformer-downstream-vocal-midi-evaluation.v1"
+SCHEMA = "sunofriend.private-melroformer-downstream-vocal-midi-evaluation.v2"
 _REPORT_NAME = "private-melroformer-vocal-midi-evaluation.json"
 _CONTROL_PACKS = ("local-htdemucs", "moises", "suno-a", "suno-b")
+_REGISTER_HYPOTHESES = (
+    "lowest_line",
+    "dominant_line",
+    "top_line",
+    "harmony_stack",
+)
 
 
 def _evaluate_private_melroformer_vocal_midi(
@@ -91,7 +97,7 @@ def _evaluate_private_melroformer_vocal_midi(
         role_out = temporary / "kim-vocal-2" / "vocals"
         role_out.mkdir(parents=True, mode=0o700)
         started = time.monotonic()
-        transcription = transcribe_vocal_melody(
+        lead_transcription = transcribe_vocal_melody(
             vocals_path,
             config=VocalConfig(
                 role="lead",
@@ -102,36 +108,59 @@ def _evaluate_private_melroformer_vocal_midi(
                 phrase_repair=True,
             ),
         )
-        notes = _validated_notes(transcription.notes)
+        lead_notes = _validated_notes(lead_transcription.notes)
+        polyphonic_transcription = transcribe_vocal_melody(
+            vocals_path,
+            config=VocalConfig(
+                role="backing",
+                tuning_hz=tuning_hz,
+                tuning_source="authorised-midi-comparison-explicit",
+                bpm=bpm,
+            ),
+        )
         from .evaluate import evaluate_stem_midi
         from .render import render_midi_to_wav
 
-        candidate = _persist_candidate(
+        lead_candidate = _persist_candidate(
             root=temporary,
             role_out=role_out,
             label="primary",
             source=vocals_path,
             role="vocals",
-            notes=notes,
+            notes=lead_notes,
             bpm=bpm,
             render=render_midi_to_wav,
             evaluate=evaluate_stem_midi,
         )
-        comparisons = {
-            pack_id: {
-                "control_note_count": len(control_notes),
-                "candidate_note_count": len(notes),
-                "comparison": _compare_note_events(
-                    control_notes,
-                    notes,
-                    tolerance_seconds=0.040,
+        comparisons = _compare_to_controls(lead_notes, controls)
+        register_hypotheses: dict[str, Any] = {}
+        for variant in _REGISTER_HYPOTHESES:
+            variant_notes = _validated_notes(
+                polyphonic_transcription.variants.get(variant, ())
+            )
+            if not variant_notes:
+                continue
+            persisted = _persist_candidate(
+                root=temporary,
+                role_out=role_out,
+                label=f"hypothesis-{variant}",
+                source=vocals_path,
+                role="vocals",
+                notes=variant_notes,
+                bpm=bpm,
+                render=render_midi_to_wav,
+                evaluate=evaluate_stem_midi,
+            )
+            register_hypotheses[variant] = {
+                "semantics": (
+                    "audition-only register hypothesis; not an inferred lead or "
+                    "backing-vocal assignment"
                 ),
-                "reference_semantics": (
-                    "control MIDI is a relative comparison baseline, not score truth"
+                "candidate": persisted,
+                "comparisons_to_existing_controls": _compare_to_controls(
+                    variant_notes, controls
                 ),
             }
-            for pack_id, control_notes in controls.items()
-        }
         if _sha256(worker_path) != worker_sha256 or _sha256(vocals_path) != vocals_claim[
             "sha256"
         ]:
@@ -176,19 +205,31 @@ def _evaluate_private_melroformer_vocal_midi(
                 "role": "lead",
                 "tracker_mode": "pyin",
                 "phrase_repair": True,
+                "polyphonic_tracker": "basic_pitch",
+                "register_hypotheses": list(_REGISTER_HYPOTHESES),
                 "onset_tolerance_ms": 40.0,
                 "same_production_vocal_settings_as_controls": True,
                 "absolute_ground_truth_claimed": False,
                 "winner_selected": False,
+                "lead_backing_role_assignment_inferred": False,
+                "lowest_register_is_lead_claimed": False,
             },
             "components": _production_component_identity(),
             "candidate": {
                 "method": {
                     "pipeline": "production_vocal_dominant_contour",
-                    "primary_variant": transcription.primary_variant,
-                    "diagnostics": transcription.diagnostics.to_dict(),
+                    "primary_variant": lead_transcription.primary_variant,
+                    "diagnostics": lead_transcription.diagnostics.to_dict(),
                 },
-                "primary": candidate,
+                "primary": lead_candidate,
+                "register_hypotheses": {
+                    "method": {
+                        "pipeline": "production_backing_vocal_voice_selector",
+                        "primary_unchanged": True,
+                        "diagnostics": polyphonic_transcription.diagnostics.to_dict(),
+                    },
+                    "variants": register_hypotheses,
+                },
                 "elapsed_seconds": round(time.monotonic() - started, 6),
             },
             "comparisons_to_existing_controls": comparisons,
@@ -205,19 +246,26 @@ def _evaluate_private_melroformer_vocal_midi(
             "effects": {
                 "source_audio_mutated": False,
                 "inactive_midi_created": True,
-                "dry_proxy_audition_created": candidate["render"] is not None,
+                "dry_proxy_audition_created": lead_candidate["render"] is not None,
+                "register_hypothesis_auditions_created": any(
+                    value["candidate"]["render"] is not None
+                    for value in register_hypotheses.values()
+                ),
                 "source_graph_mutated": False,
                 "worker_rerun": False,
             },
             "limitations": [
                 "Every control is an estimated vocal stem, not score truth.",
                 "The production vocal path reduces the source to one dominant monophonic contour.",
+                "Lowest, dominant and top register lanes can each switch singer or follow a harmonic within one excerpt.",
+                "A lower register is not automatically the lead voice and a higher register is not automatically backing.",
                 "Pairwise MIDI agreement is not melody accuracy or listening preference.",
                 "One 15-second excerpt cannot establish cross-song acceptance.",
                 "The dry General MIDI audition is not a GarageBand patch recommendation.",
             ],
             "next": {
                 "equal_level_blind_listening_required": True,
+                "lead_backing_identity_listening_required": True,
                 "cross_song_repetition_required": True,
                 "studio_import_created": False,
             },
@@ -237,6 +285,27 @@ def _evaluate_private_melroformer_vocal_midi(
     except BaseException:
         shutil.rmtree(temporary, ignore_errors=True)
         raise
+
+
+def _compare_to_controls(
+    notes: tuple[NoteEvent, ...],
+    controls: Mapping[str, tuple[NoteEvent, ...]],
+) -> dict[str, Any]:
+    return {
+        pack_id: {
+            "control_note_count": len(control_notes),
+            "candidate_note_count": len(notes),
+            "comparison": _compare_note_events(
+                control_notes,
+                notes,
+                tolerance_seconds=0.040,
+            ),
+            "reference_semantics": (
+                "control MIDI is a relative comparison baseline, not score truth"
+            ),
+        }
+        for pack_id, control_notes in controls.items()
+    }
 
 
 def _validated_control_policy(value: object) -> tuple[float, float]:

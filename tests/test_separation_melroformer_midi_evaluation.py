@@ -28,16 +28,33 @@ def test_applies_unchanged_vocal_policy_and_keeps_result_inactive(
         "_validate_private_melroformer_authorised_worker",
         lambda _: worker_document,
     )
-    transcription = SimpleNamespace(
+    lead_transcription = SimpleNamespace(
         notes=(NoteEvent(0.1, 0.5, 64, 90),),
         primary_variant="consensus",
         diagnostics=SimpleNamespace(to_dict=lambda: {"fixture": True}),
+    )
+    backing_transcription = SimpleNamespace(
+        variants={
+            "lowest_line": (NoteEvent(0.1, 0.5, 52, 90),),
+            "dominant_line": (NoteEvent(0.1, 0.5, 64, 90),),
+            "top_line": (NoteEvent(0.1, 0.5, 76, 90),),
+            "harmony_stack": (
+                NoteEvent(0.1, 0.5, 52, 90),
+                NoteEvent(0.1, 0.5, 64, 90),
+                NoteEvent(0.1, 0.5, 76, 90),
+            ),
+        },
+        diagnostics=SimpleNamespace(to_dict=lambda: {"voices": 3}),
     )
     observed_configs = []
 
     def transcribe(path: Path, *, config: object) -> object:
         observed_configs.append(config)
-        return transcription
+        return (
+            lead_transcription
+            if getattr(config, "role") == "lead"
+            else backing_transcription
+        )
 
     monkeypatch.setattr(evaluation, "transcribe_vocal_melody", transcribe)
     monkeypatch.setattr(
@@ -71,8 +88,19 @@ def test_applies_unchanged_vocal_policy_and_keeps_result_inactive(
         "suno-b",
     }
     assert result["policy"]["tracker_mode"] == "pyin"
+    assert result["policy"]["polyphonic_tracker"] == "basic_pitch"
     assert result["policy"]["bpm"] == 136.0
-    assert observed_configs[0].bpm == 136.0
+    assert [config.role for config in observed_configs] == ["lead", "backing"]
+    assert all(config.bpm == 136.0 for config in observed_configs)
+    hypotheses = result["candidate"]["register_hypotheses"]["variants"]
+    assert set(hypotheses) == {
+        "lowest_line",
+        "dominant_line",
+        "top_line",
+        "harmony_stack",
+    }
+    assert hypotheses["lowest_line"]["candidate"]["note_count"] == 1
+    assert result["policy"]["lead_backing_role_assignment_inferred"] is False
     assert result["policy"]["same_production_vocal_settings_as_controls"] is True
     assert all(value is False for value in result["permissions"].values())
     assert result["effects"]["worker_rerun"] is False
