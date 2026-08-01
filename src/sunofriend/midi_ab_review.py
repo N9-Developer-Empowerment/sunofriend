@@ -8,6 +8,7 @@ import math
 import os
 import secrets
 import shutil
+import stat
 import subprocess
 import tempfile
 from copy import deepcopy
@@ -27,6 +28,7 @@ MIDI_AB_REVIEW_SCHEMA = "sunofriend.midi-ab-review.v1"
 MIDI_AB_ANSWER_KEY_SCHEMA = "sunofriend.midi-ab-answer-key.v1"
 MIDI_AB_RESULT_SCHEMA = "sunofriend.midi-ab-result.v1"
 MIDI_AB_AUDIO_MANIFEST_SCHEMA = "sunofriend.midi-ab-audio-manifest.v1"
+MIDI_AB_STATUS_SCHEMA = "sunofriend.midi-ab-review-status.v1"
 
 _CHOICES = {"candidate_a", "candidate_b", "equivalent", "neither", "cannot_tell"}
 _RENDER_GAIN = 0.7
@@ -37,6 +39,8 @@ _MAX_RMS_MISMATCH_DB = 0.05
 _MIN_CANDIDATE_RMS_DBFS = -60.0
 _FULL_SCALE_GUARD = 0.9999
 _MELODIC_CHANNELS = tuple(channel for channel in range(16) if channel != 9)
+_MAXIMUM_REVIEW_JSON_BYTES = 8 * 1024 * 1024
+_MAXIMUM_REVIEW_DIRECTORY_ENTRIES = 512
 
 
 def create_midi_ab_review(
@@ -447,6 +451,96 @@ def create_midi_ab_review(
     }
 
 
+def inspect_midi_ab_review_status(
+    package_dir: str | Path,
+    *,
+    review_path: str | Path | None = None,
+    review_directory: str | Path | None = None,
+) -> dict[str, Any]:
+    """Identify a matching reviewed export without reading the answer key.
+
+    The optional directory search is deliberately non-recursive and bounded.
+    It only considers browser-style ``midi_ab_review.reviewed*.json`` files.
+    A matching export is ready to *attempt* resolution; the resolver still
+    has to verify and open the separately sealed answer key and source inputs.
+    """
+
+    if review_path is not None and review_directory is not None:
+        raise ValueError("MIDI A/B status accepts either a review or review directory")
+    package = Path(package_dir).expanduser().resolve()
+    seed_path, seed = _load_midi_ab_package_seed(package)
+    _verify_review_audio(seed, package)
+
+    explicit = review_path is not None
+    if explicit:
+        candidates = [_bounded_review_json_file(review_path)]
+    elif review_directory is not None:
+        candidates = _review_export_candidates(review_directory)
+    else:
+        candidates = []
+
+    matches: list[dict[str, Any]] = []
+    incompatible_count = 0
+    for candidate in candidates:
+        try:
+            review, _, _ = _load_complete_review_export(candidate, package)
+        except ValueError:
+            if explicit:
+                raise
+            incompatible_count += 1
+            continue
+        matches.append(
+            {
+                "path": str(candidate),
+                "sha256": _sha256(candidate),
+                "reviewed_unit_count": int(
+                    (review.get("summary") or {}).get("reviewed_unit_count", 0)
+                ),
+            }
+        )
+    matches.sort(
+        key=lambda item: _bounded_review_json_file(item["path"]).stat().st_mtime_ns,
+        reverse=True,
+    )
+    status = "reviewed_export_found" if matches else "awaiting_human_review"
+    html = package / "midi_ab_review.html"
+    if not html.is_file() or html.is_symlink():
+        raise ValueError("MIDI A/B review HTML changed or is missing")
+    return {
+        "schema": MIDI_AB_STATUS_SCHEMA,
+        "operation": "midi-ab-review-status",
+        "status": status,
+        "blind": True,
+        "package": {
+            "path": str(package),
+            "seed_sha256": _sha256(seed_path),
+            "package_commitment": seed["package_commitment"],
+            "review_html": str(html),
+            "question": seed["question"],
+            "unit_count": len(seed["units"]),
+        },
+        "search": {
+            "candidate_count": len(candidates),
+            "matching_review_count": len(matches),
+            "incompatible_review_count": incompatible_count,
+            "non_recursive": True,
+            "maximum_directory_entries": _MAXIMUM_REVIEW_DIRECTORY_ENTRIES,
+        },
+        "matching_reviews": matches,
+        "answer_key": {
+            "read_by_this_operation": False,
+            "assignment_revealed": False,
+            "resolver_preflight_complete": False,
+        },
+        "next_action": (
+            "Run midi-ab-resolve with one matching review and this unchanged package."
+            if matches
+            else "Open the review HTML, hear source/A/B, mark every unit reviewed, and export JSON."
+        ),
+        "effects": _zero_effects(),
+    }
+
+
 def resolve_midi_ab_review(
     review_path: str | Path,
     out: str | Path,
@@ -455,59 +549,14 @@ def resolve_midi_ab_review(
 ) -> dict[str, Any]:
     """Resolve explicit blinded choices without applying or promoting either MIDI."""
 
-    review_file = Path(review_path).expanduser().resolve()
     package = Path(package_dir).expanduser().resolve()
-    if not package.is_dir():
-        raise ValueError(f"MIDI A/B package directory does not exist: {package}")
     output = Path(out).expanduser().absolute()
     if os.path.lexists(output):
         raise FileExistsError(f"MIDI A/B result already exists: {output}")
-    review = _read_json(review_file)
-    if review.get("schema") != MIDI_AB_REVIEW_SCHEMA:
-        raise ValueError("Unsupported MIDI A/B review schema")
-    seed_path = package / "midi_ab_review.json"
-    seed = _read_json(seed_path)
-    if (
-        seed.get("schema") != MIDI_AB_REVIEW_SCHEMA
-        or seed.get("status") != "unreviewed"
-        or seed.get("blind") is not True
-    ):
-        raise ValueError("MIDI A/B package seed is invalid")
-    if not _browser_json_equal(
-        _immutable_review_document(review),
-        _immutable_review_document(seed),
-    ):
-        raise ValueError("MIDI A/B reviewed export changed immutable package fields")
-    if review.get("status") != "reviewed" or review.get("blind") is not True:
-        raise ValueError("MIDI A/B review is not complete and blinded")
-    units = list(review.get("units") or [])
-    summary = review.get("summary") or {}
-    if not units or int(summary.get("unit_count", -1)) != len(units):
-        raise ValueError("MIDI A/B review unit count is invalid")
-    if int(summary.get("reviewed_unit_count", -1)) != len(units):
-        raise ValueError("MIDI A/B review is not marked complete for every unit")
-    unit_ids = [str(unit.get("unit_id")) for unit in units]
-    if len(set(unit_ids)) != len(unit_ids):
-        raise ValueError("MIDI A/B review contains duplicate units")
-    for unit in units:
-        if unit.get("choice") not in _CHOICES:
-            raise ValueError(f"MIDI A/B unit {unit.get('unit_id')} has no valid choice")
-        heard = unit.get("heard")
-        if (
-            not isinstance(heard, Mapping)
-            or set(heard) != {"source", "candidate_a", "candidate_b"}
-            or any(
-                heard.get(name) is not True
-                for name in ("source", "candidate_a", "candidate_b")
-            )
-        ):
-            raise ValueError(f"MIDI A/B unit {unit.get('unit_id')} is not marked heard")
-        if not isinstance(unit.get("notes"), str):
-            raise ValueError(f"MIDI A/B unit {unit.get('unit_id')} notes must be text")
-    if review.get("effects") != _zero_effects():
-        raise ValueError("MIDI A/B review declares an automatic effect")
-
-    _verify_review_audio(review, package)
+    review_file = _bounded_review_json_file(review_path)
+    review, seed, seed_path = _load_complete_review_export(review_file, package)
+    units = list(review["units"])
+    unit_ids = [str(unit["unit_id"]) for unit in units]
     answer_record = seed.get("answer_key") or {}
     answer_path = _package_file(package, answer_record.get("path"), "answer key")
     if not answer_path.is_file() or _sha256(answer_path) != answer_record.get("sha256"):
@@ -824,6 +873,123 @@ def _verify_review_audio(review: Mapping[str, Any], package: Path) -> None:
             referenced.add(relative)
     if referenced != set(rows):
         raise ValueError("MIDI A/B review audio references differ from its manifest")
+
+
+def _load_midi_ab_package_seed(package: Path) -> tuple[Path, dict[str, Any]]:
+    if not package.is_dir():
+        raise ValueError(f"MIDI A/B package directory does not exist: {package}")
+    seed_path = _bounded_review_json_file(package / "midi_ab_review.json")
+    seed = _read_json(seed_path)
+    units = seed.get("units")
+    if (
+        seed.get("schema") != MIDI_AB_REVIEW_SCHEMA
+        or seed.get("status") != "unreviewed"
+        or seed.get("blind") is not True
+        or not isinstance(seed.get("package_commitment"), str)
+        or not isinstance(seed.get("question"), str)
+        or not isinstance(units, list)
+        or not units
+    ):
+        raise ValueError("MIDI A/B package seed is invalid")
+    answer_record = seed.get("answer_key")
+    if not isinstance(answer_record, Mapping):
+        raise ValueError("MIDI A/B package answer-key record is invalid")
+    _package_file(package, answer_record.get("path"), "answer key")
+    answer_sha256 = answer_record.get("sha256")
+    if (
+        not isinstance(answer_sha256, str)
+        or len(answer_sha256) != 64
+        or any(character not in "0123456789abcdef" for character in answer_sha256)
+    ):
+        raise ValueError("MIDI A/B package answer-key identity is invalid")
+    return seed_path, seed
+
+
+def _load_complete_review_export(
+    review_file: Path,
+    package: Path,
+) -> tuple[dict[str, Any], dict[str, Any], Path]:
+    """Validate reviewer-authored fields without opening the answer key."""
+
+    seed_path, seed = _load_midi_ab_package_seed(package)
+    review = _read_json(_bounded_review_json_file(review_file))
+    if review.get("schema") != MIDI_AB_REVIEW_SCHEMA:
+        raise ValueError("Unsupported MIDI A/B review schema")
+    if not _browser_json_equal(
+        _immutable_review_document(review),
+        _immutable_review_document(seed),
+    ):
+        raise ValueError("MIDI A/B reviewed export changed immutable package fields")
+    if review.get("status") != "reviewed" or review.get("blind") is not True:
+        raise ValueError("MIDI A/B review is not complete and blinded")
+    units = list(review.get("units") or [])
+    summary = review.get("summary") or {}
+    if not units or int(summary.get("unit_count", -1)) != len(units):
+        raise ValueError("MIDI A/B review unit count is invalid")
+    if int(summary.get("reviewed_unit_count", -1)) != len(units):
+        raise ValueError("MIDI A/B review is not marked complete for every unit")
+    unit_ids = [str(unit.get("unit_id")) for unit in units]
+    if len(set(unit_ids)) != len(unit_ids):
+        raise ValueError("MIDI A/B review contains duplicate units")
+    for unit in units:
+        if unit.get("choice") not in _CHOICES:
+            raise ValueError(f"MIDI A/B unit {unit.get('unit_id')} has no valid choice")
+        heard = unit.get("heard")
+        if (
+            not isinstance(heard, Mapping)
+            or set(heard) != {"source", "candidate_a", "candidate_b"}
+            or any(
+                heard.get(name) is not True
+                for name in ("source", "candidate_a", "candidate_b")
+            )
+        ):
+            raise ValueError(f"MIDI A/B unit {unit.get('unit_id')} is not marked heard")
+        if not isinstance(unit.get("notes"), str):
+            raise ValueError(f"MIDI A/B unit {unit.get('unit_id')} notes must be text")
+    if review.get("effects") != _zero_effects():
+        raise ValueError("MIDI A/B review declares an automatic effect")
+    _verify_review_audio(review, package)
+    return review, seed, seed_path
+
+
+def _bounded_review_json_file(path: str | Path) -> Path:
+    candidate = Path(path).expanduser().absolute()
+    try:
+        attached = candidate.lstat()
+    except OSError as exc:
+        raise ValueError(f"MIDI A/B review JSON is unavailable: {candidate}") from exc
+    if (
+        candidate.is_symlink()
+        or not stat.S_ISREG(attached.st_mode)
+        or not 1 <= attached.st_size <= _MAXIMUM_REVIEW_JSON_BYTES
+    ):
+        raise ValueError("MIDI A/B review JSON must be a bounded regular file")
+    return candidate.resolve(strict=True)
+
+
+def _review_export_candidates(directory: str | Path) -> list[Path]:
+    root = Path(directory).expanduser().resolve(strict=True)
+    if not root.is_dir():
+        raise ValueError(f"MIDI A/B review directory does not exist: {root}")
+    candidates: list[Path] = []
+    entry_count = 0
+    with os.scandir(root) as entries:
+        for entry in entries:
+            entry_count += 1
+            if entry_count > _MAXIMUM_REVIEW_DIRECTORY_ENTRIES:
+                raise ValueError(
+                    "MIDI A/B review directory exceeds the bounded entry limit"
+                )
+            if not (
+                entry.name.startswith("midi_ab_review.reviewed")
+                and entry.name.endswith(".json")
+            ):
+                continue
+            try:
+                candidates.append(_bounded_review_json_file(root / entry.name))
+            except ValueError:
+                continue
+    return candidates
 
 
 def _immutable_review_unit(unit: Mapping[str, Any]) -> dict[str, Any]:

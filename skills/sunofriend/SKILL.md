@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide beginners and experts through local Sunofriend setup and use. Prepare one authorised audio asset or a folder of 2–64 already-separated supported audio parts as immutable evidence plus canonical PCM24 WAV, then turn synchronized stems into editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not perform generic stem separation, music downloading, lyric writing, DAW GUI editing, human-approved release mastering or unapproved dependency/model installation.
 ---
 
-<!-- sunofriend-interface-contract: 2026-07-29.3 -->
+<!-- sunofriend-interface-contract: 2026-08-01.1 -->
 
 # Sunofriend
 
@@ -301,7 +301,10 @@ report the result, then move on.
   identifies a singer. One owner-only blind primary-versus-lowest review is
   pending under the repository's ignored `work/separation-bakeoff` tree; it is
   development evidence, not a normal skill route, and its answer key must stay
-  unopened until the reviewed JSON is exported. The
+  unopened until the reviewed JSON is exported. The read-only public
+  `midi-ab-status` command may match an explicitly named export or one bounded,
+  non-recursive download directory without opening the answer key; it cannot
+  resolve or reveal A/B. The
   resolver alone opened each answer key after the complete user export. Their
   provider/local controls are estimates rather than ground truth, so they
   select no winner and the second result is an explicit quality blocker. The latest

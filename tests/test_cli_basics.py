@@ -184,6 +184,15 @@ class CliBasicsTests(unittest.TestCase):
                 "midi-ab.result.json",
             ]
         )
+        status = parser.parse_args(
+            [
+                "midi-ab-status",
+                "--package-dir",
+                "blind-review",
+                "--review-dir",
+                "downloads",
+            ]
+        )
 
         self.assertEqual(review.source_audio, "source.wav")
         self.assertEqual(review.first_midi, "beam1.mid")
@@ -202,6 +211,9 @@ class CliBasicsTests(unittest.TestCase):
         self.assertEqual(resolve.review, "midi-ab.reviewed.json")
         self.assertEqual(resolve.package_dir, "blind-review")
         self.assertEqual(resolve.out, "midi-ab.result.json")
+        self.assertEqual(status.package_dir, "blind-review")
+        self.assertIsNone(status.review)
+        self.assertEqual(status.review_dir, "downloads")
 
     def test_ai_transcribe_session_is_bounded_and_muscriptor_only(self) -> None:
         args = build_parser().parse_args(
@@ -590,6 +602,36 @@ class CliBasicsTests(unittest.TestCase):
             package_dir="blind-review",
         )
         self.assertFalse(json.loads(stdout.getvalue())["promotion_allowed"])
+
+    @patch("sunofriend.midi_ab_review.inspect_midi_ab_review_status")
+    def test_midi_ab_status_routes_without_revealing_assignment(self, inspect) -> None:
+        inspect.return_value = {
+            "schema": "sunofriend.midi-ab-review-status.v1",
+            "status": "reviewed_export_found",
+            "answer_key": {"assignment_revealed": False},
+        }
+        stdout = io.StringIO()
+
+        with redirect_stdout(stdout):
+            result = main(
+                [
+                    "midi-ab-status",
+                    "--package-dir",
+                    "blind-review",
+                    "--review-dir",
+                    "downloads",
+                ]
+            )
+
+        self.assertEqual(result, 0)
+        inspect.assert_called_once_with(
+            "blind-review",
+            review_path=None,
+            review_directory="downloads",
+        )
+        self.assertFalse(
+            json.loads(stdout.getvalue())["answer_key"]["assignment_revealed"]
+        )
 
     @patch("sunofriend.ai_session.run_muscriptor_session")
     @patch("sunofriend.ai_runtime.resolve_muscriptor_checkpoint")

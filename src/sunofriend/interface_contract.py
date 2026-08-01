@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-07-29.3"
+INTERFACE_CONTRACT_VERSION = "2026-08-01.1"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -52,6 +52,7 @@ PUBLIC_COMMAND_GROUPS: dict[str, tuple[str, ...]] = {
         "midi-role-split",
         "midi-role-split-resolve",
         "midi-ab-review",
+        "midi-ab-status",
         "midi-ab-resolve",
         "timbre-resynthesis",
         "listening-master",

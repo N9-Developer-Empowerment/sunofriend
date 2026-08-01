@@ -833,9 +833,29 @@ download, use Safari, Chrome or Firefox for this page; no server or upload is
 required. The audio elements auto-loop, and their shared playhead is scoped to
 one review unit rather than leaking between passages. A
 secret random nonce assigns A/B per loop; the public seed contains only its
-commitment and the private nonce/mappings stay in the answer key. Then reveal
-and verify the hidden mapping with a fresh result path and the original
-unchanged package directory:
+commitment and the private nonce/mappings stay in the answer key.
+
+When several identically named browser downloads make it unclear which review
+is outstanding, inspect one explicit export or search one directory without
+revealing the assignment:
+
+```bash
+sunofriend midi-ab-status \
+  --package-dir "/absolute/fresh/path/midi-ab-review" \
+  --review-dir "$HOME/Downloads"
+```
+
+The search is local, non-recursive and limited to 512 directory entries and
+8 MiB per candidate JSON. It validates the unchanged public seed, audio
+manifest, review audio, heard flags and completed reviewer fields. It does not
+open the answer key, reveal A/B, infer a choice or complete the resolver's
+private-input preflight. You can instead use `--review FILE` to check exactly
+one export. A `reviewed_export_found` result means the matching export may be
+passed to the resolver; it is not proof that the still-sealed answer key and
+original MIDI inputs will pass resolution.
+
+Then reveal and verify the hidden mapping with a fresh result path and the
+original unchanged package directory:
 
 ```bash
 sunofriend midi-ab-resolve \

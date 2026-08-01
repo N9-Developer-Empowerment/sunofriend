@@ -1146,6 +1146,9 @@ the lowest-register hypothesis, asking which follows the male lead melody more
 recognisably:
 `work/separation-bakeoff/i-am-a-alien-kim-vocal-primary-vs-lowest-lead-review-v1/midi_ab_review.html`.
 Its answer key must remain unopened until the reviewed JSON is exported. The
+read-only `midi-ab-status` command can match a browser export to this package
+without opening the answer key; it does not resolve or reveal the assignment.
+The
 FP32/BF16 precision review and `Be Alone` Kim-versus-Moises MIDI review both
 resolved to `equivalent`; the earlier `I am a Alien mashup` comparison resolved
 to `neither`. The user also confirmed

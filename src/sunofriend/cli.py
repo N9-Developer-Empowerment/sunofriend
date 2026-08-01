@@ -1546,6 +1546,30 @@ def build_parser() -> argparse.ArgumentParser:
         "--out", required=True, help="Fresh resolved listening-evidence JSON"
     )
 
+    midi_ab_status = sub.add_parser(
+        "midi-ab-status",
+        help="Find a matching completed blind-review export without revealing A/B",
+    )
+    midi_ab_status.add_argument(
+        "--package-dir",
+        required=True,
+        help="Original unchanged midi-ab-review package directory",
+    )
+    review_source = midi_ab_status.add_mutually_exclusive_group()
+    review_source.add_argument(
+        "--review",
+        default=None,
+        help="One explicit browser-exported reviewed JSON to validate",
+    )
+    review_source.add_argument(
+        "--review-dir",
+        default=None,
+        help=(
+            "Search only this directory, non-recursively, for bounded "
+            "midi_ab_review.reviewed*.json exports"
+        ),
+    )
+
     preview = sub.add_parser(
         "preview", help="Render a MIDI file to WAV with FluidSynth"
     )
@@ -2680,6 +2704,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_midi_ab_review(args)
         if args.command == "midi-ab-resolve":
             return _run_midi_ab_resolve(args)
+        if args.command == "midi-ab-status":
+            return _run_midi_ab_status(args)
         if args.command == "timbre-resynthesis":
             return _run_timbre_resynthesis(args)
         if args.command == "preview":
@@ -4586,6 +4612,18 @@ def _run_midi_ab_resolve(args) -> int:
         args.review,
         args.out,
         package_dir=args.package_dir,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_midi_ab_status(args) -> int:
+    from .midi_ab_review import inspect_midi_ab_review_status
+
+    result = inspect_midi_ab_review_status(
+        args.package_dir,
+        review_path=args.review,
+        review_directory=args.review_dir,
     )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0

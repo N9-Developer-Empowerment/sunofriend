@@ -1,4 +1,4 @@
-<!-- sunofriend-interface-contract: 2026-07-28.1 -->
+<!-- sunofriend-interface-contract: 2026-08-01.1 -->
 
 # Sunofriend advanced operations
 
@@ -190,9 +190,11 @@ guided forms.
      fitted harmonic-plus-noise candidate itself uses the normal audio runtime.
    - `sunofriend doctor --require preview` for `midi-ab-review`; it renders
      both unchanged MIDI candidates through one pinned dry FluidSynth/SF2/
-     program/gain contract. `midi-ab-resolve` itself needs no audio, ML or
-     preview capability: it verifies one explicitly exported reviewed JSON
-     against the separately supplied original unchanged package directory.
+     program/gain contract. `midi-ab-status` and `midi-ab-resolve` need no
+     audio, ML or preview capability. Status verifies only public review
+     evidence and never opens the answer key; resolution verifies one
+     explicitly exported reviewed JSON against the separately supplied
+     original unchanged package directory and then opens the sealed key.
    - `sunofriend doctor --require preview` for offline rendering, including
      `melody-review` and `melody-guide` MIDI-only and source-overlay
      alternatives.
@@ -951,7 +953,7 @@ guided forms.
   time that corresponds to source time zero and must land on a source sample
   frame. Use `0` only when the source WAV and both MIDI files share their excerpt origin;
   never infer alignment. Pin `--soundfont` when reproducibility matters;
-  `--gm-program` is zero-based and defaults to 4. Both candidates use the same
+   `--gm-program` is zero-based and defaults to 4. Both candidates use the same
   dry FluidSynth executable, SF2, program, gain and source sample rate. Only
   the louder candidate is attenuated to the quieter fixed-window sample RMS;
   both candidate windows must reach at least -60 dBFS RMS, and the source
@@ -962,6 +964,11 @@ guided forms.
   is scoped to each unit. Require the reviewer to hear source/A/B, tick all
   three heard boxes, choose A/B/equivalent/neither/cannot tell for every loop,
   mark the review complete and export `midi_ab_review.reviewed.json`. Then use
+  `midi-ab-status --package-dir ORIGINAL_UNCHANGED_REVIEW_DIR --review FILE`
+  to validate one explicit export without opening the answer key, or replace
+  `--review FILE` with `--review-dir DIRECTORY` for a bounded, non-recursive
+  search of browser-named exports. Status never reveals an assignment and is
+  not the resolver's answer-key/source-input preflight. Then use
   `midi-ab-resolve REVIEWED.json` with
   `--package-dir ORIGINAL_UNCHANGED_REVIEW_DIR` and `--out FRESH.json` to reveal
   the verified identity mapping. The resolver must allow only review
@@ -978,6 +985,9 @@ guided forms.
   "FOCUS" [--interval START END "FOCUS" ...] --bpm N
   --midi-time-at-source-start SECONDS [--gm-program 4] [--soundfont FILE]
   [--question TEXT] --out-dir FRESH` and
+  `sunofriend midi-ab-status --package-dir
+  ORIGINAL_UNCHANGED_REVIEW_DIR [--review REVIEWED.json | --review-dir
+  DIRECTORY]` and
   `sunofriend midi-ab-resolve REVIEWED.json --package-dir
   ORIGINAL_UNCHANGED_REVIEW_DIR --out FRESH.json`.
 - Bounded exact-repeat MuScriptor timing: use `ai-transcribe-session` only to
@@ -1802,7 +1812,11 @@ sunofriend ai-label-split "$COMPLETED_M4_RUN" \
    choices begin incomplete. State explicitly that this is not LUFS, true-peak
    or perceived-loudness matching and that MIDI edits, selection, promotion and
    default changes are zero. Hand off the HTML without opening the answer key
-   or manufacturing a reviewed export. For `midi-ab-resolve`, require a
+   or manufacturing a reviewed export. For `midi-ab-status`, report the
+   unchanged package commitment and question, bounded candidate/match counts,
+   matching reviewed-export hashes, and that the operation did not read the
+   answer key, reveal A/B, infer a choice or complete resolver preflight. For
+   `midi-ab-resolve`, require a
    user-exported complete review and the separately named original unchanged
    `--package-dir`; reverify the seed, audio manifest, answer key and original
    inputs. Confirm only status/reviewed count, heard, choice and notes changed,

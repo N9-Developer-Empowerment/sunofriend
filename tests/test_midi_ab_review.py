@@ -18,7 +18,9 @@ from sunofriend.midi_ab_review import (
     MIDI_AB_ANSWER_KEY_SCHEMA,
     MIDI_AB_RESULT_SCHEMA,
     MIDI_AB_REVIEW_SCHEMA,
+    MIDI_AB_STATUS_SCHEMA,
     create_midi_ab_review,
+    inspect_midi_ab_review_status,
     resolve_midi_ab_review,
 )
 
@@ -455,6 +457,62 @@ class MidiAbReviewTests(unittest.TestCase):
                 resolve_midi_ab_review(
                     review_path, output, package_dir=report["out_dir"]
                 )
+
+    def test_status_finds_matching_export_without_reading_answer_key(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixtures = self._fixtures(root)
+            report = self._create(
+                fixtures,
+                root / "review",
+                [(0.0, 1.0, "Recognisable melody fixture.")],
+            )
+            downloads = root / "downloads"
+            downloads.mkdir()
+            reviewed = self._reviewed_export(
+                report,
+                downloads / "midi_ab_review.reviewed (1).json",
+            )
+            (downloads / "midi_ab_review.reviewed-old.json").write_text(
+                '{"schema":"different"}\n', encoding="utf-8"
+            )
+            Path(report["answer_key"]).write_text(
+                "sealed answer key deliberately unreadable by status\n",
+                encoding="utf-8",
+            )
+
+            status = inspect_midi_ab_review_status(
+                report["out_dir"], review_directory=downloads
+            )
+
+            self.assertEqual(status["schema"], MIDI_AB_STATUS_SCHEMA)
+            self.assertEqual(status["status"], "reviewed_export_found")
+            self.assertEqual(status["search"]["matching_review_count"], 1)
+            self.assertEqual(status["search"]["incompatible_review_count"], 1)
+            self.assertEqual(
+                status["matching_reviews"][0]["path"], str(reviewed.resolve())
+            )
+            self.assertFalse(status["answer_key"]["read_by_this_operation"])
+            self.assertFalse(status["answer_key"]["assignment_revealed"])
+            self.assertFalse(status["answer_key"]["resolver_preflight_complete"])
+            self.assertEqual(status["effects"], _read(Path(report["seed"]))["effects"])
+
+    def test_status_reports_pending_review_without_guessing_downloads(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixtures = self._fixtures(root)
+            report = self._create(
+                fixtures,
+                root / "review",
+                [(0.0, 1.0, "Pending-review fixture.")],
+            )
+
+            status = inspect_midi_ab_review_status(report["out_dir"])
+
+            self.assertEqual(status["status"], "awaiting_human_review")
+            self.assertEqual(status["search"]["candidate_count"], 0)
+            self.assertEqual(status["matching_reviews"], [])
+            self.assertIn("Open the review HTML", status["next_action"])
 
     def test_browser_integer_number_round_trip_preserves_immutable_meaning(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
