@@ -22,14 +22,14 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: pip
-      - name: Install lightweight test environment
+      - name: Install the portable Python test stack
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e '.[dev]' 'numpy>=2.0,<2.1'
+          python -m pip install -e '.[all,dev]'
       - name: Lint
         run: python -m ruff check src tests
       - name: Test
-        run: python -m pytest -q
+        run: python -m pytest -q -m 'not trusted_local'
 
   package:
     name: Build and inspect distributions
@@ -82,4 +82,4 @@ jobs:
           python -m sunofriend doctor --require transcribe
           python -m sunofriend doctor --require convert
       - name: Run the full test suite
-        run: python -m pytest -q
+        run: python -m pytest -q -m 'not trusted_local'

@@ -1161,6 +1161,10 @@ class SunofriendTui(App[None]):
             self.exit()
 
     async def on_unmount(self) -> None:
+        # Invalidate a project read before widgets are removed.  A slow
+        # background load must not try to update an already unmounted screen.
+        self._project_load_sequence += 1
+        self._project_loading = False
         await self._stop_simple_create(notify_timeout=False)
         await self._stop_full_conversion(notify_timeout=False)
         await self._wait_for_listening_master(notify_timeout=False)

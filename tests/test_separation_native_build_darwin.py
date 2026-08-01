@@ -430,6 +430,7 @@ raise SystemExit(4)
     assert result.returncode == 0, result.stderr.decode(errors="replace")
 
 
+@pytest.mark.trusted_local
 @pytest.mark.skipif(
     sys.platform != "darwin" or platform.system() != "Darwin",
     reason="live native launcher build is macOS-only",
@@ -561,6 +562,7 @@ def test_live_build_is_signed_path_private_and_reused(tmp_path: Path) -> None:
     )
 
 
+@pytest.mark.trusted_local
 @pytest.mark.skipif(
     sys.platform != "darwin" or platform.system() != "Darwin",
     reason="live native launcher build is macOS-only",
@@ -584,6 +586,7 @@ def test_fresh_build_never_trusts_a_tampered_previous_artifact(
     )
 
 
+@pytest.mark.trusted_local
 @pytest.mark.skipif(
     sys.platform != "darwin" or platform.system() != "Darwin",
     reason="live native launcher build is macOS-only",

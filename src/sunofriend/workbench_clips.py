@@ -185,6 +185,7 @@ class WorkbenchClipService:
             library_path / "catalog.sqlite3",
             "Clip library database",
         )
+        _require_sqlite_database_header(library_path / "catalog.sqlite3")
         objects_path = library_path / "objects"
         if (
             not objects_path.exists()
@@ -684,6 +685,14 @@ class WorkbenchClipService:
         """Re-verify the acceptance gate and current on-disk Clip inventory."""
 
         try:
+            # SQLite may continue serving cached pages or a valid WAL after the
+            # database file itself is replaced.  Check the file bytes directly
+            # so every route fails closed on missing or corrupt evidence.
+            _require_regular_file(
+                self._library.database_path,
+                "Clip library database",
+            )
+            _require_sqlite_database_header(self._library.database_path)
             acceptance = _validate_acceptance(
                 self._acceptance_result_path,
                 self._garageband_pack_path,
@@ -1467,6 +1476,18 @@ def _require_regular_file(
         raise ValueError(f"{label} does not exist") from exc
     if not stat.S_ISREG(mode) or (path.is_symlink() and not allow_symlink):
         raise ValueError(f"{label} must be a regular non-symlink file")
+
+
+def _require_sqlite_database_header(path: Path) -> None:
+    """Require the fixed SQLite file signature without trusting page caches."""
+
+    try:
+        with path.open("rb") as stream:
+            header = stream.read(16)
+    except OSError as exc:
+        raise ValueError("Clip library database cannot be read") from exc
+    if header != b"SQLite format 3\x00":
+        raise ValueError("Clip library database header is invalid")
 
 
 def _read_json(path: Path, *, maximum_bytes: int) -> dict[str, Any]:

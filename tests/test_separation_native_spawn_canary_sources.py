@@ -355,6 +355,7 @@ def test_artifact_measurement_binds_hash_and_full_stable_identity(
         harness._measure_artifact(path)
 
 
+@pytest.mark.trusted_local
 def test_runtime_worker_and_outer_supervisor_contract_are_narrow() -> None:
     runtime = harness._measure_runtime(Path(sys.executable).resolve())
     worker = harness._measure_worker(WORKER)

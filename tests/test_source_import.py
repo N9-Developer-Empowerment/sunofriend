@@ -35,6 +35,54 @@ from sunofriend.source_receipt import validate_source_receipt_files
 
 
 class SourceImportTests(unittest.TestCase):
+    def test_macos_atomic_publish_uses_only_public_no_replace_flags(self) -> None:
+        class FakeRename:
+            argtypes = None
+            restype = None
+
+            def __init__(self) -> None:
+                self.arguments = None
+
+            def __call__(self, *arguments):
+                self.arguments = arguments
+                return 0
+
+        class FakeLibrary:
+            def __init__(self, rename: FakeRename) -> None:
+                self.renameatx_np = rename
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            staging = root / "staging"
+            staging.mkdir()
+            destination = root / "published"
+            rename = FakeRename()
+            parent_fd = source_import_module._open_destination_parent(root)
+            try:
+                with (
+                    patch.object(source_import_module.sys, "platform", "darwin"),
+                    patch.object(
+                        source_import_module.ctypes,
+                        "CDLL",
+                        return_value=FakeLibrary(rename),
+                    ),
+                ):
+                    source_import_module._publish_directory_no_replace(
+                        staging,
+                        destination,
+                        parent_fd=parent_fd,
+                    )
+            finally:
+                source_import_module.os.close(parent_fd)
+
+        self.assertIsNotNone(rename.arguments)
+        self.assertEqual(
+            rename.arguments[-1],
+            source_import_module._DARWIN_RENAME_NO_REPLACE_FLAGS,
+        )
+        self.assertEqual(rename.arguments[-1], 0x00000004 | 0x00000010)
+        self.assertEqual(rename.arguments[-1] & 0x00000020, 0)
+
     def test_stable_probe_rejects_source_mutation_during_probe(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

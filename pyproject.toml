@@ -87,6 +87,8 @@ dev = [
     "build>=1.2,<2",
     "pytest>=8,<10",
     "ruff>=0.15,<0.16",
+    # Tests build the wheel without isolation to inspect packaged resources.
+    "setuptools>=77,<81",
     "twine>=6,<7",
 ]
 
@@ -117,6 +119,9 @@ sunofriend = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "trusted_local: live security probe that requires a locally owned macOS toolchain and Python runtime",
+]
 
 [tool.ruff]
 target-version = "py39"

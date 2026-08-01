@@ -603,7 +603,10 @@ class WorkbenchClipTransformTests(unittest.TestCase):
                     hashlib.sha256(path.read_bytes()).hexdigest(),
                 )
                 for path in library_root.rglob("*")
-                if path.is_file()
+                # SQLite's shared-memory index is expected to change when a
+                # connection acquires locks, even when no catalog row or
+                # immutable object changes.  It is not durable library data.
+                if path.is_file() and path.name != "catalog.sqlite3-shm"
             )
         )
 

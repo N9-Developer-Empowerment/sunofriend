@@ -46,6 +46,13 @@ from .source_receipt import (
 )
 
 
+_DARWIN_RENAME_EXCL = 0x00000004
+_DARWIN_RENAME_NOFOLLOW_ANY = 0x00000010
+_DARWIN_RENAME_NO_REPLACE_FLAGS = (
+    _DARWIN_RENAME_EXCL | _DARWIN_RENAME_NOFOLLOW_ANY
+)
+
+
 @dataclass(frozen=True)
 class SourceImportPlan:
     """Read-only plan whose identities are rechecked immediately before import."""
@@ -739,7 +746,9 @@ def _publish_directory_no_replace(
             source_bytes,
             parent_fd,
             destination_bytes,
-            0x00000004 | 0x00000010 | 0x00000020,
+            # macOS sys/stdio.h: RENAME_EXCL | RENAME_NOFOLLOW_ANY. 0x20 is
+            # not public and newer hosted runners reject it with EINVAL.
+            _DARWIN_RENAME_NO_REPLACE_FLAGS,
         )
     elif sys.platform.startswith("linux"):
         try:

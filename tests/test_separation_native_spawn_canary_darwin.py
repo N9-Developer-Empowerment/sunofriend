@@ -300,6 +300,7 @@ raise SystemExit(0 if rejected else 12)
         }
 
 
+@pytest.mark.trusted_local
 @pytest.mark.skipif(
     sys.platform != "darwin" or platform.system() != "Darwin",
     reason="live native spawn canary is macOS-only",

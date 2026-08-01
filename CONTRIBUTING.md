@@ -95,3 +95,12 @@ For conversion work, `doctor` must report `convert_ready` as true. Require
 Add a deterministic regression test for behaviour changes. Preserve existing
 golden outputs unless the change is intentional and explained with updated
 stem-to-MIDI metrics.
+
+GitHub Actions runs the portable suite on Linux and macOS and the complete
+audio/ML stack on macOS. Tests marked `trusted_local` are live security probes
+for a locally owned macOS compiler and Python runtime; hosted runners cannot
+satisfy those ownership guarantees. Run them on a trusted Mac with:
+
+```bash
+python -m pytest -m trusted_local
+```

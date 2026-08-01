@@ -679,6 +679,7 @@ def test_started_child_exit_127_is_exact_reap_not_no_start(
             session_module._KNOWN.pop(session, None)
 
 
+@pytest.mark.trusted_local
 @pytest.mark.skipif(
     sys.platform != "darwin" or platform.system() != "Darwin",
     reason="live native launcher sessions require macOS",
@@ -741,6 +742,7 @@ def test_live_session_imports_one_fresh_build_without_starting_worker(
     )
 
 
+@pytest.mark.trusted_local
 @pytest.mark.skipif(
     sys.platform != "darwin" or platform.system() != "Darwin",
     reason="live native launcher sessions require macOS",

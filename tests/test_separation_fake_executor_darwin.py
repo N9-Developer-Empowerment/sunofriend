@@ -1404,6 +1404,7 @@ def test_outer_executor_seals_whole_run_native_failure(
     assert fixture["checkpoint"].exists()
 
 
+@pytest.mark.trusted_local
 @pytest.mark.skipif(
     sys.platform != "darwin" or platform.system() != "Darwin",
     reason="live fake execution requires the audited Darwin launcher",
