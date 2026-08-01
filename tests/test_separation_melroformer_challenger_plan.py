@@ -36,6 +36,7 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
     )
     assert plan["checkpoint"]["checkpoint_specific_terms_verified"] is True
     assert plan["checkpoint"]["download_permitted"] is False
+    assert plan["checkpoint"]["static_inspection_contract_defined"] is True
     assert plan["licensing"]["explicit_user_approval_recorded"] is False
     assert plan["alternatives_reviewed"][0]["admitted"] is False
     assert plan["alternatives_reviewed"][1]["admitted"] is False
@@ -56,6 +57,11 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
     }
     assert plan["runtime"]["installation_command"] is None
     assert plan["runtime"]["installation_permitted"] is False
+    assert plan["runtime"]["exact_source_manifest_defined"] is True
+    assert plan["runtime"]["dependency_lock_defined"] is True
+    assert plan["runtime"]["dependency_license_audit_defined"] is True
+    assert plan["runtime"]["worker_protocol_defined"] is True
+    assert plan["source"]["upstream_from_pretrained_permitted"] is False
     assert plan["runtime"]["reported_parity_is_model_ground_truth_score"] is False
     assert plan["decision"]["checkpoint_published_identity_pinned"] is True
     assert plan["decision"]["checkpoint_local_identity_verified"] is False
@@ -66,8 +72,7 @@ def test_plan_is_exact_read_only_and_fail_closed() -> None:
     assert {
         "checkpoint_local_hash_unverified",
         "explicit_private_evaluation_approval_missing",
-        "runtime_dependency_lock_missing",
-        "runtime_source_audit_missing",
+        "runtime_source_materialisation_missing",
         "runtime_worker_not_implemented",
     }.issubset(plan["decision"]["blockers"])
     assert all(value is False for value in plan["effects"].values())

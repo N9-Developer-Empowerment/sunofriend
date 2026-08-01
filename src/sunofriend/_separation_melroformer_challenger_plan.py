@@ -14,6 +14,13 @@ import stat
 from pathlib import Path
 from typing import Any
 
+from ._separation_melroformer_runtime_evidence import (
+    RUNTIME_LOCK,
+    RUNTIME_LOCK_SHA256,
+    SOURCE_MANIFEST,
+    SOURCE_MANIFEST_SHA256,
+    SOURCE_REVISION as RUNTIME_SOURCE_REVISION,
+)
 from ._separation_melroformer_upstream_evidence import (
     CONVERSION_CHECKPOINT_BYTES,
     CONVERSION_CHECKPOINT_SHA256,
@@ -26,10 +33,12 @@ from ._separation_melroformer_upstream_evidence import (
     UPSTREAM_EVIDENCE_BYTES,
     UPSTREAM_EVIDENCE_SHA256,
 )
+from ._separation_melroformer_worker_protocol import SCHEMA as WORKER_PROTOCOL_SCHEMA
+from ._separation_safetensors_inspection import SCHEMA as SAFETENSORS_INSPECTION_SCHEMA
 
 
-PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v1"
-POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v1"
+PLAN_SCHEMA = "sunofriend.private-melroformer-challenger-plan.v2"
+POLICY_ID = "private-mlx-melroformer-kim-vocal-2-plan-v2"
 AUDITED_AT = "2026-08-01"
 CHECKPOINT_NAME = "model.safetensors"
 CHECKPOINT_URL = (
@@ -47,8 +56,7 @@ _BASE_BLOCKERS = (
     "apple_runtime_resource_bounds_unmeasured",
     "conversion_parity_not_independently_verified",
     "explicit_private_evaluation_approval_missing",
-    "runtime_dependency_lock_missing",
-    "runtime_source_audit_missing",
+    "runtime_source_materialisation_missing",
     "runtime_worker_not_implemented",
     "safetensors_static_inspection_not_completed",
 )
@@ -107,7 +115,14 @@ def _build_private_melroformer_challenger_plan(
             "original_checkpoint_sha256": SOURCE_CHECKPOINT_SHA256,
             "conversion_tool_revision_reported": "8380ab8",
             "source_identity_pinned": True,
-            "runtime_source_audited_by_sunofriend": False,
+            "runtime_source_repository": "Blaizzy/mlx-audio",
+            "runtime_source_revision": RUNTIME_SOURCE_REVISION,
+            "runtime_source_manifest": SOURCE_MANIFEST,
+            "runtime_source_manifest_sha256": SOURCE_MANIFEST_SHA256,
+            "runtime_source_audited_by_sunofriend": True,
+            "runtime_source_materialised": False,
+            "upstream_from_pretrained_permitted": False,
+            "stale_runtime_gpl_comment_recorded": True,
         },
         "checkpoint": {
             "name": CHECKPOINT_NAME,
@@ -129,6 +144,8 @@ def _build_private_melroformer_challenger_plan(
                 )
             ),
             "download_permitted": False,
+            "static_inspection_contract": SAFETENSORS_INSPECTION_SCHEMA,
+            "static_inspection_contract_defined": True,
             "static_inspection_completed": False,
             "model_loading_permitted": False,
             "redistribution_approved_by_sunofriend": False,
@@ -201,15 +218,22 @@ def _build_private_melroformer_challenger_plan(
             "reported_parity_sdr_db": 66.08,
             "reported_parity_is_model_ground_truth_score": False,
             "reported_parity_independently_verified_by_sunofriend": False,
-            "exact_source_manifest_defined": False,
-            "dependency_input_defined": False,
-            "dependency_lock_defined": False,
-            "dependency_license_audit_defined": False,
+            "exact_source_manifest_defined": True,
+            "exact_source_manifest_sha256": SOURCE_MANIFEST_SHA256,
+            "dependency_input_defined": True,
+            "dependency_lock_defined": True,
+            "dependency_lock": RUNTIME_LOCK,
+            "dependency_lock_sha256": RUNTIME_LOCK_SHA256,
+            "dependency_license_audit_defined": True,
+            "minimal_packages": ["mlx", "mlx-metal", "numpy"],
+            "upstream_mlx_audio_distribution_required": False,
             "installed": False,
             "installation_command": None,
             "installation_permitted": False,
             "network_denial_verified": False,
             "apple_resource_bounds_measured": False,
+            "worker_protocol_schema": WORKER_PROTOCOL_SCHEMA,
+            "worker_protocol_defined": True,
             "worker_implemented": False,
         },
         "evaluation_contract": {
@@ -243,12 +267,12 @@ def _build_private_melroformer_challenger_plan(
             "worker_start_permitted": False,
             "blockers": blockers,
             "next_safe_actions": [
-                "audit and pin the exact MLX runtime source surface",
-                "resolve a wheel-only version-and-hash dependency lock and licence audit",
-                "define a bounded Safetensors header and tensor inventory inspection",
-                "define the no-network two-role excerpt request and result protocol",
                 "request explicit private-evaluation approval before any download or install",
-                "after approval, hash the local checkpoint before any model import",
+                "after approval, materialise and verify the exact source and runtime without using the upstream convenience loader",
+                "after approval, acquire and hash the exact local checkpoint without importing the model",
+                "apply the bounded Safetensors header and tensor inventory inspection before any tensor load",
+                "implement the isolated two-role excerpt worker behind the existing non-executable protocol",
+                "measure resource and offline bounds before any wider evaluation",
             ],
         },
         "effects": {

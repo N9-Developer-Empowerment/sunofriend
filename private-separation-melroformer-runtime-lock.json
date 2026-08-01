@@ -1,0 +1,58 @@
+{
+  "schema": "sunofriend.private-melroformer-runtime-lock.v1",
+  "candidate_id": "mlx-melroformer-kim-vocal-2",
+  "python": "3.12",
+  "platform": "macOS 14+ arm64",
+  "audit_date": "2026-08-01",
+  "strategy": "hash-pinned minimal runtime for the exact audited source overlay; no mlx-audio convenience-loader dependency set",
+  "packages": [
+    {
+      "name": "mlx",
+      "version": "0.31.2",
+      "filename": "mlx-0.31.2-cp312-cp312-macosx_14_0_arm64.whl",
+      "bytes": 584863,
+      "sha256": "e5067aaf2be1f3d7bba5be52348775804f111173c1ed04639618fd713b1a530f",
+      "license": "MIT",
+      "requires": ["mlx-metal==0.31.2; platform_system == 'Darwin'"]
+    },
+    {
+      "name": "mlx-metal",
+      "version": "0.31.2",
+      "filename": "mlx_metal-0.31.2-py3-none-macosx_14_0_arm64.whl",
+      "bytes": 40055588,
+      "sha256": "b25385bcee18fc194092255b8b53b9a3d8489eb650e59160f1b57aadd07aa2dc",
+      "license": "MIT",
+      "requires": []
+    },
+    {
+      "name": "numpy",
+      "version": "2.3.5",
+      "filename": "numpy-2.3.5-cp312-cp312-macosx_14_0_arm64.whl",
+      "bytes": 5088378,
+      "sha256": "612a95a17655e213502f60cfb9bf9408efdc9eb1d5f50535cc6eb365d11b42b5",
+      "license": "BSD-3-Clause",
+      "requires": []
+    }
+  ],
+  "source_overlay": {
+    "manifest": "private-separation-melroformer-source-manifest.json",
+    "manifest_sha256": "ed2351e52fdab8e87f4065f5f50d429295e03565cbbc2a01d435db2eb3285b6d",
+    "installed_as_mlx_audio_distribution": false,
+    "upstream_convenience_loader_available": false
+  },
+  "current_environment_observation": {
+    "environment": ".venv-ai",
+    "python": "3.12.10",
+    "mlx": "0.31.2",
+    "mlx-metal": "0.31.2",
+    "numpy": "2.3.5",
+    "mlx-audio": "not-installed",
+    "observation_is_installation_authority": false
+  },
+  "installation_command": null,
+  "installed_by_this_lock": false,
+  "authorises_installation": false,
+  "authorises_model_import": false,
+  "authorises_checkpoint_loading": false,
+  "authorises_inference": false
+}

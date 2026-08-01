@@ -248,10 +248,17 @@ report the result, then move on.
   evidence pack was reviewed as a secondary lead only; its downloader was not
   executed, and its hash-stable ViperX alternatives remain rejected because
   their creator-authorised terms are unverified. Kim Vocal 2 is still
-  `blocked`/`not_run`: no user approval, runtime/source lock, Safetensors
-  inspection, worker, independent parity or Mac resource/offline evidence
-  exists. No package or model was downloaded. Do not offer or run it through
-  this skill.
+  `blocked`/`not_run`. Its exact MLX-Audio `v0.4.3` source surface and minimal
+  MLX/MLX-Metal/NumPy runtime are now size/hash pinned and licence audited. The
+  network-capable upstream convenience loader is forbidden; a stale GPL
+  source comment is recorded but checkpoint terms remain bound to the owner's
+  later immutable MIT evidence. A bounded standard-library Safetensors header
+  inspector and a non-executable one-or-two-excerpt vocals/instrumental worker
+  protocol are implemented and tested. They do not deserialize tensors, import
+  a model or start a worker. No user approval for this exact candidate, local
+  checkpoint inspection, worker, independent parity or Mac resource/offline
+  evidence exists. No package or model was downloaded. Do not offer or run it
+  through this skill.
 - `source-import` decodes exactly one local asset.
 - `source-import-folder` prepares 2–64 existing separated parts as one
   canonical WAV project. It does not separate, shift, pad, stretch, normalize

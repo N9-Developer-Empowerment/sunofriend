@@ -777,14 +777,64 @@ PYTHONPATH=src .venv/bin/python \
 ```
 
 Both commands are read-only and have no public CLI/TUI route. The plan remains
-`blocked`/`not_run`: no explicit approval has been recorded for this model,
-the local Safetensors identity and bounded tensor inventory are unverified,
-the MLX source surface and dependency set are not yet pinned, published 66.08
-dB conversion parity is not Sunofriend-verified, no bounded worker exists, and
-Mac resource/offline behaviour is unmeasured. No package or checkpoint was
-installed or downloaded, and Simple, Studio and the source graph are
-unchanged. The next safe increment is the exact source/dependency and
-Safetensors-inspection contract, followed by a separate approval request.
+`blocked`/`not_run`: no explicit approval has been recorded for this model and
+the local Safetensors identity and tensor inventory are therefore still
+unverified. Published 66.08 dB conversion parity is not Sunofriend-verified,
+no executable worker exists, and Mac resource/offline behaviour is unmeasured.
+No package or checkpoint was installed or downloaded, and Simple, Studio and
+the source graph are unchanged.
+
+The exact non-executable runtime boundary is now defined. MLX-Audio `v0.4.3`
+resolves to source revision
+`41092c02db18efd5b9d8281b2fcc41d84801757a`; the five required source/runtime
+files plus licence and package metadata are individually size/hash pinned in
+`private-separation-melroformer-source-manifest.json`. The minimal Python 3.12
+macOS arm64 runtime is separately locked to `mlx==0.31.2`,
+`mlx-metal==0.31.2` and `numpy==2.3.5`, including exact wheel sizes, SHA-256
+values and permissive licence findings. It deliberately does not install the
+full `mlx-audio` distribution or its unrelated dependencies. The upstream
+`from_pretrained` convenience path is forbidden because it can convert a
+non-local string into a Hugging Face download. A future adapter must construct
+the fixed Kim Vocal 2 configuration and load only an already-open,
+hash-verified local checkpoint.
+Because the upstream conversion uses non-strict weight loading, the future
+adapter must also prove complete post-sanitisation model-key coverage and
+reject every missing or unexpected key before inference.
+
+The source audit also found a stale `config.py` comment that calls Kim Vocal 2
+GPL-3.0 even though the checkpoint owner had already published the immutable
+MIT relicense before MLX-Audio `v0.4.3` was released. It is recorded as stale
+runtime documentation; it is not used as the source of checkpoint terms.
+
+`_separation_safetensors_inspection.py` now implements a pure-standard-library,
+descriptor-pinned inspection contract. It bounds and parses only the UTF-8
+JSON header, rejects duplicate keys, unsupported metadata, invalid dtype/shape
+geometry, holes, overlaps, trailing polyglot bytes, symlinks and hash changes,
+then hashes tensor data as opaque bytes. It never imports Safetensors, NumPy,
+MLX or a model and never interprets tensor values. The contract has not been
+applied to the 456 MB checkpoint because that checkpoint is not local and no
+download is approved.
+
+`_separation_melroformer_worker_protocol.py` fixes one or two path-free,
+canonical stereo 44.1 kHz PCM24 excerpts of at most 15 seconds, serial
+single-case execution, and exactly two outputs: `vocals.wav` and the
+mixture-minus-vocals `instrumental.wav`. Reconstruction within PCM tolerance
+is a required result check. Every install, download, checkpoint, import,
+process, inference, publication, automatic-selection and product-route
+permission remains false; this is a protocol, not a worker.
+
+Verify the tracked source/runtime records with:
+
+```bash
+PYTHONPATH=src .venv/bin/python \
+  scripts/private-melroformer-runtime-evidence.py \
+  --repository-root /absolute/path/to/Sunofriend
+```
+
+The next gated increment requires a separate explicit approval for this exact
+Kim Vocal 2 private evaluation. Only after that approval may the exact source,
+runtime and checkpoint be materialised; the local checkpoint must then pass
+the bounded static inspection before any model import or tensor load.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,

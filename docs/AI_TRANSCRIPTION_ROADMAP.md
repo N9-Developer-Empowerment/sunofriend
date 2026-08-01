@@ -1872,11 +1872,31 @@ as rejected because their creator-authorised terms remain unverified.
 This is a vocal-only registration, not a broad separator and not an executed
 experiment. A supplied evidence ZIP was reviewed as a secondary lead; its
 download helper was not run. The model, MLX runtime and packages were not
-downloaded or installed. Exact runtime source, dependency and licence locks,
-bounded Safetensors inspection, a no-network worker protocol, independent
-parity, resource bounds and explicit private-evaluation approval all remain
-open. The next increment is those non-executable runtime and inspection
-contracts, not a model run.
+downloaded or installed.
+
+The exact non-executable runtime and inspection slice is now complete. The
+five required MLX-Audio `v0.4.3` source/runtime files are pinned to revision
+`41092c02db18efd5b9d8281b2fcc41d84801757a`, with their MIT licence and package
+metadata. A minimal macOS arm64/Python 3.12 lock names only MLX 0.31.2,
+MLX-Metal 0.31.2 and NumPy 2.3.5 with exact wheel identities and licence
+findings. The upstream network-capable `from_pretrained` convenience loader is
+explicitly forbidden. The audit records its stale GPL comment about Kim Vocal
+2 but continues to derive checkpoint terms from the owner's later immutable
+MIT relicense evidence.
+The future adapter must additionally turn the upstream non-strict load into a
+fail-closed boundary by proving complete post-sanitisation model-key coverage.
+
+A bounded standard-library Safetensors parser now validates header size, unique
+JSON keys, string-only metadata, dtype/shape/offset agreement and complete
+non-overlapping data coverage while hashing tensor bytes as opaque data. It
+does not deserialize tensors or import a tensor/model runtime. A separate
+self-hashed protocol fixes one or two maximum-15-second canonical inputs and
+exactly two outputs, vocals plus mixture-minus-vocals instrumental, including
+PCM reconstruction accounting. All execution permissions remain false and no
+worker exists. Independent parity, resource/offline bounds, local static
+checkpoint inspection and explicit private-evaluation approval remain open.
+The next increment is an approval-gated materialisation and isolated worker,
+not a public separator or automatic selection route.
 
 ### 2026-07-31 — Second authorised separation-to-MIDI repeat
 

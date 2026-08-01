@@ -1,0 +1,98 @@
+{
+  "schema": "sunofriend.private-melroformer-source-manifest.v1",
+  "candidate_id": "mlx-melroformer-kim-vocal-2",
+  "repository": "Blaizzy/mlx-audio",
+  "release": "v0.4.3",
+  "revision": "41092c02db18efd5b9d8281b2fcc41d84801757a",
+  "published_at": "2026-04-28T20:17:41Z",
+  "license": "MIT",
+  "audit_date": "2026-08-01",
+  "purpose": "exact non-executable source boundary for a future private local vocal separator",
+  "files": [
+    {
+      "path": "LICENSE",
+      "kind": "license",
+      "bytes": 1070,
+      "sha256": "11d27e0259dec3a323fa6c04c330621d0950ab96c6760d5aac3e2e97229e6f22"
+    },
+    {
+      "path": "mlx_audio/__init__.py",
+      "kind": "runtime_module",
+      "bytes": 156,
+      "sha256": "073f6435c675ac1d88884b6dcff150604f217a25cfe12f4fcba2ce23ef82d3b5",
+      "direct_import_roots": ["os"],
+      "permitted_relative_imports": []
+    },
+    {
+      "path": "mlx_audio/dsp.py",
+      "kind": "runtime_module",
+      "bytes": 30091,
+      "sha256": "356ac7aca294d79983b56dc52f13c970c631a0ba029ac0283987c585cacff85b",
+      "direct_import_roots": ["functools", "math", "mlx", "numpy", "typing", "warnings"],
+      "permitted_relative_imports": []
+    },
+    {
+      "path": "mlx_audio/sts/models/mel_roformer/config.py",
+      "kind": "runtime_module",
+      "bytes": 6379,
+      "sha256": "71773eb206e131d66c5d477d0ccb06973b647a949a20b4f1a8304c9127bd726b",
+      "direct_import_roots": ["dataclasses", "typing"],
+      "permitted_relative_imports": []
+    },
+    {
+      "path": "mlx_audio/sts/models/mel_roformer/model.py",
+      "kind": "runtime_module",
+      "bytes": 27983,
+      "sha256": "5ddf498eb247155e5dc5dfc63c5237458b2793bb55d9844fe01c43b81cf3cd10",
+      "direct_import_roots": ["dataclasses", "json", "math", "mlx", "mlx_audio", "numpy", "pathlib", "re", "typing"],
+      "permitted_relative_imports": [".config"]
+    },
+    {
+      "path": "pyproject.toml",
+      "kind": "package_metadata",
+      "bytes": 2790,
+      "sha256": "d0b03193d3cba35e8a9de6fe538d6244dcec35c59049f90e9a63e61d63909cae"
+    }
+  ],
+  "release_artifact": {
+    "name": "mlx_audio-0.4.3-py3-none-any.whl",
+    "bytes": 1373582,
+    "sha256": "6b87bf42d79d9ceb6b9310a77656b9b76429c2d6ddd89f634b2786c58a2e4721",
+    "installed_by_this_manifest": false
+  },
+  "loader_policy": {
+    "upstream_from_pretrained_permitted": false,
+    "reason": "the convenience loader can treat a non-local string as a Hugging Face repository and download it",
+    "local_checkpoint_descriptor_required": true,
+    "checkpoint_hash_before_tensor_load_required": true,
+    "fixed_config": "MelRoFormerConfig.kim_vocal_2()",
+    "model_construction": "MelRoFormer(config)",
+    "tensor_load": "mx.load on a descriptor-bound local path only",
+    "weight_sanitisation": "MelRoFormer.sanitize",
+    "strict_weight_loading": false,
+    "post_sanitisation_model_key_coverage_required": true,
+    "missing_model_keys_permitted": false,
+    "unexpected_sanitised_keys_permitted": false,
+    "package_initializers_permitted": ["mlx_audio/__init__.py"],
+    "package_initializers_forbidden": ["mlx_audio/sts/__init__.py", "mlx_audio/sts/models/__init__.py"],
+    "model_import_permitted_by_manifest": false
+  },
+  "static_source_policy": {
+    "maximum_file_bytes": 65536,
+    "exact_direct_import_roots_required": true,
+    "only_listed_relative_imports_permitted": true,
+    "wildcard_imports_permitted": false,
+    "dynamic_import_or_codegen_calls_permitted": false,
+    "analysis_executes_source": false
+  },
+  "licence_note": {
+    "stale_runtime_documentation_found": true,
+    "detail": "config.py still describes Kim Vocal 2 as GPL-3.0; checkpoint terms are determined from the checkpoint owner's immutable MIT relicense evidence, not this stale comment",
+    "runtime_source_terms": "MIT",
+    "checkpoint_terms_source": "private-separation-melroformer-upstream-evidence.json"
+  },
+  "authorises_installation": false,
+  "authorises_model_import": false,
+  "authorises_checkpoint_loading": false,
+  "authorises_inference": false
+}
