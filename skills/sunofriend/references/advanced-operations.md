@@ -1597,6 +1597,10 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   surviving descendant: leader exit remains unreaped until a leader-only
   `libproc` census, group signal and exact reap complete. That owner is not
   integrated with the Kim path, so its real-worker flags remain false. The
+  next validation-only contract fixes the required native terminal projection
+  and rejects incomplete, lost, PID-bearing or unbound claims. It starts no
+  worker and does not let the current subprocess route claim native ownership.
+  The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory
   bytes. None of these observations is full-file execution proof, dynamic-

@@ -1704,6 +1704,37 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — native real-worker terminal projection fixed but not run
+
+- Goal: define exactly what evidence the Kim worker must produce before it may
+  inherit the model-free native descendant-supervision proof, without
+  launching the model or weakening the current observers.
+- Change or experiment: added a validation-only native terminal projection and
+  self-hashed blocked bridge plan. The projection requires bound session,
+  execution and worker-result hashes; exact owned start; normal zero exit;
+  matched identity; leader-exit observation; complete group drain; exact reap;
+  and ownership release. It rejects timeout TERM/KILL escalation, ownership
+  loss, partial terminal state, raw PID/PGID retention and signal authority.
+- Inputs: fixed in-memory mappings in unit tests only. No audio, checkpoint,
+  model, sandbox worker or native process ran.
+- Model/runtime/checkpoint: none.
+- Evidence and metrics: focused supervision tests pass, including rejection of
+  partial, lost, PID-bearing, subprocess-labelled, nonzero-exit, malformed-hash
+  and extra-field projections. The surrounding boundary suite passed 66 tests;
+  the complete repository suite passed 2,812 tests with one platform skip and
+  the existing third-party `resampy`/`pkg_resources` deprecation warning.
+- Listening result: not applicable; no audio or MIDI changed.
+- Decision: retain this as a strict future bridge contract, not as evidence of
+  real-worker native supervision. The current Kim v10/v11 route remains
+  synchronous `Popen.communicate` evidence with both native supervision flags
+  false.
+- Problems/risks: process-image, network-denial and native-image-ready
+  observers currently consume a raw child PID, while the native owner hides
+  PID authority. Shape validation alone is not execution provenance.
+- Next smallest step: introduce an owner-bound observation capability that can
+  perform the required parent observations without exposing PID/PGID, then
+  exercise that capability with a fixed model-free worker before Kim.
+
 ### 2026-08-02 — native descendant lifetime held through exact reap
 
 - Goal: make the existing Darwin native owner safe for a future real worker
@@ -1737,9 +1768,8 @@ Each working day should aim for one narrow vertical improvement:
   descendant, not arbitrary hostile process trees. Pre-exec signal state,
   runtime/provider path-to-execution TOCTOU and complete native-library closure
   remain open.
-- Next smallest step: design the fixed real-worker native transport and
-  observation bridge without weakening the existing import, sandbox, process-
-  image, readiness or no-product-route gates.
+- Next smallest step: started by the validation-only terminal projection above;
+  the owner-bound observer transport remains to be implemented.
 
 ### 2026-08-02 — real Kim Vocal 2 worker supervision bound
 

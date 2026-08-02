@@ -431,7 +431,10 @@ report the result, then move on.
   selected signal state, synchronous exact-child wait and normal exit 0 in a
   separate self-hashed v10 evidence layer. That layer does not reconstruct the
   pre-exec signal instant or use the separately proven native
-  process-group/descendant owner, and no separator route is enabled. The
+  process-group/descendant owner, and no separator route is enabled. A
+  validation-only terminal projection now defines and rejects incomplete
+  future native claims, but the current Kim worker cannot emit it and it is
+  not execution provenance. The
   checkpoint is not redistributed. Do not offer or run this challenger
   through the skill.
 - `source-import` decodes exactly one local asset.

@@ -20,6 +20,11 @@ from .separation_contract import _canonical_json_bytes, _freeze_json
 
 SCHEMA = "sunofriend.private-melroformer-worker-supervision.v1"
 POLICY_ID = "private-melroformer-real-worker-supervision-v1"
+NATIVE_TERMINAL_PROJECTION_SCHEMA = (
+    "sunofriend.private-melroformer-native-terminal-projection.v1"
+)
+NATIVE_PLAN_SCHEMA = "sunofriend.private-melroformer-native-supervision-plan.v1"
+NATIVE_PLAN_POLICY_ID = "private-melroformer-native-supervision-plan-v1"
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 _OBSERVED_SIGNAL_NAMES = (
     "SIGHUP",
@@ -130,6 +135,139 @@ def _build_real_worker_supervision_observation(
         {
             **payload,
             "observation_sha256": hashlib.sha256(
+                _canonical_json_bytes(payload)
+            ).hexdigest(),
+        }
+    )
+
+
+def _validate_native_terminal_projection(value: Any) -> Mapping[str, Any]:
+    """Validate the future native-owner projection without granting authority.
+
+    The current Kim route cannot produce this record.  A future bridge must
+    derive it from the exact nonconstructible native owner after the complete
+    private process group has drained; accepting this shape is not itself proof
+    that such an owner existed.
+    """
+
+    projection = _plain(value)
+    if not isinstance(projection, dict) or set(projection) != {
+        "schema",
+        "native_session_observation_sha256",
+        "native_execution_observation_sha256",
+        "worker_result_sha256",
+        "start_state",
+        "wait",
+        "timed_out",
+        "term_sent",
+        "kill_sent",
+        "worker_reported_identity_matched",
+        "leader_exit_observed",
+        "leader_reaped",
+        "group_empty",
+        "ownership_released",
+        "ownership_lost",
+        "raw_pid_retained",
+        "raw_pgid_retained",
+        "signal_authority_exposed",
+    }:
+        raise ValueError("native real-worker terminal projection fields differ")
+    if projection["schema"] != NATIVE_TERMINAL_PROJECTION_SCHEMA:
+        raise ValueError("native real-worker terminal projection schema differs")
+    for key in (
+        "native_session_observation_sha256",
+        "native_execution_observation_sha256",
+        "worker_result_sha256",
+    ):
+        digest = projection[key]
+        if not isinstance(digest, str) or _SHA_RE.fullmatch(digest) is None:
+            raise ValueError("native real-worker terminal projection hash differs")
+    if projection["start_state"] != "started_owned":
+        raise ValueError("native real-worker was not started with exact ownership")
+    if projection["wait"] != {
+        "kind": "exited",
+        "exit_code": 0,
+        "signal": None,
+        "core_dumped": False,
+    }:
+        raise ValueError("native real-worker terminal wait evidence differs")
+    required_true = (
+        "worker_reported_identity_matched",
+        "leader_exit_observed",
+        "leader_reaped",
+        "group_empty",
+        "ownership_released",
+    )
+    if any(projection[key] is not True for key in required_true):
+        raise ValueError("native real-worker terminal ownership is incomplete")
+    required_false = (
+        "timed_out",
+        "term_sent",
+        "kill_sent",
+        "ownership_lost",
+        "raw_pid_retained",
+        "raw_pgid_retained",
+        "signal_authority_exposed",
+    )
+    if any(projection[key] is not False for key in required_false):
+        raise ValueError("native real-worker terminal safety boundary differs")
+    return _freeze_json(projection)
+
+
+def _build_native_real_worker_supervision_plan() -> Mapping[str, Any]:
+    """Describe the exact blocked bridge after validating no live input."""
+
+    payload = {
+        "schema": NATIVE_PLAN_SCHEMA,
+        "policy_id": NATIVE_PLAN_POLICY_ID,
+        "status": "blocked_not_run",
+        "current_observation": {
+            "schema": SCHEMA,
+            "parent_wait_contract": "subprocess_popen_communicate_exact_child",
+            "native_process_group_supervision_bound": False,
+            "complete_descendant_supervision_bound": False,
+        },
+        "required_projection": {
+            "schema": NATIVE_TERMINAL_PROJECTION_SCHEMA,
+            "validated_shape_implemented": True,
+            "must_be_derived_from_exact_nonconstructible_native_owner": True,
+            "complete_private_group_drain_required": True,
+            "exact_leader_reap_required": True,
+            "normal_zero_exit_required": True,
+            "worker_identity_binding_required": True,
+            "native_session_and_execution_hashes_required": True,
+            "worker_result_hash_required": True,
+            "raw_pid_or_pgid_permitted": False,
+        },
+        "missing_bridge": {
+            "fixed_real_worker_native_entrypoint_implemented": False,
+            "owner_bound_process_image_observer_implemented": False,
+            "owner_bound_network_observer_implemented": False,
+            "owner_bound_native_image_ready_observer_implemented": False,
+            "native_terminal_projection_derived_from_live_owner": False,
+            "native_terminal_projection_bound_to_real_worker_result": False,
+        },
+        "effects": {
+            "process_started": False,
+            "model_imported": False,
+            "checkpoint_opened": False,
+            "audio_opened": False,
+            "filesystem_written": False,
+            "network_used": False,
+            "separator_route_enabled": False,
+            "product_authority_granted": False,
+        },
+        "limitations": [
+            "projection_shape_validation_is_not_execution_provenance",
+            "current_pid_observers_cannot_consume_the_hidden_native_owner",
+            "current_kim_worker_remains_on_the_subprocess_supervision_route",
+            "no_public_cli_tui_simple_studio_or_source_graph_route",
+        ],
+    }
+    return _freeze_json(
+        {
+            **payload,
+            "plan_sha256": hashlib.sha256(
                 _canonical_json_bytes(payload)
             ).hexdigest(),
         }
@@ -250,10 +388,15 @@ def _plain(value: Any) -> Any:
 
 
 __all__ = [
+    "NATIVE_PLAN_POLICY_ID",
+    "NATIVE_PLAN_SCHEMA",
+    "NATIVE_TERMINAL_PROJECTION_SCHEMA",
     "POLICY_ID",
     "SCHEMA",
+    "_build_native_real_worker_supervision_plan",
     "_build_real_worker_supervision_observation",
     "_observe_post_cpython_signal_state",
+    "_validate_native_terminal_projection",
     "_validate_post_cpython_signal_state",
     "_validate_real_worker_supervision_observation",
 ]

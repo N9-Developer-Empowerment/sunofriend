@@ -22,7 +22,11 @@ clean outer descriptors to normal exact-child exit. A model-free native v3
 canary now proves private-session process-group drain across an intentionally
 surviving descendant, but this owner has not yet been integrated with the real
 Kim worker; pre-exec state and real-worker native supervision remain
-incomplete. A separate private-development
+incomplete. A validation-only native terminal projection now rejects partial
+drain/reap, timeout escalation, ownership loss, raw process identifiers and
+unbound execution/result hashes. It remains a blocked shape contract because
+the PID-consuming real-worker observers have not yet been replaced by
+owner-bound equivalents. A separate private-development
 HTDemucs runner now produces and measures four real broad estimated stems on
 the copyright-safe demo, and a second private evaluator measures their effect
 on the existing MIDI transcribers. Public separation, source-graph import,
@@ -2040,7 +2044,10 @@ separator transport, source-lineage import and promotion are not implemented**
   drain and exact reap with one deliberately surviving model-free descendant.
   The checklist stays open because this owner is not yet attached to the real
   worker path, every other real worker class is not yet covered, path TOCTOU
-  remains, and no observation reconstructs the pre-exec signal instant.
+  remains, and no observation reconstructs the pre-exec signal instant. A
+  later validation-only projection defines the exact complete native terminal
+  shape and rejects partial or PID-bearing claims, but the current subprocess
+  route cannot produce it and no model run is represented by that plan.
   The exact Kim Vocal 2 worker-script subproblem is now closed for one real
   authorised observation by executing the already-open verified descriptor as
   Python standard input. The parent-PID macOS process-image observation is now

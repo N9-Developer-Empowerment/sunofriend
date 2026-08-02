@@ -657,6 +657,16 @@ They grant no source-graph or product authority. This does not reconstruct the
 pre-exec signal instant, use the separately proven native process-group owner,
 supervise real-worker descendants, or close provider/runtime pathname TOCTOU.
 
+`_separation_melroformer_supervision.py` now also contains a validation-only
+native terminal projection and a self-hashed blocked bridge plan. The
+projection requires exact normal exit, leader-exit observation, complete group
+drain, exact leader reap, released ownership and three evidence bindings while
+forbidding retained PID/PGID or exposed signal authority. It deliberately does
+not adapt the current `Popen` result into a native claim. The existing
+process-image, kernel-network and post-inference native-image observers consume
+a PID, whereas the native owner deliberately hides that authority; owner-bound
+observer entry points must replace that mismatch before real integration.
+
 `_separation_fake_execution_protocol.py` validates the new V2 magics and
 canonical bindings but intentionally cannot encode an admitted product
 request or issue an admission. Synthetic envelope creation exists only in

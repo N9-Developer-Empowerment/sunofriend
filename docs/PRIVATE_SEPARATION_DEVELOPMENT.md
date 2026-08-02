@@ -208,6 +208,17 @@ observes one surviving descendant, signals and drains the group, then
 exact-reaps the leader. The Kim command above still uses the synchronous
 subprocess path and does not inherit that proof.
 
+The following validation-only increment now fixes the evidence shape that a
+future bridge would have to derive from the exact native owner. It requires
+the bound native session, native execution and worker-result hashes, normal
+zero exit, matched worker identity, observed leader exit, complete group drain,
+exact leader reap and released ownership. It rejects timeout escalation,
+ownership loss, raw PID/PGID retention and exposed signal authority. This is a
+shape validator and blocked plan, not execution provenance: the current Kim
+route cannot emit it, no model was run, and no separator route changed. The
+remaining engineering task is an owner-bound replacement for the current
+PID-consuming process-image, network and native-image-ready observers.
+
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \
   --fixture-out work/separation-bakeoff/demo-fixture-v2 \

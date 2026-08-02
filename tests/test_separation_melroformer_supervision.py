@@ -80,6 +80,98 @@ def test_real_worker_supervision_has_no_product_route() -> None:
     assert "private-melroformer-supervision" not in DIRECT_TUI_COMMANDS
 
 
+def _complete_native_terminal_projection() -> dict[str, object]:
+    return {
+        "schema": supervision.NATIVE_TERMINAL_PROJECTION_SCHEMA,
+        "native_session_observation_sha256": "1" * 64,
+        "native_execution_observation_sha256": "2" * 64,
+        "worker_result_sha256": "3" * 64,
+        "start_state": "started_owned",
+        "wait": {
+            "kind": "exited",
+            "exit_code": 0,
+            "signal": None,
+            "core_dumped": False,
+        },
+        "timed_out": False,
+        "term_sent": False,
+        "kill_sent": False,
+        "worker_reported_identity_matched": True,
+        "leader_exit_observed": True,
+        "leader_reaped": True,
+        "group_empty": True,
+        "ownership_released": True,
+        "ownership_lost": False,
+        "raw_pid_retained": False,
+        "raw_pgid_retained": False,
+        "signal_authority_exposed": False,
+    }
+
+
+def test_native_real_worker_terminal_projection_requires_complete_safe_state() -> None:
+    projection = supervision._validate_native_terminal_projection(
+        _complete_native_terminal_projection()
+    )
+
+    assert projection["leader_exit_observed"] is True
+    assert projection["group_empty"] is True
+    assert projection["ownership_released"] is True
+    assert projection["raw_pid_retained"] is False
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        ("partial", "ownership is incomplete"),
+        ("lost", "safety boundary differs"),
+        ("raw_pid", "safety boundary differs"),
+        ("subprocess", "was not started with exact ownership"),
+        ("nonzero", "terminal wait evidence differs"),
+        ("hash", "projection hash differs"),
+        ("extra", "projection fields differ"),
+    ],
+)
+def test_native_real_worker_terminal_projection_rejects_unproven_claims(
+    mutation: str,
+    message: str,
+) -> None:
+    projection = _complete_native_terminal_projection()
+    if mutation == "partial":
+        projection["group_empty"] = False
+    elif mutation == "lost":
+        projection["ownership_lost"] = True
+    elif mutation == "raw_pid":
+        projection["raw_pid_retained"] = True
+    elif mutation == "subprocess":
+        projection["start_state"] = "subprocess_popen"
+    elif mutation == "nonzero":
+        projection["wait"]["exit_code"] = 7  # type: ignore[index]
+    elif mutation == "hash":
+        projection["worker_result_sha256"] = "not-a-hash"
+    else:
+        projection["pid"] = 1234
+
+    with pytest.raises(ValueError, match=message):
+        supervision._validate_native_terminal_projection(projection)
+
+
+def test_native_real_worker_supervision_plan_is_blocked_and_path_free() -> None:
+    plan = supervision._build_native_real_worker_supervision_plan()
+    unsigned = plain(plan)
+    digest = unsigned.pop("plan_sha256")
+
+    assert plan["status"] == "blocked_not_run"
+    assert plan["current_observation"][
+        "native_process_group_supervision_bound"
+    ] is False
+    assert plan["required_projection"][
+        "must_be_derived_from_exact_nonconstructible_native_owner"
+    ] is True
+    assert all(value is False for value in plan["effects"].values())
+    assert digest == hashlib.sha256(_canonical_json_bytes(unsigned)).hexdigest()
+    assert "/Users/" not in repr(plan)
+
+
 def test_real_worker_observes_signal_state_before_model_loading() -> None:
     worker = (
         Path(__file__).parents[1] / "scripts" / "private-melroformer-worker.py"
