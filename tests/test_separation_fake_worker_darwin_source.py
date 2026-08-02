@@ -101,6 +101,7 @@ def test_worker_has_only_the_fixed_stdlib_and_no_expansive_surface() -> None:
         "json",
         "os",
         "resource",
+        "signal",
         "stat",
         "struct",
         "typing",
@@ -169,6 +170,22 @@ def test_worker_descriptor_io_and_fixture_are_narrow() -> None:
     assert pread_sources == {"_CHECKPOINT_FD", "descriptor"}
     assert "_pread_exact(_REQUEST_FD" in text
     assert "_fixture_wav_bytes(role: str)" in text
+
+
+def test_worker_signal_report_is_post_cpython_and_fail_closed() -> None:
+    _payload, text, tree = _source()
+    signal_report = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "_signal_report"
+    )
+    source = ast.unparse(signal_report)
+    assert "signal.pthread_sigmask(signal.SIG_BLOCK, [])" in source
+    assert "signal.getsignal(getattr(signal, name))" in source
+    assert "worker_main_after_cpython_startup" in source
+    assert '"pre_exec_signal_state_reconstructed": False' in text
+    assert "signal_mask_observation_returned_none" in source
+    assert '"signal_report": _signal_report()' in text
 
     function = next(
         node

@@ -1582,9 +1582,14 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   observes only FDs 0–2 at clean harness entry, an empty main-thread signal
   mask plus selected handler dispositions after CPython startup, and normal
   zero-status exact-reap termination for every fixed descriptor layout. Its
-  matrix retains no raw PID, PGID or wait status. These facts are not yet bound
-  to the deterministic transport worker or Kim worker, and the post-CPython
-  record does not reconstruct the pre-exec signal instant. The evidence does
+  matrix retains no raw PID, PGID or wait status. A later private live proof
+  now binds equivalent facts to one exact deterministic transport-worker
+  execution: self-hashed Result V2 carries the worker signal report, the native
+  receipt binds normal zero exit and exact reap, and the self-hashed outer
+  report observed only FDs 0–2 before Sunofriend imports or execution setup.
+  It retains no PID or PGID and enables no product route. These facts remain
+  unbound to Kim Vocal 2 or any real separator, and the post-CPython record
+  does not reconstruct the pre-exec signal instant. The evidence does
   not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory
   bytes. None of these observations is full-file execution proof, dynamic-

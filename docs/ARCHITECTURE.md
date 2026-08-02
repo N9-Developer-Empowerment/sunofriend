@@ -607,12 +607,11 @@ not terminal evidence. The fork-clone check is static rather than live, fixed
 workers are required to create no descendants, and no generic post-leader
 process-group claim is made. Exhaustive arbitrary source-FD values and
 extension/runtime/worker path TOCTOU closure remain unproven. The post-CPython
-observation does not reconstruct the pre-exec signal instant, and these
-outer-supervisor, signal and termination facts are bound only to the model-free
-canary, not the deterministic transport worker or a real separator. Only fixed
-test probes ran at this boundary; there was no standalone deterministic fake
-result, checkpoint FD 5 transport, model execution, audio operation, terminal
-receipt or user-facing separator.
+observation does not reconstruct the pre-exec signal instant. At this canary
+boundary the facts were model-free and not yet attached to a transport worker
+or real separator. The later deterministic-worker boundary below attaches
+equivalent facts to the fake transport only; it does not turn this canary into
+real-model evidence.
 
 The following prepared-worker boundary keeps execution-era schemas isolated
 from every permanently blocked predecessor. The fixed
@@ -623,6 +622,19 @@ the role-hash two-frame PCM24 fixture. Its source hash and size are pinned by
 the prepared fake launch V3 record. V3 has support but no start permission and
 is explicitly not serialized authority. Complete-only Result V2 requires a
 dedicated worker process group and remains self-report evidence.
+
+The deterministic-worker supervision increment adds the missing binding. The
+worker's self-hashed Result V2 now includes its post-CPython main-thread mask
+and selected handler dispositions. The native terminal receipt validates that
+result and binds it to normal zero exit, no signal termination and exact reap.
+A separate one-shot harness is launched with `close_fds=True, pass_fds=()`,
+observes only FDs 0–2 before Sunofriend imports or execution setup, and emits a
+path-free self-hashed report containing the outer observation and exact
+terminal receipt. That final report retains no PID, PGID or raw wait status.
+It observes after CPython and stdlib imports, so it still does not reconstruct
+the pre-exec signal instant. The result is deterministic-fixture evidence only:
+real models, source graph, CLI, TUI, Simple, Studio, selection, publication and
+promotion remain unavailable.
 
 `_separation_fake_execution_protocol.py` validates the new V2 magics and
 canonical bindings but intentionally cannot encode an admitted product

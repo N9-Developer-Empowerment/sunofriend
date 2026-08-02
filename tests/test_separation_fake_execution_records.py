@@ -25,6 +25,7 @@ from sunofriend._separation_fake_execution_records import (
     _build_prepared_separation_fake_launch_plan_v3_record,
     _build_separation_fake_worker_result_v2,
     _expected_outputs,
+    _expected_post_cpython_signal_report,
     _validate_prepared_separation_fake_launch_plan_v3_record_shape,
     _validate_separation_fake_worker_result_v2_record_shape,
 )
@@ -116,6 +117,7 @@ def _execution_records(tmp_path: Path):
             "process_creation_attempted_by_worker": False,
             "reported_identifiers_are_signal_authority": False,
         },
+        signal_report=_expected_post_cpython_signal_report(),
         descriptor_report=_complete_descriptor_report(),
         checkpoint_report={
             "sha256": checkpoint["checkpoint_sha256"],
@@ -254,6 +256,7 @@ def test_v3_requires_the_pinned_worker_source(tmp_path: Path) -> None:
     "section,key,value",
     [
         ("process_report", "pgid", 124),
+        ("signal_report", "main_thread_mask_empty", False),
         ("checkpoint_report", "full_hash_verified", False),
         ("outputs", "payload_hex", "00"),
     ],
@@ -308,6 +311,7 @@ def test_result_v2_requires_dedicated_process_group_and_complete_only(
             fake_launch_plan_v3=launch_v3,
             status="failed",
             process_report=result["process_report"],
+            signal_report=result["signal_report"],
             descriptor_report=result["descriptor_report"],
             checkpoint_report=result["checkpoint_report"],
             outputs=(),

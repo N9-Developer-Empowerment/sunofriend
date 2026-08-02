@@ -25,6 +25,7 @@ import fcntl  # noqa: E402
 import hashlib  # noqa: E402
 import json  # noqa: E402
 import resource  # noqa: E402
+import signal  # noqa: E402
 import stat  # noqa: E402
 import struct  # noqa: E402
 from typing import Any, Mapping, Sequence  # noqa: E402
@@ -53,6 +54,15 @@ _ROLE_IDS = frozenset(
     backing_vocals bass cymbals drums hat keys kick lead other other_kit
     piano rhythm snare strings synth toms vocals wind
     """.split()
+)
+_OBSERVED_SIGNAL_NAMES = (
+    "SIGHUP",
+    "SIGINT",
+    "SIGQUIT",
+    "SIGPIPE",
+    "SIGTERM",
+    "SIGCHLD",
+    "SIGXFSZ",
 )
 _PLAN_FIELDS = frozenset(
     """
@@ -144,7 +154,7 @@ _LIMITATIONS = [
     "source_audio_model_inference_selection_publication_acceptance_forbidden",
     "runtime_exec_and_worker_script_path_toctou_remain_unresolved",
     "finite_descriptor_canary_matrix_is_not_exhaustive_arbitrary_fd_proof",
-    "post_cpython_signal_state_is_not_independently_proven",
+    "post_cpython_signal_state_does_not_reconstruct_pre_exec_instant",
 ]
 
 
@@ -362,6 +372,48 @@ def _descriptor_report() -> dict[str, Any]:
     }
 
 
+def _signal_handler_name(handler: Any) -> str:
+    if handler is signal.SIG_DFL:
+        return "default"
+    if handler is signal.SIG_IGN:
+        return "ignored"
+    if handler is signal.default_int_handler:
+        return "python_default_int_handler"
+    return "unexpected_python_handler"
+
+
+def _signal_report() -> dict[str, Any]:
+    """Describe the worker main thread after CPython has started.
+
+    This is exact evidence for this worker process at this observation point.
+    It deliberately makes no claim about the earlier ``posix_spawn`` instant.
+    """
+
+    blocked = signal.pthread_sigmask(signal.SIG_BLOCK, [])
+    if blocked is None:
+        raise ValueError("signal_mask_observation_returned_none")
+    blocked_names = sorted(signal.Signals(number).name for number in blocked)
+    handlers = {
+        name: _signal_handler_name(signal.getsignal(getattr(signal, name)))
+        for name in _OBSERVED_SIGNAL_NAMES
+    }
+    return {
+        "observation_point": "worker_main_after_cpython_startup",
+        "main_thread_mask_empty": blocked_names == [],
+        "blocked_signal_names": blocked_names,
+        "handlers": handlers,
+        "termination_signals_default": all(
+            handlers[name] == "default"
+            for name in ("SIGHUP", "SIGQUIT", "SIGTERM")
+        ),
+        "sigchld_default": handlers["SIGCHLD"] == "default",
+        "cpython_runtime_adjustments_observed": (
+            handlers["SIGINT"] == "python_default_int_handler"
+            and handlers["SIGPIPE"] == "ignored"
+            and handlers["SIGXFSZ"] == "ignored"
+        ),
+        "pre_exec_signal_state_reconstructed": False,
+    }
 def _checkpoint_report(plan: Mapping[str, Any]) -> dict[str, Any]:
     expected = plan["bindings"]
     before = os.fstat(_CHECKPOINT_FD)
@@ -475,6 +527,7 @@ def _result_document(
             "process_creation_attempted_by_worker": False,
             "reported_identifiers_are_signal_authority": False,
         },
+        "signal_report": _signal_report(),
         "descriptor_report": dict(descriptor_report),
         "checkpoint_report": dict(checkpoint_report),
         "outputs": [dict(item) for item in outputs],

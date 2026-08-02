@@ -84,10 +84,15 @@ report the result, then move on.
   reports an empty main-thread signal mask and selected handler dispositions
   after CPython startup, while the exact native owner separately records normal
   zero-status exit, no signal termination and exact reap. The v2 matrix retains
-  no raw PID, PGID or wait status. It does not exhaustively prove arbitrary
-  source-FD values, reconstruct the pre-exec signal instant, bind those facts
-  to the deterministic transport worker or a model, or eliminate
-  extension-import, runtime-exec or worker-script path TOCTOU. A separately
+  no raw PID, PGID or wait status. A later private live proof binds equivalent
+  facts to one exact deterministic transport-worker execution: the worker's
+  self-hashed Result V2 carries its post-CPython signal report, the native
+  terminal receipt binds normal zero exit and exact reap, and one self-hashed
+  outer report observed only FDs 0–2 before Sunofriend imports or execution
+  setup. It retains no PID or PGID and enables no public route. Neither proof
+  exhaustively covers arbitrary source-FD values, reconstructs the pre-exec
+  signal instant, binds those facts to a model, or eliminates extension-import,
+  runtime-exec or worker-script path TOCTOU. A separately
   pinned stdlib-only deterministic worker and prepared launch V3/Result V2
   contracts exist, but launch V3 is not serialized authority and retains
   worker-start permission false. On Darwin, one private, synchronous test-only

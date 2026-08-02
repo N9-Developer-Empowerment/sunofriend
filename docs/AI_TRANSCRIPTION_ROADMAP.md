@@ -1704,6 +1704,43 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — deterministic transport worker supervision bound
+
+- Goal: bind the clean outer-supervisor, post-CPython signal and exact normal
+  termination observations to one exact execution of the existing
+  deterministic transport worker before considering any real-model route.
+- Change or experiment: the pinned stdlib-only fake worker now places its
+  main-thread mask and selected handler dispositions inside its self-hashed
+  Result V2. The native terminal receipt validates and binds that result to a
+  normal zero exit with no signal termination and exact reap. The isolated
+  one-shot helper observes only FDs 0–2 before importing Sunofriend or creating
+  execution state, then emits one path-free self-hashed supervision report
+  containing both that outer observation and the exact terminal receipt.
+- Inputs: the code-owned two-frame PCM24 deterministic fixture and existing
+  synthetic checkpoint lease. No source audio, optional checkpoint, model,
+  inference or network resource was used.
+- Model/runtime/checkpoint: the current isolated Python runtime and freshly
+  built private Darwin launcher only. The fake worker source is pinned at
+  SHA-256 `8efec22498bdabef33d951eafaba9cc80cc51a7e0f0adef52ab21e883c38b741`
+  and 24,003 bytes.
+- Evidence and metrics: the exact live Darwin execution passed. The outer
+  helper observed FDs 0–2; the worker observed an empty main-thread mask,
+  default `SIGHUP`/`SIGQUIT`/`SIGTERM` and `SIGCHLD`, and CPython's expected
+  `SIGINT`, `SIGPIPE` and `SIGXFSZ` dispositions. The parent bound the worker
+  result hash to normal zero exit, no signal termination and exact reap.
+- Listening result: not applicable; no source audio or MIDI changed.
+- Decision: the earlier canary facts are now bound to the deterministic
+  transport worker only. Real-model, source-graph, CLI, TUI, Simple, Studio,
+  selection, publication and promotion routes remain disabled.
+- Problems/risks: this observes worker state after CPython startup and does not
+  reconstruct the pre-exec signal instant. It is not Kim Vocal 2 or other
+  real-separator evidence. Extension/runtime/worker pathname TOCTOU, dynamic
+  native-library closure and the real-worker outer-supervision boundary remain
+  open.
+- Next smallest step: evaluate whether a separately authorised real-worker
+  supervisor/signal observation can reuse this contract without weakening its
+  fail-closed, path-free or no-public-route guarantees.
+
 ### 2026-08-02 — outer supervisor and post-CPython signal canary
 
 - Goal: independently observe the clean outer canary boundary, the signal
@@ -1734,12 +1771,12 @@ Each working day should aim for one narrow vertical improvement:
   separator, source-graph, Simple, Studio, product and publication route stays
   disabled.
 - Problems/risks: a post-CPython observation cannot reconstruct the pre-exec
-  signal instant. The result is not yet bound to the deterministic transport
-  worker or Kim worker. Extension/runtime/worker path TOCTOU and arbitrary
-  source-FD coverage remain open.
-- Next smallest step: bind the same bounded lifecycle/signal facts to the
-  deterministic transport worker before deciding whether a CPU repeat or
-  bounded numeric GPU-difference measurement is the smaller parity experiment.
+  signal instant. This canary itself remains model-free; the later increment
+  above binds equivalent facts to the deterministic transport worker, not Kim
+  Vocal 2. Extension/runtime/worker path TOCTOU and arbitrary source-FD
+  coverage remain open.
+- Next smallest step: completed by the deterministic transport-worker
+  supervision increment above.
 
 ### 2026-08-02 — worker-ready native images bound to two authorised runs
 

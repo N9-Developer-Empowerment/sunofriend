@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import errno
+import inspect
 import json
 import os
 import pickle
@@ -223,6 +224,28 @@ def _decode_canonical_document(payload: bytes) -> dict[str, object]:
     if canonical != payload:
         raise AssertionError("fake executor report is not canonical JSON")
     return document
+
+
+def test_live_supervisor_contract_is_clean_before_application_imports() -> None:
+    parent_source = inspect.getsource(_run_bounded_helper)
+    assert "close_fds=True" in parent_source
+    assert "pass_fds=()" in parent_source
+    assert "start_new_session=True" in parent_source
+
+    harness_source = HARNESS.read_text(encoding="utf-8")
+    observation = harness_source.index(
+        "outer_open_descriptors = _open_descriptors()"
+    )
+    assert observation < harness_source.index("    import secrets")
+    assert observation < harness_source.index(
+        "    from sunofriend._separation_fake_execution_records import"
+    )
+    assert "outer_observation_occurs_after_cpython_module_imports" in (
+        harness_source
+    )
+    assert "no_public_cli_tui_simple_studio_or_source_graph_route" in (
+        harness_source
+    )
 
 
 def test_helper_cleanup_kills_root_when_child_inventory_fails(
@@ -1421,7 +1444,41 @@ def test_isolated_live_fake_executor_completes_once(tmp_path: Path) -> None:
 
     assert return_code == 0, stderr.decode("utf-8", errors="replace")
     assert stderr == b""
-    document = _decode_canonical_document(stdout)
+    report = _decode_canonical_document(stdout)
+    assert report["schema"] == (
+        "sunofriend.separation-fake-supervision-boundary.v1"
+    )
+    assert report["status"] == "bound_complete"
+    assert report["outer_supervisor"] == {
+        "observation_point": "harness_main_before_execution_setup",
+        "open_descriptors": [0, 1, 2],
+        "only_standard_descriptors_open": True,
+        "raw_descriptor_identities_retained": False,
+    }
+    assert report["exact_worker_execution"] == {
+        "terminal_receipt_sha256": report["terminal_receipt"][
+            "receipt_sha256"
+        ],
+        "fake_worker_result_v2_sha256": report["terminal_receipt"][
+            "bindings"
+        ]["fake_worker_result_v2_sha256"],
+        "worker_post_cpython_signal_state_bound": True,
+        "normal_zero_exit": True,
+        "signal_termination_observed": False,
+        "exact_reap": True,
+        "raw_pid_or_pgid_retained": False,
+    }
+    assert report["effects"] == {
+        "real_separation_enabled": False,
+        "model_executed": False,
+        "public_route_enabled": False,
+        "selection_changed": False,
+        "publication_permitted": False,
+    }
+    report_payload = dict(report)
+    report_sha256 = report_payload.pop("report_sha256")
+    assert report_sha256 == executor_module._hash(report_payload)
+    document = report["terminal_receipt"]
     assert document["status"] == "complete"
     assert document["process"] == {
         "started": True,
@@ -1435,6 +1492,15 @@ def test_isolated_live_fake_executor_completes_once(tmp_path: Path) -> None:
         "raw_pid_in_terminal_receipt": False,
         "private_result_frame_contains_worker_pid": True,
         "signal_authority_exposed": False,
+    }
+    assert document["signal"] == {
+        "worker_post_cpython_state_bound": True,
+        "worker_main_thread_mask_empty": True,
+        "termination_signals_default": True,
+        "sigchld_default": True,
+        "cpython_runtime_adjustments_observed": True,
+        "pre_exec_signal_state_reconstructed": False,
+        "worker_signal_termination_observed": False,
     }
     assert document["checkpoint"] == {
         "remeasured_before_start": True,

@@ -143,6 +143,7 @@ _TERMINAL_FIELDS = {
     "backend_scope",
     "bindings",
     "process",
+    "signal",
     "checkpoint",
     "outputs",
     "effects",
@@ -2583,6 +2584,15 @@ def _terminal_receipt(
             "private_result_frame_contains_worker_pid": True,
             "signal_authority_exposed": False,
         },
+        "signal": {
+            "worker_post_cpython_state_bound": True,
+            "worker_main_thread_mask_empty": True,
+            "termination_signals_default": True,
+            "sigchld_default": True,
+            "cpython_runtime_adjustments_observed": True,
+            "pre_exec_signal_state_reconstructed": False,
+            "worker_signal_termination_observed": False,
+        },
         "checkpoint": {
             "remeasured_before_start": True,
             "fixed_worker_result_reports_checkpoint_remeasured": True,
@@ -2682,6 +2692,16 @@ def _validate_fake_execution_terminal_receipt(
         "signal_authority_exposed": False,
     }:
         raise ValueError("fake execution terminal process evidence is invalid")
+    if document["signal"] != {
+        "worker_post_cpython_state_bound": True,
+        "worker_main_thread_mask_empty": True,
+        "termination_signals_default": True,
+        "sigchld_default": True,
+        "cpython_runtime_adjustments_observed": True,
+        "pre_exec_signal_state_reconstructed": False,
+        "worker_signal_termination_observed": False,
+    }:
+        raise ValueError("fake execution terminal signal evidence is invalid")
     if document["checkpoint"] != {
         "remeasured_before_start": True,
         "fixed_worker_result_reports_checkpoint_remeasured": True,

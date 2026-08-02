@@ -9,9 +9,10 @@ lease, reservation, native build and one non-copyable admission object before
 it can frame the separate V2 admitted envelope.
 
 The worker-result V2 record is worker-authored evidence only.  It can report
-the fixed code-owned PCM24 fixture and checkpoint hash observation; it can
-never represent source separation, model execution, publication, selection,
-acceptance or promotion.
+the fixed code-owned PCM24 fixture, checkpoint hash observation and the main
+thread's signal state after CPython startup; it cannot reconstruct the
+pre-exec signal instant and can never represent source separation, model
+execution, publication, selection, acceptance or promotion.
 """
 
 from __future__ import annotations
@@ -54,9 +55,9 @@ _FAKE_RESULT_V2_SCHEMA = "sunofriend.separation-fake-worker-result.v2"
 _FAKE_EXECUTION_POLICY_ID = "private-deterministic-fake-execution-v1"
 _FAKE_FIXTURE_ID = "code-owned-two-frame-pcm24-v1"
 _EXPECTED_FAKE_WORKER_SOURCE_SHA256 = (
-    "c00aab66e7860725858432d615a63cd278edb8eb42c76765d87784f481b8379a"
+    "8efec22498bdabef33d951eafaba9cc80cc51a7e0f0adef52ab21e883c38b741"
 )
-_EXPECTED_FAKE_WORKER_SOURCE_BYTES = 22_147
+_EXPECTED_FAKE_WORKER_SOURCE_BYTES = 24_003
 _MAXIMUM_PLAN_BYTES = 262_144
 _MAXIMUM_RESULT_BYTES = _FAKE_RESULT_MAXIMUM_FRAME_BYTES - 16
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -155,14 +156,21 @@ _EFFECT_FIELDS = _fields(
 _RESULT_FIELDS = _fields(
     """
     schema policy_id evidence_scope status backend_scope evidence_authority
-    run_nonce fake_launch_plan_v3_sha256 process_report descriptor_report
-    checkpoint_report outputs error effects result_sha256
+    run_nonce fake_launch_plan_v3_sha256 process_report signal_report
+    descriptor_report checkpoint_report outputs error effects result_sha256
     """
 )
 _PROCESS_REPORT_FIELDS = _fields(
     """
     pid pgid pgid_equals_pid process_creation_attempted_by_worker
     reported_identifiers_are_signal_authority
+    """
+)
+_SIGNAL_REPORT_FIELDS = _fields(
+    """
+    observation_point main_thread_mask_empty blocked_signal_names handlers
+    termination_signals_default sigchld_default
+    cpython_runtime_adjustments_observed pre_exec_signal_state_reconstructed
     """
 )
 _DESCRIPTOR_REPORT_FIELDS = _fields(
@@ -250,7 +258,7 @@ _LIMITATIONS = (
     "source_audio_model_inference_selection_publication_acceptance_forbidden",
     "runtime_exec_and_worker_script_path_toctou_remain_unresolved",
     "finite_descriptor_canary_matrix_is_not_exhaustive_arbitrary_fd_proof",
-    "post_cpython_signal_state_is_not_independently_proven",
+    "post_cpython_signal_state_does_not_reconstruct_pre_exec_instant",
 )
 
 
@@ -511,6 +519,7 @@ def _build_separation_fake_worker_result_v2(
     fake_launch_plan_v3: _SeparationFakeLaunchPlanV3Record,
     status: str,
     process_report: Mapping[str, Any],
+    signal_report: Mapping[str, Any],
     descriptor_report: Mapping[str, Any],
     checkpoint_report: Mapping[str, Any],
     outputs: Sequence[Mapping[str, Any]],
@@ -532,6 +541,7 @@ def _build_separation_fake_worker_result_v2(
         "run_nonce": fake_launch_plan_v3["run_nonce"],
         "fake_launch_plan_v3_sha256": fake_launch_plan_v3["plan_sha256"],
         "process_report": _plain(process_report),
+        "signal_report": _plain(signal_report),
         "descriptor_report": _plain(descriptor_report),
         "checkpoint_report": _plain(checkpoint_report),
         "outputs": [_plain(item) for item in outputs],
@@ -583,6 +593,11 @@ def _new_separation_fake_worker_result_v2_record(
         raise ValueError("fake result V2 bindings are invalid")
     _run_nonce(value["run_nonce"])
     process = _process_report(value["process_report"])
+    signal_report = _object_with_fields(
+        value["signal_report"],
+        _SIGNAL_REPORT_FIELDS,
+        "fake result V2 signal report",
+    )
     descriptor = _object_with_fields(
         value["descriptor_report"],
         _DESCRIPTOR_REPORT_FIELDS,
@@ -598,6 +613,7 @@ def _new_separation_fake_worker_result_v2_record(
         value["status"] != "complete"
         or value["error"] is not None
         or descriptor != _complete_descriptor_report()
+        or signal_report != _expected_post_cpython_signal_report()
         or outputs != _expected_outputs(fake_launch_plan_v3)
     ):
         raise ValueError("complete fake result V2 is invalid")
@@ -668,6 +684,29 @@ def _process_report(value: Any) -> dict[str, Any]:
     ):
         raise ValueError("fake result V2 process report is invalid")
     return report
+
+
+def _expected_post_cpython_signal_report() -> dict[str, Any]:
+    """Return the exact Darwin CPython worker-entry signal contract."""
+
+    return {
+        "observation_point": "worker_main_after_cpython_startup",
+        "main_thread_mask_empty": True,
+        "blocked_signal_names": [],
+        "handlers": {
+            "SIGHUP": "default",
+            "SIGINT": "python_default_int_handler",
+            "SIGQUIT": "default",
+            "SIGPIPE": "ignored",
+            "SIGTERM": "default",
+            "SIGCHLD": "default",
+            "SIGXFSZ": "ignored",
+        },
+        "termination_signals_default": True,
+        "sigchld_default": True,
+        "cpython_runtime_adjustments_observed": True,
+        "pre_exec_signal_state_reconstructed": False,
+    }
 
 
 def _result_outputs(

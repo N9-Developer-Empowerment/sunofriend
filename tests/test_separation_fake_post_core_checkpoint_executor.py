@@ -19,6 +19,7 @@ from sunofriend._separation_fake_execution_records import (
     _EXPECTED_FAKE_WORKER_SOURCE_SHA256,
     _build_prepared_separation_fake_launch_plan_v3_record,
     _build_separation_fake_worker_result_v2,
+    _expected_post_cpython_signal_report,
     _expected_outputs,
 )
 from sunofriend._separation_fake_launch_v2_records import (
@@ -117,6 +118,7 @@ def _installed_post_core(
             "process_creation_attempted_by_worker": False,
             "reported_identifiers_are_signal_authority": False,
         },
+        signal_report=_expected_post_cpython_signal_report(),
         descriptor_report=_complete_descriptor_report(),
         checkpoint_report={
             "sha256": checkpoint["checkpoint_sha256"],

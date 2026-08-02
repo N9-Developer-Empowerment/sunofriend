@@ -511,8 +511,14 @@ This finite matrix is deliberately narrower than execution authority:
 arbitrary source-FD values are not exhaustively live-proven; the observed
 post-CPython signal state does not reconstruct the spawn-time signal instant;
 and extension-import, runtime-exec and worker-script path TOCTOU are not
-eliminated. The new facts are bound only to the model-free canary, not a
-deterministic transport worker or real separator. Emergency last-reference
+eliminated. At this canary stage the new facts were bound only to the
+model-free canary, not a deterministic transport worker or real separator. A
+later private increment now binds equivalent clean-outer, post-CPython signal
+and exact-reap facts to one exact deterministic transport-worker execution.
+Its self-hashed report combines the outer FDs 0–2 observation with the
+worker-result and native terminal-receipt hashes, while retaining no PID or
+PGID. That is still not real-model evidence and enables no source-graph, CLI,
+TUI, Simple, Studio, selection or publication route. Emergency last-reference
 cleanup sends `SIGKILL`
 and polls exact `waitpid` with `WNOHANG` for a fixed bounded interval; failure
 to reap in that interval is not terminal evidence. The fixed canary workers
@@ -2004,16 +2010,17 @@ separator transport, source-lineage import and promotion are not implemented**
 - [x] Measure the first synthetic downstream-MIDI effect with identical
   existing seed-transcriber settings, inactive paired MIDI/note evidence and
   explicit note/onset/pitch/register/duration/drum-family metrics.
-- [ ] Remove or explicitly confine extension/runtime path TOCTOU, and
-  make the clean outer-supervisor and child signal-state boundaries
-  independently observable.
+- [ ] Remove or explicitly confine extension/runtime path TOCTOU, and bind the
+  clean outer-supervisor and child signal-state boundaries to each executable
+  worker class that may eventually be admitted.
   A model-free canary matrix v2 now independently observes the clean outer
   harness descriptor state, actual post-CPython worker signal mask/handlers and
   normal exact-reap termination for every fixed descriptor layout. It retains
-  no raw PID, PGID or wait status. This narrows the boundary but does not close
-  the checklist item because it is not yet bound to the deterministic
-  transport worker or Kim worker and does not reconstruct the pre-exec signal
-  instant.
+  no raw PID, PGID or wait status. A later deterministic-fixture execution now
+  binds the same facts to its exact self-hashed worker result and exact-reap
+  terminal receipt. The checklist stays open because Kim Vocal 2 and every
+  other real worker remain unbound, path TOCTOU remains, and neither
+  observation reconstructs the pre-exec signal instant.
   The exact Kim Vocal 2 worker-script subproblem is now closed for one real
   authorised observation by executing the already-open verified descriptor as
   Python standard input. The parent-PID macOS process-image observation is now
