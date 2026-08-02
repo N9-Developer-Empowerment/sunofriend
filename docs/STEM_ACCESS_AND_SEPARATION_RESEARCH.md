@@ -62,6 +62,15 @@ path-free result, lets the owner match and discard the private PID/PGID and
 exits zero. It opens no request path, reads zero fd5 checkpoint bytes, imports
 no model, reads no audio and uses no network. This proves framing and lifecycle,
 not real Kim execution; the authorised worker remains on the subprocess route.
+Model-free matrix v10 now adds a separate fixed native Kim sandbox launch
+shape. The native boundary accepts only `/usr/bin/sandbox-exec`, constructs
+the write allowlist around one validated staging tree and supplies the offline
+environment before isolated Python starts. The bootstrap's sandbox mode
+observes `EPERM` for loopback, `fork()` and an outside-tree create while the
+same fd3/fd4 frames, ready/release gate, opaque identity match, group drain and
+exact reap succeed. No request path, checkpoint byte, model or audio is opened.
+This proves the future launch envelope only; the real Kim worker remains on
+the subprocess route.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on

@@ -267,6 +267,27 @@ combined fixed-worker prerequisite only: the real Kim worker still lacks a
 native entry point with its explicit ready/release transport and remains on the
 current subprocess supervisor.
 
+Model-free native matrices v8 and v9 then fix the future real-worker transport
+without granting execution authority to data. The native owner maps private
+request, result and checkpoint files plus ready and release pipes to descriptors
+3 through 7. A bounded canonical JSON contract rejects duplicate keys, trailing
+frames, stale nonces and altered bootstrap identity before readiness. The valid
+bootstrap consumes the request, deliberately reads no checkpoint bytes, waits
+for the exact release record and emits a path-free result whose private PID and
+PGID are used only by the owner's boolean matcher. No model, checkpoint or audio
+is opened, and the existing Kim subprocess route is unchanged.
+
+Model-free native matrix v10 adds the fixed launch envelope that will surround
+that transport. The C boundary accepts only `/usr/bin/sandbox-exec`, constructs
+the sandbox profile itself around one validated private staging directory and
+supplies a fixed offline environment. The sandboxed bootstrap receives the same
+descriptor mapping and ready/release lifecycle while deliberate loopback,
+`fork()` and outside-staging write canaries each fail with `EPERM`. This proves
+the launch shape only. The next increment must replace the model-free bootstrap
+with the fixed Kim worker adapter, load the accepted checkpoint exclusively from
+fd5, and bind one previously authorised excerpt to the same opaque-owner
+terminal projection before any route can be promoted.
+
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \
   --fixture-out work/separation-bakeoff/demo-fixture-v2 \

@@ -26,6 +26,7 @@ import hashlib
 import json
 import re
 import resource
+import socket
 import stat
 import struct
 from typing import Any
@@ -296,11 +297,77 @@ def _write_result_frame(result: dict[str, Any]) -> None:
     os.ftruncate(4, len(frame))
 
 
-def _build_result(request: dict[str, Any], ready_bytes: bytes) -> dict[str, Any]:
+def _sandbox_canaries(request: dict[str, Any]) -> dict[str, Any] | None:
+    marker = os.environ.get("SUNOFRIEND_PRIVATE_KIM_NATIVE_SANDBOX")
+    if marker is None:
+        return None
+    if marker != "1":
+        raise ValueError("private Kim native sandbox marker differs")
+    attached = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        network_errno = attached.connect_ex(("127.0.0.1", 9))
+    finally:
+        attached.close()
+    try:
+        child = os.fork()
+    except OSError as error:
+        fork_errno = error.errno or 0
+    else:
+        if child == 0:
+            os._exit(97)
+        os.waitpid(child, 0)
+        fork_errno = 0
+    staging = request["paths"]["staging_directory"]
+    outside = os.path.join(
+        os.path.dirname(staging),
+        f".{os.path.basename(staging)}-outside-native-write-canary",
+    )
+    try:
+        descriptor = os.open(
+            outside,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+            0o600,
+        )
+    except OSError as error:
+        outside_write_errno = error.errno or 0
+    else:
+        os.close(descriptor)
+        outside_write_errno = 0
+    if (network_errno, fork_errno, outside_write_errno) != (
+        errno.EPERM,
+        errno.EPERM,
+        errno.EPERM,
+    ):
+        raise RuntimeError("private Kim native sandbox canary differs")
+    return {
+        "network_connect_errno": network_errno,
+        "network_errno_name": errno.errorcode[network_errno],
+        "process_fork_errno": fork_errno,
+        "process_fork_errno_name": errno.errorcode[fork_errno],
+        "outside_write_errno": outside_write_errno,
+        "outside_write_errno_name": errno.errorcode[outside_write_errno],
+        "fixed_sandbox_environment_observed": True,
+    }
+
+
+def _build_result(
+    request: dict[str, Any],
+    ready_bytes: bytes,
+    *,
+    sandbox_canaries: dict[str, Any] | None,
+) -> dict[str, Any]:
     checkpoint_state = os.fstat(5)
     child = {
-        "schema": "sunofriend.private-melroformer-native-bootstrap-child.v1",
-        "status": "model_free_frame_bootstrap_complete",
+        "schema": (
+            "sunofriend.private-melroformer-native-sandbox-bootstrap-child.v1"
+            if sandbox_canaries is not None
+            else "sunofriend.private-melroformer-native-bootstrap-child.v1"
+        ),
+        "status": (
+            "model_free_native_sandbox_bootstrap_complete"
+            if sandbox_canaries is not None
+            else "model_free_frame_bootstrap_complete"
+        ),
         "request_frame_validated": True,
         "request_paths_opened": False,
         "request_paths_retained": False,
@@ -316,6 +383,8 @@ def _build_result(request: dict[str, Any], ready_bytes: bytes) -> dict[str, Any]
         "network_used": False,
         "product_authority_granted": False,
     }
+    if sandbox_canaries is not None:
+        child["sandbox_canaries"] = sandbox_canaries
     child_hash = hashlib.sha256(_canonical_bytes(child)).hexdigest()
     payload = {
         "schema": _RESULT_SCHEMA,
@@ -370,7 +439,13 @@ def main() -> int:
             os.close(6)
         if _read_release() != _RELEASE_BYTES:
             return 72
-        _write_result_frame(_build_result(request, ready_bytes))
+        _write_result_frame(
+            _build_result(
+                request,
+                ready_bytes,
+                sandbox_canaries=_sandbox_canaries(request),
+            )
+        )
         return 0
     except (OSError, RuntimeError, TypeError, ValueError, UnicodeError):
         return 70

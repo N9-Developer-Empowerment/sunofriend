@@ -1704,6 +1704,53 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — native Kim sandbox launch shape proved model-free
+
+- Goal: put the fd3–fd7 bootstrap behind the same fixed macOS isolation shape
+  required by the real authorised Kim worker before opening its checkpoint.
+- Change or experiment: added a third private native entry point. The native
+  boundary accepts only `/usr/bin/sandbox-exec`, constructs the fixed profile
+  itself around one validated staging path, denies all network operations,
+  child forks and writes outside that tree, supplies a fixed offline
+  environment and starts isolated Python without `-S` so the future pinned MLX
+  runtime can load. The model-free frame bootstrap now has an explicit sandbox
+  mode that deliberately attempts loopback, `fork()` and an outside-tree
+  create after completing the existing request and ready/release protocol.
+- Inputs: synthetic request/checkpoint fixtures, fresh private staging,
+  `/usr/bin/sandbox-exec`, a freshly provenance-built Darwin launcher and the
+  fixed stdlib bootstrap. No authorised audio or model asset.
+- Model/runtime/checkpoint: no model. The request still names the accepted Kim
+  checkpoint, but fd5 remains unread. Live proof used the locally valid signed
+  Homebrew Python 3.13 canary runtime because strict validation of the separate
+  system and Python 3.12 images currently reports invalid signatures. The
+  freshly built native source hash is
+  `fa7d1fe2ad4512fbe6ce280439e957fe544b9ca0037a02e6483145d76e9c3e2c` and
+  its build-contract hash is
+  `01eb89ccc95caa09daa95485be12309cd0fc73b7c70d707fc268d38128267843`.
+- Evidence and metrics: the isolated sandbox-only proof validates fd3, blocks
+  for owner-bound process-image inspection, completes the exact release,
+  verifies fd4 in the parent, consumes and discards private PID/PGID through
+  the opaque owner, observes `EPERM` for network, fork and outside write, then
+  proves normal zero exit, whole-group drain and exact reap. Focused static and
+  contract tests pass. The unrestricted portable suite passes with
+  `2851 passed, 1 skipped, 9 deselected`; its outer Codex-sandbox run was
+  intentionally discarded because that sandbox forbids the loopback sockets
+  and local tool operations exercised by existing tests. The separate trusted
+  sandbox-frame canary passes under the strictly signed Homebrew Python 3.13
+  runtime.
+- Listening result: not applicable; no audio is opened or produced.
+- Decision: accept the fixed native sandbox launch shape as one more real-run
+  prerequisite. Keep `fixed_real_worker_native_entrypoint_implemented: false`,
+  the current Kim subprocess route unchanged and every product route false.
+- Problems/risks: this still executes the model-free bootstrap. It does not
+  open or descriptor-load the real checkpoint, import MLX, read authorised
+  audio, write stems or bind the final parent verification projection. Runtime,
+  worker and sandbox-provider execution remain pathname based.
+- Next smallest step: implement the fixed real Kim fd3/fd4 worker adapter,
+  make fd5 the checkpoint load source, and run one previously authorised
+  excerpt under this exact owner/sandbox lifecycle against the unchanged
+  subprocess evidence.
+
 ### 2026-08-02 — native Kim frame bootstrap proved model-free
 
 - Goal: make the fixed fd3 request/fd4 result contract executable under the

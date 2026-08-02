@@ -109,9 +109,14 @@ report the result, then move on.
   opaque owner match and discard its private PID/PGID, and retains no path or
   process identifier. It does not open any request path, read fd5, import a
   model, read audio or use a network. Frames remain values rather than spawn
-  authority, and this bootstrap is not the real Kim worker. Kim remains on the
-  subprocess route. This evidence does not enable native
-  fake-launch V2, which remains permanently
+  authority. Model-free matrix v10 now also proves a separate fixed native Kim
+  sandbox launch shape: the native boundary accepts only
+  `/usr/bin/sandbox-exec`, constructs the staging-tree write allowlist and
+  supplies an offline environment; deliberate loopback, fork and outside-write
+  canaries return `EPERM` while the same opaque lifecycle succeeds. This still
+  opens no checkpoint, model or audio, and the bootstrap is not the real Kim
+  worker. Kim remains on the subprocess route. This evidence does not enable
+  native fake-launch V2, which remains permanently
   `blocked`/`not_run` and still contains only caller-claimed artifact
   identities. A later model-free
   canary matrix v2 observes its harness before local cleanup with only FDs 0–2

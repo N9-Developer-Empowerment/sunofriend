@@ -81,6 +81,7 @@ _FRAME_BOOTSTRAP_WORKER = (
     .with_name("_separation_native_spawn_frame_bootstrap_worker.py")
     .resolve()
 )
+_SANDBOX_EXEC = Path("/usr/bin/sandbox-exec")
 _LOGICAL_ROLES = ("request", "result", "checkpoint")
 _TARGET_FDS = (3, 4, 5)
 _LOW_CANARY_FDS = (6, 7, 8)
@@ -1578,7 +1579,7 @@ def _build_model_free_native_request(
         "checkpoint_path": str(case_directory / "checkpoint.safetensors"),
         "companion_root": str(case_directory / "companion-root"),
         "authorisation_report_path": str(case_directory / "authorisation.json"),
-        "staging_directory": str(case_directory / "staging"),
+        "staging_directory": str(case_directory),
     }
     identities = {
         "worker_source_sha256": worker_sha256,
@@ -1747,11 +1748,16 @@ def _run_native_frame_bootstrap_canary(
     expected_process_image_cdhash: str,
     temporary_root: Path,
     worker_sha256: str,
+    sandboxed: bool = False,
 ) -> dict[str, Any]:
     """Consume fd3/fd4 frames under one opaque native owner, model-free."""
 
     _close_descriptors_from_three()
-    case_directory = temporary_root / "native-frame-bootstrap-valid"
+    case_directory = temporary_root / (
+        "native-sandbox-frame-bootstrap-valid"
+        if sandboxed
+        else "native-frame-bootstrap-valid"
+    )
     case_directory.mkdir(mode=0o700)
     request = _build_model_free_native_request(
         case_directory=case_directory,
@@ -1771,13 +1777,26 @@ def _run_native_frame_bootstrap_canary(
     retained: dict[str, Any] | None = None
     try:
         before_spawn = snapshot_parent_descriptors()
-        native_owner = spawn(
-            os.fsencode(runtime_path),
-            os.fsencode(_FRAME_BOOTSTRAP_WORKER),
-            *_TARGET_FDS,
-            prepared.ready_write_fd,
-            prepared.release_read_fd,
+        spawn_arguments = (
+            (
+                os.fsencode(_SANDBOX_EXEC),
+                os.fsencode(runtime_path),
+                os.fsencode(_FRAME_BOOTSTRAP_WORKER),
+                os.fsencode(case_directory),
+                *_TARGET_FDS,
+                prepared.ready_write_fd,
+                prepared.release_read_fd,
+            )
+            if sandboxed
+            else (
+                os.fsencode(runtime_path),
+                os.fsencode(_FRAME_BOOTSTRAP_WORKER),
+                *_TARGET_FDS,
+                prepared.ready_write_fd,
+                prepared.release_read_fd,
+            )
         )
+        native_owner = spawn(*spawn_arguments)
         if type(native_owner) is not owner_type:
             raise AssertionError("frame-bootstrap native owner type differs")
         if hasattr(native_owner, "pid") or hasattr(native_owner, "__dict__"):
@@ -1815,9 +1834,17 @@ def _run_native_frame_bootstrap_canary(
             child_result = _ready_handshake._plain(result["child_result"])
             expected_child = {
                 "schema": (
-                    "sunofriend.private-melroformer-native-bootstrap-child.v1"
+                    "sunofriend.private-melroformer-native-"
+                    "sandbox-bootstrap-child.v1"
+                    if sandboxed
+                    else "sunofriend.private-melroformer-"
+                    "native-bootstrap-child.v1"
                 ),
-                "status": "model_free_frame_bootstrap_complete",
+                "status": (
+                    "model_free_native_sandbox_bootstrap_complete"
+                    if sandboxed
+                    else "model_free_frame_bootstrap_complete"
+                ),
                 "request_frame_validated": True,
                 "request_paths_opened": False,
                 "request_paths_retained": False,
@@ -1844,6 +1871,16 @@ def _run_native_frame_bootstrap_canary(
                 "network_used": False,
                 "product_authority_granted": False,
             }
+            if sandboxed:
+                expected_child["sandbox_canaries"] = {
+                    "network_connect_errno": errno.EPERM,
+                    "network_errno_name": "EPERM",
+                    "process_fork_errno": errno.EPERM,
+                    "process_fork_errno_name": "EPERM",
+                    "outside_write_errno": errno.EPERM,
+                    "outside_write_errno_name": "EPERM",
+                    "fixed_sandbox_environment_observed": True,
+                }
             if child_result != expected_child:
                 raise AssertionError("frame-bootstrap child result differs")
             result_sha256 = result["result_sha256"]
@@ -1879,6 +1916,8 @@ def _run_native_frame_bootstrap_canary(
             "group_empty_before_exact_reap": True,
             "exact_reap_observed": True,
             "raw_pid_or_pgid_retained": False,
+            "fixed_native_sandbox_launch_shape": sandboxed,
+            "network_fork_and_outside_write_denied": sandboxed,
         }
     finally:
         _ready_handshake._abort_worker_ready_handshake(prepared)
@@ -2139,6 +2178,7 @@ def run_canary_matrix(
     worker_path = _WORKER.resolve(strict=True)
     runtime_before = _measure_runtime(runtime_path)
     process_image_before = _measure_runtime(expected_process_image_path)
+    sandbox_provider_before = _measure_runtime(_SANDBOX_EXEC)
     worker_before = _measure_worker(worker_path)
     hold_worker_before = _measure_worker(_HOLD_WORKER)
     descendant_worker_before = _measure_worker(_DESCENDANT_WORKER)
@@ -2157,6 +2197,13 @@ def run_canary_matrix(
     )
     if not callable(spawn_with_ready_release):
         raise RuntimeError("native ready/release entry point is unavailable")
+    spawn_private_melroformer = getattr(
+        extension,
+        "_spawn_bound_private_melroformer_worker",
+        None,
+    )
+    if not callable(spawn_private_melroformer):
+        raise RuntimeError("native private Kim sandbox entry point is unavailable")
     owner_type = getattr(extension, "_OwnedSpawnChild", None)
     if not isinstance(owner_type, type):
         raise RuntimeError("native owner type is unavailable")
@@ -2322,6 +2369,16 @@ def run_canary_matrix(
         temporary_root=temporary_root,
         worker_sha256=frame_bootstrap_worker_before.sha256,
     )
+    native_sandbox_frame_bootstrap_canary = _run_native_frame_bootstrap_canary(
+        spawn=spawn_private_melroformer,
+        owner_type=owner_type,
+        runtime_path=runtime_path,
+        expected_process_image_path=expected_process_image_path,
+        expected_process_image_cdhash=expected_process_image_cdhash,
+        temporary_root=temporary_root,
+        worker_sha256=frame_bootstrap_worker_before.sha256,
+        sandboxed=True,
+    )
     descendant_group_canary = _run_descendant_group_canary(
         spawn=spawn,
         runtime_path=runtime_path,
@@ -2329,6 +2386,7 @@ def run_canary_matrix(
     )
     runtime_after = _measure_runtime(runtime_path)
     process_image_after = _measure_runtime(expected_process_image_path)
+    sandbox_provider_after = _measure_runtime(_SANDBOX_EXEC)
     worker_after = _measure_worker(worker_path)
     hold_worker_after = _measure_worker(_HOLD_WORKER)
     descendant_worker_after = _measure_worker(_DESCENDANT_WORKER)
@@ -2341,6 +2399,8 @@ def run_canary_matrix(
         raise RuntimeError("bound runtime changed across canary matrix")
     if process_image_after != process_image_before:
         raise RuntimeError("bound runtime process image changed across canary matrix")
+    if sandbox_provider_after != sandbox_provider_before:
+        raise RuntimeError("bound sandbox provider changed across canary matrix")
     if worker_after != worker_before:
         raise RuntimeError("bound worker changed across canary matrix")
     if hold_worker_after != hold_worker_before:
@@ -2359,7 +2419,7 @@ def run_canary_matrix(
         raise RuntimeError("bound frame-bootstrap worker changed across canary matrix")
     expected_suffix = sysconfig.get_config_var("EXT_SUFFIX")
     return {
-        "schema": "sunofriend.native-spawn-canary-matrix.v9",
+        "schema": "sunofriend.native-spawn-canary-matrix.v10",
         "extension_path_serialized": False,
         "worker_path_serialized": False,
         "proof_scope": (
@@ -2379,6 +2439,9 @@ def run_canary_matrix(
         "runtime_executable_identity": _path_free_file_identity(runtime_after),
         "runtime_process_image_identity": _path_free_file_identity(
             process_image_after
+        ),
+        "fixed_sandbox_provider_identity": _path_free_file_identity(
+            sandbox_provider_after
         ),
         "fixed_worker_identity": _path_free_file_identity(worker_after),
         "fixed_hold_worker_identity": _path_free_file_identity(hold_worker_after),
@@ -2415,6 +2478,8 @@ def run_canary_matrix(
             "existing_kim_ready_schema_exercised_model_free": True,
             "fixed_model_free_frame_bootstrap_present": True,
             "private_request_result_frames_consumed_model_free": True,
+            "fixed_native_kim_sandbox_launch_shape_present": True,
+            "native_kim_sandbox_denials_exercised_model_free": True,
             "observer_exports_pid_or_pgid": False,
         },
         "runtime_environment_qualification": (
@@ -2481,6 +2546,7 @@ def run_canary_matrix(
             "combined_fixed_worker_bridge_is_not_a_real_model_worker",
             "native_ready_release_transport_is_not_attached_to_real_worker",
             "native_frame_bootstrap_is_model_free_not_real_kim_worker",
+            "native_sandbox_frame_bootstrap_is_model_free_not_real_kim_worker",
             "real_model_worker_not_under_native_owner",
         ),
         "complete_descriptor_scan_soft_limit": _CANARY_SOFT_LIMIT,
@@ -2515,13 +2581,86 @@ def run_canary_matrix(
             invalid_native_frame_bootstrap_canary
         ),
         "native_frame_bootstrap_canary": native_frame_bootstrap_canary,
+        "native_sandbox_frame_bootstrap_canary": (
+            native_sandbox_frame_bootstrap_canary
+        ),
         "descendant_group_canary": descendant_group_canary,
         "cases": cases,
     }
 
 
+def run_sandbox_frame_bootstrap_canary(
+    *,
+    extension_path: Path,
+    temporary_root: Path,
+    expected_artifact_sha256: str,
+    expected_source_sha256: str,
+    expected_build_contract_sha256: str,
+    expected_process_image_path: Path,
+    expected_process_image_cdhash: str,
+) -> dict[str, Any]:
+    """Run only the fixed sandboxed frame gate in an isolated process."""
+
+    outer = _observe_outer_supervisor_descriptors()
+    if outer["only_standard_descriptors_open"] is not True:
+        raise RuntimeError("sandbox-frame harness inherited a descriptor")
+    _prepare_isolated_descriptor_limit()
+    extension, artifact = _load_verified_extension(
+        extension_path,
+        expected_artifact_sha256=expected_artifact_sha256,
+        expected_source_sha256=expected_source_sha256,
+        expected_build_contract_sha256=expected_build_contract_sha256,
+    )
+    spawn = getattr(
+        extension,
+        "_spawn_bound_private_melroformer_worker",
+        None,
+    )
+    owner_type = getattr(extension, "_OwnedSpawnChild", None)
+    if not callable(spawn) or not isinstance(owner_type, type):
+        raise RuntimeError("private Kim sandbox native boundary is unavailable")
+    runtime = Path(sys.executable).resolve(strict=True)
+    process_image = expected_process_image_path.resolve(strict=True)
+    runtime_before = _measure_runtime(runtime)
+    image_before = _measure_runtime(process_image)
+    provider_before = _measure_runtime(_SANDBOX_EXEC)
+    worker_before = _measure_worker(_FRAME_BOOTSTRAP_WORKER)
+    canary = _run_native_frame_bootstrap_canary(
+        spawn=spawn,
+        owner_type=owner_type,
+        runtime_path=runtime,
+        expected_process_image_path=process_image,
+        expected_process_image_cdhash=expected_process_image_cdhash,
+        temporary_root=temporary_root,
+        worker_sha256=worker_before.sha256,
+        sandboxed=True,
+    )
+    if (
+        _measure_runtime(runtime) != runtime_before
+        or _measure_runtime(process_image) != image_before
+        or _measure_runtime(_SANDBOX_EXEC) != provider_before
+        or _measure_worker(_FRAME_BOOTSTRAP_WORKER) != worker_before
+    ):
+        raise RuntimeError("sandbox-frame launch artifact changed")
+    return {
+        "schema": "sunofriend.native-kim-sandbox-frame-canary.v1",
+        "status": "model_free_native_sandbox_launch_proved",
+        "native_artifact_identity": _path_free_file_identity(artifact),
+        "runtime_identity": _path_free_file_identity(runtime_before),
+        "process_image_identity": _path_free_file_identity(image_before),
+        "sandbox_provider_identity": _path_free_file_identity(provider_before),
+        "worker_identity": _path_free_file_identity(worker_before),
+        "canary": canary,
+        "real_model_worker_executed": False,
+        "checkpoint_opened": False,
+        "audio_opened": False,
+        "product_authority_granted": False,
+    }
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--sandbox-frame-only", action="store_true")
     parser.add_argument("extension_path", type=Path)
     parser.add_argument("temporary_root", type=Path)
     parser.add_argument("expected_artifact_sha256")
@@ -2534,7 +2673,12 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     arguments = _parser().parse_args(argv)
-    report = run_canary_matrix(
+    runner = (
+        run_sandbox_frame_bootstrap_canary
+        if arguments.sandbox_frame_only
+        else run_canary_matrix
+    )
+    report = runner(
         extension_path=arguments.extension_path.resolve(strict=True),
         temporary_root=arguments.temporary_root.resolve(strict=True),
         expected_artifact_sha256=arguments.expected_artifact_sha256,

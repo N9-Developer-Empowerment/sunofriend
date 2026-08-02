@@ -166,7 +166,12 @@ def test_child_stdio_environment_and_transport_numbers_are_fixed() -> None:
     environment = _function_body(
         source,
         "sunofriend_worker_environment[]",
-        "sunofriend_contains_nul(",
+        "sunofriend_private_kim_worker_environment[]",
+    )
+    private_environment = _function_body(
+        source,
+        "sunofriend_private_kim_worker_environment[]",
+        "sunofriend_sandbox_exec_path[]",
     )
 
     assert source.count('"/dev/null"') == 3
@@ -184,8 +189,23 @@ def test_child_stdio_environment_and_transport_numbers_are_fixed() -> None:
         "LC_ALL=C",
         "TZ=UTC",
     ]
-    assert '"PATH=' not in source
-    assert '"PYTHON' not in source
+    assert re.findall(
+        r'^\s+"([^"]+)",$', private_environment, flags=re.MULTILINE
+    ) == [
+        "HF_HUB_OFFLINE=1",
+        "HOME=/var/empty",
+        "LANG=C",
+        "LC_ALL=C",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "PYTHONIOENCODING=utf-8",
+        "PYTHONNOUSERSITE=1",
+        "SUNOFRIEND_PRIVATE_KIM_NATIVE_SANDBOX=1",
+        "TMPDIR=/var/empty",
+        "TRANSFORMERS_OFFLINE=1",
+        "TZ=UTC",
+    ]
+    assert '"PATH=' not in environment + private_environment
+    assert '"PYTHON' not in environment
     assert re.search(r"\benviron\b", source) is None
 
 
@@ -204,12 +224,37 @@ def test_executable_and_worker_are_bounded_bytes_with_exact_argv_template() -> N
     assert "PyBytes_AS_STRING(bound_executable)" in source
 
 
+def test_private_kim_entrypoint_fixes_sandbox_profile_environment_and_argv() -> None:
+    source = _source()
+    entrypoint = _function_body(
+        source,
+        "sunofriend_spawn_bound_private_melroformer_worker(",
+        "sunofriend_spawn_methods[]",
+    )
+
+    assert '"/usr/bin/sandbox-exec"' in source
+    assert '"(deny network*)\\n"' in source
+    assert '"(deny process-fork)\\n"' in source
+    assert '"(deny file-write*)\\n"' in source
+    assert '"(allow file-write* (subpath \\\""' in source
+    assert "sunofriend_require_fixed_sandbox_provider" in entrypoint
+    assert "sunofriend_validate_private_staging_path" in entrypoint
+    assert 'native_arguments[1] = "-p"' in entrypoint
+    assert "native_arguments[2] = sandbox_profile" in entrypoint
+    assert 'native_arguments[4] = "-I"' in entrypoint
+    assert 'native_arguments[5] = "-B"' in entrypoint
+    assert 'native_arguments[5] = "-S"' not in entrypoint
+    assert "sunofriend_private_kim_worker_environment" in entrypoint
+    assert "SUNOFRIEND_READY_RELEASE_TRANSPORT_COUNT" in entrypoint
+    assert '"_spawn_bound_private_melroformer_worker"' in source
+
+
 def test_child_owner_is_allocated_before_spawn_and_retains_lifecycle() -> None:
     source = _source()
     spawn = _function_body(
         source,
+        "sunofriend_spawn_bound_command(",
         "sunofriend_spawn_bound_worker(",
-        "sunofriend_spawn_bound_fake_worker(",
     )
     allocation = spawn.index("owned_child = PyObject_New(")
     native_spawn = spawn.index("status = posix_spawn(")
@@ -229,8 +274,8 @@ def test_no_start_is_a_code_tagged_nonconstructible_owner_not_an_exception() -> 
     source = _source()
     spawn = _function_body(
         source,
+        "sunofriend_spawn_bound_command(",
         "sunofriend_spawn_bound_worker(",
-        "sunofriend_spawn_bound_fake_worker(",
     )
     getters = _function_body(
         source,

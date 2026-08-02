@@ -12,6 +12,7 @@
 #include <signal.h>
 #include <spawn.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -98,6 +99,31 @@ static char *const sunofriend_worker_environment[] = {
     "TZ=UTC",
     NULL,
 };
+
+static char *const sunofriend_private_kim_worker_environment[] = {
+    "HF_HUB_OFFLINE=1",
+    "HOME=/var/empty",
+    "LANG=C",
+    "LC_ALL=C",
+    "PYTHONDONTWRITEBYTECODE=1",
+    "PYTHONIOENCODING=utf-8",
+    "PYTHONNOUSERSITE=1",
+    "SUNOFRIEND_PRIVATE_KIM_NATIVE_SANDBOX=1",
+    "TMPDIR=/var/empty",
+    "TRANSFORMERS_OFFLINE=1",
+    "TZ=UTC",
+    NULL,
+};
+
+static const char sunofriend_sandbox_exec_path[] = "/usr/bin/sandbox-exec";
+static const char sunofriend_private_kim_profile_prefix[] =
+    "(version 1)\n"
+    "(allow default)\n"
+    "(deny network*)\n"
+    "(deny process-fork)\n"
+    "(deny file-write*)\n"
+    "(allow file-write* (subpath \"";
+static const char sunofriend_private_kim_profile_suffix[] = "\"))\n";
 
 typedef struct {
     PyObject_HEAD
@@ -195,6 +221,60 @@ sunofriend_validate_absolute_path(PyObject *path, const char *label)
     }
     if (sunofriend_contains_nul(value, size)) {
         PyErr_Format(PyExc_ValueError, "%s contains NUL", label);
+        return -1;
+    }
+    return 0;
+}
+
+static int
+sunofriend_validate_private_staging_path(PyObject *path)
+{
+    const unsigned char *value;
+    Py_ssize_t index;
+    Py_ssize_t size;
+
+    if (sunofriend_validate_absolute_path(path, "private staging path") != 0) {
+        return -1;
+    }
+    value = (const unsigned char *)PyBytes_AS_STRING(path);
+    size = PyBytes_GET_SIZE(path);
+    for (index = 0; index < size; index++) {
+        if (
+            value[index] < (unsigned char)0x20
+            || value[index] == (unsigned char)0x7f
+            || value[index] == (unsigned char)'"'
+            || value[index] == (unsigned char)'\\'
+        ) {
+            PyErr_SetString(
+                PyExc_ValueError,
+                "private staging path cannot be represented in the fixed sandbox"
+            );
+            return -1;
+        }
+    }
+    return 0;
+}
+
+static int
+sunofriend_require_fixed_sandbox_provider(PyObject *path)
+{
+    const char *value;
+    Py_ssize_t size;
+    size_t expected_size = strlen(sunofriend_sandbox_exec_path);
+
+    if (sunofriend_validate_absolute_path(path, "sandbox provider") != 0) {
+        return -1;
+    }
+    value = PyBytes_AS_STRING(path);
+    size = PyBytes_GET_SIZE(path);
+    if (
+        size != (Py_ssize_t)expected_size
+        || memcmp(value, sunofriend_sandbox_exec_path, expected_size) != 0
+    ) {
+        PyErr_SetString(
+            PyExc_ValueError,
+            "private Kim native launch requires the fixed sandbox provider"
+        );
         return -1;
     }
     return 0;
@@ -1451,14 +1531,14 @@ static PyTypeObject SunofriendOwnedSpawnChildType = {
 };
 
 static PyObject *
-sunofriend_spawn_bound_worker(
-    PyObject *bound_executable,
-    PyObject *bound_worker_entrypoint,
+sunofriend_spawn_bound_command(
+    PyObject *spawn_executable,
+    char *const native_arguments[],
+    char *const worker_environment[],
     const int source_fds[SUNOFRIEND_MAX_TRANSPORT_COUNT],
     size_t transport_count
 )
 {
-    char *native_arguments[6];
     int scratch_fds[SUNOFRIEND_MAX_TRANSPORT_COUNT];
     posix_spawn_file_actions_t file_actions;
     posix_spawnattr_t attributes;
@@ -1470,15 +1550,7 @@ sunofriend_spawn_bound_worker(
     int status;
 
     if (
-        sunofriend_validate_absolute_path(
-            bound_executable,
-            "bound executable"
-        ) != 0
-        || sunofriend_validate_absolute_path(
-            bound_worker_entrypoint,
-            "bound worker entrypoint"
-        ) != 0
-        || sunofriend_validate_transport_fds(source_fds, transport_count) != 0
+        sunofriend_validate_transport_fds(source_fds, transport_count) != 0
         || sunofriend_validate_parent_sigchld() != 0
         || sunofriend_choose_scratch_fds(
             source_fds,
@@ -1488,12 +1560,6 @@ sunofriend_spawn_bound_worker(
     ) {
         return NULL;
     }
-    native_arguments[0] = PyBytes_AS_STRING(bound_executable);
-    native_arguments[1] = "-I";
-    native_arguments[2] = "-B";
-    native_arguments[3] = "-S";
-    native_arguments[4] = PyBytes_AS_STRING(bound_worker_entrypoint);
-    native_arguments[5] = NULL;
 
     owned_child = PyObject_New(
         SunofriendOwnedSpawnChild,
@@ -1545,11 +1611,11 @@ sunofriend_spawn_bound_worker(
 
     status = posix_spawn(
         &child_pid,
-        PyBytes_AS_STRING(bound_executable),
+        PyBytes_AS_STRING(spawn_executable),
         &file_actions,
         &attributes,
         native_arguments,
-        sunofriend_worker_environment
+        worker_environment
     );
     if (status != 0) {
         no_start_stage = SUNOFRIEND_NO_START_POSIX_SPAWN;
@@ -1572,6 +1638,43 @@ fail:
     owned_child->no_start_stage = no_start_stage;
     owned_child->native_status = status;
     return (PyObject *)owned_child;
+}
+
+static PyObject *
+sunofriend_spawn_bound_worker(
+    PyObject *bound_executable,
+    PyObject *bound_worker_entrypoint,
+    const int source_fds[SUNOFRIEND_MAX_TRANSPORT_COUNT],
+    size_t transport_count
+)
+{
+    char *native_arguments[6];
+
+    if (
+        sunofriend_validate_absolute_path(
+            bound_executable,
+            "bound executable"
+        ) != 0
+        || sunofriend_validate_absolute_path(
+            bound_worker_entrypoint,
+            "bound worker entrypoint"
+        ) != 0
+    ) {
+        return NULL;
+    }
+    native_arguments[0] = PyBytes_AS_STRING(bound_executable);
+    native_arguments[1] = "-I";
+    native_arguments[2] = "-B";
+    native_arguments[3] = "-S";
+    native_arguments[4] = PyBytes_AS_STRING(bound_worker_entrypoint);
+    native_arguments[5] = NULL;
+    return sunofriend_spawn_bound_command(
+        bound_executable,
+        native_arguments,
+        sunofriend_worker_environment,
+        source_fds,
+        transport_count
+    );
 }
 
 static PyObject *
@@ -1637,6 +1740,91 @@ sunofriend_spawn_bound_fake_worker_with_ready_release(
     );
 }
 
+static PyObject *
+sunofriend_spawn_bound_private_melroformer_worker(
+    PyObject *self,
+    PyObject *arguments
+)
+{
+    PyObject *sandbox_provider;
+    PyObject *bound_runtime;
+    PyObject *bound_worker_entrypoint;
+    PyObject *private_staging_path;
+    int source_fds[SUNOFRIEND_MAX_TRANSPORT_COUNT];
+    char sandbox_profile[PATH_MAX + 512];
+    char *native_arguments[8];
+    int profile_bytes;
+
+    (void)self;
+    if (!PyArg_ParseTuple(
+        arguments,
+        "O!O!O!O!iiiii:_spawn_bound_private_melroformer_worker",
+        &PyBytes_Type,
+        &sandbox_provider,
+        &PyBytes_Type,
+        &bound_runtime,
+        &PyBytes_Type,
+        &bound_worker_entrypoint,
+        &PyBytes_Type,
+        &private_staging_path,
+        &source_fds[0],
+        &source_fds[1],
+        &source_fds[2],
+        &source_fds[3],
+        &source_fds[4]
+    )) {
+        return NULL;
+    }
+    if (
+        sunofriend_require_fixed_sandbox_provider(sandbox_provider) != 0
+        || sunofriend_validate_absolute_path(
+            bound_runtime,
+            "bound private Kim runtime"
+        ) != 0
+        || sunofriend_validate_absolute_path(
+            bound_worker_entrypoint,
+            "bound private Kim worker entrypoint"
+        ) != 0
+        || sunofriend_validate_private_staging_path(private_staging_path) != 0
+    ) {
+        return NULL;
+    }
+    profile_bytes = snprintf(
+        sandbox_profile,
+        sizeof(sandbox_profile),
+        "%s%.*s%s",
+        sunofriend_private_kim_profile_prefix,
+        (int)PyBytes_GET_SIZE(private_staging_path),
+        PyBytes_AS_STRING(private_staging_path),
+        sunofriend_private_kim_profile_suffix
+    );
+    if (
+        profile_bytes < 0
+        || (size_t)profile_bytes >= sizeof(sandbox_profile)
+    ) {
+        PyErr_SetString(
+            PyExc_ValueError,
+            "private Kim sandbox profile exceeds its fixed bound"
+        );
+        return NULL;
+    }
+    native_arguments[0] = PyBytes_AS_STRING(sandbox_provider);
+    native_arguments[1] = "-p";
+    native_arguments[2] = sandbox_profile;
+    native_arguments[3] = PyBytes_AS_STRING(bound_runtime);
+    native_arguments[4] = "-I";
+    native_arguments[5] = "-B";
+    native_arguments[6] = PyBytes_AS_STRING(bound_worker_entrypoint);
+    native_arguments[7] = NULL;
+    return sunofriend_spawn_bound_command(
+        sandbox_provider,
+        native_arguments,
+        sunofriend_private_kim_worker_environment,
+        source_fds,
+        SUNOFRIEND_READY_RELEASE_TRANSPORT_COUNT
+    );
+}
+
 static PyMethodDef sunofriend_spawn_methods[] = {
     {
         "_spawn_bound_fake_worker",
@@ -1654,6 +1842,15 @@ static PyMethodDef sunofriend_spawn_methods[] = {
         PyDoc_STR(
             "Private fixed ready/release canary boundary; production worker "
             "integration remains unavailable."
+        ),
+    },
+    {
+        "_spawn_bound_private_melroformer_worker",
+        sunofriend_spawn_bound_private_melroformer_worker,
+        METH_VARARGS,
+        PyDoc_STR(
+            "Private fixed sandboxed Kim launch shape; real-model integration "
+            "remains unavailable."
         ),
     },
     {NULL, NULL, 0, NULL},

@@ -358,7 +358,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         ),
     )
 
-    assert report["schema"] == ("sunofriend.native-spawn-canary-matrix.v9")
+    assert report["schema"] == ("sunofriend.native-spawn-canary-matrix.v10")
     expected_layouts = {
         *itertools.permutations((3, 4, 5)),
         *harness._REPRESENTATIVE_SOURCE_FD_LAYOUTS,
@@ -405,6 +405,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
     for key in (
         "runtime_executable_identity",
         "runtime_process_image_identity",
+        "fixed_sandbox_provider_identity",
         "fixed_worker_identity",
         "fixed_hold_worker_identity",
         "fixed_descendant_worker_identity",
@@ -492,6 +493,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "combined_fixed_worker_bridge_is_not_a_real_model_worker",
         "native_ready_release_transport_is_not_attached_to_real_worker",
         "native_frame_bootstrap_is_model_free_not_real_kim_worker",
+        "native_sandbox_frame_bootstrap_is_model_free_not_real_kim_worker",
         "real_model_worker_not_under_native_owner",
     }
     assert report["extension_path_serialized"] is False
@@ -511,6 +513,8 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "existing_kim_ready_schema_exercised_model_free": True,
         "fixed_model_free_frame_bootstrap_present": True,
         "private_request_result_frames_consumed_model_free": True,
+        "fixed_native_kim_sandbox_launch_shape_present": True,
+        "native_kim_sandbox_denials_exercised_model_free": True,
         "observer_exports_pid_or_pgid": False,
     }
     assert report["post_spawn_owner_drop_canary"] == {
@@ -747,6 +751,8 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "raw_pid_or_pgid_retained",
         "parent_descriptors_unchanged_by_spawn",
         "temporary_pipe_descriptors_closed",
+        "fixed_native_sandbox_launch_shape",
+        "network_fork_and_outside_write_denied",
     }
     assert bootstrap["request_frame_validated_by_worker"] is True
     assert bootstrap["result_frame_validated_by_parent"] is True
@@ -768,6 +774,19 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
     assert bootstrap["raw_pid_or_pgid_retained"] is False
     assert bootstrap["parent_descriptors_unchanged_by_spawn"] is True
     assert bootstrap["temporary_pipe_descriptors_closed"] is True
+    assert bootstrap["fixed_native_sandbox_launch_shape"] is False
+    assert bootstrap["network_fork_and_outside_write_denied"] is False
+    sandbox_bootstrap = report["native_sandbox_frame_bootstrap_canary"]
+    assert sandbox_bootstrap["fixed_native_sandbox_launch_shape"] is True
+    assert sandbox_bootstrap["network_fork_and_outside_write_denied"] is True
+    assert sandbox_bootstrap["request_frame_validated_by_worker"] is True
+    assert sandbox_bootstrap["result_frame_validated_by_parent"] is True
+    assert sandbox_bootstrap[
+        "private_process_identity_matched_then_discarded"
+    ] is True
+    assert sandbox_bootstrap["normal_zero_exit_after_release"] is True
+    assert sandbox_bootstrap["group_empty_before_exact_reap"] is True
+    assert sandbox_bootstrap["exact_reap_observed"] is True
     assert report["descendant_group_canary"] == {
         "leader_exit_observed_without_reap": True,
         "live_descendant_prevented_ownership_release": True,
@@ -783,3 +802,73 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         artifact_path=build.artifact_path,
         probe_root=tmp_path / "custom-sigchld-probe",
     )
+
+
+@pytest.mark.trusted_local
+@pytest.mark.skipif(
+    sys.platform != "darwin" or platform.system() != "Darwin",
+    reason="live native sandbox frame canary is macOS-only",
+)
+def test_fresh_private_native_build_passes_sandbox_frame_bootstrap(
+    tmp_path: Path,
+) -> None:
+    build_root = tmp_path / r"private sandbox frame build $edge\root"
+    build = native_build._build_native_launcher(cache_root=build_root)
+    receipt = build.receipt.to_dict()
+    runtime_path = Path(sys.executable).resolve(strict=True)
+    expected_process_image_path = process_image._expected_python_process_image(
+        runtime_path
+    )
+    expected_process_image_cdhash = process_image._static_code_identity(
+        expected_process_image_path
+    )["cdhash"]
+    harness_root = tmp_path / "sandbox-frame-canary"
+    harness_root.mkdir(mode=0o700)
+    command = [
+        sys.executable,
+        "-I",
+        "-B",
+        "-S",
+        str(HARNESS),
+        "--sandbox-frame-only",
+        str(build.artifact_path),
+        str(harness_root),
+        receipt["artifact"]["sha256"],
+        receipt["build_input"]["source"]["sha256"],
+        receipt["build_input"]["build_contract_sha256"],
+        str(expected_process_image_path),
+        expected_process_image_cdhash,
+    ]
+
+    return_code, stdout, stderr = _run_bounded_harness(command)
+
+    assert return_code == 0, stderr.decode("utf-8", errors="replace")
+    assert stderr == b""
+    report = _decode_one_canonical_report(stdout)
+    _assert_path_free_report(
+        stdout,
+        forbidden_paths=(
+            tmp_path,
+            build_root,
+            build.artifact_path,
+            harness_root,
+            REPOSITORY,
+            HARNESS,
+            expected_process_image_path,
+        ),
+    )
+    assert report["schema"] == "sunofriend.native-kim-sandbox-frame-canary.v1"
+    assert report["status"] == "model_free_native_sandbox_launch_proved"
+    assert report["real_model_worker_executed"] is False
+    assert report["checkpoint_opened"] is False
+    assert report["audio_opened"] is False
+    assert report["product_authority_granted"] is False
+    canary = report["canary"]
+    assert canary["fixed_native_sandbox_launch_shape"] is True
+    assert canary["network_fork_and_outside_write_denied"] is True
+    assert canary["request_frame_validated_by_worker"] is True
+    assert canary["result_frame_validated_by_parent"] is True
+    assert canary["private_process_identity_matched_then_discarded"] is True
+    assert canary["normal_zero_exit_after_release"] is True
+    assert canary["group_empty_before_exact_reap"] is True
+    assert canary["exact_reap_observed"] is True

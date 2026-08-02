@@ -107,7 +107,6 @@ def test_canary_worker_is_fixed_stdlib_only_and_has_no_expansive_surface() -> No
         "onnxruntime",
         "pickle",
         "requests",
-        "socket",
         "subprocess",
         "torch",
         "urllib",
@@ -356,6 +355,7 @@ def test_frame_bootstrap_worker_consumes_exact_frames_without_model_or_audio() -
         "os",
         "re",
         "resource",
+        "socket",
         "stat",
         "struct",
         "typing",
@@ -367,7 +367,6 @@ def test_frame_bootstrap_worker_consumes_exact_frames_without_model_or_audio() -
         "numpy",
         "onnxruntime",
         "requests",
-        "socket",
         "subprocess",
         "torch",
         "urllib",
@@ -389,7 +388,8 @@ def test_frame_bootstrap_worker_consumes_exact_frames_without_model_or_audio() -
     assert '"checkpoint_loaded": False' in source
     assert '"audio_read": False' in source
     assert '"network_used": False' in source
-    assert "open(" not in source
+    assert source.count("os.open(") == 1
+    assert "descriptor = os.open(\n            outside," in source
 
 
 def test_hold_worker_hardens_descriptors_then_only_blocks_for_owner_canary() -> None:

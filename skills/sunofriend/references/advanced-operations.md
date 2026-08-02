@@ -1638,7 +1638,14 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   opaque boolean matcher and discards them before retaining evidence. The
   bootstrap opens no request path, reads zero checkpoint bytes, imports no
   model, reads no audio and uses no network. It is not the real Kim worker, so
-  native real-worker supervision is not claimed.
+  native real-worker supervision is not claimed. Model-free matrix v10 adds a
+  separate fixed native sandbox launch shape. The native boundary accepts only
+  `/usr/bin/sandbox-exec`, builds the write allowlist around one validated
+  staging tree and supplies a fixed offline environment. The same bootstrap
+  then observes `EPERM` for deliberate loopback, `fork()` and outside-tree
+  write canaries while fd3/fd4 validation, ready/release, opaque identity match,
+  group drain and exact reap succeed. It still opens no checkpoint, model or
+  audio and is not the real Kim worker.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory

@@ -261,6 +261,12 @@ def test_native_real_worker_supervision_plan_is_blocked_and_path_free() -> None:
     assert plan["missing_bridge"][
         "native_frame_bootstrap_exercised_under_live_owner"
     ] is True
+    assert plan["missing_bridge"][
+        "fixed_native_sandbox_launch_shape_implemented"
+    ] is True
+    assert plan["missing_bridge"][
+        "native_sandbox_launch_exercised_model_free"
+    ] is True
     assert all(value is False for value in plan["effects"].values())
     assert digest == hashlib.sha256(_canonical_json_bytes(unsigned)).hexdigest()
     assert "/Users/" not in repr(plan)
