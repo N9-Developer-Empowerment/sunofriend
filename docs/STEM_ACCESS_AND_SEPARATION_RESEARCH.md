@@ -47,8 +47,15 @@ signed process image, accepts only the exact release bytes, exits zero and is
 group-drained and exact-reaped. The parent descriptor table is unchanged by
 spawn and every temporary pipe end is closed. No model, checkpoint or audio is
 opened. This proves the transport shape, not Kim execution: the authorised
-path remains on the subprocess supervisor. A separate
-private-development HTDemucs runner now produces and measures four real broad
+path remains on the subprocess supervisor. A pure frame contract now also
+fixes the future fd3 request and fd4 result:
+canonical bounded JSON, duplicate-key rejection, a fresh request nonce, the
+exact Kim checkpoint identity, the fixed 3–7 descriptor policy, private local
+paths only in the request, and no paths in the result. PID/PGID may appear only
+in the private result for submission to the opaque owner's boolean matcher.
+Frames are values, never serialized execution authority, and no native
+bootstrap consumes them yet. Separately, a private-development HTDemucs runner
+now produces and measures four real broad
 estimated stems on
 the copyright-safe demo, and a second private evaluator measures their effect
 on the existing MIDI transcribers. Public separation, source-graph import,

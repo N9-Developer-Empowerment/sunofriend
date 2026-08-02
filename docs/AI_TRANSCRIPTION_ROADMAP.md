@@ -1704,6 +1704,48 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — native Kim request/result frames fixed model-free
+
+- Goal: define the bounded data carried on native descriptors 3 and 4 before
+  writing a real-worker bootstrap or granting any new execution authority.
+- Change or experiment: added a pure request/result transport contract with
+  fixed eight-byte magics, big-endian bounded lengths, canonical JSON,
+  duplicate-key rejection, exact field sets and semantic self-hashes. The
+  private request may contain six absolute local paths but is explicitly not
+  execution authority. It binds a fresh nonce, the exact accepted Kim
+  checkpoint identity, all required artifact hashes, the full owner-bound
+  observation policy and descriptors 3–7. The path-free private result binds
+  back to the same request and child-result hashes; PID/PGID exist only in that
+  transient result so the future parent can submit them to the opaque owner's
+  boolean matcher.
+- Inputs: synthetic value fixtures only. No file, descriptor, process, model,
+  checkpoint, audio or network operation.
+- Model/runtime/checkpoint: no model or checkpoint opened. The contract accepts
+  only checkpoint SHA-256
+  `312c38e5b698f8dfaa4d6064e8f79010744825828917871a9d22673a43eb7fe5`
+  and 456,483,463 bytes, matching the already accepted Kim conversion asset.
+- Evidence and metrics: 103 focused transport, handshake, supervision, source,
+  build and live-v8 tests pass. Mutations cover relative/root/URL/duplicate
+  paths, the wrong checkpoint, descriptor or execution-policy drift, serialized
+  authority expansion, noncanonical/duplicate/truncated/trailing frames,
+  request/nonce/hash mismatches, invalid private process identities and Unix or
+  Windows paths in results. Ruff passes. The complete repository suite passes
+  2,857 tests with one platform skip and the existing third-party
+  `resampy`/`pkg_resources` deprecation warning.
+- Listening result: not applicable; this is pure value validation.
+- Decision: accept the frame contract as preparation only and keep the native
+  real-worker entry point blocked. A serialized request remains non-authority,
+  and a worker result remains an unverified claim until exact owner and parent
+  artifact/output verification complete.
+- Problems/risks: there is no fixed native bootstrap that consumes these frames
+  yet. The path-bearing request is private but still requires strict parent
+  construction and lifetime controls. The current real worker still expects
+  CLI arguments, uses the subprocess route and has not been adapted to fd3/4.
+- Next smallest step: build one fixed stdlib bootstrap that hardens descriptors
+  3–7 first, decodes this request, imports no model in canary mode and emits a
+  bound result. Add model-free failure and exact-reap tests before any authorised
+  Kim excerpt is run.
+
 ### 2026-08-02 — native Kim ready/release transport proved model-free
 
 - Goal: prove the exact descriptor and lifecycle shape needed by the existing

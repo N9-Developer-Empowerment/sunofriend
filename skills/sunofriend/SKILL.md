@@ -98,8 +98,12 @@ report the result, then move on.
   adds a fixed five-descriptor entry point and proves the existing Kim ready/
   release schema and release bytes through the same opaque-owner lifecycle,
   again without a model, checkpoint or audio. These proofs are still not
-  attached to Kim; its real worker remains on the subprocess route. This
-  evidence does not enable native
+  attached to Kim. A pure bounded frame contract now fixes the future fd3/fd4
+  request/result values, including private request paths, exact checkpoint and
+  nonce binding, path-free results and private process identity for the opaque
+  owner match. Frames are not execution authority and no real bootstrap
+  consumes them. Kim remains on the subprocess route. This evidence does not
+  enable native
   fake-launch V2, which remains permanently
   `blocked`/`not_run` and still contains only caller-claimed artifact
   identities. A later model-free

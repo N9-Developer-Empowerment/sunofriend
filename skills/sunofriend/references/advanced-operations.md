@@ -1625,8 +1625,13 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   are mapped to 6/7. A stdlib-only worker emits a valid Kim readiness claim
   with dummy hashes, blocks through owner-bound process-image verification,
   accepts the exact release bytes, exits zero and is exact-reaped. This is
-  still not Kim Vocal 2 execution, so native real-worker supervision is not
-  claimed.
+  still not Kim Vocal 2 execution. A pure follow-on contract now fixes the
+  bounded canonical fd3 request and fd4 result frames. The request can contain
+  private local paths but is not authority; it binds the exact Kim checkpoint,
+  required observation policy, fresh nonce and descriptors 3–7. The result is
+  path-free and carries PID/PGID only for the parent's opaque-owner boolean
+  match. No native bootstrap consumes these values yet, so native real-worker
+  supervision is not claimed.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory
