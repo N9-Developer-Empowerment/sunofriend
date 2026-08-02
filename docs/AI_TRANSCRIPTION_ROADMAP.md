@@ -1697,6 +1697,48 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — private vocal candidate loopback audition
+
+- Goal: make every preserved vocal hypothesis understandable and explicitly
+  reviewable without copying private audio or allowing playback behaviour to
+  become a hidden preference.
+- Change or experiment: added a private-only loopback server, browser review
+  and separate exact verifier. The server revalidates the complete inventory,
+  MelRoFormer, vocal-leaf, phrase-completeness and authorised-excerpt chain;
+  opens source/reference WAVs with a descriptor-relative no-follow walk;
+  verifies their complete hashes before serving byte ranges; and exposes only
+  opaque token-protected media routes on `127.0.0.1`.
+- Inputs: both existing 17-candidate inventories and their already sealed
+  reports. No separation, transcription or rendering was rerun and no media
+  was copied.
+- Model/runtime/checkpoint: no model or checkpoint was loaded. The page serves
+  only existing original/leaf references and neutral MIDI-render WAVs.
+- Evidence and metrics: `I am a Alien mashup` revalidated with 16 playable and
+  one zero-note candidate; `Be Alone` revalidated with 13 playable and four
+  zero-note candidates. The page records one exact written focus, requires
+  explicit heard-reference/heard-candidate marks and accepts useful, not
+  useful or cannot-tell for every playable candidate. Multiple useful outcomes
+  are valid.
+- Listening result: none requested. The tool is ready, but no new focus was
+  opened as an acceptance gate.
+- Decision: keep the tool private and outside CLI/TUI/Simple/Studio/Workbench
+  and the source graph. Playback, seeking, looping and dwell time remain
+  zero-write browser state. Only the browser export plus exact verifier can
+  create review evidence, and that evidence cannot select, merge, repair,
+  promote or identify a singer.
+- Problems/risks: the neutral MIDI sound is not final instrumentation, provider
+  leaf labels remain observations and a `useful` result applies only to the
+  written focus. Reviewing 13–16 candidates is deliberately thorough and may
+  be tiring; later bounded grouping must not become hidden ranking.
+- Verification: both real private inventories passed exact load/revalidation;
+  24 focused review, tamper, range-serving, changed-media, no-write, symlink
+  and no-public-route tests passed. The complete repository suite passed 2,741
+  tests with one skipped test and the existing third-party
+  `resampy`/`pkg_resources` deprecation warning.
+- Next smallest step: use this interface only when an exact lead/backing or
+  phrase question justifies the listening effort; separately continue the S3
+  execution-path and independent-backend gates before any S4 Studio route.
+
 ### 2026-08-02 — private vocal candidate-set preservation
 
 - Goal: preserve complementary primary, register and provider-leaf vocal MIDI
@@ -1723,12 +1765,11 @@ Each working day should aim for one narrow vertical improvement:
 - Decision: retain every candidate and its path-free artifact identities, with
   no ranking, selection, default, merge, repair or singer assignment. Keep the
   builder out of the public CLI, TUI, Simple, Studio and source graph.
-- Problems/risks: the manifest is not an audition UI and provider groups are
-  estimated evidence rather than score truth. Zero-note results may be useful
-  diagnostics but are not playable.
-- Next smallest step: design a separate bounded private audition resolver that
-  can hear already sealed previews and record an explicit human choice without
-  copying or automatically preferring any candidate.
+- Problems/risks: the manifest itself is not an audition UI and provider groups
+  are estimated evidence rather than score truth. Zero-note results may be
+  useful diagnostics but are not playable.
+- Next smallest step: completed by the separate bounded private loopback
+  audition and explicit review verifier described above.
 
 ### 2026-08-01 — final MIDI review and exact worker-script descriptor
 

@@ -93,10 +93,12 @@ remaining execution-path safety and product gates remain open. Sunofriend now
 also preserves 17 private vocal candidates per tested excerpt: the unchanged
 Kim primary, four register hypotheses and twelve provider-leaf adapter
 primaries. That path-free inventory copies no MIDI or audio and selects,
-merges, repairs and identifies no singer. It is evidence for a later explicit
-audition contract, not a comping input or accepted separator. The repository
-describes public Studio separation as Phase S4 and one-action Simple
-separation as Phase S6.
+merges, repairs and identifies no singer. A separate private loopback adapter
+can now hear those exact sealed renders beside the mixed excerpt or provider
+vocal leaf and verify an explicit multi-candidate human review without copying
+media or recording playback behaviour. It still selects no winner and is not a
+comping input or accepted separator. The repository describes public Studio
+separation as Phase S4 and one-action Simple separation as Phase S6.
 
 Vocal comping should begin only after the requested public separation milestone
 is closed, but its architecture should remain independent:

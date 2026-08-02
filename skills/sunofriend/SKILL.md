@@ -321,9 +321,20 @@ report the result, then move on.
   including zero-note observations. `I am a Alien mashup` has 16 auditionable
   entries; `Be Alone` has 13. The private builder re-verifies the sealed
   artifact identities but copies no MIDI or audio and has no public CLI, TUI,
-  Simple, Studio or source-graph route. It is not an audition interface and
-  this skill must not use it to rank, merge, repair, identify or select a
-  singer. The
+  Simple, Studio or source-graph route. A separate private loopback adapter can
+  now revalidate that complete chain and serve the original mixed excerpt or
+  exact provider vocal leaf beside each already-sealed dry MIDI render. It uses
+  opaque per-launch `127.0.0.1` media capabilities, copies no audio or MIDI,
+  records no playback behaviour and writes no server-side review. Its browser
+  export requires both heard confirmations plus one explicit useful, not-
+  useful or cannot-tell disposition for every playable candidate, permits
+  several useful candidates and retains zero-note evidence as unavailable.
+  The separate verifier requires the exact written focus and sealed inputs,
+  then writes a fresh owner-only path-free resolution with every activation,
+  winner, merge, repair and singer-identity effect false. Do not offer this in
+  the beginner journey or treat it as a normal product command. Use it only for
+  an explicit private-development listening question, and never use its output
+  to rank, merge, repair, identify, promote or select a singer. The
   read-only public
   `midi-ab-status` command may match an explicitly named export or one bounded,
   non-recursive download directory without opening the answer key; it cannot

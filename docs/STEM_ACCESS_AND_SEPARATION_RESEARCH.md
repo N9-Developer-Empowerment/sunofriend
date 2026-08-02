@@ -2161,6 +2161,13 @@ transport, source-lineage import and promotion are not implemented**
   Alone` has 13/17. The builder re-verifies all artifact identities and exact
   report bindings, copies no audio or MIDI, and exposes no product route. It
   performs no ranking, selection, merge, repair, singer inference or review.
+- [x] Add a separate bounded private loopback audition and exact review
+  verifier for those inventories. It serves the original mixed excerpt or the
+  exact provider vocal leaf beside each already-sealed dry MIDI render through
+  opaque per-launch `127.0.0.1` capabilities, copies no media, records no
+  playback activity and permits several explicitly useful candidates. The
+  verifier publishes only a path-free owner-only review resolution; it still
+  selects no winner, infers no singer and enables no product route.
 - [x] Compare every supplied leaf inside composite `other` across both
   authorised excerpts using bidirectional audio rankings. Exact and semantic
   labels remain observations only. Keyboard was the only stable Suno pair on

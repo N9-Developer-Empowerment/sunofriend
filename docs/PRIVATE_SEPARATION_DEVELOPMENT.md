@@ -1348,11 +1348,52 @@ PYTHONPATH=src .venv/bin/python \
   --out /absolute/fresh/private-vocal-candidate-set
 ```
 
-This is not yet an audition interface. It creates no review, ranking, winner,
-merge, repair, singer identity, default, Studio import, Simple result or source-
-graph change. A future adapter may resolve the private identities to already
-sealed previews for explicit listening, but that needs its own bounded design
-and human-choice contract.
+The separate private loopback audition now resolves that path-free inventory
+back to its already sealed evidence without copying audio or MIDI. It rechecks
+the exact inventory, MelRoFormer, vocal-leaf, phrase-completeness and authorised
+excerpt reports; opens every WAV through a no-follow descriptor walk; hashes it
+before serving; and exposes only opaque per-launch media capabilities on
+`127.0.0.1`. Kim hypotheses are heard beside the exact mixed excerpt. Provider
+leaf hypotheses are heard beside the exact corresponding vocal leaf. The
+candidate is always a dry neutral MIDI render, so the page explicitly asks for
+melody/phrase usefulness rather than final instrument tone.
+
+Playback, seeking, looping and dwell time stay in the browser and write
+nothing. A review is valid only after the listener explicitly confirms hearing
+both reference and candidate and chooses **useful for this focus**, **not useful
+for this focus** or **cannot tell** for every playable candidate. Several
+candidates may be useful. Zero-note candidates stay visible but cannot be
+turned into choices. Browser export is the only review write, and the separate
+verifier requires the exact focus and complete sealed input chain before it
+publishes a fresh owner-only, path-free resolution.
+
+```bash
+PYTHONPATH=src .venv/bin/python \
+  scripts/private-vocal-candidate-audition.py \
+  --candidate-set /absolute/private/vocal-candidate-set.json \
+  --melroformer-evaluation /absolute/private/private-melroformer-vocal-midi-evaluation.json \
+  --vocal-leaf-evaluation /absolute/private/authorised-vocal-leaf-midi-evaluation.json \
+  --phrase-completeness /absolute/private/vocal-phrase-completeness.json \
+  --authorised-excerpt /absolute/private/authorised-separation-excerpt.json \
+  --focus "Which candidates follow the intended lead-vocal melody?" \
+  --open
+
+PYTHONPATH=src .venv/bin/python \
+  scripts/private-vocal-candidate-audition.py \
+  --candidate-set /absolute/private/vocal-candidate-set.json \
+  --melroformer-evaluation /absolute/private/private-melroformer-vocal-midi-evaluation.json \
+  --vocal-leaf-evaluation /absolute/private/authorised-vocal-leaf-midi-evaluation.json \
+  --phrase-completeness /absolute/private/vocal-phrase-completeness.json \
+  --authorised-excerpt /absolute/private/authorised-separation-excerpt.json \
+  --focus "Which candidates follow the intended lead-vocal melody?" \
+  --review /absolute/downloads/vocal_candidate_review.reviewed.json \
+  --out /absolute/fresh/private-vocal-candidate-review-resolution.json
+```
+
+This private adapter creates no ranking, winner, merge, repair, singer
+identity, default, Studio import, Simple result or source-graph change. A
+verified `useful` disposition is evidence for the exact written focus, not
+permission to promote or activate that candidate.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
@@ -1360,7 +1401,9 @@ resource, downstream-MIDI and human listening acceptance.
 
 ### Current private human-review queue
 
-As of 2 August 2026, there is no outstanding prepared private review. The
+As of 2 August 2026, there is no outstanding prepared private review. The new
+loopback tool is available, but no listening focus has been opened as a current
+acceptance gate. The
 corrected primary-versus-lowest review preferred the lowest-register
 hypothesis for the male lead; its answer key was opened only by the resolver
 after the complete matching browser export was found.

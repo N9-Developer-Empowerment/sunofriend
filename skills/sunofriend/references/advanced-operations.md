@@ -1534,6 +1534,22 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   roughly doubled FP32 MLX artifact. It also cannot enable or promote the BF16
   separator, change a default or justify a public route without the remaining
   cross-song MIDI and safety gates.
+- The private vocal candidate inventory and its loopback audition are also
+  owner-only developer evidence, not public Sunofriend commands. The audition
+  requires the exact self-hashed inventory, MelRoFormer, vocal-leaf, phrase-
+  completeness and authorised-excerpt reports plus one explicit one-line
+  listening focus. It copies no media: a token-protected `127.0.0.1` server
+  descriptor-opens and rehashes each existing source/reference WAV before
+  serving it. Kim candidates use the mixed excerpt as reference; provider
+  candidates use their exact vocal leaf. The candidate is a dry neutral MIDI
+  render, not final instrumentation. Playback, seeking, looping and dwell are
+  zero-write temporary state. Require explicit heard-reference and heard-
+  candidate marks plus useful-for-focus, not-useful-for-focus or cannot-tell
+  for every playable candidate; permit several useful candidates and never
+  turn zero-note evidence into a choice. Only the browser export and separate
+  exact verifier create evidence. A verified result remains focus-specific and
+  cannot rank, select, merge, repair, promote, identify a singer or activate a
+  source/Product/Studio/Simple route.
 - The latest authorised Kim Vocal 2 `Be Alone` worker observation binds the
   complete post-inference Python `sys.modules` closure for that exact run: 320
   modules, 277 independently reopened regular files, 18,067,782 aggregate
