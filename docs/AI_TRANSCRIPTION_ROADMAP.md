@@ -1704,6 +1704,45 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — native Kim frame bootstrap proved model-free
+
+- Goal: make the fixed fd3 request/fd4 result contract executable under the
+  opaque native owner without opening the Kim checkpoint or authorised audio.
+- Change or experiment: added a fixed stdlib-only bootstrap worker and upgraded
+  the macOS canary to matrix v9. The worker hardens descriptors 3–7 as its first
+  effectful user-code action, decodes and validates the exact canonical request,
+  uses the existing Kim ready/release pipe protocol, and writes the exact
+  path-free result frame. The parent validates the result against the original
+  request, submits the transient private PID/PGID to the owner's boolean matcher
+  and discards them before retaining the report.
+- Inputs: synthetic path-bearing request values, a tiny unread checkpoint-file
+  fixture, two private pipes, the freshly built Darwin launcher and the fixed
+  bootstrap worker. No source audio, MIDI or model asset.
+- Model/runtime/checkpoint: isolated current Python plus the provenance-bound
+  native launcher. The request binds the already accepted Kim checkpoint hash
+  and byte count, but the worker reads zero bytes from fd5 and loads no model.
+- Evidence and metrics: two live invalid cases, a trailing frame byte and a
+  tampered request self-hash, both fail before readiness, write no result and
+  are group-drained and exact-reaped. The valid case blocks for owner-bound
+  process-image inspection, completes the exact release, produces a
+  parent-validated result, matches and discards private process identity, exits
+  zero, closes temporary pipes and leaves the parent descriptor table stable.
+  Sixty-five focused/static/live tests pass and Ruff is clean. The complete
+  repository suite passes 2,858 tests with one platform skip and the existing
+  third-party `resampy`/`pkg_resources` deprecation warning.
+- Listening result: not applicable; no audio is opened or produced.
+- Decision: accept the model-free bootstrap as the final framed-transport proof.
+  Keep real-worker native supervision, separator activation and every public
+  CLI/TUI/Simple/Studio/source-graph route false.
+- Problems/risks: the bootstrap deliberately opens no request path or
+  checkpoint, does no inference and does not derive the full terminal projection
+  used by the future real worker. Runtime and worker execution remain pathname
+  based, and the current authorised Kim worker still uses its subprocess route.
+- Next smallest step: adapt one fixed authorised Kim worker invocation to the
+  same request/result bootstrap and opaque-owner lifecycle, run one previously
+  authorised excerpt, and compare its result with the unchanged subprocess
+  evidence before considering any route migration.
+
 ### 2026-08-02 — native Kim request/result frames fixed model-free
 
 - Goal: define the bounded data carried on native descriptors 3 and 4 before

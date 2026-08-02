@@ -53,8 +53,16 @@ canonical bounded JSON, duplicate-key rejection, a fresh request nonce, the
 exact Kim checkpoint identity, the fixed 3–7 descriptor policy, private local
 paths only in the request, and no paths in the result. PID/PGID may appear only
 in the private result for submission to the opaque owner's boolean matcher.
-Frames are values, never serialized execution authority, and no native
-bootstrap consumes them yet. Separately, a private-development HTDemucs runner
+Frames are values, never serialized execution authority. Model-free matrix v9
+now adds the fixed stdlib bootstrap that consumes them under the opaque native
+owner. It hardens fd3–fd7 first, rejects trailing-frame and tampered-self-hash
+requests before readiness with no result, and exact-reaps each failed owned
+group. Its valid path completes the ready/release lifecycle, emits the exact
+path-free result, lets the owner match and discard the private PID/PGID and
+exits zero. It opens no request path, reads zero fd5 checkpoint bytes, imports
+no model, reads no audio and uses no network. This proves framing and lifecycle,
+not real Kim execution; the authorised worker remains on the subprocess route.
+Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on
 the copyright-safe demo, and a second private evaluator measures their effect

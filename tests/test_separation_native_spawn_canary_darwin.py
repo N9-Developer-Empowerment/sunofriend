@@ -358,7 +358,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         ),
     )
 
-    assert report["schema"] == ("sunofriend.native-spawn-canary-matrix.v8")
+    assert report["schema"] == ("sunofriend.native-spawn-canary-matrix.v9")
     expected_layouts = {
         *itertools.permutations((3, 4, 5)),
         *harness._REPRESENTATIVE_SOURCE_FD_LAYOUTS,
@@ -412,6 +412,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "fixed_ready_worker_identity",
         "fixed_combined_worker_identity",
         "fixed_ready_release_worker_identity",
+        "fixed_frame_bootstrap_worker_identity",
     ):
         identity = report[key]
         assert set(identity) == {
@@ -490,6 +491,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "owner_bound_worker_ready_observer_not_attached_to_real_worker",
         "combined_fixed_worker_bridge_is_not_a_real_model_worker",
         "native_ready_release_transport_is_not_attached_to_real_worker",
+        "native_frame_bootstrap_is_model_free_not_real_kim_worker",
         "real_model_worker_not_under_native_owner",
     }
     assert report["extension_path_serialized"] is False
@@ -507,6 +509,8 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "model_free_terminal_projection_from_live_owner_present": True,
         "fixed_native_ready_release_transport_present": True,
         "existing_kim_ready_schema_exercised_model_free": True,
+        "fixed_model_free_frame_bootstrap_present": True,
+        "private_request_result_frames_consumed_model_free": True,
         "observer_exports_pid_or_pgid": False,
     }
     assert report["post_spawn_owner_drop_canary"] == {
@@ -695,6 +699,75 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "audio_read": False,
         "network_used": False,
     }
+    invalid_bootstrap = report["invalid_native_frame_bootstrap_canary"]
+    assert invalid_bootstrap == {
+        "case_count": 2,
+        "all_invalid_requests_rejected_before_ready": True,
+        "no_result_frame_written": True,
+        "all_owned_groups_drained_and_exact_reaped": True,
+        "raw_pid_or_pgid_retained": False,
+        "cases": [
+            {
+                "case": "trailing_frame_byte",
+                "rejected_before_ready": True,
+                "result_frame_written": False,
+                "normal_zero_exit_observed": False,
+                "group_empty_before_exact_reap": True,
+                "exact_reap_observed": True,
+            },
+            {
+                "case": "tampered_request_hash",
+                "rejected_before_ready": True,
+                "result_frame_written": False,
+                "normal_zero_exit_observed": False,
+                "group_empty_before_exact_reap": True,
+                "exact_reap_observed": True,
+            },
+        ],
+    }
+    bootstrap = report["native_frame_bootstrap_canary"]
+    assert set(bootstrap) == {
+        "request_frame_validated_by_worker",
+        "result_frame_validated_by_parent",
+        "request_sha256",
+        "result_sha256",
+        "child_result_sha256",
+        "private_process_identity_matched_then_discarded",
+        "worker_blocked_until_parent_release",
+        "process_image_matched_while_blocked",
+        "request_paths_opened",
+        "request_paths_retained",
+        "checkpoint_descriptor_bytes_read",
+        "model_or_checkpoint_loaded",
+        "audio_read",
+        "network_used",
+        "normal_zero_exit_after_release",
+        "group_empty_before_exact_reap",
+        "exact_reap_observed",
+        "raw_pid_or_pgid_retained",
+        "parent_descriptors_unchanged_by_spawn",
+        "temporary_pipe_descriptors_closed",
+    }
+    assert bootstrap["request_frame_validated_by_worker"] is True
+    assert bootstrap["result_frame_validated_by_parent"] is True
+    assert re.fullmatch(r"[0-9a-f]{64}", bootstrap["request_sha256"])
+    assert re.fullmatch(r"[0-9a-f]{64}", bootstrap["result_sha256"])
+    assert re.fullmatch(r"[0-9a-f]{64}", bootstrap["child_result_sha256"])
+    assert bootstrap["private_process_identity_matched_then_discarded"] is True
+    assert bootstrap["worker_blocked_until_parent_release"] is True
+    assert bootstrap["process_image_matched_while_blocked"] is True
+    assert bootstrap["request_paths_opened"] is False
+    assert bootstrap["request_paths_retained"] is False
+    assert bootstrap["checkpoint_descriptor_bytes_read"] == 0
+    assert bootstrap["model_or_checkpoint_loaded"] is False
+    assert bootstrap["audio_read"] is False
+    assert bootstrap["network_used"] is False
+    assert bootstrap["normal_zero_exit_after_release"] is True
+    assert bootstrap["group_empty_before_exact_reap"] is True
+    assert bootstrap["exact_reap_observed"] is True
+    assert bootstrap["raw_pid_or_pgid_retained"] is False
+    assert bootstrap["parent_descriptors_unchanged_by_spawn"] is True
+    assert bootstrap["temporary_pipe_descriptors_closed"] is True
     assert report["descendant_group_canary"] == {
         "leader_exit_observed_without_reap": True,
         "live_descendant_prevented_ownership_release": True,

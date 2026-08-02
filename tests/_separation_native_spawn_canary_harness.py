@@ -43,7 +43,9 @@ _REPOSITORY = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_REPOSITORY / "src"))
 import sunofriend._separation_macos_loaded_images as _loaded_images  # noqa: E402
 import sunofriend._separation_macos_sandbox_network_observer as _network_observer  # noqa: E402
+import sunofriend._separation_melroformer_native_transport as _native_transport  # noqa: E402
 import sunofriend._separation_melroformer_supervision as _supervision  # noqa: E402
+import sunofriend._separation_melroformer_upstream_evidence as _melroformer_evidence  # noqa: E402
 import sunofriend._separation_worker_ready_handshake as _ready_handshake  # noqa: E402
 
 
@@ -72,6 +74,11 @@ _COMBINED_WORKER = (
 _READY_RELEASE_WORKER = (
     Path(__file__)
     .with_name("_separation_native_spawn_ready_release_worker.py")
+    .resolve()
+)
+_FRAME_BOOTSTRAP_WORKER = (
+    Path(__file__)
+    .with_name("_separation_native_spawn_frame_bootstrap_worker.py")
     .resolve()
 )
 _LOGICAL_ROLES = ("request", "result", "checkpoint")
@@ -461,15 +468,18 @@ def _move_to_exact_descriptor(source: int, target: int) -> int:
 def _install_transport_descriptors(
     directory: Path,
     source_fds: tuple[int, int, int],
+    *,
+    request_bytes: bytes = _REQUEST_BYTES,
+    checkpoint_bytes: bytes = _CHECKPOINT_BYTES,
 ) -> dict[str, Path]:
     paths = {
         "request": directory / "request.bin",
         "result": directory / "result.bin",
         "checkpoint": directory / "checkpoint.bin",
     }
-    paths["request"].write_bytes(_REQUEST_BYTES)
+    paths["request"].write_bytes(request_bytes)
     paths["result"].write_bytes(b"")
-    paths["checkpoint"].write_bytes(_CHECKPOINT_BYTES)
+    paths["checkpoint"].write_bytes(checkpoint_bytes)
     if (
         len(set(source_fds)) != len(_LOGICAL_ROLES)
         or any(descriptor < 3 for descriptor in source_fds)
@@ -1553,6 +1563,333 @@ def _run_combined_fixed_worker_bridge_canary(
             broker.abort()
 
 
+def _bootstrap_digest(label: str) -> str:
+    return hashlib.sha256(label.encode("ascii")).hexdigest()
+
+
+def _build_model_free_native_request(
+    *,
+    case_directory: Path,
+    worker_sha256: str,
+) -> Any:
+    private_paths = {
+        "repository_root": str(case_directory / "repository-root"),
+        "source_root": str(case_directory / "source-root"),
+        "checkpoint_path": str(case_directory / "checkpoint.safetensors"),
+        "companion_root": str(case_directory / "companion-root"),
+        "authorisation_report_path": str(case_directory / "authorisation.json"),
+        "staging_directory": str(case_directory / "staging"),
+    }
+    identities = {
+        "worker_source_sha256": worker_sha256,
+        "checkpoint_sha256": _melroformer_evidence.CONVERSION_CHECKPOINT_SHA256,
+        "checkpoint_bytes": _melroformer_evidence.CONVERSION_CHECKPOINT_BYTES,
+        "authorisation_report_sha256": _bootstrap_digest(
+            "model-free-native-bootstrap-authorisation"
+        ),
+        "source_manifest_sha256": _bootstrap_digest(
+            "model-free-native-bootstrap-source"
+        ),
+        "companion_manifest_sha256": _bootstrap_digest(
+            "model-free-native-bootstrap-companions"
+        ),
+    }
+    return _native_transport._build_private_melroformer_native_request(
+        run_nonce=os.urandom(32).hex(),
+        paths=private_paths,
+        identities=identities,
+        device="cpu",
+    )
+
+
+def _wait_for_private_native_result_frame(
+    path: Path,
+    *,
+    request: Any,
+    deadline: float,
+) -> Any:
+    while time.monotonic() < deadline:
+        raw = path.read_bytes()
+        if len(raw) > _native_transport.RESULT_MAXIMUM_BYTES:
+            raise AssertionError("native bootstrap result exceeded its bound")
+        if raw:
+            try:
+                return _native_transport._decode_private_melroformer_native_result(
+                    raw,
+                    request=request,
+                )
+            except ValueError:
+                pass
+        time.sleep(0.005)
+    raise TimeoutError("native bootstrap result frame was not written")
+
+
+def _run_invalid_native_frame_bootstrap_canary(
+    *,
+    spawn: Any,
+    owner_type: type[Any],
+    runtime_path: Path,
+    temporary_root: Path,
+    worker_sha256: str,
+) -> dict[str, Any]:
+    cases = []
+    for case_name in ("trailing_frame_byte", "tampered_request_hash"):
+        _close_descriptors_from_three()
+        case_directory = temporary_root / f"native-frame-bootstrap-{case_name}"
+        case_directory.mkdir(mode=0o700)
+        request = _build_model_free_native_request(
+            case_directory=case_directory,
+            worker_sha256=worker_sha256,
+        )
+        frame = _native_transport._encode_private_melroformer_native_request(
+            request
+        )
+        if case_name == "trailing_frame_byte":
+            invalid_frame = frame + b"x"
+        else:
+            request_value = _ready_handshake._plain(request)
+            request_value["request_sha256"] = "f" * 64
+            payload = json.dumps(
+                request_value,
+                ensure_ascii=True,
+                allow_nan=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            ).encode("ascii")
+            invalid_frame = (
+                _native_transport.REQUEST_MAGIC
+                + len(payload).to_bytes(8, "big")
+                + payload
+            )
+        paths = _install_transport_descriptors(
+            case_directory,
+            _TARGET_FDS,
+            request_bytes=invalid_frame,
+        )
+        baseline = snapshot_parent_descriptors()
+        prepared = _ready_handshake._prepare_worker_ready_handshake()
+        native_owner: Any | None = None
+        try:
+            before_spawn = snapshot_parent_descriptors()
+            native_owner = spawn(
+                os.fsencode(runtime_path),
+                os.fsencode(_FRAME_BOOTSTRAP_WORKER),
+                *_TARGET_FDS,
+                prepared.ready_write_fd,
+                prepared.release_read_fd,
+            )
+            if type(native_owner) is not owner_type:
+                raise AssertionError("invalid-frame native owner type differs")
+            _assert_parent_unchanged(
+                before_spawn,
+                snapshot_parent_descriptors(),
+            )
+            with _OwnedCanaryChild(native_owner) as child:
+                try:
+                    _ready_handshake._read_worker_ready_handshake(
+                        prepared,
+                        timeout_seconds=_WAIT_SECONDS,
+                    )
+                except RuntimeError:
+                    rejected_before_ready = True
+                else:
+                    raise AssertionError("invalid request reached worker readiness")
+                status = child.wait()
+            if not os.WIFEXITED(status) or os.WEXITSTATUS(status) == 0:
+                raise AssertionError("invalid request did not fail closed")
+            if paths["result"].read_bytes() != b"":
+                raise AssertionError("invalid request produced a result frame")
+            if (
+                native_owner.leader_exit_observed is not True
+                or native_owner.leader_reaped is not True
+                or native_owner.group_empty is not True
+                or native_owner.ownership_released is not True
+                or native_owner.ownership_lost is not False
+            ):
+                raise AssertionError("invalid-frame owner terminality differs")
+            cases.append(
+                {
+                    "case": case_name,
+                    "rejected_before_ready": rejected_before_ready,
+                    "result_frame_written": False,
+                    "normal_zero_exit_observed": False,
+                    "group_empty_before_exact_reap": True,
+                    "exact_reap_observed": True,
+                }
+            )
+        finally:
+            _ready_handshake._abort_worker_ready_handshake(prepared)
+        _assert_parent_unchanged(baseline, snapshot_parent_descriptors())
+    return {
+        "case_count": len(cases),
+        "all_invalid_requests_rejected_before_ready": all(
+            case["rejected_before_ready"] for case in cases
+        ),
+        "no_result_frame_written": all(
+            case["result_frame_written"] is False for case in cases
+        ),
+        "all_owned_groups_drained_and_exact_reaped": all(
+            case["group_empty_before_exact_reap"]
+            and case["exact_reap_observed"]
+            for case in cases
+        ),
+        "raw_pid_or_pgid_retained": False,
+        "cases": cases,
+    }
+
+
+def _run_native_frame_bootstrap_canary(
+    *,
+    spawn: Any,
+    owner_type: type[Any],
+    runtime_path: Path,
+    expected_process_image_path: Path,
+    expected_process_image_cdhash: str,
+    temporary_root: Path,
+    worker_sha256: str,
+) -> dict[str, Any]:
+    """Consume fd3/fd4 frames under one opaque native owner, model-free."""
+
+    _close_descriptors_from_three()
+    case_directory = temporary_root / "native-frame-bootstrap-valid"
+    case_directory.mkdir(mode=0o700)
+    request = _build_model_free_native_request(
+        case_directory=case_directory,
+        worker_sha256=worker_sha256,
+    )
+    request_frame = _native_transport._encode_private_melroformer_native_request(
+        request
+    )
+    paths = _install_transport_descriptors(
+        case_directory,
+        _TARGET_FDS,
+        request_bytes=request_frame,
+    )
+    baseline = snapshot_parent_descriptors()
+    prepared = _ready_handshake._prepare_worker_ready_handshake()
+    native_owner: Any | None = None
+    retained: dict[str, Any] | None = None
+    try:
+        before_spawn = snapshot_parent_descriptors()
+        native_owner = spawn(
+            os.fsencode(runtime_path),
+            os.fsencode(_FRAME_BOOTSTRAP_WORKER),
+            *_TARGET_FDS,
+            prepared.ready_write_fd,
+            prepared.release_read_fd,
+        )
+        if type(native_owner) is not owner_type:
+            raise AssertionError("frame-bootstrap native owner type differs")
+        if hasattr(native_owner, "pid") or hasattr(native_owner, "__dict__"):
+            raise AssertionError("frame-bootstrap owner exposes authority")
+        _assert_parent_unchanged(before_spawn, snapshot_parent_descriptors())
+        with _OwnedCanaryChild(native_owner) as child:
+            ready = _ready_handshake._read_worker_ready_handshake(
+                prepared,
+                timeout_seconds=_WAIT_SECONDS,
+            )
+            if native_owner.wait_nohang() is not None:
+                raise AssertionError("frame bootstrap did not block for release")
+            process_image = native_owner.observe_owned_process_image(
+                os.fsencode(runtime_path),
+                os.fsencode(expected_process_image_path),
+                expected_process_image_cdhash.encode("ascii"),
+            )
+            if process_image != {
+                "kernel_cdhash": expected_process_image_cdhash,
+                "path_state": "matched_expected_process_image",
+            }:
+                raise AssertionError("frame-bootstrap process image differs")
+            _ready_handshake._release_worker_ready_handshake(prepared)
+            result = _wait_for_private_native_result_frame(
+                paths["result"],
+                request=request,
+                deadline=time.monotonic() + _WAIT_SECONDS,
+            )
+            private_identity = result["private_process_identity"]
+            if not native_owner.matches_pid_and_pgid(
+                private_identity["pid"],
+                private_identity["pgid"],
+            ):
+                raise AssertionError("frame-bootstrap private identity differs")
+            child_result = _ready_handshake._plain(result["child_result"])
+            expected_child = {
+                "schema": (
+                    "sunofriend.private-melroformer-native-bootstrap-child.v1"
+                ),
+                "status": "model_free_frame_bootstrap_complete",
+                "request_frame_validated": True,
+                "request_paths_opened": False,
+                "request_paths_retained": False,
+                "checkpoint_descriptor_regular": True,
+                "checkpoint_descriptor_bytes_read": 0,
+                "ready_release_completed": True,
+                "ready_sha256": hashlib.sha256(
+                    json.dumps(
+                        _ready_handshake._plain(ready),
+                        ensure_ascii=True,
+                        allow_nan=False,
+                        separators=(",", ":"),
+                        sort_keys=True,
+                    ).encode("ascii")
+                    + b"\n"
+                ).hexdigest(),
+                "release_sha256": hashlib.sha256(
+                    _ready_handshake._RELEASE_BYTES
+                ).hexdigest(),
+                "open_descriptors_after_handshake": [0, 1, 2, 3, 4, 5],
+                "model_imported": False,
+                "checkpoint_loaded": False,
+                "audio_read": False,
+                "network_used": False,
+                "product_authority_granted": False,
+            }
+            if child_result != expected_child:
+                raise AssertionError("frame-bootstrap child result differs")
+            result_sha256 = result["result_sha256"]
+            child_result_sha256 = result["child_result_sha256"]
+            del private_identity, result
+            status = child.wait()
+        if not os.WIFEXITED(status) or os.WEXITSTATUS(status) != 0:
+            raise AssertionError("frame-bootstrap worker did not exit zero")
+        if (
+            native_owner.leader_exit_observed is not True
+            or native_owner.leader_reaped is not True
+            or native_owner.group_empty is not True
+            or native_owner.ownership_released is not True
+            or native_owner.ownership_lost is not False
+        ):
+            raise AssertionError("frame-bootstrap owner terminality differs")
+        retained = {
+            "request_frame_validated_by_worker": True,
+            "result_frame_validated_by_parent": True,
+            "request_sha256": request["request_sha256"],
+            "result_sha256": result_sha256,
+            "child_result_sha256": child_result_sha256,
+            "private_process_identity_matched_then_discarded": True,
+            "worker_blocked_until_parent_release": True,
+            "process_image_matched_while_blocked": True,
+            "request_paths_opened": False,
+            "request_paths_retained": False,
+            "checkpoint_descriptor_bytes_read": 0,
+            "model_or_checkpoint_loaded": False,
+            "audio_read": False,
+            "network_used": False,
+            "normal_zero_exit_after_release": True,
+            "group_empty_before_exact_reap": True,
+            "exact_reap_observed": True,
+            "raw_pid_or_pgid_retained": False,
+        }
+    finally:
+        _ready_handshake._abort_worker_ready_handshake(prepared)
+    _assert_parent_unchanged(baseline, snapshot_parent_descriptors())
+    if retained is None:
+        raise AssertionError("frame-bootstrap evidence was not retained")
+    retained["parent_descriptors_unchanged_by_spawn"] = True
+    retained["temporary_pipe_descriptors_closed"] = True
+    return retained
+
+
 def _run_native_ready_release_transport_canary(
     *,
     spawn: Any,
@@ -1809,6 +2146,7 @@ def run_canary_matrix(
     ready_worker_before = _measure_worker(_READY_WORKER)
     combined_worker_before = _measure_worker(_COMBINED_WORKER)
     ready_release_worker_before = _measure_worker(_READY_RELEASE_WORKER)
+    frame_bootstrap_worker_before = _measure_worker(_FRAME_BOOTSTRAP_WORKER)
     spawn = getattr(extension, _METHOD_NAME, None)
     if not callable(spawn):
         raise RuntimeError("native extension entry point is unavailable")
@@ -1966,6 +2304,24 @@ def run_canary_matrix(
             temporary_root=temporary_root,
         )
     )
+    invalid_native_frame_bootstrap_canary = (
+        _run_invalid_native_frame_bootstrap_canary(
+            spawn=spawn_with_ready_release,
+            owner_type=owner_type,
+            runtime_path=runtime_path,
+            temporary_root=temporary_root,
+            worker_sha256=frame_bootstrap_worker_before.sha256,
+        )
+    )
+    native_frame_bootstrap_canary = _run_native_frame_bootstrap_canary(
+        spawn=spawn_with_ready_release,
+        owner_type=owner_type,
+        runtime_path=runtime_path,
+        expected_process_image_path=expected_process_image_path,
+        expected_process_image_cdhash=expected_process_image_cdhash,
+        temporary_root=temporary_root,
+        worker_sha256=frame_bootstrap_worker_before.sha256,
+    )
     descendant_group_canary = _run_descendant_group_canary(
         spawn=spawn,
         runtime_path=runtime_path,
@@ -1980,6 +2336,7 @@ def run_canary_matrix(
     ready_worker_after = _measure_worker(_READY_WORKER)
     combined_worker_after = _measure_worker(_COMBINED_WORKER)
     ready_release_worker_after = _measure_worker(_READY_RELEASE_WORKER)
+    frame_bootstrap_worker_after = _measure_worker(_FRAME_BOOTSTRAP_WORKER)
     if runtime_after != runtime_before:
         raise RuntimeError("bound runtime changed across canary matrix")
     if process_image_after != process_image_before:
@@ -1998,9 +2355,11 @@ def run_canary_matrix(
         raise RuntimeError("bound combined worker changed across canary matrix")
     if ready_release_worker_after != ready_release_worker_before:
         raise RuntimeError("bound ready/release worker changed across canary matrix")
+    if frame_bootstrap_worker_after != frame_bootstrap_worker_before:
+        raise RuntimeError("bound frame-bootstrap worker changed across canary matrix")
     expected_suffix = sysconfig.get_config_var("EXT_SUFFIX")
     return {
-        "schema": "sunofriend.native-spawn-canary-matrix.v8",
+        "schema": "sunofriend.native-spawn-canary-matrix.v9",
         "extension_path_serialized": False,
         "worker_path_serialized": False,
         "proof_scope": (
@@ -2038,6 +2397,9 @@ def run_canary_matrix(
         "fixed_ready_release_worker_identity": _path_free_file_identity(
             ready_release_worker_after
         ),
+        "fixed_frame_bootstrap_worker_identity": _path_free_file_identity(
+            frame_bootstrap_worker_after
+        ),
         "native_owner_type_qualification": {
             "direct_construction_rejected": direct_owner_construction_rejected,
             "raw_pid_not_exposed": True,
@@ -2051,6 +2413,8 @@ def run_canary_matrix(
             "model_free_terminal_projection_from_live_owner_present": True,
             "fixed_native_ready_release_transport_present": True,
             "existing_kim_ready_schema_exercised_model_free": True,
+            "fixed_model_free_frame_bootstrap_present": True,
+            "private_request_result_frames_consumed_model_free": True,
             "observer_exports_pid_or_pgid": False,
         },
         "runtime_environment_qualification": (
@@ -2116,6 +2480,7 @@ def run_canary_matrix(
             "owner_bound_worker_ready_observer_not_attached_to_real_worker",
             "combined_fixed_worker_bridge_is_not_a_real_model_worker",
             "native_ready_release_transport_is_not_attached_to_real_worker",
+            "native_frame_bootstrap_is_model_free_not_real_kim_worker",
             "real_model_worker_not_under_native_owner",
         ),
         "complete_descriptor_scan_soft_limit": _CANARY_SOFT_LIMIT,
@@ -2146,6 +2511,10 @@ def run_canary_matrix(
         "native_ready_release_transport_canary": (
             native_ready_release_transport_canary
         ),
+        "invalid_native_frame_bootstrap_canary": (
+            invalid_native_frame_bootstrap_canary
+        ),
+        "native_frame_bootstrap_canary": native_frame_bootstrap_canary,
         "descendant_group_canary": descendant_group_canary,
         "cases": cases,
     }

@@ -33,6 +33,11 @@ READY_RELEASE_WORKER = (
     / "tests"
     / "_separation_native_spawn_ready_release_worker.py"
 )
+FRAME_BOOTSTRAP_WORKER = (
+    REPOSITORY
+    / "tests"
+    / "_separation_native_spawn_frame_bootstrap_worker.py"
+)
 HARNESS = REPOSITORY / "tests" / "_separation_native_spawn_canary_harness.py"
 
 
@@ -332,6 +337,61 @@ def test_ready_release_worker_uses_exact_kim_protocol_without_audio_or_model() -
     assert "subprocess" not in source
 
 
+def test_frame_bootstrap_worker_consumes_exact_frames_without_model_or_audio() -> None:
+    tree = _tree(FRAME_BOOTSTRAP_WORKER)
+    source = FRAME_BOOTSTRAP_WORKER.read_text(encoding="utf-8")
+    imports = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imports.update(alias.name.split(".", 1)[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imports.add(node.module.split(".", 1)[0])
+
+    assert imports == {
+        "__future__",
+        "errno",
+        "fcntl",
+        "hashlib",
+        "json",
+        "os",
+        "re",
+        "resource",
+        "stat",
+        "struct",
+        "typing",
+    }
+    assert not imports & {
+        "basic_pitch",
+        "http",
+        "mlx",
+        "numpy",
+        "onnxruntime",
+        "requests",
+        "socket",
+        "subprocess",
+        "torch",
+        "urllib",
+    }
+    harden = source.index("os.set_inheritable(_transport_descriptor, False)")
+    assert harden < source.index("import hashlib")
+    main = source.index("def main()")
+    request = source.index("request = _read_request_frame()", main)
+    ready = source.index("_write_all(6, ready_bytes)", main)
+    release = source.index("if _read_release() != _RELEASE_BYTES", main)
+    result = source.index("_write_result_frame(", release)
+    assert request < ready < release < result
+    assert "os.pread(3" in source
+    assert "os.pwrite(4" in source
+    assert "os.fstat(5)" in source
+    assert '"checkpoint_descriptor_bytes_read": 0' in source
+    assert '"request_paths_opened": False' in source
+    assert '"model_imported": False' in source
+    assert '"checkpoint_loaded": False' in source
+    assert '"audio_read": False' in source
+    assert '"network_used": False' in source
+    assert "open(" not in source
+
+
 def test_hold_worker_hardens_descriptors_then_only_blocks_for_owner_canary() -> None:
     tree = _tree(HOLD_WORKER)
     main = _function(tree, "main")
@@ -455,7 +515,7 @@ def test_harness_asserts_parent_child_access_data_and_process_invariants() -> No
 
     assert "snapshot_parent_descriptors()" in source
     assert "_assert_parent_unchanged(before" in source
-    assert source.count("_assert_parent_unchanged(before") == 13
+    assert source.count("_assert_parent_unchanged(before") == 14
     assert '"open_descriptors") != [0, 1, 2, 3, 4, 5]' in source
     assert '"descriptor_scan_soft_limit") != _CANARY_SOFT_LIMIT' in source
     assert '"request_write": errno.EBADF' in source
@@ -522,6 +582,11 @@ def test_harness_asserts_parent_child_access_data_and_process_invariants() -> No
     assert "_release_worker_ready_handshake(" in source
     assert '"fixed_native_ready_release_transport_present": True' in source
     assert '"wrong_pipe_access_rejected_before_spawn"' in source
+    assert "_run_invalid_native_frame_bootstrap_canary(" in source
+    assert "_run_native_frame_bootstrap_canary(" in source
+    assert "_decode_private_melroformer_native_result(" in source
+    assert '"fixed_model_free_frame_bootstrap_present": True' in source
+    assert '"private_process_identity_matched_then_discarded": True' in source
     assert "native owner reaped before its group was empty" in source
     assert "native_owner.group_empty is not False" in source
     assert '"ownership_released_only_after_group_empty": True' in source

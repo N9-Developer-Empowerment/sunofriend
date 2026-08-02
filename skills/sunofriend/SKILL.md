@@ -101,9 +101,16 @@ report the result, then move on.
   attached to Kim. A pure bounded frame contract now fixes the future fd3/fd4
   request/result values, including private request paths, exact checkpoint and
   nonce binding, path-free results and private process identity for the opaque
-  owner match. Frames are not execution authority and no real bootstrap
-  consumes them. Kim remains on the subprocess route. This evidence does not
-  enable native
+  owner match. Model-free matrix v9 now adds a fixed stdlib-only bootstrap
+  whose first effectful user-code action hardens descriptors 3–7. Two malformed
+  request frames are rejected before readiness with no result, then
+  group-drained and exact-reaped. The valid canary decodes fd3, completes the
+  existing ready/release lifecycle, writes the exact fd4 result, lets the
+  opaque owner match and discard its private PID/PGID, and retains no path or
+  process identifier. It does not open any request path, read fd5, import a
+  model, read audio or use a network. Frames remain values rather than spawn
+  authority, and this bootstrap is not the real Kim worker. Kim remains on the
+  subprocess route. This evidence does not enable native
   fake-launch V2, which remains permanently
   `blocked`/`not_run` and still contains only caller-claimed artifact
   identities. A later model-free

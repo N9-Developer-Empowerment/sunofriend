@@ -1630,8 +1630,15 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   private local paths but is not authority; it binds the exact Kim checkpoint,
   required observation policy, fresh nonce and descriptors 3–7. The result is
   path-free and carries PID/PGID only for the parent's opaque-owner boolean
-  match. No native bootstrap consumes these values yet, so native real-worker
-  supervision is not claimed.
+  match. Model-free matrix v9 now exercises a fixed stdlib-only bootstrap under
+  that owner. It hardens fd3–fd7 before its other imports, rejects a trailing
+  request byte and tampered request self-hash before readiness, and consumes a
+  valid fd3 request through the existing ready/release gate before emitting a
+  parent-validated fd4 result. The parent submits the private PID/PGID to the
+  opaque boolean matcher and discards them before retaining evidence. The
+  bootstrap opens no request path, reads zero checkpoint bytes, imports no
+  model, reads no audio and uses no network. It is not the real Kim worker, so
+  native real-worker supervision is not claimed.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory
