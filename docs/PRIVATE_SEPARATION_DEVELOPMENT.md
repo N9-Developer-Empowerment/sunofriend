@@ -122,6 +122,36 @@ primitive is now separately attached to one authorised Kim Vocal 2 worker run,
 as recorded below. Neither result establishes dynamic native-library closure
 or complete byte-for-byte execution identity.
 
+The next model-free canary inventories stable file-backed executable mappings
+from an exact inert child after seven fixed standard-library native imports:
+
+```bash
+PYTHONPATH=src .venv-ai/bin/python \
+  scripts/private-macos-native-image-inventory.py \
+  --runtime .venv-ai/bin/python \
+  --out work/separation-bakeoff/macos-native-image-inventory-v1/native-image-inventory.json
+```
+
+The child reports only readiness. The parent uses macOS `libproc`
+`PROC_PIDREGIONPATHINFO`, takes two consecutive snapshots, requires their
+complete internal mapping geometry to match, hashes every reported executable
+file, waits for clean exit and rehashes every file. The evidence retains no
+path or PID. Two fresh runs were byte-identical: each owner-only mode-`0600`
+JSON was 9,411 bytes, self-hashed to
+`be0a3601e7fddaabc68772fa15f4d5363f93fcaa448c691cbbd1bd9e7845714a`
+and had file SHA-256
+`c954dfbe615a5c4df6bc30c3e9a6b45d0c0334a91633d8b2a3e00a7327552b53`.
+The stable inventory contained 13 executable file-backed regions across 13
+files totalling 30,677,328 bytes. Twelve files passed strict static code
+validation; one was retained explicitly as not strictly valid. All files
+matched after the child exited.
+
+This is still not a complete dyld or native-loader audit. Individual dyld
+shared-cache constituents are not enumerated by this contract, transient loads
+between snapshots are not excluded, and reopening a mapped file does not prove
+that its current bytes are the bytes mapped in memory. It is not attached to
+the model worker and enables no separator.
+
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \
   --fixture-out work/separation-bakeoff/demo-fixture-v2 \
@@ -1141,8 +1171,11 @@ This closes only the earlier “process-image canary is not bound to the model
 worker” gap. CDHash is signed code-directory identity, not a claim that every
 measured executable byte or dynamically loaded native library was the byte
 executed. Post-observation image mutability, complete native loaded-image
-closure and the wider outer-supervisor/signal-state gate remain open. No MIDI,
-review, source graph, Simple, Studio, product or publication state changed.
+closure and the wider outer-supervisor/signal-state gate remain open. The later
+model-free executable-region canary proves that a stable parent-owned snapshot
+is possible, but it is not attached to this model run and does not enumerate
+dyld shared-cache constituents. No MIDI, review, source graph, Simple, Studio,
+product or publication state changed.
 
 The development-only command is:
 

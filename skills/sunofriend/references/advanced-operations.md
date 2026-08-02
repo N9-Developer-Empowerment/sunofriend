@@ -1570,9 +1570,14 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   provider, launcher and final-image full-file hashes were rechecked after
   completion. That v6 run retained 320 modules, 277 files, one deliberate
   denied outbound canary, zero other worker denials and one-LSB PCM24 additive
-  closure. It is not full-file execution proof, dynamic-native-library closure,
-  a packet monitor or a native-loader audit; the commands remain invoked by
-  pathname and no product route is enabled.
+  closure. A separate model-free `libproc` canary now repeats byte-identically
+  with two stable parent-owned snapshots of 13 file-backed executable mappings,
+  all 13 files unchanged after exit and 12 strict signatures. It is not bound
+  to the model worker, does not enumerate dyld shared-cache constituents and
+  does not prove mapped-memory bytes. Neither observation is full-file
+  execution proof, dynamic-native-library closure, a packet monitor or a
+  complete native-loader audit; the commands remain invoked by pathname and no
+  product route is enabled.
 - Both Kim-Vocal-2-versus-Moises MIDI reviews are complete. `Be Alone`
   resolved to `equivalent`; `I am a Alien mashup` resolved to `neither` because
   both candidates followed the female backing vocal rather than the male lead

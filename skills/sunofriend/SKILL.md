@@ -400,9 +400,15 @@ report the result, then move on.
   strictly validated static identity, the exact `sandbox-exec` file remained
   on a read-only filesystem, and provider, launcher and image full-file hashes
   were rechecked after completion. This binds signed process-code identity,
-  not full executable bytes or dynamically loaded native libraries. Native
-  non-module loads, post-observation image mutability and the wider supervisor/
-  signal boundary remain explicit; no separator route is enabled. The
+  not full executable bytes or dynamically loaded native libraries. A separate
+  model-free `libproc` canary now obtains two stable parent-owned snapshots of
+  13 file-backed executable mappings and rehashes all 13 files unchanged after
+  child exit; 12 pass strict code-signature validation. That deterministic
+  canary is not attached to the model worker, does not enumerate individual
+  dyld shared-cache constituents and cannot prove mapped-memory byte identity.
+  Native non-module closure, transient loads, post-observation image mutability
+  and the wider supervisor/signal boundary remain explicit; no separator route
+  is enabled. The
   checkpoint is not redistributed. Do not offer or run this challenger
   through the skill.
 - `source-import` decodes exactly one local asset.

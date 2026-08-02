@@ -7,10 +7,11 @@ starts one inert child through the exact ``sandbox-exec`` provider, observes
 the final image from the parent by PID, and compares the kernel CDHash with the
 same image's strictly validated static code signature.
 
-This is narrow development evidence.  It starts no model, reads no audio,
-writes no output and does not enable a separator.  It also does not prove the
-identity of every dynamically loaded native library or bind this observation
-to the authorised MelRoFormer worker.
+The standalone canary is narrow development evidence: it starts no model,
+reads no audio, writes no output and enables no separator.  The reusable
+prepared binding is also attached to one separately authorised MelRoFormer
+worker observation.  Neither use proves the identity of every dynamically
+loaded native library or full executable-byte identity.
 """
 
 from __future__ import annotations

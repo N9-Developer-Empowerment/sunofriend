@@ -1878,9 +1878,12 @@ HTDemucs runner and one copyright-safe synthetic ground-truth evaluation are
 implemented. Three authorised cross-song excerpt/MIDI repeats, inactive
 leaf-level `other` comparisons and one separate-vocal-leaf MIDI diagnostic are
 complete. One exact authorised Kim Vocal 2 worker now also binds its signed
-runtime process image to the observed child PID; full native-image closure, an
-independent local backend, human acceptance, public separator transport,
-source-lineage import and promotion are not implemented**
+runtime process image to the observed child PID. A separate deterministic
+model-free canary now inventories stable file-backed executable mappings from
+an exact child, but it is not attached to the model worker and does not cover
+dyld shared-cache constituents or mapped-memory byte identity. Full
+native-image closure, an independent local backend, human acceptance, public
+separator transport, source-lineage import and promotion are not implemented**
 
 - [x] Add a pure backend-neutral `SeparationBackend` contract plus immutable
   request/result DTOs and strict versioned separation-run receipts.
@@ -2001,8 +2004,12 @@ source-lineage import and promotion are not implemented**
   provider remained on the read-only system filesystem, and provider,
   launcher and image full-file hashes were rechecked after exit. This does not
   bind dynamic native-library closure or claim full byte-for-byte execution
-  identity, and the outer-supervisor/signal-state boundary remains open, so
-  this gate is not complete.
+  identity. A later model-free `libproc` canary proved a stable two-snapshot
+  inventory of 13 file-backed executable mappings, with all 13 files rehashed
+  unchanged after exit and 12 strict signatures, but it remains disjoint from
+  the model worker, omits dyld shared-cache constituents and cannot prove
+  mapped-memory bytes. The outer-supervisor/signal-state boundary also remains
+  open, so this gate is not complete.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with the
   deterministic fake worker, exact pre-exec remeasurement, validated worker
   result, timeout/reap evidence and parent-verified quarantined outputs before

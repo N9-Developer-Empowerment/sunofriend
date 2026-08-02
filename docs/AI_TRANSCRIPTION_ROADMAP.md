@@ -1697,6 +1697,50 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — stable native executable-region inventory canary
+
+- Goal: make the first parent-owned observation of native executable mappings
+  outside Python's `sys.modules` without attaching an unfinished mechanism to
+  another authorised model run.
+- Change or experiment: added a private Darwin-only `libproc`
+  `PROC_PIDREGIONPATHINFO` canary. One exact inert child imports seven fixed
+  standard-library native modules, emits only a readiness record, then sleeps
+  while the parent takes two bounded executable-region snapshots. The parent
+  requires byte-identical snapshot geometry, hashes every reported mapped file,
+  records strict code-signature status where available, waits for clean child
+  exit and rehashes every file. Paths and the child PID are not retained.
+- Inputs: the installed `.venv-ai` Python runtime only. No audio, model,
+  checkpoint, provider result, MIDI, review or product state was read.
+- Model/runtime/checkpoint: no model or checkpoint. The nested process-image
+  binding is unchanged at `1d13892e…c798` and still verifies the exact
+  `Python.app` main image before the mapping inventory.
+- Evidence and metrics: each of two fresh owner-only runs produced the same
+  9,411-byte JSON and the same self-hash `be0a3601…714a`; the on-disk file hash
+  is `c954dfbe…2b53`. Both snapshots contained 13 executable file-backed
+  regions across 13 files and no unpathed executable region. The files totalled
+  30,677,328 bytes, all were unchanged after child exit, 12 passed strict
+  static-code validation and one was explicitly recorded as not strictly
+  valid. Twenty-eight focused inventory/process-image tests pass. The complete
+  standard non-trusted-local suite passes 2,762 tests, with one platform skip,
+  eight explicitly deselected trusted-local tests and the one pre-existing
+  dependency deprecation warning.
+- Listening result: not applicable. This canary intentionally performs no
+  music processing.
+- Decision: retain the deterministic path-free inventory as private design
+  evidence. It proves that the parent can observe and remeasure stable
+  file-backed executable mappings for an exact inert child. It grants no
+  separator, model, checkpoint, source-graph, Simple, Studio, product or
+  publication permission.
+- Problems/risks: `libproc` does not enumerate individual dyld shared-cache
+  constituents here; two snapshots cannot exclude a transient load between
+  them; reopened file hashes do not prove that mapped memory has those bytes;
+  and this canary is not bound to the model worker. Complete dynamic native
+  closure therefore remains false.
+- Next smallest step: design an explicit, bounded worker-ready observation
+  point so this parent-owned snapshot can be attached to a future authorised
+  model run without mistaking an early partial inventory for the final native
+  load set. Keep every separator route disabled.
+
 ### 2026-08-02 — runtime process image bound to the authorised worker
 
 - Goal: attach the model-free parent-PID process-image primitive to the exact
@@ -1739,9 +1783,9 @@ Each working day should aim for one narrow vertical improvement:
   proof that the full measured file bytes or every dynamically loaded native
   library were the bytes executed. Post-observation image mutability and the
   wider outer-supervisor/signal-state boundary also remain open.
-- Next smallest step: design a bounded, parent-owned native loaded-image
-  inventory for an inert child before attaching any such observation to
-  another model run. Keep every current separator route disabled.
+- Next smallest step: completed by the later stable native executable-region
+  inventory canary above. It remains model-free and does not close complete
+  dynamic native closure.
 
 ### 2026-08-02 — actual macOS runtime process-image observation
 
