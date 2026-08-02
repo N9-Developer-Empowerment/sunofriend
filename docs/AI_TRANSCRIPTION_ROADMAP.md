@@ -1697,6 +1697,52 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — runtime process image bound to the authorised worker
+
+- Goal: attach the model-free parent-PID process-image primitive to the exact
+  Kim Vocal 2 process that reads the authorised excerpt and checkpoint.
+- Change or experiment: factored a reusable prepared process-image binding,
+  combined it with the existing ready-before-child macOS Sandbox denial
+  observer, and introduced additive worker evidence schemas v6/v7. Historical
+  v1–v5 validation remains unchanged. The parent observes the final image
+  before waiting for the child, then remeasures provider, launcher and final
+  image after completion.
+- Inputs: the unchanged authorised `Be Alone` 191–206 second PCM24 excerpt,
+  current 6,790-byte descriptor-executed worker, pinned Kim Vocal 2 BF16
+  checkpoint and already installed MLX runtime. No MIDI, listening result,
+  source-graph or product state changed.
+- Model/runtime/checkpoint: the worker used GPU mode and the existing exact
+  456,483,463-byte checkpoint. The signed launcher CDHash was
+  `60332d8d…8f3`; the final `Python.app` static and kernel CDHashes were both
+  `b9f4c42c…aae`. The exact `sandbox-exec` provider was strictly signed and
+  remained on a read-only filesystem.
+- Evidence and metrics: the v6 path-free worker evidence self-hashes to
+  `fd9ee6dd…4249`; its nested runtime binding hashes to `1d13892e…c798`.
+  The 97,617-byte owner-only observation file hashes to `4de79291…7cb`.
+  The run retained 320 Python modules across 277 independently reopened files
+  totalling 18,075,137 bytes with zero unclassified modules. It observed the
+  single deliberate denied outbound canary and zero other worker denials.
+  Inference covered 661,500 frames in three chunks, took 3.349 seconds and
+  recorded 2,419,165,306 peak MLX bytes. Both 3,969,044-byte PCM24 outputs
+  passed parent re-read and source reconstruction within one integer LSB.
+  Thirty-two focused tests pass. The complete standard non-trusted-local suite
+  passes 2,748 tests, with one platform skip, eight explicitly deselected
+  trusted-local tests and one pre-existing dependency deprecation warning.
+- Listening result: not repeated. This increment deliberately preserves all
+  earlier MIDI and human listening evidence rather than manufacturing a new
+  musical comparison from a runtime-safety check.
+- Decision: retain the v6/v7 binding as private development evidence. It
+  closes the earlier “not attached to the model worker” gap for one exact
+  authorised run and grants no separator, activation, selection, Simple,
+  Studio, product or publication permission.
+- Problems/risks: a kernel/static CDHash match is code-signature identity, not
+  proof that the full measured file bytes or every dynamically loaded native
+  library were the bytes executed. Post-observation image mutability and the
+  wider outer-supervisor/signal-state boundary also remain open.
+- Next smallest step: design a bounded, parent-owned native loaded-image
+  inventory for an inert child before attaching any such observation to
+  another model run. Keep every current separator route disabled.
+
 ### 2026-08-02 — actual macOS runtime process-image observation
 
 - Goal: stop treating the measured Python launcher as if it were necessarily
@@ -1724,13 +1770,14 @@ Each working day should aim for one narrow vertical improvement:
 - Decision: retain the process-image observer as a private development
   primitive. It neither enables a separator nor grants model, checkpoint,
   audio, source-graph, product or publication permission.
-- Problems/risks: this canary is not yet attached to the authorised Kim Vocal
-  2 worker. A kernel/static CDHash match binds executed code-signature identity,
-  not the full file SHA-256 or every dynamically loaded native library.
-  Post-observation image mutability also remains outside this narrow result.
-- Next smallest step: attach the same parent-PID image observation to the
-  already isolated authorised worker, then repeat one existing sealed excerpt
-  without changing its MIDI, listening or product status.
+- Problems/risks: at this canary-only stage the observation was not attached
+  to the authorised Kim Vocal 2 worker. A kernel/static CDHash match binds
+  executed code-signature identity, not the full file SHA-256 or every
+  dynamically loaded native library. Post-observation image mutability also
+  remains outside this narrow result.
+- Next smallest step: completed by the later entry above, which attaches the
+  same parent-PID observation to one existing sealed authorised excerpt without
+  changing its MIDI, listening or product status.
 
 ### 2026-08-02 — private vocal candidate loopback audition
 

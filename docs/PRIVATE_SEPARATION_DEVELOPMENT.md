@@ -115,11 +115,12 @@ the expected final image. It also requires the exact `sandbox-exec` provider
 to be on a read-only filesystem and rechecks all three full-file hashes after
 the child exits.
 
-The evidence is owner-only and path-free. It deliberately says
-`bound_to_model_worker: false`: dynamic native-library closure, complete
-byte-for-byte execution identity and attachment to the authorised Kim Vocal 2
-worker remain later gates. The canary creates no audio, downloads nothing and
-does not enable separation.
+The standalone evidence is owner-only and path-free. It deliberately says
+`bound_to_model_worker: false`: that inert canary still creates no audio,
+downloads nothing and enables no separator. The same prepared parent-PID
+primitive is now separately attached to one authorised Kim Vocal 2 worker run,
+as recorded below. Neither result establishes dynamic native-library closure
+or complete byte-for-byte execution identity.
 
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \
@@ -1034,7 +1035,7 @@ byte-identical vocals and instrumental hashes, but each took about 23.4 seconds
 and peaked at about 3.58 GB. The future writer must hash every actual artifact;
 GPU mode cannot promise cross-run byte identity.
 
-The fixed two-role worker has now passed three separate authorised observations.
+The fixed two-role worker has now passed a sequence of authorised observations.
 The parent remeasured the exact runtime, worker, source manifest, checkpoint,
 companions, authorisation report and source PCM24 before and after the run. It
 launched the worker through the exact hashed macOS `sandbox-exec` provider with
@@ -1115,6 +1116,33 @@ It retained 320 modules, 277 files, 18,067,782 bytes and the same one denied
 network canary with zero other worker denials. `/usr/bin/sandbox-exec` and the
 Python virtual-environment runtime remain pathname-launched, so complete
 path-to-execution TOCTOU is not closed.
+
+A fifth authorised `Be Alone` observation now attaches the parent-PID runtime
+image check to the real model worker rather than an inert canary. The network
+observer is ready first; the parent then starts the descriptor-executed worker,
+observes that exact PID's transition from the signed python.org launcher to
+the signed `Python.app` image before waiting for completion, and requires the
+kernel CDHash to match the parent's strict static-code identity. After the
+worker finishes, provider, launcher and image full-file hashes are remeasured.
+The exact `sandbox-exec` provider must remain on its read-only filesystem.
+
+The new path-free v6 evidence self-hashes to
+`fd9ee6dd9a75896e87f6a01e01709ca3f161ca0d60ca6a2845d20041c2644249`;
+its nested runtime binding hashes to
+`1d13892eb87d3709b6b975e363e14f743d6adcacbeb37c6afa5d4bb07b55c798`.
+The owner-only 97,617-byte observation file hashes to
+`4de792916963efb020c739af1c048d1399b09f742df617ba00fe5be1db5747cb`.
+It retained 320 modules, 277 files and 18,075,137 bytes with zero unclassified
+modules, saw one deliberate denied outbound canary and no other worker denial,
+and reproduced both 3,969,044-byte PCM24 outputs within one integer LSB. The
+current worker was 6,790 bytes and executed through its verified descriptor.
+
+This closes only the earlier “process-image canary is not bound to the model
+worker” gap. CDHash is signed code-directory identity, not a claim that every
+measured executable byte or dynamically loaded native library was the byte
+executed. Post-observation image mutability, complete native loaded-image
+closure and the wider outer-supervisor/signal-state gate remain open. No MIDI,
+review, source graph, Simple, Studio, product or publication state changed.
 
 The development-only command is:
 

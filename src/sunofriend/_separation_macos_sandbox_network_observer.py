@@ -22,6 +22,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from ._separation_macos_process_image import (
+    _PreparedRuntimeProcessImageBinding,
+    _observe_prepared_runtime_process_image,
+)
 from ._separation_macos_sandbox_probe import _regular_file_identity
 from .separation_contract import _canonical_json_bytes, _freeze_json
 
@@ -87,9 +91,66 @@ def _run_with_macos_sandbox_network_observer(
 ) -> tuple[subprocess.CompletedProcess[str], Mapping[str, Any]]:
     """Run one child while observing kernel Sandbox network denials."""
 
+    completed, observation, process_image = _run_observed_child(
+        command=command,
+        cwd=cwd,
+        environment=environment,
+        timeout_seconds=timeout_seconds,
+        expected_canary_port=expected_canary_port,
+        stdin=stdin,
+        process_image_binding=None,
+    )
+    if process_image is not None:
+        raise RuntimeError("unexpected macOS runtime process-image observation")
+    return completed, observation
+
+
+def _run_with_macos_sandbox_network_and_process_image_observer(
+    *,
+    command: Sequence[str],
+    cwd: Path,
+    environment: Mapping[str, str],
+    timeout_seconds: float,
+    process_image_binding: _PreparedRuntimeProcessImageBinding,
+    expected_canary_port: int = 9,
+    stdin: Any = subprocess.DEVNULL,
+) -> tuple[
+    subprocess.CompletedProcess[str], Mapping[str, Any], Mapping[str, Any]
+]:
+    """Run one child and bind both denial stream and final process image."""
+
+    completed, observation, process_image = _run_observed_child(
+        command=command,
+        cwd=cwd,
+        environment=environment,
+        timeout_seconds=timeout_seconds,
+        expected_canary_port=expected_canary_port,
+        stdin=stdin,
+        process_image_binding=process_image_binding,
+    )
+    if process_image is None:
+        raise RuntimeError("macOS runtime process-image observation is absent")
+    return completed, observation, process_image
+
+
+def _run_observed_child(
+    *,
+    command: Sequence[str],
+    cwd: Path,
+    environment: Mapping[str, str],
+    timeout_seconds: float,
+    expected_canary_port: int,
+    stdin: Any,
+    process_image_binding: _PreparedRuntimeProcessImageBinding | None,
+) -> tuple[
+    subprocess.CompletedProcess[str],
+    Mapping[str, Any],
+    Mapping[str, Any] | None,
+]:
     state = _start_observer()
     target: subprocess.Popen[str] | None = None
     timed_out = False
+    process_image: Mapping[str, Any] | None = None
     try:
         target = subprocess.Popen(
             list(command),
@@ -100,6 +161,11 @@ def _run_with_macos_sandbox_network_observer(
             cwd=cwd,
             env=dict(environment),
         )
+        if process_image_binding is not None:
+            process_image = _observe_prepared_runtime_process_image(
+                target.pid,
+                prepared=process_image_binding,
+            )
         try:
             stdout, stderr = target.communicate(timeout=timeout_seconds)
         except subprocess.TimeoutExpired:
@@ -122,7 +188,7 @@ def _run_with_macos_sandbox_network_observer(
     completed = subprocess.CompletedProcess(
         list(command), target.returncode, stdout, stderr
     )
-    return completed, observation
+    return completed, observation, process_image
 
 
 def _start_observer() -> _ObserverState:
@@ -519,6 +585,7 @@ def _plain(value: Any) -> Any:
 __all__ = [
     "POLICY_ID",
     "SCHEMA",
+    "_run_with_macos_sandbox_network_and_process_image_observer",
     "_run_with_macos_sandbox_network_observer",
     "_validate_macos_sandbox_network_observation",
 ]

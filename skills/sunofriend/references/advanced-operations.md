@@ -1562,13 +1562,16 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   6,730-byte worker was opened once without following links, hash-verified,
   rewound and executed through that same descriptor as Python standard input.
   Its worker-script pathname race is therefore closed for that observation.
-  A later model-free macOS canary independently observes the exact inert-child
-  PID and records the python.org launcher's transition to its actual signed
-  `Python.app` image. The image's kernel CDHash must equal the parent's strict
-  static-code identity, while `sandbox-exec` must reside on a read-only
-  filesystem. This canary is not yet bound to the authorised model worker and
-  is not full-file or dynamic-native-library execution proof. It is also not a
-  packet monitor or native-loader audit; both commands are still invoked by
+  A model-free macOS canary then observed the exact inert-child PID and the
+  python.org launcher's transition to its actual signed `Python.app` image. A
+  later authorised `Be Alone` repeat attaches the same primitive to the exact
+  model-worker PID. The final image's kernel CDHash matched the parent's strict
+  static-code identity, `sandbox-exec` remained on a read-only filesystem, and
+  provider, launcher and final-image full-file hashes were rechecked after
+  completion. That v6 run retained 320 modules, 277 files, one deliberate
+  denied outbound canary, zero other worker denials and one-LSB PCM24 additive
+  closure. It is not full-file execution proof, dynamic-native-library closure,
+  a packet monitor or a native-loader audit; the commands remain invoked by
   pathname and no product route is enabled.
 - Both Kim-Vocal-2-versus-Moises MIDI reviews are complete. `Be Alone`
   resolved to `equivalent`; `I am a Alien mashup` resolved to `neither` because

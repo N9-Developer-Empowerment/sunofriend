@@ -13,6 +13,7 @@ import numpy as np
 import pytest
 
 import sunofriend._separation_melroformer_authorised_worker as worker
+import sunofriend._separation_macos_process_image as process_image
 import sunofriend._separation_macos_sandbox_network_observer as network_observer
 from sunofriend._separation_checkpoint_canonical import plain
 from sunofriend._separation_melroformer_pcm24_quarantine import (
@@ -124,6 +125,17 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
         lambda *_, **__: verified_closure,
     )
     monkeypatch.setattr(worker, "_verify_worker_import_identity", lambda *_, **__: None)
+    prepared_process_image = object()
+    monkeypatch.setattr(
+        worker,
+        "_prepare_runtime_process_image_binding",
+        lambda **_: prepared_process_image,
+    )
+    monkeypatch.setattr(
+        worker,
+        "_complete_runtime_process_image_binding",
+        lambda **_: _runtime_process_image_binding(),
+    )
 
     def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         assert command[command.index("-B") + 1] == "-"
@@ -202,9 +214,10 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
 
     monkeypatch.setattr(worker.subprocess, "run", fake_run)
 
-    def fake_observed_run(**kwargs: object) -> tuple[object, object]:
+    def fake_observed_run(**kwargs: object) -> tuple[object, object, object]:
         command = kwargs["command"]
         assert isinstance(command, list)
+        assert kwargs["process_image_binding"] is prepared_process_image
         completed = fake_run(command, stdin=kwargs["stdin"])
         event = {
             "eventType": "logEvent",
@@ -230,11 +243,14 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
                 "sha256": "1" * 64,
             },
         )
-        return completed, observation
+        return completed, observation, {
+            "kernel_cdhash": "c" * 40,
+            "path_state": "matched_expected_process_image",
+        }
 
     monkeypatch.setattr(
         worker,
-        "_run_with_macos_sandbox_network_observer",
+        "_run_with_macos_sandbox_network_and_process_image_observer",
         fake_observed_run,
     )
     evidence = worker._run_private_melroformer_authorised_worker(
@@ -255,7 +271,7 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
     assert evidence["conclusion"]["pcm24_quarantine_bound_to_model_worker"] is True
     assert evidence["quarantine"]["evidence_identical"] is True
     if shared_headroom:
-        assert evidence["schema"] == worker.HEADROOM_WORKER_SCHEMA
+        assert evidence["schema"] == worker.RUNTIME_IMAGE_HEADROOM_WORKER_SCHEMA
         assert evidence["quarantine"]["level_management"]["applied"] is True
     assert all(value is False for value in evidence["permissions"].values())
     assert "/Users/" not in repr(evidence)
@@ -264,15 +280,21 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
     )
     if observe_outbound_attempts:
         assert evidence["schema"] == (
-            worker.HEADROOM_WORKER_SCHEMA
+            worker.RUNTIME_IMAGE_HEADROOM_WORKER_SCHEMA
             if shared_headroom
-            else worker.DESCRIPTOR_WORKER_SCHEMA
+            else worker.RUNTIME_IMAGE_WORKER_SCHEMA
         )
         assert evidence["network_observation"]["observation"][
             "deliberate_canary_denial_count"
         ] == 1
         assert evidence["limitations"][
             "arbitrary_model_attempt_stream_observed"
+        ] is True
+        assert evidence["runtime_process_image"]["status"] == (
+            "runtime_process_image_bound_to_exact_child_pid"
+        )
+        assert evidence["conclusion"][
+            "runtime_process_image_bound_to_model_worker"
         ] is True
     elif bind_python_import_closure:
         assert evidence["schema"] == worker.IMPORT_CLOSURE_SCHEMA
@@ -287,6 +309,9 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
         assert evidence["artifacts"][
             "provider_runtime_path_to_execution_toctou_closed"
         ] is False
+        assert evidence["artifacts"][
+            "runtime_process_code_identity_bound_to_exact_child_pid"
+        ] is True
     else:
         assert "worker_script_path_to_execution_toctou_closed" not in evidence[
             "artifacts"
@@ -375,6 +400,62 @@ def _identity(label: str) -> dict[str, object]:
         "bytes": len(label),
         "sha256": hashlib.sha256(label.encode()).hexdigest(),
     }
+
+
+def _runtime_process_image_binding() -> dict[str, object]:
+    payload: dict[str, object] = {
+        "schema": process_image.BINDING_SCHEMA,
+        "policy_id": process_image.BINDING_POLICY_ID,
+        "status": "runtime_process_image_bound_to_exact_child_pid",
+        "platform": {"system": "Darwin", "machine": "arm64"},
+        "provider": {
+            "bytes": 100,
+            "sha256": "a" * 64,
+            "static_cdhash": "a" * 40,
+            "strict_code_signature_valid": True,
+            "filesystem_read_only": True,
+        },
+        "runtime": {
+            "launcher": {
+                "bytes": 101,
+                "sha256": "b" * 64,
+                "static_cdhash": "b" * 40,
+                "strict_code_signature_valid": True,
+            },
+            "process_image": {
+                "bytes": 102,
+                "sha256": "c" * 64,
+                "static_cdhash": "c" * 40,
+                "observed_kernel_cdhash": "c" * 40,
+                "strict_code_signature_valid": True,
+                "static_and_kernel_cdhash_match": True,
+            },
+            "transition": "python-org-framework-launcher-to-app-image",
+        },
+        "observation": {
+            "exact_child_pid_observed": True,
+            "child_pid_retained": False,
+            "parent_proc_pidpath_used": True,
+            "parent_csops_cdhash_used": True,
+            "process_image_path_matched_expected": True,
+            "artifacts_unchanged_after_child": True,
+        },
+        "conclusion": {
+            "provider_path_mutation_confined_by_read_only_filesystem": True,
+            "runtime_process_code_identity_bound_to_exact_child_pid": True,
+            "runtime_launcher_transition_explicit": True,
+        },
+        "limitations": {
+            "provider_runtime_complete_byte_identity_toctou_closed": False,
+            "dynamic_native_library_closure_bound": False,
+            "post_observation_image_mutability_excluded": False,
+            "code_signature_identity_is_not_full_file_sha256": True,
+        },
+    }
+    payload["evidence_sha256"] = hashlib.sha256(
+        _canonical_json_bytes(payload)
+    ).hexdigest()
+    return payload
 
 
 def _verified_import_closure(root: Path) -> object:

@@ -124,6 +124,63 @@ def test_observation_validator_rejects_permission_drift() -> None:
         observer._validate_macos_sandbox_network_observation(changed)
 
 
+def test_combined_observer_binds_process_image_before_waiting_for_child(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    state = object()
+    prepared = object()
+    process_image_observed = False
+
+    class _Target:
+        pid = 123
+        returncode = 0
+
+        def communicate(self, timeout: float | None = None) -> tuple[str, str]:
+            assert timeout == 10.0
+            assert process_image_observed is True
+            return "complete", ""
+
+        def poll(self) -> int:
+            return 0
+
+        def kill(self) -> None:
+            raise AssertionError("completed target must not be killed")
+
+    monkeypatch.setattr(observer, "_start_observer", lambda: state)
+    monkeypatch.setattr(observer.subprocess, "Popen", lambda *_, **__: _Target())
+    monkeypatch.setattr(
+        observer,
+        "_finish_observer",
+        lambda *_args, **_kwargs: {"network": "bound"},
+    )
+
+    def observe(pid: int, *, prepared: object) -> dict[str, str]:
+        nonlocal process_image_observed
+        assert pid == 123
+        assert prepared is not None
+        process_image_observed = True
+        return {"kernel_cdhash": "c" * 40}
+
+    monkeypatch.setattr(observer, "_observe_prepared_runtime_process_image", observe)
+
+    completed, network, process_image = (
+        observer._run_with_macos_sandbox_network_and_process_image_observer(
+            command=["worker"],
+            cwd=tmp_path,
+            environment={"LC_ALL": "C"},
+            timeout_seconds=10.0,
+            process_image_binding=prepared,  # type: ignore[arg-type]
+        )
+    )
+
+    assert completed.args == ["worker"]
+    assert completed.returncode == 0
+    assert completed.stdout == "complete"
+    assert completed.stderr == ""
+    assert network == {"network": "bound"}
+    assert process_image == {"kernel_cdhash": "c" * 40}
+
+
 @pytest.mark.skipif(platform.system() != "Darwin", reason="macOS-only observer")
 def test_live_observer_binds_kernel_denial_to_exact_child_pid(tmp_path: Path) -> None:
     child_source = """\

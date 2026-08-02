@@ -23,6 +23,7 @@ import platform
 import re
 import subprocess
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -35,6 +36,8 @@ from .separation_contract import _canonical_json_bytes, _freeze_json
 
 SCHEMA = "sunofriend.private-macos-runtime-process-image.v1"
 POLICY_ID = "private-macos-runtime-process-image-observation-v1"
+BINDING_SCHEMA = "sunofriend.private-macos-runtime-process-image-binding.v1"
+BINDING_POLICY_ID = "private-macos-runtime-process-image-binding-v1"
 PROBE_ID = "parent-pid-code-identity-v1"
 _SANDBOX_PROFILE = "(version 1)\n(allow default)\n(deny network*)\n"
 _CHILD_SOURCE = (
@@ -60,40 +63,172 @@ _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 _CDHASH_RE = re.compile(r"^[0-9a-f]{40}$")
 
 
+@dataclass(frozen=True)
+class _PreparedRuntimeProcessImageBinding:
+    """Private pre-launch identities needed for one exact-child observation."""
+
+    machine: str
+    provider_path: Path
+    runtime_launcher_path: Path
+    process_image_path: Path
+    provider_identity: Mapping[str, Any]
+    runtime_launcher_identity: Mapping[str, Any]
+    process_image_identity: Mapping[str, Any]
+    provider_cdhash: str
+    runtime_launcher_cdhash: str
+    process_image_cdhash: str
+    transition: str
+
+
+def _prepare_runtime_process_image_binding(
+    *, runtime_path: str | Path
+) -> _PreparedRuntimeProcessImageBinding:
+    """Measure static identities before a private child is launched."""
+
+    if platform.system() != "Darwin":
+        raise RuntimeError("macOS runtime process-image binding requires Darwin")
+    provider = _regular_file_identity(SANDBOX_EXEC_PATH)
+    launcher = _regular_file_identity(runtime_path)
+    image_path = _expected_python_process_image(Path(launcher["resolved_path"]))
+    image = _regular_file_identity(image_path)
+    if not _filesystem_is_read_only(Path(provider["resolved_path"])):
+        raise RuntimeError("macOS Sandbox provider filesystem is not read-only")
+    provider_signature = _static_code_identity(Path(provider["resolved_path"]))
+    launcher_signature = _static_code_identity(Path(launcher["resolved_path"]))
+    image_signature = _static_code_identity(Path(image["resolved_path"]))
+    transition = (
+        "python-org-framework-launcher-to-app-image"
+        if launcher["resolved_path"] != image["resolved_path"]
+        else "launcher-is-process-image"
+    )
+    return _PreparedRuntimeProcessImageBinding(
+        machine=platform.machine(),
+        provider_path=Path(provider["resolved_path"]),
+        runtime_launcher_path=Path(launcher["resolved_path"]),
+        process_image_path=Path(image["resolved_path"]),
+        provider_identity=provider,
+        runtime_launcher_identity=launcher,
+        process_image_identity=image,
+        provider_cdhash=provider_signature["cdhash"],
+        runtime_launcher_cdhash=launcher_signature["cdhash"],
+        process_image_cdhash=image_signature["cdhash"],
+        transition=transition,
+    )
+
+
+def _observe_prepared_runtime_process_image(
+    pid: int,
+    *,
+    prepared: _PreparedRuntimeProcessImageBinding,
+) -> Mapping[str, str]:
+    """Bind a prepared static identity to one exact live child PID."""
+
+    if type(prepared) is not _PreparedRuntimeProcessImageBinding:
+        raise ValueError("macOS runtime process-image preparation differs")
+    return _observe_process_image(
+        pid,
+        provider_path=prepared.provider_path,
+        runtime_launcher_path=prepared.runtime_launcher_path,
+        expected_image_path=prepared.process_image_path,
+        expected_cdhash=prepared.process_image_cdhash,
+    )
+
+
+def _complete_runtime_process_image_binding(
+    *,
+    prepared: _PreparedRuntimeProcessImageBinding,
+    observed: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """Remeasure inputs and seal one path-free exact-child binding."""
+
+    if type(prepared) is not _PreparedRuntimeProcessImageBinding:
+        raise ValueError("macOS runtime process-image preparation differs")
+    if observed != {
+        "kernel_cdhash": prepared.process_image_cdhash,
+        "path_state": "matched_expected_process_image",
+    }:
+        raise ValueError("macOS runtime process-image live observation differs")
+    for before, path, label in (
+        (prepared.provider_identity, prepared.provider_path, "provider"),
+        (
+            prepared.runtime_launcher_identity,
+            prepared.runtime_launcher_path,
+            "runtime launcher",
+        ),
+        (
+            prepared.process_image_identity,
+            prepared.process_image_path,
+            "runtime process image",
+        ),
+    ):
+        after = _regular_file_identity(path)
+        if _identity_projection(before) != _identity_projection(after):
+            raise RuntimeError(f"macOS {label} changed during observation")
+    payload = {
+        "schema": BINDING_SCHEMA,
+        "policy_id": BINDING_POLICY_ID,
+        "status": "runtime_process_image_bound_to_exact_child_pid",
+        "platform": {"system": "Darwin", "machine": prepared.machine},
+        "provider": {
+            **_path_free_identity(prepared.provider_identity),
+            "static_cdhash": prepared.provider_cdhash,
+            "strict_code_signature_valid": True,
+            "filesystem_read_only": True,
+        },
+        "runtime": {
+            "launcher": {
+                **_path_free_identity(prepared.runtime_launcher_identity),
+                "static_cdhash": prepared.runtime_launcher_cdhash,
+                "strict_code_signature_valid": True,
+            },
+            "process_image": {
+                **_path_free_identity(prepared.process_image_identity),
+                "static_cdhash": prepared.process_image_cdhash,
+                "observed_kernel_cdhash": observed["kernel_cdhash"],
+                "strict_code_signature_valid": True,
+                "static_and_kernel_cdhash_match": True,
+            },
+            "transition": prepared.transition,
+        },
+        "observation": {
+            "exact_child_pid_observed": True,
+            "child_pid_retained": False,
+            "parent_proc_pidpath_used": True,
+            "parent_csops_cdhash_used": True,
+            "process_image_path_matched_expected": True,
+            "artifacts_unchanged_after_child": True,
+        },
+        "conclusion": {
+            "provider_path_mutation_confined_by_read_only_filesystem": True,
+            "runtime_process_code_identity_bound_to_exact_child_pid": True,
+            "runtime_launcher_transition_explicit": True,
+        },
+        "limitations": {
+            "provider_runtime_complete_byte_identity_toctou_closed": False,
+            "dynamic_native_library_closure_bound": False,
+            "post_observation_image_mutability_excluded": False,
+            "code_signature_identity_is_not_full_file_sha256": True,
+        },
+    }
+    document = {
+        **payload,
+        "evidence_sha256": hashlib.sha256(_canonical_json_bytes(payload)).hexdigest(),
+    }
+    return _validate_runtime_process_image_binding(document)
+
+
 def _run_private_macos_runtime_process_image_canary(
     *, runtime_path: str | Path
 ) -> Mapping[str, Any]:
     """Observe one inert runtime process from its exact parent PID."""
 
-    if platform.system() != "Darwin":
-        raise RuntimeError("macOS runtime process-image canary requires Darwin")
-
-    provider_before = _regular_file_identity(SANDBOX_EXEC_PATH)
-    runtime_before = _regular_file_identity(runtime_path)
-    process_image_path = _expected_python_process_image(
-        Path(runtime_before["resolved_path"])
-    )
-    process_image_before = _regular_file_identity(process_image_path)
-    provider_signature = _static_code_identity(
-        Path(provider_before["resolved_path"])
-    )
-    launcher_signature = _static_code_identity(
-        Path(runtime_before["resolved_path"])
-    )
-    image_signature = _static_code_identity(
-        Path(process_image_before["resolved_path"])
-    )
-    provider_read_only = _filesystem_is_read_only(
-        Path(provider_before["resolved_path"])
-    )
-    if not provider_read_only:
-        raise RuntimeError("macOS Sandbox provider filesystem is not read-only")
+    prepared = _prepare_runtime_process_image_binding(runtime_path=runtime_path)
 
     command = [
-        provider_before["resolved_path"],
+        str(prepared.provider_path),
         "-p",
         _SANDBOX_PROFILE,
-        runtime_before["resolved_path"],
+        str(prepared.runtime_launcher_path),
         "-I",
         "-S",
         "-c",
@@ -108,12 +243,9 @@ def _run_private_macos_runtime_process_image_canary(
         env=_ENVIRONMENT,
     )
     try:
-        observed_image = _observe_process_image(
+        observed_image = _observe_prepared_runtime_process_image(
             process.pid,
-            provider_path=Path(provider_before["resolved_path"]),
-            runtime_launcher_path=Path(runtime_before["resolved_path"]),
-            expected_image_path=Path(process_image_before["resolved_path"]),
-            expected_cdhash=image_signature["cdhash"],
+            prepared=prepared,
         )
         stdout, stderr = process.communicate(timeout=3.0)
     except BaseException:
@@ -140,22 +272,9 @@ def _run_private_macos_runtime_process_image_canary(
         ) from error
     if child != {"arithmetic": 42, "probe_id": PROBE_ID}:
         raise RuntimeError("macOS runtime process-image child result differs")
-
-    provider_after = _regular_file_identity(SANDBOX_EXEC_PATH)
-    runtime_after = _regular_file_identity(runtime_path)
-    process_image_after = _regular_file_identity(process_image_path)
-    for before, after, label in (
-        (provider_before, provider_after, "provider"),
-        (runtime_before, runtime_after, "runtime launcher"),
-        (process_image_before, process_image_after, "runtime process image"),
-    ):
-        if _identity_projection(before) != _identity_projection(after):
-            raise RuntimeError(f"macOS {label} changed during observation")
-
-    transition = (
-        "python-org-framework-launcher-to-app-image"
-        if runtime_before["resolved_path"] != process_image_before["resolved_path"]
-        else "launcher-is-process-image"
+    binding = _complete_runtime_process_image_binding(
+        prepared=prepared,
+        observed=observed_image,
     )
     payload = {
         "schema": SCHEMA,
@@ -166,25 +285,10 @@ def _run_private_macos_runtime_process_image_canary(
             "machine": platform.machine(),
         },
         "provider": {
-            **_path_free_identity(provider_before),
-            "static_cdhash": provider_signature["cdhash"],
-            "strict_code_signature_valid": True,
-            "filesystem_read_only": True,
+            **_plain(binding["provider"]),
         },
         "runtime": {
-            "launcher": {
-                **_path_free_identity(runtime_before),
-                "static_cdhash": launcher_signature["cdhash"],
-                "strict_code_signature_valid": True,
-            },
-            "process_image": {
-                **_path_free_identity(process_image_before),
-                "static_cdhash": image_signature["cdhash"],
-                "observed_kernel_cdhash": observed_image["kernel_cdhash"],
-                "strict_code_signature_valid": True,
-                "static_and_kernel_cdhash_match": True,
-            },
-            "transition": transition,
+            **_plain(binding["runtime"]),
         },
         "observation": {
             "probe_id": PROBE_ID,
@@ -428,6 +532,82 @@ def _configure_security_functions(security: Any, core: Any) -> None:
 
 def _filesystem_is_read_only(path: Path) -> bool:
     return bool(os.statvfs(path).f_flag & os.ST_RDONLY)
+
+
+def _validate_runtime_process_image_binding(
+    document: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    value = _plain(document)
+    required = {
+        "schema",
+        "policy_id",
+        "status",
+        "platform",
+        "provider",
+        "runtime",
+        "observation",
+        "conclusion",
+        "limitations",
+        "evidence_sha256",
+    }
+    if not isinstance(value, dict) or set(value) != required:
+        raise ValueError("macOS runtime process-image binding fields differ")
+    digest = value.pop("evidence_sha256")
+    if not _is_sha(digest) or digest != hashlib.sha256(
+        _canonical_json_bytes(value)
+    ).hexdigest():
+        raise ValueError("macOS runtime process-image binding self-hash differs")
+    if (
+        value["schema"] != BINDING_SCHEMA
+        or value["policy_id"] != BINDING_POLICY_ID
+        or value["status"] != "runtime_process_image_bound_to_exact_child_pid"
+        or value["platform"].get("system") != "Darwin"
+        or not isinstance(value["platform"].get("machine"), str)
+        or not value["platform"]["machine"]
+    ):
+        raise ValueError("macOS runtime process-image binding identity differs")
+    _validate_artifact(value["provider"], provider=True)
+    runtime = value["runtime"]
+    if not isinstance(runtime, dict) or set(runtime) != {
+        "launcher",
+        "process_image",
+        "transition",
+    }:
+        raise ValueError("macOS runtime process-image binding runtime differs")
+    _validate_artifact(runtime["launcher"], provider=False)
+    _validate_process_image(runtime["process_image"])
+    if runtime["transition"] not in {
+        "python-org-framework-launcher-to-app-image",
+        "launcher-is-process-image",
+    }:
+        raise ValueError("macOS runtime process-image binding transition differs")
+    if value["observation"] != {
+        "exact_child_pid_observed": True,
+        "child_pid_retained": False,
+        "parent_proc_pidpath_used": True,
+        "parent_csops_cdhash_used": True,
+        "process_image_path_matched_expected": True,
+        "artifacts_unchanged_after_child": True,
+    }:
+        raise ValueError("macOS runtime process-image binding observation differs")
+    if value["conclusion"] != {
+        "provider_path_mutation_confined_by_read_only_filesystem": True,
+        "runtime_process_code_identity_bound_to_exact_child_pid": True,
+        "runtime_launcher_transition_explicit": True,
+    }:
+        raise ValueError("macOS runtime process-image binding conclusion differs")
+    if value["limitations"] != {
+        "provider_runtime_complete_byte_identity_toctou_closed": False,
+        "dynamic_native_library_closure_bound": False,
+        "post_observation_image_mutability_excluded": False,
+        "code_signature_identity_is_not_full_file_sha256": True,
+    }:
+        raise ValueError("macOS runtime process-image binding limitations differ")
+    checked = {**value, "evidence_sha256": digest}
+    encoded = json.dumps(checked, sort_keys=True, separators=(",", ":"))
+    if "/Users/" in encoded or "file://" in encoded or "://" in encoded:
+        raise ValueError("macOS runtime process-image binding is not path-free")
+    return _freeze_json(checked)
 
 
 def _validate_private_macos_runtime_process_image(

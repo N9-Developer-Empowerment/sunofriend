@@ -207,6 +207,74 @@ def test_parent_canary_builds_zero_permission_evidence(
     assert all(value is False for value in evidence["permissions"].values())
 
 
+def test_prepared_binding_seals_exact_child_without_retaining_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    provider = tmp_path / "provider"
+    launcher = tmp_path / "python"
+    image = tmp_path / "Python"
+    for path in (provider, launcher, image):
+        path.write_bytes(path.name.encode())
+    identities = {
+        str(provider): _identity(provider, "provider"),
+        str(launcher): _identity(launcher, "launcher"),
+        str(image): _identity(image, "image"),
+    }
+    monkeypatch.setattr(process_image.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(process_image.platform, "machine", lambda: "arm64")
+    monkeypatch.setattr(process_image, "SANDBOX_EXEC_PATH", provider)
+    monkeypatch.setattr(
+        process_image,
+        "_regular_file_identity",
+        lambda path: dict(identities[str(Path(path).absolute())]),
+    )
+    monkeypatch.setattr(
+        process_image, "_expected_python_process_image", lambda _path: image
+    )
+    cdhashes = {provider: "a" * 40, launcher: "b" * 40, image: "c" * 40}
+    monkeypatch.setattr(
+        process_image,
+        "_static_code_identity",
+        lambda path: {"cdhash": cdhashes[Path(path)]},
+    )
+    monkeypatch.setattr(process_image, "_filesystem_is_read_only", lambda _: True)
+    monkeypatch.setattr(
+        process_image,
+        "_observe_process_image",
+        lambda *_args, **_kwargs: {
+            "kernel_cdhash": "c" * 40,
+            "path_state": "matched_expected_process_image",
+        },
+    )
+
+    prepared = process_image._prepare_runtime_process_image_binding(
+        runtime_path=launcher
+    )
+    observed = process_image._observe_prepared_runtime_process_image(
+        123, prepared=prepared
+    )
+    evidence = process_image._complete_runtime_process_image_binding(
+        prepared=prepared,
+        observed=observed,
+    )
+
+    assert evidence["schema"] == process_image.BINDING_SCHEMA
+    assert evidence["runtime"]["process_image"][
+        "static_and_kernel_cdhash_match"
+    ] is True
+    assert evidence["conclusion"][
+        "runtime_process_code_identity_bound_to_exact_child_pid"
+    ] is True
+    assert "/Users/" not in repr(evidence)
+    assert str(tmp_path) not in repr(evidence)
+
+    changed = process_image._plain(evidence)
+    changed["limitations"]["dynamic_native_library_closure_bound"] = True
+    _resign(changed)
+    with pytest.raises(ValueError, match="binding limitations"):
+        process_image._validate_runtime_process_image_binding(changed)
+
+
 def test_private_runner_writes_owner_only_and_never_replaces(
     tmp_path: Path,
 ) -> None:

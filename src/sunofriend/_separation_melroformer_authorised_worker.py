@@ -21,8 +21,13 @@ from ._separation_macos_sandbox_probe import (
     _regular_file_identity,
 )
 from ._separation_macos_sandbox_network_observer import (
-    _run_with_macos_sandbox_network_observer,
+    _run_with_macos_sandbox_network_and_process_image_observer,
     _validate_macos_sandbox_network_observation,
+)
+from ._separation_macos_process_image import (
+    _complete_runtime_process_image_binding,
+    _prepare_runtime_process_image_binding,
+    _validate_runtime_process_image_binding,
 )
 from ._separation_melroformer_artifacts import (
     _inspect_companion_files,
@@ -93,6 +98,18 @@ HEADROOM_WORKER_SCHEMA = (
 HEADROOM_WORKER_POLICY_ID = (
     "private-melroformer-authorised-worker-shared-headroom-v5"
 )
+RUNTIME_IMAGE_WORKER_SCHEMA = (
+    "sunofriend.private-melroformer-authorised-worker-sandbox.v6"
+)
+RUNTIME_IMAGE_WORKER_POLICY_ID = (
+    "private-melroformer-authorised-worker-runtime-image-v6"
+)
+RUNTIME_IMAGE_HEADROOM_WORKER_SCHEMA = (
+    "sunofriend.private-melroformer-authorised-worker-sandbox.v7"
+)
+RUNTIME_IMAGE_HEADROOM_WORKER_POLICY_ID = (
+    "private-melroformer-authorised-worker-runtime-image-headroom-v7"
+)
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 _MAXIMUM_STDOUT_BYTES = 2 * 1024 * 1024
 
@@ -140,6 +157,11 @@ def _run_private_melroformer_authorised_worker(
         source_root=source,
         checkpoint_path=checkpoint,
         companion_root=companions,
+    )
+    prepared_process_image = (
+        _prepare_runtime_process_image_binding(runtime_path=runtime_launch_path)
+        if observe_outbound_attempts
+        else None
     )
     np = __import__("numpy")
     source_audio, authorisation_before = _load_private_authorised_excerpt_pcm24(
@@ -201,17 +223,21 @@ def _run_private_melroformer_authorised_worker(
             ]
         )
     network_observation = None
+    observed_process_image = None
     with _verified_worker_source(
         worker_path,
         expected_identity=artifacts_before["worker"],
     ) as worker_source:
         if observe_outbound_attempts:
-            completed, network_observation = (
-                _run_with_macos_sandbox_network_observer(
+            if prepared_process_image is None:
+                raise RuntimeError("MelRoFormer process-image preparation is absent")
+            completed, network_observation, observed_process_image = (
+                _run_with_macos_sandbox_network_and_process_image_observer(
                     command=command,
                     cwd=repository,
                     environment=environment,
                     timeout_seconds=120.0,
+                    process_image_binding=prepared_process_image,
                     expected_canary_port=9,
                     stdin=worker_source,
                 )
@@ -329,6 +355,14 @@ def _run_private_melroformer_authorised_worker(
     )
     if not _artifacts_equal(artifacts_before, artifacts_after):
         raise RuntimeError("MelRoFormer worker input artifact changed during inference")
+    runtime_process_image = None
+    if observe_outbound_attempts:
+        if prepared_process_image is None or observed_process_image is None:
+            raise RuntimeError("MelRoFormer process-image observation is absent")
+        runtime_process_image = _complete_runtime_process_image_binding(
+            prepared=prepared_process_image,
+            observed=observed_process_image,
+        )
     if dict(authorisation_before) != dict(authorisation_after):
         raise RuntimeError("MelRoFormer authorised input changed during inference")
     if dict(child["model"]["authorisation"]) != dict(authorisation_before):
@@ -336,8 +370,10 @@ def _run_private_melroformer_authorised_worker(
 
     payload = {
         "schema": (
-            HEADROOM_WORKER_SCHEMA
+            RUNTIME_IMAGE_HEADROOM_WORKER_SCHEMA
             if level_management
+            else RUNTIME_IMAGE_WORKER_SCHEMA
+            if runtime_process_image
             else DESCRIPTOR_WORKER_SCHEMA
             if network_observation
             else IMPORT_CLOSURE_SCHEMA
@@ -345,8 +381,10 @@ def _run_private_melroformer_authorised_worker(
             else SCHEMA
         ),
         "policy_id": (
-            HEADROOM_WORKER_POLICY_ID
+            RUNTIME_IMAGE_HEADROOM_WORKER_POLICY_ID
             if level_management
+            else RUNTIME_IMAGE_WORKER_POLICY_ID
+            if runtime_process_image
             else DESCRIPTOR_WORKER_POLICY_ID
             if network_observation
             else IMPORT_CLOSURE_POLICY_ID
@@ -377,6 +415,14 @@ def _run_private_melroformer_authorised_worker(
                 if network_observation
                 else {}
             ),
+            **(
+                {
+                    "runtime_process_code_identity_bound_to_exact_child_pid": True,
+                    "provider_path_mutation_confined_by_read_only_filesystem": True,
+                }
+                if runtime_process_image
+                else {}
+            ),
             "complete_python_import_closure_bound": import_closure is not None,
         },
         "isolation": {
@@ -395,6 +441,11 @@ def _run_private_melroformer_authorised_worker(
         **(
             {"network_observation": network_observation}
             if network_observation
+            else {}
+        ),
+        **(
+            {"runtime_process_image": runtime_process_image}
+            if runtime_process_image
             else {}
         ),
         "authorisation": dict(authorisation_before),
@@ -458,6 +509,11 @@ def _run_private_melroformer_authorised_worker(
                 if network_observation
                 else {}
             ),
+            **(
+                {"runtime_process_image_bound_to_model_worker": True}
+                if runtime_process_image
+                else {}
+            ),
             "worker_authorized_for_product": False,
         },
         "permissions": {
@@ -490,6 +546,18 @@ def _run_private_melroformer_authorised_worker(
                     "provider_runtime_path_to_execution_toctou_closed": False,
                 }
                 if network_observation
+                else {}
+            ),
+            **(
+                {
+                    "runtime_process_code_identity_bound_to_exact_child_pid": True,
+                    "provider_path_mutation_confined_by_read_only_filesystem": True,
+                    "provider_runtime_complete_byte_identity_toctou_closed": False,
+                    "dynamic_native_library_closure_bound": False,
+                    "post_observation_image_mutability_excluded": False,
+                    "code_signature_identity_is_not_full_file_sha256": True,
+                }
+                if runtime_process_image
                 else {}
             ),
             "complete_python_import_closure_bound": import_closure is not None,
@@ -595,7 +663,7 @@ def _validate_authorised_child(
 def _validate_private_melroformer_authorised_worker(
     document: Mapping[str, Any],
 ) -> Mapping[str, Any]:
-    """Validate historical v1-v3, descriptor v4 or headroom-bound v5 evidence."""
+    """Validate historical v1-v5 or runtime-image-bound v6/v7 evidence."""
 
     schema = document.get("schema") if isinstance(document, Mapping) else None
     if schema == SCHEMA:
@@ -608,7 +676,125 @@ def _validate_private_melroformer_authorised_worker(
         return _validate_private_melroformer_authorised_worker_v4(document)
     if schema == HEADROOM_WORKER_SCHEMA:
         return _validate_private_melroformer_authorised_worker_v5(document)
+    if schema == RUNTIME_IMAGE_WORKER_SCHEMA:
+        return _validate_private_melroformer_authorised_worker_v6(document)
+    if schema == RUNTIME_IMAGE_HEADROOM_WORKER_SCHEMA:
+        return _validate_private_melroformer_authorised_worker_v7(document)
     raise ValueError("MelRoFormer authorised worker evidence identity differs")
+
+
+def _validate_private_melroformer_authorised_worker_v7(
+    document: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    value = _plain(document)
+    digest = value.pop("evidence_sha256", None) if isinstance(value, dict) else None
+    if not _is_sha(digest) or digest != hashlib.sha256(
+        _canonical_json_bytes(value)
+    ).hexdigest():
+        raise ValueError("MelRoFormer authorised worker evidence self-hash differs")
+    quarantine = value.get("quarantine")
+    if (
+        value.get("schema") != RUNTIME_IMAGE_HEADROOM_WORKER_SCHEMA
+        or value.get("policy_id") != RUNTIME_IMAGE_HEADROOM_WORKER_POLICY_ID
+        or not isinstance(quarantine, dict)
+        or "level_management" not in quarantine
+    ):
+        raise ValueError("MelRoFormer authorised worker runtime headroom fields differ")
+    level_management = _validate_private_melroformer_pcm24_quarantine_level(
+        quarantine["level_management"]
+    )
+    if level_management["applied"] is not True:
+        raise ValueError("MelRoFormer authorised worker headroom was not applied")
+    runtime_bound = _plain(value)
+    runtime_bound["schema"] = RUNTIME_IMAGE_WORKER_SCHEMA
+    runtime_bound["policy_id"] = RUNTIME_IMAGE_WORKER_POLICY_ID
+    runtime_bound["quarantine"].pop("level_management")
+    runtime_bound["evidence_sha256"] = hashlib.sha256(
+        _canonical_json_bytes(runtime_bound)
+    ).hexdigest()
+    _validate_private_melroformer_authorised_worker_v6(runtime_bound)
+    checked = {**value, "evidence_sha256": digest}
+    encoded = json.dumps(checked, sort_keys=True, separators=(",", ":"))
+    if "/Users/" in encoded or "file://" in encoded or "://" in encoded:
+        raise ValueError("MelRoFormer authorised worker evidence is not path-free")
+    return _freeze_json(checked)
+
+
+def _validate_private_melroformer_authorised_worker_v6(
+    document: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    value = _plain(document)
+    digest = value.pop("evidence_sha256", None) if isinstance(value, dict) else None
+    if not _is_sha(digest) or digest != hashlib.sha256(
+        _canonical_json_bytes(value)
+    ).hexdigest():
+        raise ValueError("MelRoFormer authorised worker evidence self-hash differs")
+    if (
+        value.get("schema") != RUNTIME_IMAGE_WORKER_SCHEMA
+        or value.get("policy_id") != RUNTIME_IMAGE_WORKER_POLICY_ID
+        or "runtime_process_image" not in value
+    ):
+        raise ValueError("MelRoFormer authorised worker runtime-image fields differ")
+    _validate_runtime_process_image_binding(value["runtime_process_image"])
+    artifacts = value.get("artifacts", {})
+    conclusion = value.get("conclusion", {})
+    limitations = value.get("limitations", {})
+    if (
+        artifacts.get("runtime_process_code_identity_bound_to_exact_child_pid")
+        is not True
+        or artifacts.get(
+            "provider_path_mutation_confined_by_read_only_filesystem"
+        )
+        is not True
+        or conclusion.get("runtime_process_image_bound_to_model_worker") is not True
+        or limitations.get(
+            "runtime_process_code_identity_bound_to_exact_child_pid"
+        )
+        is not True
+        or limitations.get(
+            "provider_path_mutation_confined_by_read_only_filesystem"
+        )
+        is not True
+        or limitations.get(
+            "provider_runtime_complete_byte_identity_toctou_closed"
+        )
+        is not False
+        or limitations.get("dynamic_native_library_closure_bound") is not False
+        or limitations.get("post_observation_image_mutability_excluded") is not False
+        or limitations.get("code_signature_identity_is_not_full_file_sha256")
+        is not True
+    ):
+        raise ValueError("MelRoFormer authorised worker runtime-image claim differs")
+    descriptor_bound = _plain(value)
+    descriptor_bound.pop("runtime_process_image")
+    descriptor_bound["schema"] = DESCRIPTOR_WORKER_SCHEMA
+    descriptor_bound["policy_id"] = DESCRIPTOR_WORKER_POLICY_ID
+    for key in (
+        "runtime_process_code_identity_bound_to_exact_child_pid",
+        "provider_path_mutation_confined_by_read_only_filesystem",
+    ):
+        descriptor_bound["artifacts"].pop(key)
+    descriptor_bound["conclusion"].pop(
+        "runtime_process_image_bound_to_model_worker"
+    )
+    for key in (
+        "runtime_process_code_identity_bound_to_exact_child_pid",
+        "provider_path_mutation_confined_by_read_only_filesystem",
+        "provider_runtime_complete_byte_identity_toctou_closed",
+        "dynamic_native_library_closure_bound",
+        "post_observation_image_mutability_excluded",
+        "code_signature_identity_is_not_full_file_sha256",
+    ):
+        descriptor_bound["limitations"].pop(key)
+    descriptor_bound["evidence_sha256"] = hashlib.sha256(
+        _canonical_json_bytes(descriptor_bound)
+    ).hexdigest()
+    _validate_private_melroformer_authorised_worker_v4(descriptor_bound)
+    checked = {**value, "evidence_sha256": digest}
+    encoded = json.dumps(checked, sort_keys=True, separators=(",", ":"))
+    if "/Users/" in encoded or "file://" in encoded or "://" in encoded:
+        raise ValueError("MelRoFormer authorised worker evidence is not path-free")
+    return _freeze_json(checked)
 
 
 def _validate_private_melroformer_authorised_worker_v5(
@@ -1132,6 +1318,10 @@ __all__ = [
     "NETWORK_OBSERVATION_POLICY_ID",
     "NETWORK_OBSERVATION_SCHEMA",
     "POLICY_ID",
+    "RUNTIME_IMAGE_HEADROOM_WORKER_POLICY_ID",
+    "RUNTIME_IMAGE_HEADROOM_WORKER_SCHEMA",
+    "RUNTIME_IMAGE_WORKER_POLICY_ID",
+    "RUNTIME_IMAGE_WORKER_SCHEMA",
     "SCHEMA",
     "_run_private_melroformer_authorised_worker",
     "_validate_private_melroformer_authorised_worker",

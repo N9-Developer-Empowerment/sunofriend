@@ -393,14 +393,16 @@ report the result, then move on.
   Python standard input. That closes the worker-script pathname race and is
   bound to the complete import closure and network-denial observation. The
   deprecated `sandbox-exec` provider and Python virtual-environment runtime
-  are still launched by pathname. A separate model-free parent-PID canary now
-  shows that the python.org launcher becomes a distinct signed `Python.app`
-  process image and binds that image's kernel CDHash to the parent's strictly
-  validated static identity; it also requires the exact `sandbox-exec` file to
-  reside on a read-only filesystem. That result is not yet attached to the
-  authorised model worker, does not bind full executable bytes or dynamic
-  native-library closure and enables no separator route. Native non-module
-  loads and post-observation output mutability also remain explicit. The
+  are still invoked by pathname. A model-free parent-PID canary first showed
+  that the python.org launcher becomes a distinct signed `Python.app` process
+  image. One later authorised `Be Alone` repeat now attaches that observation
+  to the exact model-worker PID: the image's kernel CDHash matched the parent's
+  strictly validated static identity, the exact `sandbox-exec` file remained
+  on a read-only filesystem, and provider, launcher and image full-file hashes
+  were rechecked after completion. This binds signed process-code identity,
+  not full executable bytes or dynamically loaded native libraries. Native
+  non-module loads, post-observation image mutability and the wider supervisor/
+  signal boundary remain explicit; no separator route is enabled. The
   checkpoint is not redistributed. Do not offer or run this challenger
   through the skill.
 - `source-import` decodes exactly one local asset.
