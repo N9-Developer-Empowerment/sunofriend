@@ -1645,7 +1645,11 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   then observes `EPERM` for deliberate loopback, `fork()` and outside-tree
   write canaries while fd3/fd4 validation, ready/release, opaque identity match,
   group drain and exact reap succeed. It still opens no checkpoint, model or
-  audio and is not the real Kim worker.
+  audio and is not the real Kim worker. The audited bridge can now statically
+  inspect and tensor-load the exact checkpoint through an inherited
+  non-inheritable read-only descriptor without reopening its path. This fd5
+  plumbing has synthetic unit evidence only and is not yet connected to the
+  real native worker.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory

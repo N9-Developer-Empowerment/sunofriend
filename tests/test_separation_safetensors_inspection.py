@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import struct
 from pathlib import Path
 from unittest.mock import patch
@@ -11,6 +12,7 @@ import pytest
 from sunofriend._separation_safetensors_inspection import (
     MAX_HEADER_BYTES,
     _inspect_private_safetensors,
+    _inspect_private_safetensors_descriptor,
 )
 
 
@@ -53,6 +55,8 @@ def test_validates_header_and_hash_without_tensor_runtime(tmp_path: Path) -> Non
     assert result["mlx_null_metadata_compatibility_applied"] is False
     assert result["metadata_values_observed"] is False
     assert result["tensor_values_observed"] is False
+    assert "descriptor_pinned" not in result
+    assert "path_retained" not in result
     assert result["authorises_loading"] is False
     assert result["effects"] == {
         "filesystem_accessed": True,
@@ -63,6 +67,72 @@ def test_validates_header_and_hash_without_tensor_runtime(tmp_path: Path) -> Non
         "model_imported": False,
         "process_started": False,
     }
+
+
+def test_descriptor_inspection_is_path_free_and_offset_neutral(
+    tmp_path: Path,
+) -> None:
+    contents = _container(
+        {
+            "weight": {"dtype": "BF16", "shape": [2, 2], "data_offsets": [0, 8]},
+            "__metadata__": None,
+        },
+        bytes(range(8)),
+    )
+    path = tmp_path / "model.safetensors"
+    path.write_bytes(contents)
+    descriptor = os.open(path, os.O_RDONLY)
+    try:
+        os.set_inheritable(descriptor, False)
+        os.lseek(descriptor, 3, os.SEEK_SET)
+
+        result = _inspect_private_safetensors_descriptor(
+            descriptor,
+            expected_bytes=len(contents),
+            expected_sha256=hashlib.sha256(contents).hexdigest(),
+        )
+
+        assert os.lseek(descriptor, 0, os.SEEK_CUR) == 3
+        assert result["descriptor_pinned"] is True
+        assert result["path_retained"] is False
+        assert "path" not in result
+        assert str(path) not in repr(result)
+        assert result["tensor_count"] == 1
+    finally:
+        os.close(descriptor)
+
+
+def test_descriptor_inspection_rejects_inheritable_or_writable_descriptor(
+    tmp_path: Path,
+) -> None:
+    contents = _container({}, b"")
+    path = tmp_path / "model.safetensors"
+    path.write_bytes(contents)
+    digest = hashlib.sha256(contents).hexdigest()
+
+    inheritable = os.open(path, os.O_RDONLY)
+    try:
+        os.set_inheritable(inheritable, True)
+        with pytest.raises(ValueError, match="non-inheritable read-only"):
+            _inspect_private_safetensors_descriptor(
+                inheritable,
+                expected_bytes=len(contents),
+                expected_sha256=digest,
+            )
+    finally:
+        os.close(inheritable)
+
+    writable = os.open(path, os.O_RDWR)
+    try:
+        os.set_inheritable(writable, False)
+        with pytest.raises(ValueError, match="non-inheritable read-only"):
+            _inspect_private_safetensors_descriptor(
+                writable,
+                expected_bytes=len(contents),
+                expected_sha256=digest,
+            )
+    finally:
+        os.close(writable)
 
 
 def test_accepts_scalar_empty_tensor_and_space_padding(tmp_path: Path) -> None:

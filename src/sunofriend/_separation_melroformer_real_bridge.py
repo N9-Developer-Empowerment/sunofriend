@@ -15,6 +15,7 @@ import io
 import importlib.metadata
 import json
 import os
+import fcntl
 import platform
 import re
 import stat
@@ -50,7 +51,10 @@ from ._separation_melroformer_upstream_evidence import (
     CONVERSION_CHECKPOINT_BYTES,
     CONVERSION_CHECKPOINT_SHA256,
 )
-from ._separation_safetensors_inspection import _inspect_private_safetensors
+from ._separation_safetensors_inspection import (
+    _inspect_private_safetensors,
+    _inspect_private_safetensors_descriptor,
+)
 
 
 SCHEMA = "sunofriend.private-melroformer-real-bridge-probe.v1"
@@ -234,6 +238,7 @@ def _load_private_melroformer_model(
     checkpoint_path: str | Path,
     companion_root: str | Path,
     device: str = "gpu",
+    checkpoint_descriptor: int | None = None,
 ) -> _PrivateMelRoFormerHandle:
     """Load the exact model without calling upstream ``from_pretrained``."""
 
@@ -245,11 +250,20 @@ def _load_private_melroformer_model(
     companions = Path(companion_root).expanduser().absolute()
     source_observation = _verify_private_melroformer_source_tree(source)
     companion_observation = _inspect_companion_files(companions)
-    static_inspection = _inspect_private_safetensors(
-        checkpoint,
-        expected_bytes=CONVERSION_CHECKPOINT_BYTES,
-        expected_sha256=CONVERSION_CHECKPOINT_SHA256,
-    )
+    if checkpoint_descriptor is None:
+        static_inspection = _inspect_private_safetensors(
+            checkpoint,
+            expected_bytes=CONVERSION_CHECKPOINT_BYTES,
+            expected_sha256=CONVERSION_CHECKPOINT_SHA256,
+        )
+        checkpoint_transport = "verified_path_to_private_descriptor"
+    else:
+        static_inspection = _inspect_private_safetensors_descriptor(
+            checkpoint_descriptor,
+            expected_bytes=CONVERSION_CHECKPOINT_BYTES,
+            expected_sha256=CONVERSION_CHECKPOINT_SHA256,
+        )
+        checkpoint_transport = "inherited_read_only_descriptor"
 
     if not companion_observation["all_cryptographic_identities_verified"]:
         raise ValueError("MelRoFormer companion identities differ")
@@ -293,7 +307,12 @@ def _load_private_melroformer_model(
         model = model_module.MelRoFormer(config)
         expected = dict(tree_flatten(model.parameters()))
 
-        with _verified_checkpoint_stream(checkpoint) as stream:
+        checkpoint_stream = (
+            _verified_checkpoint_stream(checkpoint)
+            if checkpoint_descriptor is None
+            else _verified_checkpoint_descriptor_stream(checkpoint_descriptor)
+        )
+        with checkpoint_stream as stream:
             weights = dict(mx.load(stream, format="safetensors"))
         sanitized = model.sanitize(weights)
         coverage = _validate_weight_inventory(
@@ -334,6 +353,9 @@ def _load_private_melroformer_model(
             "static_inspection_schema": static_inspection["schema"],
             "static_tensor_count": static_inspection["tensor_count"],
             "descriptor_pinned_during_tensor_load": True,
+            "transport": checkpoint_transport,
+            "path_reopened_by_loader": checkpoint_descriptor is None,
+            "descriptor_number_retained": False,
         },
         "runtime": {**runtime, "mlx_device": device},
         "config": {
@@ -885,6 +907,56 @@ def _verified_checkpoint_stream(path: Path) -> Iterator[BinaryIO]:
             raise ValueError("MelRoFormer checkpoint changed during tensor load")
     finally:
         os.close(descriptor)
+
+
+@contextmanager
+def _verified_checkpoint_descriptor_stream(descriptor: int) -> Iterator[BinaryIO]:
+    """Yield the exact inherited fd5 bytes without resolving a pathname."""
+
+    if isinstance(descriptor, bool) or not isinstance(descriptor, int) or descriptor < 0:
+        raise ValueError("MelRoFormer checkpoint descriptor is invalid")
+    try:
+        attached = os.fstat(descriptor)
+        inheritable = os.get_inheritable(descriptor)
+        access_mode = fcntl.fcntl(descriptor, fcntl.F_GETFL) & os.O_ACCMODE
+    except OSError as error:
+        raise ValueError("MelRoFormer checkpoint descriptor is unavailable") from error
+    if (
+        inheritable
+        or access_mode != os.O_RDONLY
+        or not stat.S_ISREG(attached.st_mode)
+        or attached.st_nlink != 1
+        or attached.st_size != CONVERSION_CHECKPOINT_BYTES
+    ):
+        raise ValueError("MelRoFormer checkpoint descriptor identity differs")
+    digest = hashlib.sha256()
+    count = 0
+    while count < CONVERSION_CHECKPOINT_BYTES:
+        block = os.pread(
+            descriptor,
+            min(1024 * 1024, CONVERSION_CHECKPOINT_BYTES - count),
+            count,
+        )
+        if not block:
+            raise ValueError("MelRoFormer checkpoint descriptor is truncated")
+        count += len(block)
+        digest.update(block)
+    if digest.hexdigest() != CONVERSION_CHECKPOINT_SHA256:
+        raise ValueError("MelRoFormer checkpoint changed before tensor load")
+
+    duplicate = os.dup(descriptor)
+    try:
+        os.set_inheritable(duplicate, False)
+        os.lseek(duplicate, 0, os.SEEK_SET)
+        with os.fdopen(duplicate, "rb", closefd=False) as stream:
+            yield stream
+        if (
+            os.get_inheritable(descriptor)
+            or _identity(os.fstat(descriptor)) != _identity(attached)
+        ):
+            raise ValueError("MelRoFormer checkpoint changed during tensor load")
+    finally:
+        os.close(duplicate)
 
 
 def _validate_weight_inventory(

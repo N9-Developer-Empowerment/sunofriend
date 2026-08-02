@@ -1704,6 +1704,35 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — Kim checkpoint loader accepts inherited fd5
+
+- Goal: remove the checkpoint-path reopen from the future native Kim worker
+  before connecting the real model to the new owner and sandbox lifecycle.
+- Change or experiment: added path-free Safetensors static inspection for an
+  already-open descriptor and an optional descriptor transport to the existing
+  audited Kim loader. The descriptor must already be non-inheritable, read-only,
+  single-link, regular and the exact accepted size and SHA-256. Static inspection
+  uses positioned reads and leaves the caller's offset unchanged. MLX receives
+  a non-inheritable duplicate of that same descriptor, not a reopened path.
+- Inputs: synthetic Safetensors containers and small descriptor fixtures only.
+  No accepted Kim checkpoint, model or authorised audio was opened.
+- Model/runtime/checkpoint: no model. Tests substitute bounded fixture identities
+  for the real 456,483,463-byte checkpoint identity.
+- Evidence and metrics: 36 direct inspection/bridge tests and 80 affected Kim
+  bridge, authorised-worker, challenger, supervision and inspection tests pass.
+  Tests prove path-free evidence, offset-neutral static inspection, exact bytes
+  through the yielded stream, and rejection of inheritable or writable files.
+- Listening result: not applicable; no audio was read or produced.
+- Decision: accept descriptor-native checkpoint inspection and tensor-load
+  plumbing as implemented, but keep it unattached to the real native worker.
+  Every CLI, TUI, Simple, Studio and automatic-selection route remains disabled.
+- Problems/risks: the fixed native worker entry point is still absent. The
+  request still carries a checkpoint pathname for private evidence, and the
+  current authorised worker still follows its unchanged subprocess path.
+- Next smallest step: add the fixed real worker adapter whose first user-code
+  action hardens fds 3–7, validates fd3, imports the audited bridge and passes
+  fd5 to this loader without reopening the checkpoint path.
+
 ### 2026-08-02 — native Kim sandbox launch shape proved model-free
 
 - Goal: put the fd3–fd7 bootstrap behind the same fixed macOS isolation shape

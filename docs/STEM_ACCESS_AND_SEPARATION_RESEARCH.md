@@ -70,7 +70,10 @@ observes `EPERM` for loopback, `fork()` and an outside-tree create while the
 same fd3/fd4 frames, ready/release gate, opaque identity match, group drain and
 exact reap succeed. No request path, checkpoint byte, model or audio is opened.
 This proves the future launch envelope only; the real Kim worker remains on
-the subprocess route.
+the subprocess route. The exact Kim bridge now also supports path-free static
+inspection and tensor loading from an inherited non-inheritable read-only
+checkpoint descriptor. That fd5 plumbing has synthetic unit evidence only and
+is not yet attached to a real native worker or any product route.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on

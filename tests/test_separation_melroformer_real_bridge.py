@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 import wave
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,6 +23,7 @@ from sunofriend._separation_melroformer_real_bridge import (
     _plan_excerpt_chunks,
     _transform_checkpoint_keys,
     _validate_weight_inventory,
+    _verified_checkpoint_descriptor_stream,
 )
 from sunofriend.interface_contract import DIRECT_TUI_COMMANDS, PUBLIC_COMMANDS
 
@@ -115,6 +117,60 @@ def test_private_loader_rejects_unpinned_device_before_artifact_access() -> None
             companion_root="missing",
             device="auto",
         )
+
+
+def test_descriptor_stream_hashes_and_yields_exact_bound_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import sunofriend._separation_melroformer_real_bridge as bridge
+
+    contents = b"descriptor-native-kim-checkpoint"
+    path = tmp_path / "model.safetensors"
+    path.write_bytes(contents)
+    monkeypatch.setattr(bridge, "CONVERSION_CHECKPOINT_BYTES", len(contents))
+    monkeypatch.setattr(
+        bridge,
+        "CONVERSION_CHECKPOINT_SHA256",
+        hashlib.sha256(contents).hexdigest(),
+    )
+    descriptor = os.open(path, os.O_RDONLY)
+    try:
+        os.set_inheritable(descriptor, False)
+        os.lseek(descriptor, 7, os.SEEK_SET)
+
+        with _verified_checkpoint_descriptor_stream(descriptor) as stream:
+            assert stream.read() == contents
+
+        assert os.get_inheritable(descriptor) is False
+        assert os.fstat(descriptor).st_size == len(contents)
+    finally:
+        os.close(descriptor)
+
+
+def test_descriptor_stream_rejects_inheritable_fd_before_read(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import sunofriend._separation_melroformer_real_bridge as bridge
+
+    contents = b"descriptor-native-kim-checkpoint"
+    path = tmp_path / "model.safetensors"
+    path.write_bytes(contents)
+    monkeypatch.setattr(bridge, "CONVERSION_CHECKPOINT_BYTES", len(contents))
+    monkeypatch.setattr(
+        bridge,
+        "CONVERSION_CHECKPOINT_SHA256",
+        hashlib.sha256(contents).hexdigest(),
+    )
+    descriptor = os.open(path, os.O_RDONLY)
+    try:
+        os.set_inheritable(descriptor, True)
+        with pytest.raises(ValueError, match="descriptor identity differs"):
+            with _verified_checkpoint_descriptor_stream(descriptor):
+                raise AssertionError("inheritable checkpoint was yielded")
+    finally:
+        os.close(descriptor)
 
 
 def test_plans_nominal_half_overlap_for_full_initial_excerpt() -> None:

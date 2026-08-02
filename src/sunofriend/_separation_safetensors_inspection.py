@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import fcntl
 import re
 import stat
 import struct
@@ -62,16 +63,7 @@ def _inspect_private_safetensors(
     path = Path(value).expanduser()
     if not path.is_absolute():
         raise ValueError("Safetensors path must be absolute")
-    if (
-        isinstance(expected_bytes, bool)
-        or not isinstance(expected_bytes, int)
-        or not _HEADER_SIZE.size < expected_bytes <= MAX_FILE_BYTES
-    ):
-        raise ValueError("expected Safetensors byte count is invalid")
-    if not isinstance(expected_sha256, str) or not _SHA_RE.fullmatch(
-        expected_sha256
-    ):
-        raise ValueError("expected Safetensors SHA-256 is invalid")
+    _validate_expected_identity(expected_bytes, expected_sha256)
 
     attached = path.lstat()
     if (
@@ -90,27 +82,11 @@ def _inspect_private_safetensors(
         opened = os.fstat(descriptor)
         if os.get_inheritable(descriptor) or _identity(opened) != _identity(attached):
             raise ValueError("Safetensors checkpoint changed before inspection")
-        prefix = _read_exact(descriptor, _HEADER_SIZE.size)
-        header_bytes = _HEADER_SIZE.unpack(prefix)[0]
-        if not 2 <= header_bytes <= MAX_HEADER_BYTES:
-            raise ValueError("Safetensors header size exceeds the inspection bound")
-        if _HEADER_SIZE.size + header_bytes > expected_bytes:
-            raise ValueError("Safetensors header extends beyond the file")
-        header = _read_exact(descriptor, header_bytes)
-        if not header.startswith(b"{"):
-            raise ValueError("Safetensors header must begin with an object")
-        parsed = _parse_unique_json(header)
-        inventory = _validate_inventory(
-            parsed, data_bytes=expected_bytes - _HEADER_SIZE.size - header_bytes
+        result = _inspect_private_safetensors_descriptor(
+            descriptor,
+            expected_bytes=expected_bytes,
+            expected_sha256=expected_sha256,
         )
-
-        digest = hashlib.sha256(prefix + header)
-        count = len(prefix) + len(header)
-        while block := os.read(descriptor, 1024 * 1024):
-            count += len(block)
-            if count > expected_bytes:
-                raise ValueError("Safetensors checkpoint grew during inspection")
-            digest.update(block)
         after = os.fstat(descriptor)
         rebound = path.lstat()
         if _identity(after) != _identity(opened) or _identity(rebound) != _identity(
@@ -120,12 +96,78 @@ def _inspect_private_safetensors(
     finally:
         os.close(descriptor)
 
-    if count != expected_bytes or digest.hexdigest() != expected_sha256:
+    path_result = dict(result)
+    path_result.pop("descriptor_pinned")
+    path_result.pop("path_retained")
+    path_result["path"] = str(path)
+    return path_result
+
+
+def _inspect_private_safetensors_descriptor(
+    descriptor: int,
+    *,
+    expected_bytes: int,
+    expected_sha256: str,
+) -> dict[str, Any]:
+    """Inspect one already-open, non-inheritable read-only descriptor.
+
+    The descriptor offset is unchanged and no pathname is resolved or retained.
+    This is the static-inspection half of the future native fd5 checkpoint
+    transport; it still grants no loading or execution authority.
+    """
+
+    _validate_expected_identity(expected_bytes, expected_sha256)
+    if isinstance(descriptor, bool) or not isinstance(descriptor, int) or descriptor < 0:
+        raise ValueError("Safetensors descriptor is invalid")
+    try:
+        attached = os.fstat(descriptor)
+        inheritable = os.get_inheritable(descriptor)
+        access_mode = fcntl.fcntl(descriptor, fcntl.F_GETFL) & os.O_ACCMODE
+    except OSError as error:
+        raise ValueError("Safetensors descriptor is unavailable") from error
+    if (
+        inheritable
+        or access_mode != os.O_RDONLY
+        or not stat.S_ISREG(attached.st_mode)
+        or attached.st_nlink != 1
+        or attached.st_size != expected_bytes
+    ):
+        raise ValueError(
+            "Safetensors descriptor must be non-inheritable read-only single-link "
+            "regular file"
+        )
+
+    prefix = _pread_exact(descriptor, _HEADER_SIZE.size, 0)
+    header_bytes = _HEADER_SIZE.unpack(prefix)[0]
+    if not 2 <= header_bytes <= MAX_HEADER_BYTES:
+        raise ValueError("Safetensors header size exceeds the inspection bound")
+    if _HEADER_SIZE.size + header_bytes > expected_bytes:
+        raise ValueError("Safetensors header extends beyond the file")
+    header = _pread_exact(descriptor, header_bytes, _HEADER_SIZE.size)
+    if not header.startswith(b"{"):
+        raise ValueError("Safetensors header must begin with an object")
+    parsed = _parse_unique_json(header)
+    inventory = _validate_inventory(
+        parsed, data_bytes=expected_bytes - _HEADER_SIZE.size - header_bytes
+    )
+
+    digest = hashlib.sha256()
+    count = 0
+    while count < expected_bytes:
+        block = os.pread(descriptor, min(1024 * 1024, expected_bytes - count), count)
+        if not block:
+            raise ValueError("Safetensors checkpoint is truncated")
+        count += len(block)
+        digest.update(block)
+    if (
+        count != expected_bytes
+        or digest.hexdigest() != expected_sha256
+        or _identity(os.fstat(descriptor)) != _identity(attached)
+    ):
         raise ValueError("Safetensors checkpoint SHA-256 differs")
     return {
         "schema": SCHEMA,
         "status": "verified_header_only_not_deserialized",
-        "path": str(path),
         "bytes": count,
         "sha256": digest.hexdigest(),
         "container": "safetensors",
@@ -143,6 +185,8 @@ def _inspect_private_safetensors(
         "metadata_values_observed": False,
         "tensor_values_observed": False,
         "tensor_library_imported": False,
+        "descriptor_pinned": True,
+        "path_retained": False,
         "authorises_loading": False,
         "authorises_model_import": False,
         "authorises_inference": False,
@@ -156,6 +200,29 @@ def _inspect_private_safetensors(
             "process_started": False,
         },
     }
+
+
+def _validate_expected_identity(expected_bytes: int, expected_sha256: str) -> None:
+    if (
+        isinstance(expected_bytes, bool)
+        or not isinstance(expected_bytes, int)
+        or not _HEADER_SIZE.size < expected_bytes <= MAX_FILE_BYTES
+    ):
+        raise ValueError("expected Safetensors byte count is invalid")
+    if not isinstance(expected_sha256, str) or not _SHA_RE.fullmatch(
+        expected_sha256
+    ):
+        raise ValueError("expected Safetensors SHA-256 is invalid")
+
+
+def _pread_exact(descriptor: int, size: int, offset: int) -> bytes:
+    payload = bytearray()
+    while len(payload) < size:
+        block = os.pread(descriptor, size - len(payload), offset + len(payload))
+        if not block:
+            raise ValueError("Safetensors checkpoint is truncated")
+        payload.extend(block)
+    return bytes(payload)
 
 
 def _parse_unique_json(contents: bytes) -> dict[str, Any]:
@@ -278,16 +345,6 @@ def _validate_inventory(header: dict[str, Any], *, data_bytes: int) -> dict[str,
     }
 
 
-def _read_exact(descriptor: int, count: int) -> bytes:
-    chunks = bytearray()
-    while len(chunks) < count:
-        block = os.read(descriptor, count - len(chunks))
-        if not block:
-            raise ValueError("Safetensors checkpoint ended unexpectedly")
-        chunks.extend(block)
-    return bytes(chunks)
-
-
 def _identity(value: os.stat_result) -> tuple[int, int, int, int, int, int]:
     return (
         value.st_dev,
@@ -299,4 +356,7 @@ def _identity(value: os.stat_result) -> tuple[int, int, int, int, int, int]:
     )
 
 
-__all__ = ["_inspect_private_safetensors"]
+__all__ = [
+    "_inspect_private_safetensors",
+    "_inspect_private_safetensors_descriptor",
+]

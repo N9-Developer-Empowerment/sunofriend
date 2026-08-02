@@ -115,8 +115,12 @@ report the result, then move on.
   supplies an offline environment; deliberate loopback, fork and outside-write
   canaries return `EPERM` while the same opaque lifecycle succeeds. This still
   opens no checkpoint, model or audio, and the bootstrap is not the real Kim
-  worker. Kim remains on the subprocess route. This evidence does not enable
-  native fake-launch V2, which remains permanently
+  worker. The audited bridge can now inspect and tensor-load the accepted
+  checkpoint from an inherited non-inheritable read-only descriptor without
+  reopening its path, but that fd5 plumbing has synthetic unit evidence only
+  and is not attached to a real native worker. Kim remains on the subprocess
+  route. This evidence does not enable native fake-launch V2, which remains
+  permanently
   `blocked`/`not_run` and still contains only caller-claimed artifact
   identities. A later model-free
   canary matrix v2 observes its harness before local cleanup with only FDs 0–2

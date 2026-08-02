@@ -288,6 +288,15 @@ with the fixed Kim worker adapter, load the accepted checkpoint exclusively from
 fd5, and bind one previously authorised excerpt to the same opaque-owner
 terminal projection before any route can be promoted.
 
+The real bridge now has the checkpoint-side plumbing required by that next
+step. Its Safetensors inspector can consume an already-open non-inheritable,
+read-only descriptor with positioned reads, returning path-free static evidence
+without moving the caller's offset. The model loader can then give MLX a
+non-inheritable duplicate of that exact descriptor and records that it did not
+reopen the checkpoint path. Unit tests use small synthetic containers only; the
+accepted Kim checkpoint and authorised audio were not opened. This plumbing is
+not yet connected to a real native worker, so it grants no new route or result.
+
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \
   --fixture-out work/separation-bakeoff/demo-fixture-v2 \
