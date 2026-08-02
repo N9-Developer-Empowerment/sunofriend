@@ -314,7 +314,17 @@ report the result, then move on.
   found only two lowest-line notes and 0.099299 seconds beyond the primary,
   versus 1.533801 seconds on `I am a Alien mashup`. A useful lower-register
   complement therefore does not generalise, and activity coverage alone does
-  not warrant another review, a merge or a rule. The read-only public
+  not warrant another review, a merge or a rule. The private development
+  chain now also has a path-free candidate inventory for each of
+  those two excerpts. Each inventory retains 17 entries: the Kim primary,
+  four register hypotheses and twelve provider-leaf adapter primaries,
+  including zero-note observations. `I am a Alien mashup` has 16 auditionable
+  entries; `Be Alone` has 13. The private builder re-verifies the sealed
+  artifact identities but copies no MIDI or audio and has no public CLI, TUI,
+  Simple, Studio or source-graph route. It is not an audition interface and
+  this skill must not use it to rank, merge, repair, identify or select a
+  singer. The
+  read-only public
   `midi-ab-status` command may match an explicitly named export or one bounded,
   non-recursive download directory without opening the answer key; it cannot
   resolve or reveal A/B. The

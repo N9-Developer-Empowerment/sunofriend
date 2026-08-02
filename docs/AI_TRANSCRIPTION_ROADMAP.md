@@ -1697,6 +1697,39 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — private vocal candidate-set preservation
+
+- Goal: preserve complementary primary, register and provider-leaf vocal MIDI
+  evidence without hiding alternatives behind a new automatic choice.
+- Change or experiment: added a private-only, path-free candidate-set builder
+  and runner. It validates exact self-hashed MelRoFormer, vocal-leaf and phrase-
+  completeness reports; reopens every referenced artifact; preserves zero-note
+  observations; and publishes only one owner-readable JSON manifest into a
+  fresh owner-only directory.
+- Inputs: the sealed `I am a Alien mashup` 219–234 second and `Be Alone`
+  191–206 second evidence chains. Separation and model inference were not
+  rerun.
+- Model/runtime/checkpoint: no model was loaded. The candidate identities bind
+  the already approved, inactive Kim Vocal 2 and unchanged deterministic vocal
+  adapters.
+- Evidence and metrics: both inventories contain 17 candidates: one Kim
+  primary, four Kim register hypotheses and twelve provider-leaf adapter
+  primaries. `I am a Alien mashup` has 16 auditionable plus one zero-note
+  candidate; `Be Alone` has 13 plus four. Canonical document hashes are
+  `01779801…d2e4` and `0b8b0266…174f4`; report hashes are
+  `947559a9…dea1` and `89a25dea…e0b` respectively.
+- Listening result: none requested. Phrase activity alone did not warrant a
+  new review.
+- Decision: retain every candidate and its path-free artifact identities, with
+  no ranking, selection, default, merge, repair or singer assignment. Keep the
+  builder out of the public CLI, TUI, Simple, Studio and source graph.
+- Problems/risks: the manifest is not an audition UI and provider groups are
+  estimated evidence rather than score truth. Zero-note results may be useful
+  diagnostics but are not playable.
+- Next smallest step: design a separate bounded private audition resolver that
+  can hear already sealed previews and record an explicit human choice without
+  copying or automatically preferring any candidate.
+
 ### 2026-08-01 — final MIDI review and exact worker-script descriptor
 
 - Goal: close the last Kim Vocal 2 listening gate and remove the worker-script

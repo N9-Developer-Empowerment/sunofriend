@@ -86,11 +86,17 @@ The important missing capabilities are not “more MIDI.” They are:
 
 ## Separation dependency boundary
 
-As of the repository baseline, public finished-song separation is not enabled.
-The private Kim Vocal 2 challenger has two downstream MIDI observations, but
-one cross-song listening review and execution-path/product gates remain open.
-The repository describes public Studio separation as Phase S4 and one-action
-Simple separation as Phase S6.
+As of 2 August 2026, public finished-song separation is not enabled. The
+private Kim Vocal 2 challenger has song-disjoint downstream MIDI observations
+and its prepared listening reviews are complete, but lead/backing assignment,
+remaining execution-path safety and product gates remain open. Sunofriend now
+also preserves 17 private vocal candidates per tested excerpt: the unchanged
+Kim primary, four register hypotheses and twelve provider-leaf adapter
+primaries. That path-free inventory copies no MIDI or audio and selects,
+merges, repairs and identifies no singer. It is evidence for a later explicit
+audition contract, not a comping input or accepted separator. The repository
+describes public Studio separation as Phase S4 and one-action Simple
+separation as Phase S6.
 
 Vocal comping should begin only after the requested public separation milestone
 is closed, but its architecture should remain independent:

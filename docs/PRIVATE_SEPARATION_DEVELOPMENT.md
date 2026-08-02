@@ -1316,6 +1316,44 @@ the report file hashes to
 No focused review is warranted from activity coverage alone, and no merge,
 register rule, singer identity, default or product route changed.
 
+The next preservation increment turns those sealed alternatives into one
+path-free, self-hashed **candidate inventory** per excerpt. It deliberately
+copies no MIDI, note JSON or audio. Every entry retains only its stable musical
+hypothesis and verified byte/hash identities, including zero-note observations.
+The inventory contains the unchanged Kim primary, all four Kim register
+hypotheses and both unchanged lead/backing primary adapters for each of the six
+provider vocal leaves: 17 candidates in total. `I am a Alien mashup` has 16
+auditionable candidates and one `no_note_evidence` entry; `Be Alone` has 13 and
+four respectively. Both inventories retain four Moises, four Suno A and four
+Suno B leaf candidates.
+
+The `I am a Alien mashup` inventory's canonical document SHA-256 is
+`01779801b7ac3be0a922d525a8cf8b082b240b784279631339c8b0926863d2e4`;
+the report file hashes to
+`947559a94f22bf3e1c80ce3b015da671ccdf5599bac322c0dfe5806ade72dea1`.
+The `Be Alone` inventory's canonical document SHA-256 is
+`0b8b026652f7a5b2dea078dc7e8a008e45dcb7a83cc6bc0b671d3e4096e174f4`;
+the report file hashes to
+`89a25dea76fb9f26b7bb376b59f626b702614db2915b00096714a30804b94e0b`.
+Both output directories and reports are owner-only. The builder reopens and
+hashes every referenced candidate artifact, validates all three reports'
+self-hashes and exact cross-bindings, and refuses an existing destination.
+
+```bash
+PYTHONPATH=src .venv/bin/python \
+  scripts/private-vocal-candidate-set.py \
+  --melroformer-evaluation /absolute/private/private-melroformer-vocal-midi-evaluation.json \
+  --vocal-leaf-evaluation /absolute/private/authorised-vocal-leaf-midi-evaluation.json \
+  --phrase-completeness /absolute/private/vocal-phrase-completeness.json \
+  --out /absolute/fresh/private-vocal-candidate-set
+```
+
+This is not yet an audition interface. It creates no review, ranking, winner,
+merge, repair, singer identity, default, Studio import, Simple result or source-
+graph change. A future adapter may resolve the private identities to already
+sealed previews for explicit listening, but that needs its own bounded design
+and human-choice contract.
+
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
 resource, downstream-MIDI and human listening acceptance.

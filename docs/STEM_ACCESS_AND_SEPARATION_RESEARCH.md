@@ -2154,6 +2154,13 @@ transport, source-lineage import and promotion are not implemented**
   lowest line adds only 0.099299 seconds beyond it, versus 1.533801 seconds on
   `I am a Alien mashup`. Reject a universal lowest-register rule. Activity
   coverage alone does not warrant a focused review, merge or singer inference.
+- [x] Preserve the full private vocal result space in one path-free candidate
+  inventory per song. Each inventory keeps the Kim primary, four register
+  hypotheses and twelve provider-leaf adapter primaries, including zero-note
+  evidence. `I am a Alien mashup` has 16/17 auditionable candidates and `Be
+  Alone` has 13/17. The builder re-verifies all artifact identities and exact
+  report bindings, copies no audio or MIDI, and exposes no product route. It
+  performs no ranking, selection, merge, repair, singer inference or review.
 - [x] Compare every supplied leaf inside composite `other` across both
   authorised excerpts using bidirectional audio rankings. Exact and semantic
   labels remain observations only. Keyboard was the only stable Suno pair on
