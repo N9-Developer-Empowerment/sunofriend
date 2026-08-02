@@ -13,6 +13,7 @@ import numpy as np
 import pytest
 
 import sunofriend._separation_melroformer_authorised_worker as worker
+import sunofriend._separation_macos_worker_native_images as worker_native_images
 import sunofriend._separation_macos_process_image as process_image
 import sunofriend._separation_macos_sandbox_network_observer as network_observer
 from sunofriend._separation_checkpoint_canonical import plain
@@ -30,6 +31,11 @@ from sunofriend._separation_python_import_closure import (
 )
 from sunofriend.interface_contract import DIRECT_TUI_COMMANDS, PUBLIC_COMMANDS
 from sunofriend.separation_contract import _canonical_json_bytes
+from sunofriend._separation_worker_ready_handshake import (
+    READY_PHASE,
+    READY_SCHEMA,
+    RELEASE_PROTOCOL,
+)
 
 
 @pytest.mark.parametrize(
@@ -37,12 +43,15 @@ from sunofriend.separation_contract import _canonical_json_bytes
         "bind_python_import_closure",
         "observe_outbound_attempts",
         "shared_headroom",
+        "bind_native_image_inventory",
     ),
     [
-        (False, False, False),
-        (True, False, False),
-        (True, True, False),
-        (True, True, True),
+        (False, False, False, False),
+        (True, False, False, False),
+        (True, True, False, False),
+        (True, True, True, False),
+        (True, True, False, True),
+        (True, True, True, True),
     ],
 )
 @pytest.mark.parametrize(
@@ -58,6 +67,7 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
     bind_python_import_closure: bool,
     observe_outbound_attempts: bool,
     shared_headroom: bool,
+    bind_native_image_inventory: bool,
     rights_authority: str,
 ) -> None:
     repository = tmp_path / "repository"
@@ -136,8 +146,36 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
         "_complete_runtime_process_image_binding",
         lambda **_: _runtime_process_image_binding(),
     )
+    prepared_native_images = object()
+    monkeypatch.setattr(
+        worker,
+        "_prepare_macos_worker_native_image_observation",
+        lambda: prepared_native_images,
+    )
+    monkeypatch.setattr(
+        worker,
+        "_worker_ready_child_arguments",
+        lambda prepared: (
+            (
+                "--native-image-ready-fd",
+                "17",
+                "--native-image-release-fd",
+                "18",
+            )
+            if prepared is prepared_native_images
+            else ()
+        ),
+    )
+    monkeypatch.setattr(
+        worker,
+        "_worker_ready_child_pass_fds",
+        lambda prepared: (17, 18) if prepared is prepared_native_images else (),
+    )
+    monkeypatch.setattr(worker, "_abort_worker_ready_handshake", lambda _: None)
 
-    def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+    def fake_run(
+        command: list[str], **kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
         assert command[command.index("-B") + 1] == "-"
         source_stream = kwargs["stdin"]
         assert source_stream.read() == worker_source_bytes
@@ -227,10 +265,7 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
             ),
         }
         raw = (
-            json.dumps(event)
-            + "\n"
-            + json.dumps({"count": 1, "finished": 1})
-            + "\n"
+            json.dumps(event) + "\n" + json.dumps({"count": 1, "finished": 1}) + "\n"
         ).encode()
         observation = network_observer._build_observation(
             raw_stdout=raw,
@@ -243,15 +278,39 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
                 "sha256": "1" * 64,
             },
         )
-        return completed, observation, {
-            "kernel_cdhash": "c" * 40,
-            "path_state": "matched_expected_process_image",
-        }
+        return (
+            completed,
+            observation,
+            {
+                "kernel_cdhash": "c" * 40,
+                "path_state": "matched_expected_process_image",
+            },
+        )
 
     monkeypatch.setattr(
         worker,
         "_run_with_macos_sandbox_network_and_process_image_observer",
         fake_observed_run,
+    )
+
+    def fake_ready_observed_run(
+        **kwargs: object,
+    ) -> tuple[object, object, object, object]:
+        assert kwargs["pass_fds"] == (17, 18)
+        completed, observation, image = fake_observed_run(**kwargs)
+        return completed, observation, image, object()
+
+    monkeypatch.setattr(
+        worker,
+        "_run_with_macos_sandbox_network_process_image_and_ready_observer",
+        fake_ready_observed_run,
+    )
+    monkeypatch.setattr(
+        worker,
+        "_complete_macos_worker_native_image_observation",
+        lambda **kwargs: _native_image_inventory(
+            kwargs["runtime_process_image"], kwargs["child"]
+        ),
     )
     evidence = worker._run_private_melroformer_authorised_worker(
         repository_root=repository,
@@ -264,6 +323,7 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
         staging_directory=tmp_path / "staging",
         bind_python_import_closure=bind_python_import_closure,
         observe_outbound_attempts=observe_outbound_attempts,
+        bind_native_image_inventory=bind_native_image_inventory,
     )
 
     assert evidence["status"] == "authorised_model_worker_complete_parent_verified"
@@ -271,7 +331,11 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
     assert evidence["conclusion"]["pcm24_quarantine_bound_to_model_worker"] is True
     assert evidence["quarantine"]["evidence_identical"] is True
     if shared_headroom:
-        assert evidence["schema"] == worker.RUNTIME_IMAGE_HEADROOM_WORKER_SCHEMA
+        assert evidence["schema"] == (
+            worker.NATIVE_IMAGE_HEADROOM_WORKER_SCHEMA
+            if bind_native_image_inventory
+            else worker.RUNTIME_IMAGE_HEADROOM_WORKER_SCHEMA
+        )
         assert evidence["quarantine"]["level_management"]["applied"] is True
     assert all(value is False for value in evidence["permissions"].values())
     assert "/Users/" not in repr(evidence)
@@ -280,22 +344,41 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
     )
     if observe_outbound_attempts:
         assert evidence["schema"] == (
-            worker.RUNTIME_IMAGE_HEADROOM_WORKER_SCHEMA
+            worker.NATIVE_IMAGE_HEADROOM_WORKER_SCHEMA
+            if shared_headroom and bind_native_image_inventory
+            else worker.NATIVE_IMAGE_WORKER_SCHEMA
+            if bind_native_image_inventory
+            else worker.RUNTIME_IMAGE_HEADROOM_WORKER_SCHEMA
             if shared_headroom
             else worker.RUNTIME_IMAGE_WORKER_SCHEMA
         )
-        assert evidence["network_observation"]["observation"][
-            "deliberate_canary_denial_count"
-        ] == 1
-        assert evidence["limitations"][
-            "arbitrary_model_attempt_stream_observed"
-        ] is True
+        assert (
+            evidence["network_observation"]["observation"][
+                "deliberate_canary_denial_count"
+            ]
+            == 1
+        )
+        assert (
+            evidence["limitations"]["arbitrary_model_attempt_stream_observed"] is True
+        )
         assert evidence["runtime_process_image"]["status"] == (
             "runtime_process_image_bound_to_exact_child_pid"
         )
-        assert evidence["conclusion"][
-            "runtime_process_image_bound_to_model_worker"
-        ] is True
+        assert (
+            evidence["conclusion"]["runtime_process_image_bound_to_model_worker"]
+            is True
+        )
+        if bind_native_image_inventory:
+            assert (
+                evidence["conclusion"]["post_inference_worker_ready_handshake_bound"]
+                is True
+            )
+            assert (
+                evidence["native_image_inventory"]["conclusion"][
+                    "bound_to_model_worker"
+                ]
+                is True
+            )
     elif bind_python_import_closure:
         assert evidence["schema"] == worker.IMPORT_CLOSURE_SCHEMA
         assert evidence["import_closure"] == verified_closure
@@ -303,19 +386,24 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
         assert evidence["schema"] == worker.SCHEMA
         assert "import_closure" not in evidence
     if observe_outbound_attempts:
-        assert evidence["artifacts"][
-            "worker_script_path_to_execution_toctou_closed"
-        ] is True
-        assert evidence["artifacts"][
-            "provider_runtime_path_to_execution_toctou_closed"
-        ] is False
-        assert evidence["artifacts"][
-            "runtime_process_code_identity_bound_to_exact_child_pid"
-        ] is True
+        assert (
+            evidence["artifacts"]["worker_script_path_to_execution_toctou_closed"]
+            is True
+        )
+        assert (
+            evidence["artifacts"]["provider_runtime_path_to_execution_toctou_closed"]
+            is False
+        )
+        assert (
+            evidence["artifacts"][
+                "runtime_process_code_identity_bound_to_exact_child_pid"
+            ]
+            is True
+        )
     else:
-        assert "worker_script_path_to_execution_toctou_closed" not in evidence[
-            "artifacts"
-        ]
+        assert (
+            "worker_script_path_to_execution_toctou_closed" not in evidence["artifacts"]
+        )
 
     resigned = plain(evidence)
     resigned["permissions"]["publication_permitted"] = True
@@ -348,6 +436,24 @@ def test_worker_import_identity_must_match_the_descriptor_source() -> None:
         worker._verify_worker_import_identity(closure, expected_identity=expected)
 
 
+def test_native_image_inventory_requires_complete_private_observation_boundary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(worker.platform, "system", lambda: "Darwin")
+
+    with pytest.raises(ValueError, match="requires the import closure"):
+        worker._run_private_melroformer_authorised_worker(
+            repository_root="unused",
+            runtime_path="unused",
+            source_root="unused",
+            checkpoint_path="unused",
+            companion_root="unused",
+            authorisation_report_path="unused",
+            expected_authorisation_report_sha256="a" * 64,
+            staging_directory="unused",
+            bind_native_image_inventory=True,
+        )
+
 
 def test_authorised_worker_has_no_public_route() -> None:
     assert "private-melroformer-authorised-worker" not in PUBLIC_COMMANDS
@@ -374,9 +480,7 @@ def test_authorised_worker_script_persists_exclusive_owner_only_observation(
     module._write_private_observation(observation, {"status": "fixture"})
 
     assert stat.S_IMODE(observation.stat().st_mode) == 0o600
-    assert json.loads(observation.read_text(encoding="utf-8")) == {
-        "status": "fixture"
-    }
+    assert json.loads(observation.read_text(encoding="utf-8")) == {"status": "fixture"}
     with pytest.raises(FileExistsError):
         module._write_private_observation(observation, {"status": "replaced"})
 
@@ -458,6 +562,100 @@ def _runtime_process_image_binding() -> dict[str, object]:
     return payload
 
 
+def _native_image_inventory(
+    runtime_binding: object,
+    child: dict[str, object],
+) -> dict[str, object]:
+    model = child["model"]
+    assert isinstance(model, dict)
+    authorisation = model["authorisation"]
+    bridge = model["bridge"]
+    inference = model["inference"]
+    assert isinstance(authorisation, dict)
+    assert isinstance(bridge, dict)
+    assert isinstance(inference, dict)
+    payload: dict[str, object] = {
+        "schema": worker_native_images.SCHEMA,
+        "policy_id": worker_native_images.POLICY_ID,
+        "status": "worker_ready_executable_region_inventory_parent_verified",
+        "platform": {"system": "Darwin", "machine": "arm64"},
+        "process_image_binding": runtime_binding,
+        "readiness": {
+            "schema": READY_SCHEMA,
+            "phase": READY_PHASE,
+            "candidate_id": bridge["candidate_id"],
+            "checkpoint_sha256": bridge["checkpoint"]["sha256"],
+            "authorised_audio_sha256": authorisation["audio_sha256"],
+            "source_frames": inference["geometry"]["frames"],
+            "vocal_float32_sha256": inference["outputs"]["vocals"]["sha256"],
+            "instrumental_float32_sha256": inference["outputs"]["instrumental"][
+                "sha256"
+            ],
+            "release_protocol": RELEASE_PROTOCOL,
+        },
+        "inventory": {
+            "source": "libproc-proc-pidregionpathinfo",
+            "snapshot_count": 2,
+            "stable_consecutive_snapshots": True,
+            "executable_region_count": 1,
+            "file_backed_executable_region_count": 1,
+            "unpathed_executable_region_count": 0,
+            "mapped_file_count": 1,
+            "artifacts": [
+                {
+                    "artifact_index": 1,
+                    "bytes": 102,
+                    "sha256": "c" * 64,
+                    "executable_region_count": 1,
+                    "executable_region_bytes": 4_096,
+                    "static_code_status": "strictly_valid",
+                    "static_cdhash": "c" * 40,
+                    "matches_process_image": True,
+                }
+            ],
+            "artifacts_unchanged_after_child": True,
+            "paths_retained": False,
+        },
+        "conclusion": {
+            "exact_child_pid_observed": True,
+            "parent_owned_inventory": True,
+            "post_inference_worker_ready_handshake_bound": True,
+            "stable_file_backed_executable_regions_bound": True,
+            "main_process_image_present_once": True,
+            "bound_to_model_worker": True,
+            "separator_enabled": False,
+        },
+        "permissions": {
+            "automatic_selection_permitted": False,
+            "source_graph_activation_permitted": False,
+            "simple_mode_available": False,
+            "studio_import_available": False,
+            "product_route_permitted": False,
+            "publication_permitted": False,
+        },
+        "effects": {
+            "worker_observed": True,
+            "worker_released_after_inventory": True,
+            "source_graph_changed": False,
+            "selection_changed": False,
+            "product_route_changed": False,
+        },
+        "limitations": {
+            "private_development_observation_only": True,
+            "dyld_shared_cache_constituents_enumerated": False,
+            "transient_loads_before_or_after_snapshots_excluded": False,
+            "mapped_memory_bytes_equal_reopened_file_bytes_proven": False,
+            "dynamic_native_library_closure_bound": False,
+            "post_observation_image_mutability_excluded": False,
+            "wider_supervisor_signal_boundary_complete": False,
+        },
+    }
+    payload["evidence_sha256"] = hashlib.sha256(
+        _canonical_json_bytes(payload)
+    ).hexdigest()
+    return payload
+
+
 def _verified_import_closure(root: Path) -> object:
     root.mkdir()
     root_ids = (
@@ -481,8 +679,6 @@ def _verified_import_closure(root: Path) -> object:
     built_in = types.ModuleType("fixture_builtin")
     built_in.__spec__ = SimpleNamespace(origin="built-in")
     modules = {"fixture.file": file_module, "fixture_builtin": built_in}
-    claim = _capture_python_import_closure_claim(
-        roots=checked_roots, modules=modules
-    )
+    claim = _capture_python_import_closure_claim(roots=checked_roots, modules=modules)
     stable = _mark_python_import_closure_stable(claim, modules=modules)
     return _verify_python_import_closure_claim(stable, roots=checked_roots)

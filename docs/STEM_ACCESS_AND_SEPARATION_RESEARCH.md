@@ -1108,7 +1108,7 @@ commercially redistributable.
 | --- | --- | --- | --- | --- |
 | [Demucs / HTDemucs](https://github.com/facebookresearch/demucs) | Stable four-source vocabulary: drums, bass, vocals, other. Experimental `htdemucs_6s` adds guitar and piano, but the official README warns that piano has substantial bleed. | Original project supports MPS but is no longer actively maintained. [Demucs-MLX](https://github.com/ssmall256/demucs-mlx) and [demucs-infer](https://github.com/openmirlab/demucs-infer) are possible adapters to test. Demucs-MLX's first-use download behaviour must be disabled or preinstalled and then verified offline. | Code is MIT; checkpoint terms and hashes still require an explicit registry entry. | Unverified broad-baseline candidate. |
 | [BS-RoFormer architecture](https://arxiv.org/abs/2309.02612) | Strong four-stem research result, particularly relevant to the bass problem. | The exact [ZFTurbo `v1.0.12` MUSDB18HQ release](https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.12) is now the registered private challenger; it remains uninstalled and unrunnable. An exact tracked 1 August 2026 release/tag/licence snapshot has a no-network verifier. | The repository code is MIT, but the release provides no checkpoint-specific terms or published checkpoint SHA-256. The checkpoint asset `digest` remains null. Sunofriend does not project the code licence onto the weights. | Exact fail-closed candidate, especially for bass and composite `other`; not an available separator. |
-| [MelBand-RoFormer architecture](https://arxiv.org/abs/2310.01809) | Competitive role-specific models could complement a broad separator. The exact Kim Vocal 2 candidate produces vocals; instrumental is mixture minus vocals. | The [MLX conversion](https://huggingface.co/mlx-community/mel-roformer-kim-vocal-2-mlx) is pinned at revision `64cbfcb…` with a 456,483,463-byte Safetensors SHA-256. Its exact minimal MLX source/runtime is audited. Eight-second model chunks and a 15-second overlapped private route measured about 2.42 GB peak on the development Mac. Fast GPU and repeatable CPU modes are distinguished explicitly. All 708 BF16 tensors match their source conversion. On one authorised eight-second music window, BF16-rounded PyTorch versus BF16 MLX reached 117.70 dB SDR, while original FP32 versus BF16 MLX reached 29.14 dB. In the sealed equal-level review, the user heard the original-FP32 and published-BF16 vocal outputs as equivalent. | The [original owner repository](https://huggingface.co/KimberleyJSN/melbandroformer) changed the exact checkpoint metadata from GPL-3.0 to MIT in verified commit `ac9b061…`; the conversion licence names the original weights. Two independent LFS records reproduce the source hash. | Exact, licence-audited **vocal-only** private challenger. The converted runtime is faithful to identical BF16 weights and the one-window review does not justify a doubled FP32 artifact. Kim-versus-control MIDI reviews resolved equivalent and neither. A corrected later review preferred the lowest-register hypothesis over the primary contour for the male lead, but one excerpt does not establish singer identity or a default. A third authorised excerpt produced zero broad-vocal notes from HTDemucs, Moises and Kim. Separate Moises vocal leaves recovered 25 backing-adapter notes and 15 lead-adapter notes, showing a broad-group loss. Two disjoint leaf repeats retained non-empty broad MIDI and did not establish a universal leaf or register rule. The worker-script descriptor and actual signed Python process image are now bound to one exact authorised worker run, but full executable-byte/native-library closure and all public routes remain blocked. |
+| [MelBand-RoFormer architecture](https://arxiv.org/abs/2310.01809) | Competitive role-specific models could complement a broad separator. The exact Kim Vocal 2 candidate produces vocals; instrumental is mixture minus vocals. | The [MLX conversion](https://huggingface.co/mlx-community/mel-roformer-kim-vocal-2-mlx) is pinned at revision `64cbfcb…` with a 456,483,463-byte Safetensors SHA-256. Its exact minimal MLX source/runtime is audited. Eight-second model chunks and a 15-second overlapped private route measured about 2.42 GB peak on the development Mac. Fast GPU and repeatable CPU modes are distinguished explicitly. All 708 BF16 tensors match their source conversion. On one authorised eight-second music window, BF16-rounded PyTorch versus BF16 MLX reached 117.70 dB SDR, while original FP32 versus BF16 MLX reached 29.14 dB. In the sealed equal-level review, the user heard the original-FP32 and published-BF16 vocal outputs as equivalent. | The [original owner repository](https://huggingface.co/KimberleyJSN/melbandroformer) changed the exact checkpoint metadata from GPL-3.0 to MIT in verified commit `ac9b061…`; the conversion licence names the original weights. Two independent LFS records reproduce the source hash. | Exact, licence-audited **vocal-only** private challenger. The converted runtime is faithful to identical BF16 weights and the one-window review does not justify a doubled FP32 artifact. Kim-versus-control MIDI reviews resolved equivalent and neither. A corrected later review preferred the lowest-register hypothesis over the primary contour for the male lead, but one excerpt does not establish singer identity or a default. A third authorised excerpt produced zero broad-vocal notes from HTDemucs, Moises and Kim. Separate Moises vocal leaves recovered 25 backing-adapter notes and 15 lead-adapter notes, showing a broad-group loss. Two disjoint leaf repeats retained non-empty broad MIDI and did not establish a universal leaf or register rule. The worker script, signed Python process image and a repeatable 33-file post-inference executable-region inventory are now bound to exact authorised worker runs. The two GPU float-output hashes differed, and full executable-byte/native-library closure and all public routes remain blocked. |
 | [SCNet](https://github.com/starrytong/SCNet) | Official sparse-compression four-stem model with released MUSDB checkpoint. | PyTorch path; Apple runtime and memory need measurement. | Official code is MIT; record the release asset terms/hash separately. | Useful independent architecture in the bake-off. |
 | [Spleeter](https://github.com/deezer/spleeter) | Two, four and five source configurations; five-source adds piano. | Older TensorFlow stack has known Apple-silicon friction. | MIT code, last formal release in 2021. | Historical speed/reproducibility control only. |
 | [Open-Unmix](https://github.com/sigsep/open-unmix-pytorch) | Established four-stem reference implementation. | Generic PyTorch CPU/GPU rather than a first-class current Mac route. | MIT code; default UMXL weights are CC BY-NC-SA 4.0. | Non-commercial reference baseline, not public default. |
@@ -1878,10 +1878,13 @@ HTDemucs runner and one copyright-safe synthetic ground-truth evaluation are
 implemented. Three authorised cross-song excerpt/MIDI repeats, inactive
 leaf-level `other` comparisons and one separate-vocal-leaf MIDI diagnostic are
 complete. One exact authorised Kim Vocal 2 worker now also binds its signed
-runtime process image to the observed child PID. A separate deterministic
-model-free canary now inventories stable file-backed executable mappings from
-an exact child, but it is not attached to the model worker and does not cover
-dyld shared-cache constituents or mapped-memory byte identity. Full
+runtime process image to the observed child PID. A deterministic model-free
+canary inventories stable file-backed executable mappings from an exact child.
+The same primitive is now separately attached through a bounded post-inference
+worker-ready handshake: two fresh authorised runs repeated the same 33-file
+inventory, while their GPU float-output hashes differed. The evidence does not
+cover dyld shared-cache constituents, transient loads or mapped-memory byte
+identity. Full
 native-image closure, an independent local backend, human acceptance, public
 separator transport, source-lineage import and promotion are not implemented**
 
@@ -2004,11 +2007,15 @@ separator transport, source-lineage import and promotion are not implemented**
   provider remained on the read-only system filesystem, and provider,
   launcher and image full-file hashes were rechecked after exit. This does not
   bind dynamic native-library closure or claim full byte-for-byte execution
-  identity. A later model-free `libproc` canary proved a stable two-snapshot
+  identity. A model-free `libproc` canary first proved a stable two-snapshot
   inventory of 13 file-backed executable mappings, with all 13 files rehashed
-  unchanged after exit and 12 strict signatures, but it remains disjoint from
-  the model worker, omits dyld shared-cache constituents and cannot prove
-  mapped-memory bytes. The outer-supervisor/signal-state boundary also remains
+  unchanged after exit and 12 strict signatures. A later bounded pipe
+  handshake attached that parent observation point after inference and before
+  quarantine in two exact authorised Kim runs. Both retained an identical
+  33-file inventory, with 32 strict signatures and no unpathed executable
+  region, but the GPU float-output hashes differed. The evidence still omits
+  dyld shared-cache constituents, cannot exclude all transient loads or prove
+  mapped-memory bytes, and leaves the outer-supervisor/signal-state boundary
   open, so this gate is not complete.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with the
   deterministic fake worker, exact pre-exec remeasurement, validated worker
@@ -2024,6 +2031,12 @@ separator transport, source-lineage import and promotion are not implemented**
   final count. It saw the one deliberate port-9 canary and zero other worker
   denials. Raw records, destinations and PID were discarded. This is denial
   evidence, not packet capture; path-to-execution TOCTOU remains open.
+- [x] Bind a parent-owned native executable-region inventory to the exact
+  post-inference Kim worker without using a guessed delay. Two fresh
+  authorised runs repeated the same path-free 33-file inventory through the
+  bounded ready/release handshake. Keep dynamic closure false because dyld
+  shared-cache constituents, transient loads and mapped-memory bytes remain
+  unproved; keep conversion parity false because GPU float hashes differed.
 - [ ] Generalise the first immutable synthetic broad candidate, residual and
   quality report into a cross-song, multi-backend bake-off corpus.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.

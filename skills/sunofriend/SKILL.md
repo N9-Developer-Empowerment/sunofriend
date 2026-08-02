@@ -404,11 +404,18 @@ report the result, then move on.
   model-free `libproc` canary now obtains two stable parent-owned snapshots of
   13 file-backed executable mappings and rehashes all 13 files unchanged after
   child exit; 12 pass strict code-signature validation. That deterministic
-  canary is not attached to the model worker, does not enumerate individual
-  dyld shared-cache constituents and cannot prove mapped-memory byte identity.
-  Native non-module closure, transient loads, post-observation image mutability
-  and the wider supervisor/signal boundary remain explicit; no separator route
-  is enabled. The
+  canary itself remains model-free. A separate opt-in worker layer now uses two
+  explicitly inherited, bounded pipes to pause the exact Kim worker after
+  inference and before PCM24 quarantine while the parent takes the same native
+  inventory, then releases it. Two fresh authorised `Be Alone` runs each
+  observed the same 33 file-backed executable regions, no unpathed executable
+  region and one exact main process image; all files were unchanged after exit
+  and 32 passed strict static-code validation. Their GPU float-output hashes
+  differed, so conversion repeatability is not claimed. The observation does
+  not enumerate individual dyld shared-cache constituents, exclude all
+  transient loads or prove mapped-memory byte identity. Native non-module
+  closure, post-observation image mutability and the wider supervisor/signal
+  boundary remain explicit; no separator route is enabled. The
   checkpoint is not redistributed. Do not offer or run this challenger
   through the skill.
 - `source-import` decodes exactly one local asset.

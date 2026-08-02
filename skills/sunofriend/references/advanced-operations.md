@@ -1572,12 +1572,17 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   denied outbound canary, zero other worker denials and one-LSB PCM24 additive
   closure. A separate model-free `libproc` canary now repeats byte-identically
   with two stable parent-owned snapshots of 13 file-backed executable mappings,
-  all 13 files unchanged after exit and 12 strict signatures. It is not bound
-  to the model worker, does not enumerate dyld shared-cache constituents and
-  does not prove mapped-memory bytes. Neither observation is full-file
-  execution proof, dynamic-native-library closure, a packet monitor or a
-  complete native-loader audit; the commands remain invoked by pathname and no
-  product route is enabled.
+  all 13 files unchanged after exit and 12 strict signatures. A separate
+  private v8 worker layer now pauses the exact Kim worker after inference and
+  before quarantine through explicit bounded ready/release pipes, allowing the
+  parent to attach the inventory without a guessed delay. Two fresh authorised
+  runs repeated the same 33-file inventory with no unpathed executable region
+  and 32 strict signatures; their GPU float-output hashes differed, so bitwise
+  conversion parity remains false. The evidence does not enumerate dyld
+  shared-cache constituents, exclude all transient loads or prove mapped-memory
+  bytes. None of these observations is full-file execution proof, dynamic-
+  native-library closure, a packet monitor or a complete native-loader audit;
+  the commands remain invoked by pathname and no product route is enabled.
 - Both Kim-Vocal-2-versus-Moises MIDI reviews are complete. `Be Alone`
   resolved to `equivalent`; `I am a Alien mashup` resolved to `neither` because
   both candidates followed the female backing vocal rather than the male lead

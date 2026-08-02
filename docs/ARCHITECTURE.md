@@ -924,13 +924,24 @@ user-exported complete review. The developer script is
 `scripts/private-melroformer-precision-review.py`. None of these files is a
 public CLI, TUI, source-graph or separator route.
 
-The latest authorised Kim Vocal 2 worker closes only its script-path race. The
-parent opens and hash-verifies one bounded non-following descriptor, rewinds
-that same file description and supplies it as Python's standard-input script;
-the import closure requires `__main__` to resolve to the identical worker
-bytes. The `sandbox-exec` provider and Python virtual-environment runtime are
-still pathname-launched. This is private execution evidence, not a product
-separator or permission to expose the checkpoint.
+The authorised Kim Vocal 2 worker closes its script-path race. The parent opens
+and hash-verifies one bounded non-following descriptor, rewinds that same file
+description and supplies it as Python's standard-input script; the import
+closure requires `__main__` to resolve to the identical worker bytes. The
+parent also binds the final signed Python process image to the exact child PID.
+An optional later evidence layer uses two explicitly inherited, bounded pipes:
+after inference and before PCM24 quarantine, the child publishes a path-free
+readiness claim and blocks; the parent takes two stable `libproc` executable-
+region snapshots, hashes every reported mapped file, then releases the child
+and rehashes the files after exit. Two fresh authorised runs produced the same
+33-file path-free inventory, but their GPU float-output hashes differed.
+
+This does not establish bitwise conversion parity, individual dyld shared-
+cache constituents, transient-load exclusion, mapped-memory byte identity or
+the wider supervisor/signal boundary. The `sandbox-exec` provider and Python
+virtual-environment runtime remain pathname-launched. All of this is private
+execution evidence, not a product separator or permission to expose the
+checkpoint.
 
 Simple mode branches exact production-summary primaries into individual MIDI,
 a combined General MIDI proxy, the existing balanced MIDI-derived WAV and a

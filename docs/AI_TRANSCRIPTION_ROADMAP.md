@@ -1697,6 +1697,59 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — worker-ready native images bound to two authorised runs
+
+- Goal: attach the parent-owned native executable-region inventory to the
+  exact live Kim Vocal 2 worker after model inference, without sampling an
+  early partial load set or enabling any separator route.
+- Change or experiment: added two explicit non-inheritable pipe pairs whose
+  child ends alone are passed through `sandbox-exec`. The worker emits one
+  bounded, path-free readiness claim after inference and before PCM24
+  quarantine, then blocks for the parent's exact release. The parent binds the
+  existing signed process-image observation, takes two stable `libproc`
+  executable-region snapshots, hashes and signature-checks every reported
+  file, releases the worker, and rehashes the files after clean exit. Additive
+  v8/v9 validators preserve historical worker evidence v1-v7 unchanged.
+- Inputs: the unchanged authorised `Be Alone` 191-206 second PCM24 excerpt,
+  exact Kim Vocal 2 source revision `41092c02...`, 456,483,463-byte BF16
+  checkpoint and its pinned config/licence companions. The missing private
+  cache was re-materialised outside the repository with owner-only permissions
+  and every pinned hash was reverified before use.
+- Model/runtime/checkpoint: both fresh observations used GPU mode and checkpoint
+  SHA-256 `312c38e5...7fe5`. Readiness bound the candidate, checkpoint, authorised
+  audio, 661,500 source frames and both in-memory float-output hashes before
+  the parent allowed quarantine writing.
+- Evidence and metrics: both runs observed exactly 33 file-backed executable
+  regions across 33 files, no unpathed executable region and one exact main
+  process image. Their path-free inventory payloads were identical, with
+  canonical SHA-256 `26132d6c...75d`; every file was unchanged after its child
+  exited. Thirty-two files passed strict static-code validation and one was
+  retained explicitly as not strictly valid. The first 117,143-byte owner-only
+  observation has evidence self-hash `6b468be1...9ba` and file SHA-256
+  `8d19702a...3d6`; the 117,144-byte repeat has evidence self-hash
+  `2a5d05b4...e35` and file SHA-256 `8312560d...b5a`. Forty-seven focused
+  handshake, native-image,
+  process-image, network-observer and worker-validator tests pass. The complete
+  standard non-trusted-local suite passes 2,777 tests, with one platform skip,
+  eight explicitly deselected trusted-local tests and the one pre-existing
+  dependency deprecation warning.
+- Listening result: not repeated. This increment changes provenance evidence,
+  not candidate audio or MIDI evaluation.
+- Decision: retain the post-inference/pre-quarantine handshake and repeatable
+  file-backed inventory as private evidence. Product, publication, automatic
+  selection, source-graph, Simple and Studio permissions remain false.
+- Problems/risks: the two GPU runs produced different float-output hashes, so
+  bitwise conversion repeatability is not claimed. The inventory does not
+  enumerate individual dyld shared-cache constituents, exclude transient loads
+  outside the snapshots, prove reopened file bytes equal mapped memory, prevent
+  post-observation mutation, or close the wider supervisor/signal boundary.
+  Dynamic native-library closure and independent conversion parity remain
+  false.
+- Next smallest step: make the outer supervisor and child signal/termination
+  states independently observable, then decide whether a CPU repeat or a
+  bounded numeric GPU-difference measurement is the smaller useful parity
+  experiment. Keep every separator route disabled.
+
 ### 2026-08-02 — stable native executable-region inventory canary
 
 - Goal: make the first parent-owned observation of native executable mappings

@@ -27,6 +27,7 @@ def main() -> int:
     parser.add_argument("--device", choices=("gpu", "cpu"), default="gpu")
     parser.add_argument("--bind-python-import-closure", action="store_true")
     parser.add_argument("--observe-outbound-attempts", action="store_true")
+    parser.add_argument("--bind-native-image-inventory", action="store_true")
     args = parser.parse_args()
     evidence = _run_private_melroformer_authorised_worker(
         repository_root=args.repository_root,
@@ -40,6 +41,7 @@ def main() -> int:
         device=args.device,
         bind_python_import_closure=args.bind_python_import_closure,
         observe_outbound_attempts=args.observe_outbound_attempts,
+        bind_native_image_inventory=args.bind_native_image_inventory,
     )
     document = plain(evidence)
     _write_private_observation(

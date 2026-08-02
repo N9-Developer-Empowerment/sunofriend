@@ -152,6 +152,46 @@ between snapshots are not excluded, and reopening a mapped file does not prove
 that its current bytes are the bytes mapped in memory. It is not attached to
 the model worker and enables no separator.
 
+The same inventory primitive is now attached separately to the exact
+authorised Kim Vocal 2 worker. This is an opt-in private-development mode, not
+the model-free command above and not a public separator. The worker sends one
+path-free readiness record through an explicitly inherited pipe only after
+inference and before writing its PCM24 quarantine. It then blocks until the
+parent has bound the signed process image, taken two stable executable-region
+snapshots and sent the exact release record through a second pipe. Both waits
+are bounded; failure closes the pipes and kills/reaps the child without
+claiming completed evidence.
+
+The private command requires all earlier evidence layers explicitly:
+
+```bash
+PYTHONPATH=src .venv-ai/bin/python \
+  scripts/private-melroformer-authorised-worker.py \
+  --repository-root "$PWD" \
+  --runtime .venv-ai/bin/python \
+  --source-root /owner-only/exact-kim-source \
+  --checkpoint /owner-only/model.safetensors \
+  --companion-root /owner-only/checkpoint-directory \
+  --authorised-excerpt /owner-only/authorised-separation-excerpt.json \
+  --authorisation-report-sha256 EXPECTED_SHA256 \
+  --staging-directory /fresh/owner-only/staging \
+  --device gpu \
+  --bind-python-import-closure \
+  --observe-outbound-attempts \
+  --bind-native-image-inventory
+```
+
+Two fresh `Be Alone` observations each found 33 executable file-backed regions
+across 33 files, no unpathed executable region, and the exact main process
+image once. The path-free inventories were identical between runs; all files
+were unchanged after their child exited, 32 passed strict static-code
+validation and one was explicitly retained as not strictly valid. The two GPU
+float-output hashes differed, so bitwise conversion repeatability is not
+claimed. This still does not enumerate dyld shared-cache constituents, exclude
+all transient loads, prove mapped bytes equal reopened files, close the wider
+supervisor/signal boundary or enable any source-graph, automatic-selection,
+Simple, Studio, product or publication route.
+
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \
   --fixture-out work/separation-bakeoff/demo-fixture-v2 \

@@ -39,13 +39,9 @@ def test_observation_retains_counts_not_pid_destination_or_raw_message() -> None
     raw = _stream(
         [
             _event(
-                f"Sandbox: Python({target_pid}) deny(1) "
-                "network-outbound remote:*:9"
+                f"Sandbox: Python({target_pid}) deny(1) network-outbound remote:*:9"
             ),
-            _event(
-                f"Sandbox: Python({target_pid}) deny(1) "
-                "network-bind local:*:0"
-            ),
+            _event(f"Sandbox: Python({target_pid}) deny(1) network-bind local:*:0"),
             _event("Sandbox: unrelated(9988) deny(1) network-outbound remote:*:80"),
         ]
     )
@@ -79,7 +75,9 @@ def test_observation_retains_counts_not_pid_destination_or_raw_message() -> None
         (_stream([_event("not a sandbox denial")]), "denial message differs"),
         (
             (
-                json.dumps(_event("Sandbox: Python(123) deny(1) network-outbound remote:*:9"))
+                json.dumps(
+                    _event("Sandbox: Python(123) deny(1) network-outbound remote:*:9")
+                )
                 + "\n"
                 + json.dumps({"count": 2, "finished": 1})
                 + "\n"
@@ -102,9 +100,7 @@ def test_observation_fails_closed_on_malformed_or_incomplete_stream(
 
 
 def test_observation_validator_rejects_permission_drift() -> None:
-    raw = _stream(
-        [_event("Sandbox: Python(123) deny(1) network-outbound remote:*:9")]
-    )
+    raw = _stream([_event("Sandbox: Python(123) deny(1) network-outbound remote:*:9")])
     evidence = observer._build_observation(
         raw_stdout=raw,
         stdout_bytes=len(raw),
@@ -179,6 +175,67 @@ def test_combined_observer_binds_process_image_before_waiting_for_child(
     assert completed.stderr == ""
     assert network == {"network": "bound"}
     assert process_image == {"kernel_cdhash": "c" * 40}
+
+
+def test_ready_observer_runs_after_process_image_with_exact_passed_fds(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    order: list[str] = []
+    popen_kwargs: dict[str, object] = {}
+
+    class _Target:
+        pid = 321
+        returncode = 0
+
+        def communicate(self, timeout: float | None = None) -> tuple[str, str]:
+            assert timeout == 10.0
+            order.append("communicate")
+            return "complete", ""
+
+        def poll(self) -> int:
+            return 0
+
+        def kill(self) -> None:
+            raise AssertionError("completed target must not be killed")
+
+    def popen(*_args: object, **kwargs: object) -> _Target:
+        popen_kwargs.update(kwargs)
+        return _Target()
+
+    monkeypatch.setattr(observer, "_start_observer", object)
+    monkeypatch.setattr(observer.subprocess, "Popen", popen)
+    monkeypatch.setattr(
+        observer,
+        "_finish_observer",
+        lambda *_args, **_kwargs: {"network": "bound"},
+    )
+    monkeypatch.setattr(
+        observer,
+        "_observe_prepared_runtime_process_image",
+        lambda *_args, **_kwargs: (
+            order.append("process-image") or {"kernel_cdhash": "c" * 40}
+        ),
+    )
+
+    completed, network, image, ready = (
+        observer._run_with_macos_sandbox_network_process_image_and_ready_observer(
+            command=["worker"],
+            cwd=tmp_path,
+            environment={"LC_ALL": "C"},
+            timeout_seconds=10.0,
+            process_image_binding=object(),  # type: ignore[arg-type]
+            ready_observer=lambda pid: order.append(f"ready-{pid}") or {"ready": True},
+            pass_fds=(17, 18),
+        )
+    )
+
+    assert completed.returncode == 0
+    assert network == {"network": "bound"}
+    assert image == {"kernel_cdhash": "c" * 40}
+    assert ready == {"ready": True}
+    assert order == ["process-image", "ready-321", "communicate"]
+    assert popen_kwargs["close_fds"] is True
+    assert popen_kwargs["pass_fds"] == (17, 18)
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="macOS-only observer")

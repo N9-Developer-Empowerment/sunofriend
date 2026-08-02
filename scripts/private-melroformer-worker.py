@@ -31,6 +31,12 @@ from sunofriend._separation_python_import_closure import (
     _mark_python_import_closure_stable,
     _melroformer_python_import_roots,
 )
+from sunofriend._separation_worker_ready_handshake import (
+    READY_PHASE,
+    READY_SCHEMA,
+    RELEASE_PROTOCOL,
+    _worker_wait_for_native_image_inventory,
+)
 
 
 def main() -> int:
@@ -47,6 +53,8 @@ def main() -> int:
     parser.add_argument("--device", choices=("gpu", "cpu"), default="gpu")
     parser.add_argument("--bind-python-import-closure", action="store_true")
     parser.add_argument("--repository-root", type=Path)
+    parser.add_argument("--native-image-ready-fd", type=int)
+    parser.add_argument("--native-image-release-fd", type=int)
     args = parser.parse_args()
 
     real_values = (
@@ -71,6 +79,18 @@ def main() -> int:
         )
     if not args.bind_python_import_closure and args.repository_root is not None:
         parser.error("--repository-root requires --bind-python-import-closure")
+    native_image_descriptors = (
+        args.native_image_ready_fd,
+        args.native_image_release_fd,
+    )
+    if (native_image_descriptors[0] is None) != (native_image_descriptors[1] is None):
+        parser.error("native-image readiness requires both pipe descriptors")
+    if native_image_descriptors[0] is not None and (
+        args.synthetic_canary or not args.bind_python_import_closure
+    ):
+        parser.error(
+            "native-image readiness requires an authorised import-closure worker"
+        )
 
     network = _network_canary()
     fork = _fork_canary()
@@ -107,6 +127,26 @@ def main() -> int:
             "bridge": plain(handle.evidence),
             "inference": plain(observation.evidence),
         }
+        if args.native_image_ready_fd is not None:
+            _worker_wait_for_native_image_inventory(
+                ready_fd=args.native_image_ready_fd,
+                release_fd=args.native_image_release_fd,
+                claim={
+                    "schema": READY_SCHEMA,
+                    "phase": READY_PHASE,
+                    "candidate_id": handle.evidence["candidate_id"],
+                    "checkpoint_sha256": handle.evidence["checkpoint"]["sha256"],
+                    "authorised_audio_sha256": authorisation["audio_sha256"],
+                    "source_frames": observation.evidence["geometry"]["frames"],
+                    "vocal_float32_sha256": observation.evidence["outputs"]["vocals"][
+                        "sha256"
+                    ],
+                    "instrumental_float32_sha256": observation.evidence["outputs"][
+                        "instrumental"
+                    ]["sha256"],
+                    "release_protocol": RELEASE_PROTOCOL,
+                },
+            )
     quarantine = _materialize_private_melroformer_pcm24_quarantine(
         destination=args.destination,
         source=source,

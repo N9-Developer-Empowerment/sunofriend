@@ -20,7 +20,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 from ._separation_macos_process_image import (
     _PreparedRuntimeProcessImageBinding,
@@ -33,9 +33,7 @@ from .separation_contract import _canonical_json_bytes, _freeze_json
 SCHEMA = "sunofriend.private-macos-sandbox-network-observation.v1"
 POLICY_ID = "private-macos-kernel-sandbox-network-denial-observer-v1"
 LOG_PATH = Path("/usr/bin/log")
-SENDER_IMAGE_PATH = (
-    "/System/Library/Extensions/Sandbox.kext/Contents/MacOS/Sandbox"
-)
+SENDER_IMAGE_PATH = "/System/Library/Extensions/Sandbox.kext/Contents/MacOS/Sandbox"
 PREDICATE = (
     'process == "kernel" AND senderImagePath == '
     f'"{SENDER_IMAGE_PATH}" AND eventMessage CONTAINS " network-"'
@@ -99,6 +97,8 @@ def _run_with_macos_sandbox_network_observer(
         expected_canary_port=expected_canary_port,
         stdin=stdin,
         process_image_binding=None,
+        pass_fds=(),
+        after_process_image_observed=None,
     )
     if process_image is not None:
         raise RuntimeError("unexpected macOS runtime process-image observation")
@@ -114,9 +114,7 @@ def _run_with_macos_sandbox_network_and_process_image_observer(
     process_image_binding: _PreparedRuntimeProcessImageBinding,
     expected_canary_port: int = 9,
     stdin: Any = subprocess.DEVNULL,
-) -> tuple[
-    subprocess.CompletedProcess[str], Mapping[str, Any], Mapping[str, Any]
-]:
+) -> tuple[subprocess.CompletedProcess[str], Mapping[str, Any], Mapping[str, Any]]:
     """Run one child and bind both denial stream and final process image."""
 
     completed, observation, process_image = _run_observed_child(
@@ -127,10 +125,52 @@ def _run_with_macos_sandbox_network_and_process_image_observer(
         expected_canary_port=expected_canary_port,
         stdin=stdin,
         process_image_binding=process_image_binding,
+        pass_fds=(),
+        after_process_image_observed=None,
     )
     if process_image is None:
         raise RuntimeError("macOS runtime process-image observation is absent")
     return completed, observation, process_image
+
+
+def _run_with_macos_sandbox_network_process_image_and_ready_observer(
+    *,
+    command: Sequence[str],
+    cwd: Path,
+    environment: Mapping[str, str],
+    timeout_seconds: float,
+    process_image_binding: _PreparedRuntimeProcessImageBinding,
+    ready_observer: Callable[[int], Any],
+    pass_fds: Sequence[int],
+    expected_canary_port: int = 9,
+    stdin: Any = subprocess.DEVNULL,
+) -> tuple[
+    subprocess.CompletedProcess[str],
+    Mapping[str, Any],
+    Mapping[str, Any],
+    Any,
+]:
+    """Run one child with an explicit parent observation at worker readiness."""
+
+    captured: dict[str, Any] = {}
+
+    def observe(pid: int) -> None:
+        captured["worker_ready"] = ready_observer(pid)
+
+    completed, observation, process_image = _run_observed_child(
+        command=command,
+        cwd=cwd,
+        environment=environment,
+        timeout_seconds=timeout_seconds,
+        expected_canary_port=expected_canary_port,
+        stdin=stdin,
+        process_image_binding=process_image_binding,
+        pass_fds=pass_fds,
+        after_process_image_observed=observe,
+    )
+    if process_image is None or "worker_ready" not in captured:
+        raise RuntimeError("macOS worker-ready observation is absent")
+    return completed, observation, process_image, captured["worker_ready"]
 
 
 def _run_observed_child(
@@ -142,6 +182,8 @@ def _run_observed_child(
     expected_canary_port: int,
     stdin: Any,
     process_image_binding: _PreparedRuntimeProcessImageBinding | None,
+    pass_fds: Sequence[int],
+    after_process_image_observed: Callable[[int], None] | None,
 ) -> tuple[
     subprocess.CompletedProcess[str],
     Mapping[str, Any],
@@ -160,12 +202,16 @@ def _run_observed_child(
             text=True,
             cwd=cwd,
             env=dict(environment),
+            close_fds=True,
+            pass_fds=tuple(pass_fds),
         )
         if process_image_binding is not None:
             process_image = _observe_prepared_runtime_process_image(
                 target.pid,
                 prepared=process_image_binding,
             )
+        if after_process_image_observed is not None:
+            after_process_image_observed(target.pid)
         try:
             stdout, stderr = target.communicate(timeout=timeout_seconds)
         except subprocess.TimeoutExpired:
@@ -280,8 +326,7 @@ def _finish_observer(
         raise RuntimeError("macOS Sandbox observer emitted unexpected stderr")
     identity_after = _regular_file_identity(LOG_PATH)
     if any(
-        state.identity_before[key] != identity_after[key]
-        for key in ("bytes", "sha256")
+        state.identity_before[key] != identity_after[key] for key in ("bytes", "sha256")
     ):
         raise RuntimeError("macOS Sandbox observer executable changed")
     return _build_observation(
@@ -338,7 +383,9 @@ def _build_observation(
         try:
             item = json.loads(line)
         except json.JSONDecodeError as error:
-            raise RuntimeError("macOS Sandbox observer emitted malformed JSON") from error
+            raise RuntimeError(
+                "macOS Sandbox observer emitted malformed JSON"
+            ) from error
         if not isinstance(item, dict):
             raise RuntimeError("macOS Sandbox observer record was not an object")
         if set(item) == {"count", "finished"}:
@@ -446,15 +493,15 @@ def _validate_macos_sandbox_network_observation(
 ) -> Mapping[str, Any]:
     value = _plain(document)
     digest = value.pop("evidence_sha256", None) if isinstance(value, dict) else None
-    if not _is_sha(digest) or digest != hashlib.sha256(
-        _canonical_json_bytes(value)
-    ).hexdigest():
+    if (
+        not _is_sha(digest)
+        or digest != hashlib.sha256(_canonical_json_bytes(value)).hexdigest()
+    ):
         raise ValueError("macOS Sandbox network observation self-hash differs")
     if (
         value.get("schema") != SCHEMA
         or value.get("policy_id") != POLICY_ID
-        or value.get("status")
-        != "sandbox_network_denials_bound_to_exact_child_pid"
+        or value.get("status") != "sandbox_network_denials_bound_to_exact_child_pid"
         or set(value)
         != {
             "schema",
@@ -469,11 +516,17 @@ def _validate_macos_sandbox_network_observation(
         }
     ):
         raise ValueError("macOS Sandbox network observation fields differ")
-    if value["provider"] != {
-        "bytes": value["provider"].get("bytes"),
-        "sha256": value["provider"].get("sha256"),
-        "unchanged_after_observation": True,
-    } or type(value["provider"]["bytes"]) is not int or value["provider"]["bytes"] <= 0 or not _is_sha(value["provider"]["sha256"]):
+    if (
+        value["provider"]
+        != {
+            "bytes": value["provider"].get("bytes"),
+            "sha256": value["provider"].get("sha256"),
+            "unchanged_after_observation": True,
+        }
+        or type(value["provider"]["bytes"]) is not int
+        or value["provider"]["bytes"] <= 0
+        or not _is_sha(value["provider"]["sha256"])
+    ):
         raise ValueError("macOS Sandbox network observer identity differs")
     if value["query"] != {
         "predicate_sha256": hashlib.sha256(PREDICATE.encode("utf-8")).hexdigest(),
@@ -535,7 +588,9 @@ def _validate_macos_sandbox_network_observation(
         "unrelated_network_denial_count",
         "malformed_record_count",
     )
-    if any(type(observation[name]) is not int or observation[name] < 0 for name in integers):
+    if any(
+        type(observation[name]) is not int or observation[name] < 0 for name in integers
+    ):
         raise ValueError("macOS Sandbox network observation integer differs")
     if (
         observation["deliberate_canary_denial_count"] < 1
@@ -586,6 +641,7 @@ __all__ = [
     "POLICY_ID",
     "SCHEMA",
     "_run_with_macos_sandbox_network_and_process_image_observer",
+    "_run_with_macos_sandbox_network_process_image_and_ready_observer",
     "_run_with_macos_sandbox_network_observer",
     "_validate_macos_sandbox_network_observation",
 ]
