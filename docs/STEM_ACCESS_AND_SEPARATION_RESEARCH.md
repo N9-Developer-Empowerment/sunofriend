@@ -2143,11 +2143,17 @@ transport, source-lineage import and promotion are not implemented**
   still required before any promotion.
 - [x] Add an inactive phrase-time completeness diagnostic that gives each
   distinct provider group at most one vote after unioning its broad and leaf
-  vocal activity. On the second-song excerpt, the primary covers 4.473693 of
+  vocal activity. On `I am a Alien mashup`, the primary covers 4.473693 of
   8.206970 consensus seconds and the lowest line adds 1.533801 seconds missed
   by the primary; together they still miss 2.199476 seconds. This supports
   complementary audition, not singer identification, ranking, merging or a
-  default. Repeat the metric song-disjoint before considering a focused review.
+  default.
+- [x] Repeat phrase-time completeness song-disjoint on `Be Alone`, regenerating
+  only downstream MIDI and leaf evidence from the already sealed Kim output.
+  The primary covers 3.360474 of 5.980367 consensus seconds; the two-note
+  lowest line adds only 0.099299 seconds beyond it, versus 1.533801 seconds on
+  `I am a Alien mashup`. Reject a universal lowest-register rule. Activity
+  coverage alone does not warrant a focused review, merge or singer inference.
 - [x] Compare every supplied leaf inside composite `other` across both
   authorised excerpts using bidirectional audio rankings. Exact and semantic
   labels remain observations only. Keyboard was the only stable Suno pair on

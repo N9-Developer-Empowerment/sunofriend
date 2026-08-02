@@ -310,8 +310,11 @@ report the result, then move on.
   activity missed by the primary, but the primary covers 4.392423 seconds
   missed by the lowest and their union still misses 2.199476 seconds. This
   supports keeping both available for audition; it does not rank, merge,
-  identify a singer or change a default. A song-disjoint repeat remains
-  required. The read-only public
+  identify a singer or change a default. The song-disjoint `Be Alone` repeat
+  found only two lowest-line notes and 0.099299 seconds beyond the primary,
+  versus 1.533801 seconds on `I am a Alien mashup`. A useful lower-register
+  complement therefore does not generalise, and activity coverage alone does
+  not warrant another review, a merge or a rule. The read-only public
   `midi-ab-status` command may match an explicitly named export or one bounded,
   non-recursive download directory without opening the answer key; it cannot
   resolve or reveal A/B. The

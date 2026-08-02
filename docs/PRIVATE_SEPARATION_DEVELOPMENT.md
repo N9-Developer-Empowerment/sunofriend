@@ -1282,8 +1282,39 @@ PYTHONPATH=src .venv/bin/python \
   --out /absolute/fresh/private-vocal-phrase-completeness
 ```
 
-The next evidence step is a song-disjoint repeat of this metric, not a new
-listening page or an automatic primary-plus-lowest merge.
+The song-disjoint repeat is now complete on `Be Alone`. To preserve exact
+cross-binding, its downstream MIDI was regenerated from the latest already
+sealed Kim worker output; separation and model inference were not rerun. The
+unchanged primary again contains 14 notes. The new report also retains 2
+lowest-line, 17 dominant-line, 1 top-line and 20 harmony-stack notes. Its
+primary note sequence is identical and its MIDI is byte-identical to the
+earlier 14-note observation; the note-evidence envelope differs because it
+correctly binds the newer sealed vocal-output SHA-256. Its
+canonical document SHA-256 is
+`a450d866490c66c822949668956e6454b7d9685621173b550a24e171609f66d1`;
+the report file hashes to
+`1e072a15afd7898112b88c44a21353293f3ab33cfbcb366f4c596ec8528e4695`.
+The six provider vocal leaves were then re-evaluated unchanged against that
+exact MIDI report. Its canonical document SHA-256 is
+`e2896f70e1e641d27f25a936f4bec67076cab35797bb4e7cdcfcd5f541443489`;
+the report file hashes to
+`b212bc85031a9088c9a77daa4780c4681e287e9a7f24be61490ab3f70a8ed90b`.
+
+The `Be Alone` provider consensus contains 5.980367 seconds across 15
+intervals and six phrase groups. The 14-note primary covers 3.360474 seconds
+(56.19%) across three phrases, with 97.79% of its own activity inside the
+consensus. The two-note lowest line covers only 0.197370 seconds and adds just
+0.099299 seconds in one reportable span beyond the primary. The primary adds
+3.262404 seconds beyond the lowest line, and together they still omit
+2.520594 seconds. This is materially different from the 1.533801-second lower-
+line contribution on `I am a Alien mashup`: a useful lower-register line does
+not generalise across these songs. The diagnostic's canonical document
+SHA-256 is
+`a8af9952a11cba24aef43463c58877ed7d9ad0727c3ca271a742c3419d458551`;
+the report file hashes to
+`1dba6c352bf13166fe7aeae259ec61f477da14f2449c1bbc57bbdfe69ed110a2`.
+No focused review is warranted from activity coverage alone, and no merge,
+register rule, singer identity, default or product route changed.
 
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
@@ -1291,7 +1322,7 @@ resource, downstream-MIDI and human listening acceptance.
 
 ### Current private human-review queue
 
-As of 1 August 2026, there is no outstanding prepared private review. The
+As of 2 August 2026, there is no outstanding prepared private review. The
 corrected primary-versus-lowest review preferred the lowest-register
 hypothesis for the male lead; its answer key was opened only by the resolver
 after the complete matching browser export was found.
