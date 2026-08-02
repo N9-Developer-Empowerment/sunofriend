@@ -25,6 +25,9 @@ NETWORK_WORKER = (
 READY_WORKER = (
     REPOSITORY / "tests" / "_separation_native_spawn_ready_worker.py"
 )
+COMBINED_WORKER = (
+    REPOSITORY / "tests" / "_separation_native_spawn_combined_worker.py"
+)
 HARNESS = REPOSITORY / "tests" / "_separation_native_spawn_canary_harness.py"
 
 
@@ -226,6 +229,65 @@ def test_ready_worker_is_fixed_pid_free_and_model_free() -> None:
     )
 
 
+def test_combined_worker_has_pid_free_ready_then_private_identity_result() -> None:
+    tree = _tree(COMBINED_WORKER)
+    source = COMBINED_WORKER.read_text(encoding="utf-8")
+    imports = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imports.update(alias.name.split(".", 1)[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imports.add(node.module.split(".", 1)[0])
+
+    assert imports == {
+        "__future__",
+        "_bz2",
+        "_ctypes",
+        "_hashlib",
+        "_lzma",
+        "_sqlite3",
+        "_ssl",
+        "errno",
+        "fcntl",
+        "hashlib",
+        "json",
+        "os",
+        "pathlib",
+        "resource",
+        "socket",
+        "sys",
+        "time",
+        "typing",
+        "zlib",
+    }
+    assert not imports & {
+        "basic_pitch",
+        "http",
+        "mlx",
+        "onnxruntime",
+        "requests",
+        "subprocess",
+        "torch",
+        "urllib",
+    }
+    assert '_SANDBOX_EXEC = "/usr/bin/sandbox-exec"' in source
+    assert "(deny network*)" in source
+    assert '"schema": "sunofriend.native-owner-combined-ready.v1"' in source
+    assert '"pid_or_pgid_exported": False' in source
+    assert '"schema": "sunofriend.native-owner-combined-result.v1"' in source
+    assert '"private_process_identity"' in source
+    ready_index = source.index("ready = {")
+    ready_write_index = source.index("_write_result(ready_bytes)")
+    canary_index = source.index("socket.socket(", ready_write_index)
+    final_write_index = source.index("_write_result(_canonical_bytes(payload))")
+    assert ready_index < ready_write_index < canary_index < final_write_index
+    assert source.index("_harden_transport_descriptors()", source.index("def _run_combined_canary")) < ready_index
+    assert 'connect_ex(("127.0.0.1", 9))' in source
+    assert '"external_destination_contacted": False' in source
+    assert '"model_or_checkpoint_loaded": False' in source
+    assert '"audio_read": False' in source
+
+
 def test_hold_worker_hardens_descriptors_then_only_blocks_for_owner_canary() -> None:
     tree = _tree(HOLD_WORKER)
     main = _function(tree, "main")
@@ -349,7 +411,7 @@ def test_harness_asserts_parent_child_access_data_and_process_invariants() -> No
 
     assert "snapshot_parent_descriptors()" in source
     assert "_assert_parent_unchanged(before" in source
-    assert source.count("_assert_parent_unchanged(before") == 11
+    assert source.count("_assert_parent_unchanged(before") == 12
     assert '"open_descriptors") != [0, 1, 2, 3, 4, 5]' in source
     assert '"descriptor_scan_soft_limit") != _CANARY_SOFT_LIMIT' in source
     assert '"request_write": errno.EBADF' in source
@@ -407,6 +469,10 @@ def test_harness_asserts_parent_child_access_data_and_process_invariants() -> No
     assert "_enumerate_owned_executable_regions(native_owner)" in source
     assert '"pid_free_worker_ready_marker_observed": True' in source
     assert '"raw_executable_paths_retained": False' in source
+    assert "_run_combined_fixed_worker_bridge_canary(" in source
+    assert "_derive_model_free_native_terminal_projection(" in source
+    assert '"combined_fixed_worker_bridge_present": True' in source
+    assert '"model_free_terminal_projection_from_live_owner_present": True' in source
     assert "native owner reaped before its group was empty" in source
     assert "native_owner.group_empty is not False" in source
     assert '"ownership_released_only_after_group_empty": True' in source

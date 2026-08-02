@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import signal
 from typing import Any, Mapping, Sequence
@@ -214,6 +215,91 @@ def _validate_native_terminal_projection(value: Any) -> Mapping[str, Any]:
     return _freeze_json(projection)
 
 
+def _derive_model_free_native_terminal_projection(
+    *,
+    native_owner: Any,
+    expected_owner_type: type[Any],
+    native_session_observation_sha256: str,
+    native_execution_observation_sha256: str,
+    worker_result_sha256: str,
+    worker_reported_pid: int,
+    worker_reported_pgid: int,
+) -> Mapping[str, Any]:
+    """Project one completed fixed-worker owner without exporting authority.
+
+    This is deliberately narrower than the future Kim bridge.  It accepts the
+    exact nonconstructible owner type supplied by the freshly loaded private
+    native extension, asks that owner to match the worker's private result
+    identity, and reads the cached wait and complete group-lifetime state only
+    after exact reap.  Raw PID/PGID values are consumed for the boolean match
+    and are never included in the returned projection.
+    """
+
+    if (
+        not isinstance(expected_owner_type, type)
+        or type(native_owner) is not expected_owner_type
+        or getattr(expected_owner_type, "__name__", None) != "_OwnedSpawnChild"
+    ):
+        raise TypeError("model-free terminal projection requires the exact owner")
+    if hasattr(native_owner, "pid") or hasattr(native_owner, "__dict__"):
+        raise TypeError("model-free terminal projection owner exposes authority")
+    for digest in (
+        native_session_observation_sha256,
+        native_execution_observation_sha256,
+        worker_result_sha256,
+    ):
+        if not isinstance(digest, str) or _SHA_RE.fullmatch(digest) is None:
+            raise ValueError("model-free terminal projection hash differs")
+    if (
+        type(worker_reported_pid) is not int
+        or worker_reported_pid <= 0
+        or type(worker_reported_pgid) is not int
+        or worker_reported_pgid <= 0
+    ):
+        raise ValueError("model-free worker identity report is invalid")
+    matched = native_owner.matches_pid_and_pgid(
+        worker_reported_pid,
+        worker_reported_pgid,
+    )
+    if matched is not True:
+        raise ValueError("model-free worker identity does not match its owner")
+    raw_wait_status = native_owner.wait_nohang()
+    if type(raw_wait_status) is not int or not os.WIFEXITED(raw_wait_status):
+        raise ValueError("model-free native owner lacks a normal cached wait")
+    if os.WEXITSTATUS(raw_wait_status) != 0:
+        raise ValueError("model-free fixed worker did not exit successfully")
+    projection = {
+        "schema": NATIVE_TERMINAL_PROJECTION_SCHEMA,
+        "native_session_observation_sha256": (
+            native_session_observation_sha256
+        ),
+        "native_execution_observation_sha256": (
+            native_execution_observation_sha256
+        ),
+        "worker_result_sha256": worker_result_sha256,
+        "start_state": native_owner.start_state,
+        "wait": {
+            "kind": "exited",
+            "exit_code": os.WEXITSTATUS(raw_wait_status),
+            "signal": None,
+            "core_dumped": False,
+        },
+        "timed_out": False,
+        "term_sent": False,
+        "kill_sent": False,
+        "worker_reported_identity_matched": matched,
+        "leader_exit_observed": native_owner.leader_exit_observed,
+        "leader_reaped": native_owner.leader_reaped,
+        "group_empty": native_owner.group_empty,
+        "ownership_released": native_owner.ownership_released,
+        "ownership_lost": native_owner.ownership_lost,
+        "raw_pid_retained": False,
+        "raw_pgid_retained": False,
+        "signal_authority_exposed": False,
+    }
+    return _validate_native_terminal_projection(projection)
+
+
 def _build_native_real_worker_supervision_plan() -> Mapping[str, Any]:
     """Describe the exact blocked bridge after validating no live input."""
 
@@ -244,6 +330,8 @@ def _build_native_real_worker_supervision_plan() -> Mapping[str, Any]:
             "owner_bound_process_image_observer_implemented": True,
             "owner_bound_network_observer_implemented": True,
             "owner_bound_native_image_ready_observer_implemented": True,
+            "model_free_combined_fixed_worker_bridge_implemented": True,
+            "model_free_terminal_projection_derived_from_live_owner": True,
             "native_terminal_projection_derived_from_live_owner": False,
             "native_terminal_projection_bound_to_real_worker_result": False,
         },
@@ -261,6 +349,7 @@ def _build_native_real_worker_supervision_plan() -> Mapping[str, Any]:
             "projection_shape_validation_is_not_execution_provenance",
             "owner_bound_worker_ready_observer_not_attached_to_real_kim_worker",
             "owner_bound_network_broker_not_attached_to_real_kim_worker",
+            "combined_fixed_worker_bridge_is_model_free_not_kim_vocal_2",
             "current_kim_worker_remains_on_the_subprocess_supervision_route",
             "no_public_cli_tui_simple_studio_or_source_graph_route",
         ],
@@ -396,6 +485,7 @@ __all__ = [
     "SCHEMA",
     "_build_native_real_worker_supervision_plan",
     "_build_real_worker_supervision_observation",
+    "_derive_model_free_native_terminal_projection",
     "_observe_post_cpython_signal_state",
     "_validate_native_terminal_projection",
     "_validate_post_cpython_signal_state",

@@ -1614,9 +1614,14 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   model-free matrix v6 adds the owner-bound worker-ready executable-region
   primitive: a fixed worker emits a PID-free ready marker, the opaque owner
   supplies two stable snapshots without exporting PID/PGID, mapped files are
-  remeasured after exact reap and final evidence retains no path. None of the
-  three owner-bound primitives is attached to Kim Vocal 2; a combined fixed-
-  worker bridge is still required before native real-worker supervision can be
+  remeasured after exact reap and final evidence retains no path. Model-free
+  matrix v7 combines the three primitives around one fixed self-sandboxing
+  worker and derives the terminal projection from that same opaque owner after
+  normal zero exit, whole-group drain and exact reap. Its private result PID/
+  PGID is consumed only through the owner's boolean matcher; the final report
+  retains no process identifier, path or destination. No model, checkpoint or
+  audio is opened. This is still not Kim Vocal 2: its native ready/release
+  entry point remains unimplemented, so native real-worker supervision is not
   claimed.
   The
   evidence does not enumerate dyld

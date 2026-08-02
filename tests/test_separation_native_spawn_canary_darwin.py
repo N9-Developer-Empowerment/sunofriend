@@ -358,7 +358,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         ),
     )
 
-    assert report["schema"] == ("sunofriend.native-spawn-canary-matrix.v6")
+    assert report["schema"] == ("sunofriend.native-spawn-canary-matrix.v7")
     expected_layouts = {
         *itertools.permutations((3, 4, 5)),
         *harness._REPRESENTATIVE_SOURCE_FD_LAYOUTS,
@@ -410,6 +410,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "fixed_descendant_worker_identity",
         "fixed_network_worker_identity",
         "fixed_ready_worker_identity",
+        "fixed_combined_worker_identity",
     ):
         identity = report[key]
         assert set(identity) == {
@@ -486,6 +487,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "worker_script_path_open_toctou_not_eliminated",
         "pre_exec_signal_state_not_reconstructed_after_cpython_startup",
         "owner_bound_worker_ready_observer_not_attached_to_real_worker",
+        "combined_fixed_worker_bridge_is_not_a_real_model_worker",
         "real_model_worker_not_under_native_owner",
     }
     assert report["extension_path_serialized"] is False
@@ -499,6 +501,8 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "owner_bound_network_observation_broker_present": True,
         "network_broker_single_use": True,
         "owner_bound_worker_ready_native_image_observer_present": True,
+        "combined_fixed_worker_bridge_present": True,
+        "model_free_terminal_projection_from_live_owner_present": True,
         "observer_exports_pid_or_pgid": False,
     }
     assert report["post_spawn_owner_drop_canary"] == {
@@ -590,6 +594,87 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
     assert ready_image_canary["network_used"] is False
     assert ready_image_canary["exact_reap_after_observation"] is True
     assert ready_image_canary["parent_descriptors_unchanged"] is True
+    combined = report["combined_fixed_worker_bridge_canary"]
+    assert set(combined) == {
+        "observer_ready_before_native_spawn",
+        "pid_free_ready_marker_observed",
+        "process_image_matched",
+        "stable_consecutive_executable_region_snapshots",
+        "mapped_artifact_manifest_sha256",
+        "deliberate_network_denial_observed",
+        "other_owned_network_denial_count",
+        "network_observation_sha256",
+        "worker_result_sha256",
+        "terminal_projection",
+        "raw_pid_or_pgid_retained",
+        "raw_executable_paths_retained",
+        "raw_network_destination_retained",
+        "model_or_checkpoint_loaded",
+        "audio_read",
+        "normal_zero_exit_observed",
+        "group_empty_before_exact_reap",
+        "exact_reap_observed",
+        "parent_descriptors_unchanged",
+    }
+    assert combined["observer_ready_before_native_spawn"] is True
+    assert combined["pid_free_ready_marker_observed"] is True
+    assert combined["process_image_matched"] is True
+    assert combined["stable_consecutive_executable_region_snapshots"] is True
+    assert re.fullmatch(
+        r"[0-9a-f]{64}", combined["mapped_artifact_manifest_sha256"]
+    )
+    assert combined["deliberate_network_denial_observed"] is True
+    assert combined["other_owned_network_denial_count"] == 0
+    assert re.fullmatch(
+        r"[0-9a-f]{64}", combined["network_observation_sha256"]
+    )
+    assert re.fullmatch(r"[0-9a-f]{64}", combined["worker_result_sha256"])
+    assert combined["terminal_projection"] == {
+        "schema": "sunofriend.private-melroformer-native-terminal-projection.v1",
+        "native_session_observation_sha256": combined["terminal_projection"][
+            "native_session_observation_sha256"
+        ],
+        "native_execution_observation_sha256": combined["terminal_projection"][
+            "native_execution_observation_sha256"
+        ],
+        "worker_result_sha256": combined["worker_result_sha256"],
+        "start_state": "started_owned",
+        "wait": {
+            "kind": "exited",
+            "exit_code": 0,
+            "signal": None,
+            "core_dumped": False,
+        },
+        "timed_out": False,
+        "term_sent": False,
+        "kill_sent": False,
+        "worker_reported_identity_matched": True,
+        "leader_exit_observed": True,
+        "leader_reaped": True,
+        "group_empty": True,
+        "ownership_released": True,
+        "ownership_lost": False,
+        "raw_pid_retained": False,
+        "raw_pgid_retained": False,
+        "signal_authority_exposed": False,
+    }
+    assert re.fullmatch(
+        r"[0-9a-f]{64}",
+        combined["terminal_projection"]["native_session_observation_sha256"],
+    )
+    assert re.fullmatch(
+        r"[0-9a-f]{64}",
+        combined["terminal_projection"]["native_execution_observation_sha256"],
+    )
+    assert combined["raw_pid_or_pgid_retained"] is False
+    assert combined["raw_executable_paths_retained"] is False
+    assert combined["raw_network_destination_retained"] is False
+    assert combined["model_or_checkpoint_loaded"] is False
+    assert combined["audio_read"] is False
+    assert combined["normal_zero_exit_observed"] is True
+    assert combined["group_empty_before_exact_reap"] is True
+    assert combined["exact_reap_observed"] is True
+    assert combined["parent_descriptors_unchanged"] is True
     assert report["descendant_group_canary"] == {
         "leader_exit_observed_without_reap": True,
         "live_descendant_prevented_ownership_release": True,

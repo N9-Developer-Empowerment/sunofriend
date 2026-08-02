@@ -637,6 +637,18 @@ private observer so files can be reopened and measured. Dyld shared-cache
 constituents, transient loads, mapped-memory equality and pathname TOCTOU
 remain explicit limitations. This canary is not attached to Kim Vocal 2.
 
+Canary matrix v7 combines those three primitives around one exact model-free
+worker. The worker replaces itself through `sandbox-exec`, loads the fixed
+native-module set, publishes a PID-free ready marker, performs one deliberately
+denied loopback connection and later exits normally. The same opaque owner
+binds its signed process image, two stable executable-region snapshots, the
+single-use kernel-network observation and the private worker-result identity.
+Only after whole-group emptiness and exact leader reap does a code-owned helper
+derive the required terminal projection. The raw worker PID/PGID is consumed
+only by the owner's boolean matcher; the final matrix retains no PID, PGID,
+path or destination. This proves the orchestration shape, not a real separator:
+no model, checkpoint, audio, MIDI, source graph or product route is involved.
+
 The native entry point no longer returns a bare integer PID. It preallocates a
 nonconstructible, noncopyable exact-child owner before `posix_spawn`, arms and
 returns that same object without a post-spawn Python allocation, hides the raw
@@ -696,17 +708,17 @@ They grant no source-graph or product authority. This does not reconstruct the
 pre-exec signal instant, use the separately proven native process-group owner,
 supervise real-worker descendants, or close provider/runtime pathname TOCTOU.
 
-`_separation_melroformer_supervision.py` now also contains a validation-only
-native terminal projection and a self-hashed blocked bridge plan. The
+`_separation_melroformer_supervision.py` now also contains a native terminal
+projection validator, a model-free code-owned derivation helper and a
+self-hashed blocked real-worker bridge plan. The
 projection requires exact normal exit, leader-exit observation, complete group
 drain, exact leader reap, released ownership and three evidence bindings while
-forbidding retained PID/PGID or exposed signal authority. It deliberately does
-not adapt the current `Popen` result into a native claim. Model-free
-process-image, kernel-network and worker-ready executable-region observations
-now have owner-bound model-free primitives. The fixed native entry point still
-cannot carry the real worker's readiness/release transport or derive its final
-terminal projection, so this does not constitute real integration. The current
-Kim route has not called any of the three owner-bound primitives.
+forbidding retained PID/PGID or exposed signal authority. Matrix v7 derives
+that projection for one fixed canary execution; it deliberately does not adapt
+the current `Popen` result into a native claim. The fixed native entry point
+still cannot carry the real worker's readiness/release transport, so this does
+not constitute real integration. The current Kim route has not called any of
+the owner-bound primitives.
 
 `_separation_fake_execution_protocol.py` validates the new V2 magics and
 canonical bindings but intentionally cannot encode an admitted product

@@ -35,9 +35,14 @@ fixed self-sandboxing worker after one loopback denial. The real Kim worker is
 unchanged. Model-free matrix v6 now also takes two stable executable-region
 snapshots through the opaque owner only after a fixed PID-free worker-ready
 marker, retains a path-free artifact-manifest hash and exact-reaps the worker.
-The three owner-bound primitives are still not combined around the real Kim
-worker. A separate private-development
-HTDemucs runner now produces and measures four real broad estimated stems on
+Model-free matrix v7 now combines all three primitives and derives the terminal
+projection from the same exact fixed-worker owner after normal zero exit,
+whole-group drain and exact reap. It retains no PID, PGID, path or network
+destination and opens no model, checkpoint or audio. This is not the real Kim
+worker: its native ready/release entry point remains unimplemented and the
+authorised path remains on the subprocess supervisor. A separate
+private-development HTDemucs runner now produces and measures four real broad
+estimated stems on
 the copyright-safe demo, and a second private evaluator measures their effect
 on the existing MIDI transcribers. Public separation, source-graph import,
 hidden/cross-song acceptance and promotion are not implemented**

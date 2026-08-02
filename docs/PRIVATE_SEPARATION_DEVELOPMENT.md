@@ -252,7 +252,20 @@ process-image part of that engineering task now has a model-free owner-bound
 primitive, matrix v5 supplies the equivalent kernel-network primitive and
 matrix v6 supplies the worker-ready executable-region primitive. A combined
 fixed-worker integration proof that derives the terminal projection from the
-same live owner remains before the real Kim worker can emit the projection.
+same live owner was the next required proof.
+
+Model-free native matrix v7 now supplies that proof in one execution. A fixed
+self-sandboxing worker emits a PID-free ready marker after loading its bounded
+native-module set, then performs one deliberate loopback denial and writes a
+private identity-bearing result. The same opaque owner binds the signed process
+image, two stable executable-region snapshots, the single-use kernel-network
+observation, the private worker-result identity, normal exit, complete group
+drain and exact reap. The code-owned terminal projection consumes the private
+PID/PGID only through the owner's boolean matcher and returns no process ID,
+path or destination. No model, checkpoint or audio was opened. This closes the
+combined fixed-worker prerequisite only: the real Kim worker still lacks a
+native entry point with its explicit ready/release transport and remains on the
+current subprocess supervisor.
 
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \

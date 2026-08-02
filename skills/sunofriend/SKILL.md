@@ -90,8 +90,13 @@ report the result, then move on.
   denial. Model-free matrix v6 adds the third primitive: only after a fixed
   PID-free worker-ready marker, the opaque owner supplies two stable executable-
   region snapshots without exporting PID/PGID; mapped files are remeasured
-  after exact reap and final evidence retains no paths. None of the three
-  primitives is attached to Kim. This evidence does not enable native
+  after exact reap and final evidence retains no paths. Model-free matrix v7
+  combines all three primitives around one fixed self-sandboxing worker and
+  derives the terminal projection from that same exact owner after normal zero
+  exit, whole-group drain and exact reap. It retains no raw PID/PGID, path or
+  destination and opens no model, checkpoint or audio. The combined proof is
+  still not attached to Kim; its native ready/release entry point remains
+  unimplemented. This evidence does not enable native
   fake-launch V2, which remains permanently
   `blocked`/`not_run` and still contains only caller-claimed artifact
   identities. A later model-free

@@ -1704,6 +1704,44 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — combined fixed-worker native bridge proved model-free
+
+- Goal: prove that the three owner-bound observers and the native terminal
+  projection can describe one exact execution before changing the authorised
+  Kim Vocal 2 worker route.
+- Change or experiment: added a fixed stdlib-only combined worker and canary
+  matrix v7. One opaque native owner now spans the worker's self-sandboxing
+  exec transition, PID-free ready marker, signed process-image match, two
+  stable executable-region snapshots, one deliberate loopback denial, private
+  worker PID/PGID boolean match, normal zero exit, whole-group drain and exact
+  leader reap. A code-owned projection consumes the private identity only for
+  the owner's boolean match and returns no raw PID, PGID, path or destination.
+- Inputs: freshly provenance-built private Darwin extension, current isolated
+  Python runtime, three fixed regular-file transports and the fixed combined
+  worker. No source audio, MIDI, model or checkpoint.
+- Model/runtime/checkpoint: none. The native C source and build-contract hashes
+  remain unchanged from matrix v6; this increment needs no new PID-returning or
+  signal-authority native method.
+- Evidence and metrics: 66 focused source, helper, build and supervision tests
+  pass. The live macOS v7 matrix passes and proves one deliberate owned denial,
+  zero other owned denials, stable mapped-image evidence, a hash-bound redacted
+  worker result, normal exit 0, group emptiness, exact reap and a validated
+  path-free terminal projection from the same owner. The complete repository
+  suite passes 2,826 tests with one platform skip and the existing third-party
+  `resampy`/`pkg_resources` deprecation warning.
+- Listening result: not applicable; the worker reads no audio and creates no
+  MIDI or separation.
+- Decision: accept the model-free combined bridge as the prerequisite proof.
+  Keep `fixed_real_worker_native_entrypoint_implemented: false` and leave the
+  authorised Kim route on its existing subprocess supervisor.
+- Problems/risks: this proves the orchestration shape with a fixed canary, not
+  the real checkpoint/audio worker. Runtime and worker invocation still use
+  pathnames, dyld shared-cache and transient-load coverage remain incomplete,
+  and mapped-file remeasurement is not mapped-memory byte proof.
+- Next smallest step: design the narrow native Kim worker entry point and its
+  explicit ready/release transport. Do not run the model until that bridge has
+  static, failure and model-free tests and an explicit private-run review.
+
 ### 2026-08-02 — worker-ready executable regions bound to opaque native owner
 
 - Goal: remove the post-inference executable-region inventory's last raw-PID
@@ -1744,10 +1782,9 @@ Each working day should aim for one narrow vertical improvement:
   dyld shared-cache constituents and transient loads remain incomplete.
   Pathname TOCTOU is not closed. The native entry point still cannot run the
   real worker with its ready/release transport, and no product route changed.
-- Next smallest step: build one combined fixed-worker native bridge that uses
-  the owner-bound process-image, network and worker-ready native-image
-  primitives together and derives the terminal projection from the same live
-  owner. Only then consider a private authorised Kim worker migration.
+- Next smallest step: completed by model-free canary matrix v7 above. Only
+  after that proof should a narrowly reviewed private authorised Kim worker
+  migration be designed.
 
 ### 2026-08-02 — single-use network stream bound to opaque native owner
 

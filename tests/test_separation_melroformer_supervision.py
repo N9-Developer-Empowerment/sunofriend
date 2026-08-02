@@ -119,6 +119,67 @@ def test_native_real_worker_terminal_projection_requires_complete_safe_state() -
     assert projection["raw_pid_retained"] is False
 
 
+def test_model_free_terminal_projection_is_derived_from_exact_owner() -> None:
+    owner_type = type(
+        "_OwnedSpawnChild",
+        (),
+        {
+            "__module__": "_separation_native_spawn_darwin",
+            "__slots__": (),
+            "start_state": "started_owned",
+            "leader_exit_observed": True,
+            "leader_reaped": True,
+            "group_empty": True,
+            "ownership_released": True,
+            "ownership_lost": False,
+            "matches_pid_and_pgid": lambda self, pid, pgid: (
+                pid == 123 and pgid == 123
+            ),
+            "wait_nohang": lambda self: 0,
+        },
+    )
+    owner = owner_type()
+
+    projection = supervision._derive_model_free_native_terminal_projection(
+        native_owner=owner,
+        expected_owner_type=owner_type,
+        native_session_observation_sha256="1" * 64,
+        native_execution_observation_sha256="2" * 64,
+        worker_result_sha256="3" * 64,
+        worker_reported_pid=123,
+        worker_reported_pgid=123,
+    )
+
+    assert projection["worker_reported_identity_matched"] is True
+    assert projection["leader_reaped"] is True
+    assert projection["group_empty"] is True
+    assert projection["raw_pid_retained"] is False
+    assert projection["raw_pgid_retained"] is False
+
+
+def test_model_free_terminal_projection_rejects_wrong_worker_identity() -> None:
+    owner_type = type(
+        "_OwnedSpawnChild",
+        (),
+        {
+            "__module__": "_separation_native_spawn_darwin",
+            "__slots__": (),
+            "matches_pid_and_pgid": lambda self, pid, pgid: False,
+        },
+    )
+
+    with pytest.raises(ValueError, match="identity does not match"):
+        supervision._derive_model_free_native_terminal_projection(
+            native_owner=owner_type(),
+            expected_owner_type=owner_type,
+            native_session_observation_sha256="1" * 64,
+            native_execution_observation_sha256="2" * 64,
+            worker_result_sha256="3" * 64,
+            worker_reported_pid=123,
+            worker_reported_pgid=123,
+        )
+
+
 @pytest.mark.parametrize(
     ("mutation", "message"),
     [
@@ -179,6 +240,12 @@ def test_native_real_worker_supervision_plan_is_blocked_and_path_free() -> None:
     assert plan["missing_bridge"][
         "fixed_real_worker_native_entrypoint_implemented"
     ] is False
+    assert plan["missing_bridge"][
+        "model_free_combined_fixed_worker_bridge_implemented"
+    ] is True
+    assert plan["missing_bridge"][
+        "model_free_terminal_projection_derived_from_live_owner"
+    ] is True
     assert all(value is False for value in plan["effects"].values())
     assert digest == hashlib.sha256(_canonical_json_bytes(unsigned)).hexdigest()
     assert "/Users/" not in repr(plan)

@@ -43,6 +43,7 @@ _REPOSITORY = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_REPOSITORY / "src"))
 import sunofriend._separation_macos_loaded_images as _loaded_images  # noqa: E402
 import sunofriend._separation_macos_sandbox_network_observer as _network_observer  # noqa: E402
+import sunofriend._separation_melroformer_supervision as _supervision  # noqa: E402
 
 
 _MODULE_NAME = "_separation_native_spawn_darwin"
@@ -61,6 +62,11 @@ _NETWORK_WORKER = (
 )
 _READY_WORKER = (
     Path(__file__).with_name("_separation_native_spawn_ready_worker.py").resolve()
+)
+_COMBINED_WORKER = (
+    Path(__file__)
+    .with_name("_separation_native_spawn_combined_worker.py")
+    .resolve()
 )
 _LOGICAL_ROLES = ("request", "result", "checkpoint")
 _TARGET_FDS = (3, 4, 5)
@@ -622,6 +628,30 @@ def _read_single_json(path: Path) -> dict[str, Any]:
     if raw.decode("ascii")[end:] != "\n" or not isinstance(document, dict):
         raise AssertionError("canary result contains trailing data")
     return document
+
+
+def _wait_for_result_schema(
+    path: Path,
+    *,
+    schema: str,
+    deadline: float,
+) -> tuple[dict[str, Any], bytes]:
+    """Read one complete bounded JSON generation from a replaced result file."""
+
+    while time.monotonic() < deadline:
+        raw = path.read_bytes()
+        if len(raw) > 65_536:
+            raise AssertionError("canary result exceeded its bound")
+        if raw.endswith(b"\n"):
+            try:
+                document = json.loads(raw.decode("ascii"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                pass
+            else:
+                if isinstance(document, dict) and document.get("schema") == schema:
+                    return document, raw
+        time.sleep(0.005)
+    raise TimeoutError(f"{schema} result was not written")
 
 
 def _read_bounded_pid_marker(path: Path, *, deadline: float) -> int:
@@ -1267,6 +1297,256 @@ def _run_owner_bound_worker_ready_native_image_canary(
     }
 
 
+def _run_combined_fixed_worker_bridge_canary(
+    *,
+    spawn: Any,
+    owner_type: type[Any],
+    runtime_path: Path,
+    expected_process_image_path: Path,
+    expected_process_image_cdhash: str,
+    native_artifact_sha256: str,
+    native_source_sha256: str,
+    native_build_contract_sha256: str,
+    temporary_root: Path,
+) -> dict[str, Any]:
+    """Join every owner-bound observer and terminal projection in one run."""
+
+    _close_descriptors_from_three()
+    case_directory = temporary_root / "combined-fixed-worker-bridge"
+    case_directory.mkdir(mode=0o700)
+    paths = _install_transport_descriptors(case_directory, _TARGET_FDS)
+    before_observer = snapshot_parent_descriptors()
+    worker_before = _measure_worker(_COMBINED_WORKER)
+    runtime_before = _measure_runtime(runtime_path)
+    process_image_before = _measure_runtime(expected_process_image_path)
+    broker = _network_observer._prepare_owner_bound_network_observer()
+    native_owner: Any | None = None
+    try:
+        observer_descriptors = snapshot_parent_descriptors()
+        native_owner = spawn(
+            os.fsencode(runtime_path),
+            os.fsencode(_COMBINED_WORKER),
+            *_TARGET_FDS,
+        )
+        if type(native_owner) is not owner_type:
+            raise AssertionError("combined bridge owner type differs")
+        if hasattr(native_owner, "pid") or hasattr(native_owner, "__dict__"):
+            raise AssertionError("combined bridge exposes transferable authority")
+        with _OwnedCanaryChild(native_owner) as child:
+            ready, ready_bytes = _wait_for_result_schema(
+                paths["result"],
+                schema="sunofriend.native-owner-combined-ready.v1",
+                deadline=time.monotonic() + _WAIT_SECONDS,
+            )
+            if ready != {
+                "schema": "sunofriend.native-owner-combined-ready.v1",
+                "phase": "fixed_native_modules_loaded",
+                "native_modules": [
+                    "_bz2",
+                    "_ctypes",
+                    "_hashlib",
+                    "_lzma",
+                    "_sqlite3",
+                    "_ssl",
+                    "zlib",
+                ],
+                "pid_or_pgid_exported": False,
+                "model_or_checkpoint_loaded": False,
+                "audio_read": False,
+                "network_used": False,
+            }:
+                raise AssertionError("combined bridge ready marker differs")
+            ready_sha256 = hashlib.sha256(ready_bytes).hexdigest()
+            process_image = native_owner.observe_owned_process_image(
+                os.fsencode(runtime_path),
+                os.fsencode(expected_process_image_path),
+                expected_process_image_cdhash.encode("ascii"),
+            )
+            if process_image != {
+                "kernel_cdhash": expected_process_image_cdhash,
+                "path_state": "matched_expected_process_image",
+            }:
+                raise AssertionError("combined bridge process image differs")
+            first = _loaded_images._enumerate_owned_executable_regions(native_owner)
+            time.sleep(0.02)
+            second = _loaded_images._enumerate_owned_executable_regions(native_owner)
+            if _loaded_images._snapshot_key(first) != _loaded_images._snapshot_key(
+                second
+            ):
+                raise AssertionError("combined bridge image snapshots differ")
+            measured = _loaded_images._measure_mapped_files(
+                second,
+                process_image_path=expected_process_image_path,
+            )
+            artifacts = _loaded_images._path_free_artifacts(measured)
+            encoded_artifacts = json.dumps(
+                artifacts,
+                ensure_ascii=True,
+                allow_nan=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            ).encode("ascii")
+            mapped_manifest_sha256 = hashlib.sha256(encoded_artifacts).hexdigest()
+            final, final_bytes = _wait_for_result_schema(
+                paths["result"],
+                schema="sunofriend.native-owner-combined-result.v1",
+                deadline=time.monotonic() + _WAIT_SECONDS,
+            )
+            private_identity = final.pop("private_process_identity", None)
+            if (
+                not isinstance(private_identity, dict)
+                or set(private_identity) != {"pid", "pgid"}
+                or type(private_identity["pid"]) is not int
+                or type(private_identity["pgid"]) is not int
+            ):
+                raise AssertionError("combined bridge private identity differs")
+            if final != {
+                "schema": "sunofriend.native-owner-combined-result.v1",
+                "ok": True,
+                "ready_sha256": ready_sha256,
+                "connect_errno_name": "EPERM",
+                "loopback_only": True,
+                "external_destination_contacted": False,
+                "open_descriptors": [0, 1, 2, 3, 4, 5],
+                "native_modules": ready["native_modules"],
+                "model_or_checkpoint_loaded": False,
+                "audio_read": False,
+            }:
+                raise AssertionError("combined bridge final result differs")
+            del final_bytes
+            redacted_worker_result_bytes = (
+                json.dumps(
+                    final,
+                    ensure_ascii=True,
+                    allow_nan=False,
+                    separators=(",", ":"),
+                    sort_keys=True,
+                ).encode("ascii")
+                + b"\n"
+            )
+            worker_result_sha256 = hashlib.sha256(
+                redacted_worker_result_bytes
+            ).hexdigest()
+            network_observation = broker.finish(native_owner=native_owner)
+            if broker.consumed is not True:
+                raise AssertionError("combined bridge network broker was not consumed")
+            status = child.wait()
+        if not os.WIFEXITED(status) or os.WEXITSTATUS(status) != 0:
+            raise AssertionError("combined fixed worker did not exit normally")
+        _loaded_images._remeasure_mapped_files(measured)
+        if (
+            native_owner.leader_exit_observed is not True
+            or native_owner.leader_reaped is not True
+            or native_owner.group_empty is not True
+            or native_owner.ownership_released is not True
+            or native_owner.ownership_lost is not False
+        ):
+            raise AssertionError("combined bridge lacks exact terminal ownership")
+        worker_after = _measure_worker(_COMBINED_WORKER)
+        runtime_after = _measure_runtime(runtime_path)
+        process_image_after = _measure_runtime(expected_process_image_path)
+        if worker_after != worker_before:
+            raise AssertionError("combined fixed worker changed across execution")
+        if runtime_after != runtime_before:
+            raise AssertionError("combined bridge runtime changed across execution")
+        if process_image_after != process_image_before:
+            raise AssertionError("combined bridge process image changed")
+
+        session_payload = {
+            "native_artifact_sha256": native_artifact_sha256,
+            "native_source_sha256": native_source_sha256,
+            "native_build_contract_sha256": native_build_contract_sha256,
+            "runtime_sha256": runtime_after.sha256,
+            "process_image_sha256": process_image_after.sha256,
+            "fixed_worker_sha256": worker_after.sha256,
+            "ready_sha256": ready_sha256,
+        }
+        native_session_sha256 = hashlib.sha256(
+            json.dumps(
+                session_payload,
+                ensure_ascii=True,
+                allow_nan=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            ).encode("ascii")
+        ).hexdigest()
+        execution_payload = {
+            "process_image": process_image,
+            "network_observation_sha256": network_observation["evidence_sha256"],
+            "mapped_artifact_manifest_sha256": mapped_manifest_sha256,
+            "worker_result_sha256": worker_result_sha256,
+            "wait": {
+                "kind": "exited",
+                "exit_code": 0,
+                "signal": None,
+                "core_dumped": False,
+            },
+            "group_empty": True,
+            "exact_reap": True,
+        }
+        native_execution_sha256 = hashlib.sha256(
+            json.dumps(
+                execution_payload,
+                ensure_ascii=True,
+                allow_nan=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            ).encode("ascii")
+        ).hexdigest()
+        projection = _supervision._derive_model_free_native_terminal_projection(
+            native_owner=native_owner,
+            expected_owner_type=owner_type,
+            native_session_observation_sha256=native_session_sha256,
+            native_execution_observation_sha256=native_execution_sha256,
+            worker_result_sha256=worker_result_sha256,
+            worker_reported_pid=private_identity["pid"],
+            worker_reported_pgid=private_identity["pgid"],
+        )
+        if network_observation["observation"][
+            "deliberate_canary_denial_count"
+        ] < 1:
+            raise AssertionError("combined bridge network canary was absent")
+        after = snapshot_parent_descriptors()
+        _assert_parent_unchanged(before_observer, after)
+        encoded_projection = json.dumps(
+            _supervision._plain(projection),
+            ensure_ascii=True,
+            allow_nan=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        if '"pid":' in encoded_projection or '"pgid":' in encoded_projection:
+            raise AssertionError("combined terminal projection retained authority")
+        return {
+            "observer_ready_before_native_spawn": (
+                len(observer_descriptors) > len(before_observer)
+            ),
+            "pid_free_ready_marker_observed": True,
+            "process_image_matched": True,
+            "stable_consecutive_executable_region_snapshots": True,
+            "mapped_artifact_manifest_sha256": mapped_manifest_sha256,
+            "deliberate_network_denial_observed": True,
+            "other_owned_network_denial_count": network_observation[
+                "observation"
+            ]["other_target_network_denial_count"],
+            "network_observation_sha256": network_observation["evidence_sha256"],
+            "worker_result_sha256": worker_result_sha256,
+            "terminal_projection": _supervision._plain(projection),
+            "raw_pid_or_pgid_retained": False,
+            "raw_executable_paths_retained": False,
+            "raw_network_destination_retained": False,
+            "model_or_checkpoint_loaded": False,
+            "audio_read": False,
+            "normal_zero_exit_observed": True,
+            "group_empty_before_exact_reap": True,
+            "exact_reap_observed": True,
+            "parent_descriptors_unchanged": True,
+        }
+    finally:
+        if not broker.consumed:
+            broker.abort()
+
+
 def _run_descendant_group_canary(
     *,
     spawn: Any,
@@ -1392,6 +1672,7 @@ def run_canary_matrix(
     descendant_worker_before = _measure_worker(_DESCENDANT_WORKER)
     network_worker_before = _measure_worker(_NETWORK_WORKER)
     ready_worker_before = _measure_worker(_READY_WORKER)
+    combined_worker_before = _measure_worker(_COMBINED_WORKER)
     spawn = getattr(extension, _METHOD_NAME, None)
     if not callable(spawn):
         raise RuntimeError("native extension entry point is unavailable")
@@ -1519,6 +1800,19 @@ def run_canary_matrix(
             temporary_root=temporary_root,
         )
     )
+    combined_fixed_worker_bridge_canary = (
+        _run_combined_fixed_worker_bridge_canary(
+            spawn=spawn,
+            owner_type=owner_type,
+            runtime_path=runtime_path,
+            expected_process_image_path=expected_process_image_path,
+            expected_process_image_cdhash=expected_process_image_cdhash,
+            native_artifact_sha256=artifact.sha256,
+            native_source_sha256=expected_source_sha256,
+            native_build_contract_sha256=expected_build_contract_sha256,
+            temporary_root=temporary_root,
+        )
+    )
     descendant_group_canary = _run_descendant_group_canary(
         spawn=spawn,
         runtime_path=runtime_path,
@@ -1531,6 +1825,7 @@ def run_canary_matrix(
     descendant_worker_after = _measure_worker(_DESCENDANT_WORKER)
     network_worker_after = _measure_worker(_NETWORK_WORKER)
     ready_worker_after = _measure_worker(_READY_WORKER)
+    combined_worker_after = _measure_worker(_COMBINED_WORKER)
     if runtime_after != runtime_before:
         raise RuntimeError("bound runtime changed across canary matrix")
     if process_image_after != process_image_before:
@@ -1545,9 +1840,11 @@ def run_canary_matrix(
         raise RuntimeError("bound network worker changed across canary matrix")
     if ready_worker_after != ready_worker_before:
         raise RuntimeError("bound worker-ready worker changed across canary matrix")
+    if combined_worker_after != combined_worker_before:
+        raise RuntimeError("bound combined worker changed across canary matrix")
     expected_suffix = sysconfig.get_config_var("EXT_SUFFIX")
     return {
-        "schema": "sunofriend.native-spawn-canary-matrix.v6",
+        "schema": "sunofriend.native-spawn-canary-matrix.v7",
         "extension_path_serialized": False,
         "worker_path_serialized": False,
         "proof_scope": (
@@ -1579,6 +1876,9 @@ def run_canary_matrix(
         "fixed_ready_worker_identity": _path_free_file_identity(
             ready_worker_after
         ),
+        "fixed_combined_worker_identity": _path_free_file_identity(
+            combined_worker_after
+        ),
         "native_owner_type_qualification": {
             "direct_construction_rejected": direct_owner_construction_rejected,
             "raw_pid_not_exposed": True,
@@ -1588,6 +1888,8 @@ def run_canary_matrix(
             "owner_bound_network_observation_broker_present": True,
             "network_broker_single_use": True,
             "owner_bound_worker_ready_native_image_observer_present": True,
+            "combined_fixed_worker_bridge_present": True,
+            "model_free_terminal_projection_from_live_owner_present": True,
             "observer_exports_pid_or_pgid": False,
         },
         "runtime_environment_qualification": (
@@ -1651,6 +1953,7 @@ def run_canary_matrix(
             "worker_script_path_open_toctou_not_eliminated",
             "pre_exec_signal_state_not_reconstructed_after_cpython_startup",
             "owner_bound_worker_ready_observer_not_attached_to_real_worker",
+            "combined_fixed_worker_bridge_is_not_a_real_model_worker",
             "real_model_worker_not_under_native_owner",
         ),
         "complete_descriptor_scan_soft_limit": _CANARY_SOFT_LIMIT,
@@ -1674,6 +1977,9 @@ def run_canary_matrix(
         "owner_bound_network_canary": owner_bound_network_canary,
         "owner_bound_worker_ready_native_image_canary": (
             owner_bound_worker_ready_native_image_canary
+        ),
+        "combined_fixed_worker_bridge_canary": (
+            combined_fixed_worker_bridge_canary
         ),
         "descendant_group_canary": descendant_group_canary,
         "cases": cases,
