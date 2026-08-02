@@ -346,7 +346,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         ),
     )
 
-    assert report["schema"] == ("sunofriend.native-spawn-canary-matrix.v1")
+    assert report["schema"] == ("sunofriend.native-spawn-canary-matrix.v2")
     expected_layouts = {
         *itertools.permutations((3, 4, 5)),
         *harness._REPRESENTATIVE_SOURCE_FD_LAYOUTS,
@@ -355,15 +355,20 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
     assert report["all_source_fd_permutations_exercised"] is True
     assert report["all_representative_source_fd_layouts_exercised"] is True
     assert {tuple(case["source_fds"]) for case in report["cases"]} == (expected_layouts)
-    assert len({case["pid"] for case in report["cases"]}) == len(expected_layouts)
     for case in report["cases"]:
-        assert case["pid"] == case["pgid"]
+        assert case["native_owner_pid_pgid_match_observed"] is True
+        assert "pid" not in case
+        assert "pgid" not in case
         assert case["open_descriptors"] == [0, 1, 2, 3, 4, 5]
         assert case["native_owner_leader_reaped"] is True
         assert case["native_owner_ownership_released"] is True
         assert case["native_owner_ownership_lost"] is False
         assert case["native_owner_cached_wait_stable"] is True
         assert case["native_owner_post_reap_signal_rejected"] is True
+        assert case["native_owner_normal_exit_observed"] is True
+        assert case["native_owner_signal_termination_observed"] is False
+        assert case["native_owner_exit_status_zero"] is True
+        assert case["post_cpython_signal_state_observed"] is True
         assert case["parent_offsets_unchanged_after_spawn"] is True
         assert case["parent_offsets_unchanged_after_reap"] is True
 
@@ -441,19 +446,27 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
     assert report["outer_supervisor_qualification"] == {
         "close_fds_required": True,
         "pass_fds_required": [],
-        "observed_from_inside_harness": False,
-        "clean_outer_process_dependency_resolved": False,
+        "observed_from_inside_harness": True,
+        "observation_point": "harness_entry_before_descriptor_cleanup",
+        "harness_entry_open_descriptors": [0, 1, 2],
+        "no_unexpected_inherited_descriptors": True,
+        "clean_outer_process_dependency_resolved": True,
     }
     assert report["signal_state_canary"] == {
-        "observed": False,
+        "observed": True,
+        "observation_point": "worker_main_after_cpython_startup",
+        "main_thread_mask_empty": True,
+        "termination_signals_default": True,
+        "sigchld_default": True,
+        "cpython_runtime_adjustments_observed": True,
         "spawn_attribute_claim_proven": False,
-        "reason": ("cpython_startup_can_change_signal_state_before_worker_user_code"),
+        "reason": ("post_cpython_state_does_not_reconstruct_the_pre_exec_instant"),
     }
     assert set(report["unresolved_boundaries"]) == {
         "extension_path_import_toctou_not_eliminated",
         "runtime_executable_path_exec_toctou_not_eliminated",
         "worker_script_path_open_toctou_not_eliminated",
-        "clean_outer_supervisor_not_proven_inside_harness",
+        "pre_exec_signal_state_not_reconstructed_after_cpython_startup",
     }
     assert report["extension_path_serialized"] is False
     assert report["worker_path_serialized"] is False

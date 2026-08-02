@@ -486,6 +486,14 @@ and high inheritable descriptors were absent, and the parent descriptor
 identities, access/inheritability state and offsets were unchanged after spawn
 and reap.
 
+Canary matrix v2 observes the harness descriptor table before that harness
+performs any cleanup. Only FDs 0–2 are present after its parent launch with
+`close_fds=True, pass_fds=()`. Every fixed child also reports an empty
+main-thread signal mask and selected handler dispositions after CPython
+startup. The exact native owner independently records normal zero-status exit,
+no signal termination and exact reap. The final matrix retains no raw PID,
+PGID or wait status.
+
 The following ownership hardening removes the bare-PID handoff. The extension
 allocates a private, nonconstructible child owner before `posix_spawn`, arms
 that same object after success and returns it without another Python
@@ -500,12 +508,12 @@ group. An owner-process check prevents a fork-cloned destructor from acting,
 but that branch is presently static rather than live proof.
 
 This finite matrix is deliberately narrower than execution authority:
-arbitrary source-FD values are not exhaustively live-proven; the harness
-requires an outer
-`close_fds=True, pass_fds=()` launch but cannot observe that policy from
-inside; CPython startup prevents the worker from proving the spawn-time signal
-reset and mask state; and extension-import, runtime-exec and worker-script path
-TOCTOU are not eliminated. Emergency last-reference cleanup sends `SIGKILL`
+arbitrary source-FD values are not exhaustively live-proven; the observed
+post-CPython signal state does not reconstruct the spawn-time signal instant;
+and extension-import, runtime-exec and worker-script path TOCTOU are not
+eliminated. The new facts are bound only to the model-free canary, not a
+deterministic transport worker or real separator. Emergency last-reference
+cleanup sends `SIGKILL`
 and polls exact `waitpid` with `WNOHANG` for a fixed bounded interval; failure
 to reap in that interval is not terminal evidence. The fixed canary workers
 create no descendants, and the owner makes no numeric process-group call after
@@ -740,7 +748,8 @@ containment only.
 The executed worker is still only a code-owned transport fixture: it hashes
 but never deserializes the checkpoint and emits two-frame PCM24 payloads
 without reading source audio or running inference. Runtime-exec and
-worker-script path TOCTOU, post-CPython child signal-state observation, the
+worker-script path TOCTOU, binding the canary's post-CPython child signal-state
+observation to this deterministic worker, the
 possible failure of the bounded native emergency fallback to prove reap and
 persistent ordinary-file immutability remain explicit limitations. Those boundaries must
 stay visible when evaluating a real separator backend.
@@ -1998,6 +2007,13 @@ separator transport, source-lineage import and promotion are not implemented**
 - [ ] Remove or explicitly confine extension/runtime path TOCTOU, and
   make the clean outer-supervisor and child signal-state boundaries
   independently observable.
+  A model-free canary matrix v2 now independently observes the clean outer
+  harness descriptor state, actual post-CPython worker signal mask/handlers and
+  normal exact-reap termination for every fixed descriptor layout. It retains
+  no raw PID, PGID or wait status. This narrows the boundary but does not close
+  the checklist item because it is not yet bound to the deterministic
+  transport worker or Kim worker and does not reconstruct the pre-exec signal
+  instant.
   The exact Kim Vocal 2 worker-script subproblem is now closed for one real
   authorised observation by executing the already-open verified descriptor as
   Python standard input. The parent-PID macOS process-image observation is now
@@ -2015,8 +2031,8 @@ separator transport, source-lineage import and promotion are not implemented**
   33-file inventory, with 32 strict signatures and no unpathed executable
   region, but the GPU float-output hashes differed. The evidence still omits
   dyld shared-cache constituents, cannot exclude all transient loads or prove
-  mapped-memory bytes, and leaves the outer-supervisor/signal-state boundary
-  open, so this gate is not complete.
+  mapped-memory bytes, and leaves the real-worker outer-supervisor/signal-state
+  boundary open, so this gate is not complete.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with the
   deterministic fake worker, exact pre-exec remeasurement, validated worker
   result, timeout/reap evidence and parent-verified quarantined outputs before

@@ -542,11 +542,17 @@ repeats those invariants for ten fixed ordinary low non-target,
 scratch-candidate-collision, mixed 3/4/5-collision and near-limit physical
 layouts. Custom parent `SIGCHLD`
 handling and `SA_NOCLDWAIT` fail before child creation. This does not enable
-fake-launch V2: exhaustive arbitrary source-FD values, the outer supervisor
-policy from inside the harness, post-CPython signal state and
-extension/runtime/worker path TOCTOU remain unproven. No production fake
-worker, checkpoint transport, model, audio operation, terminal result or
-user-facing separator ran.
+fake-launch V2. Canary matrix v2 now observes only FDs 0–2 at harness entry
+before local cleanup after the parent uses `close_fds=True, pass_fds=()`.
+Each fixed child reports an empty main-thread signal mask and selected handler
+dispositions after CPython startup, while the exact native owner separately
+records normal zero-status exit, no signal termination and exact reap. The v2
+report retains no raw PID, PGID or wait status. Arbitrary source-FD values and
+extension/runtime/worker path TOCTOU remain unproven, the post-CPython
+observation does not reconstruct the pre-exec instant, and these facts are not
+bound to a deterministic transport worker or model. No production fake worker,
+checkpoint transport, model, audio operation, terminal result or user-facing
+separator ran.
 
 The next native-ownership increment closes a bare-PID exception gap before any
 transport worker runs. The extension preallocates a nonconstructible owner
@@ -795,7 +801,8 @@ evidence.
 This is not a separator result. The worker hashes but never deserializes the
 checkpoint, reads no source audio, imports no model, performs no inference,
 uses no network and creates no output file. Runtime-exec and worker-script
-path TOCTOU, post-CPython signal-state observation, persistent ordinary-file
+path TOCTOU, binding the model-free canary's post-CPython signal-state
+observation to this worker, persistent ordinary-file
 immutability and possible failure of the bounded native emergency fallback to
 prove reap remain explicit.
 
@@ -1697,6 +1704,43 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — outer supervisor and post-CPython signal canary
+
+- Goal: independently observe the clean outer canary boundary, the signal
+  state that fixed child code actually enters after CPython startup, and exact
+  normal termination without attaching unfinished supervision to a model.
+- Change or experiment: upgraded the private Darwin descriptor canary to
+  matrix v2. Before its own cleanup, the harness scans the complete current FD
+  limit and requires exactly FDs 0–2 after its parent launch with
+  `close_fds=True, pass_fds=()`. Every fixed child records its main-thread
+  signal mask and selected handlers after CPython startup. The native owner
+  separately checks normal zero-status exit, no signal termination, exact
+  reap, stable cached wait and post-reap signal rejection. The final matrix no
+  longer retains raw PID, PGID or wait status.
+- Inputs: the existing model-free, stdlib-only native-spawn canary and all 16
+  fixed exact/representative descriptor layouts. No audio, checkpoint, model
+  or network resource was used.
+- Model/runtime/checkpoint: current isolated Python runtime and freshly built
+  private Darwin launcher only; no checkpoint or inference.
+- Evidence and metrics: the live Darwin matrix passed every layout. Harness
+  entry had only FDs 0–2. Every child reached user code with an empty mask,
+  default `SIGHUP`/`SIGQUIT`/`SIGTERM` and `SIGCHLD`, plus expected CPython
+  `SIGINT`, `SIGPIPE` and `SIGXFSZ` adjustments. Twelve focused source and live
+  canary tests pass; the broader native boundary suite passes 65 tests. The
+  complete repository suite passes 2,785 tests with one platform skip and the
+  one existing third-party `resampy`/`pkg_resources` deprecation warning.
+- Listening result: not applicable; no audio or MIDI changed.
+- Decision: retain v2 as private model-free supervision evidence. Every
+  separator, source-graph, Simple, Studio, product and publication route stays
+  disabled.
+- Problems/risks: a post-CPython observation cannot reconstruct the pre-exec
+  signal instant. The result is not yet bound to the deterministic transport
+  worker or Kim worker. Extension/runtime/worker path TOCTOU and arbitrary
+  source-FD coverage remain open.
+- Next smallest step: bind the same bounded lifecycle/signal facts to the
+  deterministic transport worker before deciding whether a CPU repeat or
+  bounded numeric GPU-difference measurement is the smaller parity experiment.
+
 ### 2026-08-02 — worker-ready native images bound to two authorised runs
 
 - Goal: attach the parent-owned native executable-region inventory to the
@@ -1745,10 +1789,10 @@ Each working day should aim for one narrow vertical improvement:
   post-observation mutation, or close the wider supervisor/signal boundary.
   Dynamic native-library closure and independent conversion parity remain
   false.
-- Next smallest step: make the outer supervisor and child signal/termination
-  states independently observable, then decide whether a CPU repeat or a
-  bounded numeric GPU-difference measurement is the smaller useful parity
-  experiment. Keep every separator route disabled.
+- Next smallest step: completed by the later model-free outer-supervisor and
+  post-CPython signal canary above. Binding those facts to the deterministic
+  transport worker and real model remains separate; every separator route is
+  disabled.
 
 ### 2026-08-02 — stable native executable-region inventory canary
 

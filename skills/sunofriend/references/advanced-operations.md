@@ -1578,7 +1578,14 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   parent to attach the inventory without a guessed delay. Two fresh authorised
   runs repeated the same 33-file inventory with no unpathed executable region
   and 32 strict signatures; their GPU float-output hashes differed, so bitwise
-  conversion parity remains false. The evidence does not enumerate dyld
+  conversion parity remains false. A later model-free native canary matrix v2
+  observes only FDs 0–2 at clean harness entry, an empty main-thread signal
+  mask plus selected handler dispositions after CPython startup, and normal
+  zero-status exact-reap termination for every fixed descriptor layout. Its
+  matrix retains no raw PID, PGID or wait status. These facts are not yet bound
+  to the deterministic transport worker or Kim worker, and the post-CPython
+  record does not reconstruct the pre-exec signal instant. The evidence does
+  not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory
   bytes. None of these observations is full-file execution proof, dynamic-
   native-library closure, a packet monitor or a complete native-loader audit;

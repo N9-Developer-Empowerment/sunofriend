@@ -74,6 +74,7 @@ def test_canary_worker_is_fixed_stdlib_only_and_has_no_expansive_surface() -> No
         "json",
         "os",
         "resource",
+        "signal",
         "stat",
         "sys",
         "typing",
@@ -114,6 +115,8 @@ def test_canary_worker_is_fixed_stdlib_only_and_has_no_expansive_surface() -> No
     assert "https://" not in source
     assert "os.pread(descriptor" in source
     assert "os.pwrite(descriptor" in source
+    assert "signal.pthread_sigmask(signal.SIG_BLOCK, [])" in source
+    assert "worker_main_after_cpython_startup" in source
     assert "os.read(" not in source
     assert "os.write(" not in source
 
@@ -247,9 +250,11 @@ def test_harness_asserts_parent_child_access_data_and_process_invariants() -> No
     assert "native_owner.signal_owned_group(signal.SIGKILL)" in source
     assert "status = child.wait()" in source
     assert '"spawn_attribute_claim_proven": False' in source
-    assert "cpython_startup_can_change_signal_state" in source
+    assert "worker_main_after_cpython_startup" in source
+    assert "post_cpython_state_does_not_reconstruct_the_pre_exec_instant" in source
     assert "extension_path_import_toctou_not_eliminated" in source
-    assert "clean_outer_supervisor_not_proven_inside_harness" in source
+    assert "harness_entry_before_descriptor_cleanup" in source
+    assert "no_unexpected_inherited_descriptors" in source
     assert '"arbitrary_source_descriptor_values_proven": False' in source
     assert '"scratch_candidate_collision"' in source
     assert '"opaque_f_getfl_bits_compared": False' in source

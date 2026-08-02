@@ -579,7 +579,15 @@ and scratch-candidate/near-limit layouts. Every case has exactly FDs 0–5 in th
 child, closure of
 unrelated low and high inheritable descriptors, and unchanged parent
 descriptor identities, relevant flags and offsets after spawn and reap.
-Non-default parent `SIGCHLD` states fail closed.
+Non-default parent `SIGCHLD` states fail closed. Canary matrix v2 also observes
+its outer harness before any local descriptor cleanup: only FDs 0–2 are open
+after the parent launched it with `close_fds=True, pass_fds=()`. Each fixed
+child reports an empty main-thread signal mask after CPython startup, default
+`SIGHUP`/`SIGQUIT`/`SIGTERM` and `SIGCHLD` handling, and CPython's expected
+`SIGINT`, `SIGPIPE` and `SIGXFSZ` adjustments. The native owner independently
+records normal zero-status exit, no signal termination, exact reap and
+post-reap signal rejection. Raw PID, PGID and wait status are not retained in
+the v2 matrix report.
 
 The native entry point no longer returns a bare integer PID. It preallocates a
 nonconstructible, noncopyable exact-child owner before `posix_spawn`, arms and
@@ -597,12 +605,14 @@ authority. The emergency destructor sends `SIGKILL` and polls `waitpid` with
 `WNOHANG` for a fixed bounded interval; failure to reap in that interval is
 not terminal evidence. The fork-clone check is static rather than live, fixed
 workers are required to create no descendants, and no generic post-leader
-process-group claim is made. Exhaustive arbitrary source-FD values,
-inside-harness observation of the required clean outer supervisor,
-post-CPython child signal state and extension/runtime/worker path TOCTOU
-closure remain unproven. Only fixed test probes ran at this boundary; there
-was no standalone deterministic fake result, checkpoint FD 5 transport, model
-execution, audio operation, terminal receipt or user-facing separator.
+process-group claim is made. Exhaustive arbitrary source-FD values and
+extension/runtime/worker path TOCTOU closure remain unproven. The post-CPython
+observation does not reconstruct the pre-exec signal instant, and these
+outer-supervisor, signal and termination facts are bound only to the model-free
+canary, not the deterministic transport worker or a real separator. Only fixed
+test probes ran at this boundary; there was no standalone deterministic fake
+result, checkpoint FD 5 transport, model execution, audio operation, terminal
+receipt or user-facing separator.
 
 The following prepared-worker boundary keeps execution-era schemas isolated
 from every permanently blocked predecessor. The fixed
@@ -851,7 +861,8 @@ strict close could not be proven.
 This is transport proof, not separation. The fixed worker hashes but never
 deserializes the checkpoint, reads no source audio, imports no model, performs
 no inference, uses no network and creates no output file. Runtime-exec and
-worker-script path TOCTOU, post-CPython signal-state observation, persistent
+worker-script path TOCTOU, binding the canary's post-CPython signal-state
+observation to this deterministic worker, persistent
 ordinary-file immutability and possible failure of the bounded emergency
 destructor fallback to prove reap remain explicit limitations. No fixture is selectable,
 publishable, acceptance-eligible or promotion-eligible.
@@ -938,7 +949,10 @@ and rehashes the files after exit. Two fresh authorised runs produced the same
 
 This does not establish bitwise conversion parity, individual dyld shared-
 cache constituents, transient-load exclusion, mapped-memory byte identity or
-the wider supervisor/signal boundary. The `sandbox-exec` provider and Python
+the wider real-worker supervisor/signal boundary. The model-free canary now
+observes its own clean outer harness, post-CPython signal state and normal
+exact-reap termination, but those facts are not yet bound to this Kim worker.
+The `sandbox-exec` provider and Python
 virtual-environment runtime remain pathname-launched. All of this is private
 execution evidence, not a product separator or permission to expose the
 checkpoint.

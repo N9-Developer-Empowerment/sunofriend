@@ -231,6 +231,19 @@ def _prepare_isolated_descriptor_limit() -> int:
     return original_soft_limit
 
 
+def _observe_outer_supervisor_descriptors() -> dict[str, Any]:
+    """Observe the harness entry state before it performs any FD cleanup."""
+
+    descriptors = [
+        snapshot.descriptor for snapshot in snapshot_parent_descriptors()
+    ]
+    return {
+        "observation_point": "harness_entry_before_descriptor_cleanup",
+        "open_descriptors": descriptors,
+        "only_standard_descriptors_open": descriptors == [0, 1, 2],
+    }
+
+
 def _snapshot_descriptor(descriptor: int) -> DescriptorSnapshot:
     facts = os.fstat(descriptor)
     status_flags = fcntl.fcntl(descriptor, fcntl.F_GETFL)
@@ -648,7 +661,7 @@ def _assert_worker_report(
         "request": hashlib.sha256(_REQUEST_BYTES).hexdigest(),
         "checkpoint": hashlib.sha256(_CHECKPOINT_BYTES).hexdigest(),
     }
-    if report.get("schema") != ("sunofriend.native-spawn-descriptor-canary.v1"):
+    if report.get("schema") != ("sunofriend.native-spawn-descriptor-canary.v2"):
         raise AssertionError("canary result schema is invalid")
     if report.get("ok") is not True:
         raise AssertionError("canary worker did not complete")
@@ -659,6 +672,24 @@ def _assert_worker_report(
         raise AssertionError("canary worker does not own a new PID-matched group")
     if report.get("open_descriptors") != [0, 1, 2, 3, 4, 5]:
         raise AssertionError("child descriptor allowlist is not exact")
+    if report.get("signal_state_observation") != {
+        "observation_point": "worker_main_after_cpython_startup",
+        "main_thread_mask_empty": True,
+        "blocked_signal_names": [],
+        "handlers": {
+            "SIGHUP": "default",
+            "SIGINT": "python_default_int_handler",
+            "SIGQUIT": "default",
+            "SIGPIPE": "ignored",
+            "SIGTERM": "default",
+            "SIGCHLD": "default",
+            "SIGXFSZ": "ignored",
+        },
+        "termination_signals_default": True,
+        "sigchld_default": True,
+        "cpython_runtime_adjustments_observed": True,
+    }:
+        raise AssertionError("child post-CPython signal state differs")
     if report.get("descriptor_scan_soft_limit") != _CANARY_SOFT_LIMIT:
         raise AssertionError("child descriptor scan did not cover the fixed limit")
     if report.get("transport_inheritable") != {
@@ -900,6 +931,9 @@ def run_canary_matrix(
     expected_source_sha256: str,
     expected_build_contract_sha256: str,
 ) -> dict[str, Any]:
+    outer_supervisor_descriptors = _observe_outer_supervisor_descriptors()
+    if outer_supervisor_descriptors["only_standard_descriptors_open"] is not True:
+        raise RuntimeError("outer supervisor leaked a descriptor into the harness")
     original_soft_limit = _prepare_isolated_descriptor_limit()
     extension, artifact = _load_verified_extension(
         extension_path,
@@ -985,8 +1019,7 @@ def run_canary_matrix(
                     "layout_class": layout_class,
                     "source_fds": list(source_fds),
                     "unrelated_low_canary_fds": list(low_canary_fds),
-                    "pid": report["pid"],
-                    "pgid": report["pgid"],
+                    "native_owner_pid_pgid_match_observed": True,
                     "open_descriptors": report["open_descriptors"],
                     "native_owner_leader_reaped": (native_owner.leader_reaped),
                     "native_owner_ownership_released": (
@@ -995,6 +1028,10 @@ def run_canary_matrix(
                     "native_owner_ownership_lost": (native_owner.ownership_lost),
                     "native_owner_cached_wait_stable": True,
                     "native_owner_post_reap_signal_rejected": True,
+                    "native_owner_normal_exit_observed": True,
+                    "native_owner_signal_termination_observed": False,
+                    "native_owner_exit_status_zero": True,
+                    "post_cpython_signal_state_observed": True,
                     "parent_offsets_unchanged_after_spawn": True,
                     "parent_offsets_unchanged_after_reap": True,
                 }
@@ -1020,7 +1057,7 @@ def run_canary_matrix(
         raise RuntimeError("bound hold worker changed across canary matrix")
     expected_suffix = sysconfig.get_config_var("EXT_SUFFIX")
     return {
-        "schema": "sunofriend.native-spawn-canary-matrix.v1",
+        "schema": "sunofriend.native-spawn-canary-matrix.v2",
         "extension_path_serialized": False,
         "worker_path_serialized": False,
         "proof_scope": (
@@ -1051,10 +1088,15 @@ def run_canary_matrix(
             "post_exec_darwin_cpython_injection"
         ),
         "signal_state_canary": {
-            "observed": False,
+            "observed": True,
+            "observation_point": "worker_main_after_cpython_startup",
+            "main_thread_mask_empty": True,
+            "termination_signals_default": True,
+            "sigchld_default": True,
+            "cpython_runtime_adjustments_observed": True,
             "spawn_attribute_claim_proven": False,
             "reason": (
-                "cpython_startup_can_change_signal_state_before_worker_user_code"
+                "post_cpython_state_does_not_reconstruct_the_pre_exec_instant"
             ),
         },
         "stdio_qualification": {
@@ -1088,14 +1130,19 @@ def run_canary_matrix(
         "outer_supervisor_qualification": {
             "close_fds_required": True,
             "pass_fds_required": (),
-            "observed_from_inside_harness": False,
-            "clean_outer_process_dependency_resolved": False,
+            "observed_from_inside_harness": True,
+            "observation_point": outer_supervisor_descriptors["observation_point"],
+            "harness_entry_open_descriptors": outer_supervisor_descriptors[
+                "open_descriptors"
+            ],
+            "no_unexpected_inherited_descriptors": True,
+            "clean_outer_process_dependency_resolved": True,
         },
         "unresolved_boundaries": (
             "extension_path_import_toctou_not_eliminated",
             "runtime_executable_path_exec_toctou_not_eliminated",
             "worker_script_path_open_toctou_not_eliminated",
-            "clean_outer_supervisor_not_proven_inside_harness",
+            "pre_exec_signal_state_not_reconstructed_after_cpython_startup",
         ),
         "complete_descriptor_scan_soft_limit": _CANARY_SOFT_LIMIT,
         "inherited_descriptor_clearance_original_soft_limit": (original_soft_limit),

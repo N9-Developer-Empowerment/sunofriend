@@ -78,11 +78,15 @@ report the result, then move on.
   never terminal evidence. The fixed canaries create no descendants and no generic
   post-leader process-group claim is made. This evidence does not enable
   native fake-launch V2, which remains permanently `blocked`/`not_run` and
-  still contains only
-  caller-claimed artifact identities. It does not exhaustively prove arbitrary
-  source-FD values, observe the
-  required outer `close_fds=True, pass_fds=()` policy from inside the harness,
-  prove child signal state after CPython startup, or eliminate
+  still contains only caller-claimed artifact identities. A later model-free
+  canary matrix v2 observes its harness before local cleanup with only FDs 0–2
+  after the parent's `close_fds=True, pass_fds=()` launch. Every fixed child
+  reports an empty main-thread signal mask and selected handler dispositions
+  after CPython startup, while the exact native owner separately records normal
+  zero-status exit, no signal termination and exact reap. The v2 matrix retains
+  no raw PID, PGID or wait status. It does not exhaustively prove arbitrary
+  source-FD values, reconstruct the pre-exec signal instant, bind those facts
+  to the deterministic transport worker or a model, or eliminate
   extension-import, runtime-exec or worker-script path TOCTOU. A separately
   pinned stdlib-only deterministic worker and prepared launch V3/Result V2
   contracts exist, but launch V3 is not serialized authority and retains
@@ -414,8 +418,9 @@ report the result, then move on.
   differed, so conversion repeatability is not claimed. The observation does
   not enumerate individual dyld shared-cache constituents, exclude all
   transient loads or prove mapped-memory byte identity. Native non-module
-  closure, post-observation image mutability and the wider supervisor/signal
-  boundary remain explicit; no separator route is enabled. The
+  closure, post-observation image mutability and the wider real-worker
+  supervisor/signal boundary remain explicit; the model-free canary evidence
+  is not treated as Kim-worker evidence and no separator route is enabled. The
   checkpoint is not redistributed. Do not offer or run this challenger
   through the skill.
 - `source-import` decodes exactly one local asset.

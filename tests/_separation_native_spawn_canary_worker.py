@@ -14,6 +14,7 @@ import hashlib
 import json
 import os
 import resource
+import signal
 import stat
 import sys
 from typing import Any
@@ -28,6 +29,15 @@ _ACCESS_NAMES = {
     os.O_RDWR: "read_write",
 }
 _RUNTIME_INJECTED_ENVIRONMENT_KEY = "__CF_USER_TEXT_ENCODING"
+_OBSERVED_SIGNAL_NAMES = (
+    "SIGHUP",
+    "SIGINT",
+    "SIGQUIT",
+    "SIGPIPE",
+    "SIGTERM",
+    "SIGCHLD",
+    "SIGXFSZ",
+)
 
 
 def _harden_transport_descriptors() -> None:
@@ -149,13 +159,56 @@ def _stdio_observation() -> dict[str, Any]:
     }
 
 
+def _signal_handler_name(handler: Any) -> str:
+    if handler is signal.SIG_DFL:
+        return "default"
+    if handler is signal.SIG_IGN:
+        return "ignored"
+    if handler is signal.default_int_handler:
+        return "python_default_int_handler"
+    return "unexpected_python_handler"
+
+
+def _signal_state_observation() -> dict[str, Any]:
+    """Observe the main worker thread after CPython startup.
+
+    The native launcher resets the pre-exec signal mask and catchable signal
+    dispositions. CPython can intentionally alter them before this worker's
+    user code runs, so this record describes only the state that the worker
+    actually enters. It is not a reconstruction of the posix_spawn instant.
+    """
+
+    blocked = signal.pthread_sigmask(signal.SIG_BLOCK, [])
+    blocked_names = sorted(signal.Signals(number).name for number in blocked)
+    handlers = {
+        name: _signal_handler_name(signal.getsignal(getattr(signal, name)))
+        for name in _OBSERVED_SIGNAL_NAMES
+    }
+    return {
+        "observation_point": "worker_main_after_cpython_startup",
+        "main_thread_mask_empty": blocked_names == [],
+        "blocked_signal_names": blocked_names,
+        "handlers": handlers,
+        "termination_signals_default": all(
+            handlers[name] == "default"
+            for name in ("SIGHUP", "SIGQUIT", "SIGTERM")
+        ),
+        "sigchld_default": handlers["SIGCHLD"] == "default",
+        "cpython_runtime_adjustments_observed": (
+            handlers["SIGINT"] == "python_default_int_handler"
+            and handlers["SIGPIPE"] == "ignored"
+            and handlers["SIGXFSZ"] == "ignored"
+        ),
+    }
+
+
 def main() -> int:
     _harden_transport_descriptors()
 
     request = _read_regular_file_at_zero(3)
     checkpoint = _read_regular_file_at_zero(5)
     document = {
-        "schema": "sunofriend.native-spawn-descriptor-canary.v1",
+        "schema": "sunofriend.native-spawn-descriptor-canary.v2",
         "ok": True,
         "pid": os.getpid(),
         "pgid": os.getpgrp(),
@@ -169,6 +222,7 @@ def main() -> int:
             str(descriptor): _access_name(descriptor) for descriptor in _TRANSPORT_FDS
         },
         "stdio_observation": _stdio_observation(),
+        "signal_state_observation": _signal_state_observation(),
         "rejected_operation_errno": {
             "request_write": _rejected_errno(lambda: os.pwrite(3, b"x", 0)),
             "result_read": _rejected_errno(lambda: os.pread(4, 1, 0)),
