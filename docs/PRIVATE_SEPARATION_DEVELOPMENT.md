@@ -97,6 +97,30 @@ only. It does not prove that a model assigned sounds to the correct stems.
 This command uses only an existing local runtime and checkpoint. Every output
 path must be fresh.
 
+Before attaching another real worker to the private transport, the actual
+macOS process image can be observed without a model, checkpoint or audio:
+
+```bash
+.venv/bin/python scripts/private-macos-runtime-process-image.py \
+  --runtime .venv-ai/bin/python \
+  --out work/separation-bakeoff/macos-runtime-process-image-v2/runtime-process-image.json
+```
+
+This is not the same as hashing `.venv-ai/bin/python`. On the tested
+python.org runtime that path resolves to a signed framework launcher, which
+then becomes `Resources/Python.app/Contents/MacOS/Python`. The parent observes
+the exact child PID with `proc_pidpath`, asks the kernel for its CDHash with
+`csops`, and requires it to match the strictly validated static signature of
+the expected final image. It also requires the exact `sandbox-exec` provider
+to be on a read-only filesystem and rechecks all three full-file hashes after
+the child exits.
+
+The evidence is owner-only and path-free. It deliberately says
+`bound_to_model_worker: false`: dynamic native-library closure, complete
+byte-for-byte execution identity and attachment to the authorised Kim Vocal 2
+worker remain later gates. The canary creates no audio, downloads nothing and
+does not enable separation.
+
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \
   --fixture-out work/separation-bakeoff/demo-fixture-v2 \

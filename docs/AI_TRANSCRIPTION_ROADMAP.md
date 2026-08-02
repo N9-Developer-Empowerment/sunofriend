@@ -1697,6 +1697,41 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — actual macOS runtime process-image observation
+
+- Goal: stop treating the measured Python launcher as if it were necessarily
+  the native image that executes the private separator worker.
+- Change or experiment: added a model-free Darwin canary that launches one
+  inert child through the exact `sandbox-exec` provider, observes the exact
+  child PID from the parent with `proc_pidpath`, reads its kernel CDHash with
+  `csops`, and compares that identity with a strictly validated static code
+  signature. Provider, launcher and final-image full-file hashes are rechecked
+  after the child exits; the provider must reside on a read-only filesystem.
+- Inputs: the installed `.venv-ai` Python runtime only. No audio, model,
+  checkpoint, provider stem or existing private review was read.
+- Model/runtime/checkpoint: no model or checkpoint. The observed python.org
+  runtime uses a two-stage transition: its signed framework launcher CDHash is
+  `60332d8d…8f3`, while the actual `Python.app` process image and kernel CDHash
+  are both `b9f4c42c…aae`.
+- Evidence and metrics: the owner-only path-free observation is 2,837 bytes,
+  mode `0600`, and self-hashes to `4d5ed400…5d4`. Thirteen focused validation,
+  tamper, wrong-path, wrong-CDHash, transition, private-write and no-public-
+  route tests pass. The complete repository suite passes 2,754 tests with one
+  platform skip and the existing third-party `resampy`/`pkg_resources`
+  deprecation warning.
+- Listening result: not applicable. The child performs only a fixed arithmetic
+  probe and sleeps briefly for parent observation.
+- Decision: retain the process-image observer as a private development
+  primitive. It neither enables a separator nor grants model, checkpoint,
+  audio, source-graph, product or publication permission.
+- Problems/risks: this canary is not yet attached to the authorised Kim Vocal
+  2 worker. A kernel/static CDHash match binds executed code-signature identity,
+  not the full file SHA-256 or every dynamically loaded native library.
+  Post-observation image mutability also remains outside this narrow result.
+- Next smallest step: attach the same parent-PID image observation to the
+  already isolated authorised worker, then repeat one existing sealed excerpt
+  without changing its MIDI, listening or product status.
+
 ### 2026-08-02 — private vocal candidate loopback audition
 
 - Goal: make every preserved vocal hypothesis understandable and explicitly

@@ -1992,8 +1992,14 @@ transport, source-lineage import and promotion are not implemented**
   independently observable.
   The exact Kim Vocal 2 worker-script subproblem is now closed for one real
   authorised observation by executing the already-open verified descriptor as
-  Python standard input. The sandbox provider and Python runtime remain
-  pathname-launched.
+  Python standard input. A separate model-free macOS canary now observes the
+  exact child PID and proves that the python.org launcher transitions to a
+  different signed `Python.app` image whose kernel CDHash matches the parent's
+  strictly validated static identity. It also confines the exact
+  `sandbox-exec` provider to the observed read-only system filesystem and
+  rechecks all full-file hashes after exit. This is not yet bound to the real
+  worker, does not bind dynamic native-library closure and does not claim full
+  byte-for-byte execution identity, so this gate remains open.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with the
   deterministic fake worker, exact pre-exec remeasurement, validated worker
   result, timeout/reap evidence and parent-verified quarantined outputs before
