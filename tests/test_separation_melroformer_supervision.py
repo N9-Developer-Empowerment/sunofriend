@@ -239,7 +239,7 @@ def test_native_real_worker_supervision_plan_is_blocked_and_path_free() -> None:
     ] is True
     assert plan["missing_bridge"][
         "fixed_real_worker_native_entrypoint_implemented"
-    ] is False
+    ] is True
     assert plan["missing_bridge"][
         "model_free_combined_fixed_worker_bridge_implemented"
     ] is True

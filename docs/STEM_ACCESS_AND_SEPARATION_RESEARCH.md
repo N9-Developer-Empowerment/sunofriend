@@ -69,11 +69,16 @@ environment before isolated Python starts. The bootstrap's sandbox mode
 observes `EPERM` for loopback, `fork()` and an outside-tree create while the
 same fd3/fd4 frames, ready/release gate, opaque identity match, group drain and
 exact reap succeed. No request path, checkpoint byte, model or audio is opened.
-This proves the future launch envelope only; the real Kim worker remains on
+This proves the future launch envelope only; the active Kim path remains on
 the subprocess route. The exact Kim bridge now also supports path-free static
 inspection and tensor loading from an inherited non-inheritable read-only
-checkpoint descriptor. That fd5 plumbing has synthetic unit evidence only and
-is not yet attached to a real native worker or any product route.
+checkpoint descriptor. A fixed real native adapter now wires that loader to
+fd5, validates fd3, preserves the fd6/fd7 observation gate and can emit the
+path-free fd4 worker result. The adapter has dependency-substituted unit
+evidence only: it has not been launched by the opaque native owner and has not
+opened the accepted checkpoint or authorised audio. The private parent runner,
+observer attachment, staging revalidation and terminal projection remain
+missing, so no product route is enabled.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on

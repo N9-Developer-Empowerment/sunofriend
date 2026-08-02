@@ -1704,6 +1704,47 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — fixed real native Kim worker adapter implemented, not run
+
+- Goal: replace the model-free fd3–fd7 bootstrap with a fixed adapter capable
+  of running the already-audited Kim bridge without yet creating a live launch
+  or product route.
+- Change or experiment: added
+  `scripts/private-melroformer-native-worker.py`, whose first effectful
+  user-code action marks descriptors 3–7 non-inheritable, and a separate
+  `_separation_melroformer_native_worker.py` execution core. The worker derives
+  the repository package root only from its parent-bound script location,
+  validates the canonical fd3 request, hashes its own fixed source, verifies
+  source and companion manifests, supplies fd5 to the audited Safetensors/MLX
+  loader, uses fd6/fd7 for the existing post-inference ready/release boundary,
+  writes only a fresh PCM24 quarantine and private closure claim inside the
+  staging tree, and emits a path-free fd4 result. The path-bearing Python
+  import-closure claim is stored as a private staging artifact for later
+  independent parent verification rather than embedded in the result frame.
+- Inputs: small descriptor fixtures and monkeypatched model, inference,
+  quarantine and closure operations. No Kim checkpoint, MLX model or authorised
+  audio was opened.
+- Model/runtime/checkpoint: no model execution. The focused contract test proves
+  that the core passes the already-open checkpoint descriptor to the loader and
+  closes it without treating the checkpoint pathname as the tensor-load source.
+- Evidence and metrics: Ruff passes and 88 focused native-worker, supervision,
+  frame, Safetensors and bridge tests pass. The synthetic core exercise
+  revalidates the fd4 result against the exact request, retains no absolute path
+  and keeps publication, automatic selection and product routing false.
+- Listening result: not applicable; no audio was read or produced.
+- Decision: mark the fixed real native entrypoint and fd5 attachment as
+  implemented in source, but not live-exercised. The active Kim evaluation path
+  remains the unchanged subprocess route.
+- Problems/risks: no parent executor yet supplies a fresh live admission,
+  remeasures the fixed worker/runtime/provider, attaches the opaque-owner
+  process-image, network and executable-region observers, verifies the private
+  closure/quarantine artifacts, consumes the result PID/PGID or derives the
+  terminal projection. Runtime, worker and sandbox-provider execution remain
+  pathname based.
+- Next smallest step: implement the private parent adapter around the existing
+  native launcher and run a model-free dependency-substituted lifecycle through
+  that exact adapter before opening the accepted checkpoint or authorised audio.
+
 ### 2026-08-02 — Kim checkpoint loader accepts inherited fd5
 
 - Goal: remove the checkpoint-path reopen from the future native Kim worker
@@ -1724,11 +1765,13 @@ Each working day should aim for one narrow vertical improvement:
   through the yielded stream, and rejection of inheritable or writable files.
 - Listening result: not applicable; no audio was read or produced.
 - Decision: accept descriptor-native checkpoint inspection and tensor-load
-  plumbing as implemented, but keep it unattached to the real native worker.
+  plumbing as implemented. A later fixed real worker adapter now calls it, but
+  that adapter has not been launched and remains outside every product route.
   Every CLI, TUI, Simple, Studio and automatic-selection route remains disabled.
-- Problems/risks: the fixed native worker entry point is still absent. The
-  request still carries a checkpoint pathname for private evidence, and the
-  current authorised worker still follows its unchanged subprocess path.
+- Problems/risks: at this point in the log the fixed native worker entry point
+  was still absent. The request carries a checkpoint pathname for private
+  evidence, and the current authorised worker still follows its unchanged
+  subprocess path.
 - Next smallest step: add the fixed real worker adapter whose first user-code
   action hardens fds 3–7, validates fd3, imports the audited bridge and passes
   fd5 to this loader without reopening the checkpoint path.

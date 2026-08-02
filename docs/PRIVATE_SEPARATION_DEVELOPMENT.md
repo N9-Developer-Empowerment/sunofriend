@@ -294,8 +294,21 @@ read-only descriptor with positioned reads, returning path-free static evidence
 without moving the caller's offset. The model loader can then give MLX a
 non-inheritable duplicate of that exact descriptor and records that it did not
 reopen the checkpoint path. Unit tests use small synthetic containers only; the
-accepted Kim checkpoint and authorised audio were not opened. This plumbing is
-not yet connected to a real native worker, so it grants no new route or result.
+accepted Kim checkpoint and authorised audio were not opened.
+
+A fixed real native adapter is now implemented in source. Its tiny bootstrap
+hardens fd3–fd7 before importing project code and derives the package root from
+its parent-bound script location rather than request data. Its core validates
+fd3, binds the fixed worker/source/companion identities, passes only fd5 to the
+descriptor-native checkpoint loader, retains the existing fd6/fd7 observation
+gate, confines quarantine and a private path-bearing Python-closure claim to
+the staging tree, and emits a path-free fd4 result with every product authority
+false. Synthetic dependency-substituted tests exercise that wiring; no model,
+checkpoint or audio was opened. The missing parent adapter must still attach
+the live admission and all three opaque-owner observers, reverify the private
+staging artifacts, consume the result identity, drain the complete group and
+derive the terminal projection. The adapter has therefore not been launched,
+the active Kim path remains subprocess-based and no product route is enabled.
 
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \

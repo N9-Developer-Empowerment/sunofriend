@@ -117,9 +117,16 @@ report the result, then move on.
   opens no checkpoint, model or audio, and the bootstrap is not the real Kim
   worker. The audited bridge can now inspect and tensor-load the accepted
   checkpoint from an inherited non-inheritable read-only descriptor without
-  reopening its path, but that fd5 plumbing has synthetic unit evidence only
-  and is not attached to a real native worker. Kim remains on the subprocess
-  route. This evidence does not enable native fake-launch V2, which remains
+  reopening its path. A fixed real native adapter now validates fd3, binds its
+  parent-selected worker and repository, supplies fd5 to that loader, retains
+  the fd6/fd7 observation gate, confines quarantine plus the private pathful
+  Python-closure claim to staging and can emit the path-free fd4 worker result.
+  Dependency-substituted tests only have exercised this wiring: the adapter
+  has not been launched by the opaque native owner and has opened no accepted
+  checkpoint, model or authorised audio. The private parent executor, observer
+  attachment, staging revalidation and terminal projection remain absent, and
+  the active Kim route remains subprocess-based. This evidence does not enable
+  native fake-launch V2, which remains
   permanently
   `blocked`/`not_run` and still contains only caller-claimed artifact
   identities. A later model-free
@@ -474,10 +481,12 @@ report the result, then move on.
   pre-exec signal instant or use the separately proven native
   process-group/descendant owner, and no separator route is enabled. A
   validation-only terminal projection now defines and rejects incomplete
-  future native claims, but the current Kim worker cannot emit it and it is
-  not execution provenance. The owner-bound process-image primitive is proven
-  only with a fixed model-free worker; the current Kim route still uses its
-  older PID-consuming observation path. The
+  future native claims. The fixed native adapter can emit the private
+  identity-bearing worker result, but only a still-missing parent executor can
+  consume that identity through the opaque owner and derive the projection;
+  source shape alone is not execution provenance. The owner-bound process-image
+  primitive is proven only with a fixed model-free worker; the active Kim route
+  still uses its older PID-consuming observation path. The
   checkpoint is not redistributed. Do not offer or run this challenger
   through the skill.
 - `source-import` decodes exactly one local asset.
