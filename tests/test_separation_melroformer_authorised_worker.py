@@ -13,6 +13,7 @@ import numpy as np
 import pytest
 
 import sunofriend._separation_melroformer_authorised_worker as worker
+import sunofriend._separation_melroformer_supervision as supervision_evidence
 import sunofriend._separation_macos_worker_native_images as worker_native_images
 import sunofriend._separation_macos_process_image as process_image
 import sunofriend._separation_macos_sandbox_network_observer as network_observer
@@ -44,14 +45,17 @@ from sunofriend._separation_worker_ready_handshake import (
         "observe_outbound_attempts",
         "shared_headroom",
         "bind_native_image_inventory",
+        "bind_real_worker_supervision",
     ),
     [
-        (False, False, False, False),
-        (True, False, False, False),
-        (True, True, False, False),
-        (True, True, True, False),
-        (True, True, False, True),
-        (True, True, True, True),
+        (False, False, False, False, False),
+        (True, False, False, False, False),
+        (True, True, False, False, False),
+        (True, True, True, False, False),
+        (True, True, False, True, False),
+        (True, True, True, True, False),
+        (True, True, False, True, True),
+        (True, True, True, True, True),
     ],
 )
 @pytest.mark.parametrize(
@@ -68,6 +72,7 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
     observe_outbound_attempts: bool,
     shared_headroom: bool,
     bind_native_image_inventory: bool,
+    bind_real_worker_supervision: bool,
     rights_authority: str,
 ) -> None:
     repository = tmp_path / "repository"
@@ -189,9 +194,12 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
             allow_shared_attenuation=True,
         )
         closure_requested = "--bind-python-import-closure" in command
+        supervision_requested = "--bind-real-worker-supervision" in command
         child = {
             "schema": (
-                worker.IMPORT_CLOSURE_CHILD_SCHEMA
+                worker.SUPERVISION_CHILD_SCHEMA
+                if supervision_requested
+                else worker.IMPORT_CLOSURE_CHILD_SCHEMA
                 if closure_requested
                 else worker.CHILD_SCHEMA
             ),
@@ -248,6 +256,10 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
         }
         if closure_requested:
             child["import_closure"] = {"fixture": True}
+        if supervision_requested:
+            child["signal_state"] = (
+                supervision_evidence._expected_post_cpython_signal_state()
+            )
         return subprocess.CompletedProcess(command, 0, json.dumps(child), "")
 
     monkeypatch.setattr(worker.subprocess, "run", fake_run)
@@ -324,6 +336,10 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
         bind_python_import_closure=bind_python_import_closure,
         observe_outbound_attempts=observe_outbound_attempts,
         bind_native_image_inventory=bind_native_image_inventory,
+        bind_real_worker_supervision=bind_real_worker_supervision,
+        outer_supervisor_open_descriptors=(
+            [0, 1, 2] if bind_real_worker_supervision else None
+        ),
     )
 
     assert evidence["status"] == "authorised_model_worker_complete_parent_verified"
@@ -332,7 +348,9 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
     assert evidence["quarantine"]["evidence_identical"] is True
     if shared_headroom:
         assert evidence["schema"] == (
-            worker.NATIVE_IMAGE_HEADROOM_WORKER_SCHEMA
+            worker.SUPERVISED_NATIVE_IMAGE_HEADROOM_WORKER_SCHEMA
+            if bind_real_worker_supervision
+            else worker.NATIVE_IMAGE_HEADROOM_WORKER_SCHEMA
             if bind_native_image_inventory
             else worker.RUNTIME_IMAGE_HEADROOM_WORKER_SCHEMA
         )
@@ -344,7 +362,11 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
     )
     if observe_outbound_attempts:
         assert evidence["schema"] == (
-            worker.NATIVE_IMAGE_HEADROOM_WORKER_SCHEMA
+            worker.SUPERVISED_NATIVE_IMAGE_HEADROOM_WORKER_SCHEMA
+            if shared_headroom and bind_real_worker_supervision
+            else worker.SUPERVISED_NATIVE_IMAGE_WORKER_SCHEMA
+            if bind_real_worker_supervision
+            else worker.NATIVE_IMAGE_HEADROOM_WORKER_SCHEMA
             if shared_headroom and bind_native_image_inventory
             else worker.NATIVE_IMAGE_WORKER_SCHEMA
             if bind_native_image_inventory
@@ -378,6 +400,21 @@ def test_parent_binds_authorised_worker_denials_and_pcm24(
                     "bound_to_model_worker"
                 ]
                 is True
+            )
+        if bind_real_worker_supervision:
+            assert evidence["supervision"]["outer_supervisor"][
+                "open_descriptors"
+            ] == (0, 1, 2)
+            assert evidence["supervision"]["terminal"]["exact_child_reaped"] is True
+            assert (
+                evidence["conclusion"][
+                    "real_worker_post_cpython_signal_state_bound"
+                ]
+                is True
+            )
+            assert (
+                evidence["limitations"]["native_process_group_supervision_bound"]
+                is False
             )
     elif bind_python_import_closure:
         assert evidence["schema"] == worker.IMPORT_CLOSURE_SCHEMA
@@ -455,6 +492,42 @@ def test_native_image_inventory_requires_complete_private_observation_boundary(
         )
 
 
+def test_real_worker_supervision_requires_native_images_and_outer_descriptors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(worker.platform, "system", lambda: "Darwin")
+    base = {
+        "repository_root": "unused",
+        "runtime_path": "unused",
+        "source_root": "unused",
+        "checkpoint_path": "unused",
+        "companion_root": "unused",
+        "authorisation_report_path": "unused",
+        "expected_authorisation_report_sha256": "a" * 64,
+        "staging_directory": "unused",
+    }
+
+    with pytest.raises(ValueError, match="requires the complete native-image"):
+        worker._run_private_melroformer_authorised_worker(
+            **base,
+            bind_real_worker_supervision=True,
+            outer_supervisor_open_descriptors=[0, 1, 2],
+        )
+    with pytest.raises(ValueError, match="requires the outer descriptor"):
+        worker._run_private_melroformer_authorised_worker(
+            **base,
+            bind_python_import_closure=True,
+            observe_outbound_attempts=True,
+            bind_native_image_inventory=True,
+            bind_real_worker_supervision=True,
+        )
+    with pytest.raises(ValueError, match="requires real-worker supervision"):
+        worker._run_private_melroformer_authorised_worker(
+            **base,
+            outer_supervisor_open_descriptors=[0, 1, 2],
+        )
+
+
 def test_authorised_worker_has_no_public_route() -> None:
     assert "private-melroformer-authorised-worker" not in PUBLIC_COMMANDS
     assert "private-melroformer-authorised-worker" not in DIRECT_TUI_COMMANDS
@@ -483,6 +556,12 @@ def test_authorised_worker_script_persists_exclusive_owner_only_observation(
     assert json.loads(observation.read_text(encoding="utf-8")) == {"status": "fixture"}
     with pytest.raises(FileExistsError):
         module._write_private_observation(observation, {"status": "replaced"})
+
+    source = script.read_text(encoding="utf-8")
+    assert source.index("outer_open_descriptors = (") < source.index(
+        "from sunofriend._separation_checkpoint_canonical import plain"
+    )
+    assert 'parser.add_argument("--bind-real-worker-supervision"' in source
 
 
 def _arrays() -> tuple[np.ndarray, np.ndarray, np.ndarray]:

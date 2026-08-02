@@ -636,6 +636,18 @@ the pre-exec signal instant. The result is deterministic-fixture evidence only:
 real models, source graph, CLI, TUI, Simple, Studio, selection, publication and
 promotion remain unavailable.
 
+The separate authorised Kim Vocal 2 path now reuses a deliberately narrower
+version of this evidence contract. Before importing Sunofriend, its private
+outer launcher requires exactly standard descriptors 0-2. The real model
+worker reports its main-thread mask and selected signal dispositions after
+CPython startup, and the parent binds that report to synchronous exact-child
+`Popen.communicate`, normal exit 0 and reap. Authorised-worker schemas v10/v11
+require the existing import-closure, kernel-denial, signed-process-image and
+post-inference native-image layers before this supervision record can exist.
+They grant no source-graph or product authority. This does not reconstruct the
+pre-exec signal instant, create native process-group ownership, supervise
+descendants, or close provider/runtime pathname TOCTOU.
+
 `_separation_fake_execution_protocol.py` validates the new V2 magics and
 canonical bindings but intentionally cannot encode an admitted product
 request or issue an admission. Synthetic envelope creation exists only in
@@ -960,11 +972,11 @@ and rehashes the files after exit. Two fresh authorised runs produced the same
 33-file path-free inventory, but their GPU float-output hashes differed.
 
 This does not establish bitwise conversion parity, individual dyld shared-
-cache constituents, transient-load exclusion, mapped-memory byte identity or
-the wider real-worker supervisor/signal boundary. The model-free canary now
-observes its own clean outer harness, post-CPython signal state and normal
-exact-reap termination, but those facts are not yet bound to this Kim worker.
-The `sandbox-exec` provider and Python
+cache constituents, transient-load exclusion or mapped-memory byte identity.
+One later exact authorised run now binds its launcher entry at FDs 0-2, its
+post-CPython signal state, synchronous exact-child wait and normal exit 0 to
+the Kim worker. It still does not reconstruct pre-exec signal state or provide
+native process-group/descendant supervision. The `sandbox-exec` provider and Python
 virtual-environment runtime remain pathname-launched. All of this is private
 execution evidence, not a product separator or permission to expose the
 checkpoint.

@@ -1704,6 +1704,46 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — real Kim Vocal 2 worker supervision bound
+
+- Goal: attach the already tested outer-descriptor, post-CPython signal-state
+  and exact normal-exit contract to one real, authorised Kim Vocal 2 worker
+  without enabling a separator product route.
+- Change or experiment: the private launcher now observes its complete open-FD
+  set before importing Sunofriend. The real worker reports a fixed selected
+  signal mask/handler record after CPython startup. The parent validates both,
+  waits synchronously for the exact child, and adds one path-free self-hashed
+  supervision layer only after clean exit. This opt-in mode requires the
+  existing import-closure, sandbox-network, signed process-image and
+  post-inference native-image boundaries.
+- Inputs: the unchanged authorised `Be Alone` 191-206 second PCM24 excerpt,
+  exact Kim Vocal 2 source revision `41092c02...`, 456,483,463-byte BF16
+  checkpoint and pinned config/licence companions.
+- Model/runtime/checkpoint: GPU mode with checkpoint SHA-256
+  `312c38e5...7fe5`; the exact 9,535-byte descriptor-executed worker hashes to
+  `c95f0544...6e4b`.
+- Evidence and metrics: the live private run passed as worker schema v10. The
+  launcher had exactly FDs 0-2. The worker reported an empty main-thread mask,
+  default `SIGHUP`/`SIGQUIT`/`SIGTERM` and `SIGCHLD`, plus CPython's expected
+  `SIGINT`, `SIGPIPE` and `SIGXFSZ` dispositions. The parent observed normal
+  exit 0 and exact-child reap through synchronous `Popen.communicate`. The
+  120,078-byte owner-only report has evidence self-hash `7bd289b9...ca4e`, file
+  SHA-256 `f0057201...43e`, and nested supervision hash `d4762583...e9d`. It
+  retained 322 modules, 279 files, 18,097,696 import bytes, one deliberate
+  denied network canary and zero other worker denials.
+- Listening result: not repeated. The source, separator output and downstream
+  MIDI path are unchanged.
+- Decision: retain this as private real-worker execution evidence. Every
+  source-graph, CLI, TUI, Simple, Studio, selection, publication and promotion
+  permission remains false.
+- Problems/risks: post-CPython state does not reconstruct the pre-exec signal
+  instant. A synchronous subprocess wait is not native process-group or
+  descendant supervision. Provider/runtime path-to-execution TOCTOU, complete
+  native-library closure, dyld shared-cache constituents, transient loads and
+  mapped-memory byte identity remain open.
+- Next smallest step: design a native-owned real-worker process-group terminal
+  boundary, while preserving the current no-route and fail-closed contracts.
+
 ### 2026-08-02 — deterministic transport worker supervision bound
 
 - Goal: bind the clean outer-supervisor, post-CPython signal and exact normal
@@ -1737,9 +1777,8 @@ Each working day should aim for one narrow vertical improvement:
   real-separator evidence. Extension/runtime/worker pathname TOCTOU, dynamic
   native-library closure and the real-worker outer-supervision boundary remain
   open.
-- Next smallest step: evaluate whether a separately authorised real-worker
-  supervisor/signal observation can reuse this contract without weakening its
-  fail-closed, path-free or no-public-route guarantees.
+- Next smallest step: completed by the real Kim Vocal 2 worker-supervision
+  increment above.
 
 ### 2026-08-02 — outer supervisor and post-CPython signal canary
 

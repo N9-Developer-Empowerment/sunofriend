@@ -4,14 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import errno
+import fcntl
 import json
 import os
+import resource
 from pathlib import Path
-
-from sunofriend._separation_checkpoint_canonical import plain
-from sunofriend._separation_melroformer_authorised_worker import (
-    _run_private_melroformer_authorised_worker,
-)
 
 
 def main() -> int:
@@ -28,7 +26,17 @@ def main() -> int:
     parser.add_argument("--bind-python-import-closure", action="store_true")
     parser.add_argument("--observe-outbound-attempts", action="store_true")
     parser.add_argument("--bind-native-image-inventory", action="store_true")
+    parser.add_argument("--bind-real-worker-supervision", action="store_true")
     args = parser.parse_args()
+
+    outer_open_descriptors = (
+        _open_descriptors() if args.bind_real_worker_supervision else None
+    )
+    from sunofriend._separation_checkpoint_canonical import plain
+    from sunofriend._separation_melroformer_authorised_worker import (
+        _run_private_melroformer_authorised_worker,
+    )
+
     evidence = _run_private_melroformer_authorised_worker(
         repository_root=args.repository_root,
         runtime_path=args.runtime,
@@ -42,6 +50,8 @@ def main() -> int:
         bind_python_import_closure=args.bind_python_import_closure,
         observe_outbound_attempts=args.observe_outbound_attempts,
         bind_native_image_inventory=args.bind_native_image_inventory,
+        bind_real_worker_supervision=args.bind_real_worker_supervision,
+        outer_supervisor_open_descriptors=outer_open_descriptors,
     )
     document = plain(evidence)
     _write_private_observation(
@@ -50,6 +60,23 @@ def main() -> int:
     )
     print(json.dumps(document, indent=2, sort_keys=True))
     return 0
+
+
+def _open_descriptors() -> list[int]:
+    """Observe the launcher's descriptor boundary before Sunofriend imports."""
+
+    soft_limit, _hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
+    limit = 1_048_576 if soft_limit == resource.RLIM_INFINITY else int(soft_limit)
+    descriptors: list[int] = []
+    for descriptor in range(limit):
+        try:
+            fcntl.fcntl(descriptor, fcntl.F_GETFD)
+        except OSError as error:
+            if error.errno == errno.EBADF:
+                continue
+            raise
+        descriptors.append(descriptor)
+    return descriptors
 
 
 def _write_private_observation(path: Path, document: object) -> None:

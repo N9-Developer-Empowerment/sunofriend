@@ -1587,9 +1587,12 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   execution: self-hashed Result V2 carries the worker signal report, the native
   receipt binds normal zero exit and exact reap, and the self-hashed outer
   report observed only FDs 0–2 before Sunofriend imports or execution setup.
-  It retains no PID or PGID and enables no product route. These facts remain
-  unbound to Kim Vocal 2 or any real separator, and the post-CPython record
-  does not reconstruct the pre-exec signal instant. The evidence does
+  It retains no PID or PGID and enables no product route. One later authorised
+  Kim Vocal 2 run now binds its own outer FDs 0-2, expected post-CPython
+  selected signal state, synchronous exact-child wait and normal exit 0 in a
+  separate self-hashed v10 evidence layer. The post-CPython record still does
+  not reconstruct the pre-exec signal instant, and native process-group and
+  descendant supervision remain false. The evidence does
   not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory
   bytes. None of these observations is full-file execution proof, dynamic-

@@ -16,14 +16,17 @@ combined with bridge or release failure, checkpoint integrity combined with
 checkpoint-lease descriptor-cleanup/terminalization failure, clean
 remeasurement followed by unconfirmed descriptor close and the remaining
 adversarial matrix are incomplete. Exhaustive arbitrary source-FD proof,
-path-TOCTOU closure, guaranteed emergency-finalizer reap and live
-child-signal-state proof remain incomplete. A separate private-development
+path-TOCTOU closure and guaranteed emergency-finalizer reap remain incomplete.
+One real authorised Kim worker now binds a post-CPython signal observation and
+clean outer descriptors to normal exact-child exit, but pre-exec state and
+native process-group/descendant supervision remain incomplete. A separate
+private-development
 HTDemucs runner now produces and measures four real broad estimated stems on
 the copyright-safe demo, and a second private evaluator measures their effect
 on the existing MIDI transcribers. Public separation, source-graph import,
 hidden/cross-song acceptance and promotion are not implemented**
 
-Checked: 1 August 2026 after the private four-stem HTDemucs run, synthetic
+Checked: 2 August 2026 after the private four-stem HTDemucs run, synthetic
 ground-truth evaluation, three authorised provider comparisons, cross-song
 narrow-`other` evidence, the six-source challenger, the MelRoFormer vocal
 comparisons and its model-free macOS network-denial canary
@@ -1897,7 +1900,9 @@ runtime process image to the observed child PID. A deterministic model-free
 canary inventories stable file-backed executable mappings from an exact child.
 The same primitive is now separately attached through a bounded post-inference
 worker-ready handshake: two fresh authorised runs repeated the same 33-file
-inventory, while their GPU float-output hashes differed. The evidence does not
+inventory, while their GPU float-output hashes differed. A later authorised
+run also bound the real worker's outer standard-descriptor boundary,
+post-CPython signal state and normal exact-child exit. The evidence does not
 cover dyld shared-cache constituents, transient loads or mapped-memory byte
 identity. Full
 native-image closure, an independent local backend, human acceptance, public
@@ -2018,9 +2023,12 @@ separator transport, source-lineage import and promotion are not implemented**
   normal exact-reap termination for every fixed descriptor layout. It retains
   no raw PID, PGID or wait status. A later deterministic-fixture execution now
   binds the same facts to its exact self-hashed worker result and exact-reap
-  terminal receipt. The checklist stays open because Kim Vocal 2 and every
-  other real worker remain unbound, path TOCTOU remains, and neither
-  observation reconstructs the pre-exec signal instant.
+  terminal receipt. One exact Kim Vocal 2 run now binds the equivalent outer
+  FDs 0-2, post-CPython selected signal state and synchronous normal
+  exact-child wait. The checklist stays open because every other real worker
+  class is not yet covered, path TOCTOU remains, and no observation
+  reconstructs the pre-exec signal instant or provides native process-group
+  and descendant supervision.
   The exact Kim Vocal 2 worker-script subproblem is now closed for one real
   authorised observation by executing the already-open verified descriptor as
   Python standard input. The parent-PID macOS process-image observation is now
@@ -2038,8 +2046,8 @@ separator transport, source-lineage import and promotion are not implemented**
   33-file inventory, with 32 strict signatures and no unpathed executable
   region, but the GPU float-output hashes differed. The evidence still omits
   dyld shared-cache constituents, cannot exclude all transient loads or prove
-  mapped-memory bytes, and leaves the real-worker outer-supervisor/signal-state
-  boundary open, so this gate is not complete.
+  mapped-memory bytes. Native process-group/descendant ownership and the
+  pre-exec signal instant remain open, so this gate is not complete.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with the
   deterministic fake worker, exact pre-exec remeasurement, validated worker
   result, timeout/reap evidence and parent-verified quarantined outputs before

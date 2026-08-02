@@ -26,6 +26,9 @@ from sunofriend._separation_melroformer_worker_sandbox import (
     WORKER_RELATIVE_PATH,
     _synthetic_arrays,
 )
+from sunofriend._separation_melroformer_supervision import (
+    _observe_post_cpython_signal_state,
+)
 from sunofriend._separation_python_import_closure import (
     _capture_python_import_closure_claim,
     _mark_python_import_closure_stable,
@@ -55,6 +58,7 @@ def main() -> int:
     parser.add_argument("--repository-root", type=Path)
     parser.add_argument("--native-image-ready-fd", type=int)
     parser.add_argument("--native-image-release-fd", type=int)
+    parser.add_argument("--bind-real-worker-supervision", action="store_true")
     args = parser.parse_args()
 
     real_values = (
@@ -91,6 +95,21 @@ def main() -> int:
         parser.error(
             "native-image readiness requires an authorised import-closure worker"
         )
+    if args.bind_real_worker_supervision and (
+        args.synthetic_canary
+        or not args.bind_python_import_closure
+        or native_image_descriptors[0] is None
+    ):
+        parser.error(
+            "real-worker supervision requires the complete authorised "
+            "import-closure and native-image boundary"
+        )
+
+    signal_state = (
+        _observe_post_cpython_signal_state()
+        if args.bind_real_worker_supervision
+        else None
+    )
 
     network = _network_canary()
     fork = _fork_canary()
@@ -170,6 +189,8 @@ def main() -> int:
     }
     if model_evidence is not None:
         result["model"] = model_evidence
+    if signal_state is not None:
+        result["signal_state"] = plain(signal_state)
     closure = None
     if args.bind_python_import_closure:
         main_module = sys.modules["__main__"]
@@ -187,6 +208,11 @@ def main() -> int:
             "sunofriend.private-melroformer-authorised-worker-import-closure-child.v1"
         )
         result["import_closure"] = plain(closure)
+    if signal_state is not None:
+        result["schema"] = (
+            "sunofriend.private-melroformer-authorised-worker-"
+            "supervision-child.v1"
+        )
     encoded = json.dumps(result, sort_keys=True, separators=(",", ":"))
     if closure is not None:
         stable = _mark_python_import_closure_stable(closure)

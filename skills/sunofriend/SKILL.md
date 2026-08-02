@@ -219,10 +219,10 @@ report the result, then move on.
   selection route is exposed. Because runtime-exec and worker-script path
   TOCTOU remain open, this slice does not prove that the exact measured
   runtime/worker bytes were the bytes executed. Mixed lifecycle failures,
-  broader descriptor ownership/inheritability/I/O/authority failures, child
-  signal-state observation and possible failure of the bounded emergency
-  fallback to prove reap remain explicit limitations. Real separation execution is
-  still disabled.
+  broader descriptor ownership/inheritability/I/O/authority failures, full
+  native process-group/descendant supervision and possible failure of the
+  bounded emergency fallback to prove reap remain explicit limitations. Real
+  separation execution is still disabled.
 - One exact ZFTurbo BS-RoFormer `v1.0.12` private challenger is registered by a
   read-only internal plan, but remains `blocked`/`not_run`: checkpoint-specific
   terms and a published checkpoint SHA-256 are absent, and no installer,
@@ -423,9 +423,12 @@ report the result, then move on.
   differed, so conversion repeatability is not claimed. The observation does
   not enumerate individual dyld shared-cache constituents, exclude all
   transient loads or prove mapped-memory byte identity. Native non-module
-  closure, post-observation image mutability and the wider real-worker
-  supervisor/signal boundary remain explicit; the model-free canary evidence
-  is not treated as Kim-worker evidence and no separator route is enabled. The
+  closure and post-observation image mutability remain explicit. One later
+  authorised Kim run binds its own outer FDs 0-2, expected post-CPython
+  selected signal state, synchronous exact-child wait and normal exit 0 in a
+  separate self-hashed v10 evidence layer. That layer does not reconstruct the
+  pre-exec signal instant or provide native process-group/descendant
+  supervision, and no separator route is enabled. The
   checkpoint is not redistributed. Do not offer or run this challenger
   through the skill.
 - `source-import` decodes exactly one local asset.

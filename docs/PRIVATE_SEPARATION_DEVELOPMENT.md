@@ -178,7 +178,8 @@ PYTHONPATH=src .venv-ai/bin/python \
   --device gpu \
   --bind-python-import-closure \
   --observe-outbound-attempts \
-  --bind-native-image-inventory
+  --bind-native-image-inventory \
+  --bind-real-worker-supervision
 ```
 
 Two fresh `Be Alone` observations each found 33 executable file-backed regions
@@ -187,10 +188,19 @@ image once. The path-free inventories were identical between runs; all files
 were unchanged after their child exited, 32 passed strict static-code
 validation and one was explicitly retained as not strictly valid. The two GPU
 float-output hashes differed, so bitwise conversion repeatability is not
-claimed. This still does not enumerate dyld shared-cache constituents, exclude
-all transient loads, prove mapped bytes equal reopened files, close the wider
-supervisor/signal boundary or enable any source-graph, automatic-selection,
-Simple, Studio, product or publication route.
+claimed. A later opt-in run added `--bind-real-worker-supervision`. Before any
+Sunofriend import, the private launcher observed exactly FDs 0-2. The real
+worker then reported an empty main-thread mask and the expected post-CPython
+selected handlers; the parent bound the result to synchronous exact-child
+wait, normal exit 0 and reap. The 120,078-byte owner-only observation hashes to
+`f00572017dfbef238a37e71ac07b7d01795a49fe9ff54f628d03bdc9d763043e`;
+its self-hash is
+`7bd289b9e55e38e5619b299ff42523f708bca41ff8f67ba161b1df758d6eca4e`.
+This does not reconstruct pre-exec signal state, establish native
+process-group or descendant supervision, enumerate dyld shared-cache
+constituents, exclude all transient loads, prove mapped bytes equal reopened
+files, or enable any source-graph, automatic-selection, Simple, Studio,
+product or publication route.
 
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \
