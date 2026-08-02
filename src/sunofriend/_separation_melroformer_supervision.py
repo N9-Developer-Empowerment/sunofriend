@@ -241,8 +241,8 @@ def _build_native_real_worker_supervision_plan() -> Mapping[str, Any]:
         },
         "missing_bridge": {
             "fixed_real_worker_native_entrypoint_implemented": False,
-            "owner_bound_process_image_observer_implemented": False,
-            "owner_bound_network_observer_implemented": False,
+            "owner_bound_process_image_observer_implemented": True,
+            "owner_bound_network_observer_implemented": True,
             "owner_bound_native_image_ready_observer_implemented": False,
             "native_terminal_projection_derived_from_live_owner": False,
             "native_terminal_projection_bound_to_real_worker_result": False,
@@ -259,7 +259,8 @@ def _build_native_real_worker_supervision_plan() -> Mapping[str, Any]:
         },
         "limitations": [
             "projection_shape_validation_is_not_execution_provenance",
-            "current_pid_observers_cannot_consume_the_hidden_native_owner",
+            "post_inference_native_image_observer_still_consumes_a_raw_pid",
+            "owner_bound_network_broker_not_attached_to_real_kim_worker",
             "current_kim_worker_remains_on_the_subprocess_supervision_route",
             "no_public_cli_tui_simple_studio_or_source_graph_route",
         ],

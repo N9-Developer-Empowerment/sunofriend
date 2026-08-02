@@ -1704,6 +1704,49 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — single-use network stream bound to opaque native owner
+
+- Goal: remove the kernel-network observer's need for a caller-supplied target
+  PID before considering any real-worker native bridge.
+- Change or experiment: added a factory-only, non-copyable, non-serializable
+  owner-bound observation broker. It starts the existing bounded
+  `/usr/bin/log stream` before native spawn and, at completion, submits each
+  transient kernel-reported event PID to the opaque owner's existing
+  `matches_pid_and_pgid` method. The owner never returns its PID/PGID. The
+  broker retains only verified counts, consumes itself on success, mismatch or
+  abort, and closes its pipes deterministically. Canary matrix v5 adds one
+  fixed stdlib-only worker that replaces itself through `sandbox-exec`, denies
+  all network operations, attempts only IPv4 loopback port 9, emits a PID-free
+  result and remains alive while the parent drains the stream.
+- Inputs: current isolated Python runtime, freshly provenance-built private
+  Darwin extension, `/usr/bin/log`, `/usr/bin/sandbox-exec`, three fixed
+  transport fixtures and the fixed model-free network worker. No audio, model
+  or checkpoint input.
+- Model/runtime/checkpoint: no model or checkpoint. The native C source and
+  build contract are unchanged from matrix v4 because the existing opaque
+  identity matcher was sufficient; no new PID-returning native method was
+  added.
+- Evidence and metrics: 54 focused observer, supervision, source, build and
+  live-matrix tests pass. Synthetic evidence rejects a mismatched owner and a
+  transferable-authority claim. The live v5 matrix observed readiness before
+  spawn, one deliberate owner-matched denial, zero other owned denials, broker
+  replay rejection, normal zero exit, group emptiness and exact reap. Its
+  path-free report retains no PID, PGID, destination or raw log message. The
+  complete repository suite passes 2,819 tests with one platform skip and the
+  existing third-party `resampy`/`pkg_resources` deprecation warning.
+- Listening result: not applicable; no audio, MIDI or separation changed.
+- Decision: retain the broker as the owner-bound kernel-network primitive.
+  Keep the historical PID-based observer for the unchanged Kim v10/v11 path;
+  do not imply that the real model now uses native ownership.
+- Problems/risks: kernel log event PIDs exist transiently inside the bounded
+  parser because they are the OS records being matched, but the owner's hidden
+  PID is never exported and no event PID is retained. Unified logging remains
+  denial-only evidence, not a packet monitor. `sandbox-exec` is deprecated,
+  pathname TOCTOU remains, and the broker has not been attached to Kim Vocal 2.
+- Next smallest step: build and exercise the post-inference executable-region
+  inventory in an owner-bound, worker-ready form with a fixed model-free
+  worker. Only after that should one combined fixed-worker bridge be considered.
+
 ### 2026-08-02 — native owner observes its process image without exporting PID
 
 - Goal: replace the first raw-PID dependency in the future Kim native bridge

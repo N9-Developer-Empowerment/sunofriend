@@ -1605,9 +1605,15 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   returns only a matched kernel CDHash and fixed state tag. Deliberately wrong
   path and CDHash values are rejected without changing ownership, after which
   the valid image and exact reap succeed. No PID, PGID or path is retained.
-  This is not attached to Kim Vocal 2; owner-bound kernel-network and post-
-  inference native-image observations remain required before native real-
-  worker supervision can be claimed.
+  A later model-free matrix v5 adds a factory-only single-use kernel-network
+  broker. It starts the bounded log stream before spawn and submits each
+  transient kernel-reported event PID to the opaque owner's boolean identity
+  matcher; the owner exports no PID/PGID, and the result retains only counts.
+  A fixed self-sandboxing worker produced one loopback denial, zero other owned
+  denials, normal zero exit and exact reap; broker replay was rejected. Neither
+  owner-bound primitive is attached to Kim Vocal 2. The post-inference native-
+  image observation still needs an owner-bound worker-ready form before native
+  real-worker supervision can be claimed.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory

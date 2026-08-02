@@ -214,9 +214,21 @@ exact live child, compares a prepared signed process-image path and CDHash, and
 returns no PID, PGID or path. The blocking canary first supplies a wrong path
 and wrong CDHash, confirms both are rejected without changing ownership, then
 proves the expected image and exact reap. This does not run Kim Vocal 2. The
-current Kim path still uses its existing PID-consuming observers; network
-denial and post-inference native-image inventory still lack owner-bound
-adapters, and runtime/process-image pathname TOCTOU is not closed.
+current Kim path still uses its existing PID-consuming observers, and
+runtime/process-image pathname TOCTOU is not closed.
+
+Model-free native matrix v5 adds the second owner-bound primitive. A
+factory-only single-use broker starts the bounded kernel Sandbox denial stream
+before native spawn. It parses only the fixed log-event shape and asks the
+opaque owner whether each transient kernel-reported event PID is its exact
+private-session leader. The owner never returns its PID or PGID, and the
+broker retains no event PID, destination or raw message. A fixed worker
+replaces itself through `sandbox-exec`, attempts only loopback port 9 and stays
+alive while the broker drains. The live matrix observed the one deliberate
+denial, zero other owned denials, normal zero exit, group emptiness and exact
+reap; replay was rejected. This remains model-free and is not attached to Kim.
+The post-inference executable-region inventory is still PID-consuming and
+lacks an owner-bound worker-ready adapter.
 
 The following validation-only increment now fixes the evidence shape that a
 future bridge would have to derive from the exact native owner. It requires
@@ -227,9 +239,9 @@ ownership loss, raw PID/PGID retention and exposed signal authority. This is a
 shape validator and blocked plan, not execution provenance: the current Kim
 route cannot emit it, no model was run, and no separator route changed. The
 process-image part of that engineering task now has a model-free owner-bound
-primitive. Owner-bound network-denial and native-image-ready observations,
-followed by a fixed-worker integration proof, remain before the real Kim
-worker can emit the projection.
+primitive, and matrix v5 supplies the equivalent kernel-network primitive. An
+owner-bound native-image-ready observation, followed by a fixed-worker
+integration proof, remains before the real Kim worker can emit the projection.
 
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \

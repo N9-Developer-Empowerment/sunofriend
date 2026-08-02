@@ -39,6 +39,11 @@ from types import ModuleType
 from typing import Any, Iterator
 
 
+_REPOSITORY = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(_REPOSITORY / "src"))
+import sunofriend._separation_macos_sandbox_network_observer as _network_observer  # noqa: E402
+
+
 _MODULE_NAME = "_separation_native_spawn_darwin"
 _METHOD_NAME = "_spawn_bound_fake_worker"
 _WORKER = (
@@ -49,6 +54,9 @@ _HOLD_WORKER = (
 )
 _DESCENDANT_WORKER = (
     Path(__file__).with_name("_separation_native_spawn_descendant_worker.py").resolve()
+)
+_NETWORK_WORKER = (
+    Path(__file__).with_name("_separation_native_spawn_network_worker.py").resolve()
 )
 _LOGICAL_ROLES = ("request", "result", "checkpoint")
 _TARGET_FDS = (3, 4, 5)
@@ -1020,6 +1028,120 @@ def _run_owner_bound_process_image_canary(
     }
 
 
+def _run_owner_bound_network_canary(
+    *,
+    spawn: Any,
+    runtime_path: Path,
+    temporary_root: Path,
+) -> dict[str, Any]:
+    """Bind one kernel-denial stream to the opaque owner without its PID."""
+
+    _close_descriptors_from_three()
+    case_directory = temporary_root / "owner-bound-network"
+    case_directory.mkdir(mode=0o700)
+    paths = _install_transport_descriptors(case_directory, _TARGET_FDS)
+    before_observer = snapshot_parent_descriptors()
+    broker = _network_observer._prepare_owner_bound_network_observer()
+    native_owner: Any | None = None
+    try:
+        with_observer = snapshot_parent_descriptors()
+        native_owner = spawn(
+            os.fsencode(runtime_path),
+            os.fsencode(_NETWORK_WORKER),
+            *_TARGET_FDS,
+        )
+        if hasattr(native_owner, "pid") or hasattr(native_owner, "__dict__"):
+            raise AssertionError("network canary owner exposes transferable authority")
+        with _OwnedCanaryChild(native_owner) as child:
+            deadline = time.monotonic() + _WAIT_SECONDS
+            while time.monotonic() < deadline:
+                raw = paths["result"].read_bytes()
+                if raw.endswith(b"\n"):
+                    break
+                if len(raw) > 65_536:
+                    raise AssertionError("network canary result exceeded its bound")
+                time.sleep(0.005)
+            else:
+                raise TimeoutError("network canary result was not written")
+            worker_report = _read_single_json(paths["result"])
+            if worker_report != {
+                "schema": "sunofriend.native-owner-network-canary-worker.v1",
+                "ok": True,
+                "connect_errno_name": "EPERM",
+                "loopback_only": True,
+                "external_destination_contacted": False,
+                "open_descriptors": [0, 1, 2, 3, 4, 5],
+                "model_or_checkpoint_loaded": False,
+            }:
+                raise AssertionError("owner-bound network worker report differs")
+            observation = broker.finish(native_owner=native_owner)
+            if broker.consumed is not True:
+                raise AssertionError("owner-bound network broker was not consumed")
+            try:
+                broker.finish(native_owner=native_owner)
+            except RuntimeError as error:
+                reuse_rejected = "already consumed" in str(error)
+            else:
+                reuse_rejected = False
+            if not reuse_rejected:
+                raise AssertionError("owner-bound network broker was reusable")
+            after_observation = snapshot_parent_descriptors()
+            _assert_parent_unchanged(before_observer, after_observation)
+            status = child.wait()
+        if not os.WIFEXITED(status) or os.WEXITSTATUS(status) != 0:
+            raise AssertionError("owner-bound network canary did not exit normally")
+        if (
+            native_owner.leader_reaped is not True
+            or native_owner.group_empty is not True
+            or native_owner.ownership_released is not True
+            or native_owner.ownership_lost is not False
+        ):
+            raise AssertionError("owner-bound network canary was not exact-reaped")
+        if observation["observation"]["deliberate_canary_denial_count"] < 1:
+            raise AssertionError("owner-bound network denial canary was absent")
+        if observation["privacy"] != {
+            "raw_log_persisted": False,
+            "raw_event_messages_retained": False,
+            "destination_details_retained": False,
+            "target_pid_retained": False,
+            "owner_pid_or_pgid_exported": False,
+            "broker_single_use": True,
+        }:
+            raise AssertionError("owner-bound network privacy contract differs")
+        encoded = json.dumps(
+            _network_observer._plain(observation),
+            ensure_ascii=True,
+            allow_nan=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        if "Sandbox: " in encoded or "remote:" in encoded or "local:" in encoded:
+            raise AssertionError("owner-bound network evidence retained raw details")
+        after_reap = snapshot_parent_descriptors()
+        _assert_parent_unchanged(before_observer, after_reap)
+        return {
+            "observer_ready_before_native_spawn": (
+                len(with_observer) > len(before_observer)
+            ),
+            "native_owner_bound": True,
+            "deliberate_canary_denial_observed": True,
+            "other_owned_network_denial_count": observation["observation"][
+                "other_target_network_denial_count"
+            ],
+            "broker_single_use_rejected_replay": True,
+            "raw_pid_or_pgid_retained": False,
+            "raw_destination_retained": False,
+            "normal_zero_exit_observed": True,
+            "group_empty_before_exact_reap": True,
+            "exact_reap_after_observation": True,
+            "evidence_sha256": observation["evidence_sha256"],
+            "parent_descriptors_unchanged": True,
+        }
+    finally:
+        if not broker.consumed:
+            broker.abort()
+
+
 def _run_descendant_group_canary(
     *,
     spawn: Any,
@@ -1143,6 +1265,7 @@ def run_canary_matrix(
     worker_before = _measure_worker(worker_path)
     hold_worker_before = _measure_worker(_HOLD_WORKER)
     descendant_worker_before = _measure_worker(_DESCENDANT_WORKER)
+    network_worker_before = _measure_worker(_NETWORK_WORKER)
     spawn = getattr(extension, _METHOD_NAME, None)
     if not callable(spawn):
         raise RuntimeError("native extension entry point is unavailable")
@@ -1256,6 +1379,11 @@ def run_canary_matrix(
         expected_process_image_cdhash=expected_process_image_cdhash,
         temporary_root=temporary_root,
     )
+    owner_bound_network_canary = _run_owner_bound_network_canary(
+        spawn=spawn,
+        runtime_path=runtime_path,
+        temporary_root=temporary_root,
+    )
     descendant_group_canary = _run_descendant_group_canary(
         spawn=spawn,
         runtime_path=runtime_path,
@@ -1266,6 +1394,7 @@ def run_canary_matrix(
     worker_after = _measure_worker(worker_path)
     hold_worker_after = _measure_worker(_HOLD_WORKER)
     descendant_worker_after = _measure_worker(_DESCENDANT_WORKER)
+    network_worker_after = _measure_worker(_NETWORK_WORKER)
     if runtime_after != runtime_before:
         raise RuntimeError("bound runtime changed across canary matrix")
     if process_image_after != process_image_before:
@@ -1276,9 +1405,11 @@ def run_canary_matrix(
         raise RuntimeError("bound hold worker changed across canary matrix")
     if descendant_worker_after != descendant_worker_before:
         raise RuntimeError("bound descendant worker changed across canary matrix")
+    if network_worker_after != network_worker_before:
+        raise RuntimeError("bound network worker changed across canary matrix")
     expected_suffix = sysconfig.get_config_var("EXT_SUFFIX")
     return {
-        "schema": "sunofriend.native-spawn-canary-matrix.v4",
+        "schema": "sunofriend.native-spawn-canary-matrix.v5",
         "extension_path_serialized": False,
         "worker_path_serialized": False,
         "proof_scope": (
@@ -1304,12 +1435,17 @@ def run_canary_matrix(
         "fixed_descendant_worker_identity": _path_free_file_identity(
             descendant_worker_after
         ),
+        "fixed_network_worker_identity": _path_free_file_identity(
+            network_worker_after
+        ),
         "native_owner_type_qualification": {
             "direct_construction_rejected": direct_owner_construction_rejected,
             "raw_pid_not_exposed": True,
             "copy_and_pickle_rejected": True,
             "fork_clone_destructor_guard_present": True,
             "owner_bound_process_image_observer_present": True,
+            "owner_bound_network_observation_broker_present": True,
+            "network_broker_single_use": True,
             "observer_exports_pid_or_pgid": False,
         },
         "runtime_environment_qualification": (
@@ -1372,6 +1508,8 @@ def run_canary_matrix(
             "runtime_executable_path_exec_toctou_not_eliminated",
             "worker_script_path_open_toctou_not_eliminated",
             "pre_exec_signal_state_not_reconstructed_after_cpython_startup",
+            "post_inference_native_image_observer_not_owner_bound",
+            "real_model_worker_not_under_native_owner",
         ),
         "complete_descriptor_scan_soft_limit": _CANARY_SOFT_LIMIT,
         "inherited_descriptor_clearance_original_soft_limit": (original_soft_limit),
@@ -1391,6 +1529,7 @@ def run_canary_matrix(
         "post_spawn_owner_drop_canary": owner_drop_canary,
         "external_reap_poison_canary": external_reap_poison_canary,
         "owner_bound_process_image_canary": owner_bound_process_image_canary,
+        "owner_bound_network_canary": owner_bound_network_canary,
         "descendant_group_canary": descendant_group_canary,
         "cases": cases,
     }

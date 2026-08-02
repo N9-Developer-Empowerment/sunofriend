@@ -19,6 +19,9 @@ HOLD_WORKER = REPOSITORY / "tests" / "_separation_native_spawn_hold_worker.py"
 DESCENDANT_WORKER = (
     REPOSITORY / "tests" / "_separation_native_spawn_descendant_worker.py"
 )
+NETWORK_WORKER = (
+    REPOSITORY / "tests" / "_separation_native_spawn_network_worker.py"
+)
 HARNESS = REPOSITORY / "tests" / "_separation_native_spawn_canary_harness.py"
 
 
@@ -122,6 +125,53 @@ def test_canary_worker_is_fixed_stdlib_only_and_has_no_expansive_surface() -> No
     assert "worker_main_after_cpython_startup" in source
     assert "os.read(" not in source
     assert "os.write(" not in source
+
+
+def test_network_canary_worker_is_fixed_self_sandboxing_and_model_free() -> None:
+    tree = _tree(NETWORK_WORKER)
+    source = NETWORK_WORKER.read_text(encoding="utf-8")
+    imports = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imports.update(alias.name.split(".", 1)[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imports.add(node.module.split(".", 1)[0])
+
+    assert imports == {
+        "__future__",
+        "errno",
+        "fcntl",
+        "json",
+        "os",
+        "pathlib",
+        "resource",
+        "socket",
+        "sys",
+        "time",
+        "typing",
+    }
+    assert not imports & {
+        "basic_pitch",
+        "ctypes",
+        "http",
+        "onnxruntime",
+        "requests",
+        "subprocess",
+        "torch",
+        "urllib",
+    }
+    assert '_SANDBOX_EXEC = "/usr/bin/sandbox-exec"' in source
+    assert "(deny network*)" in source
+    assert "os.execve(" in source
+    assert 'connect_ex(("127.0.0.1", 9))' in source
+    assert '"external_destination_contacted": False' in source
+    assert '"model_or_checkpoint_loaded": False' in source
+    assert "os.getpid(" not in source
+    assert "os.getpgrp(" not in source
+    assert "_harden_transport_descriptors()" in source
+    assert source.index("_harden_transport_descriptors()", source.index("def _run_denied_canary")) < source.index(
+        "socket.socket(", source.index("def _run_denied_canary")
+    )
 
 
 def test_hold_worker_hardens_descriptors_then_only_blocks_for_owner_canary() -> None:
@@ -247,7 +297,7 @@ def test_harness_asserts_parent_child_access_data_and_process_invariants() -> No
 
     assert "snapshot_parent_descriptors()" in source
     assert "_assert_parent_unchanged(before" in source
-    assert source.count("_assert_parent_unchanged(before") == 8
+    assert source.count("_assert_parent_unchanged(before") == 10
     assert '"open_descriptors") != [0, 1, 2, 3, 4, 5]' in source
     assert '"descriptor_scan_soft_limit") != _CANARY_SOFT_LIMIT' in source
     assert '"request_write": errno.EBADF' in source
@@ -296,6 +346,11 @@ def test_harness_asserts_parent_child_access_data_and_process_invariants() -> No
     assert '"scratch_candidate_collision"' in source
     assert '"opaque_f_getfl_bits_compared": False' in source
     assert "_run_descendant_group_canary(" in source
+    assert "_run_owner_bound_network_canary(" in source
+    assert "_prepare_owner_bound_network_observer()" in source
+    assert "broker.finish(native_owner=native_owner)" in source
+    assert '"broker_single_use_rejected_replay": True' in source
+    assert '"raw_pid_or_pgid_retained": False' in source
     assert "native owner reaped before its group was empty" in source
     assert "native_owner.group_empty is not False" in source
     assert '"ownership_released_only_after_group_empty": True' in source

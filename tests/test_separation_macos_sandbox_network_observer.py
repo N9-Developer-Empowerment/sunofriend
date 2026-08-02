@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
+import pickle
 import platform
 from pathlib import Path
 
@@ -32,6 +34,19 @@ def _identity() -> dict[str, object]:
         "bytes": 1_024,
         "sha256": "a" * 64,
     }
+
+
+class _OpaqueOwner:
+    __slots__ = ("_pid", "start_state", "ownership_released", "ownership_lost")
+
+    def __init__(self, pid: int) -> None:
+        self._pid = pid
+        self.start_state = "started_owned"
+        self.ownership_released = False
+        self.ownership_lost = False
+
+    def matches_pid_and_pgid(self, pid: int, pgid: int) -> bool:
+        return pid == self._pid and pgid == self._pid
 
 
 def test_observation_retains_counts_not_pid_destination_or_raw_message() -> None:
@@ -118,6 +133,152 @@ def test_observation_validator_rejects_permission_drift() -> None:
 
     with pytest.raises(ValueError, match="boundary differs"):
         observer._validate_macos_sandbox_network_observation(changed)
+
+
+def test_owner_bound_observation_matches_kernel_events_without_exporting_owner_pid() -> None:
+    target_pid = 51_234
+    evidence = observer._build_owner_bound_observation(
+        raw_stdout=_stream(
+            [
+                _event(
+                    f"Sandbox: Python({target_pid}) deny(1) "
+                    "network-outbound remote:*:9"
+                ),
+                _event(
+                    f"Sandbox: Python({target_pid}) deny(1) network-bind local:*:0"
+                ),
+                _event(
+                    "Sandbox: unrelated(9988) deny(1) "
+                    "network-outbound remote:*:80"
+                ),
+            ]
+        ),
+        stdout_bytes=512,
+        native_owner=_OpaqueOwner(target_pid),
+        expected_canary_port=9,
+        identity=_identity(),
+    )
+
+    assert evidence["schema"] == observer.OWNER_BOUND_SCHEMA
+    assert evidence["observation"]["native_owner_bound"] is True
+    assert evidence["observation"]["target_network_denial_count"] == 2
+    assert evidence["observation"]["deliberate_canary_denial_count"] == 1
+    assert evidence["observation"]["other_target_network_denial_count"] == 1
+    assert evidence["observation"]["unrelated_network_denial_count"] == 1
+    assert evidence["privacy"]["owner_pid_or_pgid_exported"] is False
+    encoded = repr(evidence)
+    assert str(target_pid) not in encoded
+    assert "remote:" not in encoded
+    assert "local:" not in encoded
+    assert "Sandbox: " not in encoded
+
+
+def test_owner_bound_observation_rejects_wrong_owner() -> None:
+    raw = _stream(
+        [_event("Sandbox: Python(123) deny(1) network-outbound remote:*:9")]
+    )
+
+    with pytest.raises(RuntimeError, match="did not see the deliberate canary"):
+        observer._build_owner_bound_observation(
+            raw_stdout=raw,
+            stdout_bytes=len(raw),
+            native_owner=_OpaqueOwner(456),
+            expected_canary_port=9,
+            identity=_identity(),
+        )
+
+
+def test_owner_bound_validator_rejects_transferable_authority_claim() -> None:
+    raw = _stream(
+        [_event("Sandbox: Python(123) deny(1) network-outbound remote:*:9")]
+    )
+    evidence = observer._build_owner_bound_observation(
+        raw_stdout=raw,
+        stdout_bytes=len(raw),
+        native_owner=_OpaqueOwner(123),
+        expected_canary_port=9,
+        identity=_identity(),
+    )
+    changed = plain(evidence)
+    changed["privacy"]["owner_pid_or_pgid_exported"] = True
+    unsigned = dict(changed)
+    unsigned.pop("evidence_sha256")
+    changed["evidence_sha256"] = hashlib.sha256(
+        _canonical_json_bytes(unsigned)
+    ).hexdigest()
+
+    with pytest.raises(ValueError, match="boundary differs"):
+        observer._validate_owner_bound_network_observation(changed)
+
+
+def test_owner_bound_broker_is_factory_only_single_use_and_nontransferable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    state = observer._ObserverState(  # type: ignore[arg-type]
+        process=object(),
+        identity_before=_identity(),
+        stdout=observer._BoundedBytes(128),
+        stderr=observer._BoundedBytes(128),
+        threads=(),
+    )
+    raw = _stream(
+        [_event("Sandbox: Python(123) deny(1) network-outbound remote:*:9")]
+    )
+    monkeypatch.setattr(observer, "_start_observer", lambda: state)
+    monkeypatch.setattr(
+        observer,
+        "_finish_observer_capture",
+        lambda value: (raw, len(raw), value.identity_before),
+    )
+    aborted: list[object] = []
+    monkeypatch.setattr(observer, "_abort_observer", aborted.append)
+
+    with pytest.raises(TypeError, match="factory-only"):
+        observer._OwnerBoundNetworkObservationBroker(object(), state)
+    broker = observer._prepare_owner_bound_network_observer()
+    for operation in (copy.copy, copy.deepcopy, pickle.dumps):
+        with pytest.raises(TypeError):
+            operation(broker)
+
+    evidence = broker.finish(native_owner=_OpaqueOwner(123))
+
+    assert evidence["observation"]["native_owner_bound"] is True
+    assert broker.consumed is True
+    assert aborted == []
+    with pytest.raises(RuntimeError, match="already consumed"):
+        broker.finish(native_owner=_OpaqueOwner(123))
+    with pytest.raises(RuntimeError, match="already consumed"):
+        broker.abort()
+
+
+def test_owner_bound_broker_consumes_and_aborts_after_owner_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    state = observer._ObserverState(  # type: ignore[arg-type]
+        process=object(),
+        identity_before=_identity(),
+        stdout=observer._BoundedBytes(128),
+        stderr=observer._BoundedBytes(128),
+        threads=(),
+    )
+    raw = _stream(
+        [_event("Sandbox: Python(123) deny(1) network-outbound remote:*:9")]
+    )
+    monkeypatch.setattr(observer, "_start_observer", lambda: state)
+    monkeypatch.setattr(
+        observer,
+        "_finish_observer_capture",
+        lambda value: (raw, len(raw), value.identity_before),
+    )
+    aborted: list[object] = []
+    monkeypatch.setattr(observer, "_abort_observer", aborted.append)
+    broker = observer._prepare_owner_bound_network_observer()
+
+    with pytest.raises(RuntimeError, match="did not see the deliberate canary"):
+        broker.finish(native_owner=_OpaqueOwner(456))
+
+    assert broker.consumed is True
+    assert aborted == [state]
 
 
 def test_combined_observer_binds_process_image_before_waiting_for_child(

@@ -4,6 +4,7 @@ import itertools
 import json
 import os
 import platform
+import re
 import selectors
 import signal
 import stat
@@ -357,7 +358,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         ),
     )
 
-    assert report["schema"] == ("sunofriend.native-spawn-canary-matrix.v4")
+    assert report["schema"] == ("sunofriend.native-spawn-canary-matrix.v5")
     expected_layouts = {
         *itertools.permutations((3, 4, 5)),
         *harness._REPRESENTATIVE_SOURCE_FD_LAYOUTS,
@@ -407,6 +408,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "fixed_worker_identity",
         "fixed_hold_worker_identity",
         "fixed_descendant_worker_identity",
+        "fixed_network_worker_identity",
     ):
         identity = report[key]
         assert set(identity) == {
@@ -482,6 +484,8 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "runtime_executable_path_exec_toctou_not_eliminated",
         "worker_script_path_open_toctou_not_eliminated",
         "pre_exec_signal_state_not_reconstructed_after_cpython_startup",
+        "post_inference_native_image_observer_not_owner_bound",
+        "real_model_worker_not_under_native_owner",
     }
     assert report["extension_path_serialized"] is False
     assert report["worker_path_serialized"] is False
@@ -491,6 +495,8 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "copy_and_pickle_rejected": True,
         "fork_clone_destructor_guard_present": True,
         "owner_bound_process_image_observer_present": True,
+        "owner_bound_network_observation_broker_present": True,
+        "network_broker_single_use": True,
         "observer_exports_pid_or_pgid": False,
     }
     assert report["post_spawn_owner_drop_canary"] == {
@@ -518,6 +524,33 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "exact_reap_after_observation": True,
         "parent_descriptors_unchanged": True,
     }
+    network_canary = report["owner_bound_network_canary"]
+    assert set(network_canary) == {
+        "observer_ready_before_native_spawn",
+        "native_owner_bound",
+        "deliberate_canary_denial_observed",
+        "other_owned_network_denial_count",
+        "broker_single_use_rejected_replay",
+        "raw_pid_or_pgid_retained",
+        "raw_destination_retained",
+        "normal_zero_exit_observed",
+        "group_empty_before_exact_reap",
+        "exact_reap_after_observation",
+        "evidence_sha256",
+        "parent_descriptors_unchanged",
+    }
+    assert network_canary["observer_ready_before_native_spawn"] is True
+    assert network_canary["native_owner_bound"] is True
+    assert network_canary["deliberate_canary_denial_observed"] is True
+    assert network_canary["other_owned_network_denial_count"] == 0
+    assert network_canary["broker_single_use_rejected_replay"] is True
+    assert network_canary["raw_pid_or_pgid_retained"] is False
+    assert network_canary["raw_destination_retained"] is False
+    assert network_canary["normal_zero_exit_observed"] is True
+    assert network_canary["group_empty_before_exact_reap"] is True
+    assert network_canary["exact_reap_after_observation"] is True
+    assert re.fullmatch(r"[0-9a-f]{64}", network_canary["evidence_sha256"])
+    assert network_canary["parent_descriptors_unchanged"] is True
     assert report["descendant_group_canary"] == {
         "leader_exit_observed_without_reap": True,
         "live_descendant_prevented_ownership_release": True,

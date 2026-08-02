@@ -28,8 +28,12 @@ unbound execution/result hashes. It remains a blocked shape contract because
 the real-worker observer migration is incomplete. Model-free native matrix v4
 now binds signed process-image path/CDHash observation to the opaque owner
 without exporting PID/PGID, including mismatch and exact-reap canaries.
-Owner-bound kernel-network and post-inference native-image observers still
-remain. A separate private-development
+Model-free native matrix v5 now adds a factory-only single-use kernel-network
+broker: it is ready before spawn, matches transient kernel-event PIDs through
+the opaque owner, retains no PID/destination/raw message and exact-reaps a
+fixed self-sandboxing worker after one loopback denial. The real Kim worker is
+unchanged, and the post-inference native-image observer still needs an owner-
+bound worker-ready form. A separate private-development
 HTDemucs runner now produces and measures four real broad estimated stems on
 the copyright-safe demo, and a second private evaluator measures their effect
 on the existing MIDI transcribers. Public separation, source-graph import,
@@ -522,8 +526,18 @@ with a prepared process-image path and static CDHash. A blocking model-free
 worker rejects deliberately wrong path and CDHash values without losing
 ownership, then accepts the correct image and is group-killed and exact-
 reaped. The path-free matrix retains no PID, PGID or image path. This is not a
-Kim Vocal 2 run, does not close pathname TOCTOU, and does not yet replace the
-PID-consuming kernel-network or post-inference native-image observers.
+Kim Vocal 2 run and does not close pathname TOCTOU.
+
+Canary matrix v5 adds the kernel-network counterpart without expanding the C
+API. A single-use broker starts `/usr/bin/log stream` before native spawn, then
+asks the opaque owner to match each kernel-reported event PID. The owner
+returns only a boolean, and no target PID is supplied by the caller or retained
+in evidence. A fixed stdlib worker replaces itself through `sandbox-exec`,
+attempts only loopback port 9 and stays live for the drain. The path-free live
+matrix recorded one deliberate denial, zero other owned denials, replay
+rejection, normal zero exit, group emptiness and exact reap. This is model-free
+engineering evidence, not a public separator or a Kim integration. The post-
+inference native-image observer remains PID-consuming.
 
 The following ownership hardening removes the bare-PID handoff. The extension
 allocates a private, nonconstructible child owner before `posix_spawn`, arms

@@ -83,10 +83,15 @@ report the result, then move on.
   that uses `proc_pidpath` and `csops` internally to match the exact child
   process image and kernel CDHash without exporting PID, PGID or paths. Wrong
   path/CDHash canaries preserve ownership before a correct match and exact
-  reap. This is not attached to Kim; owner-bound network-denial and native-
-  image-ready observers still remain. This evidence does not enable
-  native fake-launch V2, which remains permanently `blocked`/`not_run` and
-  still contains only caller-claimed artifact identities. A later model-free
+  reap. Model-free matrix v5 adds a factory-only single-use kernel-network
+  broker. It starts the bounded log stream before spawn, matches transient
+  kernel-event PIDs through the opaque owner, retains no PID/destination/raw
+  message and exact-reaps a fixed self-sandboxing worker after one loopback
+  denial. Neither primitive is attached to Kim; the post-inference native-
+  image-ready observer still lacks an owner-bound form. This evidence does not
+  enable native fake-launch V2, which remains permanently
+  `blocked`/`not_run` and still contains only caller-claimed artifact
+  identities. A later model-free
   canary matrix v2 observes its harness before local cleanup with only FDs 0–2
   after the parent's `close_fds=True, pass_fds=()` launch. Every fixed child
   reports an empty main-thread signal mask and selected handler dispositions

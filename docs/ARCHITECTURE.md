@@ -608,8 +608,22 @@ rejected without releasing or losing ownership, that the correct signed image
 is then observed, and that whole-group signal plus exact reap still completes.
 The report contains no path or process identifier. This closes only the
 owner-bound process-image primitive: static-path preparation and TOCTOU remain
-explicit, and kernel-network plus post-inference executable-region observers
-still need owner-bound forms before real-worker integration.
+explicit.
+
+Canary matrix v5 adds a single-use owner-bound kernel-network broker without
+changing the native C surface. The broker starts the existing bounded
+`/usr/bin/log stream` before spawn, accepts no target PID and asks the opaque
+owner to match each transient kernel-reported event PID with
+`matches_pid_and_pgid(event_pid, event_pid)`. The owner returns only a boolean;
+its hidden PID/PGID never crosses the API. The broker is factory-only,
+non-copyable, non-serializable and consumed by finish, mismatch or abort. Its
+result is path-free counts with no raw message, destination or process ID. A
+fixed stdlib worker replaces itself through the deprecated `sandbox-exec`,
+performs one loopback-port-9 canary and remains live for the bounded drain.
+The matrix observes normal zero exit and exact reap. This closes the model-free
+owner-bound kernel-network primitive only. The post-inference executable-
+region observer still needs an owner-bound worker-ready form before real-
+worker integration.
 
 The native entry point no longer returns a bare integer PID. It preallocates a
 nonconstructible, noncopyable exact-child owner before `posix_spawn`, arms and
@@ -675,12 +689,12 @@ native terminal projection and a self-hashed blocked bridge plan. The
 projection requires exact normal exit, leader-exit observation, complete group
 drain, exact leader reap, released ownership and three evidence bindings while
 forbidding retained PID/PGID or exposed signal authority. It deliberately does
-not adapt the current `Popen` result into a native claim. The existing
-process-image observer now has a model-free owner-bound primitive. The
-kernel-network and post-inference native-image observers still consume a PID,
-whereas the native owner deliberately hides that authority; owner-bound entry
-points for those two observations must replace that mismatch before real
-integration. The current Kim route has not called the new primitive.
+not adapt the current `Popen` result into a native claim. Model-free
+process-image and kernel-network observations now have owner-bound primitives.
+The post-inference native-image observer still consumes a PID, whereas the
+native owner deliberately hides that authority; its owner-bound worker-ready
+entry point must replace that mismatch before real integration. The current
+Kim route has not called either owner-bound primitive.
 
 `_separation_fake_execution_protocol.py` validates the new V2 magics and
 canonical bindings but intentionally cannot encode an admitted product

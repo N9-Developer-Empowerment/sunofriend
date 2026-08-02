@@ -167,6 +167,18 @@ def test_native_real_worker_supervision_plan_is_blocked_and_path_free() -> None:
     assert plan["required_projection"][
         "must_be_derived_from_exact_nonconstructible_native_owner"
     ] is True
+    assert plan["missing_bridge"][
+        "owner_bound_process_image_observer_implemented"
+    ] is True
+    assert plan["missing_bridge"][
+        "owner_bound_network_observer_implemented"
+    ] is True
+    assert plan["missing_bridge"][
+        "owner_bound_native_image_ready_observer_implemented"
+    ] is False
+    assert plan["missing_bridge"][
+        "fixed_real_worker_native_entrypoint_implemented"
+    ] is False
     assert all(value is False for value in plan["effects"].values())
     assert digest == hashlib.sha256(_canonical_json_bytes(unsigned)).hexdigest()
     assert "/Users/" not in repr(plan)
