@@ -310,6 +310,19 @@ staging artifacts, consume the result identity, drain the complete group and
 derive the terminal projection. The adapter has therefore not been launched,
 the active Kim path remains subprocess-based and no product route is enabled.
 
+The corresponding parent lifecycle order is now executable only through an
+explicit dependency-substituted exercise. It requires the exact opaque owner,
+runs owner-bound observation/release before synchronous supervision, accepts
+only normal zero exit with complete group drain and exact reap, decodes the fd4
+result against its fd3 request, requires independent path-free staging
+verification and consumes the private PID/PGID only through the owner's boolean
+matcher. Invalid observer evidence still runs terminal supervision before the
+exercise fails. This proves orchestration and cleanup behavior only: all
+operations are injected, no native extension/process/checkpoint/model/audio or
+staging path is opened and every product permission remains false. A concrete
+private macOS adapter with fresh admission, descriptor construction and the
+three live observers remains missing.
+
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \
   --fixture-out work/separation-bakeoff/demo-fixture-v2 \

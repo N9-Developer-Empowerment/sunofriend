@@ -79,6 +79,17 @@ evidence only: it has not been launched by the opaque native owner and has not
 opened the accepted checkpoint or authorised audio. The private parent runner,
 observer attachment, staging revalidation and terminal projection remain
 missing, so no product route is enabled.
+
+The first parent-side increment now fixes that orchestration order with
+dependency-substituted operations. It proves that live observation/release
+precedes synchronous whole-group supervision, fd4 is decoded against the exact
+fd3 request, staging evidence must be independently verified, and result
+PID/PGID is consumed only by the opaque owner's boolean matcher before a
+path-free terminal projection is returned. Forced observer failures still
+invoke terminal supervision. This is not a live native Kim run: it opens no
+checkpoint, model, audio or staging tree, grants no product authority and does
+not replace the active subprocess evaluation path. The next boundary is the
+fixed private macOS adapter and fresh live admission around that lifecycle.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on

@@ -1704,6 +1704,41 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — native Kim parent lifecycle exercised with substituted dependencies
+
+- Goal: fix the private parent-side order and failure behaviour before allowing
+  the native adapter to open the accepted checkpoint or authorised audio.
+- Change or experiment: added a private dependency-substituted lifecycle core
+  that requires one exact opaque native-owner type, observes and releases the
+  worker before supervision, requires normal zero exit plus complete group
+  drain and exact reap, decodes fd4 against the exact fd3 request, requires an
+  independent path-free staging verification, consumes the worker PID/PGID
+  only through the owner's boolean matcher and derives the existing terminal
+  projection. Generalised the terminal-projection helper name while retaining
+  the model-free compatibility entry point used by earlier canaries.
+- Inputs: pure request/result frames, an in-memory exact-shape owner and injected
+  observer, supervisor, result-reader and staging-verifier functions. A forced
+  observer failure and three malformed observer claims prove that supervision
+  still runs before failure is returned.
+- Model/runtime/checkpoint: no native extension was built or imported; no
+  process, checkpoint, model, audio or staging path was opened.
+- Evidence and metrics: 58 focused parent, transport, worker and supervision
+  tests pass. The successful exercise emits a self-hashed, path-free record
+  whose effects and every product permission are false; wrong worker identity,
+  incomplete staging verification and unsafe live observations fail closed.
+- Listening result: not applicable; no audio was read or produced.
+- Decision: accept the dependency-substituted lifecycle core as the parent
+  orchestration contract, not as real-model execution evidence and not as a
+  separator route.
+- Problems/risks: the real macOS adapter still needs to create and measure the
+  descriptors and files, consume one fresh live admission, invoke the fixed C
+  method, attach the actual process-image/network/native-image observers and
+  perform the concrete closure and PCM24 quarantine verification. Runtime,
+  worker and sandbox-provider execution are still pathname based.
+- Next smallest step: connect this lifecycle order to one private macOS adapter
+  and prove the complete native lifecycle with model-free substitute artifacts
+  before opening the accepted checkpoint or authorised excerpt.
+
 ### 2026-08-02 — fixed real native Kim worker adapter implemented, not run
 
 - Goal: replace the model-free fd3–fd7 bootstrap with a fixed adapter capable

@@ -123,9 +123,14 @@ report the result, then move on.
   Python-closure claim to staging and can emit the path-free fd4 worker result.
   Dependency-substituted tests only have exercised this wiring: the adapter
   has not been launched by the opaque native owner and has opened no accepted
-  checkpoint, model or authorised audio. The private parent executor, observer
-  attachment, staging revalidation and terminal projection remain absent, and
-  the active Kim route remains subprocess-based. This evidence does not enable
+  checkpoint, model or authorised audio. The private live parent executor,
+  observer attachment and concrete staging revalidation remain absent. A
+  dependency-substituted parent lifecycle now fixes observation/release,
+  whole-group supervision, fd4 decoding, staging-verification and private
+  identity-consumption order, including cleanup after observer failure, but it
+  opens no native process, checkpoint, model, audio or staging path and is not
+  execution provenance. The active Kim route remains subprocess-based. This
+  evidence does not enable
   native fake-launch V2, which remains
   permanently
   `blocked`/`not_run` and still contains only caller-claimed artifact
@@ -482,9 +487,11 @@ report the result, then move on.
   process-group/descendant owner, and no separator route is enabled. A
   validation-only terminal projection now defines and rejects incomplete
   future native claims. The fixed native adapter can emit the private
-  identity-bearing worker result, but only a still-missing parent executor can
-  consume that identity through the opaque owner and derive the projection;
-  source shape alone is not execution provenance. The owner-bound process-image
+  identity-bearing worker result. The dependency-substituted parent core can
+  consume that identity through an exact-shape opaque owner and derive the
+  projection, but the fixed live macOS adapter, fresh admission and concrete
+  observers remain missing; source shape alone is not execution provenance.
+  The owner-bound process-image
   primitive is proven only with a fixed model-free worker; the active Kim route
   still uses its older PID-consuming observation path. The
   checkpoint is not redistributed. Do not offer or run this challenger

@@ -215,7 +215,7 @@ def _validate_native_terminal_projection(value: Any) -> Mapping[str, Any]:
     return _freeze_json(projection)
 
 
-def _derive_model_free_native_terminal_projection(
+def _derive_native_terminal_projection(
     *,
     native_owner: Any,
     expected_owner_type: type[Any],
@@ -227,12 +227,11 @@ def _derive_model_free_native_terminal_projection(
 ) -> Mapping[str, Any]:
     """Project one completed fixed-worker owner without exporting authority.
 
-    This is deliberately narrower than the future Kim bridge.  It accepts the
-    exact nonconstructible owner type supplied by the freshly loaded private
-    native extension, asks that owner to match the worker's private result
-    identity, and reads the cached wait and complete group-lifetime state only
-    after exact reap.  Raw PID/PGID values are consumed for the boolean match
-    and are never included in the returned projection.
+    It accepts the exact nonconstructible owner type supplied by the freshly
+    loaded private native extension, asks that owner to match the worker's
+    private result identity, and reads the cached wait and complete
+    group-lifetime state only after exact reap. Raw PID/PGID values are consumed
+    for the boolean match and are never included in the returned projection.
     """
 
     if (
@@ -240,34 +239,34 @@ def _derive_model_free_native_terminal_projection(
         or type(native_owner) is not expected_owner_type
         or getattr(expected_owner_type, "__name__", None) != "_OwnedSpawnChild"
     ):
-        raise TypeError("model-free terminal projection requires the exact owner")
+        raise TypeError("native terminal projection requires the exact owner")
     if hasattr(native_owner, "pid") or hasattr(native_owner, "__dict__"):
-        raise TypeError("model-free terminal projection owner exposes authority")
+        raise TypeError("native terminal projection owner exposes authority")
     for digest in (
         native_session_observation_sha256,
         native_execution_observation_sha256,
         worker_result_sha256,
     ):
         if not isinstance(digest, str) or _SHA_RE.fullmatch(digest) is None:
-            raise ValueError("model-free terminal projection hash differs")
+            raise ValueError("native terminal projection hash differs")
     if (
         type(worker_reported_pid) is not int
         or worker_reported_pid <= 0
         or type(worker_reported_pgid) is not int
         or worker_reported_pgid <= 0
     ):
-        raise ValueError("model-free worker identity report is invalid")
+        raise ValueError("native worker identity report is invalid")
     matched = native_owner.matches_pid_and_pgid(
         worker_reported_pid,
         worker_reported_pgid,
     )
     if matched is not True:
-        raise ValueError("model-free worker identity does not match its owner")
+        raise ValueError("native worker identity does not match its owner")
     raw_wait_status = native_owner.wait_nohang()
     if type(raw_wait_status) is not int or not os.WIFEXITED(raw_wait_status):
-        raise ValueError("model-free native owner lacks a normal cached wait")
+        raise ValueError("native owner lacks a normal cached wait")
     if os.WEXITSTATUS(raw_wait_status) != 0:
-        raise ValueError("model-free fixed worker did not exit successfully")
+        raise ValueError("native fixed worker did not exit successfully")
     projection = {
         "schema": NATIVE_TERMINAL_PROJECTION_SCHEMA,
         "native_session_observation_sha256": (
@@ -298,6 +297,14 @@ def _derive_model_free_native_terminal_projection(
         "signal_authority_exposed": False,
     }
     return _validate_native_terminal_projection(projection)
+
+
+def _derive_model_free_native_terminal_projection(
+    **arguments: Any,
+) -> Mapping[str, Any]:
+    """Compatibility name retained for the earlier model-free canaries."""
+
+    return _derive_native_terminal_projection(**arguments)
 
 
 def _build_native_real_worker_supervision_plan() -> Mapping[str, Any]:
@@ -501,6 +508,7 @@ __all__ = [
     "_build_native_real_worker_supervision_plan",
     "_build_real_worker_supervision_observation",
     "_derive_model_free_native_terminal_projection",
+    "_derive_native_terminal_projection",
     "_observe_post_cpython_signal_state",
     "_validate_native_terminal_projection",
     "_validate_post_cpython_signal_state",
