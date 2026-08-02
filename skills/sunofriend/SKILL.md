@@ -87,9 +87,12 @@ report the result, then move on.
   broker. It starts the bounded log stream before spawn, matches transient
   kernel-event PIDs through the opaque owner, retains no PID/destination/raw
   message and exact-reaps a fixed self-sandboxing worker after one loopback
-  denial. Neither primitive is attached to Kim; the post-inference native-
-  image-ready observer still lacks an owner-bound form. This evidence does not
-  enable native fake-launch V2, which remains permanently
+  denial. Model-free matrix v6 adds the third primitive: only after a fixed
+  PID-free worker-ready marker, the opaque owner supplies two stable executable-
+  region snapshots without exporting PID/PGID; mapped files are remeasured
+  after exact reap and final evidence retains no paths. None of the three
+  primitives is attached to Kim. This evidence does not enable native
+  fake-launch V2, which remains permanently
   `blocked`/`not_run` and still contains only caller-claimed artifact
   identities. A later model-free
   canary matrix v2 observes its harness before local cleanup with only FDs 0–2

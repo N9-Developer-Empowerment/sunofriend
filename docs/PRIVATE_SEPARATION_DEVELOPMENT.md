@@ -227,8 +227,18 @@ replaces itself through `sandbox-exec`, attempts only loopback port 9 and stays
 alive while the broker drains. The live matrix observed the one deliberate
 denial, zero other owned denials, normal zero exit, group emptiness and exact
 reap; replay was rejected. This remains model-free and is not attached to Kim.
-The post-inference executable-region inventory is still PID-consuming and
-lacks an owner-bound worker-ready adapter.
+
+Model-free native matrix v6 adds an owner-bound worker-ready executable-region
+canary. The exact native owner calls `proc_pidinfo` for its internally retained
+live child and returns no PID/PGID. A fixed model-free worker loads seven fixed
+native modules, writes one PID-free ready marker and stays alive while the
+parent takes two stable owner-bound snapshots. The parent measures every
+file-backed mapping, requires the signed main Python process image exactly
+once, terminates and exact-reaps the private group, then remeasures the mapped
+files. The final report contains counts and an artifact-manifest hash, no path
+or process identifier. Transient paths exist only inside the private observer;
+dyld shared-cache coverage, transient-load exclusion, mapped-memory equality
+and pathname TOCTOU remain unproven. This is not attached to Kim.
 
 The following validation-only increment now fixes the evidence shape that a
 future bridge would have to derive from the exact native owner. It requires
@@ -239,9 +249,10 @@ ownership loss, raw PID/PGID retention and exposed signal authority. This is a
 shape validator and blocked plan, not execution provenance: the current Kim
 route cannot emit it, no model was run, and no separator route changed. The
 process-image part of that engineering task now has a model-free owner-bound
-primitive, and matrix v5 supplies the equivalent kernel-network primitive. An
-owner-bound native-image-ready observation, followed by a fixed-worker
-integration proof, remains before the real Kim worker can emit the projection.
+primitive, matrix v5 supplies the equivalent kernel-network primitive and
+matrix v6 supplies the worker-ready executable-region primitive. A combined
+fixed-worker integration proof that derives the terminal projection from the
+same live owner remains before the real Kim worker can emit the projection.
 
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \

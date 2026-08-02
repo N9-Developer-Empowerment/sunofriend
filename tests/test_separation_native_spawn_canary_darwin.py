@@ -358,7 +358,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         ),
     )
 
-    assert report["schema"] == ("sunofriend.native-spawn-canary-matrix.v5")
+    assert report["schema"] == ("sunofriend.native-spawn-canary-matrix.v6")
     expected_layouts = {
         *itertools.permutations((3, 4, 5)),
         *harness._REPRESENTATIVE_SOURCE_FD_LAYOUTS,
@@ -409,6 +409,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "fixed_hold_worker_identity",
         "fixed_descendant_worker_identity",
         "fixed_network_worker_identity",
+        "fixed_ready_worker_identity",
     ):
         identity = report[key]
         assert set(identity) == {
@@ -484,7 +485,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "runtime_executable_path_exec_toctou_not_eliminated",
         "worker_script_path_open_toctou_not_eliminated",
         "pre_exec_signal_state_not_reconstructed_after_cpython_startup",
-        "post_inference_native_image_observer_not_owner_bound",
+        "owner_bound_worker_ready_observer_not_attached_to_real_worker",
         "real_model_worker_not_under_native_owner",
     }
     assert report["extension_path_serialized"] is False
@@ -497,6 +498,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "owner_bound_process_image_observer_present": True,
         "owner_bound_network_observation_broker_present": True,
         "network_broker_single_use": True,
+        "owner_bound_worker_ready_native_image_observer_present": True,
         "observer_exports_pid_or_pgid": False,
     }
     assert report["post_spawn_owner_drop_canary"] == {
@@ -551,6 +553,43 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
     assert network_canary["exact_reap_after_observation"] is True
     assert re.fullmatch(r"[0-9a-f]{64}", network_canary["evidence_sha256"])
     assert network_canary["parent_descriptors_unchanged"] is True
+    ready_image_canary = report["owner_bound_worker_ready_native_image_canary"]
+    assert set(ready_image_canary) == {
+        "pid_free_worker_ready_marker_observed",
+        "native_owner_bound",
+        "stable_consecutive_snapshots",
+        "executable_region_count",
+        "file_backed_executable_region_count",
+        "unpathed_executable_region_count",
+        "mapped_file_count",
+        "main_process_image_present_once",
+        "mapped_artifact_manifest_sha256",
+        "raw_pid_or_pgid_retained",
+        "raw_executable_paths_retained",
+        "model_or_checkpoint_loaded",
+        "audio_read",
+        "network_used",
+        "exact_reap_after_observation",
+        "parent_descriptors_unchanged",
+    }
+    assert ready_image_canary["pid_free_worker_ready_marker_observed"] is True
+    assert ready_image_canary["native_owner_bound"] is True
+    assert ready_image_canary["stable_consecutive_snapshots"] is True
+    assert ready_image_canary["executable_region_count"] >= 1
+    assert ready_image_canary["file_backed_executable_region_count"] >= 1
+    assert ready_image_canary["unpathed_executable_region_count"] >= 0
+    assert ready_image_canary["mapped_file_count"] >= 1
+    assert ready_image_canary["main_process_image_present_once"] is True
+    assert re.fullmatch(
+        r"[0-9a-f]{64}", ready_image_canary["mapped_artifact_manifest_sha256"]
+    )
+    assert ready_image_canary["raw_pid_or_pgid_retained"] is False
+    assert ready_image_canary["raw_executable_paths_retained"] is False
+    assert ready_image_canary["model_or_checkpoint_loaded"] is False
+    assert ready_image_canary["audio_read"] is False
+    assert ready_image_canary["network_used"] is False
+    assert ready_image_canary["exact_reap_after_observation"] is True
+    assert ready_image_canary["parent_descriptors_unchanged"] is True
     assert report["descendant_group_canary"] == {
         "leader_exit_observed_without_reap": True,
         "live_descendant_prevented_ownership_release": True,

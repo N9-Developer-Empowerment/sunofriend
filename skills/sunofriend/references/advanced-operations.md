@@ -1610,10 +1610,14 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   transient kernel-reported event PID to the opaque owner's boolean identity
   matcher; the owner exports no PID/PGID, and the result retains only counts.
   A fixed self-sandboxing worker produced one loopback denial, zero other owned
-  denials, normal zero exit and exact reap; broker replay was rejected. Neither
-  owner-bound primitive is attached to Kim Vocal 2. The post-inference native-
-  image observation still needs an owner-bound worker-ready form before native
-  real-worker supervision can be claimed.
+  denials, normal zero exit and exact reap; broker replay was rejected. A later
+  model-free matrix v6 adds the owner-bound worker-ready executable-region
+  primitive: a fixed worker emits a PID-free ready marker, the opaque owner
+  supplies two stable snapshots without exporting PID/PGID, mapped files are
+  remeasured after exact reap and final evidence retains no path. None of the
+  three owner-bound primitives is attached to Kim Vocal 2; a combined fixed-
+  worker bridge is still required before native real-worker supervision can be
+  claimed.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory

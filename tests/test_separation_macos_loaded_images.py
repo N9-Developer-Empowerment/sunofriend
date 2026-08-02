@@ -122,6 +122,47 @@ def test_enumerator_keeps_only_executable_regions(
     ]
 
 
+def test_owner_bound_enumerator_uses_opaque_owner_without_pid(
+    tmp_path: Path,
+) -> None:
+    image = tmp_path / "image"
+    image.write_bytes(b"image")
+    owner = _OpaqueRegionOwner(
+        (
+            (os.fsencode(image), 0x1000, 0x1000, 0, 5),
+            (None, 0x5000, 0x2000, 0, 5),
+        )
+    )
+
+    regions = loaded_images._enumerate_owned_executable_regions(owner)
+
+    assert owner.calls == 1
+    assert [(region.path, region.size) for region in regions] == [
+        (image, 0x1000),
+        (None, 0x2000),
+    ]
+
+
+def test_owner_bound_enumerator_rejects_transferable_or_invalid_owner(
+    tmp_path: Path,
+) -> None:
+    image = tmp_path / "image"
+    image.write_bytes(b"image")
+    transferable = SimpleNamespace(
+        start_state="started_owned",
+        ownership_released=False,
+        ownership_lost=False,
+        snapshot_owned_executable_regions=lambda: (),
+    )
+
+    with pytest.raises(TypeError, match="live opaque owner"):
+        loaded_images._enumerate_owned_executable_regions(transferable)
+    with pytest.raises(RuntimeError, match="geometry differs"):
+        loaded_images._enumerate_owned_executable_regions(
+            _OpaqueRegionOwner(((os.fsencode(image), 0x1000, 0, 0, 5),))
+        )
+
+
 def test_mapped_file_measurement_records_signature_status_without_paths(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -158,6 +199,27 @@ def test_mapped_file_measurement_records_signature_status_without_paths(
     assert artifacts[1]["executable_region_bytes"] == 70
     assert artifacts[1]["static_code_status"] == "not_strictly_valid"
     assert str(tmp_path) not in repr(artifacts)
+
+
+class _OpaqueRegionOwner:
+    __slots__ = (
+        "_snapshot",
+        "calls",
+        "start_state",
+        "ownership_released",
+        "ownership_lost",
+    )
+
+    def __init__(self, snapshot: tuple[tuple[object, ...], ...]) -> None:
+        self._snapshot = snapshot
+        self.calls = 0
+        self.start_state = "started_owned"
+        self.ownership_released = False
+        self.ownership_lost = False
+
+    def snapshot_owned_executable_regions(self) -> tuple[tuple[object, ...], ...]:
+        self.calls += 1
+        return self._snapshot
 
 
 def test_remeasurement_rejects_changed_mapped_file(

@@ -413,6 +413,68 @@ def _enumerate_executable_regions(pid: int) -> tuple[_ExecutableRegion, ...]:
     return tuple(regions)
 
 
+def _enumerate_owned_executable_regions(
+    native_owner: Any,
+) -> tuple[_ExecutableRegion, ...]:
+    """Snapshot one exact native-owned child without obtaining its PID."""
+
+    snapshot = getattr(native_owner, "snapshot_owned_executable_regions", None)
+    if (
+        getattr(native_owner, "start_state", None) != "started_owned"
+        or getattr(native_owner, "ownership_released", None) is not False
+        or getattr(native_owner, "ownership_lost", None) is not False
+        or hasattr(native_owner, "pid")
+        or hasattr(native_owner, "pgid")
+        or hasattr(native_owner, "__dict__")
+        or not callable(snapshot)
+    ):
+        raise TypeError("executable-region snapshot requires one live opaque owner")
+    raw = snapshot()
+    if type(raw) is not tuple or not 1 <= len(raw) <= _MAXIMUM_REGIONS:
+        raise RuntimeError("owner-bound executable-region snapshot differs")
+    regions: list[_ExecutableRegion] = []
+    previous_address = -1
+    for item in raw:
+        if type(item) is not tuple or len(item) != 5:
+            raise RuntimeError("owner-bound executable-region fields differ")
+        raw_path, address, size, offset, protection = item
+        if (
+            raw_path is not None
+            and (type(raw_path) is not bytes or not raw_path.startswith(b"/"))
+        ):
+            raise RuntimeError("owner-bound executable-region path differs")
+        if (
+            type(address) is not int
+            or address <= previous_address
+            or type(size) is not int
+            or size <= 0
+            or type(offset) is not int
+            or offset < 0
+            or type(protection) is not int
+            or not protection & _VM_PROT_EXECUTE
+        ):
+            raise RuntimeError("owner-bound executable-region geometry differs")
+        path: Path | None = None
+        if raw_path is not None:
+            try:
+                path = Path(raw_path.decode("utf-8")).resolve(strict=True)
+            except UnicodeDecodeError as error:
+                raise RuntimeError(
+                    "owner-bound executable-region path is not UTF-8"
+                ) from error
+        regions.append(
+            _ExecutableRegion(
+                path=path,
+                address=address,
+                size=size,
+                offset=offset,
+                protection=protection,
+            )
+        )
+        previous_address = address
+    return tuple(regions)
+
+
 def _snapshot_key(regions: Sequence[_ExecutableRegion]) -> tuple[tuple[Any, ...], ...]:
     return tuple(
         (

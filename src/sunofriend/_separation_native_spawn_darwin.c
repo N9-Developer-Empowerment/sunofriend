@@ -12,6 +12,7 @@
 #include <signal.h>
 #include <spawn.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -53,6 +54,8 @@
 #define SUNOFRIEND_CDHASH_BYTES 20
 #define SUNOFRIEND_CDHASH_HEX_BYTES 40
 #define SUNOFRIEND_CS_OPS_CDHASH 5
+#define SUNOFRIEND_EXECUTABLE_REGION_LIMIT 4096
+#define SUNOFRIEND_VM_PROT_EXECUTE 0x04
 
 /* csops is exported by Darwin's libSystem but is not declared by the public
  * SDK headers consumed by this deliberately small extension. */
@@ -1102,6 +1105,205 @@ sunofriend_owned_child_observe_process_image(
     }
 }
 
+static PyObject *
+sunofriend_owned_child_snapshot_executable_regions(
+    SunofriendOwnedSpawnChild *child,
+    PyObject *ignored
+)
+{
+    PyObject *regions;
+    PyObject *entry;
+    PyObject *path;
+    struct proc_regionwithpathinfo output;
+    uint64_t address = 0;
+    uint64_t next_address;
+    size_t path_bytes;
+    bool terminal = false;
+    int result;
+    int status;
+    int index;
+
+    (void)ignored;
+    if (
+        !child->spawned
+        || child->pid <= 0
+        || child->owner_pid != getpid()
+        || child->ownership_released
+        || child->ownership_lost
+    ) {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "native child executable regions are not owned"
+        );
+        return NULL;
+    }
+    status = sunofriend_poll_owned_terminal(child, &terminal);
+    if (status == ECHILD && child->ownership_lost) {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "native child ownership was lost before executable-region snapshot"
+        );
+        return NULL;
+    }
+    if (status != 0) {
+        errno = status;
+        PyErr_SetFromErrno(PyExc_OSError);
+        return NULL;
+    }
+    if (terminal || child->leader_exit_observed) {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "native child exited before executable-region snapshot"
+        );
+        return NULL;
+    }
+
+    regions = PyList_New(0);
+    if (regions == NULL) {
+        return NULL;
+    }
+    for (index = 0; index < SUNOFRIEND_EXECUTABLE_REGION_LIMIT; index++) {
+        memset(&output, 0, sizeof(output));
+        errno = 0;
+        result = proc_pidinfo(
+            child->pid,
+            PROC_PIDREGIONPATHINFO,
+            address,
+            &output,
+            (int)sizeof(output)
+        );
+        if (result <= 0) {
+            if (errno == 0 || errno == EINVAL) {
+                break;
+            }
+            if (errno == ESRCH) {
+                PyErr_SetString(
+                    PyExc_RuntimeError,
+                    "native child exited during executable-region snapshot"
+                );
+            } else {
+                PyErr_SetFromErrno(PyExc_OSError);
+            }
+            goto fail;
+        }
+        if (result != (int)sizeof(output)) {
+            PyErr_SetString(
+                PyExc_RuntimeError,
+                "native executable-region result size differs"
+            );
+            goto fail;
+        }
+        if (
+            output.prp_prinfo.pri_size == 0
+            || output.prp_prinfo.pri_address > UINT64_MAX
+                - output.prp_prinfo.pri_size
+        ) {
+            PyErr_SetString(
+                PyExc_RuntimeError,
+                "native executable-region traversal did not advance"
+            );
+            goto fail;
+        }
+        next_address = output.prp_prinfo.pri_address
+            + output.prp_prinfo.pri_size;
+        if (next_address <= address) {
+            PyErr_SetString(
+                PyExc_RuntimeError,
+                "native executable-region traversal did not advance"
+            );
+            goto fail;
+        }
+        address = next_address;
+        if (
+            (output.prp_prinfo.pri_protection & SUNOFRIEND_VM_PROT_EXECUTE)
+            == 0
+        ) {
+            continue;
+        }
+        path_bytes = strnlen(
+            output.prp_vip.vip_path,
+            sizeof(output.prp_vip.vip_path)
+        );
+        if (path_bytes == sizeof(output.prp_vip.vip_path)) {
+            PyErr_SetString(
+                PyExc_RuntimeError,
+                "native executable-region path exceeded its bound"
+            );
+            goto fail;
+        }
+        if (path_bytes == 0) {
+            path = Py_None;
+            Py_INCREF(path);
+        } else {
+            path = PyBytes_FromStringAndSize(
+                output.prp_vip.vip_path,
+                (Py_ssize_t)path_bytes
+            );
+        }
+        if (path == NULL) {
+            goto fail;
+        }
+        entry = Py_BuildValue(
+            "(OKKKI)",
+            path,
+            (unsigned long long)output.prp_prinfo.pri_address,
+            (unsigned long long)output.prp_prinfo.pri_size,
+            (unsigned long long)output.prp_prinfo.pri_offset,
+            (unsigned int)output.prp_prinfo.pri_protection
+        );
+        Py_DECREF(path);
+        if (entry == NULL) {
+            goto fail;
+        }
+        if (PyList_Append(regions, entry) != 0) {
+            Py_DECREF(entry);
+            goto fail;
+        }
+        Py_DECREF(entry);
+    }
+    if (index == SUNOFRIEND_EXECUTABLE_REGION_LIMIT) {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "native executable-region count exceeded its bound"
+        );
+        goto fail;
+    }
+    if (PyList_GET_SIZE(regions) == 0) {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "native executable-region snapshot is empty"
+        );
+        goto fail;
+    }
+    status = sunofriend_poll_owned_terminal(child, &terminal);
+    if (status == ECHILD && child->ownership_lost) {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "native child ownership was lost during executable-region snapshot"
+        );
+        goto fail;
+    }
+    if (status != 0) {
+        errno = status;
+        PyErr_SetFromErrno(PyExc_OSError);
+        goto fail;
+    }
+    if (terminal || child->leader_exit_observed) {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "native child exited during executable-region snapshot"
+        );
+        goto fail;
+    }
+    entry = PyList_AsTuple(regions);
+    Py_DECREF(regions);
+    return entry;
+
+fail:
+    Py_DECREF(regions);
+    return NULL;
+}
+
 static PyMethodDef sunofriend_owned_child_methods[] = {
     {
         "wait_nohang",
@@ -1130,6 +1332,15 @@ static PyMethodDef sunofriend_owned_child_methods[] = {
         PyDoc_STR(
             "Verify the owned live process image and kernel CDHash without "
             "exposing PID authority."
+        ),
+    },
+    {
+        "snapshot_owned_executable_regions",
+        (PyCFunction)sunofriend_owned_child_snapshot_executable_regions,
+        METH_NOARGS,
+        PyDoc_STR(
+            "Snapshot executable regions of the exact owned live child "
+            "without exposing PID authority."
         ),
     },
     {NULL, NULL, 0, NULL},

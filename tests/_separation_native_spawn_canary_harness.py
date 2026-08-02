@@ -41,6 +41,7 @@ from typing import Any, Iterator
 
 _REPOSITORY = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_REPOSITORY / "src"))
+import sunofriend._separation_macos_loaded_images as _loaded_images  # noqa: E402
 import sunofriend._separation_macos_sandbox_network_observer as _network_observer  # noqa: E402
 
 
@@ -57,6 +58,9 @@ _DESCENDANT_WORKER = (
 )
 _NETWORK_WORKER = (
     Path(__file__).with_name("_separation_native_spawn_network_worker.py").resolve()
+)
+_READY_WORKER = (
+    Path(__file__).with_name("_separation_native_spawn_ready_worker.py").resolve()
 )
 _LOGICAL_ROLES = ("request", "result", "checkpoint")
 _TARGET_FDS = (3, 4, 5)
@@ -1142,6 +1146,127 @@ def _run_owner_bound_network_canary(
             broker.abort()
 
 
+def _run_owner_bound_worker_ready_native_image_canary(
+    *,
+    spawn: Any,
+    runtime_path: Path,
+    expected_process_image_path: Path,
+    expected_process_image_cdhash: str,
+    temporary_root: Path,
+) -> dict[str, Any]:
+    """Inventory a PID-free ready worker through its opaque native owner."""
+
+    _close_descriptors_from_three()
+    case_directory = temporary_root / "owner-bound-worker-ready-native-images"
+    case_directory.mkdir(mode=0o700)
+    paths = _install_transport_descriptors(case_directory, _TARGET_FDS)
+    before = snapshot_parent_descriptors()
+    native_owner = spawn(
+        os.fsencode(runtime_path),
+        os.fsencode(_READY_WORKER),
+        *_TARGET_FDS,
+    )
+    if hasattr(native_owner, "pid") or hasattr(native_owner, "__dict__"):
+        raise AssertionError("worker-ready image owner exposes transferable authority")
+    with _OwnedCanaryChild(native_owner) as child:
+        deadline = time.monotonic() + _WAIT_SECONDS
+        while time.monotonic() < deadline:
+            raw = paths["result"].read_bytes()
+            if raw.endswith(b"\n"):
+                break
+            if len(raw) > 65_536:
+                raise AssertionError("worker-ready result exceeded its bound")
+            time.sleep(0.005)
+        else:
+            raise TimeoutError("worker-ready result was not written")
+        ready = _read_single_json(paths["result"])
+        if ready != {
+            "schema": "sunofriend.native-owner-worker-ready-canary.v1",
+            "phase": "fixed_native_modules_loaded",
+            "native_modules": [
+                "_bz2",
+                "_ctypes",
+                "_hashlib",
+                "_lzma",
+                "_sqlite3",
+                "_ssl",
+                "zlib",
+            ],
+            "pid_or_pgid_exported": False,
+            "model_or_checkpoint_loaded": False,
+            "audio_read": False,
+            "network_used": False,
+        }:
+            raise AssertionError("owner-bound worker-ready report differs")
+        process_image = native_owner.observe_owned_process_image(
+            os.fsencode(runtime_path),
+            os.fsencode(expected_process_image_path),
+            expected_process_image_cdhash.encode("ascii"),
+        )
+        if process_image != {
+            "kernel_cdhash": expected_process_image_cdhash,
+            "path_state": "matched_expected_process_image",
+        }:
+            raise AssertionError("worker-ready process-image observation differs")
+        first = _loaded_images._enumerate_owned_executable_regions(native_owner)
+        time.sleep(0.02)
+        second = _loaded_images._enumerate_owned_executable_regions(native_owner)
+        if _loaded_images._snapshot_key(first) != _loaded_images._snapshot_key(
+            second
+        ):
+            raise AssertionError("owner-bound executable-region snapshots differ")
+        measured = _loaded_images._measure_mapped_files(
+            second,
+            process_image_path=expected_process_image_path,
+        )
+        artifacts = _loaded_images._path_free_artifacts(measured)
+        file_backed = [region for region in second if region.path is not None]
+        unpathed = [region for region in second if region.path is None]
+        if sum(item["matches_process_image"] for item in artifacts) != 1:
+            raise AssertionError("owned process image is not present exactly once")
+        encoded_artifacts = json.dumps(
+            artifacts,
+            ensure_ascii=True,
+            allow_nan=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("ascii")
+        native_owner.signal_owned_group(signal.SIGKILL)
+        status = child.wait()
+    if not os.WIFSIGNALED(status) or os.WTERMSIG(status) != signal.SIGKILL:
+        raise AssertionError("worker-ready image canary was not exactly terminated")
+    _loaded_images._remeasure_mapped_files(measured)
+    if (
+        native_owner.leader_reaped is not True
+        or native_owner.group_empty is not True
+        or native_owner.ownership_released is not True
+        or native_owner.ownership_lost is not False
+    ):
+        raise AssertionError("worker-ready image canary was not exact-reaped")
+    after = snapshot_parent_descriptors()
+    _assert_parent_unchanged(before, after)
+    return {
+        "pid_free_worker_ready_marker_observed": True,
+        "native_owner_bound": True,
+        "stable_consecutive_snapshots": True,
+        "executable_region_count": len(second),
+        "file_backed_executable_region_count": len(file_backed),
+        "unpathed_executable_region_count": len(unpathed),
+        "mapped_file_count": len(measured),
+        "main_process_image_present_once": True,
+        "mapped_artifact_manifest_sha256": hashlib.sha256(
+            encoded_artifacts
+        ).hexdigest(),
+        "raw_pid_or_pgid_retained": False,
+        "raw_executable_paths_retained": False,
+        "model_or_checkpoint_loaded": False,
+        "audio_read": False,
+        "network_used": False,
+        "exact_reap_after_observation": True,
+        "parent_descriptors_unchanged": True,
+    }
+
+
 def _run_descendant_group_canary(
     *,
     spawn: Any,
@@ -1266,6 +1391,7 @@ def run_canary_matrix(
     hold_worker_before = _measure_worker(_HOLD_WORKER)
     descendant_worker_before = _measure_worker(_DESCENDANT_WORKER)
     network_worker_before = _measure_worker(_NETWORK_WORKER)
+    ready_worker_before = _measure_worker(_READY_WORKER)
     spawn = getattr(extension, _METHOD_NAME, None)
     if not callable(spawn):
         raise RuntimeError("native extension entry point is unavailable")
@@ -1384,6 +1510,15 @@ def run_canary_matrix(
         runtime_path=runtime_path,
         temporary_root=temporary_root,
     )
+    owner_bound_worker_ready_native_image_canary = (
+        _run_owner_bound_worker_ready_native_image_canary(
+            spawn=spawn,
+            runtime_path=runtime_path,
+            expected_process_image_path=expected_process_image_path,
+            expected_process_image_cdhash=expected_process_image_cdhash,
+            temporary_root=temporary_root,
+        )
+    )
     descendant_group_canary = _run_descendant_group_canary(
         spawn=spawn,
         runtime_path=runtime_path,
@@ -1395,6 +1530,7 @@ def run_canary_matrix(
     hold_worker_after = _measure_worker(_HOLD_WORKER)
     descendant_worker_after = _measure_worker(_DESCENDANT_WORKER)
     network_worker_after = _measure_worker(_NETWORK_WORKER)
+    ready_worker_after = _measure_worker(_READY_WORKER)
     if runtime_after != runtime_before:
         raise RuntimeError("bound runtime changed across canary matrix")
     if process_image_after != process_image_before:
@@ -1407,9 +1543,11 @@ def run_canary_matrix(
         raise RuntimeError("bound descendant worker changed across canary matrix")
     if network_worker_after != network_worker_before:
         raise RuntimeError("bound network worker changed across canary matrix")
+    if ready_worker_after != ready_worker_before:
+        raise RuntimeError("bound worker-ready worker changed across canary matrix")
     expected_suffix = sysconfig.get_config_var("EXT_SUFFIX")
     return {
-        "schema": "sunofriend.native-spawn-canary-matrix.v5",
+        "schema": "sunofriend.native-spawn-canary-matrix.v6",
         "extension_path_serialized": False,
         "worker_path_serialized": False,
         "proof_scope": (
@@ -1438,6 +1576,9 @@ def run_canary_matrix(
         "fixed_network_worker_identity": _path_free_file_identity(
             network_worker_after
         ),
+        "fixed_ready_worker_identity": _path_free_file_identity(
+            ready_worker_after
+        ),
         "native_owner_type_qualification": {
             "direct_construction_rejected": direct_owner_construction_rejected,
             "raw_pid_not_exposed": True,
@@ -1446,6 +1587,7 @@ def run_canary_matrix(
             "owner_bound_process_image_observer_present": True,
             "owner_bound_network_observation_broker_present": True,
             "network_broker_single_use": True,
+            "owner_bound_worker_ready_native_image_observer_present": True,
             "observer_exports_pid_or_pgid": False,
         },
         "runtime_environment_qualification": (
@@ -1508,7 +1650,7 @@ def run_canary_matrix(
             "runtime_executable_path_exec_toctou_not_eliminated",
             "worker_script_path_open_toctou_not_eliminated",
             "pre_exec_signal_state_not_reconstructed_after_cpython_startup",
-            "post_inference_native_image_observer_not_owner_bound",
+            "owner_bound_worker_ready_observer_not_attached_to_real_worker",
             "real_model_worker_not_under_native_owner",
         ),
         "complete_descriptor_scan_soft_limit": _CANARY_SOFT_LIMIT,
@@ -1530,6 +1672,9 @@ def run_canary_matrix(
         "external_reap_poison_canary": external_reap_poison_canary,
         "owner_bound_process_image_canary": owner_bound_process_image_canary,
         "owner_bound_network_canary": owner_bound_network_canary,
+        "owner_bound_worker_ready_native_image_canary": (
+            owner_bound_worker_ready_native_image_canary
+        ),
         "descendant_group_canary": descendant_group_canary,
         "cases": cases,
     }

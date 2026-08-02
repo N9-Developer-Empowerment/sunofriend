@@ -22,6 +22,9 @@ DESCENDANT_WORKER = (
 NETWORK_WORKER = (
     REPOSITORY / "tests" / "_separation_native_spawn_network_worker.py"
 )
+READY_WORKER = (
+    REPOSITORY / "tests" / "_separation_native_spawn_ready_worker.py"
+)
 HARNESS = REPOSITORY / "tests" / "_separation_native_spawn_canary_harness.py"
 
 
@@ -174,6 +177,55 @@ def test_network_canary_worker_is_fixed_self_sandboxing_and_model_free() -> None
     )
 
 
+def test_ready_worker_is_fixed_pid_free_and_model_free() -> None:
+    tree = _tree(READY_WORKER)
+    source = READY_WORKER.read_text(encoding="utf-8")
+    imports = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imports.update(alias.name.split(".", 1)[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imports.add(node.module.split(".", 1)[0])
+
+    assert imports == {
+        "__future__",
+        "_bz2",
+        "_ctypes",
+        "_hashlib",
+        "_lzma",
+        "_sqlite3",
+        "_ssl",
+        "json",
+        "os",
+        "signal",
+        "time",
+        "typing",
+        "zlib",
+    }
+    assert not imports & {
+        "basic_pitch",
+        "http",
+        "mlx",
+        "onnxruntime",
+        "requests",
+        "subprocess",
+        "torch",
+        "urllib",
+    }
+    assert '"phase": "fixed_native_modules_loaded"' in source
+    assert '"pid_or_pgid_exported": False' in source
+    assert '"model_or_checkpoint_loaded": False' in source
+    assert '"audio_read": False' in source
+    assert '"network_used": False' in source
+    assert "os.getpid(" not in source
+    assert "os.getpgrp(" not in source
+    assert "socket." not in source
+    assert "_harden_transport_descriptors()" in source
+    assert source.index("_harden_transport_descriptors()", source.index("def main")) < source.index(
+        "_write_result(", source.index("def main")
+    )
+
+
 def test_hold_worker_hardens_descriptors_then_only_blocks_for_owner_canary() -> None:
     tree = _tree(HOLD_WORKER)
     main = _function(tree, "main")
@@ -297,7 +349,7 @@ def test_harness_asserts_parent_child_access_data_and_process_invariants() -> No
 
     assert "snapshot_parent_descriptors()" in source
     assert "_assert_parent_unchanged(before" in source
-    assert source.count("_assert_parent_unchanged(before") == 10
+    assert source.count("_assert_parent_unchanged(before") == 11
     assert '"open_descriptors") != [0, 1, 2, 3, 4, 5]' in source
     assert '"descriptor_scan_soft_limit") != _CANARY_SOFT_LIMIT' in source
     assert '"request_write": errno.EBADF' in source
@@ -351,6 +403,10 @@ def test_harness_asserts_parent_child_access_data_and_process_invariants() -> No
     assert "broker.finish(native_owner=native_owner)" in source
     assert '"broker_single_use_rejected_replay": True' in source
     assert '"raw_pid_or_pgid_retained": False' in source
+    assert "_run_owner_bound_worker_ready_native_image_canary(" in source
+    assert "_enumerate_owned_executable_regions(native_owner)" in source
+    assert '"pid_free_worker_ready_marker_observed": True' in source
+    assert '"raw_executable_paths_retained": False' in source
     assert "native owner reaped before its group was empty" in source
     assert "native_owner.group_empty is not False" in source
     assert '"ownership_released_only_after_group_empty": True' in source

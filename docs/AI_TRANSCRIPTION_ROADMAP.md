@@ -1704,6 +1704,51 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — worker-ready executable regions bound to opaque native owner
+
+- Goal: remove the post-inference executable-region inventory's last raw-PID
+  dependency before designing a real-worker native entry point.
+- Change or experiment: added `snapshot_owned_executable_regions` to the
+  nonconstructible Darwin child owner. It calls `proc_pidinfo` against only
+  the internally retained live child, returns a bounded transient region
+  snapshot without PID/PGID, and rechecks ownership and liveness before and
+  after enumeration. Canary matrix v6 adds a fixed stdlib-only worker that
+  loads seven fixed native modules, emits one PID-free ready marker and stays
+  alive. Only after that marker does the parent take two owner-bound snapshots,
+  require stability, hash and statically inspect each file-backed mapping,
+  terminate the private group, exact-reap it and remeasure every file.
+- Inputs: current isolated Python runtime, freshly provenance-built private
+  Darwin extension, three fixed regular-file transports and the fixed
+  model-free ready worker. No audio, model or checkpoint input and no network
+  operation.
+- Model/runtime/checkpoint: no model or checkpoint. The pinned native source
+  SHA-256 is `997a3f21386a9af9c79fbfb5a96a2947dfc37fa468296cde4f3867a01148a06f`;
+  the updated build-contract SHA-256 is
+  `89530410bf6f6c08fcacb246e002ed22fe1b74a0f748e8d59802f3c73fc3f130`.
+- Evidence and metrics: the focused source, build, helper and live-matrix
+  tests pass. The live v6 canary observed the PID-free marker before two
+  matching executable-region snapshots, found the main signed Python process
+  image exactly once, retained only a path-free artifact-manifest hash, then
+  proved whole-group termination, group emptiness, exact reap and unchanged
+  parent descriptors. The complete repository suite passes 2,823 tests with
+  one platform skip and the existing third-party `resampy`/`pkg_resources`
+  deprecation warning; Ruff and diff checks pass.
+- Listening result: not applicable; no audio, MIDI or separation changed.
+- Decision: retain the native-owner executable-region snapshot and v6
+  worker-ready canary as the third owner-bound primitive. Mark the primitive
+  implemented, but keep the Kim Vocal 2 route on its current subprocess
+  supervisor.
+- Problems/risks: executable paths cross the private native/Python boundary
+  transiently so their files can be measured, although no path or process ID
+  enters the report. Reopened file bytes are not proof of mapped memory bytes;
+  dyld shared-cache constituents and transient loads remain incomplete.
+  Pathname TOCTOU is not closed. The native entry point still cannot run the
+  real worker with its ready/release transport, and no product route changed.
+- Next smallest step: build one combined fixed-worker native bridge that uses
+  the owner-bound process-image, network and worker-ready native-image
+  primitives together and derives the terminal projection from the same live
+  owner. Only then consider a private authorised Kim worker migration.
+
 ### 2026-08-02 — single-use network stream bound to opaque native owner
 
 - Goal: remove the kernel-network observer's need for a caller-supplied target

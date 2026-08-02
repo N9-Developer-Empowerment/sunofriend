@@ -32,8 +32,11 @@ Model-free native matrix v5 now adds a factory-only single-use kernel-network
 broker: it is ready before spawn, matches transient kernel-event PIDs through
 the opaque owner, retains no PID/destination/raw message and exact-reaps a
 fixed self-sandboxing worker after one loopback denial. The real Kim worker is
-unchanged, and the post-inference native-image observer still needs an owner-
-bound worker-ready form. A separate private-development
+unchanged. Model-free matrix v6 now also takes two stable executable-region
+snapshots through the opaque owner only after a fixed PID-free worker-ready
+marker, retains a path-free artifact-manifest hash and exact-reaps the worker.
+The three owner-bound primitives are still not combined around the real Kim
+worker. A separate private-development
 HTDemucs runner now produces and measures four real broad estimated stems on
 the copyright-safe demo, and a second private evaluator measures their effect
 on the existing MIDI transcribers. Public separation, source-graph import,
@@ -536,8 +539,17 @@ in evidence. A fixed stdlib worker replaces itself through `sandbox-exec`,
 attempts only loopback port 9 and stays live for the drain. The path-free live
 matrix recorded one deliberate denial, zero other owned denials, replay
 rejection, normal zero exit, group emptiness and exact reap. This is model-free
-engineering evidence, not a public separator or a Kim integration. The post-
-inference native-image observer remains PID-consuming.
+engineering evidence, not a public separator or a Kim integration.
+
+Canary matrix v6 adds the worker-ready executable-region counterpart. The
+opaque native owner uses `proc_pidinfo` internally and returns a bounded
+transient mapping snapshot without PID/PGID. A fixed stdlib worker loads seven
+native modules, emits a PID-free ready marker and stays alive while the parent
+takes two stable owner-bound snapshots. File-backed mappings are measured,
+the signed main process image must occur exactly once, and the files are
+remeasured after whole-group termination and exact reap. Final evidence keeps
+counts and an artifact-manifest hash, not paths. This remains model-free; the
+three primitives are not yet combined around Kim Vocal 2.
 
 The following ownership hardening removes the bare-PID handoff. The extension
 allocates a private, nonconstructible child owner before `posix_spawn`, arms

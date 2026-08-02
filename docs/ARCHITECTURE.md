@@ -621,9 +621,21 @@ result is path-free counts with no raw message, destination or process ID. A
 fixed stdlib worker replaces itself through the deprecated `sandbox-exec`,
 performs one loopback-port-9 canary and remains live for the bounded drain.
 The matrix observes normal zero exit and exact reap. This closes the model-free
-owner-bound kernel-network primitive only. The post-inference executable-
-region observer still needs an owner-bound worker-ready form before real-
-worker integration.
+owner-bound kernel-network primitive only.
+
+Canary matrix v6 adds the third owner-bound primitive. The opaque native owner
+now exposes a bounded `snapshot_owned_executable_regions` operation that uses
+`proc_pidinfo` only against its internally retained exact live child and never
+returns PID or PGID. A fixed model-free worker loads seven fixed native
+modules, writes a PID-free ready marker and stays alive. The parent takes two
+owner-bound executable-region snapshots only after that marker, requires them
+to be stable, measures every file-backed mapping, finds the signed main process
+image exactly once, terminates and exact-reaps the private group, then
+remeasures each file. Final matrix evidence keeps counts and a path-free
+artifact-manifest hash, not executable paths. Paths exist transiently in the
+private observer so files can be reopened and measured. Dyld shared-cache
+constituents, transient loads, mapped-memory equality and pathname TOCTOU
+remain explicit limitations. This canary is not attached to Kim Vocal 2.
 
 The native entry point no longer returns a bare integer PID. It preallocates a
 nonconstructible, noncopyable exact-child owner before `posix_spawn`, arms and
@@ -690,11 +702,11 @@ projection requires exact normal exit, leader-exit observation, complete group
 drain, exact leader reap, released ownership and three evidence bindings while
 forbidding retained PID/PGID or exposed signal authority. It deliberately does
 not adapt the current `Popen` result into a native claim. Model-free
-process-image and kernel-network observations now have owner-bound primitives.
-The post-inference native-image observer still consumes a PID, whereas the
-native owner deliberately hides that authority; its owner-bound worker-ready
-entry point must replace that mismatch before real integration. The current
-Kim route has not called either owner-bound primitive.
+process-image, kernel-network and worker-ready executable-region observations
+now have owner-bound model-free primitives. The fixed native entry point still
+cannot carry the real worker's readiness/release transport or derive its final
+terminal projection, so this does not constitute real integration. The current
+Kim route has not called any of the three owner-bound primitives.
 
 `_separation_fake_execution_protocol.py` validates the new V2 magics and
 canonical bindings but intentionally cannot encode an admitted product

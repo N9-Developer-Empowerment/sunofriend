@@ -348,7 +348,7 @@ def test_child_owner_observes_process_image_without_exporting_authority() -> Non
     observer = _function_body(
         source,
         "sunofriend_owned_child_observe_process_image(",
-        "sunofriend_owned_child_methods[]",
+        "sunofriend_owned_child_snapshot_executable_regions(",
     )
 
     assert '"observe_owned_process_image"' in source
@@ -373,3 +373,27 @@ def test_child_owner_observes_process_image_without_exporting_authority() -> Non
     )
     assert '"pid"' not in getset
     assert '"pgid"' not in getset
+
+
+def test_child_owner_snapshots_executable_regions_without_exporting_pid() -> None:
+    source = _source()
+    observer = _function_body(
+        source,
+        "sunofriend_owned_child_snapshot_executable_regions(",
+        "sunofriend_owned_child_methods[]",
+    )
+
+    assert '"snapshot_owned_executable_regions"' in source
+    assert "proc_pidinfo(" in observer
+    assert "PROC_PIDREGIONPATHINFO" in observer
+    assert "SUNOFRIEND_EXECUTABLE_REGION_LIMIT" in observer
+    assert "SUNOFRIEND_VM_PROT_EXECUTE" in observer
+    assert "child->owner_pid != getpid()" in observer
+    assert "child->ownership_released" in observer
+    assert "child->ownership_lost" in observer
+    assert "sunofriend_poll_owned_terminal(child, &terminal)" in observer
+    assert "native child exited during executable-region snapshot" in observer
+    assert "PyBytes_FromStringAndSize(" in observer
+    assert '"(OKKKI)"' in observer
+    assert "PyLong_FromLong((long)child->pid)" not in observer
+    assert "PyLong_FromLong((long)child->pid)" not in source
