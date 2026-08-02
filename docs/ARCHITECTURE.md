@@ -598,6 +598,19 @@ model-free descendant prevents ownership release. After a whole-group
 only then marks the group empty and releases ownership. This is native
 primitive evidence; it is not yet real-model integration.
 
+Canary matrix v4 adds the first observation method to that same opaque owner.
+`observe_owned_process_image` calls Darwin `proc_pidpath` and `csops` against
+the internally held exact child PID, compares the resulting image path and
+kernel CDHash with caller-prepared static expectations, and returns only the
+matched CDHash plus a fixed path-state tag. It never exports PID or PGID. A
+fixed blocking model-free worker proves that a wrong path and wrong CDHash are
+rejected without releasing or losing ownership, that the correct signed image
+is then observed, and that whole-group signal plus exact reap still completes.
+The report contains no path or process identifier. This closes only the
+owner-bound process-image primitive: static-path preparation and TOCTOU remain
+explicit, and kernel-network plus post-inference executable-region observers
+still need owner-bound forms before real-worker integration.
+
 The native entry point no longer returns a bare integer PID. It preallocates a
 nonconstructible, noncopyable exact-child owner before `posix_spawn`, arms and
 returns that same object without a post-spawn Python allocation, hides the raw
@@ -663,9 +676,11 @@ projection requires exact normal exit, leader-exit observation, complete group
 drain, exact leader reap, released ownership and three evidence bindings while
 forbidding retained PID/PGID or exposed signal authority. It deliberately does
 not adapt the current `Popen` result into a native claim. The existing
-process-image, kernel-network and post-inference native-image observers consume
-a PID, whereas the native owner deliberately hides that authority; owner-bound
-observer entry points must replace that mismatch before real integration.
+process-image observer now has a model-free owner-bound primitive. The
+kernel-network and post-inference native-image observers still consume a PID,
+whereas the native owner deliberately hides that authority; owner-bound entry
+points for those two observations must replace that mismatch before real
+integration. The current Kim route has not called the new primitive.
 
 `_separation_fake_execution_protocol.py` validates the new V2 magics and
 canonical bindings but intentionally cannot encode an admitted product

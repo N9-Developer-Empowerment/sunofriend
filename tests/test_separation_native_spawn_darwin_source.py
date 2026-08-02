@@ -341,3 +341,35 @@ def test_child_owner_exact_wait_signal_release_and_emergency_cleanup() -> None:
     assert "child->owner_pid == getpid()" in source
     assert "owned_child->owner_pid = getpid()" in source
     assert source.count("child->owner_pid != getpid()") >= 3
+
+
+def test_child_owner_observes_process_image_without_exporting_authority() -> None:
+    source = _source()
+    observer = _function_body(
+        source,
+        "sunofriend_owned_child_observe_process_image(",
+        "sunofriend_owned_child_methods[]",
+    )
+
+    assert '"observe_owned_process_image"' in source
+    assert "proc_pidpath(" in observer
+    assert "csops(" in observer
+    assert "SUNOFRIEND_CS_OPS_CDHASH" in observer
+    assert "clock_gettime(CLOCK_MONOTONIC" in observer
+    assert "SUNOFRIEND_PROCESS_IMAGE_OBSERVATION_SECONDS" in observer
+    assert "nanosleep(&remaining_pause, &remaining_pause)" in observer
+    assert "strcmp(current_path, expected_path)" in observer
+    assert "strcmp(current_path, launcher_path)" in observer
+    assert "native child process image path differs" in observer
+    assert "native child process image CDHash differs" in observer
+    assert '"matched_expected_process_image"' in observer
+    assert "child->owner_pid != getpid()" in observer
+    assert "child->ownership_released" in observer
+    assert "child->ownership_lost" in observer
+    getset = _function_body(
+        source,
+        "sunofriend_owned_child_getset[]",
+        "SunofriendOwnedSpawnChildType =",
+    )
+    assert '"pid"' not in getset
+    assert '"pgid"' not in getset

@@ -89,6 +89,7 @@ _MAX_ARTIFACT_BYTES = 16_777_216
 _MAX_RUNTIME_BYTES = 134_217_728
 _MAX_WORKER_BYTES = 65_536
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_CDHASH_RE = re.compile(r"^[0-9a-f]{40}$")
 _DARWIN_TEXT_ENCODING_RE = re.compile(r"^0x[0-9A-Fa-f]{1,8}:[0-9]{1,5}:[0-9]{1,5}$")
 
 
@@ -926,6 +927,99 @@ def _run_external_reap_poison_canary(
     }
 
 
+def _run_owner_bound_process_image_canary(
+    *,
+    spawn: Any,
+    runtime_path: Path,
+    expected_process_image_path: Path,
+    expected_process_image_cdhash: str,
+    temporary_root: Path,
+) -> dict[str, Any]:
+    """Exercise live image observation without exporting child authority."""
+
+    _close_descriptors_from_three()
+    case_directory = temporary_root / "owner-bound-process-image"
+    case_directory.mkdir(mode=0o700)
+    paths = _install_transport_descriptors(case_directory, _TARGET_FDS)
+    before = snapshot_parent_descriptors()
+    native_owner = spawn(
+        os.fsencode(runtime_path),
+        os.fsencode(_HOLD_WORKER),
+        *_TARGET_FDS,
+    )
+    worker_pid = _read_bounded_pid_marker(
+        paths["result"],
+        deadline=time.monotonic() + _WAIT_SECONDS,
+    )
+    if not native_owner.matches_pid_and_pgid(worker_pid, worker_pid):
+        raise AssertionError("process-image canary marker identity is invalid")
+    if hasattr(native_owner, "pid") or hasattr(native_owner, "__dict__"):
+        raise AssertionError("process-image observer exposes transferable authority")
+    wrong_path = temporary_root / "deliberately-not-the-owned-process-image"
+    try:
+        native_owner.observe_owned_process_image(
+            os.fsencode(wrong_path),
+            os.fsencode(wrong_path),
+            expected_process_image_cdhash.encode("ascii"),
+        )
+    except RuntimeError as error:
+        wrong_path_rejected = "process image path differs" in str(error)
+    else:
+        wrong_path_rejected = False
+    if not wrong_path_rejected:
+        raise AssertionError("owner-bound observer accepted a wrong process image")
+    wrong_cdhash = (
+        ("0" if expected_process_image_cdhash[0] != "0" else "1")
+        + expected_process_image_cdhash[1:]
+    )
+    try:
+        native_owner.observe_owned_process_image(
+            os.fsencode(runtime_path),
+            os.fsencode(expected_process_image_path),
+            wrong_cdhash.encode("ascii"),
+        )
+    except RuntimeError as error:
+        wrong_cdhash_rejected = "process image CDHash differs" in str(error)
+    else:
+        wrong_cdhash_rejected = False
+    if not wrong_cdhash_rejected:
+        raise AssertionError("owner-bound observer accepted a wrong CDHash")
+    if (
+        native_owner.ownership_released is not False
+        or native_owner.ownership_lost is not False
+    ):
+        raise AssertionError("failed image observation altered native ownership")
+    observation = native_owner.observe_owned_process_image(
+        os.fsencode(runtime_path),
+        os.fsencode(expected_process_image_path),
+        expected_process_image_cdhash.encode("ascii"),
+    )
+    if observation != {
+        "kernel_cdhash": expected_process_image_cdhash,
+        "path_state": "matched_expected_process_image",
+    }:
+        raise AssertionError("owner-bound process-image observation differs")
+    after_observation = snapshot_parent_descriptors()
+    _assert_parent_unchanged(before, after_observation)
+    native_owner.signal_owned_group(signal.SIGKILL)
+    with _OwnedCanaryChild(native_owner) as child:
+        status = child.wait()
+    if not os.WIFSIGNALED(status) or os.WTERMSIG(status) != signal.SIGKILL:
+        raise AssertionError("process-image canary was not exactly terminated")
+    after_reap = snapshot_parent_descriptors()
+    _assert_parent_unchanged(before, after_reap)
+    return {
+        "wrong_process_image_rejected": True,
+        "wrong_cdhash_rejected": True,
+        "rejection_preserved_ownership": True,
+        "expected_process_image_matched": True,
+        "kernel_cdhash_matched_static_identity": True,
+        "raw_pid_or_pgid_retained": False,
+        "exact_reap_after_observation": True,
+        "parent_descriptors_unchanged": True,
+    }
+
+
 def _run_descendant_group_canary(
     *,
     spawn: Any,
@@ -1026,6 +1120,8 @@ def run_canary_matrix(
     expected_artifact_sha256: str,
     expected_source_sha256: str,
     expected_build_contract_sha256: str,
+    expected_process_image_path: Path,
+    expected_process_image_cdhash: str,
 ) -> dict[str, Any]:
     outer_supervisor_descriptors = _observe_outer_supervisor_descriptors()
     if outer_supervisor_descriptors["only_standard_descriptors_open"] is not True:
@@ -1038,8 +1134,12 @@ def run_canary_matrix(
         expected_build_contract_sha256=expected_build_contract_sha256,
     )
     runtime_path = Path(sys.executable).resolve(strict=True)
+    expected_process_image_path = expected_process_image_path.resolve(strict=True)
+    if not _CDHASH_RE.fullmatch(expected_process_image_cdhash):
+        raise ValueError("expected process-image CDHash is invalid")
     worker_path = _WORKER.resolve(strict=True)
     runtime_before = _measure_runtime(runtime_path)
+    process_image_before = _measure_runtime(expected_process_image_path)
     worker_before = _measure_worker(worker_path)
     hold_worker_before = _measure_worker(_HOLD_WORKER)
     descendant_worker_before = _measure_worker(_DESCENDANT_WORKER)
@@ -1149,17 +1249,27 @@ def run_canary_matrix(
         runtime_path=runtime_path,
         temporary_root=temporary_root,
     )
+    owner_bound_process_image_canary = _run_owner_bound_process_image_canary(
+        spawn=spawn,
+        runtime_path=runtime_path,
+        expected_process_image_path=expected_process_image_path,
+        expected_process_image_cdhash=expected_process_image_cdhash,
+        temporary_root=temporary_root,
+    )
     descendant_group_canary = _run_descendant_group_canary(
         spawn=spawn,
         runtime_path=runtime_path,
         temporary_root=temporary_root,
     )
     runtime_after = _measure_runtime(runtime_path)
+    process_image_after = _measure_runtime(expected_process_image_path)
     worker_after = _measure_worker(worker_path)
     hold_worker_after = _measure_worker(_HOLD_WORKER)
     descendant_worker_after = _measure_worker(_DESCENDANT_WORKER)
     if runtime_after != runtime_before:
         raise RuntimeError("bound runtime changed across canary matrix")
+    if process_image_after != process_image_before:
+        raise RuntimeError("bound runtime process image changed across canary matrix")
     if worker_after != worker_before:
         raise RuntimeError("bound worker changed across canary matrix")
     if hold_worker_after != hold_worker_before:
@@ -1168,7 +1278,7 @@ def run_canary_matrix(
         raise RuntimeError("bound descendant worker changed across canary matrix")
     expected_suffix = sysconfig.get_config_var("EXT_SUFFIX")
     return {
-        "schema": "sunofriend.native-spawn-canary-matrix.v3",
+        "schema": "sunofriend.native-spawn-canary-matrix.v4",
         "extension_path_serialized": False,
         "worker_path_serialized": False,
         "proof_scope": (
@@ -1186,6 +1296,9 @@ def run_canary_matrix(
         "native_source_sha256": expected_source_sha256,
         "native_build_contract_sha256": expected_build_contract_sha256,
         "runtime_executable_identity": _path_free_file_identity(runtime_after),
+        "runtime_process_image_identity": _path_free_file_identity(
+            process_image_after
+        ),
         "fixed_worker_identity": _path_free_file_identity(worker_after),
         "fixed_hold_worker_identity": _path_free_file_identity(hold_worker_after),
         "fixed_descendant_worker_identity": _path_free_file_identity(
@@ -1196,6 +1309,8 @@ def run_canary_matrix(
             "raw_pid_not_exposed": True,
             "copy_and_pickle_rejected": True,
             "fork_clone_destructor_guard_present": True,
+            "owner_bound_process_image_observer_present": True,
+            "observer_exports_pid_or_pgid": False,
         },
         "runtime_environment_qualification": (
             "exact_three_entry_envp_by_contract_with_one_validated_"
@@ -1275,6 +1390,7 @@ def run_canary_matrix(
         ),
         "post_spawn_owner_drop_canary": owner_drop_canary,
         "external_reap_poison_canary": external_reap_poison_canary,
+        "owner_bound_process_image_canary": owner_bound_process_image_canary,
         "descendant_group_canary": descendant_group_canary,
         "cases": cases,
     }
@@ -1287,6 +1403,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("expected_artifact_sha256")
     parser.add_argument("expected_source_sha256")
     parser.add_argument("expected_build_contract_sha256")
+    parser.add_argument("expected_process_image_path", type=Path)
+    parser.add_argument("expected_process_image_cdhash")
     return parser
 
 
@@ -1298,6 +1416,8 @@ def main(argv: list[str] | None = None) -> int:
         expected_artifact_sha256=arguments.expected_artifact_sha256,
         expected_source_sha256=arguments.expected_source_sha256,
         expected_build_contract_sha256=(arguments.expected_build_contract_sha256),
+        expected_process_image_path=arguments.expected_process_image_path,
+        expected_process_image_cdhash=arguments.expected_process_image_cdhash,
     )
     sys.stdout.write(
         json.dumps(

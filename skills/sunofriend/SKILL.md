@@ -79,7 +79,12 @@ report the result, then move on.
   session and deliberately surviving descendant, observes leader exit without
   reaping, drains the complete group and exact-reaps only after a leader-only
   `libproc` census. It retains no PID/PGID and proves the native primitive, not
-  real-model integration. This evidence does not enable
+  real-model integration. Model-free matrix v4 adds one bounded owner method
+  that uses `proc_pidpath` and `csops` internally to match the exact child
+  process image and kernel CDHash without exporting PID, PGID or paths. Wrong
+  path/CDHash canaries preserve ownership before a correct match and exact
+  reap. This is not attached to Kim; owner-bound network-denial and native-
+  image-ready observers still remain. This evidence does not enable
   native fake-launch V2, which remains permanently `blocked`/`not_run` and
   still contains only caller-claimed artifact identities. A later model-free
   canary matrix v2 observes its harness before local cleanup with only FDs 0–2
@@ -434,7 +439,9 @@ report the result, then move on.
   process-group/descendant owner, and no separator route is enabled. A
   validation-only terminal projection now defines and rejects incomplete
   future native claims, but the current Kim worker cannot emit it and it is
-  not execution provenance. The
+  not execution provenance. The owner-bound process-image primitive is proven
+  only with a fixed model-free worker; the current Kim route still uses its
+  older PID-consuming observation path. The
   checkpoint is not redistributed. Do not offer or run this challenger
   through the skill.
 - `source-import` decodes exactly one local asset.

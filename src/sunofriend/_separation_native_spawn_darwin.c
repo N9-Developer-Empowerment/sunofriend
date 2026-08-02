@@ -48,6 +48,15 @@
 #define SUNOFRIEND_GROUP_MEMBER_LIMIT 1024
 #define SUNOFRIEND_EMERGENCY_REAP_ATTEMPTS 200
 #define SUNOFRIEND_EMERGENCY_REAP_PAUSE_NS 5000000L
+#define SUNOFRIEND_PROCESS_IMAGE_OBSERVATION_SECONDS 2
+#define SUNOFRIEND_PROCESS_IMAGE_POLL_PAUSE_NS 10000000L
+#define SUNOFRIEND_CDHASH_BYTES 20
+#define SUNOFRIEND_CDHASH_HEX_BYTES 40
+#define SUNOFRIEND_CS_OPS_CDHASH 5
+
+/* csops is exported by Darwin's libSystem but is not declared by the public
+ * SDK headers consumed by this deliberately small extension. */
+extern int csops(pid_t pid, unsigned int operations, void *output, size_t size);
 
 enum {
     SUNOFRIEND_STDIN_FD = 0,
@@ -102,6 +111,58 @@ static bool
 sunofriend_contains_nul(const char *value, Py_ssize_t size)
 {
     return memchr(value, '\0', (size_t)size) != NULL;
+}
+
+static int
+sunofriend_validate_cdhash(PyObject *value)
+{
+    const unsigned char *text;
+    Py_ssize_t index;
+
+    if (
+        !PyBytes_CheckExact(value)
+        || PyBytes_GET_SIZE(value) != SUNOFRIEND_CDHASH_HEX_BYTES
+    ) {
+        PyErr_SetString(
+            PyExc_ValueError,
+            "expected process-image CDHash must be 40 lowercase hex bytes"
+        );
+        return -1;
+    }
+    text = (const unsigned char *)PyBytes_AS_STRING(value);
+    for (index = 0; index < SUNOFRIEND_CDHASH_HEX_BYTES; index++) {
+        if (
+            !(
+                (text[index] >= (unsigned char)'0'
+                 && text[index] <= (unsigned char)'9')
+                || (text[index] >= (unsigned char)'a'
+                    && text[index] <= (unsigned char)'f')
+            )
+        ) {
+            PyErr_SetString(
+                PyExc_ValueError,
+                "expected process-image CDHash must be 40 lowercase hex bytes"
+            );
+            return -1;
+        }
+    }
+    return 0;
+}
+
+static void
+sunofriend_cdhash_to_hex(
+    const unsigned char input[SUNOFRIEND_CDHASH_BYTES],
+    char output[SUNOFRIEND_CDHASH_HEX_BYTES + 1]
+)
+{
+    static const char hexadecimal[] = "0123456789abcdef";
+    size_t index;
+
+    for (index = 0; index < SUNOFRIEND_CDHASH_BYTES; index++) {
+        output[index * 2] = hexadecimal[input[index] >> 4];
+        output[index * 2 + 1] = hexadecimal[input[index] & 0x0f];
+    }
+    output[SUNOFRIEND_CDHASH_HEX_BYTES] = '\0';
 }
 
 static int
@@ -854,6 +915,193 @@ sunofriend_owned_child_matches_identity(
     );
 }
 
+static PyObject *
+sunofriend_owned_child_observe_process_image(
+    SunofriendOwnedSpawnChild *child,
+    PyObject *arguments
+)
+{
+    PyObject *runtime_launcher;
+    PyObject *expected_process_image;
+    PyObject *expected_cdhash;
+    const char *launcher_path;
+    const char *expected_path;
+    const char *expected_cdhash_text;
+    char current_path[PROC_PIDPATHINFO_MAXSIZE];
+    unsigned char kernel_cdhash[SUNOFRIEND_CDHASH_BYTES];
+    char kernel_cdhash_text[SUNOFRIEND_CDHASH_HEX_BYTES + 1];
+    struct timespec deadline;
+    struct timespec now;
+    struct timespec pause = {
+        .tv_sec = 0,
+        .tv_nsec = SUNOFRIEND_PROCESS_IMAGE_POLL_PAUSE_NS,
+    };
+    struct timespec remaining_pause;
+    bool terminal = false;
+    int path_bytes;
+    int status;
+
+    if (!PyArg_ParseTuple(
+        arguments,
+        "O!O!O!:observe_owned_process_image",
+        &PyBytes_Type,
+        &runtime_launcher,
+        &PyBytes_Type,
+        &expected_process_image,
+        &PyBytes_Type,
+        &expected_cdhash
+    )) {
+        return NULL;
+    }
+    if (
+        sunofriend_validate_absolute_path(
+            runtime_launcher,
+            "runtime launcher"
+        ) != 0
+        || sunofriend_validate_absolute_path(
+            expected_process_image,
+            "expected process image"
+        ) != 0
+        || sunofriend_validate_cdhash(expected_cdhash) != 0
+    ) {
+        return NULL;
+    }
+    if (
+        !child->spawned
+        || child->pid <= 0
+        || child->owner_pid != getpid()
+        || child->ownership_released
+        || child->ownership_lost
+    ) {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "native child process image is not owned"
+        );
+        return NULL;
+    }
+    status = sunofriend_poll_owned_terminal(child, &terminal);
+    if (status == ECHILD && child->ownership_lost) {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "native child ownership was lost before process-image observation"
+        );
+        return NULL;
+    }
+    if (status != 0) {
+        errno = status;
+        PyErr_SetFromErrno(PyExc_OSError);
+        return NULL;
+    }
+    if (terminal || child->leader_exit_observed) {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "native child exited before process-image observation"
+        );
+        return NULL;
+    }
+    if (clock_gettime(CLOCK_MONOTONIC, &deadline) != 0) {
+        PyErr_SetFromErrno(PyExc_OSError);
+        return NULL;
+    }
+    deadline.tv_sec += SUNOFRIEND_PROCESS_IMAGE_OBSERVATION_SECONDS;
+    launcher_path = PyBytes_AS_STRING(runtime_launcher);
+    expected_path = PyBytes_AS_STRING(expected_process_image);
+    expected_cdhash_text = PyBytes_AS_STRING(expected_cdhash);
+
+    for (;;) {
+        memset(current_path, 0, sizeof(current_path));
+        errno = 0;
+        path_bytes = proc_pidpath(
+            child->pid,
+            current_path,
+            (uint32_t)sizeof(current_path)
+        );
+        if (path_bytes > 0) {
+            if ((size_t)path_bytes >= sizeof(current_path)) {
+                PyErr_SetString(
+                    PyExc_RuntimeError,
+                    "native child process image path exceeded its bound"
+                );
+                return NULL;
+            }
+            current_path[path_bytes] = '\0';
+            if (strcmp(current_path, expected_path) == 0) {
+                memset(kernel_cdhash, 0, sizeof(kernel_cdhash));
+                if (
+                    csops(
+                        child->pid,
+                        SUNOFRIEND_CS_OPS_CDHASH,
+                        kernel_cdhash,
+                        sizeof(kernel_cdhash)
+                    ) != 0
+                ) {
+                    if (errno != ESRCH && errno != EINVAL) {
+                        PyErr_SetFromErrno(PyExc_OSError);
+                        return NULL;
+                    }
+                } else {
+                    sunofriend_cdhash_to_hex(
+                        kernel_cdhash,
+                        kernel_cdhash_text
+                    );
+                    if (
+                        memcmp(
+                            kernel_cdhash_text,
+                            expected_cdhash_text,
+                            SUNOFRIEND_CDHASH_HEX_BYTES
+                        ) != 0
+                    ) {
+                        PyErr_SetString(
+                            PyExc_RuntimeError,
+                            "native child process image CDHash differs"
+                        );
+                        return NULL;
+                    }
+                    return Py_BuildValue(
+                        "{s:s,s:s}",
+                        "kernel_cdhash",
+                        kernel_cdhash_text,
+                        "path_state",
+                        "matched_expected_process_image"
+                    );
+                }
+            } else if (strcmp(current_path, launcher_path) != 0) {
+                PyErr_SetString(
+                    PyExc_RuntimeError,
+                    "native child process image path differs"
+                );
+                return NULL;
+            }
+        } else if (errno != ESRCH && errno != EINVAL) {
+            PyErr_SetFromErrno(PyExc_OSError);
+            return NULL;
+        }
+        if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) {
+            PyErr_SetFromErrno(PyExc_OSError);
+            return NULL;
+        }
+        if (
+            now.tv_sec > deadline.tv_sec
+            || (
+                now.tv_sec == deadline.tv_sec
+                && now.tv_nsec >= deadline.tv_nsec
+            )
+        ) {
+            PyErr_SetString(
+                PyExc_TimeoutError,
+                "native child process image observation timed out"
+            );
+            return NULL;
+        }
+        remaining_pause = pause;
+        while (
+            nanosleep(&remaining_pause, &remaining_pause) != 0
+            && errno == EINTR
+        ) {
+        }
+    }
+}
+
 static PyMethodDef sunofriend_owned_child_methods[] = {
     {
         "wait_nohang",
@@ -874,6 +1122,15 @@ static PyMethodDef sunofriend_owned_child_methods[] = {
         (PyCFunction)sunofriend_owned_child_matches_identity,
         METH_VARARGS,
         PyDoc_STR("Confirm reported PID/PGID without exposing child authority."),
+    },
+    {
+        "observe_owned_process_image",
+        (PyCFunction)sunofriend_owned_child_observe_process_image,
+        METH_VARARGS,
+        PyDoc_STR(
+            "Verify the owned live process image and kernel CDHash without "
+            "exposing PID authority."
+        ),
     },
     {NULL, NULL, 0, NULL},
 };

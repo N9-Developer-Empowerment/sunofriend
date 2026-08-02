@@ -247,7 +247,7 @@ def test_harness_asserts_parent_child_access_data_and_process_invariants() -> No
 
     assert "snapshot_parent_descriptors()" in source
     assert "_assert_parent_unchanged(before" in source
-    assert source.count("_assert_parent_unchanged(before") == 6
+    assert source.count("_assert_parent_unchanged(before") == 8
     assert '"open_descriptors") != [0, 1, 2, 3, 4, 5]' in source
     assert '"descriptor_scan_soft_limit") != _CANARY_SOFT_LIMIT' in source
     assert '"request_write": errno.EBADF' in source

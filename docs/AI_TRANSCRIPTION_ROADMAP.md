@@ -1704,6 +1704,46 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — native owner observes its process image without exporting PID
+
+- Goal: replace the first raw-PID dependency in the future Kim native bridge
+  with an observation performed by the exact native owner, while keeping the
+  real model and every product route untouched.
+- Change or experiment: added `observe_owned_process_image` to the
+  nonconstructible Darwin owner. It polls `proc_pidpath` on the internally
+  retained child, obtains the kernel CDHash with `csops`, and accepts only the
+  prepared runtime-launcher transition, exact process-image path and exact
+  lowercase 40-hex CDHash. It returns a path-free two-field result and never
+  exports PID or PGID. Native canary matrix v4 uses a fixed blocking worker to
+  reject a deliberately wrong path and wrong CDHash, prove both rejections
+  preserve ownership, accept the real image and then group-kill and exact-reap
+  the child.
+- Inputs: current isolated Python runtime, its strictly validated signed
+  process image, the freshly provenance-built private Darwin extension and a
+  fixed stdlib-only blocking worker. No audio or model input.
+- Model/runtime/checkpoint: no model or checkpoint. Native source SHA-256 is
+  `95191625be35d2052cdefc7446cb1847ad42a22706851300ef7aadfea5a2433e`;
+  build-contract SHA-256 is
+  `e72175cbb64cf5419c797e00c7293349ff200c54d4b00b81ccc2074401c99727`.
+- Evidence and metrics: 33 focused source/build/live-canary tests pass. Matrix
+  v4 retains only path-free file identities and boolean qualification facts;
+  the test rejects any serialized temporary, repository, extension, worker or
+  expected process-image path. The complete repository suite passes 2,813
+  tests with one platform skip and the existing third-party
+  `resampy`/`pkg_resources` deprecation warning.
+- Listening result: not applicable; no audio, MIDI or separation changed.
+- Decision: retain this as the first owner-bound observer primitive. It is
+  model-free infrastructure, not real-worker supervision or separation
+  acceptance.
+- Problems/risks: caller-prepared paths and static identities retain their
+  stated TOCTOU limits. The current Kim v10/v11 subprocess route still uses its
+  existing raw-PID observers and both native-supervision flags remain false.
+  Kernel-network denial and post-inference executable-region observations do
+  not yet have owner-bound adapters.
+- Next smallest step: design and exercise a single-use owner-bound observation
+  broker for the kernel-network denial stream with a fixed model-free worker,
+  without exposing PID/PGID or invoking Kim.
+
 ### 2026-08-02 — native real-worker terminal projection fixed but not run
 
 - Goal: define exactly what evidence the Kim worker must produce before it may

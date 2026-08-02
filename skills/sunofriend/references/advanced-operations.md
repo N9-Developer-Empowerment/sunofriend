@@ -1600,6 +1600,14 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   next validation-only contract fixes the required native terminal projection
   and rejects incomplete, lost, PID-bearing or unbound claims. It starts no
   worker and does not let the current subprocess route claim native ownership.
+  A later model-free matrix v4 adds the first owner-bound observer: the opaque
+  owner applies `proc_pidpath` and `csops` to its own exact live child and
+  returns only a matched kernel CDHash and fixed state tag. Deliberately wrong
+  path and CDHash values are rejected without changing ownership, after which
+  the valid image and exact reap succeed. No PID, PGID or path is retained.
+  This is not attached to Kim Vocal 2; owner-bound kernel-network and post-
+  inference native-image observations remain required before native real-
+  worker supervision can be claimed.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory

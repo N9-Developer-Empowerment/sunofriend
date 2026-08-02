@@ -17,6 +17,7 @@ from typing import Any
 import pytest
 
 from sunofriend import _separation_native_build_darwin as native_build
+from sunofriend import _separation_macos_process_image as process_image
 from tests import _separation_native_spawn_canary_harness as harness
 
 
@@ -314,6 +315,13 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
     artifact = receipt["artifact"]
     source_sha256 = receipt["build_input"]["source"]["sha256"]
     build_contract_sha256 = receipt["build_input"]["build_contract_sha256"]
+    runtime_path = Path(sys.executable).resolve(strict=True)
+    expected_process_image_path = process_image._expected_python_process_image(
+        runtime_path
+    )
+    expected_process_image_cdhash = process_image._static_code_identity(
+        expected_process_image_path
+    )["cdhash"]
     harness_root = tmp_path / "isolated-canary"
     harness_root.mkdir(mode=0o700)
     command = [
@@ -327,6 +335,8 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         artifact["sha256"],
         source_sha256,
         build_contract_sha256,
+        str(expected_process_image_path),
+        expected_process_image_cdhash,
     ]
 
     return_code, stdout, stderr = _run_bounded_harness(command)
@@ -343,10 +353,11 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
             harness_root,
             REPOSITORY,
             HARNESS,
+            expected_process_image_path,
         ),
     )
 
-    assert report["schema"] == ("sunofriend.native-spawn-canary-matrix.v3")
+    assert report["schema"] == ("sunofriend.native-spawn-canary-matrix.v4")
     expected_layouts = {
         *itertools.permutations((3, 4, 5)),
         *harness._REPRESENTATIVE_SOURCE_FD_LAYOUTS,
@@ -392,6 +403,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
     }
     for key in (
         "runtime_executable_identity",
+        "runtime_process_image_identity",
         "fixed_worker_identity",
         "fixed_hold_worker_identity",
         "fixed_descendant_worker_identity",
@@ -478,6 +490,8 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "raw_pid_not_exposed": True,
         "copy_and_pickle_rejected": True,
         "fork_clone_destructor_guard_present": True,
+        "owner_bound_process_image_observer_present": True,
+        "observer_exports_pid_or_pgid": False,
     }
     assert report["post_spawn_owner_drop_canary"] == {
         "worker_pid_reported_by_child": True,
@@ -493,6 +507,16 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "direct_stale_signal_rejected": True,
         "poisoned_wait_rejected": True,
         "drop_after_loss_did_not_touch_parent_descriptors": True,
+    }
+    assert report["owner_bound_process_image_canary"] == {
+        "wrong_process_image_rejected": True,
+        "wrong_cdhash_rejected": True,
+        "rejection_preserved_ownership": True,
+        "expected_process_image_matched": True,
+        "kernel_cdhash_matched_static_identity": True,
+        "raw_pid_or_pgid_retained": False,
+        "exact_reap_after_observation": True,
+        "parent_descriptors_unchanged": True,
     }
     assert report["descendant_group_canary"] == {
         "leader_exit_observed_without_reap": True,

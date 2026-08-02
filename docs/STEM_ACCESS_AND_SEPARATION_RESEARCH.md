@@ -25,8 +25,11 @@ Kim worker; pre-exec state and real-worker native supervision remain
 incomplete. A validation-only native terminal projection now rejects partial
 drain/reap, timeout escalation, ownership loss, raw process identifiers and
 unbound execution/result hashes. It remains a blocked shape contract because
-the PID-consuming real-worker observers have not yet been replaced by
-owner-bound equivalents. A separate private-development
+the real-worker observer migration is incomplete. Model-free native matrix v4
+now binds signed process-image path/CDHash observation to the opaque owner
+without exporting PID/PGID, including mismatch and exact-reap canaries.
+Owner-bound kernel-network and post-inference native-image observers still
+remain. A separate private-development
 HTDemucs runner now produces and measures four real broad estimated stems on
 the copyright-safe demo, and a second private evaluator measures their effect
 on the existing MIDI transcribers. Public separation, source-graph import,
@@ -512,6 +515,15 @@ and exits normally. The owner remains unreleased, signals the complete group,
 waits until only the retained leader remains, then exact-reaps and releases
 ownership. The path-free report retains neither PID nor PGID. This proves the
 native primitive, not its use by Kim Vocal 2 or any product route.
+
+Canary matrix v4 adds the first PID-free observer on the opaque native owner.
+It uses `proc_pidpath` and `csops` internally to compare one exact live child
+with a prepared process-image path and static CDHash. A blocking model-free
+worker rejects deliberately wrong path and CDHash values without losing
+ownership, then accepts the correct image and is group-killed and exact-
+reaped. The path-free matrix retains no PID, PGID or image path. This is not a
+Kim Vocal 2 run, does not close pathname TOCTOU, and does not yet replace the
+PID-consuming kernel-network or post-inference native-image observers.
 
 The following ownership hardening removes the bare-PID handoff. The extension
 allocates a private, nonconstructible child owner before `posix_spawn`, arms

@@ -208,6 +208,16 @@ observes one surviving descendant, signals and drains the group, then
 exact-reaps the leader. The Kim command above still uses the synchronous
 subprocess path and does not inherit that proof.
 
+Model-free native matrix v4 now attaches one bounded observer directly to the
+opaque owner. The owner internally applies `proc_pidpath` and `csops` to its
+exact live child, compares a prepared signed process-image path and CDHash, and
+returns no PID, PGID or path. The blocking canary first supplies a wrong path
+and wrong CDHash, confirms both are rejected without changing ownership, then
+proves the expected image and exact reap. This does not run Kim Vocal 2. The
+current Kim path still uses its existing PID-consuming observers; network
+denial and post-inference native-image inventory still lack owner-bound
+adapters, and runtime/process-image pathname TOCTOU is not closed.
+
 The following validation-only increment now fixes the evidence shape that a
 future bridge would have to derive from the exact native owner. It requires
 the bound native session, native execution and worker-result hashes, normal
@@ -216,8 +226,10 @@ exact leader reap and released ownership. It rejects timeout escalation,
 ownership loss, raw PID/PGID retention and exposed signal authority. This is a
 shape validator and blocked plan, not execution provenance: the current Kim
 route cannot emit it, no model was run, and no separator route changed. The
-remaining engineering task is an owner-bound replacement for the current
-PID-consuming process-image, network and native-image-ready observers.
+process-image part of that engineering task now has a model-free owner-bound
+primitive. Owner-bound network-denial and native-image-ready observations,
+followed by a fixed-worker integration proof, remain before the real Kim
+worker can emit the projection.
 
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \
