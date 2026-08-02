@@ -197,10 +197,16 @@ wait, normal exit 0 and reap. The 120,078-byte owner-only observation hashes to
 its self-hash is
 `7bd289b9e55e38e5619b299ff42523f708bca41ff8f67ba161b1df758d6eca4e`.
 This does not reconstruct pre-exec signal state, establish native
-process-group or descendant supervision, enumerate dyld shared-cache
-constituents, exclude all transient loads, prove mapped bytes equal reopened
-files, or enable any source-graph, automatic-selection, Simple, Studio,
-product or publication route.
+process-group or descendant supervision for this real worker, enumerate dyld
+shared-cache constituents, exclude all transient loads, prove mapped bytes
+equal reopened files, or enable any source-graph, automatic-selection, Simple,
+Studio, product or publication route.
+
+A later model-free native matrix v3 closes the underlying process-group state
+machine only. It creates a private session, retains an exited leader unreaped,
+observes one surviving descendant, signals and drains the group, then
+exact-reaps the leader. The Kim command above still uses the synchronous
+subprocess path and does not inherit that proof.
 
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \

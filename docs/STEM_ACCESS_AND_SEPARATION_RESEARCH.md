@@ -18,9 +18,11 @@ remeasurement followed by unconfirmed descriptor close and the remaining
 adversarial matrix are incomplete. Exhaustive arbitrary source-FD proof,
 path-TOCTOU closure and guaranteed emergency-finalizer reap remain incomplete.
 One real authorised Kim worker now binds a post-CPython signal observation and
-clean outer descriptors to normal exact-child exit, but pre-exec state and
-native process-group/descendant supervision remain incomplete. A separate
-private-development
+clean outer descriptors to normal exact-child exit. A model-free native v3
+canary now proves private-session process-group drain across an intentionally
+surviving descendant, but this owner has not yet been integrated with the real
+Kim worker; pre-exec state and real-worker native supervision remain
+incomplete. A separate private-development
 HTDemucs runner now produces and measures four real broad estimated stems on
 the copyright-safe demo, and a second private evaluator measures their effect
 on the existing MIDI transcribers. Public separation, source-graph import,
@@ -497,6 +499,16 @@ startup. The exact native owner independently records normal zero-status exit,
 no signal termination and exact reap. The final matrix retains no raw PID,
 PGID or wait status.
 
+Canary matrix v3 preserves that clean outer and fixed-layout evidence and adds
+the previously missing descendant lifetime case. The native spawn now creates
+a private session, observes leader exit with `waitid(..., WNOWAIT)` without
+reaping, and uses `proc_listpgrppids` while the zombie leader reserves the
+session/process-group identity. A fixed model-free worker forks one descendant
+and exits normally. The owner remains unreleased, signals the complete group,
+waits until only the retained leader remains, then exact-reaps and releases
+ownership. The path-free report retains neither PID nor PGID. This proves the
+native primitive, not its use by Kim Vocal 2 or any product route.
+
 The following ownership hardening removes the bare-PID handoff. The extension
 allocates a private, nonconstructible child owner before `posix_spawn`, arms
 that same object after success and returns it without another Python
@@ -522,11 +534,10 @@ Its self-hashed report combines the outer FDs 0–2 observation with the
 worker-result and native terminal-receipt hashes, while retaining no PID or
 PGID. That is still not real-model evidence and enables no source-graph, CLI,
 TUI, Simple, Studio, selection or publication route. Emergency last-reference
-cleanup sends `SIGKILL`
-and polls exact `waitpid` with `WNOHANG` for a fixed bounded interval; failure
-to reap in that interval is not terminal evidence. The fixed canary workers
-create no descendants, and the owner makes no numeric process-group call after
-exact leader reap; generic descendant supervision is not claimed. Parent
+cleanup sends group `SIGKILL` and performs the same bounded unreaped-leader/
+group-census polling. Failure to drain and reap in that interval is not
+terminal evidence. Matrix v3 covers one fixed descendant; arbitrary descendant
+trees and every real worker class are not yet claimed. Parent
 `SIGCHLD` incompatibilities fail closed, but no standalone deterministic fake
 transport worker, checkpoint lease transport, source audio, model, terminal
 fake result or user-facing separator ran at this boundary.
@@ -2025,10 +2036,11 @@ separator transport, source-lineage import and promotion are not implemented**
   binds the same facts to its exact self-hashed worker result and exact-reap
   terminal receipt. One exact Kim Vocal 2 run now binds the equivalent outer
   FDs 0-2, post-CPython selected signal state and synchronous normal
-  exact-child wait. The checklist stays open because every other real worker
-  class is not yet covered, path TOCTOU remains, and no observation
-  reconstructs the pre-exec signal instant or provides native process-group
-  and descendant supervision.
+  exact-child wait. Matrix v3 additionally proves native private-session group
+  drain and exact reap with one deliberately surviving model-free descendant.
+  The checklist stays open because this owner is not yet attached to the real
+  worker path, every other real worker class is not yet covered, path TOCTOU
+  remains, and no observation reconstructs the pre-exec signal instant.
   The exact Kim Vocal 2 worker-script subproblem is now closed for one real
   authorised observation by executing the already-open verified descriptor as
   Python standard input. The parent-PID macOS process-image observation is now
@@ -2046,8 +2058,9 @@ separator transport, source-lineage import and promotion are not implemented**
   33-file inventory, with 32 strict signatures and no unpathed executable
   region, but the GPU float-output hashes differed. The evidence still omits
   dyld shared-cache constituents, cannot exclude all transient loads or prove
-  mapped-memory bytes. Native process-group/descendant ownership and the
-  pre-exec signal instant remain open, so this gate is not complete.
+  mapped-memory bytes. Native process-group/descendant ownership is proven only
+  by the separate model-free v3 canary, not by this Kim worker; the pre-exec
+  signal instant also remains open, so this gate is not complete.
 - [ ] Prove a non-bypassable fail-closed subprocess transport with the
   deterministic fake worker, exact pre-exec remeasurement, validated worker
   result, timeout/reap evidence and parent-verified quarantined outputs before

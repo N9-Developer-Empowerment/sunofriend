@@ -47,6 +47,9 @@ _WORKER = (
 _HOLD_WORKER = (
     Path(__file__).with_name("_separation_native_spawn_hold_worker.py").resolve()
 )
+_DESCENDANT_WORKER = (
+    Path(__file__).with_name("_separation_native_spawn_descendant_worker.py").resolve()
+)
 _LOGICAL_ROLES = ("request", "result", "checkpoint")
 _TARGET_FDS = (3, 4, 5)
 _LOW_CANARY_FDS = (6, 7, 8)
@@ -923,6 +926,99 @@ def _run_external_reap_poison_canary(
     }
 
 
+def _run_descendant_group_canary(
+    *,
+    spawn: Any,
+    runtime_path: Path,
+    temporary_root: Path,
+) -> dict[str, Any]:
+    _close_descriptors_from_three()
+    case_directory = temporary_root / "descendant-group"
+    case_directory.mkdir(mode=0o700)
+    paths = _install_transport_descriptors(case_directory, _TARGET_FDS)
+    before = snapshot_parent_descriptors()
+    native_owner = spawn(
+        os.fsencode(runtime_path),
+        os.fsencode(_DESCENDANT_WORKER),
+        *_TARGET_FDS,
+    )
+    deadline = time.monotonic() + _WAIT_SECONDS
+    while time.monotonic() < deadline:
+        raw = paths["result"].read_bytes()
+        if raw.endswith(b"\n"):
+            break
+        if len(raw) > 65_536:
+            raise AssertionError("descendant canary result exceeded its bound")
+        time.sleep(0.005)
+    else:
+        raise TimeoutError("descendant canary result was not written")
+    report = _read_single_json(paths["result"])
+    if (
+        report.get("schema")
+        != "sunofriend.native-spawn-descendant-canary.v1"
+        or report.get("ok") is not True
+        or report.get("descendant_started") is not True
+        or not native_owner.matches_pid_and_pgid(
+            report.get("pid"), report.get("pgid")
+        )
+    ):
+        raise AssertionError("descendant canary worker report is invalid")
+    if report.get("request_sha256") != hashlib.sha256(_REQUEST_BYTES).hexdigest():
+        raise AssertionError("descendant canary request identity differs")
+    if report.get("checkpoint_sha256") != hashlib.sha256(
+        _CHECKPOINT_BYTES
+    ).hexdigest():
+        raise AssertionError("descendant canary checkpoint identity differs")
+
+    while time.monotonic() < deadline:
+        if native_owner.wait_nohang() is not None:
+            raise AssertionError("native owner reaped before its group was empty")
+        if native_owner.leader_exit_observed:
+            break
+        time.sleep(0.005)
+    else:
+        raise TimeoutError("native owner did not observe descendant leader exit")
+    if (
+        native_owner.leader_reaped is not False
+        or native_owner.group_empty is not False
+        or native_owner.ownership_released is not False
+        or native_owner.ownership_lost is not False
+    ):
+        raise AssertionError("native owner released a live descendant group")
+
+    native_owner.signal_owned_group(signal.SIGKILL)
+    status = None
+    while time.monotonic() < deadline:
+        status = native_owner.wait_nohang()
+        if status is not None:
+            break
+        time.sleep(0.005)
+    if status is None:
+        raise TimeoutError("native owner did not drain its descendant group")
+    if not os.WIFEXITED(status) or os.WEXITSTATUS(status) != 0:
+        raise AssertionError("descendant canary leader exit status differs")
+    if (
+        native_owner.leader_exit_observed is not True
+        or native_owner.leader_reaped is not True
+        or native_owner.group_empty is not True
+        or native_owner.ownership_released is not True
+        or native_owner.ownership_lost is not False
+    ):
+        raise AssertionError("native descendant group did not become terminal")
+    after = snapshot_parent_descriptors()
+    _assert_parent_unchanged(before, after)
+    return {
+        "leader_exit_observed_without_reap": True,
+        "live_descendant_prevented_ownership_release": True,
+        "whole_owned_group_signalled": True,
+        "group_empty_before_exact_leader_reap": True,
+        "leader_exact_reaped": True,
+        "ownership_released_only_after_group_empty": True,
+        "raw_pid_or_pgid_retained": False,
+        "parent_descriptors_unchanged": True,
+    }
+
+
 def run_canary_matrix(
     *,
     extension_path: Path,
@@ -946,6 +1042,7 @@ def run_canary_matrix(
     runtime_before = _measure_runtime(runtime_path)
     worker_before = _measure_worker(worker_path)
     hold_worker_before = _measure_worker(_HOLD_WORKER)
+    descendant_worker_before = _measure_worker(_DESCENDANT_WORKER)
     spawn = getattr(extension, _METHOD_NAME, None)
     if not callable(spawn):
         raise RuntimeError("native extension entry point is unavailable")
@@ -985,7 +1082,9 @@ def run_canary_matrix(
             *source_fds,
         )
         if (
-            native_owner.leader_reaped is not False
+            native_owner.leader_exit_observed is not False
+            or native_owner.leader_reaped is not False
+            or native_owner.group_empty is not False
             or native_owner.ownership_released is not False
             or native_owner.ownership_lost is not False
         ):
@@ -1021,7 +1120,11 @@ def run_canary_matrix(
                     "unrelated_low_canary_fds": list(low_canary_fds),
                     "native_owner_pid_pgid_match_observed": True,
                     "open_descriptors": report["open_descriptors"],
+                    "native_owner_leader_exit_observed": (
+                        native_owner.leader_exit_observed
+                    ),
                     "native_owner_leader_reaped": (native_owner.leader_reaped),
+                    "native_owner_group_empty": native_owner.group_empty,
                     "native_owner_ownership_released": (
                         native_owner.ownership_released
                     ),
@@ -1046,18 +1149,26 @@ def run_canary_matrix(
         runtime_path=runtime_path,
         temporary_root=temporary_root,
     )
+    descendant_group_canary = _run_descendant_group_canary(
+        spawn=spawn,
+        runtime_path=runtime_path,
+        temporary_root=temporary_root,
+    )
     runtime_after = _measure_runtime(runtime_path)
     worker_after = _measure_worker(worker_path)
     hold_worker_after = _measure_worker(_HOLD_WORKER)
+    descendant_worker_after = _measure_worker(_DESCENDANT_WORKER)
     if runtime_after != runtime_before:
         raise RuntimeError("bound runtime changed across canary matrix")
     if worker_after != worker_before:
         raise RuntimeError("bound worker changed across canary matrix")
     if hold_worker_after != hold_worker_before:
         raise RuntimeError("bound hold worker changed across canary matrix")
+    if descendant_worker_after != descendant_worker_before:
+        raise RuntimeError("bound descendant worker changed across canary matrix")
     expected_suffix = sysconfig.get_config_var("EXT_SUFFIX")
     return {
-        "schema": "sunofriend.native-spawn-canary-matrix.v2",
+        "schema": "sunofriend.native-spawn-canary-matrix.v3",
         "extension_path_serialized": False,
         "worker_path_serialized": False,
         "proof_scope": (
@@ -1077,6 +1188,9 @@ def run_canary_matrix(
         "runtime_executable_identity": _path_free_file_identity(runtime_after),
         "fixed_worker_identity": _path_free_file_identity(worker_after),
         "fixed_hold_worker_identity": _path_free_file_identity(hold_worker_after),
+        "fixed_descendant_worker_identity": _path_free_file_identity(
+            descendant_worker_after
+        ),
         "native_owner_type_qualification": {
             "direct_construction_rejected": direct_owner_construction_rejected,
             "raw_pid_not_exposed": True,
@@ -1161,6 +1275,7 @@ def run_canary_matrix(
         ),
         "post_spawn_owner_drop_canary": owner_drop_canary,
         "external_reap_poison_canary": external_reap_poison_canary,
+        "descendant_group_canary": descendant_group_canary,
         "cases": cases,
     }
 

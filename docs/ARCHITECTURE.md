@@ -589,23 +589,32 @@ records normal zero-status exit, no signal termination, exact reap and
 post-reap signal rejection. Raw PID, PGID and wait status are not retained in
 the v2 matrix report.
 
+Canary matrix v3 adds a private-session descendant lifetime proof. The native
+owner observes leader exit with `waitid(..., WNOWAIT)`, keeps the zombie leader
+unreaped so its session/process-group number cannot be recycled, and asks
+`libproc` for the complete process group. An intentionally surviving
+model-free descendant prevents ownership release. After a whole-group
+`SIGKILL`, the owner waits for a leader-only census, exact-reaps that leader and
+only then marks the group empty and releases ownership. This is native
+primitive evidence; it is not yet real-model integration.
+
 The native entry point no longer returns a bare integer PID. It preallocates a
 nonconstructible, noncopyable exact-child owner before `posix_spawn`, arms and
 returns that same object without a post-spawn Python allocation, hides the raw
 PID and binds destructive methods to the creating process. Exact nonblocking
-wait caches status and releases leader ownership atomically; no signal or
-negative-PID probe is permitted after reap. `ECHILD` poisons the owner, so a
-stolen reap cannot lead to a stale-PID signal. Live canaries cover ordinary
+terminal polling caches status only after both group drain and leader reap; no
+signal or negative-PID probe is permitted after release. `ECHILD` poisons the
+owner, so a stolen reap cannot lead to a stale-PID signal. Live canaries cover ordinary
 reap, stable cached wait, signal rejection after reap, last-reference
 `SIGKILL` plus exact reap, and poisoned ownership after a deliberately stolen
 reap.
 
 This finite evidence does not enable fake-launch V2 or provide model-execution
-authority. The emergency destructor sends `SIGKILL` and polls `waitpid` with
-`WNOHANG` for a fixed bounded interval; failure to reap in that interval is
-not terminal evidence. The fork-clone check is static rather than live, fixed
-workers are required to create no descendants, and no generic post-leader
-process-group claim is made. Exhaustive arbitrary source-FD values and
+authority. The emergency destructor sends group `SIGKILL` and uses the same
+bounded unreaped-leader/group-census terminal poll; failure to drain and reap
+in that interval is not terminal evidence. The fork-clone check is static
+rather than live, and matrix v3 covers one fixed descendant rather than
+arbitrary process trees. Exhaustive arbitrary source-FD values and
 extension/runtime/worker path TOCTOU closure remain unproven. The post-CPython
 observation does not reconstruct the pre-exec signal instant. At this canary
 boundary the facts were model-free and not yet attached to a transport worker
@@ -645,8 +654,8 @@ CPython startup, and the parent binds that report to synchronous exact-child
 require the existing import-closure, kernel-denial, signed-process-image and
 post-inference native-image layers before this supervision record can exist.
 They grant no source-graph or product authority. This does not reconstruct the
-pre-exec signal instant, create native process-group ownership, supervise
-descendants, or close provider/runtime pathname TOCTOU.
+pre-exec signal instant, use the separately proven native process-group owner,
+supervise real-worker descendants, or close provider/runtime pathname TOCTOU.
 
 `_separation_fake_execution_protocol.py` validates the new V2 magics and
 canonical bindings but intentionally cannot encode an admitted product

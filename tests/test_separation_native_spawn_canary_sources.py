@@ -16,6 +16,9 @@ from tests import _separation_native_spawn_canary_harness as harness
 REPOSITORY = Path(__file__).resolve().parents[1]
 WORKER = REPOSITORY / "tests" / "_separation_native_spawn_canary_worker.py"
 HOLD_WORKER = REPOSITORY / "tests" / "_separation_native_spawn_hold_worker.py"
+DESCENDANT_WORKER = (
+    REPOSITORY / "tests" / "_separation_native_spawn_descendant_worker.py"
+)
 HARNESS = REPOSITORY / "tests" / "_separation_native_spawn_canary_harness.py"
 
 
@@ -157,6 +160,40 @@ def test_hold_worker_hardens_descriptors_then_only_blocks_for_owner_canary() -> 
     )
 
 
+def test_descendant_worker_is_fixed_model_free_group_lifetime_canary() -> None:
+    tree = _tree(DESCENDANT_WORKER)
+    imports = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imports.update(alias.name.split(".", 1)[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imports.add(node.module.split(".", 1)[0])
+    assert imports == {
+        "__future__",
+        "hashlib",
+        "json",
+        "os",
+        "signal",
+    }
+    source = DESCENDANT_WORKER.read_text(encoding="utf-8")
+    assert source.count("os.fork()") == 1
+    assert "signal.pause()" in source
+    assert "signal.SIGTERM, signal.SIG_IGN" in source
+    assert "os.pread(3" in source
+    assert "os.pread(5" in source
+    assert "os.pwrite(4" in source
+    assert not any(
+        token in source
+        for token in (
+            "http://",
+            "https://",
+            "socket",
+            "subprocess",
+            "torch",
+        )
+    )
+
+
 def test_harness_enumerates_target_and_representative_source_layouts() -> None:
     assert tuple(harness._exact_target_source_fd_permutations()) == tuple(
         itertools.permutations((3, 4, 5))
@@ -210,7 +247,7 @@ def test_harness_asserts_parent_child_access_data_and_process_invariants() -> No
 
     assert "snapshot_parent_descriptors()" in source
     assert "_assert_parent_unchanged(before" in source
-    assert source.count("_assert_parent_unchanged(before") == 5
+    assert source.count("_assert_parent_unchanged(before") == 6
     assert '"open_descriptors") != [0, 1, 2, 3, 4, 5]' in source
     assert '"descriptor_scan_soft_limit") != _CANARY_SOFT_LIMIT' in source
     assert '"request_write": errno.EBADF' in source
@@ -258,6 +295,10 @@ def test_harness_asserts_parent_child_access_data_and_process_invariants() -> No
     assert '"arbitrary_source_descriptor_values_proven": False' in source
     assert '"scratch_candidate_collision"' in source
     assert '"opaque_f_getfl_bits_compared": False' in source
+    assert "_run_descendant_group_canary(" in source
+    assert "native owner reaped before its group was empty" in source
+    assert "native_owner.group_empty is not False" in source
+    assert '"ownership_released_only_after_group_empty": True' in source
 
 
 def test_harness_does_not_compile_fetch_model_or_run_separation() -> None:

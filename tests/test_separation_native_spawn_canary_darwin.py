@@ -346,7 +346,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         ),
     )
 
-    assert report["schema"] == ("sunofriend.native-spawn-canary-matrix.v2")
+    assert report["schema"] == ("sunofriend.native-spawn-canary-matrix.v3")
     expected_layouts = {
         *itertools.permutations((3, 4, 5)),
         *harness._REPRESENTATIVE_SOURCE_FD_LAYOUTS,
@@ -360,7 +360,9 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         assert "pid" not in case
         assert "pgid" not in case
         assert case["open_descriptors"] == [0, 1, 2, 3, 4, 5]
+        assert case["native_owner_leader_exit_observed"] is True
         assert case["native_owner_leader_reaped"] is True
+        assert case["native_owner_group_empty"] is True
         assert case["native_owner_ownership_released"] is True
         assert case["native_owner_ownership_lost"] is False
         assert case["native_owner_cached_wait_stable"] is True
@@ -392,6 +394,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "runtime_executable_identity",
         "fixed_worker_identity",
         "fixed_hold_worker_identity",
+        "fixed_descendant_worker_identity",
     ):
         identity = report[key]
         assert set(identity) == {
@@ -490,6 +493,16 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "direct_stale_signal_rejected": True,
         "poisoned_wait_rejected": True,
         "drop_after_loss_did_not_touch_parent_descriptors": True,
+    }
+    assert report["descendant_group_canary"] == {
+        "leader_exit_observed_without_reap": True,
+        "live_descendant_prevented_ownership_release": True,
+        "whole_owned_group_signalled": True,
+        "group_empty_before_exact_leader_reap": True,
+        "leader_exact_reaped": True,
+        "ownership_released_only_after_group_empty": True,
+        "raw_pid_or_pgid_retained": False,
+        "parent_descriptors_unchanged": True,
     }
 
     _assert_nondefault_sigchld_rejected(

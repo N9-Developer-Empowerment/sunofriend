@@ -1592,8 +1592,12 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   selected signal state, synchronous exact-child wait and normal exit 0 in a
   separate self-hashed v10 evidence layer. The post-CPython record still does
   not reconstruct the pre-exec signal instant, and native process-group and
-  descendant supervision remain false. The evidence does
-  not enumerate dyld
+  descendant supervision remain false. A still later model-free matrix v3
+  proves the underlying native private-session owner against one deliberately
+  surviving descendant: leader exit remains unreaped until a leader-only
+  `libproc` census, group signal and exact reap complete. That owner is not
+  integrated with the Kim path, so its real-worker flags remain false. The
+  evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory
   bytes. None of these observations is full-file execution proof, dynamic-
   native-library closure, a packet monitor or a complete native-loader audit;

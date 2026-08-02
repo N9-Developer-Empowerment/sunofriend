@@ -75,8 +75,11 @@ report the result, then move on.
   post-reap signals, kills and exact-reaps on last-reference loss, and poisons
   itself after a stolen external reap. Its emergency destructor sends
   `SIGKILL` and uses a bounded best-effort nonblocking reap; that fallback is
-  never terminal evidence. The fixed canaries create no descendants and no generic
-  post-leader process-group claim is made. This evidence does not enable
+  never terminal evidence. A later model-free matrix v3 creates a private
+  session and deliberately surviving descendant, observes leader exit without
+  reaping, drains the complete group and exact-reaps only after a leader-only
+  `libproc` census. It retains no PID/PGID and proves the native primitive, not
+  real-model integration. This evidence does not enable
   native fake-launch V2, which remains permanently `blocked`/`not_run` and
   still contains only caller-claimed artifact identities. A later model-free
   canary matrix v2 observes its harness before local cleanup with only FDs 0–2
@@ -427,8 +430,8 @@ report the result, then move on.
   authorised Kim run binds its own outer FDs 0-2, expected post-CPython
   selected signal state, synchronous exact-child wait and normal exit 0 in a
   separate self-hashed v10 evidence layer. That layer does not reconstruct the
-  pre-exec signal instant or provide native process-group/descendant
-  supervision, and no separator route is enabled. The
+  pre-exec signal instant or use the separately proven native
+  process-group/descendant owner, and no separator route is enabled. The
   checkpoint is not redistributed. Do not offer or run this challenger
   through the skill.
 - `source-import` decodes exactly one local asset.

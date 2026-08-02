@@ -1704,6 +1704,43 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — native descendant lifetime held through exact reap
+
+- Goal: make the existing Darwin native owner safe for a future real worker
+  whose descendant might survive its leader, without enabling any separator
+  route or attaching an unfinished primitive to Kim Vocal 2.
+- Change or experiment: native spawn now creates a private session. The owner
+  uses `waitid(P_PID, ..., WNOWAIT)` to observe leader exit without reaping,
+  then `proc_listpgrppids` to census the still-reserved process group. Exact
+  `waitpid` is permitted only when the retained leader is the sole member.
+  Ownership release therefore means both group emptiness and exact leader
+  reap. Emergency cleanup uses the same bounded state machine.
+- Inputs: a new fixed stdlib-only model-free canary. It hardens FDs 3/4/5,
+  forks exactly one descendant, writes only bounded request/checkpoint hashes
+  and PID/PGID self-report evidence to its existing result descriptor, then
+  exits normally. No audio, checkpoint, model, network or product route ran.
+- Model/runtime/checkpoint: current isolated Python runtime and freshly built
+  private Darwin launcher only.
+- Evidence and metrics: the live matrix v3 observed leader exit while the
+  descendant kept `leader_reaped`, `group_empty` and `ownership_released`
+  false. Whole-group `SIGKILL` was followed by a leader-only census, exact
+  zero-status leader reap, `group_empty=true` and ownership release. The report
+  retains no PID/PGID. The focused native boundary suite passed 94 tests,
+  including one fresh live Darwin canary build/run. The complete suite passed
+  2,803 tests with one platform skip and the existing third-party
+  `resampy`/`pkg_resources` deprecation warning.
+- Listening result: not applicable; no audio or MIDI changed.
+- Decision: retain this as model-free native process-group state-machine
+  evidence. Public and private real-model execution permissions are unchanged.
+- Problems/risks: the Kim worker still uses synchronous `Popen.communicate`
+  and has not been moved under this native owner. The canary covers one fixed
+  descendant, not arbitrary hostile process trees. Pre-exec signal state,
+  runtime/provider path-to-execution TOCTOU and complete native-library closure
+  remain open.
+- Next smallest step: design the fixed real-worker native transport and
+  observation bridge without weakening the existing import, sandbox, process-
+  image, readiness or no-product-route gates.
+
 ### 2026-08-02 — real Kim Vocal 2 worker supervision bound
 
 - Goal: attach the already tested outer-descriptor, post-CPython signal-state

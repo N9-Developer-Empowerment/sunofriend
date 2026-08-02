@@ -66,10 +66,10 @@ def test_source_uses_only_direct_darwin_spawn_with_close_all_default() -> None:
     assert source.count("status = posix_spawn(") == 1
     assert "POSIX_SPAWN_CLOEXEC_DEFAULT" in source
     assert "posix_spawnattr_setflags(attributes, flags)" in source
-    assert "POSIX_SPAWN_SETPGROUP" in source
+    assert "POSIX_SPAWN_SETSID" in source
     assert "POSIX_SPAWN_SETSIGDEF" in source
     assert "POSIX_SPAWN_SETSIGMASK" in source
-    assert "posix_spawnattr_setpgroup(attributes, 0)" in source
+    assert "posix_spawnattr_setpgroup" not in source
     assert "sigfillset(&default_signals)" in source
     assert "sigdelset(&default_signals, SIGKILL)" in source
     assert "sigdelset(&default_signals, SIGSTOP)" in source
@@ -294,34 +294,49 @@ def test_child_owner_exact_wait_signal_release_and_emergency_cleanup() -> None:
         "sunofriend_owned_child_signal_group(",
     )
     assert "kill(-child->pid, SIGKILL)" in cleanup
-    assert "kill(child->pid, SIGKILL)" in cleanup
-    assert "waitpid(child->pid, &observed_wait_status, WNOHANG)" in cleanup
+    assert "kill(child->pid, SIGKILL)" not in cleanup
+    assert "sunofriend_poll_owned_terminal(child, &terminal)" in cleanup
     assert "waitpid(child->pid, &observed_wait_status, 0)" not in cleanup
     assert "SUNOFRIEND_EMERGENCY_REAP_ATTEMPTS" in cleanup
     assert "nanosleep(&remaining_pause, &remaining_pause)" in cleanup
     assert "unbounded wait" in cleanup
-    assert cleanup.index("if (child->leader_reaped)") < cleanup.index(
+    assert cleanup.index("sunofriend_poll_owned_terminal(") < cleanup.index(
         "kill(-child->pid, SIGKILL)"
     )
-    assert "errno == ECHILD" in cleanup
-    assert "Never" in cleanup and "recycled PID" in cleanup
-    assert "waitpid(child->pid, &observed_wait_status, WNOHANG)" in wait
-    assert "child->leader_reaped = true" in wait
-    assert "native child ownership was lost before exact reap" in wait
+    terminal = _function_body(
+        source,
+        "sunofriend_poll_owned_terminal(",
+        "sunofriend_emergency_kill_and_reap(",
+    )
+    assert "waitid(" in terminal
+    assert "WEXITED | WNOHANG | WNOWAIT" in terminal
+    assert "proc_listpgrppids(" in terminal
+    assert "group_member_count != 1" in terminal
+    assert "group_members[0] != child->pid" in terminal
+    assert terminal.index("proc_listpgrppids(") < terminal.index("waitpid(")
+    assert "child->leader_exit_observed = true" in terminal
+    assert "child->leader_reaped = true" in terminal
+    assert "child->group_empty = true" in terminal
+    assert "child->ownership_released = true" in terminal
+    assert "sunofriend_poll_owned_terminal(child, &terminal)" in wait
+    assert "native child ownership was lost before exact group terminality" in wait
     assert "signal_number != SIGTERM && signal_number != SIGKILL" in source
     signal_group = _function_body(
         source,
         "sunofriend_owned_child_signal_group(",
         "sunofriend_owned_child_matches_identity(",
     )
-    assert "waitpid(child->pid, &observed_wait_status, WNOHANG)" in signal_group
-    assert signal_group.index("waitpid(") < signal_group.index(
+    assert "sunofriend_poll_owned_terminal(child, &terminal)" in signal_group
+    assert signal_group.index("sunofriend_poll_owned_terminal(") < signal_group.index(
         "kill(-child->pid, signal_number)"
     )
     assert "native child ownership was lost before group signal" in signal_group
     assert "kill(-child->pid, 0)" not in source
-    assert "child->ownership_released = true" in wait
-    assert "child->ownership_lost = true" in wait
+    assert "POSIX_SPAWN_SETSID makes pid the exact private session" in cleanup
+    assert "child->ownership_released = true" in terminal
+    assert "child->ownership_lost = true" in terminal
+    assert '"leader_exit_observed"' in source
+    assert '"group_empty"' in source
     assert "|| child->ownership_lost" in source
     assert "child->owner_pid == getpid()" in source
     assert "owned_child->owner_pid = getpid()" in source
