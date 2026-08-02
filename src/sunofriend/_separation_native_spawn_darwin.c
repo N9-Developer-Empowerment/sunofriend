@@ -28,9 +28,10 @@
  * hash-pinned artifact for explicit internal canary checks; production worker
  * integration still requires its separate authority and lifecycle gates.
  *
- * The entry point accepts three already-open parent descriptors. It changes no
- * parent descriptor flag or table entry. All descriptor changes below are
- * ordered posix_spawn child file actions.
+ * The fixed entry points accept either the three data descriptors or those
+ * three descriptors plus the existing Kim ready/release pipe pair. They
+ * change no parent descriptor flag or table entry. All descriptor changes
+ * below are ordered posix_spawn child file actions.
  */
 
 #ifndef POSIX_SPAWN_CLOEXEC_DEFAULT
@@ -45,7 +46,6 @@
 #error "The audited native build-contract identity is required."
 #endif
 
-#define SUNOFRIEND_SCRATCH_FD_MIN 6
 #define SUNOFRIEND_GROUP_MEMBER_LIMIT 1024
 #define SUNOFRIEND_EMERGENCY_REAP_ATTEMPTS 200
 #define SUNOFRIEND_EMERGENCY_REAP_PAUSE_NS 5000000L
@@ -68,7 +68,11 @@ enum {
     SUNOFRIEND_REQUEST_FD = 3,
     SUNOFRIEND_RESULT_FD = 4,
     SUNOFRIEND_CHECKPOINT_FD = 5,
-    SUNOFRIEND_TRANSPORT_COUNT = 3,
+    SUNOFRIEND_READY_FD = 6,
+    SUNOFRIEND_RELEASE_FD = 7,
+    SUNOFRIEND_DATA_TRANSPORT_COUNT = 3,
+    SUNOFRIEND_READY_RELEASE_TRANSPORT_COUNT = 5,
+    SUNOFRIEND_MAX_TRANSPORT_COUNT = 5,
 };
 
 enum {
@@ -80,10 +84,12 @@ enum {
     SUNOFRIEND_NO_START_POSIX_SPAWN = 5,
 };
 
-static const int sunofriend_target_fds[SUNOFRIEND_TRANSPORT_COUNT] = {
+static const int sunofriend_target_fds[SUNOFRIEND_MAX_TRANSPORT_COUNT] = {
     SUNOFRIEND_REQUEST_FD,
     SUNOFRIEND_RESULT_FD,
     SUNOFRIEND_CHECKPOINT_FD,
+    SUNOFRIEND_READY_FD,
+    SUNOFRIEND_RELEASE_FD,
 };
 
 static char *const sunofriend_worker_environment[] = {
@@ -195,18 +201,30 @@ sunofriend_validate_absolute_path(PyObject *path, const char *label)
 }
 
 static int
-sunofriend_validate_transport_fds(const int source_fds[SUNOFRIEND_TRANSPORT_COUNT])
+sunofriend_validate_transport_fds(
+    const int source_fds[SUNOFRIEND_MAX_TRANSPORT_COUNT],
+    size_t transport_count
+)
 {
-    static const int required_access_modes[SUNOFRIEND_TRANSPORT_COUNT] = {
+    static const int required_access_modes[SUNOFRIEND_MAX_TRANSPORT_COUNT] = {
+        O_RDONLY,
+        O_WRONLY,
         O_RDONLY,
         O_WRONLY,
         O_RDONLY,
     };
-    struct stat backing_nodes[SUNOFRIEND_TRANSPORT_COUNT];
+    struct stat backing_nodes[SUNOFRIEND_MAX_TRANSPORT_COUNT];
     size_t left;
     size_t right;
 
-    for (left = 0; left < SUNOFRIEND_TRANSPORT_COUNT; left++) {
+    if (
+        transport_count != SUNOFRIEND_DATA_TRANSPORT_COUNT
+        && transport_count != SUNOFRIEND_READY_RELEASE_TRANSPORT_COUNT
+    ) {
+        PyErr_SetString(PyExc_ValueError, "transport descriptor count differs");
+        return -1;
+    }
+    for (left = 0; left < transport_count; left++) {
         if (source_fds[left] < SUNOFRIEND_REQUEST_FD) {
             PyErr_SetString(
                 PyExc_ValueError,
@@ -249,22 +267,28 @@ sunofriend_validate_transport_fds(const int source_fds[SUNOFRIEND_TRANSPORT_COUN
             PyErr_SetFromErrno(PyExc_OSError);
             return -1;
         }
-        if (!S_ISREG(backing_nodes[left].st_mode)) {
+        if (
+            (left < SUNOFRIEND_DATA_TRANSPORT_COUNT
+             && !S_ISREG(backing_nodes[left].st_mode))
+            || (left >= SUNOFRIEND_DATA_TRANSPORT_COUNT
+                && !S_ISFIFO(backing_nodes[left].st_mode))
+        ) {
             PyErr_SetString(
                 PyExc_ValueError,
-                "transport descriptors must reference regular files"
+                "data transports must be regular files and readiness "
+                "transports must be pipes"
             );
             return -1;
         }
-        for (right = left + 1; right < SUNOFRIEND_TRANSPORT_COUNT; right++) {
+        for (right = left + 1; right < transport_count; right++) {
             if (source_fds[left] == source_fds[right]) {
                 PyErr_SetString(PyExc_ValueError, "transport descriptors must be distinct");
                 return -1;
             }
         }
     }
-    for (left = 0; left < SUNOFRIEND_TRANSPORT_COUNT; left++) {
-        for (right = left + 1; right < SUNOFRIEND_TRANSPORT_COUNT; right++) {
+    for (left = 0; left < transport_count; left++) {
+        for (right = left + 1; right < transport_count; right++) {
             if (
                 backing_nodes[left].st_dev == backing_nodes[right].st_dev
                 && backing_nodes[left].st_ino == backing_nodes[right].st_ino
@@ -305,17 +329,20 @@ sunofriend_validate_parent_sigchld(void)
 static bool
 sunofriend_fd_is_reserved(
     int candidate,
-    const int source_fds[SUNOFRIEND_TRANSPORT_COUNT],
-    const int scratch_fds[SUNOFRIEND_TRANSPORT_COUNT],
+    const int source_fds[SUNOFRIEND_MAX_TRANSPORT_COUNT],
+    const int scratch_fds[SUNOFRIEND_MAX_TRANSPORT_COUNT],
+    size_t transport_count,
     size_t scratch_count
 )
 {
     size_t index;
 
-    if (candidate >= SUNOFRIEND_STDIN_FD && candidate <= SUNOFRIEND_CHECKPOINT_FD) {
-        return true;
+    for (index = 0; index < transport_count; index++) {
+        if (candidate == sunofriend_target_fds[index]) {
+            return true;
+        }
     }
-    for (index = 0; index < SUNOFRIEND_TRANSPORT_COUNT; index++) {
+    for (index = 0; index < transport_count; index++) {
         if (candidate == source_fds[index]) {
             return true;
         }
@@ -330,19 +357,21 @@ sunofriend_fd_is_reserved(
 
 static int
 sunofriend_choose_scratch_fds(
-    const int source_fds[SUNOFRIEND_TRANSPORT_COUNT],
-    int scratch_fds[SUNOFRIEND_TRANSPORT_COUNT]
+    const int source_fds[SUNOFRIEND_MAX_TRANSPORT_COUNT],
+    int scratch_fds[SUNOFRIEND_MAX_TRANSPORT_COUNT],
+    size_t transport_count
 )
 {
-    int candidate = SUNOFRIEND_SCRATCH_FD_MIN;
+    int candidate = sunofriend_target_fds[transport_count - 1] + 1;
     size_t index;
 
-    for (index = 0; index < SUNOFRIEND_TRANSPORT_COUNT; index++) {
+    for (index = 0; index < transport_count; index++) {
         while (
             sunofriend_fd_is_reserved(
                 candidate,
                 source_fds,
                 scratch_fds,
+                transport_count,
                 index
             )
         ) {
@@ -363,8 +392,9 @@ sunofriend_choose_scratch_fds(
 static int
 sunofriend_add_child_file_actions(
     posix_spawn_file_actions_t *actions,
-    const int source_fds[SUNOFRIEND_TRANSPORT_COUNT],
-    const int scratch_fds[SUNOFRIEND_TRANSPORT_COUNT]
+    const int source_fds[SUNOFRIEND_MAX_TRANSPORT_COUNT],
+    const int scratch_fds[SUNOFRIEND_MAX_TRANSPORT_COUNT],
+    size_t transport_count
 )
 {
     size_t index;
@@ -372,10 +402,10 @@ sunofriend_add_child_file_actions(
 
     /*
      * Copy every source first. This makes mappings collision-free even when a
-     * source currently occupies fixed target 3, 4, or 5. No operation here
+     * source currently occupies one of its fixed targets. No operation here
      * runs against the parent descriptor table.
      */
-    for (index = 0; index < SUNOFRIEND_TRANSPORT_COUNT; index++) {
+    for (index = 0; index < transport_count; index++) {
         status = posix_spawn_file_actions_adddup2(
             actions,
             source_fds[index],
@@ -389,16 +419,16 @@ sunofriend_add_child_file_actions(
     /*
      * All originals are distinct and at least 3. Close them after staging and
      * before installing the fixed targets, including originals numbered 3,
-     * 4, or 5. This leaves no alias of a transport channel in the child.
+     * 4, 5, 6 or 7. This leaves no alias of a transport channel in the child.
      */
-    for (index = 0; index < SUNOFRIEND_TRANSPORT_COUNT; index++) {
+    for (index = 0; index < transport_count; index++) {
         status = posix_spawn_file_actions_addclose(actions, source_fds[index]);
         if (status != 0) {
             return status;
         }
     }
 
-    for (index = 0; index < SUNOFRIEND_TRANSPORT_COUNT; index++) {
+    for (index = 0; index < transport_count; index++) {
         status = posix_spawn_file_actions_adddup2(
             actions,
             scratch_fds[index],
@@ -410,10 +440,11 @@ sunofriend_add_child_file_actions(
     }
 
     /*
-     * The fixed 3/4/5 descriptors intentionally cross this exec boundary.
+     * The fixed data and optional ready/release descriptors intentionally
+     * cross this exec boundary.
      * The worker must set FD_CLOEXEC on them as its first user-code action.
      */
-    for (index = 0; index < SUNOFRIEND_TRANSPORT_COUNT; index++) {
+    for (index = 0; index < transport_count; index++) {
         status = posix_spawn_file_actions_addclose(actions, scratch_fds[index]);
         if (status != 0) {
             return status;
@@ -1420,13 +1451,15 @@ static PyTypeObject SunofriendOwnedSpawnChildType = {
 };
 
 static PyObject *
-sunofriend_spawn_bound_fake_worker(PyObject *self, PyObject *arguments)
+sunofriend_spawn_bound_worker(
+    PyObject *bound_executable,
+    PyObject *bound_worker_entrypoint,
+    const int source_fds[SUNOFRIEND_MAX_TRANSPORT_COUNT],
+    size_t transport_count
+)
 {
-    PyObject *bound_executable;
-    PyObject *bound_worker_entrypoint;
     char *native_arguments[6];
-    int source_fds[SUNOFRIEND_TRANSPORT_COUNT];
-    int scratch_fds[SUNOFRIEND_TRANSPORT_COUNT];
+    int scratch_fds[SUNOFRIEND_MAX_TRANSPORT_COUNT];
     posix_spawn_file_actions_t file_actions;
     posix_spawnattr_t attributes;
     bool file_actions_ready = false;
@@ -1436,20 +1469,6 @@ sunofriend_spawn_bound_fake_worker(PyObject *self, PyObject *arguments)
     pid_t child_pid = -1;
     int status;
 
-    (void)self;
-    if (!PyArg_ParseTuple(
-        arguments,
-        "O!O!iii:_spawn_bound_fake_worker",
-        &PyBytes_Type,
-        &bound_executable,
-        &PyBytes_Type,
-        &bound_worker_entrypoint,
-        &source_fds[0],
-        &source_fds[1],
-        &source_fds[2]
-    )) {
-        return NULL;
-    }
     if (
         sunofriend_validate_absolute_path(
             bound_executable,
@@ -1459,9 +1478,13 @@ sunofriend_spawn_bound_fake_worker(PyObject *self, PyObject *arguments)
             bound_worker_entrypoint,
             "bound worker entrypoint"
         ) != 0
-        || sunofriend_validate_transport_fds(source_fds) != 0
+        || sunofriend_validate_transport_fds(source_fds, transport_count) != 0
         || sunofriend_validate_parent_sigchld() != 0
-        || sunofriend_choose_scratch_fds(source_fds, scratch_fds) != 0
+        || sunofriend_choose_scratch_fds(
+            source_fds,
+            scratch_fds,
+            transport_count
+        ) != 0
     ) {
         return NULL;
     }
@@ -1500,7 +1523,8 @@ sunofriend_spawn_bound_fake_worker(PyObject *self, PyObject *arguments)
     status = sunofriend_add_child_file_actions(
         &file_actions,
         source_fds,
-        scratch_fds
+        scratch_fds,
+        transport_count
     );
     if (status != 0) {
         no_start_stage = SUNOFRIEND_NO_START_FILE_ACTIONS;
@@ -1550,6 +1574,69 @@ fail:
     return (PyObject *)owned_child;
 }
 
+static PyObject *
+sunofriend_spawn_bound_fake_worker(PyObject *self, PyObject *arguments)
+{
+    PyObject *bound_executable;
+    PyObject *bound_worker_entrypoint;
+    int source_fds[SUNOFRIEND_MAX_TRANSPORT_COUNT] = {-1, -1, -1, -1, -1};
+
+    (void)self;
+    if (!PyArg_ParseTuple(
+        arguments,
+        "O!O!iii:_spawn_bound_fake_worker",
+        &PyBytes_Type,
+        &bound_executable,
+        &PyBytes_Type,
+        &bound_worker_entrypoint,
+        &source_fds[0],
+        &source_fds[1],
+        &source_fds[2]
+    )) {
+        return NULL;
+    }
+    return sunofriend_spawn_bound_worker(
+        bound_executable,
+        bound_worker_entrypoint,
+        source_fds,
+        SUNOFRIEND_DATA_TRANSPORT_COUNT
+    );
+}
+
+static PyObject *
+sunofriend_spawn_bound_fake_worker_with_ready_release(
+    PyObject *self,
+    PyObject *arguments
+)
+{
+    PyObject *bound_executable;
+    PyObject *bound_worker_entrypoint;
+    int source_fds[SUNOFRIEND_MAX_TRANSPORT_COUNT];
+
+    (void)self;
+    if (!PyArg_ParseTuple(
+        arguments,
+        "O!O!iiiii:_spawn_bound_fake_worker_with_ready_release",
+        &PyBytes_Type,
+        &bound_executable,
+        &PyBytes_Type,
+        &bound_worker_entrypoint,
+        &source_fds[0],
+        &source_fds[1],
+        &source_fds[2],
+        &source_fds[3],
+        &source_fds[4]
+    )) {
+        return NULL;
+    }
+    return sunofriend_spawn_bound_worker(
+        bound_executable,
+        bound_worker_entrypoint,
+        source_fds,
+        SUNOFRIEND_READY_RELEASE_TRANSPORT_COUNT
+    );
+}
+
 static PyMethodDef sunofriend_spawn_methods[] = {
     {
         "_spawn_bound_fake_worker",
@@ -1558,6 +1645,15 @@ static PyMethodDef sunofriend_spawn_methods[] = {
         PyDoc_STR(
             "Private audited spawn boundary; production worker integration "
             "remains unavailable."
+        ),
+    },
+    {
+        "_spawn_bound_fake_worker_with_ready_release",
+        sunofriend_spawn_bound_fake_worker_with_ready_release,
+        METH_VARARGS,
+        PyDoc_STR(
+            "Private fixed ready/release canary boundary; production worker "
+            "integration remains unavailable."
         ),
     },
     {NULL, NULL, 0, NULL},

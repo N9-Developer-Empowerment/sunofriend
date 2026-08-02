@@ -94,9 +94,12 @@ report the result, then move on.
   combines all three primitives around one fixed self-sandboxing worker and
   derives the terminal projection from that same exact owner after normal zero
   exit, whole-group drain and exact reap. It retains no raw PID/PGID, path or
-  destination and opens no model, checkpoint or audio. The combined proof is
-  still not attached to Kim; its native ready/release entry point remains
-  unimplemented. This evidence does not enable native
+  destination and opens no model, checkpoint or audio. Model-free matrix v8
+  adds a fixed five-descriptor entry point and proves the existing Kim ready/
+  release schema and release bytes through the same opaque-owner lifecycle,
+  again without a model, checkpoint or audio. These proofs are still not
+  attached to Kim; its real worker remains on the subprocess route. This
+  evidence does not enable native
   fake-launch V2, which remains permanently
   `blocked`/`not_run` and still contains only caller-claimed artifact
   identities. A later model-free

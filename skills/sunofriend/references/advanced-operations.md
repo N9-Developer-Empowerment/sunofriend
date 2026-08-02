@@ -1620,8 +1620,12 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   normal zero exit, whole-group drain and exact reap. Its private result PID/
   PGID is consumed only through the owner's boolean matcher; the final report
   retains no process identifier, path or destination. No model, checkpoint or
-  audio is opened. This is still not Kim Vocal 2: its native ready/release
-  entry point remains unimplemented, so native real-worker supervision is not
+  audio is opened. Model-free matrix v8 adds a fixed five-descriptor native
+  entry point: data remain on 3/4/5 and the existing Kim ready/release pipes
+  are mapped to 6/7. A stdlib-only worker emits a valid Kim readiness claim
+  with dummy hashes, blocks through owner-bound process-image verification,
+  accepts the exact release bytes, exits zero and is exact-reaped. This is
+  still not Kim Vocal 2 execution, so native real-worker supervision is not
   claimed.
   The
   evidence does not enumerate dyld

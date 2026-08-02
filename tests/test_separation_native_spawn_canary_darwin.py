@@ -358,7 +358,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         ),
     )
 
-    assert report["schema"] == ("sunofriend.native-spawn-canary-matrix.v7")
+    assert report["schema"] == ("sunofriend.native-spawn-canary-matrix.v8")
     expected_layouts = {
         *itertools.permutations((3, 4, 5)),
         *harness._REPRESENTATIVE_SOURCE_FD_LAYOUTS,
@@ -411,6 +411,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "fixed_network_worker_identity",
         "fixed_ready_worker_identity",
         "fixed_combined_worker_identity",
+        "fixed_ready_release_worker_identity",
     ):
         identity = report[key]
         assert set(identity) == {
@@ -488,6 +489,7 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "pre_exec_signal_state_not_reconstructed_after_cpython_startup",
         "owner_bound_worker_ready_observer_not_attached_to_real_worker",
         "combined_fixed_worker_bridge_is_not_a_real_model_worker",
+        "native_ready_release_transport_is_not_attached_to_real_worker",
         "real_model_worker_not_under_native_owner",
     }
     assert report["extension_path_serialized"] is False
@@ -503,6 +505,8 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
         "owner_bound_worker_ready_native_image_observer_present": True,
         "combined_fixed_worker_bridge_present": True,
         "model_free_terminal_projection_from_live_owner_present": True,
+        "fixed_native_ready_release_transport_present": True,
+        "existing_kim_ready_schema_exercised_model_free": True,
         "observer_exports_pid_or_pgid": False,
     }
     assert report["post_spawn_owner_drop_canary"] == {
@@ -675,6 +679,22 @@ def test_fresh_private_native_build_passes_isolated_descriptor_canary(
     assert combined["group_empty_before_exact_reap"] is True
     assert combined["exact_reap_observed"] is True
     assert combined["parent_descriptors_unchanged"] is True
+    assert report["native_ready_release_transport_canary"] == {
+        "fixed_descriptor_targets": [3, 4, 5, 6, 7],
+        "wrong_pipe_access_rejected_before_spawn": True,
+        "existing_kim_ready_schema_validated": True,
+        "worker_blocked_until_parent_release": True,
+        "process_image_matched_while_blocked": True,
+        "normal_zero_exit_after_release": True,
+        "group_empty_before_exact_reap": True,
+        "exact_reap_observed": True,
+        "parent_descriptors_unchanged_by_spawn": True,
+        "temporary_pipe_descriptors_closed": True,
+        "raw_pid_or_pgid_retained": False,
+        "model_or_checkpoint_loaded": False,
+        "audio_read": False,
+        "network_used": False,
+    }
     assert report["descendant_group_canary"] == {
         "leader_exit_observed_without_reap": True,
         "live_descendant_prevented_ownership_release": True,

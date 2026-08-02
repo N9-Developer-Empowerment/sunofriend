@@ -1704,6 +1704,51 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — native Kim ready/release transport proved model-free
+
+- Goal: prove the exact descriptor and lifecycle shape needed by the existing
+  Kim post-inference native-image handshake before migrating the authorised
+  model worker from its subprocess supervisor.
+- Change or experiment: added a second fixed private native entry point that
+  reuses the same nonconstructible child owner and shared `posix_spawn`
+  implementation. It maps regular-file request/result/checkpoint transports to
+  descriptors 3/4/5 and the existing ready-write/release-read pipes to 6/7. A
+  fixed stdlib-only worker emits a valid Kim readiness claim with dummy hashes,
+  blocks until the parent verifies its signed process image, accepts only the
+  exact existing release bytes, writes one bounded path-free result, exits zero
+  and is group-drained and exact-reaped. Swapped pipe access is rejected before
+  spawn.
+- Inputs: freshly provenance-built private Darwin extension, current isolated
+  Python runtime, three synthetic regular files, two private pipes and the
+  fixed ready/release worker. No source audio, MIDI, model or checkpoint.
+- Model/runtime/checkpoint: no model or checkpoint. Updated native source
+  SHA-256 is
+  `10fc9911b89a5093e87f4d64d466cebcd1ae3e26b49ab3a2601b5b189a2f64a4`;
+  updated build-contract SHA-256 is
+  `7671be0c6a25f0a5642a5f6076a6979388a4eb5f53e5a759671a587f84ebcfac`.
+- Evidence and metrics: 95 focused handshake, supervision, source, build and
+  live-matrix tests pass. The live macOS v8 matrix proves invalid access is a
+  no-start failure; valid readiness blocks before release; the owner-bound
+  process-image match succeeds while blocked; release leads to normal exit 0,
+  group emptiness and exact reap; spawn does not change the parent descriptor
+  table; and all temporary pipe ends close. Ruff passes. The complete
+  repository suite passes 2,828 tests with one platform skip and the existing
+  third-party `resampy`/`pkg_resources` deprecation warning.
+- Listening result: not applicable; the worker reads no audio and creates no
+  MIDI or separation.
+- Decision: accept the fixed five-descriptor transport as the final model-free
+  prerequisite for a narrowly reviewed Kim migration. Keep
+  `fixed_real_worker_native_entrypoint_implemented: false`; the real authorised
+  Kim route remains on its subprocess supervisor.
+- Problems/risks: the test claim uses dummy hashes and does not import MLX,
+  open the checkpoint or process audio. Runtime and worker invocation still use
+  pathnames, and the model worker's argument/request/result adaptation has not
+  yet been moved behind the native owner.
+- Next smallest step: design the fixed real-worker request/result adapter and
+  its failure projections around these exact descriptor targets. Run one
+  authorised Kim excerpt only after that adapter's model-free static and
+  failure tests pass.
+
 ### 2026-08-02 — combined fixed-worker native bridge proved model-free
 
 - Goal: prove that the three owner-bound observers and the native terminal

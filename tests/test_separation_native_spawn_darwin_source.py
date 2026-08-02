@@ -139,17 +139,17 @@ def test_scratch_descriptors_exclude_sources_targets_and_each_other() -> None:
         "sunofriend_add_child_file_actions(",
     )
 
-    assert "#define SUNOFRIEND_SCRATCH_FD_MIN 6" in source
-    assert (
-        "candidate >= SUNOFRIEND_STDIN_FD && candidate <= SUNOFRIEND_CHECKPOINT_FD"
-    ) in selector
+    assert "int candidate = sunofriend_target_fds[transport_count - 1] + 1" in source
+    assert "candidate == sunofriend_target_fds[index]" in selector
     assert "candidate == source_fds[index]" in selector
     assert "candidate == scratch_fds[index]" in selector
-    assert "sunofriend_choose_scratch_fds(source_fds, scratch_fds)" in source
+    assert "sunofriend_choose_scratch_fds(" in source
     assert "transport descriptors must be distinct" in source
     assert "transport descriptors must be at least 3" in source
     assert "transport descriptors must have distinct backing nodes" in source
-    assert "transport descriptors must reference regular files" in source
+    assert "data transports must be regular files and readiness" in source
+    assert "&& !S_ISREG(backing_nodes[left].st_mode)" in source
+    assert "&& !S_ISFIFO(backing_nodes[left].st_mode)" in source
     assert "fcntl(source_fds[left], F_GETFD) != FD_CLOEXEC" in source
     assert "(status_flags & O_ACCMODE) != required_access_modes[left]" in source
     assert "(status_flags & O_APPEND) != 0" in source
@@ -175,6 +175,8 @@ def test_child_stdio_environment_and_transport_numbers_are_fixed() -> None:
     assert "SUNOFRIEND_REQUEST_FD = 3" in source
     assert "SUNOFRIEND_RESULT_FD = 4" in source
     assert "SUNOFRIEND_CHECKPOINT_FD = 5" in source
+    assert "SUNOFRIEND_READY_FD = 6" in source
+    assert "SUNOFRIEND_RELEASE_FD = 7" in source
     assert "worker must set FD_CLOEXEC on them as its first user-code action" in source
     assert "sunofriend_worker_environment" in source
     assert re.findall(r'^\s+"([^"]+)",$', environment, flags=re.MULTILINE) == [
@@ -206,8 +208,8 @@ def test_child_owner_is_allocated_before_spawn_and_retains_lifecycle() -> None:
     source = _source()
     spawn = _function_body(
         source,
+        "sunofriend_spawn_bound_worker(",
         "sunofriend_spawn_bound_fake_worker(",
-        "sunofriend_spawn_methods[]",
     )
     allocation = spawn.index("owned_child = PyObject_New(")
     native_spawn = spawn.index("status = posix_spawn(")
@@ -227,8 +229,8 @@ def test_no_start_is_a_code_tagged_nonconstructible_owner_not_an_exception() -> 
     source = _source()
     spawn = _function_body(
         source,
+        "sunofriend_spawn_bound_worker(",
         "sunofriend_spawn_bound_fake_worker(",
-        "sunofriend_spawn_methods[]",
     )
     getters = _function_body(
         source,
@@ -280,6 +282,21 @@ def test_no_start_is_a_code_tagged_nonconstructible_owner_not_an_exception() -> 
     bind_spawned = spawn.index("owned_child->spawned = true")
     assert status_check < bind_pid < bind_spawned
 
+
+def test_ready_release_entrypoint_is_fixed_and_reuses_exact_owner_boundary() -> None:
+    source = _source()
+    wrapper = _function_body(
+        source,
+        "sunofriend_spawn_bound_fake_worker_with_ready_release(",
+        "sunofriend_spawn_methods[]",
+    )
+
+    assert '"O!O!iiiii:_spawn_bound_fake_worker_with_ready_release"' in wrapper
+    assert "SUNOFRIEND_READY_RELEASE_TRANSPORT_COUNT" in wrapper
+    assert "sunofriend_spawn_bound_worker(" in wrapper
+    assert source.count("status = posix_spawn(") == 1
+    assert '"Private fixed ready/release canary boundary; production worker "' in source
+    assert '"integration remains unavailable."' in source
 
 def test_child_owner_exact_wait_signal_release_and_emergency_cleanup() -> None:
     source = _source()

@@ -44,6 +44,7 @@ sys.path.insert(0, str(_REPOSITORY / "src"))
 import sunofriend._separation_macos_loaded_images as _loaded_images  # noqa: E402
 import sunofriend._separation_macos_sandbox_network_observer as _network_observer  # noqa: E402
 import sunofriend._separation_melroformer_supervision as _supervision  # noqa: E402
+import sunofriend._separation_worker_ready_handshake as _ready_handshake  # noqa: E402
 
 
 _MODULE_NAME = "_separation_native_spawn_darwin"
@@ -66,6 +67,11 @@ _READY_WORKER = (
 _COMBINED_WORKER = (
     Path(__file__)
     .with_name("_separation_native_spawn_combined_worker.py")
+    .resolve()
+)
+_READY_RELEASE_WORKER = (
+    Path(__file__)
+    .with_name("_separation_native_spawn_ready_release_worker.py")
     .resolve()
 )
 _LOGICAL_ROLES = ("request", "result", "checkpoint")
@@ -1547,6 +1553,135 @@ def _run_combined_fixed_worker_bridge_canary(
             broker.abort()
 
 
+def _run_native_ready_release_transport_canary(
+    *,
+    spawn: Any,
+    owner_type: type[Any],
+    runtime_path: Path,
+    expected_process_image_path: Path,
+    expected_process_image_cdhash: str,
+    temporary_root: Path,
+) -> dict[str, Any]:
+    """Exercise the exact Kim ready/release pipes through one native owner."""
+
+    _close_descriptors_from_three()
+    case_directory = temporary_root / "native-ready-release-transport"
+    case_directory.mkdir(mode=0o700)
+    paths = _install_transport_descriptors(case_directory, _TARGET_FDS)
+    baseline = snapshot_parent_descriptors()
+    invalid_prepared = _ready_handshake._prepare_worker_ready_handshake()
+    try:
+        try:
+            spawn(
+                os.fsencode(runtime_path),
+                os.fsencode(_READY_RELEASE_WORKER),
+                *_TARGET_FDS,
+                invalid_prepared.release_read_fd,
+                invalid_prepared.ready_write_fd,
+            )
+        except ValueError:
+            wrong_pipe_access_rejected_before_spawn = True
+        else:
+            raise AssertionError("swapped ready/release access was accepted")
+    finally:
+        _ready_handshake._abort_worker_ready_handshake(invalid_prepared)
+    _assert_parent_unchanged(baseline, snapshot_parent_descriptors())
+    prepared = _ready_handshake._prepare_worker_ready_handshake()
+    native_owner: Any | None = None
+    try:
+        before_spawn = snapshot_parent_descriptors()
+        native_owner = spawn(
+            os.fsencode(runtime_path),
+            os.fsencode(_READY_RELEASE_WORKER),
+            *_TARGET_FDS,
+            prepared.ready_write_fd,
+            prepared.release_read_fd,
+        )
+        if type(native_owner) is not owner_type:
+            raise AssertionError("ready/release native owner type differs")
+        if hasattr(native_owner, "pid") or hasattr(native_owner, "__dict__"):
+            raise AssertionError("ready/release owner exposes transferable authority")
+        after_spawn = snapshot_parent_descriptors()
+        _assert_parent_unchanged(before_spawn, after_spawn)
+        with _OwnedCanaryChild(native_owner) as child:
+            ready = _ready_handshake._read_worker_ready_handshake(
+                prepared,
+                timeout_seconds=_WAIT_SECONDS,
+            )
+            if native_owner.wait_nohang() is not None:
+                raise AssertionError("ready/release worker did not block for release")
+            process_image = native_owner.observe_owned_process_image(
+                os.fsencode(runtime_path),
+                os.fsencode(expected_process_image_path),
+                expected_process_image_cdhash.encode("ascii"),
+            )
+            if process_image != {
+                "kernel_cdhash": expected_process_image_cdhash,
+                "path_state": "matched_expected_process_image",
+            }:
+                raise AssertionError("ready/release process image differs")
+            _ready_handshake._release_worker_ready_handshake(prepared)
+            status = child.wait()
+        if not os.WIFEXITED(status) or os.WEXITSTATUS(status) != 0:
+            raise AssertionError("ready/release worker did not exit zero")
+        if (
+            native_owner.leader_exit_observed is not True
+            or native_owner.leader_reaped is not True
+            or native_owner.group_empty is not True
+            or native_owner.ownership_released is not True
+            or native_owner.ownership_lost is not False
+        ):
+            raise AssertionError("ready/release owner terminality differs")
+        ready_document = _ready_handshake._plain(ready)
+        ready_bytes = (
+            json.dumps(
+                ready_document,
+                ensure_ascii=True,
+                allow_nan=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            ).encode("ascii")
+            + b"\n"
+        )
+        result = _read_single_json(paths["result"])
+        if result != {
+            "schema": "sunofriend.native-owner-ready-release-result.v1",
+            "ok": True,
+            "ready_sha256": hashlib.sha256(ready_bytes).hexdigest(),
+            "release_sha256": hashlib.sha256(
+                _ready_handshake._RELEASE_BYTES
+            ).hexdigest(),
+            "open_descriptors_after_handshake": [0, 1, 2, 3, 4, 5],
+            "pid_or_pgid_exported": False,
+            "model_or_checkpoint_loaded": False,
+            "audio_read": False,
+            "network_used": False,
+        }:
+            raise AssertionError("ready/release worker result differs")
+        final = snapshot_parent_descriptors()
+        _assert_parent_unchanged(baseline, final)
+        return {
+            "fixed_descriptor_targets": [3, 4, 5, 6, 7],
+            "wrong_pipe_access_rejected_before_spawn": (
+                wrong_pipe_access_rejected_before_spawn
+            ),
+            "existing_kim_ready_schema_validated": True,
+            "worker_blocked_until_parent_release": True,
+            "process_image_matched_while_blocked": True,
+            "normal_zero_exit_after_release": True,
+            "group_empty_before_exact_reap": True,
+            "exact_reap_observed": True,
+            "parent_descriptors_unchanged_by_spawn": True,
+            "temporary_pipe_descriptors_closed": True,
+            "raw_pid_or_pgid_retained": False,
+            "model_or_checkpoint_loaded": False,
+            "audio_read": False,
+            "network_used": False,
+        }
+    finally:
+        _ready_handshake._abort_worker_ready_handshake(prepared)
+
+
 def _run_descendant_group_canary(
     *,
     spawn: Any,
@@ -1673,9 +1808,17 @@ def run_canary_matrix(
     network_worker_before = _measure_worker(_NETWORK_WORKER)
     ready_worker_before = _measure_worker(_READY_WORKER)
     combined_worker_before = _measure_worker(_COMBINED_WORKER)
+    ready_release_worker_before = _measure_worker(_READY_RELEASE_WORKER)
     spawn = getattr(extension, _METHOD_NAME, None)
     if not callable(spawn):
         raise RuntimeError("native extension entry point is unavailable")
+    spawn_with_ready_release = getattr(
+        extension,
+        "_spawn_bound_fake_worker_with_ready_release",
+        None,
+    )
+    if not callable(spawn_with_ready_release):
+        raise RuntimeError("native ready/release entry point is unavailable")
     owner_type = getattr(extension, "_OwnedSpawnChild", None)
     if not isinstance(owner_type, type):
         raise RuntimeError("native owner type is unavailable")
@@ -1813,6 +1956,16 @@ def run_canary_matrix(
             temporary_root=temporary_root,
         )
     )
+    native_ready_release_transport_canary = (
+        _run_native_ready_release_transport_canary(
+            spawn=spawn_with_ready_release,
+            owner_type=owner_type,
+            runtime_path=runtime_path,
+            expected_process_image_path=expected_process_image_path,
+            expected_process_image_cdhash=expected_process_image_cdhash,
+            temporary_root=temporary_root,
+        )
+    )
     descendant_group_canary = _run_descendant_group_canary(
         spawn=spawn,
         runtime_path=runtime_path,
@@ -1826,6 +1979,7 @@ def run_canary_matrix(
     network_worker_after = _measure_worker(_NETWORK_WORKER)
     ready_worker_after = _measure_worker(_READY_WORKER)
     combined_worker_after = _measure_worker(_COMBINED_WORKER)
+    ready_release_worker_after = _measure_worker(_READY_RELEASE_WORKER)
     if runtime_after != runtime_before:
         raise RuntimeError("bound runtime changed across canary matrix")
     if process_image_after != process_image_before:
@@ -1842,9 +1996,11 @@ def run_canary_matrix(
         raise RuntimeError("bound worker-ready worker changed across canary matrix")
     if combined_worker_after != combined_worker_before:
         raise RuntimeError("bound combined worker changed across canary matrix")
+    if ready_release_worker_after != ready_release_worker_before:
+        raise RuntimeError("bound ready/release worker changed across canary matrix")
     expected_suffix = sysconfig.get_config_var("EXT_SUFFIX")
     return {
-        "schema": "sunofriend.native-spawn-canary-matrix.v7",
+        "schema": "sunofriend.native-spawn-canary-matrix.v8",
         "extension_path_serialized": False,
         "worker_path_serialized": False,
         "proof_scope": (
@@ -1879,6 +2035,9 @@ def run_canary_matrix(
         "fixed_combined_worker_identity": _path_free_file_identity(
             combined_worker_after
         ),
+        "fixed_ready_release_worker_identity": _path_free_file_identity(
+            ready_release_worker_after
+        ),
         "native_owner_type_qualification": {
             "direct_construction_rejected": direct_owner_construction_rejected,
             "raw_pid_not_exposed": True,
@@ -1890,6 +2049,8 @@ def run_canary_matrix(
             "owner_bound_worker_ready_native_image_observer_present": True,
             "combined_fixed_worker_bridge_present": True,
             "model_free_terminal_projection_from_live_owner_present": True,
+            "fixed_native_ready_release_transport_present": True,
+            "existing_kim_ready_schema_exercised_model_free": True,
             "observer_exports_pid_or_pgid": False,
         },
         "runtime_environment_qualification": (
@@ -1954,6 +2115,7 @@ def run_canary_matrix(
             "pre_exec_signal_state_not_reconstructed_after_cpython_startup",
             "owner_bound_worker_ready_observer_not_attached_to_real_worker",
             "combined_fixed_worker_bridge_is_not_a_real_model_worker",
+            "native_ready_release_transport_is_not_attached_to_real_worker",
             "real_model_worker_not_under_native_owner",
         ),
         "complete_descriptor_scan_soft_limit": _CANARY_SOFT_LIMIT,
@@ -1980,6 +2142,9 @@ def run_canary_matrix(
         ),
         "combined_fixed_worker_bridge_canary": (
             combined_fixed_worker_bridge_canary
+        ),
+        "native_ready_release_transport_canary": (
+            native_ready_release_transport_canary
         ),
         "descendant_group_canary": descendant_group_canary,
         "cases": cases,

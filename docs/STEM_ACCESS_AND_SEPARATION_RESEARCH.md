@@ -39,8 +39,15 @@ Model-free matrix v7 now combines all three primitives and derives the terminal
 projection from the same exact fixed-worker owner after normal zero exit,
 whole-group drain and exact reap. It retains no PID, PGID, path or network
 destination and opens no model, checkpoint or audio. This is not the real Kim
-worker: its native ready/release entry point remains unimplemented and the
-authorised path remains on the subprocess supervisor. A separate
+worker. Model-free matrix v8 now adds a second fixed native entry point that
+maps the three regular-file data transports plus the existing Kim ready and
+release pipes to fixed descriptors 3–7. A stdlib-only worker emits a valid Kim
+readiness record with dummy hashes, blocks while its opaque owner verifies the
+signed process image, accepts only the exact release bytes, exits zero and is
+group-drained and exact-reaped. The parent descriptor table is unchanged by
+spawn and every temporary pipe end is closed. No model, checkpoint or audio is
+opened. This proves the transport shape, not Kim execution: the authorised
+path remains on the subprocess supervisor. A separate
 private-development HTDemucs runner now produces and measures four real broad
 estimated stems on
 the copyright-safe demo, and a second private evaluator measures their effect

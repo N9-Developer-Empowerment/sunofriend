@@ -28,6 +28,11 @@ READY_WORKER = (
 COMBINED_WORKER = (
     REPOSITORY / "tests" / "_separation_native_spawn_combined_worker.py"
 )
+READY_RELEASE_WORKER = (
+    REPOSITORY
+    / "tests"
+    / "_separation_native_spawn_ready_release_worker.py"
+)
 HARNESS = REPOSITORY / "tests" / "_separation_native_spawn_canary_harness.py"
 
 
@@ -288,6 +293,45 @@ def test_combined_worker_has_pid_free_ready_then_private_identity_result() -> No
     assert '"audio_read": False' in source
 
 
+def test_ready_release_worker_uses_exact_kim_protocol_without_audio_or_model() -> None:
+    tree = _tree(READY_RELEASE_WORKER)
+    source = READY_RELEASE_WORKER.read_text(encoding="utf-8")
+    imports = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imports.update(alias.name.split(".", 1)[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imports.add(node.module.split(".", 1)[0])
+
+    assert imports == {
+        "__future__",
+        "errno",
+        "fcntl",
+        "hashlib",
+        "json",
+        "os",
+        "resource",
+        "typing",
+    }
+    assert "_TRANSPORT_FDS = (3, 4, 5, 6, 7)" in source
+    assert '"sunofriend.private-melroformer-worker-ready.v1"' in source
+    assert '"post_inference_pre_quarantine"' in source
+    assert '"mlx-melroformer-kim-vocal-2"' in source
+    assert "sunofriend-native-image-inventory-release-v1" in source
+    assert source.index("_harden_transport_descriptors()", source.index("def main")) < source.index(
+        "_write_all(_READY_FD", source.index("def main")
+    )
+    assert source.index("_write_all(_READY_FD", source.index("def main")) < source.index(
+        "release = _read_release()", source.index("def main")
+    )
+    assert '"pid_or_pgid_exported": False' in source
+    assert '"model_or_checkpoint_loaded": False' in source
+    assert '"audio_read": False' in source
+    assert '"network_used": False' in source
+    assert "socket" not in source
+    assert "subprocess" not in source
+
+
 def test_hold_worker_hardens_descriptors_then_only_blocks_for_owner_canary() -> None:
     tree = _tree(HOLD_WORKER)
     main = _function(tree, "main")
@@ -411,7 +455,7 @@ def test_harness_asserts_parent_child_access_data_and_process_invariants() -> No
 
     assert "snapshot_parent_descriptors()" in source
     assert "_assert_parent_unchanged(before" in source
-    assert source.count("_assert_parent_unchanged(before") == 12
+    assert source.count("_assert_parent_unchanged(before") == 13
     assert '"open_descriptors") != [0, 1, 2, 3, 4, 5]' in source
     assert '"descriptor_scan_soft_limit") != _CANARY_SOFT_LIMIT' in source
     assert '"request_write": errno.EBADF' in source
@@ -473,6 +517,11 @@ def test_harness_asserts_parent_child_access_data_and_process_invariants() -> No
     assert "_derive_model_free_native_terminal_projection(" in source
     assert '"combined_fixed_worker_bridge_present": True' in source
     assert '"model_free_terminal_projection_from_live_owner_present": True' in source
+    assert "_run_native_ready_release_transport_canary(" in source
+    assert "_read_worker_ready_handshake(" in source
+    assert "_release_worker_ready_handshake(" in source
+    assert '"fixed_native_ready_release_transport_present": True' in source
+    assert '"wrong_pipe_access_rejected_before_spawn"' in source
     assert "native owner reaped before its group was empty" in source
     assert "native_owner.group_empty is not False" in source
     assert '"ownership_released_only_after_group_empty": True' in source
