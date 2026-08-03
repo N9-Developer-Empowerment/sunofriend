@@ -1,20 +1,26 @@
 """Dependency-substituted lifecycle core for the private native Kim parent.
 
 This module deliberately does not open a checkpoint, import a model, read
-audio, build a native extension or start a process. It fixes the order and
-fail-closed behaviour that the later macOS adapter must use around one exact
-opaque native owner:
+audio, build a native extension or start a process. Its v2 exercise fixes the
+fail-closed order that the later macOS adapter must use around one exact opaque
+native owner:
 
-1. start through a separately admitted fixed native method;
-2. attach live owner-bound observers and release the ready worker;
-3. synchronously drain and exact-reap the complete process group;
-4. decode the fd4 result against the exact fd3 request;
-5. independently verify the private staging artifacts; and
-6. consume PID/PGID only through the owner's boolean identity matcher.
+1. prepare bounded observers before native spawn;
+2. start through a separately admitted fixed native method;
+3. capture worker readiness and executable state, then release the worker;
+4. drain and decode fd4 while the owner is live;
+5. consume live observers before synchronously draining and exact-reaping the
+   complete process group;
+6. remeasure and seal deferred observations and private staging after reap; and
+7. consume PID/PGID only through the owner's boolean identity matcher.
 
-The only executable entry point in this module is explicitly marked as a
-dependency-substituted exercise. It cannot be used as evidence that the real
-Kim model ran and grants no product, selection or publication authority.
+The v1 exercise remains as compatibility evidence for its earlier simplified
+ordering. It is not the production integration contract.
+
+Both executable entry points in this module are explicitly marked as
+dependency-substituted exercises. Neither can be used as evidence that the
+real Kim model ran, and neither grants product, selection or publication
+authority.
 """
 
 from __future__ import annotations
@@ -38,6 +44,8 @@ from ._separation_melroformer_supervision import (
 
 SCHEMA = "sunofriend.private-melroformer-native-parent-exercise.v1"
 POLICY_ID = "private-kim-native-parent-dependency-substituted-v1"
+TWO_PHASE_SCHEMA = "sunofriend.private-melroformer-native-parent-exercise.v2"
+TWO_PHASE_POLICY_ID = "private-kim-native-parent-two-phase-substituted-v1"
 _SHA_FIELDS = (
     "process_image_observation_sha256",
     "network_observation_sha256",
@@ -142,6 +150,233 @@ def _exercise_dependency_substituted_parent_lifecycle(
     staging_verification = _validate_staging_verification(
         verify_private_staging(checked_request, result["child_result"])
     )
+    return _build_dependency_substituted_parent_evidence(
+        schema=SCHEMA,
+        policy_id=POLICY_ID,
+        status="dependency_substituted_lifecycle_complete",
+        evidence_scope="private_model_free_parent_orchestration_only",
+        checked_request=checked_request,
+        expected_owner_type=expected_owner_type,
+        native_session_observation_sha256=(
+            native_session_observation_sha256
+        ),
+        native_owner=native_owner,
+        live_observation=live_observation,
+        terminal=terminal,
+        result=result,
+        staging_verification=staging_verification,
+        limitations=[
+            "all_lifecycle_dependencies_were_substituted",
+            "no_native_process_checkpoint_model_audio_or_staging_was_opened",
+            "live_macos_adapter_and_fresh_admission_remain_required",
+            "no_public_cli_tui_simple_studio_or_source_graph_route",
+        ],
+    )
+
+
+def _exercise_dependency_substituted_two_phase_parent_lifecycle(
+    *,
+    request: Mapping[str, Any],
+    expected_owner_type: type[Any],
+    native_session_observation_sha256: str,
+    prepare_observers: Callable[[], Any],
+    spawn_native: Callable[[Any], Any],
+    capture_ready_and_release: Callable[[Any, Any], Any],
+    read_result_frame: Callable[[], bytes],
+    finish_live_observers: Callable[[Any, Any], Any],
+    supervise_owner: Callable[[Any], Mapping[str, Any]],
+    seal_post_reap_observation: Callable[
+        [Any, Any, Mapping[str, Any], Mapping[str, Any]], Mapping[str, Any]
+    ],
+    verify_private_staging: Callable[
+        [Mapping[str, Any], Mapping[str, Any]], Mapping[str, Any]
+    ],
+    abort_prepared_observers: Callable[[Any], None],
+) -> Mapping[str, Any]:
+    """Exercise the safe two-phase parent order without real dependencies.
+
+    The observer handle is prepared before spawn. The worker-ready capture and
+    fd4 drain happen while the exact owner is live; live observers are then
+    consumed before whole-group supervision. Only after exact reap may mapped
+    artifacts and other deferred observations be remeasured and sealed.
+
+    All operations remain caller-supplied and private. This function opens no
+    path or descriptor and cannot enable a product route. The later fixed macOS
+    adapter must replace these hooks rather than expose them to users.
+    """
+
+    checked_request = _validate_private_melroformer_native_request(request)
+    _require_sha(
+        native_session_observation_sha256,
+        "native session observation",
+    )
+    if not isinstance(expected_owner_type, type):
+        raise TypeError("private Kim parent owner type is invalid")
+    for callback in (
+        prepare_observers,
+        spawn_native,
+        capture_ready_and_release,
+        read_result_frame,
+        finish_live_observers,
+        supervise_owner,
+        seal_post_reap_observation,
+        verify_private_staging,
+        abort_prepared_observers,
+    ):
+        if not callable(callback):
+            raise TypeError("private Kim parent lifecycle hook is not callable")
+
+    prepared: Any | None = None
+    native_owner: Any | None = None
+    live_capture: Any | None = None
+    live_observer_capture: Any | None = None
+    result: Mapping[str, Any] | None = None
+    terminal: Mapping[str, Any] | None = None
+    observers_terminal = False
+    primary_error: BaseException | None = None
+    cleanup_error: BaseException | None = None
+
+    try:
+        prepared = prepare_observers()
+        if prepared is None:
+            raise RuntimeError("private Kim prepared observer handle is absent")
+        candidate_owner = spawn_native(prepared)
+        _require_live_exact_owner(
+            candidate_owner,
+            expected_owner_type=expected_owner_type,
+        )
+        native_owner = candidate_owner
+        live_capture = capture_ready_and_release(native_owner, prepared)
+        result = _decode_private_melroformer_native_result(
+            read_result_frame(),
+            request=checked_request,
+        )
+    except BaseException as error:
+        primary_error = error
+
+    if native_owner is not None and prepared is not None:
+        try:
+            live_observer_capture = finish_live_observers(
+                native_owner,
+                prepared,
+            )
+            observers_terminal = True
+        except BaseException as error:
+            if primary_error is None:
+                primary_error = error
+            else:
+                cleanup_error = error
+
+    if native_owner is not None:
+        try:
+            terminal = _validate_terminal_observation(
+                supervise_owner(native_owner)
+            )
+        except BaseException as error:
+            if primary_error is None:
+                primary_error = error
+            elif cleanup_error is None:
+                cleanup_error = error
+
+    if prepared is not None and not observers_terminal:
+        try:
+            abort_prepared_observers(prepared)
+        except BaseException as error:
+            if primary_error is None:
+                primary_error = error
+            elif cleanup_error is None:
+                cleanup_error = error
+
+    cleanup_complete = _terminal_cleanup_complete(terminal)
+    if primary_error is not None:
+        raise _PrivateMelroformerParentLifecycleFailure(
+            primary_error=primary_error,
+            terminal_cleanup_complete=cleanup_complete,
+            cleanup_error=cleanup_error,
+        ) from primary_error
+    if (
+        native_owner is None
+        or live_capture is None
+        or live_observer_capture is None
+        or result is None
+        or terminal is None
+    ):
+        error = RuntimeError(
+            "private Kim two-phase lifecycle evidence is incomplete"
+        )
+        raise _PrivateMelroformerParentLifecycleFailure(
+            primary_error=error,
+            terminal_cleanup_complete=cleanup_complete,
+        ) from error
+
+    try:
+        live_observation = _validate_live_observation(
+            seal_post_reap_observation(
+                live_capture,
+                live_observer_capture,
+                checked_request,
+                result["child_result"],
+            )
+        )
+        staging_verification = _validate_staging_verification(
+            verify_private_staging(checked_request, result["child_result"])
+        )
+        return _build_dependency_substituted_parent_evidence(
+            schema=TWO_PHASE_SCHEMA,
+            policy_id=TWO_PHASE_POLICY_ID,
+            status="dependency_substituted_two_phase_lifecycle_complete",
+            evidence_scope="private_model_free_two_phase_parent_orchestration_only",
+            checked_request=checked_request,
+            expected_owner_type=expected_owner_type,
+            native_session_observation_sha256=(
+                native_session_observation_sha256
+            ),
+            native_owner=native_owner,
+            live_observation=live_observation,
+            terminal=terminal,
+            result=result,
+            staging_verification=staging_verification,
+            limitations=[
+                "all_two_phase_lifecycle_dependencies_were_substituted",
+                "no_native_process_checkpoint_model_audio_or_staging_was_opened",
+                "concrete_macos_observer_and_supervisor_adapter_remains_required",
+                "no_public_cli_tui_simple_studio_or_source_graph_route",
+            ],
+        )
+    except BaseException as error:
+        raise _PrivateMelroformerParentLifecycleFailure(
+            primary_error=error,
+            terminal_cleanup_complete=cleanup_complete,
+        ) from error
+
+
+def _terminal_cleanup_complete(
+    terminal: Mapping[str, Any] | None,
+) -> bool:
+    return bool(
+        terminal is not None
+        and terminal["leader_reaped"] is True
+        and terminal["group_empty"] is True
+        and terminal["ownership_released"] is True
+    )
+
+
+def _build_dependency_substituted_parent_evidence(
+    *,
+    schema: str,
+    policy_id: str,
+    status: str,
+    evidence_scope: str,
+    checked_request: Mapping[str, Any],
+    expected_owner_type: type[Any],
+    native_session_observation_sha256: str,
+    native_owner: Any,
+    live_observation: Mapping[str, Any],
+    terminal: Mapping[str, Any],
+    result: Mapping[str, Any],
+    staging_verification: Mapping[str, Any],
+    limitations: list[str],
+) -> Mapping[str, Any]:
     execution_payload = {
         "request_sha256": checked_request["request_sha256"],
         "worker_result_sha256": result["result_sha256"],
@@ -172,10 +407,10 @@ def _exercise_dependency_substituted_parent_lifecycle(
         worker_reported_pgid=process_identity["pgid"],
     )
     payload = {
-        "schema": SCHEMA,
-        "policy_id": POLICY_ID,
-        "status": "dependency_substituted_lifecycle_complete",
-        "evidence_scope": "private_model_free_parent_orchestration_only",
+        "schema": schema,
+        "policy_id": policy_id,
+        "status": status,
+        "evidence_scope": evidence_scope,
         "request_sha256": checked_request["request_sha256"],
         "worker_result_sha256": result["result_sha256"],
         "native_execution_observation_sha256": (
@@ -207,12 +442,7 @@ def _exercise_dependency_substituted_parent_lifecycle(
             "product_route_permitted": False,
             "publication_permitted": False,
         },
-        "limitations": [
-            "all_lifecycle_dependencies_were_substituted",
-            "no_native_process_checkpoint_model_audio_or_staging_was_opened",
-            "live_macos_adapter_and_fresh_admission_remain_required",
-            "no_public_cli_tui_simple_studio_or_source_graph_route",
-        ],
+        "limitations": limitations,
     }
     document = {
         **payload,

@@ -127,6 +127,85 @@ def _result_frame(request):
     return _encode_private_melroformer_native_result(result, request=request)
 
 
+def _two_phase_hooks(request, owner, calls: list[str]):
+    prepared = object()
+    live_capture = object()
+    observer_capture = object()
+
+    def prepare():
+        calls.append("prepare_observers")
+        return prepared
+
+    def spawn(value):
+        assert value is prepared
+        calls.append("spawn")
+        return owner
+
+    def capture(value, observer_handle):
+        assert value is owner
+        assert observer_handle is prepared
+        assert value.ownership_released is False
+        calls.append("capture_ready_and_release")
+        return live_capture
+
+    def read():
+        calls.append("read_result")
+        return _result_frame(request)
+
+    def finish(value, observer_handle):
+        assert value is owner
+        assert observer_handle is prepared
+        assert value.ownership_released is False
+        calls.append("finish_live_observers")
+        return observer_capture
+
+    def supervise(value):
+        assert value is owner
+        calls.append("supervise")
+        return _terminal(value)
+
+    def seal(capture_value, observer_value, checked_request, child):
+        assert capture_value is live_capture
+        assert observer_value is observer_capture
+        assert checked_request["request_sha256"] == request["request_sha256"]
+        assert child["status"] == "complete"
+        assert owner.ownership_released is True
+        calls.append("seal_post_reap")
+        return _live_observation()
+
+    def verify(checked_request, child):
+        assert checked_request["request_sha256"] == request["request_sha256"]
+        assert child["status"] == "complete"
+        assert owner.ownership_released is True
+        calls.append("verify_staging")
+        return _staging_verification()
+
+    def abort(observer_handle):
+        assert observer_handle is prepared
+        calls.append("abort_observers")
+
+    return {
+        "prepare_observers": prepare,
+        "spawn_native": spawn,
+        "capture_ready_and_release": capture,
+        "read_result_frame": read,
+        "finish_live_observers": finish,
+        "supervise_owner": supervise,
+        "seal_post_reap_observation": seal,
+        "verify_private_staging": verify,
+        "abort_prepared_observers": abort,
+    }
+
+
+def _exercise_two_phase(request, hooks):
+    return parent._exercise_dependency_substituted_two_phase_parent_lifecycle(
+        request=request,
+        expected_owner_type=_OwnedSpawnChild,
+        native_session_observation_sha256="b" * 64,
+        **hooks,
+    )
+
+
 def test_dependency_substituted_parent_exercises_exact_safe_order() -> None:
     request = _request()
     owner = _OwnedSpawnChild()
@@ -191,6 +270,166 @@ def test_dependency_substituted_parent_exercises_exact_safe_order() -> None:
     assert "7171" not in encoded
     assert "'pid'" not in encoded
     assert "'pgid'" not in encoded
+
+
+def test_two_phase_parent_drains_before_observer_finish_and_post_reap_seal() -> None:
+    request = _request()
+    owner = _OwnedSpawnChild()
+    calls: list[str] = []
+
+    evidence = _exercise_two_phase(
+        request,
+        _two_phase_hooks(request, owner, calls),
+    )
+
+    assert calls == [
+        "prepare_observers",
+        "spawn",
+        "capture_ready_and_release",
+        "read_result",
+        "finish_live_observers",
+        "supervise",
+        "seal_post_reap",
+        "verify_staging",
+    ]
+    assert evidence["schema"] == parent.TWO_PHASE_SCHEMA
+    assert evidence["status"] == (
+        "dependency_substituted_two_phase_lifecycle_complete"
+    )
+    assert evidence["terminal_projection"]["leader_reaped"] is True
+    assert all(value is False for value in evidence["permissions"].values())
+    encoded = repr(plain(evidence))
+    assert "/private/" not in encoded
+    assert "7171" not in encoded
+    assert "'pid'" not in encoded
+    assert "'pgid'" not in encoded
+
+
+def test_two_phase_result_failure_finishes_observers_and_exact_reaps() -> None:
+    request = _request()
+    owner = _OwnedSpawnChild()
+    calls: list[str] = []
+    hooks = _two_phase_hooks(request, owner, calls)
+
+    def fail_result():
+        calls.append("read_result")
+        raise ValueError("synthetic fd4 failure")
+
+    hooks["read_result_frame"] = fail_result
+    with pytest.raises(
+        parent._PrivateMelroformerParentLifecycleFailure
+    ) as captured:
+        _exercise_two_phase(request, hooks)
+
+    assert calls == [
+        "prepare_observers",
+        "spawn",
+        "capture_ready_and_release",
+        "read_result",
+        "finish_live_observers",
+        "supervise",
+    ]
+    assert captured.value.terminal_cleanup_complete is True
+    assert str(captured.value.primary_error) == "synthetic fd4 failure"
+
+
+def test_two_phase_observer_finish_failure_aborts_and_exact_reaps() -> None:
+    request = _request()
+    owner = _OwnedSpawnChild()
+    calls: list[str] = []
+    hooks = _two_phase_hooks(request, owner, calls)
+
+    def fail_finish(value, _prepared):
+        assert value is owner
+        calls.append("finish_live_observers")
+        raise RuntimeError("synthetic observer finish failure")
+
+    hooks["finish_live_observers"] = fail_finish
+    with pytest.raises(
+        parent._PrivateMelroformerParentLifecycleFailure
+    ) as captured:
+        _exercise_two_phase(request, hooks)
+
+    assert calls == [
+        "prepare_observers",
+        "spawn",
+        "capture_ready_and_release",
+        "read_result",
+        "finish_live_observers",
+        "supervise",
+        "abort_observers",
+    ]
+    assert captured.value.terminal_cleanup_complete is True
+
+
+def test_two_phase_invalid_spawn_owner_only_aborts_prepared_observers() -> None:
+    request = _request()
+    owner = _OwnedSpawnChild()
+    calls: list[str] = []
+    hooks = _two_phase_hooks(request, owner, calls)
+
+    def invalid_spawn(_prepared):
+        calls.append("spawn")
+        return object()
+
+    hooks["spawn_native"] = invalid_spawn
+    with pytest.raises(
+        parent._PrivateMelroformerParentLifecycleFailure
+    ) as captured:
+        _exercise_two_phase(request, hooks)
+
+    assert calls == ["prepare_observers", "spawn", "abort_observers"]
+    assert captured.value.terminal_cleanup_complete is False
+    assert isinstance(captured.value.primary_error, TypeError)
+
+
+def test_two_phase_post_reap_seal_failure_reports_complete_cleanup() -> None:
+    request = _request()
+    owner = _OwnedSpawnChild()
+    calls: list[str] = []
+    hooks = _two_phase_hooks(request, owner, calls)
+
+    def fail_seal(*_arguments):
+        calls.append("seal_post_reap")
+        raise RuntimeError("synthetic post-reap seal failure")
+
+    hooks["seal_post_reap_observation"] = fail_seal
+    with pytest.raises(
+        parent._PrivateMelroformerParentLifecycleFailure
+    ) as captured:
+        _exercise_two_phase(request, hooks)
+
+    assert calls[-2:] == ["supervise", "seal_post_reap"]
+    assert captured.value.terminal_cleanup_complete is True
+    assert str(captured.value.primary_error) == "synthetic post-reap seal failure"
+
+
+@pytest.mark.parametrize(
+    "hook_name",
+    ["capture_ready_and_release", "finish_live_observers"],
+)
+def test_two_phase_absent_live_capture_fails_after_complete_cleanup(
+    hook_name: str,
+) -> None:
+    request = _request()
+    owner = _OwnedSpawnChild()
+    calls: list[str] = []
+    hooks = _two_phase_hooks(request, owner, calls)
+    original = hooks[hook_name]
+
+    def absent(*arguments):
+        original(*arguments)
+        return None
+
+    hooks[hook_name] = absent
+    with pytest.raises(
+        parent._PrivateMelroformerParentLifecycleFailure
+    ) as captured:
+        _exercise_two_phase(request, hooks)
+
+    assert "supervise" in calls
+    assert captured.value.terminal_cleanup_complete is True
+    assert "evidence is incomplete" in str(captured.value.primary_error)
 
 
 def test_observer_failure_still_exact_reaps_before_failure() -> None:

@@ -706,6 +706,18 @@ and no process, model, audio or observer ran. It therefore closes an API/wiring
 gap but does not yet prove a live lease/start composition or enable any
 separator route.
 
+The private parent contract now also has a two-phase dependency-substituted
+exercise. It starts the observer handle before spawn, captures readiness and
+releases the worker, drains and validates fd4 while the exact opaque owner is
+still live, consumes live observers, exact-reaps the complete process group,
+and only then permits mapped-file remeasurement, final observation sealing and
+independent staging verification. This corrects two unsafe simplifications in
+the older exercise: a large fd4 result must not be left until after wait, and
+mutable mapped-file evidence must not be finalized before post-reap
+remeasurement. Seven adversarial cases prove ordering and cleanup with
+substituted dependencies only. No checkpoint, process, model, audio, staging
+tree or kernel observer was opened, and no separator route is enabled.
+
 The twenty-fourth S3 increment adds a distinct, process-free Result V2
 quarantine verifier. It first revalidates the exact historical request,
 blocked launch records, prepared V3 plan and complete Result V2, then observes

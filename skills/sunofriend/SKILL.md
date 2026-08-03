@@ -516,6 +516,13 @@ report the result, then move on.
   owner observers, post-run fd5 and staging verification, reservation/lease
   closure and terminal evidence remain missing; source shape alone is not
   execution provenance.
+  The private parent exercise now has a v2 two-phase order: prepare observers
+  before spawn; capture ready state and release; drain and validate fd4 while
+  the exact owner is live; consume live observers; exact-reap the whole group;
+  then seal deferred mapped-file evidence and verify staging. Its adversarial
+  tests are dependency-substituted only. The fixed macOS adapter, live lease
+  cleanup and terminal receipt are still absent, so this does not permit a Kim
+  run or any CLI, TUI, Simple, Studio or source-graph route.
   The owner-bound process-image
   primitive is proven only with a fixed model-free worker; the active Kim route
   still uses its older PID-consuming observation path. The

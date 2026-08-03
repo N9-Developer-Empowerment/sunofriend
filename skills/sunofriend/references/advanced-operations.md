@@ -1656,6 +1656,14 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   dependency-substituted evidence only: no accepted checkpoint, process, model
   or audio was opened. Concrete observer, supervision, fd4 result, staging and
   terminal composition remains outstanding.
+  The target parent lifecycle is now fixed by a second dependency-substituted
+  exercise: prepare observers before spawn; capture ready state and release;
+  drain fd4 while the owner is live; finish live observers; exact-reap the
+  complete group; then remeasure and seal deferred observations and staging.
+  This prevents waiting before a potentially blocking fd4 drain and prevents
+  mutable mapped-file evidence from being finalized before reap. Seven
+  adversarial cases prove ordering and cleanup only; a fixed concrete macOS
+  adapter remains outstanding and no separator route is enabled.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory

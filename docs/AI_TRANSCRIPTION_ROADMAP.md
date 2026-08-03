@@ -1704,6 +1704,41 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-03 — two-phase native parent order made explicit and fail-closed
+
+- Goal: replace the older substituted lifecycle's unsafe assumption that a
+  final live observation could be sealed before reap and that fd4 could be
+  drained only after supervising the worker.
+- Change or experiment: added a private v2 dependency-substituted parent
+  exercise. It prepares the observer handle before spawn, requires the exact
+  opaque owner, captures readiness and releases the worker, drains and validates
+  fd4 while ownership is live, consumes the live observers, exact-reaps the
+  process group, and only then seals deferred mapped-file evidence and verifies
+  staging. Invalid owners are never passed to observer or supervisor hooks.
+  Result, observer and post-reap failures retain bounded cleanup evidence;
+  unconsumed prepared observers are explicitly aborted.
+- Inputs: frozen request/result documents, one model-free opaque-owner stand-in,
+  opaque capture tokens and dependency-substituted lifecycle callbacks.
+- Model/runtime/checkpoint: dependency-substituted only. No native process,
+  checkpoint, model, authorised audio, staging directory, kernel log stream or
+  executable region was opened or run.
+- Evidence and metrics: seven new cases cover exact success order, fd4 failure,
+  observer-finish failure, invalid-owner rejection, post-reap sealing failure
+  and absent ready or observer captures. The focused parent/lease/session suite
+  passes 36 tests and Ruff passes.
+- Listening result: not applicable; no audio was read or produced.
+- Decision: accept the v2 ordering as the target parent contract and retain v1
+  only as compatibility evidence. This is still substituted wiring, not real
+  Kim execution or separator evidence.
+- Problems/risks: the fixed macOS adapter still needs to bind concrete network,
+  process-image, ready/executable-region, fd4, whole-group supervisor, staging,
+  lease remeasurement and terminal-receipt operations to this order. A bounded
+  fd4 reader must ensure the real child cannot block indefinitely or exceed the
+  result-frame contract.
+- Next smallest step: implement one fixed model-free macOS adapter over the
+  existing owner-bound primitives, then exercise it with the fixed stdlib
+  worker before permitting a live Kim checkpoint or authorised audio.
+
 ### 2026-08-03 — native Kim fd5 lease handoff bound without opening the checkpoint
 
 - Goal: remove the raw checkpoint-descriptor gap between the existing live
