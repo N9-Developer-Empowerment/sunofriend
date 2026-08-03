@@ -1564,6 +1564,13 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   browser export. Keep every omitted candidate unchanged in the sealed
   inventory and preserve all zero activation, selection, merge and singer-
   identity effects.
+  When the private command explicitly uses `--classify-reference-line`, also
+  require one separate human relationship for every playable reference:
+  focus line, different line, mixed/overlapping lines or cannot tell. Keep that
+  label separate from whether the MIDI is useful for the written focus. The
+  label is focus-relative evidence only, not singer identity, sex, gender or
+  demographics. Existing reviews without the flag retain their exact earlier
+  shape.
 - The latest authorised Kim Vocal 2 `Be Alone` worker observation binds the
   complete post-inference Python `sys.modules` closure for that exact run: 320
   modules, 277 independently reopened regular files, 18,067,782 aggregate

@@ -1833,14 +1833,32 @@ The other 15 candidates remain preserved, unranked and unaffected. This result
 does not select, merge, repair or activate either candidate. There is no
 outstanding review on this scope.
 
-The next bounded review is ready for the later phrase from 9.20 to 14.95
-seconds. It asks whether unchanged `kim/primary` follows the intended male-lead
-melody. That candidate contains 17 overlapping notes out of 23 across the
-complete excerpt. `kim/register/lowest-line` has no notes in this later window,
-so it is deliberately omitted rather than presented as a silent comparison.
-The other 16 candidates remain preserved, unranked and unaffected. This is a
-source-relative question about one existing candidate, not an A/B winner,
-merge, repair or activation proposal.
+The later-phrase review from 9.20 to 14.95 seconds is also complete. It asked
+whether unchanged `kim/primary` follows the intended male-lead melody. That
+candidate contains 17 overlapping notes out of 23 across the complete excerpt;
+`kim/register/lowest-line` has no notes in this window and was omitted rather
+than presented as a silent comparison. The listener marked the primary not
+useful for the stated male-lead focus and added the decisive observation that
+the source in this window is a female vocal and that the MIDI reflects that
+vocal accurately. The exact reviewed export SHA-256 is
+`38d07cbb966854c4f1d5fbc944dd19197d35e395929310d818b27dc0fe99ab4a`.
+The separate verifier accepted it and wrote a
+`complete_review_no_activation` result whose document SHA-256 is
+`96745fb47a396606f225eb66a3b3380bca601fb98c5981e0234e730cd89c4764`.
+
+This is evidence of a **line-assignment failure**, not a transcription-quality
+failure. It does not justify a stitched male-lead challenger: the earlier
+lowest-register evidence is useful for the male lead only in the earlier
+phrase, while this later primary evidence follows a different vocal line. All
+other candidates remain preserved, unranked and unaffected.
+
+Future private reviews can explicitly opt into
+`--classify-reference-line`. That adds a required, separate focus-relative
+human label for whether the heard source is the named focus line, a different
+line, mixed/overlapping lines or unclear. The MIDI usefulness judgement remains
+separate. Existing review commands retain their previous exact shape unless
+the flag is supplied. These labels do not infer singer identity, sex, gender or
+demographics.
 
 The first live browser load also exposed an escaped-newline defect in the
 inline export script. It was fixed before the review, both source and candidate

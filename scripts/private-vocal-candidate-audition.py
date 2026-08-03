@@ -30,6 +30,14 @@ def main() -> int:
         default=[],
         help="Exact candidate ID from the sealed inventory; repeat to review a subset",
     )
+    parser.add_argument(
+        "--classify-reference-line",
+        action="store_true",
+        help=(
+            "Require a separate human label for whether each heard reference "
+            "contains the vocal line named in the focus"
+        ),
+    )
     parser.add_argument("--review")
     parser.add_argument("--out")
     parser.add_argument("--port", type=int, default=0)
@@ -53,6 +61,7 @@ def main() -> int:
             start_seconds=args.start_seconds,
             end_seconds=args.end_seconds,
             candidate_ids=args.candidate,
+            classify_reference_line=args.classify_reference_line,
             out=args.out,
         )
         print(
@@ -79,6 +88,7 @@ def main() -> int:
         start_seconds=args.start_seconds,
         end_seconds=args.end_seconds,
         candidate_ids=args.candidate,
+        classify_reference_line=args.classify_reference_line,
     )
     server = _VocalCandidateAuditionServer(context, port=args.port)
     print(

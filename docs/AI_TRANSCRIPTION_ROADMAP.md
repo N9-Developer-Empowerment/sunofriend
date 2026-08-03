@@ -3188,9 +3188,40 @@ Each working day should aim for one narrow vertical improvement:
 - Decision: use the new gate for all private scoped candidate reviews. It
   changes presentation eligibility for one listening window only and cannot
   reject, select, merge, repair, promote or activate a candidate.
-- Next smallest step: collect the one-candidate later-phrase listening answer,
-  verify its exact export and then decide whether the two reviewed phrases
-  justify proposing a still-inactive stitched MIDI challenger.
+- Next smallest step: completed by the later-phrase listening result below.
+
+### 2026-08-03 — focus-relative vocal-line classification
+
+- Goal: distinguish a musically accurate transcription of a different heard
+  vocal line from a poor transcription of the line named in the review focus.
+- Listening result: the exact 9.20–14.95 second `kim/primary` review resolved to
+  `not_useful_for_focus` for the intended male lead. The listener heard a female
+  vocal in the source and reported that the MIDI accurately reflected that
+  vocal. The reviewed export SHA-256 is
+  `38d07cbb966854c4f1d5fbc944dd19197d35e395929310d818b27dc0fe99ab4a`;
+  the verified resolution document SHA-256 is
+  `96745fb47a396606f225eb66a3b3380bca601fb98c5981e0234e730cd89c4764`.
+- Decision: do not create the previously contemplated stitched male-lead
+  challenger. The two phrase results refer to different vocal lines. Preserve
+  both candidates as useful evidence for what each actually follows.
+- Change: private candidate reviews now accept the optional
+  `--classify-reference-line` flag. When enabled, every playable row requires
+  a separate human label of `focus_line`, `different_line`,
+  `mixed_or_overlapping_lines` or `cannot_tell` before its MIDI disposition can
+  be completed. The verifier and path-free resolution retain both judgements.
+  Existing invocations remain compatible because the extra field is opt-in.
+- Safety: the relationship is to the written listening focus only. It is not
+  singer identity or demographic inference, does not rank or select a
+  candidate, and changes no MIDI, source graph, default or product route.
+- Verification: 29 focused tests cover legacy compatibility, required labels,
+  a faithful-different-line result, browser instructions and the previous
+  media/evidence protections. The complete portable suite passes 2,975 tests
+  with one expected skip, 13 trusted-local tests deselected and the existing
+  third-party `resampy`/`pkg_resources` deprecation warning.
+- Next smallest step: use the new classification only for a bounded provider-
+  leaf review whose source makes the line relationship audible. Do not ask the
+  listener to infer the target male lead from a mixed reference that contains
+  a different dominant vocal.
 
 ### 2026-08-03 — scoped private vocal-candidate review
 

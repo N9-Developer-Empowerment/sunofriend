@@ -57,6 +57,9 @@ _MAX_NOTE_CHARACTERS = 1_000
 _MINIMUM_WINDOW_SECONDS = 0.5
 _MAXIMUM_WINDOW_SECONDS = 15.0
 _DISPOSITIONS = frozenset(("useful_for_focus", "not_useful_for_focus", "cannot_tell"))
+_REFERENCE_RELATIONSHIPS = frozenset(
+    ("focus_line", "different_line", "mixed_or_overlapping_lines", "cannot_tell")
+)
 
 
 @dataclass(frozen=True)
@@ -102,6 +105,7 @@ def _load_audition_context(
     start_seconds: float | None = None,
     end_seconds: float | None = None,
     candidate_ids: Sequence[str] = (),
+    classify_reference_line: bool = False,
 ) -> _AuditionContext:
     """Revalidate the complete sealed chain and resolve media in memory."""
 
@@ -168,6 +172,7 @@ def _load_audition_context(
         candidate_media=candidate_media,
         candidate_notes=candidate_notes,
         scope=scope,
+        classify_reference_line=classify_reference_line,
     )
     _reverify_audition_inputs(
         inventory_path=inventory_path,
@@ -427,6 +432,7 @@ def _review_seed(
     candidate_media: Mapping[str, tuple[_VerifiedMedia | None, _VerifiedMedia | None]],
     candidate_notes: Mapping[str, _VerifiedNoteEvidence | None] | None = None,
     scope: Mapping[str, Any] | None = None,
+    classify_reference_line: bool = False,
 ) -> dict[str, Any]:
     if scope is None:
         scope = _review_scope(
@@ -470,42 +476,43 @@ def _review_seed(
                 else candidate["audition_state"]
             )
         )
-        choices.append(
-            {
-                "candidate_id": candidate_id,
-                "family": candidate["family"],
-                "provider_group": candidate.get("provider_group"),
-                "leaf_id": candidate.get("leaf_id"),
-                "adapter": candidate.get("adapter"),
-                "variant": candidate["variant"],
-                "note_count": candidate["note_count"],
-                "scope_note_count": scope_note_count,
-                "inventory_audition_state": candidate["audition_state"],
-                "audition_state": audition_state,
-                "candidate_render": (
-                    {"sha256": preview.sha256, "bytes": preview.size}
-                    if inventory_available
-                    else None
-                ),
-                "source_reference": (
-                    {
-                        "kind": (
-                            "provider_vocal_leaf"
-                            if candidate["family"] == "provider_leaf"
-                            else "original_mixed_excerpt"
-                        ),
-                        "sha256": reference.sha256,
-                        "bytes": reference.size,
-                    }
-                    if reference is not None
-                    else None
-                ),
-                "heard_reference": False,
-                "heard_candidate": False,
-                "disposition": "unavailable" if not available else "",
-                "notes": "",
-            }
-        )
+        choice = {
+            "candidate_id": candidate_id,
+            "family": candidate["family"],
+            "provider_group": candidate.get("provider_group"),
+            "leaf_id": candidate.get("leaf_id"),
+            "adapter": candidate.get("adapter"),
+            "variant": candidate["variant"],
+            "note_count": candidate["note_count"],
+            "scope_note_count": scope_note_count,
+            "inventory_audition_state": candidate["audition_state"],
+            "audition_state": audition_state,
+            "candidate_render": (
+                {"sha256": preview.sha256, "bytes": preview.size}
+                if inventory_available
+                else None
+            ),
+            "source_reference": (
+                {
+                    "kind": (
+                        "provider_vocal_leaf"
+                        if candidate["family"] == "provider_leaf"
+                        else "original_mixed_excerpt"
+                    ),
+                    "sha256": reference.sha256,
+                    "bytes": reference.size,
+                }
+                if reference is not None
+                else None
+            ),
+            "heard_reference": False,
+            "heard_candidate": False,
+            "disposition": "unavailable" if not available else "",
+            "notes": "",
+        }
+        if classify_reference_line:
+            choice["reference_relationship"] = "" if available else "unavailable"
+        choices.append(choice)
     scoped_summary = _scoped_summary(choices)
     seed = {
         "schema": REVIEW_SCHEMA,
@@ -537,6 +544,7 @@ def _review_seed(
             "omitted_candidates_ranked_or_rejected": False,
             "review_window_infers_phrase_boundaries": False,
             "scope_availability_uses_note_overlap": candidate_notes is not None,
+            "reference_line_classification_required": classify_reference_line,
         },
         "summary": scoped_summary,
         "inventory_summary": dict(inventory["summary"]),
@@ -723,6 +731,10 @@ def _verify_review_document(
     useful: list[str] = []
     not_useful: list[str] = []
     cannot_tell: list[str] = []
+    reference_relationships = {value: [] for value in sorted(_REFERENCE_RELATIONSHIPS)}
+    classify_reference_line = bool(
+        seed.get("policy", {}).get("reference_line_classification_required")
+    )
     for expected, row in zip(seed_rows, rows):
         if not isinstance(row, Mapping):
             raise ValueError("vocal candidate review choice differs")
@@ -741,6 +753,13 @@ def _verify_review_document(
                 raise ValueError(
                     "every auditionable candidate must be heard with its reference"
                 )
+            if classify_reference_line:
+                reference_relationship = row.get("reference_relationship")
+                if reference_relationship not in _REFERENCE_RELATIONSHIPS:
+                    raise ValueError(
+                        "every auditionable reference needs one focus relationship"
+                    )
+                reference_relationships[reference_relationship].append(candidate_id)
             disposition = row.get("disposition")
             if disposition not in _DISPOSITIONS:
                 raise ValueError("every auditionable candidate needs one disposition")
@@ -754,6 +773,10 @@ def _verify_review_document(
             row.get("heard_reference") is not False
             or row.get("heard_candidate") is not False
             or row.get("disposition") != "unavailable"
+            or (
+                classify_reference_line
+                and row.get("reference_relationship") != "unavailable"
+            )
             or notes
         ):
             raise ValueError("no-note candidate review state differs")
@@ -768,12 +791,15 @@ def _verify_review_document(
         row["heard_candidate"] = expected["heard_candidate"]
         row["disposition"] = expected["disposition"]
         row["notes"] = expected["notes"]
+        if classify_reference_line:
+            row["reference_relationship"] = expected["reference_relationship"]
     if sanitized != seed:
         raise ValueError("vocal candidate review changed immutable evidence")
     return {
         "useful_for_focus": useful,
         "not_useful_for_focus": not_useful,
         "cannot_tell": cannot_tell,
+        "reference_relationships": reference_relationships,
     }
 
 
@@ -789,6 +815,7 @@ def _resolve_vocal_candidate_review(
     start_seconds: float | None = None,
     end_seconds: float | None = None,
     candidate_ids: Sequence[str] = (),
+    classify_reference_line: bool = False,
     out: str | Path,
 ) -> dict[str, Any]:
     context = _load_audition_context(
@@ -801,6 +828,7 @@ def _resolve_vocal_candidate_review(
         start_seconds=start_seconds,
         end_seconds=end_seconds,
         candidate_ids=candidate_ids,
+        classify_reference_line=classify_reference_line,
     )
     path = _regular_json(review_path, "reviewed vocal candidate export")
     if path.stat().st_size > _MAX_REVIEW_BYTES:
@@ -831,6 +859,7 @@ def _resolve_vocal_candidate_review(
             "not_useful_for_focus": results["not_useful_for_focus"],
             "cannot_tell_count": len(results["cannot_tell"]),
             "cannot_tell": results["cannot_tell"],
+            "reference_relationships": results["reference_relationships"],
         },
         "policy": {
             "human_dispositions_verified": True,
@@ -840,6 +869,7 @@ def _resolve_vocal_candidate_review(
             "automatic_merge": False,
             "automatic_repair": False,
             "singer_identity_inferred": False,
+            "human_reference_line_relationships_verified": classify_reference_line,
             "production_eligible": False,
         },
         "effects": {
@@ -855,6 +885,7 @@ def _resolve_vocal_candidate_review(
             "The review keeps multiple useful candidates and does not choose, merge, repair, promote or activate any of them.",
             "Candidate MIDI renders use one neutral proxy sound and do not evaluate final GarageBand instrumentation.",
             "Candidates omitted from this explicit scoped review remain preserved and are neither rejected nor ranked.",
+            "Reference-line relationships are focus-relative human labels, not singer identity or demographic inference.",
         ],
     }
     resolution["document_sha256"] = _document_sha256(resolution)
@@ -1186,6 +1217,16 @@ def _audition_html(
             {"value": "not_useful_for_focus", "label": "Not useful for this focus"},
             {"value": "cannot_tell", "label": "Cannot tell"},
         ],
+        "referenceRelationships": [
+            {"value": "", "label": "Classify the reference voice…"},
+            {"value": "focus_line", "label": "It is the vocal line named in the focus"},
+            {"value": "different_line", "label": "It is a different vocal line"},
+            {
+                "value": "mixed_or_overlapping_lines",
+                "label": "It contains mixed or overlapping vocal lines",
+            },
+            {"value": "cannot_tell", "label": "I cannot tell which vocal line it is"},
+        ],
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     encoded = (
@@ -1195,15 +1236,16 @@ def _audition_html(
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Sunofriend private vocal candidate audition</title><style>
 :root{color-scheme:dark;font-family:system-ui,sans-serif;background:#071018;color:#ecf6ff}body{margin:0}.local{padding:12px 24px;background:#123d2b;color:#baffd1;font-weight:700}.wrap{max-width:1100px;margin:auto;padding:28px}.hero,.transport,.card{background:#111e2a;border:1px solid #2b4052;border-radius:14px;padding:20px;margin-bottom:16px}.warning{border-left:4px solid #ffbf3f;padding:10px 14px;background:#332a13}.muted{color:#9fb2c2}.focus{color:#75dcff;font-size:1.12rem}.transport{position:sticky;top:0;z-index:3}audio{width:100%;margin:10px 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.card h3{margin-top:0}.meta{font-family:ui-monospace,monospace;color:#a8c5d8}.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}button,select,textarea{font:inherit}button,select{padding:9px 12px;border-radius:8px;border:1px solid #4a718e;background:#17344a;color:#fff}button.primary{background:#0b6b7d}button:disabled{opacity:.45}textarea{box-sizing:border-box;width:100%;margin-top:8px;border-radius:8px;background:#0b1620;color:#fff;border:1px solid #3b5367;padding:9px}.unavailable{opacity:.65}.status{font-weight:700;color:#ffca53}.complete{color:#76f0a9}@media(max-width:760px){.grid{grid-template-columns:1fr}.wrap{padding:16px}}
-</style></head><body><div class="local">● Private local developer audition — no audio or review is uploaded</div><main class="wrap"><section class="hero"><h1>Vocal MIDI candidate audition</h1><p class="focus" id="focus"></p><p class="meta" id="scope"></p><p>This page reviews an explicit window and candidate subset from the complete sealed inventory. Omitted candidates remain preserved and are not rejected or ranked. The page does not infer a singer or require one winner. More than one candidate may be useful.</p><p class="warning"><strong>What you hear:</strong> the reference is the original mixed excerpt for Kim candidates and the exact provider vocal leaf for provider candidates. The candidate is a dry neutral MIDI render. Tone is only a proxy; judge whether the notes and phrase follow the written focus.</p><p class="muted">The order below is canonical serialization only, not a recommendation. Zero-note evidence remains visible but cannot be reviewed as audio.</p></section><section class="transport"><strong id="now">Nothing loaded</strong><audio id="player" controls preload="metadata"></audio><label><input id="loop" type="checkbox"> Loop the exact review window</label><p class="muted">Playback, seeking, looping and dwell time stay in this tab and are not feedback.</p></section><div id="cards"></div><section class="hero"><p id="status" class="status">Unreviewed</p><div class="actions"><button id="complete" class="primary">Mark explicit review complete</button><button id="export" disabled>Export reviewed JSON</button></div><p class="muted">Completion requires both heard boxes and one disposition for every playable candidate in this explicit scope. Export is a browser download; the local server writes nothing.</p></section></main><script>
+</style></head><body><div class="local">● Private local developer audition — no audio or review is uploaded</div><main class="wrap"><section class="hero"><h1>Vocal MIDI candidate audition</h1><p class="focus" id="focus"></p><p class="meta" id="scope"></p><p>This page reviews an explicit window and candidate subset from the complete sealed inventory. Omitted candidates remain preserved and are not rejected or ranked. The page does not infer a singer or require one winner. More than one candidate may be useful.</p><p class="warning"><strong>What you hear:</strong> the reference is the original mixed excerpt for Kim candidates and the exact provider vocal leaf for provider candidates. The candidate is a dry neutral MIDI render. Tone is only a proxy; judge whether the notes and phrase follow the written focus.</p><p class="muted">When reference-line classification is enabled, first say whether the heard reference contains the vocal line named in the focus. Then judge the MIDI separately. This distinguishes a good transcription of the wrong vocal line from poor transcription. These are focus-relative listening labels, not singer identity.</p><p class="muted">The order below is canonical serialization only, not a recommendation. Zero-note evidence remains visible but cannot be reviewed as audio.</p></section><section class="transport"><strong id="now">Nothing loaded</strong><audio id="player" controls preload="metadata"></audio><label><input id="loop" type="checkbox"> Loop the exact review window</label><p class="muted">Playback, seeking, looping and dwell time stay in this tab and are not feedback.</p></section><div id="cards"></div><section class="hero"><p id="status" class="status">Unreviewed</p><div class="actions"><button id="complete" class="primary">Mark explicit review complete</button><button id="export" disabled>Export reviewed JSON</button></div><p class="muted">Completion requires both heard boxes, any required reference-line label, and one MIDI disposition for every playable candidate in this explicit scope. Export is a browser download; the local server writes nothing.</p></section></main><script>
 const payload=__PAYLOAD__;const seed=structuredClone(payload.seed);let review=structuredClone(seed);const scope=review.scope;const player=document.getElementById('player');const root=document.getElementById('cards');const status=document.getElementById('status');const exportButton=document.getElementById('export');document.getElementById('focus').textContent='Listening focus: '+review.focus;document.getElementById('scope').textContent=`Review window ${scope.start_seconds.toFixed(3)}–${scope.end_seconds.toFixed(3)} seconds · ${scope.candidate_count} of ${scope.inventory_candidate_count} preserved candidates included`;function restartOrStop(){if(document.getElementById('loop').checked){player.currentTime=scope.start_seconds;player.play().catch(()=>{})}else{player.pause();player.currentTime=scope.start_seconds}}player.onended=restartOrStop;player.ontimeupdate=()=>{if(player.currentTime>=scope.end_seconds-0.005){restartOrStop()}};
 function label(row){if(row.family==='kim_primary')return 'Kim separator primary';if(row.family==='kim_register')return 'Kim register hypothesis: '+row.variant.replaceAll('_',' ');return `${row.provider_group} · ${row.leaf_id} · ${row.adapter} adapter · ${row.variant.replaceAll('_',' ')}`}
 function noteSummary(row){if(scope.time_window_source==='full_excerpt')return `${row.note_count} MIDI notes · ${row.audition_state.replaceAll('_',' ')}`;return `${row.scope_note_count} notes in review window · ${row.note_count} in complete excerpt · ${row.audition_state.replaceAll('_',' ')}`}
 function play(url,title){player.pause();player.src=url;document.getElementById('now').textContent=title;const start=()=>{const maximum=Number.isFinite(player.duration)?Math.max(0,player.duration-0.01):scope.start_seconds;try{player.currentTime=Math.min(scope.start_seconds,maximum)}catch(_){}player.play().catch(()=>{})};if(player.readyState>=1){start()}else{player.addEventListener('loadedmetadata',start,{once:true})}}
 function invalidate(){review.status='unreviewed';review.reviewed_at=null;status.className='status';status.textContent=`Unreviewed · ${completedCount()} of ${review.summary.audition_available_count} candidates complete`;exportButton.disabled=true}
-function completedCount(){return review.choices.filter(x=>x.audition_state==='available'&&x.heard_reference&&x.heard_candidate&&x.disposition).length}
-function render(){root.innerHTML='';review.choices.forEach((row,index)=>{const card=document.createElement('section');card.className='card '+(row.audition_state==='available'?'':'unavailable');const title=document.createElement('h3');title.textContent=label(row);card.appendChild(title);const meta=document.createElement('p');meta.className='meta';meta.textContent=noteSummary(row);card.appendChild(meta);if(row.audition_state!=='available'){const p=document.createElement('p');p.textContent=row.audition_state==='no_note_evidence_in_scope'?'No MIDI notes overlap this review window. The complete-excerpt candidate remains preserved and is not rejected or ranked.':'No note evidence: retained as a diagnostic, with no audio choice required.';card.appendChild(p);root.appendChild(card);return}const actions=document.createElement('div');actions.className='actions';const ref=document.createElement('button');ref.textContent=row.source_reference.kind==='provider_vocal_leaf'?'Play source vocal leaf':'Play mixed source excerpt';ref.onclick=()=>play(payload.urls[row.candidate_id].reference,ref.textContent+' — '+label(row));const candidate=document.createElement('button');candidate.textContent='Play candidate MIDI';candidate.onclick=()=>play(payload.urls[row.candidate_id].candidate,candidate.textContent+' — '+label(row));actions.append(ref,candidate);card.appendChild(actions);const checks=document.createElement('div');checks.className='actions';['heard_reference','heard_candidate'].forEach((key)=>{const lab=document.createElement('label');const input=document.createElement('input');input.type='checkbox';input.checked=row[key];input.onchange=()=>{row[key]=input.checked;invalidate()};lab.append(input,document.createTextNode(key==='heard_reference'?' I heard the reference':' I heard the candidate'));checks.appendChild(lab)});const select=document.createElement('select');payload.dispositions.forEach(option=>{const node=document.createElement('option');node.value=option.value;node.textContent=option.label;select.appendChild(node)});select.value=row.disposition;select.onchange=()=>{row.disposition=select.value;invalidate()};checks.appendChild(select);card.appendChild(checks);const notes=document.createElement('textarea');notes.maxLength=1000;notes.rows=2;notes.placeholder='Optional private notes about melody, register, timing or role';notes.value=row.notes;notes.oninput=()=>{row.notes=notes.value;invalidate()};card.appendChild(notes);root.appendChild(card)});invalidate()}
-document.getElementById('complete').onclick=()=>{const complete=review.choices.filter(x=>x.audition_state==='available').every(x=>x.heard_reference&&x.heard_candidate&&x.disposition);if(!complete){alert('Hear the reference and candidate, then choose a disposition for every playable candidate.');return}review.status='reviewed';review.reviewed_at=new Date().toISOString();status.className='status complete';status.textContent='Explicit review complete · ready to export';exportButton.disabled=false};
+function rowComplete(x){const relationshipReady=!review.policy.reference_line_classification_required||x.reference_relationship;return x.audition_state==='available'&&x.heard_reference&&x.heard_candidate&&relationshipReady&&x.disposition}
+function completedCount(){return review.choices.filter(rowComplete).length}
+function render(){root.innerHTML='';review.choices.forEach((row,index)=>{const card=document.createElement('section');card.className='card '+(row.audition_state==='available'?'':'unavailable');const title=document.createElement('h3');title.textContent=label(row);card.appendChild(title);const meta=document.createElement('p');meta.className='meta';meta.textContent=noteSummary(row);card.appendChild(meta);if(row.audition_state!=='available'){const p=document.createElement('p');p.textContent=row.audition_state==='no_note_evidence_in_scope'?'No MIDI notes overlap this review window. The complete-excerpt candidate remains preserved and is not rejected or ranked.':'No note evidence: retained as a diagnostic, with no audio choice required.';card.appendChild(p);root.appendChild(card);return}const actions=document.createElement('div');actions.className='actions';const ref=document.createElement('button');ref.textContent=row.source_reference.kind==='provider_vocal_leaf'?'Play source vocal leaf':'Play mixed source excerpt';ref.onclick=()=>play(payload.urls[row.candidate_id].reference,ref.textContent+' — '+label(row));const candidate=document.createElement('button');candidate.textContent='Play candidate MIDI';candidate.onclick=()=>play(payload.urls[row.candidate_id].candidate,candidate.textContent+' — '+label(row));actions.append(ref,candidate);card.appendChild(actions);const checks=document.createElement('div');checks.className='actions';['heard_reference','heard_candidate'].forEach((key)=>{const lab=document.createElement('label');const input=document.createElement('input');input.type='checkbox';input.checked=row[key];input.onchange=()=>{row[key]=input.checked;invalidate()};lab.append(input,document.createTextNode(key==='heard_reference'?' I heard the reference':' I heard the candidate'));checks.appendChild(lab)});if(review.policy.reference_line_classification_required){const relationship=document.createElement('select');payload.referenceRelationships.forEach(option=>{const node=document.createElement('option');node.value=option.value;node.textContent=option.label;relationship.appendChild(node)});relationship.value=row.reference_relationship;relationship.onchange=()=>{row.reference_relationship=relationship.value;invalidate()};checks.appendChild(relationship)}const select=document.createElement('select');payload.dispositions.forEach(option=>{const node=document.createElement('option');node.value=option.value;node.textContent=option.label;select.appendChild(node)});select.value=row.disposition;select.onchange=()=>{row.disposition=select.value;invalidate()};checks.appendChild(select);card.appendChild(checks);const notes=document.createElement('textarea');notes.maxLength=1000;notes.rows=2;notes.placeholder='Optional private notes about melody, register, timing or role';notes.value=row.notes;notes.oninput=()=>{row.notes=notes.value;invalidate()};card.appendChild(notes);root.appendChild(card)});invalidate()}
+document.getElementById('complete').onclick=()=>{const complete=review.choices.filter(x=>x.audition_state==='available').every(rowComplete);if(!complete){alert('Hear the reference and candidate, classify the reference line when requested, then choose a MIDI disposition for every playable candidate.');return}review.status='reviewed';review.reviewed_at=new Date().toISOString();status.className='status complete';status.textContent='Explicit review complete · ready to export';exportButton.disabled=false};
 exportButton.onclick=()=>{if(review.status!=='reviewed'){return}const blob=new Blob([JSON.stringify(review,null,2)+'\\n'],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='vocal_candidate_review.reviewed.json';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)};render();
 </script></body></html>""".replace("__PAYLOAD__", encoded)
     return html.encode("utf-8")

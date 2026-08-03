@@ -200,8 +200,11 @@ earlier Kim observations for that song. This clears a narrow cross-song
 execution-to-MIDI reproducibility gate. It does not clear listening quality:
 the existing blind review of that exact MIDI resolved to `neither` because the
 candidates followed the female backing vocal instead of the intended male
-lead. Voice/line assignment therefore remains an explicit blocker even where
-provider-control MIDI agreement is high.
+lead. A later scoped primary-only review confirmed the distinction more
+precisely: the listener heard a female vocal in the source and found that the
+MIDI followed it accurately, while correctly marking it not useful for the
+male-lead focus. Voice/line assignment therefore remains an explicit blocker
+even where provider-control MIDI agreement is high.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on

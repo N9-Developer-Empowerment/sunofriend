@@ -179,7 +179,70 @@ def test_complete_review_keeps_multiple_useful_candidates() -> None:
         "useful_for_focus": ["candidate-1", "candidate-2"],
         "not_useful_for_focus": [],
         "cannot_tell": ["candidate-3"],
+        "reference_relationships": {
+            "cannot_tell": [],
+            "different_line": [],
+            "focus_line": [],
+            "mixed_or_overlapping_lines": [],
+        },
     }
+
+
+def test_reference_line_classification_is_separate_from_midi_usefulness(
+    tmp_path: Path,
+) -> None:
+    inventory, excerpt, media = _evidence(tmp_path)
+    seed = audition._review_seed(
+        inventory,
+        candidate_set_file_sha256="a" * 64,
+        excerpt=excerpt,
+        excerpt_file_sha256="b" * 64,
+        focus="Does this candidate follow the intended male lead?",
+        candidate_media=media,
+        classify_reference_line=True,
+    )
+    review = copy.deepcopy(seed)
+    review["status"] = "reviewed"
+    review["reviewed_at"] = "2026-08-03T18:00:00+01:00"
+    review["choices"][0].update(
+        heard_reference=True,
+        heard_candidate=True,
+        reference_relationship="different_line",
+        disposition="not_useful_for_focus",
+        notes="Female vocal reference; MIDI follows that vocal accurately.",
+    )
+
+    result = audition._verify_review_document(seed, review)
+
+    assert result["not_useful_for_focus"] == ["candidate-1"]
+    assert result["reference_relationships"]["different_line"] == ["candidate-1"]
+    assert result["reference_relationships"]["focus_line"] == []
+
+
+def test_reference_line_classification_is_required_when_enabled(
+    tmp_path: Path,
+) -> None:
+    inventory, excerpt, media = _evidence(tmp_path)
+    seed = audition._review_seed(
+        inventory,
+        candidate_set_file_sha256="a" * 64,
+        excerpt=excerpt,
+        excerpt_file_sha256="b" * 64,
+        focus="Does this candidate follow the intended male lead?",
+        candidate_media=media,
+        classify_reference_line=True,
+    )
+    review = copy.deepcopy(seed)
+    review["status"] = "reviewed"
+    review["reviewed_at"] = "2026-08-03T18:00:00+01:00"
+    review["choices"][0].update(
+        heard_reference=True,
+        heard_candidate=True,
+        disposition="not_useful_for_focus",
+    )
+
+    with pytest.raises(ValueError, match="reference needs one focus relationship"):
+        audition._verify_review_document(seed, review)
 
 
 @pytest.mark.parametrize(
@@ -278,6 +341,7 @@ def test_loopback_server_serves_verified_range_and_writes_nothing(
             assert "Export reviewed JSON" in html
             assert "Review window" in html
             assert "Omitted candidates remain preserved" in html
+            assert "good transcription of the wrong vocal line" in html
             assert "JSON.stringify(review,null,2)+'\\n'" in html
             assert "localStorage" not in html
             assert str(tmp_path) not in html
