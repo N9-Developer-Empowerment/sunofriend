@@ -1764,6 +1764,12 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   both candidates followed the female backing vocal rather than the male lead
   in the source reference. Treat this as a lead-versus-backing assignment
   quality failure, not permission to merge candidates or promote a separator.
+  A later role-corrected private review of the exact 9.20–14.95 second window
+  asked for the principal lead-vocal melody rather than a male voice. It marked
+  Kim primary, Moises leaf 02, Suno A leaf 01 and Suno B leaf 01 as focus-line
+  and useful, while Moises leaf 01 was a different line and not useful for that
+  focus. Preserve the four useful alternatives and the different-line evidence;
+  do not infer a winner, merge, singer identity, default or product route.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,

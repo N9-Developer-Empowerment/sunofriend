@@ -210,6 +210,11 @@ question is principal lead versus backing or overlapping vocal line, not male
 versus female voice. All four leaves were different from the old written focus,
 but that result cannot answer the corrected role-based question. No register-
 or gender-based stitch is justified.
+The corrected role-based repeat then found usable principal-lead MIDI in Kim
+primary and three provider leaves, while one Moises leaf followed a different
+line. This shows why separation evaluation must preserve several vocal leaves
+and ask a musical-role question before judging transcription. It does not rank
+the four useful candidates or authorize a merge or product route.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on
@@ -2509,6 +2514,10 @@ separator transport, source-lineage import and promotion are not implemented**
   all four MIDI candidates as not useful for that focus. The listener corrected
   the product question to principal lead versus backing/overlap, so a fresh
   immutable review is required; the old export cannot be reinterpreted.
+- [x] Complete that fresh role-based review. Kim primary, Moises leaf 02, Suno
+  A leaf 01 and Suno B leaf 01 were all focus-line/useful; Moises leaf 01 was
+  different-line/not-useful for the principal-lead focus. Preserve all five and
+  compare the four useful note geometries before any merge or activation.
 - [x] Compare every supplied leaf inside composite `other` across both
   authorised excerpts using bidirectional audio rankings. Exact and semantic
   labels remain observations only. Keyboard was the only stable Suno pair on

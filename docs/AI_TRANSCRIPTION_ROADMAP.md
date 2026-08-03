@@ -3248,9 +3248,23 @@ Each working day should aim for one narrow vertical improvement:
   before any separation or transcription proposal.
 - Safety: no candidate was selected, merged, repaired, promoted or activated;
   source, MIDI and product routes remain unchanged.
-- Next smallest step: compare the unchanged primary and provider leaves with
-  the focus "principal lead-vocal melody; backing or overlapping harmony is
-  not the target" over the same bounded window.
+- Follow-up result: the fresh immutable role-based review is complete. Kim
+  primary, Moises leaf 02, Suno A leaf 01 and Suno B leaf 01 were each marked
+  as containing the principal lead line and as useful MIDI for that exact
+  focus. Moises leaf 01 was marked as a different line and not useful. The
+  reviewed export SHA-256 is
+  `221e24708d4a2076583dd0c7e6ae5f2176d7313717eba43b3b3383564fbe9232`;
+  the verified resolution document SHA-256 is
+  `1e10f317def79776515659a2dc950e6f1181448d850386d9597c183735629098`.
+- Interpretation: the earlier apparent later-phrase failure was primarily a
+  target-definition error. Several unchanged separation/transcription paths
+  already preserve the principal lead line. Agreement does not establish a
+  winner, and the one different-line leaf remains useful backing/alternative
+  evidence rather than an error to delete.
+- Next smallest step: compare the four useful candidates by phrase geometry
+  and timing without merging them, then determine whether the existing Kim
+  primary is already sufficient or whether a provider leaf adds complementary
+  lead detail.
 
 ### 2026-08-03 — scoped private vocal-candidate review
 

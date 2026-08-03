@@ -1870,6 +1870,22 @@ captures the principal lead. No stitched candidate is justified. Future
 reference-line reviews must name the musical role or phrase and keep voice
 demographics out of the target definition.
 
+The fresh role-based repeat is now complete. It added unchanged `kim/primary`
+to the four provider leaves and asked for the **principal lead-vocal melody;
+backing harmony or another overlapping line was not the target**. The listener
+classified `kim/primary`, Moises `leaf-02`, Suno A `leaf-01` and Suno B
+`leaf-01` as the focus line and marked each MIDI useful for that exact focus.
+Moises `leaf-01` was classified as a different line and its MIDI was not useful
+for the principal-lead focus. The exact reviewed export SHA-256 is
+`221e24708d4a2076583dd0c7e6ae5f2176d7313717eba43b3b3383564fbe9232`;
+the path-free resolution document SHA-256 is
+`1e10f317def79776515659a2dc950e6f1181448d850386d9597c183735629098`.
+
+This resolves the framing problem but does not select a winner. Four useful
+candidates remain separate; the different-line leaf is preserved as potential
+backing or alternate evidence. No merge, repair, default, activation or product
+route changed.
+
 Future private reviews can explicitly opt into
 `--classify-reference-line`. That adds a required, separate focus-relative
 human label for whether the heard source is the named focus line, a different
