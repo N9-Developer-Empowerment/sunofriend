@@ -489,8 +489,12 @@ report the result, then move on.
   future native claims. The fixed native adapter can emit the private
   identity-bearing worker result. The dependency-substituted parent core can
   consume that identity through an exact-shape opaque owner and derive the
-  projection, but the fixed live macOS adapter, fresh admission and concrete
-  observers remain missing; source shape alone is not execution provenance.
+  projection. A fixed private macOS session now binds and remeasures the real
+  worker, runtime, sandbox provider, native method and owner type, and a
+  separate single-use admission binds its exact request/nonce/worker identity.
+  One trusted-local canary opened and rechecked that static session without
+  spawning. The guarded descriptor/spawn adapter and concrete observers remain
+  missing; source shape alone is not execution provenance.
   The owner-bound process-image
   primitive is proven only with a fixed model-free worker; the active Kim route
   still uses its older PID-consuming observation path. The

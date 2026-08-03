@@ -323,6 +323,18 @@ staging path is opened and every product permission remains false. A concrete
 private macOS adapter with fresh admission, descriptor construction and the
 three live observers remains missing.
 
+The next private prerequisite now exists and has one live static canary. An
+opaque Kim session wraps a freshly built verified launcher, binds and remeasures
+the fixed real-worker script, Python runtime and `/usr/bin/sandbox-exec`, and
+retains the exact native spawn method plus nonconstructible owner type only in
+private registry state. A separate opaque admission binds that exact session to
+the canonical request hash, nonce, repository and worker SHA, permits only one
+outstanding admission and is single-use. The trusted-local canary built and
+imported the native extension and rechecked all static bindings; it did not call
+the spawn method or open a checkpoint, model, source, audio or staging tree.
+The guarded fd3–fd7 descriptor/spawn/cleanup adapter is still missing, so this
+does not change the active subprocess route or enable a product route.
+
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \
   --fixture-out work/separation-bakeoff/demo-fixture-v2 \

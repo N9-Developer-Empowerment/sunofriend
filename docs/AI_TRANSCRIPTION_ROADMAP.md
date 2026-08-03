@@ -1704,6 +1704,41 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-02 — fixed native Kim session and request-bound admission proved
+
+- Goal: bind the real fixed worker and native sandbox method to a fresh measured
+  macOS session while keeping the fd3 request value separate from spawn
+  authority.
+- Change or experiment: added a private opaque session that wraps one freshly
+  built verified native-launcher session, binds the exact fixed Kim worker,
+  `/usr/bin/sandbox-exec`, runtime, native spawn method and nonconstructible
+  owner type, and remeasures those bindings. Added a separate nonconstructible,
+  noncopyable, nonserializable admission that binds the exact session, request
+  hash, run nonce, repository root and worker SHA, changes the session to one
+  outstanding-admission state and can be consumed only once. Abandoning an
+  unconsumed admission restores the measured session to ready but permanently
+  retires its nonce.
+- Inputs: synthetic canonical requests for unit tests, plus one fresh real
+  native build/import and static worker/provider remeasurement on the
+  development Mac.
+- Model/runtime/checkpoint: the trusted-local canary binds the current Python
+  runtime, fixed worker and Apple sandbox provider. It starts no child and opens
+  no checkpoint, model, audio, source, companion or staging artifact.
+- Evidence and metrics: 42 portable focused tests pass and the one trusted-local
+  fresh-session canary passes in 1.24 seconds. Tests reject copied or serialized
+  capabilities, replacement observations, another request, worker/repository
+  mismatches, nonce reuse, repeat admission consumption and cross-process use.
+- Listening result: not applicable; no audio was read or produced.
+- Decision: accept the session and admission as private prerequisites only.
+  Neither the session observation nor fd3 bytes grants execution authority.
+- Problems/risks: descriptor creation, live checkpoint lease attachment, the
+  native spawn call, actual owner-bound observers, staging verification and
+  terminal receipt remain unimplemented. The runtime, worker and sandbox
+  provider are remeasured path bindings and retain execution-time TOCTOU.
+- Next smallest step: add the one guarded native-call adapter that constructs
+  fd3–fd7, consumes the exact admission immediately before the fixed C method
+  and guarantees bounded supervision and descriptor cleanup on every outcome.
+
 ### 2026-08-02 — native Kim parent lifecycle exercised with substituted dependencies
 
 - Goal: fix the private parent-side order and failure behaviour before allowing

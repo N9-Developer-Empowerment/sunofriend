@@ -90,6 +90,16 @@ invoke terminal supervision. This is not a live native Kim run: it opens no
 checkpoint, model, audio or staging tree, grants no product authority and does
 not replace the active subprocess evaluation path. The next boundary is the
 fixed private macOS adapter and fresh live admission around that lifecycle.
+
+That fresh-session/admission prerequisite is now implemented. One opaque
+private session wraps a newly built verified native launcher and binds the fixed
+Kim worker, Python runtime, Apple sandbox provider, native method and owner type.
+One separate opaque admission binds the exact session, canonical request hash,
+nonce, repository and worker SHA and can be consumed only once. A trusted-local
+canary built and imported the extension and remeasured the static bindings
+without starting a worker or opening a checkpoint, model or audio. This is not
+separation evidence: the guarded fd3–fd7 construction, spawn, owner observers,
+staging verification and terminal receipt remain the next boundary.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on
