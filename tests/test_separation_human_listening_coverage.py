@@ -55,8 +55,10 @@ def test_projects_phrase_reviews_without_turning_them_into_acceptance(
         "review_window_count": 2,
         "reviewed_candidate_count": 4,
         "useful_for_focus_count": 3,
+        "structured_focus_phrase_coverage_window_count": 0,
         "all_reviews_classify_reference_line_for_written_focus": True,
         "all_reviews_record_candidate_usefulness_separately": True,
+        "all_reviews_record_focus_phrase_coverage": False,
         "all_reviewed_tracks_are_bound_to_normalized_excerpt": True,
         "cross_song_review_coverage_complete": False,
     }
@@ -94,6 +96,7 @@ def test_cross_song_reviews_still_do_not_close_quality_gate(tmp_path: Path) -> N
                 start=1.0,
                 end=3.0,
                 useful=["kim/primary"],
+                structured_coverage=True,
             ),
         )
         for track_id, excerpt in excerpts.items()
@@ -112,9 +115,11 @@ def test_cross_song_reviews_still_do_not_close_quality_gate(tmp_path: Path) -> N
     )
     assert result["publication_gate"]["cross_method_quality_comparison_ready"] is False
     assert (
-        "transcription_completeness_not_structured"
-        in result["publication_gate"]["unresolved_or_out_of_scope"]
+        "transcription_completeness_not_structured_for_every_window"
+        not in result["publication_gate"]["unresolved_or_out_of_scope"]
     )
+    assert result["coverage"]["structured_focus_phrase_coverage_window_count"] == 2
+    assert result["coverage"]["all_reviews_record_focus_phrase_coverage"] is True
 
 
 def test_rejects_review_bound_to_a_different_excerpt(tmp_path: Path) -> None:
@@ -213,6 +218,7 @@ def _review(
     end: float,
     useful: list[str],
     classify_reference_line: bool = True,
+    structured_coverage: bool = False,
 ) -> Path:
     candidates = [
         "kim/primary",
@@ -258,10 +264,17 @@ def _review(
                 "focus_line": useful,
                 "mixed_or_overlapping_lines": [],
             },
+            "focus_phrase_coverage": {
+                "cannot_tell": [],
+                "little_or_no_focus_line": not_useful if structured_coverage else [],
+                "partially_complete": useful if structured_coverage else [],
+                "substantially_complete": [],
+            },
         },
         "policy": {
             "human_dispositions_verified": True,
             "human_reference_line_relationships_verified": classify_reference_line,
+            "human_focus_phrase_coverage_verified": structured_coverage,
             "winner_selected": False,
             "automatic_selection": False,
             "automatic_merge": False,

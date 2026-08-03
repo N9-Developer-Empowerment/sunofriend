@@ -2368,6 +2368,14 @@ separator transport, source-lineage import and promotion are not implemented**
     It separately preserves source-line classification and MIDI usefulness,
     copies no free-text notes and keeps the gate open because `Be Alone`,
     full-song coverage and structured missed-note completeness remain absent.
+    - [x] Add an opt-in focus-phrase coverage question to the sealed browser
+      review and resolver. It records `substantially_complete`,
+      `partially_complete`, `little_or_no_focus_line` or `cannot_tell`
+      separately from line identity and usefulness, and gives no repair,
+      ranking, selection or activation permission.
+    - [ ] Complete fresh role-correct reviews with that question and regenerate
+      the listening projection. Existing free-text missed-note feedback remains
+      human context rather than a machine label.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
 - [x] Repeat the clean/estimate comparison through exact production
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation

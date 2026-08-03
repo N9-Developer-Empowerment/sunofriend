@@ -1814,9 +1814,13 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   focus-relative vocal review resolutions to those normalized song cells. It
   projects source-line classification and candidate usefulness separately,
   copies no listener notes and keeps usefulness distinct from completeness or
-  accuracy. The current evidence covers two phrase windows on only one of two
-  normalized songs. Keep cross-song listening, full-song coverage and an
-  explicit missed-note/completeness question open before publication.
+  accuracy. Private vocal auditions can opt into
+  `--classify-focus-phrase-coverage`; this requires a separate structured label
+  for substantially complete, partially complete, little/no focus line or
+  cannot tell. Do not infer that label from notes or usefulness. The current
+  evidence covers two phrase windows on only one of two normalized songs and
+  predates the structured question. Keep cross-song listening, full-song
+  coverage and reviewed phrase completeness open before publication.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,

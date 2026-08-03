@@ -185,6 +185,12 @@ def test_complete_review_keeps_multiple_useful_candidates() -> None:
             "focus_line": [],
             "mixed_or_overlapping_lines": [],
         },
+        "focus_phrase_coverage": {
+            "cannot_tell": [],
+            "little_or_no_focus_line": [],
+            "partially_complete": [],
+            "substantially_complete": [],
+        },
     }
 
 
@@ -242,6 +248,58 @@ def test_reference_line_classification_is_required_when_enabled(
     )
 
     with pytest.raises(ValueError, match="reference needs one focus relationship"):
+        audition._verify_review_document(seed, review)
+
+
+def test_focus_phrase_coverage_is_separate_from_usefulness(tmp_path: Path) -> None:
+    inventory, excerpt, media = _evidence(tmp_path)
+    seed = audition._review_seed(
+        inventory,
+        candidate_set_file_sha256="a" * 64,
+        excerpt=excerpt,
+        excerpt_file_sha256="b" * 64,
+        focus="Capture the principal lead-vocal phrase",
+        candidate_media=media,
+        classify_focus_phrase_coverage=True,
+    )
+    review = copy.deepcopy(seed)
+    review["status"] = "reviewed"
+    review["reviewed_at"] = "2026-08-03T20:00:00+01:00"
+    review["choices"][0].update(
+        heard_reference=True,
+        heard_candidate=True,
+        focus_phrase_coverage="partially_complete",
+        disposition="useful_for_focus",
+    )
+
+    result = audition._verify_review_document(seed, review)
+
+    assert result["useful_for_focus"] == ["candidate-1"]
+    assert result["focus_phrase_coverage"]["partially_complete"] == ["candidate-1"]
+    assert seed["policy"]["focus_phrase_coverage_classification_required"] is True
+
+
+def test_focus_phrase_coverage_is_required_when_enabled(tmp_path: Path) -> None:
+    inventory, excerpt, media = _evidence(tmp_path)
+    seed = audition._review_seed(
+        inventory,
+        candidate_set_file_sha256="a" * 64,
+        excerpt=excerpt,
+        excerpt_file_sha256="b" * 64,
+        focus="Capture the principal lead-vocal phrase",
+        candidate_media=media,
+        classify_focus_phrase_coverage=True,
+    )
+    review = copy.deepcopy(seed)
+    review["status"] = "reviewed"
+    review["reviewed_at"] = "2026-08-03T20:00:00+01:00"
+    review["choices"][0].update(
+        heard_reference=True,
+        heard_candidate=True,
+        disposition="useful_for_focus",
+    )
+
+    with pytest.raises(ValueError, match="focus-phrase coverage label"):
         audition._verify_review_document(seed, review)
 
 
@@ -346,6 +404,8 @@ def test_loopback_server_serves_verified_range_and_writes_nothing(
             assert "principal lead, backing harmony, duet line" in html
             assert "Classify the reference line" in html
             assert "Classify the reference voice" not in html
+            assert "structured missing-note question" in html
+            assert "How much of the focus phrase is captured?" in html
             assert "JSON.stringify(review,null,2)+'\\n'" in html
             assert "localStorage" not in html
             assert str(tmp_path) not in html
@@ -550,6 +610,11 @@ def test_resolution_is_fresh_private_and_never_selects(
     assert persisted["document_sha256"] == audition._document_sha256(persisted)
     assert persisted["results"]["useful_for_focus"] == ["candidate-1"]
     assert persisted["policy"]["winner_selected"] is False
+    assert persisted["policy"]["human_focus_phrase_coverage_verified"] is False
+    assert all(
+        not candidates
+        for candidates in persisted["results"]["focus_phrase_coverage"].values()
+    )
     assert persisted["effects"]["candidate_selected"] is False
     assert result["report"] == str(output)
     assert output.stat().st_mode & 0o777 == 0o600

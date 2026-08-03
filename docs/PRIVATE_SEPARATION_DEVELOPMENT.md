@@ -1939,9 +1939,9 @@ PYTHONPATH=src ./.venv/bin/python \
 ```
 
 The current report has file SHA-256
-`0c5bc19be4f7f4e3417e9acf198a70ccc2ee488d1fb5bde0cbb88460bb10ce82`
+`33d64fc1eeeda3e552df2b60feebfa8268062aa5d70edc867834f9a3d42a0407`
 and document SHA-256
-`f9d3f48cb3d92f488d3a4e35ad1eb42ae9834415b769a4eb264e39af3854cb01`.
+`94ec0cff29b2621614090c73c0c556b03abef9307656e1c4cf239b398347f39e`.
 It binds both role-correct `I am a Alien mashup` windows to the matching song
 cell, covering 11 candidate auditions and five exact-focus usefulness results.
 It does not reinterpret those five as winners or complete transcriptions.
@@ -1952,8 +1952,17 @@ windows on one of the two normalized songs. Cross-song listening coverage,
 full-excerpt or full-song coverage and a structured missed-note/completeness
 judgement remain open. In particular, the earlier listener's free-text note
 that the useful candidate still missed notes is deliberately not parsed into a
-machine quality label. A future review contract must ask that question
-explicitly before completeness can become comparable evidence.
+machine quality label.
+
+The optional review contract now asks that question explicitly with
+`--classify-focus-phrase-coverage`. For every playable candidate, the listener
+must separately choose `substantially_complete`, `partially_complete`,
+`little_or_no_focus_line` or `cannot_tell`. This stays independent of source
+line identity and the existing useful/not-useful disposition. The current two
+resolutions predate that field, so the refreshed coverage report correctly
+records zero of two windows with structured phrase coverage and keeps
+`transcription_completeness_not_structured_for_every_window` open. The next
+step is a fresh role-correct review, not interpretation of the old free text.
 
 ### Current private human-review queue
 

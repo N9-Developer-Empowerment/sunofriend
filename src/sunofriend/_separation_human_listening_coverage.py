@@ -24,6 +24,7 @@ from ._separation_normalized_midi_agreement import (
     SCHEMA as NORMALIZED_AGREEMENT_SCHEMA,
 )
 from ._separation_vocal_candidate_audition import (
+    _FOCUS_PHRASE_COVERAGE,
     RESOLUTION_SCHEMA,
     _write_fresh_private_json,
 )
@@ -214,11 +215,18 @@ def _load_review(path: str | Path) -> _LoadedJson:
         policy.get(key) is not value for key, value in required_policy.items()
     ):
         raise ValueError("human vocal review resolution policy differs")
+    coverage_policy = policy.get("human_focus_phrase_coverage_verified")
+    if coverage_policy not in (None, False, True):
+        raise ValueError("human vocal review phrase-coverage policy differs")
     _require_all_false(document.get("effects"), "review effects")
     _validate_review_inputs(document.get("inputs"))
     _validate_review_focus(document.get("focus"))
     candidate_ids = _validate_review_scope(document.get("scope"))
-    _validate_review_results(document.get("results"), candidate_ids)
+    _validate_review_results(
+        document.get("results"),
+        candidate_ids,
+        focus_phrase_coverage_required=coverage_policy is True,
+    )
     return loaded
 
 
@@ -284,7 +292,12 @@ def _validate_review_scope(raw: Any) -> tuple[str, ...]:
     return tuple(candidate_ids)
 
 
-def _validate_review_results(raw: Any, candidate_ids: Sequence[str]) -> None:
+def _validate_review_results(
+    raw: Any,
+    candidate_ids: Sequence[str],
+    *,
+    focus_phrase_coverage_required: bool,
+) -> None:
     if not isinstance(raw, Mapping):
         raise ValueError("human vocal review results differ")
     dispositions = []
@@ -320,6 +333,30 @@ def _validate_review_results(raw: Any, candidate_ids: Sequence[str]) -> None:
     if sorted(classified) != sorted(candidate_ids):
         raise ValueError("human vocal review relationships do not partition scope")
 
+    coverage = raw.get("focus_phrase_coverage")
+    if coverage is None and not focus_phrase_coverage_required:
+        return
+    if (
+        not isinstance(coverage, Mapping)
+        or frozenset(coverage) != _FOCUS_PHRASE_COVERAGE
+    ):
+        raise ValueError("human vocal review focus-phrase coverage differs")
+    covered = []
+    for key in sorted(_FOCUS_PHRASE_COVERAGE):
+        values = coverage[key]
+        if (
+            not isinstance(values, list)
+            or len(values) != len(set(values))
+            or not all(isinstance(value, str) and value for value in values)
+        ):
+            raise ValueError("human vocal review focus-phrase coverage differs")
+        covered.extend(values)
+    expected = sorted(candidate_ids) if focus_phrase_coverage_required else []
+    if sorted(covered) != expected:
+        raise ValueError(
+            "human vocal review focus-phrase coverage does not match policy"
+        )
+
 
 def _build_document(
     *,
@@ -337,9 +374,13 @@ def _build_document(
         int(item.review.document["results"]["useful_for_focus_count"])
         for item in reviews
     )
+    structured_coverage_count = sum(
+        item.review.document["policy"].get("human_focus_phrase_coverage_verified")
+        is True
+        for item in reviews
+    )
     unresolved = [
         "full_excerpt_or_full_song_listening_coverage_not_proved",
-        "transcription_completeness_not_structured",
         "human_usefulness_is_not_accuracy_or_score_truth",
         "provider_control_is_not_score_ground_truth",
         "hidden_test_set_not_represented",
@@ -348,6 +389,10 @@ def _build_document(
     ]
     if reviewed_track_ids != agreement_track_ids:
         unresolved.insert(0, "cross_song_human_listening_coverage_incomplete")
+    if structured_coverage_count != len(reviews):
+        unresolved.insert(
+            1, "transcription_completeness_not_structured_for_every_window"
+        )
     return {
         "schema": SCHEMA,
         "status": "complete_human_listening_projection_not_acceptance",
@@ -365,8 +410,14 @@ def _build_document(
             "review_window_count": len(reviews),
             "reviewed_candidate_count": reviewed_candidate_count,
             "useful_for_focus_count": useful_count,
+            "structured_focus_phrase_coverage_window_count": (
+                structured_coverage_count
+            ),
             "all_reviews_classify_reference_line_for_written_focus": True,
             "all_reviews_record_candidate_usefulness_separately": True,
+            "all_reviews_record_focus_phrase_coverage": (
+                structured_coverage_count == len(reviews)
+            ),
             "all_reviewed_tracks_are_bound_to_normalized_excerpt": True,
             "cross_song_review_coverage_complete": (
                 reviewed_track_ids == agreement_track_ids
@@ -378,6 +429,7 @@ def _build_document(
             "useful_candidate_is_winner": False,
             "useful_candidate_is_complete_transcription": False,
             "human_result_is_accuracy_score": False,
+            "focus_phrase_coverage_is_note_recall": False,
             "agreement_is_ground_truth": False,
         },
         "publication_gate": {
@@ -429,6 +481,12 @@ def _build_document(
 def _review_window(item: _BoundReview) -> dict[str, Any]:
     review = item.review.document
     results = review["results"]
+    coverage_verified = (
+        review["policy"].get("human_focus_phrase_coverage_verified") is True
+    )
+    coverage = results.get("focus_phrase_coverage") or {
+        key: [] for key in sorted(_FOCUS_PHRASE_COVERAGE)
+    }
     return {
         "track_id": item.track_id,
         "source_track_id": item.source_track_id,
@@ -450,6 +508,10 @@ def _review_window(item: _BoundReview) -> dict[str, Any]:
             "reference_relationships": {
                 key: list(results["reference_relationships"][key])
                 for key in sorted(_REFERENCE_RELATIONSHIPS)
+            },
+            "focus_phrase_coverage_verified": coverage_verified,
+            "focus_phrase_coverage": {
+                key: list(coverage[key]) for key in sorted(_FOCUS_PHRASE_COVERAGE)
             },
         },
         "interpretation": (

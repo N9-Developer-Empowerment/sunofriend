@@ -47,6 +47,15 @@ def main() -> int:
             "rather than backing harmony"
         ),
     )
+    parser.add_argument(
+        "--classify-focus-phrase-coverage",
+        action="store_true",
+        help=(
+            "Require a separate human label for whether each candidate captures "
+            "substantially all, part, or little of the musical phrase named in "
+            "the focus"
+        ),
+    )
     parser.add_argument("--review")
     parser.add_argument("--out")
     parser.add_argument("--port", type=int, default=0)
@@ -71,6 +80,7 @@ def main() -> int:
             end_seconds=args.end_seconds,
             candidate_ids=args.candidate,
             classify_reference_line=args.classify_reference_line,
+            classify_focus_phrase_coverage=args.classify_focus_phrase_coverage,
             out=args.out,
         )
         print(
@@ -98,6 +108,7 @@ def main() -> int:
         end_seconds=args.end_seconds,
         candidate_ids=args.candidate,
         classify_reference_line=args.classify_reference_line,
+        classify_focus_phrase_coverage=args.classify_focus_phrase_coverage,
     )
     server = _VocalCandidateAuditionServer(context, port=args.port)
     print(
