@@ -1939,38 +1939,43 @@ PYTHONPATH=src ./.venv/bin/python \
 ```
 
 The current report has file SHA-256
-`33d64fc1eeeda3e552df2b60feebfa8268062aa5d70edc867834f9a3d42a0407`
+`66efeaa84a642bcc5b6d165cc46274d8c2fdf7b6dc945b204dc2d361d60c5c7e`
 and document SHA-256
-`94ec0cff29b2621614090c73c0c556b03abef9307656e1c4cf239b398347f39e`.
+`652c5b3c14a05678ca95830d649656c6e6541fcc0386ac1206cc54a1d3208cfb`.
 It binds both role-correct `I am a Alien mashup` windows to the matching song
 cell, covering 11 candidate auditions and five exact-focus usefulness results.
 It does not reinterpret those five as winners or complete transcriptions.
 
 This makes the listening gap precise rather than hiding it in prose. Human
 line identity and candidate usefulness are now projected for two observed
-windows on one of the two normalized songs. Cross-song listening coverage,
-full-excerpt or full-song coverage and a structured missed-note/completeness
-judgement remain open. In particular, the earlier listener's free-text note
-that the useful candidate still missed notes is deliberately not parsed into a
-machine quality label.
+windows on one of the two normalized songs. One of those two windows now also
+has structured phrase-completeness evidence. Cross-song listening coverage,
+full-excerpt or full-song coverage and structured completeness for every
+reviewed window remain open.
 
 The optional review contract now asks that question explicitly with
 `--classify-focus-phrase-coverage`. For every playable candidate, the listener
 must separately choose `substantially_complete`, `partially_complete`,
 `little_or_no_focus_line` or `cannot_tell`. This stays independent of source
-line identity and the existing useful/not-useful disposition. The current two
-resolutions predate that field, so the refreshed coverage report correctly
-records zero of two windows with structured phrase coverage and keeps
+line identity and the existing useful/not-useful disposition. A fresh review
+of the earlier window recorded four `partially_complete` candidates and two
+`little_or_no_focus_line` candidates; none was `substantially_complete`. Suno B
+`leaf-01` was the only candidate both useful for the focus and partially
+complete. The later-window resolution still predates this field, so the
+refreshed coverage report correctly records one of two windows with structured
+phrase coverage and keeps
 `transcription_completeness_not_structured_for_every_window` open. The next
-step is a fresh role-correct review, not interpretation of the old free text.
+step is a fresh later-window review, not interpretation of old free text.
 
 The browser now puts the enabled review purpose in the page and browser-tab
 title, states the required independent decisions above the players and exports
 a purpose-and-window-specific filename such as
 `vocal-line-and-phrase-completeness-3450-6850.reviewed.json`. This prevents a
 generic export from an older open tab being mistaken for the new structured
-review. The resolver still verifies the exact seed and fails closed if an old
-export is supplied; the filename is navigation help, not evidence.
+review. An older open tab may still download under a generic name, as happened
+for the completed earlier-window review. The resolver nevertheless verifies
+the exact seed, candidate set, window and evidence hashes and fails closed if
+the contents do not match; the filename is navigation help, not evidence.
 
 ### Current private human-review queue
 
@@ -2065,6 +2070,22 @@ the path-free resolution document SHA-256 is
 `a96a0e462359070f923105b4b64537a8c0ebe4634b1250b39485d14ae1b218c7`.
 This resolves the outstanding review queue but does not make Suno B a winner,
 complete transcription, automatic merge source, default or product route.
+
+A fresh structured repeat of that earlier window is also complete. It retained
+the same six-candidate scope and independently asked about source-line
+relationship, usefulness and focus-phrase coverage. Suno B `leaf-01` remained
+the only useful candidate and was classified `partially_complete`, not
+`substantially_complete`. Kim primary and Moises leaf 01 were classified
+`little_or_no_focus_line`; Kim lowest-line, Moises leaf 02 and Suno A leaf 01
+were `partially_complete` but not useful for the exact focus. The reviewed
+export file SHA-256 is
+`c3ab7186a9deb1ed6e7af0cea76a3552f1f734157ec9055db22951a38ad3554c`.
+The verified resolution has file SHA-256
+`3834cdaa4b6a54c385bd7bc7ad4650cfe3b727cd80755a86242000b70e1cb184`
+and document SHA-256
+`173dbb800ee1d0bc64a1ff885fdd125aa064ef076dc0ff4c7ae53ec14a4de1e9`.
+Its status is `complete_review_no_activation`: no candidate was selected,
+merged, repaired, promoted or made production-eligible.
 
 The reusable owner-only command is:
 

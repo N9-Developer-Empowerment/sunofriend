@@ -2367,14 +2367,19 @@ separator transport, source-lineage import and promotion are not implemented**
     mashup`, 11 candidate auditions and five exact-focus usefulness results.
     It separately preserves source-line classification and MIDI usefulness,
     copies no free-text notes and keeps the gate open because `Be Alone`,
-    full-song coverage and structured missed-note completeness remain absent.
+    full-song coverage and structured completeness for every reviewed window
+    remain absent.
     - [x] Add an opt-in focus-phrase coverage question to the sealed browser
       review and resolver. It records `substantially_complete`,
       `partially_complete`, `little_or_no_focus_line` or `cannot_tell`
       separately from line identity and usefulness, and gives no repair,
       ranking, selection or activation permission.
     - [ ] Complete fresh role-correct reviews with that question and regenerate
-      the listening projection. Existing free-text missed-note feedback remains
+      the listening projection. The earlier 3.45–6.85 second repeat is complete:
+      no candidate was substantially complete, four were partially complete,
+      two contained little or none of the focus line, and Suno B leaf 01 was the
+      only useful partial candidate. The later 9.20–14.95 second structured
+      repeat remains outstanding. Existing free-text missed-note feedback stays
       human context rather than a machine label.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
 - [x] Repeat the clean/estimate comparison through exact production
@@ -2567,6 +2572,11 @@ separator transport, source-lineage import and promotion are not implemented**
   qualification that it misses some notes. Preserve that incompleteness: this
   is a usable partial candidate, not a winner, complete melody, merge input or
   activation decision.
+- [x] Repeat that earlier review with the structured focus-phrase coverage
+  question. Suno B leaf 01 remained the only useful candidate and was
+  `partially_complete`; none of the six candidates was
+  `substantially_complete`. This confirms the earlier qualification without
+  parsing free text and grants no selection, merge, repair or activation.
 - [x] Compare every supplied leaf inside composite `other` across both
   authorised excerpts using bidirectional audio rankings. Exact and semantic
   labels remain observations only. Keyboard was the only stable Suno pair on

@@ -1777,9 +1777,14 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   the comparison did not find.
 - The role-correct earlier-phrase repeat from 3.45 to 6.85 seconds is complete.
   Only Suno B leaf 01 was useful for the principal-lead focus, and the listener
-  explicitly reported that it still misses notes. Treat it as a useful partial
-  candidate, not a winner, complete melody, automatic merge source, default or
-  product route. The five other heard candidates remain preserved.
+  explicitly reported that it still misses notes. A fresh structured repeat
+  confirmed it as `partially_complete`, not `substantially_complete`; none of
+  the six candidates was substantially complete. Kim primary and Moises leaf
+  01 had little or none of the focus line, while Kim lowest-line, Moises leaf
+  02 and Suno A leaf 01 were partial but not useful for the exact focus. Treat
+  Suno B as a useful partial candidate, not a winner, complete melody,
+  automatic merge source, default or product route. The five other heard
+  candidates remain preserved.
 - `scripts/private-reviewed-vocal-geometry.py` is an owner-only diagnostic for
   two or more candidates already marked useful in one exact sealed review. It
   reconstructs that scope, verifies the note evidence and reports pairwise
@@ -1821,10 +1826,11 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   phrase-completeness review and include the exact millisecond window, so use
   that current export rather than a generic export from an older browser tab.
   The verifier, not the filename, authenticates the exact review seed. Do not
-  infer that label from notes or usefulness. The current
-  evidence covers two phrase windows on only one of two normalized songs and
-  predates the structured question. Keep cross-song listening, full-song
-  coverage and reviewed phrase completeness open before publication.
+  infer that label from notes or usefulness. The current evidence covers two
+  phrase windows on only one of two normalized songs. The earlier window has
+  structured phrase coverage; the later window still predates that question.
+  Keep cross-song listening, full-song coverage and structured completeness for
+  every reviewed window open before publication.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,
