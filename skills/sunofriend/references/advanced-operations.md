@@ -1774,7 +1774,14 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   every pair at 80 ms, with 0 ms median onset error and at most 23.22 ms p95
   onset error. In this phrase the useful candidates are near-duplicates around
   one common melody backbone, so do not merge them in search of detail that
-  the comparison did not find.
+  the comparison did not find. A subsequent structured repeat asked separately
+  about source line, focus-phrase completeness and MIDI usefulness. Its
+  authoritative second pass marked Kim primary, both Moises lead adapters and
+  Suno A leaf 01 substantially complete and useful, while Suno B leaf 01 was
+  `cannot_tell` for all three questions. Moises leaf 01's reference remained a
+  different line even though its MIDI was useful for the written focus. Treat
+  the structured second pass as current coverage evidence, retain the first
+  pass as superseded history and never infer one human label from another.
 - The role-correct earlier-phrase repeat from 3.45 to 6.85 seconds is complete.
   Only Suno B leaf 01 was useful for the principal-lead focus, and the listener
   explicitly reported that it still misses notes. A fresh structured repeat
@@ -1827,10 +1834,10 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   that current export rather than a generic export from an older browser tab.
   The verifier, not the filename, authenticates the exact review seed. Do not
   infer that label from notes or usefulness. The current evidence covers two
-  phrase windows on only one of two normalized songs. The earlier window has
-  structured phrase coverage; the later window still predates that question.
-  Keep cross-song listening, full-song coverage and structured completeness for
-  every reviewed window open before publication.
+  phrase windows on only one of two normalized songs, and both windows have
+  structured phrase coverage. Keep cross-song listening and full-song coverage
+  open before publication; the next review gap is the song-disjoint `Be Alone`
+  cell rather than another repeat of those two windows.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,

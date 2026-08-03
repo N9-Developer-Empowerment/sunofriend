@@ -2363,24 +2363,27 @@ separator transport, source-lineage import and promotion are not implemented**
     parent corpus and publication gates remain open.
   - [x] Bind completed focus-relative human listening to that normalized song
     evidence without treating usefulness as accuracy. The first path-free
-    projection covers two principal-lead phrase windows on `I am a Alien
-    mashup`, 11 candidate auditions and five exact-focus usefulness results.
-    It separately preserves source-line classification and MIDI usefulness,
-    copies no free-text notes and keeps the gate open because `Be Alone`,
-    full-song coverage and structured completeness for every reviewed window
-    remain absent.
+    projection now covers two structured principal-lead phrase windows on `I
+    am a Alien mashup`, 11 candidate auditions and five exact-focus usefulness
+    results. It separately preserves source-line classification, completeness
+    and MIDI usefulness, copies no free-text notes and keeps the gate open
+    because `Be Alone` and full-song coverage remain absent.
     - [x] Add an opt-in focus-phrase coverage question to the sealed browser
       review and resolver. It records `substantially_complete`,
       `partially_complete`, `little_or_no_focus_line` or `cannot_tell`
       separately from line identity and usefulness, and gives no repair,
       ranking, selection or activation permission.
-    - [ ] Complete fresh role-correct reviews with that question and regenerate
+    - [x] Complete fresh role-correct reviews with that question and regenerate
       the listening projection. The earlier 3.45–6.85 second repeat is complete:
       no candidate was substantially complete, four were partially complete,
       two contained little or none of the focus line, and Suno B leaf 01 was the
-      only useful partial candidate. The later 9.20–14.95 second structured
-      repeat remains outstanding. Existing free-text missed-note feedback stays
-      human context rather than a machine label.
+      only useful partial candidate. In the authoritative later 9.20–14.95
+      second repeat, Kim primary, both Moises lead adapters and Suno A leaf 01
+      were substantially complete and useful; Suno B leaf 01 was `cannot_tell`.
+      The first later-window export is retained as superseded history after the
+      listener's second pass. Existing free-text feedback stays human context
+      rather than a machine label. The next review gap is the song-disjoint `Be
+      Alone` cell.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
 - [x] Repeat the clean/estimate comparison through exact production
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation
@@ -2577,6 +2580,13 @@ separator transport, source-lineage import and promotion are not implemented**
   `partially_complete`; none of the six candidates was
   `substantially_complete`. This confirms the earlier qualification without
   parsing free text and grants no selection, merge, repair or activation.
+- [x] Repeat the later 9.20–14.95 second review with the same structured
+  question. The authoritative second pass marked Kim primary, both Moises
+  lead adapters and Suno A leaf 01 substantially complete and useful; Suno B
+  leaf 01 was `cannot_tell` for line, completeness and usefulness. Moises leaf
+  01's source reference was a different line while its MIDI was still marked
+  useful for the written focus, so line identity and MIDI usefulness remain
+  separate evidence. This grants no ranking, merge, repair or activation.
 - [x] Compare every supplied leaf inside composite `other` across both
   authorised excerpts using bidirectional audio rankings. Exact and semantic
   labels remain observations only. Keyboard was the only stable Suno pair on

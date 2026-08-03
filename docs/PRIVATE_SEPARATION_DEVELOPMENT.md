@@ -1939,19 +1939,18 @@ PYTHONPATH=src ./.venv/bin/python \
 ```
 
 The current report has file SHA-256
-`66efeaa84a642bcc5b6d165cc46274d8c2fdf7b6dc945b204dc2d361d60c5c7e`
+`27c8f07766db4f3991145364f4ea5bf5dc2f219852612698f714c5d68514a0bf`
 and document SHA-256
-`652c5b3c14a05678ca95830d649656c6e6541fcc0386ac1206cc54a1d3208cfb`.
+`acdd235184a86a0529efbe6e723d9cf0c43bb7d42fa14525846133435e5a99fe`.
 It binds both role-correct `I am a Alien mashup` windows to the matching song
 cell, covering 11 candidate auditions and five exact-focus usefulness results.
 It does not reinterpret those five as winners or complete transcriptions.
 
 This makes the listening gap precise rather than hiding it in prose. Human
 line identity and candidate usefulness are now projected for two observed
-windows on one of the two normalized songs. One of those two windows now also
-has structured phrase-completeness evidence. Cross-song listening coverage,
-full-excerpt or full-song coverage and structured completeness for every
-reviewed window remain open.
+windows on one of the two normalized songs. Both windows now have structured
+phrase-completeness evidence. Cross-song listening coverage and full-excerpt
+or full-song coverage remain open.
 
 The optional review contract now asks that question explicitly with
 `--classify-focus-phrase-coverage`. For every playable candidate, the listener
@@ -1961,11 +1960,14 @@ line identity and the existing useful/not-useful disposition. A fresh review
 of the earlier window recorded four `partially_complete` candidates and two
 `little_or_no_focus_line` candidates; none was `substantially_complete`. Suno B
 `leaf-01` was the only candidate both useful for the focus and partially
-complete. The later-window resolution still predates this field, so the
-refreshed coverage report correctly records one of two windows with structured
-phrase coverage and keeps
-`transcription_completeness_not_structured_for_every_window` open. The next
-step is a fresh later-window review, not interpretation of old free text.
+complete. The authoritative later-window repeat classified Kim primary,
+Moises leaf 01, Moises leaf 02 and Suno A leaf 01 as substantially complete
+and useful for the focus; Suno B leaf 01 was `cannot_tell` for source line,
+completeness and usefulness. Moises leaf 01's reference was classified as a
+different line even though its MIDI was still marked substantially complete
+and useful for the written focus. Preserve those independent human judgements
+rather than inferring one from another. The next listening gap is the
+song-disjoint `Be Alone` cell, not another `I am a Alien mashup` repeat.
 
 The browser now puts the enabled review purpose in the page and browser-tab
 title, states the required independent decisions above the players and exports
@@ -2086,6 +2088,23 @@ and document SHA-256
 `173dbb800ee1d0bc64a1ff885fdd125aa064ef076dc0ff4c7ae53ec14a4de1e9`.
 Its status is `complete_review_no_activation`: no candidate was selected,
 merged, repaired, promoted or made production-eligible.
+
+The later 9.20–14.95 second phrase now has the same structured review. The
+first complete export is retained as superseded history because the listener
+made a second pass over the same exact seed. The later export is authoritative:
+Kim primary, Moises leaf 01, Moises leaf 02 and Suno A leaf 01 were each marked
+`substantially_complete` and useful for the principal-lead focus. Suno B leaf
+01 was `cannot_tell` for source-line relationship, phrase completeness and
+usefulness. Moises leaf 01's reference was classified as a different line even
+though its MIDI was marked substantially complete and useful; those are
+separate human questions and are preserved without reinterpretation. The
+authoritative export file SHA-256 is
+`21e6ec91e5b09c2d5e449905427986d793e0aeb60d46856fa2c74128d290f044`.
+The verified resolution has file SHA-256
+`a2f52c99a758d6022568c85c58461b21fc263e1c36cac31f1ac5e88fe8c520d7`
+and document SHA-256
+`79e1f2cf72e8037c5d5dde8cc0bbb26ccbc39a496eca870c3e83f2ecfe937b23`.
+It selected, merged, repaired and activated nothing.
 
 The reusable owner-only command is:
 
