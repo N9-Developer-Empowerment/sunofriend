@@ -354,13 +354,18 @@ lease terminalization. Dependency-substituted success and pre-release failure
 tests prove the fixed order and cleanup only. They did not start the native
 worker or open a checkpoint, model, source, audio or staging tree.
 
-The next blocker is narrower but material: the session currently binds a
-resolved `sys.executable`, which can turn a virtual-environment launcher into
-the base Python executable and lose the MLX package environment. The exact
-launcher, resolved process image and both runtime roots must be measured and
-transported separately. Proven-no-start and mixed cleanup-failure receipts
-also remain outstanding. None of these changes the active subprocess route or
-enables a product route.
+The session now binds the exact virtual-environment launcher separately from
+its resolved process image and base-runtime root, and the coordinator emits
+disjoint path-free receipts for a proved no-child outcome versus a started,
+completely drained and exactly reaped owner. A private one-shot transport owner
+now supplies the exact fd3 request file and paired fd4 writer/reader around
+that coordinator. It uses a separate fresh owner-only transport directory,
+removes it after success or failure and never deletes the output staging tree.
+The wrapper's tests substitute the coordinator, so no checkpoint, model, audio
+or native process was opened. The remaining next step is to construct the
+exact accepted real-checkpoint inspection/lease/V2 authority chain and run one
+unchanged authorised excerpt through the composed path. None of this changes
+the active subprocess route or enables a product route.
 
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \

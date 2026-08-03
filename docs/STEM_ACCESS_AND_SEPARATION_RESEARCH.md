@@ -148,7 +148,14 @@ code-owned no-child start, and one only for a started owner after complete
 group drain, exact reap and ownership release. Both preserve safe cleanup stage
 codes in observed order while excluding exception text, private paths and raw
 process identity; an unproven start or incomplete reap receives no receipt.
-No product route is enabled.
+One private one-shot wrapper now also owns the fd3/fd4 transport-file assembly:
+it creates a fresh owner-only directory, binds the exact framed request and a
+single empty result inode with distinct writer/reader descriptors, invokes
+only that fixed coordinator, and removes the transport files after success or
+failure without touching output staging. Its tests substitute the coordinator;
+no checkpoint, process, model or audio was opened. The remaining next boundary
+is the exact real-checkpoint inspection/lease/V2 authority chain followed by
+one authorised live excerpt. No product route is enabled.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on

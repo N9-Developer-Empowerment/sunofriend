@@ -1687,8 +1687,13 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   static-session evidence only. Exact code-owned no-child starts and started
   owners that are completely drained and exactly reaped now have separate
   inert path-free receipts. Both preserve ordered safe cleanup stage codes
-  without exception text; unproven start or incomplete reap has no receipt.
-  No separator route is enabled.
+  without exception text; unproven start or incomplete reap has no receipt. A
+  private one-shot wrapper now creates and removes the exact owner-only fd3/fd4
+  transport files around that coordinator, including distinct writer/reader
+  descriptions for one result inode. Its tests substitute the coordinator and
+  do not open the checkpoint, model or audio. The accepted real-checkpoint
+  inspection/lease/V2 authority chain and one fresh authorised live run remain
+  outstanding. No separator route is enabled.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory

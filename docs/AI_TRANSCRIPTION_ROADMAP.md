@@ -1704,6 +1704,40 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-03 — one-shot native transport owner composed, not run
+
+- Goal: remove the last ad hoc caller responsibility for fd3 request and fd4
+  result-file assembly before attempting the fixed private Kim coordinator.
+- Change or experiment: added one developer-only wrapper that requires the
+  already-issued checkpoint lease/reservation, V2 record, session and
+  observations; creates a fresh owner-only transport directory through
+  directory-relative operations; writes and reopens the exact framed request;
+  supplies distinct write/read descriptions for one empty result inode; calls
+  only the fixed coordinator; and removes both frames and the directory after
+  success or failure. It preserves the coordinator's original exception if
+  cleanup also fails and never deletes the separate output staging tree.
+- Inputs: canonical in-memory private Kim requests and dependency-substituted
+  coordinator outcomes. No native process, checkpoint, model, source audio or
+  output staging content was opened.
+- Model/runtime/checkpoint: no backend import or inference occurred.
+- Evidence and metrics: five focused one-shot tests and 36 related
+  session/coordinator tests pass. They prove the exact request bytes, shared
+  result inode, distinct non-inheritable descriptor roles, coordinator
+  argument identity, cleanup after coordinator-owned descriptor close,
+  preservation of the primary failure, rejection of a non-private transport
+  parent and absence from public CLI/TUI command sets. Ruff passes.
+- Listening result: not applicable; this increment produced no audio.
+- Decision: retain this helper as the sole future transport-file owner around
+  the fixed coordinator. It is not a public runner, trust-record constructor
+  or separation-quality claim.
+- Problems/risks: a real authorised run still needs the exact accepted
+  safetensors inspection/lease and V2 facade composed around the existing
+  approved Kim checkpoint. Pathname-to-`exec` TOCTOU, incomplete dyld
+  shared-cache coverage and transient native loads remain open.
+- Next smallest step: construct the exact private real-checkpoint authority
+  chain, then run the unchanged authorised `Be Alone` excerpt once through
+  this one-shot boundary outside the Codex sandbox.
+
 ### 2026-08-03 — native failure receipts made disjoint, not run
 
 - Goal: make the fixed private Kim coordinator explain failure without
