@@ -1964,6 +1964,14 @@ records zero of two windows with structured phrase coverage and keeps
 `transcription_completeness_not_structured_for_every_window` open. The next
 step is a fresh role-correct review, not interpretation of the old free text.
 
+The browser now puts the enabled review purpose in the page and browser-tab
+title, states the required independent decisions above the players and exports
+a purpose-and-window-specific filename such as
+`vocal-line-and-phrase-completeness-3450-6850.reviewed.json`. This prevents a
+generic export from an older open tab being mistaken for the new structured
+review. The resolver still verifies the exact seed and fails closed if an old
+export is supplied; the filename is navigation help, not evidence.
+
 ### Current private human-review queue
 
 As of 3 August 2026, the first scoped `I am a Alien mashup` review is complete.

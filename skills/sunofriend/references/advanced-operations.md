@@ -1817,7 +1817,11 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   accuracy. Private vocal auditions can opt into
   `--classify-focus-phrase-coverage`; this requires a separate structured label
   for substantially complete, partially complete, little/no focus line or
-  cannot tell. Do not infer that label from notes or usefulness. The current
+  cannot tell. The page title and exported filename identify this as a
+  phrase-completeness review and include the exact millisecond window, so use
+  that current export rather than a generic export from an older browser tab.
+  The verifier, not the filename, authenticates the exact review seed. Do not
+  infer that label from notes or usefulness. The current
   evidence covers two phrase windows on only one of two normalized songs and
   predates the structured question. Keep cross-song listening, full-song
   coverage and reviewed phrase completeness open before publication.

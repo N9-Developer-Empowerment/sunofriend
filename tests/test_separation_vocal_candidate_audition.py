@@ -373,6 +373,8 @@ def test_loopback_server_serves_verified_range_and_writes_nothing(
         excerpt_file_sha256="b" * 64,
         focus="Follow the intended lead melody",
         candidate_media=media,
+        classify_reference_line=True,
+        classify_focus_phrase_coverage=True,
     )
     context = audition._AuditionContext(
         candidate_set_path=tmp_path / "inventory.json",
@@ -406,6 +408,11 @@ def test_loopback_server_serves_verified_range_and_writes_nothing(
             assert "Classify the reference voice" not in html
             assert "structured missing-note question" in html
             assert "How much of the focus phrase is captured?" in html
+            assert "Vocal line and phrase-completeness review" in html
+            assert "make three separate decisions" in html
+            assert (
+                "vocal-line-and-phrase-completeness-0-15000.reviewed.json" in html
+            )
             assert "JSON.stringify(review,null,2)+'\\n'" in html
             assert "localStorage" not in html
             assert str(tmp_path) not in html
