@@ -1704,6 +1704,44 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-03 — disjoint native execution-to-MIDI repeat completed
+
+- Goal: determine whether fixed native execution and downstream MIDI parity
+  repeat on a second song without confusing engineering reproducibility with
+  melody or singer correctness.
+- Change or experiment: ran the same composed Kim native chain on the already
+  authorised `I am a Alien mashup` 219–234-second excerpt, then supplied its
+  sealed native evidence to the unchanged 114 BPM four-control vocal evaluator.
+- Inputs: independent authorised source/report and independent local HTDemucs,
+  Moises, Suno A and Suno B control evidence for the same 15-second window.
+- Model/runtime/checkpoint: identical fixed native runtime, source/companion
+  tree and 456,483,463-byte Kim Vocal 2 checkpoint; GPU mode remained explicit.
+- Evidence and metrics: total through output evidence was 11.299359 seconds,
+  including 9.671387 seconds in `native_one_shot`, 1.205779 in session open,
+  0.207415 in lease acquisition and 0.193225 in fd5 reservation. Timing
+  self-hash:
+  `96ffa4e7637ee91c0993c54f110866c4d6a8992eb5263f7c0564792cf8907334`.
+  The primary contains 23 notes and has MIDI SHA-256
+  `776a07c43bdddbde585736e039f202ab8df13ed50d54750e6e83969aa39747e5`,
+  byte-identical to both earlier Kim evaluations for this excerpt. Exact-pitch/
+  onset F1 is 0.8889 against local HTDemucs, 0.9130 against Moises, 0.8444
+  against Suno A and 0.7727 against Suno B. Evaluation canonical SHA-256:
+  `3fc213fe3ad5e929f0f5a176373743f28dcbe67075ed6a272879a7dd854bfccf`.
+- Listening result: the existing blind review already covers this exact MIDI
+  and resolved to `neither`; both candidates tracked female backing vocals
+  rather than the intended male lead in the mixed reference.
+- Decision: accept a narrow two-song engineering result: fixed native output
+  reaches reproducible downstream MIDI. Do not accept separator musical quality
+  or activate a route, because voice/line assignment failed the human goal on
+  the disjoint song.
+- Problems/risks: agreement among estimated provider controls can be high while
+  every candidate follows the wrong singer. Transcription reproducibility does
+  not solve semantic source selection.
+- Next smallest step: preserve Kim as an inactive vocal candidate and focus the
+  next quality increment on singer/line selection evidence, using the existing
+  primary-versus-lowest and phrase-completeness work rather than changing the
+  separator or repeating identical A/B audio.
+
 ### 2026-08-03 — coarse native timing bound without benchmark claims
 
 - Goal: locate the large outer runtime variation without adding paths, process

@@ -436,6 +436,28 @@ unchanged downstream evaluator again produced byte-identical primary MIDI
 Broader cross-song execution and listening remain before any integration
 decision.
 
+That cross-song execution repeat is now complete on the already authorised
+`I am a Alien mashup` 219–234-second excerpt. The exact same native chain
+completed through output evidence in 11.299359 seconds: 9.671387 seconds in
+the coarse one-shot and 1.205779 seconds opening the session, with all other
+outer stages below 0.21 seconds. Timing self-hash:
+`96ffa4e7637ee91c0993c54f110866c4d6a8992eb5263f7c0564792cf8907334`.
+The unchanged 114 BPM downstream evaluator produced 23 primary notes and MIDI
+SHA-256
+`776a07c43bdddbde585736e039f202ab8df13ed50d54750e6e83969aa39747e5`,
+byte-identical to both earlier Kim evaluations of that song. Exact-pitch/onset
+F1 was 0.8889 against local HTDemucs, 0.9130 against Moises, 0.8444 against
+Suno A and 0.7727 against Suno B. Those comparisons show reproducible relative
+agreement, not score truth.
+
+The existing blind review already heard this exact MIDI and resolved it to
+`neither`: both anonymous candidates followed the female backing vocal rather
+than the intended male lead in the mixed reference. No duplicate review is
+needed. The cross-song result therefore clears execution-to-MIDI reproducibility
+but confirms that voice/line assignment remains a musical-quality blocker.
+Do not activate Kim, infer singer identity or expose a product route from these
+engineering results.
+
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \
   --fixture-out work/separation-bakeoff/demo-fixture-v2 \

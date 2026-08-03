@@ -194,6 +194,14 @@ benchmark claim. Its one-shot span still combines model work with transport,
 observation, verification and terminal cleanup, so finer profiling would need a
 new security-preserving inner boundary. The repeat changed PCM24 stem samples
 by at most one LSB and again yielded the same byte-identical primary MIDI.
+The disjoint authorised `I am a Alien mashup` repeat then completed in
+11.299359 seconds and yielded a 23-note primary MIDI byte-identical to both
+earlier Kim observations for that song. This clears a narrow cross-song
+execution-to-MIDI reproducibility gate. It does not clear listening quality:
+the existing blind review of that exact MIDI resolved to `neither` because the
+candidates followed the female backing vocal instead of the intended male
+lead. Voice/line assignment therefore remains an explicit blocker even where
+provider-control MIDI agreement is high.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on

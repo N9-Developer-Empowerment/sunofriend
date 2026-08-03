@@ -1723,6 +1723,13 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   inference from the one-shot's transport, observation, verification and
   cleanup. Cross-song execution and listening still precede any acceptance or
   integration decision, and no separator route is enabled.
+  The disjoint `I am a Alien mashup` native repeat subsequently completed in
+  11.299359 seconds and produced the same byte-identical 23-note primary MIDI
+  as both earlier Kim runs for that excerpt. This clears only cross-song
+  execution-to-MIDI reproducibility. Its existing blind review resolved to
+  `neither` because the MIDI followed the female backing vocal rather than the
+  intended male lead. Keep voice/line assignment as a quality blocker and do
+  not activate Kim or infer singer identity from provider-control agreement.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory
