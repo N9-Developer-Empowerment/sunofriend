@@ -2487,6 +2487,14 @@ separator transport, source-lineage import and promotion are not implemented**
   and primary as not useful for the stated male-lead focus, without selecting,
   merging, repairing or activating either candidate. The other 15 inventory
   candidates remain unaffected.
+- [x] Bind scoped audition availability to the sealed note evidence inside the
+  exact review window, not the candidate's complete-excerpt note count. The
+  adapter descriptor-opens and rehashes the note JSON, validates all note
+  intervals and reports scoped versus complete counts. A globally non-empty
+  candidate with zero overlapping notes stays preserved but is unavailable in
+  that scope. The later 9.20–14.95 second source-relative review therefore
+  offers only Kim primary's 17 overlapping notes; the locally silent
+  lowest-line evidence is not turned into a misleading A/B choice.
 - [x] Compare every supplied leaf inside composite `other` across both
   authorised excerpts using bidirectional audio rankings. Exact and semantic
   labels remain observations only. Keyboard was the only stable Suno pair on

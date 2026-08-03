@@ -52,6 +52,7 @@ def test_scoped_review_uses_explicit_window_and_subset_without_rejecting_omissio
     tmp_path: Path,
 ) -> None:
     inventory, excerpt, media = _evidence(tmp_path)
+    notes = _note_evidence(tmp_path)
     scope = audition._review_scope(
         inventory,
         excerpt,
@@ -67,16 +68,71 @@ def test_scoped_review_uses_explicit_window_and_subset_without_rejecting_omissio
         excerpt_file_sha256="b" * 64,
         focus="Follow the intended male lead in this phrase",
         candidate_media=media,
+        candidate_notes=notes,
         scope=scope,
     )
 
     assert seed["scope"]["candidate_ids"] == ["candidate-1"]
     assert seed["scope"]["omitted_candidate_count"] == 1
     assert seed["summary"]["candidate_count"] == 1
+    assert seed["summary"]["audition_available_count"] == 1
+    assert seed["choices"][0]["scope_note_count"] == 3
+    assert seed["choices"][0]["note_count"] == 4
     assert seed["inventory_summary"]["candidate_count"] == 2
     assert seed["policy"]["candidate_subset_is_explicit"] is True
     assert seed["policy"]["omitted_candidates_ranked_or_rejected"] is False
     assert [row["candidate_id"] for row in seed["choices"]] == ["candidate-1"]
+
+
+def test_scoped_review_does_not_offer_globally_nonempty_locally_silent_candidate(
+    tmp_path: Path,
+) -> None:
+    inventory, excerpt, media = _evidence(tmp_path)
+    notes = _note_evidence(tmp_path)
+    scope = audition._review_scope(
+        inventory,
+        excerpt,
+        start_seconds=10.0,
+        end_seconds=11.0,
+        candidate_ids=("candidate-1",),
+    )
+
+    seed = audition._review_seed(
+        inventory,
+        candidate_set_file_sha256="a" * 64,
+        excerpt=excerpt,
+        excerpt_file_sha256="b" * 64,
+        focus="Follow the intended male lead in this phrase",
+        candidate_media=media,
+        candidate_notes=notes,
+        scope=scope,
+    )
+
+    assert seed["summary"]["audition_available_count"] == 0
+    assert seed["summary"]["no_note_evidence_in_scope_count"] == 1
+    assert seed["choices"][0]["note_count"] == 4
+    assert seed["choices"][0]["scope_note_count"] == 0
+    assert seed["choices"][0]["inventory_audition_state"] == "available"
+    assert seed["choices"][0]["audition_state"] == "no_note_evidence_in_scope"
+    assert seed["choices"][0]["candidate_render"] is not None
+    assert seed["choices"][0]["disposition"] == "unavailable"
+
+
+def test_scoped_review_rejects_changed_note_evidence(tmp_path: Path) -> None:
+    inventory, excerpt, media = _evidence(tmp_path)
+    notes = _note_evidence(tmp_path)
+    (tmp_path / "candidate-1.notes.json").write_text("{}", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="note evidence geometry differs"):
+        audition._review_seed(
+            inventory,
+            candidate_set_file_sha256="a" * 64,
+            excerpt=excerpt,
+            excerpt_file_sha256="b" * 64,
+            focus="Follow the intended male lead in this phrase",
+            candidate_media=media,
+            candidate_notes=notes,
+        )
 
 
 @pytest.mark.parametrize(
@@ -115,9 +171,7 @@ def test_complete_review_keeps_multiple_useful_candidates() -> None:
     for index, row in enumerate(review["choices"]):
         row["heard_reference"] = True
         row["heard_candidate"] = True
-        row["disposition"] = (
-            "useful_for_focus" if index < 2 else "cannot_tell"
-        )
+        row["disposition"] = "useful_for_focus" if index < 2 else "cannot_tell"
 
     result = audition._verify_review_document(seed, review)
 
@@ -209,6 +263,7 @@ def test_loopback_server_serves_verified_range_and_writes_nothing(
         focus="Follow the intended lead melody",
         seed=seed,
         candidate_media=media,
+        candidate_notes={},
     )
     server = audition._VocalCandidateAuditionServer(context)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -277,6 +332,7 @@ def test_loopback_server_fails_closed_after_media_change(tmp_path: Path) -> None
         focus="Follow the intended lead melody",
         seed=seed,
         candidate_media=media,
+        candidate_notes={},
     )
     server = audition._VocalCandidateAuditionServer(context)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -294,6 +350,49 @@ def test_loopback_server_fails_closed_after_media_change(tmp_path: Path) -> None
         server.shutdown()
         server.server_close()
         thread.join(timeout=2)
+
+
+def test_loopback_server_does_not_register_locally_silent_candidate(
+    tmp_path: Path,
+) -> None:
+    inventory, excerpt, media = _evidence(tmp_path)
+    notes = _note_evidence(tmp_path)
+    scope = audition._review_scope(
+        inventory,
+        excerpt,
+        start_seconds=10.0,
+        end_seconds=11.0,
+        candidate_ids=("candidate-1",),
+    )
+    seed = audition._review_seed(
+        inventory,
+        candidate_set_file_sha256="a" * 64,
+        excerpt=excerpt,
+        excerpt_file_sha256="b" * 64,
+        focus="Follow the intended male lead in this phrase",
+        candidate_media=media,
+        candidate_notes=notes,
+        scope=scope,
+    )
+    context = audition._AuditionContext(
+        candidate_set_path=tmp_path / "inventory.json",
+        candidate_set_file_sha256="a" * 64,
+        candidate_set=inventory,
+        excerpt_path=tmp_path / "excerpt.json",
+        excerpt_file_sha256="b" * 64,
+        excerpt=excerpt,
+        focus="Follow the intended male lead in this phrase",
+        seed=seed,
+        candidate_media=media,
+        candidate_notes=notes,
+    )
+
+    server = audition._VocalCandidateAuditionServer(context)
+    try:
+        assert server.candidate_urls == {}
+        assert server.media == {}
+    finally:
+        server.server_close()
 
 
 def test_descriptor_walk_rejects_intermediate_symlink(tmp_path: Path) -> None:
@@ -362,6 +461,7 @@ def test_resolution_is_fresh_private_and_never_selects(
         focus=seed["focus"],
         seed=seed,
         candidate_media={},
+        candidate_notes={},
     )
     monkeypatch.setattr(audition, "_load_audition_context", lambda *a, **k: context)
     monkeypatch.setattr(audition, "_reverify_context", lambda _: None)
@@ -472,6 +572,33 @@ def _evidence(
         "candidate-zero": (None, None),
     }
     return inventory, excerpt, media
+
+
+def _note_evidence(
+    tmp_path: Path,
+) -> dict[str, audition._VerifiedNoteEvidence | None]:
+    path = tmp_path / "candidate-1.notes.json"
+    path.write_text(
+        json.dumps(
+            {
+                "notes": [
+                    {"start_seconds": 1.0, "end_seconds": 1.5},
+                    {"start_seconds": 3.5, "end_seconds": 3.8},
+                    {"start_seconds": 5.0, "end_seconds": 5.5},
+                    {"start_seconds": 6.8, "end_seconds": 7.2},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    evidence = audition._VerifiedNoteEvidence(
+        root=tmp_path,
+        relative_path=path.name,
+        sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+        size=path.stat().st_size,
+        label="candidate notes",
+    )
+    return {"candidate-1": evidence, "candidate-zero": None}
 
 
 def _three_available_seed() -> dict[str, object]:

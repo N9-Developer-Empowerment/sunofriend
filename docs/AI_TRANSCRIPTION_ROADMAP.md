@@ -3167,6 +3167,31 @@ Each working day should aim for one narrow vertical improvement:
   phrase question justifies the listening effort; separately continue the S3
   execution-path and independent-backend gates before any S4 Studio route.
 
+### 2026-08-03 — review-window note-evidence gate
+
+- Goal: prevent a phrase review from treating a candidate as playable merely
+  because it has notes somewhere else in the complete excerpt.
+- Change or experiment: the private audition now reopens and rehashes every
+  included candidate's sealed note JSON, validates every note interval and
+  counts only notes overlapping the explicit review window. The page reports
+  the scoped and complete counts separately. A globally non-empty but locally
+  silent candidate remains preserved but is unavailable for that scope and
+  requires no listening disposition.
+- Inputs: the unchanged `I am a Alien mashup` candidate inventory and its exact
+  MelRoFormer, vocal-leaf, phrase-completeness and authorised-excerpt chain.
+  No separation, transcription, MIDI repair or audio rendering was rerun.
+- Evidence and metrics: the later 9.20–14.95 second window contains 17 of the
+  unchanged Kim primary candidate's 23 notes. The lowest-line candidate has no
+  notes in this window and is therefore not a meaningful A/B comparator. The
+  pending source-relative review includes only `kim/primary`; all other 16
+  candidates remain sealed, unranked and unaffected.
+- Decision: use the new gate for all private scoped candidate reviews. It
+  changes presentation eligibility for one listening window only and cannot
+  reject, select, merge, repair, promote or activate a candidate.
+- Next smallest step: collect the one-candidate later-phrase listening answer,
+  verify its exact export and then decide whether the two reviewed phrases
+  justify proposing a still-inactive stitched MIDI challenger.
+
 ### 2026-08-03 — scoped private vocal-candidate review
 
 - Goal: turn the existing primary-versus-lowest and phrase-completeness

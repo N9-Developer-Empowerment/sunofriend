@@ -1553,8 +1553,13 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   A scoped audition may additionally bind one explicit 0.5–15 second window
   and an explicit non-empty subset of sealed candidate IDs. It must retain the
   complete inventory count, preserve canonical inventory order, disclose every
-  omission and state that omission is neither rejection nor ranking. Playback
-  starts and loops at the exact scope. Verification must reconstruct the same
+  omission and state that omission is neither rejection nor ranking. Reopen and
+  rehash each included candidate's sealed note JSON, validate its note
+  intervals and count only notes overlapping the explicit window. Report that
+  scoped count beside the complete-excerpt count. A globally non-empty but
+  locally silent candidate remains preserved yet unavailable for that scope;
+  do not present its silent render as a listening choice. Playback starts and
+  loops at the exact scope. Verification must reconstruct the same
   window and candidate subset; it cannot accept a wider, narrower or swapped
   browser export. Keep every omitted candidate unchanged in the sealed
   inventory and preserve all zero activation, selection, merge and singer-

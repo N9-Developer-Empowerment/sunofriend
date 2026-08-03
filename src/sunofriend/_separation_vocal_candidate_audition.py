@@ -50,6 +50,7 @@ from ._separation_vocal_phrase_completeness import _REGISTER_HYPOTHESES
 REVIEW_SCHEMA = "sunofriend.private-vocal-candidate-review.v1"
 RESOLUTION_SCHEMA = "sunofriend.private-vocal-candidate-review-resolution.v1"
 _MAX_MEDIA_BYTES = 64 * 1024 * 1024
+_MAX_NOTE_EVIDENCE_BYTES = 8 * 1024 * 1024
 _MAX_REVIEW_BYTES = 256 * 1024
 _MAX_FOCUS_CHARACTERS = 180
 _MAX_NOTE_CHARACTERS = 1_000
@@ -68,6 +69,15 @@ class _VerifiedMedia:
 
 
 @dataclass(frozen=True)
+class _VerifiedNoteEvidence:
+    root: Path
+    relative_path: str
+    sha256: str
+    size: int
+    label: str
+
+
+@dataclass(frozen=True)
 class _AuditionContext:
     candidate_set_path: Path
     candidate_set_file_sha256: str
@@ -77,9 +87,8 @@ class _AuditionContext:
     excerpt: Mapping[str, Any]
     focus: str
     seed: Mapping[str, Any]
-    candidate_media: Mapping[
-        str, tuple[_VerifiedMedia | None, _VerifiedMedia | None]
-    ]
+    candidate_media: Mapping[str, tuple[_VerifiedMedia | None, _VerifiedMedia | None]]
+    candidate_notes: Mapping[str, _VerifiedNoteEvidence | None]
 
 
 def _load_audition_context(
@@ -134,14 +143,15 @@ def _load_audition_context(
     _require_private_inactive(source, "authorised source excerpt")
     _verify_artifacts(source_path.parent, source.get("artifacts"))
     leaf_inputs = inputs["leaf"].get("inputs", {})
-    if (
-        leaf_inputs.get("excerpt_sha256") != source_file_sha256
-        or leaf_inputs.get("excerpt_document_sha256") != source.get("document_sha256")
-    ):
+    if leaf_inputs.get("excerpt_sha256") != source_file_sha256 or leaf_inputs.get(
+        "excerpt_document_sha256"
+    ) != source.get("document_sha256"):
         raise ValueError("authorised source excerpt is not bound to vocal leaves")
 
     candidate_media = _resolve_candidate_media(inputs, source_path.parent, source)
     _require_exact_candidate_media(inventory, candidate_media)
+    candidate_notes = _resolve_candidate_notes(inputs)
+    _require_exact_candidate_notes(inventory, candidate_notes)
     scope = _review_scope(
         inventory,
         source,
@@ -156,6 +166,7 @@ def _load_audition_context(
         excerpt_file_sha256=source_file_sha256,
         focus=focus,
         candidate_media=candidate_media,
+        candidate_notes=candidate_notes,
         scope=scope,
     )
     _reverify_audition_inputs(
@@ -175,6 +186,7 @@ def _load_audition_context(
         focus=focus,
         seed=seed,
         candidate_media=candidate_media,
+        candidate_notes=candidate_notes,
     )
 
 
@@ -227,7 +239,9 @@ def _resolve_candidate_media(
             )
             for adapter_id, adapter in sorted(leaf.get("adapters", {}).items()):
                 variant = adapter.get("primary_variant")
-                candidate = adapter.get("variants", {}).get(variant, {}).get("candidate", {})
+                candidate = (
+                    adapter.get("variants", {}).get(variant, {}).get("candidate", {})
+                )
                 candidate_id = (
                     f"provider/{_safe_token(provider_id)}/{_safe_token(leaf_id)}/"
                     f"{_safe_token(adapter_id)}/{_safe_token(str(variant))}"
@@ -245,6 +259,58 @@ def _resolve_candidate_media(
                     result[candidate_id] = (preview, source_reference)
                 else:
                     result[candidate_id] = (None, None)
+    return result
+
+
+def _resolve_candidate_notes(
+    inputs: Mapping[str, Any],
+) -> dict[str, _VerifiedNoteEvidence | None]:
+    result: dict[str, _VerifiedNoteEvidence | None] = {}
+
+    mel = inputs["melroformer"]
+    mel_root = inputs["melroformer_root"]
+    raw = mel.get("candidate", {})
+    result["kim/primary"] = _notes_from_artifact(
+        mel_root,
+        raw.get("primary", {}).get("notes"),
+        "Kim primary note evidence",
+    )
+    variants = raw.get("register_hypotheses", {}).get("variants", {})
+    for variant in sorted(_REGISTER_HYPOTHESES):
+        candidate = variants.get(variant, {}).get("candidate", {})
+        candidate_id = f"kim/register/{_safe_token(variant)}"
+        result[candidate_id] = (
+            _notes_from_artifact(
+                mel_root,
+                candidate.get("notes"),
+                f"Kim {variant} note evidence",
+            )
+            if candidate.get("notes") is not None
+            else None
+        )
+
+    leaf_document = inputs["leaf"]
+    leaf_root = inputs["leaf_root"]
+    for provider_id, provider_leaves in sorted(leaf_document.get("leaves", {}).items()):
+        for leaf_id, leaf in sorted(provider_leaves.items()):
+            for adapter_id, adapter in sorted(leaf.get("adapters", {}).items()):
+                variant = adapter.get("primary_variant")
+                candidate = (
+                    adapter.get("variants", {}).get(variant, {}).get("candidate", {})
+                )
+                candidate_id = (
+                    f"provider/{_safe_token(provider_id)}/{_safe_token(leaf_id)}/"
+                    f"{_safe_token(adapter_id)}/{_safe_token(str(variant))}"
+                )
+                result[candidate_id] = (
+                    _notes_from_artifact(
+                        leaf_root,
+                        candidate.get("notes"),
+                        f"{candidate_id} note evidence",
+                    )
+                    if candidate.get("notes") is not None
+                    else None
+                )
     return result
 
 
@@ -273,6 +339,31 @@ def _media_from_artifact(root: Path, raw: Any, label: str) -> _VerifiedMedia:
     )
 
 
+def _notes_from_artifact(root: Path, raw: Any, label: str) -> _VerifiedNoteEvidence:
+    path = _artifact_path(root, raw, label)
+    assert isinstance(raw, Mapping)
+    size = raw.get("bytes")
+    sha256 = raw.get("sha256")
+    relative = raw.get("path")
+    if (
+        isinstance(size, bool)
+        or not isinstance(size, int)
+        or not 0 < size <= _MAX_NOTE_EVIDENCE_BYTES
+        or not isinstance(sha256, str)
+        or len(sha256) != 64
+        or not isinstance(relative, str)
+    ):
+        raise ValueError(f"{label} identity differs")
+    path.relative_to(root.resolve(strict=True))
+    return _VerifiedNoteEvidence(
+        root=root.resolve(strict=True),
+        relative_path=relative,
+        sha256=sha256,
+        size=size,
+        label=label,
+    )
+
+
 def _require_exact_candidate_media(
     inventory: Mapping[str, Any],
     media: Mapping[str, tuple[_VerifiedMedia | None, _VerifiedMedia | None]],
@@ -288,13 +379,42 @@ def _require_exact_candidate_media(
         preview, reference = media[candidate_id]
         expected = candidate.get("artifacts", {}).get("render")
         if candidate.get("audition_state") == "available":
-            if preview is None or reference is None or not isinstance(expected, Mapping):
+            if (
+                preview is None
+                or reference is None
+                or not isinstance(expected, Mapping)
+            ):
                 raise ValueError("auditionable vocal candidate media differs")
             if expected != {"sha256": preview.sha256, "bytes": preview.size}:
                 raise ValueError("vocal candidate preview identity differs")
         else:
             if reference is not None or expected is not None:
                 raise ValueError("zero-note vocal candidate media differs")
+
+
+def _require_exact_candidate_notes(
+    inventory: Mapping[str, Any],
+    notes: Mapping[str, _VerifiedNoteEvidence | None],
+) -> None:
+    candidates = inventory.get("candidates")
+    if not isinstance(candidates, list) or not candidates:
+        raise ValueError("vocal candidate inventory is empty")
+    expected_ids = {str(candidate.get("candidate_id", "")) for candidate in candidates}
+    if expected_ids != set(notes):
+        raise ValueError("vocal candidate note membership differs")
+    for candidate in candidates:
+        candidate_id = str(candidate["candidate_id"])
+        evidence = notes[candidate_id]
+        expected = candidate.get("artifacts", {}).get("notes")
+        if isinstance(expected, Mapping):
+            if evidence is None:
+                raise ValueError("vocal candidate notes differ")
+            if expected != {"sha256": evidence.sha256, "bytes": evidence.size}:
+                raise ValueError("vocal candidate note identity differs")
+        elif evidence is not None:
+            raise ValueError("vocal candidate notes differ")
+        if candidate.get("audition_state") == "available" and evidence is None:
+            raise ValueError("auditionable vocal candidate notes differ")
 
 
 def _review_seed(
@@ -304,9 +424,8 @@ def _review_seed(
     excerpt: Mapping[str, Any],
     excerpt_file_sha256: str,
     focus: str,
-    candidate_media: Mapping[
-        str, tuple[_VerifiedMedia | None, _VerifiedMedia | None]
-    ],
+    candidate_media: Mapping[str, tuple[_VerifiedMedia | None, _VerifiedMedia | None]],
+    candidate_notes: Mapping[str, _VerifiedNoteEvidence | None] | None = None,
     scope: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     if scope is None:
@@ -324,9 +443,33 @@ def _review_seed(
         if candidate_id not in included_ids:
             continue
         preview, reference = candidate_media[candidate_id]
-        available = candidate["audition_state"] == "available"
-        if available and (preview is None or reference is None):
+        inventory_available = candidate["audition_state"] == "available"
+        if inventory_available and (preview is None or reference is None):
             raise ValueError("auditionable vocal candidate media differs")
+        if candidate_notes is None:
+            scope_note_count = candidate["note_count"]
+        else:
+            note_evidence = candidate_notes[candidate_id]
+            scope_note_count = (
+                _scope_note_count(
+                    note_evidence,
+                    start_seconds=float(scope["start_seconds"]),
+                    end_seconds=float(scope["end_seconds"]),
+                    expected_total=candidate["note_count"],
+                )
+                if note_evidence is not None
+                else 0
+            )
+        available = inventory_available and scope_note_count > 0
+        audition_state = (
+            "available"
+            if available
+            else (
+                "no_note_evidence_in_scope"
+                if inventory_available
+                else candidate["audition_state"]
+            )
+        )
         choices.append(
             {
                 "candidate_id": candidate_id,
@@ -336,10 +479,12 @@ def _review_seed(
                 "adapter": candidate.get("adapter"),
                 "variant": candidate["variant"],
                 "note_count": candidate["note_count"],
-                "audition_state": candidate["audition_state"],
+                "scope_note_count": scope_note_count,
+                "inventory_audition_state": candidate["audition_state"],
+                "audition_state": audition_state,
                 "candidate_render": (
                     {"sha256": preview.sha256, "bytes": preview.size}
-                    if available
+                    if inventory_available
                     else None
                 ),
                 "source_reference": (
@@ -391,6 +536,7 @@ def _review_seed(
             ),
             "omitted_candidates_ranked_or_rejected": False,
             "review_window_infers_phrase_boundaries": False,
+            "scope_availability_uses_note_overlap": candidate_notes is not None,
         },
         "summary": scoped_summary,
         "inventory_summary": dict(inventory["summary"]),
@@ -460,7 +606,9 @@ def _review_scope(
         "inventory_candidate_count": len(inventory_ids),
         "omitted_candidate_count": len(inventory_ids) - len(selected),
         "candidate_order": "sealed_inventory_order_not_rank",
-        "time_window_source": "explicit" if start_seconds is not None else "full_excerpt",
+        "time_window_source": "explicit"
+        if start_seconds is not None
+        else "full_excerpt",
     }
 
 
@@ -468,6 +616,7 @@ def _scoped_summary(choices: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     family_counts: dict[str, int] = {}
     provider_counts: dict[str, int] = {}
     available = 0
+    locally_silent = 0
     for row in choices:
         family = str(row["family"])
         family_counts[family] = family_counts.get(family, 0) + 1
@@ -476,13 +625,57 @@ def _scoped_summary(choices: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             provider_counts[provider] = provider_counts.get(provider, 0) + 1
         if row["audition_state"] == "available":
             available += 1
+        elif row["audition_state"] == "no_note_evidence_in_scope":
+            locally_silent += 1
     return {
         "candidate_count": len(choices),
         "audition_available_count": available,
         "no_note_evidence_count": len(choices) - available,
+        "no_note_evidence_in_scope_count": locally_silent,
         "family_counts": dict(sorted(family_counts.items())),
         "provider_leaf_counts": dict(sorted(provider_counts.items())),
     }
+
+
+def _scope_note_count(
+    evidence: _VerifiedNoteEvidence,
+    *,
+    start_seconds: float,
+    end_seconds: float,
+    expected_total: int,
+) -> int:
+    descriptor = _open_verified_note_evidence(evidence)
+    try:
+        payload = bytearray()
+        while len(payload) <= _MAX_NOTE_EVIDENCE_BYTES:
+            block = os.read(
+                descriptor, min(128 * 1024, _MAX_NOTE_EVIDENCE_BYTES + 1 - len(payload))
+            )
+            if not block:
+                break
+            payload.extend(block)
+    finally:
+        os.close(descriptor)
+    if len(payload) != evidence.size:
+        raise ValueError("vocal candidate note evidence size differs")
+    try:
+        document = json.loads(payload)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError("vocal candidate note evidence is not valid JSON") from error
+    raw_notes = document.get("notes") if isinstance(document, Mapping) else None
+    if not isinstance(raw_notes, list) or len(raw_notes) != expected_total:
+        raise ValueError("vocal candidate note count differs")
+    count = 0
+    for raw in raw_notes:
+        if not isinstance(raw, Mapping):
+            raise ValueError("vocal candidate note geometry differs")
+        note_start = _finite_scope_number(raw.get("start_seconds"), "note start")
+        note_end = _finite_scope_number(raw.get("end_seconds"), "note end")
+        if note_start < 0.0 or note_end <= note_start:
+            raise ValueError("vocal candidate note geometry differs")
+        if note_start < end_seconds and note_end > start_seconds:
+            count += 1
+    return count
 
 
 def _finite_scope_number(raw: Any, label: str) -> float:
@@ -541,8 +734,13 @@ def _verify_review_document(
             raise ValueError("vocal candidate review notes differ")
         total_notes += len(notes)
         if expected["audition_state"] == "available":
-            if row.get("heard_reference") is not True or row.get("heard_candidate") is not True:
-                raise ValueError("every auditionable candidate must be heard with its reference")
+            if (
+                row.get("heard_reference") is not True
+                or row.get("heard_candidate") is not True
+            ):
+                raise ValueError(
+                    "every auditionable candidate must be heard with its reference"
+                )
             disposition = row.get("disposition")
             if disposition not in _DISPOSITIONS:
                 raise ValueError("every auditionable candidate needs one disposition")
@@ -672,7 +870,9 @@ def _write_fresh_private_json(destination: Path, document: Mapping[str, Any]) ->
         raise FileExistsError(f"review resolution already exists: {destination}")
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = Path(
-        tempfile.mkdtemp(prefix=f".{destination.name}.building-", dir=destination.parent)
+        tempfile.mkdtemp(
+            prefix=f".{destination.name}.building-", dir=destination.parent
+        )
     )
     temporary.chmod(0o700)
     try:
@@ -696,11 +896,13 @@ class _VocalCandidateAuditionServer(ThreadingHTTPServer):
         self.media: dict[str, _VerifiedMedia] = {}
         self.candidate_urls: dict[str, dict[str, str | None]] = {}
         identity_to_id: dict[tuple[str, int], str] = {}
-        included_ids = {
-            str(row["candidate_id"]) for row in context.seed["choices"]
+        available_ids = {
+            str(row["candidate_id"])
+            for row in context.seed["choices"]
+            if row["audition_state"] == "available"
         }
         for candidate_id, (preview, reference) in context.candidate_media.items():
-            if candidate_id not in included_ids:
+            if candidate_id not in available_ids:
                 continue
             urls: dict[str, str | None] = {"candidate": None, "reference": None}
             if preview is not None and reference is not None:
@@ -885,16 +1087,43 @@ class _VocalCandidateAuditionHandler(BaseHTTPRequestHandler):
 
 
 def _open_verified_media(media: _VerifiedMedia) -> int:
-    parts = PurePosixPath(media.relative_path).parts
+    return _open_verified_artifact(
+        root=media.root,
+        relative_path=media.relative_path,
+        sha256=media.sha256,
+        size=media.size,
+        noun="private audition media",
+    )
+
+
+def _open_verified_note_evidence(evidence: _VerifiedNoteEvidence) -> int:
+    return _open_verified_artifact(
+        root=evidence.root,
+        relative_path=evidence.relative_path,
+        sha256=evidence.sha256,
+        size=evidence.size,
+        noun="vocal candidate note evidence",
+    )
+
+
+def _open_verified_artifact(
+    *,
+    root: Path,
+    relative_path: str,
+    sha256: str,
+    size: int,
+    noun: str,
+) -> int:
+    parts = PurePosixPath(relative_path).parts
     if (
         not parts
-        or PurePosixPath(media.relative_path).is_absolute()
+        or PurePosixPath(relative_path).is_absolute()
         or any(part in {"", ".", ".."} for part in parts)
     ):
-        raise ValueError("private audition media path differs")
+        raise ValueError(f"{noun} path differs")
     directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
     file_flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC
-    descriptor = os.open(media.root, directory_flags)
+    descriptor = os.open(root, directory_flags)
     try:
         for part in parts[:-1]:
             child = os.open(part, directory_flags, dir_fd=descriptor)
@@ -905,16 +1134,16 @@ def _open_verified_media(media: _VerifiedMedia) -> int:
         os.close(descriptor)
     try:
         details = os.fstat(file_descriptor)
-        if not stat.S_ISREG(details.st_mode) or details.st_size != media.size:
-            raise ValueError("private audition media geometry differs")
+        if not stat.S_ISREG(details.st_mode) or details.st_size != size:
+            raise ValueError(f"{noun} geometry differs")
         digest = hashlib.sha256()
         while True:
             block = os.read(file_descriptor, 1024 * 1024)
             if not block:
                 break
             digest.update(block)
-        if digest.hexdigest() != media.sha256:
-            raise ValueError("private audition media hash differs")
+        if digest.hexdigest() != sha256:
+            raise ValueError(f"{noun} hash differs")
         os.lseek(file_descriptor, 0, os.SEEK_SET)
         return file_descriptor
     except BaseException:
@@ -959,7 +1188,9 @@ def _audition_html(
         ],
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-    encoded = encoded.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+    encoded = (
+        encoded.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+    )
     html = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Sunofriend private vocal candidate audition</title><style>
@@ -967,10 +1198,11 @@ def _audition_html(
 </style></head><body><div class="local">● Private local developer audition — no audio or review is uploaded</div><main class="wrap"><section class="hero"><h1>Vocal MIDI candidate audition</h1><p class="focus" id="focus"></p><p class="meta" id="scope"></p><p>This page reviews an explicit window and candidate subset from the complete sealed inventory. Omitted candidates remain preserved and are not rejected or ranked. The page does not infer a singer or require one winner. More than one candidate may be useful.</p><p class="warning"><strong>What you hear:</strong> the reference is the original mixed excerpt for Kim candidates and the exact provider vocal leaf for provider candidates. The candidate is a dry neutral MIDI render. Tone is only a proxy; judge whether the notes and phrase follow the written focus.</p><p class="muted">The order below is canonical serialization only, not a recommendation. Zero-note evidence remains visible but cannot be reviewed as audio.</p></section><section class="transport"><strong id="now">Nothing loaded</strong><audio id="player" controls preload="metadata"></audio><label><input id="loop" type="checkbox"> Loop the exact review window</label><p class="muted">Playback, seeking, looping and dwell time stay in this tab and are not feedback.</p></section><div id="cards"></div><section class="hero"><p id="status" class="status">Unreviewed</p><div class="actions"><button id="complete" class="primary">Mark explicit review complete</button><button id="export" disabled>Export reviewed JSON</button></div><p class="muted">Completion requires both heard boxes and one disposition for every playable candidate in this explicit scope. Export is a browser download; the local server writes nothing.</p></section></main><script>
 const payload=__PAYLOAD__;const seed=structuredClone(payload.seed);let review=structuredClone(seed);const scope=review.scope;const player=document.getElementById('player');const root=document.getElementById('cards');const status=document.getElementById('status');const exportButton=document.getElementById('export');document.getElementById('focus').textContent='Listening focus: '+review.focus;document.getElementById('scope').textContent=`Review window ${scope.start_seconds.toFixed(3)}–${scope.end_seconds.toFixed(3)} seconds · ${scope.candidate_count} of ${scope.inventory_candidate_count} preserved candidates included`;function restartOrStop(){if(document.getElementById('loop').checked){player.currentTime=scope.start_seconds;player.play().catch(()=>{})}else{player.pause();player.currentTime=scope.start_seconds}}player.onended=restartOrStop;player.ontimeupdate=()=>{if(player.currentTime>=scope.end_seconds-0.005){restartOrStop()}};
 function label(row){if(row.family==='kim_primary')return 'Kim separator primary';if(row.family==='kim_register')return 'Kim register hypothesis: '+row.variant.replaceAll('_',' ');return `${row.provider_group} · ${row.leaf_id} · ${row.adapter} adapter · ${row.variant.replaceAll('_',' ')}`}
+function noteSummary(row){if(scope.time_window_source==='full_excerpt')return `${row.note_count} MIDI notes · ${row.audition_state.replaceAll('_',' ')}`;return `${row.scope_note_count} notes in review window · ${row.note_count} in complete excerpt · ${row.audition_state.replaceAll('_',' ')}`}
 function play(url,title){player.pause();player.src=url;document.getElementById('now').textContent=title;const start=()=>{const maximum=Number.isFinite(player.duration)?Math.max(0,player.duration-0.01):scope.start_seconds;try{player.currentTime=Math.min(scope.start_seconds,maximum)}catch(_){}player.play().catch(()=>{})};if(player.readyState>=1){start()}else{player.addEventListener('loadedmetadata',start,{once:true})}}
 function invalidate(){review.status='unreviewed';review.reviewed_at=null;status.className='status';status.textContent=`Unreviewed · ${completedCount()} of ${review.summary.audition_available_count} candidates complete`;exportButton.disabled=true}
 function completedCount(){return review.choices.filter(x=>x.audition_state==='available'&&x.heard_reference&&x.heard_candidate&&x.disposition).length}
-function render(){root.innerHTML='';review.choices.forEach((row,index)=>{const card=document.createElement('section');card.className='card '+(row.audition_state==='available'?'':'unavailable');const title=document.createElement('h3');title.textContent=label(row);card.appendChild(title);const meta=document.createElement('p');meta.className='meta';meta.textContent=`${row.note_count} MIDI notes · ${row.audition_state.replaceAll('_',' ')}`;card.appendChild(meta);if(row.audition_state!=='available'){const p=document.createElement('p');p.textContent='No note evidence: retained as a diagnostic, with no audio choice required.';card.appendChild(p);root.appendChild(card);return}const actions=document.createElement('div');actions.className='actions';const ref=document.createElement('button');ref.textContent=row.source_reference.kind==='provider_vocal_leaf'?'Play source vocal leaf':'Play mixed source excerpt';ref.onclick=()=>play(payload.urls[row.candidate_id].reference,ref.textContent+' — '+label(row));const candidate=document.createElement('button');candidate.textContent='Play candidate MIDI';candidate.onclick=()=>play(payload.urls[row.candidate_id].candidate,candidate.textContent+' — '+label(row));actions.append(ref,candidate);card.appendChild(actions);const checks=document.createElement('div');checks.className='actions';['heard_reference','heard_candidate'].forEach((key)=>{const lab=document.createElement('label');const input=document.createElement('input');input.type='checkbox';input.checked=row[key];input.onchange=()=>{row[key]=input.checked;invalidate()};lab.append(input,document.createTextNode(key==='heard_reference'?' I heard the reference':' I heard the candidate'));checks.appendChild(lab)});const select=document.createElement('select');payload.dispositions.forEach(option=>{const node=document.createElement('option');node.value=option.value;node.textContent=option.label;select.appendChild(node)});select.value=row.disposition;select.onchange=()=>{row.disposition=select.value;invalidate()};checks.appendChild(select);card.appendChild(checks);const notes=document.createElement('textarea');notes.maxLength=1000;notes.rows=2;notes.placeholder='Optional private notes about melody, register, timing or role';notes.value=row.notes;notes.oninput=()=>{row.notes=notes.value;invalidate()};card.appendChild(notes);root.appendChild(card)});invalidate()}
+function render(){root.innerHTML='';review.choices.forEach((row,index)=>{const card=document.createElement('section');card.className='card '+(row.audition_state==='available'?'':'unavailable');const title=document.createElement('h3');title.textContent=label(row);card.appendChild(title);const meta=document.createElement('p');meta.className='meta';meta.textContent=noteSummary(row);card.appendChild(meta);if(row.audition_state!=='available'){const p=document.createElement('p');p.textContent=row.audition_state==='no_note_evidence_in_scope'?'No MIDI notes overlap this review window. The complete-excerpt candidate remains preserved and is not rejected or ranked.':'No note evidence: retained as a diagnostic, with no audio choice required.';card.appendChild(p);root.appendChild(card);return}const actions=document.createElement('div');actions.className='actions';const ref=document.createElement('button');ref.textContent=row.source_reference.kind==='provider_vocal_leaf'?'Play source vocal leaf':'Play mixed source excerpt';ref.onclick=()=>play(payload.urls[row.candidate_id].reference,ref.textContent+' — '+label(row));const candidate=document.createElement('button');candidate.textContent='Play candidate MIDI';candidate.onclick=()=>play(payload.urls[row.candidate_id].candidate,candidate.textContent+' — '+label(row));actions.append(ref,candidate);card.appendChild(actions);const checks=document.createElement('div');checks.className='actions';['heard_reference','heard_candidate'].forEach((key)=>{const lab=document.createElement('label');const input=document.createElement('input');input.type='checkbox';input.checked=row[key];input.onchange=()=>{row[key]=input.checked;invalidate()};lab.append(input,document.createTextNode(key==='heard_reference'?' I heard the reference':' I heard the candidate'));checks.appendChild(lab)});const select=document.createElement('select');payload.dispositions.forEach(option=>{const node=document.createElement('option');node.value=option.value;node.textContent=option.label;select.appendChild(node)});select.value=row.disposition;select.onchange=()=>{row.disposition=select.value;invalidate()};checks.appendChild(select);card.appendChild(checks);const notes=document.createElement('textarea');notes.maxLength=1000;notes.rows=2;notes.placeholder='Optional private notes about melody, register, timing or role';notes.value=row.notes;notes.oninput=()=>{row.notes=notes.value;invalidate()};card.appendChild(notes);root.appendChild(card)});invalidate()}
 document.getElementById('complete').onclick=()=>{const complete=review.choices.filter(x=>x.audition_state==='available').every(x=>x.heard_reference&&x.heard_candidate&&x.disposition);if(!complete){alert('Hear the reference and candidate, then choose a disposition for every playable candidate.');return}review.status='reviewed';review.reviewed_at=new Date().toISOString();status.className='status complete';status.textContent='Explicit review complete · ready to export';exportButton.disabled=false};
 exportButton.onclick=()=>{if(review.status!=='reviewed'){return}const blob=new Blob([JSON.stringify(review,null,2)+'\\n'],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='vocal_candidate_review.reviewed.json';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)};render();
 </script></body></html>""".replace("__PAYLOAD__", encoded)
@@ -988,7 +1220,9 @@ def _reverify_audition_inputs(
     if _sha256(inventory_path) != inventory_sha256:
         raise ValueError("vocal candidate set changed during audition preparation")
     if _sha256(excerpt_path) != excerpt_sha256:
-        raise ValueError("authorised source excerpt changed during audition preparation")
+        raise ValueError(
+            "authorised source excerpt changed during audition preparation"
+        )
     for label in ("melroformer", "leaf", "phrase"):
         if _sha256(inputs[f"{label}_path"]) != inputs[f"{label}_sha256"]:
             raise ValueError(f"{label} evidence changed during audition preparation")
@@ -1010,6 +1244,12 @@ def _reverify_context(context: _AuditionContext) -> None:
             seen.add((media.sha256, media.size))
             descriptor = _open_verified_media(media)
             os.close(descriptor)
+    for evidence in context.candidate_notes.values():
+        if evidence is None or (evidence.sha256, evidence.size) in seen:
+            continue
+        seen.add((evidence.sha256, evidence.size))
+        descriptor = _open_verified_note_evidence(evidence)
+        os.close(descriptor)
 
 
 __all__: Sequence[str] = ()

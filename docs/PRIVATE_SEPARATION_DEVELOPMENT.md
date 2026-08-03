@@ -1789,7 +1789,11 @@ permission to promote or activate that candidate.
 The same private adapter can narrow one review to an explicit 0.5–15 second
 window and explicit candidate subset. Use paired `--start-seconds` and
 `--end-seconds` plus repeated `--candidate` values. The page loops only the
-stated window and reports both the scoped count and complete inventory count.
+stated window and reports both the notes that overlap that window and the
+candidate's complete-excerpt note count. A candidate that is non-empty across
+the complete excerpt but has no overlapping notes is shown as unavailable for
+that scope. Its complete evidence remains preserved; it is not offered as a
+silent listening choice or treated as rejected.
 Candidates outside the scope remain sealed in the inventory: omission is not a
 rejection, ranking, choice or singer assignment. Resolution must use the same
 window and candidate IDs, so a browser export cannot silently expand, shrink
@@ -1827,8 +1831,16 @@ published a `complete_review_no_activation` resolution with document SHA-256
 `c26d293df96ae0259ba32510eea3827edf2dba257dc5fbd5a3b7c3989ad45fae`.
 The other 15 candidates remain preserved, unranked and unaffected. This result
 does not select, merge, repair or activate either candidate. There is no
-outstanding review on this scope; the next review should cover a later phrase
-whose source evidence is one-sided before any stitched candidate is proposed.
+outstanding review on this scope.
+
+The next bounded review is ready for the later phrase from 9.20 to 14.95
+seconds. It asks whether unchanged `kim/primary` follows the intended male-lead
+melody. That candidate contains 17 overlapping notes out of 23 across the
+complete excerpt. `kim/register/lowest-line` has no notes in this later window,
+so it is deliberately omitted rather than presented as a silent comparison.
+The other 16 candidates remain preserved, unranked and unaffected. This is a
+source-relative question about one existing candidate, not an A/B winner,
+merge, repair or activation proposal.
 
 The first live browser load also exposed an escaped-newline defect in the
 inline export script. It was fixed before the review, both source and candidate
