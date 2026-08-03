@@ -1921,6 +1921,40 @@ truth, human line identity is not a normalized metric, the corpus is not a
 hidden test set, and licensing, offline and resource acceptance remain
 separate gates.
 
+### Source-bound human-listening coverage
+
+The next owner-only projection binds completed phrase reviews to the exact
+authorised excerpt identities in that normalized agreement report. It accepts
+only completed focus-relative review resolutions that separately classify the
+heard source line and the candidate MIDI's usefulness. It copies neither
+free-text notes nor filesystem paths:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-human-listening-coverage.py \
+  /absolute/private-separation-normalized-midi-agreement.json \
+  --review i-am-a-alien /absolute/earlier/private-vocal-candidate-review-resolution.json \
+  --review i-am-a-alien /absolute/later/private-vocal-candidate-review-resolution.json \
+  --out /absolute/fresh/private-separation-human-listening-coverage.json
+```
+
+The current report has file SHA-256
+`0c5bc19be4f7f4e3417e9acf198a70ccc2ee488d1fb5bde0cbb88460bb10ce82`
+and document SHA-256
+`f9d3f48cb3d92f488d3a4e35ad1eb42ae9834415b769a4eb264e39af3854cb01`.
+It binds both role-correct `I am a Alien mashup` windows to the matching song
+cell, covering 11 candidate auditions and five exact-focus usefulness results.
+It does not reinterpret those five as winners or complete transcriptions.
+
+This makes the listening gap precise rather than hiding it in prose. Human
+line identity and candidate usefulness are now projected for two observed
+windows on one of the two normalized songs. Cross-song listening coverage,
+full-excerpt or full-song coverage and a structured missed-note/completeness
+judgement remain open. In particular, the earlier listener's free-text note
+that the useful candidate still missed notes is deliberately not parsed into a
+machine quality label. A future review contract must ask that question
+explicitly before completeness can become comparable evidence.
+
 ### Current private human-review queue
 
 As of 3 August 2026, the first scoped `I am a Alien mashup` review is complete.

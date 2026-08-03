@@ -2361,6 +2361,13 @@ separator transport, source-lineage import and promotion are not implemented**
     the two song cells separately and computes no aggregate winner. This is
     pairwise agreement, not score truth, listening quality or acceptance; the
     parent corpus and publication gates remain open.
+  - [x] Bind completed focus-relative human listening to that normalized song
+    evidence without treating usefulness as accuracy. The first path-free
+    projection covers two principal-lead phrase windows on `I am a Alien
+    mashup`, 11 candidate auditions and five exact-focus usefulness results.
+    It separately preserves source-line classification and MIDI usefulness,
+    copies no free-text notes and keeps the gate open because `Be Alone`,
+    full-song coverage and structured missed-note completeness remain absent.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
 - [x] Repeat the clean/estimate comparison through exact production
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation

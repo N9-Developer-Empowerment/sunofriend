@@ -1804,6 +1804,19 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   no complete rectangle. Licensing, human listening, hidden-set, offline and
   resource acceptance remain separate gates; the coverage report cannot rank,
   select, promote, activate or enable a product route.
+- `scripts/private-separation-normalized-midi-agreement.py` recomputes one
+  source-bound candidate/control MIDI metric across two or more songs. It
+  verifies each candidate, control, role mapping and authorised excerpt chain,
+  then preserves each song as a separate cell. Agreement with an estimated
+  provider control is not score truth, melody accuracy or listening quality;
+  never aggregate the cells into a winner or activate a separator from them.
+- `scripts/private-separation-human-listening-coverage.py` binds completed
+  focus-relative vocal review resolutions to those normalized song cells. It
+  projects source-line classification and candidate usefulness separately,
+  copies no listener notes and keeps usefulness distinct from completeness or
+  accuracy. The current evidence covers two phrase windows on only one of two
+  normalized songs. Keep cross-song listening, full-song coverage and an
+  explicit missed-note/completeness question open before publication.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,
