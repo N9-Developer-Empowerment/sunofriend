@@ -1874,6 +1874,53 @@ offline operation or resource acceptance. Those facts do not erase the human
 reviews already documented below; they mean this particular machine-readable
 index cannot be used as evidence for those gates.
 
+### Source-bound cross-song MIDI agreement
+
+The owner-only
+`scripts/private-separation-normalized-midi-agreement.py` command closes the
+smallest metric-contract gap without turning a relative control into truth. A
+comparison supplies four sealed reports for each song: the candidate MIDI
+evaluation, its exact authorised MIDI control, the role mapping behind that
+control and the original authorised excerpt. The command also requires the
+candidate and provider-reference topology cells to exist in the sealed index.
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-normalized-midi-agreement.py \
+  /absolute/private-cross-song-separation-evidence-index.json \
+  --candidate-method kim-vocal-2 \
+  --control-method provider-reference \
+  --control-id moises \
+  --comparison be-alone \
+    /absolute/be-alone/private-melroformer-vocal-midi-evaluation.json \
+    /absolute/be-alone/authorised-midi-comparison.json \
+    /absolute/be-alone/authorised-role-mapping.json \
+    /absolute/be-alone/authorised-separation-excerpt.json \
+  --comparison i-am-a-alien \
+    /absolute/alien/private-melroformer-vocal-midi-evaluation.json \
+    /absolute/alien/authorised-midi-comparison.json \
+    /absolute/alien/authorised-role-mapping.json \
+    /absolute/alien/authorised-separation-excerpt.json \
+  --out /absolute/fresh/private-separation-normalized-midi-agreement.json
+```
+
+The current two-song report has file SHA-256
+`376183b91dd266ca6a6a1d9c30a9176ded21d0964753520859dde974cc05f591`
+and document SHA-256
+`bc901038f6ee1f40b99d518c59294efc12d38484e59be4bc85d05a15237b0095`.
+It proves one same-excerpt chain per song and recomputes the unchanged
+`sunofriend.private-demucs-midi-note-metrics.v1` comparison at 40 ms. The
+`Be Alone` Kim/Moises cell has exact-pitch/onset F1 `0.6`; the `I am a Alien`
+cell has exact-pitch/onset F1 `0.913043478`. These are descriptive agreement
+values only. The higher second value does not override the completed human
+review that both candidates followed the wrong vocal line for that question.
+
+The report is path-free, creates no audio or MIDI, ranks no method and keeps
+the publication gate open. Provider MIDI remains estimated rather than score
+truth, human line identity is not a normalized metric, the corpus is not a
+hidden test set, and licensing, offline and resource acceptance remain
+separate gates.
+
 ### Current private human-review queue
 
 As of 3 August 2026, the first scoped `I am a Alien mashup` review is complete.

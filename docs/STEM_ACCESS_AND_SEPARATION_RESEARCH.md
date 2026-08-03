@@ -2353,6 +2353,14 @@ separator transport, source-lineage import and promotion are not implemented**
     listening, hidden-set, offline and resource acceptance out of scope. The
     projection remains open even for a future complete rectangle until a
     separate normalized metric and acceptance contract is reviewed.
+  - [x] Add the first cross-schema normalized MIDI-agreement contract for one
+    repeated method pair. Across `Be Alone` and `I am a Alien mashup`, it
+    proves candidate and provider-control MIDI belong to the same authorised
+    excerpt, recomputes the existing 40 ms note metrics from sealed note
+    evidence and requires an exact match with each earlier report. It records
+    the two song cells separately and computes no aggregate winner. This is
+    pairwise agreement, not score truth, listening quality or acceptance; the
+    parent corpus and publication gates remain open.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
 - [x] Repeat the clean/estimate comparison through exact production
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation
