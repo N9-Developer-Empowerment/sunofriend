@@ -2339,6 +2339,13 @@ separator transport, source-lineage import and promotion are not implemented**
   unproved; keep conversion parity false because GPU float hashes differed.
 - [ ] Generalise the first immutable synthetic broad candidate, residual and
   quality report into a cross-song, multi-backend bake-off corpus.
+  - [x] Add a first path-free, self-hashed integrity catalogue over six sealed
+    reports spanning three track IDs, three caller-declared method families
+    and four evidence kinds. The catalogue verifies file and document hashes,
+    rejects active permissions/effects and copies no report bodies or paths.
+    Keep the parent gate open: heterogeneous metrics are not normalized,
+    methods are not compared or ranked, the test set is not hidden and the
+    catalogue is not an acceptance report.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
 - [x] Repeat the clean/estimate comparison through exact production
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation
@@ -2524,6 +2531,12 @@ separator transport, source-lineage import and promotion are not implemented**
   A leaf 01 and Suno B leaf 01 were all focus-line/useful; Moises leaf 01 was
   different-line/not-useful for the principal-lead focus. Preserve all five and
   compare the four useful note geometries before any merge or activation.
+- [x] Repeat the role-correct review over the earlier 3.45–6.85 second phrase
+  with Kim primary, Kim lowest-line and four provider leaves. Only Suno B leaf
+  01 was marked useful for the principal-lead focus, with the explicit human
+  qualification that it misses some notes. Preserve that incompleteness: this
+  is a usable partial candidate, not a winner, complete melody, merge input or
+  activation decision.
 - [x] Compare every supplied leaf inside composite `other` across both
   authorised excerpts using bidirectional audio rankings. Exact and semantic
   labels remain observations only. Keyboard was the only stable Suno pair on

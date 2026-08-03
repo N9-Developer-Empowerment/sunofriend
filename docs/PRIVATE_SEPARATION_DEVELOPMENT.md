@@ -1819,6 +1819,35 @@ Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
 resource, downstream-MIDI and human listening acceptance.
 
+### Cross-song evidence catalogue
+
+The owner-only `scripts/private-separation-evidence-index.py` command builds a
+fresh, path-free integrity index from already sealed private reports. Each
+`--evidence` value supplies a caller-declared track ID, method-family ID,
+finite evidence kind and report. The current catalogue covers the synthetic
+Demucs separator/audio and downstream-MIDI reports plus provider-reference and
+Kim Vocal 2 MIDI reports for `Be Alone` and `I am a Alien mashup`:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-evidence-index.py \
+  --evidence synthetic-demo demucs separator_audio /absolute/synthetic-audio.json \
+  --evidence synthetic-demo demucs downstream_midi /absolute/synthetic-midi.json \
+  --evidence be-alone provider-reference provider_midi /absolute/be-alone-provider.json \
+  --evidence i-am-a-alien provider-reference provider_midi /absolute/alien-provider.json \
+  --evidence be-alone kim-vocal-2 vocal_midi /absolute/be-alone-kim.json \
+  --evidence i-am-a-alien kim-vocal-2 vocal_midi /absolute/alien-kim.json \
+  --out /absolute/fresh/private-cross-song-separation-evidence-index.json
+```
+
+The current six-entry document has SHA-256
+`4368c30a78feabdf37674239bce7168292e63a4ed03bbc4268c87accaa66949e`.
+It verifies source file hashes, source document self-hashes, private scope and
+inactive permissions. It copies no audio, MIDI, report bodies or filesystem
+paths. It does not normalize unlike metrics, compare methods, rank a backend,
+evaluate cross-song acceptance, resolve licensing, or enable Simple/Studio.
+The broader bake-off-corpus publication gate therefore remains open.
+
 ### Current private human-review queue
 
 As of 3 August 2026, the first scoped `I am a Alien mashup` review is complete.
@@ -1899,6 +1928,19 @@ its document SHA-256 is
 `3993aa00547b388e3df328bbb4b58d52896f8cc05617b77e8c5b40fdd7d1e5e7`.
 This does not promote Kim primary, but it shows there is no evidence-based
 reason to merge these near-duplicates for this phrase.
+
+The matching role-correct review of the earlier 3.45–6.85 second phrase is now
+also complete. It compared Kim primary, Kim lowest-line, two Moises leaves and
+one leaf from each Suno pack. Only Suno B `leaf-01` was marked useful for the
+principal-lead focus. The listener explicitly noted that it covers the lead
+but does not capture every note. The other five candidates were heard and
+marked not useful for this exact focus; they remain preserved rather than
+deleted or globally rejected. The authoritative reviewed export SHA-256 is
+`4a327cc1f567c253bdafbf6ee777e78e807915c6d0ced6d0d99e8fd2d6d6c513`;
+the path-free resolution document SHA-256 is
+`a96a0e462359070f923105b4b64537a8c0ebe4634b1250b39485d14ae1b218c7`.
+This resolves the outstanding review queue but does not make Suno B a winner,
+complete transcription, automatic merge source, default or product route.
 
 The reusable owner-only command is:
 

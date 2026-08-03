@@ -1775,12 +1775,25 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   onset error. In this phrase the useful candidates are near-duplicates around
   one common melody backbone, so do not merge them in search of detail that
   the comparison did not find.
+- The role-correct earlier-phrase repeat from 3.45 to 6.85 seconds is complete.
+  Only Suno B leaf 01 was useful for the principal-lead focus, and the listener
+  explicitly reported that it still misses notes. Treat it as a useful partial
+  candidate, not a winner, complete melody, automatic merge source, default or
+  product route. The five other heard candidates remain preserved.
 - `scripts/private-reviewed-vocal-geometry.py` is an owner-only diagnostic for
   two or more candidates already marked useful in one exact sealed review. It
   reconstructs that scope, verifies the note evidence and reports pairwise
   exact-pitch, chroma, onset, duration and timing observations. Pair order is
   review order, not preference. The report cannot select, merge, repair,
   activate or publish MIDI; agreement is not ground truth.
+- `scripts/private-separation-evidence-index.py` creates a fresh owner-only,
+  path-free integrity catalogue from at least four sealed private reports over
+  at least two caller-declared track IDs and two method families. It verifies
+  each report's exact file hash, document self-hash, private scope and inactive
+  permissions. It copies no report body, audio, MIDI or path, and it does not
+  normalize heterogeneous metrics, compare methods, rank a backend, accept a
+  result or enable a product route. A catalogue is progress toward the
+  cross-song corpus gate, not completion of that gate.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,
