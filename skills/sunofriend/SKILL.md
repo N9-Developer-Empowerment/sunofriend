@@ -129,7 +129,13 @@ report the result, then move on.
   whole-group supervision, fd4 decoding, staging-verification and private
   identity-consumption order, including cleanup after observer failure, but it
   opens no native process, checkpoint, model, audio or staging path and is not
-  execution provenance. The active Kim route remains subprocess-based. This
+  execution provenance. A separate guarded native-start boundary now validates
+  the exact prepared fd3–fd7 geometry and owner-only staging identity, consumes
+  one request-bound admission immediately before the sole fixed C-method call,
+  and retains only an exact started opaque owner after child-side descriptor
+  cleanup. Its evidence is dependency-substituted: concrete fd5 lease
+  composition, owner observers, post-run staging verification and terminal
+  evidence are still absent. The active Kim route remains subprocess-based. This
   evidence does not enable
   native fake-launch V2, which remains
   permanently
@@ -493,8 +499,17 @@ report the result, then move on.
   worker, runtime, sandbox provider, native method and owner type, and a
   separate single-use admission binds its exact request/nonce/worker identity.
   One trusted-local canary opened and rechecked that static session without
-  spawning. The guarded descriptor/spawn adapter and concrete observers remain
-  missing; source shape alone is not execution provenance.
+  spawning. A guarded start adapter now validates the exact fd3 request, all
+  five non-inheritable descriptor roles, fixed checkpoint byte geometry and one
+  fresh owner-only staging identity, then consumes the single-use admission
+  immediately before the sole bound C-method call. It closes every transferred
+  child-side descriptor on every substituted outcome, leaves fd5 with its
+  separate lease owner and retains only the exact opaque native owner in a
+  running session. Dependency-substituted tests only have exercised this
+  boundary: no native process, checkpoint, model or audio was opened. Concrete
+  owner observers, checkpoint-lease composition, post-run staging verification
+  and terminal evidence remain missing; source shape alone is not execution
+  provenance.
   The owner-bound process-image
   primitive is proven only with a fixed model-free worker; the active Kim route
   still uses its older PID-consuming observation path. The

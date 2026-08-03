@@ -1704,6 +1704,51 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-03 — guarded native Kim start boundary exercised without a process
+
+- Goal: make the exact fixed C spawn method reachable only through the measured
+  session and one-use request admission while leaving checkpoint ownership and
+  the live model outside this increment.
+- Change or experiment: added one private guarded start function that validates
+  the canonical fd3 frame, distinct non-inheritable fd3–fd7 access/type
+  geometry, an empty fd4 result, fixed checkpoint byte size and a fresh
+  owner-only staging identity. It repeats descriptor, staging, worker, runtime,
+  sandbox-provider, native-method and owner-type measurements immediately
+  before consuming the exact admission and making the module's only bound C
+  method call. The parent closes fd3/fd4/fd6/fd7 on success and every failure,
+  deliberately leaves fd5 with its separate lease owner, and retains only the
+  exact opaque native owner after `started_owned` plus parent cleanup.
+- Inputs: canonical request frames, sparse synthetic fixed-size checkpoint
+  descriptors, regular-file request/result transports, real local pipes,
+  owner-only temporary staging directories and substituted spawn outcomes.
+- Model/runtime/checkpoint: dependency-substituted only. No native process was
+  created, no checkpoint byte was read, and no model, audio, source companion
+  or quarantine artifact was opened.
+- Evidence and metrics: 15 portable session/admission/start tests pass. They
+  exercise the exact success path, wrong ready/release geometry, request-frame
+  drift, non-private staging, an exact native no-start result and a native-call
+  exception. Every transferred child-side descriptor closes, fd5 remains open
+  at offset zero, an issued admission is retired or consumed once, and only an
+  exact started owner becomes the registered running owner. The related
+  session/parent/transport/worker regression passed 67 tests, the trusted-local
+  real static-session remeasurement passed in 1.34 seconds, and the complete
+  portable repository suite passed 2,881 tests with one skip, 10 trusted-local
+  deselections and only the existing third-party `resampy/pkg_resources`
+  warning.
+- Listening result: not applicable; no audio was read or produced.
+- Decision: accept the guarded start boundary as code wiring only, not process
+  provenance, separator evidence or a product route.
+- Problems/risks: the caller still needs a concrete request/result/handshake
+  constructor under the existing live checkpoint lease. Actual process-image,
+  kernel-network and executable-region observers, whole-group supervision,
+  fd4 decode, independent quarantine/closure verification and the terminal
+  receipt are not yet composed around this start. Runtime, worker and sandbox
+  provider remain remeasured pathname exec bindings.
+- Next smallest step: compose one model-free private coordinator from the live
+  fd5 lease, guarded start, concrete opaque-owner observers and the existing
+  dependency-substituted parent lifecycle before opening the accepted Kim
+  checkpoint or an authorised excerpt.
+
 ### 2026-08-02 — fixed native Kim session and request-bound admission proved
 
 - Goal: bind the real fixed worker and native sandbox method to a fresh measured

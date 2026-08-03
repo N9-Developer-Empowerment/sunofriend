@@ -98,8 +98,16 @@ One separate opaque admission binds the exact session, canonical request hash,
 nonce, repository and worker SHA and can be consumed only once. A trusted-local
 canary built and imported the extension and remeasured the static bindings
 without starting a worker or opening a checkpoint, model or audio. This is not
-separation evidence: the guarded fd3–fd7 construction, spawn, owner observers,
-staging verification and terminal receipt remain the next boundary.
+separation evidence. A follow-on dependency-substituted start boundary now
+validates the exact fd3 frame, all five non-inheritable descriptor roles,
+fixed fd5 byte geometry and one fresh owner-only staging identity. It
+remeasures immediately before consuming the exact one-use admission and the
+sole fixed native call, closes the four transferred child-side descriptors on
+every tested outcome, leaves fd5 with its separate lease owner and retains the
+exact opaque owner only after a proved started outcome. No native process,
+checkpoint byte, model or audio was opened by those tests. Concrete fd5 lease
+composition, live owner observers, post-run staging/artifact verification and
+the terminal receipt remain the next boundary.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on
@@ -107,7 +115,7 @@ the copyright-safe demo, and a second private evaluator measures their effect
 on the existing MIDI transcribers. Public separation, source-graph import,
 hidden/cross-song acceptance and promotion are not implemented**
 
-Checked: 2 August 2026 after the private four-stem HTDemucs run, synthetic
+Checked: 3 August 2026 after the private four-stem HTDemucs run, synthetic
 ground-truth evaluation, three authorised provider comparisons, cross-song
 narrow-`other` evidence, the six-source challenger, the MelRoFormer vocal
 comparisons and its model-free macOS network-denial canary

@@ -6,13 +6,18 @@ Neither the session observation nor the serialized worker request is execution
 authority. A parent-issued admission binds one exact live session and request
 nonce and may be consumed only once by the later private executor.
 
-This module does not open a checkpoint, read audio or invoke the native spawn
-method. No public, CLI, TUI, Simple, Studio or source-graph route imports it.
+The guarded start boundary validates the request/staging/descriptor geometry,
+consumes one exact admission and may invoke the fixed native spawn method. It
+does not open or read the checkpoint, read audio, supervise a worker or grant
+product authority. No public, CLI, TUI, Simple, Studio or source-graph route
+imports it.
 """
 
 from __future__ import annotations
 
+import fcntl
 import os
+import stat
 import threading
 import weakref
 from dataclasses import dataclass
@@ -26,6 +31,7 @@ from ._separation_checkpoint_canonical import (
     plain as _plain,
 )
 from ._separation_melroformer_native_transport import (
+    _encode_private_melroformer_native_request,
     _validate_private_melroformer_native_request,
 )
 
@@ -123,6 +129,7 @@ class _SessionState:
     observation_document: Mapping[str, Any]
     observation_object: _VerifiedPrivateMelroformerNativeSessionObservation
     run_status: str
+    native_owner: Any | None
 
 
 @dataclass
@@ -205,6 +212,7 @@ def _open_verified_private_melroformer_native_session(
             "opaque_owner_type_bound": True,
             "fixed_worker_bound": True,
             "sandbox_provider_bound": True,
+            "guarded_descriptor_start_adapter_available": True,
             "worker_started": False,
             "real_separation_executed": False,
         },
@@ -222,7 +230,7 @@ def _open_verified_private_melroformer_native_session(
             "opaque_session_and_observation_are_not_execution_authority",
             "single_use_admission_is_still_required_immediately_before_spawn",
             "runtime_worker_and_sandbox_provider_paths_retain_exec_toctou",
-            "checkpoint_source_companions_and_staging_are_not_yet_bound",
+            "checkpoint_lease_source_companions_and_post_run_staging_verification_are_not_yet_bound",
             "no_live_observer_or_terminal_evidence_exists",
             "no_public_cli_tui_simple_studio_or_source_graph_route",
         ],
@@ -251,6 +259,7 @@ def _open_verified_private_melroformer_native_session(
         observation_document=document,
         observation_object=observation,
         run_status="ready",
+        native_owner=None,
     )
     with _REGISTRY_LOCK:
         _SESSIONS[session] = state
@@ -383,6 +392,385 @@ def _finish_private_melroformer_native_admission(
             session_state.run_status = "ready"
     if mismatch:
         raise RuntimeError("private Kim native admission state differs")
+
+
+def _start_verified_private_melroformer_native_worker(
+    trusted_session: _VerifiedPrivateMelroformerNativeSession,
+    *,
+    session_observation: _VerifiedPrivateMelroformerNativeSessionObservation,
+    trusted_admission: _PrivateMelroformerNativeAdmission,
+    request: Mapping[str, Any],
+    staging_directory: str | Path,
+    request_read_descriptor: int,
+    result_write_descriptor: int,
+    checkpoint_read_descriptor: int,
+    ready_write_descriptor: int,
+    release_read_descriptor: int,
+) -> Any:
+    """Start one fixed worker after consuming one exact live admission.
+
+    Invocation transfers the four child-only request/result/ready/release
+    descriptors to this boundary. They are closed in the parent on every
+    outcome. The checkpoint descriptor remains owned by its separate live
+    lease and is never closed or read here.
+
+    The returned value is the exact native opaque owner. It carries no public
+    PID/PGID attribute and is also retained in the private session registry so
+    later observer and terminal phases can require object identity.
+    """
+
+    transferred_descriptors = (
+        request_read_descriptor,
+        result_write_descriptor,
+        ready_write_descriptor,
+        release_read_descriptor,
+    )
+    native_owner: Any | None = None
+    consumed = False
+    primary_error: BaseException | None = None
+    cleanup_failures: list[tuple[str, BaseException]] = []
+    start_state: str | None = None
+    state: _SessionState | None = None
+    try:
+        checked_request = _validate_private_melroformer_native_request(request)
+        _session, state = _known_session(trusted_session)
+        descriptor_measurement = _validate_private_native_start_descriptors(
+            request=checked_request,
+            request_read_descriptor=request_read_descriptor,
+            result_write_descriptor=result_write_descriptor,
+            checkpoint_read_descriptor=checkpoint_read_descriptor,
+            ready_write_descriptor=ready_write_descriptor,
+            release_read_descriptor=release_read_descriptor,
+        )
+        staging_before = _measure_private_staging_directory(
+            staging_directory,
+            request=checked_request,
+            require_empty=True,
+        )
+        _validate_verified_private_melroformer_native_session_observation(
+            trusted_session,
+            session_observation,
+        )
+        with state.lock:
+            _require_owner(state)
+            if state.run_status != "admission_issued":
+                raise RuntimeError(
+                    "private Kim native session lacks an issued admission"
+                )
+            _remeasure_state(state)
+            if _measure_private_staging_directory(
+                staging_directory,
+                request=checked_request,
+                require_empty=True,
+            ) != staging_before:
+                raise RuntimeError(
+                    "private Kim staging changed before native start"
+                )
+            _recheck_private_native_start_descriptors(
+                descriptor_measurement,
+                request=checked_request,
+                request_read_descriptor=request_read_descriptor,
+                result_write_descriptor=result_write_descriptor,
+                checkpoint_read_descriptor=checkpoint_read_descriptor,
+                ready_write_descriptor=ready_write_descriptor,
+                release_read_descriptor=release_read_descriptor,
+            )
+            _consume_private_melroformer_native_admission(
+                trusted_admission,
+                trusted_session=trusted_session,
+                request=checked_request,
+            )
+            consumed = True
+            state.run_status = "starting"
+            native_owner = state.spawn_method(
+                os.fsencode(state.sandbox_provider_path),
+                os.fsencode(state.runtime_path),
+                os.fsencode(state.worker_path),
+                os.fsencode(Path(staging_before["resolved_path"])),
+                request_read_descriptor,
+                result_write_descriptor,
+                checkpoint_read_descriptor,
+                ready_write_descriptor,
+                release_read_descriptor,
+            )
+            start_state, _no_start_stage, _native_status = (
+                _base._validate_native_start_outcome(
+                    native_owner,
+                    expected_owner_type=state.owner_type,
+                )
+            )
+            if start_state != "started_owned":
+                state.run_status = "consumed_no_start"
+                raise RuntimeError("private Kim native worker was not started")
+            if _staging_identity(
+                _measure_private_staging_directory(
+                    staging_directory,
+                    request=checked_request,
+                    require_empty=False,
+                )
+            ) != _staging_identity(staging_before):
+                state.run_status = "consumed_start_unproven"
+                raise RuntimeError("private Kim staging changed during start")
+            state.run_status = "started_pending_parent_cleanup"
+    except BaseException as exc:
+        primary_error = exc
+        if state is not None:
+            with state.lock:
+                if consumed and state.run_status not in {
+                    "consumed_no_start",
+                    "consumed_start_unproven",
+                }:
+                    state.run_status = "consumed_start_unproven"
+
+    cleanup_failures.extend(
+        _close_transferred_private_native_descriptors(
+            transferred_descriptors,
+            protected_descriptor=checkpoint_read_descriptor,
+        )
+    )
+    try:
+        _finish_private_melroformer_native_admission(
+            trusted_admission,
+            expected_status="consumed" if consumed else "issued",
+        )
+    except BaseException as exc:
+        cleanup_failures.append(("native_admission_finish", exc))
+
+    if primary_error is None and cleanup_failures:
+        primary_error = RuntimeError(
+            "private Kim native parent descriptor cleanup was incomplete"
+        )
+        if state is None:
+            raise primary_error
+        with state.lock:
+            state.run_status = "consumed_start_unproven"
+    if primary_error is not None:
+        # Dropping an unretained exact owner invokes the native emergency
+        # containment backstop. It is not accepted as terminal evidence.
+        native_owner = None
+        if cleanup_failures:
+            detail = ", ".join(label for label, _error in cleanup_failures)
+            raise RuntimeError(
+                f"private Kim native start failed; cleanup: {detail}"
+            ) from primary_error
+        raise primary_error
+    if start_state != "started_owned" or native_owner is None:
+        if state is None:
+            raise RuntimeError("private Kim native start session is unproven")
+        with state.lock:
+            state.run_status = "consumed_start_unproven"
+        raise RuntimeError("private Kim native start outcome is unproven")
+    if state is None:
+        native_owner = None
+        raise RuntimeError("private Kim native start session is unproven")
+    with state.lock:
+        _require_owner(state)
+        if state.run_status != "started_pending_parent_cleanup":
+            native_owner = None
+            state.run_status = "consumed_start_unproven"
+            raise RuntimeError("private Kim native start state changed")
+        state.native_owner = native_owner
+        state.run_status = "running"
+    return native_owner
+
+
+def _known_started_private_melroformer_native_owner(
+    trusted_session: _VerifiedPrivateMelroformerNativeSession,
+    value: Any,
+) -> Any:
+    """Require the exact native owner retained by one running session."""
+
+    _session, state = _known_session(trusted_session)
+    with state.lock:
+        _require_owner(state)
+        if (
+            state.run_status != "running"
+            or type(value) is not state.owner_type
+            or value is not state.native_owner
+        ):
+            raise ValueError("private Kim native owner is not the active owner")
+        return value
+
+
+def _validate_private_native_start_descriptors(
+    *,
+    request: Mapping[str, Any],
+    request_read_descriptor: int,
+    result_write_descriptor: int,
+    checkpoint_read_descriptor: int,
+    ready_write_descriptor: int,
+    release_read_descriptor: int,
+) -> Mapping[str, Any]:
+    descriptors = (
+        request_read_descriptor,
+        result_write_descriptor,
+        checkpoint_read_descriptor,
+        ready_write_descriptor,
+        release_read_descriptor,
+    )
+    if (
+        any(type(descriptor) is not int or descriptor < 3 for descriptor in descriptors)
+        or len(set(descriptors)) != 5
+    ):
+        raise ValueError("private Kim native descriptors are invalid")
+    measurements = {
+        "request": _descriptor_measurement(request_read_descriptor),
+        "result": _descriptor_measurement(result_write_descriptor),
+        "checkpoint": _descriptor_measurement(checkpoint_read_descriptor),
+        "ready": _descriptor_measurement(ready_write_descriptor),
+        "release": _descriptor_measurement(release_read_descriptor),
+    }
+    if any(item["inheritable"] for item in measurements.values()):
+        raise ValueError("private Kim native descriptor is inheritable")
+    if (
+        measurements["request"]["access_mode"] != os.O_RDONLY
+        or measurements["request"]["file_type"] != "regular"
+        or measurements["result"]["access_mode"] != os.O_WRONLY
+        or measurements["result"]["file_type"] != "regular"
+        or measurements["result"]["size"] != 0
+        or measurements["result"]["append"] is True
+        or measurements["checkpoint"]["access_mode"] != os.O_RDONLY
+        or measurements["checkpoint"]["file_type"] != "regular"
+        or measurements["checkpoint"]["size"]
+        != request["identities"]["checkpoint_bytes"]
+        or measurements["ready"]["access_mode"] != os.O_WRONLY
+        or measurements["ready"]["file_type"] != "fifo"
+        or measurements["release"]["access_mode"] != os.O_RDONLY
+        or measurements["release"]["file_type"] != "fifo"
+    ):
+        raise ValueError("private Kim native descriptor geometry differs")
+    frame = _encode_private_melroformer_native_request(request)
+    if measurements["request"]["size"] != len(frame):
+        raise ValueError("private Kim native request descriptor size differs")
+    if _pread_exact(request_read_descriptor, len(frame)) != frame:
+        raise ValueError("private Kim native request descriptor content differs")
+    if _descriptor_measurement(request_read_descriptor) != measurements["request"]:
+        raise ValueError("private Kim native request descriptor changed")
+    return _freeze(measurements)
+
+
+def _recheck_private_native_start_descriptors(
+    expected: Mapping[str, Any],
+    **descriptors: Any,
+) -> None:
+    request = descriptors.pop("request")
+    measured = _validate_private_native_start_descriptors(
+        request=request,
+        **descriptors,
+    )
+    if measured != expected:
+        raise RuntimeError("private Kim native descriptors changed before start")
+
+
+def _descriptor_measurement(descriptor: int) -> Mapping[str, Any]:
+    try:
+        flags = fcntl.fcntl(descriptor, fcntl.F_GETFL)
+        value = os.fstat(descriptor)
+        inheritable = os.get_inheritable(descriptor)
+    except OSError as exc:
+        raise ValueError("private Kim native descriptor is unavailable") from exc
+    if stat.S_ISREG(value.st_mode):
+        file_type = "regular"
+    elif stat.S_ISFIFO(value.st_mode):
+        file_type = "fifo"
+    else:
+        file_type = "other"
+    return _freeze(
+        {
+            "access_mode": flags & os.O_ACCMODE,
+            "append": bool(flags & os.O_APPEND),
+            "inheritable": inheritable,
+            "file_type": file_type,
+            "device": value.st_dev,
+            "inode": value.st_ino,
+            "mode": stat.S_IMODE(value.st_mode),
+            "size": value.st_size,
+            "modified_ns": value.st_mtime_ns,
+            "changed_ns": value.st_ctime_ns,
+        }
+    )
+
+
+def _measure_private_staging_directory(
+    value: str | Path,
+    *,
+    request: Mapping[str, Any],
+    require_empty: bool,
+) -> Mapping[str, Any]:
+    requested = Path(request["paths"]["staging_directory"])
+    supplied = Path(value)
+    if supplied != requested or not supplied.is_absolute():
+        raise ValueError("private Kim staging path differs from request")
+    try:
+        link_state = supplied.lstat()
+        resolved = supplied.resolve(strict=True)
+        resolved_state = resolved.stat()
+    except OSError as exc:
+        raise ValueError("private Kim staging directory is unavailable") from exc
+    if (
+        not stat.S_ISDIR(link_state.st_mode)
+        or resolved != supplied
+        or (link_state.st_dev, link_state.st_ino)
+        != (resolved_state.st_dev, resolved_state.st_ino)
+        or resolved_state.st_uid != os.getuid()
+        or stat.S_IMODE(resolved_state.st_mode) & 0o077
+    ):
+        raise ValueError("private Kim staging directory is not owner-only")
+    if require_empty:
+        try:
+            with os.scandir(resolved) as entries:
+                if next(entries, None) is not None:
+                    raise ValueError("private Kim staging directory is not fresh")
+        except OSError as exc:
+            raise ValueError("private Kim staging directory is unavailable") from exc
+    return _freeze(
+        {
+            "resolved_path": str(resolved),
+            "device": resolved_state.st_dev,
+            "inode": resolved_state.st_ino,
+            "uid": resolved_state.st_uid,
+            "mode": stat.S_IMODE(resolved_state.st_mode),
+        }
+    )
+
+
+def _staging_identity(value: Mapping[str, Any]) -> tuple[Any, ...]:
+    return tuple(value[key] for key in ("resolved_path", "device", "inode", "uid", "mode"))
+
+
+def _pread_exact(descriptor: int, byte_count: int) -> bytes:
+    received = bytearray()
+    offset = 0
+    while len(received) < byte_count:
+        block = os.pread(descriptor, byte_count - len(received), offset)
+        if not block:
+            break
+        received.extend(block)
+        offset += len(block)
+    return bytes(received)
+
+
+def _close_transferred_private_native_descriptors(
+    descriptors: tuple[int, ...],
+    *,
+    protected_descriptor: int,
+) -> tuple[tuple[str, BaseException], ...]:
+    failures: list[tuple[str, BaseException]] = []
+    seen: set[int] = set()
+    for descriptor in descriptors:
+        if (
+            type(descriptor) is not int
+            or descriptor < 3
+            or descriptor == protected_descriptor
+            or descriptor in seen
+        ):
+            continue
+        seen.add(descriptor)
+        try:
+            os.close(descriptor)
+        except OSError as exc:
+            failures.append(("child_transport_descriptor_close", exc))
+    return tuple(failures)
 
 
 def _known_session(
