@@ -34,6 +34,10 @@ from ._separation_melroformer_native_transport import (
     _encode_private_melroformer_native_request,
     _validate_private_melroformer_native_request,
 )
+from ._separation_melroformer_native_runtime_darwin import (
+    _measure_private_runtime_launcher,
+    _path_free_runtime_binding,
+)
 
 
 __all__: tuple[str, ...] = ()
@@ -121,7 +125,10 @@ class _SessionState:
     native_module: Any
     spawn_method: Any
     owner_type: type[Any]
-    runtime_path: Path
+    runtime_launcher_path: Path
+    runtime_environment_root: Path
+    base_runtime_root: Path
+    runtime_measurement: Mapping[str, Any]
     worker_path: Path
     worker_measurement: Mapping[str, Any]
     sandbox_provider_path: Path
@@ -151,6 +158,7 @@ _ADMISSIONS: weakref.WeakKeyDictionary[
 
 def _open_verified_private_melroformer_native_session(
     *,
+    runtime_launcher_path: str | Path,
     cache_root: str | Path | None = None,
 ) -> tuple[
     _VerifiedPrivateMelroformerNativeSession,
@@ -158,6 +166,7 @@ def _open_verified_private_melroformer_native_session(
 ]:
     """Build and bind one fresh native session without starting a process."""
 
+    runtime_before = _measure_private_runtime_launcher(runtime_launcher_path)
     base_session, base_observation = _base._open_verified_native_launcher_session(
         cache_root=cache_root
     )
@@ -177,14 +186,16 @@ def _open_verified_private_melroformer_native_session(
         ):
             raise RuntimeError("private Kim native spawn binding is invalid")
         owner_type = base_state.owner_type
-        runtime_path = base_state.runtime_path
         native_module = base_state.module
+    runtime_after = _measure_private_runtime_launcher(runtime_launcher_path)
     worker_after = _measure_worker(worker_path)
     provider_after = _measure_provider(provider_path)
     if worker_after != worker_before:
         raise RuntimeError("fixed private Kim worker changed during session open")
     if provider_after != provider_before:
         raise RuntimeError("sandbox provider changed during session open")
+    if runtime_after != runtime_before:
+        raise RuntimeError("private Kim runtime changed during session open")
     base_document = _plain(base_observation)
     payload = {
         "schema": _SESSION_SCHEMA,
@@ -200,6 +211,7 @@ def _open_verified_private_melroformer_native_session(
             "runtime_executable": base_document["bindings"][
                 "runtime_executable"
             ],
+            "private_ai_runtime": _path_free_runtime_binding(runtime_after),
             "fixed_kim_worker": _path_free_binding(worker_after),
             "sandbox_provider": _path_free_binding(provider_after),
             "native_build_receipt_sha256": base_document["bindings"][
@@ -210,6 +222,8 @@ def _open_verified_private_melroformer_native_session(
             "fresh_private_native_build_verified": True,
             "fixed_kim_spawn_method_bound": True,
             "opaque_owner_type_bound": True,
+            "explicit_ai_runtime_bound": True,
+            "virtual_environment_bound": True,
             "fixed_worker_bound": True,
             "sandbox_provider_bound": True,
             "guarded_descriptor_start_adapter_available": True,
@@ -229,7 +243,8 @@ def _open_verified_private_melroformer_native_session(
         "limitations": [
             "opaque_session_and_observation_are_not_execution_authority",
             "single_use_admission_is_still_required_immediately_before_spawn",
-            "runtime_worker_and_sandbox_provider_paths_retain_exec_toctou",
+            "measured_runtime_worker_and_sandbox_provider_paths_retain_exec_toctou",
+            "base_runtime_files_outside_the_virtual_environment_are_observed_again_after_execution_but_not_frozen",
             "checkpoint_lease_source_companions_and_post_run_staging_verification_are_not_yet_bound",
             "no_live_observer_or_terminal_evidence_exists",
             "no_public_cli_tui_simple_studio_or_source_graph_route",
@@ -251,7 +266,10 @@ def _open_verified_private_melroformer_native_session(
         native_module=native_module,
         spawn_method=spawn_method,
         owner_type=owner_type,
-        runtime_path=runtime_path,
+        runtime_launcher_path=Path(runtime_after["runtime_launcher_path"]),
+        runtime_environment_root=Path(runtime_after["runtime_environment_root"]),
+        base_runtime_root=Path(runtime_after["base_runtime_root"]),
+        runtime_measurement=_freeze(runtime_after),
         worker_path=worker_path,
         worker_measurement=_freeze(worker_after),
         sandbox_provider_path=provider_path,
@@ -484,7 +502,7 @@ def _start_verified_private_melroformer_native_worker(
             state.run_status = "starting"
             native_owner = state.spawn_method(
                 os.fsencode(state.sandbox_provider_path),
-                os.fsencode(state.runtime_path),
+                os.fsencode(state.runtime_launcher_path),
                 os.fsencode(state.worker_path),
                 os.fsencode(Path(staging_before["resolved_path"])),
                 request_read_descriptor,
@@ -1013,15 +1031,16 @@ def _remeasure_state(state: _SessionState) -> None:
     )
     worker = _measure_worker(state.worker_path)
     provider = _measure_provider(state.sandbox_provider_path)
+    runtime = _measure_private_runtime_launcher(state.runtime_launcher_path)
     _base_session, base_state = _base._known_state(state.base_session)
     if (
         worker != _plain(state.worker_measurement)
         or provider != _plain(state.sandbox_provider_measurement)
+        or runtime != _plain(state.runtime_measurement)
         or base_state.module is not state.native_module
         or getattr(state.native_module, _SPAWN_METHOD_NAME, None)
         is not state.spawn_method
         or base_state.owner_type is not state.owner_type
-        or base_state.runtime_path != state.runtime_path
     ):
         raise RuntimeError("private Kim native session binding changed")
 

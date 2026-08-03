@@ -125,11 +125,13 @@ def _install_fixed_substitutions(
     worker_request = object()
     session_observation = {"observation_sha256": _digest("session")}
     state = SimpleNamespace(
-        runtime_path=Path("/fixed/runtime/python"),
+        runtime_launcher_path=Path("/fixed/runtime-env/bin/python"),
+        runtime_environment_root=Path("/fixed/runtime-env"),
+        base_runtime_root=Path("/fixed/base-runtime"),
         owner_type=owner_type,
     )
     binding = SimpleNamespace(
-        runtime_launcher_path=Path("/fixed/runtime/python"),
+        runtime_launcher_path=Path("/fixed/runtime-env/bin/python"),
         process_image_path=Path("/fixed/runtime/Python"),
         process_image_cdhash="c" * 40,
     )
@@ -149,10 +151,15 @@ def _install_fixed_substitutions(
         "_known_session",
         lambda trusted: (trusted, state),
     )
+    def prepare_process_image(**kwargs):
+        assert kwargs == {"runtime_path": state.runtime_launcher_path}
+        calls.append("process_prepare")
+        return binding
+
     monkeypatch.setattr(
         coordinator._process_image,
         "_prepare_runtime_process_image_binding",
-        lambda **_kwargs: calls.append("process_prepare") or binding,
+        prepare_process_image,
     )
     monkeypatch.setattr(
         coordinator._network_observer,
@@ -238,11 +245,18 @@ def _install_fixed_substitutions(
         lambda **kwargs: calls.append("images_complete")
         or {"evidence_sha256": _digest("images")},
     )
+    def verify_staging(**kwargs):
+        assert kwargs["runtime_environment_root"] == (
+            state.runtime_environment_root
+        )
+        assert kwargs["base_runtime_root"] == state.base_runtime_root
+        calls.append("staging_verified")
+        return {"evidence_sha256": _digest("staging")}
+
     monkeypatch.setattr(
         coordinator,
         "_verify_private_melroformer_native_worker_staging",
-        lambda **kwargs: calls.append("staging_verified")
-        or {"evidence_sha256": _digest("staging")},
+        verify_staging,
     )
     monkeypatch.setattr(
         coordinator._lease,

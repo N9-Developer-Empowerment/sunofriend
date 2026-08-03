@@ -1704,6 +1704,49 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-03 — exact private AI virtual environment bound, not run
+
+- Goal: prevent the future native Kim worker from silently falling back from
+  the explicitly prepared AI environment to the parent process's resolved base
+  Python executable.
+- Change or experiment: the private session now requires an explicit Python
+  launcher path. It preserves that exact virtual-environment invocation for
+  native `exec`, while separately resolving and hashing the base executable for
+  signed process-image observation. The session also binds `pyvenv.cfg`, the
+  environment and `bin` directory identities, the resolved base-runtime root,
+  CPython version and disabled system-site-packages policy. Every binding is
+  repeated at validation, immediately before start and after exact reap. The
+  fixed coordinator now gives the staging verifier these session-bound roots
+  instead of deriving a false environment from the resolved executable or the
+  parent interpreter.
+- Inputs: synthetic virtual environments in portable tests and the existing
+  local `.venv-ai` launcher in one trusted-local static session check. No
+  checkpoint, model, source audio or output staging was opened.
+- Model/runtime/checkpoint: `.venv-ai/bin/python` remains the intended private
+  ML runtime; the check measured its launcher/config/base executable only. No
+  backend import or inference occurred.
+- Evidence and metrics: 27 focused portable session/coordinator tests pass,
+  the 151-test related native gate passes and the trusted-local fresh native-
+  session check passes. The complete portable suite passes 2,921 tests with
+  one expected skip, 11 trusted-local deselections and the existing third-
+  party `resampy`/`pkg_resources` warning. Tests prove that the
+  guarded spawn receives the unresolved environment launcher, the post-run
+  verifier receives distinct environment/base roots, path-free observations
+  reveal no local path, system-site packages fail closed and runtime/config
+  mutation invalidates the session. The separate macOS unified-log observer
+  also passes when run outside the Codex sandbox, which cannot read that host
+  log by design.
+- Listening result: not applicable; this increment produced no audio.
+- Decision: keep the explicit AI-runtime binding inside the sole private future
+  coordinator. It remains unavailable to CLI, TUI, Simple, Studio and the
+  source graph and does not make separation or quality claims.
+- Problems/risks: pathname-to-`exec` TOCTOU still exists; base-runtime files
+  outside the virtual environment are measured and observed but not frozen.
+  Proven no-start and mixed cleanup-failure receipts remain incomplete.
+- Next smallest step: make no-start and mixed cleanup outcomes disjoint and
+  path-free, then run one fresh authorised excerpt through the fixed
+  coordinator before considering any private activation.
+
 ### 2026-08-03 — fixed real-worker coordinator composed, not run
 
 - Goal: replace the remaining loose parent-side Kim lifecycle pieces with one

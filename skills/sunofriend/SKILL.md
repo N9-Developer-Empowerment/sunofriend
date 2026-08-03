@@ -151,10 +151,13 @@ report the result, then move on.
   checkpoint recheck and reservation/session/lease terminalization. Its tests
   substitute every effectful dependency and prove only fixed order plus
   cleanup; they do not start a native process or open the accepted checkpoint,
-  model, source or audio. The runtime binding must next preserve the exact
-  virtual-environment launcher separately from its resolved process image, and
-  disjoint no-start plus mixed-failure receipts remain outstanding. The active
-  Kim route remains subprocess-based. This
+  model, source or audio. The private session now requires and repeatedly
+  measures the exact virtual-environment launcher separately from its resolved
+  process image, and the coordinator passes its independently bound environment
+  and base-runtime roots to post-run verification. This has portable and
+  trusted-local static-session evidence only. Disjoint no-start plus mixed-
+  failure receipts remain outstanding. The active authorised Kim evaluation
+  route remains subprocess-based. This
   evidence does not enable
   native fake-launch V2, which remains
   permanently
@@ -547,11 +550,13 @@ report the result, then move on.
   lifecycle tests remain dependency-substituted. The fixed model-free macOS
   adapter now proves the concrete observer/fd4/supervisor/staging order with a
   small placeholder fd5 and one stdlib worker, including exact cleanup after a
-  wrong process-image claim. The real staging verifier and session terminal
-  transition now exist separately, but real lease/start/observer composition,
-  accepted-fd5 remeasurement, lease cleanup and one combined terminal receipt
-  remain absent, so this does not permit a Kim run or any CLI, TUI, Simple,
-  Studio or source-graph route.
+  wrong process-image claim. The fixed private coordinator now composes the
+  real staging verifier, session terminal transition, lease/start/observer
+  order, accepted-fd5 remeasurement and lease cleanup. It preserves and
+  remeasures the explicit virtual-environment launcher separately from the
+  resolved process image and base-runtime root. Its tests still substitute all
+  effectful dependencies, so this does not permit a Kim run or any CLI, TUI,
+  Simple, Studio or source-graph route.
   The owner-bound process-image
   primitive is proven only with a fixed model-free worker; the active Kim route
   still uses its older PID-consuming observation path. The

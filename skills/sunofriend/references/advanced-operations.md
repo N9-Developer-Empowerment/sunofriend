@@ -1680,8 +1680,11 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   fd4 drain, exact reap, real staging verification and session/fd5/lease
   terminalization. Its initial tests substitute every effectful dependency,
   so they prove ordering and cleanup rather than live execution. The exact
-  virtual-environment launcher still needs to be preserved separately from the
-  resolved process image, and no-start plus mixed-failure receipts remain
+  virtual-environment launcher is now preserved and repeatedly measured
+  separately from the resolved process image; native `exec` receives the
+  environment launcher and the staging verifier receives independently bound
+  environment and base-runtime roots. This has portable and trusted-local
+  static-session evidence only. No-start plus mixed-failure receipts remain
   outstanding. No separator route is enabled.
   The
   evidence does not enumerate dyld

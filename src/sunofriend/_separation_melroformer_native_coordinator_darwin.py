@@ -16,7 +16,6 @@ from __future__ import annotations
 import hashlib
 import os
 import platform
-import sys
 import time
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -121,7 +120,7 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
         trusted_native_session
     )
     del _known_session
-    runtime_path = session_state.runtime_path
+    runtime_path = session_state.runtime_launcher_path
     expected_owner_type = session_state.owner_type
     process_binding = _process_image._prepare_runtime_process_image_binding(
         runtime_path=runtime_path
@@ -277,8 +276,10 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
                 _verify_private_melroformer_native_worker_staging(
                     request=checked_request,
                     child_result=result["child_result"],
-                    runtime_environment_root=Path(runtime_path).parent.parent,
-                    base_runtime_root=Path(sys.base_prefix),
+                    runtime_environment_root=(
+                        session_state.runtime_environment_root
+                    ),
+                    base_runtime_root=session_state.base_runtime_root,
                 )
             )
             post_run_lease_observation = (

@@ -6,12 +6,13 @@ import pickle
 import platform
 import threading
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 
 import pytest
 
 import sunofriend
 from sunofriend import _separation_melroformer_native_session_darwin as session
+from sunofriend import _separation_melroformer_native_runtime_darwin as runtime
 from sunofriend._separation_checkpoint_canonical import deep_freeze
 from sunofriend._separation_melroformer_native_transport import (
     _build_private_melroformer_native_request,
@@ -89,7 +90,10 @@ def _registered_session():
         native_module=module,
         spawn_method=spawn,
         owner_type=owner_type,
-        runtime_path=Path("/private/tmp/runtime"),
+        runtime_launcher_path=Path("/private/tmp/runtime-env/bin/python"),
+        runtime_environment_root=Path("/private/tmp/runtime-env"),
+        base_runtime_root=Path("/private/tmp/base-runtime"),
+        runtime_measurement={},
         worker_path=Path(
             "/private/tmp/repository/scripts/private-melroformer-native-worker.py"
         ),
@@ -326,7 +330,7 @@ def test_guarded_start_consumes_admission_and_closes_child_transport_descriptors
         assert len(calls) == 1
         assert calls[0][:4] == (
             os.fsencode(state.sandbox_provider_path),
-            os.fsencode(state.runtime_path),
+            os.fsencode(state.runtime_launcher_path),
             os.fsencode(state.worker_path),
             os.fsencode(staging),
         )
@@ -882,6 +886,128 @@ def test_module_has_one_guarded_spawn_call_and_no_product_route() -> None:
         )
 
 
+def test_private_runtime_binding_has_no_process_or_product_route() -> None:
+    assert runtime.__all__ == ()
+    source = Path(runtime.__file__).read_text(encoding="utf-8")
+    for forbidden in ("subprocess", "socket", "urlopen", "requests"):
+        assert forbidden not in source
+    for path in (
+        Path(sunofriend.__file__),
+        Path(sunofriend.__file__).with_name("cli.py"),
+    ):
+        assert "_separation_melroformer_native_runtime_darwin" not in (
+            path.read_text(encoding="utf-8")
+        )
+
+
+def _runtime_fixture(tmp_path: Path) -> tuple[Path, Path, Path]:
+    base_root = (tmp_path / "base" / "3.12").resolve()
+    base_bin = base_root / "bin"
+    base_bin.mkdir(parents=True)
+    native_python = base_bin / "python3.12"
+    native_python.write_bytes(b"private-test-python\n")
+    native_python.chmod(0o755)
+
+    environment = (tmp_path / "runtime-env").resolve()
+    runtime_bin = environment / "bin"
+    runtime_bin.mkdir(parents=True)
+    launcher = runtime_bin / "python"
+    launcher.symlink_to(native_python)
+    (environment / "pyvenv.cfg").write_text(
+        "\n".join(
+            (
+                f"home = {base_bin}",
+                "implementation = CPython",
+                "version_info = 3.12.10",
+                "include-system-site-packages = false",
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+    return launcher, environment, base_root
+
+
+def test_private_runtime_measurement_preserves_venv_launcher_and_hides_paths(
+    tmp_path: Path,
+) -> None:
+    launcher, environment, base_root = _runtime_fixture(tmp_path)
+
+    measured = session._measure_private_runtime_launcher(launcher)
+    public = session._path_free_runtime_binding(measured)
+
+    assert measured["runtime_launcher_path"] == str(launcher)
+    assert measured["runtime_environment_root"] == str(environment)
+    assert measured["base_runtime_root"] == str(base_root)
+    assert measured["launcher_entry"]["kind"] == "symlink"
+    assert measured["python_version"] == "3.12.10"
+    assert public["system_site_packages_enabled"] is False
+    assert str(tmp_path) not in repr(public)
+
+
+def test_private_runtime_measurement_rejects_system_site_packages(
+    tmp_path: Path,
+) -> None:
+    launcher, environment, _base_root = _runtime_fixture(tmp_path)
+    (environment / "pyvenv.cfg").write_text(
+        (environment / "pyvenv.cfg")
+        .read_text(encoding="utf-8")
+        .replace("false", "true"),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="disable system site packages"):
+        session._measure_private_runtime_launcher(launcher)
+
+
+def test_session_remeasurement_rejects_changed_explicit_ai_runtime(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    launcher, environment, base_root = _runtime_fixture(tmp_path)
+    trusted, _observation, state = _registered_session()
+    measurement = session._measure_private_runtime_launcher(launcher)
+    state.runtime_launcher_path = launcher
+    state.runtime_environment_root = environment
+    state.base_runtime_root = base_root
+    state.runtime_measurement = deep_freeze(measurement)
+    state.worker_measurement = {"worker": True}
+    state.sandbox_provider_measurement = {"provider": True}
+    base_state = SimpleNamespace(
+        module=state.native_module,
+        owner_type=state.owner_type,
+    )
+    monkeypatch.setattr(
+        session._base,
+        "_validate_verified_native_launcher_session_observation",
+        lambda *args: None,
+    )
+    monkeypatch.setattr(
+        session._base,
+        "_known_state",
+        lambda value: (value, base_state),
+    )
+    monkeypatch.setattr(
+        session,
+        "_measure_worker",
+        lambda value: {"worker": True},
+    )
+    monkeypatch.setattr(
+        session,
+        "_measure_provider",
+        lambda value: {"provider": True},
+    )
+    (environment / "pyvenv.cfg").write_text(
+        (environment / "pyvenv.cfg")
+        .read_text(encoding="utf-8")
+        .replace("3.12.10", "3.12.11"),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="session binding changed"):
+        session._remeasure_state(state)
+
+
 def _normal_terminal() -> dict[str, object]:
     return {
         "wait": {
@@ -906,8 +1032,12 @@ def _normal_terminal() -> dict[str, object]:
 def test_fresh_real_session_binds_worker_provider_and_rechecks(
     tmp_path: Path,
 ) -> None:
+    runtime = Path(session.__file__).resolve().parents[2] / ".venv-ai/bin/python"
+    if not runtime.exists():
+        pytest.skip("private AI runtime is unavailable")
     trusted, observation = (
         session._open_verified_private_melroformer_native_session(
+            runtime_launcher_path=runtime,
             cache_root=tmp_path / "native-cache"
         )
     )
@@ -915,6 +1045,11 @@ def test_fresh_real_session_binds_worker_provider_and_rechecks(
     assert observation["status"] == "verified_not_run"
     assert observation["execution_authority"] is False
     assert observation["capabilities"]["fixed_kim_spawn_method_bound"] is True
+    assert observation["capabilities"]["explicit_ai_runtime_bound"] is True
+    assert observation["bindings"]["private_ai_runtime"][
+        "system_site_packages_enabled"
+    ] is False
+    assert str(runtime.parent.parent) not in repr(observation)
     assert observation["capabilities"]["worker_started"] is False
     assert observation["effects"]["checkpoint_opened"] is False
     assert observation["effects"]["audio_read"] is False

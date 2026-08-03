@@ -132,11 +132,19 @@ fd4/fd5 orchestration, the real staging verifier, post-run checkpoint recheck,
 opaque terminal projection and reservation/session/lease cleanup. Its initial
 success and pre-release failure tests substitute every effectful dependency;
 they prove fixed order and cleanup but do not start a process or open the
-accepted checkpoint, model or audio. Before a real run, the exact virtual-
-environment launcher must be preserved separately from its resolved process
-image so the MLX package environment is not lost. Disjoint no-start and mixed
-cleanup-failure receipts remain the next boundary, and no product route is
-enabled.
+  accepted checkpoint, model or audio. Before a real run, the exact virtual-
+environment launcher had to be preserved separately from its resolved process
+image so the MLX package environment was not lost. That boundary is now fixed:
+the private session requires and repeatedly measures the explicit environment
+launcher, `pyvenv.cfg`, disabled system-site-packages policy, environment/bin
+directories, resolved executable and base-runtime root. Native `exec` receives
+the unresolved environment launcher, while code-signature/process-image
+evidence still binds the resolved executable image. The post-run staging
+verifier now receives the two session-bound roots instead of deriving them
+from the parent interpreter. Portable tests and one trusted-local static
+session check pass; no checkpoint, model or audio was opened. Disjoint no-start
+and mixed cleanup-failure receipts remain the next boundary, and no product
+route is enabled.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on
