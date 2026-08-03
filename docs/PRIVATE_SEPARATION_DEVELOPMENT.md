@@ -1939,18 +1939,20 @@ PYTHONPATH=src ./.venv/bin/python \
 ```
 
 The current report has file SHA-256
-`27c8f07766db4f3991145364f4ea5bf5dc2f219852612698f714c5d68514a0bf`
+`028502c0fb4d5adaa46bb02042e48c77d39d4f311930a22bad5b1f2786240ff1`
 and document SHA-256
-`acdd235184a86a0529efbe6e723d9cf0c43bb7d42fa14525846133435e5a99fe`.
-It binds both role-correct `I am a Alien mashup` windows to the matching song
-cell, covering 11 candidate auditions and five exact-focus usefulness results.
-It does not reinterpret those five as winners or complete transcriptions.
+`04b41f5fa71407802aa6f227082ee760815b1f723f5f58ba08b5f0d35746a7fd`.
+It binds both role-correct `I am a Alien mashup` windows and the complete
+15-second `Be Alone` excerpt to their matching song cells. The projection now
+covers three structured windows, 16 candidate auditions and nine exact-focus
+usefulness results across both normalized songs. Cross-song human-listening
+coverage is complete for this bounded two-song corpus.
 
-This makes the listening gap precise rather than hiding it in prose. Human
-line identity and candidate usefulness are now projected for two observed
-windows on one of the two normalized songs. Both windows now have structured
-phrase-completeness evidence. Cross-song listening coverage and full-excerpt
-or full-song coverage remain open.
+This clears the cross-song listening-coverage item without reinterpreting any
+useful disposition as a winner, complete transcription, score truth or global
+method judgement. Full-excerpt or full-song listening beyond this bounded
+corpus, a hidden test set, checkpoint licensing, offline behaviour and resource
+acceptance remain open publication gates.
 
 The optional review contract now asks that question explicitly with
 `--classify-focus-phrase-coverage`. For every playable candidate, the listener
@@ -2104,6 +2106,20 @@ The verified resolution has file SHA-256
 `a2f52c99a758d6022568c85c58461b21fc263e1c36cac31f1ac5e88fe8c520d7`
 and document SHA-256
 `79e1f2cf72e8037c5d5dde8cc0bbb26ccbc39a496eca870c3e83f2ecfe937b23`.
+It selected, merged, repaired and activated nothing.
+
+The song-disjoint `Be Alone` review is now complete over the entire sealed
+0.00–15.00 second excerpt. Kim primary, Moises leaf 02, Suno A leaf 01 and
+Suno B leaf 01 were each classified as the principal focus line and useful for
+that exact focus. Suno B leaf 01 was `substantially_complete`; the other three
+were `partially_complete`. Moises leaf 01 was a different line, contained
+little or none of the focus line and was not useful for the principal-lead
+focus. The reviewed export file SHA-256 is
+`0eecf78afbf3b625f8a66e3560653a712cc0838211c645a65878771fd33f3339`.
+The verified resolution has file SHA-256
+`53efb9caeca7dd7b8d7410c9fe59e50b051da4c854e431561d91cfc6834a4188`
+and document SHA-256
+`257a308552dda806f29c2083bc52db46b07ebb587bd5e96e3b98cb8ff793b4d3`.
 It selected, merged, repaired and activated nothing.
 
 The reusable owner-only command is:

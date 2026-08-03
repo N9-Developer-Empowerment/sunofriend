@@ -2362,12 +2362,15 @@ separator transport, source-lineage import and promotion are not implemented**
     pairwise agreement, not score truth, listening quality or acceptance; the
     parent corpus and publication gates remain open.
   - [x] Bind completed focus-relative human listening to that normalized song
-    evidence without treating usefulness as accuracy. The first path-free
-    projection now covers two structured principal-lead phrase windows on `I
-    am a Alien mashup`, 11 candidate auditions and five exact-focus usefulness
-    results. It separately preserves source-line classification, completeness
-    and MIDI usefulness, copies no free-text notes and keeps the gate open
-    because `Be Alone` and full-song coverage remain absent.
+    evidence without treating usefulness as accuracy. The current path-free
+    projection covers three structured principal-lead windows, 16 candidate
+    auditions and nine exact-focus usefulness results across both `I am a
+    Alien mashup` and `Be Alone`. It separately preserves source-line
+    classification, completeness and MIDI usefulness, copies no free-text
+    notes and clears the bounded two-song cross-song listening-coverage item.
+    Full-excerpt or full-song evidence beyond this corpus, a hidden test set,
+    checkpoint licensing, offline behaviour and resource acceptance remain
+    open.
     - [x] Add an opt-in focus-phrase coverage question to the sealed browser
       review and resolver. It records `substantially_complete`,
       `partially_complete`, `little_or_no_focus_line` or `cannot_tell`
@@ -2381,9 +2384,13 @@ separator transport, source-lineage import and promotion are not implemented**
       second repeat, Kim primary, both Moises lead adapters and Suno A leaf 01
       were substantially complete and useful; Suno B leaf 01 was `cannot_tell`.
       The first later-window export is retained as superseded history after the
-      listener's second pass. Existing free-text feedback stays human context
-      rather than a machine label. The next review gap is the song-disjoint `Be
-      Alone` cell.
+      listener's second pass. The complete 0.00–15.00 second `Be Alone` review
+      then found Kim primary, Moises leaf 02, Suno A leaf 01 and Suno B leaf 01
+      useful for the principal-lead focus. Suno B was substantially complete;
+      the other three were partial. Moises leaf 01 followed a different line
+      and was not useful for that focus. Existing free-text feedback stays
+      human context rather than a machine label. No review selected, merged,
+      repaired, promoted or activated a candidate.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
 - [x] Repeat the clean/estimate comparison through exact production
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation

@@ -1833,11 +1833,15 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   phrase-completeness review and include the exact millisecond window, so use
   that current export rather than a generic export from an older browser tab.
   The verifier, not the filename, authenticates the exact review seed. Do not
-  infer that label from notes or usefulness. The current evidence covers two
-  phrase windows on only one of two normalized songs, and both windows have
-  structured phrase coverage. Keep cross-song listening and full-song coverage
-  open before publication; the next review gap is the song-disjoint `Be Alone`
-  cell rather than another repeat of those two windows.
+  infer that label from notes or usefulness. The current evidence covers three
+  structured windows and 16 candidate auditions across both normalized songs.
+  The complete 15-second `Be Alone` review found four focus-line candidates
+  useful: Suno B leaf 01 was substantially complete, while Kim primary,
+  Moises leaf 02 and Suno A leaf 01 were partial. Moises leaf 01 followed a
+  different line and was not useful for the principal-lead focus. This clears
+  only the bounded two-song cross-song listening-coverage item. Keep broader
+  full-excerpt/full-song, hidden-set, licensing, offline and resource gates
+  open, and do not select, merge or promote from these human labels.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,
