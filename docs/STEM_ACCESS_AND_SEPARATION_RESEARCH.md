@@ -125,9 +125,18 @@ composition and a fixed post-run staging verifier now exist separately. The
 verifier reopens the report-bound source, two PCM24 files, the private closure
 claim and every claimed module, then repeats the mutable checks; it explicitly
 does not claim lease, session or observer verification. The measured session
-also has a one-use exact-owner normal-zero-exit terminal transition. Live owner
-observers, fd4/fd5 orchestration, reservation/lease cleanup and one combined
-terminal receipt remain the next boundary.
+also has a one-use exact-owner normal-zero-exit terminal transition and a
+separate no-success transition for a failed but completely drained and exactly
+reaped owner. A fixed private coordinator now composes live owner observers,
+fd4/fd5 orchestration, the real staging verifier, post-run checkpoint recheck,
+opaque terminal projection and reservation/session/lease cleanup. Its initial
+success and pre-release failure tests substitute every effectful dependency;
+they prove fixed order and cleanup but do not start a process or open the
+accepted checkpoint, model or audio. Before a real run, the exact virtual-
+environment launcher must be preserved separately from its resolved process
+image so the MLX package environment is not lost. Disjoint no-start and mixed
+cleanup-failure receipts remain the next boundary, and no product route is
+enabled.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on

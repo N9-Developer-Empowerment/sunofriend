@@ -1675,10 +1675,14 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   mapped files and verifies the three-entry staging tree. A wrong-CDHash case
   fails before release yet completes terminal cleanup. Its fd5 must be a small
   placeholder and checkpoint-sized inputs are rejected; no accepted
-  checkpoint, model or audio was opened. The real lease/start/staging/terminal
-  coordinator remains outstanding even though staging verification and the
-  session terminal transition now exist as separate fixed components; no
-  separator route is enabled.
+  checkpoint, model or audio was opened. A fixed private real-worker
+  coordinator now composes the existing lease/start, live observers, bounded
+  fd4 drain, exact reap, real staging verification and session/fd5/lease
+  terminalization. Its initial tests substitute every effectful dependency,
+  so they prove ordering and cleanup rather than live execution. The exact
+  virtual-environment launcher still needs to be preserved separately from the
+  resolved process image, and no-start plus mixed-failure receipts remain
+  outstanding. No separator route is enabled.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory

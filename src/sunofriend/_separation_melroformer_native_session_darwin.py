@@ -653,6 +653,122 @@ def _finish_started_private_melroformer_native_session(
         return receipt
 
 
+def _finish_failed_started_private_melroformer_native_session(
+    trusted_session: _VerifiedPrivateMelroformerNativeSession,
+    native_owner: Any,
+    *,
+    terminal_observation: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """Release one failed but completely reaped exact owner from its session.
+
+    Unlike the successful transition above, this record accepts no quality or
+    execution-success claim.  It exists only so a coordinator failure cannot
+    leave a fully reaped owner registered as running.  A missing owner, lost
+    ownership, incomplete group drain or unproved reap still fails closed.
+    """
+
+    terminal = _validate_private_native_failed_terminal_observation(
+        terminal_observation
+    )
+    _session, state = _known_session(trusted_session)
+    with state.lock:
+        _require_owner(state)
+        if (
+            state.run_status != "running"
+            or type(native_owner) is not state.owner_type
+            or native_owner is not state.native_owner
+        ):
+            raise ValueError("private Kim native owner is not the active owner")
+        if (
+            getattr(native_owner, "leader_reaped", None) is not True
+            or getattr(native_owner, "group_empty", None) is not True
+            or getattr(native_owner, "ownership_released", None) is not True
+            or getattr(native_owner, "ownership_lost", None) is not False
+        ):
+            raise ValueError("private Kim failed native owner is not exactly reaped")
+        _remeasure_state(state)
+        payload = {
+            "schema": "sunofriend.private-melroformer-native-session-terminal.v1",
+            "policy_id": "private-kim-native-session-terminal-transition-v1",
+            "status": "failed_run_exact_reap_recorded",
+            "session_observation_sha256": state.observation_document[
+                "observation_sha256"
+            ],
+            "terminal": _plain(terminal),
+            "session_bindings_remeasured_after_reap": True,
+            "active_owner_released_from_session": True,
+            "execution_success_claimed": False,
+            "paths_retained": False,
+            "permissions": {
+                "automatic_selection_permitted": False,
+                "product_route_permitted": False,
+                "publication_permitted": False,
+            },
+        }
+        receipt = _freeze(
+            {
+                **payload,
+                "evidence_sha256": _canonical_sha256(payload),
+            }
+        )
+        state.native_owner = None
+        state.run_status = "terminal"
+        return receipt
+
+
+def _validate_private_native_failed_terminal_observation(
+    value: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    terminal = _plain(value)
+    if not isinstance(terminal, dict) or set(terminal) != {
+        "wait",
+        "timed_out",
+        "term_sent",
+        "kill_sent",
+        "leader_exit_observed",
+        "leader_reaped",
+        "group_empty",
+        "ownership_released",
+        "ownership_lost",
+    }:
+        raise ValueError("private Kim failed terminal observation fields differ")
+    wait = terminal["wait"]
+    if (
+        not isinstance(wait, dict)
+        or set(wait) != {"kind", "exit_code", "signal", "core_dumped"}
+        or wait["kind"] not in {"exited", "signaled"}
+        or type(wait["core_dumped"]) is not bool
+    ):
+        raise ValueError("private Kim failed terminal wait evidence differs")
+    if wait["kind"] == "exited":
+        if (
+            type(wait["exit_code"]) is not int
+            or wait["exit_code"] == 0
+            or wait["signal"] is not None
+        ):
+            raise ValueError("private Kim failed exit evidence differs")
+    elif (
+        wait["exit_code"] is not None
+        or type(wait["signal"]) is not int
+        or wait["signal"] <= 0
+    ):
+        raise ValueError("private Kim failed signal evidence differs")
+    if any(
+        terminal[key] is not True
+        for key in (
+            "leader_exit_observed",
+            "leader_reaped",
+            "group_empty",
+            "ownership_released",
+        )
+    ) or terminal["ownership_lost"] is not False:
+        raise ValueError("private Kim failed terminal ownership is incomplete")
+    for key in ("timed_out", "term_sent", "kill_sent"):
+        if type(terminal[key]) is not bool:
+            raise ValueError("private Kim failed terminal flags differ")
+    return _freeze(terminal)
+
+
 def _validate_private_native_terminal_observation(
     value: Mapping[str, Any],
 ) -> Mapping[str, Any]:

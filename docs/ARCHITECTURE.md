@@ -761,17 +761,28 @@ filesystem execute bit on regular dynamic libraries.
 This adapter starts a real native process but never the real model worker. It
 rejects the accepted checkpoint's byte geometry, reads no audio, grants no
 product authority and is imported only by trusted developer tests. The live
-checkpoint lease and measured real-worker session/admission still remain to be
-composed by one fixed real coordinator before an authorised Kim excerpt may use
-the native path. The quarantine/import-closure side is now a fixed parent
-module: it reopens the report-bound source, both canonical PCM24 stems, the
+checkpoint lease and measured real-worker session/admission are now composed
+by one fixed private real-worker coordinator. The coordinator reuses the same
+observer, fd4, supervision and exact-reap order, then performs the real staging
+verification, post-run lease check, opaque terminal projection and session/fd5/
+lease cleanup. Its initial tests substitute every effectful dependency: they
+prove fixed ordering and cleanup but do not start a native process or open the
+accepted checkpoint, model or audio. The quarantine/import-closure side is a
+fixed parent module: it reopens the report-bound source, both canonical PCM24 stems, the
 private closure claim and every claimed Python module, repeats the mutable
 artifact checks and emits only path-free evidence. The measured session also
 has a one-use normal-zero-exit transition that requires the exact retained
 owner to be group-empty, released and exactly reaped before clearing it from
-the registry. Neither component supervises a process or closes the checkpoint
-lease; concrete observer, fd4, fd5 and failure-cleanup composition remains the
-coordinator's responsibility.
+the registry. A disjoint failed-run transition can clear a nonzero/signalled
+owner only after the same complete drain and exact reap, without claiming
+success.
+
+Before a live coordinator run, the runtime binding must preserve the exact
+virtual-environment launcher independently from its resolved signed process
+image and both Python runtime roots. The current resolved-executable binding is
+sufficient for the stdlib canaries but may lose MLX packages. No-start and
+mixed cleanup-failure receipts also remain incomplete, and no product route is
+enabled.
 
 `_separation_fake_execution_quarantine.py` is the twenty-fourth internal S3
 boundary. It revalidates the exact historical request and blocked launches,

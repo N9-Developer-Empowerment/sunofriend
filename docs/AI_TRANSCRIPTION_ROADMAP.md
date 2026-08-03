@@ -1704,6 +1704,49 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-03 — fixed real-worker coordinator composed, not run
+
+- Goal: replace the remaining loose parent-side Kim lifecycle pieces with one
+  fixed, private and non-configurable coordinator while preserving exact cleanup
+  and the existing no-product-route boundary.
+- Change or experiment: added a developer-only coordinator that validates the
+  request and measured session, prepares the network and ready/release
+  observers, starts only through the live fd5 lease bridge, binds the exact
+  opaque owner, captures the process image and two executable-region
+  snapshots, releases the worker, drains bounded fd4 while ownership is live,
+  finishes the network observer, supervises and exactly reaps the group, then
+  completes native-image, staging, checkpoint-lease, terminal-identity and
+  session evidence in one fixed order. Added a separate failed-run session
+  terminal transition so a nonzero or signalled but fully drained and exactly
+  reaped owner is not left registered as running.
+- Inputs: dependency-substituted request, session, lease, descriptors,
+  observers, owner, result and staging evidence only. No native process,
+  accepted checkpoint, model, authorised source, audio or staging tree was
+  opened by these tests.
+- Evidence and metrics: the success test proves observer preparation before
+  start; ready/image observation before release; fd4 drain before observer
+  finish and reap; post-reap image/staging/checkpoint verification; private
+  PID/PGID consumption only through the opaque owner matcher; and session then
+  fd5/lease terminalization. A forced pre-release process-image failure proves
+  observer abort, complete group cleanup, failed-session terminalization and
+  lease closure. The related portable native suite passes 90 tests with two
+  deliberate deselections. The complete portable suite passes 2,917 tests with
+  one expected skip and 11 trusted-local deselections; Ruff passes.
+- Listening result: not applicable; this increment produced no audio.
+- Decision: retain this as the sole future real-worker parent composition and
+  keep it absent from CLI, TUI, Simple, Studio and source-graph routes. Its
+  substituted tests prove ordering and cleanup, not live execution provenance
+  or separation quality.
+- Problems/risks: the measured session currently resolves `sys.executable` to
+  the base Python image. In a virtual environment that can discard the launcher
+  context and its MLX packages even though the signed process image is correctly
+  bound. Proven-no-start and mixed cleanup-failure receipts also remain
+  separate work. A real Kim run is not yet authorised by this increment.
+- Next smallest step: preserve and measure the exact virtual-environment
+  launcher separately from its resolved process image and runtime roots, then
+  add disjoint no-start and mixed-failure receipts before attempting one fresh
+  authorised excerpt through this coordinator.
+
 ### 2026-08-03 — real-worker staging and session terminal boundaries fixed
 
 - Goal: remove the two remaining caller-shaped claims between a completed real

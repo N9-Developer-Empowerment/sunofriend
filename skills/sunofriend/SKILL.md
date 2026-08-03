@@ -146,9 +146,15 @@ report the result, then move on.
   cleanup. A later lease bridge now supplies the reserved fd5 through that
   exact start frame, and a one-use session transition now accepts only the exact
   retained owner after normal zero exit, complete group drain, released
-  ownership and exact reap. The concrete owner observers, fd4/fd5/staging
-  composition and complete lease cleanup are still absent. The active Kim route
-  remains subprocess-based. This
+  ownership and exact reap. A fixed private coordinator now composes the
+  concrete observers, bounded fd4 drain, exact reap, real staging verifier,
+  checkpoint recheck and reservation/session/lease terminalization. Its tests
+  substitute every effectful dependency and prove only fixed order plus
+  cleanup; they do not start a native process or open the accepted checkpoint,
+  model, source or audio. The runtime binding must next preserve the exact
+  virtual-environment launcher separately from its resolved process image, and
+  disjoint no-start plus mixed-failure receipts remain outstanding. The active
+  Kim route remains subprocess-based. This
   evidence does not enable
   native fake-launch V2, which remains
   permanently
@@ -528,10 +534,12 @@ report the result, then move on.
   checkpoint, model or audio was opened. A fixed real-worker staging verifier
   now reopens the authorised source, both PCM24 files and the Python closure,
   while a separate one-use session transition records only normal-zero-exit
-  exact reap from the exact retained owner. Concrete live lease/start/observer
-  composition, post-run fd5 remeasurement, reservation/lease closure and the
-  combined terminal receipt remain missing; source shape alone is not execution
-  provenance.
+  exact reap from the exact retained owner. A separate failed-run transition
+  can clear only a completely drained and exactly reaped nonzero/signalled
+  owner without claiming execution success. The fixed private coordinator now
+  owns the concrete live lease/start/observer, bounded fd4, post-run fd5,
+  staging and terminal-cleanup order, with dependency-substituted evidence
+  only; source shape alone is not execution provenance.
   The private parent exercise now has a v2 two-phase order: prepare observers
   before spawn; capture ready state and release; drain and validate fd4 while
   the exact owner is live; consume live observers; exact-reap the whole group;

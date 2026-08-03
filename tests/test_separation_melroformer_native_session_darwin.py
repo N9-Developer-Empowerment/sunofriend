@@ -437,6 +437,65 @@ def test_terminal_transition_rejects_nonzero_or_wrong_owner(
     assert state.native_owner is owner
 
 
+def test_failed_terminal_transition_releases_one_exactly_reaped_owner(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    trusted, _observation, state = _registered_session()
+    owner = state.owner_type()
+    owner.leader_reaped = True
+    owner.group_empty = True
+    owner.ownership_released = True
+    owner.ownership_lost = False
+    state.native_owner = owner
+    state.run_status = "running"
+    monkeypatch.setattr(session, "_remeasure_state", lambda _value: None)
+    failed = _normal_terminal()
+    failed["wait"]["exit_code"] = 7
+
+    receipt = session._finish_failed_started_private_melroformer_native_session(
+        trusted,
+        owner,
+        terminal_observation=failed,
+    )
+
+    assert receipt["status"] == "failed_run_exact_reap_recorded"
+    assert receipt["execution_success_claimed"] is False
+    assert receipt["active_owner_released_from_session"] is True
+    assert state.run_status == "terminal"
+    assert state.native_owner is None
+
+
+def test_failed_terminal_transition_rejects_normal_or_incomplete_terminal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    trusted, _observation, state = _registered_session()
+    owner = state.owner_type()
+    owner.leader_reaped = True
+    owner.group_empty = True
+    owner.ownership_released = True
+    state.native_owner = owner
+    state.run_status = "running"
+    monkeypatch.setattr(session, "_remeasure_state", lambda _value: None)
+
+    with pytest.raises(ValueError, match="failed exit evidence differs"):
+        session._finish_failed_started_private_melroformer_native_session(
+            trusted,
+            owner,
+            terminal_observation=_normal_terminal(),
+        )
+    failed = _normal_terminal()
+    failed["wait"]["exit_code"] = 3
+    failed["group_empty"] = False
+    with pytest.raises(ValueError, match="ownership is incomplete"):
+        session._finish_failed_started_private_melroformer_native_session(
+            trusted,
+            owner,
+            terminal_observation=failed,
+        )
+    assert state.run_status == "running"
+    assert state.native_owner is owner
+
+
 def test_guarded_start_rejects_wrong_pipe_geometry_without_spawning(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

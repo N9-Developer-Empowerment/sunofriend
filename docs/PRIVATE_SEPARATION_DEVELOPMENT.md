@@ -341,10 +341,26 @@ admission immediately around the sole native spawn call while retaining fd5
 with the lease owner. The session now also has a one-use terminal transition:
 only the exact retained owner with normal zero exit, group drain, released
 ownership and exact reap may move it from running to terminal, after another
-session-binding remeasurement. The fixed real coordinator must still compose
-those parts with live observers, fd4 drain, the staging verifier and complete
-fd5 reservation/lease cleanup. None of these changes the active subprocess
-route or enables a product route.
+session-binding remeasurement. A separate transition now clears a failed but
+fully group-drained and exactly reaped exact owner without making an execution-
+success claim.
+
+The fixed real coordinator is now implemented as private source. It composes
+that measured session and live lease-to-start bridge with the ready/release,
+network, process-image and executable-region observers; bounded fd4 drain;
+whole-group supervision and exact reap; real staging verification; post-run
+checkpoint remeasurement; opaque owner identity consumption; and fd5/session/
+lease terminalization. Dependency-substituted success and pre-release failure
+tests prove the fixed order and cleanup only. They did not start the native
+worker or open a checkpoint, model, source, audio or staging tree.
+
+The next blocker is narrower but material: the session currently binds a
+resolved `sys.executable`, which can turn a virtual-environment launcher into
+the base Python executable and lose the MLX package environment. The exact
+launcher, resolved process image and both runtime roots must be measured and
+transported separately. Proven-no-start and mixed cleanup-failure receipts
+also remain outstanding. None of these changes the active subprocess route or
+enables a product route.
 
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \
