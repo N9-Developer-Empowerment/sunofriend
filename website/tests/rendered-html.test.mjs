@@ -87,10 +87,14 @@ test("server-renders an approachable skill-first musician page", async () => {
     html,
     /<title>Sunofriend — Hear the song\. Change the parts\.<\/title>/i,
   );
-  assert.match(html, /skills-aware coding agent guide the setup/);
+  assert.match(html, /Let your agent guide the setup/);
   assert.match(html, /Start with the skill/);
   assert.match(html, /ONE SKILL\. YOUR CHOICE OF AGENT/);
-  assert.match(html, /Codex, Claude Code,\s*Antigravity/);
+  assert.match(html, /plain-text Sunofriend skill tells a compatible local agent/);
+  assert.match(
+    html,
+    /Example skills-aware agents\s*include Codex, Claude Code and Antigravity/,
+  );
   assert.match(html, /Tested on a MacBook so far/);
   assert.match(html, /Windows and Linux are not verified yet/);
   assert.match(html, /Feedback from every Sunofriend user is welcome/);

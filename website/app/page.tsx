@@ -63,13 +63,13 @@ export default function Home() {
           <span>SUNOFRIEND</span>
         </a>
         <nav aria-label="Main navigation">
-          <a href="#codex">Start</a>
+          <a href="#agent">Start</a>
           <a href="#choose">Choose a route</a>
           <Link href="/stems/">What are stems?</Link>
           <a href="#demo">Try the demo</a>
           <Link href="/for-agents">For AI agents</Link>
         </nav>
-        <a className="header-cta" href="#codex">
+        <a className="header-cta" href="#agent">
           Use with your agent <span aria-hidden="true">↓</span>
         </a>
       </header>
@@ -84,16 +84,14 @@ export default function Home() {
             Hear the song.
             <span>Change the parts.</span>
           </h1>
-          <p className="hero-proof">
-            Let a skills-aware coding agent guide the setup.
-          </p>
+          <p className="hero-proof">Let your agent guide the setup.</p>
           <p className="hero-lede">
             Sunofriend listens to separate drums, bass, keys, vocals and other
             song parts. It gives you editable MIDI and a clean instrumental
             interpretation you can hear before opening your music software.
           </p>
           <div className="hero-actions">
-            <a className="button button-hot" href="#codex">
+            <a className="button button-hot" href="#agent">
               Start with the skill <span aria-hidden="true">↓</span>
             </a>
             <ExternalLink className="button button-ghost" href={links.outOfPlace}>
@@ -133,18 +131,17 @@ export default function Home() {
         </span>
       </div>
 
-      <section id="codex" className="codex-start section-shell" aria-labelledby="codex-title">
+      <section id="agent" className="codex-start section-shell" aria-labelledby="agent-title">
         <div className="section-index">01 / EASIEST WAY IN</div>
         <div className="section-heading-row">
           <div>
             <p className="kicker">ONE SKILL. YOUR CHOICE OF AGENT.</p>
-            <h2 id="codex-title">Give this job to your coding agent.</h2>
+            <h2 id="agent-title">Give this job to your agent.</h2>
           </div>
           <p>
-            The plain-text Sunofriend skill tells Codex, Claude Code,
-            Antigravity or another skills-aware coding agent what the tool can
-            do, what must stay local and which questions to ask before it
-            changes anything on your computer.
+            The plain-text Sunofriend skill tells a compatible local agent what
+            the tool can do, what must stay local and which questions to ask
+            before it changes anything on your computer.
           </p>
         </div>
         <div className="codex-grid">
@@ -159,7 +156,8 @@ export default function Home() {
             />
             <p className="prompt-help">
               <strong>Do not clone the repository first.</strong> These
-              copy-ready prompts are the Codex route. If{" "}
+              copy-ready prompts use Codex syntax. Example skills-aware agents
+              include Codex, Claude Code and Antigravity. If{" "}
               <code>$sunofriend</code> is not recognised after turn 1, restart
               Codex once and send turn 2 again. In Claude Code, Antigravity or
               another agent, use its native skill installer or ask it to read
@@ -230,7 +228,7 @@ export default function Home() {
               <li>Preparation never separates or repairs alignment</li>
               <li>Your agent then uses the focused create command</li>
             </ul>
-            <a className="text-link" href="#codex">
+            <a className="text-link" href="#agent">
               Copy the starter prompt ↑
             </a>
           </article>
