@@ -67,7 +67,6 @@ def test_one_shot_owns_exact_transport_and_removes_it(
     authority = {
         "trusted_lease": object(),
         "trusted_reservation": object(),
-        "trusted_worker_request_v2": object(),
         "current_lease_observation": object(),
         "trusted_native_session": object(),
         "native_session_observation": object(),
@@ -146,7 +145,6 @@ def test_one_shot_preserves_coordinator_error_and_cleans_transport(
         one_shot._run_reserved_private_melroformer_native_one_shot_darwin(
             object(),
             trusted_reservation=object(),
-            trusted_worker_request_v2=object(),
             current_lease_observation=object(),
             trusted_native_session=object(),
             native_session_observation=object(),
@@ -188,7 +186,6 @@ def test_one_shot_preserves_primary_when_transport_cleanup_also_fails(
         one_shot._run_reserved_private_melroformer_native_one_shot_darwin(
             object(),
             trusted_reservation=object(),
-            trusted_worker_request_v2=object(),
             current_lease_observation=object(),
             trusted_native_session=object(),
             native_session_observation=object(),
@@ -218,7 +215,6 @@ def test_one_shot_rejects_non_private_parent_before_creating_transport(
         one_shot._run_reserved_private_melroformer_native_one_shot_darwin(
             object(),
             trusted_reservation=object(),
-            trusted_worker_request_v2=object(),
             current_lease_observation=object(),
             trusted_native_session=object(),
             native_session_observation=object(),

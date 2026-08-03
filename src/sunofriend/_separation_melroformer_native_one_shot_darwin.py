@@ -51,7 +51,6 @@ def _run_reserved_private_melroformer_native_one_shot_darwin(
     trusted_lease: Any,
     *,
     trusted_reservation: Any,
-    trusted_worker_request_v2: Any,
     current_lease_observation: Any,
     trusted_native_session: Any,
     native_session_observation: Any,
@@ -130,7 +129,6 @@ def _run_reserved_private_melroformer_native_one_shot_darwin(
         receipt = _coordinate_reserved_private_melroformer_native_worker_darwin(
             trusted_lease,
             trusted_reservation=trusted_reservation,
-            trusted_worker_request_v2=trusted_worker_request_v2,
             current_lease_observation=current_lease_observation,
             trusted_native_session=trusted_native_session,
             native_session_observation=native_session_observation,

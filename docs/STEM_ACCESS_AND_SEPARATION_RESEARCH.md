@@ -158,9 +158,13 @@ now retains and repeatedly rechecks the exact approved checkpoint descriptor,
 canonical request, upstream evidence and descriptor-pinned Safetensors
 inspection. The real file passed that static check without tensor-value access,
 model import or audio access. This private lease does not claim the hidden-set
-acceptance required by the general separator lease. The remaining next
-boundary is its single-use fd5 reservation/start bridge followed by one
-authorised live excerpt. No product route is enabled.
+acceptance required by the general separator lease. Its single-use fd5
+reservation/start bridge now remeasures under lock and hands the raw descriptor
+only to an admission from the exact verified native session. The coordinator
+and one-shot wrapper consume that private authority directly, with no general
+worker-V2 record. The remaining next boundary is full one-run authority
+composition followed by one authorised live excerpt. No product route is
+enabled.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on

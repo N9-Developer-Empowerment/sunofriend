@@ -24,9 +24,9 @@ from . import _separation_macos_loaded_images as _loaded_images
 from . import _separation_macos_process_image as _process_image
 from . import _separation_macos_sandbox_network_observer as _network_observer
 from . import _separation_macos_worker_native_images as _worker_images
+from . import _separation_melroformer_checkpoint_lease as _lease
 from . import _separation_melroformer_native_session_darwin as _session
 from . import _separation_worker_ready_handshake as _ready_handshake
-from . import separation_checkpoint_descriptor_lease as _lease
 from ._separation_checkpoint_canonical import (
     canonical_json_bytes as _canonical_json,
     deep_freeze as _freeze,
@@ -97,7 +97,6 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
     trusted_lease: Any,
     *,
     trusted_reservation: Any,
-    trusted_worker_request_v2: Any,
     current_lease_observation: Any,
     trusted_native_session: Any,
     native_session_observation: Any,
@@ -172,7 +171,6 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
         native_owner = _lease._start_reserved_private_melroformer_native_worker_darwin(
             trusted_lease,
             trusted_reservation=trusted_reservation,
-            trusted_worker_request_v2=trusted_worker_request_v2,
             current_lease_observation=current_lease_observation,
             trusted_native_session=trusted_native_session,
             native_session_observation=checked_session_observation,
@@ -325,7 +323,7 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
             )
             primary_stage = "checkpoint_remeasurement"
             post_run_lease_observation = (
-                _lease.recheck_separation_checkpoint_descriptor_lease(
+                _lease._recheck_private_melroformer_checkpoint_lease(
                     trusted_lease
                 )
             )
@@ -388,7 +386,7 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
             cleanup_errors.append(error)
 
     try:
-        _lease._release_separation_checkpoint_descriptor_fd5(
+        _lease._release_private_melroformer_checkpoint_fd5(
             trusted_lease,
             trusted_reservation,
         )
@@ -396,8 +394,8 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
         cleanup_stages.append("fd5_reservation_release")
         cleanup_errors.append(error)
     try:
-        lease_terminal = _lease.close_separation_checkpoint_descriptor_lease(
-            trusted_lease
+        lease_terminal = (
+            _lease._close_private_melroformer_checkpoint_lease(trusted_lease)
         )
     except BaseException as error:
         cleanup_stages.append("checkpoint_lease_close")

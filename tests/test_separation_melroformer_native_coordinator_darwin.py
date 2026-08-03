@@ -129,13 +129,12 @@ def _install_fixed_substitutions(
     release_failure: bool = False,
     handshake_abort_failure: bool = False,
     lease_close_failure: bool = False,
-) -> tuple[Any, Any, Any, Any, Any]:
+) -> tuple[Any, Any, Any, Any]:
     owner_type = type("_OwnedSpawnChild", (_Owner,), {})
     owner = owner_type(calls, fail_process_image=fail_process_image)
     native_session = object()
     lease = object()
     reservation = object()
-    worker_request = object()
     session_observation = {"observation_sha256": _digest("session")}
     state = SimpleNamespace(
         runtime_launcher_path=Path("/fixed/runtime-env/bin/python"),
@@ -282,7 +281,7 @@ def _install_fixed_substitutions(
     )
     monkeypatch.setattr(
         coordinator._lease,
-        "recheck_separation_checkpoint_descriptor_lease",
+        "_recheck_private_melroformer_checkpoint_lease",
         lambda value: calls.append("lease_rechecked")
         or {"observation_sha256": _digest("lease-observation")},
     )
@@ -332,7 +331,7 @@ def _install_fixed_substitutions(
 
     monkeypatch.setattr(
         coordinator._lease,
-        "_release_separation_checkpoint_descriptor_fd5",
+        "_release_private_melroformer_checkpoint_fd5",
         release,
     )
     def close_lease(value):
@@ -351,7 +350,7 @@ def _install_fixed_substitutions(
 
     monkeypatch.setattr(
         coordinator._lease,
-        "close_separation_checkpoint_descriptor_lease",
+        "_close_private_melroformer_checkpoint_lease",
         close_lease,
     )
     monkeypatch.setattr(
@@ -370,7 +369,7 @@ def _install_fixed_substitutions(
         "_abort_worker_ready_handshake",
         abort_handshake,
     )
-    return lease, reservation, worker_request, native_session, session_observation
+    return lease, reservation, native_session, session_observation
 
 
 def test_fixed_coordinator_composes_success_in_one_nonconfigurable_order(
@@ -380,7 +379,7 @@ def test_fixed_coordinator_composes_success_in_one_nonconfigurable_order(
     staging = tmp_path / "staging"
     request = _request(staging)
     calls: list[str] = []
-    lease, reservation, worker_request, native_session, session_observation = (
+    lease, reservation, native_session, session_observation = (
         _install_fixed_substitutions(
             monkeypatch,
             request=request,
@@ -391,7 +390,6 @@ def test_fixed_coordinator_composes_success_in_one_nonconfigurable_order(
     receipt = coordinator._coordinate_reserved_private_melroformer_native_worker_darwin(
         lease,
         trusted_reservation=reservation,
-        trusted_worker_request_v2=worker_request,
         current_lease_observation={"observation_sha256": _digest("lease")},
         trusted_native_session=native_session,
         native_session_observation=session_observation,
@@ -433,7 +431,7 @@ def test_fixed_coordinator_exactly_cleans_a_pre_release_observer_failure(
     staging = tmp_path / "staging"
     request = _request(staging)
     calls: list[str] = []
-    lease, reservation, worker_request, native_session, session_observation = (
+    lease, reservation, native_session, session_observation = (
         _install_fixed_substitutions(
             monkeypatch,
             request=request,
@@ -448,7 +446,6 @@ def test_fixed_coordinator_exactly_cleans_a_pre_release_observer_failure(
         coordinator._coordinate_reserved_private_melroformer_native_worker_darwin(
             lease,
             trusted_reservation=reservation,
-            trusted_worker_request_v2=worker_request,
             current_lease_observation={"observation_sha256": _digest("lease")},
             trusted_native_session=native_session,
             native_session_observation=session_observation,
@@ -481,7 +478,7 @@ def test_fixed_coordinator_seals_a_disjoint_no_start_receipt(
     staging = tmp_path / "staging"
     request = _request(staging)
     calls: list[str] = []
-    lease, reservation, worker_request, native_session, session_observation = (
+    lease, reservation, native_session, session_observation = (
         _install_fixed_substitutions(
             monkeypatch,
             request=request,
@@ -496,7 +493,6 @@ def test_fixed_coordinator_seals_a_disjoint_no_start_receipt(
         coordinator._coordinate_reserved_private_melroformer_native_worker_darwin(
             lease,
             trusted_reservation=reservation,
-            trusted_worker_request_v2=worker_request,
             current_lease_observation={"observation_sha256": _digest("lease")},
             trusted_native_session=native_session,
             native_session_observation=session_observation,
@@ -527,7 +523,7 @@ def test_fixed_coordinator_preserves_started_failure_with_cleanup_failure(
     staging = tmp_path / "staging"
     request = _request(staging)
     calls: list[str] = []
-    lease, reservation, worker_request, native_session, session_observation = (
+    lease, reservation, native_session, session_observation = (
         _install_fixed_substitutions(
             monkeypatch,
             request=request,
@@ -543,7 +539,6 @@ def test_fixed_coordinator_preserves_started_failure_with_cleanup_failure(
         coordinator._coordinate_reserved_private_melroformer_native_worker_darwin(
             lease,
             trusted_reservation=reservation,
-            trusted_worker_request_v2=worker_request,
             current_lease_observation={"observation_sha256": _digest("lease")},
             trusted_native_session=native_session,
             native_session_observation=session_observation,
@@ -578,7 +573,7 @@ def test_fixed_coordinator_preserves_each_no_start_cleanup_stage(
     staging = tmp_path / "staging"
     request = _request(staging)
     calls: list[str] = []
-    lease, reservation, worker_request, native_session, session_observation = (
+    lease, reservation, native_session, session_observation = (
         _install_fixed_substitutions(
             monkeypatch,
             request=request,
@@ -598,7 +593,6 @@ def test_fixed_coordinator_preserves_each_no_start_cleanup_stage(
         coordinator._coordinate_reserved_private_melroformer_native_worker_darwin(
             lease,
             trusted_reservation=reservation,
-            trusted_worker_request_v2=worker_request,
             current_lease_observation={"observation_sha256": _digest("lease")},
             trusted_native_session=native_session,
             native_session_observation=session_observation,
@@ -629,7 +623,7 @@ def test_fixed_coordinator_labels_cleanup_only_failure_as_cleanup(
     staging = tmp_path / "staging"
     request = _request(staging)
     calls: list[str] = []
-    lease, reservation, worker_request, native_session, session_observation = (
+    lease, reservation, native_session, session_observation = (
         _install_fixed_substitutions(
             monkeypatch,
             request=request,
@@ -644,7 +638,6 @@ def test_fixed_coordinator_labels_cleanup_only_failure_as_cleanup(
         coordinator._coordinate_reserved_private_melroformer_native_worker_darwin(
             lease,
             trusted_reservation=reservation,
-            trusted_worker_request_v2=worker_request,
             current_lease_observation={"observation_sha256": _digest("lease")},
             trusted_native_session=native_session,
             native_session_observation=session_observation,
@@ -670,7 +663,7 @@ def test_fixed_coordinator_retains_receipt_when_lease_cleanup_is_incomplete(
     staging = tmp_path / "staging"
     request = _request(staging)
     calls: list[str] = []
-    lease, reservation, worker_request, native_session, session_observation = (
+    lease, reservation, native_session, session_observation = (
         _install_fixed_substitutions(
             monkeypatch,
             request=request,
@@ -686,7 +679,6 @@ def test_fixed_coordinator_retains_receipt_when_lease_cleanup_is_incomplete(
         coordinator._coordinate_reserved_private_melroformer_native_worker_darwin(
             lease,
             trusted_reservation=reservation,
-            trusted_worker_request_v2=worker_request,
             current_lease_observation={"observation_sha256": _digest("lease")},
             trusted_native_session=native_session,
             native_session_observation=session_observation,
@@ -714,7 +706,7 @@ def test_fixed_coordinator_keeps_primary_when_handshake_abort_also_fails(
     staging = tmp_path / "staging"
     request = _request(staging)
     calls: list[str] = []
-    lease, reservation, worker_request, native_session, session_observation = (
+    lease, reservation, native_session, session_observation = (
         _install_fixed_substitutions(
             monkeypatch,
             request=request,
@@ -730,7 +722,6 @@ def test_fixed_coordinator_keeps_primary_when_handshake_abort_also_fails(
         coordinator._coordinate_reserved_private_melroformer_native_worker_darwin(
             lease,
             trusted_reservation=reservation,
-            trusted_worker_request_v2=worker_request,
             current_lease_observation={"observation_sha256": _digest("lease")},
             trusted_native_session=native_session,
             native_session_observation=session_observation,
@@ -756,7 +747,7 @@ def test_fixed_coordinator_gives_unproven_start_no_terminal_receipt(
     staging = tmp_path / "staging"
     request = _request(staging)
     calls: list[str] = []
-    lease, reservation, worker_request, native_session, session_observation = (
+    lease, reservation, native_session, session_observation = (
         _install_fixed_substitutions(
             monkeypatch,
             request=request,
@@ -771,7 +762,6 @@ def test_fixed_coordinator_gives_unproven_start_no_terminal_receipt(
         coordinator._coordinate_reserved_private_melroformer_native_worker_darwin(
             lease,
             trusted_reservation=reservation,
-            trusted_worker_request_v2=worker_request,
             current_lease_observation={"observation_sha256": _digest("lease")},
             trusted_native_session=native_session,
             native_session_observation=session_observation,

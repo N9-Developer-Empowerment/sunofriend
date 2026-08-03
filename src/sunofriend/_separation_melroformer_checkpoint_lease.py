@@ -70,6 +70,28 @@ class _PrivateMelroformerCheckpointLease:
         raise TypeError("private Kim checkpoint leases cannot be serialized")
 
 
+class _PrivateMelroformerCheckpointFD5Reservation:
+    __slots__ = ()
+
+    def __new__(cls, *_args: Any, **_kwargs: Any) -> Any:
+        raise TypeError("private Kim fd5 reservations are parent-issued only")
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}()"
+
+    def __copy__(self) -> Any:
+        raise TypeError("private Kim fd5 reservations cannot be copied")
+
+    def __deepcopy__(self, _memo: Any) -> Any:
+        raise TypeError("private Kim fd5 reservations cannot be copied")
+
+    def __reduce__(self) -> Any:
+        raise TypeError("private Kim fd5 reservations cannot be serialized")
+
+    def __reduce_ex__(self, _protocol: int) -> Any:
+        raise TypeError("private Kim fd5 reservations cannot be serialized")
+
+
 @dataclass(frozen=True, init=False)
 class _PrivateMelroformerCheckpointLeaseObservation(Mapping[str, Any]):
     _document: Mapping[str, Any]
@@ -122,6 +144,14 @@ class _LeaseState:
     terminal_document: Mapping[str, Any] | None
     finalizer: weakref.finalize
     status: str
+    fd5_reservation: _ReservationBinding | None
+
+
+@dataclass(frozen=True)
+class _ReservationBinding:
+    authority: _PrivateMelroformerCheckpointFD5Reservation
+    lease_observation: _PrivateMelroformerCheckpointLeaseObservation
+    native_request_sha256: str
 
 
 _KNOWN: weakref.WeakKeyDictionary[
@@ -196,6 +226,7 @@ def _acquire_private_melroformer_checkpoint_lease(
             terminal_document=None,
             finalizer=finalizer,
             status="retained",
+            fd5_reservation=None,
         )
         with _REGISTRY_LOCK:
             _KNOWN[lease] = state
@@ -254,6 +285,10 @@ def _close_private_melroformer_checkpoint_lease(
         _require_owner(state)
         if state.status != "retained":
             return _receipt(state)
+        if state.fd5_reservation is not None:
+            raise ValueError(
+                "private Kim checkpoint fd5 reservation remains active"
+            )
         try:
             _remeasure(state)
         except BaseException as error:
@@ -281,6 +316,133 @@ def _close_private_melroformer_checkpoint_lease(
                 receipt,
             )
         return receipt
+
+
+def _reserve_private_melroformer_checkpoint_fd5(
+    trusted_lease: _PrivateMelroformerCheckpointLease,
+    *,
+    current_lease_observation: (
+        _PrivateMelroformerCheckpointLeaseObservation
+    ),
+) -> _PrivateMelroformerCheckpointFD5Reservation:
+    """Reserve the retained descriptor for one exact guarded native start."""
+
+    lease, state = _known_state(trusted_lease)
+    if (
+        type(current_lease_observation)
+        is not _PrivateMelroformerCheckpointLeaseObservation
+    ):
+        raise ValueError(
+            "private Kim fd5 reservation requires an exact observation"
+        )
+    with state.lock:
+        _require_retained(state)
+        _require_owner(state)
+        _remeasure(state)
+        if (
+            current_lease_observation._document
+            is not state.observation_document
+        ):
+            raise ValueError(
+                "private Kim fd5 reservation observation differs"
+            )
+        if state.fd5_reservation is not None:
+            raise ValueError("private Kim fd5 is already reserved")
+        authority = object.__new__(
+            _PrivateMelroformerCheckpointFD5Reservation
+        )
+        state.fd5_reservation = _ReservationBinding(
+            authority=authority,
+            lease_observation=current_lease_observation,
+            native_request_sha256=state.request["request_sha256"],
+        )
+        return authority
+
+
+def _release_private_melroformer_checkpoint_fd5(
+    trusted_lease: _PrivateMelroformerCheckpointLease,
+    trusted_reservation: _PrivateMelroformerCheckpointFD5Reservation,
+) -> None:
+    """Remeasure and release one exact private fd5 reservation."""
+
+    _lease, state = _known_state(trusted_lease)
+    with state.lock:
+        _require_retained(state)
+        _require_owner(state)
+        _remeasure(state)
+        _require_reservation(state, trusted_reservation)
+        state.fd5_reservation = None
+
+
+def _start_reserved_private_melroformer_native_worker_darwin(
+    trusted_lease: _PrivateMelroformerCheckpointLease,
+    *,
+    trusted_reservation: _PrivateMelroformerCheckpointFD5Reservation,
+    current_lease_observation: (
+        _PrivateMelroformerCheckpointLeaseObservation
+    ),
+    trusted_native_session: Any,
+    native_session_observation: Any,
+    request: Mapping[str, Any],
+    staging_directory: str | os.PathLike[str],
+    request_read_descriptor: int,
+    result_write_descriptor: int,
+    ready_write_descriptor: int,
+    release_read_descriptor: int,
+) -> Any:
+    """Pass retained fd5 only to the exact verified private native session."""
+
+    from . import _separation_melroformer_native_session_darwin as native_session
+
+    checked_request = _validate_private_melroformer_native_request(request)
+    _lease, state = _known_state(trusted_lease)
+    with state.lock:
+        _require_retained(state)
+        _require_owner(state)
+        _remeasure(state)
+        binding = _require_reservation(state, trusted_reservation)
+        if (
+            type(current_lease_observation)
+            is not _PrivateMelroformerCheckpointLeaseObservation
+            or current_lease_observation is not binding.lease_observation
+            or current_lease_observation._document
+            is not state.observation_document
+        ):
+            raise ValueError(
+                "private Kim native start observation differs"
+            )
+        if (
+            checked_request["request_sha256"]
+            != binding.native_request_sha256
+            or _plain(checked_request) != _plain(state.request)
+        ):
+            raise ValueError("private Kim native start request differs")
+        descriptor = state.descriptor
+        if type(descriptor) is not int or descriptor < 3:
+            raise ValueError("private Kim checkpoint descriptor is unavailable")
+        checked_session_observation = (
+            native_session._validate_verified_private_melroformer_native_session_observation(
+                trusted_native_session,
+                native_session_observation,
+            )
+        )
+        admission = native_session._issue_private_melroformer_native_admission(
+            trusted_session=trusted_native_session,
+            session_observation=checked_session_observation,
+            request=checked_request,
+        )
+        return native_session._start_verified_private_melroformer_native_worker(
+            trusted_native_session,
+            session_observation=checked_session_observation,
+            trusted_admission=admission,
+            request=checked_request,
+            staging_directory=staging_directory,
+            request_read_descriptor=request_read_descriptor,
+            result_write_descriptor=result_write_descriptor,
+            checkpoint_read_descriptor=descriptor,
+            ready_write_descriptor=ready_write_descriptor,
+            release_read_descriptor=release_read_descriptor,
+        )
 
 
 def _open_exact_checkpoint(
@@ -451,6 +613,7 @@ def _terminalize(
         if state.finalizer.alive:
             state.finalizer.detach()
     state.descriptor = None
+    state.fd5_reservation = None
     with _REGISTRY_LOCK:
         _ACTIVE.discard(lease)
     if cleanup_status != "complete":
@@ -588,6 +751,25 @@ def _known_state(
 def _require_owner(state: _LeaseState) -> None:
     if state.owner_pid != os.getpid():
         raise RuntimeError("private Kim checkpoint lease owner changed")
+
+
+def _require_retained(state: _LeaseState) -> None:
+    if state.status != "retained":
+        raise RuntimeError("private Kim checkpoint lease is terminal")
+
+
+def _require_reservation(
+    state: _LeaseState,
+    value: Any,
+) -> _ReservationBinding:
+    binding = state.fd5_reservation
+    if (
+        type(value) is not _PrivateMelroformerCheckpointFD5Reservation
+        or binding is None
+        or value is not binding.authority
+    ):
+        raise ValueError("private Kim fd5 reservation differs")
+    return binding
 
 
 def _finalize_descriptor(descriptor: int, identity: tuple[int, int]) -> None:

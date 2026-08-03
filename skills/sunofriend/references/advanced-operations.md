@@ -1697,9 +1697,12 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   pinned Safetensors inspection. Its trusted-local static test opened and
   hashed the approved file but did not observe tensor values, import a model or
   read audio. This deliberately does not reuse the general lease's public
-  bake-off acceptance authority. The private fd5 reservation/start bridge and
-  one fresh authorised live run remain outstanding. No separator route is
-  enabled.
+  bake-off acceptance authority. A single-use reservation now binds the exact
+  observation and canonical request under the lease lock, remeasures before
+  handoff, and passes fd5 only to an admission issued by the verified native
+  session. The coordinator and one-shot wrapper no longer accept the general
+  worker-V2 record. Full one-run authority composition and one fresh authorised
+  live run remain outstanding. No separator route is enabled.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory

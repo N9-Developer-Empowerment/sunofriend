@@ -1722,20 +1722,27 @@ Each working day should aim for one narrow vertical improvement:
 - Model/runtime/checkpoint: Kim Vocal 2 MLX `model.safetensors`, 456,483,463
   bytes, exact pinned SHA-256, 708 BF16 tensors. The checkpoint was hashed but
   tensor values were not observed or deserialized.
-- Evidence and metrics: Ruff passes; three portable lease tests pass; the real
+- Evidence and metrics: Ruff passes; five portable lease tests and the related
+  fixed-coordinator/one-shot tests pass; the real
   checkpoint acquire/recheck/close test passes in 0.61 seconds. Tests cover
   path-free evidence, exact observation identity, terminal idempotence,
-  pathname identity change rejection and absence from public CLI/TUI commands.
+  pathname identity change rejection, single-use reservation, exact native
+  session admission/fd5 handoff, coordinator recheck/release/close and absence
+  from public CLI/TUI commands.
 - Listening result: not applicable; no model or audio was loaded.
 - Decision: use this dedicated private lease for the approved Kim experiment.
   The general separator lease remains tied to genuine public bake-off
-  acceptance and must not be repurposed for a one-song private evaluation.
-- Problems/risks: the lease is static checkpoint evidence, not execution
-  authority. The reservation/start bridge and coordinator still reference the
-  general accepted-separator lease/V2 record and must be narrowed to this exact
-  private request before a live run.
-- Next smallest step: add a single-use private fd5 reservation and guarded
-  lease-to-session start bridge, then substitute it into the fixed coordinator.
+  acceptance and must not be repurposed for a one-song private evaluation. The
+  fixed coordinator and one-shot wrapper now consume the private lease,
+  reservation and canonical request directly; their obsolete general worker-V2
+  argument has been removed.
+- Problems/risks: this makes the checkpoint start boundary executable only
+  when composed with an exact verified private native session. It is still not
+  a product route or separation-quality claim. The one-run authority composer,
+  authorised source report validation and fresh live execution remain.
+- Next smallest step: construct the exact private native session and one-run
+  authority chain around the unchanged authorised `Be Alone` excerpt, then run
+  it once through the one-shot owner outside the Codex sandbox.
 
 ### 2026-08-03 — one-shot native transport owner composed, not run
 

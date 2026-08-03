@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 
 from sunofriend import _separation_melroformer_checkpoint_lease as lease_module
+from sunofriend import _separation_melroformer_native_session_darwin as session_module
 from sunofriend._separation_melroformer_native_transport import (
     _build_private_melroformer_native_request,
 )
@@ -194,6 +195,143 @@ def test_private_checkpoint_lease_detects_path_identity_change(
         lease_module._recheck_private_melroformer_checkpoint_lease(lease)
     assert caught.value.receipt["status"] == "integrity_failed"
     assert caught.value.receipt["cleanup"]["status"] == "complete"
+
+
+def test_private_checkpoint_fd5_reservation_guards_exact_native_start(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "private"
+    root.mkdir(mode=0o700)
+    checkpoint = _sparse_checkpoint(root)
+    request = _request(root, checkpoint)
+    _install_static_substitutions(monkeypatch)
+    lease, observation = (
+        lease_module._acquire_private_melroformer_checkpoint_lease(request)
+    )
+    reservation = lease_module._reserve_private_melroformer_checkpoint_fd5(
+        lease,
+        current_lease_observation=observation,
+    )
+    session = object()
+    session_observation = object()
+    checked_session_observation = {"observation_sha256": _digest("session")}
+    admission = object()
+    owner = object()
+    calls: list[str] = []
+
+    monkeypatch.setattr(
+        session_module,
+        "_validate_verified_private_melroformer_native_session_observation",
+        lambda trusted, value: (
+            calls.append("validate_session")
+            or checked_session_observation
+            if trusted is session and value is session_observation
+            else (_ for _ in ()).throw(AssertionError("wrong session"))
+        ),
+    )
+
+    def issue(**kwargs: Any):
+        assert kwargs == {
+            "trusted_session": session,
+            "session_observation": checked_session_observation,
+            "request": request,
+        }
+        calls.append("issue_admission")
+        return admission
+
+    monkeypatch.setattr(
+        session_module,
+        "_issue_private_melroformer_native_admission",
+        issue,
+    )
+
+    def start(trusted: Any, **kwargs: Any):
+        assert trusted is session
+        assert kwargs["session_observation"] is checked_session_observation
+        assert kwargs["trusted_admission"] is admission
+        assert kwargs["request"] == request
+        descriptor = kwargs["checkpoint_read_descriptor"]
+        assert os.fstat(descriptor).st_size == CONVERSION_CHECKPOINT_BYTES
+        assert os.get_inheritable(descriptor) is False
+        assert kwargs["staging_directory"] == request["paths"][
+            "staging_directory"
+        ]
+        assert {
+            kwargs["request_read_descriptor"],
+            kwargs["result_write_descriptor"],
+            kwargs["ready_write_descriptor"],
+            kwargs["release_read_descriptor"],
+        } == {31, 32, 33, 34}
+        calls.append("start")
+        return owner
+
+    monkeypatch.setattr(
+        session_module,
+        "_start_verified_private_melroformer_native_worker",
+        start,
+    )
+
+    assert (
+        lease_module._start_reserved_private_melroformer_native_worker_darwin(
+            lease,
+            trusted_reservation=reservation,
+            current_lease_observation=observation,
+            trusted_native_session=session,
+            native_session_observation=session_observation,
+            request=request,
+            staging_directory=request["paths"]["staging_directory"],
+            request_read_descriptor=31,
+            result_write_descriptor=32,
+            ready_write_descriptor=33,
+            release_read_descriptor=34,
+        )
+        is owner
+    )
+    assert calls == ["validate_session", "issue_admission", "start"]
+    with pytest.raises(ValueError, match="remains active"):
+        lease_module._close_private_melroformer_checkpoint_lease(lease)
+    lease_module._release_private_melroformer_checkpoint_fd5(
+        lease,
+        reservation,
+    )
+    assert lease_module._close_private_melroformer_checkpoint_lease(lease)[
+        "status"
+    ] == "closed"
+
+
+def test_private_checkpoint_fd5_reservation_rejects_substitution(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "private"
+    root.mkdir(mode=0o700)
+    checkpoint = _sparse_checkpoint(root)
+    request = _request(root, checkpoint)
+    _install_static_substitutions(monkeypatch)
+    lease, observation = (
+        lease_module._acquire_private_melroformer_checkpoint_lease(request)
+    )
+    reservation = lease_module._reserve_private_melroformer_checkpoint_fd5(
+        lease,
+        current_lease_observation=observation,
+    )
+
+    with pytest.raises(ValueError, match="reservation differs"):
+        lease_module._release_private_melroformer_checkpoint_fd5(
+            lease,
+            object(),
+        )
+    with pytest.raises(ValueError, match="already reserved"):
+        lease_module._reserve_private_melroformer_checkpoint_fd5(
+            lease,
+            current_lease_observation=observation,
+        )
+    lease_module._release_private_melroformer_checkpoint_fd5(
+        lease,
+        reservation,
+    )
+    lease_module._close_private_melroformer_checkpoint_lease(lease)
 
 
 @pytest.mark.trusted_local

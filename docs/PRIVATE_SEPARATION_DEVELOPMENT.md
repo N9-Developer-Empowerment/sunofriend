@@ -369,10 +369,14 @@ Safetensors inspection. Its trusted-local static check rehashed and rechecked
 the exact 456,483,463-byte approved checkpoint without reading tensor values,
 importing the model or touching audio. This deliberately does not reuse the
 general separator lease, whose authority depends on a genuine public bake-off
-acceptance corpus. The remaining next step is a single-use private fd5
-reservation/start bridge and coordinator substitution, followed by one
-unchanged authorised excerpt. None of this changes the active subprocess route
-or enables a product route.
+acceptance corpus. A single-use private fd5 reservation now retains that exact
+observation and request under the lease lock, remeasures immediately before
+handoff, and passes the raw descriptor only into an admission issued by the
+verified native session. The fixed coordinator and one-shot wrapper use this
+private boundary directly and no longer accept the general worker-V2 record.
+The remaining next step is to construct the full one-run authority chain and
+run one unchanged authorised excerpt. None of this changes the active
+subprocess route or enables a product route.
 
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \
