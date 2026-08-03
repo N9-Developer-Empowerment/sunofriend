@@ -1704,6 +1704,39 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-03 — private Kim checkpoint descriptor lease verified, not loaded
+
+- Goal: construct truthful private checkpoint authority for the approved Kim
+  Vocal 2 evaluation without borrowing the public bake-off acceptance schema
+  or fabricating a hidden-corpus result.
+- Change or experiment: added a developer-only opaque lease that validates the
+  canonical native request, re-verifies the author-hosted upstream licence
+  evidence, opens the exact owner-only checkpoint with `O_NOFOLLOW`, retains a
+  non-inheritable read-only descriptor, and binds descriptor/path identity to
+  the existing descriptor-pinned Safetensors inspection. Recheck and terminal
+  close each repeat the identity and full-file inspection. Returned evidence is
+  path-free and explicitly grants no execution, model-load, product, selection
+  or publication authority.
+- Inputs: synthetic sparse files for adversarial portable tests and the exact
+  approved local Kim checkpoint for one trusted-local static check.
+- Model/runtime/checkpoint: Kim Vocal 2 MLX `model.safetensors`, 456,483,463
+  bytes, exact pinned SHA-256, 708 BF16 tensors. The checkpoint was hashed but
+  tensor values were not observed or deserialized.
+- Evidence and metrics: Ruff passes; three portable lease tests pass; the real
+  checkpoint acquire/recheck/close test passes in 0.61 seconds. Tests cover
+  path-free evidence, exact observation identity, terminal idempotence,
+  pathname identity change rejection and absence from public CLI/TUI commands.
+- Listening result: not applicable; no model or audio was loaded.
+- Decision: use this dedicated private lease for the approved Kim experiment.
+  The general separator lease remains tied to genuine public bake-off
+  acceptance and must not be repurposed for a one-song private evaluation.
+- Problems/risks: the lease is static checkpoint evidence, not execution
+  authority. The reservation/start bridge and coordinator still reference the
+  general accepted-separator lease/V2 record and must be narrowed to this exact
+  private request before a live run.
+- Next smallest step: add a single-use private fd5 reservation and guarded
+  lease-to-session start bridge, then substitute it into the fixed coordinator.
+
 ### 2026-08-03 — one-shot native transport owner composed, not run
 
 - Goal: remove the last ad hoc caller responsibility for fd3 request and fd4
@@ -1730,13 +1763,14 @@ Each working day should aim for one narrow vertical improvement:
 - Decision: retain this helper as the sole future transport-file owner around
   the fixed coordinator. It is not a public runner, trust-record constructor
   or separation-quality claim.
-- Problems/risks: a real authorised run still needs the exact accepted
-  safetensors inspection/lease and V2 facade composed around the existing
-  approved Kim checkpoint. Pathname-to-`exec` TOCTOU, incomplete dyld
+- Problems/risks: a real authorised run still needs the exact private
+  safetensors lease/reservation/start bridge composed around the existing
+  approved Kim checkpoint. It must not reuse the general bake-off acceptance
+  record. Pathname-to-`exec` TOCTOU, incomplete dyld
   shared-cache coverage and transient native loads remain open.
-- Next smallest step: construct the exact private real-checkpoint authority
-  chain, then run the unchanged authorised `Be Alone` excerpt once through
-  this one-shot boundary outside the Codex sandbox.
+- Next smallest step: complete the private lease-to-start authority chain, then
+  run the unchanged authorised `Be Alone` excerpt once through this one-shot
+  boundary outside the Codex sandbox.
 
 ### 2026-08-03 — native failure receipts made disjoint, not run
 

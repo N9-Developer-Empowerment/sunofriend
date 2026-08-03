@@ -1691,9 +1691,15 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   private one-shot wrapper now creates and removes the exact owner-only fd3/fd4
   transport files around that coordinator, including distinct writer/reader
   descriptions for one result inode. Its tests substitute the coordinator and
-  do not open the checkpoint, model or audio. The accepted real-checkpoint
-  inspection/lease/V2 authority chain and one fresh authorised live run remain
-  outstanding. No separator route is enabled.
+  do not open the checkpoint, model or audio. A dedicated private Kim lease now
+  retains and rechecks the exact owner-only checkpoint descriptor against the
+  canonical native request, author-hosted upstream evidence and descriptor-
+  pinned Safetensors inspection. Its trusted-local static test opened and
+  hashed the approved file but did not observe tensor values, import a model or
+  read audio. This deliberately does not reuse the general lease's public
+  bake-off acceptance authority. The private fd5 reservation/start bridge and
+  one fresh authorised live run remain outstanding. No separator route is
+  enabled.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory

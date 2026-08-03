@@ -362,10 +362,17 @@ now supplies the exact fd3 request file and paired fd4 writer/reader around
 that coordinator. It uses a separate fresh owner-only transport directory,
 removes it after success or failure and never deletes the output staging tree.
 The wrapper's tests substitute the coordinator, so no checkpoint, model, audio
-or native process was opened. The remaining next step is to construct the
-exact accepted real-checkpoint inspection/lease/V2 authority chain and run one
-unchanged authorised excerpt through the composed path. None of this changes
-the active subprocess route or enables a product route.
+or native process was opened. A dedicated private Kim checkpoint lease now
+binds the canonical native request, author-hosted upstream evidence, an
+owner-only non-inheritable descriptor and the existing descriptor-pinned
+Safetensors inspection. Its trusted-local static check rehashed and rechecked
+the exact 456,483,463-byte approved checkpoint without reading tensor values,
+importing the model or touching audio. This deliberately does not reuse the
+general separator lease, whose authority depends on a genuine public bake-off
+acceptance corpus. The remaining next step is a single-use private fd5
+reservation/start bridge and coordinator substitution, followed by one
+unchanged authorised excerpt. None of this changes the active subprocess route
+or enables a product route.
 
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \

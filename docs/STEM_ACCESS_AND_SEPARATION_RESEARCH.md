@@ -153,9 +153,14 @@ it creates a fresh owner-only directory, binds the exact framed request and a
 single empty result inode with distinct writer/reader descriptors, invokes
 only that fixed coordinator, and removes the transport files after success or
 failure without touching output staging. Its tests substitute the coordinator;
-no checkpoint, process, model or audio was opened. The remaining next boundary
-is the exact real-checkpoint inspection/lease/V2 authority chain followed by
-one authorised live excerpt. No product route is enabled.
+no checkpoint, process, model or audio was opened. A separate private Kim lease
+now retains and repeatedly rechecks the exact approved checkpoint descriptor,
+canonical request, upstream evidence and descriptor-pinned Safetensors
+inspection. The real file passed that static check without tensor-value access,
+model import or audio access. This private lease does not claim the hidden-set
+acceptance required by the general separator lease. The remaining next
+boundary is its single-use fd5 reservation/start bridge followed by one
+authorised live excerpt. No product route is enabled.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on
