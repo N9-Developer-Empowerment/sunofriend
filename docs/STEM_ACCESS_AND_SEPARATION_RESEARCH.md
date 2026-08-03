@@ -91,6 +91,21 @@ checkpoint, model, audio or staging tree, grants no product authority and does
 not replace the active subprocess evaluation path. The next boundary is the
 fixed private macOS adapter and fresh live admission around that lifecycle.
 
+That fixed model-free adapter is now implemented and exercised live on macOS.
+It prepares the kernel Sandbox denial stream before native spawn, uses the
+existing fd6/fd7 readiness gate, binds the signed process image and two stable
+owner-only executable-region snapshots, releases the fixed stdlib worker,
+decodes the bounded fd4 result while ownership is live, finishes the observer,
+drains and exact-reaps the complete group, then remeasures mapped files and the
+three-entry staging tree. A forced wrong process-image CDHash is rejected before
+release and still reaches complete terminal cleanup. The adapter explicitly
+requires a small fd5 placeholder and rejects a checkpoint-sized descriptor, so
+it cannot run Kim. No accepted checkpoint, model or audio was opened and no
+product route is enabled. The remaining bridge is the fixed real coordinator
+that composes these concrete operations with the existing measured Kim
+session, live lease-to-start handoff, real staging verifier and lease terminal
+receipt.
+
 That fresh-session/admission prerequisite is now implemented. One opaque
 private session wraps a newly built verified native launcher and binds the fixed
 Kim worker, Python runtime, Apple sandbox provider, native method and owner type.

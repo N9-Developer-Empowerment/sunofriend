@@ -32,7 +32,7 @@ def test_native_launcher_is_packaged_as_source_but_not_registered_to_compile() -
     assert "Extension(" not in pyproject
 
 
-def test_source_is_mac_only_and_referenced_only_by_private_builder() -> None:
+def test_source_is_mac_only_and_referenced_only_by_private_native_boundaries() -> None:
     source = _source()
     python_sources = list((REPOSITORY / "src" / "sunofriend").glob("*.py"))
     runtime_references = [
@@ -49,6 +49,7 @@ def test_source_is_mac_only_and_referenced_only_by_private_builder() -> None:
     assert "PyInit__separation_native_spawn_darwin" in source
     assert '"_spawn_bound_fake_worker"' in source
     assert sorted(runtime_references) == [
+        "_separation_melroformer_native_model_free_adapter_darwin.py",
         "_separation_native_build_darwin.py",
         "_separation_native_session_darwin.py",
     ]

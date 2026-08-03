@@ -43,6 +43,7 @@ _REPOSITORY = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_REPOSITORY / "src"))
 import sunofriend._separation_macos_loaded_images as _loaded_images  # noqa: E402
 import sunofriend._separation_macos_sandbox_network_observer as _network_observer  # noqa: E402
+import sunofriend._separation_melroformer_native_model_free_adapter_darwin as _model_free_parent_adapter  # noqa: E402
 import sunofriend._separation_melroformer_native_transport as _native_transport  # noqa: E402
 import sunofriend._separation_melroformer_supervision as _supervision  # noqa: E402
 import sunofriend._separation_melroformer_upstream_evidence as _melroformer_evidence  # noqa: E402
@@ -2658,9 +2659,158 @@ def run_sandbox_frame_bootstrap_canary(
     }
 
 
+def run_fixed_model_free_parent_adapter_canary(
+    *,
+    extension_path: Path,
+    temporary_root: Path,
+    expected_artifact_sha256: str,
+    expected_source_sha256: str,
+    expected_build_contract_sha256: str,
+    expected_process_image_path: Path,
+    expected_process_image_cdhash: str,
+) -> dict[str, Any]:
+    """Run only the concrete model-free parent adapter, never Kim."""
+
+    outer = _observe_outer_supervisor_descriptors()
+    if outer["only_standard_descriptors_open"] is not True:
+        raise RuntimeError("fixed-parent harness inherited a descriptor")
+    _prepare_isolated_descriptor_limit()
+    extension, artifact = _load_verified_extension(
+        extension_path,
+        expected_artifact_sha256=expected_artifact_sha256,
+        expected_source_sha256=expected_source_sha256,
+        expected_build_contract_sha256=expected_build_contract_sha256,
+    )
+    spawn = getattr(extension, "_spawn_bound_private_melroformer_worker", None)
+    owner_type = getattr(extension, "_OwnedSpawnChild", None)
+    if not callable(spawn) or not isinstance(owner_type, type):
+        raise RuntimeError("fixed model-free native boundary is unavailable")
+    runtime = Path(sys.executable).resolve(strict=True)
+    process_image = expected_process_image_path.resolve(strict=True)
+    worker_before = _measure_worker(_FRAME_BOOTSTRAP_WORKER)
+    case_directory = temporary_root / "fixed-model-free-parent-adapter"
+    case_directory.mkdir(mode=0o700)
+    request = _build_model_free_native_request(
+        case_directory=case_directory,
+        worker_sha256=worker_before.sha256,
+    )
+    paths = _install_transport_descriptors(
+        case_directory,
+        _TARGET_FDS,
+        request_bytes=_native_transport._encode_private_melroformer_native_request(
+            request
+        ),
+    )
+    result_reader = os.open(paths["result"], os.O_RDONLY)
+    os.set_inheritable(result_reader, False)
+    session_payload = {
+        "native_artifact_sha256": artifact.sha256,
+        "native_source_sha256": expected_source_sha256,
+        "native_build_contract_sha256": expected_build_contract_sha256,
+        "runtime_sha256": _measure_runtime(runtime).sha256,
+        "process_image_cdhash": expected_process_image_cdhash,
+        "worker_sha256": worker_before.sha256,
+    }
+    session_sha256 = hashlib.sha256(
+        json.dumps(
+            session_payload,
+            ensure_ascii=True,
+            allow_nan=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("ascii")
+    ).hexdigest()
+    evidence = _model_free_parent_adapter._run_fixed_model_free_macos_parent_adapter(
+        request=request,
+        native_session_observation_sha256=session_sha256,
+        spawn_native=spawn,
+        expected_owner_type=owner_type,
+        runtime_path=runtime,
+        expected_process_image_path=process_image,
+        expected_process_image_cdhash=expected_process_image_cdhash,
+        staging_directory=case_directory,
+        request_read_descriptor=3,
+        result_write_descriptor=4,
+        result_read_descriptor=result_reader,
+        checkpoint_placeholder_descriptor=5,
+    )
+    _close_descriptors_from_three()
+    failure_directory = temporary_root / "fixed-model-free-parent-failure"
+    failure_directory.mkdir(mode=0o700)
+    failure_request = _build_model_free_native_request(
+        case_directory=failure_directory,
+        worker_sha256=worker_before.sha256,
+    )
+    failure_paths = _install_transport_descriptors(
+        failure_directory,
+        _TARGET_FDS,
+        request_bytes=_native_transport._encode_private_melroformer_native_request(
+            failure_request
+        ),
+    )
+    failure_reader = os.open(failure_paths["result"], os.O_RDONLY)
+    os.set_inheritable(failure_reader, False)
+    wrong_cdhash = (
+        ("0" if expected_process_image_cdhash[0] != "0" else "1")
+        + expected_process_image_cdhash[1:]
+    )
+    try:
+        _model_free_parent_adapter._run_fixed_model_free_macos_parent_adapter(
+            request=failure_request,
+            native_session_observation_sha256=session_sha256,
+            spawn_native=spawn,
+            expected_owner_type=owner_type,
+            runtime_path=runtime,
+            expected_process_image_path=process_image,
+            expected_process_image_cdhash=wrong_cdhash,
+            staging_directory=failure_directory,
+            request_read_descriptor=3,
+            result_write_descriptor=4,
+            result_read_descriptor=failure_reader,
+            checkpoint_placeholder_descriptor=5,
+        )
+    except _model_free_parent_adapter._FixedModelFreeMacosParentAdapterFailure as error:
+        failure = {
+            "case": "wrong_process_image_cdhash",
+            "rejected_before_worker_release": True,
+            "terminal_cleanup_complete": error.terminal_cleanup_complete,
+            "cleanup_error_count": len(error.cleanup_errors),
+            "real_model_worker_started": False,
+            "checkpoint_opened": False,
+            "audio_opened": False,
+        }
+    else:
+        raise RuntimeError("fixed model-free parent accepted the wrong process image")
+    if _measure_worker(_FRAME_BOOTSTRAP_WORKER) != worker_before:
+        raise RuntimeError("fixed model-free parent worker changed")
+    payload = {
+        "schema": "sunofriend.native-model-free-parent-adapter-canary.v1",
+        "status": "fixed_model_free_parent_adapter_and_cleanup_proved",
+        "adapter_evidence": _model_free_parent_adapter._plain(evidence),
+        "adversarial_cleanup": failure,
+        "real_model_worker_executed": False,
+        "accepted_checkpoint_opened": False,
+        "audio_opened": False,
+        "product_authority_granted": False,
+    }
+    return {
+        **payload,
+        "report_sha256": hashlib.sha256(
+            json.dumps(
+                payload,
+                ensure_ascii=True,
+                allow_nan=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            ).encode("ascii")
+        ).hexdigest(),
+    }
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--sandbox-frame-only", action="store_true")
+    parser.add_argument("--fixed-parent-adapter-only", action="store_true")
     parser.add_argument("extension_path", type=Path)
     parser.add_argument("temporary_root", type=Path)
     parser.add_argument("expected_artifact_sha256")
@@ -2673,11 +2823,14 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     arguments = _parser().parse_args(argv)
-    runner = (
-        run_sandbox_frame_bootstrap_canary
-        if arguments.sandbox_frame_only
-        else run_canary_matrix
-    )
+    if arguments.sandbox_frame_only and arguments.fixed_parent_adapter_only:
+        raise ValueError("choose only one native canary mode")
+    if arguments.fixed_parent_adapter_only:
+        runner = run_fixed_model_free_parent_adapter_canary
+    elif arguments.sandbox_frame_only:
+        runner = run_sandbox_frame_bootstrap_canary
+    else:
+        runner = run_canary_matrix
     report = runner(
         extension_path=arguments.extension_path.resolve(strict=True),
         temporary_root=arguments.temporary_root.resolve(strict=True),

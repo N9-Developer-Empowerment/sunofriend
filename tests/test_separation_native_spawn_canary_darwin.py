@@ -872,3 +872,103 @@ def test_fresh_private_native_build_passes_sandbox_frame_bootstrap(
     assert canary["normal_zero_exit_after_release"] is True
     assert canary["group_empty_before_exact_reap"] is True
     assert canary["exact_reap_observed"] is True
+
+
+@pytest.mark.trusted_local
+@pytest.mark.skipif(
+    sys.platform != "darwin" or platform.system() != "Darwin",
+    reason="fixed model-free native parent adapter is macOS-only",
+)
+def test_fresh_private_native_build_passes_fixed_model_free_parent_adapter(
+    tmp_path: Path,
+) -> None:
+    build_root = tmp_path / r"private fixed parent build $edge\root"
+    build = native_build._build_native_launcher(cache_root=build_root)
+    receipt = build.receipt.to_dict()
+    runtime_path = Path(sys.executable).resolve(strict=True)
+    expected_process_image_path = process_image._expected_python_process_image(
+        runtime_path
+    )
+    expected_process_image_cdhash = process_image._static_code_identity(
+        expected_process_image_path
+    )["cdhash"]
+    harness_root = tmp_path / "fixed-parent-adapter-canary"
+    harness_root.mkdir(mode=0o700)
+    command = [
+        sys.executable,
+        "-I",
+        "-B",
+        "-S",
+        str(HARNESS),
+        "--fixed-parent-adapter-only",
+        str(build.artifact_path),
+        str(harness_root),
+        receipt["artifact"]["sha256"],
+        receipt["build_input"]["source"]["sha256"],
+        receipt["build_input"]["build_contract_sha256"],
+        str(expected_process_image_path),
+        expected_process_image_cdhash,
+    ]
+
+    return_code, stdout, stderr = _run_bounded_harness(command)
+
+    assert return_code == 0, stderr.decode("utf-8", errors="replace")
+    assert stderr == b""
+    report = _decode_one_canonical_report(stdout)
+    _assert_path_free_report(
+        stdout,
+        forbidden_paths=(
+            tmp_path,
+            build_root,
+            build.artifact_path,
+            harness_root,
+            REPOSITORY,
+            HARNESS,
+            expected_process_image_path,
+        ),
+    )
+    assert report["schema"] == (
+        "sunofriend.native-model-free-parent-adapter-canary.v1"
+    )
+    assert report["status"] == (
+        "fixed_model_free_parent_adapter_and_cleanup_proved"
+    )
+    evidence = report["adapter_evidence"]
+    assert evidence["schema"] == (
+        "sunofriend.private-melroformer-native-model-free-adapter.v1"
+    )
+    assert evidence["live_observation"]["ready_release_completed"] is True
+    assert evidence["live_observation"]["deliberate_network_denial_count"] >= 1
+    assert evidence["live_observation"]["other_owned_network_denial_count"] == 0
+    assert evidence["staging_verification"]["worker_inputs_unchanged"] is True
+    assert evidence["staging_verification"]["only_result_frame_changed"] is True
+    assert evidence["terminal_projection"]["leader_reaped"] is True
+    assert evidence["terminal_projection"]["group_empty"] is True
+    assert evidence["terminal_projection"]["ownership_released"] is True
+    assert evidence["terminal_projection"]["worker_reported_identity_matched"] is True
+    assert evidence["effects"] == {
+        "native_process_started": True,
+        "model_free_worker_started": True,
+        "accepted_checkpoint_opened": False,
+        "checkpoint_descriptor_bytes_read_by_worker": 0,
+        "model_imported": False,
+        "audio_read": False,
+        "network_used": False,
+        "denied_network_canary_attempted": True,
+        "staged_result_frame_written": True,
+    }
+    assert all(value is False for value in evidence["permissions"].values())
+    assert report["adversarial_cleanup"] == {
+        "case": "wrong_process_image_cdhash",
+        "rejected_before_worker_release": True,
+        "terminal_cleanup_complete": True,
+        "cleanup_error_count": 0,
+        "real_model_worker_started": False,
+        "checkpoint_opened": False,
+        "audio_opened": False,
+    }
+    assert report["real_model_worker_executed"] is False
+    assert report["accepted_checkpoint_opened"] is False
+    assert report["audio_opened"] is False
+    assert report["product_authority_granted"] is False
+    assert re.fullmatch(r"[0-9a-f]{64}", report["report_sha256"])

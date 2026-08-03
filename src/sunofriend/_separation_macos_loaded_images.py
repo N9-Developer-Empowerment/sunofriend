@@ -23,6 +23,7 @@ import os
 import platform
 import re
 import selectors
+import stat
 import subprocess
 import time
 from dataclasses import dataclass
@@ -36,7 +37,6 @@ from ._separation_macos_process_image import (
     _static_code_identity,
     _validate_runtime_process_image_binding,
 )
-from ._separation_macos_sandbox_probe import _regular_file_identity
 from .separation_contract import _canonical_json_bytes, _freeze_json
 
 
@@ -486,6 +486,47 @@ def _snapshot_key(regions: Sequence[_ExecutableRegion]) -> tuple[tuple[Any, ...]
         )
         for region in regions
     )
+
+
+def _regular_file_identity(value: str | Path) -> dict[str, Any]:
+    """Hash one stable mapped regular file without requiring a mode-x bit.
+
+    The executable-region fact comes from the kernel VM protection. Dynamic
+    libraries and Python extension modules may be mapped executable even when
+    their filesystem mode does not carry an execute bit, so the unrelated
+    launchable-program policy must not be reused here.
+    """
+
+    path = Path(value).expanduser().resolve(strict=True)
+    before = path.stat()
+    if not stat.S_ISREG(before.st_mode):
+        raise ValueError("macOS mapped executable backing must be a regular file")
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        while block := stream.read(1024 * 1024):
+            digest.update(block)
+    after = path.stat()
+    before_identity = (
+        before.st_dev,
+        before.st_ino,
+        before.st_mode,
+        before.st_size,
+        before.st_mtime_ns,
+    )
+    after_identity = (
+        after.st_dev,
+        after.st_ino,
+        after.st_mode,
+        after.st_size,
+        after.st_mtime_ns,
+    )
+    if before_identity != after_identity:
+        raise ValueError("macOS mapped executable backing changed while hashing")
+    return {
+        "resolved_path": str(path),
+        "bytes": before.st_size,
+        "sha256": digest.hexdigest(),
+    }
 
 
 def _measure_mapped_files(

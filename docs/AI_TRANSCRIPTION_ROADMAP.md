@@ -1704,6 +1704,53 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-03 — fixed model-free macOS parent adapter proved live
+
+- Goal: replace the two-phase lifecycle's caller-supplied hooks with one fixed
+  developer-only adapter before allowing an accepted checkpoint or authorised
+  audio into the native path.
+- Change or experiment: added a private Darwin adapter that owns the concrete
+  order for the kernel Sandbox denial broker, fd6/fd7 ready/release gate,
+  opaque-owner process-image match, two stable executable-region snapshots,
+  bounded fd4 decode, live-observer finish, whole-group supervision, exact
+  reap, mapped-file remeasurement and three-entry staging verification. It
+  calls only the fixed native sandbox method and fixed stdlib bootstrap. Its
+  fd5 input must be a small placeholder; a checkpoint-sized descriptor is
+  rejected. A forced wrong-CDHash run is rejected before worker release and
+  still drains and exact-reaps the owned group.
+- Inputs: the fixed stdlib frame-bootstrap worker, a canonical model-free fd3
+  request, empty fd4 file, small fd5 placeholder, fresh owner-only staging,
+  freshly provenance-built native extension, signed Python process image and
+  `/usr/bin/sandbox-exec`.
+- Model/runtime/checkpoint: no model or accepted checkpoint. The worker read
+  zero fd5 bytes, imported no model and read no audio. The accepted 456,483,463-
+  byte Kim checkpoint is explicitly outside this adapter.
+- Evidence and metrics: eight portable adapter cases cover transport/staging,
+  exact result decode, empty-result timeout, oversized-result rejection,
+  checkpoint-sized-fd5 rejection, child-result checkpoint-read rejection and
+  spawn-binding rejection, plus absence from every public and direct-TUI
+  command route. The related portable parent/image suite passes 38 tests. One
+  trusted-local macOS canary passed both the complete native
+  lifecycle and forced process-image failure cleanup. It also exposed and
+  corrected an older policy mismatch: a kernel executable mapping may be
+  backed by a regular library without a filesystem execute bit, so mapped-file
+  evidence now requires stable regular hashed bytes rather than launchability.
+  The complete portable regression suite passes 2,904 tests, with one expected
+  skip and the 11 trusted-local cases deliberately deselected.
+- Listening result: not applicable; no audio was opened or produced.
+- Decision: accept this as concrete model-free native-parent evidence. Keep it
+  developer-only and unreachable from CLI, TUI, Simple, Studio and the source
+  graph. It is not Kim execution or separator-quality evidence.
+- Problems/risks: the real measured Kim session, live checkpoint lease and
+  reservation, guarded start, import-closure/quarantine staging verifier and
+  lease terminal receipt are still not composed through this adapter. Runtime,
+  worker and provider invocation retain their documented pathname TOCTOU; dyld
+  shared-cache and transient-load coverage remain incomplete.
+- Next smallest step: build one fixed real coordinator that reuses this proven
+  observer/result/supervision boundary while composing the existing live
+  lease-to-start bridge and terminal lease closure. Prove its failure paths
+  with substituted artifacts before running one previously authorised excerpt.
+
 ### 2026-08-03 — two-phase native parent order made explicit and fail-closed
 
 - Goal: replace the older substituted lifecycle's unsafe assumption that a

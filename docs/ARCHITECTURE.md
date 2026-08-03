@@ -746,6 +746,25 @@ worker-script path TOCTOU at a later launch. The guarded call therefore
 remeasures all three paths immediately before start and after exact reap, but
 does not claim path-to-exec or path-to-open atomicity.
 
+`_separation_melroformer_native_model_free_adapter_darwin.py` is the fixed
+developer-only composition proof for the future native Kim parent. It accepts
+only the built-in sandboxed spawn method, exact opaque owner type, fixed stdlib
+bootstrap and a small non-checkpoint fd5 placeholder. It owns the concrete
+pre-spawn observer, ready/process-image/executable-region capture, release,
+bounded fd4 read, observer finish, group supervision, exact reap, mapped-file
+remeasurement and staging-verification order. The adapter's result is path- and
+PID-free. A wrong-CDHash canary proves failure before release still reaches
+complete group cleanup. The mapped-image layer separately treats the kernel VM
+execute protection as the execution fact and no longer incorrectly requires a
+filesystem execute bit on regular dynamic libraries.
+
+This adapter starts a real native process but never the real model worker. It
+rejects the accepted checkpoint's byte geometry, reads no audio, grants no
+product authority and is imported only by trusted developer tests. The live
+checkpoint lease, measured real-worker session/admission, quarantine/import-
+closure verifier and lease terminal receipt remain to be composed by one fixed
+real coordinator before an authorised Kim excerpt may use the native path.
+
 `_separation_fake_execution_quarantine.py` is the twenty-fourth internal S3
 boundary. It revalidates the exact historical request and blocked launches,
 prepared V3 plan and complete Result V2, then observes an existing owner-only

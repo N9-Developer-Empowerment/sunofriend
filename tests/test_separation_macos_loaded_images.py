@@ -201,6 +201,22 @@ def test_mapped_file_measurement_records_signature_status_without_paths(
     assert str(tmp_path) not in repr(artifacts)
 
 
+def test_mapped_file_identity_accepts_regular_library_without_mode_x(
+    tmp_path: Path,
+) -> None:
+    library = tmp_path / "native-extension.so"
+    library.write_bytes(b"mapped-native-extension")
+    library.chmod(0o600)
+
+    identity = loaded_images._regular_file_identity(library)
+
+    assert identity == {
+        "resolved_path": str(library.resolve()),
+        "bytes": len(b"mapped-native-extension"),
+        "sha256": hashlib.sha256(b"mapped-native-extension").hexdigest(),
+    }
+
+
 class _OpaqueRegionOwner:
     __slots__ = (
         "_snapshot",

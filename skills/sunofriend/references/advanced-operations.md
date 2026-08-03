@@ -1662,8 +1662,16 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   complete group; then remeasure and seal deferred observations and staging.
   This prevents waiting before a potentially blocking fd4 drain and prevents
   mutable mapped-file evidence from being finalized before reap. Seven
-  adversarial cases prove ordering and cleanup only; a fixed concrete macOS
-  adapter remains outstanding and no separator route is enabled.
+  adversarial cases prove ordering and cleanup only. A later fixed developer-
+  only macOS adapter now applies that order to the real sandbox method and
+  opaque native owner with the stdlib frame bootstrap: it prepares the kernel
+  observer, binds ready/process-image/two stable executable-region snapshots,
+  releases, drains bounded fd4, consumes the observer, exact-reaps, remeasures
+  mapped files and verifies the three-entry staging tree. A wrong-CDHash case
+  fails before release yet completes terminal cleanup. Its fd5 must be a small
+  placeholder and checkpoint-sized inputs are rejected; no accepted
+  checkpoint, model or audio was opened. The real lease/start/staging/terminal
+  coordinator remains outstanding and no separator route is enabled.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory

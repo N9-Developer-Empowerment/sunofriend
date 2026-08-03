@@ -123,13 +123,20 @@ report the result, then move on.
   Python-closure claim to staging and can emit the path-free fd4 worker result.
   Dependency-substituted tests only have exercised this wiring: the adapter
   has not been launched by the opaque native owner and has opened no accepted
-  checkpoint, model or authorised audio. The private live parent executor,
-  observer attachment and concrete staging revalidation remain absent. A
+  checkpoint, model or authorised audio. The real-Kim live parent executor,
+  observer attachment to an accepted run and real staging revalidation remain
+  absent. A
   dependency-substituted parent lifecycle now fixes observation/release,
   whole-group supervision, fd4 decoding, staging-verification and private
   identity-consumption order, including cleanup after observer failure, but it
   opens no native process, checkpoint, model, audio or staging path and is not
-  execution provenance. A separate guarded native-start boundary now validates
+  execution provenance. A fixed developer-only macOS adapter now applies that
+  order to the real sandbox method and opaque owner with the fixed stdlib
+  bootstrap. It bounds fd4, remeasures executable mappings and the transport
+  staging tree after exact reap, and exact-cleans a forced process-image
+  failure. It rejects checkpoint-sized fd5 inputs, opened no accepted
+  checkpoint, model or audio, and remains unavailable to every product route.
+  A separate guarded native-start boundary now validates
   the exact prepared fd3–fd7 geometry and owner-only staging identity, consumes
   one request-bound admission immediately before the sole fixed C-method call,
   and retains only an exact started opaque owner after child-side descriptor
@@ -520,9 +527,13 @@ report the result, then move on.
   before spawn; capture ready state and release; drain and validate fd4 while
   the exact owner is live; consume live observers; exact-reap the whole group;
   then seal deferred mapped-file evidence and verify staging. Its adversarial
-  tests are dependency-substituted only. The fixed macOS adapter, live lease
-  cleanup and terminal receipt are still absent, so this does not permit a Kim
-  run or any CLI, TUI, Simple, Studio or source-graph route.
+  lifecycle tests remain dependency-substituted. The fixed model-free macOS
+  adapter now proves the concrete observer/fd4/supervisor/staging order with a
+  small placeholder fd5 and one stdlib worker, including exact cleanup after a
+  wrong process-image claim. The real lease/start composition, accepted-fd5
+  remeasurement, real staging verification, lease cleanup and terminal receipt
+  remain absent, so this does not permit a Kim run or any CLI, TUI, Simple,
+  Studio or source-graph route.
   The owner-bound process-image
   primitive is proven only with a fixed model-free worker; the active Kim route
   still uses its older PID-consuming observation path. The
