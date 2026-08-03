@@ -66,7 +66,7 @@ def test_scoped_review_uses_explicit_window_and_subset_without_rejecting_omissio
         candidate_set_file_sha256="a" * 64,
         excerpt=excerpt,
         excerpt_file_sha256="b" * 64,
-        focus="Follow the intended male lead in this phrase",
+        focus="Follow the principal lead-vocal line rather than backing harmony",
         candidate_media=media,
         candidate_notes=notes,
         scope=scope,
@@ -102,7 +102,7 @@ def test_scoped_review_does_not_offer_globally_nonempty_locally_silent_candidate
         candidate_set_file_sha256="a" * 64,
         excerpt=excerpt,
         excerpt_file_sha256="b" * 64,
-        focus="Follow the intended male lead in this phrase",
+        focus="Follow the principal lead-vocal line rather than backing harmony",
         candidate_media=media,
         candidate_notes=notes,
         scope=scope,
@@ -129,7 +129,7 @@ def test_scoped_review_rejects_changed_note_evidence(tmp_path: Path) -> None:
             candidate_set_file_sha256="a" * 64,
             excerpt=excerpt,
             excerpt_file_sha256="b" * 64,
-            focus="Follow the intended male lead in this phrase",
+            focus="Follow the principal lead-vocal line rather than backing harmony",
             candidate_media=media,
             candidate_notes=notes,
         )
@@ -197,7 +197,7 @@ def test_reference_line_classification_is_separate_from_midi_usefulness(
         candidate_set_file_sha256="a" * 64,
         excerpt=excerpt,
         excerpt_file_sha256="b" * 64,
-        focus="Does this candidate follow the intended male lead?",
+        focus="Does this candidate follow the principal lead-vocal line?",
         candidate_media=media,
         classify_reference_line=True,
     )
@@ -209,7 +209,7 @@ def test_reference_line_classification_is_separate_from_midi_usefulness(
         heard_candidate=True,
         reference_relationship="different_line",
         disposition="not_useful_for_focus",
-        notes="Female vocal reference; MIDI follows that vocal accurately.",
+        notes="Backing-harmony reference; MIDI follows that line accurately.",
     )
 
     result = audition._verify_review_document(seed, review)
@@ -228,7 +228,7 @@ def test_reference_line_classification_is_required_when_enabled(
         candidate_set_file_sha256="a" * 64,
         excerpt=excerpt,
         excerpt_file_sha256="b" * 64,
-        focus="Does this candidate follow the intended male lead?",
+        focus="Does this candidate follow the principal lead-vocal line?",
         candidate_media=media,
         classify_reference_line=True,
     )
@@ -342,6 +342,10 @@ def test_loopback_server_serves_verified_range_and_writes_nothing(
             assert "Review window" in html
             assert "Omitted candidates remain preserved" in html
             assert "good transcription of the wrong vocal line" in html
+            assert "Define the target musically" in html
+            assert "principal lead, backing harmony, duet line" in html
+            assert "Classify the reference line" in html
+            assert "Classify the reference voice" not in html
             assert "JSON.stringify(review,null,2)+'\\n'" in html
             assert "localStorage" not in html
             assert str(tmp_path) not in html
@@ -433,7 +437,7 @@ def test_loopback_server_does_not_register_locally_silent_candidate(
         candidate_set_file_sha256="a" * 64,
         excerpt=excerpt,
         excerpt_file_sha256="b" * 64,
-        focus="Follow the intended male lead in this phrase",
+        focus="Follow the principal lead-vocal line rather than backing harmony",
         candidate_media=media,
         candidate_notes=notes,
         scope=scope,
@@ -445,7 +449,7 @@ def test_loopback_server_does_not_register_locally_silent_candidate(
         excerpt_path=tmp_path / "excerpt.json",
         excerpt_file_sha256="b" * 64,
         excerpt=excerpt,
-        focus="Follow the intended male lead in this phrase",
+        focus="Follow the principal lead-vocal line rather than backing harmony",
         seed=seed,
         candidate_media=media,
         candidate_notes=notes,

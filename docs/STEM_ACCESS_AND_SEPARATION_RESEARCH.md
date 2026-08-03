@@ -204,7 +204,12 @@ lead. A later scoped primary-only review confirmed the distinction more
 precisely: the listener heard a female vocal in the source and found that the
 MIDI followed it accurately, while correctly marking it not useful for the
 male-lead focus. Voice/line assignment therefore remains an explicit blocker
-even where provider-control MIDI agreement is high.
+even where provider-control MIDI agreement is high. A later four-provider-leaf
+review exposed that the focus itself was too demographic: the required product
+question is principal lead versus backing or overlapping vocal line, not male
+versus female voice. All four leaves were different from the old written focus,
+but that result cannot answer the corrected role-based question. No register-
+or gender-based stitch is justified.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on
@@ -2498,6 +2503,12 @@ separator transport, source-lineage import and promotion are not implemented**
   that scope. The later 9.20–14.95 second source-relative review therefore
   offers only Kim primary's 17 overlapping notes; the locally silent
   lowest-line evidence is not turned into a misleading A/B choice.
+- [x] Separate source-line presence from MIDI usefulness and require the target
+  to be written as a musical role. The completed four-provider-leaf review
+  classified all four references as different from its old male-line focus and
+  all four MIDI candidates as not useful for that focus. The listener corrected
+  the product question to principal lead versus backing/overlap, so a fresh
+  immutable review is required; the old export cannot be reinterpreted.
 - [x] Compare every supplied leaf inside composite `other` across both
   authorised excerpts using bidirectional audio rankings. Exact and semantic
   labels remain observations only. Keyboard was the only stable Suno pair on

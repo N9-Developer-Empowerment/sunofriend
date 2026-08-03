@@ -3223,6 +3223,35 @@ Each working day should aim for one narrow vertical improvement:
   listener to infer the target male lead from a mixed reference that contains
   a different dominant vocal.
 
+### 2026-08-03 — correct the target from voice demographics to musical role
+
+- Goal: ensure vocal separation and transcription evaluate the line the song
+  needs, rather than treating a singer's perceived sex or register as the
+  musical role.
+- Listening result: four provider-leaf candidates were reviewed over the exact
+  9.20–14.95 second window. Every source reference was classified as a
+  different line from the written male-line focus, and every MIDI was marked
+  `not_useful_for_focus`. The authoritative reviewed export SHA-256 is
+  `645820e9d6dab0b1a77ff4650429dbe8651de05be1971859acf08a35ef9ec850`;
+  the verified resolution document SHA-256 is
+  `42ca7df2fa3ef30da6a38d63205fdc22cf7d0b263910d11fd657c0d9145b3b52`.
+  The earlier browser export of the same choices is a superseded draft, not a
+  second independent observation.
+- User correction: the target should be **principal lead vocal versus backing
+  or overlapping vocal**, not male versus female. The completed review cannot
+  be reinterpreted under that new focus because its question is immutable.
+- Change: the private page and command help now require a musical-role focus
+  and explicitly warn that demographics are not a substitute. Tests use
+  principal-lead versus backing-harmony language.
+- Decision: keep the male-line result as exact historical evidence, abandon the
+  proposed gender/register-based stitch, and start a fresh role-based review
+  before any separation or transcription proposal.
+- Safety: no candidate was selected, merged, repaired, promoted or activated;
+  source, MIDI and product routes remain unchanged.
+- Next smallest step: compare the unchanged primary and provider leaves with
+  the focus "principal lead-vocal melody; backing or overlapping harmony is
+  not the target" over the same bounded window.
+
 ### 2026-08-03 — scoped private vocal-candidate review
 
 - Goal: turn the existing primary-versus-lowest and phrase-completeness

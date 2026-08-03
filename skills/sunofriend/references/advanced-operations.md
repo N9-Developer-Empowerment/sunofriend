@@ -1569,8 +1569,10 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   focus line, different line, mixed/overlapping lines or cannot tell. Keep that
   label separate from whether the MIDI is useful for the written focus. The
   label is focus-relative evidence only, not singer identity, sex, gender or
-  demographics. Existing reviews without the flag retain their exact earlier
-  shape.
+  demographics. Define the target by its musical job, such as principal lead,
+  backing harmony or a named duet line. Do not substitute male/female or other
+  demographic language for that musical role. Existing reviews without the
+  flag retain their exact earlier shape.
 - The latest authorised Kim Vocal 2 `Be Alone` worker observation binds the
   complete post-inference Python `sys.modules` closure for that exact run: 320
   modules, 277 independently reopened regular files, 18,067,782 aggregate

@@ -1852,13 +1852,32 @@ lowest-register evidence is useful for the male lead only in the earlier
 phrase, while this later primary evidence follows a different vocal line. All
 other candidates remain preserved, unranked and unaffected.
 
+A follow-up scoped review tested four provider vocal leaves over the same
+9.20–14.95 second window. All four references were marked as a different line
+from the written male-line focus, and all four candidate MIDIs were marked
+`not_useful_for_focus`. The authoritative reviewed export SHA-256 is
+`645820e9d6dab0b1a77ff4650429dbe8651de05be1971859acf08a35ef9ec850`;
+the path-free resolution document SHA-256 is
+`42ca7df2fa3ef30da6a38d63205fdc22cf7d0b263910d11fd657c0d9145b3b52`.
+An earlier browser export of the same four choices is retained as a superseded
+draft, not counted as an independent listening result.
+
+More importantly, the listener corrected the question itself: the useful
+musical distinction is **principal lead versus backing or overlapping vocal
+line**, not male versus female voice. The completed result remains valid only
+for its exact written focus and therefore cannot answer which candidate best
+captures the principal lead. No stitched candidate is justified. Future
+reference-line reviews must name the musical role or phrase and keep voice
+demographics out of the target definition.
+
 Future private reviews can explicitly opt into
 `--classify-reference-line`. That adds a required, separate focus-relative
 human label for whether the heard source is the named focus line, a different
 line, mixed/overlapping lines or unclear. The MIDI usefulness judgement remains
 separate. Existing review commands retain their previous exact shape unless
 the flag is supplied. These labels do not infer singer identity, sex, gender or
-demographics.
+demographics. The caller must define the target musically, for example the
+principal lead-vocal melody rather than backing harmony.
 
 The first live browser load also exposed an escaped-newline defect in the
 inline export script. It was fixed before the review, both source and candidate

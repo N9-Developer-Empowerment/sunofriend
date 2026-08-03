@@ -21,7 +21,15 @@ def main() -> int:
     parser.add_argument("--vocal-leaf-evaluation", required=True)
     parser.add_argument("--phrase-completeness", required=True)
     parser.add_argument("--authorised-excerpt", required=True)
-    parser.add_argument("--focus", required=True)
+    parser.add_argument(
+        "--focus",
+        required=True,
+        help=(
+            "One-line musical listening target, such as the principal lead-vocal "
+            "melody rather than backing harmony; do not substitute voice "
+            "demographics for the musical role"
+        ),
+    )
     parser.add_argument("--start-seconds", type=float)
     parser.add_argument("--end-seconds", type=float)
     parser.add_argument(
@@ -35,7 +43,8 @@ def main() -> int:
         action="store_true",
         help=(
             "Require a separate human label for whether each heard reference "
-            "contains the vocal line named in the focus"
+            "contains the musical vocal line named in the focus, such as lead "
+            "rather than backing harmony"
         ),
     )
     parser.add_argument("--review")
