@@ -80,15 +80,18 @@ export default function Contact() {
               <h2>Use a GitHub report</h2>
               <p>
                 Use the structured forms for a first-song journey or another
-                DAW, separator, AI tool or MIDI setup. Public reports help
-                other musicians find the same answer.
+                coding agent, operating system, DAW, separator, AI tool or MIDI
+                setup. All feedback is welcome; Windows and Linux reports can
+                directly improve SKILL.md and the cross-platform setup
+                guidance. Public reports help other musicians find the same
+                answer.
               </p>
               <div className="journey-links">
                 <ExternalLink className="text-link" href={links.firstSong}>
                   First-song report ↗
                 </ExternalLink>
                 <ExternalLink className="text-link" href={links.compatibility}>
-                  DAW / AI compatibility report ↗
+                  Compatibility feedback ↗
                 </ExternalLink>
               </div>
             </div>

@@ -70,7 +70,7 @@ export default function Home() {
           <Link href="/for-agents">For AI agents</Link>
         </nav>
         <a className="header-cta" href="#codex">
-          Use with Codex <span aria-hidden="true">↓</span>
+          Use with your agent <span aria-hidden="true">↓</span>
         </a>
       </header>
 
@@ -84,7 +84,9 @@ export default function Home() {
             Hear the song.
             <span>Change the parts.</span>
           </h1>
-          <p className="hero-proof">Let Codex guide the setup.</p>
+          <p className="hero-proof">
+            Let a skills-aware coding agent guide the setup.
+          </p>
           <p className="hero-lede">
             Sunofriend listens to separate drums, bass, keys, vocals and other
             song parts. It gives you editable MIDI and a clean instrumental
@@ -124,11 +126,10 @@ export default function Home() {
       </section>
 
       <div className="plain-strip">
-        <strong>You do not need to understand Python.</strong>
+        <strong>Tested on a MacBook so far.</strong>
         <span>
-          You need a Mac and Codex with local workspace access for the guided
-          route. To use your own song, you also need music you are allowed to
-          process.
+          The skill should work with any coding agent that understands skills
+          and can use a local workspace. Windows and Linux are not verified yet.
         </span>
       </div>
 
@@ -136,13 +137,14 @@ export default function Home() {
         <div className="section-index">01 / EASIEST WAY IN</div>
         <div className="section-heading-row">
           <div>
-            <p className="kicker">INSTALL THE GUIDE BEFORE THE TOOL.</p>
-            <h2 id="codex-title">Give this job to Codex.</h2>
+            <p className="kicker">ONE SKILL. YOUR CHOICE OF AGENT.</p>
+            <h2 id="codex-title">Give this job to your coding agent.</h2>
           </div>
           <p>
-            The Sunofriend skill tells an AI coding agent what the tool can do,
-            what must stay local and which questions to ask before it changes
-            anything on your Mac.
+            The plain-text Sunofriend skill tells Codex, Claude Code,
+            Antigravity or another skills-aware coding agent what the tool can
+            do, what must stay local and which questions to ask before it
+            changes anything on your computer.
           </p>
         </div>
         <div className="codex-grid">
@@ -156,9 +158,12 @@ export default function Home() {
               label="TURN 2 / USE SUNOFRIEND"
             />
             <p className="prompt-help">
-              <strong>Do not clone the repository first.</strong> If
+              <strong>Do not clone the repository first.</strong> These
+              copy-ready prompts are the Codex route. If{" "}
               <code>$sunofriend</code> is not recognised after turn 1, restart
-              Codex once and send turn 2 again.
+              Codex once and send turn 2 again. In Claude Code, Antigravity or
+              another agent, use its native skill installer or ask it to read
+              the complete <a href={links.rawSkill}>SKILL.md</a> first.
             </p>
           </div>
           <aside className="what-happens">
@@ -167,16 +172,18 @@ export default function Home() {
               <li>
                 <strong>First turn: install only the skill.</strong>
                 <span>
-                  Codex confirms the guide is available, then stops before
-                  installing the app or audio dependencies.
+                  The agent confirms the guide is available, then stops before
+                  installing the app or audio dependencies. The installer
+                  command can differ between agents.
                 </span>
               </li>
               <li>
-                <strong>Second turn: use $sunofriend.</strong>
+                <strong>Second turn: explicitly use the skill.</strong>
                 <span>
-                  The installed skill checks your Mac, explains missing
-                  software, asks before preparing the source, then asks again
-                  before installing the exact reviewed commit.
+                  Codex can invoke <code>$sunofriend</code>; other agents can
+                  follow the installed SKILL.md in their native way. The skill
+                  checks the host, explains missing software and asks before
+                  making changes.
                 </span>
               </li>
               <li>
@@ -186,7 +193,7 @@ export default function Home() {
               <li>
                 <strong>The beginner route makes a first result.</strong>
                 <span>
-                  Codex can use the focused create or demo command; the TUI
+                  Your agent can use the focused create or demo command; the TUI
                   offers the same outcome through Simple mode. MIDI, a listening
                   WAV and a ZIP stay automatic and unreviewed.
                 </span>
@@ -204,8 +211,8 @@ export default function Home() {
         <div className="section-heading-row">
           <h2 id="choose-title">Pick the sentence that sounds like you.</h2>
           <p>
-            After the two prompts above, Codex should offer these same three
-            routes one at a time.
+            After installing and invoking the skill, your agent should offer
+            these same three routes one at a time.
           </p>
         </div>
         <div className="journey-grid">
@@ -213,7 +220,7 @@ export default function Home() {
             <span className="card-number">A / I HAVE STEMS</span>
             <h3>I already have separate audio files.</h3>
             <p>
-              Give Codex the folder location. It will check the files and,
+              Give your agent the folder location. It will check the files and,
               when needed, prepare supported WAV, AIFF, FLAC, M4A, MP3 or Ogg
               parts as one canonical WAV project before making a fresh result.
             </p>
@@ -221,7 +228,7 @@ export default function Home() {
               <li>Best when you already export separate parts</li>
               <li>Use music you own or can process</li>
               <li>Preparation never separates or repairs alignment</li>
-              <li>Codex then uses the focused create command</li>
+              <li>Your agent then uses the focused create command</li>
             </ul>
             <a className="text-link" href="#codex">
               Copy the starter prompt ↑
@@ -255,9 +262,9 @@ export default function Home() {
             <span className="card-number">C / I WANT THE DEMO</span>
             <h3>I want to try it without personal music or paid stems.</h3>
             <p>
-              Let Codex run a copyright-safe synthetic stem project through the
-              real automatic pipeline. Then hear the result and explore the
-              included worked MIDI pack.
+              Let your agent run a copyright-safe synthetic stem project
+              through the real automatic pipeline. Then hear the result and
+              explore the included worked MIDI pack.
             </p>
             <div className="journey-links">
               <Link className="text-link" href="/demo">
@@ -350,7 +357,8 @@ export default function Home() {
         <div className="boundary-list">
           <p>
             <strong>It is not an online converter.</strong> This website never
-            receives your stems. Processing currently happens on your Mac.
+            receives your stems. Processing is local, and the app has only been
+            tested on a MacBook so far. Windows and Linux remain unverified.
           </p>
           <p>
             <strong>It is not a stem separator.</strong> Bring already-separated
@@ -373,15 +381,21 @@ export default function Home() {
         <div className="section-index">05 / HELP SHAPE THE NEXT VERSION</div>
         <div className="signal-grid">
           <div>
-            <p className="kicker">MADE A FIRST SONG?</p>
-            <h2 id="signal-title">Tell us where it was easy and where it hurt.</h2>
+            <p className="kicker">YOUR EXPERIENCE CAN IMPROVE THE NEXT VERSION.</p>
+            <h2 id="signal-title">Tell us what worked—and what did not.</h2>
+            <p>
+              Feedback from every Sunofriend user is welcome. Reports from
+              Claude Code, Antigravity or another skills-aware agent are
+              especially useful, as are Windows and Linux trials that could
+              help make SKILL.md and the setup path more portable.
+            </p>
           </div>
           <div className="feedback-actions">
             <ExternalLink className="button button-hot" href={links.firstSong}>
               Send a first-song report ↗
             </ExternalLink>
             <ExternalLink className="button button-ghost" href={links.compatibility}>
-              Report another DAW or AI setup ↗
+              Send compatibility feedback ↗
             </ExternalLink>
           </div>
         </div>

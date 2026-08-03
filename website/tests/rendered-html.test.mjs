@@ -87,9 +87,15 @@ test("server-renders an approachable skill-first musician page", async () => {
     html,
     /<title>Sunofriend — Hear the song\. Change the parts\.<\/title>/i,
   );
-  assert.match(html, /Let Codex guide the setup/);
+  assert.match(html, /skills-aware coding agent guide the setup/);
   assert.match(html, /Start with the skill/);
-  assert.match(html, /INSTALL THE GUIDE BEFORE THE TOOL/);
+  assert.match(html, /ONE SKILL\. YOUR CHOICE OF AGENT/);
+  assert.match(html, /Codex, Claude Code,\s*Antigravity/);
+  assert.match(html, /Tested on a MacBook so far/);
+  assert.match(html, /Windows and Linux are not verified yet/);
+  assert.match(html, /Feedback from every Sunofriend user is welcome/);
+  assert.match(html, /make SKILL\.md and the setup path more portable/);
+  assert.match(html, /Send compatibility feedback/);
   assert.match(html, /TURN 1 \/ INSTALL THE SKILL/);
   assert.match(html, /Use \$skill-installer/);
   assert.match(html, /Do not install the Sunofriend app/);
@@ -148,6 +154,12 @@ test("publishes a canonical developer and agent integration page", async () => {
   const html = await response.text();
 
   assert.match(html, /AUTHORITATIVE AGENT ENTRY POINT/);
+  assert.match(html, /One skill, not one agent/);
+  assert.match(html, /plain-text operational guidance, not a Codex-only/);
+  assert.match(html, /Codex, Claude Code, Antigravity/);
+  assert.match(html, /Only a MacBook has been tested so far/);
+  assert.match(html, /Windows\s*and Linux are unverified/);
+  assert.match(html, /SKILL\.md and setup\s*guidance can be made more compatible/);
   assert.match(html, /Install and read the official skill/);
   assert.match(html, /Stop after confirming the skill is available/);
   assert.match(html, /\$skill-installer/);
@@ -259,11 +271,17 @@ test("publishes concise llms.txt discovery guidance", async () => {
   );
 
   assert.match(text, /^# Sunofriend/m);
+  assert.match(text, /skill is not tied to Codex/);
+  assert.match(text, /Codex, Claude Code and Antigravity/);
+  assert.match(text, /only been tested on a MacBook so far/);
+  assert.match(text, /Windows and Linux are unverified/);
+  assert.match(text, /feedback from every user is welcome/i);
   assert.match(text, /Install the official skill/);
   assert.match(text, /standard ChatGPT conversation/i);
   assert.match(text, /\$skill-installer/);
   assert.match(text, /Confirm the skill is available, then stop/);
-  assert.match(text, /In a second turn, explicitly use `\$sunofriend`/);
+  assert.match(text, /In a second turn, explicitly use the installed skill/);
+  assert.match(text, /In Codex, invoke `\$sunofriend`/);
   assert.match(text, /two-stage bootstrap/);
   assert.match(text, /exact 40-character commit/);
   assert.match(text, /exact published production primary/);
@@ -301,6 +319,15 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(data.schema, "sunofriend.agent-capabilities.v1");
   assert.equal(data.product.local_first, true);
   assert.equal(data.product.hosted_conversion_available, false);
+  assert.deepEqual(data.platform_testing.verified, ["MacBook running macOS"]);
+  assert.deepEqual(data.platform_testing.unverified, ["Windows", "Linux"]);
+  assert.match(data.platform_testing.feedback_requested_from, /Every Sunofriend user/);
+  assert.deepEqual(data.agent_entry.example_agents, [
+    "Codex",
+    "Claude Code",
+    "Antigravity",
+  ]);
+  assert.equal(data.agent_entry.codex_specific_commands_required, false);
   assert.equal(data.agent_entry.raw_skill_url.includes("SKILL.md"), true);
   assert.equal(
     data.agent_entry.advanced_operations_url.includes("advanced-operations.md"),

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     template: "%s — Sunofriend",
   },
   description:
-    "Use the Sunofriend skill with Codex to turn authorised music stems into editable MIDI, a balanced song-interpretation WAV and a starter ZIP on your Mac.",
+    "Use the Sunofriend skill with a local coding agent to turn authorised music stems into editable MIDI, a balanced song-interpretation WAV and a starter ZIP. Tested on a MacBook so far.",
   applicationName: "Sunofriend",
   alternates: {
     canonical: "/",
@@ -28,6 +28,8 @@ export const metadata: Metadata = {
     "Moises stems",
     "music transcription",
     "Codex music skill",
+    "Claude Code music skill",
+    "Antigravity music skill",
     "AI agent skill",
     "local music tool",
   ],
@@ -42,7 +44,7 @@ export const metadata: Metadata = {
     type: "website",
     title: "Sunofriend — Hear the song. Change the parts.",
     description:
-      "Let Codex guide the local setup. Authorised stems become editable MIDI, a balanced MIDI-derived listening WAV and a starter ZIP.",
+      "Let a skills-aware coding agent guide the local setup. Authorised stems become editable MIDI, a balanced MIDI-derived listening WAV and a starter ZIP.",
     siteName: "Sunofriend",
     images: [
       {
@@ -57,7 +59,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Sunofriend — Hear the song. Change the parts.",
     description:
-      "Use the Sunofriend skill with Codex: authorised stems in; editable MIDI, listening WAV and a starter ZIP out.",
+      "Use the Sunofriend skill with a local coding agent: authorised stems in; editable MIDI, listening WAV and a starter ZIP out.",
     images: ["/og.png"],
   },
 };

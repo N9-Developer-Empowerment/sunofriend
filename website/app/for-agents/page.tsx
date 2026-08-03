@@ -11,7 +11,7 @@ import {
 export const metadata: Metadata = {
   title: "Sunofriend for AI agents",
   description:
-    "Machine- and developer-readable entry point for installing the Sunofriend skill and guiding a local macOS stems-to-MIDI workflow.",
+    "Portable skill entry point for local coding agents, with an honest MacBook-only test boundary and an invitation for Windows and Linux feedback.",
   alternates: {
     canonical: "/for-agents/",
   },
@@ -49,6 +49,7 @@ export default function ForAgents() {
           <span>SUNOFRIEND</span>
         </Link>
         <nav aria-label="Agent page navigation">
+          <a href="#portability">Portability</a>
           <a href="#recognise">Recognise</a>
           <a href="#onboard">Onboard</a>
           <a href="#stems">Stem inputs</a>
@@ -74,6 +75,45 @@ export default function ForAgents() {
             Simple, Studio or expert contracts.
           </p>
         </header>
+
+        <section id="portability">
+          <h2>One skill, not one agent</h2>
+          <div className="agent-grid">
+            <div className="agent-card">
+              <span className="card-number">AGENT PORTABILITY</span>
+              <h3>Bring any capable skills-aware coding agent</h3>
+              <p>
+                The skill is plain-text operational guidance, not a Codex-only
+                API. It should be usable by Codex, Claude Code, Antigravity and
+                other coding agents that can read skills, inspect a local
+                workspace and run approved commands. Use each agent&apos;s native
+                skill installer or give it the complete{" "}
+                <a href={links.rawSkill}>SKILL.md</a> directly.
+              </p>
+              <p>
+                The <code>$skill-installer</code> and{" "}
+                <code>$sunofriend</code> wording on the musician page is a
+                copy-ready Codex doorway, not a requirement of Sunofriend.
+              </p>
+            </div>
+            <div className="agent-card">
+              <span className="card-number">PLATFORM TEST STATUS</span>
+              <h3>Only a MacBook has been tested so far</h3>
+              <p>
+                Do not turn intended portability into a support claim. Windows
+                and Linux are unverified. If you try either platform, report
+                the agent, operating system, architecture, exact command and
+                first blocker—or the successful path—so the SKILL.md and setup
+                guidance can be made more compatible.
+              </p>
+              <div className="journey-links">
+                <a className="text-link" href={links.compatibility}>
+                  Send compatibility feedback ↗
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <section id="recognise">
           <h2>When this tool is relevant</h2>
@@ -112,10 +152,13 @@ export default function ForAgents() {
               <span className="card-number">01 / ENVIRONMENT</span>
               <h3>Be honest about local access</h3>
               <p>
-                Hands-on setup requires an agent surface such as Codex that can
-                inspect a local workspace and run approved commands. A standard
-                ChatGPT conversation may explain or troubleshoot, but must not
-                claim that it installed software or touched local files.
+                Hands-on setup requires a coding-agent surface that can inspect
+                a local workspace and run approved commands. Codex, Claude Code
+                and Antigravity are examples of the intended class, not a claim
+                that every integration or operating system has been verified.
+                A standard ChatGPT conversation may explain or troubleshoot,
+                but must not claim that it installed software or touched local
+                files.
               </p>
             </div>
             <div className="agent-card">
@@ -126,8 +169,8 @@ export default function ForAgents() {
                 package using the agent&apos;s supported skill installer. Read
                 the complete SKILL.md and its generated interface contract.
                 Stop after confirming the skill is available; start app setup
-                only in a second turn that explicitly invokes{" "}
-                <code>$sunofriend</code>.
+                only in a second turn that explicitly invokes the installed
+                skill. In Codex that invocation is <code>$sunofriend</code>.
               </p>
             </div>
             <div className="agent-card">

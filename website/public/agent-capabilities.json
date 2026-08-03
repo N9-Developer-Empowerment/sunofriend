@@ -12,6 +12,18 @@
     "license": "Apache-2.0",
     "independence": "Unsigned Media Ltd project; not related to or affiliated with Suno Inc."
   },
+  "platform_testing": {
+    "verified": [
+      "MacBook running macOS"
+    ],
+    "unverified": [
+      "Windows",
+      "Linux"
+    ],
+    "support_boundary": "Windows and Linux compatibility has not yet been verified.",
+    "feedback_requested_from": "Every Sunofriend user, especially anyone trying another coding agent, Windows or Linux.",
+    "feedback_url": "https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml"
+  },
   "agent_entry": {
     "skill_install_url": "https://github.com/N9-Developer-Empowerment/sunofriend/tree/main/skills/sunofriend",
     "raw_skill_url": "https://raw.githubusercontent.com/N9-Developer-Empowerment/sunofriend/main/skills/sunofriend/SKILL.md",
@@ -19,11 +31,18 @@
     "advanced_operations_url": "https://raw.githubusercontent.com/N9-Developer-Empowerment/sunofriend/main/skills/sunofriend/references/advanced-operations.md",
     "stem_guide_url": "https://sunofriend.com/stems/",
     "glossary_url": "https://sunofriend.com/glossary/",
-    "preferred_surface": "Codex or another agent with explicit local workspace and command access",
+    "preferred_surface": "Any skills-aware coding agent with explicit local workspace and command access",
+    "skill_portability": "The plain-text skill is designed for capable coding agents including Codex, Claude Code and Antigravity; use the agent's native skill mechanism or provide SKILL.md directly.",
+    "example_agents": [
+      "Codex",
+      "Claude Code",
+      "Antigravity"
+    ],
+    "codex_specific_commands_required": false,
     "standard_chat_boundary": "A standard ChatGPT conversation may guide but must not claim local execution.",
     "two_turn_start": [
-      "Use $skill-installer to install the official skill. Do not install the app or audio dependencies. Confirm availability, then stop.",
-      "Use $sunofriend in a new turn. Inspect first, explain changes, then offer the three newcomer routes."
+      "Install and read the official skill using the agent's native skill mechanism; in Codex, use $skill-installer. Do not install the app or audio dependencies. Confirm availability, then stop.",
+      "Explicitly invoke the installed skill in a new turn; in Codex, use $sunofriend. Inspect first, explain changes, then offer the three newcomer routes."
     ],
     "installation_protocol": {
       "stage_1": "Run the read-only plan. If source is absent, ask before preparing only the source checkout.",

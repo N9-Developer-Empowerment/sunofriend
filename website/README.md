@@ -2,10 +2,11 @@
 
 This is the public, serverless launch site for Sunofriend. Its main page is a
 plain-language route for musicians: install the official Sunofriend skill
-first, let Codex guide local setup, then choose existing stems, help obtaining
-stems or the no-private-audio worked demo. It links to listening examples and
-asks for the feedback that will decide whether a hosted conversion pilot
-should be built.
+first, let a skills-aware local coding agent guide setup, then choose existing
+stems, help obtaining stems or the no-private-audio worked demo. Codex has the
+copy-ready route, while Claude Code, Antigravity and other capable agents can
+use their native skill mechanism or read SKILL.md directly. It links to
+listening examples and asks every user for feedback.
 
 The public strapline is **Listen deeper. Create further.** The name is taken
 from Hindi **सुनो** (*suno*), “listen.” Sunofriend is an independent Unsigned
@@ -23,6 +24,11 @@ The website and the music engine have deliberately different boundaries:
   GitHub issue forms; and
 - Sunofriend audio processing remains local. The site has no stem upload,
   account, database or music-processing API.
+
+The application has only been tested on a MacBook so far. The public copy does
+not claim verified Windows or Linux support; it explicitly asks people who try
+either platform to share what worked or failed through the existing
+compatibility form so SKILL.md and the setup guidance can be improved.
 
 Agent discovery has its own public surfaces so the musician page does not need
 to carry every technical detail:
@@ -50,16 +56,16 @@ Studio. It compares available recorded-origin evidence but does not separate,
 shift, pad, stretch, normalize or align audio, prove a downbeat or create MIDI.
 The narrower `source-import` command preserves one standalone asset.
 
-The agent pages explicitly distinguish Codex with local workspace access from a
-standard ChatGPT conversation. They do not claim that a normal web chat can run
-commands or inspect files on a Mac.
+The agent pages explicitly distinguish a coding agent with local workspace
+access from a standard ChatGPT conversation. They do not claim that a normal
+web chat can run commands or inspect local files.
 
-The newcomer copy uses a reliable two-turn handoff. Turn one explicitly invokes
-`$skill-installer`, installs only the skill and stops. Turn two explicitly
-invokes `$sunofriend`, then inspects the Mac and offers stems, stem help or the
-built-in demo. A new app installation has two further change boundaries:
-prepare only the source, then review its exact commit before separately
-approving dependencies and audio assets for that unchanged commit.
+The newcomer copy uses a two-turn handoff. The copy-ready Codex route invokes
+`$skill-installer`, installs only the skill and stops, then invokes
+`$sunofriend` in turn two. Other agents should perform the same boundaries
+through their native skill mechanism. A new app installation has two further
+change boundaries: prepare only the source, then review its exact commit before
+separately approving dependencies and audio assets for that unchanged commit.
 
 ## Local preview
 

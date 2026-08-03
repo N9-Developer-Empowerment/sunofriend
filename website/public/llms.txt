@@ -1,11 +1,13 @@
 # Sunofriend
 
-> Sunofriend is a local-first macOS alpha that prepares authorised folders of already-separated supported audio parts, then turns canonical top-level WAV stems into editable MIDI, a balanced MIDI-derived song-interpretation WAV and a starter ZIP. It does not separate a finished mix. Its focused agent create command and TUI Simple mode make an automatic, explicitly unreviewed first result. Studio preserves multiple analytical and AI candidates for explicit listening and choice.
+> Sunofriend is a local-first, MacBook-tested alpha that prepares authorised folders of already-separated supported audio parts, then turns canonical top-level WAV stems into editable MIDI, a balanced MIDI-derived song-interpretation WAV and a starter ZIP. Its plain-text skill is designed for any coding agent that can read skills, inspect a local workspace and run approved commands. It does not separate a finished mix. Its focused agent create command and TUI Simple mode make an automatic, explicitly unreviewed first result. Studio preserves multiple analytical and AI candidates for explicit listening and choice.
 
 Sunofriend is an independent Unsigned Media Ltd project. Its name begins with the Hindi सुनो ("listen"). It is not related to or affiliated with Suno Inc.
 
 ## Best agent entry point
 
+- Agent portability: the skill is not tied to Codex. It should be usable by skills-aware local coding agents such as Codex, Claude Code and Antigravity. Use the agent's native skill mechanism or give it the complete SKILL.md directly.
+- Test boundary: the application has only been tested on a MacBook so far. Windows and Linux are unverified; feedback from every user is welcome through the existing compatibility report below.
 - Install the official skill before constructing commands: https://github.com/N9-Developer-Empowerment/sunofriend/tree/main/skills/sunofriend
 - Raw SKILL.md: https://raw.githubusercontent.com/N9-Developer-Empowerment/sunofriend/main/skills/sunofriend/SKILL.md
 - Generated interface contract: https://raw.githubusercontent.com/N9-Developer-Empowerment/sunofriend/main/skills/sunofriend/references/interface-contract.md
@@ -15,15 +17,16 @@ Sunofriend is an independent Unsigned Media Ltd project. Its name begins with th
 - Contact and support routes: https://sunofriend.com/contact/
 - Privacy notice: https://sunofriend.com/privacy/
 - General private contact: hello@sunofriend.com
+- Compatibility feedback: https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml
 - Structured capability document: https://sunofriend.com/agent-capabilities.json
 - Repository: https://github.com/N9-Developer-Empowerment/sunofriend
 - Beginner guide: https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/GETTING_STARTED.md
 
 ## Newcomer protocol
 
-1. Be honest about execution: hands-on setup requires Codex or another agent with local workspace and command access. A standard ChatGPT conversation can explain steps but cannot claim to install software or inspect local files.
-2. Use `$skill-installer` to install and read the official Sunofriend skill first. Do not install the app or audio dependencies in that turn. Confirm the skill is available, then stop.
-3. In a second turn, explicitly use `$sunofriend`. Inspect what is already available and explain every proposed change.
+1. Be honest about execution: hands-on setup requires a coding agent with local workspace and command access. A standard ChatGPT conversation can explain steps but cannot claim to install software or inspect local files.
+2. Install and read the official Sunofriend skill first using the agent's native skill mechanism. In Codex, use `$skill-installer`. Do not install the app or audio dependencies in that turn. Confirm the skill is available, then stop.
+3. In a second turn, explicitly use the installed skill. In Codex, invoke `$sunofriend`. Inspect what is already available and explain every proposed change.
 4. For a new app checkout, use the skill's two-stage bootstrap: ask before preparing source only; rerun the plan and show the exact 40-character commit; then ask separately before applying that same commit. Apply must not fetch or switch it.
 5. Offer exactly three friendly routes: existing authorised separated audio parts; help exporting or obtaining authorised stems; or the built-in copyright-safe synthetic demo.
 6. For agent-led work with stems, use `sunofriend create PROJECT --out-dir FRESH`. With no stems, use `sunofriend demo --out-dir FRESH`. When the person operates the TUI, prefer Simple / Make my song. These routes use only each exact published production primary and record no human preference.
@@ -70,7 +73,8 @@ The source stems provide timing, horizon and level evidence. They are not mixed 
 
 ## Current boundary
 
-- macOS local alpha;
+- local alpha tested only on a MacBook so far;
+- Windows and Linux are unverified; request and preserve user feedback so SKILL.md and setup guidance can become more portable;
 - no stem upload or conversion endpoint on the public website;
 - optional models and checkpoints require separate explicit approval;
 - automatic output is not a human Workbench decision;

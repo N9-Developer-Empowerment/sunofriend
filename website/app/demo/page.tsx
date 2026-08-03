@@ -62,7 +62,7 @@ export default function Demo() {
         </header>
 
         <section id="run">
-          <h2>1. Ask Codex to run it</h2>
+          <h2>1. Ask a skills-aware coding agent to run it</h2>
           <div className="codex-grid">
             <div className="prompt-stack">
               <CopyPrompt
@@ -71,16 +71,20 @@ export default function Demo() {
               />
               <CopyPrompt prompt={demoPrompt} label="TURN 2 / RUN THE DEMO" />
               <p className="prompt-help">
-                <strong>Do not clone the repository first.</strong> If
+                <strong>Do not clone the repository first.</strong> These
+                prompts are the copy-ready Codex route. If{" "}
                 <code>$sunofriend</code> is not recognised after turn 1,
-                restart Codex once and send turn 2 again.
+                restart Codex once and send turn 2 again. Claude Code,
+                Antigravity and other agents should use their native skill
+                mechanism or read the complete{" "}
+                <a href={links.rawSkill}>SKILL.md</a> directly.
               </p>
             </div>
             <div className="agent-card">
               <span className="card-number">THE REAL DEMO COMMAND</span>
               <h3>One fresh output folder</h3>
               <p>
-                The skill guides Codex to run{" "}
+                The skill guides your coding agent to run{" "}
                 <code>sunofriend demo --out-dir FRESH</code>. The command
                 creates copyright-safe synthetic stems, then uses the normal
                 automatic MIDI/WAV/ZIP pipeline. It will not overwrite an
@@ -103,10 +107,10 @@ export default function Demo() {
               <span className="card-number">YOUR DEMO OUTPUT</span>
               <h3>Play the balanced WAV first</h3>
               <p>
-                Ask Codex to point out the listening WAV and start guide. Then
-                inspect the individual MIDI. The synthetic sources provide
-                timing, song length and level evidence; their audio is not mixed
-                into the MIDI-derived WAV.
+                Ask your agent to point out the listening WAV and start guide.
+                Then inspect the individual MIDI. The synthetic sources provide
+                timing, song length and level evidence; their audio is not
+                mixed into the MIDI-derived WAV.
               </p>
             </div>
             <div className="agent-card">
