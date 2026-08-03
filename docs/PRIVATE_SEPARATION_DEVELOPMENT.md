@@ -1848,6 +1848,32 @@ paths. It does not normalize unlike metrics, compare methods, rank a backend,
 evaluate cross-song acceptance, resolve licensing, or enable Simple/Studio.
 The broader bake-off-corpus publication gate therefore remains open.
 
+The follow-on owner-only coverage command verifies that exact index and
+reports its comparison topology without opening any of the six source report
+bodies:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-corpus-coverage.py \
+  /absolute/private-cross-song-separation-evidence-index.json \
+  --out /absolute/fresh/private-separation-corpus-coverage.json
+```
+
+The current coverage document has SHA-256
+`f40eea3eb661d0d42ddca739efdd850a153e1884e7cc107f89fe8ff3997f88f1`.
+It finds four schema/kind groups. Provider MIDI and Kim vocal MIDI each repeat
+one method family across two songs. Synthetic separator audio and downstream
+MIDI each have only one song/method cell. There is no same-schema cross-method
+pair and no complete two-song-by-two-method rectangle. Even a future complete
+rectangle remains topology only: this command always keeps metric comparison
+false until a separate normalized metric and acceptance contract exists.
+
+The report also makes its boundary explicit. The index does not represent a
+hidden test set and cannot evaluate checkpoint licensing, human listening,
+offline operation or resource acceptance. Those facts do not erase the human
+reviews already documented below; they mean this particular machine-readable
+index cannot be used as evidence for those gates.
+
 ### Current private human-review queue
 
 As of 3 August 2026, the first scoped `I am a Alien mashup` review is complete.

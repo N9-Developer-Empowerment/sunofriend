@@ -34,6 +34,7 @@ from ._separation_vocal_candidate_audition import _write_fresh_private_json
 SCHEMA = "sunofriend.private-cross-song-separation-evidence-index.v1"
 _MAX_REPORT_BYTES = 2 * 1024 * 1024
 _MINIMUM_ENTRIES = 4
+_MAXIMUM_ENTRIES = 256
 _ID_PATTERN = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?")
 _SCHEMA_BY_KIND = {
     "separator_audio": PRIVATE_DEMUCS_DEMO_EVALUATION_SCHEMA,
@@ -81,6 +82,10 @@ def _index_cross_song_separation_evidence(
 ) -> dict[str, Any]:
     """Validate and catalogue sealed reports without comparing their metrics."""
 
+    if len(evidence) < _MINIMUM_ENTRIES:
+        raise ValueError(f"at least {_MINIMUM_ENTRIES} evidence reports are required")
+    if len(evidence) > _MAXIMUM_ENTRIES:
+        raise ValueError(f"at most {_MAXIMUM_ENTRIES} evidence reports are supported")
     loaded = tuple(_load_evidence(item) for item in evidence)
     _validate_corpus(loaded)
     document = _build_document(loaded)
@@ -158,6 +163,8 @@ def _validate_inactive_report(report: Mapping[str, Any]) -> None:
 def _validate_corpus(evidence: Sequence[_LoadedEvidence]) -> None:
     if len(evidence) < _MINIMUM_ENTRIES:
         raise ValueError(f"at least {_MINIMUM_ENTRIES} evidence reports are required")
+    if len(evidence) > _MAXIMUM_ENTRIES:
+        raise ValueError(f"at most {_MAXIMUM_ENTRIES} evidence reports are supported")
     track_ids = {item.source.track_id for item in evidence}
     method_families = {item.source.method_family for item in evidence}
     if len(track_ids) < 2:
@@ -177,6 +184,9 @@ def _validate_corpus(evidence: Sequence[_LoadedEvidence]) -> None:
     report_hashes = [item.report_sha256 for item in evidence]
     if len(report_hashes) != len(set(report_hashes)):
         raise ValueError("the same sealed report cannot be catalogued twice")
+    document_hashes = [item.report_document_sha256 for item in evidence]
+    if len(document_hashes) != len(set(document_hashes)):
+        raise ValueError("the same sealed report content cannot be catalogued twice")
 
 
 def _build_document(evidence: Sequence[_LoadedEvidence]) -> dict[str, Any]:

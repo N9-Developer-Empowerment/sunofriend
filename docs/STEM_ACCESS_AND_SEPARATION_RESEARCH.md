@@ -2346,6 +2346,13 @@ separator transport, source-lineage import and promotion are not implemented**
     Keep the parent gate open: heterogeneous metrics are not normalized,
     methods are not compared or ranked, the test set is not hidden and the
     catalogue is not an acceptance report.
+  - [x] Add a schema-aware coverage projection over that exact catalogue. It
+    finds two cross-song same-method repeats, zero same-schema cross-method
+    pairs and zero complete two-song-by-two-method rectangles. It reads no
+    source report body, permits no metric comparison and keeps licensing,
+    listening, hidden-set, offline and resource acceptance out of scope. The
+    projection remains open even for a future complete rectangle until a
+    separate normalized metric and acceptance contract is reviewed.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
 - [x] Repeat the clean/estimate comparison through exact production
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation

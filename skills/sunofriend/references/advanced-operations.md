@@ -1790,10 +1790,20 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   path-free integrity catalogue from at least four sealed private reports over
   at least two caller-declared track IDs and two method families. It verifies
   each report's exact file hash, document self-hash, private scope and inactive
-  permissions. It copies no report body, audio, MIDI or path, and it does not
-  normalize heterogeneous metrics, compare methods, rank a backend, accept a
-  result or enable a product route. A catalogue is progress toward the
-  cross-song corpus gate, not completion of that gate.
+  permissions, with a maximum of 256 entries. It copies no report body, audio,
+  MIDI or path, and it does not normalize heterogeneous metrics, compare
+  methods, rank a backend, accept a result or enable a product route. A
+  catalogue is progress toward the cross-song corpus gate, not completion of
+  that gate.
+- `scripts/private-separation-corpus-coverage.py` verifies one exact evidence
+  index and reports like-schema track/method cells, cross-song repeats,
+  cross-method pairs and complete two-track/two-method rectangles. It reads no
+  indexed report body and always keeps metric comparison false. A rectangle is
+  topology evidence, not comparable quality data. The current six-entry index
+  has two cross-song same-method groups, no same-schema cross-method pair and
+  no complete rectangle. Licensing, human listening, hidden-set, offline and
+  resource acceptance remain separate gates; the coverage report cannot rank,
+  select, promote, activate or enable a product route.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,

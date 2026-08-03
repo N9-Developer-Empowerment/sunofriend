@@ -146,6 +146,54 @@ def test_index_requires_cross_song_multi_method_unique_reports(tmp_path: Path) -
         )
 
 
+def test_index_bounds_report_count(tmp_path: Path) -> None:
+    evidence = list(_corpus(tmp_path))
+    template = evidence[0].report
+    for index in range(4, 257):
+        report = tmp_path / f"extra-{index}.json"
+        document = json.loads(template.read_text(encoding="utf-8"))
+        document["marker"] = index
+        document["document_sha256"] = _document_sha256(document)
+        report.write_text(json.dumps(document), encoding="utf-8")
+        evidence.append(
+            EvidenceInput(
+                track_id=f"track-{index}",
+                method_family="demucs",
+                evidence_kind="separator_audio",
+                report=report,
+            )
+        )
+
+    with pytest.raises(ValueError, match="at most 256"):
+        _index_cross_song_separation_evidence(
+            evidence,
+            out=tmp_path / "too-large.json",
+        )
+    assert not (tmp_path / "too-large.json").exists()
+
+
+def test_index_rejects_reserialized_copy_of_same_report(tmp_path: Path) -> None:
+    evidence = _corpus(tmp_path)
+    copied_report = tmp_path / "reserialized-copy.json"
+    original = json.loads(evidence[0].report.read_text(encoding="utf-8"))
+    copied_report.write_text(json.dumps(original, indent=2), encoding="utf-8")
+
+    duplicated_content = evidence + (
+        EvidenceInput(
+            track_id="track-c",
+            method_family="another-method",
+            evidence_kind=evidence[0].evidence_kind,
+            report=copied_report,
+        ),
+    )
+    with pytest.raises(ValueError, match="same sealed report content"):
+        _index_cross_song_separation_evidence(
+            duplicated_content,
+            out=tmp_path / "duplicate-content.json",
+        )
+    assert not (tmp_path / "duplicate-content.json").exists()
+
+
 def _corpus(tmp_path: Path) -> tuple[EvidenceInput, ...]:
     rows = (
         (
