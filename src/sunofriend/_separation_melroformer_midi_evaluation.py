@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import os
 import shutil
+import stat
 import tempfile
 import time
 from pathlib import Path
@@ -28,6 +30,15 @@ from ._separation_demucs_midi_metrics import _compare_note_events
 from ._separation_demucs_refinement_evaluation import _validated_notes
 from ._separation_melroformer_authorised_worker import (
     _validate_private_melroformer_authorised_worker,
+)
+from ._separation_checkpoint_canonical import canonical_json_bytes
+from ._separation_melroformer_native_attempt_darwin import (
+    _EVIDENCE_SCHEMA as _NATIVE_ATTEMPT_EVIDENCE_SCHEMA,
+    _inspect_attempt_pcm24,
+)
+from ._separation_melroformer_upstream_evidence import (
+    CONVERSION_CHECKPOINT_BYTES,
+    CONVERSION_CHECKPOINT_SHA256,
 )
 from .models import NoteEvent
 from .vocal import VocalConfig, transcribe_vocal_melody
@@ -54,22 +65,7 @@ def _evaluate_private_melroformer_vocal_midi(
 
     worker_path = _regular_json(worker_observation_path, "worker observation")
     worker_sha256 = _sha256(worker_path)
-    worker = _validate_private_melroformer_authorised_worker(
-        json.loads(worker_path.read_text(encoding="utf-8"))
-    )
-    worker_root = worker_path.parent
-    vocals_claim = next(
-        item for item in worker["quarantine"]["outputs"] if item["role"] == "vocals"
-    )
-    vocals_path = _artifact_path(
-        worker_root,
-        {
-            "path": "output/STEMS/vocals.wav",
-            "bytes": vocals_claim["bytes"],
-            "sha256": vocals_claim["sha256"],
-        },
-        "MelRoFormer quarantined vocals",
-    )
+    worker, vocals_path = _load_verified_vocal_source(worker_path)
 
     control_path = _regular_json(control_comparison_path, "control comparison")
     control_root = control_path.parent
@@ -161,9 +157,11 @@ def _evaluate_private_melroformer_vocal_midi(
                     variant_notes, controls
                 ),
             }
-        if _sha256(worker_path) != worker_sha256 or _sha256(vocals_path) != vocals_claim[
-            "sha256"
-        ]:
+        if (
+            _sha256(worker_path) != worker_sha256
+            or _sha256(vocals_path) != worker["vocal_pcm24_sha256"]
+            or _load_verified_vocal_source(worker_path) != (worker, vocals_path)
+        ):
             raise ValueError("MelRoFormer worker evidence changed during MIDI evaluation")
         if _sha256(control_path) != control_sha256:
             raise ValueError("authorised MIDI controls changed during evaluation")
@@ -175,20 +173,7 @@ def _evaluate_private_melroformer_vocal_midi(
             "evidence_scope": "private_development_only",
             "worker": {
                 "observation_sha256": worker_sha256,
-                "evidence_sha256": worker["evidence_sha256"],
-                "candidate_id": worker["model"]["candidate_id"],
-                "checkpoint_sha256": worker["model"]["checkpoint_sha256"],
-                "authorisation_report_sha256": worker["artifacts"][
-                    "authorisation_report_sha256"
-                ],
-                "vocal_pcm24_sha256": vocals_claim["sha256"],
-                "vocal_pcm24_bytes": vocals_claim["bytes"],
-                "network_denial_bound_to_model_worker": worker["conclusion"][
-                    "network_denial_bound_to_model_worker"
-                ],
-                "pcm24_quarantine_bound_to_model_worker": worker["conclusion"][
-                    "pcm24_quarantine_bound_to_model_worker"
-                ],
+                **worker,
             },
             "controls": {
                 "comparison_sha256": control_sha256,
@@ -287,6 +272,199 @@ def _evaluate_private_melroformer_vocal_midi(
         raise
 
 
+def _load_verified_vocal_source(
+    evidence_path: Path,
+) -> tuple[dict[str, Any], Path]:
+    """Normalize legacy and fixed-native evidence without widening permissions."""
+
+    raw = json.loads(evidence_path.read_text(encoding="utf-8"))
+    if not isinstance(raw, Mapping):
+        raise ValueError("MelRoFormer worker evidence must be a JSON object")
+    if raw.get("schema") == _NATIVE_ATTEMPT_EVIDENCE_SCHEMA:
+        return _load_native_attempt_vocal_source(evidence_path, raw)
+
+    worker = _validate_private_melroformer_authorised_worker(raw)
+    vocals_claim = next(
+        item for item in worker["quarantine"]["outputs"] if item["role"] == "vocals"
+    )
+    vocals_path = _artifact_path(
+        evidence_path.parent,
+        {
+            "path": "output/STEMS/vocals.wav",
+            "bytes": vocals_claim["bytes"],
+            "sha256": vocals_claim["sha256"],
+        },
+        "MelRoFormer quarantined vocals",
+    )
+    return (
+        {
+            "evidence_sha256": worker["evidence_sha256"],
+            "candidate_id": worker["model"]["candidate_id"],
+            "checkpoint_sha256": worker["model"]["checkpoint_sha256"],
+            "authorisation_report_sha256": worker["artifacts"][
+                "authorisation_report_sha256"
+            ],
+            "vocal_pcm24_sha256": vocals_claim["sha256"],
+            "vocal_pcm24_bytes": vocals_claim["bytes"],
+            "network_denial_bound_to_model_worker": worker["conclusion"][
+                "network_denial_bound_to_model_worker"
+            ],
+            "pcm24_quarantine_bound_to_model_worker": worker["conclusion"][
+                "pcm24_quarantine_bound_to_model_worker"
+            ],
+        },
+        vocals_path,
+    )
+
+
+def _load_native_attempt_vocal_source(
+    evidence_path: Path,
+    document: Mapping[str, Any],
+) -> tuple[dict[str, Any], Path]:
+    payload = dict(document)
+    evidence_sha256 = payload.pop("evidence_sha256", None)
+    bindings = document.get("bindings")
+    conclusion = document.get("conclusion")
+    permissions = document.get("permissions")
+    outputs = document.get("outputs")
+    if (
+        document.get("status") != "private_native_attempt_verified_not_selected"
+        or document.get("evidence_scope")
+        != "private_local_execution_and_output_binding_only"
+        or document.get("candidate_id") != "mlx-melroformer-kim-vocal-2"
+        or not _is_sha256(evidence_sha256)
+        or evidence_sha256
+        != hashlib.sha256(canonical_json_bytes(payload)).hexdigest()
+        or not isinstance(bindings, Mapping)
+        or bindings.get("checkpoint_sha256") != CONVERSION_CHECKPOINT_SHA256
+        or bindings.get("checkpoint_bytes") != CONVERSION_CHECKPOINT_BYTES
+        or any(
+            not _is_sha256(bindings.get(name))
+            for name in (
+                "request_sha256",
+                "terminal_receipt_sha256",
+                "worker_source_sha256",
+                "authorisation_report_sha256",
+                "source_manifest_sha256",
+                "companion_manifest_sha256",
+            )
+        )
+        or not isinstance(conclusion, Mapping)
+        or any(
+            conclusion.get(name) is not True
+            for name in (
+                "native_execution_terminal",
+                "network_denial_bound_to_model_worker",
+                "pcm24_quarantine_bound_to_model_worker",
+                "parent_staging_verification_complete",
+                "checkpoint_remeasured_and_closed",
+            )
+        )
+        or conclusion.get("listening_quality_established") is not False
+        or not isinstance(permissions, Mapping)
+        or set(permissions)
+        != {
+            "accepted",
+            "automatic_selection",
+            "source_graph_activation",
+            "simple_mode_available",
+            "studio_import_available",
+            "product_route_permitted",
+            "publication_permitted",
+        }
+        or any(value is not False for value in permissions.values())
+        or not isinstance(outputs, list)
+        or len(outputs) != 2
+    ):
+        raise ValueError("private Kim native attempt evidence differs")
+
+    _validate_native_attempt_receipt(evidence_path.parent, bindings)
+
+    output_by_role = {
+        item.get("role"): item for item in outputs if isinstance(item, Mapping)
+    }
+    if set(output_by_role) != {"instrumental", "vocals"}:
+        raise ValueError("private Kim native attempt outputs differ")
+    for role in ("instrumental", "vocals"):
+        if dict(output_by_role[role]) != dict(
+            _inspect_attempt_pcm24(evidence_path.parent, role=role)
+        ):
+            raise ValueError("private Kim native attempt output changed")
+
+    vocals_claim = output_by_role["vocals"]
+    return (
+        {
+            "evidence_sha256": evidence_sha256,
+            "candidate_id": document["candidate_id"],
+            "checkpoint_sha256": bindings["checkpoint_sha256"],
+            "authorisation_report_sha256": bindings[
+                "authorisation_report_sha256"
+            ],
+            "vocal_pcm24_sha256": vocals_claim["sha256"],
+            "vocal_pcm24_bytes": vocals_claim["bytes"],
+            "network_denial_bound_to_model_worker": conclusion[
+                "network_denial_bound_to_model_worker"
+            ],
+            "pcm24_quarantine_bound_to_model_worker": conclusion[
+                "pcm24_quarantine_bound_to_model_worker"
+            ],
+        },
+        evidence_path.parent / "staging" / "quarantine" / "STEMS" / "vocals.wav",
+    )
+
+
+def _validate_native_attempt_receipt(
+    attempt_root: Path,
+    bindings: Mapping[str, Any],
+) -> None:
+    path = attempt_root / "native-attempt-receipt.json"
+    try:
+        state = path.lstat()
+    except OSError as error:
+        raise ValueError("private Kim native terminal receipt is missing") from error
+    if (
+        stat.S_ISLNK(state.st_mode)
+        or not stat.S_ISREG(state.st_mode)
+        or state.st_nlink != 1
+        or state.st_uid != os.geteuid()
+        or stat.S_IMODE(state.st_mode) != 0o600
+        or not 1 <= state.st_size <= 2 * 1024 * 1024
+    ):
+        raise ValueError("private Kim native terminal receipt differs")
+    receipt = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(receipt, Mapping):
+        raise ValueError("private Kim native terminal receipt differs")
+    payload = dict(receipt)
+    receipt_sha256 = payload.pop("receipt_sha256", None)
+    lifecycle = receipt.get("lifecycle")
+    receipt_permissions = receipt.get("permissions")
+    if (
+        receipt.get("schema")
+        != "sunofriend.private-melroformer-native-coordinator.v1"
+        or receipt.get("status")
+        != "private_native_worker_complete_and_terminal"
+        or receipt.get("request_sha256") != bindings["request_sha256"]
+        or receipt_sha256 != bindings["terminal_receipt_sha256"]
+        or receipt_sha256
+        != hashlib.sha256(canonical_json_bytes(payload)).hexdigest()
+        or not isinstance(lifecycle, Mapping)
+        or not lifecycle
+        or any(value is not True for value in lifecycle.values())
+        or not isinstance(receipt_permissions, Mapping)
+        or not receipt_permissions
+        or any(value is not False for value in receipt_permissions.values())
+    ):
+        raise ValueError("private Kim native terminal receipt differs")
+
+
+def _is_sha256(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
 def _compare_to_controls(
     notes: tuple[NoteEvent, ...],
     controls: Mapping[str, tuple[NoteEvent, ...]],
@@ -379,5 +557,6 @@ def _load_control_notes(
 __all__ = [
     "SCHEMA",
     "_evaluate_private_melroformer_vocal_midi",
+    "_load_verified_vocal_source",
     "_validated_control_policy",
 ]

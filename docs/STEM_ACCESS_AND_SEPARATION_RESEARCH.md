@@ -176,7 +176,16 @@ reaped and the checkpoint/session authorities were terminalised. These facts
 prove the fixed execution boundary works; they do not prove separation
 quality, select Kim over another provider, activate a source node or publish a
 separator. Private audition/downstream MIDI comparison and per-stage runtime
-diagnostics remain before any integration decision.
+diagnostics remain before any integration decision. The attempt now also has a
+path-free, self-hashed evidence envelope binding both exact PCM24 outputs to
+the request, terminal receipt, checkpoint and authorised input chain. The
+unchanged downstream vocal-MIDI evaluator consumed that envelope and produced
+a 14-note primary MIDI that is byte-identical to both earlier Kim observations
+(`65111b1dadbc9daaa7ea015a542a256510bd1b8f3ecbb88a36f55dc63dd5dcc1`). The prior blind `Be Alone`
+Kim-versus-Moises review therefore already covers the audible MIDI and resolved
+it as `equivalent`; generating a visually different duplicate review would add
+no evidence. This establishes exact downstream parity for one excerpt, not
+separator acceptance, and no product permission changed.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on

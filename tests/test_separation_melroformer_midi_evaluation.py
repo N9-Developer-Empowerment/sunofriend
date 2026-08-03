@@ -14,6 +14,11 @@ from sunofriend._separation_authorised_midi_comparison import (
     AUTHORISED_MIDI_COMPARISON_SCHEMA,
     _document_sha256,
 )
+from sunofriend._separation_checkpoint_canonical import canonical_json_bytes
+from sunofriend._separation_melroformer_upstream_evidence import (
+    CONVERSION_CHECKPOINT_BYTES,
+    CONVERSION_CHECKPOINT_SHA256,
+)
 from sunofriend.interface_contract import DIRECT_TUI_COMMANDS, PUBLIC_COMMANDS
 from sunofriend.models import NoteEvent
 
@@ -128,6 +133,43 @@ def test_rejects_a_changed_worker_vocal_before_transcription(
         )
 
 
+def test_accepts_native_attempt_evidence_without_promoting_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report, outputs = _native_attempt_fixture(tmp_path / "native")
+    monkeypatch.setattr(
+        evaluation,
+        "_inspect_attempt_pcm24",
+        lambda _root, *, role: next(item for item in outputs if item["role"] == role),
+    )
+
+    worker, vocals = evaluation._load_verified_vocal_source(report)
+
+    assert vocals == report.parent / "staging/quarantine/STEMS/vocals.wav"
+    assert worker["candidate_id"] == "mlx-melroformer-kim-vocal-2"
+    assert worker["checkpoint_sha256"] == CONVERSION_CHECKPOINT_SHA256
+    assert worker["vocal_pcm24_sha256"] == _digest("native-vocals")
+    assert worker["network_denial_bound_to_model_worker"] is True
+    assert worker["pcm24_quarantine_bound_to_model_worker"] is True
+
+
+def test_rejects_changed_native_attempt_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report, outputs = _native_attempt_fixture(tmp_path / "native")
+    monkeypatch.setattr(
+        evaluation,
+        "_inspect_attempt_pcm24",
+        lambda _root, *, role: next(item for item in outputs if item["role"] == role),
+    )
+    document = json.loads(report.read_text(encoding="utf-8"))
+    document["permissions"]["accepted"] = True
+    report.write_text(json.dumps(document), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="native attempt evidence differs"):
+        evaluation._load_verified_vocal_source(report)
+
+
 def test_private_melroformer_midi_evaluation_has_no_public_route() -> None:
     assert "private-melroformer-vocal-midi-evaluation" not in PUBLIC_COMMANDS
     assert "private-melroformer-vocal-midi-evaluation" not in DIRECT_TUI_COMMANDS
@@ -213,6 +255,89 @@ def _worker_fixture(root: Path) -> tuple[Path, dict[str, object]]:
     report = root / "authorised-worker-observation.json"
     report.write_text("{}\n", encoding="utf-8")
     return report, document
+
+
+def _native_attempt_fixture(root: Path) -> tuple[Path, list[dict[str, object]]]:
+    root.mkdir(parents=True)
+    request_sha256 = _digest("request")
+    receipt_payload: dict[str, object] = {
+        "schema": "sunofriend.private-melroformer-native-coordinator.v1",
+        "status": "private_native_worker_complete_and_terminal",
+        "request_sha256": request_sha256,
+        "lifecycle": {"terminal": True},
+        "permissions": {"accepted": False},
+    }
+    terminal_receipt_sha256 = hashlib.sha256(
+        canonical_json_bytes(receipt_payload)
+    ).hexdigest()
+    receipt = {
+        **receipt_payload,
+        "receipt_sha256": terminal_receipt_sha256,
+    }
+    receipt_path = root / "native-attempt-receipt.json"
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+    receipt_path.chmod(0o600)
+    outputs: list[dict[str, object]] = [
+        {
+            "role": role,
+            "bytes": 3_969_044,
+            "sha256": _digest(f"native-{role}"),
+            "geometry": {
+                "sample_rate": 44_100,
+                "channels": 2,
+                "sample_width_bytes": 3,
+                "frames": 661_500,
+            },
+        }
+        for role in ("instrumental", "vocals")
+    ]
+    payload: dict[str, object] = {
+        "schema": "sunofriend.private-kim-native-attempt-evidence.v1",
+        "status": "private_native_attempt_verified_not_selected",
+        "evidence_scope": "private_local_execution_and_output_binding_only",
+        "candidate_id": "mlx-melroformer-kim-vocal-2",
+        "bindings": {
+            "request_sha256": request_sha256,
+            "terminal_receipt_sha256": terminal_receipt_sha256,
+            "worker_source_sha256": _digest("worker"),
+            "checkpoint_sha256": CONVERSION_CHECKPOINT_SHA256,
+            "checkpoint_bytes": CONVERSION_CHECKPOINT_BYTES,
+            "authorisation_report_sha256": _digest("authorisation"),
+            "source_manifest_sha256": _digest("source"),
+            "companion_manifest_sha256": _digest("companions"),
+        },
+        "outputs": outputs,
+        "conclusion": {
+            "native_execution_terminal": True,
+            "network_denial_bound_to_model_worker": True,
+            "pcm24_quarantine_bound_to_model_worker": True,
+            "parent_staging_verification_complete": True,
+            "checkpoint_remeasured_and_closed": True,
+            "listening_quality_established": False,
+        },
+        "permissions": {
+            "accepted": False,
+            "automatic_selection": False,
+            "source_graph_activation": False,
+            "simple_mode_available": False,
+            "studio_import_available": False,
+            "product_route_permitted": False,
+            "publication_permitted": False,
+        },
+        "limitations": ["fixture"],
+    }
+    document = {
+        **payload,
+        "evidence_sha256": hashlib.sha256(canonical_json_bytes(payload)).hexdigest(),
+    }
+    report = root / "native-attempt-evidence.json"
+    report.write_text(json.dumps(document), encoding="utf-8")
+    report.chmod(0o600)
+    return report, outputs
+
+
+def _digest(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
 def _control_fixture(

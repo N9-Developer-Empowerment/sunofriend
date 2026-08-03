@@ -390,9 +390,36 @@ post-run staging/checkpoint remeasurement, fd5 release, lease close and native
 session terminalisation. Both 15-second outputs are 44.1 kHz stereo PCM24 and
 their integer sum differs from the authorised input by at most one LSB. This is
 working private execution provenance, not listening acceptance, source-graph
-activation, automatic selection or a public separator. The next private work
-is audition/MIDI comparison plus bounded path-free stage timing; total wall
-time was much longer than the earlier isolated inference measurement.
+activation, automatic selection or a public separator.
+
+The attempt owner now also persists `native-attempt-evidence.json`. This
+path-free, self-hashed document binds the canonical request, terminal receipt,
+checkpoint, authorisation, worker/source/companion identities and exact hash,
+size and geometry of both fixed-location PCM24 outputs. Its evidence self-hash
+is `ef418783b15c9a64f188b5f7be9b0612ba491c537c3e2b669021b073f48b6d8c`;
+the evidence file hashes to
+`9497d0af8b626c1a3ce043be831e25714de1b20216d91fa8ef54e01acc2f3669`.
+It explicitly records that listening quality is not established and grants no
+selection, source-graph, Simple, Studio, product or publication permission.
+
+The unchanged private vocal-MIDI evaluator now accepts that stricter native
+evidence as an alternative to the legacy worker observation, reopens and
+remeasures both outputs before and after transcription, and normalises only the
+existing provenance fields. On the same `Be Alone` excerpt it produced the
+same 14-note primary and the same 2/17/1/20-note lowest/dominant/top/harmony
+hypotheses. The primary MIDI SHA-256 is
+`65111b1dadbc9daaa7ea015a542a256510bd1b8f3ecbb88a36f55dc63dd5dcc1`,
+byte-identical to both earlier Kim evaluations. The new evaluation's canonical
+document SHA-256 is
+`b901a672c65276cf09514d05056cc912555df241693f1cde864bca4d7cea042a`;
+the report file hashes to
+`28b60fbe3166feb24f2edd1adb1a1388cd5d4091b4ef104e0230bf5ddeaa58a0`.
+No duplicate blind review is required because the audition MIDI is unchanged;
+the existing `Be Alone` Kim-versus-Moises review already resolved this MIDI as
+`equivalent`. This proves downstream parity for the exact excerpt, not score
+truth or separator acceptance. Bounded path-free stage timing and broader
+cross-song listening remain; total wall time was much longer than the earlier
+isolated inference measurement.
 
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \

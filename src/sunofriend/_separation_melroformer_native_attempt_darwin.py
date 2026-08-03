@@ -9,9 +9,11 @@ from every public CLI, TUI, Simple, Studio and source-graph route.
 
 from __future__ import annotations
 
+import hashlib
 import os
 import platform
 import stat
+import wave
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -52,6 +54,8 @@ _STAGING_NAME = "staging"
 _TRANSPORT_NAME = "transport"
 _NATIVE_CACHE_NAME = "native-cache"
 _RECEIPT_NAME = "native-attempt-receipt.json"
+_EVIDENCE_NAME = "native-attempt-evidence.json"
+_EVIDENCE_SCHEMA = "sunofriend.private-kim-native-attempt-evidence.v1"
 _MAXIMUM_WORKER_BYTES = 1024 * 1024
 _MAXIMUM_AUTHORISATION_REPORT_BYTES = 2 * 1024 * 1024
 _MAXIMUM_RECEIPT_BYTES = 2 * 1024 * 1024
@@ -90,15 +94,6 @@ def _run_private_melroformer_native_attempt_darwin(
 
     if platform.system() != "Darwin":
         raise RuntimeError("private Kim native attempt requires macOS")
-    repository = _canonical_directory(repository_root, "repository root")
-    runtime = _explicit_runtime_launcher(runtime_launcher_path)
-    source = _canonical_directory(source_root, "source root")
-    checkpoint = _canonical_file(checkpoint_path, "checkpoint")
-    companions = _canonical_directory(companion_root, "companion root")
-    authorisation = _canonical_file(
-        authorisation_report_path,
-        "authorisation report",
-    )
     attempt = Path(attempt_directory)
     if not attempt.is_absolute() or attempt.name in {"", ".", ".."}:
         raise ValueError("private Kim attempt path must be absolute and fresh")
@@ -106,45 +101,17 @@ def _run_private_melroformer_native_attempt_darwin(
     if attempt.exists() or attempt.is_symlink():
         raise ValueError("private Kim attempt path must not exist")
 
-    _verify_private_melroformer_source_tree(source)
-    report_state = authorisation.lstat()
-    _read_exact_regular_file(
-        authorisation,
-        expected_sha256=authorisation_report_sha256,
-        expected_bytes=report_state.st_size,
-    )
-    if not 1 <= report_state.st_size <= _MAXIMUM_AUTHORISATION_REPORT_BYTES:
-        raise ValueError("private Kim authorisation report size differs")
-    companion_identity = _companion_manifest_identity(
-        _inspect_companion_files(companions)
-    )
-    worker = repository / WORKER_RELATIVE_PATH
-    worker_identity = _regular_file_identity(
-        worker,
-        maximum_bytes=_MAXIMUM_WORKER_BYTES,
-    )
-
     staging = attempt / _STAGING_NAME
-    request = _build_private_melroformer_native_request(
+    runtime, request = _prepare_private_melroformer_native_request(
         run_nonce=run_nonce,
-        paths={
-            "repository_root": str(repository),
-            "source_root": str(source),
-            "checkpoint_path": str(checkpoint),
-            "companion_root": str(companions),
-            "authorisation_report_path": str(authorisation),
-            "staging_directory": str(staging),
-        },
-        identities={
-            "worker_source_sha256": worker_identity["sha256"],
-            "checkpoint_sha256": CONVERSION_CHECKPOINT_SHA256,
-            "checkpoint_bytes": CONVERSION_CHECKPOINT_BYTES,
-            "authorisation_report_sha256": authorisation_report_sha256,
-            "source_manifest_sha256": SOURCE_MANIFEST_SHA256,
-            "companion_manifest_sha256": companion_identity[
-                "manifest_sha256"
-            ],
-        },
+        repository_root=repository_root,
+        runtime_launcher_path=runtime_launcher_path,
+        source_root=source_root,
+        checkpoint_path=checkpoint_path,
+        companion_root=companion_root,
+        authorisation_report_path=authorisation_report_path,
+        authorisation_report_sha256=authorisation_report_sha256,
+        staging_directory=staging,
         device=device,
     )
     _create_attempt_tree(parent, attempt.name)
@@ -180,6 +147,7 @@ def _run_private_melroformer_native_attempt_darwin(
             transport_directory=attempt / _TRANSPORT_NAME,
         )
         _write_attempt_receipt(attempt, receipt)
+        _write_attempt_evidence(attempt, request=request, receipt=receipt)
     except BaseException as error:
         primary_error = error
     if primary_error is not None:
@@ -201,6 +169,73 @@ def _run_private_melroformer_native_attempt_darwin(
     if receipt is None:
         raise RuntimeError("private Kim native attempt returned no receipt")
     return receipt
+
+
+def _prepare_private_melroformer_native_request(
+    *,
+    run_nonce: str,
+    repository_root: str | Path,
+    runtime_launcher_path: str | Path,
+    source_root: str | Path,
+    checkpoint_path: str | Path,
+    companion_root: str | Path,
+    authorisation_report_path: str | Path,
+    authorisation_report_sha256: str,
+    staging_directory: str | Path,
+    device: str,
+) -> tuple[Path, Mapping[str, Any]]:
+    repository = _canonical_directory(repository_root, "repository root")
+    runtime = _explicit_runtime_launcher(runtime_launcher_path)
+    source = _canonical_directory(source_root, "source root")
+    checkpoint = _canonical_file(checkpoint_path, "checkpoint")
+    companions = _canonical_directory(companion_root, "companion root")
+    authorisation = _canonical_file(
+        authorisation_report_path,
+        "authorisation report",
+    )
+    staging = Path(staging_directory)
+    if not staging.is_absolute():
+        raise ValueError("private Kim staging path must be absolute")
+
+    _verify_private_melroformer_source_tree(source)
+    report_state = authorisation.lstat()
+    _read_exact_regular_file(
+        authorisation,
+        expected_sha256=authorisation_report_sha256,
+        expected_bytes=report_state.st_size,
+    )
+    if not 1 <= report_state.st_size <= _MAXIMUM_AUTHORISATION_REPORT_BYTES:
+        raise ValueError("private Kim authorisation report size differs")
+    companion_identity = _companion_manifest_identity(
+        _inspect_companion_files(companions)
+    )
+    worker_identity = _regular_file_identity(
+        repository / WORKER_RELATIVE_PATH,
+        maximum_bytes=_MAXIMUM_WORKER_BYTES,
+    )
+    request = _build_private_melroformer_native_request(
+        run_nonce=run_nonce,
+        paths={
+            "repository_root": str(repository),
+            "source_root": str(source),
+            "checkpoint_path": str(checkpoint),
+            "companion_root": str(companions),
+            "authorisation_report_path": str(authorisation),
+            "staging_directory": str(staging),
+        },
+        identities={
+            "worker_source_sha256": worker_identity["sha256"],
+            "checkpoint_sha256": CONVERSION_CHECKPOINT_SHA256,
+            "checkpoint_bytes": CONVERSION_CHECKPOINT_BYTES,
+            "authorisation_report_sha256": authorisation_report_sha256,
+            "source_manifest_sha256": SOURCE_MANIFEST_SHA256,
+            "companion_manifest_sha256": companion_identity[
+                "manifest_sha256"
+            ],
+        },
+        device=device,
+    )
+    return runtime, request
 
 
 def _canonical_directory(value: str | Path, label: str) -> Path:
@@ -383,6 +418,165 @@ def _write_attempt_receipt(
             or state.st_size != len(encoded)
         ):
             raise RuntimeError("private Kim attempt receipt file differs")
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        os.close(directory_descriptor)
+
+
+def _write_attempt_evidence(
+    attempt: Path,
+    *,
+    request: Mapping[str, Any],
+    receipt: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    receipt_document = _plain(receipt)
+    receipt_payload = dict(receipt_document)
+    receipt_sha256 = receipt_payload.pop("receipt_sha256", None)
+    if (
+        receipt_document.get("schema")
+        != "sunofriend.private-melroformer-native-coordinator.v1"
+        or receipt_document.get("status")
+        != "private_native_worker_complete_and_terminal"
+        or receipt_document.get("request_sha256")
+        != request["request_sha256"]
+        or receipt_sha256
+        != hashlib.sha256(_canonical_json(receipt_payload)).hexdigest()
+        or any(
+            value is not True
+            for value in receipt_document.get("lifecycle", {}).values()
+        )
+        or any(
+            value is not False
+            for value in receipt_document.get("permissions", {}).values()
+        )
+    ):
+        raise ValueError("private Kim native terminal receipt differs")
+    outputs = [
+        _inspect_attempt_pcm24(attempt, role=role)
+        for role in ("instrumental", "vocals")
+    ]
+    payload = {
+        "schema": _EVIDENCE_SCHEMA,
+        "status": "private_native_attempt_verified_not_selected",
+        "evidence_scope": "private_local_execution_and_output_binding_only",
+        "candidate_id": request["candidate_id"],
+        "bindings": {
+            "request_sha256": request["request_sha256"],
+            "terminal_receipt_sha256": receipt_sha256,
+            **_plain(request["identities"]),
+        },
+        "outputs": outputs,
+        "conclusion": {
+            "native_execution_terminal": True,
+            "network_denial_bound_to_model_worker": True,
+            "pcm24_quarantine_bound_to_model_worker": True,
+            "parent_staging_verification_complete": True,
+            "checkpoint_remeasured_and_closed": True,
+            "listening_quality_established": False,
+        },
+        "permissions": {
+            "accepted": False,
+            "automatic_selection": False,
+            "source_graph_activation": False,
+            "simple_mode_available": False,
+            "studio_import_available": False,
+            "product_route_permitted": False,
+            "publication_permitted": False,
+        },
+        "limitations": [
+            "evidence_is_private_execution_provenance_not_quality_acceptance",
+            "relative_artifact_location_is_fixed_by_schema_not_serialized",
+            "gpu_outputs_are_not_claimed_bitwise_repeatable",
+            "no_public_cli_tui_simple_studio_or_source_graph_route",
+        ],
+    }
+    document = {
+        **payload,
+        "evidence_sha256": hashlib.sha256(_canonical_json(payload)).hexdigest(),
+    }
+    _write_private_json(attempt, _EVIDENCE_NAME, document)
+    return document
+
+
+def _inspect_attempt_pcm24(attempt: Path, *, role: str) -> Mapping[str, Any]:
+    if role not in {"instrumental", "vocals"}:
+        raise ValueError("private Kim native output role differs")
+    path = attempt / "staging" / "quarantine" / "STEMS" / f"{role}.wav"
+    state = path.lstat()
+    if (
+        stat.S_ISLNK(state.st_mode)
+        or not stat.S_ISREG(state.st_mode)
+        or state.st_nlink != 1
+        or state.st_uid != os.geteuid()
+        or stat.S_IMODE(state.st_mode) != 0o600
+    ):
+        raise ValueError("private Kim native PCM24 artifact differs")
+    contents = path.read_bytes()
+    with wave.open(str(path), "rb") as reader:
+        geometry = {
+            "sample_rate": reader.getframerate(),
+            "channels": reader.getnchannels(),
+            "sample_width_bytes": reader.getsampwidth(),
+            "frames": reader.getnframes(),
+        }
+        if reader.getcomptype() != "NONE":
+            raise ValueError("private Kim native PCM24 compression differs")
+    if geometry != {
+        "sample_rate": 44_100,
+        "channels": 2,
+        "sample_width_bytes": 3,
+        "frames": 661_500,
+    }:
+        raise ValueError("private Kim native PCM24 geometry differs")
+    return {
+        "role": role,
+        "bytes": len(contents),
+        "sha256": hashlib.sha256(contents).hexdigest(),
+        "geometry": geometry,
+    }
+
+
+def _write_private_json(
+    attempt: Path,
+    name: str,
+    document: Mapping[str, Any],
+) -> None:
+    _validate_path_free(document, "private Kim native attempt evidence")
+    encoded = _canonical_json(document)
+    if not 1 <= len(encoded) <= _MAXIMUM_RECEIPT_BYTES:
+        raise ValueError("private Kim native attempt evidence size differs")
+    directory_descriptor = _open_dir(attempt)
+    descriptor: int | None = None
+    try:
+        descriptor = os.open(
+            name,
+            os.O_WRONLY
+            | os.O_CREAT
+            | os.O_EXCL
+            | getattr(os, "O_NOFOLLOW", 0)
+            | getattr(os, "O_CLOEXEC", 0),
+            0o600,
+            dir_fd=directory_descriptor,
+        )
+        os.set_inheritable(descriptor, False)
+        offset = 0
+        while offset < len(encoded):
+            written = os.write(descriptor, encoded[offset:])
+            if written <= 0:
+                raise RuntimeError("private Kim attempt evidence write stalled")
+            offset += written
+        os.fsync(descriptor)
+        state = os.fstat(descriptor)
+        if (
+            os.get_inheritable(descriptor)
+            or not stat.S_ISREG(state.st_mode)
+            or state.st_nlink != 1
+            or state.st_uid != os.geteuid()
+            or stat.S_IMODE(state.st_mode) != 0o600
+            or state.st_size != len(encoded)
+        ):
+            raise RuntimeError("private Kim attempt evidence file differs")
     finally:
         if descriptor is not None:
             os.close(descriptor)

@@ -4,6 +4,7 @@ import hashlib
 import json
 import platform
 import stat
+import wave
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any
@@ -98,9 +99,7 @@ def test_private_native_attempt_composes_exact_authorities(
     lease = object()
     lease_observation = object()
     reservation = object()
-    receipt = MappingProxyType(
-        {"receipt_sha256": _digest("receipt"), "status": "complete"}
-    )
+    receipt_holder: list[MappingProxyType[str, Any]] = []
     calls: list[str] = []
 
     monkeypatch.setattr(
@@ -134,6 +133,28 @@ def test_private_native_attempt_composes_exact_authorities(
             "companions"
         )
         assert kwargs["transport_directory"] == fixture["attempt"] / "transport"
+        stems = fixture["attempt"] / "staging/quarantine/STEMS"
+        stems.mkdir(parents=True, mode=0o700)
+        stems.parent.chmod(0o700)
+        stems.chmod(0o700)
+        for role in ("vocals", "instrumental"):
+            _write_pcm24(stems / f"{role}.wav")
+        payload = {
+            "schema": "sunofriend.private-melroformer-native-coordinator.v1",
+            "status": "private_native_worker_complete_and_terminal",
+            "request_sha256": request["request_sha256"],
+            "lifecycle": {"terminal": True},
+            "permissions": {"accepted": False},
+        }
+        receipt = MappingProxyType(
+            {
+                **payload,
+                "receipt_sha256": hashlib.sha256(
+                    attempt_module._canonical_json(payload)
+                ).hexdigest(),
+            }
+        )
+        receipt_holder.append(receipt)
         calls.append("one_shot")
         return receipt
 
@@ -143,7 +164,8 @@ def test_private_native_attempt_composes_exact_authorities(
         run_one_shot,
     )
 
-    assert _run(fixture) == receipt
+    result = _run(fixture)
+    assert result is receipt_holder[0]
     assert calls == ["session", "lease", "reserve", "one_shot"]
     assert stat.S_IMODE(fixture["attempt"].stat().st_mode) == 0o700
     assert stat.S_IMODE(
@@ -151,7 +173,15 @@ def test_private_native_attempt_composes_exact_authorities(
     ) == 0o700
     receipt_path = fixture["attempt"] / "native-attempt-receipt.json"
     assert stat.S_IMODE(receipt_path.stat().st_mode) == 0o600
-    assert json.loads(receipt_path.read_bytes()) == dict(receipt)
+    assert json.loads(receipt_path.read_bytes()) == dict(receipt_holder[0])
+    evidence_path = fixture["attempt"] / "native-attempt-evidence.json"
+    evidence = json.loads(evidence_path.read_bytes())
+    assert evidence["status"] == "private_native_attempt_verified_not_selected"
+    assert [item["role"] for item in evidence["outputs"]] == [
+        "instrumental",
+        "vocals",
+    ]
+    assert all(value is False for value in evidence["permissions"].values())
 
 
 def test_private_native_attempt_releases_pre_coordinator_authority_on_failure(
@@ -266,6 +296,11 @@ def test_real_private_assets_compose_to_the_one_shot_boundary(
         "_run_reserved_private_melroformer_native_one_shot_darwin",
         static_one_shot,
     )
+    monkeypatch.setattr(
+        attempt_module,
+        "_write_attempt_evidence",
+        lambda *_args, **_kwargs: None,
+    )
 
     assert attempt_module._run_private_melroformer_native_attempt_darwin(
         run_nonce=_digest(f"real-static-attempt:{tmp_path}"),
@@ -297,3 +332,12 @@ def _run(fixture: dict[str, Any]):
         attempt_directory=fixture["attempt"],
         device="cpu",
     )
+
+
+def _write_pcm24(path: Path) -> None:
+    with wave.open(str(path), "wb") as writer:
+        writer.setnchannels(2)
+        writer.setsampwidth(3)
+        writer.setframerate(44_100)
+        writer.writeframes(b"\0" * 661_500 * 2 * 3)
+    path.chmod(0o600)

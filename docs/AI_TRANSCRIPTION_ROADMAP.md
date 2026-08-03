@@ -1704,6 +1704,47 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-03 — fixed native Kim output bound to unchanged MIDI evidence
+
+- Goal: carry the clean native Kim result into the already established private
+  vocal-MIDI comparison without changing the transcriber, selecting a winner or
+  widening any product route.
+- Change or experiment: the native attempt now writes an owner-only, path-free,
+  self-hashed evidence envelope after the terminal receipt. It binds the
+  request, terminal receipt, checkpoint, authorisation, worker/source/companion
+  identities and exact PCM24 output hashes and geometry. The private MIDI
+  evaluator accepts either this envelope or the legacy worker observation,
+  revalidates both native outputs and preserves its existing report contract.
+- Inputs: the clean `Be Alone` native v2 attempt and the unchanged four-pack
+  authorised MIDI comparison for seconds 191–206.
+- Model/runtime/checkpoint: no inference rerun. The evaluator consumed the
+  already quarantined Kim Vocal 2 PCM24 vocal and used the unchanged production
+  pYIN lead plus Basic Pitch register-hypothesis settings at 136 BPM and A=440.
+- Evidence and metrics: native evidence self-hash
+  `ef418783b15c9a64f188b5f7be9b0612ba491c537c3e2b669021b073f48b6d8c`;
+  MIDI-evaluation canonical document SHA-256
+  `b901a672c65276cf09514d05056cc912555df241693f1cde864bca4d7cea042a`.
+  The primary has 14 notes; the lowest/dominant/top/harmony hypotheses have
+  2/17/1/20 notes. The primary MIDI SHA-256
+  `65111b1dadbc9daaa7ea015a542a256510bd1b8f3ecbb88a36f55dc63dd5dcc1`
+  is byte-identical to both earlier Kim evaluations. Exact-pitch/onset F1 is
+  0.5185 against local HTDemucs, 0.6000 against Moises, 0.5600 against Suno A
+  and 0.4615 against Suno B; these controls are estimates, not score truth.
+  The focused native/evaluator suite passes 197 portable tests plus the trusted
+  exact-private-asset static composition test.
+- Listening result: no duplicate review was generated because its MIDI audio
+  would be identical. The existing blind `Be Alone` Kim-versus-Moises review
+  already resolved this exact primary MIDI as `equivalent`.
+- Decision: accept exact one-excerpt downstream parity from fixed native
+  execution through MIDI evidence. Keep the separator inactive and private;
+  this does not establish broad separation quality or product readiness.
+- Problems/risks: one excerpt and one unchanged MIDI result cannot establish
+  cross-song robustness. The execution still lacks bounded per-stage timings,
+  and earlier total wall time varied materially.
+- Next smallest step: add safe path-free stage timing to locate the native
+  latency, then repeat the full execution-to-MIDI/listening gate on a disjoint
+  song before considering any Studio integration.
+
 ### 2026-08-03 — fixed native Kim authority chain completed and run privately
 
 - Goal: execute the unchanged authorised `Be Alone` 191–206-second excerpt

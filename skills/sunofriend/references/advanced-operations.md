@@ -1709,9 +1709,14 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   verification, post-run checkpoint remeasurement, fd5 release, lease close
   and terminal session claims. Both 15-second outputs are 44.1 kHz stereo
   PCM24, and their integer sum is within one LSB of the authorised source.
-  Treat this only as private execution provenance. Audition and downstream
-  MIDI comparison still precede any acceptance or integration decision, and
-  no separator route is enabled.
+  The attempt now also writes a path-free evidence envelope for those exact
+  outputs. The unchanged downstream evaluator consumed it and produced the
+  same byte-identical 14-note primary MIDI as both earlier Kim evaluations.
+  The existing blind `Be Alone` Kim-versus-Moises review therefore already
+  covers it and resolved to `equivalent`; no duplicate review was created.
+  Treat this only as private execution and one-excerpt downstream-parity
+  evidence. Cross-song listening and bounded stage timing still precede any
+  acceptance or integration decision, and no separator route is enabled.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory
