@@ -1701,8 +1701,17 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   observation and canonical request under the lease lock, remeasures before
   handoff, and passes fd5 only to an admission issued by the verified native
   session. The coordinator and one-shot wrapper no longer accept the general
-  worker-V2 record. Full one-run authority composition and one fresh authorised
-  live run remain outstanding. No separator route is enabled.
+  worker-V2 record. The complete private chain has since produced one clean
+  authorised `Be Alone`
+  v2 run. Its canonical path-free terminal receipt hashes to
+  `950a20550278985381a32df9eb44c37e2b79204652be1fc739d2f306aa3535f7`;
+  it records the fixed ready/release, live observer, exact group reap, staging
+  verification, post-run checkpoint remeasurement, fd5 release, lease close
+  and terminal session claims. Both 15-second outputs are 44.1 kHz stereo
+  PCM24, and their integer sum is within one LSB of the authorised source.
+  Treat this only as private execution provenance. Audition and downstream
+  MIDI comparison still precede any acceptance or integration decision, and
+  no separator route is enabled.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory

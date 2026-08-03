@@ -162,9 +162,21 @@ acceptance required by the general separator lease. Its single-use fd5
 reservation/start bridge now remeasures under lock and hands the raw descriptor
 only to an admission from the exact verified native session. The coordinator
 and one-shot wrapper consume that private authority directly, with no general
-worker-V2 record. The remaining next boundary is full one-run authority
-composition followed by one authorised live excerpt. No product route is
-enabled.
+worker-V2 record. The full one-run authority composition described next is the
+subsequent private boundary. No product route is enabled.
+
+That exact private composition has now completed a clean authorised live run.
+The v2 attempt persisted a path-free, self-verifying terminal receipt with
+SHA-256
+`950a20550278985381a32df9eb44c37e2b79204652be1fc739d2f306aa3535f7`
+and two 15-second, 44.1 kHz stereo PCM24 roles. The parent verified the output
+tree and additive reconstruction; the vocal-plus-instrumental integer sum is
+within one PCM24 LSB of the approved source. The process group was exactly
+reaped and the checkpoint/session authorities were terminalised. These facts
+prove the fixed execution boundary works; they do not prove separation
+quality, select Kim over another provider, activate a source node or publish a
+separator. Private audition/downstream MIDI comparison and per-stage runtime
+diagnostics remain before any integration decision.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on

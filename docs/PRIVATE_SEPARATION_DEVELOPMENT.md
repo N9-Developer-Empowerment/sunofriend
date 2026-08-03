@@ -374,9 +374,25 @@ observation and request under the lease lock, remeasures immediately before
 handoff, and passes the raw descriptor only into an admission issued by the
 verified native session. The fixed coordinator and one-shot wrapper use this
 private boundary directly and no longer accept the general worker-V2 record.
-The remaining next step is to construct the full one-run authority chain and
-run one unchanged authorised excerpt. None of this changes the active
-subprocess route or enables a product route.
+The full one-run authority chain described next composes these parts. None of
+this changes the active subprocess route or enables a product route.
+
+That private chain has now run successfully end to end. A developer-only
+attempt owner measures the exact worker, source, companions and authorisation
+report, creates a fresh owner-only attempt tree, opens the verified native
+session, acquires/reserves the dedicated Kim descriptor lease and invokes the
+one-shot coordinator. The clean `Be Alone` repeat is under
+`work/separation-bakeoff/be-alone-kim-fixed-native-v2/`. Its owner-only canonical
+receipt self-verifies as
+`950a20550278985381a32df9eb44c37e2b79204652be1fc739d2f306aa3535f7`
+and records successful ready/release, live observers, exact group reap,
+post-run staging/checkpoint remeasurement, fd5 release, lease close and native
+session terminalisation. Both 15-second outputs are 44.1 kHz stereo PCM24 and
+their integer sum differs from the authorised input by at most one LSB. This is
+working private execution provenance, not listening acceptance, source-graph
+activation, automatic selection or a public separator. The next private work
+is audition/MIDI comparison plus bounded path-free stage timing; total wall
+time was much longer than the earlier isolated inference measurement.
 
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \

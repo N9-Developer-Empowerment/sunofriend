@@ -1704,6 +1704,55 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-03 — fixed native Kim authority chain completed and run privately
+
+- Goal: execute the unchanged authorised `Be Alone` 191–206-second excerpt
+  once through the fully composed native fd3–fd7 path, without widening any
+  product route or borrowing public separator-acceptance authority.
+- Change or experiment: added one developer-only attempt owner that measures
+  the exact repository worker, source tree, companion files and authorisation
+  receipt; creates a fresh owner-only attempt/staging tree; opens the verified
+  native session; acquires and reserves the dedicated private checkpoint lease;
+  invokes the one-shot transport; and terminalises unused authority after a
+  pre-coordinator failure. A successful attempt now persists the coordinator's
+  immutable path-free receipt as owner-only canonical JSON.
+- Inputs: exact creator-authorised `Be Alone` 15-second PCM24 model input under
+  `be-alone-authorised-191-206-v2`, exact private Kim source/companion pack and
+  exact 456,483,463-byte checkpoint. GPU mode remained explicit.
+- Model/runtime/checkpoint: the fixed macOS native owner launched the pinned
+  `.venv-ai` runtime and worker, loaded Kim Vocal 2 only from inherited fd5,
+  read the authorised 661,500-frame 44.1 kHz stereo excerpt, and wrote exactly
+  the two quarantined PCM24 roles plus its import-closure claim.
+- Evidence and metrics: the first successful run exposed only a caller-side
+  JSON diagnostic bug because `mappingproxy` is intentionally not serializable;
+  its two stems remained valid. The clean repeat persisted a self-verifying
+  receipt with SHA-256
+  `950a20550278985381a32df9eb44c37e2b79204652be1fc739d2f306aa3535f7`.
+  The receipt records ready/image observation before release, fd4 drain while
+  live, network observation before reap, complete group exact reap, mapped-file
+  and staging remeasurement, checkpoint remeasurement, fd5 release, lease close
+  and terminal native session. `vocals.wav` and `instrumental.wav` are each
+  3,969,044 bytes, 44.1 kHz stereo PCM24 with 661,500 frames. Their integer sum
+  differs from the authorised PCM24 input by at most one LSB; 87,800 of
+  1,323,000 samples differ by that rounding bound. Across the two GPU runs each
+  role differed by at most one LSB, so bitwise GPU repeatability is not claimed.
+  Four portable attempt-owner tests, one trusted-local full static-authority
+  test and the related 24 focused lease/coordinator/one-shot tests pass.
+- Listening result: not yet auditioned in this increment; execution provenance
+  and exact reconstruction accounting do not establish vocal quality.
+- Decision: the previously separate safety layers now form one working private
+  native execution chain. Keep the result inactive and private until listening
+  and downstream MIDI comparisons are complete.
+- Problems/risks: the two runs took roughly 222 and 101 seconds of total wall
+  time, substantially longer than earlier isolated inference timings. The
+  durable receipt intentionally omits timing and detailed child evidence, so
+  the next diagnostic must measure safe per-stage durations without exposing
+  paths or process identity. Dyld shared-cache and transient-load coverage also
+  remain incomplete.
+- Next smallest step: independently verify the persisted receipt and outputs,
+  generate a private listening/MIDI comparison from the v2 stems, and add
+  bounded path-free stage timing before considering any separator integration.
+
 ### 2026-08-03 — private Kim checkpoint descriptor lease verified, not loaded
 
 - Goal: construct truthful private checkpoint authority for the approved Kim
@@ -1736,20 +1785,20 @@ Each working day should aim for one narrow vertical improvement:
   fixed coordinator and one-shot wrapper now consume the private lease,
   reservation and canonical request directly; their obsolete general worker-V2
   argument has been removed.
-- Problems/risks: this makes the checkpoint start boundary executable only
+- Problems/risks: this made the checkpoint start boundary executable only
   when composed with an exact verified private native session. It is still not
-  a product route or separation-quality claim. The one-run authority composer,
-  authorised source report validation and fresh live execution remain.
-- Next smallest step: construct the exact private native session and one-run
-  authority chain around the unchanged authorised `Be Alone` excerpt, then run
-  it once through the one-shot owner outside the Codex sandbox.
+  a product route or separation-quality claim. The preceding log entry records
+  the later one-run authority composition and live execution.
+- Next smallest step at this checkpoint: construct the exact private native
+  session and one-run authority chain around the unchanged authorised
+  `Be Alone` excerpt.
 
 ### 2026-08-03 — one-shot native transport owner composed, not run
 
 - Goal: remove the last ad hoc caller responsibility for fd3 request and fd4
   result-file assembly before attempting the fixed private Kim coordinator.
 - Change or experiment: added one developer-only wrapper that requires the
-  already-issued checkpoint lease/reservation, V2 record, session and
+  already-issued checkpoint lease/reservation, session and
   observations; creates a fresh owner-only transport directory through
   directory-relative operations; writes and reopens the exact framed request;
   supplies distinct write/read descriptions for one empty result inode; calls
