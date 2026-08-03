@@ -506,10 +506,16 @@ report the result, then move on.
   child-side descriptor on every substituted outcome, leaves fd5 with its
   separate lease owner and retains only the exact opaque native owner in a
   running session. Dependency-substituted tests only have exercised this
-  boundary: no native process, checkpoint, model or audio was opened. Concrete
-  owner observers, checkpoint-lease composition, post-run staging verification
-  and terminal evidence remain missing; source shape alone is not execution
-  provenance.
+  boundary. A new private lease bridge now runs under the lease lock,
+  cross-binds the native request's checkpoint hash/bytes/path and fixed worker,
+  mints the one-use admission internally and passes the retained fd5 only into
+  that guarded start stack frame. It returns no descriptor and leaves the
+  reservation active for later supervision and close. This bridge also has
+  dependency-substituted evidence only: no native process or accepted
+  checkpoint, model or audio was opened. Concrete live lease/start composition,
+  owner observers, post-run fd5 and staging verification, reservation/lease
+  closure and terminal evidence remain missing; source shape alone is not
+  execution provenance.
   The owner-bound process-image
   primitive is proven only with a fixed model-free worker; the active Kim route
   still uses its older PID-consuming observation path. The

@@ -1704,6 +1704,49 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-03 — native Kim fd5 lease handoff bound without opening the checkpoint
+
+- Goal: remove the raw checkpoint-descriptor gap between the existing live
+  lease and the guarded native start without exposing fd5 or treating the old
+  blocked worker record as execution authority.
+- Change or experiment: added one private lease-module bridge that runs under
+  the exact lease lock, revalidates the live reservation and observation,
+  cross-binds the Kim request's checkpoint hash, byte count and path to the
+  lease, cross-binds its worker hash to the measured native session, mints the
+  one-use session admission internally and passes the retained fd5 only to the
+  guarded start stack frame. A successful start deliberately leaves the exact
+  reservation and lease active for later supervision, post-run remeasurement,
+  release and close. Binding failures occur before transport ownership is
+  transferred to the guarded start.
+- Inputs: one small model-free regular-file descriptor, path-free frozen lease,
+  reservation, worker-request and session stand-ins, canonical Kim native
+  request values and substituted admission/start functions.
+- Model/runtime/checkpoint: dependency-substituted only. The accepted Kim
+  checkpoint was not opened, hashed, read or deserialized; no native process,
+  model, audio, source companion, network observer or staging artifact ran.
+- Evidence and metrics: eight new tests cover exact fd5 handoff, retained lease
+  ownership, checkpoint identity drift, blocked-worker binding drift, fixed
+  worker drift, checkpoint-path drift, wrong reservation and substituted
+  worker-request objects and incomplete binding evidence. All 29 focused
+  bridge/session/parent tests pass, and Ruff passes.
+- Listening result: not applicable; no audio was read or produced.
+- Decision: accept the lease handoff as a private non-exporting composition
+  boundary. It is still code wiring, not live lease execution provenance,
+  separator evidence or product authority.
+- Problems/risks: the bridge has not yet been exercised with one concrete live
+  lease and native owner. The two-phase process-image, network and executable-
+  region observers still need to be composed around readiness/release and
+  whole-group supervision; fd4 decode, independent staging verification,
+  post-run fd5 remeasurement, reservation release, lease close and one terminal
+  receipt remain outstanding. Source/companion evidence is carried by the Kim
+  request but is not yet independently rebound by this narrow checkpoint
+  bridge.
+- Next smallest step: build the model-free parent coordinator around this
+  bridge, separating live observer capture from post-reap sealing so the same
+  exact opaque owner can drive readiness, release, supervision, result decode,
+  staging verification and terminal projection without opening the accepted
+  checkpoint or authorised audio.
+
 ### 2026-08-03 — guarded native Kim start boundary exercised without a process
 
 - Goal: make the exact fixed C spawn method reachable only through the measured

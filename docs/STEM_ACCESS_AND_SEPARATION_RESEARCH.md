@@ -693,6 +693,19 @@ runtime-exec or worker-script path race at launch. The guarded call remeasures
 the bound files immediately before start and after exact reap, while retaining
 that truthful TOCTOU limitation.
 
+The next private composition increment adds the missing lease-to-start handoff.
+Only while holding the exact live checkpoint-lease lock, it revalidates the
+reservation and issued observation, cross-binds the native Kim request's
+checkpoint hash, byte count and path to that lease, binds the fixed worker to
+the measured native session, issues the one-use admission internally and
+passes the raw retained fd5 only into the guarded start stack frame. It returns
+the opaque owner, never the descriptor, and leaves the reservation active for
+the later post-run recheck, release and lease close. Its current evidence is
+dependency-substituted and model-free: the accepted checkpoint was not opened
+and no process, model, audio or observer ran. It therefore closes an API/wiring
+gap but does not yet prove a live lease/start composition or enable any
+separator route.
+
 The twenty-fourth S3 increment adds a distinct, process-free Result V2
 quarantine verifier. It first revalidates the exact historical request,
 blocked launch records, prepared V3 plan and complete Result V2, then observes

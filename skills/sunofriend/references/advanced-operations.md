@@ -1648,8 +1648,14 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   audio and is not the real Kim worker. The audited bridge can now statically
   inspect and tensor-load the exact checkpoint through an inherited
   non-inheritable read-only descriptor without reopening its path. This fd5
-  plumbing has synthetic unit evidence only and is not yet connected to the
-  real native worker.
+  plumbing has synthetic unit evidence only. A private lease-to-start bridge
+  now revalidates and cross-binds the reserved checkpoint, native request and
+  fixed worker while holding the live lease lock, then passes that retained fd5
+  only into the guarded start frame. It returns no descriptor and keeps the
+  reservation active for later remeasurement and close. This bridge also has
+  dependency-substituted evidence only: no accepted checkpoint, process, model
+  or audio was opened. Concrete observer, supervision, fd4 result, staging and
+  terminal composition remains outstanding.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory

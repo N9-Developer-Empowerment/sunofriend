@@ -768,6 +768,166 @@ def _execute_reserved_separation_fake_worker_darwin(
     )
 
 
+def _start_reserved_private_melroformer_native_worker_darwin(
+    trusted_lease: SeparationCheckpointDescriptorLease,
+    *,
+    trusted_reservation: _CheckpointDescriptorFD5Reservation,
+    trusted_worker_request_v2: SeparationWorkerRequestV2Record,
+    current_lease_observation: SeparationCheckpointDescriptorLeaseObservation,
+    trusted_native_session: Any,
+    native_session_observation: Any,
+    request: Mapping[str, Any],
+    staging_directory: str | os.PathLike[str],
+    request_read_descriptor: int,
+    result_write_descriptor: int,
+    ready_write_descriptor: int,
+    release_read_descriptor: int,
+) -> Any:
+    """Start the fixed native Kim worker while fd5 remains lease-owned.
+
+    This private bridge is the only place where the raw retained checkpoint
+    descriptor crosses from the live lease registry to the guarded native
+    start.  The descriptor never leaves this stack frame as a return value or
+    serialized field.  The exact reservation remains active after a successful
+    start so the later coordinator must supervise the owner, recheck fd5,
+    release the reservation and close the lease.
+
+    The four child-only transport descriptors transfer only when the guarded
+    start is invoked.  Binding failures before that call leave them with the
+    caller.  No public route imports this function.
+    """
+
+    from . import _separation_melroformer_native_session_darwin as native_session
+    from ._separation_melroformer_native_transport import (
+        _validate_private_melroformer_native_request,
+    )
+
+    checked_request = _validate_private_melroformer_native_request(request)
+    lease, state = _known_state(trusted_lease)
+    with state.lock:
+        _require_active_state_for_reservation(lease, state)
+        _require_owner(state)
+        _validate_state_authority(state)
+        _remeasure(state)
+        binding = state.fd5_reservation
+        if binding is None:
+            raise ValueError(
+                "checkpoint descriptor lease has no FD5 reservation"
+            )
+        _require_fd5_reservation_authority(
+            trusted_reservation,
+            binding,
+        )
+        if trusted_worker_request_v2 is not binding.worker_request_v2:
+            raise ValueError(
+                "private Kim native start must use the exact reserved request"
+            )
+        if (
+            current_lease_observation is not binding.lease_observation
+            or getattr(current_lease_observation, "_document", None)
+            is not state.observation_document
+        ):
+            raise ValueError(
+                "private Kim native start requires the exact lease observation"
+            )
+        descriptor = state.descriptor
+        if type(descriptor) is not int or descriptor < 3:
+            raise ValueError(
+                "checkpoint descriptor lease ownership is invalid"
+            )
+        checked_session_observation = (
+            native_session._validate_verified_private_melroformer_native_session_observation(
+                trusted_native_session,
+                native_session_observation,
+            )
+        )
+        _validate_private_melroformer_native_lease_bindings(
+            request=checked_request,
+            lease_observation=current_lease_observation,
+            inspection_request=state.request,
+            worker_request_v2=trusted_worker_request_v2,
+            native_session_observation=checked_session_observation,
+        )
+        admission = native_session._issue_private_melroformer_native_admission(
+            trusted_session=trusted_native_session,
+            session_observation=checked_session_observation,
+            request=checked_request,
+        )
+        return native_session._start_verified_private_melroformer_native_worker(
+            trusted_native_session,
+            session_observation=checked_session_observation,
+            trusted_admission=admission,
+            request=checked_request,
+            staging_directory=staging_directory,
+            request_read_descriptor=request_read_descriptor,
+            result_write_descriptor=result_write_descriptor,
+            checkpoint_read_descriptor=descriptor,
+            ready_write_descriptor=ready_write_descriptor,
+            release_read_descriptor=release_read_descriptor,
+        )
+
+
+def _validate_private_melroformer_native_lease_bindings(
+    *,
+    request: Mapping[str, Any],
+    lease_observation: Mapping[str, Any],
+    inspection_request: Any,
+    worker_request_v2: Mapping[str, Any],
+    native_session_observation: Mapping[str, Any],
+) -> None:
+    """Cross-bind the native request to the exact lease and fixed session."""
+
+    try:
+        native_document = _plain(request)
+        native_identities = native_document["identities"]
+        native_paths = native_document["paths"]
+        lease_document = _plain(lease_observation)
+        worker_document = _plain(worker_request_v2)
+        session_document = _plain(native_session_observation)
+        lease_bindings = lease_document["bindings"]
+        worker_bindings = worker_document["bindings"]
+        fixed_worker = session_document["bindings"]["fixed_kim_worker"]
+        inspection_checkpoint_path = inspection_request.checkpoint_path
+        expected_checkpoint = {
+            "sha256": lease_bindings["checkpoint_sha256"],
+            "bytes": lease_bindings["checkpoint_bytes"],
+        }
+        native_checkpoint = {
+            "sha256": native_identities["checkpoint_sha256"],
+            "bytes": native_identities["checkpoint_bytes"],
+        }
+        native_worker_sha256 = native_identities["worker_source_sha256"]
+        fixed_worker_sha256 = fixed_worker["sha256"]
+        native_checkpoint_path = native_paths["checkpoint_path"]
+    except (AttributeError, KeyError, TypeError) as exc:
+        raise ValueError(
+            "private Kim native lease binding evidence is incomplete"
+        ) from exc
+    if native_checkpoint != expected_checkpoint:
+        raise ValueError(
+            "private Kim native request does not bind the leased checkpoint"
+        )
+    if (
+        worker_bindings.get("lease_observation_sha256")
+        != lease_document.get("observation_sha256")
+        or worker_bindings.get("checkpoint_sha256")
+        != expected_checkpoint["sha256"]
+        or worker_bindings.get("checkpoint_bytes")
+        != expected_checkpoint["bytes"]
+    ):
+        raise ValueError(
+            "reserved worker request does not bind the leased checkpoint"
+        )
+    if native_worker_sha256 != fixed_worker_sha256:
+        raise ValueError(
+            "private Kim native request does not bind the fixed session worker"
+        )
+    if os.fspath(inspection_checkpoint_path) != native_checkpoint_path:
+        raise ValueError(
+            "private Kim native request checkpoint path differs from the lease"
+        )
+
+
 def _execute_reserved_fake_worker_under_lock(
     *,
     trusted_lease: SeparationCheckpointDescriptorLease,
