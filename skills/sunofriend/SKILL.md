@@ -155,8 +155,11 @@ report the result, then move on.
   measures the exact virtual-environment launcher separately from its resolved
   process image, and the coordinator passes its independently bound environment
   and base-runtime roots to post-run verification. This has portable and
-  trusted-local static-session evidence only. Disjoint no-start plus mixed-
-  failure receipts remain outstanding. The active authorised Kim evaluation
+  trusted-local static-session evidence only. The coordinator now emits one
+  inert path-free receipt for an exact code-owned no-child start and a different
+  receipt only after a started owner is completely drained and exactly reaped.
+  Both preserve safe ordered cleanup stage codes without exception text;
+  unproven start/reap has no receipt. The active authorised Kim evaluation
   route remains subprocess-based. This
   evidence does not enable
   native fake-launch V2, which remains

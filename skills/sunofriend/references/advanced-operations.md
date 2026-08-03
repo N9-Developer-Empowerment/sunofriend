@@ -1684,8 +1684,11 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   separately from the resolved process image; native `exec` receives the
   environment launcher and the staging verifier receives independently bound
   environment and base-runtime roots. This has portable and trusted-local
-  static-session evidence only. No-start plus mixed-failure receipts remain
-  outstanding. No separator route is enabled.
+  static-session evidence only. Exact code-owned no-child starts and started
+  owners that are completely drained and exactly reaped now have separate
+  inert path-free receipts. Both preserve ordered safe cleanup stage codes
+  without exception text; unproven start or incomplete reap has no receipt.
+  No separator route is enabled.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory

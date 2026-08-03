@@ -1704,6 +1704,46 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-03 — native failure receipts made disjoint, not run
+
+- Goal: make the fixed private Kim coordinator explain failure without
+  confusing a proved no-child start with a child that started and was later
+  exactly reaped, and without replacing the first error when cleanup also
+  fails.
+- Change or experiment: the guarded session now emits a terminal, path-free
+  no-start record only for the native launcher's exact code-owned setup or
+  `posix_spawn` result with a positive native status. The coordinator composes
+  that with the terminal checkpoint lease into a distinct inert receipt. A
+  second receipt covers only a started owner whose complete group was drained,
+  exactly reaped and released without ownership loss. Safe cleanup stage codes
+  are retained in observed order, including repeated child-descriptor cleanup;
+  exception text, native status number, PID, PGID and paths are excluded.
+  Unknown start state, incomplete session or lease terminalization, and
+  incomplete reap deliberately receive no receipt.
+- Inputs: dependency-substituted request, session, lease, owner, terminal and
+  cleanup evidence plus pure receipt fixtures. No native process, checkpoint,
+  model, source audio or output staging was opened.
+- Model/runtime/checkpoint: no backend import or inference occurred.
+- Evidence and metrics: 51 focused portable tests pass. They cover the two
+  non-interchangeable receipt types, self-hashes, path-free and inert policy,
+  rehashed tampering, unproven start, duplicate ordered cleanup, cleanup-only
+  failure labelling, release failure and a second handshake-cleanup failure
+  without loss of the primary error. The complete portable suite passes 2,945
+  tests with one expected skip, 11 trusted-local deselections and the existing
+  third-party `resampy`/`pkg_resources` warning. The trusted-local installed-AI-
+  runtime session check passes, as does the macOS unified-log observer when run
+  outside the Codex sandbox. Ruff passes.
+- Listening result: not applicable; this increment produced no audio.
+- Decision: keep both receipts private and non-authorising. Receipt presence
+  proves only the bounded failure lifecycle it records, never separator
+  quality or product readiness.
+- Problems/risks: the fixed real-worker coordinator still has no authorised
+  live model/audio execution evidence. Pathname-to-`exec` TOCTOU, incomplete
+  dyld shared-cache coverage and transient native loads remain open.
+- Next smallest step: run the broader native and complete portable gates, then
+  attempt one fresh authorised excerpt through the fixed coordinator under the
+  existing private evaluation boundary.
+
 ### 2026-08-03 — exact private AI virtual environment bound, not run
 
 - Goal: prevent the future native Kim worker from silently falling back from

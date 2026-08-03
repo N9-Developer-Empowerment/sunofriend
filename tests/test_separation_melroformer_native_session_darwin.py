@@ -104,6 +104,9 @@ def _registered_session():
         observation_object=observation,
         run_status="ready",
         native_owner=None,
+        no_start_stage=None,
+        no_start_native_status=None,
+        no_start_cleanup_stages=(),
     )
     with session._REGISTRY_LOCK:
         session._SESSIONS[trusted] = state
@@ -846,7 +849,7 @@ def test_guarded_start_rejects_exact_no_start_without_retaining_owner(
         request=request,
     )
     try:
-        with pytest.raises(RuntimeError, match="worker was not started"):
+        with pytest.raises(session._PrivateMelroformerNativeNoStart):
             session._start_verified_private_melroformer_native_worker(
                 trusted,
                 session_observation=observation,
@@ -861,6 +864,18 @@ def test_guarded_start_rejects_exact_no_start_without_retaining_owner(
             )
         assert state.run_status == "consumed_no_start"
         assert state.native_owner is None
+        receipt = session._finish_no_start_private_melroformer_native_session(
+            trusted
+        )
+        assert receipt["status"] == "no_child_started"
+        assert receipt["native_no_start_stage"] == "posix_spawn"
+        assert receipt["native_status_nonzero"] is True
+        assert receipt["process_started"] is False
+        assert receipt["paths_retained"] is False
+        assert state.run_status == "terminal"
+        assert state.no_start_native_status is None
+        with pytest.raises(ValueError, match="no-start state is invalid"):
+            session._finish_no_start_private_melroformer_native_session(trusted)
         with pytest.raises(RuntimeError, match="unavailable"):
             session._finish_private_melroformer_native_admission(
                 admission,
@@ -870,6 +885,51 @@ def test_guarded_start_rejects_exact_no_start_without_retaining_owner(
         _close_if_open(descriptors["checkpoint_read_descriptor"])
         for descriptor in descriptors["parent_descriptors"]:
             _close_if_open(descriptor)
+
+
+def test_no_start_terminal_receipt_preserves_safe_cleanup_stage_order(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    trusted, _observation, state = _registered_session()
+    state.run_status = "consumed_no_start"
+    state.no_start_stage = "attributes"
+    state.no_start_native_status = 22
+    state.no_start_cleanup_stages = (
+        "child_transport_descriptor_close",
+        "child_transport_descriptor_close",
+        "native_admission_finish",
+    )
+    monkeypatch.setattr(session, "_remeasure_state", lambda value: None)
+
+    receipt = session._finish_no_start_private_melroformer_native_session(
+        trusted
+    )
+
+    document = session._plain(receipt)
+    evidence_sha256 = document.pop("evidence_sha256")
+    assert receipt["status"] == "no_child_started_with_cleanup_failures"
+    assert [event["stage"] for event in receipt["cleanup"]] == [
+        "child_transport_descriptor_close",
+        "child_transport_descriptor_close",
+        "native_admission_finish",
+    ]
+    assert receipt["cleanup_count"] == 3
+    assert evidence_sha256 == session._canonical_sha256(document)
+    assert "/private/" not in repr(receipt)
+
+
+def test_no_start_terminal_receipt_rejects_unbounded_cleanup_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    trusted, _observation, state = _registered_session()
+    state.run_status = "consumed_no_start"
+    state.no_start_stage = "attributes"
+    state.no_start_native_status = 22
+    state.no_start_cleanup_stages = ("/private/exception-text",)
+    monkeypatch.setattr(session, "_remeasure_state", lambda value: None)
+
+    with pytest.raises(ValueError, match="no-start state is invalid"):
+        session._finish_no_start_private_melroformer_native_session(trusted)
 
 
 def test_module_has_one_guarded_spawn_call_and_no_product_route() -> None:

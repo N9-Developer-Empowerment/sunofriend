@@ -142,9 +142,13 @@ the unresolved environment launcher, while code-signature/process-image
 evidence still binds the resolved executable image. The post-run staging
 verifier now receives the two session-bound roots instead of deriving them
 from the parent interpreter. Portable tests and one trusted-local static
-session check pass; no checkpoint, model or audio was opened. Disjoint no-start
-and mixed cleanup-failure receipts remain the next boundary, and no product
-route is enabled.
+session check pass; no checkpoint, model or audio was opened. The coordinator
+now has two non-interchangeable, path-free failure receipts: one only for a
+code-owned no-child start, and one only for a started owner after complete
+group drain, exact reap and ownership release. Both preserve safe cleanup stage
+codes in observed order while excluding exception text, private paths and raw
+process identity; an unproven start or incomplete reap receives no receipt.
+No product route is enabled.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on

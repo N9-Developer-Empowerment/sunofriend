@@ -39,6 +39,10 @@ from ._separation_melroformer_native_model_free_adapter_darwin import (
     _supervise_owner,
     _terminal_cleanup_complete,
 )
+from ._separation_melroformer_native_failure_records import (
+    _build_no_start_coordinator_failure_receipt,
+    _build_started_coordinator_failure_receipt,
+)
 from ._separation_melroformer_native_staging import (
     _verify_private_melroformer_native_worker_staging,
 )
@@ -68,12 +72,23 @@ class _PrivateMelroformerNativeCoordinatorFailure(RuntimeError):
         *,
         primary_error: BaseException,
         terminal_cleanup_complete: bool,
+        receipt: Mapping[str, Any] | None = None,
         cleanup_stages: Sequence[str] = (),
         cleanup_errors: Sequence[BaseException] = (),
     ) -> None:
         super().__init__("private Kim native coordinator failed")
         self.primary_error = primary_error
         self.terminal_cleanup_complete = terminal_cleanup_complete
+        self.receipt = receipt
+        self.failure_kind = (
+            "unproven"
+            if receipt is None
+            else (
+                "no_start"
+                if receipt["process"]["state"] == "not_started"
+                else "started_exact_reap"
+            )
+        )
         self.cleanup_stages = tuple(cleanup_stages)
         self.cleanup_errors = tuple(cleanup_errors)
 
@@ -142,13 +157,18 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
     session_terminal: Mapping[str, Any] | None = None
     lease_terminal: Mapping[str, Any] | None = None
     worker_released = False
+    no_start = False
     primary_error: BaseException | None = None
+    primary_stage = "native_start"
     cleanup_stages: list[str] = []
     cleanup_errors: list[BaseException] = []
 
     try:
+        primary_stage = "network_observer_prepare"
         broker = _network_observer._prepare_owner_bound_network_observer()
+        primary_stage = "ready_handshake_prepare"
         handshake = _ready_handshake._prepare_worker_ready_handshake()
+        primary_stage = "native_start"
         native_owner = _lease._start_reserved_private_melroformer_native_worker_darwin(
             trusted_lease,
             trusted_reservation=trusted_reservation,
@@ -163,14 +183,17 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
             ready_write_descriptor=handshake.ready_write_fd,
             release_read_descriptor=handshake.release_read_fd,
         )
+        primary_stage = "owner_binding"
         _session._known_started_private_melroformer_native_owner(
             trusted_native_session,
             native_owner,
         )
+        primary_stage = "ready_handshake"
         readiness = _ready_handshake._read_worker_ready_handshake(
             handshake,
             timeout_seconds=_READY_TIMEOUT_SECONDS,
         )
+        primary_stage = "process_image_observation"
         process_observation = native_owner.observe_owned_process_image(
             os.fsencode(process_binding.runtime_launcher_path),
             os.fsencode(process_binding.process_image_path),
@@ -181,6 +204,7 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
             "path_state": "matched_expected_process_image",
         }:
             raise RuntimeError("private Kim process-image observation differs")
+        primary_stage = "executable_snapshot"
         first_regions = _loaded_images._enumerate_owned_executable_regions(
             native_owner
         )
@@ -201,19 +225,28 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
             regions=tuple(second_regions),
             measured=tuple(mapped_files),
         )
+        primary_stage = "worker_release"
         _ready_handshake._release_worker_ready_handshake(handshake)
         worker_released = True
+        primary_stage = "result_read"
         result = _read_bounded_result_frame(
             result_read_descriptor,
             request=checked_request,
             timeout_seconds=_RESULT_TIMEOUT_SECONDS,
         )
+        primary_stage = "network_observer_finish"
         network_observation = broker.finish(native_owner=native_owner)
+        primary_stage = "native_supervision"
         terminal = _supervise_owner(
             native_owner,
             timeout_seconds=_SUPERVISION_TIMEOUT_SECONDS,
         )
+        primary_stage = "terminal_validation"
         _require_successful_terminal(terminal)
+    except _session._PrivateMelroformerNativeNoStart as error:
+        no_start = True
+        primary_stage = "native_no_start"
+        primary_error = error
     except BaseException as error:
         primary_error = error
     finally:
@@ -224,7 +257,11 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
         ):
             _close_if_open(descriptor)
         if handshake is not None:
-            _ready_handshake._abort_worker_ready_handshake(handshake)
+            try:
+                _ready_handshake._abort_worker_ready_handshake(handshake)
+            except BaseException as error:
+                cleanup_stages.append("ready_handshake_abort")
+                cleanup_errors.append(error)
         if broker is not None and not broker.consumed:
             try:
                 if native_owner is not None and worker_released:
@@ -242,6 +279,7 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
                 cleanup_errors.append(error)
 
     if primary_error is None and cleanup_errors:
+        primary_stage = "terminal_cleanup"
         primary_error = RuntimeError(
             "private Kim live-parent cleanup was incomplete"
         )
@@ -259,12 +297,14 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
                 )
             ):
                 raise RuntimeError("private Kim live evidence is incomplete")
+            primary_stage = "process_image_completion"
             runtime_process_image = (
                 _process_image._complete_runtime_process_image_binding(
                     prepared=process_binding,
                     observed=process_observation,
                 )
             )
+            primary_stage = "native_image_completion"
             native_image_evidence = (
                 _worker_images._complete_macos_worker_native_image_observation(
                     observed=observed_native_images,
@@ -272,6 +312,7 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
                     child=result["child_result"],
                 )
             )
+            primary_stage = "staging_verification"
             staging_verification = (
                 _verify_private_melroformer_native_worker_staging(
                     request=checked_request,
@@ -282,6 +323,7 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
                     base_runtime_root=session_state.base_runtime_root,
                 )
             )
+            primary_stage = "checkpoint_remeasurement"
             post_run_lease_observation = (
                 _lease.recheck_separation_checkpoint_descriptor_lease(
                     trusted_lease
@@ -297,6 +339,7 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
                 post_run_lease_observation=post_run_lease_observation,
             )
             private_identity = result["private_process_identity"]
+            primary_stage = "terminal_projection"
             terminal_projection = _derive_native_terminal_projection(
                 native_owner=native_owner,
                 expected_owner_type=expected_owner_type,
@@ -311,7 +354,20 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
         except BaseException as error:
             primary_error = error
 
-    if native_owner is not None and terminal is not None:
+    if no_start:
+        try:
+            session_terminal = (
+                _session._finish_no_start_private_melroformer_native_session(
+                    trusted_native_session
+                )
+            )
+            cleanup_stages.extend(
+                event["stage"] for event in session_terminal["cleanup"]
+            )
+        except BaseException as error:
+            cleanup_stages.append("native_session_terminal")
+            cleanup_errors.append(error)
+    elif native_owner is not None and terminal is not None:
         try:
             if _normal_terminal(terminal):
                 session_terminal = (
@@ -349,17 +405,41 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
         lease_terminal = getattr(error, "receipt", None)
 
     cleanup_complete = bool(
-        _terminal_cleanup_complete(terminal)
-        and session_terminal is not None
+        session_terminal is not None
         and lease_terminal is not None
+        and (no_start or _terminal_cleanup_complete(terminal))
+        and (
+            not no_start
+            or session_terminal.get("cleanup_count") == 0
+        )
+        and _lease_terminal_cleanup_complete(lease_terminal)
     )
     if primary_error is not None or cleanup_errors:
+        if primary_error is None:
+            primary_stage = "terminal_cleanup"
         error = primary_error or RuntimeError(
             "private Kim coordinator terminal cleanup was incomplete"
         )
+        try:
+            receipt = _failure_receipt(
+                request=checked_request,
+                primary_stage=primary_stage,
+                no_start=no_start,
+                native_owner=native_owner,
+                terminal=terminal,
+                result=result,
+                session_terminal=session_terminal,
+                lease_terminal=lease_terminal,
+                cleanup_stages=cleanup_stages,
+            )
+        except BaseException as receipt_error:
+            cleanup_stages.append("failure_receipt_seal")
+            cleanup_errors.append(receipt_error)
+            receipt = None
         raise _PrivateMelroformerNativeCoordinatorFailure(
             primary_error=error,
             terminal_cleanup_complete=cleanup_complete,
+            receipt=receipt,
             cleanup_stages=cleanup_stages,
             cleanup_errors=cleanup_errors,
         ) from error
@@ -378,9 +458,24 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
         )
     ):
         error = RuntimeError("private Kim terminal evidence is incomplete")
+        try:
+            receipt = _failure_receipt(
+                request=checked_request,
+                primary_stage="terminal_evidence",
+                no_start=False,
+                native_owner=native_owner,
+                terminal=terminal,
+                result=result,
+                session_terminal=session_terminal,
+                lease_terminal=lease_terminal,
+                cleanup_stages=cleanup_stages,
+            )
+        except BaseException:
+            receipt = None
         raise _PrivateMelroformerNativeCoordinatorFailure(
             primary_error=error,
             terminal_cleanup_complete=cleanup_complete,
+            receipt=receipt,
         ) from error
     return _build_terminal_receipt(
         request=checked_request,
@@ -518,7 +613,7 @@ def _build_terminal_receipt(
         },
         "limitations": [
             "receipt_is_execution_provenance_not_separator_quality_evidence",
-            "nonnormal_and_no_start_failure_receipts_remain_separate_work",
+            "unproven_start_or_incomplete_reap_has_no_failure_receipt",
             "dyld_shared_cache_and_transient_load_coverage_remain_incomplete",
             "no_public_cli_tui_simple_studio_or_source_graph_route",
         ],
@@ -540,6 +635,61 @@ def _build_terminal_receipt(
     ):
         raise RuntimeError("private Kim coordinator receipt retained private data")
     return _freeze(document)
+
+
+def _failure_receipt(
+    *,
+    request: Mapping[str, Any],
+    primary_stage: str,
+    no_start: bool,
+    native_owner: Any | None,
+    terminal: Mapping[str, Any] | None,
+    result: Mapping[str, Any] | None,
+    session_terminal: Mapping[str, Any] | None,
+    lease_terminal: Mapping[str, Any] | None,
+    cleanup_stages: Sequence[str],
+) -> Mapping[str, Any] | None:
+    """Seal only a proved no-start or completely reaped started failure."""
+
+    if session_terminal is None or lease_terminal is None:
+        return None
+    session_sha256 = _evidence_digest(session_terminal, "session terminal")
+    lease_sha256 = _evidence_digest(lease_terminal, "checkpoint lease terminal")
+    if no_start:
+        if (
+            native_owner is not None
+            or terminal is not None
+            or session_terminal.get("process_started") is not False
+        ):
+            return None
+        return _build_no_start_coordinator_failure_receipt(
+            request_sha256=request["request_sha256"],
+            native_session_terminal_sha256=session_sha256,
+            checkpoint_lease_terminal_sha256=lease_sha256,
+            native_no_start_stage=session_terminal["native_no_start_stage"],
+            cleanup_stages=cleanup_stages,
+        )
+    if (
+        native_owner is None
+        or terminal is None
+        or not _terminal_cleanup_complete(terminal)
+    ):
+        return None
+    return _build_started_coordinator_failure_receipt(
+        request_sha256=request["request_sha256"],
+        native_session_terminal_sha256=session_sha256,
+        checkpoint_lease_terminal_sha256=lease_sha256,
+        primary_stage=primary_stage,
+        terminal_kind=(
+            "normal_exit_after_evidence_failure"
+            if _normal_terminal(terminal)
+            else "failed_exit_exact_reap"
+        ),
+        worker_result_sha256=(
+            None if result is None else result["result_sha256"]
+        ),
+        cleanup_stages=cleanup_stages,
+    )
 
 
 def _evidence_digest(value: Mapping[str, Any], label: str) -> str:
@@ -575,6 +725,13 @@ def _normal_terminal(value: Mapping[str, Any]) -> bool:
         "ownership_released": True,
         "ownership_lost": False,
     }
+
+
+def _lease_terminal_cleanup_complete(value: Mapping[str, Any]) -> bool:
+    try:
+        return value["cleanup"]["status"] == "complete"
+    except (KeyError, TypeError):
+        return False
 
 
 def _close_if_open(descriptor: int) -> None:

@@ -50,6 +50,12 @@ _SANDBOX_PROVIDER_PATH = Path("/usr/bin/sandbox-exec")
 _MAXIMUM_WORKER_BYTES = 1_048_576
 _MAXIMUM_PROVIDER_BYTES = 8_388_608
 _MAXIMUM_USED_NONCES = 1_024
+_NO_START_CLEANUP_STAGES = frozenset(
+    {
+        "child_transport_descriptor_close",
+        "native_admission_finish",
+    }
+)
 _REGISTRY_LOCK = threading.RLock()
 _USED_NONCES: set[str] = set()
 
@@ -116,6 +122,13 @@ class _PrivateMelroformerNativeAdmission:
         raise TypeError("private Kim native admissions cannot be serialized")
 
 
+class _PrivateMelroformerNativeNoStart(RuntimeError):
+    """Code-owned signal that the fixed native launcher created no child."""
+
+    def __init__(self) -> None:
+        super().__init__("private Kim native worker was not started")
+
+
 @dataclass
 class _SessionState:
     lock: Any
@@ -137,6 +150,9 @@ class _SessionState:
     observation_object: _VerifiedPrivateMelroformerNativeSessionObservation
     run_status: str
     native_owner: Any | None
+    no_start_stage: str | None
+    no_start_native_status: int | None
+    no_start_cleanup_stages: tuple[str, ...]
 
 
 @dataclass
@@ -278,6 +294,9 @@ def _open_verified_private_melroformer_native_session(
         observation_object=observation,
         run_status="ready",
         native_owner=None,
+        no_start_stage=None,
+        no_start_native_status=None,
+        no_start_cleanup_stages=(),
     )
     with _REGISTRY_LOCK:
         _SESSIONS[session] = state
@@ -511,7 +530,7 @@ def _start_verified_private_melroformer_native_worker(
                 ready_write_descriptor,
                 release_read_descriptor,
             )
-            start_state, _no_start_stage, _native_status = (
+            start_state, no_start_stage, native_status = (
                 _base._validate_native_start_outcome(
                     native_owner,
                     expected_owner_type=state.owner_type,
@@ -519,7 +538,9 @@ def _start_verified_private_melroformer_native_worker(
             )
             if start_state != "started_owned":
                 state.run_status = "consumed_no_start"
-                raise RuntimeError("private Kim native worker was not started")
+                state.no_start_stage = no_start_stage
+                state.no_start_native_status = native_status
+                raise _PrivateMelroformerNativeNoStart()
             if _staging_identity(
                 _measure_private_staging_directory(
                     staging_directory,
@@ -568,6 +589,15 @@ def _start_verified_private_melroformer_native_worker(
         native_owner = None
         if cleanup_failures:
             detail = ", ".join(label for label, _error in cleanup_failures)
+            if (
+                state is not None
+                and isinstance(primary_error, _PrivateMelroformerNativeNoStart)
+            ):
+                with state.lock:
+                    state.no_start_cleanup_stages = tuple(
+                        label for label, _error in cleanup_failures
+                    )
+                raise _PrivateMelroformerNativeNoStart() from primary_error
             raise RuntimeError(
                 f"private Kim native start failed; cleanup: {detail}"
             ) from primary_error
@@ -608,6 +638,73 @@ def _known_started_private_melroformer_native_owner(
         ):
             raise ValueError("private Kim native owner is not the active owner")
         return value
+
+
+def _finish_no_start_private_melroformer_native_session(
+    trusted_session: _VerifiedPrivateMelroformerNativeSession,
+) -> Mapping[str, Any]:
+    """Terminalize one exact code-owned attempt that created no child."""
+
+    _session, state = _known_session(trusted_session)
+    with state.lock:
+        _require_owner(state)
+        if (
+            state.run_status != "consumed_no_start"
+            or state.native_owner is not None
+            or state.no_start_stage not in _base._NO_START_STAGES
+            or type(state.no_start_native_status) is not int
+            or state.no_start_native_status <= 0
+            or len(state.no_start_cleanup_stages) > 16
+            or any(
+                stage not in _NO_START_CLEANUP_STAGES
+                for stage in state.no_start_cleanup_stages
+            )
+        ):
+            raise ValueError("private Kim native no-start state is invalid")
+        _remeasure_state(state)
+        cleanup = [
+            {
+                "ordinal": ordinal,
+                "stage": stage,
+                "reason_code": f"{stage}_failed",
+            }
+            for ordinal, stage in enumerate(state.no_start_cleanup_stages)
+        ]
+        payload = {
+            "schema": "sunofriend.private-melroformer-native-session-no-start.v1",
+            "policy_id": "private-kim-native-session-no-start-v1",
+            "status": (
+                "no_child_started_with_cleanup_failures"
+                if cleanup
+                else "no_child_started"
+            ),
+            "session_observation_sha256": state.observation_document[
+                "observation_sha256"
+            ],
+            "native_no_start_stage": state.no_start_stage,
+            "native_status_nonzero": True,
+            "process_started": False,
+            "wait_attempted": False,
+            "signal_attempted": False,
+            "session_bindings_remeasured_after_attempt": True,
+            "cleanup": cleanup,
+            "cleanup_count": len(cleanup),
+            "paths_retained": False,
+            "permissions": {
+                "automatic_selection_permitted": False,
+                "product_route_permitted": False,
+                "publication_permitted": False,
+            },
+        }
+        receipt = _freeze(
+            {
+                **payload,
+                "evidence_sha256": _canonical_sha256(payload),
+            }
+        )
+        state.run_status = "terminal"
+        state.no_start_native_status = None
+        return receipt
 
 
 def _finish_started_private_melroformer_native_session(
