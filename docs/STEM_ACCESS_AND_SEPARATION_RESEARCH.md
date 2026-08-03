@@ -185,7 +185,15 @@ a 14-note primary MIDI that is byte-identical to both earlier Kim observations
 Kim-versus-Moises review therefore already covers the audible MIDI and resolved
 it as `equivalent`; generating a visually different duplicate review would add
 no evidence. This establishes exact downstream parity for one excerpt, not
-separator acceptance, and no product permission changed.
+separator acceptance, and no product permission changed. A fresh timed repeat
+then completed through verified output evidence in 11.868113 monotonic seconds:
+10.270401 seconds were inside the coarse native one-shot, 1.175781 seconds in
+session setup and every other outer stage below 0.21 seconds. The timing receipt
+stores no paths, PIDs, timestamps or wall-clock values and explicitly rejects a
+benchmark claim. Its one-shot span still combines model work with transport,
+observation, verification and terminal cleanup, so finer profiling would need a
+new security-preserving inner boundary. The repeat changed PCM24 stem samples
+by at most one LSB and again yielded the same byte-identical primary MIDI.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on

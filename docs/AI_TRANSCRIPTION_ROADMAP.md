@@ -1704,6 +1704,47 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-03 — coarse native timing bound without benchmark claims
+
+- Goal: locate the large outer runtime variation without adding paths, process
+  identity, wall-clock timestamps or a profiler inside the fixed native trust
+  boundary.
+- Change or experiment: successful private native attempts now write a third
+  owner-only, self-hashed timing document bound to the canonical request,
+  terminal receipt and output evidence. Eight ordered outer stages use
+  monotonic elapsed seconds. All benchmark, performance-acceptance, selection,
+  source-graph, product and publication permissions remain false.
+- Inputs: one fresh GPU repeat of the same authorised `Be Alone` 191–206-second
+  excerpt, followed by the unchanged four-control vocal-MIDI evaluator.
+- Model/runtime/checkpoint: exact fixed macOS native Kim Vocal 2 chain and the
+  same 456,483,463-byte checkpoint; no model, source or settings change.
+- Evidence and metrics: total observed time through output evidence was
+  11.868113 seconds. `native_one_shot` took 10.270401 seconds, session open
+  1.175781, checkpoint lease acquisition 0.208044, fd5 reservation 0.190611,
+  input measurement 0.017047, output evidence persistence 0.004620, terminal
+  receipt persistence 0.000871 and attempt-tree creation 0.000254 seconds.
+  Timing self-hash:
+  `78ff396e17c7b8ea363cdebd3c9a66757129c1df4216e506efbce47020ebf3bd`;
+  file SHA-256:
+  `96edb37a93f5a84bda00d950d4a6f2bc070ddb5aaea6913c3c735800e08d634d`.
+  Relative to v2, each v3 role differed in no sample by more than one PCM24
+  LSB. The unchanged evaluator again produced the exact 14-note primary MIDI
+  SHA-256
+  `65111b1dadbc9daaa7ea015a542a256510bd1b8f3ecbb88a36f55dc63dd5dcc1`.
+- Listening result: no new human review is required because the primary MIDI
+  remains byte-identical to the already reviewed `Be Alone` candidate.
+- Decision: coarse timing is sufficient to show that outer setup, lease and
+  persistence are not the latency bottleneck in this run. Preserve the entire
+  observation as non-benchmark evidence and do not infer stable throughput
+  from one warm/cached execution.
+- Problems/risks: `native_one_shot` intentionally combines transport, spawn,
+  model load/inference, live observers, staging verification and cleanup. It
+  does not yet distinguish those inner costs, and scheduler/cache/thermal state
+  is uncontrolled.
+- Next smallest step: repeat the complete execution-to-MIDI gate on one
+  disjoint authorised song. Add an inner timing boundary only if that repeat
+  shows a product-relevant latency problem that coarse timing cannot explain.
+
 ### 2026-08-03 — fixed native Kim output bound to unchanged MIDI evidence
 
 - Goal: carry the clean native Kim result into the already established private

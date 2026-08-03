@@ -10,9 +10,11 @@ from every public CLI, TUI, Simple, Studio and source-graph route.
 from __future__ import annotations
 
 import hashlib
+import math
 import os
 import platform
 import stat
+import time
 import wave
 from pathlib import Path
 from typing import Any, Mapping
@@ -56,6 +58,18 @@ _NATIVE_CACHE_NAME = "native-cache"
 _RECEIPT_NAME = "native-attempt-receipt.json"
 _EVIDENCE_NAME = "native-attempt-evidence.json"
 _EVIDENCE_SCHEMA = "sunofriend.private-kim-native-attempt-evidence.v1"
+_TIMING_NAME = "native-attempt-timing.json"
+_TIMING_SCHEMA = "sunofriend.private-kim-native-attempt-timing.v1"
+_TIMING_STAGES = (
+    "input_measurement",
+    "attempt_tree_creation",
+    "native_session_open",
+    "checkpoint_lease_acquire",
+    "checkpoint_fd5_reserve",
+    "native_one_shot",
+    "terminal_receipt_persistence",
+    "output_evidence_persistence",
+)
 _MAXIMUM_WORKER_BYTES = 1024 * 1024
 _MAXIMUM_AUTHORISATION_REPORT_BYTES = 2 * 1024 * 1024
 _MAXIMUM_RECEIPT_BYTES = 2 * 1024 * 1024
@@ -94,6 +108,8 @@ def _run_private_melroformer_native_attempt_darwin(
 
     if platform.system() != "Darwin":
         raise RuntimeError("private Kim native attempt requires macOS")
+    attempt_started = time.monotonic()
+    stage_seconds: dict[str, float] = {}
     attempt = Path(attempt_directory)
     if not attempt.is_absolute() or attempt.name in {"", ".", ".."}:
         raise ValueError("private Kim attempt path must be absolute and fresh")
@@ -102,19 +118,27 @@ def _run_private_melroformer_native_attempt_darwin(
         raise ValueError("private Kim attempt path must not exist")
 
     staging = attempt / _STAGING_NAME
-    runtime, request = _prepare_private_melroformer_native_request(
-        run_nonce=run_nonce,
-        repository_root=repository_root,
-        runtime_launcher_path=runtime_launcher_path,
-        source_root=source_root,
-        checkpoint_path=checkpoint_path,
-        companion_root=companion_root,
-        authorisation_report_path=authorisation_report_path,
-        authorisation_report_sha256=authorisation_report_sha256,
-        staging_directory=staging,
-        device=device,
+    runtime, request = _observe_stage(
+        stage_seconds,
+        "input_measurement",
+        lambda: _prepare_private_melroformer_native_request(
+            run_nonce=run_nonce,
+            repository_root=repository_root,
+            runtime_launcher_path=runtime_launcher_path,
+            source_root=source_root,
+            checkpoint_path=checkpoint_path,
+            companion_root=companion_root,
+            authorisation_report_path=authorisation_report_path,
+            authorisation_report_sha256=authorisation_report_sha256,
+            staging_directory=staging,
+            device=device,
+        ),
     )
-    _create_attempt_tree(parent, attempt.name)
+    _observe_stage(
+        stage_seconds,
+        "attempt_tree_creation",
+        lambda: _create_attempt_tree(parent, attempt.name),
+    )
 
     trusted_lease: Any | None = None
     reservation: Any | None = None
@@ -124,30 +148,62 @@ def _run_private_melroformer_native_attempt_darwin(
     cleanup_stages: list[str] = []
     cleanup_errors: list[BaseException] = []
     try:
-        native_session, native_observation = (
-            _session._open_verified_private_melroformer_native_session(
+        native_session, native_observation = _observe_stage(
+            stage_seconds,
+            "native_session_open",
+            lambda: _session._open_verified_private_melroformer_native_session(
                 runtime_launcher_path=runtime,
                 cache_root=attempt / _NATIVE_CACHE_NAME,
-            )
+            ),
         )
-        trusted_lease, lease_observation = (
-            _lease._acquire_private_melroformer_checkpoint_lease(request)
+        trusted_lease, lease_observation = _observe_stage(
+            stage_seconds,
+            "checkpoint_lease_acquire",
+            lambda: _lease._acquire_private_melroformer_checkpoint_lease(request),
         )
-        reservation = _lease._reserve_private_melroformer_checkpoint_fd5(
-            trusted_lease,
-            current_lease_observation=lease_observation,
+        reservation = _observe_stage(
+            stage_seconds,
+            "checkpoint_fd5_reserve",
+            lambda: _lease._reserve_private_melroformer_checkpoint_fd5(
+                trusted_lease,
+                current_lease_observation=lease_observation,
+            ),
         )
-        receipt = _run_reserved_private_melroformer_native_one_shot_darwin(
-            trusted_lease,
-            trusted_reservation=reservation,
-            current_lease_observation=lease_observation,
-            trusted_native_session=native_session,
-            native_session_observation=native_observation,
+        receipt = _observe_stage(
+            stage_seconds,
+            "native_one_shot",
+            lambda: _run_reserved_private_melroformer_native_one_shot_darwin(
+                trusted_lease,
+                trusted_reservation=reservation,
+                current_lease_observation=lease_observation,
+                trusted_native_session=native_session,
+                native_session_observation=native_observation,
+                request=request,
+                transport_directory=attempt / _TRANSPORT_NAME,
+            ),
+        )
+        _observe_stage(
+            stage_seconds,
+            "terminal_receipt_persistence",
+            lambda: _write_attempt_receipt(attempt, receipt),
+        )
+        evidence = _observe_stage(
+            stage_seconds,
+            "output_evidence_persistence",
+            lambda: _write_attempt_evidence(
+                attempt,
+                request=request,
+                receipt=receipt,
+            ),
+        )
+        _write_attempt_timing(
+            attempt,
             request=request,
-            transport_directory=attempt / _TRANSPORT_NAME,
+            receipt=receipt,
+            evidence=evidence,
+            stage_seconds=stage_seconds,
+            observed_total_seconds=_elapsed_seconds(attempt_started),
         )
-        _write_attempt_receipt(attempt, receipt)
-        _write_attempt_evidence(attempt, request=request, receipt=receipt)
     except BaseException as error:
         primary_error = error
     if primary_error is not None:
@@ -169,6 +225,26 @@ def _run_private_melroformer_native_attempt_darwin(
     if receipt is None:
         raise RuntimeError("private Kim native attempt returned no receipt")
     return receipt
+
+
+def _observe_stage(
+    stages: dict[str, float],
+    name: str,
+    action: Any,
+) -> Any:
+    if name not in _TIMING_STAGES or name in stages:
+        raise ValueError("private Kim timing stage differs")
+    started = time.monotonic()
+    result = action()
+    stages[name] = _elapsed_seconds(started)
+    return result
+
+
+def _elapsed_seconds(started: float) -> float:
+    elapsed = time.monotonic() - started
+    if not math.isfinite(elapsed) or not 0.0 <= elapsed <= 3_600.0:
+        raise ValueError("private Kim timing observation differs")
+    return round(elapsed, 6)
 
 
 def _prepare_private_melroformer_native_request(
@@ -535,6 +611,107 @@ def _inspect_attempt_pcm24(attempt: Path, *, role: str) -> Mapping[str, Any]:
         "sha256": hashlib.sha256(contents).hexdigest(),
         "geometry": geometry,
     }
+
+
+def _write_attempt_timing(
+    attempt: Path,
+    *,
+    request: Mapping[str, Any],
+    receipt: Mapping[str, Any],
+    evidence: Mapping[str, Any],
+    stage_seconds: Mapping[str, float],
+    observed_total_seconds: float,
+) -> Mapping[str, Any]:
+    if tuple(stage_seconds) != _TIMING_STAGES:
+        raise ValueError("private Kim timing stage order differs")
+    checked_stages = {
+        name: _checked_timing_value(value) for name, value in stage_seconds.items()
+    }
+    total = _checked_timing_value(observed_total_seconds)
+    if total + 0.000010 < sum(checked_stages.values()):
+        raise ValueError("private Kim timing total differs")
+    receipt_sha256 = receipt.get("receipt_sha256")
+    evidence_sha256 = evidence.get("evidence_sha256")
+    if (
+        not _is_sha256(receipt_sha256)
+        or not _is_sha256(evidence_sha256)
+        or receipt.get("request_sha256") != request["request_sha256"]
+        or evidence.get("bindings", {}).get("request_sha256")
+        != request["request_sha256"]
+        or evidence.get("bindings", {}).get("terminal_receipt_sha256")
+        != receipt_sha256
+    ):
+        raise ValueError("private Kim timing bindings differ")
+    longest_stage = max(_TIMING_STAGES, key=checked_stages.__getitem__)
+    payload = {
+        "schema": _TIMING_SCHEMA,
+        "status": "private_runtime_observation_not_benchmark",
+        "evidence_scope": "private_local_coarse_stage_timing_only",
+        "bindings": {
+            "request_sha256": request["request_sha256"],
+            "terminal_receipt_sha256": receipt_sha256,
+            "output_evidence_sha256": evidence_sha256,
+        },
+        "clock": {
+            "source": "time.monotonic",
+            "wall_clock_recorded": False,
+            "timestamps_recorded": False,
+        },
+        "stage_order": list(_TIMING_STAGES),
+        "stage_seconds": checked_stages,
+        "observed_total_through_output_evidence_seconds": total,
+        "longest_stage": {
+            "name": longest_stage,
+            "seconds": checked_stages[longest_stage],
+        },
+        "semantics": {
+            "native_one_shot": (
+                "transport, native spawn, model inference, live observation, "
+                "staging verification and terminal cleanup"
+            ),
+            "timing_document_write_included": False,
+            "stages_are_coarse_not_profiler_spans": True,
+        },
+        "permissions": {
+            "benchmark_claim": False,
+            "performance_acceptance": False,
+            "automatic_selection": False,
+            "source_graph_activation": False,
+            "product_route_permitted": False,
+            "publication_permitted": False,
+        },
+        "limitations": [
+            "one_run_is_not_a_runtime_benchmark",
+            "coarse_stage_timing_does_not_split_model_load_from_inference",
+            "scheduler_cache_and_thermal_state_are_not_controlled",
+            "no_paths_pids_wall_clock_or_process_identity_are_recorded",
+        ],
+    }
+    document = {
+        **payload,
+        "timing_sha256": hashlib.sha256(_canonical_json(payload)).hexdigest(),
+    }
+    _write_private_json(attempt, _TIMING_NAME, document)
+    return document
+
+
+def _checked_timing_value(value: object) -> float:
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not math.isfinite(float(value))
+        or not 0.0 <= float(value) <= 3_600.0
+    ):
+        raise ValueError("private Kim timing value differs")
+    return round(float(value), 6)
+
+
+def _is_sha256(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
 
 
 def _write_private_json(

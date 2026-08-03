@@ -417,9 +417,24 @@ the report file hashes to
 No duplicate blind review is required because the audition MIDI is unchanged;
 the existing `Be Alone` Kim-versus-Moises review already resolved this MIDI as
 `equivalent`. This proves downstream parity for the exact excerpt, not score
-truth or separator acceptance. Bounded path-free stage timing and broader
-cross-song listening remain; total wall time was much longer than the earlier
-isolated inference measurement.
+truth or separator acceptance.
+
+A separate coarse timing receipt is now part of each successful fresh attempt.
+It uses `time.monotonic`, records elapsed durations rather than timestamps and
+contains no path, PID, process identity or wall-clock field. The first timed
+v3 repeat completed through output evidence in 11.868113 seconds. The native
+one-shot was the longest stage at 10.270401 seconds; session opening took
+1.175781 seconds, checkpoint lease acquisition 0.208044 seconds, fd5
+reservation 0.190611 seconds, input measurement 0.017047 seconds and every
+remaining persistence/tree stage under 0.005 seconds. The receipt self-hashes
+to `78ff396e17c7b8ea363cdebd3c9a66757129c1df4216e506efbce47020ebf3bd`.
+This is one coarse runtime observation, not a benchmark: the one-shot still
+combines transport, spawn, model load/inference, observers, staging checks and
+terminal cleanup. The v3 stems differ from v2 by at most one PCM24 LSB, but the
+unchanged downstream evaluator again produced byte-identical primary MIDI
+`65111b1dadbc9daaa7ea015a542a256510bd1b8f3ecbb88a36f55dc63dd5dcc1`.
+Broader cross-song execution and listening remain before any integration
+decision.
 
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \

@@ -182,6 +182,21 @@ def test_private_native_attempt_composes_exact_authorities(
         "vocals",
     ]
     assert all(value is False for value in evidence["permissions"].values())
+    timing_path = fixture["attempt"] / "native-attempt-timing.json"
+    timing = json.loads(timing_path.read_bytes())
+    assert timing["status"] == "private_runtime_observation_not_benchmark"
+    assert timing["stage_order"] == list(attempt_module._TIMING_STAGES)
+    assert set(timing["stage_seconds"]) == set(attempt_module._TIMING_STAGES)
+    assert timing["clock"] == {
+        "source": "time.monotonic",
+        "timestamps_recorded": False,
+        "wall_clock_recorded": False,
+    }
+    assert timing["bindings"]["terminal_receipt_sha256"] == receipt_holder[0][
+        "receipt_sha256"
+    ]
+    assert all(value is False for value in timing["permissions"].values())
+    assert stat.S_IMODE(timing_path.stat().st_mode) == 0o600
 
 
 def test_private_native_attempt_releases_pre_coordinator_authority_on_failure(
@@ -234,6 +249,13 @@ def test_private_native_attempt_releases_pre_coordinator_authority_on_failure(
     assert caught.value.cleanup_stages == ()
     assert caught.value.cleanup_errors == ()
     assert calls == ["terminalize"]
+    assert not (fixture["attempt"] / "native-attempt-timing.json").exists()
+
+
+@pytest.mark.parametrize("value", [True, -0.1, float("nan"), 3_600.1])
+def test_private_native_attempt_rejects_invalid_timing_values(value: object) -> None:
+    with pytest.raises(ValueError, match="timing value differs"):
+        attempt_module._checked_timing_value(value)
 
 
 def test_private_native_attempt_requires_fresh_path_before_authority(
@@ -299,6 +321,11 @@ def test_real_private_assets_compose_to_the_one_shot_boundary(
     monkeypatch.setattr(
         attempt_module,
         "_write_attempt_evidence",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        attempt_module,
+        "_write_attempt_timing",
         lambda *_args, **_kwargs: None,
     )
 

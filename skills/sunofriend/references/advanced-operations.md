@@ -1715,8 +1715,14 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   The existing blind `Be Alone` Kim-versus-Moises review therefore already
   covers it and resolved to `equivalent`; no duplicate review was created.
   Treat this only as private execution and one-excerpt downstream-parity
-  evidence. Cross-song listening and bounded stage timing still precede any
-  acceptance or integration decision, and no separator route is enabled.
+  evidence. Fresh attempts now also emit a path/PID/timestamp-free monotonic
+  timing receipt. The first timed repeat took 11.868113 seconds through output
+  evidence, including 10.270401 seconds in the coarse native one-shot and
+  1.175781 seconds opening the session; every other outer stage was below
+  0.21 seconds. This is explicitly not a benchmark and does not split model
+  inference from the one-shot's transport, observation, verification and
+  cleanup. Cross-song execution and listening still precede any acceptance or
+  integration decision, and no separator route is enabled.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory
