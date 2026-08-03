@@ -1842,6 +1842,15 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   only the bounded two-song cross-song listening-coverage item. Keep broader
   full-excerpt/full-song, hidden-set, licensing, offline and resource gates
   open, and do not select, merge or promote from these human labels.
+- `scripts/private-separation-publication-readiness.py` verifies the exact
+  normalized MIDI-agreement and human-listening coverage reports, requires the
+  latter to be hash-bound to the former, and emits one owner-only path-free gate
+  ledger. The current ledger passes three bounded milestones but leaves eight
+  publication gates open, including separated-audio quality, full-song/broad
+  role coverage, hidden-set, checkpoint terms, offline/resources and public
+  product integration. Treat `publication_ready: false` as authoritative for
+  this evidence scope. The command cannot accept a caller assertion, run a
+  model, select a separator or enable Simple, Studio, CLI, TUI or source graph.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,

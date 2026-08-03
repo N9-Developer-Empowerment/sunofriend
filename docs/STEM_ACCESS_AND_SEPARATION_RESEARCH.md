@@ -2391,6 +2391,14 @@ separator transport, source-lineage import and promotion are not implemented**
       and was not useful for that focus. Existing free-text feedback stays
       human context rather than a machine label. No review selected, merged,
       repaired, promoted or activated a candidate.
+  - [x] Project the accepted bounded milestones and every remaining publication
+    blocker into one path-free, self-hashed readiness ledger. The current
+    ledger passes source-bound cross-song downstream MIDI, cross-song human
+    listening and structured phrase-completeness coverage, while keeping eight
+    gates open: separated-audio quality, full-song duration/alignment, broad
+    roles, hidden-set evaluation, checkpoint terms, offline execution, resource
+    acceptance and a public product route. It cannot close a gate from a caller
+    assertion, rank or select a separator, or enable CLI/TUI/Simple/Studio.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
 - [x] Repeat the clean/estimate comparison through exact production
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation

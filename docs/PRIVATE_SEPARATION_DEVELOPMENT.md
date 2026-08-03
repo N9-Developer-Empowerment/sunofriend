@@ -1954,6 +1954,36 @@ method judgement. Full-excerpt or full-song listening beyond this bounded
 corpus, a hidden test set, checkpoint licensing, offline behaviour and resource
 acceptance remain open publication gates.
 
+### Publication-readiness ledger
+
+The owner-only `scripts/private-separation-publication-readiness.py` command
+now gives those distributed findings one fail-closed, path-free status report:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-publication-readiness.py \
+  /absolute/private-separation-normalized-midi-agreement.json \
+  /absolute/private-separation-human-listening-coverage.json \
+  --out /absolute/fresh/private-separation-publication-readiness.json
+```
+
+The current report has file SHA-256
+`9773a9291b89e905aedf63d9b9eb2f4a89f471f085eab59470b081452c635632`
+and document SHA-256
+`f0e941108dbfb7172104d20dfa923f7b9841609df77390af8136d67214aa6f1d`.
+It records three passed bounded-evidence milestones: source-bound cross-song
+downstream MIDI, source-bound cross-song human listening and a separate
+structured phrase-completeness judgement for every supplied window.
+
+Eight publication gates remain explicitly open: cross-song separated-audio
+quality, full-song duration/alignment, broad role coverage, a hidden
+song-disjoint test set, checkpoint usage/distribution terms, offline execution,
+the full-song resource envelope and a public CLI/TUI/Simple/Studio route. The
+report therefore says `publication_ready: false` and describes the current
+stage as `private_bounded_vocal_research`. It cannot accept a separator from
+caller flags, compute a quality percentage, copy listener notes or enable a
+product route. Future gates require new typed, hash-bound evidence.
+
 The optional review contract now asks that question explicitly with
 `--classify-focus-phrase-coverage`. For every playable candidate, the listener
 must separately choose `substantially_complete`, `partially_complete`,
