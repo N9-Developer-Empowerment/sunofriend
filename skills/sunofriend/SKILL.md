@@ -123,9 +123,12 @@ report the result, then move on.
   Python-closure claim to staging and can emit the path-free fd4 worker result.
   Dependency-substituted tests only have exercised this wiring: the adapter
   has not been launched by the opaque native owner and has opened no accepted
-  checkpoint, model or authorised audio. The real-Kim live parent executor,
-  observer attachment to an accepted run and real staging revalidation remain
-  absent. A
+  checkpoint, model or authorised audio. A fixed private parent verifier now
+  reopens the report-bound source, both real-worker PCM24 outputs, the private
+  Python-closure claim and every claimed module, repeats those mutable checks
+  and returns path-free evidence. It does not verify the checkpoint lease,
+  native session or live observers. The real-Kim live parent executor and
+  observer attachment to an accepted run remain absent. A
   dependency-substituted parent lifecycle now fixes observation/release,
   whole-group supervision, fd4 decoding, staging-verification and private
   identity-consumption order, including cleanup after observer failure, but it
@@ -140,9 +143,12 @@ report the result, then move on.
   the exact prepared fd3–fd7 geometry and owner-only staging identity, consumes
   one request-bound admission immediately before the sole fixed C-method call,
   and retains only an exact started opaque owner after child-side descriptor
-  cleanup. Its evidence is dependency-substituted: concrete fd5 lease
-  composition, owner observers, post-run staging verification and terminal
-  evidence are still absent. The active Kim route remains subprocess-based. This
+  cleanup. A later lease bridge now supplies the reserved fd5 through that
+  exact start frame, and a one-use session transition now accepts only the exact
+  retained owner after normal zero exit, complete group drain, released
+  ownership and exact reap. The concrete owner observers, fd4/fd5/staging
+  composition and complete lease cleanup are still absent. The active Kim route
+  remains subprocess-based. This
   evidence does not enable
   native fake-launch V2, which remains
   permanently
@@ -519,10 +525,13 @@ report the result, then move on.
   that guarded start stack frame. It returns no descriptor and leaves the
   reservation active for later supervision and close. This bridge also has
   dependency-substituted evidence only: no native process or accepted
-  checkpoint, model or audio was opened. Concrete live lease/start composition,
-  owner observers, post-run fd5 and staging verification, reservation/lease
-  closure and terminal evidence remain missing; source shape alone is not
-  execution provenance.
+  checkpoint, model or audio was opened. A fixed real-worker staging verifier
+  now reopens the authorised source, both PCM24 files and the Python closure,
+  while a separate one-use session transition records only normal-zero-exit
+  exact reap from the exact retained owner. Concrete live lease/start/observer
+  composition, post-run fd5 remeasurement, reservation/lease closure and the
+  combined terminal receipt remain missing; source shape alone is not execution
+  provenance.
   The private parent exercise now has a v2 two-phase order: prepare observers
   before spawn; capture ready state and release; drain and validate fd4 while
   the exact owner is live; consume live observers; exact-reap the whole group;
@@ -530,8 +539,9 @@ report the result, then move on.
   lifecycle tests remain dependency-substituted. The fixed model-free macOS
   adapter now proves the concrete observer/fd4/supervisor/staging order with a
   small placeholder fd5 and one stdlib worker, including exact cleanup after a
-  wrong process-image claim. The real lease/start composition, accepted-fd5
-  remeasurement, real staging verification, lease cleanup and terminal receipt
+  wrong process-image claim. The real staging verifier and session terminal
+  transition now exist separately, but real lease/start/observer composition,
+  accepted-fd5 remeasurement, lease cleanup and one combined terminal receipt
   remain absent, so this does not permit a Kim run or any CLI, TUI, Simple,
   Studio or source-graph route.
   The owner-bound process-image

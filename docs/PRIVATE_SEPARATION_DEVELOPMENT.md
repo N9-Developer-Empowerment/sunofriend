@@ -304,11 +304,14 @@ descriptor-native checkpoint loader, retains the existing fd6/fd7 observation
 gate, confines quarantine and a private path-bearing Python-closure claim to
 the staging tree, and emits a path-free fd4 result with every product authority
 false. Synthetic dependency-substituted tests exercise that wiring; no model,
-checkpoint or audio was opened. The missing parent adapter must still attach
-the live admission and all three opaque-owner observers, reverify the private
-staging artifacts, consume the result identity, drain the complete group and
-derive the terminal projection. The adapter has therefore not been launched,
-the active Kim path remains subprocess-based and no product route is enabled.
+checkpoint or audio was opened. A fixed parent staging verifier now validates
+the real child contract and fd5-only checkpoint claim, reopens the authorised
+source, both PCM24 outputs, the private Python-closure claim and every claimed
+module, and repeats the mutable checks before emitting path-free evidence. It
+does not attach the three opaque-owner observers, supervise the process or
+remeasure the checkpoint lease. The real worker adapter has therefore still
+not been launched, the active Kim path remains subprocess-based and no product
+route is enabled.
 
 The corresponding parent lifecycle order is now executable only through an
 explicit dependency-substituted exercise. It requires the exact opaque owner,
@@ -319,9 +322,10 @@ verification and consumes the private PID/PGID only through the owner's boolean
 matcher. Invalid observer evidence still runs terminal supervision before the
 exercise fails. This proves orchestration and cleanup behavior only: all
 operations are injected, no native extension/process/checkpoint/model/audio or
-staging path is opened and every product permission remains false. A concrete
-private macOS adapter with fresh admission, descriptor construction and the
-three live observers remains missing.
+staging path is opened and every product permission remains false. A later
+fixed model-free macOS adapter now owns that concrete observer, fd4, supervisor,
+exact-reap, mapped-file and staging order for the stdlib bootstrap. It rejects
+checkpoint-sized fd5 inputs and is not the real Kim coordinator.
 
 The next private prerequisite now exists and has one live static canary. An
 opaque Kim session wraps a freshly built verified launcher, binds and remeasures
@@ -332,8 +336,15 @@ the canonical request hash, nonce, repository and worker SHA, permits only one
 outstanding admission and is single-use. The trusted-local canary built and
 imported the native extension and rechecked all static bindings; it did not call
 the spawn method or open a checkpoint, model, source, audio or staging tree.
-The guarded fd3–fd7 descriptor/spawn/cleanup adapter is still missing, so this
-does not change the active subprocess route or enable a product route.
+A guarded fd3–fd7 start boundary and lease-to-start bridge now consume the
+admission immediately around the sole native spawn call while retaining fd5
+with the lease owner. The session now also has a one-use terminal transition:
+only the exact retained owner with normal zero exit, group drain, released
+ownership and exact reap may move it from running to terminal, after another
+session-binding remeasurement. The fixed real coordinator must still compose
+those parts with live observers, fd4 drain, the staging verifier and complete
+fd5 reservation/lease cleanup. None of these changes the active subprocess
+route or enables a product route.
 
 ```bash
 .venv/bin/python scripts/private-demucs-four-stem-canary.py \

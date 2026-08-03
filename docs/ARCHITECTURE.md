@@ -761,9 +761,17 @@ filesystem execute bit on regular dynamic libraries.
 This adapter starts a real native process but never the real model worker. It
 rejects the accepted checkpoint's byte geometry, reads no audio, grants no
 product authority and is imported only by trusted developer tests. The live
-checkpoint lease, measured real-worker session/admission, quarantine/import-
-closure verifier and lease terminal receipt remain to be composed by one fixed
-real coordinator before an authorised Kim excerpt may use the native path.
+checkpoint lease and measured real-worker session/admission still remain to be
+composed by one fixed real coordinator before an authorised Kim excerpt may use
+the native path. The quarantine/import-closure side is now a fixed parent
+module: it reopens the report-bound source, both canonical PCM24 stems, the
+private closure claim and every claimed Python module, repeats the mutable
+artifact checks and emits only path-free evidence. The measured session also
+has a one-use normal-zero-exit transition that requires the exact retained
+owner to be group-empty, released and exactly reaped before clearing it from
+the registry. Neither component supervises a process or closes the checkpoint
+lease; concrete observer, fd4, fd5 and failure-cleanup composition remains the
+coordinator's responsibility.
 
 `_separation_fake_execution_quarantine.py` is the twenty-fourth internal S3
 boundary. It revalidates the exact historical request and blocked launches,

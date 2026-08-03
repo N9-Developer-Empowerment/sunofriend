@@ -350,6 +350,93 @@ def test_guarded_start_consumes_admission_and_closes_child_transport_descriptors
             _close_if_open(descriptor)
 
 
+def test_running_session_records_one_exact_reap_terminal_transition(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    trusted, _observation, state = _registered_session()
+    owner = state.owner_type()
+    owner.leader_reaped = True
+    owner.ownership_released = True
+    owner.ownership_lost = False
+    state.native_owner = owner
+    state.run_status = "running"
+    remeasurements: list[object] = []
+    monkeypatch.setattr(
+        session,
+        "_remeasure_state",
+        lambda value: remeasurements.append(value),
+    )
+
+    receipt = session._finish_started_private_melroformer_native_session(
+        trusted,
+        owner,
+        terminal_observation=_normal_terminal(),
+    )
+
+    assert receipt["status"] == "normal_zero_exit_exact_reap_recorded"
+    assert receipt["active_owner_released_from_session"] is True
+    assert receipt["paths_retained"] is False
+    assert all(value is False for value in receipt["permissions"].values())
+    assert remeasurements == [state]
+    assert state.run_status == "terminal"
+    assert state.native_owner is None
+    with pytest.raises(ValueError, match="not the active owner"):
+        session._finish_started_private_melroformer_native_session(
+            trusted,
+            owner,
+            terminal_observation=_normal_terminal(),
+        )
+
+
+def test_terminal_transition_rejects_incomplete_owner_without_mutating_session(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    trusted, _observation, state = _registered_session()
+    owner = state.owner_type()
+    state.native_owner = owner
+    state.run_status = "running"
+    monkeypatch.setattr(session, "_remeasure_state", lambda _value: None)
+
+    with pytest.raises(ValueError, match="not exactly reaped"):
+        session._finish_started_private_melroformer_native_session(
+            trusted,
+            owner,
+            terminal_observation=_normal_terminal(),
+        )
+
+    assert state.run_status == "running"
+    assert state.native_owner is owner
+
+
+def test_terminal_transition_rejects_nonzero_or_wrong_owner(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    trusted, _observation, state = _registered_session()
+    owner = state.owner_type()
+    owner.leader_reaped = True
+    owner.ownership_released = True
+    state.native_owner = owner
+    state.run_status = "running"
+    monkeypatch.setattr(session, "_remeasure_state", lambda _value: None)
+    failed = _normal_terminal()
+    failed["wait"]["exit_code"] = 1
+
+    with pytest.raises(ValueError, match="did not exit normally"):
+        session._finish_started_private_melroformer_native_session(
+            trusted,
+            owner,
+            terminal_observation=failed,
+        )
+    with pytest.raises(ValueError, match="not the active owner"):
+        session._finish_started_private_melroformer_native_session(
+            trusted,
+            state.owner_type(),
+            terminal_observation=_normal_terminal(),
+        )
+    assert state.run_status == "running"
+    assert state.native_owner is owner
+
+
 def test_guarded_start_rejects_wrong_pipe_geometry_without_spawning(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -734,6 +821,25 @@ def test_module_has_one_guarded_spawn_call_and_no_product_route() -> None:
         assert "_separation_melroformer_native_session_darwin" not in (
             path.read_text(encoding="utf-8")
         )
+
+
+def _normal_terminal() -> dict[str, object]:
+    return {
+        "wait": {
+            "kind": "exited",
+            "exit_code": 0,
+            "signal": None,
+            "core_dumped": False,
+        },
+        "timed_out": False,
+        "term_sent": False,
+        "kill_sent": False,
+        "leader_exit_observed": True,
+        "leader_reaped": True,
+        "group_empty": True,
+        "ownership_released": True,
+        "ownership_lost": False,
+    }
 
 
 @pytest.mark.trusted_local

@@ -592,6 +592,111 @@ def _known_started_private_melroformer_native_owner(
         return value
 
 
+def _finish_started_private_melroformer_native_session(
+    trusted_session: _VerifiedPrivateMelroformerNativeSession,
+    native_owner: Any,
+    *,
+    terminal_observation: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """Record one normal exact-reap terminal transition exactly once.
+
+    The process supervisor remains a separate fixed parent component. This
+    transition accepts only its path-free normal-exit observation, requires the
+    exact owner retained by the running session and remeasures every session
+    binding before releasing that owner from the registry.
+    """
+
+    terminal = _validate_private_native_terminal_observation(
+        terminal_observation
+    )
+    _session, state = _known_session(trusted_session)
+    with state.lock:
+        _require_owner(state)
+        if (
+            state.run_status != "running"
+            or type(native_owner) is not state.owner_type
+            or native_owner is not state.native_owner
+        ):
+            raise ValueError("private Kim native owner is not the active owner")
+        if (
+            getattr(native_owner, "leader_reaped", None) is not True
+            or getattr(native_owner, "ownership_released", None) is not True
+            or getattr(native_owner, "ownership_lost", None) is not False
+        ):
+            raise ValueError("private Kim native owner is not exactly reaped")
+        _remeasure_state(state)
+        payload = {
+            "schema": "sunofriend.private-melroformer-native-session-terminal.v1",
+            "policy_id": "private-kim-native-session-terminal-transition-v1",
+            "status": "normal_zero_exit_exact_reap_recorded",
+            "session_observation_sha256": state.observation_document[
+                "observation_sha256"
+            ],
+            "terminal": _plain(terminal),
+            "session_bindings_remeasured_after_reap": True,
+            "active_owner_released_from_session": True,
+            "paths_retained": False,
+            "permissions": {
+                "automatic_selection_permitted": False,
+                "product_route_permitted": False,
+                "publication_permitted": False,
+            },
+        }
+        receipt = _freeze(
+            {
+                **payload,
+                "evidence_sha256": _canonical_sha256(payload),
+            }
+        )
+        state.native_owner = None
+        state.run_status = "terminal"
+        return receipt
+
+
+def _validate_private_native_terminal_observation(
+    value: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    terminal = _plain(value)
+    if not isinstance(terminal, dict) or set(terminal) != {
+        "wait",
+        "timed_out",
+        "term_sent",
+        "kill_sent",
+        "leader_exit_observed",
+        "leader_reaped",
+        "group_empty",
+        "ownership_released",
+        "ownership_lost",
+    }:
+        raise ValueError("private Kim terminal observation fields differ")
+    if terminal["wait"] != {
+        "kind": "exited",
+        "exit_code": 0,
+        "signal": None,
+        "core_dumped": False,
+    }:
+        raise ValueError("private Kim native worker did not exit normally")
+    if any(
+        terminal[key] is not True
+        for key in (
+            "leader_exit_observed",
+            "leader_reaped",
+            "group_empty",
+            "ownership_released",
+        )
+    ) or any(
+        terminal[key] is not False
+        for key in (
+            "timed_out",
+            "term_sent",
+            "kill_sent",
+            "ownership_lost",
+        )
+    ):
+        raise ValueError("private Kim terminal ownership is incomplete")
+    return _freeze(terminal)
+
+
 def _validate_private_native_start_descriptors(
     *,
     request: Mapping[str, Any],

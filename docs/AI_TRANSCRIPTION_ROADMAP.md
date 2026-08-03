@@ -1704,6 +1704,48 @@ Each working day should aim for one narrow vertical improvement:
 
 ## Daily log
 
+### 2026-08-03 — real-worker staging and session terminal boundaries fixed
+
+- Goal: remove the two remaining caller-shaped claims between a completed real
+  native worker and the future fixed parent coordinator: private artifact
+  verification and the running-session-to-terminal transition.
+- Change or experiment: added a developer-only parent verifier that validates
+  the real child-result contract, fd5-only checkpoint claim, fixed sandbox
+  canaries and post-CPython signal state; reopens the exact authorised source;
+  independently verifies both PCM24 quarantine files and additive closure;
+  reopens the canonical private Python import-closure claim and every claimed
+  module; then repeats the source, closure and quarantine checks before
+  returning path-free evidence. Added a one-use native-session transition that
+  accepts only normal zero exit, complete group drain, exact reap and released
+  ownership from the exact retained opaque owner, remeasures all session
+  bindings and removes that owner from the running registry.
+- Inputs: synthetic owner-only staging with canonical 4,096-frame PCM24 source,
+  two-role quarantine and one-file Python closure; dependency-substituted
+  opaque owner and terminal observations.
+- Model/runtime/checkpoint: no native process, model, accepted checkpoint or
+  user audio was opened. Numpy is imported only inside the private verifier.
+- Evidence and metrics: the focused staging/session suite passes 24 tests,
+  including closure-byte tampering, unexpected staging content, forbidden
+  checkpoint pathname reopen, incomplete ownership, non-zero exit, wrong owner
+  and terminal replay. The complete portable suite passes 2,912 tests with one
+  expected skip, 11 trusted-local cases deselected and the existing
+  `resampy`/`pkg_resources` warning. Ruff passes for all changed source and
+  tests.
+- Listening result: not applicable; this increment validates execution
+  provenance and cleanup, not separation quality.
+- Decision: accept both contracts as fixed private prerequisites. Keep their
+  limits explicit: staging evidence does not claim checkpoint-lease, session
+  or live-observer verification, and the terminal transition does not supervise
+  a process itself. No CLI, TUI, Simple, Studio or source-graph route is added.
+- Problems/risks: the real coordinator still must prepare the observers, call
+  the live lease-to-start bridge, drain/decode fd4 while the owner is live,
+  complete observers and whole-group supervision, invoke these new boundaries,
+  remeasure/release/close fd5 and the lease, consume PID/PGID only through the
+  owner matcher and emit one path-free terminal receipt on every outcome.
+- Next smallest step: compose that fixed coordinator with substituted
+  components first and prove success plus failure cleanup before any authorised
+  Kim excerpt is run through it.
+
 ### 2026-08-03 — fixed model-free macOS parent adapter proved live
 
 - Goal: replace the two-phase lifecycle's caller-supplied hooks with one fixed

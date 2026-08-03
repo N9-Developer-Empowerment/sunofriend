@@ -1654,8 +1654,13 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   only into the guarded start frame. It returns no descriptor and keeps the
   reservation active for later remeasurement and close. This bridge also has
   dependency-substituted evidence only: no accepted checkpoint, process, model
-  or audio was opened. Concrete observer, supervision, fd4 result, staging and
-  terminal composition remains outstanding.
+  or audio was opened. A fixed parent verifier now reopens the real worker's
+  report-bound source, two PCM24 quarantine files, private closure claim and
+  every claimed Python module, then repeats the mutable artifact checks. A
+  separate one-use session transition accepts only normal zero exit, group
+  drain, released ownership and exact reap from the exact retained opaque
+  owner. Concrete observer, supervision, fd4/fd5, lease and terminal-receipt
+  composition remains outstanding.
   The target parent lifecycle is now fixed by a second dependency-substituted
   exercise: prepare observers before spawn; capture ready state and release;
   drain fd4 while the owner is live; finish live observers; exact-reap the
@@ -1671,7 +1676,9 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   fails before release yet completes terminal cleanup. Its fd5 must be a small
   placeholder and checkpoint-sized inputs are rejected; no accepted
   checkpoint, model or audio was opened. The real lease/start/staging/terminal
-  coordinator remains outstanding and no separator route is enabled.
+  coordinator remains outstanding even though staging verification and the
+  session terminal transition now exist as separate fixed components; no
+  separator route is enabled.
   The
   evidence does not enumerate dyld
   shared-cache constituents, exclude all transient loads or prove mapped-memory

@@ -121,8 +121,13 @@ sole fixed native call, closes the four transferred child-side descriptors on
 every tested outcome, leaves fd5 with its separate lease owner and retains the
 exact opaque owner only after a proved started outcome. No native process,
 checkpoint byte, model or audio was opened by those tests. Concrete fd5 lease
-composition, live owner observers, post-run staging/artifact verification and
-the terminal receipt remain the next boundary.
+composition and a fixed post-run staging verifier now exist separately. The
+verifier reopens the report-bound source, two PCM24 files, the private closure
+claim and every claimed module, then repeats the mutable checks; it explicitly
+does not claim lease, session or observer verification. The measured session
+also has a one-use exact-owner normal-zero-exit terminal transition. Live owner
+observers, fd4/fd5 orchestration, reservation/lease cleanup and one combined
+terminal receipt remain the next boundary.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on
