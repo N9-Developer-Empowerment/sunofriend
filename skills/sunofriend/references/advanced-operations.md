@@ -1550,6 +1550,15 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   exact verifier create evidence. A verified result remains focus-specific and
   cannot rank, select, merge, repair, promote, identify a singer or activate a
   source/Product/Studio/Simple route.
+  A scoped audition may additionally bind one explicit 0.5–15 second window
+  and an explicit non-empty subset of sealed candidate IDs. It must retain the
+  complete inventory count, preserve canonical inventory order, disclose every
+  omission and state that omission is neither rejection nor ranking. Playback
+  starts and loops at the exact scope. Verification must reconstruct the same
+  window and candidate subset; it cannot accept a wider, narrower or swapped
+  browser export. Keep every omitted candidate unchanged in the sealed
+  inventory and preserve all zero activation, selection, merge and singer-
+  identity effects.
 - The latest authorised Kim Vocal 2 `Be Alone` worker observation binds the
   complete post-inference Python `sys.modules` closure for that exact run: 320
   modules, 277 independently reopened regular files, 18,067,782 aggregate

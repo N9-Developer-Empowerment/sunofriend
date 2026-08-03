@@ -3167,6 +3167,42 @@ Each working day should aim for one narrow vertical improvement:
   phrase question justifies the listening effort; separately continue the S3
   execution-path and independent-backend gates before any S4 Studio route.
 
+### 2026-08-03 — scoped private vocal-candidate review
+
+- Goal: turn the existing primary-versus-lowest and phrase-completeness
+  evidence into a small lead-line question without merging MIDI or reviewing
+  all 17 candidates at once.
+- Change or experiment: the owner-only loopback audition now accepts one
+  explicit 0.5–15 second window and a repeated explicit candidate subset. The
+  review seed records complete and scoped inventory counts, exact canonical
+  candidate order and omissions. The player loops the exact window, and
+  resolution reconstructs the same scope before accepting an export.
+- Inputs: the unchanged `I am a Alien mashup` 17-candidate inventory, exact
+  register, vocal-leaf, phrase-completeness and authorised-excerpt evidence.
+  No separation, transcription or rendering was rerun.
+- Model/runtime/checkpoint: no model or checkpoint was loaded. The first scope
+  uses only the already sealed Kim primary and lowest-line dry renders.
+- Evidence and metrics: the first live scope is 3.45–6.85 seconds and includes
+  2 of 17 preserved candidates. Its unreviewed seed document SHA-256 is
+  `1b7b6d980444bcf675209d8076eb7b26ab66b1ff5237e20a4109a7f70b2e1bde`.
+  The exact reviewed export resolved to document SHA-256
+  `c26d293df96ae0259ba32510eea3827edf2dba257dc5fbd5a3b7c3989ad45fae`.
+  The complete private phrase/candidate/audition slice passes 33 tests, and the
+  portable repository suite passes 2,970 tests with one skip and 13 explicitly
+  deselected trusted-local tests.
+- Listening result: the owner marked `kim/register/lowest-line` useful for the
+  exact male-lead focus and `kim/primary` not useful for it. Playback, looping,
+  seeking and omission from this scope remain zero-effect. A JavaScript
+  newline-escaping defect found on the first page load was fixed and covered by
+  the served-page regression test before this result was collected.
+- Decision: keep this private and inactive. Omitted candidates are neither
+  rejected nor ranked, and the page makes no singer identity, winner,
+  selection, merge, repair, default or route claim.
+- Next smallest step: identify the later phrase whose existing evidence is
+  one-sided, then ask one source-relative scoped question before proposing any
+  stitched candidate. This completed scope alone is not sufficient to merge or
+  promote the lowest-line hypothesis.
+
 ### 2026-08-02 — private vocal candidate-set preservation
 
 - Goal: preserve complementary primary, register and provider-leaf vocal MIDI

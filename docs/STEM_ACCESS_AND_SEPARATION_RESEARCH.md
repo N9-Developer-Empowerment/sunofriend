@@ -2478,6 +2478,15 @@ separator transport, source-lineage import and promotion are not implemented**
   playback activity and permits several explicitly useful candidates. The
   verifier publishes only a path-free owner-only review resolution; it still
   selects no winner, infers no singer and enables no product route.
+- [x] Add an explicit scoped form of that audition for one 0.5–15 second window
+  and named candidate subset. The page retains the complete inventory count,
+  treats every omission as neither rejection nor rank, loops only the exact
+  review window and requires the resolver to reconstruct the same scope. The
+  first scope compared Kim primary with lowest line at 3.45–6.85 seconds on
+  `I am a Alien mashup`. Its exact human export resolved lowest line as useful
+  and primary as not useful for the stated male-lead focus, without selecting,
+  merging, repairing or activating either candidate. The other 15 inventory
+  candidates remain unaffected.
 - [x] Compare every supplied leaf inside composite `other` across both
   authorised excerpts using bidirectional audio rankings. Exact and semantic
   labels remain observations only. Keyboard was the only stable Suno pair on

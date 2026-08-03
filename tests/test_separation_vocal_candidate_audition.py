@@ -30,11 +30,81 @@ def test_review_seed_is_path_free_and_does_not_rank_or_choose(tmp_path: Path) ->
     assert seed["policy"]["ordering_has_rank_semantics"] is False
     assert seed["policy"]["multiple_useful_candidates_allowed"] is True
     assert seed["policy"]["winner_required"] is False
+    assert seed["scope"] == {
+        "start_seconds": 0.0,
+        "end_seconds": 15.0,
+        "duration_seconds": 15.0,
+        "candidate_ids": ["candidate-1", "candidate-zero"],
+        "candidate_count": 2,
+        "inventory_candidate_count": 2,
+        "omitted_candidate_count": 0,
+        "candidate_order": "sealed_inventory_order_not_rank",
+        "time_window_source": "full_excerpt",
+    }
     assert seed["effects"]["candidate_selected"] is False
     assert seed["choices"][0]["heard_candidate"] is False
     assert seed["choices"][1]["disposition"] == "unavailable"
     assert not _contains_key(seed, "path")
     assert str(tmp_path) not in json.dumps(seed)
+
+
+def test_scoped_review_uses_explicit_window_and_subset_without_rejecting_omissions(
+    tmp_path: Path,
+) -> None:
+    inventory, excerpt, media = _evidence(tmp_path)
+    scope = audition._review_scope(
+        inventory,
+        excerpt,
+        start_seconds=3.45,
+        end_seconds=6.85,
+        candidate_ids=("candidate-1",),
+    )
+
+    seed = audition._review_seed(
+        inventory,
+        candidate_set_file_sha256="a" * 64,
+        excerpt=excerpt,
+        excerpt_file_sha256="b" * 64,
+        focus="Follow the intended male lead in this phrase",
+        candidate_media=media,
+        scope=scope,
+    )
+
+    assert seed["scope"]["candidate_ids"] == ["candidate-1"]
+    assert seed["scope"]["omitted_candidate_count"] == 1
+    assert seed["summary"]["candidate_count"] == 1
+    assert seed["inventory_summary"]["candidate_count"] == 2
+    assert seed["policy"]["candidate_subset_is_explicit"] is True
+    assert seed["policy"]["omitted_candidates_ranked_or_rejected"] is False
+    assert [row["candidate_id"] for row in seed["choices"]] == ["candidate-1"]
+
+
+@pytest.mark.parametrize(
+    ("start", "end", "candidate_ids", "message"),
+    [
+        (0.0, 0.49, (), "0.5-15 seconds"),
+        (14.0, 15.1, (), "inside the excerpt"),
+        (1.0, 2.0, ("missing",), "not in the sealed inventory"),
+        (1.0, 2.0, ("candidate-1", "candidate-1"), "must be unique"),
+    ],
+)
+def test_scoped_review_rejects_invalid_window_or_membership(
+    tmp_path: Path,
+    start: float,
+    end: float,
+    candidate_ids: tuple[str, ...],
+    message: str,
+) -> None:
+    inventory, excerpt, _ = _evidence(tmp_path)
+
+    with pytest.raises(ValueError, match=message):
+        audition._review_scope(
+            inventory,
+            excerpt,
+            start_seconds=start,
+            end_seconds=end,
+            candidate_ids=candidate_ids,
+        )
 
 
 def test_complete_review_keeps_multiple_useful_candidates() -> None:
@@ -151,6 +221,9 @@ def test_loopback_server_serves_verified_range_and_writes_nothing(
             assert "Private local developer audition" in html
             assert "Playback, seeking, looping and dwell time" in html
             assert "Export reviewed JSON" in html
+            assert "Review window" in html
+            assert "Omitted candidates remain preserved" in html
+            assert "JSON.stringify(review,null,2)+'\\n'" in html
             assert "localStorage" not in html
             assert str(tmp_path) not in html
 
@@ -275,7 +348,10 @@ def test_resolution_is_fresh_private_and_never_selects(
     review_path = tmp_path / "review.json"
     review_path.write_text(json.dumps(review), encoding="utf-8")
     inventory = {"document_sha256": "c" * 64}
-    excerpt = {"document_sha256": "d" * 64}
+    excerpt = {
+        "document_sha256": "d" * 64,
+        "original": {"geometry": {"duration_seconds": 15.0}},
+    }
     context = audition._AuditionContext(
         candidate_set_path=tmp_path / "inventory.json",
         candidate_set_file_sha256="a" * 64,
@@ -332,7 +408,11 @@ def test_private_audition_has_no_public_route() -> None:
 
 def _evidence(
     tmp_path: Path,
-) -> tuple[dict[str, object], dict[str, str], dict[str, tuple[object, object | None]]]:
+) -> tuple[
+    dict[str, object],
+    dict[str, object],
+    dict[str, tuple[object, object | None]],
+]:
     preview_path = tmp_path / "preview.wav"
     reference_path = tmp_path / "reference.wav"
     preview_path.write_bytes(b"RIFFNDID-TEST")
@@ -383,7 +463,10 @@ def _evidence(
             },
         ],
     }
-    excerpt = {"document_sha256": "d" * 64}
+    excerpt = {
+        "document_sha256": "d" * 64,
+        "original": {"geometry": {"duration_seconds": 15.0}},
+    }
     media = {
         "candidate-1": (preview, reference),
         "candidate-zero": (None, None),
@@ -423,8 +506,20 @@ def _three_available_seed() -> dict[str, object]:
         "evidence_scope": "private_development_only",
         "inputs": {},
         "focus": "Follow the intended lead melody",
+        "scope": {
+            "start_seconds": 0.0,
+            "end_seconds": 15.0,
+            "duration_seconds": 15.0,
+            "candidate_ids": ["candidate-1", "candidate-2", "candidate-3"],
+            "candidate_count": 3,
+            "inventory_candidate_count": 3,
+            "omitted_candidate_count": 0,
+            "candidate_order": "sealed_inventory_order_not_rank",
+            "time_window_source": "full_excerpt",
+        },
         "policy": {},
         "summary": {"candidate_count": 3, "audition_available_count": 3},
+        "inventory_summary": {"candidate_count": 3, "audition_available_count": 3},
         "choices": choices,
         "effects": {},
     }

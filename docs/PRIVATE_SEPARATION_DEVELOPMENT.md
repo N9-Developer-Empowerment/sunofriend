@@ -1786,15 +1786,56 @@ identity, default, Studio import, Simple result or source-graph change. A
 verified `useful` disposition is evidence for the exact written focus, not
 permission to promote or activate that candidate.
 
+The same private adapter can narrow one review to an explicit 0.5–15 second
+window and explicit candidate subset. Use paired `--start-seconds` and
+`--end-seconds` plus repeated `--candidate` values. The page loops only the
+stated window and reports both the scoped count and complete inventory count.
+Candidates outside the scope remain sealed in the inventory: omission is not a
+rejection, ranking, choice or singer assignment. Resolution must use the same
+window and candidate IDs, so a browser export cannot silently expand, shrink
+or swap its question.
+
+```bash
+PYTHONPATH=src .venv/bin/python \
+  scripts/private-vocal-candidate-audition.py \
+  --candidate-set /absolute/private/vocal-candidate-set.json \
+  --melroformer-evaluation /absolute/private/private-melroformer-vocal-midi-evaluation.json \
+  --vocal-leaf-evaluation /absolute/private/authorised-vocal-leaf-midi-evaluation.json \
+  --phrase-completeness /absolute/private/vocal-phrase-completeness.json \
+  --authorised-excerpt /absolute/private/authorised-separation-excerpt.json \
+  --focus "Which candidate follows the intended lead in this phrase?" \
+  --start-seconds 3.45 \
+  --end-seconds 6.85 \
+  --candidate kim/primary \
+  --candidate kim/register/lowest-line \
+  --open
+```
+
 Public Studio finished-song separation remains Phase S4. One-action Simple
 separation remains Phase S6 and requires cross-song, licence, offline,
 resource, downstream-MIDI and human listening acceptance.
 
 ### Current private human-review queue
 
-As of 2 August 2026, there is no outstanding prepared private review. The new
-loopback tool is available, but no listening focus has been opened as a current
-acceptance gate. The
+As of 3 August 2026, the first scoped `I am a Alien mashup` review is complete.
+It compared only the unchanged Kim primary and unchanged lowest-line hypothesis
+from 3.45 to 6.85 seconds, where both contain activity, with the question
+**Which candidate follows the intended male lead melody in this phrase?** The
+listener marked the lowest-line hypothesis useful for that exact focus and the
+primary not useful for it. The separate verifier accepted the exact export and
+published a `complete_review_no_activation` resolution with document SHA-256
+`c26d293df96ae0259ba32510eea3827edf2dba257dc5fbd5a3b7c3989ad45fae`.
+The other 15 candidates remain preserved, unranked and unaffected. This result
+does not select, merge, repair or activate either candidate. There is no
+outstanding review on this scope; the next review should cover a later phrase
+whose source evidence is one-sided before any stitched candidate is proposed.
+
+The first live browser load also exposed an escaped-newline defect in the
+inline export script. It was fixed before the review, both source and candidate
+audio were verified in the browser, and the served-page test now guards the
+JavaScript escape sequence. Playback itself still writes nothing.
+
+The
 corrected primary-versus-lowest review preferred the lowest-register
 hypothesis for the male lead; its answer key was opened only by the resolver
 after the complete matching browser export was found.

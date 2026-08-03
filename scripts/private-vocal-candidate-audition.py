@@ -22,6 +22,14 @@ def main() -> int:
     parser.add_argument("--phrase-completeness", required=True)
     parser.add_argument("--authorised-excerpt", required=True)
     parser.add_argument("--focus", required=True)
+    parser.add_argument("--start-seconds", type=float)
+    parser.add_argument("--end-seconds", type=float)
+    parser.add_argument(
+        "--candidate",
+        action="append",
+        default=[],
+        help="Exact candidate ID from the sealed inventory; repeat to review a subset",
+    )
     parser.add_argument("--review")
     parser.add_argument("--out")
     parser.add_argument("--port", type=int, default=0)
@@ -29,6 +37,8 @@ def main() -> int:
     args = parser.parse_args()
     if bool(args.review) != bool(args.out):
         parser.error("--review and --out must be supplied together")
+    if bool(args.start_seconds is not None) != bool(args.end_seconds is not None):
+        parser.error("--start-seconds and --end-seconds must be supplied together")
     if args.review:
         if args.open or args.port:
             parser.error("--open and --port are serve-only options")
@@ -40,6 +50,9 @@ def main() -> int:
             args.phrase_completeness,
             args.authorised_excerpt,
             focus=args.focus,
+            start_seconds=args.start_seconds,
+            end_seconds=args.end_seconds,
+            candidate_ids=args.candidate,
             out=args.out,
         )
         print(
@@ -63,6 +76,9 @@ def main() -> int:
         args.phrase_completeness,
         args.authorised_excerpt,
         focus=args.focus,
+        start_seconds=args.start_seconds,
+        end_seconds=args.end_seconds,
+        candidate_ids=args.candidate,
     )
     server = _VocalCandidateAuditionServer(context, port=args.port)
     print(
@@ -74,6 +90,7 @@ def main() -> int:
                 "audition_available_count": context.seed["summary"][
                     "audition_available_count"
                 ],
+                "scope": context.seed["scope"],
                 "server_writes_review": False,
                 "audio_or_midi_copied": False,
                 "stop": "Press Ctrl-C",
