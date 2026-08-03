@@ -1769,7 +1769,18 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   Kim primary, Moises leaf 02, Suno A leaf 01 and Suno B leaf 01 as focus-line
   and useful, while Moises leaf 01 was a different line and not useful for that
   focus. Preserve the four useful alternatives and the different-line evidence;
-  do not infer a winner, merge, singer identity, default or product route.
+  do not infer a winner, merge, singer identity, default or product route. The
+  subsequent private geometry report found 16 exact-pitch onset matches in
+  every pair at 80 ms, with 0 ms median onset error and at most 23.22 ms p95
+  onset error. In this phrase the useful candidates are near-duplicates around
+  one common melody backbone, so do not merge them in search of detail that
+  the comparison did not find.
+- `scripts/private-reviewed-vocal-geometry.py` is an owner-only diagnostic for
+  two or more candidates already marked useful in one exact sealed review. It
+  reconstructs that scope, verifies the note evidence and reports pairwise
+  exact-pitch, chroma, onset, duration and timing observations. Pair order is
+  review order, not preference. The report cannot select, merge, repair,
+  activate or publish MIDI; agreement is not ground truth.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,

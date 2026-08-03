@@ -214,7 +214,13 @@ The corrected role-based repeat then found usable principal-lead MIDI in Kim
 primary and three provider leaves, while one Moises leaf followed a different
 line. This shows why separation evaluation must preserve several vocal leaves
 and ask a musical-role question before judging transcription. It does not rank
-the four useful candidates or authorize a merge or product route.
+the four useful candidates or authorize a merge or product route. A subsequent
+pairwise geometry report found that all four useful paths share the same
+16-note exact-pitch backbone in the reviewed later phrase: pairwise F1 is
+0.941176–0.969697 at 80 ms, median onset error is 0 ms and p95 onset error is
+at most 23.22 ms. The differences are boundary-note and duration details, so
+merging would add no demonstrated inner-phrase melody. This is diagnostic
+agreement among estimates, not isolated-vocal ground truth or a model winner.
 Separately, a private-development HTDemucs runner
 now produces and measures four real broad
 estimated stems on

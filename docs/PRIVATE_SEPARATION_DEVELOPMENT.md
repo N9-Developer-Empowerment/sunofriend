@@ -1886,6 +1886,39 @@ candidates remain separate; the different-line leaf is preserved as potential
 backing or alternate evidence. No merge, repair, default, activation or product
 route changed.
 
+The follow-up private geometry report compared those four useful candidates
+without rendering, selecting or merging them. Across the six pairings, each
+pair had 16 exact-pitch onset matches at an 80 ms tolerance. Pairwise F1 was
+either 0.941176 or 0.969697, median onset error was 0 ms, and p95 onset error
+was no more than 23.22 ms. All four used the same six MIDI pitches from 68 to
+77. Their differences are therefore limited to one boundary-overlapping note
+and small timing or duration changes around a common 16-note phrase, not
+complementary inner-phrase notes. The path-free report is
+`i-am-a-alien-principal-lead-later-phrase-geometry-9200-14950-v1/private-reviewed-vocal-geometry.json`;
+its document SHA-256 is
+`3993aa00547b388e3df328bbb4b58d52896f8cc05617b77e8c5b40fdd7d1e5e7`.
+This does not promote Kim primary, but it shows there is no evidence-based
+reason to merge these near-duplicates for this phrase.
+
+The reusable owner-only command is:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-reviewed-vocal-geometry.py \
+  --review-resolution /absolute/review-resolution.json \
+  --candidate-set /absolute/vocal-candidate-set.json \
+  --melroformer-evaluation /absolute/melroformer-evaluation.json \
+  --vocal-leaf-evaluation /absolute/vocal-leaf-evaluation.json \
+  --phrase-completeness /absolute/vocal-phrase-completeness.json \
+  --authorised-excerpt /absolute/authorised-separation-excerpt.json \
+  --out /absolute/fresh/private-reviewed-vocal-geometry.json
+```
+
+It requires at least two candidates marked useful by one exact completed
+review, reconstructs the sealed review scope, verifies all note artifacts and
+writes only diagnostic JSON. It cannot select, merge, repair, activate or
+publish a candidate.
+
 Future private reviews can explicitly opt into
 `--classify-reference-line`. That adds a required, separate focus-relative
 human label for whether the heard source is the named focus line, a different

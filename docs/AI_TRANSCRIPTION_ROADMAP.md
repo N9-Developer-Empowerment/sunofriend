@@ -3261,10 +3261,23 @@ Each working day should aim for one narrow vertical improvement:
   already preserve the principal lead line. Agreement does not establish a
   winner, and the one different-line leaf remains useful backing/alternative
   evidence rather than an error to delete.
-- Next smallest step: compare the four useful candidates by phrase geometry
-  and timing without merging them, then determine whether the existing Kim
-  primary is already sufficient or whether a provider leaf adds complementary
-  lead detail.
+- Follow-up geometry result: a new path-free private report compared all six
+  pairs at an 80 ms onset tolerance. Every candidate used the same six pitches
+  from MIDI 68 to 77. Every pair matched 16 exact-pitch onsets; pairwise F1 was
+  0.941176 or 0.969697. Median onset error was 0 ms and pairwise p95 onset
+  error was at most 23.22 ms. The candidates therefore share the same
+  16-note principal-lead backbone in this window; their differences are one
+  boundary-overlapping note and small duration/timing variations, not
+  complementary inner-phrase melody. The report document SHA-256 is
+  `3993aa00547b388e3df328bbb4b58d52896f8cc05617b77e8c5b40fdd7d1e5e7`.
+- Decision: do not merge these near-duplicates. Kim primary is sufficient as
+  the existing representative for this exact phrase, but this diagnostic does
+  not promote it or make it a product default. Keep all provider alternatives
+  and the different-line Moises leaf as sealed evidence.
+- Next smallest step: repeat the role-correct review and geometry observation
+  on a phrase where the useful candidates disagree materially, so any future
+  repair rule is based on complementary evidence rather than this near-
+  duplicate case.
 
 ### 2026-08-03 — scoped private vocal-candidate review
 
