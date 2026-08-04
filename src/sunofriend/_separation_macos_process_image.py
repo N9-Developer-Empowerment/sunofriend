@@ -62,6 +62,19 @@ _OBSERVATION_TIMEOUT_SECONDS = 2.0
 _POLL_SECONDS = 0.01
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 _CDHASH_RE = re.compile(r"^[0-9a-f]{40}$")
+_CSSMERR_TP_NOT_TRUSTED = -2147409622
+_STRICT_VALIDATION = "strict_security_framework_validation"
+_SEALED_PROVIDER_FALLBACK = (
+    "sealed_read_only_system_provider_cdhash_trust_unavailable"
+)
+
+
+class _StaticCodeValidationError(RuntimeError):
+    """Retain the exact Security.framework status for bounded fallback policy."""
+
+    def __init__(self, status: int) -> None:
+        super().__init__("macOS static-code strict validation failed")
+        self.status = status
 
 
 @dataclass(frozen=True)
@@ -76,6 +89,7 @@ class _PreparedRuntimeProcessImageBinding:
     runtime_launcher_identity: Mapping[str, Any]
     process_image_identity: Mapping[str, Any]
     provider_cdhash: str
+    provider_static_validation: str
     runtime_launcher_cdhash: str
     process_image_cdhash: str
     transition: str
@@ -94,7 +108,9 @@ def _prepare_runtime_process_image_binding(
     image = _regular_file_identity(image_path)
     if not _filesystem_is_read_only(Path(provider["resolved_path"])):
         raise RuntimeError("macOS Sandbox provider filesystem is not read-only")
-    provider_signature = _static_code_identity(Path(provider["resolved_path"]))
+    provider_signature, provider_static_validation = _provider_static_code_identity(
+        Path(provider["resolved_path"])
+    )
     launcher_signature = _static_code_identity(Path(launcher["resolved_path"]))
     image_signature = _static_code_identity(Path(image["resolved_path"]))
     transition = (
@@ -111,6 +127,7 @@ def _prepare_runtime_process_image_binding(
         runtime_launcher_identity=launcher,
         process_image_identity=image,
         provider_cdhash=provider_signature["cdhash"],
+        provider_static_validation=provider_static_validation,
         runtime_launcher_cdhash=launcher_signature["cdhash"],
         process_image_cdhash=image_signature["cdhash"],
         transition=transition,
@@ -173,7 +190,10 @@ def _complete_runtime_process_image_binding(
         "provider": {
             **_path_free_identity(prepared.provider_identity),
             "static_cdhash": prepared.provider_cdhash,
-            "strict_code_signature_valid": True,
+            "strict_code_signature_valid": (
+                prepared.provider_static_validation == _STRICT_VALIDATION
+            ),
+            "static_code_validation": prepared.provider_static_validation,
             "filesystem_read_only": True,
         },
         "runtime": {
@@ -441,8 +461,38 @@ def _pid_cdhash(pid: int) -> str:
     return value
 
 
+def _provider_static_code_identity(path: Path) -> tuple[Mapping[str, str], str]:
+    """Validate the provider, recording one exact sealed-system trust fallback."""
+
+    try:
+        return _static_code_identity(path), _STRICT_VALIDATION
+    except _StaticCodeValidationError as error:
+        resolved = path.resolve(strict=True)
+        if (
+            error.status != _CSSMERR_TP_NOT_TRUSTED
+            or resolved != SANDBOX_EXEC_PATH.resolve(strict=True)
+            or not _filesystem_is_read_only(resolved)
+        ):
+            raise
+        return _static_code_identity_without_validity(resolved), _SEALED_PROVIDER_FALLBACK
+
+
+def _static_code_identity_without_validity(path: Path) -> Mapping[str, str]:
+    """Read one embedded CDHash without claiming code-signature validity."""
+
+    return _static_code_identity_impl(path, require_validity=False)
+
+
 def _static_code_identity(path: Path) -> Mapping[str, str]:
     """Strictly validate one static Mach-O and return its preferred CDHash."""
+
+    return _static_code_identity_impl(path, require_validity=True)
+
+
+def _static_code_identity_impl(
+    path: Path, *, require_validity: bool
+) -> Mapping[str, str]:
+    """Return an embedded CDHash, with strict validity unless explicitly omitted."""
 
     encoded = os.fsencode(path.resolve(strict=True))
     if not encoded or len(encoded) >= _MAXIMUM_PATH_BYTES or b"\x00" in encoded:
@@ -466,8 +516,9 @@ def _static_code_identity(path: Path) -> Mapping[str, str]:
         if security.SecStaticCodeCreateWithPath(url, 0, ctypes.byref(code)) != 0:
             raise RuntimeError("macOS static-code creation failed")
         # Check every architecture and apply strict validation.
-        if security.SecStaticCodeCheckValidity(code, 17, None) != 0:
-            raise RuntimeError("macOS static-code strict validation failed")
+        validity_status = security.SecStaticCodeCheckValidity(code, 17, None)
+        if require_validity and validity_status != 0:
+            raise _StaticCodeValidationError(validity_status)
         if (
             security.SecCodeCopySigningInformation(
                 code, 2, ctypes.byref(information)
@@ -726,7 +777,7 @@ def _validate_artifact(value: Any, *, provider: bool) -> None:
         "strict_code_signature_valid",
     }
     if provider:
-        fields.add("filesystem_read_only")
+        fields.update(("filesystem_read_only", "static_code_validation"))
     if not isinstance(value, dict) or set(value) != fields:
         raise ValueError("macOS runtime process-image artifact fields differ")
     if (
@@ -734,9 +785,20 @@ def _validate_artifact(value: Any, *, provider: bool) -> None:
         or value["bytes"] <= 0
         or not _is_sha(value["sha256"])
         or not _CDHASH_RE.fullmatch(value["static_cdhash"])
-        or value["strict_code_signature_valid"] is not True
         or (provider and value["filesystem_read_only"] is not True)
     ):
+        raise ValueError("macOS runtime process-image artifact identity differs")
+    if provider:
+        validation = value["static_code_validation"]
+        if validation == _STRICT_VALIDATION:
+            valid = True
+        elif validation == _SEALED_PROVIDER_FALLBACK:
+            valid = False
+        else:
+            raise ValueError("macOS runtime process-image provider validation differs")
+        if value["strict_code_signature_valid"] is not valid:
+            raise ValueError("macOS runtime process-image provider validation differs")
+    elif value["strict_code_signature_valid"] is not True:
         raise ValueError("macOS runtime process-image artifact identity differs")
 
 

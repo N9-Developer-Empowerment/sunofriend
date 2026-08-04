@@ -449,6 +449,7 @@ def _binding() -> dict[str, object]:
             "sha256": "a" * 64,
             "static_cdhash": "a" * 40,
             "strict_code_signature_valid": True,
+            "static_code_validation": process_image._STRICT_VALIDATION,
             "filesystem_read_only": True,
         },
         "runtime": {

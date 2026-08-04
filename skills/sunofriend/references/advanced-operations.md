@@ -2201,8 +2201,35 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   the earlier v2 patch targets. Treat them as current human evidence, not as
   proof that v2 caused a regression. The planning step runs no model, creates
   no audio, copies no private review notes and cannot select or accept a
-  separator. There is no current human review page. Build and validate a fresh
-  candidate from that exact plan before requesting more listening.
+  separator.
+  The matching owner-only executor is
+  `scripts/private-separation-candidate-join-remediation-execute.py`. It must
+  receive that exact plan plus the unchanged candidate review, alignment,
+  reassessment and complete v1/v2 evidence roots. It re-derives every binding,
+  runs only missing 15-second Kim worker windows, stops the reused worker
+  executor before its old candidate builder, starts candidate assembly from
+  exact v2 PCM24, patches only the named four-second role regions and publishes
+  the candidate directory atomically. An exact rerun must report
+  `windows_executed_this_invocation: 0`.
+  The completed private run at
+  `work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v1`
+  verified seven workers, ten role patches, unchanged v2 hashes and exact v2
+  PCM24 outside every target. Its candidate report file/document SHA-256 values
+  are
+  `8dda4e13569db363378412c4c564b7bde36183eda90bb2a5f3c349832043ab21`
+  and
+  `e89fa4a26610e123bc34df8cc84574834caf7c4998157128d7259f59070d7a43`.
+  This is not a listening result. Build fresh targeted and complete-song review
+  evidence, then fresh alignment, before reassessing readiness.
+  On macOS 26.5.1, an exact sealed/read-only `/usr/bin/sandbox-exec`
+  `CSSMERR_TP_NOT_TRUSTED` result is recorded as
+  `sealed_read_only_system_provider_cdhash_trust_unavailable` with
+  `strict_code_signature_valid: false`; never report it as strict validation.
+  The runtime launcher and observed process image still require strict validity
+  and matching static/kernel CDHashes. Use a private ignored Python 3.12 virtual
+  environment backed by a valid local runtime rather than changing the system
+  Python. There is no current human review page, and selection, acceptance,
+  readiness and every product/publication permission remain false.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic
   snapshot across the whole operation; status and result record this explicit

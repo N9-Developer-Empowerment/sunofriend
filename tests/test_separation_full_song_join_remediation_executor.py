@@ -164,6 +164,32 @@ def test_join_remediation_executor_preserves_failed_attempt(tmp_path: Path) -> N
     assert state["windows"][0]["attempts"][0]["status"] == "preserved_incomplete"
 
 
+def test_join_remediation_executor_can_stop_after_verified_workers(
+    tmp_path: Path,
+) -> None:
+    remediation, package, source_plan = _inputs(tmp_path)
+    runtime = _runtime_arguments(tmp_path)
+    output = tmp_path / "worker-only-execution"
+    calls: list[int] = []
+
+    result = _execute_private_separation_full_song_join_remediation(
+        remediation,
+        package_dir=package,
+        source_plan_path=source_plan,
+        out_dir=output,
+        **runtime,
+        maximum_windows=None,
+        build_candidates=False,
+        attempt_runner=_fake_runner(calls),
+    )
+
+    assert result["summary"]["all_worker_runs_complete"] is True
+    assert result["summary"]["candidate_audio_complete"] is False
+    assert result["candidate_report_path"] is None
+    assert not (output / CANDIDATE_REPORT_NAME).exists()
+    assert calls == [661_500]
+
+
 def test_equal_power_patch_keeps_exact_outer_samples() -> None:
     destination = np.full((12, 2), 0.25, dtype=np.float32)
     replacement = np.full((8, 2), 0.75, dtype=np.float32)

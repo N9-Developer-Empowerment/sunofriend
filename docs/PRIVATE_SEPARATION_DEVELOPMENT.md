@@ -2936,9 +2936,46 @@ patch-edge checks. All ten ratings are outside the two role-boundary pairs
 previously repatched by v2, so they are current human evidence but are not
 proof that v2 introduced regressions. Planning ran no model, created no audio,
 copied no private listener notes and changed no candidate or product route.
-No human review is currently ready. The next development increment is a
-private executor that must create a fresh candidate from this exact plan before
-targeted and complete-song listening can resume.
+
+The matching private executor is now implemented as
+`scripts/private-separation-candidate-join-remediation-execute.py`. It
+re-derives the sealed plan and complete v1/v2/review/alignment/reassessment
+chain, delegates only the seven named source windows to the audited Kim worker,
+then starts from the immutable v2 PCM24 roles and replaces only the ten named
+four-second role regions. The old worker executor has an explicit worker-only
+mode so it cannot accidentally assemble its earlier raw-stitch candidate.
+Candidate publication is an owner-only atomic directory rename, and an exact
+rerun verifies the retained workers and candidate with zero model calls.
+
+The completed private execution is under
+`work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v1`.
+It verified seven worker windows, ten role patches and exact v2 samples outside
+every target. Its execution file SHA-256 is
+`c25822b5cdcc145c2d43dbaa374e05a3f0cc57ef3a851023456490aa00c4092a`.
+The candidate report file/document SHA-256 values are
+`8dda4e13569db363378412c4c564b7bde36183eda90bb2a5f3c349832043ab21`
+and
+`e89fa4a26610e123bc34df8cc84574834caf7c4998157128d7259f59070d7a43`.
+The reconstruction required no gain reduction (`global_gain: 1.0`). The
+result is complete engineering evidence only: fresh targeted edge/boundary
+listening, complete-song listening and alignment remain required before any
+readiness reassessment.
+
+On macOS 26.5.1, Security.framework returned
+`CSSMERR_TP_NOT_TRUSTED` for the sealed, read-only system
+`/usr/bin/sandbox-exec`. Sunofriend now permits only that exact provider and
+status combination to retain the embedded CDHash while recording
+`strict_code_signature_valid: false` and
+`sealed_read_only_system_provider_cdhash_trust_unavailable`. Runtime launchers
+and live process images still require strict validation plus the exact kernel
+CDHash. The successful run used an ignored Python 3.12.9 virtual environment
+backed by the already-installed, strictly valid pyenv runtime; no system Python
+was modified. This compatibility evidence must not be described as strict
+provider-signature validation.
+
+No human review page has yet been built for this new candidate. Selection,
+acceptance, source-graph activation, Simple/Studio exposure, readiness and
+publication all remain false.
 
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:

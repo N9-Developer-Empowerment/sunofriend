@@ -85,6 +85,7 @@ def _execute_private_separation_full_song_join_remediation(
     companion_root: str | Path,
     device: str = "gpu",
     maximum_windows: int | None = 1,
+    build_candidates: bool = True,
     attempt_runner: AttemptRunner = _run_private_melroformer_native_attempt_darwin,
 ) -> dict[str, Any]:
     """Resume verified remediation work and build candidates when complete."""
@@ -97,6 +98,8 @@ def _execute_private_separation_full_song_join_remediation(
         or maximum_windows < 1
     ):
         raise ValueError("maximum windows must be a positive integer or None")
+    if not isinstance(build_candidates, bool):
+        raise ValueError("build candidates must be boolean")
 
     plan_path, plan, plan_sha256 = _load_remediation_plan(remediation_plan_path)
     package, stitch, stitch_path = _load_bound_stitch(package_dir, plan)
@@ -203,7 +206,9 @@ def _execute_private_separation_full_song_join_remediation(
         executed += 1
         _write_state(destination, state)
 
-    if all(item["status"] == "verified_complete" for item in state["windows"]):
+    if build_candidates and all(
+        item["status"] == "verified_complete" for item in state["windows"]
+    ):
         if state.get("candidate_report") is None:
             candidate = _build_candidates(
                 destination,

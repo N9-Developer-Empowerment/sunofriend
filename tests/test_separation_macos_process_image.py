@@ -148,6 +148,56 @@ def test_non_framework_runtime_remains_its_own_process_image(tmp_path: Path) -> 
     assert process_image._expected_python_process_image(runtime) == runtime
 
 
+def test_sealed_provider_records_trust_unavailable_without_claiming_validity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    provider = tmp_path / "sandbox-exec"
+    provider.write_bytes(b"provider")
+    monkeypatch.setattr(process_image, "SANDBOX_EXEC_PATH", provider)
+    monkeypatch.setattr(process_image, "_filesystem_is_read_only", lambda _: True)
+    monkeypatch.setattr(
+        process_image,
+        "_static_code_identity",
+        lambda _path: (_ for _ in ()).throw(
+            process_image._StaticCodeValidationError(
+                process_image._CSSMERR_TP_NOT_TRUSTED
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        process_image,
+        "_static_code_identity_without_validity",
+        lambda _path: {"cdhash": "a" * 40},
+    )
+
+    identity, validation = process_image._provider_static_code_identity(provider)
+
+    assert identity == {"cdhash": "a" * 40}
+    assert validation == process_image._SEALED_PROVIDER_FALLBACK
+
+
+def test_provider_trust_fallback_rejects_a_different_validation_status(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    provider = tmp_path / "sandbox-exec"
+    provider.write_bytes(b"provider")
+    monkeypatch.setattr(process_image, "SANDBOX_EXEC_PATH", provider)
+    monkeypatch.setattr(process_image, "_filesystem_is_read_only", lambda _: True)
+    monkeypatch.setattr(
+        process_image,
+        "_static_code_identity",
+        lambda _path: (_ for _ in ()).throw(
+            process_image._StaticCodeValidationError(-1)
+        ),
+    )
+
+    with pytest.raises(
+        process_image._StaticCodeValidationError,
+        match="strict validation failed",
+    ):
+        process_image._provider_static_code_identity(provider)
+
+
 def test_parent_canary_builds_zero_permission_evidence(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -351,6 +401,7 @@ def _evidence() -> dict[str, object]:
             "sha256": "a" * 64,
             "static_cdhash": "a" * 40,
             "strict_code_signature_valid": True,
+            "static_code_validation": process_image._STRICT_VALIDATION,
             "filesystem_read_only": True,
         },
         "runtime": {
