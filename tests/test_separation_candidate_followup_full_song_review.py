@@ -16,8 +16,14 @@ from sunofriend._separation_candidate_followup_full_song_review import (
 )
 from sunofriend._separation_candidate_followup_full_song_review_result import (
     RESULT_STATUS,
+    _load_completed_review,
     _resolve_private_candidate_followup_full_song_review,
     _status_private_candidate_followup_full_song_review,
+)
+from sunofriend._separation_candidate_followup_full_song_alignment import (
+    POLICY_ID as FOLLOWUP_ALIGNMENT_POLICY_ID,
+    SCHEMA as FOLLOWUP_ALIGNMENT_SCHEMA,
+    _measure_private_candidate_followup_full_song_alignment,
 )
 from sunofriend._separation_candidate_join_remediation_review_result import (
     _resolve_private_candidate_join_remediation_review,
@@ -110,7 +116,7 @@ def _builder_fixture(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> dict[str, object]:
     tmp_path.chmod(0o700)
-    frames = SAMPLE_RATE * 2
+    frames = SAMPLE_RATE * 6
     time = np.arange(frames, dtype="float64") / SAMPLE_RATE
     vocals = np.column_stack(
         (0.08 * np.sin(2 * np.pi * 220 * time),) * 2
@@ -161,7 +167,7 @@ def _builder_fixture(
     boundary_review = _write_boundary_review(
         stitch_root,
         title="Synthetic original",
-        boundaries=[SAMPLE_RATE],
+        boundaries=[SAMPLE_RATE * 3],
         role_paths=original_roles,
         soundfile=soundfile,
         np=np,
@@ -170,7 +176,7 @@ def _builder_fixture(
         "sample_rate": SAMPLE_RATE,
         "channels": 2,
         "frames": frames,
-        "duration_seconds": 2.0,
+        "duration_seconds": 6.0,
         "chunk_count": 2,
         "boundary_count": 1,
         "gap_frames": 0,
@@ -426,3 +432,83 @@ def test_resolver_rejects_incomplete_export_and_changed_audio(
         stream.write(bytes([value[0] ^ 1]))
     with pytest.raises(ValueError, match="audio"):
         _status_private_candidate_followup_full_song_review(reviewed, **arguments)
+
+
+def _alignment_fixture(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[dict[str, object], Path, Path, dict[str, object]]:
+    fixture, reviewed = _completed_full_review(tmp_path, monkeypatch)
+    arguments = _result_args(fixture)
+    context = _load_completed_review(reviewed, **arguments)
+    result_root = tmp_path / "full-result"
+    result_root.mkdir(mode=0o700)
+    result_path = result_root / "result.json"
+    _resolve_private_candidate_followup_full_song_review(
+        reviewed,
+        out=result_path,
+        **arguments,
+    )
+    monkeypatch.setattr(
+        "sunofriend._separation_candidate_followup_full_song_alignment._load_completed_review",
+        lambda *args, **kwargs: context,
+    )
+    return fixture, reviewed, result_path, context
+
+
+def _alignment_args(
+    fixture: dict[str, object], reviewed: Path, *, out: Path
+) -> dict[str, object]:
+    return {
+        "full_song_review_export_path": reviewed,
+        "full_song_review_package_dir": fixture["out"],
+        "targeted_review_result_path": fixture["result_path"],
+        "targeted_reviewed_export_path": fixture["reviewed"],
+        "targeted_review_package_dir": fixture["review_package"],
+        "execution_dir": fixture["execution"],
+        "v2_execution_dir": fixture["v2"],
+        "stitch_package_dir": fixture["stitch"],
+        "out": out,
+    }
+
+
+def test_measures_fresh_followup_alignment_only_after_exact_full_review(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fixture, reviewed, result_path, _ = _alignment_fixture(tmp_path, monkeypatch)
+    output_root = tmp_path / "alignment-result"
+    output_root.mkdir(mode=0o700)
+    output = output_root / "alignment.json"
+    result = _measure_private_candidate_followup_full_song_alignment(
+        result_path,
+        **_alignment_args(fixture, reviewed, out=output),
+    )
+
+    assert result["schema"] == FOLLOWUP_ALIGNMENT_SCHEMA
+    assert result["policy_id"] == FOLLOWUP_ALIGNMENT_POLICY_ID
+    assert len(result["windows"]) == 9
+    assert result["readiness_evidence"]["followup_alignment_complete"] is True
+    assert isinstance(result["readiness_evidence"]["alignment_gate_passed"], bool)
+    assert result["readiness_evidence"]["original_audible_joins_resolved"] is False
+    assert result["readiness_evidence"]["publication_ready"] is False
+    assert result["permissions"] == _FALSE_PERMISSIONS
+    assert output.is_file()
+
+
+def test_alignment_rejects_a_self_hashed_but_changed_full_review_result(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fixture, reviewed, result_path, _ = _alignment_fixture(tmp_path, monkeypatch)
+    changed = json.loads(result_path.read_text(encoding="utf-8"))
+    changed["readiness_evidence"]["publication_ready"] = True
+    changed["document_sha256"] = _document_sha256(changed)
+    _write(result_path, changed)
+    output_root = tmp_path / "alignment-result"
+    output_root.mkdir(mode=0o700)
+    output = output_root / "alignment.json"
+
+    with pytest.raises(ValueError, match="review result differs"):
+        _measure_private_candidate_followup_full_song_alignment(
+            result_path,
+            **_alignment_args(fixture, reviewed, out=output),
+        )
+    assert not output.exists()

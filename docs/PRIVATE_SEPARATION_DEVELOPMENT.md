@@ -3083,6 +3083,23 @@ original-join resolution, selection, acceptance, activation and publication
 false. The resolver is tested now; no real result exists because its input
 review package is still correctly gated by the outstanding targeted review.
 
+The next candidate-bound alignment stage is implemented as
+`scripts/private-separation-candidate-followup-full-song-alignment.py`. It
+requires the completed all-boundary browser export and its resolved result,
+re-derives that result from the complete evidence chain and refuses a merely
+self-hashed or edited readiness document. It then measures the exact original
+source against the exact follow-up reconstruction in the established nine
+early/middle/late windows. No audio is created or changed.
+
+The alignment output records lag, drift spread, normalized correlation and the
+gate outcome separately from the human full-song and boundary ratings. A
+failed measurement is retained as evidence rather than promoted. Completion
+makes a fresh readiness reassessment technically possible, but does not by
+itself resolve the original joins or establish separator quality. The real
+alignment command cannot run yet because its prerequisite targeted review and
+subsequent all-boundary review have not been completed. Selection, acceptance,
+product exposure and publication remain false.
+
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
 

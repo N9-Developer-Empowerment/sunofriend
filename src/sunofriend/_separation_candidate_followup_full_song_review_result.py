@@ -131,6 +131,25 @@ def _resolve_private_candidate_followup_full_song_review(
             context["stitch_snapshot"]["path"],
         ),
     )
+    result = _resolved_result_document(context)
+    published = False
+    try:
+        _write_json_exclusive(output, result)
+        published = True
+        _reverify_completed_review(context)
+    except BaseException:
+        if published:
+            try:
+                output.unlink()
+            except FileNotFoundError:
+                pass
+        raise
+    return {**result, "report": str(output)}
+
+
+def _resolved_result_document(context: Mapping[str, Any]) -> dict[str, Any]:
+    """Derive the exact non-activating result from one verified review context."""
+
     review = context["review_snapshot"]["document"]
     counts = _boundary_counts(review)
     audible = {
@@ -198,19 +217,7 @@ def _resolve_private_candidate_followup_full_song_review(
         "effects": dict(_RESULT_EFFECTS),
     }
     result["document_sha256"] = _document_sha256(result)
-    published = False
-    try:
-        _write_json_exclusive(output, result)
-        published = True
-        _reverify_completed_review(context)
-    except BaseException:
-        if published:
-            try:
-                output.unlink()
-            except FileNotFoundError:
-                pass
-        raise
-    return {**result, "report": str(output)}
+    return result
 
 
 def _load_completed_review(

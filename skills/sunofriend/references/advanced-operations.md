@@ -2275,6 +2275,14 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   selection, acceptance, product exposure and publication stay false. The
   code is ready, but there is no real result until the targeted review has
   passed and this all-boundary page has subsequently been heard and exported.
+  The subsequent deterministic alignment command is
+  `scripts/private-separation-candidate-followup-full-song-alignment.py`. It
+  re-verifies and re-derives the completed all-boundary result, then compares
+  the bound source with the exact follow-up reconstruction over nine
+  early/middle/late windows. Treat lag, drift and correlation as clock evidence
+  only. Preserve a failing gate as evidence; do not turn synchronization into
+  separator quality or acceptance. This command creates no audio and remains
+  blocked until both upstream human review stages genuinely complete.
   On macOS 26.5.1, an exact sealed/read-only `/usr/bin/sandbox-exec`
   `CSSMERR_TP_NOT_TRUSTED` result is recorded as
   `sealed_read_only_system_provider_cdhash_trust_unavailable` with
