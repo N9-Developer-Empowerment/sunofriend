@@ -1962,15 +1962,20 @@ now gives those distributed findings one fail-closed, path-free status report:
 ```bash
 PYTHONPATH=src ./.venv/bin/python \
   scripts/private-separation-publication-readiness.py \
-  /absolute/private-separation-normalized-midi-agreement.json \
-  /absolute/private-separation-human-listening-coverage.json \
-  --out /absolute/fresh/private-separation-publication-readiness.json
+  work/separation-bakeoff/cross-song-normalized-midi-agreement-v1/private-separation-normalized-midi-agreement.json \
+  work/separation-bakeoff/cross-song-human-listening-coverage-v6/private-separation-human-listening-coverage.json \
+  --separated-audio-quality \
+    work/separation-bakeoff/cross-song-separated-audio-quality-result-v1/private-separated-audio-quality-result.json \
+  --resource-benchmark-result \
+    work/separation-bakeoff/be-alone-full-song-kim-resource-benchmark-result-v1.json \
+  --out \
+    work/separation-bakeoff/separation-publication-readiness-v7/private-separation-publication-readiness.json
 ```
 
 The current report has file SHA-256
-`1fc548c9c1fb502c4793e92d3075e3cc4e285c59544c43529a82e3cf914a681b`
+`a828f2503dbfd60bc6c33969b996f4e5dc573d3163dc5d1600026cbba3168b5e`
 and document SHA-256
-`0b67c015c7fa583ea4c3dd8c03ed4648fcd8a8472a1d7f55960e8251045967ff`.
+`70fd01deea16a574c3730f0a8c973a338f2598184c2a4039b11a3511ad00d787`.
 It records three passed bounded-evidence milestones: source-bound cross-song
 downstream MIDI, source-bound cross-song human listening and a separate
 structured phrase-completeness judgement for every supplied window.
@@ -1992,6 +1997,18 @@ separate A/B preference is deliberately ignored by this gate, so preferring a
 provider cannot select or reject Kim. The current report includes the completed
 two-song result. One of two Kim excerpts meets the minimum, so the gate remains
 open.
+
+The optional `--resource-benchmark-result` input accepts only a self-hashed,
+complete controlled full-song result with three to ten distinct serial
+repetitions, consistent plan/checkpoint/runtime/device/machine bindings and all
+required timing, RSS, MLX, physical-footprint, thermal, timeout and OOM fields.
+The current three-run 36 GiB development result met every frozen development
+ceiling and is recorded in the ledger, including the 3.812089 GiB maximum
+Darwin physical footprint. It does **not** close the resource gate: the
+separately required 16 GiB acceptance class was not observed. The ledger still
+has three passed and eight open gates, and every product/publication permission
+remains false. A mixed pass/fail repetition set is valid evidence of a failed
+development threshold, not malformed evidence or acceptance.
 
 ### Cross-song separated-audio quality review
 
@@ -2074,6 +2091,8 @@ PYTHONPATH=src ./.venv/bin/python \
   work/separation-bakeoff/cross-song-human-listening-coverage-v6/private-separation-human-listening-coverage.json \
   --separated-audio-quality \
     /absolute/fresh/private-separated-audio-quality-result.json \
+  --resource-benchmark-result \
+    /absolute/private-separation-full-song-resource-benchmark-result.json \
   --out /absolute/fresh/private-separation-publication-readiness.json
 ```
 

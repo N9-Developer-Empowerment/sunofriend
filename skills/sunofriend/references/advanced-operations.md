@@ -1858,6 +1858,16 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   with no severe bleed or artefacts. Provider preference is ignored. A weaker
   completed result leaves the gate open; a passing result closes only the
   bounded separated-audio gate and never selects or enables the separator.
+  Its optional `--resource-benchmark-result` input accepts one complete
+  controlled full-song result, verifies three to ten distinct serial
+  repetitions plus their measurement, identity and machine-class contract,
+  and records the development envelope without accepting it. The current
+  36 GiB `Be Alone` result met its frozen development ceilings across three
+  runs, but it cannot substitute for the separately required 16 GiB
+  acceptance class. The resource gate, publication readiness and every
+  product permission therefore remain open/false. A valid mixture of passing
+  and failing repetition rows is retained as a failed aggregate threshold,
+  not rejected merely because some individual runs passed.
 - `scripts/private-separated-audio-quality-review.py` creates a fresh
   owner-only blind review from two or more exact source-bound vocal-separation
   cases. Each case must bind one authorised mixed excerpt, one unchanged Kim

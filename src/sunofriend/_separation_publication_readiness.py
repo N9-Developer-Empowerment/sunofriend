@@ -27,6 +27,10 @@ from ._separation_audio_quality_review import (
 from ._separation_human_listening_coverage import (
     SCHEMA as HUMAN_LISTENING_SCHEMA,
 )
+from ._separation_full_song_resource_benchmark_result import (
+    SCHEMA as RESOURCE_BENCHMARK_RESULT_SCHEMA,
+    STATUS as RESOURCE_BENCHMARK_RESULT_STATUS,
+)
 from ._separation_normalized_midi_agreement import (
     SCHEMA as NORMALIZED_AGREEMENT_SCHEMA,
 )
@@ -55,6 +59,7 @@ def _project_private_separation_publication_readiness(
     human_listening_coverage_path: str | Path,
     *,
     separated_audio_quality_path: str | Path | None = None,
+    resource_benchmark_result_path: str | Path | None = None,
     out: str | Path,
 ) -> dict[str, Any]:
     """Build one path-free ledger from the currently sealed acceptance work."""
@@ -64,6 +69,11 @@ def _project_private_separation_publication_readiness(
     audio_quality = (
         _load_separated_audio_quality(separated_audio_quality_path)
         if separated_audio_quality_path is not None
+        else None
+    )
+    resource_benchmark = (
+        _load_resource_benchmark_result(resource_benchmark_result_path)
+        if resource_benchmark_result_path is not None
         else None
     )
     _require_listening_bound_to_agreement(listening, agreement)
@@ -90,9 +100,10 @@ def _project_private_separation_publication_readiness(
         agreement=agreement,
         listening=listening,
         audio_quality=audio_quality,
+        resource_benchmark=resource_benchmark,
     )
     document["document_sha256"] = _document_sha256(document)
-    _reverify(agreement, listening, audio_quality)
+    _reverify(agreement, listening, audio_quality, resource_benchmark)
     _write_fresh_private_json(Path(out), document)
     document["report"] = str(Path(out).expanduser().absolute())
     return document
@@ -248,6 +259,209 @@ def _load_separated_audio_quality(path: str | Path) -> _LoadedJson:
     return loaded
 
 
+def _load_resource_benchmark_result(path: str | Path) -> _LoadedJson:
+    loaded = _load_json(path, "full-song resource benchmark result")
+    document = loaded.document
+    coverage = document.get("coverage")
+    readiness = document.get("readiness")
+    protocol = document.get("protocol")
+    machine = document.get("machine_class")
+    candidate = document.get("candidate")
+    aggregate = document.get("aggregate")
+    repetitions = document.get("repetitions")
+    bindings = document.get("bindings")
+    if (
+        document.get("schema") != RESOURCE_BENCHMARK_RESULT_SCHEMA
+        or document.get("status") != RESOURCE_BENCHMARK_RESULT_STATUS
+        or document.get("evidence_scope") != "private_development_only"
+        or document.get("document_sha256") != _document_sha256(document)
+        or not isinstance(coverage, Mapping)
+        or coverage.get("all_required_measurements_observed") is not True
+        or coverage.get("same_plan_checkpoint_runtime_device_and_machine_observed")
+        is not True
+        or coverage.get("serial_non_overlapping_execution_observed") is not True
+        or type(coverage.get("controlled_repetitions_observed")) is not int
+        or not 3 <= coverage["controlled_repetitions_observed"] <= 10
+        or type(coverage.get("development_machine_thresholds_met")) is not bool
+        or type(coverage.get("required_16_gib_acceptance_class_observed"))
+        is not bool
+        or not isinstance(readiness, Mapping)
+        or readiness.get("controlled_repeated_benchmark_complete") is not True
+        or readiness.get("development_machine_thresholds_met")
+        is not coverage["development_machine_thresholds_met"]
+        or type(readiness.get("resource_envelope_accepted")) is not bool
+        or readiness.get("publication_ready") is not False
+        or not isinstance(protocol, Mapping)
+        or protocol.get("name") != "fresh-process-resource-measurement-v1"
+        or protocol.get("serial_non_overlapping") is not True
+        or protocol.get("distinct_process_scoped_nonces") is not True
+        or protocol.get("operating_system_cache_controlled") is not False
+        or protocol.get("planned_repetitions")
+        != coverage["controlled_repetitions_observed"]
+        or protocol.get("verified_repetitions")
+        != coverage["controlled_repetitions_observed"]
+        or not isinstance(repetitions, list)
+        or len(repetitions) != coverage["controlled_repetitions_observed"]
+        or not _valid_resource_repetitions(
+            repetitions,
+            expected_count=coverage["controlled_repetitions_observed"],
+            aggregate_within=coverage["development_machine_thresholds_met"],
+        )
+        or not isinstance(machine, Mapping)
+        or machine.get("architecture") != "arm64"
+        or machine.get("hardware_family") != "Apple silicon"
+        or type(machine.get("unified_memory_gib")) is not int
+        or machine.get("class_id")
+        != f"apple-silicon-{machine.get('unified_memory_gib')}gib"
+        or coverage["required_16_gib_acceptance_class_observed"]
+        is not (machine["unified_memory_gib"] == 16)
+        or not isinstance(candidate, Mapping)
+        or candidate.get("candidate_id") != "mlx-melroformer-kim-vocal-2"
+        or candidate.get("device") not in {"cpu", "gpu"}
+        or not isinstance(aggregate, Mapping)
+        or not _valid_resource_aggregate(
+            aggregate,
+            expected_count=coverage["controlled_repetitions_observed"],
+        )
+        or not isinstance(bindings, Mapping)
+        or set(bindings)
+        != {
+            "benchmark_plan_sha256",
+            "benchmark_plan_document_sha256",
+            "plan_report_sha256",
+            "checkpoint_sha256",
+            "runtime_executable_sha256",
+        }
+        or not all(_is_sha256(value) for value in bindings.values())
+        or readiness["resource_envelope_accepted"]
+        is not (
+            coverage["development_machine_thresholds_met"]
+            and coverage["required_16_gib_acceptance_class_observed"]
+        )
+    ):
+        raise ValueError("full-song resource benchmark result differs")
+    _require_all_false(document.get("permissions"), "resource permissions")
+    _require_all_false(document.get("effects"), "resource effects")
+    return loaded
+
+
+def _valid_resource_repetitions(
+    values: list[Any],
+    *,
+    expected_count: int,
+    aggregate_within: bool,
+) -> bool:
+    if len(values) != expected_count:
+        return False
+    starts: list[int] = []
+    finishes: list[int] = []
+    nonces: list[str] = []
+    within_thresholds: list[bool] = []
+    for index, item in enumerate(values, start=1):
+        if (
+            not isinstance(item, Mapping)
+            or set(item)
+            != {
+                "index",
+                "report_sha256",
+                "document_sha256",
+                "nonce_sha256",
+                "wall_started_unix_ns",
+                "wall_finished_unix_ns",
+                "within_frozen_thresholds",
+            }
+            or item.get("index") != index
+            or type(item.get("within_frozen_thresholds")) is not bool
+            or not all(
+                _is_sha256(item.get(field))
+                for field in (
+                    "report_sha256",
+                    "document_sha256",
+                    "nonce_sha256",
+                )
+            )
+            or type(item.get("wall_started_unix_ns")) is not int
+            or type(item.get("wall_finished_unix_ns")) is not int
+            or item["wall_started_unix_ns"] <= 0
+            or item["wall_finished_unix_ns"] <= item["wall_started_unix_ns"]
+        ):
+            return False
+        starts.append(item["wall_started_unix_ns"])
+        finishes.append(item["wall_finished_unix_ns"])
+        nonces.append(item["nonce_sha256"])
+        within_thresholds.append(item["within_frozen_thresholds"])
+    return (
+        len(set(nonces)) == expected_count
+        and all(earlier <= later for earlier, later in zip(finishes, starts[1:]))
+        and all(within_thresholds) is aggregate_within
+    )
+
+
+def _valid_resource_aggregate(
+    value: Mapping[str, Any], *, expected_count: int
+) -> bool:
+    summaries = (
+        "parent_observed_full_song_wall_time_seconds",
+        "wall_time_seconds_per_audio_minute",
+        "summed_worker_model_call_seconds",
+        "peak_process_rss_bytes",
+        "peak_mlx_allocator_memory_bytes",
+        "peak_total_unified_memory_bytes",
+    )
+    return (
+        all(
+            _valid_summary(value.get(field), expected_count=expected_count)
+            for field in summaries
+        )
+        and isinstance(value.get("maximum_peak_total_unified_memory_gib"), (int, float))
+        and not isinstance(value.get("maximum_peak_total_unified_memory_gib"), bool)
+        and value["maximum_peak_total_unified_memory_gib"] > 0
+        and value.get("timeouts_observed") == 0
+        and value.get("oom_events_observed") == 0
+        and isinstance(value.get("thermal_state_before"), list)
+        and isinstance(value.get("thermal_state_after"), list)
+        and len(value["thermal_state_before"]) == len(value["thermal_state_after"])
+        and len(value["thermal_state_before"]) == expected_count
+        and all(_valid_thermal(item) for item in value["thermal_state_before"])
+        and all(_valid_thermal(item) for item in value["thermal_state_after"])
+    )
+
+
+def _valid_summary(value: Any, *, expected_count: int) -> bool:
+    return (
+        isinstance(value, Mapping)
+        and set(value) == {"count", "minimum", "median", "maximum"}
+        and type(value.get("count")) is int
+        and value["count"] == expected_count
+        and all(
+            isinstance(value.get(field), (int, float))
+            and not isinstance(value.get(field), bool)
+            and value[field] > 0
+            for field in ("minimum", "median", "maximum")
+        )
+        and value["minimum"] <= value["median"] <= value["maximum"]
+    )
+
+
+def _valid_thermal(value: Any) -> bool:
+    names = {0: "nominal", 1: "fair", 2: "serious", 3: "critical"}
+    return (
+        isinstance(value, Mapping)
+        and set(value) == {"value", "name"}
+        and type(value.get("value")) is int
+        and value["value"] in names
+        and value.get("name") == names[value["value"]]
+    )
+
+
+def _is_sha256(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
 def _require_listening_bound_to_agreement(
     listening: _LoadedJson,
     agreement: _LoadedJson,
@@ -336,11 +550,17 @@ def _build_document(
     agreement: _LoadedJson,
     listening: _LoadedJson,
     audio_quality: _LoadedJson | None,
+    resource_benchmark: _LoadedJson | None,
 ) -> dict[str, Any]:
     coverage = listening.document["coverage"]
     audio_assessment = (
         _assess_separated_audio_quality(audio_quality.document)
         if audio_quality is not None
+        else None
+    )
+    resource_assessment = (
+        _assess_resource_benchmark(resource_benchmark.document)
+        if resource_benchmark is not None
         else None
     )
     passed = [
@@ -407,7 +627,15 @@ def _build_document(
         _gate(
             "resource_envelope_acceptance",
             "open",
-            "Full-song time, memory, disk and failure-recovery limits have not been accepted.",
+            (
+                "Three controlled full-song repetitions met the frozen ceilings on the development Mac, but the separately required 16 GiB acceptance class was not observed."
+                if resource_assessment
+                and resource_assessment["development_machine_thresholds_met"]
+                and not resource_assessment[
+                    "required_16_gib_acceptance_class_observed"
+                ]
+                else "Full-song time, memory, disk and failure-recovery limits have not been accepted."
+            ),
         ),
         _gate(
             "public_cli_tui_simple_studio_route",
@@ -431,6 +659,15 @@ def _build_document(
             {
                 "separated_audio_quality_sha256": audio_quality.file_sha256,
                 "separated_audio_quality_document_sha256": audio_quality.document[
+                    "document_sha256"
+                ],
+            }
+        )
+    if resource_benchmark is not None:
+        inputs.update(
+            {
+                "resource_benchmark_result_sha256": resource_benchmark.file_sha256,
+                "resource_benchmark_result_document_sha256": resource_benchmark.document[
                     "document_sha256"
                 ],
             }
@@ -467,6 +704,7 @@ def _build_document(
         },
         "gates": gates,
         "separated_audio_quality_assessment": audio_assessment,
+        "resource_benchmark_assessment": resource_assessment,
         "interpretation": {
             "private_separator_derived_midi_has_useful_evidence": True,
             "general_finished_song_separation_is_working": False,
@@ -475,6 +713,7 @@ def _build_document(
             "passed_gate_is_separator_selection": False,
             "open_gate_can_be_inferred_from_other_evidence": False,
             "provider_preference_is_separator_selection": False,
+            "development_resource_thresholds_are_resource_acceptance": False,
         },
         "policy": {
             "fail_closed": True,
@@ -486,6 +725,7 @@ def _build_document(
             "minimum_usable_audio_policy_predeclared": True,
             "separator_selected": False,
             "product_route_enabled": False,
+            "development_resource_result_can_close_acceptance_gate": False,
         },
         "permissions": {
             "accepted": False,
@@ -510,7 +750,53 @@ def _build_document(
             "Its passed gates are bounded evidence milestones, not a percentage quality score or publication approval.",
             "Future gate closure must be supplied by a new typed, hash-bound evidence contract; caller assertions cannot close a gate.",
             "The separated-audio minimum is a bounded usability gate, not a model ranking, score-truth claim or general finished-song approval.",
+            "A controlled development-machine resource result records progress but cannot substitute for the separate acceptance-class contract.",
         ],
+    }
+
+
+def _assess_resource_benchmark(document: Mapping[str, Any]) -> dict[str, Any]:
+    coverage = document["coverage"]
+    aggregate = document["aggregate"]
+    return {
+        "protocol": document["protocol"]["name"],
+        "candidate_id": document["candidate"]["candidate_id"],
+        "device": document["candidate"]["device"],
+        "machine_class_id": document["machine_class"]["class_id"],
+        "unified_memory_gib": document["machine_class"]["unified_memory_gib"],
+        "controlled_repetitions_observed": coverage[
+            "controlled_repetitions_observed"
+        ],
+        "development_machine_thresholds_met": coverage[
+            "development_machine_thresholds_met"
+        ],
+        "required_16_gib_acceptance_class_observed": coverage[
+            "required_16_gib_acceptance_class_observed"
+        ],
+        "resource_envelope_accepted": document["readiness"][
+            "resource_envelope_accepted"
+        ],
+        "maximum_parent_wall_seconds": aggregate[
+            "parent_observed_full_song_wall_time_seconds"
+        ]["maximum"],
+        "maximum_wall_seconds_per_audio_minute": aggregate[
+            "wall_time_seconds_per_audio_minute"
+        ]["maximum"],
+        "maximum_peak_process_rss_bytes": aggregate["peak_process_rss_bytes"][
+            "maximum"
+        ],
+        "maximum_peak_mlx_allocator_memory_bytes": aggregate[
+            "peak_mlx_allocator_memory_bytes"
+        ]["maximum"],
+        "maximum_peak_total_unified_memory_bytes": aggregate[
+            "peak_total_unified_memory_bytes"
+        ]["maximum"],
+        "maximum_peak_total_unified_memory_gib": aggregate[
+            "maximum_peak_total_unified_memory_gib"
+        ],
+        "timeouts_observed": aggregate["timeouts_observed"],
+        "oom_events_observed": aggregate["oom_events_observed"],
+        "acceptance_gate_closed": False,
     }
 
 
@@ -607,6 +893,7 @@ def _reverify(
     agreement: _LoadedJson,
     listening: _LoadedJson,
     audio_quality: _LoadedJson | None,
+    resource_benchmark: _LoadedJson | None,
 ) -> None:
     if _sha256(agreement.path) != agreement.file_sha256:
         raise ValueError("normalized MIDI agreement changed during projection")
@@ -617,6 +904,11 @@ def _reverify(
         and _sha256(audio_quality.path) != audio_quality.file_sha256
     ):
         raise ValueError("separated-audio quality changed during projection")
+    if (
+        resource_benchmark is not None
+        and _sha256(resource_benchmark.path) != resource_benchmark.file_sha256
+    ):
+        raise ValueError("resource benchmark result changed during projection")
 
 
 __all__ = [

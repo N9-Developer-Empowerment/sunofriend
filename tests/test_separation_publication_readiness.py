@@ -12,6 +12,10 @@ from sunofriend._separation_authorised_midi_comparison import (
 from sunofriend._separation_human_listening_coverage import (
     SCHEMA as HUMAN_LISTENING_SCHEMA,
 )
+from sunofriend._separation_full_song_resource_benchmark_result import (
+    SCHEMA as RESOURCE_RESULT_SCHEMA,
+    STATUS as RESOURCE_RESULT_STATUS,
+)
 from sunofriend._separation_audio_quality_review import (
     POLICY_ID as AUDIO_QUALITY_POLICY_ID,
     RESULT_SCHEMA as AUDIO_QUALITY_RESULT_SCHEMA,
@@ -182,6 +186,88 @@ def test_completed_audio_review_stays_open_when_one_kim_excerpt_is_partial(
     assert result["separated_audio_quality_assessment"]["gate_passed"] is False
 
 
+def test_records_controlled_development_resources_without_closing_gate(
+    tmp_path: Path,
+) -> None:
+    agreement = _agreement(tmp_path)
+    listening = _listening(tmp_path, agreement)
+    resources = _resource_result(tmp_path)
+
+    result = _project_private_separation_publication_readiness(
+        agreement,
+        listening,
+        resource_benchmark_result_path=resources,
+        out=tmp_path / "readiness-with-resources.json",
+    )
+
+    gates = {gate["gate_id"]: gate for gate in result["gates"]}
+    resource_gate = gates["resource_envelope_acceptance"]
+    assert resource_gate["status"] == "open"
+    assert "36 GiB" not in resource_gate["finding"]
+    assert "16 GiB acceptance class was not observed" in resource_gate["finding"]
+    assessment = result["resource_benchmark_assessment"]
+    assert assessment["machine_class_id"] == "apple-silicon-36gib"
+    assert assessment["controlled_repetitions_observed"] == 3
+    assert assessment["development_machine_thresholds_met"] is True
+    assert assessment["required_16_gib_acceptance_class_observed"] is False
+    assert assessment["resource_envelope_accepted"] is False
+    assert assessment["acceptance_gate_closed"] is False
+    assert assessment["maximum_peak_total_unified_memory_gib"] == 3.812089
+    assert result["readiness"]["passed_gate_count"] == 3
+    assert result["readiness"]["open_gate_count"] == 8
+    assert result["readiness"]["publication_ready"] is False
+    assert result["policy"]["development_resource_result_can_close_acceptance_gate"] is False
+    assert all(value is False for value in result["permissions"].values())
+    assert all(value is False for value in result["effects"].values())
+
+
+def test_rejects_forged_resource_acceptance_on_development_machine(
+    tmp_path: Path,
+) -> None:
+    agreement = _agreement(tmp_path)
+    listening = _listening(tmp_path, agreement)
+    resources = _resource_result(tmp_path)
+    document = json.loads(resources.read_text(encoding="utf-8"))
+    document["readiness"]["resource_envelope_accepted"] = True
+    resources = _write_hashed(tmp_path / "forged-resource.json", document)
+
+    with pytest.raises(ValueError, match="resource benchmark result differs"):
+        _project_private_separation_publication_readiness(
+            agreement,
+            listening,
+            resource_benchmark_result_path=resources,
+            out=tmp_path / "rejected.json",
+        )
+
+
+def test_records_mixed_repetition_thresholds_as_development_failure(
+    tmp_path: Path,
+) -> None:
+    agreement = _agreement(tmp_path)
+    listening = _listening(tmp_path, agreement)
+    resources = _resource_result(tmp_path)
+    document = json.loads(resources.read_text(encoding="utf-8"))
+    document["repetitions"][1]["within_frozen_thresholds"] = False
+    document["coverage"]["development_machine_thresholds_met"] = False
+    document["readiness"]["development_machine_thresholds_met"] = False
+    resources = _write_hashed(tmp_path / "mixed-threshold-resources.json", document)
+
+    result = _project_private_separation_publication_readiness(
+        agreement,
+        listening,
+        resource_benchmark_result_path=resources,
+        out=tmp_path / "readiness-mixed-thresholds.json",
+    )
+
+    gates = {gate["gate_id"]: gate for gate in result["gates"]}
+    assert gates["resource_envelope_acceptance"]["status"] == "open"
+    assert result["resource_benchmark_assessment"][
+        "development_machine_thresholds_met"
+    ] is False
+    assert result["resource_benchmark_assessment"]["acceptance_gate_closed"] is False
+    assert result["readiness"]["publication_ready"] is False
+
+
 def test_rejects_audio_review_bound_to_different_excerpt(tmp_path: Path) -> None:
     agreement = _agreement(tmp_path)
     listening = _listening(tmp_path, agreement)
@@ -344,6 +430,120 @@ def _audio_quality(
         "effects": {**_agreement_effects(), "separator_selected": False},
     }
     return _write_hashed(root / "audio-quality.json", document)
+
+
+def _resource_result(root: Path) -> Path:
+    summaries = {
+        "parent_observed_full_song_wall_time_seconds": {
+            "count": 3,
+            "minimum": 172.56133,
+            "median": 172.962042,
+            "maximum": 173.454702,
+        },
+        "wall_time_seconds_per_audio_minute": {
+            "count": 3,
+            "minimum": 39.433576,
+            "median": 39.525147,
+            "maximum": 39.637729,
+        },
+        "summed_worker_model_call_seconds": {
+            "count": 3,
+            "minimum": 53.882378,
+            "median": 53.944776,
+            "maximum": 53.985068,
+        },
+        "peak_process_rss_bytes": {
+            "count": 3,
+            "minimum": 1_118_208_000,
+            "median": 1_124_237_312,
+            "maximum": 1_141_309_440,
+        },
+        "peak_mlx_allocator_memory_bytes": {
+            "count": 3,
+            "minimum": 2_324_039_502,
+            "median": 2_324_039_502,
+            "maximum": 2_324_039_502,
+        },
+        "peak_total_unified_memory_bytes": {
+            "count": 3,
+            "minimum": 4_089_218_536,
+            "median": 4_090_595_032,
+            "maximum": 4_093_199_920,
+        },
+    }
+    repetitions = []
+    for index in range(1, 4):
+        repetitions.append(
+            {
+                "index": index,
+                "report_sha256": str(index) * 64,
+                "document_sha256": str(index + 3) * 64,
+                "nonce_sha256": str(index + 6) * 64,
+                "wall_started_unix_ns": index * 1_000_000_000,
+                "wall_finished_unix_ns": index * 1_000_000_000 + 500_000_000,
+                "within_frozen_thresholds": True,
+            }
+        )
+    document = {
+        "schema": RESOURCE_RESULT_SCHEMA,
+        "status": RESOURCE_RESULT_STATUS,
+        "evidence_scope": "private_development_only",
+        "bindings": {
+            "benchmark_plan_sha256": "a" * 64,
+            "benchmark_plan_document_sha256": "b" * 64,
+            "plan_report_sha256": "c" * 64,
+            "checkpoint_sha256": "d" * 64,
+            "runtime_executable_sha256": "e" * 64,
+        },
+        "candidate": {
+            "candidate_id": "mlx-melroformer-kim-vocal-2",
+            "device": "gpu",
+        },
+        "machine_class": {
+            "class_id": "apple-silicon-36gib",
+            "architecture": "arm64",
+            "hardware_family": "Apple silicon",
+            "unified_memory_gib": 36,
+        },
+        "protocol": {
+            "name": "fresh-process-resource-measurement-v1",
+            "planned_repetitions": 3,
+            "verified_repetitions": 3,
+            "serial_non_overlapping": True,
+            "distinct_process_scoped_nonces": True,
+            "operating_system_cache_controlled": False,
+        },
+        "repetitions": repetitions,
+        "aggregate": {
+            **summaries,
+            "maximum_peak_total_unified_memory_gib": 3.812089,
+            "thermal_state_before": [
+                {"value": 0, "name": "nominal"} for _ in range(3)
+            ],
+            "thermal_state_after": [
+                {"value": 0, "name": "nominal"} for _ in range(3)
+            ],
+            "timeouts_observed": 0,
+            "oom_events_observed": 0,
+        },
+        "coverage": {
+            "controlled_repetitions_observed": 3,
+            "all_required_measurements_observed": True,
+            "same_plan_checkpoint_runtime_device_and_machine_observed": True,
+            "serial_non_overlapping_execution_observed": True,
+            "required_16_gib_acceptance_class_observed": False,
+            "development_machine_thresholds_met": True,
+        },
+        "readiness": {
+            "controlled_repeated_benchmark_complete": True,
+            "development_machine_thresholds_met": True,
+            "resource_envelope_accepted": False,
+            "publication_ready": False,
+        },
+        "permissions": {"accepted": False, "publication_permitted": False},
+        "effects": {"model_run_started": False, "audio_created": False},
+    }
+    return _write_hashed(root / "resource-result.json", document)
 
 
 def _permissions() -> dict[str, bool]:

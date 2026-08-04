@@ -22,12 +22,20 @@ def main() -> int:
             "preference never selects a separator"
         ),
     )
+    parser.add_argument(
+        "--resource-benchmark-result",
+        help=(
+            "optional verified controlled full-song development resource result; "
+            "it cannot substitute for the acceptance machine class"
+        ),
+    )
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
     result = _project_private_separation_publication_readiness(
         args.normalized_midi_agreement,
         args.human_listening_coverage,
         separated_audio_quality_path=args.separated_audio_quality,
+        resource_benchmark_result_path=args.resource_benchmark_result,
         out=args.out,
     )
     print(
