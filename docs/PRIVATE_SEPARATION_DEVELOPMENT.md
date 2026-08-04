@@ -3000,6 +3000,34 @@ exposure, readiness and publication all remain false. A separate resolver,
 fresh candidate-bound 17-boundary review and fresh alignment remain required
 after this targeted comparison.
 
+The separate verifier/resolver is now implemented as
+`scripts/private-separation-candidate-join-remediation-review-result.py`.
+After the browser export exists, first secure that private JSON to mode `600`
+and run the key-blind status path:
+
+```bash
+PYTHONPATH=src .venv/bin/python \
+  scripts/private-separation-candidate-join-remediation-review-result.py \
+  --status "/absolute/path/to/join_remediation_review.reviewed.json" \
+  --review-package-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-review-v1 \
+  --execution-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v1 \
+  --v2-execution-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2
+```
+
+Status re-derives the ten boundary windows, the deterministic first-audible
+edge-window choices and all complete-song records, then verifies all 66 audio
+references without opening the answer key. Only after it succeeds should the
+same command use `--resolve REVIEWED_JSON --out FRESH_RESULT.json`. Resolution
+repeats the public verification, opens the exact committed answer key and
+records identity-resolved outcomes. A targeted pass requires the follow-up to
+be preferred at all ten formerly audible joins, and follow-up or equivalent at
+all twenty patch edges and all three complete-song roles. Even a pass only
+makes a fresh all-17-boundary review and alignment eligible. Every selection,
+acceptance, source-graph, product and publication effect remains false.
+
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
 

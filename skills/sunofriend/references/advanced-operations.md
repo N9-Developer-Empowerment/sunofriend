@@ -2238,6 +2238,20 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   sealed answer key first. This page does not select, accept or activate a
   separator. A separate resolver, fresh candidate-bound all-17-boundary review
   and fresh alignment are still required before reassessing readiness.
+  The verifier/resolver is
+  `scripts/private-separation-candidate-join-remediation-review-result.py`.
+  Give `--status` the browser-exported reviewed JSON plus the exact review,
+  follow-up execution and v2 execution directories. It reconstructs every
+  public unit, confirms the first audible fixed edge window and verifies all
+  66 audio references without opening the key. Secure a downloaded export to
+  owner-only mode `600` before status. Only after status succeeds may
+  `--resolve` use the same inputs plus one fresh owner-only `--out`. Resolution
+  repeats those checks, then verifies the committed key and records resolved
+  outcomes. A targeted pass requires follow-up preference at all ten formerly
+  audible joins, plus follow-up or equivalence at all 20 patch edges and all
+  three complete-song roles. A pass permits only a fresh all-17-boundary
+  review and alignment; it does not select, accept, activate or publish the
+  separator.
   On macOS 26.5.1, an exact sealed/read-only `/usr/bin/sandbox-exec`
   `CSSMERR_TP_NOT_TRUSTED` result is recorded as
   `sealed_read_only_system_provider_cdhash_trust_unavailable` with
