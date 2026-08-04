@@ -2466,7 +2466,16 @@ separator transport, source-lineage import and promotion are not implemented**
     the full-song observer can summarize those fields only when every selected
     attempt carries them. This does not retroactively fill the current run and
     is not process RSS or total unified-memory evidence. Do not relabel this
-    one uncontrolled observation as a benchmark.
+    one uncontrolled observation as a benchmark. The new path-free benchmark
+    plan freezes three fresh serial repetitions, exact plan/checkpoint/runtime/
+    device/Mac bindings, the existing wall-time and 12 GiB ceilings, and every
+    required wall-time, RSS, MLX, total-unified-memory, thermal and timeout/OOM
+    measurement before execution. Its current 36 GiB development-Mac profile
+    does not satisfy the required 16 GiB class, all repeat slots remain
+    `not_run`, and no model or product route was started. Next implement the
+    bounded measurement runner and fail-closed result verifier against that
+    immutable plan; then run the three development repetitions before arranging
+    a separate 16 GiB-class repeat.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
 - [x] Repeat the clean/estimate comparison through exact production
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation

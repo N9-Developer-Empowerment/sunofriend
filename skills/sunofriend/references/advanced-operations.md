@@ -1928,6 +1928,20 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   one. Existing attempts without the projection remain valid but cannot be
   backfilled. Never treat MLX allocator peak as process RSS, total unified
   memory, a controlled benchmark or resource acceptance.
+  Before any controlled repeats, use
+  `scripts/private-separation-full-song-resource-benchmark-plan.py` to bind one
+  exact sealed full-song plan, the exact checkpoint and resolved runtime
+  executable, the locally probed Mac class, three to ten fresh serial runs and
+  fixed resource ceilings. The plan probes with bounded local commands, starts
+  no model, contains no paths and rechecks runtime/checkpoint identities after
+  probing. Its required measurements are parent full-song wall time, worker
+  model-call time, peak process RSS, peak MLX allocator bytes, peak total
+  unified memory, thermal state before/after and timeout/OOM outcome. All
+  repeat slots begin `not_run`; the document is not a benchmark result and
+  cannot accept or enable anything. A development Mac with more memory does
+  not substitute for the separately required 16 GiB acceptance class. The
+  bounded runner and result verifier remain the next implementation step; do
+  not manually fill slots or infer acceptance from the older coarse report.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,

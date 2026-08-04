@@ -2323,6 +2323,42 @@ resource envelope. Existing completed attempts predate the projection, so the
 measurements cannot be reconstructed from their retained receipts and the
 current 18-chunk report correctly remains unchanged.
 
+The next resource step is now frozen before any repeat is run:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-full-song-resource-benchmark-plan.py \
+  --plan \
+    work/separation-bakeoff/be-alone-full-song-kim-plan-v1/private-separation-full-song-plan.json \
+  --runtime-launcher .venv-ai/bin/python \
+  --checkpoint \
+    "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/model.safetensors" \
+  --device gpu \
+  --repetitions 3 \
+  --out \
+    work/separation-bakeoff/be-alone-full-song-kim-resource-benchmark-plan-v1/private-separation-full-song-resource-benchmark-plan.json
+```
+
+This starts no model. It binds the exact full-song clock, checkpoint and
+resolved runtime executable, probes the current Mac with fixed local commands,
+then rechecks the runtime and checkpoint before publication. It freezes three
+fresh, serial, non-overlapping repetitions and the existing ceilings of 120
+wall seconds per audio minute, 900 wall seconds per song and 12 GiB peak total
+unified memory. Every repeat must retain parent-observed full-song wall time,
+worker model-call time, process RSS, MLX allocator peak, total unified-memory
+peak, thermal state before/after and timeout/OOM outcome. MLX allocator peak
+cannot stand in for either of the other memory measurements.
+
+The current plan's JSON file SHA-256 is
+`b551213724acef7163e468a785e77ece5fe030f04bf660a7a1a9532dd4b04437` and
+its document SHA-256 is
+`d3005fbf0fb12ec6948e59597f2927231919523b16109b43a96bf2855eacbeef`.
+It records the development machine as macOS 26.5.1 build 25F80, arm64,
+CPython 3.12.10 and 36 GiB unified memory. That is useful development evidence
+but cannot satisfy the separately required 16 GiB acceptance class. All three
+slots remain `not_run`, resource acceptance remains false and no separator or
+product route is enabled.
+
 The optional review contract now asks that question explicitly with
 `--classify-focus-phrase-coverage`. For every playable candidate, the listener
 must separately choose `substantially_complete`, `partially_complete`,
