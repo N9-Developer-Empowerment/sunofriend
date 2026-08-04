@@ -2032,6 +2032,28 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   result keeps `original_audible_joins_resolved: false`; the combined
   duration/alignment milestone and every product/publication gate remain open.
   No current human review page remains outstanding.
+  The next bounded artifact is the v2 plan produced by
+  `scripts/private-separation-full-song-join-remediation-plan-v2.py`. Bind the
+  exact v3 stitch package, full-song review result, v1 plan, v1 execution and
+  candidate reports, strengthened v4 resolved join review and readiness-v12
+  ledger, then write the fixed
+  `private-separation-full-song-join-remediation-plan-v2.json` name into a
+  fresh owner-only directory. The current file SHA-256 is
+  `dfdff09fbd7b6b79701f96075004493ba4726bf950a62b2425f031c030ef29c6`;
+  its document SHA-256 is
+  `3ca4ce793b569e3c0032051e90767796bf4147bafa658c5563ee94863a671a90`.
+  It derives only boundary 11 vocals and boundary 13 instrumental from the two
+  human-equivalent v1 outcomes, while preserving the candidate-preferred
+  boundary 11 instrumental and boundary 12 vocals repairs. It starts from the
+  verified v1 candidate and reuses worker-local `[242550, 418950)` for each
+  target. The only signal-processing delta is widening each patch from one to
+  two seconds per side; 100 ms equal-power edges and 15-second source windows
+  remain unchanged. It runs zero models, writes no audio, selects nothing and
+  closes no gate. No v2 page exists yet. A future candidate needs two blind
+  v1-versus-v2 comparisons with independent absolute cleanliness ratings,
+  four patch-edge checks and, if those pass, a new candidate-bound three-role
+  full-song review plus nine-window alignment review. Never transfer v1
+  review or alignment decisions to the new candidate.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic
   snapshot across the whole operation; status and result record this explicit

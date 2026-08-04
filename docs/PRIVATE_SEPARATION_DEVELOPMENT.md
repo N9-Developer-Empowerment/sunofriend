@@ -2572,6 +2572,60 @@ questions, but the two equivalent originally audible joins are not proven
 removed. The result therefore keeps `original_audible_joins_resolved: false`
 and the duration/alignment publication milestone open.
 
+The next bounded increment is now recorded as the owner-only, self-hashed v2
+plan at
+`work/separation-bakeoff/be-alone-full-song-join-remediation-plan-v2/private-separation-full-song-join-remediation-plan-v2.json`.
+Its file SHA-256 is
+`dfdff09fbd7b6b79701f96075004493ba4726bf950a62b2425f031c030ef29c6` and
+its document SHA-256 is
+`3ca4ce793b569e3c0032051e90767796bf4147bafa658c5563ee94863a671a90`.
+The plan derives only the two v1 outcomes that the listener rated equivalent:
+boundary 11 vocals at 160.453333 seconds and boundary 13 instrumental at
+189.626667 seconds. Their full-song patch ranges are respectively
+`[6987792, 7164192)` and `[8274336, 8450736)` frames; both reuse the verified
+worker-local range `[242550, 418950)`. The successful boundary 11
+instrumental and boundary 12 vocals v1 repairs remain preserved.
+
+Generate this plan from the exact sealed evidence chain with:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-full-song-join-remediation-plan-v2.py \
+  work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review \
+  --full-song-review-result \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-review-result-v1/private-separation-full-song-review-result.json \
+  --v1-plan \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-plan-v1/private-separation-full-song-join-remediation-plan.json \
+  --v1-execution \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v1/private-separation-full-song-join-remediation-execution.json \
+  --v1-candidate \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v1/private-separation-full-song-join-remediation-candidates.json \
+  --resolved-join-review-result \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-review-result-v4/private-separation-full-song-join-remediation-review-result.json \
+  --publication-readiness \
+    work/separation-bakeoff/separation-publication-readiness-v12/private-separation-publication-readiness.json \
+  --out \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-plan-v2/private-separation-full-song-join-remediation-plan-v2.json
+```
+
+The sole signal-processing change is a wider patch: one second on either side
+of the join becomes two seconds on either side, so the total patch grows from
+two to four seconds. The 100 ms equal-power edges and original 15-second
+source windows do not change. This is an assembly-policy experiment over the
+sealed v1 worker WAVs: it schedules zero model calls, creates no audio, starts
+from the verified v1 candidate and cannot select a separator or close a
+readiness gate. Publication readiness therefore remains the unchanged v12
+context, not an authority for choosing targets.
+
+No v2 listening page exists yet and no human review is currently outstanding.
+Before a v2 candidate can affect readiness, its two anonymous v1-versus-v2
+boundary comparisons need both a relative choice and an independent absolute
+`clean`, `audible_join` or `cannot_tell` rating, and its four new patch edges
+must be reviewed. Only if those checks pass may a separate immutable candidate
+package receive a fresh three-role, 17-boundary full-song review and fresh
+nine-window alignment review. No v1 review or alignment decision transfers to
+that future candidate.
+
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
 
