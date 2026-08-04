@@ -298,6 +298,28 @@ def test_v2_executor_rechecks_inputs_after_audio_publication(
     assert not (output / REPORT_NAME).exists()
 
 
+def test_v2_executor_reverify_rejects_stitch_intermediate_symlink_rebinding(
+    tmp_path: Path,
+) -> None:
+    evidence, plan_path, plan = _prepared(tmp_path)
+    inputs = executor_v2._load_execution_inputs(
+        plan,
+        package_dir=evidence.package,
+        v1_plan_path=evidence.v1_plan,
+        v1_execution_report_path=evidence.execution,
+        v1_candidate_report_path=evidence.candidate,
+    )
+    stems = evidence.package / "STEMS"
+    original = evidence.package / "STEMS-original"
+    stems.rename(original)
+    stems.symlink_to(original.name, target_is_directory=True)
+
+    with pytest.raises((OSError, ValueError)):
+        executor_v2._reverify_input_audio(inputs)
+    assert stems.is_symlink()
+    assert plan_path.is_file()
+
+
 def test_v2_executor_rechecks_published_audio_after_final_input_check(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -321,6 +343,83 @@ def test_v2_executor_rechecks_published_audio_after_final_input_check(
         _execute(evidence, plan_path, output)
     assert calls == 2
     assert not (output / REPORT_NAME).exists()
+
+
+def test_v2_executor_rejects_rehashed_forged_edge_blend_sample(
+    tmp_path: Path,
+) -> None:
+    evidence, plan_path, _plan = _prepared(tmp_path)
+    output = tmp_path / "v2-execution"
+    _execute(evidence, plan_path, output)
+
+    report_path = output / REPORT_NAME
+    report = _read(report_path)
+    target = next(row for row in report["windows"] if row["role"] == "vocals")
+    edge_frame = int(target["patch_start_frame"]) + 10
+    candidate_root = output / CANDIDATES_DIRECTORY
+    vocals_path = candidate_root / "vocals.wav"
+    instrumental_path = candidate_root / "instrumental.wav"
+    reconstruction_path = candidate_root / "reconstruction.wav"
+
+    vocals, rate = soundfile.read(vocals_path, dtype="int32", always_2d=True)
+    instrumental, _ = soundfile.read(
+        instrumental_path,
+        dtype="int32",
+        always_2d=True,
+    )
+    vocals[edge_frame, 0] += 256
+    soundfile.write(
+        vocals_path,
+        vocals.astype("float64") / 2_147_483_648.0,
+        rate,
+        subtype="PCM_24",
+    )
+    vocals_path.chmod(0o600)
+
+    reconstruction_float = (
+        vocals.astype("float64") + instrumental.astype("float64")
+    ) / 2_147_483_648.0
+    peak = float(np.max(np.abs(reconstruction_float)))
+    gain = min(1.0, 0.98 / peak) if peak else 1.0
+    reconstruction = executor_v2._quantize_float_to_pcm24_int32(
+        reconstruction_float * gain,
+        np=np,
+    )
+    soundfile.write(
+        reconstruction_path,
+        reconstruction.astype("float64") / 2_147_483_648.0,
+        rate,
+        subtype="PCM_24",
+    )
+    reconstruction_path.chmod(0o600)
+
+    for role, path in (
+        ("vocals", vocals_path),
+        ("reconstruction", reconstruction_path),
+    ):
+        snapshot = executor_v2._read_pcm24_snapshot(
+            path,
+            None,
+            expected_frames=int(report["clock"]["frames"]),
+            label=f"forged private v2 {role}",
+        )
+        report["artifacts"][role]["sha256"] = snapshot["sha256"]
+        report["artifacts"][role]["bytes"] = snapshot["bytes"]
+        report["artifacts"][role]["pcm24_int32_sequence_sha256"] = snapshot[
+            "pcm24_int32_sequence_sha256"
+        ]
+    report["artifacts"]["reconstruction"]["global_gain"] = round(gain, 9)
+    _rewrite_hashed(report_path, report)
+
+    inputs = executor_v2._load_execution_inputs(
+        _read(plan_path),
+        package_dir=evidence.package,
+        v1_plan_path=evidence.v1_plan,
+        v1_execution_report_path=evidence.execution,
+        v1_candidate_report_path=evidence.candidate,
+    )
+    with pytest.raises(ValueError, match="published patched role differs"):
+        executor_v2._verify_published_candidate(output, report, inputs=inputs)
 
 
 def test_v2_executor_revokes_report_when_audio_changes_during_report_write(

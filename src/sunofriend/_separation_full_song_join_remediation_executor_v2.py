@@ -51,6 +51,7 @@ REPORT_NAME = "private-separation-full-song-join-remediation-execution-v2.json"
 CANDIDATES_DIRECTORY = "CANDIDATES"
 _ROLES = ("vocals", "instrumental")
 _FULL_SONG_ROLES = (*_ROLES, "reconstruction")
+_STITCH_ROLES = ("source", *_FULL_SONG_ROLES)
 _FALSE_PERMISSIONS = {
     "accepted": False,
     "automatic_selection": False,
@@ -323,6 +324,19 @@ def _load_execution_inputs(
     if stitch != stitch_snapshot["document"]:
         raise ValueError("private full-song stitch report changed")
     _verify_stitch_audio(package, stitch)
+    total_frames = int(stitch["clock"]["frames"])
+    stitch_audio: dict[str, dict[str, Any]] = {}
+    for role in _STITCH_ROLES:
+        record = stitch["artifacts"][role]
+        snapshot = _read_private_pcm24_child_snapshot(
+            package,
+            record["path"],
+            record,
+            expected_frames=total_frames,
+            label=f"private full-song {role} artifact",
+        )
+        snapshot["relative_path"] = record["path"]
+        stitch_audio[role] = snapshot
 
     v1_plan_snapshot = _load_private_json_snapshot(
         v1_plan_path, "private v1 join-remediation plan"
@@ -403,6 +417,7 @@ def _load_execution_inputs(
         "execution_root": execution_root,
         "patch_inventory": patch_inventory,
         "candidate_paths": candidate_paths,
+        "stitch_audio": stitch_audio,
         "base_audio": base_audio,
         "worker_audio": worker_audio,
     }
@@ -800,10 +815,32 @@ def _verify_candidate_observed(
     for role in _ROLES:
         base = inputs["base_audio"][role]["samples"]
         samples = observed[role]["samples"]
+        expected_float = base.astype("float64") / 2_147_483_648.0
         ranges = [
             (int(row["patch_start_frame"]), int(row["patch_end_frame"]))
             for row in windows_by_role[role]
         ]
+        for row in windows_by_role[role]:
+            key = (int(row["boundary_index"]), role)
+            worker = inputs["worker_audio"][key]["samples"]
+            start = int(row["patch_start_frame"])
+            end = int(row["patch_end_frame"])
+            local_start = int(row["worker_local_patch_start_frame"])
+            local_end = int(row["worker_local_patch_end_frame"])
+            replacement = (
+                worker[local_start:local_end].astype("float64") / 2_147_483_648.0
+            )
+            _apply_equal_power_patch(
+                expected_float,
+                replacement,
+                start=start,
+                end=end,
+                blend_frames=int(row["edge_blend_frames"]),
+                np=np,
+            )
+        expected_samples = _quantize_float_to_pcm24_int32(expected_float, np=np)
+        if not bool(np.array_equal(samples, expected_samples)):
+            raise ValueError("private v2 published patched role differs")
         _outside_ranges_exact(base, samples, ranges=ranges, np=np)
         for row in windows_by_role[role]:
             key = (int(row["boundary_index"]), role)
@@ -813,6 +850,12 @@ def _verify_candidate_observed(
             local_start = int(row["worker_local_patch_start_frame"])
             local_end = int(row["worker_local_patch_end_frame"])
             blend = int(row["edge_blend_frames"])
+            changed = int(np.count_nonzero(samples[start:end] != base[start:end]))
+            if changed < 1 or changed != _exact_int(
+                row.get("changed_pcm24_sample_values"),
+                "changed sample count",
+            ):
+                raise ValueError("private v2 published changed sample count differs")
             if not bool(
                 np.array_equal(
                     samples[start + blend : end - blend],
@@ -1202,6 +1245,108 @@ def _read_pcm24_snapshot(
         os.close(descriptor)
 
 
+def _read_private_pcm24_child_snapshot(
+    root: Path,
+    relative: Any,
+    claim: Mapping[str, Any] | None,
+    *,
+    expected_frames: int,
+    label: str,
+    expected_component_identities: Mapping[str, tuple[int, int]] | None = None,
+) -> dict[str, Any]:
+    """Read a private PCM24 child while binding every directory component."""
+
+    if not isinstance(relative, str):
+        raise ValueError(f"{label} path differs")
+    pure = Path(relative)
+    if pure.is_absolute() or not pure.parts or ".." in pure.parts:
+        raise ValueError(f"{label} path differs")
+
+    root_descriptor = _open_absolute_directory_nofollow(root)
+    descriptors = [root_descriptor]
+    component_names: list[str] = []
+    component_identities: dict[str, tuple[int, int]] = {}
+    try:
+        root_state = os.fstat(root_descriptor)
+        visible_root = root.lstat()
+        root_identity = _inode_identity(root_state)
+        expected_root = (
+            expected_component_identities.get(".")
+            if expected_component_identities is not None
+            else None
+        )
+        if (
+            not stat.S_ISDIR(root_state.st_mode)
+            or _owner_identity(root_state) != _owner_identity(visible_root)
+            or root_state.st_uid != os.geteuid()
+            or stat.S_IMODE(root_state.st_mode) & 0o077
+            or (expected_root is not None and root_identity != expected_root)
+        ):
+            raise ValueError(f"{label} root is not an owner-only bound directory")
+        component_identities["."] = root_identity
+
+        current_descriptor = root_descriptor
+        prefix: list[str] = []
+        for component in pure.parts[:-1]:
+            prefix.append(component)
+            key = "/".join(prefix)
+            expected_identity = (
+                expected_component_identities.get(key)
+                if expected_component_identities is not None
+                else None
+            )
+            next_descriptor = _open_directory_at(
+                current_descriptor,
+                component,
+                label,
+                expected_identity=expected_identity,
+            )
+            descriptors.append(next_descriptor)
+            component_names.append(component)
+            component_identities[key] = _inode_identity(os.fstat(next_descriptor))
+            current_descriptor = next_descriptor
+
+        observed = _read_pcm24_at(
+            current_descriptor,
+            pure.parts[-1],
+            claim,
+            expected_frames=expected_frames,
+            label=label,
+        )
+
+        root_after = os.fstat(root_descriptor)
+        visible_root_after = root.lstat()
+        if _inode_identity(root_after) != component_identities["."] or _owner_identity(
+            root_after
+        ) != _owner_identity(visible_root_after):
+            raise ValueError(f"{label} root binding changed")
+        for index, component in enumerate(component_names, start=1):
+            directory_state = os.fstat(descriptors[index])
+            visible_state = os.stat(
+                component,
+                dir_fd=descriptors[index - 1],
+                follow_symlinks=False,
+            )
+            key = "/".join(pure.parts[:index])
+            if _inode_identity(directory_state) != component_identities[
+                key
+            ] or _owner_identity(directory_state) != _owner_identity(visible_state):
+                raise ValueError(f"{label} directory binding changed")
+        if (
+            expected_component_identities is not None
+            and dict(expected_component_identities) != component_identities
+        ):
+            raise ValueError(f"{label} directory inventory changed")
+        observed["component_identities"] = component_identities
+        return observed
+    finally:
+        for descriptor in reversed(descriptors):
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+
+
 def _read_pcm24_at(
     directory_descriptor: int,
     name: str,
@@ -1301,6 +1446,20 @@ def _read_pcm24_descriptor_snapshot(
 
 
 def _reverify_input_audio(inputs: Mapping[str, Any]) -> None:
+    for role, original in inputs["stitch_audio"].items():
+        current = _read_private_pcm24_child_snapshot(
+            inputs["package"],
+            original["relative_path"],
+            {"sha256": original["sha256"], "bytes": original["bytes"]},
+            expected_frames=original["frames"],
+            label=f"private full-song {role} artifact",
+            expected_component_identities=original["component_identities"],
+        )
+        if (
+            current["pcm24_int32_sequence_sha256"]
+            != original["pcm24_int32_sequence_sha256"]
+        ):
+            raise ValueError("private full-song stitch PCM24 source changed")
     for role in _ROLES:
         original = inputs["base_audio"][role]
         current = _read_pcm24_snapshot(
