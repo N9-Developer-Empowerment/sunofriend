@@ -16,6 +16,10 @@ from sunofriend._separation_full_song_resource_benchmark_result import (
     SCHEMA as RESOURCE_RESULT_SCHEMA,
     STATUS as RESOURCE_RESULT_STATUS,
 )
+from sunofriend._separation_full_song_review import (
+    SCHEMA as FULL_SONG_REVIEW_SCHEMA,
+    STATUS as FULL_SONG_REVIEW_STATUS,
+)
 from sunofriend._separation_audio_quality_review import (
     POLICY_ID as AUDIO_QUALITY_POLICY_ID,
     RESULT_SCHEMA as AUDIO_QUALITY_RESULT_SCHEMA,
@@ -58,9 +62,7 @@ def test_projects_passed_and_open_gates_without_enabling_separation(
     assert gates["separator_audio_quality_cross_song"] == "open"
     assert gates["public_cli_tui_simple_studio_route"] == "open"
     assert (
-        result["interpretation"][
-            "private_separator_derived_midi_has_useful_evidence"
-        ]
+        result["interpretation"]["private_separator_derived_midi_has_useful_evidence"]
         is True
     )
     assert result["interpretation"]["human_usefulness_is_accuracy"] is False
@@ -186,6 +188,122 @@ def test_completed_audio_review_stays_open_when_one_kim_excerpt_is_partial(
     assert result["separated_audio_quality_assessment"]["gate_passed"] is False
 
 
+def test_records_completed_full_song_review_but_keeps_audible_join_gate_open(
+    tmp_path: Path,
+) -> None:
+    agreement = _agreement(tmp_path)
+    listening = _listening(tmp_path, agreement)
+    full_song = _full_song_review_result(tmp_path, all_boundaries_clean=False)
+
+    result = _project_private_separation_publication_readiness(
+        agreement,
+        listening,
+        full_song_review_result_path=full_song,
+        out=tmp_path / "readiness-with-full-song.json",
+    )
+
+    gates = {gate["gate_id"]: gate for gate in result["gates"]}
+    assert gates["full_song_duration_and_alignment"]["status"] == "open"
+    assessment = result["full_song_duration_alignment_assessment"]
+    assert assessment["exact_duration_and_frame_count_verified"] is True
+    assert assessment["full_song_and_boundary_listening_complete"] is True
+    assert assessment["all_full_song_outputs_useful"] is True
+    assert assessment["all_role_boundaries_clean"] is False
+    assert assessment["audible_join_boundaries_by_role"] == {
+        "vocals": [2],
+        "instrumental": [2],
+        "reconstruction": [],
+    }
+    assert assessment["review_minimum_met"] is False
+    assert assessment["gate_passed"] is False
+    assert assessment["acceptance_gate_closed"] is False
+    assert assessment["separator_accepted"] is False
+    assert result["readiness"]["passed_gate_count"] == 3
+    assert result["readiness"]["open_gate_count"] == 8
+    persisted = (tmp_path / "readiness-with-full-song.json").read_text()
+    assert "Private full-song note" not in persisted
+    assert all(value is False for value in result["permissions"].values())
+    assert all(value is False for value in result["effects"].values())
+
+
+def test_clean_useful_full_song_review_still_cannot_claim_source_alignment(
+    tmp_path: Path,
+) -> None:
+    agreement = _agreement(tmp_path)
+    listening = _listening(tmp_path, agreement)
+    full_song = _full_song_review_result(tmp_path, all_boundaries_clean=True)
+
+    result = _project_private_separation_publication_readiness(
+        agreement,
+        listening,
+        full_song_review_result_path=full_song,
+        out=tmp_path / "readiness-clean-full-song.json",
+    )
+
+    gates = {gate["gate_id"]: gate["status"] for gate in result["gates"]}
+    assert gates["full_song_duration_and_alignment"] == "open"
+    assert gates["broad_role_coverage"] == "open"
+    assert gates["public_cli_tui_simple_studio_route"] == "open"
+    assert result["readiness"]["passed_gate_count"] == 3
+    assert result["readiness"]["open_gate_count"] == 8
+    assert result["readiness"]["publication_ready"] is False
+    assessment = result["full_song_duration_alignment_assessment"]
+    assert assessment["review_minimum_met"] is True
+    assert assessment["source_to_output_alignment_verified"] is False
+    assert assessment["drift_acceptance_complete"] is False
+    assert assessment["gate_passed"] is False
+    assert assessment["acceptance_gate_closed"] is False
+    assert (
+        result["interpretation"]["full_song_gate_pass_is_separator_acceptance"] is False
+    )
+    assert result["policy"]["full_song_review_can_select_or_accept_separator"] is False
+    assert (
+        result["policy"]["full_song_review_can_close_duration_alignment_gate"] is False
+    )
+    assert all(value is False for value in result["permissions"].values())
+    assert all(value is False for value in result["effects"].values())
+
+
+def test_rejects_forged_full_song_quality_acceptance(tmp_path: Path) -> None:
+    agreement = _agreement(tmp_path)
+    listening = _listening(tmp_path, agreement)
+    full_song = _full_song_review_result(tmp_path, all_boundaries_clean=True)
+    document = json.loads(full_song.read_text(encoding="utf-8"))
+    document["readiness"]["full_song_quality_accepted"] = True
+    full_song = _write_hashed(tmp_path / "forged-full-song.json", document)
+
+    with pytest.raises(ValueError, match="full-song review result differs"):
+        _project_private_separation_publication_readiness(
+            agreement,
+            listening,
+            full_song_review_result_path=full_song,
+            out=tmp_path / "rejected.json",
+        )
+
+
+def test_rejects_full_song_boundary_summary_that_differs_from_units(
+    tmp_path: Path,
+) -> None:
+    agreement = _agreement(tmp_path)
+    listening = _listening(tmp_path, agreement)
+    full_song = _full_song_review_result(tmp_path, all_boundaries_clean=False)
+    document = json.loads(full_song.read_text(encoding="utf-8"))
+    document["boundary_summary"]["rating_counts_by_role"]["vocals"] = {
+        "audible_join": 0,
+        "cannot_tell": 0,
+        "clean": 2,
+    }
+    full_song = _write_hashed(tmp_path / "forged-summary.json", document)
+
+    with pytest.raises(ValueError, match="full-song review result differs"):
+        _project_private_separation_publication_readiness(
+            agreement,
+            listening,
+            full_song_review_result_path=full_song,
+            out=tmp_path / "rejected.json",
+        )
+
+
 def test_records_controlled_development_resources_without_closing_gate(
     tmp_path: Path,
 ) -> None:
@@ -216,7 +334,10 @@ def test_records_controlled_development_resources_without_closing_gate(
     assert result["readiness"]["passed_gate_count"] == 3
     assert result["readiness"]["open_gate_count"] == 8
     assert result["readiness"]["publication_ready"] is False
-    assert result["policy"]["development_resource_result_can_close_acceptance_gate"] is False
+    assert (
+        result["policy"]["development_resource_result_can_close_acceptance_gate"]
+        is False
+    )
     assert all(value is False for value in result["permissions"].values())
     assert all(value is False for value in result["effects"].values())
 
@@ -261,9 +382,10 @@ def test_records_mixed_repetition_thresholds_as_development_failure(
 
     gates = {gate["gate_id"]: gate for gate in result["gates"]}
     assert gates["resource_envelope_acceptance"]["status"] == "open"
-    assert result["resource_benchmark_assessment"][
-        "development_machine_thresholds_met"
-    ] is False
+    assert (
+        result["resource_benchmark_assessment"]["development_machine_thresholds_met"]
+        is False
+    )
     assert result["resource_benchmark_assessment"]["acceptance_gate_closed"] is False
     assert result["readiness"]["publication_ready"] is False
 
@@ -273,9 +395,7 @@ def test_rejects_audio_review_bound_to_different_excerpt(tmp_path: Path) -> None
     listening = _listening(tmp_path, agreement)
     audio_quality = _audio_quality(tmp_path, agreement, minimum_usable=True)
     document = json.loads(audio_quality.read_text(encoding="utf-8"))
-    document["units"][0]["source_binding"][
-        "authorised_excerpt_sha256"
-    ] = "f" * 64
+    document["units"][0]["source_binding"]["authorised_excerpt_sha256"] = "f" * 64
     audio_quality = _write_hashed(tmp_path / "wrong-audio.json", document)
 
     with pytest.raises(ValueError, match="source binding differs"):
@@ -432,6 +552,120 @@ def _audio_quality(
     return _write_hashed(root / "audio-quality.json", document)
 
 
+def _full_song_review_result(
+    root: Path,
+    *,
+    all_boundaries_clean: bool,
+) -> Path:
+    roles = ("vocals", "instrumental", "reconstruction")
+    ratings = {role: "useful" for role in roles}
+    boundaries = []
+    for index, frame in enumerate((58_800, 117_600), start=1):
+        boundary_ratings = {role: "clean" for role in roles}
+        if index == 2 and not all_boundaries_clean:
+            boundary_ratings["vocals"] = "audible_join"
+            boundary_ratings["instrumental"] = "audible_join"
+        boundaries.append(
+            {
+                "boundary_index": index,
+                "frame": frame,
+                "seconds": frame / 44_100,
+                "ratings": boundary_ratings,
+                "notes": "Private boundary note",
+            }
+        )
+    counts = {
+        role: {
+            "audible_join": sum(
+                boundary["ratings"][role] == "audible_join" for boundary in boundaries
+            ),
+            "cannot_tell": 0,
+            "clean": sum(
+                boundary["ratings"][role] == "clean" for boundary in boundaries
+            ),
+        }
+        for role in roles
+    }
+    audible_joins = {
+        role: [
+            boundary["boundary_index"]
+            for boundary in boundaries
+            if boundary["ratings"][role] == "audible_join"
+        ]
+        for role in roles
+    }
+    document = {
+        "schema": FULL_SONG_REVIEW_SCHEMA,
+        "status": FULL_SONG_REVIEW_STATUS,
+        "evidence_scope": "private_development_only",
+        "bindings": {
+            "stitch_report_sha256": "1" * 64,
+            "stitch_document_sha256": "2" * 64,
+            "review_seed_sha256": "3" * 64,
+            "review_export_sha256": "4" * 64,
+            "package_commitment": "5" * 64,
+            "plan_document_sha256": "6" * 64,
+            "execution_state_sha256": "7" * 64,
+        },
+        "clock": {
+            "boundary_count": 2,
+            "channels": 2,
+            "chunk_count": 3,
+            "crossfade_frames": 0,
+            "duration_seconds": 4.0,
+            "frames": 176_400,
+            "gap_frames": 0,
+            "overlap_frames": 0,
+            "sample_rate": 44_100,
+        },
+        "full_song": {
+            "heard_all": True,
+            "ratings": ratings,
+            "notes": "Private full-song note",
+        },
+        "boundary_summary": {
+            "reviewed_boundaries": 2,
+            "rating_counts_by_role": counts,
+            "audible_join_boundaries_by_role": audible_joins,
+        },
+        "boundaries": boundaries,
+        "readiness": {
+            "worker_runs_complete": True,
+            "stitched_outputs_complete": True,
+            "exact_duration_and_frame_count_verified": True,
+            "full_song_and_boundary_listening_complete": True,
+            "full_song_quality_accepted": False,
+            "publication_ready": False,
+        },
+        "interpretation": {
+            "ratings_are_human_listening_evidence": True,
+            "clean_boundary_is_separator_accuracy": False,
+            "review_completion_is_quality_acceptance": False,
+            "automatic_winner_selected": False,
+            "separator_accepted": False,
+        },
+        "permissions": {
+            "accepted": False,
+            "automatic_selection": False,
+            "product_route_permitted": False,
+            "publication_permitted": False,
+            "simple_mode_available": False,
+            "source_graph_activation": False,
+            "studio_import_available": False,
+        },
+        "effects": {
+            "product_contract_mutated": False,
+            "publication_state_mutated": False,
+            "separator_accepted": False,
+            "separator_selected": False,
+            "source_audio_mutated": False,
+            "source_graph_mutated": False,
+            "stitched_audio_mutated": False,
+        },
+    }
+    return _write_hashed(root / "full-song-review.json", document)
+
+
 def _resource_result(root: Path) -> Path:
     summaries = {
         "parent_observed_full_song_wall_time_seconds": {
@@ -517,12 +751,8 @@ def _resource_result(root: Path) -> Path:
         "aggregate": {
             **summaries,
             "maximum_peak_total_unified_memory_gib": 3.812089,
-            "thermal_state_before": [
-                {"value": 0, "name": "nominal"} for _ in range(3)
-            ],
-            "thermal_state_after": [
-                {"value": 0, "name": "nominal"} for _ in range(3)
-            ],
+            "thermal_state_before": [{"value": 0, "name": "nominal"} for _ in range(3)],
+            "thermal_state_after": [{"value": 0, "name": "nominal"} for _ in range(3)],
             "timeouts_observed": 0,
             "oom_events_observed": 0,
         },

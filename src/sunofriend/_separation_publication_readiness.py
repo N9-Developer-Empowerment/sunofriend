@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import math
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -31,6 +32,10 @@ from ._separation_full_song_resource_benchmark_result import (
     SCHEMA as RESOURCE_BENCHMARK_RESULT_SCHEMA,
     STATUS as RESOURCE_BENCHMARK_RESULT_STATUS,
 )
+from ._separation_full_song_review import (
+    SCHEMA as FULL_SONG_REVIEW_RESULT_SCHEMA,
+    STATUS as FULL_SONG_REVIEW_RESULT_STATUS,
+)
 from ._separation_normalized_midi_agreement import (
     SCHEMA as NORMALIZED_AGREEMENT_SCHEMA,
 )
@@ -45,6 +50,34 @@ _VOCAL_RETENTION = frozenset(
     ("substantially_complete", "partially_complete", "little_or_none", "cannot_tell")
 )
 _PROBLEM_SEVERITY = frozenset(("low", "noticeable", "severe", "cannot_tell"))
+_FULL_SONG_ROLES = ("vocals", "instrumental", "reconstruction")
+_FULL_SONG_RATINGS = frozenset(
+    ("useful", "noticeable_problems", "not_useful", "cannot_tell")
+)
+_BOUNDARY_RATINGS = frozenset(("clean", "audible_join", "cannot_tell"))
+_MAXIMUM_NOTES_CHARACTERS = 2_000
+_FULL_SONG_PERMISSION_KEYS = frozenset(
+    (
+        "accepted",
+        "automatic_selection",
+        "product_route_permitted",
+        "publication_permitted",
+        "simple_mode_available",
+        "source_graph_activation",
+        "studio_import_available",
+    )
+)
+_FULL_SONG_EFFECT_KEYS = frozenset(
+    (
+        "product_contract_mutated",
+        "publication_state_mutated",
+        "separator_accepted",
+        "separator_selected",
+        "source_audio_mutated",
+        "source_graph_mutated",
+        "stitched_audio_mutated",
+    )
+)
 
 
 @dataclass(frozen=True)
@@ -60,6 +93,7 @@ def _project_private_separation_publication_readiness(
     *,
     separated_audio_quality_path: str | Path | None = None,
     resource_benchmark_result_path: str | Path | None = None,
+    full_song_review_result_path: str | Path | None = None,
     out: str | Path,
 ) -> dict[str, Any]:
     """Build one path-free ledger from the currently sealed acceptance work."""
@@ -74,6 +108,11 @@ def _project_private_separation_publication_readiness(
     resource_benchmark = (
         _load_resource_benchmark_result(resource_benchmark_result_path)
         if resource_benchmark_result_path is not None
+        else None
+    )
+    full_song_review = (
+        _load_full_song_review_result(full_song_review_result_path)
+        if full_song_review_result_path is not None
         else None
     )
     _require_listening_bound_to_agreement(listening, agreement)
@@ -101,9 +140,16 @@ def _project_private_separation_publication_readiness(
         listening=listening,
         audio_quality=audio_quality,
         resource_benchmark=resource_benchmark,
+        full_song_review=full_song_review,
     )
     document["document_sha256"] = _document_sha256(document)
-    _reverify(agreement, listening, audio_quality, resource_benchmark)
+    _reverify(
+        agreement,
+        listening,
+        audio_quality,
+        resource_benchmark,
+        full_song_review,
+    )
     _write_fresh_private_json(Path(out), document)
     document["report"] = str(Path(out).expanduser().absolute())
     return document
@@ -225,11 +271,10 @@ def _load_separated_audio_quality(path: str | Path) -> _LoadedJson:
             source_binding.get("provider_id"), "audio-quality provider ID"
         )
         provider_method = f"provider-{provider_id}-broad-vocals"
-        if (
-            set(ratings) != {"kim-vocal-2", provider_method}
-            or {unit.get("candidate_a_method"), unit.get("candidate_b_method")}
-            != set(ratings)
-        ):
+        if set(ratings) != {"kim-vocal-2", provider_method} or {
+            unit.get("candidate_a_method"),
+            unit.get("candidate_b_method"),
+        } != set(ratings):
             raise ValueError("separated-audio quality methods differ")
         for method_ratings in ratings.values():
             if (
@@ -283,8 +328,7 @@ def _load_resource_benchmark_result(path: str | Path) -> _LoadedJson:
         or type(coverage.get("controlled_repetitions_observed")) is not int
         or not 3 <= coverage["controlled_repetitions_observed"] <= 10
         or type(coverage.get("development_machine_thresholds_met")) is not bool
-        or type(coverage.get("required_16_gib_acceptance_class_observed"))
-        is not bool
+        or type(coverage.get("required_16_gib_acceptance_class_observed")) is not bool
         or not isinstance(readiness, Mapping)
         or readiness.get("controlled_repeated_benchmark_complete") is not True
         or readiness.get("development_machine_thresholds_met")
@@ -345,6 +389,223 @@ def _load_resource_benchmark_result(path: str | Path) -> _LoadedJson:
     return loaded
 
 
+def _load_full_song_review_result(path: str | Path) -> _LoadedJson:
+    loaded = _load_json(path, "full-song review result")
+    document = loaded.document
+    bindings = document.get("bindings")
+    clock = document.get("clock")
+    full_song = document.get("full_song")
+    summary = document.get("boundary_summary")
+    boundaries = document.get("boundaries")
+    readiness = document.get("readiness")
+    interpretation = document.get("interpretation")
+    if (
+        document.get("schema") != FULL_SONG_REVIEW_RESULT_SCHEMA
+        or document.get("status") != FULL_SONG_REVIEW_RESULT_STATUS
+        or document.get("evidence_scope") != "private_development_only"
+        or document.get("document_sha256") != _document_sha256(document)
+        or not isinstance(bindings, Mapping)
+        or set(bindings)
+        != {
+            "stitch_report_sha256",
+            "stitch_document_sha256",
+            "review_seed_sha256",
+            "review_export_sha256",
+            "package_commitment",
+            "plan_document_sha256",
+            "execution_state_sha256",
+        }
+        or not all(_is_sha256(value) for value in bindings.values())
+        or not _valid_full_song_clock(clock)
+        or not _valid_full_song_ratings(full_song)
+        or not isinstance(boundaries, list)
+        or len(boundaries) != clock["boundary_count"]
+        or not _valid_full_song_boundaries(
+            boundaries,
+            boundary_count=clock["boundary_count"],
+            sample_rate=clock["sample_rate"],
+            total_frames=clock["frames"],
+        )
+        or not _valid_full_song_boundary_summary(
+            summary,
+            boundaries=boundaries,
+            boundary_count=clock["boundary_count"],
+        )
+        or readiness
+        != {
+            "worker_runs_complete": True,
+            "stitched_outputs_complete": True,
+            "exact_duration_and_frame_count_verified": True,
+            "full_song_and_boundary_listening_complete": True,
+            "full_song_quality_accepted": False,
+            "publication_ready": False,
+        }
+        or interpretation
+        != {
+            "ratings_are_human_listening_evidence": True,
+            "clean_boundary_is_separator_accuracy": False,
+            "review_completion_is_quality_acceptance": False,
+            "automatic_winner_selected": False,
+            "separator_accepted": False,
+        }
+    ):
+        raise ValueError("full-song review result differs")
+    permissions = document.get("permissions")
+    effects = document.get("effects")
+    if (
+        not isinstance(permissions, Mapping)
+        or set(permissions) != _FULL_SONG_PERMISSION_KEYS
+        or not isinstance(effects, Mapping)
+        or set(effects) != _FULL_SONG_EFFECT_KEYS
+    ):
+        raise ValueError("full-song review result differs")
+    _require_all_false(permissions, "full-song review permissions")
+    _require_all_false(effects, "full-song review effects")
+    return loaded
+
+
+def _valid_full_song_clock(value: Any) -> bool:
+    if not isinstance(value, Mapping) or set(value) != {
+        "boundary_count",
+        "channels",
+        "chunk_count",
+        "crossfade_frames",
+        "duration_seconds",
+        "frames",
+        "gap_frames",
+        "overlap_frames",
+        "sample_rate",
+    }:
+        return False
+    integer_fields = (
+        "boundary_count",
+        "channels",
+        "chunk_count",
+        "crossfade_frames",
+        "frames",
+        "gap_frames",
+        "overlap_frames",
+        "sample_rate",
+    )
+    if any(type(value.get(field)) is not int for field in integer_fields):
+        return False
+    duration = value.get("duration_seconds")
+    return (
+        value["boundary_count"] >= 1
+        and value["chunk_count"] == value["boundary_count"] + 1
+        and value["frames"] > 0
+        and value["sample_rate"] > 0
+        and value.get("channels") in {1, 2}
+        and value.get("crossfade_frames") == 0
+        and value.get("gap_frames") == 0
+        and value.get("overlap_frames") == 0
+        and isinstance(duration, (int, float))
+        and not isinstance(duration, bool)
+        and duration > 0
+        and math.isclose(
+            duration,
+            value["frames"] / value["sample_rate"],
+            rel_tol=0.0,
+            abs_tol=1e-9,
+        )
+    )
+
+
+def _valid_full_song_ratings(value: Any) -> bool:
+    return (
+        isinstance(value, Mapping)
+        and set(value) == {"heard_all", "ratings", "notes"}
+        and value.get("heard_all") is True
+        and isinstance(value.get("ratings"), Mapping)
+        and set(value["ratings"]) == set(_FULL_SONG_ROLES)
+        and all(rating in _FULL_SONG_RATINGS for rating in value["ratings"].values())
+        and isinstance(value.get("notes"), str)
+        and len(value["notes"]) <= _MAXIMUM_NOTES_CHARACTERS
+    )
+
+
+def _valid_full_song_boundaries(
+    values: list[Any],
+    *,
+    boundary_count: int,
+    sample_rate: int,
+    total_frames: int,
+) -> bool:
+    previous_frame = 0
+    for expected_index, item in enumerate(values, start=1):
+        if (
+            not isinstance(item, Mapping)
+            or set(item) != {"boundary_index", "frame", "seconds", "ratings", "notes"}
+            or type(item.get("boundary_index")) is not int
+            or item.get("boundary_index") != expected_index
+            or type(item.get("frame")) is not int
+            or not previous_frame < item["frame"] < total_frames
+            or not isinstance(item.get("seconds"), (int, float))
+            or isinstance(item.get("seconds"), bool)
+            or not math.isclose(
+                item["seconds"],
+                item["frame"] / sample_rate,
+                rel_tol=0.0,
+                abs_tol=1e-9,
+            )
+            or not isinstance(item.get("ratings"), Mapping)
+            or set(item["ratings"]) != set(_FULL_SONG_ROLES)
+            or any(
+                rating not in _BOUNDARY_RATINGS for rating in item["ratings"].values()
+            )
+            or not isinstance(item.get("notes"), str)
+            or len(item["notes"]) > _MAXIMUM_NOTES_CHARACTERS
+        ):
+            return False
+        previous_frame = item["frame"]
+    return len(values) == boundary_count
+
+
+def _valid_full_song_boundary_summary(
+    value: Any,
+    *,
+    boundaries: list[Any],
+    boundary_count: int,
+) -> bool:
+    if (
+        not isinstance(value, Mapping)
+        or set(value)
+        != {
+            "reviewed_boundaries",
+            "rating_counts_by_role",
+            "audible_join_boundaries_by_role",
+        }
+        or value.get("reviewed_boundaries") != boundary_count
+        or not isinstance(value.get("rating_counts_by_role"), Mapping)
+        or set(value["rating_counts_by_role"]) != set(_FULL_SONG_ROLES)
+        or not isinstance(value.get("audible_join_boundaries_by_role"), Mapping)
+        or set(value["audible_join_boundaries_by_role"]) != set(_FULL_SONG_ROLES)
+    ):
+        return False
+    for role in _FULL_SONG_ROLES:
+        counts = value["rating_counts_by_role"][role]
+        joins = value["audible_join_boundaries_by_role"][role]
+        observed_counts = {rating: 0 for rating in sorted(_BOUNDARY_RATINGS)}
+        observed_joins = []
+        for boundary in boundaries:
+            rating = boundary["ratings"][role]
+            observed_counts[rating] += 1
+            if rating == "audible_join":
+                observed_joins.append(boundary["boundary_index"])
+        if (
+            not isinstance(counts, Mapping)
+            or set(counts) != _BOUNDARY_RATINGS
+            or any(type(counts.get(rating)) is not int for rating in _BOUNDARY_RATINGS)
+            or any(counts[rating] < 0 for rating in _BOUNDARY_RATINGS)
+            or dict(counts) != observed_counts
+            or not isinstance(joins, list)
+            or any(type(index) is not int for index in joins)
+            or joins != observed_joins
+        ):
+            return False
+    return True
+
+
 def _valid_resource_repetitions(
     values: list[Any],
     *,
@@ -397,9 +658,7 @@ def _valid_resource_repetitions(
     )
 
 
-def _valid_resource_aggregate(
-    value: Mapping[str, Any], *, expected_count: int
-) -> bool:
+def _valid_resource_aggregate(value: Mapping[str, Any], *, expected_count: int) -> bool:
     summaries = (
         "parent_observed_full_song_wall_time_seconds",
         "wall_time_seconds_per_audio_minute",
@@ -469,8 +728,7 @@ def _require_listening_bound_to_agreement(
     inputs = listening.document.get("inputs")
     if (
         not isinstance(inputs, Mapping)
-        or inputs.get("normalized_midi_agreement_sha256")
-        != agreement.file_sha256
+        or inputs.get("normalized_midi_agreement_sha256") != agreement.file_sha256
         or inputs.get("normalized_midi_agreement_document_sha256")
         != agreement.document.get("document_sha256")
     ):
@@ -551,6 +809,7 @@ def _build_document(
     listening: _LoadedJson,
     audio_quality: _LoadedJson | None,
     resource_benchmark: _LoadedJson | None,
+    full_song_review: _LoadedJson | None,
 ) -> dict[str, Any]:
     coverage = listening.document["coverage"]
     audio_assessment = (
@@ -561,6 +820,11 @@ def _build_document(
     resource_assessment = (
         _assess_resource_benchmark(resource_benchmark.document)
         if resource_benchmark is not None
+        else None
+    )
+    full_song_assessment = (
+        _assess_full_song_review(full_song_review.document)
+        if full_song_review is not None
         else None
     )
     passed = [
@@ -598,51 +862,64 @@ def _build_document(
         audio_open_gates: list[dict[str, str]] = []
     else:
         audio_open_gates = [audio_gate]
-    open_gates = audio_open_gates + [
-        _gate(
-            "full_song_duration_and_alignment",
-            "open",
-            "Bounded excerpts do not prove full-song quality, clock alignment or drift.",
+    full_song_gate = _gate(
+        "full_song_duration_and_alignment",
+        "open",
+        (
+            "The exact full-song clock and bounded listening minimum were verified, but synchronized source-to-output alignment and drift acceptance are not supplied by this review contract."
+            if full_song_assessment and full_song_assessment["review_minimum_met"]
+            else (
+                "Exact duration and complete listening were verified, but the predeclared minimum requires every generated complete-song role to be useful and every role-boundary judgement to be clean."
+                if full_song_assessment
+                else "Bounded excerpts do not prove full-song quality, clock alignment or drift."
+            )
         ),
-        _gate(
-            "broad_role_coverage",
-            "open",
-            "The accepted evidence does not yet cover publishable drums, bass, keys, other and vocal outputs together.",
-        ),
-        _gate(
-            "hidden_song_disjoint_test_set",
-            "open",
-            "The reviewed owner corpus is useful development evidence but is not a hidden test set.",
-        ),
-        _gate(
-            "checkpoint_usage_and_distribution_terms",
-            "open",
-            "Checkpoint-specific product and redistribution permission has not been accepted by this evidence chain.",
-        ),
-        _gate(
-            "offline_execution_acceptance",
-            "open",
-            "A clean installed-machine offline run has not been accepted for publication.",
-        ),
-        _gate(
-            "resource_envelope_acceptance",
-            "open",
-            (
-                "Three controlled full-song repetitions met the frozen ceilings on the development Mac, but the separately required 16 GiB acceptance class was not observed."
-                if resource_assessment
-                and resource_assessment["development_machine_thresholds_met"]
-                and not resource_assessment[
-                    "required_16_gib_acceptance_class_observed"
-                ]
-                else "Full-song time, memory, disk and failure-recovery limits have not been accepted."
+    )
+    full_song_open_gates = [full_song_gate]
+    open_gates = (
+        audio_open_gates
+        + full_song_open_gates
+        + [
+            _gate(
+                "broad_role_coverage",
+                "open",
+                "The accepted evidence does not yet cover publishable drums, bass, keys, other and vocal outputs together.",
             ),
-        ),
-        _gate(
-            "public_cli_tui_simple_studio_route",
-            "open",
-            "No public finished-song separator route is enabled in the product contract.",
-        ),
-    ]
+            _gate(
+                "hidden_song_disjoint_test_set",
+                "open",
+                "The reviewed owner corpus is useful development evidence but is not a hidden test set.",
+            ),
+            _gate(
+                "checkpoint_usage_and_distribution_terms",
+                "open",
+                "Checkpoint-specific product and redistribution permission has not been accepted by this evidence chain.",
+            ),
+            _gate(
+                "offline_execution_acceptance",
+                "open",
+                "A clean installed-machine offline run has not been accepted for publication.",
+            ),
+            _gate(
+                "resource_envelope_acceptance",
+                "open",
+                (
+                    "Three controlled full-song repetitions met the frozen ceilings on the development Mac, but the separately required 16 GiB acceptance class was not observed."
+                    if resource_assessment
+                    and resource_assessment["development_machine_thresholds_met"]
+                    and not resource_assessment[
+                        "required_16_gib_acceptance_class_observed"
+                    ]
+                    else "Full-song time, memory, disk and failure-recovery limits have not been accepted."
+                ),
+            ),
+            _gate(
+                "public_cli_tui_simple_studio_route",
+                "open",
+                "No public finished-song separator route is enabled in the product contract.",
+            ),
+        ]
+    )
     gates = passed + open_gates
     inputs = {
         "normalized_midi_agreement_sha256": agreement.file_sha256,
@@ -672,6 +949,15 @@ def _build_document(
                 ],
             }
         )
+    if full_song_review is not None:
+        inputs.update(
+            {
+                "full_song_review_result_sha256": full_song_review.file_sha256,
+                "full_song_review_result_document_sha256": full_song_review.document[
+                    "document_sha256"
+                ],
+            }
+        )
     return {
         "schema": SCHEMA,
         "status": "blocked_private_bounded_vocal_midi_evidence_only",
@@ -686,11 +972,22 @@ def _build_document(
                 "structured_focus_phrase_coverage_window_count"
             ],
             "role_scope": ["vocals"],
-            "duration_scope": "bounded_authorised_excerpts",
+            "duration_scope": (
+                "bounded_authorised_excerpts_plus_one_full_song"
+                if full_song_assessment
+                else "bounded_authorised_excerpts"
+            ),
             "separated_audio_reviewed_track_count": (
-                audio_assessment["reviewed_track_count"]
-                if audio_assessment
-                else 0
+                audio_assessment["reviewed_track_count"] if audio_assessment else 0
+            ),
+            "full_song_reviewed": full_song_assessment is not None,
+            "full_song_review_duration_seconds": (
+                full_song_assessment["duration_seconds"]
+                if full_song_assessment
+                else None
+            ),
+            "full_song_review_role_scope": (
+                list(_FULL_SONG_ROLES) if full_song_assessment else []
             ),
         },
         "readiness": {
@@ -705,6 +1002,7 @@ def _build_document(
         "gates": gates,
         "separated_audio_quality_assessment": audio_assessment,
         "resource_benchmark_assessment": resource_assessment,
+        "full_song_duration_alignment_assessment": full_song_assessment,
         "interpretation": {
             "private_separator_derived_midi_has_useful_evidence": True,
             "general_finished_song_separation_is_working": False,
@@ -714,6 +1012,8 @@ def _build_document(
             "open_gate_can_be_inferred_from_other_evidence": False,
             "provider_preference_is_separator_selection": False,
             "development_resource_thresholds_are_resource_acceptance": False,
+            "full_song_review_completion_is_quality_acceptance": False,
+            "full_song_gate_pass_is_separator_acceptance": False,
         },
         "policy": {
             "fail_closed": True,
@@ -726,6 +1026,9 @@ def _build_document(
             "separator_selected": False,
             "product_route_enabled": False,
             "development_resource_result_can_close_acceptance_gate": False,
+            "full_song_minimum_policy_predeclared": True,
+            "full_song_review_can_select_or_accept_separator": False,
+            "full_song_review_can_close_duration_alignment_gate": False,
         },
         "permissions": {
             "accepted": False,
@@ -751,7 +1054,64 @@ def _build_document(
             "Future gate closure must be supplied by a new typed, hash-bound evidence contract; caller assertions cannot close a gate.",
             "The separated-audio minimum is a bounded usability gate, not a model ranking, score-truth claim or general finished-song approval.",
             "A controlled development-machine resource result records progress but cannot substitute for the separate acceptance-class contract.",
+            "One owner-reviewed full song records exact duration and join evidence but cannot establish synchronized source alignment, drift acceptance, broad-role, hidden-set or general separator quality.",
         ],
+    }
+
+
+def _assess_full_song_review(document: Mapping[str, Any]) -> dict[str, Any]:
+    clock = document["clock"]
+    full_song_ratings = document["full_song"]["ratings"]
+    summary = document["boundary_summary"]
+    rating_counts = summary["rating_counts_by_role"]
+    audible_joins = summary["audible_join_boundaries_by_role"]
+    all_outputs_useful = all(
+        full_song_ratings[role] == "useful" for role in _FULL_SONG_ROLES
+    )
+    all_boundaries_clean = all(
+        rating_counts[role]["clean"] == clock["boundary_count"]
+        and rating_counts[role]["audible_join"] == 0
+        and rating_counts[role]["cannot_tell"] == 0
+        for role in _FULL_SONG_ROLES
+    )
+    return {
+        "duration_seconds": clock["duration_seconds"],
+        "frames": clock["frames"],
+        "sample_rate": clock["sample_rate"],
+        "channels": clock["channels"],
+        "chunk_count": clock["chunk_count"],
+        "boundary_count": clock["boundary_count"],
+        "reviewed_boundaries": summary["reviewed_boundaries"],
+        "full_song_ratings_by_role": {
+            role: full_song_ratings[role] for role in _FULL_SONG_ROLES
+        },
+        "boundary_rating_counts_by_role": {
+            role: {
+                rating: rating_counts[role][rating]
+                for rating in sorted(_BOUNDARY_RATINGS)
+            }
+            for role in _FULL_SONG_ROLES
+        },
+        "audible_join_boundaries_by_role": {
+            role: list(audible_joins[role]) for role in _FULL_SONG_ROLES
+        },
+        "exact_duration_and_frame_count_verified": True,
+        "full_song_and_boundary_listening_complete": True,
+        "all_full_song_outputs_useful": all_outputs_useful,
+        "all_role_boundaries_clean": all_boundaries_clean,
+        "requirements": {
+            "full_song_rating_for_every_generated_role": "useful",
+            "boundary_rating_for_every_generated_role": "clean",
+            "exact_duration_and_frame_count_required": True,
+            "complete_full_song_and_boundary_listening_required": True,
+            "review_notes_affect_gate": False,
+        },
+        "review_minimum_met": all_outputs_useful and all_boundaries_clean,
+        "source_to_output_alignment_verified": False,
+        "drift_acceptance_complete": False,
+        "gate_passed": False,
+        "acceptance_gate_closed": False,
+        "separator_accepted": False,
     }
 
 
@@ -764,9 +1124,7 @@ def _assess_resource_benchmark(document: Mapping[str, Any]) -> dict[str, Any]:
         "device": document["candidate"]["device"],
         "machine_class_id": document["machine_class"]["class_id"],
         "unified_memory_gib": document["machine_class"]["unified_memory_gib"],
-        "controlled_repetitions_observed": coverage[
-            "controlled_repetitions_observed"
-        ],
+        "controlled_repetitions_observed": coverage["controlled_repetitions_observed"],
         "development_machine_thresholds_met": coverage[
             "development_machine_thresholds_met"
         ],
@@ -894,6 +1252,7 @@ def _reverify(
     listening: _LoadedJson,
     audio_quality: _LoadedJson | None,
     resource_benchmark: _LoadedJson | None,
+    full_song_review: _LoadedJson | None,
 ) -> None:
     if _sha256(agreement.path) != agreement.file_sha256:
         raise ValueError("normalized MIDI agreement changed during projection")
@@ -909,6 +1268,11 @@ def _reverify(
         and _sha256(resource_benchmark.path) != resource_benchmark.file_sha256
     ):
         raise ValueError("resource benchmark result changed during projection")
+    if (
+        full_song_review is not None
+        and _sha256(full_song_review.path) != full_song_review.file_sha256
+    ):
+        raise ValueError("full-song review result changed during projection")
 
 
 __all__ = [

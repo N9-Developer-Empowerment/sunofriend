@@ -1868,6 +1868,16 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   product permission therefore remain open/false. A valid mixture of passing
   and failing repetition rows is retained as a failed aggregate threshold,
   not rejected merely because some individual runs passed.
+  Its optional `--full-song-review-result` input accepts the verified resolved
+  v1 complete-song and boundary review. The predeclared minimum requires all
+  three complete generated roles to be useful and every role at every boundary
+  to be clean. Listener notes are not copied and cannot affect the gate. The
+  current `Be Alone` review verified exact duration and rated all three
+  complete outputs useful, but vocals had audible joins at boundaries 11/12
+  and the instrumental at 11/13. The duration/alignment gate therefore remains
+  open. Even an all-clean result would not prove synchronized source-to-output
+  alignment or accepted drift, and could not close the gate, select or accept
+  a separator.
 - `scripts/private-separated-audio-quality-review.py` creates a fresh
   owner-only blind review from two or more exact source-bound vocal-separation
   cases. Each case must bind one authorised mixed excerpt, one unchanged Kim
@@ -1930,6 +1940,12 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   Use the fresh `be-alone-full-song-kim-stitch-v3-playable-review` package. The
   superseded `v2` page has an invalid JavaScript newline and therefore cannot
   render its audio controls; retain it only as defect evidence.
+  The v3 review is complete and resolved. Vocals, instrumental and
+  reconstruction were all rated useful. Reconstruction was clean at all 17
+  joins; vocals had audible joins at 11/12 and the instrumental at 11/13. The
+  result keeps full-song quality acceptance, separator selection, publication
+  and every product route false. No current human review page remains
+  outstanding; older packages are superseded evidence.
   Never call exact input partitioning or exact output duration seamless or
   accepted separation.
   Fresh native attempts now retain two path-free resource projections inside

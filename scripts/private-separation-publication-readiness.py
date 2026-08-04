@@ -29,6 +29,13 @@ def main() -> int:
             "it cannot substitute for the acceptance machine class"
         ),
     )
+    parser.add_argument(
+        "--full-song-review-result",
+        help=(
+            "optional verified complete-song and exact-boundary listening result; "
+            "review completion cannot select or accept a separator"
+        ),
+    )
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
     result = _project_private_separation_publication_readiness(
@@ -36,6 +43,7 @@ def main() -> int:
         args.human_listening_coverage,
         separated_audio_quality_path=args.separated_audio_quality,
         resource_benchmark_result_path=args.resource_benchmark_result,
+        full_song_review_result_path=args.full_song_review_result,
         out=args.out,
     )
     print(

@@ -1968,14 +1968,16 @@ PYTHONPATH=src ./.venv/bin/python \
     work/separation-bakeoff/cross-song-separated-audio-quality-result-v1/private-separated-audio-quality-result.json \
   --resource-benchmark-result \
     work/separation-bakeoff/be-alone-full-song-kim-resource-benchmark-result-v1.json \
+  --full-song-review-result \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-review-result-v1/private-separation-full-song-review-result.json \
   --out \
-    work/separation-bakeoff/separation-publication-readiness-v7/private-separation-publication-readiness.json
+    work/separation-bakeoff/separation-publication-readiness-v9/private-separation-publication-readiness.json
 ```
 
 The current report has file SHA-256
-`a828f2503dbfd60bc6c33969b996f4e5dc573d3163dc5d1600026cbba3168b5e`
+`b7fd7a9a3287b7d6b8ad7c6ba4270de999d58694253f2a0223647c4d95cf1020`
 and document SHA-256
-`70fd01deea16a574c3730f0a8c973a338f2598184c2a4039b11a3511ad00d787`.
+`f7194bdb934a6aae0d941f0ab6dbeedfe9d6376e70bb11378bc26f6e54c5e150`.
 It records three passed bounded-evidence milestones: source-bound cross-song
 downstream MIDI, source-bound cross-song human listening and a separate
 structured phrase-completeness judgement for every supplied window.
@@ -1997,6 +1999,20 @@ separate A/B preference is deliberately ignored by this gate, so preferring a
 provider cannot select or reject Kim. The current report includes the completed
 two-song result. One of two Kim excerpts meets the minimum, so the gate remains
 open.
+
+The optional `--full-song-review-result` input accepts only the self-hashed
+resolved v1 result with the exact clock, complete three-role song ratings and
+all ordered boundary ratings consistent with its recomputed summary. The
+predeclared duration/alignment minimum requires every generated complete-song
+role to be rated `useful` and every role at every chunk boundary to be rated
+`clean`. Notes are not copied into the ledger and never affect the assessment.
+Even a clean review cannot establish synchronized source-to-output alignment
+or accepted drift, so this review contract cannot close the gate, accept or
+select the separator. In the current `Be Alone` result all three complete
+outputs were useful, exact duration was verified and all 17 boundaries were
+reviewed. Reconstruction had 17 clean boundaries, but vocals had audible joins
+at 11 and 12 and the instrumental had audible joins at 11 and 13. The gate
+therefore remains open.
 
 The optional `--resource-benchmark-result` input accepts only a self-hashed,
 complete controlled full-song result with three to ten distinct serial
@@ -2082,7 +2098,7 @@ the exact path-free authorised-excerpt, role-mapping and audio-hash binding for
 each reviewed song. It cannot select Kim or the provider, change a default,
 publish a separator or enable any product route.
 
-After resolution, create a fresh ledger with the third verified input:
+After resolution, create a fresh ledger with the optional verified inputs:
 
 ```bash
 PYTHONPATH=src ./.venv/bin/python \
@@ -2093,6 +2109,8 @@ PYTHONPATH=src ./.venv/bin/python \
     /absolute/fresh/private-separated-audio-quality-result.json \
   --resource-benchmark-result \
     /absolute/private-separation-full-song-resource-benchmark-result.json \
+  --full-song-review-result \
+    /absolute/private-separation-full-song-review-result.json \
   --out /absolute/fresh/private-separation-publication-readiness.json
 ```
 
@@ -2100,8 +2118,8 @@ The ledger rechecks exact track coverage and the authorised excerpt and role
 mapping hashes against the normalized MIDI evidence. It copies no private note
 and computes no score. If even one Kim rating is partial, cannot-tell or severe,
 the gate stays open. If the bounded minimum passes, only that one gate closes;
-full-song, broad-role, hidden-set, terms, offline, resource and public-route
-gates stay open.
+the independently assessed full-song, broad-role, hidden-set, terms, offline,
+resource and public-route gates remain unchanged.
 
 ### Focused separated-vocal challenger review
 
@@ -2274,7 +2292,7 @@ PYTHONPATH=src ./.venv/bin/python \
     work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review
 ```
 
-The remaining human gate is one page at
+The authoritative human-review page is at
 `be-alone-full-song-kim-stitch-v3-playable-review/BOUNDARY-REVIEW/separation_boundary_review.html`.
 It first presents all four complete-song tracks, then 17 four-second units
 centred on the exact joins. Rate the vocal, instrumental and reconstruction
@@ -2307,6 +2325,20 @@ complete-song and boundary WAV before retaining the human ratings and notes.
 Its result deliberately keeps full-song quality acceptance, separator
 selection, publication and every product route false. Review completion is
 evidence, not acceptance.
+
+That review is complete. The verified result is at
+`work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-review-result-v1/private-separation-full-song-review-result.json`.
+Its file SHA-256 is
+`b10be9019d5ed3c67fd0c187f63cad7aa9121ac4ad71aa6b8a90c77ebd9d2935`
+and its document SHA-256 is
+`b0d0417f84913bc5c50cf1dfd7d3bf1fd740b7d1acc8d087c8c23663f7643686`.
+The listener rated vocals, instrumental and reconstruction useful. The exact
+reconstruction was clean at all 17 joins; vocals had audible joins at 11 and
+12, and the instrumental had audible joins at 11 and 13. Exact duration and
+complete listening are therefore verified, while seamlessness and full-song
+duration/alignment acceptance remain open. There are no further current human
+review pages awaiting the owner; older full-song packages are superseded
+defect or provenance evidence.
 
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
