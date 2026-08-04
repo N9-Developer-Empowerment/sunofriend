@@ -1985,9 +1985,42 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   candidate boundary-role pairs, all eight patch-edge pairs and three
   complete-song pairs. Short pairs use attenuation-only whole-window sample-
   RMS matching; complete songs remain unchanged. Do not open the separate
-  answer key before review. The 15-unit page is the one current outstanding
-  human review. No readiness, selection, acceptance or product route changes
-  until its exported review is separately verified and resolved.
+  answer key before review. Make the browser export owner-only with
+  `chmod 600 REVIEWED`, then use
+  `scripts/private-separation-full-song-join-remediation-review-result.py
+  --status REVIEWED --review-package-dir REVIEW_PACKAGE --execution-dir
+  EXECUTION --stitch-package-dir STITCH` first. Status re-verifies the public
+  seed, unchanged execution/candidate/stitch evidence and all 30 audio
+  references without reading the key or revealing A/B. For a v1 package it
+  reconstructs the exact question, unit kinds, titles, focus text, windows and
+  unordered raw/candidate PCM24 pairs from that evidence; it also rejects a
+  browser export larger than 8 MiB before parsing. Seed, reviewed export and
+  answer key are each read once through a bounded non-following descriptor;
+  the exact parsed bytes supply the stored digest. Only after status succeeds,
+  repeat the same explicit roots with `--resolve REVIEWED --out FRESH`.
+  Resolution repeats the public checks before opening the sealed key, verifies
+  its A/B identities and level facts against the audio, fsyncs a hidden private
+  temporary file and hard-links the complete inode to the fresh name without
+  overwriting an existing path. The self-hashed result is
+  `complete_review_no_activation`. Terminal
+  output is summary-only and does not print private per-unit notes. It maps the
+  explicit choices but keeps join elimination unproven, every permission and
+  effect false, separator selection/acceptance false and publication false. A
+  separate readiness reassessment must interpret the result. No readiness,
+  selection, acceptance or product route changes merely because the page was
+  exported or resolved. The current review is complete: candidate remediation
+  was preferred for two of four boundary-role pairs and equivalent for two,
+  preferred for one of eight patch edges and equivalent for seven, and
+  preferred for one of three complete-song roles and equivalent for two. No
+  unit preferred raw, neither or cannot-tell. Because two originally audible
+  joins were only equivalent rather than candidate-preferred, the resolved
+  result keeps `original_audible_joins_resolved: false`; the combined
+  duration/alignment milestone and every product/publication gate remain open.
+  No current human review page remains outstanding.
+  Keep the execution, candidate and stitch trees quiescent during status and
+  resolution. Their JSON and WAV descriptors are not held as one atomic
+  snapshot across the whole operation; status and result record this explicit
+  limitation.
   Never call exact input partitioning or exact output duration seamless or
   accepted separation.
   Fresh native attempts now retain two path-free resource projections inside

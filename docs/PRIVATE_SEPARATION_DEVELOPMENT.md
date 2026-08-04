@@ -2469,8 +2469,81 @@ RMS; the complete-song files are unchanged. All 30 audio references and their
 hashes have been rechecked and the HTML JavaScript parses. Open
 `join_remediation_review.html`, hear A and B for all 15 units, choose an
 outcome and export `join_remediation_review.reviewed.json`. Do not open the
-separate answer key first. This is the one current outstanding human review;
-readiness, separator selection and every public product route remain false.
+separate answer key first. The current owner review is now complete and was
+verified before the answer key was opened. Readiness, separator selection and
+every public product route remain false.
+
+After the browser has exported the completed JSON, verify it without opening
+the answer key:
+
+```bash
+chmod 600 /absolute/path/join_remediation_review.reviewed.json
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-full-song-join-remediation-review-result.py \
+  --status /absolute/path/join_remediation_review.reviewed.json \
+  --review-package-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-review-v1 \
+  --execution-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v1 \
+  --stitch-package-dir \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review
+```
+
+The reviewed export, seed and later answer key must be owner-only, single-link
+regular files. They are read once through bounded non-following descriptors;
+the exact bytes parsed are the bytes hashed into the result. That read-only
+status operation re-verifies the execution, candidate, stitch, immutable
+browser export and all 30 audio references. For this v1 package it also
+reconstructs every expected question, kind, time window and unordered
+raw/candidate PCM24 pair from the verified execution evidence. Browser exports
+larger than 8 MiB are rejected before parsing. Status reports that the key was
+not opened and reveals no identity mapping. Only after status succeeds, run
+the separate resolver with a fresh output:
+
+The verified execution, candidate and stitch trees must remain quiescent while
+status or resolution runs. Their report and WAV descriptors are not held open
+as one atomic snapshot across the whole verification; this limitation is
+recorded explicitly in both status and result documents.
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-full-song-join-remediation-review-result.py \
+  --resolve /absolute/path/join_remediation_review.reviewed.json \
+  --review-package-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-review-v1 \
+  --execution-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v1 \
+  --stitch-package-dir \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review \
+  --out /absolute/fresh/private-separation-full-song-join-remediation-review-result.json
+```
+
+The resolver repeats every public-evidence check before it opens the sealed
+key. It then verifies the key's slot identities and level facts against the
+already verified audio, writes and fsyncs a hidden owner-only file, and
+atomically hard-links that complete inode to the fresh result name without
+overwriting a raced file. Its self-hashed owner-only result maps A/B
+choices to raw or candidate and summarises boundary, patch-edge and complete-
+song outcomes. Terminal output is summary-only and does not print private unit
+notes. The result deliberately keeps `original_audible_joins_resolved`,
+publication readiness, separator selection and every product permission
+false. A subsequent explicit readiness assessment, not the resolver, must
+decide whether the human evidence satisfies the predeclared gate.
+
+The current resolved result is the fresh, strengthened-verifier result at
+`work/separation-bakeoff/be-alone-full-song-join-remediation-review-result-v4/private-separation-full-song-join-remediation-review-result.json`.
+The earlier `v1`, `v2` and `v3` results are superseded private history; the
+listening export and its choices did not change and no repeat listening review
+was required.
+All 15 units and 30 audio references verified. The targeted candidate was
+preferred for two of four boundary-role comparisons and equivalent for the
+other two; it was preferred for one patch edge and equivalent for seven; and
+it was preferred for one complete-song role and equivalent for two. No unit
+preferred the raw stitch, selected neither or returned cannot-tell. This is
+useful evidence that the candidate introduced no heard regression in these
+questions, but the two equivalent originally audible joins are not proven
+removed. The result therefore keeps `original_audible_joins_resolved: false`
+and the duration/alignment publication milestone open.
 
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:

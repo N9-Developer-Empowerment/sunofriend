@@ -44,6 +44,7 @@ ANSWER_KEY_NAME = "private-separation-full-song-join-remediation-answer-key.json
 AUDIO_DIRECTORY = "audio"
 TARGET_SAMPLE_RATE = 44_100
 _PAIR_CHOICES = ("A", "B", "equivalent", "neither", "cannot_tell")
+_PATCH_ROLES = frozenset({"vocals", "instrumental"})
 _FALSE_EFFECTS = {
     "candidate_audio_mutated": False,
     "preference_inferred": False,
@@ -53,6 +54,84 @@ _FALSE_EFFECTS = {
     "separator_selected": False,
     "source_graph_mutated": False,
 }
+
+
+def _review_instructions(boundary_role_pair_count: int) -> list[str]:
+    if (
+        not isinstance(boundary_role_pair_count, int)
+        or isinstance(boundary_role_pair_count, bool)
+        or boundary_role_pair_count < 0
+    ):
+        raise ValueError("private remediation review comparison count differs")
+    words = {0: "zero", 1: "one", 2: "two", 3: "three", 4: "four"}
+    count = words.get(boundary_role_pair_count, str(boundary_role_pair_count))
+    noun = (
+        "boundary comparison"
+        if boundary_role_pair_count == 1
+        else "boundary comparisons"
+    )
+    return [
+        "Review A and B by listening; neither letter is a recommendation.",
+        f"Complete the {count} {noun} before judging patch edges.",
+        "Then hear all three complete-song pairs for broader side effects.",
+        "Equivalent, neither and cannot tell are valid outcomes.",
+        "Do not open the separate answer key before exporting the review.",
+    ]
+
+
+def _validated_grouped_patches(
+    candidate: Mapping[str, Any],
+    *,
+    total_frames: int,
+    boundary_count: int,
+) -> dict[tuple[int, str], Mapping[str, Any]]:
+    patches = candidate.get("patches")
+    summary = candidate.get("summary")
+    if (
+        not isinstance(total_frames, int)
+        or isinstance(total_frames, bool)
+        or total_frames < 1
+        or not isinstance(boundary_count, int)
+        or isinstance(boundary_count, bool)
+        or boundary_count < 1
+        or not isinstance(patches, list)
+        or not isinstance(summary, Mapping)
+        or not isinstance(summary.get("patched_boundary_role_pair_count"), int)
+        or isinstance(summary.get("patched_boundary_role_pair_count"), bool)
+        or summary["patched_boundary_role_pair_count"] != len(patches)
+    ):
+        raise ValueError("private remediation review patch inventory differs")
+    grouped: dict[tuple[int, str], Mapping[str, Any]] = {}
+    for patch in patches:
+        if not isinstance(patch, Mapping):
+            raise ValueError("private remediation review patch inventory differs")
+        boundary_index = patch.get("boundary_index")
+        role = patch.get("role")
+        start_frame = patch.get("start_frame")
+        end_frame = patch.get("end_frame")
+        edge_blend_frames = patch.get("edge_blend_frames")
+        if (
+            not isinstance(boundary_index, int)
+            or isinstance(boundary_index, bool)
+            or not 1 <= boundary_index <= boundary_count
+            or not isinstance(role, str)
+            or role not in _PATCH_ROLES
+            or not isinstance(start_frame, int)
+            or isinstance(start_frame, bool)
+            or not isinstance(end_frame, int)
+            or isinstance(end_frame, bool)
+            or not 0 <= start_frame < end_frame <= total_frames
+            or not isinstance(edge_blend_frames, int)
+            or isinstance(edge_blend_frames, bool)
+            or edge_blend_frames < 1
+            or 2 * edge_blend_frames >= end_frame - start_frame
+        ):
+            raise ValueError("private remediation review patch bounds differ")
+        key = (boundary_index, role)
+        if key in grouped:
+            raise ValueError("private remediation review patch identity is duplicated")
+        grouped[key] = patch
+    return grouped
 
 
 def _prepare_private_join_remediation_review(
@@ -119,10 +198,11 @@ def _prepare_private_join_remediation_review(
 
         answer_units: list[dict[str, Any]] = []
         public_units: list[dict[str, Any]] = []
-        grouped_patches: dict[tuple[int, str], Mapping[str, Any]] = {
-            (int(item["boundary_index"]), str(item["role"])): item
-            for item in candidate["patches"]
-        }
+        grouped_patches = _validated_grouped_patches(
+            candidate,
+            total_frames=stitch["clock"]["frames"],
+            boundary_count=stitch["clock"]["boundary_count"],
+        )
         for boundary_index, role in sorted(grouped_patches):
             patch = grouped_patches[(boundary_index, role)]
             boundary_frame = (int(patch["start_frame"]) + int(patch["end_frame"])) // 2
@@ -239,13 +319,7 @@ def _prepare_private_join_remediation_review(
                 "Did targeted overlap re-inference reduce the reviewed joins without "
                 "creating worse patch edges or complete-song problems?"
             ),
-            "instructions": [
-                "Review A and B by listening; neither letter is a recommendation.",
-                "Complete the four boundary comparisons before judging patch edges.",
-                "Then hear all three complete-song pairs for broader side effects.",
-                "Equivalent, neither and cannot tell are valid outcomes.",
-                "Do not open the separate answer key before exporting the review.",
-            ],
+            "instructions": _review_instructions(len(grouped_patches)),
             "bindings": {
                 "execution_report_sha256": _sha256(execution_path),
                 "execution_state_sha256": state["state_sha256"],
@@ -274,9 +348,7 @@ def _prepare_private_join_remediation_review(
         }
         document["document_sha256"] = _document_sha256(document)
         _write_json_exclusive(temporary / REPORT_NAME, document)
-        (temporary / HTML_NAME).write_text(
-            _review_html(document), encoding="utf-8"
-        )
+        (temporary / HTML_NAME).write_text(_review_html(document), encoding="utf-8")
         (temporary / HTML_NAME).chmod(0o600)
         _make_private_tree(temporary)
         os.replace(temporary, destination)
@@ -440,9 +512,9 @@ body{{margin:0;background:#08111d;color:#e8f1ff;font:18px/1.45 system-ui,sans-se
 h1{{font-size:42px}}h2{{color:#63d7ff}}audio{{width:100%;margin:8px 0 14px}}label{{display:inline-block;margin:7px 16px 7px 0}}textarea{{width:100%;min-height:80px;background:#0a1724;color:#fff;border:1px solid #3b607d;border-radius:8px}}
 button{{background:#1d789c;color:#fff;border:0;border-radius:9px;padding:14px 20px;font-size:17px;margin-right:10px}}button:disabled{{opacity:.45}}.status{{color:#ffd253;font-weight:700}}code{{color:#8edcff}}
 </style></head><body><div class="privacy">Private local developer review — no audio or review is uploaded</div><main>
-<div class="card"><h1>Targeted join-remediation review</h1><p>{html.escape(document['question'])}</p>
-<p>There are <strong>{document['expected_counts']['boundary_role_pairs']} boundary comparisons</strong>, <strong>{document['expected_counts']['patch_edge_pairs']} edge comparisons</strong> and <strong>3 complete-song comparisons</strong>. A and B are randomised independently. Equivalent, neither and cannot tell are valid.</p>
-<p><strong>Do not open the separate answer key before exporting this review.</strong></p><p class="status" id="progress">Reviewed 0 of {len(document['units'])} units</p></div>
+<div class="card"><h1>Targeted join-remediation review</h1><p>{html.escape(document["question"])}</p>
+<p>There are <strong>{document["expected_counts"]["boundary_role_pairs"]} boundary comparisons</strong>, <strong>{document["expected_counts"]["patch_edge_pairs"]} edge comparisons</strong> and <strong>3 complete-song comparisons</strong>. A and B are randomised independently. Equivalent, neither and cannot tell are valid.</p>
+<p><strong>Do not open the separate answer key before exporting this review.</strong></p><p class="status" id="progress">Reviewed 0 of {len(document["units"])} units</p></div>
 <div id="units"></div>
 <div class="card"><button id="complete">Mark review complete</button><button id="export" disabled>Export reviewed JSON</button><p id="message"></p></div>
 <script id="seed" type="application/json">{seed}</script><script>
@@ -459,7 +531,9 @@ document.getElementById('export').onclick=()=>{{const blob=new Blob([JSON.string
 
 def _write_json_exclusive(path: Path, document: Mapping[str, Any]) -> None:
     payload = (
-        json.dumps(document, indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False)
+        json.dumps(
+            document, indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False
+        )
         + "\n"
     ).encode("utf-8")
     descriptor = os.open(

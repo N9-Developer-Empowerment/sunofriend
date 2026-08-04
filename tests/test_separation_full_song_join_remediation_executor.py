@@ -2,8 +2,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
+import runpy
+import shlex
 import stat
+import subprocess
+import sys
 from typing import Any, Mapping
 import wave
 
@@ -19,6 +24,7 @@ from sunofriend._separation_full_song_join_remediation_executor import (
     SCHEMA,
     _apply_equal_power_patch,
     _execute_private_separation_full_song_join_remediation,
+    _state_sha256,
 )
 from sunofriend._separation_full_song_join_remediation_plan import (
     POLICY_ID,
@@ -33,6 +39,15 @@ from sunofriend._separation_full_song_join_remediation_review import (
     HTML_NAME,
     REPORT_NAME as REVIEW_REPORT_NAME,
     _prepare_private_join_remediation_review,
+    _review_instructions,
+)
+from sunofriend._separation_full_song_join_remediation_review_result import (
+    _PrivateJsonSnapshotError,
+    _load_private_json_snapshot,
+    _resolve_private_join_remediation_review,
+    _status_private_join_remediation_review,
+    _verify_blind_audio_contract,
+    _write_json_exclusive,
 )
 from sunofriend._separation_full_song_plan import (
     REPORT_NAME as SOURCE_PLAN_NAME,
@@ -78,9 +93,7 @@ def test_join_remediation_executor_resumes_and_preserves_raw_control(
     assert calls == [661_500]
     candidate = json.loads((output / CANDIDATE_REPORT_NAME).read_text())
     assert candidate["summary"]["patched_boundary_role_pair_count"] == 1
-    assert candidate["artifacts"]["vocals"][
-        "outside_patch_pcm24_samples_exact"
-    ] is True
+    assert candidate["artifacts"]["vocals"]["outside_patch_pcm24_samples_exact"] is True
     assert candidate["artifacts"]["instrumental"]["patch_count"] == 0
     assert candidate["readiness"]["candidate_review_complete"] is False
     assert all(value is False for value in candidate["permissions"].values())
@@ -107,10 +120,14 @@ def test_join_remediation_executor_resumes_and_preserves_raw_control(
         review_root / ANSWER_KEY_NAME
     )
     assert answer["status"] == "sealed_do_not_open_before_review"
-    assert "\"assignment\"" not in page
+    assert '"assignment"' not in page
     assert "Export reviewed JSON" in page
     assert all(unit["choice"] is None for unit in seed["units"])
     assert all(not unit["heard"]["A"] for unit in seed["units"])
+    assert seed["instructions"] == _review_instructions(1)
+    assert _review_instructions(4)[1] == (
+        "Complete the four boundary comparisons before judging patch edges."
+    )
 
     repeated = _execute_private_separation_full_song_join_remediation(
         remediation,
@@ -167,6 +184,687 @@ def test_equal_power_patch_keeps_exact_outer_samples() -> None:
     np.testing.assert_array_equal(destination[2], before[2])
     np.testing.assert_array_equal(destination[9], before[9])
     np.testing.assert_array_equal(destination[4:8], replacement[2:6])
+
+
+def test_join_remediation_review_status_keeps_key_closed_then_resolves(
+    tmp_path: Path,
+) -> None:
+    execution, package, review_root, reviewed_path = _completed_review(tmp_path)
+    key_path = review_root / ANSWER_KEY_NAME
+    key_bytes = key_path.read_bytes()
+    key_path.write_text("deliberately unreadable during status\n", encoding="utf-8")
+
+    status = _status_private_join_remediation_review(
+        reviewed_path,
+        review_package_dir=review_root,
+        execution_dir=execution,
+        stitch_package_dir=package,
+    )
+
+    assert status["status"] == "complete_review_verified_key_unopened"
+    assert status["answer_key_opened"] is False
+    assert status["identity_mapping_revealed"] is False
+    assert status["reviewed_units"] == 6
+    assert status["audio_references_verified"] == 12
+    assert status["review_export_sha256"] == _sha256(reviewed_path)
+    assert status["review_seed_sha256"] == _sha256(review_root / REVIEW_REPORT_NAME)
+    assert status["document_sha256"] == _document_sha256(status)
+    assert (
+        status["verification_claims"][
+            "review_seed_and_export_bounded_single_read_snapshots"
+        ]
+        is True
+    )
+    assert "bounded_single_read_json_snapshots" not in status["verification_claims"]
+    assert (
+        status["verification_claims"][
+            "answer_key_bounded_single_read_snapshot_verified"
+        ]
+        is False
+    )
+    assert (
+        status["verification_limitations"][
+            "execution_candidate_and_stitch_json_snapshot_held"
+        ]
+        is False
+    )
+    assert (
+        status["verification_limitations"][
+            "wav_descriptors_snapshot_held_across_verification"
+        ]
+        is False
+    )
+    assert (
+        status["verification_limitations"][
+            "non_snapshot_private_inputs_assumed_quiescent"
+        ]
+        is True
+    )
+    assert all(value is False for value in status["effects"].values())
+
+    key_path.write_bytes(key_bytes)
+    key_path.chmod(0o600)
+    answer = json.loads(key_bytes)
+    result_path = tmp_path / "resolved-review.json"
+    result = _resolve_private_join_remediation_review(
+        reviewed_path,
+        review_package_dir=review_root,
+        execution_dir=execution,
+        stitch_package_dir=package,
+        out=result_path,
+    )
+
+    choices = json.loads(reviewed_path.read_text())["units"]
+    expected = []
+    for unit, answer_unit in zip(choices, answer["units"]):
+        choice = unit["choice"]
+        expected.append(
+            f"{answer_unit['assignment'][choice]}_preferred"
+            if choice in {"A", "B"}
+            else choice
+        )
+    assert result["status"] == "complete_review_no_activation"
+    assert [unit["resolved_choice"] for unit in result["units"]] == expected
+    assert result["readiness_evidence"]["original_audible_joins_resolved"] is False
+    assert result["readiness_evidence"]["publication_ready"] is False
+    assert all(value is False for value in result["permissions"].values())
+    assert all(value is False for value in result["effects"].values())
+    assert (
+        result["verification_claims"][
+            "result_temp_fsynced_before_no_overwrite_publication"
+        ]
+        is True
+    )
+    assert (
+        result["verification_claims"]["result_published_by_no_overwrite_hard_link"]
+        is True
+    )
+    assert (
+        result["verification_claims"][
+            "answer_key_bounded_single_read_snapshot_verified"
+        ]
+        is True
+    )
+    assert (
+        result["verification_limitations"][
+            "execution_candidate_and_stitch_json_snapshot_held"
+        ]
+        is False
+    )
+    assert (
+        result["verification_limitations"][
+            "wav_descriptors_snapshot_held_across_verification"
+        ]
+        is False
+    )
+    stored = json.loads(result_path.read_text())
+    assert stored["document_sha256"] == _document_sha256(stored)
+    assert stat.S_IMODE(result_path.stat().st_mode) == 0o600
+    stored_bytes = result_path.read_bytes()
+    with pytest.raises(FileExistsError):
+        _resolve_private_join_remediation_review(
+            reviewed_path,
+            review_package_dir=review_root,
+            execution_dir=execution,
+            stitch_package_dir=package,
+            out=result_path,
+        )
+    assert result_path.read_bytes() == stored_bytes
+
+
+def test_join_remediation_review_status_rejects_incomplete_or_changed_export(
+    tmp_path: Path,
+) -> None:
+    execution, package, review_root, reviewed_path = _completed_review(tmp_path)
+    reviewed = json.loads(reviewed_path.read_text())
+    reviewed["units"][0]["title"] = "changed title"
+    changed = tmp_path / "changed-review.json"
+    _write_private_json(changed, reviewed)
+
+    with pytest.raises(ValueError, match="changed immutable evidence"):
+        _status_private_join_remediation_review(
+            changed,
+            review_package_dir=review_root,
+            execution_dir=execution,
+            stitch_package_dir=package,
+        )
+
+    reviewed = json.loads(reviewed_path.read_text())
+    reviewed["units"][0]["heard"]["A"] = False
+    incomplete = tmp_path / "incomplete-review.json"
+    _write_private_json(incomplete, reviewed)
+    with pytest.raises(ValueError, match="unit is incomplete"):
+        _status_private_join_remediation_review(
+            incomplete,
+            review_package_dir=review_root,
+            execution_dir=execution,
+            stitch_package_dir=package,
+        )
+
+
+def test_join_remediation_review_resolver_rejects_changed_key(
+    tmp_path: Path,
+) -> None:
+    execution, package, review_root, reviewed_path = _completed_review(tmp_path)
+    key_path = review_root / ANSWER_KEY_NAME
+    key_path.write_text("changed\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="answer key differs"):
+        _resolve_private_join_remediation_review(
+            reviewed_path,
+            review_package_dir=review_root,
+            execution_dir=execution,
+            stitch_package_dir=package,
+            out=tmp_path / "result.json",
+        )
+
+
+@pytest.mark.parametrize("rewrite", ("question", "kind", "window"))
+def test_join_remediation_review_rejects_coherently_rewritten_public_semantics(
+    tmp_path: Path,
+    rewrite: str,
+) -> None:
+    execution, package, review_root, reviewed_path = _completed_review(tmp_path)
+    seed_path = review_root / REVIEW_REPORT_NAME
+    seed = json.loads(seed_path.read_text())
+    reviewed = json.loads(reviewed_path.read_text())
+    if rewrite == "question":
+        seed["question"] = "A different but self-consistent review question"
+        reviewed["question"] = seed["question"]
+    elif rewrite == "kind":
+        seed["units"][0]["kind"] = "patch_edge_pair"
+        reviewed["units"][0]["kind"] = "patch_edge_pair"
+        seed["expected_counts"]["boundary_role_pairs"] = 0
+        seed["expected_counts"]["patch_edge_pairs"] = 3
+        reviewed["expected_counts"] = dict(seed["expected_counts"])
+    else:
+        for document in (seed, reviewed):
+            window = document["units"][0]["source_window"]
+            window["start_frame"] += 1
+            window["start_seconds"] = window["start_frame"] / SAMPLE_RATE
+    seed["document_sha256"] = _document_sha256(seed)
+    reviewed["document_sha256"] = seed["document_sha256"]
+    _write_private_json(seed_path, seed)
+    reviewed_path.write_text(json.dumps(reviewed), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="public semantics differ"):
+        _status_private_join_remediation_review(
+            reviewed_path,
+            review_package_dir=review_root,
+            execution_dir=execution,
+            stitch_package_dir=package,
+        )
+
+
+@pytest.mark.parametrize(
+    ("tamper", "message"),
+    (
+        ("short_assignment", "short answer binding differs"),
+        ("short_level", "short answer binding differs"),
+        ("complete_assignment", "complete-song answer binding differs"),
+    ),
+)
+def test_join_remediation_review_resolver_binds_revealed_key_to_audio(
+    tmp_path: Path,
+    tamper: str,
+    message: str,
+) -> None:
+    execution, package, review_root, reviewed_path = _completed_review(tmp_path)
+    answer_path = review_root / ANSWER_KEY_NAME
+    answer = json.loads(answer_path.read_text())
+    if tamper == "short_assignment":
+        assignment = answer["units"][0]["assignment"]
+        assignment["A"], assignment["B"] = assignment["B"], assignment["A"]
+    elif tamper == "short_level":
+        answer["units"][0]["raw_rms"] = round(
+            answer["units"][0]["raw_rms"] * 1.01,
+            12,
+        )
+    else:
+        assignment = answer["units"][-1]["assignment"]
+        assignment["A"], assignment["B"] = assignment["B"], assignment["A"]
+    _repin_answer_key_and_public_review(
+        answer,
+        answer_path=answer_path,
+        seed_path=review_root / REVIEW_REPORT_NAME,
+        reviewed_path=reviewed_path,
+    )
+
+    with pytest.raises(ValueError, match=message):
+        _resolve_private_join_remediation_review(
+            reviewed_path,
+            review_package_dir=review_root,
+            execution_dir=execution,
+            stitch_package_dir=package,
+            out=tmp_path / "resolved.json",
+        )
+
+
+def test_join_remediation_review_status_rejects_oversized_browser_export(
+    tmp_path: Path,
+) -> None:
+    execution, package, review_root, reviewed_path = _completed_review(tmp_path)
+    reviewed_path.write_bytes(
+        reviewed_path.read_bytes()
+        + b" " * (8 * 1024 * 1024 - reviewed_path.stat().st_size + 1)
+    )
+
+    with pytest.raises(ValueError, match="no larger than 8 MiB"):
+        _status_private_join_remediation_review(
+            reviewed_path,
+            review_package_dir=review_root,
+            execution_dir=execution,
+            stitch_package_dir=package,
+        )
+
+
+def test_private_json_snapshot_requires_owner_only_mode_and_reads_once(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = tmp_path / "private review with spaces.json"
+    _write_private_json(path, {"value": 1})
+    real_read = os.read
+    calls = 0
+
+    def counted_read(descriptor: int, maximum: int) -> bytes:
+        nonlocal calls
+        calls += 1
+        return real_read(descriptor, maximum)
+
+    monkeypatch.setattr(os, "read", counted_read)
+    snapshot = _load_private_json_snapshot(path, "private test review")
+
+    assert calls == 1
+    assert snapshot["sha256"] == _sha256(path)
+    assert snapshot["bytes"] == path.stat().st_size
+    path.chmod(0o644)
+    with pytest.raises(_PrivateJsonSnapshotError) as caught:
+        _load_private_json_snapshot(path, "private test review")
+    assert caught.value.chmod_recommended is True
+
+
+def test_private_json_snapshot_rejects_symbolic_and_hard_links(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source.json"
+    _write_private_json(source, {"value": 1})
+    symbolic = tmp_path / "symbolic.json"
+    symbolic.symlink_to(source)
+    with pytest.raises(_PrivateJsonSnapshotError, match="regular non-link"):
+        _load_private_json_snapshot(symbolic, "private test review")
+
+    hard = tmp_path / "hard.json"
+    os.link(source, hard)
+    with pytest.raises(_PrivateJsonSnapshotError, match="exactly one filesystem link"):
+        _load_private_json_snapshot(source, "private test review")
+
+
+def test_private_json_snapshot_rejects_short_or_changed_reads_and_closes_fd(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = tmp_path / "private.json"
+    _write_private_json(path, {"value": 1})
+    real_read = os.read
+
+    with monkeypatch.context() as patch:
+        patch.setattr(os, "read", lambda fd, maximum: real_read(fd, maximum)[:-1])
+        with pytest.raises(_PrivateJsonSnapshotError, match="changed while"):
+            _load_private_json_snapshot(path, "private test review")
+
+    real_fstat = os.fstat
+    fstat_calls = 0
+
+    def changed_fstat(descriptor: int) -> os.stat_result:
+        nonlocal fstat_calls
+        current = real_fstat(descriptor)
+        fstat_calls += 1
+        if fstat_calls == 2:
+            values = list(current)
+            values[6] += 1
+            return os.stat_result(values)
+        return current
+
+    with monkeypatch.context() as patch:
+        patch.setattr(os, "fstat", changed_fstat)
+        with pytest.raises(_PrivateJsonSnapshotError, match="changed while"):
+            _load_private_json_snapshot(path, "private test review")
+
+    path.write_text("not json", encoding="utf-8")
+    path.chmod(0o600)
+    real_open = os.open
+    descriptors: list[int] = []
+
+    def recorded_open(open_path: os.PathLike[str], flags: int) -> int:
+        descriptor = real_open(open_path, flags)
+        descriptors.append(descriptor)
+        return descriptor
+
+    with monkeypatch.context() as patch:
+        patch.setattr(os, "open", recorded_open)
+        with pytest.raises(_PrivateJsonSnapshotError, match="differs"):
+            _load_private_json_snapshot(path, "private test review")
+    assert len(descriptors) == 1
+    with pytest.raises(OSError):
+        os.fstat(descriptors[0])
+
+
+@pytest.mark.parametrize("failure", ["write", "fsync"])
+def test_exclusive_result_write_removes_its_partial_inode_on_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure: str,
+) -> None:
+    path = tmp_path / f"failed-{failure}.json"
+    target = os.write if failure == "write" else os.fsync
+
+    def fail(*_args: object) -> None:
+        raise OSError(f"injected {failure} failure")
+
+    monkeypatch.setattr(os, failure, fail)
+    with pytest.raises(OSError, match=f"injected {failure} failure"):
+        _write_json_exclusive(path, {"value": 1})
+    assert not path.exists()
+    assert list(tmp_path.glob(f".{path.name}.*.tmp")) == []
+
+    monkeypatch.setattr(os, failure, target)
+    _write_json_exclusive(path, {"value": 2})
+    assert json.loads(path.read_text()) == {"value": 2}
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600
+    assert list(tmp_path.glob(f".{path.name}.*.tmp")) == []
+
+
+def test_exclusive_result_is_invisible_until_complete_temp_publication(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = tmp_path / "published-result.json"
+    real_link = os.link
+    observed_publication = False
+
+    def checked_link(
+        source: os.PathLike[str],
+        destination: os.PathLike[str],
+        *,
+        follow_symlinks: bool = True,
+    ) -> None:
+        nonlocal observed_publication
+        assert Path(destination) == path
+        assert not path.exists()
+        assert json.loads(Path(source).read_text()) == {"value": 1}
+        assert stat.S_IMODE(Path(source).stat().st_mode) == 0o600
+        observed_publication = True
+        real_link(source, destination, follow_symlinks=follow_symlinks)
+
+    monkeypatch.setattr(os, "link", checked_link)
+    _write_json_exclusive(path, {"value": 1})
+
+    assert observed_publication is True
+    assert json.loads(path.read_text()) == {"value": 1}
+    assert list(tmp_path.glob(f".{path.name}.*.tmp")) == []
+
+
+def test_exclusive_result_write_preserves_interposed_race_winner(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = tmp_path / "raced-result.json"
+    sentinel = b"race winner must remain unchanged\n"
+    real_link = os.link
+    interposed = False
+
+    def interposed_link(
+        source: os.PathLike[str],
+        destination: os.PathLike[str],
+        *,
+        follow_symlinks: bool = True,
+    ) -> None:
+        nonlocal interposed
+        if Path(destination) == path and not interposed:
+            interposed = True
+            path.write_bytes(sentinel)
+            path.chmod(0o600)
+        real_link(source, destination, follow_symlinks=follow_symlinks)
+
+    monkeypatch.setattr(os, "link", interposed_link)
+    with pytest.raises(FileExistsError):
+        _write_json_exclusive(path, {"value": "must not replace sentinel"})
+    assert interposed is True
+    assert path.read_bytes() == sentinel
+    assert list(tmp_path.glob(f".{path.name}.*.tmp")) == []
+
+
+def test_join_remediation_review_rejects_pcm24_identical_short_pair(
+    tmp_path: Path,
+) -> None:
+    audio = np.full((SAMPLE_RATE, 2), 0.125, dtype=np.float64)
+    raw = tmp_path / "raw.wav"
+    candidate = tmp_path / "candidate.wav"
+    first = tmp_path / "first.wav"
+    second = tmp_path / "second.wav"
+    for path in (raw, candidate, first, second):
+        soundfile.write(path, audio, SAMPLE_RATE, subtype="PCM_24")
+    review = {
+        "units": [
+            {
+                "unit_id": "boundary-01-vocals",
+                "kind": "boundary_role_pair",
+            }
+        ]
+    }
+    reconstructed = {
+        "units": [
+            {
+                "public": {
+                    "unit_id": "boundary-01-vocals",
+                    "source_window": {
+                        "start_frame": 0,
+                        "end_frame": SAMPLE_RATE,
+                    },
+                },
+                "raw_path": raw,
+                "candidate_path": candidate,
+            }
+        ]
+    }
+
+    with pytest.raises(ValueError, match="PCM24-identical"):
+        _verify_blind_audio_contract(
+            review,
+            reconstructed=reconstructed,
+            audio_paths={
+                "boundary-01-vocals": {"A": first, "B": second},
+            },
+        )
+
+
+def test_join_remediation_review_generator_rejects_duplicate_patch_identity(
+    tmp_path: Path,
+) -> None:
+    remediation, package, source_plan = _inputs(tmp_path)
+    execution = tmp_path / "execution"
+    _execute_private_separation_full_song_join_remediation(
+        remediation,
+        package_dir=package,
+        source_plan_path=source_plan,
+        out_dir=execution,
+        **_runtime_arguments(tmp_path),
+        maximum_windows=None,
+        attempt_runner=_fake_runner([]),
+    )
+    candidate_path = execution / CANDIDATE_REPORT_NAME
+    candidate = json.loads(candidate_path.read_text())
+    candidate["patches"].append(dict(candidate["patches"][0]))
+    candidate["summary"]["patched_boundary_role_pair_count"] = 2
+    candidate["document_sha256"] = _document_sha256(candidate)
+    _write_private_json(candidate_path, candidate)
+    state_path = execution / REPORT_NAME
+    state = json.loads(state_path.read_text())
+    state["candidate_report"] = {
+        "path": CANDIDATE_REPORT_NAME,
+        "sha256": _sha256(candidate_path),
+        "document_sha256": candidate["document_sha256"],
+        "bytes": candidate_path.stat().st_size,
+    }
+    state["state_sha256"] = _state_sha256(state)
+    _write_private_json(state_path, state)
+
+    with pytest.raises(ValueError, match="patch identity is duplicated"):
+        _prepare_private_join_remediation_review(
+            execution,
+            package_dir=package,
+            out_dir=tmp_path / "duplicate-review",
+        )
+
+
+def test_join_remediation_review_cli_exposes_only_summary_and_safe_chmod(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    namespace = runpy.run_path(
+        str(
+            Path(__file__).parents[1]
+            / "scripts/private-separation-full-song-join-remediation-review-result.py"
+        )
+    )
+    summary = namespace["_cli_resolution_summary"](
+        {
+            "status": "complete_review_no_activation",
+            "report": "/private/result.json",
+            "reviewed_unit_count": 1,
+            "counts_by_kind_and_outcome": {},
+            "overall_outcome_counts": {},
+            "readiness_evidence": {},
+            "verification_claims": {},
+            "verification_limitations": {},
+            "document_sha256": "0" * 64,
+            "units": [{"notes": "PRIVATE NOTE MUST NOT PRINT"}],
+        }
+    )
+    encoded = json.dumps(summary)
+    assert "units" not in summary
+    assert "PRIVATE NOTE MUST NOT PRINT" not in encoded
+    unsafe_path = tmp_path / "review with spaces;$(touch SHOULD_NOT_EXIST).json"
+    unsafe_path.write_text("{}")
+    unsafe_path.chmod(0o644)
+    error = _PrivateJsonSnapshotError(
+        "private mode required",
+        path=unsafe_path,
+        chmod_recommended=True,
+    )
+    message = namespace["_snapshot_error_message"]("review-tool", error)
+    command = message.splitlines()[-1].strip()
+    assert command == shlex.join(["chmod", "600", str(unsafe_path)])
+    completed = subprocess.run(
+        command,
+        cwd=tmp_path,
+        shell=True,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert stat.S_IMODE(unsafe_path.stat().st_mode) == 0o600
+    assert not (tmp_path / "SHOULD_NOT_EXIST").exists()
+
+    main = namespace["main"]
+    main.__globals__["_status_private_join_remediation_review"] = lambda *_a, **_k: {
+        "status": "complete_review_verified_key_unopened",
+        "reviewed_units": 1,
+        "counts_by_kind": {},
+        "audio_references_verified": 2,
+        "effects": {},
+        "answer_key_opened": False,
+        "identity_mapping_revealed": False,
+        "verification_claims": {},
+        "verification_limitations": {},
+        "document_sha256": "0" * 64,
+        "units": [{"notes": "PRIVATE NOTE MUST NOT PRINT"}],
+    }
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "review-tool",
+            "--status",
+            str(tmp_path / "review.json"),
+            "--review-package-dir",
+            str(tmp_path / "review-package"),
+            "--execution-dir",
+            str(tmp_path / "execution"),
+            "--stitch-package-dir",
+            str(tmp_path / "stitch"),
+        ],
+    )
+    assert main() == 0
+    captured = capsys.readouterr()
+    assert "PRIVATE NOTE MUST NOT PRINT" not in captured.out
+    assert '"status": "complete_review_verified_key_unopened"' in captured.out
+
+
+def _repin_answer_key_and_public_review(
+    answer: dict[str, Any],
+    *,
+    answer_path: Path,
+    seed_path: Path,
+    reviewed_path: Path,
+) -> None:
+    answer["document_sha256"] = _document_sha256(answer)
+    _write_private_json(answer_path, answer)
+    seed = json.loads(seed_path.read_text())
+    seed["bindings"]["answer_key_sha256"] = _sha256(answer_path)
+    seed["bindings"]["answer_key_document_sha256"] = answer["document_sha256"]
+    seed["package_commitment"] = hashlib.sha256(
+        (
+            f"{seed['bindings']['answer_key_sha256']}:"
+            f"{seed['bindings']['answer_key_document_sha256']}:"
+            f"{seed['bindings']['audio_manifest_sha256']}"
+        ).encode("ascii")
+    ).hexdigest()
+    seed["document_sha256"] = _document_sha256(seed)
+    _write_private_json(seed_path, seed)
+    reviewed = json.loads(reviewed_path.read_text())
+    reviewed["bindings"] = dict(seed["bindings"])
+    reviewed["package_commitment"] = seed["package_commitment"]
+    reviewed["document_sha256"] = seed["document_sha256"]
+    reviewed_path.write_text(json.dumps(reviewed), encoding="utf-8")
+
+
+def _completed_review(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
+    remediation, package, source_plan = _inputs(tmp_path)
+    execution = tmp_path / "execution"
+    _execute_private_separation_full_song_join_remediation(
+        remediation,
+        package_dir=package,
+        source_plan_path=source_plan,
+        out_dir=execution,
+        **_runtime_arguments(tmp_path),
+        maximum_windows=None,
+        attempt_runner=_fake_runner([]),
+    )
+    review_root = tmp_path / "review"
+    _prepare_private_join_remediation_review(
+        execution,
+        package_dir=package,
+        out_dir=review_root,
+    )
+    reviewed = json.loads((review_root / REVIEW_REPORT_NAME).read_text())
+    choices = ("A", "B", "equivalent", "neither", "cannot_tell", "A")
+    for unit, choice in zip(reviewed["units"], choices):
+        unit["heard"] = {"A": True, "B": True}
+        unit["choice"] = choice
+        unit["notes"] = f"private note for {unit['unit_id']}"
+    reviewed["status"] = "reviewed"
+    reviewed["summary"] = {
+        "reviewed_units": len(reviewed["units"]),
+        "total_units": len(reviewed["units"]),
+        "complete": True,
+    }
+    reviewed_path = tmp_path / "join_remediation_review.reviewed.json"
+    _write_private_json(reviewed_path, reviewed)
+    return execution, package, review_root, reviewed_path
 
 
 def _inputs(tmp_path: Path) -> tuple[Path, Path, Path]:
