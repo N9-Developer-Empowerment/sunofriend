@@ -2416,11 +2416,61 @@ The current plan file SHA-256 is
 `71ec5ffdf6653929d3e14692dafd41d3c6ac4bccb73ecf36fa8b666c2519b089`
 and its document SHA-256 is
 `5b2cb4730fa710f0ff08e2398a2d05a2cb9fe100d969a7a6fb29ece05563cec5`.
-It records zero created candidates and zero completed worker runs. After a
-future executor creates candidates, all four original-versus-repaired
-boundary-role pairs, all eight new patch edges and the three complete-song
-roles still require human listening before the readiness ledger can be
-reassessed. No review page is outstanding from this planning increment.
+It initially recorded zero created candidates and zero completed worker runs.
+The separate executor now consumes that sealed plan while keeping the original
+stitch immutable:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-full-song-join-remediation-execute.py \
+  work/separation-bakeoff/be-alone-full-song-join-remediation-plan-v1/private-separation-full-song-join-remediation-plan.json \
+  --package-dir \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review \
+  --source-plan \
+    work/separation-bakeoff/be-alone-full-song-kim-plan-v1/private-separation-full-song-plan.json \
+  --out-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v1 \
+  --repository-root "$PWD" \
+  --runtime-launcher "$PWD/.venv-ai/bin/python" \
+  --source-root \
+    "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/mlx-audio-source" \
+  --checkpoint \
+    "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/model.safetensors" \
+  --companion-root \
+    "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/checkpoint-directory" \
+  --device gpu --all
+```
+
+The command is resumable and preserves interrupted attempts. It independently
+reverified all three native worker results before creating candidate vocals,
+instrumental and diagnostic reconstruction WAVs. The four two-second role
+patches use only the planned 100 ms equal-power edges. Both role candidates are
+PCM24-exact outside their named patch regions. Their pre-write peaks are
+0.619194746 for vocals and 0.667407751 for instrumental. The reconstructed
+candidate peak is 0.812045455, so its disclosed global gain remained 1.0.
+Candidate creation is not evidence that any join improved.
+
+Create the required owner listening page from those verified candidates:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-full-song-join-remediation-review.py \
+  work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v1 \
+  --package-dir \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review \
+  --out-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-review-v1
+```
+
+The fresh page contains four blind raw-versus-candidate boundary comparisons,
+eight blind patch-edge comparisons and three blind complete-song comparisons.
+Short clips attenuate only the louder item to the quieter whole-window sample
+RMS; the complete-song files are unchanged. All 30 audio references and their
+hashes have been rechecked and the HTML JavaScript parses. Open
+`join_remediation_review.html`, hear A and B for all 15 units, choose an
+outcome and export `join_remediation_review.reviewed.json`. Do not open the
+separate answer key first. This is the one current outstanding human review;
+readiness, separator selection and every public product route remain false.
 
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:

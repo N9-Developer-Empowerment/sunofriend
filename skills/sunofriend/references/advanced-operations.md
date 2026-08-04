@@ -1970,11 +1970,24 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   instrumental. Each future candidate may patch only the named role for two
   seconds around the join with 100 ms equal-power transitions, while retaining
   the raw stitch as the unchanged control. Source windows may overlap; patch
-  regions may not. Planning is not execution or repair success. A later
-  executor must keep repaired audio separate and require blind comparison of
-  all four boundary-role pairs, listening at all eight patch edges and a new
-  complete-song review before readiness can be reassessed. No review is
-  outstanding from the planning command itself.
+  regions may not. Planning is not execution or repair success.
+  `scripts/private-separation-full-song-join-remediation-execute.py` now
+  resumes those sealed windows through the existing audited native worker,
+  preserves incomplete attempts and creates candidates only after every
+  authorisation and worker result verifies. The current execution completed
+  all three windows. It created separate PCM24 vocals and instrumental
+  candidates that are exact outside their four named patch regions, plus a
+  diagnostic reconstruction. Role peaks remained below full scale and the
+  reconstruction required no global attenuation. Raw stitch hashes remained
+  unchanged. This is candidate integrity, not repair success.
+  Use `scripts/private-separation-full-song-join-remediation-review.py` to
+  create the fresh blind page. The current package has four raw-versus-
+  candidate boundary-role pairs, all eight patch-edge pairs and three
+  complete-song pairs. Short pairs use attenuation-only whole-window sample-
+  RMS matching; complete songs remain unchanged. Do not open the separate
+  answer key before review. The 15-unit page is the one current outstanding
+  human review. No readiness, selection, acceptance or product route changes
+  until its exported review is separately verified and resolved.
   Never call exact input partitioning or exact output duration seamless or
   accepted separation.
   Fresh native attempts now retain two path-free resource projections inside
