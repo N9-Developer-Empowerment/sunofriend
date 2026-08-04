@@ -2384,6 +2384,44 @@ reconstruction remains on the source clock for those windows. It does not
 prove that either separated role is accurate or sounds good, and the audible
 human-reviewed joins still keep the combined milestone open.
 
+Those four human-rated defects now have a separate model-free remediation
+plan. `scripts/private-separation-full-song-join-remediation-plan.py` verifies
+the unchanged stitch, the resolved human review and the passing alignment
+result before writing any proposal. It copies no listener notes, creates no
+audio, runs no model and does not change publication readiness.
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-full-song-join-remediation-plan.py \
+  work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review \
+  --review-result \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-review-result-v1/private-separation-full-song-review-result.json \
+  --alignment-result \
+    work/separation-bakeoff/be-alone-full-song-source-reconstruction-alignment-v1/private-separation-full-song-alignment.json \
+  --out \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-plan-v1/private-separation-full-song-join-remediation-plan.json
+```
+
+The plan retains the raw stitch as the only control and deduplicates the four
+role defects into three exact 15-second source-clock inferences: boundary 11
+targets both vocals and instrumental, boundary 12 targets vocals, and boundary
+13 targets instrumental. A later executor may use only a two-second candidate
+patch around each join with 100 ms equal-power transitions at the patch edges.
+The patch regions do not overlap, although the independently inferred source
+windows may overlap. The planned output must remain a separate candidate;
+vocals plus instrumental must be recomputed as a separate diagnostic
+reconstruction rather than altering the raw one.
+
+The current plan file SHA-256 is
+`71ec5ffdf6653929d3e14692dafd41d3c6ac4bccb73ecf36fa8b666c2519b089`
+and its document SHA-256 is
+`5b2cb4730fa710f0ff08e2398a2d05a2cb9fe100d969a7a6fb29ece05563cec5`.
+It records zero created candidates and zero completed worker runs. After a
+future executor creates candidates, all four original-versus-repaired
+boundary-role pairs, all eight new patch edges and the three complete-song
+roles still require human listening before the readiness ledger can be
+reassessed. No review page is outstanding from this planning increment.
+
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
 

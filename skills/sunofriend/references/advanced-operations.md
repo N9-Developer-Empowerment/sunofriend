@@ -1960,6 +1960,21 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   fidelity, bleed, artefact, musical-quality or separator-accuracy evidence.
   The human-reviewed vocal and instrumental joins still keep the combined
   duration/alignment milestone open.
+  `scripts/private-separation-full-song-join-remediation-plan.py` verifies that
+  exact stitch, resolved review and passing alignment result before proposing
+  any repair. It derives targets only from explicit `audible_join` ratings,
+  rejects an unexplained reconstruction join, copies no listener notes and
+  writes no audio. The current `Be Alone` plan reduces four role defects to
+  three unique 15-second source-clock worker windows: boundary 11 targets both
+  vocals and instrumental, boundary 12 targets vocals, and boundary 13 targets
+  instrumental. Each future candidate may patch only the named role for two
+  seconds around the join with 100 ms equal-power transitions, while retaining
+  the raw stitch as the unchanged control. Source windows may overlap; patch
+  regions may not. Planning is not execution or repair success. A later
+  executor must keep repaired audio separate and require blind comparison of
+  all four boundary-role pairs, listening at all eight patch edges and a new
+  complete-song review before readiness can be reassessed. No review is
+  outstanding from the planning command itself.
   Never call exact input partitioning or exact output duration seamless or
   accepted separation.
   Fresh native attempts now retain two path-free resource projections inside
