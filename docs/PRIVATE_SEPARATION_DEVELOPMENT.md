@@ -1972,17 +1972,24 @@ PYTHONPATH=src ./.venv/bin/python \
     work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-review-result-v1/private-separation-full-song-review-result.json \
   --full-song-alignment-result \
     work/separation-bakeoff/be-alone-full-song-source-reconstruction-alignment-v1/private-separation-full-song-alignment.json \
+  --full-song-join-remediation-review-result \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-review-result-v4/private-separation-full-song-join-remediation-review-result.json \
   --out \
-    work/separation-bakeoff/separation-publication-readiness-v10/private-separation-publication-readiness.json
+    work/separation-bakeoff/separation-publication-readiness-v12/private-separation-publication-readiness.json
 ```
 
-The current report has file SHA-256
-`6650a67df2d45f32ac904c76c7fcb510bc7f2df39b545a37aef32ed2e8200ab8`
+The verified v12 report has file SHA-256
+`f8148f7cc41b830ec9d48d4f4189764e782d784f74b023fcf55f532ecc597285`
 and document SHA-256
-`12c330dd80525dfb683b36e5a0c393608e506524a824c52594c4a004cf5c3a10`.
-It records three passed bounded-evidence milestones: source-bound cross-song
-downstream MIDI, source-bound cross-song human listening and a separate
+`1d2b16100652e5fd2529695d27f32626b8b11eb36ecba19fce270547382e7dc9`.
+The ledger records three passed bounded-evidence
+milestones: source-bound cross-song downstream MIDI, source-bound cross-song
+human listening and a separate
 structured phrase-completeness judgement for every supplied window.
+Each input report is parsed and hashed from one bounded, non-followed file
+descriptor snapshot, then rechecked before publication. A newly created result
+directory is mode `0700`; the ledger is fsynced as mode `0600` and published by
+a no-overwrite hard link, so a raced path cannot replace the fresh result.
 
 Eight publication gates remain explicitly open: cross-song separated-audio
 quality, full-song duration/alignment, broad role coverage, a hidden
@@ -1993,14 +2000,13 @@ stage as `private_bounded_vocal_research`. It cannot accept a separator from
 caller flags, compute a quality percentage, copy listener notes or enable a
 product route. Future gates require new typed, hash-bound evidence.
 
-Version 2 of the ledger predeclares the bounded separated-audio minimum before
-the listening result is available. Every source-bound Kim Vocal 2 excerpt must
-be rated `substantially_complete`, with non-vocal bleed and distracting
-artefacts each no worse than `noticeable`. All reviewed songs must pass. The
-separate A/B preference is deliberately ignored by this gate, so preferring a
-provider cannot select or reject Kim. The current report includes the completed
-two-song result. One of two Kim excerpts meets the minimum, so the gate remains
-open.
+Version 3 retains the Version 2 bounded separated-audio minimum. Every
+source-bound Kim Vocal 2 excerpt must be rated `substantially_complete`, with
+non-vocal bleed and distracting artefacts each no worse than `noticeable`.
+All reviewed songs must pass. The separate A/B preference is deliberately
+ignored by this gate, so preferring a provider cannot select or reject Kim.
+The current evidence includes the completed two-song result. One of two Kim
+excerpts meets the minimum, so the gate remains open.
 
 The optional `--full-song-review-result` input accepts only the self-hashed
 resolved v1 result with the exact clock, complete three-role song ratings and
@@ -2038,6 +2044,25 @@ All nine windows were eligible, maximum absolute lag and lag spread were both
 contract passes. The combined duration/alignment milestone remains open only
 because the human review recorded the vocal and instrumental audible joins
 above. No separator or product route is enabled.
+
+The optional `--full-song-join-remediation-review-result` input requires a
+validated `--full-song-review-result` for the same exact raw stitch. It verifies
+that the original audible vocal/instrumental role-boundary set exactly matches
+the resolved remediation review units, then adds a separate supplementary
+assessment. This is directional
+raw-versus-candidate A/B evidence: `candidate_preferred` supports improvement,
+while `equivalent` does not prove that an originally audible join became
+clean. It does not rewrite the original full-song ratings, change their clean-
+boundary counts or close the duration/alignment gate. Listener notes are not
+copied.
+
+In the current `Be Alone` remediation result, candidate remediation was
+preferred or equivalent for every reviewed question, but the originally
+audible boundary 11 vocals join and boundary 13 instrumental join were only
+equivalent. Improvement is therefore not evidenced for those two role-boundary
+pairs. The supplementary assessment keeps
+`original_audible_joins_resolved: false`, leaves the original duration/alignment
+assessment unchanged and cannot select, accept, publish or enable a separator.
 
 The optional `--resource-benchmark-result` input accepts only a self-hashed,
 complete controlled full-song result with three to ten distinct serial
@@ -2138,6 +2163,8 @@ PYTHONPATH=src ./.venv/bin/python \
     /absolute/private-separation-full-song-review-result.json \
   --full-song-alignment-result \
     /absolute/private-separation-full-song-alignment.json \
+  --full-song-join-remediation-review-result \
+    /absolute/private-separation-full-song-join-remediation-review-result.json \
   --out /absolute/fresh/private-separation-publication-readiness.json
 ```
 

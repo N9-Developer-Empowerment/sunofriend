@@ -1881,6 +1881,21 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   stitch, plan, execution and clock. A matching review and alignment result can
   close only the duration/alignment milestone when both predeclared minima
   pass; neither can select or accept a separator.
+  The optional `--full-song-join-remediation-review-result` input additionally
+  requires a validated full-song review for the same exact raw stitch. It
+  verifies that the original audible vocal/instrumental role-boundary set
+  exactly matches the resolved remediation review units, then records it as
+  supplementary directional A/B evidence. It does not
+  replace any original boundary rating, alter the original clean-boundary
+  counts or close the duration/alignment gate. A candidate-preferred answer is
+  evidence of improvement relative to the raw stitch; an equivalent answer is
+  not evidence that an originally audible join is now clean. In the current
+  `Be Alone` result, improvement remains unevidenced for boundary 11 vocals and
+  boundary 13 instrumental. The resulting v3 ledger target is
+  `work/separation-bakeoff/separation-publication-readiness-v12/private-separation-publication-readiness.json`;
+  it keeps `original_audible_joins_resolved`, publication readiness and every
+  selection, acceptance and product-route permission false. Listener notes are
+  not copied.
 - `scripts/private-separated-audio-quality-review.py` creates a fresh
   owner-only blind review from two or more exact source-bound vocal-separation
   cases. Each case must bind one authorised mixed excerpt, one unchanged Kim

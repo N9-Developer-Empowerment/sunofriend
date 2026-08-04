@@ -10,15 +10,16 @@ human audition.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 import json
 import math
+import os
 from pathlib import Path
+import stat
 from typing import Any, Mapping
 
 from ._separation_authorised_midi_comparison import (
     _document_sha256,
-    _regular_json,
-    _sha256,
 )
 from ._separation_cross_song_evidence_index import _ID_PATTERN
 from ._separation_audio_quality_review import (
@@ -49,13 +50,21 @@ from ._separation_full_song_alignment import (
     STATUS as FULL_SONG_ALIGNMENT_RESULT_STATUS,
     WINDOW_COUNT as ALIGNMENT_WINDOW_COUNT,
 )
+from ._separation_full_song_join_remediation_review import (
+    POLICY_ID as JOIN_REMEDIATION_POLICY_ID,
+    TARGET_SAMPLE_RATE as JOIN_REMEDIATION_SAMPLE_RATE,
+)
+from ._separation_full_song_join_remediation_review_result import (
+    RESULT_SCHEMA as JOIN_REMEDIATION_RESULT_SCHEMA,
+    RESULT_STATUS as JOIN_REMEDIATION_RESULT_STATUS,
+    _write_json_exclusive,
+)
+from ._separation_full_song_executor import _require_private_directory
 from ._separation_normalized_midi_agreement import (
     SCHEMA as NORMALIZED_AGREEMENT_SCHEMA,
 )
-from ._separation_vocal_candidate_audition import _write_fresh_private_json
 
-
-SCHEMA = "sunofriend.private-separation-publication-readiness.v2"
+SCHEMA = "sunofriend.private-separation-publication-readiness.v3"
 AUDIO_MINIMUM_POLICY_ID = "cross-song-kim-vocal-minimum-usable-v1"
 _MAXIMUM_REPORT_BYTES = 2 * 1024 * 1024
 _NON_SEVERE = frozenset(("low", "noticeable"))
@@ -68,6 +77,83 @@ _FULL_SONG_RATINGS = frozenset(
     ("useful", "noticeable_problems", "not_useful", "cannot_tell")
 )
 _BOUNDARY_RATINGS = frozenset(("clean", "audible_join", "cannot_tell"))
+_JOIN_REMEDIATION_KINDS = (
+    "boundary_role_pair",
+    "patch_edge_pair",
+    "complete_song_pair",
+)
+_JOIN_REMEDIATION_OUTCOMES = (
+    "candidate_preferred",
+    "raw_preferred",
+    "equivalent",
+    "neither",
+    "cannot_tell",
+)
+_JOIN_REMEDIATION_UNIT_KEYS = frozenset(
+    (
+        "unit_id",
+        "kind",
+        "title",
+        "focus",
+        "source_window",
+        "blind_choice",
+        "candidate_a_identity",
+        "candidate_b_identity",
+        "resolved_choice",
+        "notes",
+    )
+)
+_JOIN_REMEDIATION_BINDING_KEYS = frozenset(
+    (
+        "answer_key_document_sha256",
+        "answer_key_sha256",
+        "audio_manifest_sha256",
+        "candidate_document_sha256",
+        "candidate_report_sha256",
+        "execution_report_sha256",
+        "execution_state_sha256",
+        "review_export_sha256",
+        "review_seed_sha256",
+        "stitch_document_sha256",
+        "stitch_report_sha256",
+    )
+)
+_JOIN_REMEDIATION_EFFECT_KEYS = frozenset(
+    (
+        "candidate_audio_mutated",
+        "candidate_audio_selected",
+        "preference_inferred",
+        "publication_state_mutated",
+        "raw_stitch_mutated",
+        "readiness_gate_closed",
+        "review_evidence_mutated",
+        "separator_accepted",
+        "separator_selected",
+        "source_graph_mutated",
+    )
+)
+_JOIN_REMEDIATION_RESULT_KEYS = frozenset(
+    (
+        "schema",
+        "status",
+        "evidence_scope",
+        "policy_id",
+        "blind_review",
+        "package_commitment",
+        "bindings",
+        "reviewed_unit_count",
+        "counts_by_kind_and_outcome",
+        "overall_outcome_counts",
+        "units",
+        "readiness_evidence",
+        "interpretation",
+        "verification_claims",
+        "verification_limitations",
+        "permissions",
+        "effects",
+        "document_sha256",
+    )
+)
 _MAXIMUM_NOTES_CHARACTERS = 2_000
 _FULL_SONG_PERMISSION_KEYS = frozenset(
     (
@@ -118,10 +204,12 @@ def _project_private_separation_publication_readiness(
     resource_benchmark_result_path: str | Path | None = None,
     full_song_review_result_path: str | Path | None = None,
     full_song_alignment_result_path: str | Path | None = None,
+    full_song_join_remediation_review_result_path: str | Path | None = None,
     out: str | Path,
 ) -> dict[str, Any]:
     """Build one path-free ledger from the currently sealed acceptance work."""
 
+    output = Path(out).expanduser().absolute()
     agreement = _load_normalized_agreement(normalized_agreement_path)
     listening = _load_human_listening_coverage(human_listening_coverage_path)
     audio_quality = (
@@ -142,6 +230,21 @@ def _project_private_separation_publication_readiness(
     full_song_alignment = (
         _load_full_song_alignment_result(full_song_alignment_result_path)
         if full_song_alignment_result_path is not None
+        else None
+    )
+    if (
+        full_song_join_remediation_review_result_path is not None
+        and full_song_review is None
+    ):
+        raise ValueError(
+            "full-song join-remediation review result requires a full-song "
+            "review result for the same raw stitch"
+        )
+    join_remediation_review = (
+        _load_full_song_join_remediation_review_result(
+            full_song_join_remediation_review_result_path
+        )
+        if full_song_join_remediation_review_result_path is not None
         else None
     )
     _require_listening_bound_to_agreement(listening, agreement)
@@ -168,6 +271,12 @@ def _project_private_separation_publication_readiness(
             full_song_alignment,
             full_song_review,
         )
+    if join_remediation_review is not None:
+        assert full_song_review is not None
+        _require_join_remediation_bound_to_full_song_review(
+            join_remediation_review,
+            full_song_review,
+        )
 
     document = _build_document(
         agreement=agreement,
@@ -176,6 +285,7 @@ def _project_private_separation_publication_readiness(
         resource_benchmark=resource_benchmark,
         full_song_review=full_song_review,
         full_song_alignment=full_song_alignment,
+        join_remediation_review=join_remediation_review,
     )
     document["document_sha256"] = _document_sha256(document)
     _reverify(
@@ -185,9 +295,16 @@ def _project_private_separation_publication_readiness(
         resource_benchmark,
         full_song_review,
         full_song_alignment,
+        join_remediation_review,
     )
-    _write_fresh_private_json(Path(out), document)
-    document["report"] = str(Path(out).expanduser().absolute())
+    if not os.path.lexists(output.parent):
+        output.parent.mkdir(parents=True, mode=0o700)
+    _require_private_directory(
+        output.parent,
+        "private separation publication-readiness directory",
+    )
+    _write_json_exclusive(output, document)
+    document["report"] = str(output)
     return document
 
 
@@ -565,27 +682,251 @@ def _load_full_song_alignment_result(path: str | Path) -> _LoadedJson:
     return loaded
 
 
+def _load_full_song_join_remediation_review_result(
+    path: str | Path,
+) -> _LoadedJson:
+    loaded = _load_json(path, "full-song join-remediation review result")
+    document = loaded.document
+    bindings = document.get("bindings")
+    units = document.get("units")
+    permissions = document.get("permissions")
+    effects = document.get("effects")
+    if (
+        set(document) != _JOIN_REMEDIATION_RESULT_KEYS
+        or document.get("schema") != JOIN_REMEDIATION_RESULT_SCHEMA
+        or document.get("status") != JOIN_REMEDIATION_RESULT_STATUS
+        or document.get("evidence_scope") != "private_development_only"
+        or document.get("policy_id") != JOIN_REMEDIATION_POLICY_ID
+        or document.get("blind_review") is not True
+        or not _is_sha256(document.get("package_commitment"))
+        or document.get("document_sha256") != _document_sha256(document)
+        or not isinstance(bindings, Mapping)
+        or set(bindings) != _JOIN_REMEDIATION_BINDING_KEYS
+        or not all(_is_sha256(value) for value in bindings.values())
+        or not isinstance(units, list)
+        or not units
+        or document.get("reviewed_unit_count") != len(units)
+        or not isinstance(permissions, Mapping)
+        or set(permissions) != _FULL_SONG_PERMISSION_KEYS
+        or not isinstance(effects, Mapping)
+        or set(effects) != _JOIN_REMEDIATION_EFFECT_KEYS
+    ):
+        raise ValueError("full-song join-remediation review result differs")
+    _require_all_false(permissions, "join-remediation review permissions")
+    _require_all_false(effects, "join-remediation review effects")
+    expected_package_commitment = hashlib.sha256(
+        (
+            f"{bindings['answer_key_sha256']}:"
+            f"{bindings['answer_key_document_sha256']}:"
+            f"{bindings['audio_manifest_sha256']}"
+        ).encode("ascii")
+    ).hexdigest()
+    if document["package_commitment"] != expected_package_commitment:
+        raise ValueError("full-song join-remediation review package commitment differs")
+
+    counts = {
+        kind: {outcome: 0 for outcome in _JOIN_REMEDIATION_OUTCOMES}
+        for kind in _JOIN_REMEDIATION_KINDS
+    }
+    overall = {outcome: 0 for outcome in _JOIN_REMEDIATION_OUTCOMES}
+    unit_ids: list[str] = []
+    for unit in units:
+        kind, resolved = _validate_join_remediation_unit(unit)
+        counts[kind][resolved] += 1
+        overall[resolved] += 1
+        unit_ids.append(str(unit["unit_id"]))
+    if len(set(unit_ids)) != len(unit_ids):
+        raise ValueError("full-song join-remediation review unit set differs")
+    boundary_count = sum(counts["boundary_role_pair"].values())
+    edge_count = sum(counts["patch_edge_pair"].values())
+    song_count = sum(counts["complete_song_pair"].values())
+    expected_readiness = {
+        "human_join_remediation_review_complete": True,
+        "all_targeted_join_pairs_candidate_preferred": (
+            counts["boundary_role_pair"]["candidate_preferred"] == boundary_count
+        ),
+        "all_patch_edges_candidate_or_equivalent": (
+            counts["patch_edge_pair"]["candidate_preferred"]
+            + counts["patch_edge_pair"]["equivalent"]
+            == edge_count
+        ),
+        "all_complete_songs_candidate_or_equivalent": (
+            counts["complete_song_pair"]["candidate_preferred"]
+            + counts["complete_song_pair"]["equivalent"]
+            == song_count
+        ),
+        "readiness_reassessment_eligible": True,
+        "original_audible_joins_resolved": False,
+        "publication_ready": False,
+    }
+    expected_interpretation = {
+        "choices_are_human_listening_evidence": True,
+        "candidate_preference_is_join_elimination": False,
+        "candidate_preference_is_separator_accuracy": False,
+        "review_completion_is_quality_acceptance": False,
+        "answer_key_opened_only_after_complete_review_verified": True,
+        "automatic_winner_selected": False,
+        "separator_accepted": False,
+    }
+    expected_claims = {
+        "review_seed_and_export_bounded_single_read_snapshots": True,
+        "review_seed_and_export_no_symlink_follow": True,
+        "review_seed_and_export_identity_stable_before_after": True,
+        "review_seed_and_export_owner_only_single_link": True,
+        "public_semantics_reconstructed_from_verified_sources": True,
+        "short_pcm24_pairs_verified_key_blind": True,
+        "complete_song_records_verified_key_blind": True,
+        "identical_short_pcm24_pairs_rejected": True,
+        "answer_key_bounded_single_read_snapshot_verified": True,
+        "answer_key_slot_identities_and_levels_verified": True,
+        "result_temp_fsynced_before_no_overwrite_publication": True,
+        "result_published_by_no_overwrite_hard_link": True,
+    }
+    expected_limitations = {
+        "execution_candidate_and_stitch_json_snapshot_held": False,
+        "wav_descriptors_snapshot_held_across_verification": False,
+        "non_snapshot_private_inputs_assumed_quiescent": True,
+    }
+    if (
+        document.get("counts_by_kind_and_outcome") != counts
+        or document.get("overall_outcome_counts") != overall
+        or boundary_count < 1
+        or edge_count != 2 * boundary_count
+        or song_count != len(_FULL_SONG_ROLES)
+        or document.get("readiness_evidence") != expected_readiness
+        or document.get("interpretation") != expected_interpretation
+        or document.get("verification_claims") != expected_claims
+        or document.get("verification_limitations") != expected_limitations
+    ):
+        raise ValueError("full-song join-remediation review result differs")
+    return loaded
+
+
+def _validate_join_remediation_unit(unit: Any) -> tuple[str, str]:
+    if (
+        not isinstance(unit, Mapping)
+        or set(unit) != _JOIN_REMEDIATION_UNIT_KEYS
+        or not isinstance(unit.get("unit_id"), str)
+        or not isinstance(unit.get("title"), str)
+        or not unit["title"]
+        or not isinstance(unit.get("focus"), str)
+        or not unit["focus"]
+        or not isinstance(unit.get("notes"), str)
+        or len(unit["notes"]) > 1_000
+        or unit.get("kind") not in _JOIN_REMEDIATION_KINDS
+        or {unit.get("candidate_a_identity"), unit.get("candidate_b_identity")}
+        != {"candidate", "raw"}
+        or unit.get("blind_choice")
+        not in {"A", "B", "equivalent", "neither", "cannot_tell"}
+    ):
+        raise ValueError("full-song join-remediation review unit differs")
+    kind = str(unit["kind"])
+    parsed_kind, _boundary_index, _role, _edge = _parse_join_remediation_unit_id(
+        str(unit["unit_id"])
+    )
+    if parsed_kind != kind:
+        raise ValueError("full-song join-remediation review unit set differs")
+    window = unit.get("source_window")
+    if kind == "complete_song_pair":
+        if window is not None:
+            raise ValueError("full-song join-remediation review unit differs")
+    elif not _valid_join_remediation_window(window):
+        raise ValueError("full-song join-remediation review unit differs")
+    choice = str(unit["blind_choice"])
+    resolved = (
+        f"{unit[f'candidate_{choice.lower()}_identity']}_preferred"
+        if choice in {"A", "B"}
+        else choice
+    )
+    if (
+        resolved not in _JOIN_REMEDIATION_OUTCOMES
+        or unit.get("resolved_choice") != resolved
+    ):
+        raise ValueError("full-song join-remediation review unit differs")
+    return kind, resolved
+
+
+def _parse_join_remediation_unit_id(
+    unit_id: str,
+) -> tuple[str, int | None, str, str | None]:
+    parts = unit_id.split("-")
+    if len(parts) == 3 and parts[0] == "boundary":
+        kind = "boundary_role_pair"
+        boundary_token, role, edge = parts[1], parts[2], None
+    elif len(parts) == 4 and parts[0] == "edge":
+        kind = "patch_edge_pair"
+        boundary_token, role, edge = parts[1], parts[2], parts[3]
+        if edge not in {"start", "end"}:
+            raise ValueError("full-song join-remediation review unit set differs")
+    elif len(parts) == 3 and parts[:2] == ["complete", "song"]:
+        role = parts[2]
+        if role not in _FULL_SONG_ROLES:
+            raise ValueError("full-song join-remediation review unit set differs")
+        return "complete_song_pair", None, role, None
+    else:
+        raise ValueError("full-song join-remediation review unit set differs")
+    if role not in {"vocals", "instrumental"}:
+        raise ValueError("full-song join-remediation review unit set differs")
+    try:
+        boundary_index = int(boundary_token)
+    except ValueError as error:
+        raise ValueError(
+            "full-song join-remediation review unit set differs"
+        ) from error
+    if boundary_index < 1 or boundary_token != f"{boundary_index:02d}":
+        raise ValueError("full-song join-remediation review unit set differs")
+    return kind, boundary_index, role, edge
+
+
+def _valid_join_remediation_window(value: Any) -> bool:
+    if not isinstance(value, Mapping) or set(value) != {
+        "start_frame",
+        "end_frame",
+        "start_seconds",
+        "end_seconds",
+    }:
+        return False
+    start = value.get("start_frame")
+    end = value.get("end_frame")
+    return (
+        type(start) is int
+        and type(end) is int
+        and 0 <= start < end
+        and _finite_number(value.get("start_seconds"))
+        and _finite_number(value.get("end_seconds"))
+        and math.isclose(
+            float(value["start_seconds"]),
+            start / 44_100,
+            rel_tol=0.0,
+            abs_tol=1.0e-9,
+        )
+        and math.isclose(
+            float(value["end_seconds"]),
+            end / 44_100,
+            rel_tol=0.0,
+            abs_tol=1.0e-9,
+        )
+    )
+
+
 def _valid_alignment_protocol(value: Any) -> bool:
     if not isinstance(value, Mapping):
         return False
     window_seconds = value.get("window_seconds")
     return (
-        value.get("comparison")
-        == "canonical source versus diagnostic reconstruction"
+        value.get("comparison") == "canonical source versus diagnostic reconstruction"
         and value.get("feature") == "log spectral-band energy"
         and value.get("window_count") == ALIGNMENT_WINDOW_COUNT
         and _finite_number(window_seconds)
         and 0.0 < float(window_seconds) <= 8.0
         and value.get("feature_frame_milliseconds")
         == ALIGNMENT_FEATURE_FRAME_MILLISECONDS
-        and value.get("feature_hop_milliseconds")
-        == ALIGNMENT_FEATURE_HOP_MILLISECONDS
+        and value.get("feature_hop_milliseconds") == ALIGNMENT_FEATURE_HOP_MILLISECONDS
         and value.get("maximum_search_lag_milliseconds")
         == MAXIMUM_SEARCH_LAG_MILLISECONDS
         and value.get("lag_sign")
         == "positive means reconstruction is later than source"
-        and value.get("source_and_reconstruction_gain_normalized_for_timing")
-        is True
+        and value.get("source_and_reconstruction_gain_normalized_for_timing") is True
     )
 
 
@@ -675,26 +1016,20 @@ def _valid_alignment_summary_and_readiness(
         return False
     eligible = [window for window in windows if window["eligible"]]
     lags = [float(window["best_lag_milliseconds"]) for window in eligible]
-    correlations = [
-        float(window["peak_normalized_correlation"]) for window in eligible
-    ]
-    coverage_complete = (
-        len(eligible) == ALIGNMENT_WINDOW_COUNT
-        and {window["song_third"] for window in eligible}
-        == {"early", "middle", "late"}
-    )
+    correlations = [float(window["peak_normalized_correlation"]) for window in eligible]
+    coverage_complete = len(eligible) == ALIGNMENT_WINDOW_COUNT and {
+        window["song_third"] for window in eligible
+    } == {"early", "middle", "late"}
     maximum_absolute_lag = max((abs(value) for value in lags), default=None)
     lag_spread = max(lags) - min(lags) if lags else None
     minimum_correlation = min(correlations, default=-1.0)
     gate_passed = (
         coverage_complete
         and maximum_absolute_lag is not None
-        and maximum_absolute_lag
-        <= thresholds["maximum_absolute_lag_milliseconds"]
+        and maximum_absolute_lag <= thresholds["maximum_absolute_lag_milliseconds"]
         and lag_spread is not None
         and lag_spread <= thresholds["maximum_lag_spread_milliseconds"]
-        and minimum_correlation
-        >= thresholds["minimum_window_normalized_correlation"]
+        and minimum_correlation >= thresholds["minimum_window_normalized_correlation"]
     )
     expected_summary = {
         "eligible_window_count": len(eligible),
@@ -732,6 +1067,116 @@ def _require_alignment_bound_to_full_song_review(
         or alignment.document["clock"] != review.document["clock"]
     ):
         raise ValueError("full-song alignment binding differs from review")
+
+
+def _require_join_remediation_bound_to_full_song_review(
+    remediation: _LoadedJson,
+    review: _LoadedJson,
+) -> None:
+    remediation_bindings = remediation.document["bindings"]
+    review_bindings = review.document["bindings"]
+    if (
+        remediation_bindings["stitch_report_sha256"]
+        != review_bindings["stitch_report_sha256"]
+        or remediation_bindings["stitch_document_sha256"]
+        != review_bindings["stitch_document_sha256"]
+    ):
+        raise ValueError(
+            "full-song join-remediation binding differs from original review"
+        )
+
+    clock = review.document["clock"]
+    if clock["sample_rate"] != JOIN_REMEDIATION_SAMPLE_RATE:
+        raise ValueError("full-song join-remediation clock differs from review policy")
+    total_frames = clock["frames"]
+
+    expected_pairs = {
+        (boundary["boundary_index"], role): boundary["frame"]
+        for boundary in review.document["boundaries"]
+        for role in ("vocals", "instrumental")
+        if boundary["ratings"][role] == "audible_join"
+    }
+    units = remediation.document["units"]
+    observed_pairs: dict[tuple[int, str], Mapping[str, Any]] = {}
+    observed_edges: set[tuple[int, str, str]] = set()
+    complete_roles: set[str] = set()
+    for unit in units:
+        kind, boundary_index, role, edge = _parse_join_remediation_unit_id(
+            unit["unit_id"]
+        )
+        if kind == "boundary_role_pair":
+            assert boundary_index is not None
+            observed_pairs[(boundary_index, role)] = unit
+        elif kind == "patch_edge_pair":
+            assert boundary_index is not None and edge is not None
+            observed_edges.add((boundary_index, role, edge))
+        else:
+            complete_roles.add(role)
+    expected_edges = {
+        (boundary_index, role, edge)
+        for boundary_index, role in expected_pairs
+        for edge in ("start", "end")
+    }
+    if (
+        set(observed_pairs) != set(expected_pairs)
+        or observed_edges != expected_edges
+        or complete_roles != set(_FULL_SONG_ROLES)
+    ):
+        raise ValueError(
+            "full-song join-remediation unit set differs from original audible joins"
+        )
+    for key, unit in observed_pairs.items():
+        window = unit["source_window"]
+        boundary_frame = expected_pairs[key]
+        expected_boundary_window = _join_remediation_window(
+            centre_frame=boundary_frame,
+            half_frames=2 * JOIN_REMEDIATION_SAMPLE_RATE,
+            total_frames=total_frames,
+        )
+        expected_start_edge_window = _join_remediation_window(
+            centre_frame=boundary_frame - JOIN_REMEDIATION_SAMPLE_RATE,
+            half_frames=JOIN_REMEDIATION_SAMPLE_RATE,
+            total_frames=total_frames,
+        )
+        expected_end_edge_window = _join_remediation_window(
+            centre_frame=boundary_frame + JOIN_REMEDIATION_SAMPLE_RATE,
+            half_frames=JOIN_REMEDIATION_SAMPLE_RATE,
+            total_frames=total_frames,
+        )
+        if window != expected_boundary_window:
+            raise ValueError(
+                "full-song join-remediation window differs from original review"
+            )
+        start_edge = next(
+            item
+            for item in units
+            if item["unit_id"] == f"edge-{key[0]:02d}-{key[1]}-start"
+        )
+        end_edge = next(
+            item
+            for item in units
+            if item["unit_id"] == f"edge-{key[0]:02d}-{key[1]}-end"
+        )
+        if (
+            start_edge["source_window"] != expected_start_edge_window
+            or end_edge["source_window"] != expected_end_edge_window
+        ):
+            raise ValueError(
+                "full-song join-remediation window differs from original review"
+            )
+
+
+def _join_remediation_window(
+    *, centre_frame: int, half_frames: int, total_frames: int
+) -> dict[str, int | float]:
+    start = max(0, centre_frame - half_frames)
+    end = min(total_frames, centre_frame + half_frames)
+    return {
+        "start_frame": start,
+        "end_frame": end,
+        "start_seconds": start / JOIN_REMEDIATION_SAMPLE_RATE,
+        "end_seconds": end / JOIN_REMEDIATION_SAMPLE_RATE,
+    }
 
 
 def _valid_full_song_clock(value: Any) -> bool:
@@ -1081,6 +1526,7 @@ def _build_document(
     resource_benchmark: _LoadedJson | None,
     full_song_review: _LoadedJson | None,
     full_song_alignment: _LoadedJson | None,
+    join_remediation_review: _LoadedJson | None,
 ) -> dict[str, Any]:
     coverage = listening.document["coverage"]
     audio_assessment = (
@@ -1101,6 +1547,11 @@ def _build_document(
     alignment_assessment = (
         _assess_full_song_alignment(full_song_alignment.document)
         if full_song_alignment is not None
+        else None
+    )
+    join_remediation_assessment = (
+        _assess_join_remediation_review(join_remediation_review.document)
+        if join_remediation_review is not None
         else None
     )
     if full_song_assessment is not None and alignment_assessment is not None:
@@ -1166,9 +1617,24 @@ def _build_document(
             "The exact clock, complete-song listening minimum, clean role boundaries and source-to-reconstruction alignment/drift thresholds were all verified for this one owner-reviewed song."
             if full_song_assessment and full_song_assessment["gate_passed"]
             else (
-                "The full-song listening minimum was verified, but synchronized source-to-reconstruction alignment and drift evidence are still missing or outside the declared thresholds."
-                if full_song_assessment
-                and full_song_assessment["review_minimum_met"]
+                (
+                    "The original full-song review still contains audible joins. "
+                    "The bound targeted-remediation review found "
+                    f"{join_remediation_assessment['candidate_preferred_boundary_role_count']} "
+                    "candidate-preferred and "
+                    f"{join_remediation_assessment['equivalent_boundary_role_count']} "
+                    "equivalent boundary-role pairs"
+                    + (
+                        " with no raw-preferred, neither or cannot-tell outcome, but "
+                        if join_remediation_assessment["no_heard_regression"]
+                        else " and one or more non-safe outcomes, while "
+                    )
+                    + "comparative preference is not an absolute clean-boundary rating "
+                    "and cannot replace a new candidate-bound full-song review."
+                )
+                if join_remediation_assessment is not None
+                else "The full-song listening minimum was verified, but synchronized source-to-reconstruction alignment and drift evidence are still missing or outside the declared thresholds."
+                if full_song_assessment and full_song_assessment["review_minimum_met"]
                 else (
                     "Automated alignment passed, but exact full-song listening still requires every generated role to be useful and every role-boundary judgement to be clean."
                     if alignment_assessment and alignment_assessment["gate_passed"]
@@ -1277,7 +1743,18 @@ def _build_document(
                 ],
             }
         )
-    return {
+    if join_remediation_review is not None:
+        inputs.update(
+            {
+                "full_song_join_remediation_review_result_sha256": (
+                    join_remediation_review.file_sha256
+                ),
+                "full_song_join_remediation_review_result_document_sha256": (
+                    join_remediation_review.document["document_sha256"]
+                ),
+            }
+        )
+    document = {
         "schema": SCHEMA,
         "status": "blocked_private_bounded_vocal_midi_evidence_only",
         "evidence_scope": "private_development_only",
@@ -1310,9 +1787,7 @@ def _build_document(
             ),
             "full_song_alignment_measured": alignment_assessment is not None,
             "full_song_alignment_window_count": (
-                alignment_assessment["window_count"]
-                if alignment_assessment
-                else 0
+                alignment_assessment["window_count"] if alignment_assessment else 0
             ),
         },
         "readiness": {
@@ -1384,6 +1859,94 @@ def _build_document(
             "A controlled development-machine resource result records progress but cannot substitute for the separate acceptance-class contract.",
             "One owner-reviewed full song plus a matching alignment result can close only the duration/alignment milestone; it cannot establish broad-role, hidden-set or general separator quality.",
         ],
+    }
+    if join_remediation_assessment is not None:
+        document["observed_scope"].update(
+            {
+                "full_song_join_remediation_reviewed": True,
+                "full_song_join_remediation_reviewed_unit_count": (
+                    join_remediation_assessment["reviewed_unit_count"]
+                ),
+            }
+        )
+        document["full_song_join_remediation_assessment"] = join_remediation_assessment
+        document["interpretation"][
+            "join_remediation_preference_is_absolute_boundary_cleanliness"
+        ] = False
+        document["policy"][
+            "join_remediation_review_can_close_duration_alignment_gate"
+        ] = False
+        document["limitations"].append(
+            "A targeted raw-versus-candidate remediation preference is "
+            "supplementary directional evidence; only a new candidate-bound "
+            "full-song review can replace the original boundary ratings."
+        )
+    return document
+
+
+def _assess_join_remediation_review(
+    document: Mapping[str, Any],
+) -> dict[str, Any]:
+    boundary_units = [
+        unit for unit in document["units"] if unit["kind"] == "boundary_role_pair"
+    ]
+    candidate_preferred: dict[str, list[int]] = {
+        "vocals": [],
+        "instrumental": [],
+    }
+    improvement_not_evidenced: dict[str, list[int]] = {
+        "vocals": [],
+        "instrumental": [],
+    }
+    for unit in boundary_units:
+        _kind, boundary_index, role, _edge = _parse_join_remediation_unit_id(
+            unit["unit_id"]
+        )
+        assert boundary_index is not None
+        target = (
+            candidate_preferred
+            if unit["resolved_choice"] == "candidate_preferred"
+            else improvement_not_evidenced
+        )
+        target[role].append(boundary_index)
+    for values in (*candidate_preferred.values(), *improvement_not_evidenced.values()):
+        values.sort()
+
+    boundary_counts = document["counts_by_kind_and_outcome"]["boundary_role_pair"]
+    edge_counts = document["counts_by_kind_and_outcome"]["patch_edge_pair"]
+    song_counts = document["counts_by_kind_and_outcome"]["complete_song_pair"]
+    no_heard_regression = all(
+        document["overall_outcome_counts"][outcome] == 0
+        for outcome in ("raw_preferred", "neither", "cannot_tell")
+    )
+    return {
+        "policy_id": document["policy_id"],
+        "reviewed_unit_count": document["reviewed_unit_count"],
+        "human_join_remediation_review_complete": True,
+        "boundary_role_outcome_counts": dict(boundary_counts),
+        "patch_edge_outcome_counts": dict(edge_counts),
+        "complete_song_outcome_counts": dict(song_counts),
+        "candidate_preferred_boundary_role_count": boundary_counts[
+            "candidate_preferred"
+        ],
+        "equivalent_boundary_role_count": boundary_counts["equivalent"],
+        "candidate_preferred_boundaries_by_role": candidate_preferred,
+        "improvement_not_evidenced_boundaries_by_role": improvement_not_evidenced,
+        "no_heard_regression": no_heard_regression,
+        "non_safe_outcome_count": sum(
+            document["overall_outcome_counts"][outcome]
+            for outcome in ("raw_preferred", "neither", "cannot_tell")
+        ),
+        "all_patch_edges_candidate_or_equivalent": document["readiness_evidence"][
+            "all_patch_edges_candidate_or_equivalent"
+        ],
+        "all_complete_songs_candidate_or_equivalent": document["readiness_evidence"][
+            "all_complete_songs_candidate_or_equivalent"
+        ],
+        "absolute_boundary_cleanliness_established": False,
+        "original_audible_joins_resolved": False,
+        "can_close_duration_alignment_gate": False,
+        "separator_accepted": False,
     }
 
 
@@ -1559,16 +2122,73 @@ def _gate(gate_id: str, status: str, finding: str) -> dict[str, str]:
 
 
 def _load_json(value: str | Path, label: str) -> _LoadedJson:
-    path = _regular_json(value, label)
-    if path.stat().st_size > _MAXIMUM_REPORT_BYTES:
-        raise ValueError(f"{label} is too large")
+    path = Path(value).expanduser().absolute()
+    if path.suffix.lower() != ".json":
+        raise ValueError(f"{label} must be a non-empty regular JSON file")
+    no_follow = getattr(os, "O_NOFOLLOW", None)
+    if no_follow is None:
+        raise ValueError(f"{label} cannot be opened without link protection")
+    flags = os.O_RDONLY | no_follow | getattr(os, "O_CLOEXEC", 0)
     try:
-        document = json.loads(path.read_text(encoding="utf-8"))
+        descriptor = os.open(path, flags)
+    except OSError as error:
+        raise ValueError(f"{label} must be a non-empty regular JSON file") from error
+    try:
+        os.set_inheritable(descriptor, False)
+        before = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(before.st_mode)
+            or before.st_size <= 0
+            or before.st_size > _MAXIMUM_REPORT_BYTES
+        ):
+            raise ValueError(
+                f"{label} must be a non-empty regular JSON file no larger than "
+                f"{_MAXIMUM_REPORT_BYTES} bytes"
+            )
+        contents = bytearray()
+        while len(contents) <= _MAXIMUM_REPORT_BYTES:
+            chunk = os.read(
+                descriptor,
+                min(64 * 1024, _MAXIMUM_REPORT_BYTES + 1 - len(contents)),
+            )
+            if not chunk:
+                break
+            contents.extend(chunk)
+        after = os.fstat(descriptor)
+    finally:
+        os.close(descriptor)
+    payload = bytes(contents)
+    if (
+        _snapshot_identity(before) != _snapshot_identity(after)
+        or len(payload) != before.st_size
+        or len(payload) > _MAXIMUM_REPORT_BYTES
+    ):
+        raise ValueError(f"{label} changed while it was being read")
+    try:
+        document = json.loads(payload.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise ValueError(f"{label} is not valid JSON") from error
     if not isinstance(document, dict):
         raise ValueError(f"{label} must be a JSON object")
-    return _LoadedJson(path=path, file_sha256=_sha256(path), document=document)
+    return _LoadedJson(
+        path=path,
+        file_sha256=hashlib.sha256(payload).hexdigest(),
+        document=document,
+    )
+
+
+def _snapshot_identity(value: os.stat_result) -> tuple[int, ...]:
+    return (
+        value.st_dev,
+        value.st_ino,
+        value.st_mode,
+        value.st_nlink,
+        value.st_uid,
+        value.st_gid,
+        value.st_size,
+        value.st_mtime_ns,
+        value.st_ctime_ns,
+    )
 
 
 def _require_all_false(raw: Any, label: str) -> None:
@@ -1617,31 +2237,29 @@ def _reverify(
     resource_benchmark: _LoadedJson | None,
     full_song_review: _LoadedJson | None,
     full_song_alignment: _LoadedJson | None,
+    join_remediation_review: _LoadedJson | None,
 ) -> None:
-    if _sha256(agreement.path) != agreement.file_sha256:
-        raise ValueError("normalized MIDI agreement changed during projection")
-    if _sha256(listening.path) != listening.file_sha256:
-        raise ValueError("human-listening coverage changed during projection")
-    if (
-        audio_quality is not None
-        and _sha256(audio_quality.path) != audio_quality.file_sha256
-    ):
-        raise ValueError("separated-audio quality changed during projection")
-    if (
-        resource_benchmark is not None
-        and _sha256(resource_benchmark.path) != resource_benchmark.file_sha256
-    ):
-        raise ValueError("resource benchmark result changed during projection")
-    if (
-        full_song_review is not None
-        and _sha256(full_song_review.path) != full_song_review.file_sha256
-    ):
-        raise ValueError("full-song review result changed during projection")
-    if (
-        full_song_alignment is not None
-        and _sha256(full_song_alignment.path) != full_song_alignment.file_sha256
-    ):
-        raise ValueError("full-song alignment result changed during projection")
+    _require_unchanged(agreement, "normalized MIDI agreement")
+    _require_unchanged(listening, "human-listening coverage")
+    if audio_quality is not None:
+        _require_unchanged(audio_quality, "separated-audio quality")
+    if resource_benchmark is not None:
+        _require_unchanged(resource_benchmark, "resource benchmark result")
+    if full_song_review is not None:
+        _require_unchanged(full_song_review, "full-song review result")
+    if full_song_alignment is not None:
+        _require_unchanged(full_song_alignment, "full-song alignment result")
+    if join_remediation_review is not None:
+        _require_unchanged(
+            join_remediation_review,
+            "full-song join-remediation review result",
+        )
+
+
+def _require_unchanged(loaded: _LoadedJson, label: str) -> None:
+    current = _load_json(loaded.path, label)
+    if current.file_sha256 != loaded.file_sha256:
+        raise ValueError(f"{label} changed during projection")
 
 
 __all__ = [

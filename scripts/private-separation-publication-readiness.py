@@ -43,6 +43,14 @@ def main() -> int:
             "it is synchronization evidence, not separator quality"
         ),
     )
+    parser.add_argument(
+        "--full-song-join-remediation-review-result",
+        help=(
+            "optional verified targeted raw-versus-candidate join-remediation "
+            "review; it is supplementary evidence and cannot replace clean "
+            "ratings from a candidate-bound full-song review"
+        ),
+    )
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
     result = _project_private_separation_publication_readiness(
@@ -52,6 +60,9 @@ def main() -> int:
         resource_benchmark_result_path=args.resource_benchmark_result,
         full_song_review_result_path=args.full_song_review_result,
         full_song_alignment_result_path=args.full_song_alignment_result,
+        full_song_join_remediation_review_result_path=(
+            args.full_song_join_remediation_review_result
+        ),
         out=args.out,
     )
     print(

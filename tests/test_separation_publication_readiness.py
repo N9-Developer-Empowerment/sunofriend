@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
+import stat
 
 import pytest
 
@@ -31,6 +33,13 @@ from sunofriend._separation_full_song_alignment import (
     POLICY_ID as FULL_SONG_ALIGNMENT_POLICY_ID,
     SCHEMA as FULL_SONG_ALIGNMENT_SCHEMA,
     STATUS as FULL_SONG_ALIGNMENT_STATUS,
+)
+from sunofriend._separation_full_song_join_remediation_review import (
+    POLICY_ID as JOIN_REMEDIATION_POLICY_ID,
+)
+from sunofriend._separation_full_song_join_remediation_review_result import (
+    RESULT_SCHEMA as JOIN_REMEDIATION_RESULT_SCHEMA,
+    RESULT_STATUS as JOIN_REMEDIATION_RESULT_STATUS,
 )
 from sunofriend._separation_audio_quality_review import (
     POLICY_ID as AUDIO_QUALITY_POLICY_ID,
@@ -78,6 +87,16 @@ def test_projects_passed_and_open_gates_without_enabling_separation(
         is True
     )
     assert result["interpretation"]["human_usefulness_is_accuracy"] is False
+    assert "full_song_join_remediation_assessment" not in result
+    assert "full_song_join_remediation_reviewed" not in result["observed_scope"]
+    assert (
+        "join_remediation_preference_is_absolute_boundary_cleanliness"
+        not in result["interpretation"]
+    )
+    assert (
+        "join_remediation_review_can_close_duration_alignment_gate"
+        not in result["policy"]
+    )
     assert all(value is False for value in result["permissions"].values())
     assert all(value is False for value in result["effects"].values())
 
@@ -85,6 +104,47 @@ def test_projects_passed_and_open_gates_without_enabling_separation(
     persisted = json.loads(text)
     assert persisted["document_sha256"] == _document_sha256(persisted)
     assert str(tmp_path) not in text
+
+
+def test_writes_fresh_result_in_owner_only_directory_without_overwrite(
+    tmp_path: Path,
+) -> None:
+    agreement = _agreement(tmp_path)
+    listening = _listening(tmp_path, agreement)
+    output = tmp_path / "private-result" / "readiness.json"
+
+    _project_private_separation_publication_readiness(
+        agreement,
+        listening,
+        out=output,
+    )
+
+    assert stat.S_IMODE(output.parent.stat().st_mode) == 0o700
+    assert stat.S_IMODE(output.stat().st_mode) == 0o600
+    assert output.stat().st_nlink == 1
+    original = output.read_bytes()
+    with pytest.raises(FileExistsError):
+        _project_private_separation_publication_readiness(
+            agreement,
+            listening,
+            out=output,
+        )
+    assert output.read_bytes() == original
+
+
+def test_rejects_symbolic_link_input_snapshot(tmp_path: Path) -> None:
+    agreement = _agreement(tmp_path)
+    listening = _listening(tmp_path, agreement)
+    linked_agreement = tmp_path / "linked-agreement.json"
+    linked_agreement.symlink_to(agreement)
+
+    with pytest.raises(ValueError, match="regular JSON file"):
+        _project_private_separation_publication_readiness(
+            linked_agreement,
+            listening,
+            out=tmp_path / "rejected.json",
+        )
+    assert not (tmp_path / "rejected.json").exists()
 
 
 def test_rejects_listening_report_bound_to_different_agreement(
@@ -308,8 +368,16 @@ def test_matching_review_and_alignment_close_only_full_song_milestone(
     alignment_assessment = result["full_song_alignment_assessment"]
     assert alignment_assessment["gate_passed"] is True
     assert alignment_assessment["separator_accuracy_established"] is False
-    assert result["policy"]["alignment_result_alone_can_close_duration_alignment_gate"] is False
-    assert result["policy"]["matching_review_and_alignment_can_close_duration_alignment_gate"] is True
+    assert (
+        result["policy"]["alignment_result_alone_can_close_duration_alignment_gate"]
+        is False
+    )
+    assert (
+        result["policy"][
+            "matching_review_and_alignment_can_close_duration_alignment_gate"
+        ]
+        is True
+    )
 
 
 def test_alignment_alone_or_audible_joins_keep_full_song_milestone_open(
@@ -332,6 +400,156 @@ def test_alignment_alone_or_audible_joins_keep_full_song_milestone_open(
     assert gates["full_song_duration_and_alignment"] == "open"
     assert result["full_song_alignment_assessment"]["gate_passed"] is True
     assert result["full_song_duration_alignment_assessment"]["gate_passed"] is False
+
+
+def test_records_bound_join_remediation_without_closing_full_song_gate(
+    tmp_path: Path,
+) -> None:
+    agreement = _agreement(tmp_path)
+    listening = _listening(tmp_path, agreement)
+    full_song = _full_song_review_result(
+        tmp_path,
+        all_boundaries_clean=False,
+        audible_join_boundaries_by_role={
+            "vocals": (11, 12),
+            "instrumental": (11, 13),
+        },
+    )
+    remediation = _join_remediation_review_result(tmp_path, full_song)
+
+    result = _project_private_separation_publication_readiness(
+        agreement,
+        listening,
+        full_song_review_result_path=full_song,
+        full_song_join_remediation_review_result_path=remediation,
+        out=tmp_path / "readiness-with-join-remediation.json",
+    )
+
+    gates = {gate["gate_id"]: gate for gate in result["gates"]}
+    assert gates["full_song_duration_and_alignment"]["status"] == "open"
+    assert (
+        "comparative preference is not an absolute clean-boundary rating"
+        in gates["full_song_duration_and_alignment"]["finding"]
+    )
+    assert result["readiness"]["passed_gate_count"] == 3
+    assert result["readiness"]["open_gate_count"] == 8
+    original = result["full_song_duration_alignment_assessment"]
+    assert original["audible_join_boundaries_by_role"] == {
+        "vocals": [11, 12],
+        "instrumental": [11, 13],
+        "reconstruction": [],
+    }
+    assert original["review_minimum_met"] is False
+    assert original["gate_passed"] is False
+    assessment = result["full_song_join_remediation_assessment"]
+    assert assessment["reviewed_unit_count"] == 15
+    assert assessment["candidate_preferred_boundary_role_count"] == 2
+    assert assessment["equivalent_boundary_role_count"] == 2
+    assert assessment["candidate_preferred_boundaries_by_role"] == {
+        "vocals": [12],
+        "instrumental": [11],
+    }
+    assert assessment["improvement_not_evidenced_boundaries_by_role"] == {
+        "vocals": [11],
+        "instrumental": [13],
+    }
+    assert assessment["no_heard_regression"] is True
+    assert assessment["absolute_boundary_cleanliness_established"] is False
+    assert assessment["original_audible_joins_resolved"] is False
+    assert assessment["can_close_duration_alignment_gate"] is False
+    assert result["readiness"]["publication_ready"] is False
+    persisted = (tmp_path / "readiness-with-join-remediation.json").read_text()
+    assert "Private remediation note" not in persisted
+
+
+def test_join_remediation_requires_original_full_song_review(tmp_path: Path) -> None:
+    agreement = _agreement(tmp_path)
+    listening = _listening(tmp_path, agreement)
+    full_song = _full_song_review_result(
+        tmp_path,
+        all_boundaries_clean=False,
+        audible_join_boundaries_by_role={
+            "vocals": (11, 12),
+            "instrumental": (11, 13),
+        },
+    )
+    remediation = _join_remediation_review_result(tmp_path, full_song)
+
+    with pytest.raises(ValueError, match="requires a full-song review result"):
+        _project_private_separation_publication_readiness(
+            agreement,
+            listening,
+            full_song_join_remediation_review_result_path=remediation,
+            out=tmp_path / "rejected.json",
+        )
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    (
+        "unit_set",
+        "windows",
+        "counts",
+        "package_commitment",
+        "readiness",
+        "permissions",
+        "effects",
+        "bindings",
+    ),
+)
+def test_rejects_altered_join_remediation_evidence(
+    tmp_path: Path,
+    mutation: str,
+) -> None:
+    agreement = _agreement(tmp_path)
+    listening = _listening(tmp_path, agreement)
+    full_song = _full_song_review_result(
+        tmp_path,
+        all_boundaries_clean=False,
+        audible_join_boundaries_by_role={
+            "vocals": (11, 12),
+            "instrumental": (11, 13),
+        },
+    )
+    remediation = _join_remediation_review_result(tmp_path, full_song)
+    document = json.loads(remediation.read_text(encoding="utf-8"))
+    if mutation == "unit_set":
+        document["units"][9]["unit_id"] = "boundary-14-instrumental"
+    elif mutation == "windows":
+        for unit in document["units"]:
+            if unit["source_window"] is not None:
+                unit["source_window"] = {
+                    "start_frame": 0,
+                    "end_frame": 176_400,
+                    "start_seconds": 0.0,
+                    "end_seconds": 4.0,
+                }
+    elif mutation == "counts":
+        document["overall_outcome_counts"]["equivalent"] += 1
+    elif mutation == "package_commitment":
+        document["package_commitment"] = "0" * 64
+    elif mutation == "readiness":
+        document["readiness_evidence"][
+            "all_targeted_join_pairs_candidate_preferred"
+        ] = True
+    elif mutation == "permissions":
+        document["permissions"]["accepted"] = True
+    elif mutation == "effects":
+        document["effects"]["readiness_gate_closed"] = True
+    else:
+        document["bindings"]["stitch_report_sha256"] = "f" * 64
+    remediation = _write_hashed(
+        tmp_path / f"altered-join-remediation-{mutation}.json", document
+    )
+
+    with pytest.raises(ValueError, match="join-remediation"):
+        _project_private_separation_publication_readiness(
+            agreement,
+            listening,
+            full_song_review_result_path=full_song,
+            full_song_join_remediation_review_result_path=remediation,
+            out=tmp_path / f"rejected-{mutation}.json",
+        )
 
 
 def test_rejects_alignment_not_bound_to_full_song_review(tmp_path: Path) -> None:
@@ -645,15 +863,34 @@ def _full_song_review_result(
     root: Path,
     *,
     all_boundaries_clean: bool,
+    audible_join_boundaries_by_role: dict[str, tuple[int, ...]] | None = None,
 ) -> Path:
     roles = ("vocals", "instrumental", "reconstruction")
     ratings = {role: "useful" for role in roles}
+    if audible_join_boundaries_by_role is None:
+        audible_join_boundaries_by_role = {
+            "vocals": () if all_boundaries_clean else (2,),
+            "instrumental": () if all_boundaries_clean else (2,),
+        }
+        boundary_frames = (58_800, 117_600)
+        total_frames = 176_400
+    else:
+        assert not all_boundaries_clean
+        maximum_boundary = max(
+            boundary
+            for boundaries in audible_join_boundaries_by_role.values()
+            for boundary in boundaries
+        )
+        boundary_frames = tuple(
+            index * 44_100 for index in range(1, maximum_boundary + 1)
+        )
+        total_frames = (maximum_boundary + 3) * 44_100
     boundaries = []
-    for index, frame in enumerate((58_800, 117_600), start=1):
+    for index, frame in enumerate(boundary_frames, start=1):
         boundary_ratings = {role: "clean" for role in roles}
-        if index == 2 and not all_boundaries_clean:
-            boundary_ratings["vocals"] = "audible_join"
-            boundary_ratings["instrumental"] = "audible_join"
+        for role, audible_boundaries in audible_join_boundaries_by_role.items():
+            if index in audible_boundaries:
+                boundary_ratings[role] = "audible_join"
         boundaries.append(
             {
                 "boundary_index": index,
@@ -697,12 +934,12 @@ def _full_song_review_result(
             "execution_state_sha256": "7" * 64,
         },
         "clock": {
-            "boundary_count": 2,
+            "boundary_count": len(boundary_frames),
             "channels": 2,
-            "chunk_count": 3,
+            "chunk_count": len(boundary_frames) + 1,
             "crossfade_frames": 0,
-            "duration_seconds": 4.0,
-            "frames": 176_400,
+            "duration_seconds": total_frames / 44_100,
+            "frames": total_frames,
             "gap_frames": 0,
             "overlap_frames": 0,
             "sample_rate": 44_100,
@@ -713,7 +950,7 @@ def _full_song_review_result(
             "notes": "Private full-song note",
         },
         "boundary_summary": {
-            "reviewed_boundaries": 2,
+            "reviewed_boundaries": len(boundary_frames),
             "rating_counts_by_role": counts,
             "audible_join_boundaries_by_role": audible_joins,
         },
@@ -755,13 +992,214 @@ def _full_song_review_result(
     return _write_hashed(root / "full-song-review.json", document)
 
 
+def _join_remediation_review_result(root: Path, full_song_review: Path) -> Path:
+    review = json.loads(full_song_review.read_text(encoding="utf-8"))
+    boundary_frames = {
+        boundary["boundary_index"]: boundary["frame"]
+        for boundary in review["boundaries"]
+    }
+    targets = sorted(
+        (boundary_index, role)
+        for role in ("vocals", "instrumental")
+        for boundary_index in review["boundary_summary"][
+            "audible_join_boundaries_by_role"
+        ][role]
+    )
+    preferred_targets = {(11, "instrumental"), (12, "vocals")}
+    units: list[dict[str, object]] = []
+
+    def add_unit(
+        *,
+        unit_id: str,
+        kind: str,
+        source_window: dict[str, int | float] | None,
+        resolved_choice: str,
+    ) -> None:
+        units.append(
+            {
+                "unit_id": unit_id,
+                "kind": kind,
+                "title": f"Review {unit_id}",
+                "focus": "Which version preserves the intended continuity?",
+                "source_window": source_window,
+                "blind_choice": (
+                    "A" if resolved_choice == "candidate_preferred" else resolved_choice
+                ),
+                "candidate_a_identity": "candidate",
+                "candidate_b_identity": "raw",
+                "resolved_choice": resolved_choice,
+                "notes": "Private remediation note",
+            }
+        )
+
+    for boundary_index, role in targets:
+        boundary_frame = boundary_frames[boundary_index]
+        start = boundary_frame - 2 * 44_100
+        end = boundary_frame + 2 * 44_100
+        boundary_window = {
+            "start_frame": start,
+            "end_frame": end,
+            "start_seconds": start / 44_100,
+            "end_seconds": end / 44_100,
+        }
+        outcome = (
+            "candidate_preferred"
+            if (boundary_index, role) in preferred_targets
+            else "equivalent"
+        )
+        add_unit(
+            unit_id=f"boundary-{boundary_index:02d}-{role}",
+            kind="boundary_role_pair",
+            source_window=boundary_window,
+            resolved_choice=outcome,
+        )
+        for edge, edge_start, edge_end in (
+            ("start", start, boundary_frame),
+            ("end", boundary_frame, end),
+        ):
+            edge_outcome = (
+                "candidate_preferred"
+                if (boundary_index, role, edge) == (11, "instrumental", "start")
+                else "equivalent"
+            )
+            add_unit(
+                unit_id=f"edge-{boundary_index:02d}-{role}-{edge}",
+                kind="patch_edge_pair",
+                source_window={
+                    "start_frame": edge_start,
+                    "end_frame": edge_end,
+                    "start_seconds": edge_start / 44_100,
+                    "end_seconds": edge_end / 44_100,
+                },
+                resolved_choice=edge_outcome,
+            )
+    for role in ("vocals", "instrumental", "reconstruction"):
+        add_unit(
+            unit_id=f"complete-song-{role}",
+            kind="complete_song_pair",
+            source_window=None,
+            resolved_choice=(
+                "candidate_preferred" if role == "instrumental" else "equivalent"
+            ),
+        )
+
+    outcomes = (
+        "candidate_preferred",
+        "raw_preferred",
+        "equivalent",
+        "neither",
+        "cannot_tell",
+    )
+    kinds = ("boundary_role_pair", "patch_edge_pair", "complete_song_pair")
+    counts = {
+        kind: {
+            outcome: sum(
+                unit["kind"] == kind and unit["resolved_choice"] == outcome
+                for unit in units
+            )
+            for outcome in outcomes
+        }
+        for kind in kinds
+    }
+    overall = {
+        outcome: sum(unit["resolved_choice"] == outcome for unit in units)
+        for outcome in outcomes
+    }
+    bindings = {
+        "answer_key_document_sha256": "a" * 64,
+        "answer_key_sha256": "b" * 64,
+        "audio_manifest_sha256": "c" * 64,
+        "candidate_document_sha256": "d" * 64,
+        "candidate_report_sha256": "e" * 64,
+        "execution_report_sha256": "0" * 64,
+        "execution_state_sha256": "8" * 64,
+        "review_export_sha256": "9" * 64,
+        "review_seed_sha256": "f" * 64,
+        "stitch_document_sha256": review["bindings"]["stitch_document_sha256"],
+        "stitch_report_sha256": review["bindings"]["stitch_report_sha256"],
+    }
+    document = {
+        "schema": JOIN_REMEDIATION_RESULT_SCHEMA,
+        "status": JOIN_REMEDIATION_RESULT_STATUS,
+        "evidence_scope": "private_development_only",
+        "policy_id": JOIN_REMEDIATION_POLICY_ID,
+        "blind_review": True,
+        "package_commitment": hashlib.sha256(
+            f"{'b' * 64}:{'a' * 64}:{'c' * 64}".encode("ascii")
+        ).hexdigest(),
+        "bindings": bindings,
+        "reviewed_unit_count": len(units),
+        "counts_by_kind_and_outcome": counts,
+        "overall_outcome_counts": overall,
+        "units": units,
+        "readiness_evidence": {
+            "human_join_remediation_review_complete": True,
+            "all_targeted_join_pairs_candidate_preferred": False,
+            "all_patch_edges_candidate_or_equivalent": True,
+            "all_complete_songs_candidate_or_equivalent": True,
+            "readiness_reassessment_eligible": True,
+            "original_audible_joins_resolved": False,
+            "publication_ready": False,
+        },
+        "interpretation": {
+            "choices_are_human_listening_evidence": True,
+            "candidate_preference_is_join_elimination": False,
+            "candidate_preference_is_separator_accuracy": False,
+            "review_completion_is_quality_acceptance": False,
+            "answer_key_opened_only_after_complete_review_verified": True,
+            "automatic_winner_selected": False,
+            "separator_accepted": False,
+        },
+        "verification_claims": {
+            "review_seed_and_export_bounded_single_read_snapshots": True,
+            "review_seed_and_export_no_symlink_follow": True,
+            "review_seed_and_export_identity_stable_before_after": True,
+            "review_seed_and_export_owner_only_single_link": True,
+            "public_semantics_reconstructed_from_verified_sources": True,
+            "short_pcm24_pairs_verified_key_blind": True,
+            "complete_song_records_verified_key_blind": True,
+            "identical_short_pcm24_pairs_rejected": True,
+            "answer_key_bounded_single_read_snapshot_verified": True,
+            "answer_key_slot_identities_and_levels_verified": True,
+            "result_temp_fsynced_before_no_overwrite_publication": True,
+            "result_published_by_no_overwrite_hard_link": True,
+        },
+        "verification_limitations": {
+            "execution_candidate_and_stitch_json_snapshot_held": False,
+            "wav_descriptors_snapshot_held_across_verification": False,
+            "non_snapshot_private_inputs_assumed_quiescent": True,
+        },
+        "permissions": {
+            "accepted": False,
+            "automatic_selection": False,
+            "product_route_permitted": False,
+            "publication_permitted": False,
+            "simple_mode_available": False,
+            "source_graph_activation": False,
+            "studio_import_available": False,
+        },
+        "effects": {
+            "candidate_audio_mutated": False,
+            "candidate_audio_selected": False,
+            "preference_inferred": False,
+            "publication_state_mutated": False,
+            "raw_stitch_mutated": False,
+            "readiness_gate_closed": False,
+            "review_evidence_mutated": False,
+            "separator_accepted": False,
+            "separator_selected": False,
+            "source_graph_mutated": False,
+        },
+    }
+    return _write_hashed(root / "join-remediation-review-result.json", document)
+
+
 def _full_song_alignment_result(root: Path, *, gate_passed: bool) -> Path:
     sample_rate = 44_100
     total_frames = 176_400
     window_frames = 14_700
     starts = [
-        int(round((total_frames - window_frames) * index / 8))
-        for index in range(9)
+        int(round((total_frames - window_frames) * index / 8)) for index in range(9)
     ]
     lag = 0.0 if gate_passed else 50.0
     windows = [
