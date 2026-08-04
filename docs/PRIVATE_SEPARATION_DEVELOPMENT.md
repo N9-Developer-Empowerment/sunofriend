@@ -2371,8 +2371,7 @@ process can write only one repetition. A failed or interrupted root is evidence
 to preserve; rerun into a different fresh root.
 
 Run the three repetitions serially as three separate Python processes. This is
-the command shape; it has **not** been executed as part of implementing the
-runner:
+the command shape used for the completed private development run:
 
 ```bash
 set -e
@@ -2405,7 +2404,7 @@ PYTHONPATH=src ./.venv/bin/python \
   --benchmark-plan \
     work/separation-bakeoff/be-alone-full-song-kim-resource-benchmark-plan-v1/private-separation-full-song-resource-benchmark-plan.json \
   --repetition-report \
-    work/separation-bakeoff/be-alone-full-song-kim-resource-run-1/private-separation-full-song-resource-benchmark-repetition.json \
+    work/separation-bakeoff/be-alone-full-song-kim-resource-run-1-v2/private-separation-full-song-resource-benchmark-repetition.json \
   --repetition-report \
     work/separation-bakeoff/be-alone-full-song-kim-resource-run-2/private-separation-full-song-resource-benchmark-repetition.json \
   --repetition-report \
@@ -2421,6 +2420,41 @@ runs met the frozen ceilings on the 36 GiB development Mac. It must still keep
 `resource_envelope_accepted` false because this is not the separately required
 16 GiB acceptance class. Neither command selects a separator or enables a
 public route.
+
+The first attempted repetition root,
+`be-alone-full-song-kim-resource-run-1`, is preserved as an 8 KiB
+pre-inference failure. The initial runner verified the virtual-environment
+launcher but passed its resolved base executable into the native session,
+which correctly rejected the missing virtual-environment boundary. The runner
+now keeps those responsibilities separate: it hash-binds the resolved
+executable while passing the exact `.venv-ai/bin/python` invocation path. A
+symlinked-launcher regression test guards that distinction. Repetition 1 was
+then run from a fresh `-run-1-v2` root; the failed root was not reused.
+
+All three successful roots contain 18 independently verified native attempts
+and distinct process-scoped nonces. The aggregate verifier confirmed serial
+non-overlap, identical plan/checkpoint/runtime/device/machine bindings and all
+required measurements. On the 262.56-second song:
+
+- whole-pipeline time was 172.561330–173.454702 seconds, median 172.962042;
+- wall time per audio minute was 39.433576–39.637729 seconds;
+- summed worker model-call time was 53.882378–53.985068 seconds;
+- peak RSS was 1,118,208,000–1,141,309,440 bytes;
+- peak MLX allocator memory was 2,324,039,502 bytes in all three runs;
+- Darwin lifetime physical footprint was
+  4,089,218,536–4,093,199,920 bytes, at most 3.812089 GiB;
+- every before/after thermal state was `nominal`, with zero timeouts and zero
+  OOM outcomes.
+
+Every repetition met the frozen development ceilings. The result file SHA-256
+is `9a2541d16009de4173076db0e3771026ae34167f4cdaf4c2a30c6957fbcbb7cf`;
+its document SHA-256 is
+`a56216ca88fd4795e802d0b4ae01f5104d1dc60338373f33482b3c4ed3769ec9`.
+`controlled_repeated_benchmark_complete` and
+`development_machine_thresholds_met` are true. Resource acceptance and
+publication readiness remain false because the observed Mac has 36 GiB, not
+the separately required 16 GiB acceptance class. This evidence changes no
+separator selection, source graph or product route.
 
 The optional review contract now asks that question explicitly with
 `--classify-focus-phrase-coverage`. For every playable candidate, the listener

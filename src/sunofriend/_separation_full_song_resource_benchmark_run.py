@@ -114,7 +114,8 @@ def _run_private_full_song_resource_benchmark_repetition(
     ):
         raise ValueError("resource benchmark full-song plan differs")
 
-    runtime = _resolved_regular_file(runtime_launcher_path, "runtime launcher")
+    runtime_invocation = Path(runtime_launcher_path).expanduser().absolute()
+    runtime = _resolved_regular_file(runtime_invocation, "runtime launcher")
     checkpoint = _resolved_regular_file(checkpoint_path, "Kim checkpoint")
     _verify_file_binding(
         runtime,
@@ -154,7 +155,7 @@ def _run_private_full_song_resource_benchmark_repetition(
         plan_path,
         out_dir=execution_root,
         repository_root=repository_root,
-        runtime_launcher_path=runtime,
+        runtime_launcher_path=runtime_invocation,
         source_root=source_root,
         checkpoint_path=checkpoint,
         companion_root=companion_root,

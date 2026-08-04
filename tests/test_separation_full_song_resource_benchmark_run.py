@@ -83,8 +83,11 @@ def _inputs(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
         out_dir=plan_root,
         maximum_chunk_frames=9_000,
     )
-    runtime = tmp_path / "python"
-    runtime.write_bytes(b"runtime")
+    base_runtime = tmp_path / "base-python"
+    base_runtime.write_bytes(b"runtime")
+    runtime = tmp_path / "venv/bin/python"
+    runtime.parent.mkdir(parents=True)
+    runtime.symlink_to(base_runtime)
     checkpoint = tmp_path / "model.safetensors"
     with checkpoint.open("wb") as handle:
         handle.truncate(CONVERSION_CHECKPOINT_BYTES)
@@ -108,6 +111,7 @@ def _write_private_json(path: Path, value: Mapping[str, Any]) -> None:
 
 def _fake_pipeline() -> tuple[Any, Any, Any]:
     def executor(*_args: Any, **kwargs: Any) -> Mapping[str, Any]:
+        assert Path(kwargs["runtime_launcher_path"]).parent.name == "bin"
         report = Path(kwargs["out_dir"]) / EXECUTION_REPORT
         document = {
             "status": "private_chunk_execution_complete_not_selected",

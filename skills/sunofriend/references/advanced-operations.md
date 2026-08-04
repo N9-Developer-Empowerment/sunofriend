@@ -1954,6 +1954,19 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   acceptance and all product/publication permissions false until the separate
   16 GiB acceptance-class run also exists. Do not manually fill slots or infer
   acceptance from the older coarse report.
+  The completed `Be Alone` development run used three distinct, serial roots;
+  one earlier pre-inference launcher-boundary failure is preserved separately.
+  The three verified whole-pipeline times were 172.561330–173.454702 seconds,
+  maximum wall time was 39.637729 seconds per audio minute, maximum peak RSS
+  was 1,141,309,440 bytes, maximum MLX allocator peak was 2,324,039,502 bytes,
+  and maximum Darwin physical footprint was 4,093,199,920 bytes (3.812089
+  GiB). Thermal state remained nominal before and after every repetition; no
+  timeout or OOM was observed. The result file SHA-256 is
+  `9a2541d16009de4173076db0e3771026ae34167f4cdaf4c2a30c6957fbcbb7cf`
+  and document SHA-256 is
+  `a56216ca88fd4795e802d0b4ae01f5104d1dc60338373f33482b3c4ed3769ec9`.
+  Development thresholds passed, but the 36 GiB machine does not satisfy the
+  16 GiB acceptance-class gate; acceptance/publication remain false.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,
