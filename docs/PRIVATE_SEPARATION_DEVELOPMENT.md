@@ -3132,20 +3132,42 @@ were follow-up or equivalent. The defined gate therefore failed; no
 all-17-boundary package, alignment or readiness reassessment was generated.
 
 The exact failed result now feeds the model-free second-remediation planner
-`scripts/private-separation-candidate-followup-remediation-plan.py`. The sealed
-plan is at
-`work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-plan-v2/private-separation-candidate-followup-remediation-plan.json`.
+`scripts/private-separation-candidate-followup-remediation-plan.py`. Its first
+v2 evidence document is retained, but inspection showed that its six proposed
+source intervals exactly repeated the deterministic windows used for the first
+follow-up. Running those calls would not have explored new evidence. The
+corrected sealed v3 plan is at
+`work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-plan-v3/private-separation-candidate-followup-remediation-plan.json`.
 Its file/document SHA-256 values are
-`dac8061581b8e942b5b1ef8dc8477e171b040851fd9e31fc43962a615b8962c3`
+`75c7483ea7986fc03c78b01cfa8ebaf9bb7e65112ded56b63af97bd02bd54b1f`
 and
-`52ff2db45308032bddafac9752e70ad11f5dfaa37ae09b38b5f7cd10d2225cfa`.
-It preserves successful regions, plans edge-aware reinference/blend search for
-three role-boundary pairs, reinference for the three equivalent formerly
-audible joins, and an exact v2-control revert for boundary 10 vocals. That is
-seven role-boundary actions over six unique 15-second source windows and six
-future model calls. Planning created no audio, ran no model and copied no
-private listener notes. A future candidate still requires a new blind targeted
-review before the all-boundary gate can reopen.
+`f324e44abdd5b2e2ef1eb69ba9111a7da01d474e08a3040c373bb4ffc383c68d`.
+It shifts all six 15-second inference windows two seconds later, preserves
+successful regions, restores boundary 10 vocals from the exact v2 control and
+declares two explicit edge hypotheses. One variant uses the shifted worker
+through the original 100 ms blend; the other keeps the earlier preferred
+centre at the three failed edges and extends its blend to 250 ms. Planning
+created no audio, ran no model and copied no private listener notes.
+
+The corresponding resumable executor is
+`scripts/private-separation-candidate-followup-remediation-execute.py`. It
+re-derives the plan from the exact browser export and resolved result before
+running anything, delegates only the six shifted windows to the audited private
+Kim worker, starts from the exact first follow-up candidate and publishes both
+variants atomically without ranking either. The completed owner-only execution
+is under
+`work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v2`.
+The execution file/document SHA-256 values are
+`c63e3b961cd39343a6b79ba6c4991fe488ccff0697ad72d2a3262fcf08efe19c`
+and
+`64761bb0c5fc36f911a4175409b1d95644310e1dd6412cb1417f896ae7ace170`;
+the candidate-manifest file/document values are
+`ab59a71942adf1e2ca8afd307b0246c004fe4795f0b77ef621b53da3236af8d2`
+and
+`4f5c2790da0abf82c6dca33e4c851b4864f0eaec72efb348d9155133e3b92321`.
+An exact rerun verified all six retained workers and both complete-song variants
+with zero new model calls. Neither variant is selected. A fresh blind targeted
+review remains mandatory before the all-boundary gate can reopen.
 
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:

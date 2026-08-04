@@ -30,8 +30,11 @@ from sunofriend._separation_candidate_followup_readiness_reassessment import (
     _reassess_private_candidate_followup_readiness,
 )
 from sunofriend._separation_candidate_followup_remediation_plan import (
+    CONTEXT_SHIFT_FRAMES,
+    EXTENDED_EDGE_BLEND_FRAMES,
     REPORT_NAME as FOLLOWUP_PLAN_REPORT_NAME,
     _plan_private_candidate_followup_remediation,
+    _window as followup_remediation_window,
 )
 from sunofriend._separation_candidate_join_remediation_review import ANSWER_KEY_NAME
 from sunofriend._separation_candidate_join_remediation_review_result import (
@@ -680,11 +683,44 @@ def test_failed_targeted_review_produces_only_a_bounded_model_free_plan(
         "revert_patch_to_v2_control": 1
     }
     assert plan["summary"]["planned_model_call_count"] == 0
+    assert plan["summary"]["candidate_variant_count"] == 2
+    assert plan["protocol"]["reinference_context_shift_frames"] == 88_200
+    assert plan["protocol"]["candidate_variants"][1][
+        "failed_edge_blend_frames"
+    ] == EXTENDED_EDGE_BLEND_FRAMES
     assert plan["readiness"]["remediation_execution_complete"] is False
     assert plan["effects"]["model_run"] is False
     assert plan["permissions"] == _FALSE_PERMISSIONS
     assert output.is_file()
     assert plan_root.stat().st_mode & 0o077 == 0
+
+
+def test_model_window_uses_new_later_context_instead_of_repeating_worker() -> None:
+    patch = {
+        "patch_start_frame": 400_000,
+        "patch_end_frame": 576_400,
+        "edge_blend_frames": 4_410,
+    }
+    window = followup_remediation_window(
+        3,
+        actions={
+            "vocals": {
+                "action": "reinfer_role_boundary",
+                "model_call_required": True,
+                "boundary_outcome": "equivalent",
+                "failed_edges": [],
+            }
+        },
+        patches={(3, "vocals"): patch},
+        total_frames=2_000_000,
+        window_index=1,
+    )
+
+    assert window["actual_context_shift_frames"] == CONTEXT_SHIFT_FRAMES
+    assert window["source_start_frame"] == (
+        window["unshifted_source_start_frame"] + CONTEXT_SHIFT_FRAMES
+    )
+    assert window["source_end_frame"] - window["source_start_frame"] == 661_500
 
 
 def test_passing_targeted_review_refuses_a_remediation_plan(tmp_path: Path) -> None:

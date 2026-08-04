@@ -2306,10 +2306,21 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   closed. The next model-free plan is produced with
   `scripts/private-separation-candidate-followup-remediation-plan.py`; it binds
   the exact export and result, preserves successful regions, schedules three
-  edge-aware repairs and three unresolved-boundary reinferences over six
-  source windows, and reverts boundary 10 vocals to exact v2 control. It runs
-  no model and creates no audio. Selection, acceptance, readiness and every
-  product/publication permission remain false.
+  edge-aware repairs and three unresolved-boundary reinferences, and reverts
+  boundary 10 vocals to exact v2 control. Do not execute the retained v2 plan:
+  its six source windows repeat the earlier deterministic calls. The corrected
+  v3 plan shifts each inference window two seconds later and declares two
+  unranked edge variants, one with shifted inference and 100 ms edges and one
+  preserving the earlier centre with 250 ms edges. Planning runs no model and
+  creates no audio.
+  Execute that exact v3 plan only with
+  `scripts/private-separation-candidate-followup-remediation-execute.py`. The
+  resumable private executor re-derives all failed-review inputs, runs the six
+  shifted windows and atomically publishes both variants. A completed rerun
+  must verify the retained workers and candidate PCM24 with zero new calls.
+  Both variants remain `not_reviewed`; selection, acceptance, readiness and
+  every product/publication permission remain false until a fresh blind
+  targeted review passes.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic
   snapshot across the whole operation; status and result record this explicit

@@ -29,10 +29,12 @@ from ._separation_full_song_join_remediation_review_result import (
 from ._separation_melroformer_real_bridge import MAXIMUM_EXCERPT_FRAMES
 
 
-SCHEMA = "sunofriend.private-separation-candidate-followup-remediation-plan.v1"
+SCHEMA = "sunofriend.private-separation-candidate-followup-remediation-plan.v2"
 STATUS = "planned_failed_blind_review_remediation_no_model_run"
-POLICY_ID = "failed-followup-review-control-revert-and-edge-aware-reinference-v1"
+POLICY_ID = "failed-followup-review-shifted-context-variant-search-v2"
 REPORT_NAME = "private-separation-candidate-followup-remediation-plan.json"
+CONTEXT_SHIFT_FRAMES = 2 * TARGET_SAMPLE_RATE
+EXTENDED_EDGE_BLEND_FRAMES = TARGET_SAMPLE_RATE // 4
 _ROLES = ("vocals", "instrumental")
 _FALSE_EFFECTS = {
     "audio_created_or_mutated": False,
@@ -174,11 +176,29 @@ def _plan_private_candidate_followup_remediation(
             "source_window_seconds": MAXIMUM_EXCERPT_FRAMES / TARGET_SAMPLE_RATE,
             "candidate_base": "exact_review_derived_followup_candidate",
             "control_revert_source": "exact_immutable_v2_candidate",
-            "reinference": "independent_model_call_per_unique_boundary",
+            "reinference": "independent_shifted_context_model_call_per_unique_boundary",
+            "reinference_context_direction": "later",
+            "reinference_context_shift_frames": CONTEXT_SHIFT_FRAMES,
+            "reinference_context_shift_seconds": CONTEXT_SHIFT_FRAMES
+            / TARGET_SAMPLE_RATE,
             "edge_policy": (
                 "preserve the preferred centre while exploring edge-aware blend "
                 "and reinference variants; do not silently choose a winner"
             ),
+            "candidate_variants": [
+                {
+                    "variant_id": "shifted-context-standard-edge",
+                    "reinference_source": "shifted_context_worker",
+                    "failed_edge_source": "shifted_context_worker",
+                    "failed_edge_blend_frames": 4410,
+                },
+                {
+                    "variant_id": "preserved-centre-extended-edge",
+                    "reinference_source": "shifted_context_worker",
+                    "failed_edge_source": "exact_followup_candidate_patch",
+                    "failed_edge_blend_frames": EXTENDED_EDGE_BLEND_FRAMES,
+                },
+            ],
             "automatic_preference_inference": False,
         },
         "windows": windows,
@@ -186,6 +206,7 @@ def _plan_private_candidate_followup_remediation(
             "remediation_role_boundary_count": len(actions),
             "unique_boundary_count": len(windows),
             "planned_model_call_count": len(model_boundaries),
+            "candidate_variant_count": 2,
             "model_boundaries": model_boundaries,
             "action_counts": action_counts,
             "successful_followup_boundary_pairs_preserved": sum(
@@ -229,6 +250,8 @@ def _plan_private_candidate_followup_remediation(
         "effects": dict(_FALSE_EFFECTS),
         "limitations": [
             "This plan creates no audio and runs no model.",
+            "Shifted context is required because repeating the earlier deterministic window would duplicate its worker output.",
+            "Two explicit candidate variants preserve competing edge hypotheses; neither is preferred automatically.",
             "The plan preserves the complete-song pass but does not treat it as separator acceptance.",
             "Equivalent formerly-audible joins remain unresolved under the current gate.",
             "Neither-rated patch edges require new evidence rather than assumed smoothing.",
@@ -318,7 +341,24 @@ def _window(
         int(patch["patch_start_frame"]) + int(patch["patch_end_frame"])
         for patch in relevant
     ) // (2 * len(relevant))
-    start = max(0, min(centre - MAXIMUM_EXCERPT_FRAMES // 2, total_frames - MAXIMUM_EXCERPT_FRAMES))
+    model_call_required = any(
+        action["model_call_required"] for action in actions.values()
+    )
+    unshifted_start = max(
+        0,
+        min(
+            centre - MAXIMUM_EXCERPT_FRAMES // 2,
+            total_frames - MAXIMUM_EXCERPT_FRAMES,
+        ),
+    )
+    requested_shift = CONTEXT_SHIFT_FRAMES if model_call_required else 0
+    start = max(
+        0,
+        min(
+            unshifted_start + requested_shift,
+            total_frames - MAXIMUM_EXCERPT_FRAMES,
+        ),
+    )
     end = start + MAXIMUM_EXCERPT_FRAMES
     return {
         "window_index": window_index,
@@ -327,9 +367,9 @@ def _window(
         "source_end_frame": end,
         "source_start_seconds": start / TARGET_SAMPLE_RATE,
         "source_end_seconds": end / TARGET_SAMPLE_RATE,
-        "model_call_required": any(
-            action["model_call_required"] for action in actions.values()
-        ),
+        "model_call_required": model_call_required,
+        "unshifted_source_start_frame": unshifted_start,
+        "actual_context_shift_frames": start - unshifted_start,
         "role_actions": {
             role: {
                 **deepcopy(action),
