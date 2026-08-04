@@ -2422,6 +2422,15 @@ separator transport, source-lineage import and promotion are not implemented**
     in both blind cells, but its `Be Alone` vocal was rated only partially
     complete. One of two cells meets the predeclared minimum, so the gate stays
     open. This is bounded human evidence, not separator acceptance.
+  - [x] Turn the listener's exact `Be Alone` held-vocal failure into a separate
+    blinded challenger review rather than weakening the predeclared gate. The
+    new focus review compares Kim, Moises and both supplied Suno vocal estimates
+    from the same 191.00–206.00 second source binding. It level-matches all four
+    candidates, permits multiple useful results and asks independently about
+    retention of the named event, bleed and artefacts. A frame-activity
+    disagreement justified including the Suno challengers but is not musical
+    proof. The unreviewed package cannot select or activate a separator and does
+    not count as cross-song publication evidence.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
 - [x] Repeat the clean/estimate comparison through exact production
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation

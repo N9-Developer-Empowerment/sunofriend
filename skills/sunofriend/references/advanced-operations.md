@@ -1875,6 +1875,22 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   complete while `I am a Alien mashup` was substantially complete. One of two
   cells therefore meets the predeclared minimum. Keep separated-audio quality
   open and do not turn preference into a default or model selection.
+- When a completed separated-audio review names one exact missing vocal event,
+  use `scripts/private-separated-vocal-focus-review.py` for a bounded challenger
+  review instead of changing the quality threshold. Create mode requires one
+  source-bound authorised excerpt, unchanged Kim evaluation, matching role map,
+  one to five repeated `--provider` values, a 1–500 character `--focus` and a
+  fresh `--out-dir`. It blinds and jointly sample-RMS matches Kim plus the
+  provider broad-vocal estimates, keeps the mixed source unmodified and asks
+  for independent focus retention, bleed, artefact and usefulness labels.
+  Multiple candidates may be useful and there is no preference field. Resolve
+  with `--resolve REVIEWED_JSON --package-dir PACKAGE --out RESULT`; the result
+  is private diagnostic evidence only and cannot close publication readiness,
+  choose a winner or enable a product route. The current `Be Alone` package at
+  `work/separation-bakeoff/be-alone-held-vocal-focus-review-v1` compares Kim,
+  Moises, Suno A and Suno B for the listener-reported extended robotic held
+  note. Do not infer vocal retention from the preceding frame-activity
+  disagreement; human listening remains required.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,

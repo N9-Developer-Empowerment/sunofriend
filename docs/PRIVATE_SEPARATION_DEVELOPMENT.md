@@ -2084,6 +2084,70 @@ the gate stays open. If the bounded minimum passes, only that one gate closes;
 full-song, broad-role, hidden-set, terms, offline, resource and public-route
 gates stay open.
 
+### Focused separated-vocal challenger review
+
+The cross-song review identified a narrower failure that its two-candidate
+contract cannot answer: on `Be Alone`, the listener heard an extended,
+robotic-sounding held vocal in the mixed source that neither Kim nor the Moises
+control preserved for its full duration. A read-only 250 ms activity diagnostic
+then found the largest Kim/provider disagreements late in the exact excerpt.
+Kim was near digital silence while one Suno alternative still contained
+material. That numeric disagreement is only a way to choose challengers. It
+does not prove that the remaining sound is the target vocal rather than bleed.
+
+`scripts/private-separated-vocal-focus-review.py` turns that kind of human
+observation into one bounded follow-up. It accepts one exact authorised excerpt,
+the unchanged Kim result, the matching role map, one to five named provider
+groups and a required plain-language listening focus. It anonymously shuffles
+all candidates, level-matches them together, keeps the mixed source separate and
+asks for independent focus-retention, bleed, artefact and usefulness labels.
+More than one candidate may be useful; there is no preference or winner field.
+
+The current four-way `Be Alone` package compares Kim, Moises and both supplied
+Suno vocal estimates without revealing their positions:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separated-vocal-focus-review.py --create \
+  --track-id be-alone \
+  --authorised-excerpt \
+    work/separation-bakeoff/be-alone-authorised-191-206-v2/authorised-separation-excerpt.json \
+  --candidate-evaluation \
+    work/separation-bakeoff/be-alone-kim-fixed-native-v3-timed-midi-191-206-v1/private-melroformer-vocal-midi-evaluation.json \
+  --role-mapping \
+    work/separation-bakeoff/be-alone-role-mapping-191-206-v1/authorised-role-mapping.json \
+  --provider moises --provider suno-a --provider suno-b \
+  --focus \
+    'The extended, robotic-sounding held vocal note in this excerpt: does the separated vocal continue for its full audible duration rather than being cut short?' \
+  --out-dir \
+    work/separation-bakeoff/be-alone-held-vocal-focus-review-v1
+```
+
+The unreviewed seed SHA-256 is
+`50361a5771ac88ead7e446f83a59a744bc1b87f647778897d4da31b23f63e85b`;
+the five-file audio manifest SHA-256 is
+`85b84b943963879119f72be0efc4e8bf0a161bf3e8f91bab51e7bd12bc5a9f96`.
+All four anonymous candidates re-read at exactly `-24.548949` dBFS sample RMS.
+That is level-control evidence, not perceived-loudness equality.
+
+After the browser export, resolve identities without opening the answer key:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separated-vocal-focus-review.py \
+  --resolve /absolute/separated-vocal-focus.reviewed.json \
+  --package-dir \
+    work/separation-bakeoff/be-alone-held-vocal-focus-review-v1 \
+  --out /absolute/fresh/private-separated-vocal-focus-result.json
+```
+
+The resolver fails closed on changed focus text, source bindings, audio,
+manifest, blind assignment or incomplete ratings. Its result remains a private
+diagnostic with no activation authority. It deliberately does not feed the
+cross-song publication gate: first use it to learn whether an already-supplied
+alternative retains the missing event, then design a new cross-song test only
+if that hypothesis survives human listening.
+
 The optional review contract now asks that question explicitly with
 `--classify-focus-phrase-coverage`. For every playable candidate, the listener
 must separately choose `substantially_complete`, `partially_complete`,
