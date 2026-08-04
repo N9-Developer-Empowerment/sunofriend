@@ -2456,6 +2456,12 @@ separator transport, source-lineage import and promotion are not implemented**
     activation. Use that result to decide whether a boundary repair experiment
     is justified. Keep any repair as a separate derived challenger; never
     replace the exact stitch.
+  - [ ] Close the full-song resource envelope. The implemented coarse report
+    reverified all 18 selected attempts and observed 170.139463 seconds for
+    262.56 seconds of audio plus a 565,805,462-byte retained evidence snapshot.
+    It correctly leaves acceptance open because peak process and accelerator
+    memory, thermals, energy, controlled repeats and concurrent load were not
+    measured. Do not relabel this one uncontrolled observation as a benchmark.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
 - [x] Repeat the clean/estimate comparison through exact production
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation

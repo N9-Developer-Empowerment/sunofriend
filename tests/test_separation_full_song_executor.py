@@ -30,6 +30,11 @@ from sunofriend._separation_full_song_review import (
     SCHEMA as REVIEW_RESULT_SCHEMA,
     _resolve_private_separation_full_song_review,
 )
+from sunofriend._separation_full_song_resource import (
+    SCHEMA as RESOURCE_SCHEMA,
+    _observe_private_separation_full_song_resources,
+    _timing_observation,
+)
 from sunofriend._separation_melroformer_upstream_evidence import (
     CONVERSION_CHECKPOINT_BYTES,
     CONVERSION_CHECKPOINT_SHA256,
@@ -176,12 +181,21 @@ def _fake_runner(calls: list[int]):
         timing = _hash_document(
             {
                 "schema": "sunofriend.private-kim-native-attempt-timing.v1",
+                "status": "private_runtime_observation_not_benchmark",
+                "evidence_scope": "private_local_coarse_stage_timing_only",
                 "bindings": {
                     "request_sha256": request_sha,
                     "terminal_receipt_sha256": receipt["receipt_sha256"],
                     "output_evidence_sha256": evidence["evidence_sha256"],
                 },
-                "permissions": {"benchmark_claim": False},
+                "observed_total_through_output_evidence_seconds": 1.5,
+                "stage_order": ["input", "native_one_shot"],
+                "stage_seconds": {"input": 0.25, "native_one_shot": 1.0},
+                "longest_stage": {"name": "native_one_shot", "seconds": 1.0},
+                "permissions": {
+                    "benchmark_claim": False,
+                    "performance_acceptance": False,
+                },
             },
             "timing_sha256",
         )
@@ -448,3 +462,44 @@ def test_full_song_review_resolver_rejects_changed_audio(tmp_path: Path) -> None
             package_dir=stitch,
             out=tmp_path / "result.json",
         )
+
+
+def test_full_song_resource_observation_is_coarse_and_non_accepting(
+    tmp_path: Path,
+) -> None:
+    stitch = _stitched_fixture(tmp_path)
+    result = _observe_private_separation_full_song_resources(
+        tmp_path / "plan" / PLAN_REPORT_NAME,
+        tmp_path / "execution" / REPORT_NAME,
+        stitch / "private-separation-full-song-stitch.json",
+        out=tmp_path / "resource.json",
+    )
+
+    assert result["schema"] == RESOURCE_SCHEMA
+    assert result["execution_observation"]["benchmark"] is False
+    assert result["execution_observation"]["selected_attempt_count"] == 2
+    assert result["execution_observation"]["summed_observed_seconds"] == 3.0
+    assert result["coverage"]["coarse_monotonic_timing_observed"] is True
+    assert result["coverage"]["peak_process_rss_observed"] is False
+    assert result["coverage"]["peak_accelerator_memory_observed"] is False
+    assert result["readiness"]["resource_envelope_accepted"] is False
+    assert all(value is False for value in result["permissions"].values())
+    assert all(value is False for value in result["effects"].values())
+    assert stat.S_IMODE((tmp_path / "resource.json").stat().st_mode) == 0o600
+
+
+def test_full_song_resource_observation_rejects_changed_timing_semantics(
+    tmp_path: Path,
+) -> None:
+    timing = {
+        "schema": "sunofriend.private-kim-native-attempt-timing.v1",
+        "status": "claimed_benchmark",
+        "evidence_scope": "private_local_coarse_stage_timing_only",
+        "observed_total_through_output_evidence_seconds": 1.5,
+        "stage_order": ["input", "native_one_shot"],
+        "stage_seconds": {"input": 0.25, "native_one_shot": 1.0},
+        "longest_stage": {"name": "native_one_shot", "seconds": 1.0},
+        "permissions": {"benchmark_claim": False},
+    }
+    with pytest.raises(ValueError, match="timing observation differs"):
+        _timing_observation(0, timing)

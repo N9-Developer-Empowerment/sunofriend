@@ -2283,6 +2283,34 @@ Its result deliberately keeps full-song quality acceptance, separator
 selection, publication and every product route false. Review completion is
 evidence, not acceptance.
 
+The independent coarse resource observation can run before the listener
+finishes that page because it makes no musical judgement:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-full-song-resource.py \
+  --plan \
+    work/separation-bakeoff/be-alone-full-song-kim-plan-v1/private-separation-full-song-plan.json \
+  --execution \
+    work/separation-bakeoff/be-alone-full-song-kim-execution-v1/private-separation-full-song-execution.json \
+  --stitch \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v2-full-review/private-separation-full-song-stitch.json \
+  --out \
+    work/separation-bakeoff/be-alone-full-song-kim-resource-v1/private-separation-full-song-resource.json
+```
+
+That verified report has document SHA-256
+`a6a68350336037ad1cc5944808f136f64a55c2cad1a99f18d47f6f4b758d481a`.
+It rechecked all 18 selected attempts, the two safely preserved incomplete
+attempts, the exact stitch and every retained regular file. The selected
+coarse monotonic timings total 170.139463 seconds for 262.56 seconds of source,
+an observed serial real-time factor of 0.648002 in this one uncontrolled run.
+The plan, execution and stitch snapshots contain 565,805,462 regular-file
+bytes in aggregate. This is not a benchmark: operating-system cache, scheduler
+and thermal state were uncontrolled, and peak process RSS, accelerator memory,
+energy and concurrent load were not measured. The full-song resource envelope
+therefore remains unaccepted.
+
 The optional review contract now asks that question explicitly with
 `--classify-focus-phrase-coverage`. For every playable candidate, the listener
 must separately choose `substantially_complete`, `partially_complete`,
