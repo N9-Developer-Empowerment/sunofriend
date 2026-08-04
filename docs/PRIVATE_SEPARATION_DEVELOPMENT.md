@@ -2242,7 +2242,7 @@ hidden repair. The source, vocal, instrumental and diagnostic reconstruction
 are all exactly 11,578,896 frames at 44.1 kHz stereo PCM24; the source integer
 sequence re-verifies the plan hash. The diagnostic sum needed no global
 attenuation. The current stitch report document SHA-256 is
-`2b56a42854013c71778f081b5bd6e4d6a33682cd398014f4d52957e74bdd8de4`.
+`8221fc571b333b1070c9cfa0791ac112f6089d76db8a182c0af499f836951c64`.
 
 ```bash
 PYTHONPATH=src ./.venv/bin/python \
@@ -2252,16 +2252,22 @@ PYTHONPATH=src ./.venv/bin/python \
   --execution \
     work/separation-bakeoff/be-alone-full-song-kim-execution-v1/private-separation-full-song-execution.json \
   --out-dir \
-    work/separation-bakeoff/be-alone-full-song-kim-stitch-v2-full-review
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review
 ```
 
 The remaining human gate is one page at
-`be-alone-full-song-kim-stitch-v2-full-review/BOUNDARY-REVIEW/separation_boundary_review.html`.
+`be-alone-full-song-kim-stitch-v3-playable-review/BOUNDARY-REVIEW/separation_boundary_review.html`.
 It first presents all four complete-song tracks, then 17 four-second units
 centred on the exact joins. Rate the vocal, instrumental and reconstruction
 independently for overall usefulness and for clicks, cut notes, level jumps or
 tone changes. Exact duration and reconstruction do not establish seamlessness,
 musical completeness or product readiness.
+
+The earlier `v2` HTML is retained as evidence of a review-generator defect: an
+unescaped newline made its JavaScript invalid before it could create the audio
+controls. The `v3` page was generated afresh after the fix. Its HTML SHA-256 is
+`ffbb6ac6949dcf38b3a95d8c14b979c1d1481ece8d6f5cbba2fd545af3c26d40`;
+all 72 referenced WAV paths exist, and the embedded script parses successfully.
 
 After the page exports
 `separation-boundary-and-full-song.reviewed.json`, resolve it against the
@@ -2272,7 +2278,7 @@ PYTHONPATH=src ./.venv/bin/python \
   scripts/private-separation-full-song-review.py \
   --resolve /absolute/path/separation-boundary-and-full-song.reviewed.json \
   --package-dir \
-    work/separation-bakeoff/be-alone-full-song-kim-stitch-v2-full-review \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review \
   --out /absolute/fresh/private-separation-full-song-review-result.json
 ```
 

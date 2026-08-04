@@ -411,6 +411,8 @@ def test_full_song_stitch_preserves_clock_and_prepares_review(tmp_path: Path) ->
     review_html = review.read_text(encoding="utf-8")
     assert "complete song outputs" in review_html
     assert "every exact chunk join" in review_html
+    assert "JSON.stringify(review,null,2)+'\\n'" in review_html
+    assert "<audio controls" in review_html
     review_seed = json.loads(
         (tmp_path / "stitch/BOUNDARY-REVIEW/separation_boundary_review.json").read_text()
     )

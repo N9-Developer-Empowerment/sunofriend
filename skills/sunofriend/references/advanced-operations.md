@@ -1917,6 +1917,9 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   produced 11,578,896-frame source, vocal, instrumental and reconstruction
   PCM24 WAVs. The current review page first presents all four complete-song
   tracks and then all 17 exact-boundary windows; both scopes must be rated.
+  Use the fresh `be-alone-full-song-kim-stitch-v3-playable-review` package. The
+  superseded `v2` page has an invalid JavaScript newline and therefore cannot
+  render its audio controls; retain it only as defect evidence.
   Never call exact input partitioning or exact output duration seamless or
   accepted separation.
   Fresh native attempts now retain two path-free resource projections inside
