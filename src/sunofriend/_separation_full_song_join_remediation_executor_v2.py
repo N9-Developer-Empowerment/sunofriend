@@ -9,13 +9,15 @@ outputs.  It has no model runner, runtime, checkpoint or device interface.
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import os
 from pathlib import Path
+import secrets
 import shutil
 import stat
 import tempfile
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 from ._separation_authorised_excerpt import _document_sha256
 from ._separation_full_song_executor import _require_private_directory
@@ -34,7 +36,6 @@ from ._separation_full_song_join_remediation_plan_v2 import (
 )
 from ._separation_full_song_join_remediation_review_result import (
     _load_private_json_snapshot,
-    _write_json_exclusive,
 )
 from ._separation_full_song_review import (
     _load_stitch_report,
@@ -154,13 +155,24 @@ def _execute_private_separation_full_song_join_remediation_v2(
     )
     _require_execution_geometry(plan, inputs)
 
-    parent = destination.parent
-    parent.mkdir(parents=True, exist_ok=True)
-    staging = Path(
-        tempfile.mkdtemp(prefix=f".{destination.name}.building-", dir=parent)
+    parent_descriptor = _bind_output_parent(
+        destination,
+        evidence_roots=(
+            inputs["package"],
+            inputs["execution_root"],
+            *(path.parent for path in evidence_paths),
+        ),
+        evidence_paths=evidence_paths,
     )
-    staging.chmod(0o700)
+    # Staging is deliberately outside the destination parent.  Publication is
+    # performed relative to the already-bound parent descriptor, so replacing
+    # a path component cannot redirect writes into an evidence tree.
+    staging: Path | None = None
+    published: dict[str, int] | None = None
     try:
+        _require_exclusive_directory_rename_available()
+        staging = Path(tempfile.mkdtemp(prefix=f".{destination.name}.building-"))
+        staging.chmod(0o700)
         document = _build_staged_candidate(
             staging,
             plan=plan,
@@ -175,20 +187,65 @@ def _execute_private_separation_full_song_join_remediation_v2(
         _require_plan_rederivation(plan, **evidence_arguments)
         _reverify_input_audio(inputs)
 
-        _publish_verified_candidate(staging, destination, document)
-        _verify_published_candidate(destination, document, inputs=inputs)
+        published = _publish_verified_candidate(
+            staging,
+            destination,
+            document,
+            parent_descriptor=parent_descriptor,
+        )
+        _verify_published_candidate_bound(published, document, inputs=inputs)
 
         # The report is the completion marker.  Recheck the complete chain one
         # final time after audio publication, then publish it exclusively.
         _require_snapshot_unchanged(plan_snapshot, "private v2 join-remediation plan")
         _require_plan_rederivation(plan, **evidence_arguments)
         _reverify_input_audio(inputs)
-        _verify_published_candidate(destination, document, inputs=inputs)
-        _write_json_exclusive(destination / REPORT_NAME, document)
-        _verify_report(destination / REPORT_NAME, document)
-        _fsync_directory(destination)
+        _verify_published_candidate_bound(published, document, inputs=inputs)
+        _require_visible_output_binding(
+            destination,
+            parent_descriptor=parent_descriptor,
+            destination_descriptor=published["destination"],
+            candidates_descriptor=published["candidates"],
+        )
+
+        # The report is the completion marker.  It is published through the
+        # held destination descriptor and is not allowed to survive unless all
+        # audio and the report itself still verify *after* report creation.
+        report_identity: tuple[int, ...] | None = None
+        try:
+            report_identity = _write_json_exclusive(
+                published["destination"],
+                REPORT_NAME,
+                document,
+            )
+            _verify_report_bound(
+                published["destination"],
+                document,
+                expected_identity=report_identity,
+            )
+            _verify_published_candidate_bound(published, document, inputs=inputs)
+            _require_visible_output_binding(
+                destination,
+                parent_descriptor=parent_descriptor,
+                destination_descriptor=published["destination"],
+                candidates_descriptor=published["candidates"],
+            )
+            os.fsync(published["destination"])
+            os.fsync(parent_descriptor)
+        except BaseException:
+            if report_identity is not None:
+                _remove_completion_report(
+                    published["destination"],
+                    expected_identity=report_identity,
+                )
+            raise
     finally:
-        shutil.rmtree(staging, ignore_errors=True)
+        if published is not None:
+            os.close(published["candidates"])
+            os.close(published["destination"])
+        os.close(parent_descriptor)
+        if staging is not None:
+            shutil.rmtree(staging, ignore_errors=True)
 
     return {
         **document,
@@ -661,14 +718,35 @@ def _verify_published_candidate(
     _verify_candidate_tree(destination, document, inputs=inputs)
 
 
+def _verify_published_candidate_bound(
+    published: Mapping[str, int],
+    document: Mapping[str, Any],
+    *,
+    inputs: Mapping[str, Any],
+) -> None:
+    observed: dict[str, Any] = {}
+    candidate_descriptor = published["candidates"]
+    for role in _FULL_SONG_ROLES:
+        claim = document["artifacts"][role]
+        expected_path = f"{CANDIDATES_DIRECTORY}/{role}.wav"
+        if claim.get("path") != expected_path:
+            raise ValueError("private v2 artifact path differs")
+        observed[role] = _read_pcm24_at(
+            candidate_descriptor,
+            f"{role}.wav",
+            claim,
+            expected_frames=int(document["clock"]["frames"]),
+            label=f"private v2 {role} audio",
+        )
+    _verify_candidate_observed(document, inputs=inputs, observed=observed)
+
+
 def _verify_candidate_tree(
     root: Path,
     document: Mapping[str, Any],
     *,
     inputs: Mapping[str, Any],
 ) -> None:
-    import numpy as np
-
     if (
         set(document) != _REPORT_KEYS
         or document.get("schema") != SCHEMA
@@ -691,6 +769,29 @@ def _verify_candidate_tree(
             expected_frames=int(document["clock"]["frames"]),
             label=f"private v2 {role} audio",
         )
+
+    _verify_candidate_observed(document, inputs=inputs, observed=observed)
+
+
+def _verify_candidate_observed(
+    document: Mapping[str, Any],
+    *,
+    inputs: Mapping[str, Any],
+    observed: Mapping[str, Mapping[str, Any]],
+) -> None:
+    import numpy as np
+
+    if (
+        set(document) != _REPORT_KEYS
+        or document.get("schema") != SCHEMA
+        or document.get("status") != STATUS
+        or document.get("policy_id") != POLICY_ID
+        or document.get("document_sha256") != _document_sha256(document)
+        or document.get("permissions") != _FALSE_PERMISSIONS
+        or document.get("effects") != _EFFECTS
+        or set(observed) != set(_FULL_SONG_ROLES)
+    ):
+        raise ValueError("private v2 execution report differs")
 
     windows_by_role = {
         role: [row for row in document["windows"] if row["role"] == role]
@@ -747,24 +848,223 @@ def _publish_verified_candidate(
     staging: Path,
     destination: Path,
     document: Mapping[str, Any],
-) -> None:
+    *,
+    parent_descriptor: int,
+) -> dict[str, int]:
+    build_name = f".{destination.name}.{secrets.token_hex(32)}.building"
+    os.mkdir(build_name, mode=0o700, dir_fd=parent_descriptor)
+    build_created = os.stat(
+        build_name,
+        dir_fd=parent_descriptor,
+        follow_symlinks=False,
+    )
+    os.fsync(parent_descriptor)
+    destination_descriptor = _open_directory_at(
+        parent_descriptor,
+        build_name,
+        "private v2 remediation build root",
+        expected_identity=_inode_identity(build_created),
+    )
+    candidate_descriptor: int | None = None
+    created_audio_names: list[str] = []
+    published = False
     try:
-        destination.mkdir(mode=0o700)
-    except FileExistsError as error:
-        raise FileExistsError(
-            f"private v2 remediation output exists: {destination}"
-        ) from error
-    _fsync_directory(destination.parent)
-    candidate_root = destination / CANDIDATES_DIRECTORY
-    candidate_root.mkdir(mode=0o700)
-    for role in _FULL_SONG_ROLES:
-        relative = document["artifacts"][role]["path"]
-        source = _private_child_regular(staging, relative, "private v2 staged audio")
-        target = destination / relative
-        _copy_regular_exclusive(source, target)
-    _fsync_directory(candidate_root)
-    _fsync_directory(destination)
-    _fsync_directory(destination.parent)
+        os.mkdir(
+            CANDIDATES_DIRECTORY,
+            mode=0o700,
+            dir_fd=destination_descriptor,
+        )
+        candidates_created = os.stat(
+            CANDIDATES_DIRECTORY,
+            dir_fd=destination_descriptor,
+            follow_symlinks=False,
+        )
+        candidate_descriptor = _open_directory_at(
+            destination_descriptor,
+            CANDIDATES_DIRECTORY,
+            "private v2 candidate root",
+            expected_identity=_inode_identity(candidates_created),
+        )
+        for role in _FULL_SONG_ROLES:
+            relative = document["artifacts"][role]["path"]
+            if relative != f"{CANDIDATES_DIRECTORY}/{role}.wav":
+                raise ValueError("private v2 artifact path differs")
+            source = _private_child_regular(
+                staging,
+                relative,
+                "private v2 staged audio",
+            )
+            created_audio_names.append(f"{role}.wav")
+            _copy_regular_exclusive_at(
+                source,
+                f"{role}.wav",
+                target_directory_descriptor=candidate_descriptor,
+            )
+        os.fsync(candidate_descriptor)
+        os.fsync(destination_descriptor)
+        os.fsync(parent_descriptor)
+        try:
+            _rename_directory_exclusive_at(
+                parent_descriptor,
+                build_name,
+                destination.name,
+            )
+        except FileExistsError as error:
+            raise FileExistsError(
+                f"private v2 remediation output exists: {destination}"
+            ) from error
+        published = True
+        visible = os.stat(
+            destination.name,
+            dir_fd=parent_descriptor,
+            follow_symlinks=False,
+        )
+        if _owner_identity(os.fstat(destination_descriptor)) != _owner_identity(
+            visible
+        ):
+            raise RuntimeError("private v2 published directory identity changed")
+        try:
+            os.stat(build_name, dir_fd=parent_descriptor, follow_symlinks=False)
+        except FileNotFoundError:
+            pass
+        else:
+            raise RuntimeError("private v2 hidden build name survived publication")
+        os.fsync(parent_descriptor)
+        return {
+            "destination": destination_descriptor,
+            "candidates": candidate_descriptor,
+        }
+    except BaseException:
+        if not published:
+            _discard_unpublished_candidate(
+                parent_descriptor=parent_descriptor,
+                build_name=build_name,
+                destination_descriptor=destination_descriptor,
+                candidates_descriptor=candidate_descriptor,
+                created_audio_names=tuple(created_audio_names),
+            )
+        if candidate_descriptor is not None:
+            os.close(candidate_descriptor)
+        os.close(destination_descriptor)
+        raise
+
+
+def _rename_directory_exclusive_at(
+    parent_descriptor: int,
+    source_name: str,
+    destination_name: str,
+) -> None:
+    """Atomically publish one directory without replacing any raced name."""
+
+    import ctypes
+    import errno
+
+    if (
+        Path(source_name).name != source_name
+        or Path(destination_name).name != destination_name
+        or source_name in ("", ".", "..")
+        or destination_name in ("", ".", "..")
+    ):
+        raise ValueError("private v2 publication name differs")
+    function, flag = _exclusive_directory_rename_implementation()
+    source = os.fsencode(source_name)
+    destination = os.fsencode(destination_name)
+    if (
+        function(
+            parent_descriptor,
+            source,
+            parent_descriptor,
+            destination,
+            flag,
+        )
+        == 0
+    ):
+        return
+    error_number = ctypes.get_errno()
+    if error_number in (errno.EEXIST, errno.ENOTEMPTY):
+        raise FileExistsError(error_number, os.strerror(error_number), destination_name)
+    if error_number in {
+        errno.ENOSYS,
+        errno.EINVAL,
+        errno.ENOTSUP,
+        getattr(errno, "EOPNOTSUPP", errno.ENOTSUP),
+        errno.EXDEV,
+    }:
+        raise RuntimeError(
+            "private v2 atomic exclusive directory publication is unavailable"
+        )
+    raise OSError(error_number, os.strerror(error_number), destination_name)
+
+
+def _require_exclusive_directory_rename_available() -> None:
+    _exclusive_directory_rename_implementation()
+
+
+def _exclusive_directory_rename_implementation() -> tuple[Any, int]:
+    import ctypes
+    import sys
+
+    library = ctypes.CDLL(None, use_errno=True)
+    if sys.platform == "darwin":
+        function = getattr(library, "renameatx_np", None)
+        flag = 0x00000004  # RENAME_EXCL from sys/stdio.h.
+    elif sys.platform.startswith("linux"):
+        function = getattr(library, "renameat2", None)
+        flag = 0x00000001  # RENAME_NOREPLACE from linux/fs.h.
+    else:
+        function = None
+        flag = 0
+    if function is None:
+        raise RuntimeError(
+            "private v2 output requires an atomic exclusive directory rename"
+        )
+    function.argtypes = (
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_uint,
+    )
+    function.restype = ctypes.c_int
+    return function, flag
+
+
+def _discard_unpublished_candidate(
+    *,
+    parent_descriptor: int,
+    build_name: str,
+    destination_descriptor: int,
+    candidates_descriptor: int | None,
+    created_audio_names: tuple[str, ...],
+) -> None:
+    """Best-effort cleanup of this call's still-hidden private build tree."""
+
+    if candidates_descriptor is not None:
+        for name in created_audio_names:
+            try:
+                os.unlink(name, dir_fd=candidates_descriptor)
+            except FileNotFoundError:
+                pass
+        try:
+            os.fsync(candidates_descriptor)
+        except OSError:
+            pass
+        try:
+            os.rmdir(CANDIDATES_DIRECTORY, dir_fd=destination_descriptor)
+        except OSError:
+            pass
+    try:
+        os.fsync(destination_descriptor)
+    except OSError:
+        pass
+    try:
+        os.rmdir(build_name, dir_fd=parent_descriptor)
+    except OSError:
+        pass
+    try:
+        os.fsync(parent_descriptor)
+    except OSError:
+        pass
 
 
 def _write_pcm24_exclusive(path: Path, samples: Any) -> None:
@@ -810,7 +1110,12 @@ def _write_pcm24_exclusive(path: Path, samples: Any) -> None:
         os.close(descriptor)
 
 
-def _copy_regular_exclusive(source: Path, target: Path) -> None:
+def _copy_regular_exclusive_at(
+    source: Path,
+    target_name: str,
+    *,
+    target_directory_descriptor: int,
+) -> None:
     no_follow = getattr(os, "O_NOFOLLOW", None)
     if no_follow is None:
         raise RuntimeError(
@@ -824,13 +1129,14 @@ def _copy_regular_exclusive(source: Path, target: Path) -> None:
         os.set_inheritable(source_fd, False)
         source_state = os.fstat(source_fd)
         target_fd = os.open(
-            target,
+            target_name,
             os.O_WRONLY
             | os.O_CREAT
             | os.O_EXCL
             | no_follow
             | getattr(os, "O_CLOEXEC", 0),
             0o600,
+            dir_fd=target_directory_descriptor,
         )
         try:
             os.set_inheritable(target_fd, False)
@@ -846,6 +1152,18 @@ def _copy_regular_exclusive(source: Path, target: Path) -> None:
                         raise RuntimeError("private v2 audio copy made no progress")
                     offset += written
             os.fsync(target_fd)
+            target_state = os.fstat(target_fd)
+            visible = os.stat(
+                target_name,
+                dir_fd=target_directory_descriptor,
+                follow_symlinks=False,
+            )
+            if (
+                _owner_identity(target_state) != _owner_identity(visible)
+                or not stat.S_ISREG(target_state.st_mode)
+                or target_state.st_nlink != 1
+            ):
+                raise RuntimeError("private v2 published audio identity changed")
         finally:
             os.close(target_fd)
         if _snapshot_identity(source_state) != _snapshot_identity(os.fstat(source_fd)):
@@ -861,9 +1179,6 @@ def _read_pcm24_snapshot(
     expected_frames: int,
     label: str,
 ) -> dict[str, Any]:
-    import numpy as np
-    import soundfile
-
     no_follow = getattr(os, "O_NOFOLLOW", None)
     if no_follow is None:
         raise ValueError(f"{label} cannot be opened without symbolic-link protection")
@@ -875,52 +1190,114 @@ def _read_pcm24_snapshot(
     except OSError as error:
         raise ValueError(f"{label} is unavailable") from error
     try:
-        os.set_inheritable(descriptor, False)
-        before = os.fstat(descriptor)
-        if (
-            not stat.S_ISREG(before.st_mode)
-            or before.st_nlink != 1
-            or before.st_uid != os.geteuid()
-            or stat.S_IMODE(before.st_mode) & 0o077
-            or before.st_size <= 0
-        ):
-            raise ValueError(f"{label} is not an owner-only single-link file")
-        first_hash = _hash_descriptor(descriptor)
-        os.lseek(descriptor, 0, os.SEEK_SET)
-        with soundfile.SoundFile(descriptor, mode="r", closefd=False) as handle:
-            if (
-                int(handle.samplerate) != TARGET_SAMPLE_RATE
-                or int(handle.channels) != 2
-                or int(handle.frames) != expected_frames
-                or handle.subtype != "PCM_24"
-            ):
-                raise ValueError(f"{label} geometry differs")
-            samples = handle.read(dtype="int32", always_2d=True)
-        if samples.shape != (expected_frames, 2) or samples.dtype != np.int32:
-            raise ValueError(f"{label} decoded geometry differs")
-        second_hash = _hash_descriptor(descriptor)
-        after = os.fstat(descriptor)
-        if (
-            _snapshot_identity(before) != _snapshot_identity(after)
-            or first_hash != second_hash
-        ):
-            raise ValueError(f"{label} changed while it was read")
-        if claim is not None and (
-            first_hash != claim.get("sha256") or before.st_size != claim.get("bytes")
-        ):
-            raise ValueError(f"{label} binding differs")
-        return {
-            "path": path,
-            "sha256": first_hash,
-            "bytes": before.st_size,
-            "frames": expected_frames,
-            "samples": samples,
-            "pcm24_int32_sequence_sha256": hashlib.sha256(
-                samples.astype("<i4", copy=False).tobytes(order="C")
-            ).hexdigest(),
-        }
+        return _read_pcm24_descriptor_snapshot(
+            descriptor,
+            claim,
+            expected_frames=expected_frames,
+            label=label,
+            visible_state=lambda: path.lstat(),
+            reported_path=path,
+        )
     finally:
         os.close(descriptor)
+
+
+def _read_pcm24_at(
+    directory_descriptor: int,
+    name: str,
+    claim: Mapping[str, Any] | None,
+    *,
+    expected_frames: int,
+    label: str,
+) -> dict[str, Any]:
+    no_follow = getattr(os, "O_NOFOLLOW", None)
+    if no_follow is None:
+        raise ValueError(f"{label} cannot be opened without symbolic-link protection")
+    try:
+        descriptor = os.open(
+            name,
+            os.O_RDONLY | no_follow | getattr(os, "O_CLOEXEC", 0),
+            dir_fd=directory_descriptor,
+        )
+    except OSError as error:
+        raise ValueError(f"{label} is unavailable") from error
+    try:
+        return _read_pcm24_descriptor_snapshot(
+            descriptor,
+            claim,
+            expected_frames=expected_frames,
+            label=label,
+            visible_state=lambda: os.stat(
+                name,
+                dir_fd=directory_descriptor,
+                follow_symlinks=False,
+            ),
+            reported_path=Path(name),
+        )
+    finally:
+        os.close(descriptor)
+
+
+def _read_pcm24_descriptor_snapshot(
+    descriptor: int,
+    claim: Mapping[str, Any] | None,
+    *,
+    expected_frames: int,
+    label: str,
+    visible_state: Callable[[], os.stat_result],
+    reported_path: Path,
+) -> dict[str, Any]:
+    import numpy as np
+    import soundfile
+
+    os.set_inheritable(descriptor, False)
+    before = os.fstat(descriptor)
+    visible_before = visible_state()
+    if (
+        not stat.S_ISREG(before.st_mode)
+        or before.st_nlink != 1
+        or before.st_uid != os.geteuid()
+        or stat.S_IMODE(before.st_mode) & 0o077
+        or before.st_size <= 0
+        or _owner_identity(before) != _owner_identity(visible_before)
+    ):
+        raise ValueError(f"{label} is not an owner-only single-link file")
+    first_hash = _hash_descriptor(descriptor)
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    with soundfile.SoundFile(descriptor, mode="r", closefd=False) as handle:
+        if (
+            int(handle.samplerate) != TARGET_SAMPLE_RATE
+            or int(handle.channels) != 2
+            or int(handle.frames) != expected_frames
+            or handle.subtype != "PCM_24"
+        ):
+            raise ValueError(f"{label} geometry differs")
+        samples = handle.read(dtype="int32", always_2d=True)
+    if samples.shape != (expected_frames, 2) or samples.dtype != np.int32:
+        raise ValueError(f"{label} decoded geometry differs")
+    second_hash = _hash_descriptor(descriptor)
+    after = os.fstat(descriptor)
+    visible_after = visible_state()
+    if (
+        _snapshot_identity(before) != _snapshot_identity(after)
+        or first_hash != second_hash
+        or _owner_identity(after) != _owner_identity(visible_after)
+    ):
+        raise ValueError(f"{label} changed while it was read")
+    if claim is not None and (
+        first_hash != claim.get("sha256") or before.st_size != claim.get("bytes")
+    ):
+        raise ValueError(f"{label} binding differs")
+    return {
+        "path": reported_path,
+        "sha256": first_hash,
+        "bytes": before.st_size,
+        "frames": expected_frames,
+        "samples": samples,
+        "pcm24_int32_sequence_sha256": hashlib.sha256(
+            samples.astype("<i4", copy=False).tobytes(order="C")
+        ).hexdigest(),
+    }
 
 
 def _reverify_input_audio(inputs: Mapping[str, Any]) -> None:
@@ -972,6 +1349,179 @@ def _require_output_disjoint_from_inputs(
         resolved_path = path.resolve(strict=True)
         if resolved_destination == resolved_path:
             raise ValueError("private v2 output must differ from input evidence paths")
+
+
+def _bind_output_parent(
+    destination: Path,
+    *,
+    evidence_roots: tuple[Path, ...],
+    evidence_paths: tuple[Path, ...],
+) -> int:
+    """Bind the actual output parent and validate that exact directory."""
+
+    parent = destination.parent
+    try:
+        descriptor = _open_absolute_directory_nofollow(parent)
+    except OSError as error:
+        raise ValueError(
+            "private v2 output parent must already exist without symbolic links"
+        ) from error
+    try:
+        os.set_inheritable(descriptor, False)
+        before = os.fstat(descriptor)
+        visible = parent.lstat()
+        resolved_parent = parent.resolve(strict=True)
+        after = os.fstat(descriptor)
+        visible_after = parent.lstat()
+        if (
+            not stat.S_ISDIR(before.st_mode)
+            or _owner_identity(before) != _owner_identity(visible)
+            or _snapshot_identity(before) != _snapshot_identity(after)
+            or _owner_identity(after) != _owner_identity(visible_after)
+            or before.st_uid != os.geteuid()
+            or stat.S_IMODE(before.st_mode) & 0o022
+        ):
+            raise RuntimeError("private v2 output parent is not safely bound")
+        _require_output_disjoint_from_inputs(
+            resolved_parent / destination.name,
+            evidence_roots=evidence_roots,
+            evidence_paths=evidence_paths,
+        )
+        try:
+            os.stat(
+                destination.name,
+                dir_fd=descriptor,
+                follow_symlinks=False,
+            )
+        except FileNotFoundError:
+            pass
+        else:
+            raise FileExistsError(
+                f"private v2 remediation output exists: {destination}"
+            )
+        return descriptor
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _open_absolute_directory_nofollow(path: Path) -> int:
+    """Open every absolute path component with no-follow semantics."""
+
+    no_follow = getattr(os, "O_NOFOLLOW", None)
+    if no_follow is None:
+        raise RuntimeError(
+            "private v2 output parent cannot be bound without no-follow support"
+        )
+    if not path.is_absolute() or any(part in (".", "..") for part in path.parts):
+        raise ValueError("private v2 output parent path differs")
+    flags = (
+        os.O_RDONLY
+        | getattr(os, "O_DIRECTORY", 0)
+        | no_follow
+        | getattr(os, "O_CLOEXEC", 0)
+    )
+    descriptor = os.open("/", flags)
+    try:
+        os.set_inheritable(descriptor, False)
+        for component in path.parts[1:]:
+            next_descriptor = os.open(component, flags, dir_fd=descriptor)
+            os.set_inheritable(next_descriptor, False)
+            os.close(descriptor)
+            descriptor = next_descriptor
+        return descriptor
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _require_visible_output_binding(
+    destination: Path,
+    *,
+    parent_descriptor: int,
+    destination_descriptor: int,
+    candidates_descriptor: int,
+) -> None:
+    """Prove the requested pathname still names the held output directories."""
+
+    try:
+        parent_state = os.fstat(parent_descriptor)
+        destination_state = os.fstat(destination_descriptor)
+        candidates_state = os.fstat(candidates_descriptor)
+        visible_parent = destination.parent.lstat()
+        visible_by_parent = os.stat(
+            destination.name,
+            dir_fd=parent_descriptor,
+            follow_symlinks=False,
+        )
+        visible_destination = destination.lstat()
+        visible_candidates_by_destination = os.stat(
+            CANDIDATES_DIRECTORY,
+            dir_fd=destination_descriptor,
+            follow_symlinks=False,
+        )
+        visible_candidates = (destination / CANDIDATES_DIRECTORY).lstat()
+    except OSError as error:
+        raise RuntimeError("private v2 visible output binding changed") from error
+    if (
+        not stat.S_ISDIR(parent_state.st_mode)
+        or not stat.S_ISDIR(destination_state.st_mode)
+        or _owner_identity(parent_state) != _owner_identity(visible_parent)
+        or _owner_identity(destination_state) != _owner_identity(visible_by_parent)
+        or _owner_identity(destination_state) != _owner_identity(visible_destination)
+        or not stat.S_ISDIR(candidates_state.st_mode)
+        or _owner_identity(candidates_state)
+        != _owner_identity(visible_candidates_by_destination)
+        or _owner_identity(candidates_state) != _owner_identity(visible_candidates)
+        or destination_state.st_uid != os.geteuid()
+        or stat.S_IMODE(destination_state.st_mode) & 0o077
+        or candidates_state.st_uid != os.geteuid()
+        or stat.S_IMODE(candidates_state.st_mode) & 0o077
+    ):
+        raise RuntimeError("private v2 visible output binding changed")
+
+
+def _open_directory_at(
+    parent_descriptor: int,
+    name: str,
+    label: str,
+    *,
+    expected_identity: tuple[int, int] | None = None,
+) -> int:
+    no_follow = getattr(os, "O_NOFOLLOW", None)
+    if no_follow is None:
+        raise RuntimeError(f"{label} cannot be opened without no-follow support")
+    descriptor = os.open(
+        name,
+        os.O_RDONLY
+        | getattr(os, "O_DIRECTORY", 0)
+        | no_follow
+        | getattr(os, "O_CLOEXEC", 0),
+        dir_fd=parent_descriptor,
+    )
+    try:
+        os.set_inheritable(descriptor, False)
+        state = os.fstat(descriptor)
+        visible = os.stat(
+            name,
+            dir_fd=parent_descriptor,
+            follow_symlinks=False,
+        )
+        if (
+            not stat.S_ISDIR(state.st_mode)
+            or _owner_identity(state) != _owner_identity(visible)
+            or state.st_uid != os.geteuid()
+            or stat.S_IMODE(state.st_mode) & 0o077
+            or (
+                expected_identity is not None
+                and _inode_identity(state) != expected_identity
+            )
+        ):
+            raise ValueError(f"{label} is not an owner-only directory")
+        return descriptor
+    except BaseException:
+        os.close(descriptor)
+        raise
 
 
 def _preserved_patch_checks(
@@ -1085,10 +1635,251 @@ def _audio_claim(
     }
 
 
-def _verify_report(path: Path, expected: Mapping[str, Any]) -> None:
-    snapshot = _load_private_json_snapshot(path, "private v2 execution report")
-    if snapshot["document"] != expected:
-        raise ValueError("private v2 execution report changed during publication")
+def _write_json_exclusive(
+    directory_descriptor: int,
+    name: str,
+    document: Mapping[str, Any],
+) -> tuple[int, ...]:
+    """Publish canonical JSON without re-resolving the destination pathname."""
+
+    payload = _json_payload(document)
+    no_follow = getattr(os, "O_NOFOLLOW", None)
+    if no_follow is None:
+        raise RuntimeError(
+            "private v2 report cannot be written without no-follow support"
+        )
+    temp_name = f".{name}.{secrets.token_hex(16)}.tmp"
+    descriptor = os.open(
+        temp_name,
+        os.O_WRONLY | os.O_CREAT | os.O_EXCL | no_follow | getattr(os, "O_CLOEXEC", 0),
+        0o600,
+        dir_fd=directory_descriptor,
+    )
+    created: os.stat_result | None = None
+    linked = False
+    descriptor_open = True
+    try:
+        created = os.fstat(descriptor)
+        os.set_inheritable(descriptor, False)
+        os.fchmod(descriptor, 0o600)
+        offset = 0
+        while offset < len(payload):
+            written = os.write(descriptor, payload[offset:])
+            if written <= 0:
+                raise RuntimeError("private v2 report write made no progress")
+            offset += written
+        os.fsync(descriptor)
+        temp_visible = os.stat(
+            temp_name,
+            dir_fd=directory_descriptor,
+            follow_symlinks=False,
+        )
+        if _inode_identity(created) != _inode_identity(temp_visible):
+            raise RuntimeError("private v2 report temp identity changed")
+        os.link(
+            temp_name,
+            name,
+            src_dir_fd=directory_descriptor,
+            dst_dir_fd=directory_descriptor,
+            follow_symlinks=False,
+        )
+        linked = True
+        final_visible = os.stat(
+            name,
+            dir_fd=directory_descriptor,
+            follow_symlinks=False,
+        )
+        if _inode_identity(created) != _inode_identity(final_visible):
+            raise RuntimeError("private v2 published report identity changed")
+        os.fsync(directory_descriptor)
+        os.close(descriptor)
+        descriptor_open = False
+        if not _unlink_name_if_inode_at(
+            directory_descriptor,
+            temp_name,
+            expected_inode=_inode_identity(created),
+        ):
+            raise RuntimeError("private v2 report temp cleanup identity changed")
+        if not linked:
+            raise RuntimeError("private v2 report was not published")
+        final = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
+        if (
+            not stat.S_ISREG(final.st_mode)
+            or final.st_nlink != 1
+            or final.st_uid != os.geteuid()
+            or stat.S_IMODE(final.st_mode) & 0o077
+            or _inode_identity(final) != _inode_identity(created)
+        ):
+            raise RuntimeError("private v2 published report is not owner-only")
+        return _owner_identity(final)
+    except BaseException:
+        if descriptor_open:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+        if created is not None:
+            expected_inode = _inode_identity(created)
+            if linked:
+                _unlink_name_if_inode_at(
+                    directory_descriptor,
+                    name,
+                    expected_inode=expected_inode,
+                )
+            _unlink_name_if_inode_at(
+                directory_descriptor,
+                temp_name,
+                expected_inode=expected_inode,
+            )
+        else:
+            _unlink_unbound_private_temp_best_effort(
+                directory_descriptor,
+                temp_name,
+            )
+        raise
+
+
+def _verify_report_bound(
+    directory_descriptor: int,
+    expected: Mapping[str, Any],
+    *,
+    expected_identity: tuple[int, ...],
+) -> None:
+    no_follow = getattr(os, "O_NOFOLLOW", None)
+    if no_follow is None:
+        raise ValueError("private v2 report cannot be opened without no-follow support")
+    descriptor = os.open(
+        REPORT_NAME,
+        os.O_RDONLY | no_follow | getattr(os, "O_CLOEXEC", 0),
+        dir_fd=directory_descriptor,
+    )
+    try:
+        os.set_inheritable(descriptor, False)
+        before = os.fstat(descriptor)
+        visible_before = os.stat(
+            REPORT_NAME,
+            dir_fd=directory_descriptor,
+            follow_symlinks=False,
+        )
+        payload = _read_descriptor_bytes(descriptor)
+        after = os.fstat(descriptor)
+        visible_after = os.stat(
+            REPORT_NAME,
+            dir_fd=directory_descriptor,
+            follow_symlinks=False,
+        )
+        if (
+            not stat.S_ISREG(before.st_mode)
+            or before.st_nlink != 1
+            or before.st_uid != os.geteuid()
+            or stat.S_IMODE(before.st_mode) & 0o077
+            or _snapshot_identity(before) != _snapshot_identity(after)
+            or _owner_identity(before) != _owner_identity(visible_before)
+            or _owner_identity(after) != _owner_identity(visible_after)
+            or _owner_identity(after) != expected_identity
+            or payload != _json_payload(expected)
+        ):
+            raise ValueError("private v2 execution report changed during publication")
+    finally:
+        os.close(descriptor)
+
+
+def _remove_completion_report(
+    directory_descriptor: int,
+    *,
+    expected_identity: tuple[int, ...],
+) -> None:
+    try:
+        visible = os.stat(
+            REPORT_NAME,
+            dir_fd=directory_descriptor,
+            follow_symlinks=False,
+        )
+    except FileNotFoundError:
+        return
+    if not stat.S_ISREG(visible.st_mode) or visible.st_uid != os.geteuid():
+        raise RuntimeError("private v2 completion report cannot be removed safely")
+    if _inode_identity(visible) != (
+        expected_identity[0],
+        expected_identity[1],
+    ):
+        raise RuntimeError("private v2 completion report identity changed")
+    os.unlink(REPORT_NAME, dir_fd=directory_descriptor)
+    os.fsync(directory_descriptor)
+
+
+def _unlink_name_if_inode_at(
+    directory_descriptor: int,
+    name: str,
+    *,
+    expected_inode: tuple[int, int],
+) -> bool:
+    try:
+        visible = os.stat(
+            name,
+            dir_fd=directory_descriptor,
+            follow_symlinks=False,
+        )
+    except FileNotFoundError:
+        return False
+    if _inode_identity(visible) != expected_inode:
+        return False
+    os.unlink(name, dir_fd=directory_descriptor)
+    os.fsync(directory_descriptor)
+    return True
+
+
+def _unlink_unbound_private_temp_best_effort(
+    directory_descriptor: int,
+    name: str,
+) -> None:
+    """Clean the random O_EXCL temp if initial descriptor stat failed."""
+
+    try:
+        visible = os.stat(
+            name,
+            dir_fd=directory_descriptor,
+            follow_symlinks=False,
+        )
+    except OSError:
+        return
+    if (
+        not stat.S_ISREG(visible.st_mode)
+        or visible.st_uid != os.geteuid()
+        or visible.st_nlink != 1
+        or stat.S_IMODE(visible.st_mode) & 0o077
+    ):
+        return
+    try:
+        os.unlink(name, dir_fd=directory_descriptor)
+        os.fsync(directory_descriptor)
+    except OSError:
+        pass
+
+
+def _json_payload(document: Mapping[str, Any]) -> bytes:
+    return (
+        json.dumps(
+            document,
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=False,
+            allow_nan=False,
+        )
+        + "\n"
+    ).encode("utf-8")
+
+
+def _read_descriptor_bytes(descriptor: int) -> bytes:
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    chunks: list[bytes] = []
+    while True:
+        block = os.read(descriptor, 1024 * 1024)
+        if not block:
+            break
+        chunks.append(block)
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    return b"".join(chunks)
 
 
 def _require_snapshot_unchanged(snapshot: Mapping[str, Any], label: str) -> None:
@@ -1135,6 +1926,10 @@ def _owner_identity(value: os.stat_result) -> tuple[int, ...]:
         value.st_uid,
         value.st_gid,
     )
+
+
+def _inode_identity(value: os.stat_result) -> tuple[int, int]:
+    return (value.st_dev, value.st_ino)
 
 
 def _fsync_directory(path: Path) -> None:

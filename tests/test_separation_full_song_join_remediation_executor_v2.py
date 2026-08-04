@@ -56,6 +56,7 @@ def test_v2_executor_reuses_workers_and_preserves_v1_pcm24_base(
 
     report_path = output / REPORT_NAME
     assert report_path.is_file()
+    assert not list(output.glob(f".{REPORT_NAME}.*.tmp"))
     assert stat.S_IMODE(output.stat().st_mode) == 0o700
     assert stat.S_IMODE(report_path.stat().st_mode) == 0o600
     assert report_path.stat().st_nlink == 1
@@ -283,9 +284,10 @@ def test_v2_executor_rechecks_inputs_after_audio_publication(
     )
     original = executor_v2._publish_verified_candidate
 
-    def mutate_after_publish(*args: object, **kwargs: object) -> None:
-        original(*args, **kwargs)  # type: ignore[arg-type]
+    def mutate_after_publish(*args: object, **kwargs: object) -> dict[str, int]:
+        published = original(*args, **kwargs)  # type: ignore[arg-type]
         worker.write_bytes(worker.read_bytes() + b"changed-after-publish")
+        return published
 
     monkeypatch.setattr(
         executor_v2, "_publish_verified_candidate", mutate_after_publish
@@ -319,6 +321,534 @@ def test_v2_executor_rechecks_published_audio_after_final_input_check(
         _execute(evidence, plan_path, output)
     assert calls == 2
     assert not (output / REPORT_NAME).exists()
+
+
+def test_v2_executor_revokes_report_when_audio_changes_during_report_write(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    evidence, plan_path, _plan = _prepared(tmp_path)
+    output = tmp_path / "v2-execution"
+    original = executor_v2._write_json_exclusive
+
+    def write_then_mutate_audio(*args: object, **kwargs: object) -> tuple[int, ...]:
+        identity = original(*args, **kwargs)  # type: ignore[arg-type]
+        vocals = output / CANDIDATES_DIRECTORY / "vocals.wav"
+        vocals.write_bytes(vocals.read_bytes() + b"changed-during-report-write")
+        return identity
+
+    monkeypatch.setattr(
+        executor_v2,
+        "_write_json_exclusive",
+        write_then_mutate_audio,
+    )
+    with pytest.raises(ValueError):
+        _execute(evidence, plan_path, output)
+
+    assert (output / CANDIDATES_DIRECTORY / "vocals.wav").is_file()
+    assert not (output / REPORT_NAME).exists()
+    assert not list(output.glob(f".{REPORT_NAME}.*.tmp"))
+
+
+def test_report_writer_rolls_back_its_inode_after_post_link_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "private-report-output"
+    output.mkdir(mode=0o700)
+    descriptor = os.open(
+        output,
+        os.O_RDONLY | getattr(os, "O_DIRECTORY", 0),
+    )
+    original = executor_v2._inode_identity
+    calls = 0
+
+    def mismatch_final_link(value: os.stat_result) -> tuple[int, int]:
+        nonlocal calls
+        calls += 1
+        identity = original(value)
+        if calls == 4:
+            return (identity[0], identity[1] + 1)
+        return identity
+
+    monkeypatch.setattr(executor_v2, "_inode_identity", mismatch_final_link)
+    try:
+        with pytest.raises(RuntimeError, match="published report identity changed"):
+            executor_v2._write_json_exclusive(
+                descriptor,
+                REPORT_NAME,
+                {"status": "test"},
+            )
+    finally:
+        os.close(descriptor)
+
+    assert not (output / REPORT_NAME).exists()
+    assert not list(output.glob(f".{REPORT_NAME}.*.tmp"))
+
+
+def test_report_writer_rolls_back_after_temp_unlink_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "private-report-output"
+    output.mkdir(mode=0o700)
+    descriptor = os.open(
+        output,
+        os.O_RDONLY | getattr(os, "O_DIRECTORY", 0),
+    )
+    original = os.unlink
+    injected = False
+
+    def fail_first_temp_unlink(path: object, *args: object, **kwargs: object) -> None:
+        nonlocal injected
+        if not injected and str(path).endswith(".tmp"):
+            injected = True
+            raise OSError("injected temp cleanup failure")
+        original(path, *args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(os, "unlink", fail_first_temp_unlink)
+    try:
+        with pytest.raises(OSError, match="injected temp cleanup failure"):
+            executor_v2._write_json_exclusive(
+                descriptor,
+                REPORT_NAME,
+                {"status": "test"},
+            )
+    finally:
+        os.close(descriptor)
+
+    assert injected is True
+    assert not (output / REPORT_NAME).exists()
+    assert not list(output.glob(f".{REPORT_NAME}.*.tmp"))
+
+
+def test_report_writer_rolls_back_after_final_nlink_validation_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "private-report-output"
+    output.mkdir(mode=0o700)
+    descriptor = os.open(
+        output,
+        os.O_RDONLY | getattr(os, "O_DIRECTORY", 0),
+    )
+    original = executor_v2._unlink_name_if_inode_at
+    injected = False
+
+    def add_extra_link_after_temp_cleanup(
+        directory_descriptor: int,
+        name: str,
+        *,
+        expected_inode: tuple[int, int],
+    ) -> bool:
+        nonlocal injected
+        removed = original(
+            directory_descriptor,
+            name,
+            expected_inode=expected_inode,
+        )
+        if removed and name.endswith(".tmp") and not injected:
+            injected = True
+            os.link(
+                REPORT_NAME,
+                "extra-report-link",
+                src_dir_fd=directory_descriptor,
+                dst_dir_fd=directory_descriptor,
+                follow_symlinks=False,
+            )
+        return removed
+
+    monkeypatch.setattr(
+        executor_v2,
+        "_unlink_name_if_inode_at",
+        add_extra_link_after_temp_cleanup,
+    )
+    try:
+        with pytest.raises(RuntimeError, match="published report is not owner-only"):
+            executor_v2._write_json_exclusive(
+                descriptor,
+                REPORT_NAME,
+                {"status": "test"},
+            )
+    finally:
+        os.close(descriptor)
+
+    assert injected is True
+    assert not (output / REPORT_NAME).exists()
+    assert not list(output.glob(f".{REPORT_NAME}.*.tmp"))
+    assert (output / "extra-report-link").is_file()
+
+
+def test_report_writer_closes_and_removes_temp_when_initial_fstat_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "private-report-output"
+    output.mkdir(mode=0o700)
+    descriptor = os.open(
+        output,
+        os.O_RDONLY | getattr(os, "O_DIRECTORY", 0),
+    )
+    original = os.fstat
+    injected = False
+
+    def fail_first_fstat(file_descriptor: int) -> os.stat_result:
+        nonlocal injected
+        if not injected:
+            injected = True
+            raise OSError("injected initial fstat failure")
+        return original(file_descriptor)
+
+    monkeypatch.setattr(os, "fstat", fail_first_fstat)
+    try:
+        with pytest.raises(OSError, match="injected initial fstat failure"):
+            executor_v2._write_json_exclusive(
+                descriptor,
+                REPORT_NAME,
+                {"status": "test"},
+            )
+    finally:
+        os.close(descriptor)
+
+    assert injected is True
+    assert not (output / REPORT_NAME).exists()
+    assert not list(output.glob(f".{REPORT_NAME}.*.tmp"))
+
+
+def test_report_writer_never_removes_a_raced_report(tmp_path: Path) -> None:
+    output = tmp_path / "private-report-output"
+    output.mkdir(mode=0o700)
+    report = output / REPORT_NAME
+    report.write_bytes(b"raced-report\n")
+    report.chmod(0o600)
+    descriptor = os.open(
+        output,
+        os.O_RDONLY | getattr(os, "O_DIRECTORY", 0),
+    )
+    try:
+        with pytest.raises(FileExistsError):
+            executor_v2._write_json_exclusive(
+                descriptor,
+                REPORT_NAME,
+                {"status": "test"},
+            )
+    finally:
+        os.close(descriptor)
+
+    assert report.read_bytes() == b"raced-report\n"
+    assert not list(output.glob(f".{REPORT_NAME}.*.tmp"))
+
+
+def test_v2_executor_parent_symlink_swap_cannot_redirect_publication(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    evidence, plan_path, _plan = _prepared(tmp_path)
+    safe_parent = tmp_path / "safe-output-parent"
+    safe_parent.mkdir(mode=0o700)
+    moved_parent = tmp_path / "held-safe-output-parent"
+    output = safe_parent / "v2-execution"
+    evidence_before = _tree_inventory(evidence.package)
+    original = executor_v2._publish_verified_candidate
+
+    def swap_parent_then_publish(*args: object, **kwargs: object) -> dict[str, int]:
+        safe_parent.rename(moved_parent)
+        safe_parent.symlink_to(evidence.package, target_is_directory=True)
+        return original(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(
+        executor_v2,
+        "_publish_verified_candidate",
+        swap_parent_then_publish,
+    )
+    with pytest.raises(RuntimeError, match="visible output binding changed"):
+        _execute(evidence, plan_path, output)
+
+    assert _tree_inventory(evidence.package) == evidence_before
+    assert not (evidence.package / output.name).exists()
+    assert (moved_parent / output.name / CANDIDATES_DIRECTORY / "vocals.wav").is_file()
+    assert not (moved_parent / output.name / REPORT_NAME).exists()
+
+
+def test_v2_executor_atomic_publish_never_populates_raced_final_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    evidence, plan_path, _plan = _prepared(tmp_path)
+    output_parent = tmp_path / "exclusive-output-parent"
+    output_parent.mkdir(mode=0o700)
+    output = output_parent / "v2-execution"
+    original = executor_v2._rename_directory_exclusive_at
+
+    def install_victim_then_rename(
+        parent_descriptor: int,
+        source_name: str,
+        destination_name: str,
+    ) -> None:
+        os.mkdir(destination_name, mode=0o700, dir_fd=parent_descriptor)
+        victim_descriptor = os.open(
+            destination_name,
+            os.O_RDONLY | getattr(os, "O_DIRECTORY", 0),
+            dir_fd=parent_descriptor,
+        )
+        try:
+            marker_descriptor = os.open(
+                "victim.txt",
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                0o600,
+                dir_fd=victim_descriptor,
+            )
+            os.write(marker_descriptor, b"do-not-populate\n")
+            os.close(marker_descriptor)
+        finally:
+            os.close(victim_descriptor)
+        original(parent_descriptor, source_name, destination_name)
+
+    monkeypatch.setattr(
+        executor_v2,
+        "_rename_directory_exclusive_at",
+        install_victim_then_rename,
+    )
+    with pytest.raises(FileExistsError, match="output exists"):
+        _execute(evidence, plan_path, output)
+
+    assert (output / "victim.txt").read_text(encoding="utf-8") == "do-not-populate\n"
+    assert not (output / CANDIDATES_DIRECTORY).exists()
+    assert not (output / REPORT_NAME).exists()
+    assert not list(output_parent.glob(f".{output.name}.*.building"))
+
+
+def test_v2_executor_rejects_hidden_build_directory_substitution(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    evidence, plan_path, _plan = _prepared(tmp_path)
+    output_parent = tmp_path / "build-substitution-parent"
+    output_parent.mkdir(mode=0o700)
+    output = output_parent / "v2-execution"
+    original = executor_v2._open_directory_at
+
+    def substitute_before_open(
+        parent_descriptor: int,
+        name: str,
+        label: str,
+        **kwargs: object,
+    ) -> int:
+        if label == "private v2 remediation build root":
+            os.rename(
+                name,
+                f"{name}.held",
+                src_dir_fd=parent_descriptor,
+                dst_dir_fd=parent_descriptor,
+            )
+            os.mkdir(name, mode=0o700, dir_fd=parent_descriptor)
+            victim_descriptor = os.open(
+                name,
+                os.O_RDONLY | getattr(os, "O_DIRECTORY", 0),
+                dir_fd=parent_descriptor,
+            )
+            marker_descriptor = os.open(
+                "victim.txt",
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                0o600,
+                dir_fd=victim_descriptor,
+            )
+            os.write(marker_descriptor, b"not-an-output\n")
+            os.close(marker_descriptor)
+            os.close(victim_descriptor)
+        return original(parent_descriptor, name, label, **kwargs)
+
+    monkeypatch.setattr(executor_v2, "_open_directory_at", substitute_before_open)
+    with pytest.raises(ValueError, match="not an owner-only directory"):
+        _execute(evidence, plan_path, output)
+
+    victims = [
+        path
+        for path in output_parent.glob(f".{output.name}.*.building")
+        if (path / "victim.txt").is_file()
+    ]
+    assert len(victims) == 1
+    assert (victims[0] / "victim.txt").read_text(encoding="utf-8") == (
+        "not-an-output\n"
+    )
+    assert not (victims[0] / CANDIDATES_DIRECTORY).exists()
+    assert not output.exists()
+
+
+def test_v2_executor_rejects_hidden_candidates_directory_substitution(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    evidence, plan_path, _plan = _prepared(tmp_path)
+    output_parent = tmp_path / "candidate-substitution-parent"
+    output_parent.mkdir(mode=0o700)
+    output = output_parent / "v2-execution"
+    original = executor_v2._open_directory_at
+
+    def substitute_before_open(
+        parent_descriptor: int,
+        name: str,
+        label: str,
+        **kwargs: object,
+    ) -> int:
+        if label == "private v2 candidate root":
+            os.rename(
+                name,
+                f"{name}-held",
+                src_dir_fd=parent_descriptor,
+                dst_dir_fd=parent_descriptor,
+            )
+            os.mkdir(name, mode=0o700, dir_fd=parent_descriptor)
+            victim_descriptor = os.open(
+                name,
+                os.O_RDONLY | getattr(os, "O_DIRECTORY", 0),
+                dir_fd=parent_descriptor,
+            )
+            marker_descriptor = os.open(
+                "victim.txt",
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                0o600,
+                dir_fd=victim_descriptor,
+            )
+            os.write(marker_descriptor, b"not-a-candidate-root\n")
+            os.close(marker_descriptor)
+            os.close(victim_descriptor)
+        return original(parent_descriptor, name, label, **kwargs)
+
+    monkeypatch.setattr(executor_v2, "_open_directory_at", substitute_before_open)
+    with pytest.raises(ValueError, match="not an owner-only directory"):
+        _execute(evidence, plan_path, output)
+
+    builds = list(output_parent.glob(f".{output.name}.*.building"))
+    assert len(builds) == 1
+    assert (builds[0] / CANDIDATES_DIRECTORY / "victim.txt").read_text(
+        encoding="utf-8"
+    ) == "not-a-candidate-root\n"
+    assert not list((builds[0] / CANDIDATES_DIRECTORY).glob("*.wav"))
+    assert not output.exists()
+
+
+def test_v2_executor_checks_atomic_rename_support_before_output_side_effects(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    evidence, plan_path, _plan = _prepared(tmp_path)
+    output_parent = tmp_path / "unsupported-publication-parent"
+    output_parent.mkdir(mode=0o700)
+    output = output_parent / "v2-execution"
+
+    def unsupported() -> None:
+        raise RuntimeError("atomic exclusive rename unavailable")
+
+    monkeypatch.setattr(
+        executor_v2,
+        "_require_exclusive_directory_rename_available",
+        unsupported,
+    )
+    with pytest.raises(RuntimeError, match="rename unavailable"):
+        _execute(evidence, plan_path, output)
+
+    assert list(output_parent.iterdir()) == []
+
+
+def test_v2_executor_requires_preexisting_output_parent(tmp_path: Path) -> None:
+    evidence, plan_path, _plan = _prepared(tmp_path)
+    missing_parent = tmp_path / "missing-parent"
+
+    with pytest.raises(ValueError, match="must already exist"):
+        _execute(evidence, plan_path, missing_parent / "v2-execution")
+
+    assert not missing_parent.exists()
+
+
+def test_v2_executor_rejects_symlinked_output_parent_component(
+    tmp_path: Path,
+) -> None:
+    evidence, plan_path, _plan = _prepared(tmp_path)
+    real_parent = tmp_path / "real-output-parent"
+    real_parent.mkdir(mode=0o700)
+    alias = tmp_path / "output-parent-alias"
+    alias.symlink_to(real_parent, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="without symbolic links"):
+        _execute(evidence, plan_path, alias / "v2-execution")
+
+    assert not (real_parent / "v2-execution").exists()
+
+
+def test_v2_executor_rejects_group_or_world_writable_output_parent(
+    tmp_path: Path,
+) -> None:
+    evidence, plan_path, _plan = _prepared(tmp_path)
+    unsafe_parent = tmp_path / "unsafe-output-parent"
+    unsafe_parent.mkdir(mode=0o700)
+    unsafe_parent.chmod(0o722)
+
+    with pytest.raises(RuntimeError, match="not safely bound"):
+        _execute(evidence, plan_path, unsafe_parent / "v2-execution")
+
+    assert not (unsafe_parent / "v2-execution").exists()
+
+
+def test_v2_executor_revokes_report_when_visible_candidates_directory_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    evidence, plan_path, _plan = _prepared(tmp_path)
+    output = tmp_path / "v2-execution"
+    original = executor_v2._write_json_exclusive
+
+    def write_then_replace_candidates(
+        *args: object, **kwargs: object
+    ) -> tuple[int, ...]:
+        identity = original(*args, **kwargs)  # type: ignore[arg-type]
+        candidates = output / CANDIDATES_DIRECTORY
+        candidates.rename(output / "CANDIDATES-held-original")
+        candidates.mkdir(mode=0o700)
+        return identity
+
+    monkeypatch.setattr(
+        executor_v2,
+        "_write_json_exclusive",
+        write_then_replace_candidates,
+    )
+    with pytest.raises(RuntimeError, match="visible output binding changed"):
+        _execute(evidence, plan_path, output)
+
+    assert not (output / REPORT_NAME).exists()
+    assert not list(output.glob(f".{REPORT_NAME}.*.tmp"))
+    assert (output / "CANDIDATES-held-original" / "vocals.wav").is_file()
+    assert list((output / CANDIDATES_DIRECTORY).iterdir()) == []
+
+
+def test_v2_executor_revokes_report_when_final_directory_fsync_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    evidence, plan_path, _plan = _prepared(tmp_path)
+    output = tmp_path / "v2-execution"
+    original_binding = executor_v2._require_visible_output_binding
+    original_fsync = os.fsync
+    binding_calls = 0
+    armed = False
+    injected = False
+
+    def arm_after_post_report_binding(*args: object, **kwargs: object) -> None:
+        nonlocal binding_calls, armed
+        original_binding(*args, **kwargs)  # type: ignore[arg-type]
+        binding_calls += 1
+        if binding_calls == 2:
+            armed = True
+
+    def fail_first_final_fsync(descriptor: int) -> None:
+        nonlocal armed, injected
+        if armed and not injected:
+            armed = False
+            injected = True
+            raise OSError("injected final directory fsync failure")
+        original_fsync(descriptor)
+
+    monkeypatch.setattr(
+        executor_v2,
+        "_require_visible_output_binding",
+        arm_after_post_report_binding,
+    )
+    monkeypatch.setattr(os, "fsync", fail_first_final_fsync)
+    with pytest.raises(OSError, match="injected final directory fsync failure"):
+        _execute(evidence, plan_path, output)
+
+    assert binding_calls == 2
+    assert injected is True
+    assert not (output / REPORT_NAME).exists()
+    assert not list(output.glob(f".{REPORT_NAME}.*.tmp"))
 
 
 @pytest.mark.parametrize("collision", ("symlink", "hardlink"))
