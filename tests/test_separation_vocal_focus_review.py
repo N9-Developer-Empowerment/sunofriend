@@ -290,7 +290,10 @@ def test_rejects_changed_audio_and_answer_key(tmp_path: Path) -> None:
     _write_json(reviewed_path, _reviewed(seed))
     answer_path = Path(str(created["answer_key"]))
     answer = json.loads(answer_path.read_text())
-    answer["mapping"]["candidate_a"] = "kim-vocal-2"
+    original = answer["mapping"]["candidate_a"]
+    answer["mapping"]["candidate_a"] = next(
+        method for method in answer["mapping"].values() if method != original
+    )
     _write_json(answer_path, answer)
     with pytest.raises(ValueError, match="answer key changed"):
         _resolve_private_separated_vocal_focus_review(

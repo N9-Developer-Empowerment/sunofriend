@@ -1891,6 +1891,22 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   Moises, Suno A and Suno B for the listener-reported extended robotic held
   note. Do not infer vocal retention from the preceding frame-activity
   disagreement; human listening remains required.
+- For the private full-song duration/alignment precursor, use
+  `scripts/private-separation-full-song-plan.py` with one authorised corpus,
+  one exact track ID and a fresh output directory. It keeps the audited Kim
+  worker at 661,500 frames/15 seconds, converts the complete source once to a
+  canonical 44.1 kHz stereo clock and writes contiguous independently hashed
+  chunk authorisations with no gap or overlap. It runs no model and cannot
+  close duration/alignment, resources, quality, role, terms, offline or product
+  gates. The current `Be Alone` plan has 11,578,896 frames in 18 equal
+  643,272-frame chunks, zero end-clock error, plan file SHA-256
+  `8eb63e00994482652059072d9c9f5ef034a1063478b2682e192723cd1004bc34`
+  and document SHA-256
+  `ee89785e095657c853427a6bc984248052cd1e28cf2e6893b294071ab5aca89d`.
+  Before any acceptance, run every chunk through the unchanged native owner,
+  verify and stitch exact canonical frames, measure full resource/failure
+  behavior and require separate boundary/full-song listening. Never call exact
+  input partitioning seamless separated audio.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,

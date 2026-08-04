@@ -2148,6 +2148,50 @@ cross-song publication gate: first use it to learn whether an already-supplied
 alternative retains the missing event, then design a new cross-song test only
 if that hypothesis survives human listening.
 
+### Full-song bounded-worker queue
+
+The full-song duration/alignment gate now has a safe executable precursor.
+`scripts/private-separation-full-song-plan.py` does not increase the audited
+Kim worker's 15-second input ceiling. Instead, it decodes one owner-authorised
+original, converts the complete song once to the worker's 44.1 kHz stereo
+clock, divides that exact clock into contiguous chunks and writes one
+independently self-hashed worker-compatible authorisation package per chunk.
+The partition has no gaps or overlaps. No model, checkpoint or product route is
+opened.
+
+The first real plan uses the owned `Be Alone` original:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-full-song-plan.py \
+  --corpus stem_examples/corpus.json \
+  --track-id be-alone \
+  --out-dir \
+    work/separation-bakeoff/be-alone-full-song-kim-plan-v1
+```
+
+It binds the 50,411,692-byte, 48 kHz stereo source at SHA-256
+`68156218501b952703fcff76addea5ade377dbdab92f25375ecd4515b3efca5d`.
+The canonical clock is exactly 11,578,896 frames, 262.56 seconds and has zero
+end-clock error. Eighteen equal 643,272-frame chunks cover that clock from
+frame zero through the final frame; each is about 14.586667 seconds and remains
+below the unchanged 661,500-frame worker ceiling. The canonical PCM24 integer
+sequence SHA-256 is
+`8172affc93c8e210c16ceef74d5ac36f455357ccdc7635f721db6d285c343b09`.
+The plan file SHA-256 is
+`8eb63e00994482652059072d9c9f5ef034a1063478b2682e192723cd1004bc34`
+and its document SHA-256 is
+`ee89785e095657c853427a6bc984248052cd1e28cf2e6893b294071ab5aca89d`.
+All retained paths are relative to the private 66 MiB plan tree.
+
+This closes no publication gate. The next increment must execute every chunk
+through the unchanged native owner, verify every output against its exact
+chunk authorisation, stitch vocals and accompaniment on the canonical frame
+clock, measure timing/resources/failure recovery and create a separate
+boundary-listening review. Independent inference can disagree at boundaries;
+exact input partitioning is not evidence that the separated audio is seamless
+or musically complete.
+
 The optional review contract now asks that question explicitly with
 `--classify-focus-phrase-coverage`. For every playable candidate, the listener
 must separately choose `substantially_complete`, `partially_complete`,

@@ -2431,6 +2431,17 @@ separator transport, source-lineage import and promotion are not implemented**
     disagreement justified including the Suno challengers but is not musical
     proof. The unreviewed package cannot select or activate a separator and does
     not count as cross-song publication evidence.
+  - [x] Add a model-free full-song queue without weakening the audited Kim
+    worker's 15-second ceiling. The first owned `Be Alone` plan converts the
+    complete source once to an exact 44.1 kHz stereo clock and partitions all
+    11,578,896 frames into 18 equal, contiguous worker-compatible authorisation
+    packages. It proves zero input-clock gap, overlap and end error, runs no
+    model and keeps every product permission false.
+  - [ ] Execute all 18 `Be Alone` chunks through the unchanged native owner,
+    bind outputs and timings to the plan, stitch exact-length vocal and
+    accompaniment outputs, test interruption/restart and hand off a separate
+    boundary/full-song review. Queue preparation alone does not close either
+    the duration/alignment or resource-envelope gate.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
 - [x] Repeat the clean/estimate comparison through exact production
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation
