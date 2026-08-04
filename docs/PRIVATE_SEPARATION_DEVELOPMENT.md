@@ -2905,16 +2905,40 @@ approval. If any full-song role is not useful, any candidate boundary is not
 clean, or the alignment gate fails, the next action remains bounded
 remediation instead.
 
-The current outstanding human review is the fresh candidate-bound full-song
-and boundary page at
-`work/separation-bakeoff/be-alone-v2-candidate-full-song-review-v1/BOUNDARY-REVIEW/separation_boundary_review.html`.
-It contains three complete-song candidate ratings and three role ratings at
-each of 17 boundaries. Its package report file and document SHA-256 values are
-`f3d0e7f708d0e0e536b9b0b856f3b9bd03add67af1799faa734695f0a05c2fc9` and
-`379ef8c5bd43136ce650728ff2a4441dbcfb87fc9f973a1f4b3462b3b3f314e4`.
-No reassessment exists until that page is genuinely completed, exported and
-resolved. A separate final human-acceptance review may become eligible only
-after reassessment; it is not a current ready review.
+The fresh candidate-bound full-song and boundary review is complete and
+resolved. All three complete-song roles were rated useful and reconstruction
+was clean at all 17 boundaries. Vocals were rated audible at boundaries 7, 8,
+9, 10 and 17; instrumental was rated audible at boundaries 4, 7, 8, 10 and
+12. Its result file and document SHA-256 values are
+`b920a9932248f736268e5f4194d64058927204616b321287f18f59b8c5b1cdf3` and
+`f644d764f942268649db089600bf1d351d8b563169a5ec8d9172b7b3f16ffc4d`.
+The listener's ratings are retained as current evidence; they are not
+reinterpreted from the clean reconstruction or the earlier review.
+
+The exact candidate review and passing nine-window alignment have now been
+combined in
+`work/separation-bakeoff/be-alone-v2-candidate-readiness-reassessment-v1/private-separation-candidate-readiness-reassessment.json`.
+The reassessment records useful complete-song roles, a passing alignment gate
+and a passing targeted-v2 gate, but fails the all-boundaries-clean prerequisite.
+It therefore sets `technical_and_listening_prerequisites_met: false`,
+`final_human_acceptance_review_eligible: false` and next action
+`remediate_failed_candidate_evidence`.
+
+That bounded follow-up plan is now implemented as
+`scripts/private-separation-candidate-join-remediation-plan.py` and sealed at
+`work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-plan-v1/private-separation-candidate-join-remediation-plan.json`.
+Its file and document SHA-256 values are
+`61b317188304a4fafc8f01c822d87b334faf19121e63c92377edcf574cac3aa2` and
+`08726eab263e450ed6dad7b428d16aa9160a472572fb02c1a45492de205cd35e`.
+The plan derives ten role-boundary repairs across seven unique boundaries,
+requiring seven future independent 15-second model calls and twenty future
+patch-edge checks. All ten ratings are outside the two role-boundary pairs
+previously repatched by v2, so they are current human evidence but are not
+proof that v2 introduced regressions. Planning ran no model, created no audio,
+copied no private listener notes and changed no candidate or product route.
+No human review is currently ready. The next development increment is a
+private executor that must create a fresh candidate from this exact plan before
+targeted and complete-song listening can resume.
 
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:

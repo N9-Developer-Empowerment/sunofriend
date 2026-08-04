@@ -2163,6 +2163,12 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   full-song and 51 role-boundary ratings. Resolution selects and accepts
   nothing and keeps alignment, original-join resolution, readiness and
   publication false.
+  That candidate-bound review is now complete and resolved. All three
+  complete-song roles were useful and reconstruction was clean at all 17
+  boundaries. Vocals had audible joins at boundaries 7, 8, 9, 10 and 17;
+  instrumental had audible joins at boundaries 4, 7, 8, 10 and 12. Preserve
+  those explicit ratings even though the complete reconstruction and automatic
+  alignment passed; do not reinterpret one evidence type from another.
   The separate fresh alignment command
   `scripts/private-separation-candidate-full-song-alignment.py` has also run
   from the exact passing v2 result and complete evidence chain. All nine fixed
@@ -2181,6 +2187,22 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   final human-acceptance review eligible. The reassessment does not add
   listening evidence and keeps original-join resolution, selection,
   acceptance, product activation and publication false.
+  The current reassessment is complete and records
+  `technical_and_listening_prerequisites_met: false` and
+  `final_human_acceptance_review_eligible: false` because ten role-boundary
+  ratings remain audible. Its next action is
+  `remediate_failed_candidate_evidence`.
+  The fresh bounded plan has now been derived with
+  `scripts/private-separation-candidate-join-remediation-plan.py` and sealed at
+  `work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-plan-v1/private-separation-candidate-join-remediation-plan.json`.
+  It maps the ten explicit audible role joins onto seven unique 15-second
+  source windows, proposes seven future independent model calls and requires
+  twenty future patch-edge checks. All ten role-boundary findings are outside
+  the earlier v2 patch targets. Treat them as current human evidence, not as
+  proof that v2 caused a regression. The planning step runs no model, creates
+  no audio, copies no private review notes and cannot select or accept a
+  separator. There is no current human review page. Build and validate a fresh
+  candidate from that exact plan before requesting more listening.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic
   snapshot across the whole operation; status and result record this explicit
