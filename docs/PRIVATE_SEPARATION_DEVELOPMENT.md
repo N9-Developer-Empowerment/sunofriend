@@ -2617,14 +2617,10 @@ from the verified v1 candidate and cannot select a separator or close a
 readiness gate. Publication readiness therefore remains the unchanged v12
 context, not an authority for choosing targets.
 
-No v2 listening page exists yet and no human review is currently outstanding.
-Before a v2 candidate can affect readiness, its two anonymous v1-versus-v2
-boundary comparisons need both a relative choice and an independent absolute
-`clean`, `audible_join` or `cannot_tell` rating, and its four new patch edges
-must be reviewed. Only if those checks pass may a separate immutable candidate
-package receive a fresh three-role, 17-boundary full-song review and fresh
-nine-window alignment review. No v1 review or alignment decision transfers to
-that future candidate.
+A targeted v2 listening page now exists and its human review is outstanding.
+It is deliberately limited to the two anonymous v1-versus-v2 boundary
+comparisons and four new v2 patch edges described below. No v1 review or
+alignment decision transfers to this candidate.
 
 The sealed v2 candidate can now be assembled without another model run:
 
@@ -2683,6 +2679,63 @@ used no network and did not mutate the stitch, v1 candidate, worker output,
 review evidence or readiness ledger. Candidate integrity is not audible repair
 or musical quality: every permission and readiness decision remains false,
 and the targeted v2 listening review described above is still required.
+
+Generate the sealed targeted review into a fresh directory whose existing
+parent is owner-only:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-full-song-join-remediation-review-v2.py \
+  work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2 \
+  --v2-plan \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-plan-v2/private-separation-full-song-join-remediation-plan-v2.json \
+  --v1-execution-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v1 \
+  --full-song-review-result \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-review-result-v1/private-separation-full-song-review-result.json \
+  --v1-plan \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-plan-v1/private-separation-full-song-join-remediation-plan.json \
+  --resolved-join-review-result \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-review-result-v4/private-separation-full-song-join-remediation-review-result.json \
+  --publication-readiness \
+    work/separation-bakeoff/separation-publication-readiness-v12/private-separation-publication-readiness.json \
+  --package-dir \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review \
+  --out-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-review-v2
+```
+
+Open
+`work/separation-bakeoff/be-alone-full-song-join-remediation-review-v2/join_remediation_review_v2.html`.
+The page has two blind v1-versus-v2 boundary comparison units and four
+single-player v2 patch-edge units: six units and eight audio references in
+total. For each boundary, hear A and B, rate each independently as `clean`,
+`audible_join` or `cannot_tell`, then choose `A`, `B`, `equivalent`, `neither`
+or `cannot_tell`. For each edge, confirm it was heard and give the same
+absolute cleanliness rating. The short boundary pairs use attenuation-only
+sample-RMS matching. The four edge clips preserve the exact v2 PCM24 samples.
+The public report and page expose only opaque commitments; v1/v2 identities
+and source details remain in the sealed answer key.
+
+The review report file SHA-256 is
+`e646043606b75c884fadc2bc22591868db72089f93b06b6d6db7f45d20befe1b` and
+its document SHA-256 is
+`0d691805f4f8ecfda3e57f26a1f9b87f3d12858dd26f2ba156b79cd82a1b423a`.
+The HTML SHA-256 is
+`5b460af9293cc5825298f66df36a55f284a7ae93033dff9151fd11ab977e9fa2`.
+The sealed answer-key file SHA-256 is
+`e17a034eb7a220957952ad3657772c31918be4d1d54dd09ba10593fa547fb47c`
+and its document SHA-256 is
+`6848541cc0b634937debf04397650dabe19e72c299065cd72e62c3b3d6a4f4f7`.
+The package commitment is
+`2bc140793f4b483b1aa3e9db8f619174aa564736dee726c09ad9fa2898f2974a`.
+
+This targeted review remains outstanding. Its creation, completion or a
+passing result cannot select a separator, accept the candidate, change
+readiness, enable publication or activate any product route. Passing all six
+units permits only the later creation of a fresh immutable candidate-bound
+three-role, 17-boundary full-song review and a fresh nine-window alignment
+review. Those later reviews must not inherit v1 decisions.
 
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:

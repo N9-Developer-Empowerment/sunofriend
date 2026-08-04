@@ -1962,8 +1962,9 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   reconstruction were all rated useful. Reconstruction was clean at all 17
   joins; vocals had audible joins at 11/12 and the instrumental at 11/13. The
   result keeps full-song quality acceptance, separator selection, publication
-  and every product route false. No current human review page remains
-  outstanding; older packages are superseded evidence.
+  and every product route false. That full-song page is complete; the later
+  targeted v2 join review documented below is outstanding, and older packages
+  are superseded evidence.
   `scripts/private-separation-full-song-alignment.py` now measures the exact
   source against the diagnostic reconstruction in nine early-to-late windows.
   It uses gain-normalized log spectral-band timing features, searches only the
@@ -2031,7 +2032,8 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   joins were only equivalent rather than candidate-preferred, the resolved
   result keeps `original_audible_joins_resolved: false`; the combined
   duration/alignment milestone and every product/publication gate remain open.
-  No current human review page remains outstanding.
+  That v1 page has no remaining action; the targeted v2 page documented below
+  is the current outstanding human review.
   The next bounded artifact is the v2 plan produced by
   `scripts/private-separation-full-song-join-remediation-plan-v2.py`. Bind the
   exact v3 stitch package, full-song review result, v1 plan, v1 execution and
@@ -2049,11 +2051,10 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   target. The only signal-processing delta is widening each patch from one to
   two seconds per side; 100 ms equal-power edges and 15-second source windows
   remain unchanged. It runs zero models, writes no audio, selects nothing and
-  closes no gate. No v2 page exists yet. A future candidate needs two blind
-  v1-versus-v2 comparisons with independent absolute cleanliness ratings,
-  four patch-edge checks and, if those pass, a new candidate-bound three-role
-  full-song review plus nine-window alignment review. Never transfer v1
-  review or alignment decisions to the new candidate.
+  closes no gate. A targeted v2 page now exists and its human review is
+  outstanding. It requires two blind v1-versus-v2 comparisons with
+  independent absolute cleanliness ratings and four v2 patch-edge checks.
+  Never transfer v1 review or alignment decisions to the new candidate.
   Assemble that candidate with
   `scripts/private-separation-full-song-join-remediation-execute-v2.py`, the
   exact v2 plan and the same bound stitch/review/v1/readiness evidence chain,
@@ -2073,6 +2074,56 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   This proves assembly integrity only. Selection, acceptance, readiness and
   publication remain false; the targeted two-pair/four-edge review and any
   later fresh full-song review/alignment are still mandatory.
+  Generate the targeted package only under a fresh output directory whose
+  existing parent is owner-only:
+
+  ```bash
+  PYTHONPATH=src ./.venv/bin/python \
+    scripts/private-separation-full-song-join-remediation-review-v2.py \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2 \
+    --v2-plan \
+      work/separation-bakeoff/be-alone-full-song-join-remediation-plan-v2/private-separation-full-song-join-remediation-plan-v2.json \
+    --v1-execution-dir \
+      work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v1 \
+    --full-song-review-result \
+      work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-review-result-v1/private-separation-full-song-review-result.json \
+    --v1-plan \
+      work/separation-bakeoff/be-alone-full-song-join-remediation-plan-v1/private-separation-full-song-join-remediation-plan.json \
+    --resolved-join-review-result \
+      work/separation-bakeoff/be-alone-full-song-join-remediation-review-result-v4/private-separation-full-song-join-remediation-review-result.json \
+    --publication-readiness \
+      work/separation-bakeoff/separation-publication-readiness-v12/private-separation-publication-readiness.json \
+    --package-dir \
+      work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review \
+    --out-dir \
+      work/separation-bakeoff/be-alone-full-song-join-remediation-review-v2
+  ```
+
+  Open
+  `work/separation-bakeoff/be-alone-full-song-join-remediation-review-v2/join_remediation_review_v2.html`.
+  It contains exactly two blind boundary comparisons and four single-player
+  v2 edge checks: six units and eight audio references. Each boundary requires
+  heard A/B, an independent `clean`, `audible_join` or `cannot_tell` rating for
+  A and B, and a relative `A`, `B`, `equivalent`, `neither` or `cannot_tell`
+  choice. Each edge requires heard plus the same absolute cleanliness rating.
+  Boundary pairs use attenuation-only sample-RMS matching; edge audio is exact
+  v2 PCM24. The public report/page hide identities behind opaque commitments;
+  the answer key is sealed.
+
+  The report file/document SHA-256 values are respectively
+  `e646043606b75c884fadc2bc22591868db72089f93b06b6d6db7f45d20befe1b` and
+  `0d691805f4f8ecfda3e57f26a1f9b87f3d12858dd26f2ba156b79cd82a1b423a`.
+  The HTML SHA-256 is
+  `5b460af9293cc5825298f66df36a55f284a7ae93033dff9151fd11ab977e9fa2`.
+  The sealed answer-key file/document SHA-256 values are respectively
+  `e17a034eb7a220957952ad3657772c31918be4d1d54dd09ba10593fa547fb47c` and
+  `6848541cc0b634937debf04397650dabe19e72c299065cd72e62c3b3d6a4f4f7`.
+  The package commitment is
+  `2bc140793f4b483b1aa3e9db8f619174aa564736dee726c09ad9fa2898f2974a`.
+  This review is outstanding. Creating, completing or passing it cannot select
+  or accept a separator, change readiness, publish anything or enable a
+  product route. A pass permits only later fresh candidate-bound three-role,
+  17-boundary full-song and nine-window alignment reviews.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic
   snapshot across the whole operation; status and result record this explicit
