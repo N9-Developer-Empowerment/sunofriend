@@ -2351,6 +2351,21 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   local PCM24 review windows are byte-identical. Zero, one or both variants may
   become eligible only for a fresh all-boundary review; selection, alignment,
   acceptance, join resolution and publication remain false.
+  The downstream fail-closed builder is
+  `scripts/private-separation-candidate-followup-variant-full-song-review.py`.
+  Run it only after the exact 36-unit browser export has passed status and has
+  been resolved into the exact supplied result. It re-runs that resolver,
+  requires at least one eligible variant and creates one independent
+  complete-song plus every-original-boundary page for every eligible variant.
+  Zero eligible variants produces no output; one produces one page and two
+  produces two pages in canonical plan order. It may not accept a caller's
+  preferred subset and never treats package order as a ranking. The parent
+  report is
+  `private-separation-candidate-followup-variant-full-song-review-package.json`.
+  Package construction runs no model and leaves selection, alignment,
+  acceptance, original-join resolution, product activation and publication
+  false. Every emitted page still needs genuine human completion, followed by
+  a separate resolver and fresh alignment for that exact variant.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic
   snapshot across the whole operation; status and result record this explicit

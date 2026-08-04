@@ -3264,6 +3264,45 @@ one or both variants may therefore be eligible. Eligibility is not selection,
 join resolution, alignment, acceptance or publication, and every such effect
 and permission remains false.
 
+The next fail-closed builder is already implemented, but it must not run until
+the exact 36-unit export has passed status and resolution above. It re-resolves
+that same export and includes **every** eligible variant in one owner-only
+parent package. Zero eligible variants is a hard failure; one produces one
+independent full-song/all-boundary page, and two produce two pages. The builder
+does not choose between them:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-candidate-followup-variant-full-song-review.py \
+  --variant-review-result \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-result-v1/private-separation-candidate-followup-variant-review-result.json \
+  --reviewed-export "$HOME/Downloads/join_remediation_review.reviewed.json" \
+  --variant-review-package-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-v1 \
+  --plan \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-plan-v3/private-separation-candidate-followup-remediation-plan.json \
+  --execution-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v1 \
+  --v2-execution-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2 \
+  --variant-execution-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v2 \
+  --stitch-package-dir \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review \
+  --out-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-eligible-full-song-review-v1
+```
+
+The parent report is
+`private-separation-candidate-followup-variant-full-song-review-package.json`.
+Each `variant-NN/BOUNDARY-REVIEW/separation_boundary_review.html` page contains
+the complete source and exact eligible variant roles plus every original chunk
+boundary. All pages are required evidence; package order is canonical plan
+order, not preference. Model execution, candidate selection, alignment,
+acceptance, product activation and publication all remain false. A separate
+resolver and a fresh alignment result are still required for each reviewed
+variant before any later readiness reassessment.
+
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
 
