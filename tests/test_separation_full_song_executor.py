@@ -26,6 +26,10 @@ from sunofriend._separation_full_song_stitch import (
     REVIEW_HTML_NAME,
     _stitch_private_separation_full_song,
 )
+from sunofriend._separation_full_song_review import (
+    SCHEMA as REVIEW_RESULT_SCHEMA,
+    _resolve_private_separation_full_song_review,
+)
 from sunofriend._separation_melroformer_upstream_evidence import (
     CONVERSION_CHECKPOINT_BYTES,
     CONVERSION_CHECKPOINT_SHA256,
@@ -329,3 +333,118 @@ def test_full_song_stitch_preserves_clock_and_prepares_review(tmp_path: Path) ->
         "instrumental",
         "reconstruction",
     }
+
+
+def _completed_full_song_review(seed_path: Path, output: Path) -> Path:
+    review = json.loads(seed_path.read_text(encoding="utf-8"))
+    review["status"] = "reviewed"
+    review["full_song"]["heard_all"] = True
+    review["full_song"]["ratings"] = {
+        "vocals": "noticeable_problems",
+        "instrumental": "useful",
+        "reconstruction": "useful",
+    }
+    review["full_song"]["notes"] = "Broad listening note."
+    for unit in review["units"]:
+        unit["heard_all"] = True
+        unit["ratings"] = {
+            "vocals": "audible_join",
+            "instrumental": "clean",
+            "reconstruction": "cannot_tell",
+        }
+        unit["notes"] = "Exact join note."
+    review["summary"]["full_song_reviewed"] = True
+    review["summary"]["reviewed_boundaries"] = len(review["units"])
+    _write_json(output, review)
+    return output
+
+
+def _stitched_fixture(tmp_path: Path) -> Path:
+    plan = _plan(tmp_path)
+    runtime = _runtime_arguments(tmp_path)
+    execution = tmp_path / "execution"
+    _execute_private_separation_full_song_queue(
+        plan,
+        out_dir=execution,
+        **runtime,
+        maximum_chunks=None,
+        attempt_runner=_fake_runner([]),
+    )
+    stitch = tmp_path / "stitch"
+    _stitch_private_separation_full_song(
+        plan,
+        execution / REPORT_NAME,
+        out_dir=stitch,
+    )
+    return stitch
+
+
+def test_full_song_review_resolver_records_exact_human_evidence(tmp_path: Path) -> None:
+    stitch = _stitched_fixture(tmp_path)
+    reviewed = _completed_full_song_review(
+        stitch / "BOUNDARY-REVIEW/separation_boundary_review.json",
+        tmp_path / "reviewed.json",
+    )
+
+    result = _resolve_private_separation_full_song_review(
+        reviewed,
+        package_dir=stitch,
+        out=tmp_path / "result.json",
+    )
+
+    assert result["schema"] == REVIEW_RESULT_SCHEMA
+    assert result["status"] == "complete_review_no_activation"
+    assert result["readiness"]["full_song_and_boundary_listening_complete"] is True
+    assert result["readiness"]["full_song_quality_accepted"] is False
+    assert result["boundary_summary"]["audible_join_boundaries_by_role"] == {
+        "vocals": [1],
+        "instrumental": [],
+        "reconstruction": [],
+    }
+    assert all(value is False for value in result["permissions"].values())
+    assert all(value is False for value in result["effects"].values())
+    assert result["document_sha256"]
+    assert stat.S_IMODE((tmp_path / "result.json").stat().st_mode) == 0o600
+
+
+def test_full_song_review_resolver_rejects_incomplete_or_changed_review(
+    tmp_path: Path,
+) -> None:
+    stitch = _stitched_fixture(tmp_path)
+    seed = stitch / "BOUNDARY-REVIEW/separation_boundary_review.json"
+    incomplete = tmp_path / "incomplete.json"
+    _write_json(incomplete, json.loads(seed.read_text(encoding="utf-8")))
+    with pytest.raises(ValueError, match="incomplete"):
+        _resolve_private_separation_full_song_review(
+            incomplete,
+            package_dir=stitch,
+            out=tmp_path / "incomplete-result.json",
+        )
+
+    changed = _completed_full_song_review(seed, tmp_path / "changed.json")
+    changed_document = json.loads(changed.read_text(encoding="utf-8"))
+    changed_document["question"] = "A different question"
+    _write_json(changed, changed_document)
+    with pytest.raises(ValueError, match="changed immutable evidence"):
+        _resolve_private_separation_full_song_review(
+            changed,
+            package_dir=stitch,
+            out=tmp_path / "changed-result.json",
+        )
+
+
+def test_full_song_review_resolver_rejects_changed_audio(tmp_path: Path) -> None:
+    stitch = _stitched_fixture(tmp_path)
+    reviewed = _completed_full_song_review(
+        stitch / "BOUNDARY-REVIEW/separation_boundary_review.json",
+        tmp_path / "reviewed.json",
+    )
+    vocal = stitch / "STEMS/vocals.wav"
+    vocal.write_bytes(vocal.read_bytes() + b"changed")
+
+    with pytest.raises(ValueError, match="artifact changed"):
+        _resolve_private_separation_full_song_review(
+            reviewed,
+            package_dir=stitch,
+            out=tmp_path / "result.json",
+        )

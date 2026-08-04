@@ -2450,9 +2450,12 @@ separator transport, source-lineage import and promotion are not implemented**
     with no crossfade or hidden repair. Queue execution and exact stitching do
     not close quality or publication gates.
   - [ ] Complete all 17 boundary ratings and full-song listening on the exact
-    stitch, resolve the browser export, and decide whether a boundary repair
-    experiment is justified. Keep any repair as a separate derived challenger;
-    never replace the exact stitch.
+    stitch, then run the implemented fail-closed resolver against the browser
+    export. The resolver re-verifies the unchanged stitch, review seed and all
+    referenced audio and records human evidence without acceptance or product
+    activation. Use that result to decide whether a boundary repair experiment
+    is justified. Keep any repair as a separate derived challenger; never
+    replace the exact stitch.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
 - [x] Repeat the clean/estimate comparison through exact production
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation

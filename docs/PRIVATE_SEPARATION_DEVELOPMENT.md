@@ -2263,6 +2263,26 @@ independently for overall usefulness and for clicks, cut notes, level jumps or
 tone changes. Exact duration and reconstruction do not establish seamlessness,
 musical completeness or product readiness.
 
+After the page exports
+`separation-boundary-and-full-song.reviewed.json`, resolve it against the
+unchanged stitch root:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-full-song-review.py \
+  --resolve /absolute/path/separation-boundary-and-full-song.reviewed.json \
+  --package-dir \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v2-full-review \
+  --out /absolute/fresh/private-separation-full-song-review-result.json
+```
+
+The resolver fails closed unless the complete song and all 17 joins were heard
+and rated. It re-verifies the stitch report, immutable browser seed and every
+complete-song and boundary WAV before retaining the human ratings and notes.
+Its result deliberately keeps full-song quality acceptance, separator
+selection, publication and every product route false. Review completion is
+evidence, not acceptance.
+
 The optional review contract now asks that question explicitly with
 `--classify-focus-phrase-coverage`. For every playable candidate, the listener
 must separately choose `substantially_complete`, `partially_complete`,
