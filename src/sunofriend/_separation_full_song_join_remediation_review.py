@@ -377,6 +377,8 @@ def _clip_pair_unit(
     package_root: Path,
     soundfile: Any,
     np: Any,
+    left_identity: str = "raw",
+    right_identity: str = "candidate",
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     total_frames = int(soundfile.info(raw_path).frames)
     start = max(0, centre_frame - half_frames)
@@ -403,11 +405,19 @@ def _clip_pair_unit(
         raise ValueError("private remediation review clip is too quiet")
     raw_gain = target_rms / raw_rms
     candidate_gain = target_rms / candidate_rms
+    if (
+        not isinstance(left_identity, str)
+        or not left_identity
+        or not isinstance(right_identity, str)
+        or not right_identity
+        or left_identity == right_identity
+    ):
+        raise ValueError("private remediation review identities differ")
     sources = {
-        "raw": raw * raw_gain,
-        "candidate": candidate * candidate_gain,
+        left_identity: raw * raw_gain,
+        right_identity: candidate * candidate_gain,
     }
-    assignment = _assignment()
+    assignment = _assignment(left_identity, right_identity)
     audio: dict[str, Any] = {}
     for slot in ("A", "B"):
         identity = assignment[slot]
@@ -454,9 +464,19 @@ def _external_pair_unit(
     raw_path: Path,
     candidate_path: Path,
     review_root: Path,
+    left_identity: str = "raw",
+    right_identity: str = "candidate",
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    assignment = _assignment()
-    identities = {"raw": raw_path, "candidate": candidate_path}
+    if (
+        not isinstance(left_identity, str)
+        or not left_identity
+        or not isinstance(right_identity, str)
+        or not right_identity
+        or left_identity == right_identity
+    ):
+        raise ValueError("private remediation review identities differ")
+    assignment = _assignment(left_identity, right_identity)
+    identities = {left_identity: raw_path, right_identity: candidate_path}
     audio = {}
     for slot in ("A", "B"):
         path = identities[assignment[slot]]
@@ -483,10 +503,14 @@ def _external_pair_unit(
     return public, {"unit_id": unit_id, "assignment": assignment}
 
 
-def _assignment() -> dict[str, str]:
+def _assignment(
+    left_identity: str = "raw", right_identity: str = "candidate"
+) -> dict[str, str]:
+    if left_identity == right_identity:
+        raise ValueError("private remediation review identities differ")
     if secrets.randbelow(2):
-        return {"A": "raw", "B": "candidate"}
-    return {"A": "candidate", "B": "raw"}
+        return {"A": left_identity, "B": right_identity}
+    return {"A": right_identity, "B": left_identity}
 
 
 def _rms(value: Any, *, np: Any) -> float:

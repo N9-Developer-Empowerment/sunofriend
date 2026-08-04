@@ -2219,8 +2219,25 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   `8dda4e13569db363378412c4c564b7bde36183eda90bb2a5f3c349832043ab21`
   and
   `e89fa4a26610e123bc34df8cc84574834caf7c4998157128d7259f59070d7a43`.
-  This is not a listening result. Build fresh targeted and complete-song review
-  evidence, then fresh alignment, before reassessing readiness.
+  This is not a listening result. The next owner-only builder is
+  `scripts/private-separation-candidate-join-remediation-review.py`. It binds
+  that exact execution and the immutable v2 control, randomises A/B separately
+  for each unit and writes 10 targeted boundary pairs, 20 patch-edge pairs and
+  three complete-song pairs. Short comparisons attenuate only the louder file
+  to the quieter whole-window RMS. A patch edge below the audibility floor
+  expands through fixed centred 2/4/6/8-second options and uses the first
+  window where both versions are audible; the current two quiet vocal ends use
+  six seconds. The completed unreviewed package is
+  `work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-review-v1`.
+  Its report file/document SHA-256 values are
+  `b35443e8fba1bb93a404467b058d4e7e9ef6c6404906bd899a5d05eeda202e45`
+  and
+  `4d39c7d15f6d3ebb33aa8ed2e660e39097c67ca7c380150f26733b1e94f8142c`.
+  Open its `join_remediation_review.html`, hear and classify every A/B pair,
+  and export only after all 33 units are complete. Do not inspect the separate
+  sealed answer key first. This page does not select, accept or activate a
+  separator. A separate resolver, fresh candidate-bound all-17-boundary review
+  and fresh alignment are still required before reassessing readiness.
   On macOS 26.5.1, an exact sealed/read-only `/usr/bin/sandbox-exec`
   `CSSMERR_TP_NOT_TRUSTED` result is recorded as
   `sealed_read_only_system_provider_cdhash_trust_unavailable` with
@@ -2228,7 +2245,7 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   The runtime launcher and observed process image still require strict validity
   and matching static/kernel CDHashes. Use a private ignored Python 3.12 virtual
   environment backed by a valid local runtime rather than changing the system
-  Python. There is no current human review page, and selection, acceptance,
+  Python. The current review page is unreviewed; selection, acceptance,
   readiness and every product/publication permission remain false.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic

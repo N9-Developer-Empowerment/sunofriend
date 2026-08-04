@@ -2973,9 +2973,32 @@ backed by the already-installed, strictly valid pyenv runtime; no system Python
 was modified. This compatibility evidence must not be described as strict
 provider-signature validation.
 
-No human review page has yet been built for this new candidate. Selection,
-acceptance, source-graph activation, Simple/Studio exposure, readiness and
-publication all remain false.
+A fresh blind review package is now implemented by
+`scripts/private-separation-candidate-join-remediation-review.py` and built at
+`work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-review-v1`.
+It compares the immutable v2 candidate with the review-derived follow-up at
+all ten targeted role-boundary pairs, both edges of every new patch and all
+three complete-song roles. That is 10 boundary pairs, 20 patch-edge pairs,
+three complete-song pairs, 33 review units and 66 verified audio references.
+The two vocal patch ends whose initial two-second windows were below the
+audibility floor expand deterministically to the first audible six-second
+window. All other edges retain the shortest audible centred window. Short
+comparisons attenuate only the louder version to the quieter whole-window RMS;
+complete songs remain byte-unchanged external files.
+
+The package report file/document SHA-256 values are
+`b35443e8fba1bb93a404467b058d4e7e9ef6c6404906bd899a5d05eeda202e45`
+and
+`4d39c7d15f6d3ebb33aa8ed2e660e39097c67ca7c380150f26733b1e94f8142c`.
+The answer key is separate and sealed; do not open it before exporting a
+complete review. Open
+`work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-review-v1/join_remediation_review.html`,
+hear A and B, mark both heard and choose one outcome for every unit, then
+export the reviewed JSON. The page runs no model and records no file until the
+browser export. Selection, acceptance, source-graph activation, Simple/Studio
+exposure, readiness and publication all remain false. A separate resolver,
+fresh candidate-bound 17-boundary review and fresh alignment remain required
+after this targeted comparison.
 
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
