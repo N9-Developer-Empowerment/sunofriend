@@ -2334,8 +2334,23 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   clones, not identity-revealing source paths. Listen to every A/B item and
   export only when all 36 units are complete. Do not open the separate answer
   key first. The page records no preference and does not select either variant;
-  a separate key-blind status and resolver stage must be implemented and pass
-  before any all-boundary review is reconsidered.
+  verify the completed browser export with
+  `scripts/private-separation-candidate-followup-variant-review-result.py
+  --status` before resolution. Status re-derives the 36-unit contract, checks
+  all 72 references and the exact private audio inventory, and never reads the
+  answer-key file. Only after it reports
+  `complete_review_verified_key_unopened` may the same script run with
+  `--resolve` and one fresh `--out` path. Resolution repeats every public check,
+  then opens the sealed mapping and records identity-resolved human evidence.
+  The retained package has three PCM24-identical short A/B pairs; treat those as
+  `equivalent`. If A or B is exported for an identical pair, resolution
+  suppresses the impossible identity preference and records equivalence.
+  It selects no winner. At a previously failed edge, candidate preference is
+  required; equivalence does not repair that failed gate. The preserved-centre
+  variant may inherit omitted standard-variant choices only where the exact
+  local PCM24 review windows are byte-identical. Zero, one or both variants may
+  become eligible only for a fresh all-boundary review; selection, alignment,
+  acceptance, join resolution and publication remain false.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic
   snapshot across the whole operation; status and result record this explicit

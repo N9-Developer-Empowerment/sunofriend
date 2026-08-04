@@ -3193,6 +3193,77 @@ separate verifier/resolver must re-derive the package and open the answer key
 only after the key-blind export passes status; that is the next implementation
 increment before any all-boundary gate can reopen.
 
+That verifier/resolver is now implemented as
+`scripts/private-separation-candidate-followup-variant-review-result.py`.
+After the browser has exported all 36 completed units, secure the exact export
+and run status first:
+
+```bash
+chmod 600 "$HOME/Downloads/join_remediation_review.reviewed.json"
+
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-candidate-followup-variant-review-result.py \
+  --status "$HOME/Downloads/join_remediation_review.reviewed.json" \
+  --plan \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-plan-v3/private-separation-candidate-followup-remediation-plan.json \
+  --review-package-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-v1 \
+  --execution-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v1 \
+  --v2-execution-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2 \
+  --variant-execution-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v2
+```
+
+Status re-derives all 36 units, verifies the immutable seed and browser export,
+checks all 72 references and the exact package-local audio inventory, and
+re-renders every short PCM24 comparison. It deliberately does not read the
+answer-key file. A successful result reports
+`complete_review_verified_key_unopened`, `answer_key_opened: false` and
+`identity_mapping_revealed: false`.
+
+A key-blind preflight against the retained real package verified 36 units, 72
+references and 69 unique private audio files without opening the answer key.
+Three short A/B pairs are PCM24-identical. They are valid redundant evidence,
+not an identity preference: choose `equivalent` when they sound the same. If a
+blind A or B letter is nevertheless exported for an identical pair, the
+resolver records the musical outcome as `equivalent` and explicitly suppresses
+the impossible identity claim.
+
+Only after that passes, resolve the same immutable export into a fresh
+owner-only file:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-candidate-followup-variant-review-result.py \
+  --resolve "$HOME/Downloads/join_remediation_review.reviewed.json" \
+  --plan \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-plan-v3/private-separation-candidate-followup-remediation-plan.json \
+  --review-package-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-v1 \
+  --execution-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v1 \
+  --v2-execution-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2 \
+  --variant-execution-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v2 \
+  --out \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-result-v1/private-separation-candidate-followup-variant-review-result.json
+```
+
+Resolution re-runs every public check before opening and verifying the sealed
+mapping. It records the human choices for both hypotheses without ranking or
+selecting a winner. A variant is merely eligible for a fresh all-boundary
+review when every strict targeted gate and all three complete-song gates pass.
+At the three previously failed edges, the candidate must be explicitly
+preferred; equivalence is insufficient. Where the preserved-centre variant
+was intentionally omitted, it can inherit a standard-variant listening choice
+only after the corresponding local PCM24 windows prove byte-identical. Zero,
+one or both variants may therefore be eligible. Eligibility is not selection,
+join resolution, alignment, acceptance or publication, and every such effect
+and permission remains false.
+
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
 
