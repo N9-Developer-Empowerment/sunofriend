@@ -537,7 +537,7 @@ h1{{font-size:42px}}h2{{color:#63d7ff}}audio{{width:100%;margin:8px 0 14px}}labe
 button{{background:#1d789c;color:#fff;border:0;border-radius:9px;padding:14px 20px;font-size:17px;margin-right:10px}}button:disabled{{opacity:.45}}.status{{color:#ffd253;font-weight:700}}code{{color:#8edcff}}
 </style></head><body><div class="privacy">Private local developer review — no audio or review is uploaded</div><main>
 <div class="card"><h1>Targeted join-remediation review</h1><p>{html.escape(document["question"])}</p>
-<p>There are <strong>{document["expected_counts"]["boundary_role_pairs"]} boundary comparisons</strong>, <strong>{document["expected_counts"]["patch_edge_pairs"]} edge comparisons</strong> and <strong>3 complete-song comparisons</strong>. A and B are randomised independently. Equivalent, neither and cannot tell are valid.</p>
+<p>There are <strong>{document["expected_counts"]["boundary_role_pairs"]} boundary comparisons</strong>, <strong>{document["expected_counts"]["patch_edge_pairs"]} edge comparisons</strong> and <strong>{document["expected_counts"]["complete_song_pairs"]} complete-song comparisons</strong>. A and B are randomised independently. Equivalent, neither and cannot tell are valid.</p>
 <p><strong>Do not open the separate answer key before exporting this review.</strong></p><p class="status" id="progress">Reviewed 0 of {len(document["units"])} units</p></div>
 <div id="units"></div>
 <div class="card"><button id="complete">Mark review complete</button><button id="export" disabled>Export reviewed JSON</button><p id="message"></p></div>

@@ -3169,6 +3169,30 @@ An exact rerun verified all six retained workers and both complete-song variants
 with zero new model calls. Neither variant is selected. A fresh blind targeted
 review remains mandatory before the all-boundary gate can reopen.
 
+That fresh sealed review is now built with
+`scripts/private-separation-candidate-followup-variant-review.py` at
+`work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-v1`.
+It compares the shifted-context variant with the unchanged first-follow-up
+control at all seven role actions, and adds the preserved-centre edge variant
+only at the three regions where its PCM24 genuinely differs. The page therefore
+contains 10 boundary comparisons, 20 patch-edge comparisons and six
+complete-song comparisons: 36 units and 72 A/B audio references in total. The
+complete-song files use opaque package-local byte-identical clones, so their
+paths do not reveal the sealed variant identities. The report file/document
+SHA-256 values are
+`8197a0dd3e94dcfc1dbc11490a2adc5d0a117bfd2d263f076850785463341fc2`
+and
+`1eb811bef8ef0629f95453180934c1d4f8de0cbcc67f598b79d333291f3b6e71`.
+
+Open `join_remediation_review.html`, listen to and classify all 36 units, then
+export the reviewed JSON. Do not inspect the separate sealed answer key first.
+This package is fresh listening evidence only: both hypotheses remain
+unselected and `variant_review_complete`, `variant_preferred`,
+`original_audible_joins_resolved` and `publication_ready` remain false. A
+separate verifier/resolver must re-derive the package and open the answer key
+only after the key-blind export passes status; that is the next implementation
+increment before any all-boundary gate can reopen.
+
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
 

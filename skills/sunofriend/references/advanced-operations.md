@@ -2321,6 +2321,21 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   Both variants remain `not_reviewed`; selection, acceptance, readiness and
   every product/publication permission remain false until a fresh blind
   targeted review passes.
+  Build that review only with
+  `scripts/private-separation-candidate-followup-variant-review.py`, passing the
+  exact v3 plan, first-follow-up execution root, immutable v2 root, second
+  execution root and a fresh output directory. The current sealed package is
+  `work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-v1`.
+  Its `join_remediation_review.html` contains 10 boundary pairs, 20 start/end
+  edge pairs and six complete-song pairs, for 36 units and 72 audio references.
+  It presents the standard shifted-context variant at every action and the
+  preserved-centre variant only at the three edge actions where it differs.
+  Complete songs are exposed through opaque package-local byte-identical
+  clones, not identity-revealing source paths. Listen to every A/B item and
+  export only when all 36 units are complete. Do not open the separate answer
+  key first. The page records no preference and does not select either variant;
+  a separate key-blind status and resolver stage must be implemented and pass
+  before any all-boundary review is reconsidered.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic
   snapshot across the whole operation; status and result record this explicit
