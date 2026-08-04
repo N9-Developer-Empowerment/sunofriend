@@ -2730,6 +2730,80 @@ and its document SHA-256 is
 The package commitment is
 `2bc140793f4b483b1aa3e9db8f619174aa564736dee726c09ad9fa2898f2974a`.
 
+After the listener marks every unit complete and exports
+`join_remediation_review_v2.reviewed.json`, secure the browser download and
+run the key-blind status check first:
+
+```bash
+REVIEWED="$HOME/Downloads/join_remediation_review_v2.reviewed.json"
+chmod 600 "$REVIEWED"
+
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-full-song-join-remediation-review-result-v2.py \
+  --status "$REVIEWED" \
+  --review-package-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-review-v2 \
+  --v2-execution-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2 \
+  --v2-plan \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-plan-v2/private-separation-full-song-join-remediation-plan-v2.json \
+  --v1-execution-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v1 \
+  --package-dir \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review \
+  --full-song-review-result \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-review-result-v1/private-separation-full-song-review-result.json \
+  --v1-plan \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-plan-v1/private-separation-full-song-join-remediation-plan.json \
+  --resolved-join-review-result \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-review-result-v4/private-separation-full-song-join-remediation-review-result.json \
+  --publication-readiness \
+    work/separation-bakeoff/separation-publication-readiness-v12/private-separation-publication-readiness.json
+```
+
+Status reconstructs the six public units and all eight PCM24 references from
+the exact evidence chain, validates the immutable browser export and keeps the
+answer key unopened. Keep all bound evidence trees quiescent during status and
+resolution. If status succeeds, create a fresh owner-only result directory and
+repeat the same bindings with `--resolve`:
+
+```bash
+RESULT_DIR=work/separation-bakeoff/be-alone-full-song-join-remediation-review-result-v2
+mkdir -m 700 "$RESULT_DIR"
+
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-full-song-join-remediation-review-result-v2.py \
+  --resolve "$REVIEWED" \
+  --review-package-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-review-v2 \
+  --v2-execution-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2 \
+  --v2-plan \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-plan-v2/private-separation-full-song-join-remediation-plan-v2.json \
+  --v1-execution-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v1 \
+  --package-dir \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review \
+  --full-song-review-result \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-review-result-v1/private-separation-full-song-review-result.json \
+  --v1-plan \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-plan-v1/private-separation-full-song-join-remediation-plan.json \
+  --resolved-join-review-result \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-review-result-v4/private-separation-full-song-join-remediation-review-result.json \
+  --publication-readiness \
+    work/separation-bakeoff/separation-publication-readiness-v12/private-separation-publication-readiness.json \
+  --out \
+    "$RESULT_DIR/private-separation-full-song-join-remediation-review-result-v2.json"
+```
+
+Resolution opens the sealed key only after the complete export passes the
+public checks. It records identity-resolved absolute cleanliness and relative
+preference separately. A targeted pass requires the v2 identity to be rated
+`clean` at both target boundaries and all four v2 patch edges to be rated
+`clean`. Even a pass enables only fresh candidate-bound full-song and
+alignment reviews: `original_audible_joins_resolved`, selection, acceptance,
+readiness and publication remain false.
+
 This targeted review remains outstanding. Its creation, completion or a
 passing result cannot select a separator, accept the candidate, change
 readiness, enable publication or activate any product route. Passing all six

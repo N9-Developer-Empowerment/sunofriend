@@ -2120,6 +2120,25 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   `6848541cc0b634937debf04397650dabe19e72c299065cd72e62c3b3d6a4f4f7`.
   The package commitment is
   `2bc140793f4b483b1aa3e9db8f619174aa564736dee726c09ad9fa2898f2974a`.
+  After the listener exports `join_remediation_review_v2.reviewed.json`, make
+  that file owner-only with `chmod 600 REVIEWED`. Use
+  `scripts/private-separation-full-song-join-remediation-review-result-v2.py
+  --status REVIEWED` first, with the exact unchanged `--review-package-dir`,
+  `--v2-execution-dir`, `--v2-plan`, `--v1-execution-dir`, `--package-dir`,
+  `--full-song-review-result`, `--v1-plan`,
+  `--resolved-join-review-result` and `--publication-readiness` inputs used by
+  the package. Status reconstructs all six units and eight PCM24 references,
+  verifies the opaque source binding and leaves the key unopened. Only after
+  status succeeds, repeat those inputs with `--resolve REVIEWED --out FRESH`.
+  Resolution opens the sealed key, verifies its A/B identities and level facts
+  against the audio and writes a fresh owner-only no-overwrite result. It keeps
+  absolute cleanliness separate from comparative preference. A targeted pass
+  requires both v2 target-boundary identities and all four v2 patch edges to
+  be `clean`. Even then, `original_audible_joins_resolved`, selection,
+  acceptance, readiness and publication remain false; the pass permits only
+  later fresh candidate-bound full-song and alignment reviews. Keep every
+  evidence tree quiescent because JSON and WAV descriptors are not held as one
+  atomic snapshot across the whole operation.
   This review is outstanding. Creating, completing or passing it cannot select
   or accept a separator, change readiness, publish anything or enable a
   product route. A pass permits only later fresh candidate-bound three-role,
