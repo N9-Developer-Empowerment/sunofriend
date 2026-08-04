@@ -2617,10 +2617,11 @@ from the verified v1 candidate and cannot select a separator or close a
 readiness gate. Publication readiness therefore remains the unchanged v12
 context, not an authority for choosing targets.
 
-A targeted v2 listening page now exists and its human review is outstanding.
-It is deliberately limited to the two anonymous v1-versus-v2 boundary
-comparisons and four new v2 patch edges described below. No v1 review or
-alignment decision transfers to this candidate.
+The targeted v2 listening review is complete and resolved. It was deliberately
+limited to the two anonymous v1-versus-v2 boundary comparisons and four new v2
+patch edges described below. Both v1 and v2 were rated clean at both target
+joins and judged equivalent; all four v2 patch edges were rated clean. No v1
+full-song review or alignment decision transferred to this candidate.
 
 The sealed v2 candidate can now be assembled without another model run:
 
@@ -2804,21 +2805,23 @@ preference separately. A targeted pass requires the v2 identity to be rated
 alignment reviews: `original_audible_joins_resolved`, selection, acceptance,
 readiness and publication remain false.
 
-This targeted review remains outstanding. Its creation, completion or a
-passing result cannot select a separator, accept the candidate, change
-readiness, enable publication or activate any product route. Passing all six
-units permits only the later creation of a fresh immutable candidate-bound
-three-role, 17-boundary full-song review and a fresh nine-window alignment
-review. Those later reviews must not inherit v1 decisions.
+This targeted review passed without selecting a separator, accepting the
+candidate, changing readiness, enabling publication or activating a product
+route. The browser export SHA-256 is
+`a13777f55a4415fa6482bc4c6c5ccf4b77e2bbbc99997643dfd498703897d593`.
+The resolved result file and document SHA-256 values are
+`3a699bb8581ff6d088cd03d138dc0b96b8a2fa43f6197ded3c2af0f7ce5b0e7e` and
+`fc9704c79d10887dffae476c1d5dc2d322d16fcc212c30b343bfc3858e73f5c4`.
+That pass permits only fresh candidate-bound full-song review and alignment.
 
-The full-song half of that later gate is now implemented but remains inert
-until the targeted result exists and passes. The builder verifies the complete
-v1/v2 evidence chain again, requires both v2 target joins and all four v2 patch
-edges to be explicitly `clean`, copies the unchanged source plus the exact v2
-vocals, instrumental and reconstruction PCM24 files into a fresh private root,
-and recreates all 17 original boundary windows. It runs no model and writes its
-completion report last. A missing, changed, incomplete or non-passing targeted
-result is rejected before the output directory is created.
+The full-song half of that later gate has now been built from the passing
+targeted result. The builder verified the complete v1/v2 evidence chain again,
+required both v2 target joins and all four v2 patch edges to be explicitly
+`clean`, copied the unchanged source plus the exact v2 vocals, instrumental and
+reconstruction PCM24 files into a fresh private root, and recreated all 17
+original boundary windows. It ran no model and wrote its completion report
+last. A missing, changed, incomplete or non-passing targeted result remains a
+hard failure before any output directory is created.
 
 After a passing result only, use:
 
@@ -2870,19 +2873,16 @@ cleanliness as human evidence, but keeps selection, acceptance, alignment,
 all three complete-song roles are useful and all 51 role-boundary ratings are
 clean, a fresh candidate-bound alignment review is still required.
 
-The fresh candidate-bound nine-window alignment measurement is also
-implemented and is independently gated by the exact passing v2 result. Run
-`scripts/private-separation-candidate-full-song-alignment.py` with the same
-`--v2-review-result`, v1/v2 execution, plan, stitch, review and readiness
-arguments as the package builder, plus a fresh owner-only `--out`. It compares
-the original canonical source with the exact v2 reconstruction at nine
-early/middle/late windows using the existing fixed spectral-clock policy. It
-does not inherit the earlier candidate's alignment result and writes no audio.
-
-The result records whether the fixed lag, drift and correlation thresholds
-passed, while keeping separator accuracy, candidate selection and acceptance,
-full-song review, `original_audible_joins_resolved`, product readiness and
-publication false.
+The fresh candidate-bound nine-window alignment measurement has also run from
+the exact passing v2 result. All nine windows were eligible, the maximum lag
+and lag spread were both 0 ms, the minimum correlation was 0.998685 and the
+fixed gate passed. This is an automatic source-clock measurement, not a human
+listening review. Its result file and document SHA-256 values are
+`273f3622e459310e282442b1f79f83b0dad5ae4486b08d5b99338815ac9ff427` and
+`de031a0a478b245f17b684134b009208c1dc253d0e262fa2c042592db77b56d6`.
+It keeps separator accuracy, candidate selection and acceptance, full-song
+review, `original_audible_joins_resolved`, product readiness and publication
+false.
 
 The final evidence-combination step is now implemented as
 `scripts/private-separation-candidate-readiness-reassessment.py`. Run it only
@@ -2905,9 +2905,16 @@ approval. If any full-song role is not useful, any candidate boundary is not
 clean, or the alignment gate fails, the next action remains bounded
 remediation instead.
 
-The targeted v2 export is still outstanding, so no real candidate-bound
-full-song package, candidate alignment result or reassessment has been created
-yet.
+The current outstanding human review is the fresh candidate-bound full-song
+and boundary page at
+`work/separation-bakeoff/be-alone-v2-candidate-full-song-review-v1/BOUNDARY-REVIEW/separation_boundary_review.html`.
+It contains three complete-song candidate ratings and three role ratings at
+each of 17 boundaries. Its package report file and document SHA-256 values are
+`f3d0e7f708d0e0e536b9b0b856f3b9bd03add67af1799faa734695f0a05c2fc9` and
+`379ef8c5bd43136ce650728ff2a4441dbcfb87fc9f973a1f4b3462b3b3f314e4`.
+No reassessment exists until that page is genuinely completed, exported and
+resolved. A separate final human-acceptance review may become eligible only
+after reassessment; it is not a current ready review.
 
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:

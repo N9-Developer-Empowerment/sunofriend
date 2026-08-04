@@ -1963,8 +1963,8 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   joins; vocals had audible joins at 11/12 and the instrumental at 11/13. The
   result keeps full-song quality acceptance, separator selection, publication
   and every product route false. That full-song page is complete; the later
-  targeted v2 join review documented below is outstanding, and older packages
-  are superseded evidence.
+  targeted v2 join review documented below is also complete and passed, and
+  older packages are superseded evidence.
   `scripts/private-separation-full-song-alignment.py` now measures the exact
   source against the diagnostic reconstruction in nine early-to-late windows.
   It uses gain-normalized log spectral-band timing features, searches only the
@@ -2139,21 +2139,20 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   later fresh candidate-bound full-song and alignment reviews. Keep every
   evidence tree quiescent because JSON and WAV descriptors are not held as one
   atomic snapshot across the whole operation.
-  This review is outstanding. Creating, completing or passing it cannot select
-  or accept a separator, change readiness, publish anything or enable a
-  product route. A pass permits only later fresh candidate-bound three-role,
-  17-boundary full-song and nine-window alignment reviews.
-  The full-song package builder for that later gate now exists as
-  `scripts/private-separation-candidate-full-song-review.py`, but it is inert
-  without the exact resolved v2 result. It re-verifies the complete evidence
-  chain, requires the two v2 target joins and all four v2 edges to be `clean`,
-  then copies the unchanged source and exact v2 candidate roles into a fresh
-  private package with all 17 original boundary windows. The completion marker
-  is `private-separation-candidate-full-song-review-package.json` and the page
-  is `BOUNDARY-REVIEW/separation_boundary_review.html`. It runs no model and
-  selects, accepts, activates and publishes nothing. A separate resolver and
-  fresh nine-window alignment package are still required; never run this
-  builder by inventing or hand-editing a passing result.
+  This review is complete and passed: both v1 and v2 were clean at both target
+  joins and equivalent, and all four v2 patch edges were clean. Its resolved
+  result permits only fresh candidate-bound three-role, 17-boundary full-song
+  review and fresh nine-window alignment; it selects and accepts nothing,
+  changes no readiness state and enables no product or publication route.
+  The full-song package builder for that later gate has now run as
+  `scripts/private-separation-candidate-full-song-review.py` from the exact
+  passing v2 result. It re-verified the complete evidence chain and copied the
+  unchanged source and exact v2 candidate roles into
+  `work/separation-bakeoff/be-alone-v2-candidate-full-song-review-v1` with all
+  17 original boundary windows. The current human review page is
+  `BOUNDARY-REVIEW/separation_boundary_review.html`. It runs no model and
+  selects, accepts, activates and publishes nothing. Never invent or hand-edit
+  a passing result.
   After that page is genuinely completed, make the exported
   `separation-boundary-and-full-song.reviewed.json` owner-only and use
   `scripts/private-separation-candidate-full-song-review-result.py --status`
@@ -2164,15 +2163,14 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   full-song and 51 role-boundary ratings. Resolution selects and accepts
   nothing and keeps alignment, original-join resolution, readiness and
   publication false.
-  The separate fresh alignment command is now
-  `scripts/private-separation-candidate-full-song-alignment.py`. It requires
-  the exact passing v2 result and same complete evidence chain, then compares
-  the original source with the exact v2 reconstruction in nine fixed
-  early/middle/late windows. It reuses the established spectral-clock policy,
-  not the earlier candidate's result, runs no model and writes no audio. Its
-  lag/drift/correlation outcome remains evidence only: selection, acceptance,
-  full-song review, original-join resolution, readiness and publication stay
-  false.
+  The separate fresh alignment command
+  `scripts/private-separation-candidate-full-song-alignment.py` has also run
+  from the exact passing v2 result and complete evidence chain. All nine fixed
+  early/middle/late windows were eligible, maximum lag and lag spread were 0
+  ms, minimum correlation was 0.998685 and the gate passed. This automatic
+  source-clock result is not a listening review and remains evidence only:
+  selection, acceptance, full-song review, original-join resolution, readiness
+  and publication stay false.
   After all three exact results exist, use
   `scripts/private-separation-candidate-readiness-reassessment.py` with
   `--v2-review-result`, `--candidate-review-result`,
