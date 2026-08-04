@@ -2252,6 +2252,19 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   three complete-song roles. A pass permits only a fresh all-17-boundary
   review and alignment; it does not select, accept, activate or publish the
   separator.
+  The fail-closed all-boundary builder is
+  `scripts/private-separation-candidate-followup-full-song-review.py`. It
+  requires both the completed browser export and the resolved targeted result,
+  re-runs the resolver into a temporary owner-only location, demands exact
+  equality with that result and rejects every non-passing readiness field. It
+  then verifies that the original stitch and its entire boundary inventory are
+  the ones bound by the immutable v2 execution before copying the exact source
+  and follow-up PCM24 roles into a fresh review root. The resulting page still
+  requires complete-song and every-original-boundary human listening. Do not
+  run or describe this stage as complete while the current 33-unit targeted
+  review remains unexported. Even after a package is built, selection,
+  acceptance, activation and publication remain false; a separate review
+  resolver and fresh alignment still follow.
   On macOS 26.5.1, an exact sealed/read-only `/usr/bin/sandbox-exec`
   `CSSMERR_TP_NOT_TRUSTED` result is recorded as
   `sealed_read_only_system_provider_cdhash_trust_unavailable` with

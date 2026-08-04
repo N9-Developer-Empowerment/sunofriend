@@ -3028,6 +3028,47 @@ all twenty patch edges and all three complete-song roles. Even a pass only
 makes a fresh all-17-boundary review and alignment eligible. Every selection,
 acceptance, source-graph, product and publication effect remains false.
 
+The gated all-boundary package builder is now implemented as
+`scripts/private-separation-candidate-followup-full-song-review.py`. It cannot
+run from an edited result flag alone. It requires the browser-exported targeted
+review and its separately resolved result, re-verifies the complete blind
+review, opens the sealed answer key only after that export verifies, re-derives
+the resolved result into a temporary owner-only location and requires exact
+document equality plus the targeted pass. It also binds the unchanged original
+stitch and its full 17-boundary inventory through the v2 execution before it
+copies any audio.
+
+After the outstanding 33-unit review has genuinely been exported, status has
+succeeded and a fresh passing result has been resolved, build the next package
+with these exact evidence roots and fresh output paths:
+
+```bash
+PYTHONPATH=src .venv/bin/python \
+  scripts/private-separation-candidate-followup-full-song-review.py \
+  --targeted-review-result "/absolute/path/to/followup-review-result.json" \
+  --reviewed-export "/absolute/path/to/join_remediation_review.reviewed.json" \
+  --targeted-review-package-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-review-v1 \
+  --execution-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v1 \
+  --v2-execution-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2 \
+  --stitch-package-dir \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v2-full-review \
+  --out-dir \
+    work/separation-bakeoff/be-alone-followup-candidate-full-song-review-v1
+```
+
+The generated page presents the exact source and follow-up vocals,
+instrumental and reconstruction over the complete song and every original
+boundary. It is a new unreviewed package, not a carry-over of the targeted A/B
+choices. The current repository has the builder but no real package from this
+stage because the preceding human review has not yet been exported and
+resolved. This is intentional fail-closed behaviour. A separate resolver for
+the resulting full-song review, then a fresh alignment review, still precede
+any readiness reassessment. Selection, acceptance, product activation and
+publication remain false.
+
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
 
