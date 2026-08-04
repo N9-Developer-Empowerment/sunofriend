@@ -29,6 +29,11 @@ from sunofriend._separation_candidate_followup_readiness_reassessment import (
     STATUS as FOLLOWUP_REASSESSMENT_STATUS,
     _reassess_private_candidate_followup_readiness,
 )
+from sunofriend._separation_candidate_followup_remediation_plan import (
+    REPORT_NAME as FOLLOWUP_PLAN_REPORT_NAME,
+    _plan_private_candidate_followup_remediation,
+)
+from sunofriend._separation_candidate_join_remediation_review import ANSWER_KEY_NAME
 from sunofriend._separation_candidate_join_remediation_review_result import (
     _resolve_private_candidate_join_remediation_review,
 )
@@ -619,3 +624,90 @@ def test_reassessment_can_only_make_final_human_review_eligible(
     assert result["readiness"]["separator_selected"] is False
     assert result["readiness"]["publication_ready"] is False
     assert result["next_action"] == "run_explicit_final_followup_candidate_acceptance_review"
+
+
+def _failed_targeted_review(
+    tmp_path: Path,
+) -> tuple[Path, Path, Path, Path, Path]:
+    execution, v2, review_root, reviewed = _completed_review(tmp_path)
+    review = json.loads(reviewed.read_text(encoding="utf-8"))
+    answer = json.loads((review_root / ANSWER_KEY_NAME).read_text(encoding="utf-8"))
+    for unit, answer_unit in zip(review["units"], answer["units"]):
+        if unit["kind"] == "boundary_role_pair":
+            unit["choice"] = next(
+                slot
+                for slot, identity in answer_unit["assignment"].items()
+                if identity == "v2_control"
+            )
+        elif unit["kind"] == "patch_edge_pair" and unit["unit_id"].endswith(
+            "-start"
+        ):
+            unit["choice"] = "neither"
+        else:
+            unit["choice"] = "equivalent"
+    _write(reviewed, review)
+    result_root = tmp_path / "failed-result"
+    result_path = result_root / "resolved.json"
+    _resolve_private_candidate_join_remediation_review(
+        reviewed,
+        review_package_dir=review_root,
+        execution_dir=execution,
+        v2_execution_dir=v2,
+        out=result_path,
+    )
+    return execution, v2, review_root, reviewed, result_path
+
+
+def test_failed_targeted_review_produces_only_a_bounded_model_free_plan(
+    tmp_path: Path,
+) -> None:
+    execution, v2, review_root, reviewed, result_path = _failed_targeted_review(
+        tmp_path
+    )
+    plan_root = tmp_path / "plan"
+    output = plan_root / FOLLOWUP_PLAN_REPORT_NAME
+    plan = _plan_private_candidate_followup_remediation(
+        result_path,
+        reviewed_export_path=reviewed,
+        targeted_review_package_dir=review_root,
+        execution_dir=execution,
+        v2_execution_dir=v2,
+        out=output,
+    )
+
+    assert plan["summary"]["remediation_role_boundary_count"] == 1
+    assert plan["summary"]["action_counts"] == {
+        "revert_patch_to_v2_control": 1
+    }
+    assert plan["summary"]["planned_model_call_count"] == 0
+    assert plan["readiness"]["remediation_execution_complete"] is False
+    assert plan["effects"]["model_run"] is False
+    assert plan["permissions"] == _FALSE_PERMISSIONS
+    assert output.is_file()
+    assert plan_root.stat().st_mode & 0o077 == 0
+
+
+def test_passing_targeted_review_refuses_a_remediation_plan(tmp_path: Path) -> None:
+    execution, v2, review_root, reviewed = _completed_review(tmp_path)
+    result_root = tmp_path / "passing-result"
+    result_path = result_root / "resolved.json"
+    _resolve_private_candidate_join_remediation_review(
+        reviewed,
+        review_package_dir=review_root,
+        execution_dir=execution,
+        v2_execution_dir=v2,
+        out=result_path,
+    )
+    plan_root = tmp_path / "plan"
+    plan_root.mkdir(mode=0o700)
+    output = plan_root / FOLLOWUP_PLAN_REPORT_NAME
+    with pytest.raises(ValueError, match="needs no remediation"):
+        _plan_private_candidate_followup_remediation(
+            result_path,
+            reviewed_export_path=reviewed,
+            targeted_review_package_dir=review_root,
+            execution_dir=execution,
+            v2_execution_dir=v2,
+            out=output,
+        )
+    assert not output.exists()

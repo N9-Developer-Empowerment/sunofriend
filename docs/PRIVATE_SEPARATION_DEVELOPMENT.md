@@ -3038,9 +3038,9 @@ document equality plus the targeted pass. It also binds the unchanged original
 stitch and its full 17-boundary inventory through the v2 execution before it
 copies any audio.
 
-After the outstanding 33-unit review has genuinely been exported, status has
-succeeded and a fresh passing result has been resolved, build the next package
-with these exact evidence roots and fresh output paths:
+Only after a 33-unit review has genuinely been exported, status has succeeded
+and a fresh passing result has been resolved may the next package be built with
+these exact evidence roots and fresh output paths:
 
 ```bash
 PYTHONPATH=src .venv/bin/python \
@@ -3063,8 +3063,8 @@ The generated page presents the exact source and follow-up vocals,
 instrumental and reconstruction over the complete song and every original
 boundary. It is a new unreviewed package, not a carry-over of the targeted A/B
 choices. The current repository has the builder but no real package from this
-stage because the preceding human review has not yet been exported and
-resolved. This is intentional fail-closed behaviour. A separate resolver for
+stage because the resolved targeted review did not pass. This is intentional
+fail-closed behaviour. A separate resolver for
 the resulting full-song review, then a fresh alignment review, still precede
 any readiness reassessment. Selection, acceptance, product activation and
 publication remain false.
@@ -3080,8 +3080,8 @@ role at every original boundary. It separately reports whether all boundaries
 were clean and whether all complete-song roles were useful. The result makes a
 fresh follow-up alignment review eligible but keeps alignment completion,
 original-join resolution, selection, acceptance, activation and publication
-false. The resolver is tested now; no real result exists because its input
-review package is still correctly gated by the outstanding targeted review.
+false. The resolver is tested now; no real result exists because the required
+all-boundary package remains correctly blocked by the failed targeted review.
 
 The next candidate-bound alignment stage is implemented as
 `scripts/private-separation-candidate-followup-full-song-alignment.py`. It
@@ -3096,9 +3096,9 @@ gate outcome separately from the human full-song and boundary ratings. A
 failed measurement is retained as evidence rather than promoted. Completion
 makes a fresh readiness reassessment technically possible, but does not by
 itself resolve the original joins or establish separator quality. The real
-alignment command cannot run yet because its prerequisite targeted review and
-subsequent all-boundary review have not been completed. Selection, acceptance,
-product exposure and publication remain false.
+alignment command cannot run yet because the targeted review failed, so the
+subsequent all-boundary review does not exist. Selection, acceptance, product
+exposure and publication remain false.
 
 The evidence-combination stage is implemented as
 `scripts/private-separation-candidate-followup-readiness-reassessment.py`. It
@@ -3112,8 +3112,40 @@ is clean and the alignment gate passes does it set
 `final_human_acceptance_review_eligible: true`. Even then, final acceptance,
 original-join resolution, selection, product exposure and publication remain
 false. Any failed prerequisite is retained and routes to bounded remediation.
-The real reassessment remains blocked by the two unfinished human-review
-stages, so no result has been generated for the current follow-up candidate.
+The real reassessment remains blocked because the targeted review failed before
+the all-boundary stage, so no result has been generated for the current
+follow-up candidate.
+
+The 33-unit browser export completed on 4 August 2026 and key-blind status
+verified all 66 audio references before the answer key was opened. Resolution
+is retained at
+`work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-review-result-v1/private-separation-candidate-join-remediation-review-result.json`.
+Its file/document SHA-256 values are
+`094450edd4faad8071f0a57ee0809549781e241750f872ee651c3337adcb8a9d`
+and
+`3733d2a3e3e3dd1119db49be81f03c117c5f8cb7329c8eacf5c51428130478c1`.
+Six targeted boundaries preferred the follow-up, three were equivalent and
+boundary 10 vocals preferred the v2 control. Seventeen patch edges were
+equivalent, while the instrumental end edges at boundaries 4 and 7 and the
+vocal end edge at boundary 8 were rated neither. All three complete-song pairs
+were follow-up or equivalent. The defined gate therefore failed; no
+all-17-boundary package, alignment or readiness reassessment was generated.
+
+The exact failed result now feeds the model-free second-remediation planner
+`scripts/private-separation-candidate-followup-remediation-plan.py`. The sealed
+plan is at
+`work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-plan-v2/private-separation-candidate-followup-remediation-plan.json`.
+Its file/document SHA-256 values are
+`dac8061581b8e942b5b1ef8dc8477e171b040851fd9e31fc43962a615b8962c3`
+and
+`52ff2db45308032bddafac9752e70ad11f5dfaa37ae09b38b5f7cd10d2225cfa`.
+It preserves successful regions, plans edge-aware reinference/blend search for
+three role-boundary pairs, reinference for the three equivalent formerly
+audible joins, and an exact v2-control revert for boundary 10 vocals. That is
+seven role-boundary actions over six unique 15-second source windows and six
+future model calls. Planning created no audio, ran no model and copied no
+private listener notes. A future candidate still requires a new blind targeted
+review before the all-boundary gate can reopen.
 
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:

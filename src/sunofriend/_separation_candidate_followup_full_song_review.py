@@ -272,35 +272,16 @@ def _verified_passing_targeted_result(
     execution_dir: Path,
     v2_execution_dir: Path,
 ) -> dict[str, Any]:
-    """Re-resolve the completed blind export and require byte-exact result semantics."""
+    """Re-resolve the completed blind export and require the targeted pass."""
 
-    result_snapshot = _load_private_json_snapshot(
-        result_path, "private targeted follow-up review result"
+    document = _verified_exact_targeted_result(
+        result_path,
+        reviewed_export_path=reviewed_export_path,
+        targeted_review_package_dir=targeted_review_package_dir,
+        execution_dir=execution_dir,
+        v2_execution_dir=v2_execution_dir,
     )
-    with tempfile.TemporaryDirectory(prefix="sunofriend-followup-gate-") as temporary:
-        root = Path(temporary)
-        root.chmod(0o700)
-        derived_path = root / "resolved.json"
-        derived = _resolve_private_candidate_join_remediation_review(
-            reviewed_export_path,
-            review_package_dir=targeted_review_package_dir,
-            execution_dir=execution_dir,
-            v2_execution_dir=v2_execution_dir,
-            out=derived_path,
-        )
-        derived.pop("report", None)
-    document = result_snapshot["document"]
-    readiness = document.get("readiness_evidence")
-    if (
-        document != derived
-        or document.get("schema") != TARGETED_RESULT_SCHEMA
-        or document.get("status") != TARGETED_RESULT_STATUS
-        or document.get("document_sha256") != _document_sha256(document)
-        or document.get("permissions") != _FALSE_PERMISSIONS
-        or document.get("effects") != TARGETED_REVIEW_FALSE_EFFECTS
-        or not isinstance(readiness, Mapping)
-    ):
-        raise ValueError("private targeted follow-up review result differs")
+    readiness = document["readiness_evidence"]
     required_true = (
         "targeted_followup_review_complete",
         "all_targeted_boundaries_followup_preferred",
@@ -319,6 +300,45 @@ def _verified_passing_targeted_result(
         readiness.get(key) is not False for key in required_false
     ):
         raise ValueError("private targeted follow-up review did not pass")
+    return document
+
+
+def _verified_exact_targeted_result(
+    result_path: str | Path,
+    *,
+    reviewed_export_path: str | Path,
+    targeted_review_package_dir: Path,
+    execution_dir: Path,
+    v2_execution_dir: Path,
+) -> dict[str, Any]:
+    """Re-resolve a completed blind export and require byte-exact semantics."""
+
+    result_snapshot = _load_private_json_snapshot(
+        result_path, "private targeted follow-up review result"
+    )
+    with tempfile.TemporaryDirectory(prefix="sunofriend-followup-gate-") as temporary:
+        root = Path(temporary)
+        root.chmod(0o700)
+        derived_path = root / "resolved.json"
+        derived = _resolve_private_candidate_join_remediation_review(
+            reviewed_export_path,
+            review_package_dir=targeted_review_package_dir,
+            execution_dir=execution_dir,
+            v2_execution_dir=v2_execution_dir,
+            out=derived_path,
+        )
+        derived.pop("report", None)
+    document = result_snapshot["document"]
+    if (
+        document != derived
+        or document.get("schema") != TARGETED_RESULT_SCHEMA
+        or document.get("status") != TARGETED_RESULT_STATUS
+        or document.get("document_sha256") != _document_sha256(document)
+        or document.get("permissions") != _FALSE_PERMISSIONS
+        or document.get("effects") != TARGETED_REVIEW_FALSE_EFFECTS
+        or not isinstance(document.get("readiness_evidence"), Mapping)
+    ):
+        raise ValueError("private targeted follow-up review result differs")
     return document
 
 

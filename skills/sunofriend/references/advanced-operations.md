@@ -2261,8 +2261,8 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   the ones bound by the immutable v2 execution before copying the exact source
   and follow-up PCM24 roles into a fresh review root. The resulting page still
   requires complete-song and every-original-boundary human listening. Do not
-  run or describe this stage as complete while the current 33-unit targeted
-  review remains unexported. Even after a package is built, selection,
+  run or describe this stage as complete unless the preceding 33-unit targeted
+  review has resolved as a pass. Even after a package is built, selection,
   acceptance, activation and publication remain false; a separate review
   resolver and fresh alignment still follow.
   The corresponding non-activating verifier/resolver is
@@ -2273,8 +2273,8 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   per-role boundary counts and exact audible-join indices. Completion only
   makes the next fresh alignment review eligible; original-join resolution,
   selection, acceptance, product exposure and publication stay false. The
-  code is ready, but there is no real result until the targeted review has
-  passed and this all-boundary page has subsequently been heard and exported.
+  code is ready, but there is no real result because the current targeted
+  review failed and no all-boundary page was generated.
   The subsequent deterministic alignment command is
   `scripts/private-separation-candidate-followup-full-song-alignment.py`. It
   re-verifies and re-derives the completed all-boundary result, then compares
@@ -2299,8 +2299,17 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   The runtime launcher and observed process image still require strict validity
   and matching static/kernel CDHashes. Use a private ignored Python 3.12 virtual
   environment backed by a valid local runtime rather than changing the system
-  Python. The current review page is unreviewed; selection, acceptance,
-  readiness and every product/publication permission remain false.
+  Python. The current 33-unit review is complete and resolved but failed its
+  gate: six target boundaries preferred the follow-up, three were equivalent,
+  boundary 10 vocals preferred v2, three patch-end pairs were neither, and all
+  complete-song pairs passed. The all-boundary builder therefore remains
+  closed. The next model-free plan is produced with
+  `scripts/private-separation-candidate-followup-remediation-plan.py`; it binds
+  the exact export and result, preserves successful regions, schedules three
+  edge-aware repairs and three unresolved-boundary reinferences over six
+  source windows, and reverts boundary 10 vocals to exact v2 control. It runs
+  no model and creates no audio. Selection, acceptance, readiness and every
+  product/publication permission remain false.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic
   snapshot across the whole operation; status and result record this explicit
