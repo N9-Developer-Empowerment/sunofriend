@@ -86,10 +86,77 @@ def _measure_private_separation_full_song_alignment(
     clock = stitch["clock"]
     _require_audio_clock(source_path, clock=clock, soundfile=soundfile)
     _require_audio_clock(reconstruction_path, clock=clock, soundfile=soundfile)
+    observation = _measure_alignment_observation(
+        source_path,
+        reconstruction_path,
+        clock=clock,
+        soundfile=soundfile,
+        np=np,
+    )
+
+    result: dict[str, Any] = {
+        "schema": SCHEMA,
+        "status": STATUS,
+        "evidence_scope": "private_development_only",
+        "policy_id": POLICY_ID,
+        "bindings": {
+            "stitch_report_sha256": _sha256(stitch_path),
+            "stitch_document_sha256": stitch["document_sha256"],
+            "source_audio_sha256": stitch["artifacts"]["source"]["sha256"],
+            "reconstruction_audio_sha256": stitch["artifacts"]["reconstruction"][
+                "sha256"
+            ],
+            "plan_document_sha256": stitch["bindings"]["plan_document_sha256"],
+            "execution_state_sha256": stitch["bindings"]["execution_state_sha256"],
+        },
+        "clock": deepcopy(clock),
+        "protocol": observation["protocol"],
+        "thresholds": observation["thresholds"],
+        "windows": observation["windows"],
+        "summary": observation["summary"],
+        "readiness": {
+            "exact_source_and_reconstruction_clock_verified": True,
+            "source_to_reconstruction_alignment_verified": observation[
+                "gate_passed"
+            ],
+            "drift_acceptance_complete": observation["gate_passed"],
+            "alignment_gate_passed": observation["gate_passed"],
+            "separator_accuracy_established": False,
+            "publication_ready": False,
+        },
+        "interpretation": {
+            "alignment_is_separator_quality": False,
+            "reconstruction_similarity_is_role_fidelity": False,
+            "gate_pass_is_separator_acceptance": False,
+            "automatic_winner_selected": False,
+        },
+        "permissions": dict(_FALSE_PERMISSIONS),
+        "effects": dict(_FALSE_EFFECTS),
+        "limitations": [
+            "This report measures only source-to-reconstruction synchronization and drift.",
+            "A reconstruction can remain synchronized while vocals or instrumental stems contain bleed, omissions or artefacts.",
+            "Spectral correlation is used as clock evidence, not as a music-quality or separator-accuracy score.",
+            "Human full-song and exact-boundary listening remain separate required evidence.",
+        ],
+    }
+    result["document_sha256"] = _document_sha256(result)
+    _write_json_atomic(output, result)
+    return {**result, "report": str(output)}
+
+
+def _measure_alignment_observation(
+    source_path: Path,
+    reconstruction_path: Path,
+    *,
+    clock: Mapping[str, Any],
+    soundfile: Any,
+    np: Any,
+) -> dict[str, Any]:
+    """Return the reusable nine-window alignment observation."""
+
     duration_seconds = float(clock["duration_seconds"])
     if duration_seconds < MINIMUM_SONG_SECONDS:
         raise ValueError("private full-song alignment source is too short")
-
     sample_rate = int(clock["sample_rate"])
     window_seconds = min(MAXIMUM_WINDOW_SECONDS, duration_seconds / 12.0)
     window_frames = max(1, int(round(window_seconds * sample_rate)))
@@ -151,23 +218,7 @@ def _measure_private_separation_full_song_alignment(
         and lag_spread <= MAXIMUM_ACCEPTED_LAG_SPREAD_MILLISECONDS
         and minimum_correlation >= MINIMUM_ACCEPTED_WINDOW_CORRELATION
     )
-
-    result: dict[str, Any] = {
-        "schema": SCHEMA,
-        "status": STATUS,
-        "evidence_scope": "private_development_only",
-        "policy_id": POLICY_ID,
-        "bindings": {
-            "stitch_report_sha256": _sha256(stitch_path),
-            "stitch_document_sha256": stitch["document_sha256"],
-            "source_audio_sha256": stitch["artifacts"]["source"]["sha256"],
-            "reconstruction_audio_sha256": stitch["artifacts"]["reconstruction"][
-                "sha256"
-            ],
-            "plan_document_sha256": stitch["bindings"]["plan_document_sha256"],
-            "execution_state_sha256": stitch["bindings"]["execution_state_sha256"],
-        },
-        "clock": deepcopy(clock),
+    return {
         "protocol": {
             "comparison": "canonical source versus diagnostic reconstruction",
             "feature": "log spectral-band energy",
@@ -200,32 +251,8 @@ def _measure_private_separation_full_song_alignment(
             ),
             "early_middle_late_coverage_complete": coverage_complete,
         },
-        "readiness": {
-            "exact_source_and_reconstruction_clock_verified": True,
-            "source_to_reconstruction_alignment_verified": gate_passed,
-            "drift_acceptance_complete": gate_passed,
-            "alignment_gate_passed": gate_passed,
-            "separator_accuracy_established": False,
-            "publication_ready": False,
-        },
-        "interpretation": {
-            "alignment_is_separator_quality": False,
-            "reconstruction_similarity_is_role_fidelity": False,
-            "gate_pass_is_separator_acceptance": False,
-            "automatic_winner_selected": False,
-        },
-        "permissions": dict(_FALSE_PERMISSIONS),
-        "effects": dict(_FALSE_EFFECTS),
-        "limitations": [
-            "This report measures only source-to-reconstruction synchronization and drift.",
-            "A reconstruction can remain synchronized while vocals or instrumental stems contain bleed, omissions or artefacts.",
-            "Spectral correlation is used as clock evidence, not as a music-quality or separator-accuracy score.",
-            "Human full-song and exact-boundary listening remain separate required evidence.",
-        ],
+        "gate_passed": gate_passed,
     }
-    result["document_sha256"] = _document_sha256(result)
-    _write_json_atomic(output, result)
-    return {**result, "report": str(output)}
 
 
 def _window_start_frames(*, total_frames: int, window_frames: int) -> list[int]:

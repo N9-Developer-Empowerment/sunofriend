@@ -2163,7 +2163,16 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   referenced clip. It records but does not reinterpret the listener's three
   full-song and 51 role-boundary ratings. Resolution selects and accepts
   nothing and keeps alignment, original-join resolution, readiness and
-  publication false. The fresh nine-window alignment review remains required.
+  publication false.
+  The separate fresh alignment command is now
+  `scripts/private-separation-candidate-full-song-alignment.py`. It requires
+  the exact passing v2 result and same complete evidence chain, then compares
+  the original source with the exact v2 reconstruction in nine fixed
+  early/middle/late windows. It reuses the established spectral-clock policy,
+  not the earlier candidate's result, runs no model and writes no audio. Its
+  lag/drift/correlation outcome remains evidence only: selection, acceptance,
+  full-song review, original-join resolution, readiness and publication stay
+  false.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic
   snapshot across the whole operation; status and result record this explicit

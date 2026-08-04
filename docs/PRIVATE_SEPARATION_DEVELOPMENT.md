@@ -2851,8 +2851,7 @@ The fixed completion marker is
 `private-separation-candidate-full-song-review-package.json`; the human page is
 `BOUNDARY-REVIEW/separation_boundary_review.html`. Building or completing that
 page still cannot select or accept the candidate, prove alignment, resolve the
-original audible joins, change readiness or publish anything. A separate
-fresh nine-window alignment package remains a later increment.
+original audible joins, change readiness or publish anything.
 
 The matching candidate-bound review resolver is implemented. After the
 listener completes all three full-song ratings and all three role ratings at
@@ -2870,6 +2869,22 @@ cleanliness as human evidence, but keeps selection, acceptance, alignment,
 `original_audible_joins_resolved`, readiness and publication false. Even when
 all three complete-song roles are useful and all 51 role-boundary ratings are
 clean, a fresh candidate-bound alignment review is still required.
+
+The fresh candidate-bound nine-window alignment measurement is also
+implemented and is independently gated by the exact passing v2 result. Run
+`scripts/private-separation-candidate-full-song-alignment.py` with the same
+`--v2-review-result`, v1/v2 execution, plan, stitch, review and readiness
+arguments as the package builder, plus a fresh owner-only `--out`. It compares
+the original canonical source with the exact v2 reconstruction at nine
+early/middle/late windows using the existing fixed spectral-clock policy. It
+does not inherit the earlier candidate's alignment result and writes no audio.
+
+The result records whether the fixed lag, drift and correlation thresholds
+passed, while keeping separator accuracy, candidate selection and acceptance,
+full-song review, `original_audible_joins_resolved`, product readiness and
+publication false. The targeted v2 export is still outstanding, so neither the
+real candidate-bound full-song package nor real alignment result has been
+created yet.
 
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
