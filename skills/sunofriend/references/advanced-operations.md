@@ -1875,9 +1875,12 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   current `Be Alone` review verified exact duration and rated all three
   complete outputs useful, but vocals had audible joins at boundaries 11/12
   and the instrumental at 11/13. The duration/alignment gate therefore remains
-  open. Even an all-clean result would not prove synchronized source-to-output
-  alignment or accepted drift, and could not close the gate, select or accept
-  a separator.
+  open. The review alone does not prove synchronized source-to-output alignment
+  or accepted drift. Its optional `--full-song-alignment-result` accepts the
+  separate self-hashed v1 timing result only when it is bound to the same
+  stitch, plan, execution and clock. A matching review and alignment result can
+  close only the duration/alignment milestone when both predeclared minima
+  pass; neither can select or accept a separator.
 - `scripts/private-separated-audio-quality-review.py` creates a fresh
   owner-only blind review from two or more exact source-bound vocal-separation
   cases. Each case must bind one authorised mixed excerpt, one unchanged Kim
@@ -1946,6 +1949,17 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   result keeps full-song quality acceptance, separator selection, publication
   and every product route false. No current human review page remains
   outstanding; older packages are superseded evidence.
+  `scripts/private-separation-full-song-alignment.py` now measures the exact
+  source against the diagnostic reconstruction in nine early-to-late windows.
+  It uses gain-normalized log spectral-band timing features, searches only the
+  declared plus/minus 100 ms interval and requires all windows active, no more
+  than 20 ms absolute lag, no more than 20 ms lag spread and at least 0.90
+  normalized correlation in every window. The current `Be Alone` result passed
+  with nine eligible windows, 0 ms maximum lag, 0 ms spread and 1.0 minimum
+  correlation. This is source-clock synchronization evidence only, not stem
+  fidelity, bleed, artefact, musical-quality or separator-accuracy evidence.
+  The human-reviewed vocal and instrumental joins still keep the combined
+  duration/alignment milestone open.
   Never call exact input partitioning or exact output duration seamless or
   accepted separation.
   Fresh native attempts now retain two path-free resource projections inside

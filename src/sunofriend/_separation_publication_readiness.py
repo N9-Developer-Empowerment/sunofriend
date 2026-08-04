@@ -36,6 +36,19 @@ from ._separation_full_song_review import (
     SCHEMA as FULL_SONG_REVIEW_RESULT_SCHEMA,
     STATUS as FULL_SONG_REVIEW_RESULT_STATUS,
 )
+from ._separation_full_song_alignment import (
+    FEATURE_FRAME_MILLISECONDS as ALIGNMENT_FEATURE_FRAME_MILLISECONDS,
+    FEATURE_HOP_MILLISECONDS as ALIGNMENT_FEATURE_HOP_MILLISECONDS,
+    MAXIMUM_ACCEPTED_ABSOLUTE_LAG_MILLISECONDS,
+    MAXIMUM_ACCEPTED_LAG_SPREAD_MILLISECONDS,
+    MAXIMUM_SEARCH_LAG_MILLISECONDS,
+    MINIMUM_ACCEPTED_WINDOW_CORRELATION,
+    MINIMUM_ACTIVE_RMS_DBFS,
+    POLICY_ID as FULL_SONG_ALIGNMENT_POLICY_ID,
+    SCHEMA as FULL_SONG_ALIGNMENT_RESULT_SCHEMA,
+    STATUS as FULL_SONG_ALIGNMENT_RESULT_STATUS,
+    WINDOW_COUNT as ALIGNMENT_WINDOW_COUNT,
+)
 from ._separation_normalized_midi_agreement import (
     SCHEMA as NORMALIZED_AGREEMENT_SCHEMA,
 )
@@ -78,6 +91,16 @@ _FULL_SONG_EFFECT_KEYS = frozenset(
         "stitched_audio_mutated",
     )
 )
+_ALIGNMENT_EFFECT_KEYS = frozenset(
+    (
+        "audio_created_or_mutated",
+        "product_contract_mutated",
+        "publication_state_mutated",
+        "separator_accepted",
+        "separator_selected",
+        "source_graph_mutated",
+    )
+)
 
 
 @dataclass(frozen=True)
@@ -94,6 +117,7 @@ def _project_private_separation_publication_readiness(
     separated_audio_quality_path: str | Path | None = None,
     resource_benchmark_result_path: str | Path | None = None,
     full_song_review_result_path: str | Path | None = None,
+    full_song_alignment_result_path: str | Path | None = None,
     out: str | Path,
 ) -> dict[str, Any]:
     """Build one path-free ledger from the currently sealed acceptance work."""
@@ -115,6 +139,11 @@ def _project_private_separation_publication_readiness(
         if full_song_review_result_path is not None
         else None
     )
+    full_song_alignment = (
+        _load_full_song_alignment_result(full_song_alignment_result_path)
+        if full_song_alignment_result_path is not None
+        else None
+    )
     _require_listening_bound_to_agreement(listening, agreement)
 
     agreement_track_ids = {
@@ -134,6 +163,11 @@ def _project_private_separation_publication_readiness(
     )
     if audio_quality is not None:
         _require_audio_bound_to_agreement(audio_quality, agreement)
+    if full_song_review is not None and full_song_alignment is not None:
+        _require_alignment_bound_to_full_song_review(
+            full_song_alignment,
+            full_song_review,
+        )
 
     document = _build_document(
         agreement=agreement,
@@ -141,6 +175,7 @@ def _project_private_separation_publication_readiness(
         audio_quality=audio_quality,
         resource_benchmark=resource_benchmark,
         full_song_review=full_song_review,
+        full_song_alignment=full_song_alignment,
     )
     document["document_sha256"] = _document_sha256(document)
     _reverify(
@@ -149,6 +184,7 @@ def _project_private_separation_publication_readiness(
         audio_quality,
         resource_benchmark,
         full_song_review,
+        full_song_alignment,
     )
     _write_fresh_private_json(Path(out), document)
     document["report"] = str(Path(out).expanduser().absolute())
@@ -462,6 +498,240 @@ def _load_full_song_review_result(path: str | Path) -> _LoadedJson:
     _require_all_false(permissions, "full-song review permissions")
     _require_all_false(effects, "full-song review effects")
     return loaded
+
+
+def _load_full_song_alignment_result(path: str | Path) -> _LoadedJson:
+    loaded = _load_json(path, "full-song alignment result")
+    document = loaded.document
+    bindings = document.get("bindings")
+    clock = document.get("clock")
+    protocol = document.get("protocol")
+    thresholds = document.get("thresholds")
+    windows = document.get("windows")
+    summary = document.get("summary")
+    readiness = document.get("readiness")
+    interpretation = document.get("interpretation")
+    if (
+        document.get("schema") != FULL_SONG_ALIGNMENT_RESULT_SCHEMA
+        or document.get("status") != FULL_SONG_ALIGNMENT_RESULT_STATUS
+        or document.get("evidence_scope") != "private_development_only"
+        or document.get("policy_id") != FULL_SONG_ALIGNMENT_POLICY_ID
+        or document.get("document_sha256") != _document_sha256(document)
+        or not isinstance(bindings, Mapping)
+        or set(bindings)
+        != {
+            "stitch_report_sha256",
+            "stitch_document_sha256",
+            "source_audio_sha256",
+            "reconstruction_audio_sha256",
+            "plan_document_sha256",
+            "execution_state_sha256",
+        }
+        or not all(_is_sha256(value) for value in bindings.values())
+        or not _valid_full_song_clock(clock)
+        or not _valid_alignment_protocol(protocol)
+        or not _valid_alignment_thresholds(thresholds)
+        or not _valid_alignment_windows(
+            windows,
+            clock=clock,
+            protocol=protocol,
+        )
+        or not _valid_alignment_summary_and_readiness(
+            summary,
+            readiness=readiness,
+            windows=windows,
+            thresholds=thresholds,
+        )
+        or interpretation
+        != {
+            "alignment_is_separator_quality": False,
+            "reconstruction_similarity_is_role_fidelity": False,
+            "gate_pass_is_separator_acceptance": False,
+            "automatic_winner_selected": False,
+        }
+    ):
+        raise ValueError("full-song alignment result differs")
+    permissions = document.get("permissions")
+    effects = document.get("effects")
+    if (
+        not isinstance(permissions, Mapping)
+        or set(permissions) != _FULL_SONG_PERMISSION_KEYS
+        or not isinstance(effects, Mapping)
+        or set(effects) != _ALIGNMENT_EFFECT_KEYS
+    ):
+        raise ValueError("full-song alignment result differs")
+    _require_all_false(permissions, "full-song alignment permissions")
+    _require_all_false(effects, "full-song alignment effects")
+    return loaded
+
+
+def _valid_alignment_protocol(value: Any) -> bool:
+    if not isinstance(value, Mapping):
+        return False
+    window_seconds = value.get("window_seconds")
+    return (
+        value.get("comparison")
+        == "canonical source versus diagnostic reconstruction"
+        and value.get("feature") == "log spectral-band energy"
+        and value.get("window_count") == ALIGNMENT_WINDOW_COUNT
+        and _finite_number(window_seconds)
+        and 0.0 < float(window_seconds) <= 8.0
+        and value.get("feature_frame_milliseconds")
+        == ALIGNMENT_FEATURE_FRAME_MILLISECONDS
+        and value.get("feature_hop_milliseconds")
+        == ALIGNMENT_FEATURE_HOP_MILLISECONDS
+        and value.get("maximum_search_lag_milliseconds")
+        == MAXIMUM_SEARCH_LAG_MILLISECONDS
+        and value.get("lag_sign")
+        == "positive means reconstruction is later than source"
+        and value.get("source_and_reconstruction_gain_normalized_for_timing")
+        is True
+    )
+
+
+def _valid_alignment_thresholds(value: Any) -> bool:
+    return value == {
+        "minimum_active_rms_dbfs": MINIMUM_ACTIVE_RMS_DBFS,
+        "minimum_eligible_window_count": ALIGNMENT_WINDOW_COUNT,
+        "all_song_thirds_required": True,
+        "maximum_absolute_lag_milliseconds": MAXIMUM_ACCEPTED_ABSOLUTE_LAG_MILLISECONDS,
+        "maximum_lag_spread_milliseconds": MAXIMUM_ACCEPTED_LAG_SPREAD_MILLISECONDS,
+        "minimum_window_normalized_correlation": MINIMUM_ACCEPTED_WINDOW_CORRELATION,
+    }
+
+
+def _valid_alignment_windows(
+    value: Any,
+    *,
+    clock: Mapping[str, Any],
+    protocol: Mapping[str, Any],
+) -> bool:
+    if not isinstance(value, list) or len(value) != ALIGNMENT_WINDOW_COUNT:
+        return False
+    sample_rate = clock["sample_rate"]
+    total_frames = clock["frames"]
+    expected_window_frames = int(round(protocol["window_seconds"] * sample_rate))
+    available_frames = total_frames - expected_window_frames
+    expected_starts = [
+        int(round(available_frames * index / (ALIGNMENT_WINDOW_COUNT - 1)))
+        for index in range(ALIGNMENT_WINDOW_COUNT)
+    ]
+    for index, window in enumerate(value, start=1):
+        expected_third = "early" if index <= 3 else "middle" if index <= 6 else "late"
+        if not isinstance(window, Mapping):
+            return False
+        start = window.get("start_frame")
+        end = window.get("end_frame")
+        correlation = window.get("peak_normalized_correlation")
+        lag = window.get("best_lag_milliseconds")
+        if (
+            window.get("window_index") != index
+            or window.get("song_third") != expected_third
+            or type(start) is not int
+            or type(end) is not int
+            or start != expected_starts[index - 1]
+            or start < 0
+            or end - start != expected_window_frames
+            or end > total_frames
+            or not _finite_number(window.get("start_seconds"))
+            or not _finite_number(window.get("end_seconds"))
+            or abs(float(window["start_seconds"]) - start / sample_rate) > 1.0e-6
+            or abs(float(window["end_seconds"]) - end / sample_rate) > 1.0e-6
+            or not _finite_number(window.get("source_rms_dbfs"))
+            or not _finite_number(window.get("reconstruction_rms_dbfs"))
+            or type(window.get("eligible")) is not bool
+        ):
+            return False
+        if window["eligible"]:
+            if (
+                not _finite_number(correlation)
+                or not -1.0 <= float(correlation) <= 1.0
+                or not _finite_number(lag)
+                or abs(float(lag)) > MAXIMUM_SEARCH_LAG_MILLISECONDS
+                or window["source_rms_dbfs"] < MINIMUM_ACTIVE_RMS_DBFS
+                or window["reconstruction_rms_dbfs"] < MINIMUM_ACTIVE_RMS_DBFS
+            ):
+                return False
+        elif (correlation is None) is not (lag is None):
+            return False
+        elif correlation is not None and (
+            not _finite_number(correlation)
+            or not -1.0 <= float(correlation) <= 1.0
+            or not _finite_number(lag)
+            or abs(float(lag)) > MAXIMUM_SEARCH_LAG_MILLISECONDS
+        ):
+            return False
+    return True
+
+
+def _valid_alignment_summary_and_readiness(
+    summary: Any,
+    *,
+    readiness: Any,
+    windows: list[Mapping[str, Any]],
+    thresholds: Mapping[str, Any],
+) -> bool:
+    if not isinstance(summary, Mapping) or not isinstance(readiness, Mapping):
+        return False
+    eligible = [window for window in windows if window["eligible"]]
+    lags = [float(window["best_lag_milliseconds"]) for window in eligible]
+    correlations = [
+        float(window["peak_normalized_correlation"]) for window in eligible
+    ]
+    coverage_complete = (
+        len(eligible) == ALIGNMENT_WINDOW_COUNT
+        and {window["song_third"] for window in eligible}
+        == {"early", "middle", "late"}
+    )
+    maximum_absolute_lag = max((abs(value) for value in lags), default=None)
+    lag_spread = max(lags) - min(lags) if lags else None
+    minimum_correlation = min(correlations, default=-1.0)
+    gate_passed = (
+        coverage_complete
+        and maximum_absolute_lag is not None
+        and maximum_absolute_lag
+        <= thresholds["maximum_absolute_lag_milliseconds"]
+        and lag_spread is not None
+        and lag_spread <= thresholds["maximum_lag_spread_milliseconds"]
+        and minimum_correlation
+        >= thresholds["minimum_window_normalized_correlation"]
+    )
+    expected_summary = {
+        "eligible_window_count": len(eligible),
+        "maximum_absolute_lag_milliseconds": maximum_absolute_lag,
+        "lag_spread_milliseconds": lag_spread,
+        "minimum_window_normalized_correlation": round(minimum_correlation, 6),
+        "early_middle_late_coverage_complete": coverage_complete,
+    }
+    expected_readiness = {
+        "exact_source_and_reconstruction_clock_verified": True,
+        "source_to_reconstruction_alignment_verified": gate_passed,
+        "drift_acceptance_complete": gate_passed,
+        "alignment_gate_passed": gate_passed,
+        "separator_accuracy_established": False,
+        "publication_ready": False,
+    }
+    return summary == expected_summary and readiness == expected_readiness
+
+
+def _require_alignment_bound_to_full_song_review(
+    alignment: _LoadedJson,
+    review: _LoadedJson,
+) -> None:
+    alignment_bindings = alignment.document["bindings"]
+    review_bindings = review.document["bindings"]
+    if (
+        alignment_bindings["stitch_report_sha256"]
+        != review_bindings["stitch_report_sha256"]
+        or alignment_bindings["stitch_document_sha256"]
+        != review_bindings["stitch_document_sha256"]
+        or alignment_bindings["plan_document_sha256"]
+        != review_bindings["plan_document_sha256"]
+        or alignment_bindings["execution_state_sha256"]
+        != review_bindings["execution_state_sha256"]
+        or alignment.document["clock"] != review.document["clock"]
+    ):
+        raise ValueError("full-song alignment binding differs from review")
 
 
 def _valid_full_song_clock(value: Any) -> bool:
@@ -810,6 +1080,7 @@ def _build_document(
     audio_quality: _LoadedJson | None,
     resource_benchmark: _LoadedJson | None,
     full_song_review: _LoadedJson | None,
+    full_song_alignment: _LoadedJson | None,
 ) -> dict[str, Any]:
     coverage = listening.document["coverage"]
     audio_assessment = (
@@ -827,6 +1098,28 @@ def _build_document(
         if full_song_review is not None
         else None
     )
+    alignment_assessment = (
+        _assess_full_song_alignment(full_song_alignment.document)
+        if full_song_alignment is not None
+        else None
+    )
+    if full_song_assessment is not None and alignment_assessment is not None:
+        combined_gate_passed = (
+            full_song_assessment["review_minimum_met"]
+            and alignment_assessment["gate_passed"]
+        )
+        full_song_assessment.update(
+            {
+                "source_to_output_alignment_verified": alignment_assessment[
+                    "source_to_reconstruction_alignment_verified"
+                ],
+                "drift_acceptance_complete": alignment_assessment[
+                    "drift_acceptance_complete"
+                ],
+                "gate_passed": combined_gate_passed,
+                "acceptance_gate_closed": combined_gate_passed,
+            }
+        )
     passed = [
         _gate(
             "source_bound_cross_song_downstream_midi",
@@ -864,18 +1157,35 @@ def _build_document(
         audio_open_gates = [audio_gate]
     full_song_gate = _gate(
         "full_song_duration_and_alignment",
-        "open",
         (
-            "The exact full-song clock and bounded listening minimum were verified, but synchronized source-to-output alignment and drift acceptance are not supplied by this review contract."
-            if full_song_assessment and full_song_assessment["review_minimum_met"]
+            "passed"
+            if full_song_assessment and full_song_assessment["gate_passed"]
+            else "open"
+        ),
+        (
+            "The exact clock, complete-song listening minimum, clean role boundaries and source-to-reconstruction alignment/drift thresholds were all verified for this one owner-reviewed song."
+            if full_song_assessment and full_song_assessment["gate_passed"]
             else (
-                "Exact duration and complete listening were verified, but the predeclared minimum requires every generated complete-song role to be useful and every role-boundary judgement to be clean."
+                "The full-song listening minimum was verified, but synchronized source-to-reconstruction alignment and drift evidence are still missing or outside the declared thresholds."
                 if full_song_assessment
-                else "Bounded excerpts do not prove full-song quality, clock alignment or drift."
+                and full_song_assessment["review_minimum_met"]
+                else (
+                    "Automated alignment passed, but exact full-song listening still requires every generated role to be useful and every role-boundary judgement to be clean."
+                    if alignment_assessment and alignment_assessment["gate_passed"]
+                    else (
+                        "Exact duration and complete listening were verified, but the predeclared minimum requires every generated complete-song role to be useful and every role-boundary judgement to be clean."
+                        if full_song_assessment
+                        else "Bounded excerpts do not prove full-song quality, clock alignment or drift."
+                    )
+                )
             )
         ),
     )
-    full_song_open_gates = [full_song_gate]
+    if full_song_gate["status"] == "passed":
+        passed.append(full_song_gate)
+        full_song_open_gates: list[dict[str, str]] = []
+    else:
+        full_song_open_gates = [full_song_gate]
     open_gates = (
         audio_open_gates
         + full_song_open_gates
@@ -958,6 +1268,15 @@ def _build_document(
                 ],
             }
         )
+    if full_song_alignment is not None:
+        inputs.update(
+            {
+                "full_song_alignment_result_sha256": full_song_alignment.file_sha256,
+                "full_song_alignment_result_document_sha256": full_song_alignment.document[
+                    "document_sha256"
+                ],
+            }
+        )
     return {
         "schema": SCHEMA,
         "status": "blocked_private_bounded_vocal_midi_evidence_only",
@@ -989,6 +1308,12 @@ def _build_document(
             "full_song_review_role_scope": (
                 list(_FULL_SONG_ROLES) if full_song_assessment else []
             ),
+            "full_song_alignment_measured": alignment_assessment is not None,
+            "full_song_alignment_window_count": (
+                alignment_assessment["window_count"]
+                if alignment_assessment
+                else 0
+            ),
         },
         "readiness": {
             "stage": "private_bounded_vocal_research",
@@ -1003,6 +1328,7 @@ def _build_document(
         "separated_audio_quality_assessment": audio_assessment,
         "resource_benchmark_assessment": resource_assessment,
         "full_song_duration_alignment_assessment": full_song_assessment,
+        "full_song_alignment_assessment": alignment_assessment,
         "interpretation": {
             "private_separator_derived_midi_has_useful_evidence": True,
             "general_finished_song_separation_is_working": False,
@@ -1029,6 +1355,8 @@ def _build_document(
             "full_song_minimum_policy_predeclared": True,
             "full_song_review_can_select_or_accept_separator": False,
             "full_song_review_can_close_duration_alignment_gate": False,
+            "alignment_result_alone_can_close_duration_alignment_gate": False,
+            "matching_review_and_alignment_can_close_duration_alignment_gate": True,
         },
         "permissions": {
             "accepted": False,
@@ -1054,7 +1382,7 @@ def _build_document(
             "Future gate closure must be supplied by a new typed, hash-bound evidence contract; caller assertions cannot close a gate.",
             "The separated-audio minimum is a bounded usability gate, not a model ranking, score-truth claim or general finished-song approval.",
             "A controlled development-machine resource result records progress but cannot substitute for the separate acceptance-class contract.",
-            "One owner-reviewed full song records exact duration and join evidence but cannot establish synchronized source alignment, drift acceptance, broad-role, hidden-set or general separator quality.",
+            "One owner-reviewed full song plus a matching alignment result can close only the duration/alignment milestone; it cannot establish broad-role, hidden-set or general separator quality.",
         ],
     }
 
@@ -1111,6 +1439,33 @@ def _assess_full_song_review(document: Mapping[str, Any]) -> dict[str, Any]:
         "drift_acceptance_complete": False,
         "gate_passed": False,
         "acceptance_gate_closed": False,
+        "separator_accepted": False,
+    }
+
+
+def _assess_full_song_alignment(document: Mapping[str, Any]) -> dict[str, Any]:
+    summary = document["summary"]
+    readiness = document["readiness"]
+    return {
+        "policy_id": document["policy_id"],
+        "window_count": len(document["windows"]),
+        "eligible_window_count": summary["eligible_window_count"],
+        "early_middle_late_coverage_complete": summary[
+            "early_middle_late_coverage_complete"
+        ],
+        "maximum_absolute_lag_milliseconds": summary[
+            "maximum_absolute_lag_milliseconds"
+        ],
+        "lag_spread_milliseconds": summary["lag_spread_milliseconds"],
+        "minimum_window_normalized_correlation": summary[
+            "minimum_window_normalized_correlation"
+        ],
+        "source_to_reconstruction_alignment_verified": readiness[
+            "source_to_reconstruction_alignment_verified"
+        ],
+        "drift_acceptance_complete": readiness["drift_acceptance_complete"],
+        "gate_passed": readiness["alignment_gate_passed"],
+        "separator_accuracy_established": False,
         "separator_accepted": False,
     }
 
@@ -1247,12 +1602,21 @@ def _nonnegative_int(value: Any, label: str) -> int:
     return value
 
 
+def _finite_number(value: Any) -> bool:
+    return (
+        not isinstance(value, bool)
+        and isinstance(value, (int, float))
+        and math.isfinite(float(value))
+    )
+
+
 def _reverify(
     agreement: _LoadedJson,
     listening: _LoadedJson,
     audio_quality: _LoadedJson | None,
     resource_benchmark: _LoadedJson | None,
     full_song_review: _LoadedJson | None,
+    full_song_alignment: _LoadedJson | None,
 ) -> None:
     if _sha256(agreement.path) != agreement.file_sha256:
         raise ValueError("normalized MIDI agreement changed during projection")
@@ -1273,6 +1637,11 @@ def _reverify(
         and _sha256(full_song_review.path) != full_song_review.file_sha256
     ):
         raise ValueError("full-song review result changed during projection")
+    if (
+        full_song_alignment is not None
+        and _sha256(full_song_alignment.path) != full_song_alignment.file_sha256
+    ):
+        raise ValueError("full-song alignment result changed during projection")
 
 
 __all__ = [

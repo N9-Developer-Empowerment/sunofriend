@@ -20,6 +20,18 @@ from sunofriend._separation_full_song_review import (
     SCHEMA as FULL_SONG_REVIEW_SCHEMA,
     STATUS as FULL_SONG_REVIEW_STATUS,
 )
+from sunofriend._separation_full_song_alignment import (
+    FEATURE_FRAME_MILLISECONDS,
+    FEATURE_HOP_MILLISECONDS,
+    MAXIMUM_ACCEPTED_ABSOLUTE_LAG_MILLISECONDS,
+    MAXIMUM_ACCEPTED_LAG_SPREAD_MILLISECONDS,
+    MAXIMUM_SEARCH_LAG_MILLISECONDS,
+    MINIMUM_ACCEPTED_WINDOW_CORRELATION,
+    MINIMUM_ACTIVE_RMS_DBFS,
+    POLICY_ID as FULL_SONG_ALIGNMENT_POLICY_ID,
+    SCHEMA as FULL_SONG_ALIGNMENT_SCHEMA,
+    STATUS as FULL_SONG_ALIGNMENT_STATUS,
+)
 from sunofriend._separation_audio_quality_review import (
     POLICY_ID as AUDIO_QUALITY_POLICY_ID,
     RESULT_SCHEMA as AUDIO_QUALITY_RESULT_SCHEMA,
@@ -262,6 +274,83 @@ def test_clean_useful_full_song_review_still_cannot_claim_source_alignment(
     )
     assert all(value is False for value in result["permissions"].values())
     assert all(value is False for value in result["effects"].values())
+
+
+def test_matching_review_and_alignment_close_only_full_song_milestone(
+    tmp_path: Path,
+) -> None:
+    agreement = _agreement(tmp_path)
+    listening = _listening(tmp_path, agreement)
+    full_song = _full_song_review_result(tmp_path, all_boundaries_clean=True)
+    alignment = _full_song_alignment_result(tmp_path, gate_passed=True)
+
+    result = _project_private_separation_publication_readiness(
+        agreement,
+        listening,
+        full_song_review_result_path=full_song,
+        full_song_alignment_result_path=alignment,
+        out=tmp_path / "readiness-with-alignment.json",
+    )
+
+    gates = {gate["gate_id"]: gate["status"] for gate in result["gates"]}
+    assert gates["full_song_duration_and_alignment"] == "passed"
+    assert gates["broad_role_coverage"] == "open"
+    assert gates["public_cli_tui_simple_studio_route"] == "open"
+    assert result["readiness"]["passed_gate_count"] == 4
+    assert result["readiness"]["open_gate_count"] == 7
+    assert result["readiness"]["publication_ready"] is False
+    review_assessment = result["full_song_duration_alignment_assessment"]
+    assert review_assessment["review_minimum_met"] is True
+    assert review_assessment["source_to_output_alignment_verified"] is True
+    assert review_assessment["drift_acceptance_complete"] is True
+    assert review_assessment["gate_passed"] is True
+    assert review_assessment["separator_accepted"] is False
+    alignment_assessment = result["full_song_alignment_assessment"]
+    assert alignment_assessment["gate_passed"] is True
+    assert alignment_assessment["separator_accuracy_established"] is False
+    assert result["policy"]["alignment_result_alone_can_close_duration_alignment_gate"] is False
+    assert result["policy"]["matching_review_and_alignment_can_close_duration_alignment_gate"] is True
+
+
+def test_alignment_alone_or_audible_joins_keep_full_song_milestone_open(
+    tmp_path: Path,
+) -> None:
+    agreement = _agreement(tmp_path)
+    listening = _listening(tmp_path, agreement)
+    full_song = _full_song_review_result(tmp_path, all_boundaries_clean=False)
+    alignment = _full_song_alignment_result(tmp_path, gate_passed=True)
+
+    result = _project_private_separation_publication_readiness(
+        agreement,
+        listening,
+        full_song_review_result_path=full_song,
+        full_song_alignment_result_path=alignment,
+        out=tmp_path / "readiness-audible-joins.json",
+    )
+
+    gates = {gate["gate_id"]: gate["status"] for gate in result["gates"]}
+    assert gates["full_song_duration_and_alignment"] == "open"
+    assert result["full_song_alignment_assessment"]["gate_passed"] is True
+    assert result["full_song_duration_alignment_assessment"]["gate_passed"] is False
+
+
+def test_rejects_alignment_not_bound_to_full_song_review(tmp_path: Path) -> None:
+    agreement = _agreement(tmp_path)
+    listening = _listening(tmp_path, agreement)
+    full_song = _full_song_review_result(tmp_path, all_boundaries_clean=True)
+    alignment = _full_song_alignment_result(tmp_path, gate_passed=True)
+    document = json.loads(alignment.read_text(encoding="utf-8"))
+    document["bindings"]["stitch_report_sha256"] = "f" * 64
+    alignment = _write_hashed(tmp_path / "wrong-alignment-binding.json", document)
+
+    with pytest.raises(ValueError, match="binding differs from review"):
+        _project_private_separation_publication_readiness(
+            agreement,
+            listening,
+            full_song_review_result_path=full_song,
+            full_song_alignment_result_path=alignment,
+            out=tmp_path / "rejected.json",
+        )
 
 
 def test_rejects_forged_full_song_quality_acceptance(tmp_path: Path) -> None:
@@ -664,6 +753,117 @@ def _full_song_review_result(
         },
     }
     return _write_hashed(root / "full-song-review.json", document)
+
+
+def _full_song_alignment_result(root: Path, *, gate_passed: bool) -> Path:
+    sample_rate = 44_100
+    total_frames = 176_400
+    window_frames = 14_700
+    starts = [
+        int(round((total_frames - window_frames) * index / 8))
+        for index in range(9)
+    ]
+    lag = 0.0 if gate_passed else 50.0
+    windows = [
+        {
+            "window_index": index,
+            "song_third": "early" if index <= 3 else "middle" if index <= 6 else "late",
+            "start_frame": start,
+            "end_frame": start + window_frames,
+            "start_seconds": round(start / sample_rate, 6),
+            "end_seconds": round((start + window_frames) / sample_rate, 6),
+            "source_rms_dbfs": -12.0,
+            "reconstruction_rms_dbfs": -13.0,
+            "eligible": True,
+            "best_lag_milliseconds": lag,
+            "peak_normalized_correlation": 0.99,
+        }
+        for index, start in enumerate(starts, start=1)
+    ]
+    document = {
+        "schema": FULL_SONG_ALIGNMENT_SCHEMA,
+        "status": FULL_SONG_ALIGNMENT_STATUS,
+        "evidence_scope": "private_development_only",
+        "policy_id": FULL_SONG_ALIGNMENT_POLICY_ID,
+        "bindings": {
+            "stitch_report_sha256": "1" * 64,
+            "stitch_document_sha256": "2" * 64,
+            "source_audio_sha256": "8" * 64,
+            "reconstruction_audio_sha256": "9" * 64,
+            "plan_document_sha256": "6" * 64,
+            "execution_state_sha256": "7" * 64,
+        },
+        "clock": {
+            "boundary_count": 2,
+            "channels": 2,
+            "chunk_count": 3,
+            "crossfade_frames": 0,
+            "duration_seconds": 4.0,
+            "frames": total_frames,
+            "gap_frames": 0,
+            "overlap_frames": 0,
+            "sample_rate": sample_rate,
+        },
+        "protocol": {
+            "comparison": "canonical source versus diagnostic reconstruction",
+            "feature": "log spectral-band energy",
+            "window_count": 9,
+            "window_seconds": round(window_frames / sample_rate, 6),
+            "feature_frame_milliseconds": FEATURE_FRAME_MILLISECONDS,
+            "feature_hop_milliseconds": FEATURE_HOP_MILLISECONDS,
+            "maximum_search_lag_milliseconds": MAXIMUM_SEARCH_LAG_MILLISECONDS,
+            "lag_sign": "positive means reconstruction is later than source",
+            "source_and_reconstruction_gain_normalized_for_timing": True,
+        },
+        "thresholds": {
+            "minimum_active_rms_dbfs": MINIMUM_ACTIVE_RMS_DBFS,
+            "minimum_eligible_window_count": 9,
+            "all_song_thirds_required": True,
+            "maximum_absolute_lag_milliseconds": MAXIMUM_ACCEPTED_ABSOLUTE_LAG_MILLISECONDS,
+            "maximum_lag_spread_milliseconds": MAXIMUM_ACCEPTED_LAG_SPREAD_MILLISECONDS,
+            "minimum_window_normalized_correlation": MINIMUM_ACCEPTED_WINDOW_CORRELATION,
+        },
+        "windows": windows,
+        "summary": {
+            "eligible_window_count": 9,
+            "maximum_absolute_lag_milliseconds": abs(lag),
+            "lag_spread_milliseconds": 0.0,
+            "minimum_window_normalized_correlation": 0.99,
+            "early_middle_late_coverage_complete": True,
+        },
+        "readiness": {
+            "exact_source_and_reconstruction_clock_verified": True,
+            "source_to_reconstruction_alignment_verified": gate_passed,
+            "drift_acceptance_complete": gate_passed,
+            "alignment_gate_passed": gate_passed,
+            "separator_accuracy_established": False,
+            "publication_ready": False,
+        },
+        "interpretation": {
+            "alignment_is_separator_quality": False,
+            "reconstruction_similarity_is_role_fidelity": False,
+            "gate_pass_is_separator_acceptance": False,
+            "automatic_winner_selected": False,
+        },
+        "permissions": {
+            "accepted": False,
+            "automatic_selection": False,
+            "product_route_permitted": False,
+            "publication_permitted": False,
+            "simple_mode_available": False,
+            "source_graph_activation": False,
+            "studio_import_available": False,
+        },
+        "effects": {
+            "audio_created_or_mutated": False,
+            "product_contract_mutated": False,
+            "publication_state_mutated": False,
+            "separator_accepted": False,
+            "separator_selected": False,
+            "source_graph_mutated": False,
+        },
+    }
+    return _write_hashed(root / "full-song-alignment.json", document)
 
 
 def _resource_result(root: Path) -> Path:

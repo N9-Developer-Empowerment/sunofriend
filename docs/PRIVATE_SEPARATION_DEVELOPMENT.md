@@ -1970,14 +1970,16 @@ PYTHONPATH=src ./.venv/bin/python \
     work/separation-bakeoff/be-alone-full-song-kim-resource-benchmark-result-v1.json \
   --full-song-review-result \
     work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-review-result-v1/private-separation-full-song-review-result.json \
+  --full-song-alignment-result \
+    work/separation-bakeoff/be-alone-full-song-source-reconstruction-alignment-v1/private-separation-full-song-alignment.json \
   --out \
-    work/separation-bakeoff/separation-publication-readiness-v9/private-separation-publication-readiness.json
+    work/separation-bakeoff/separation-publication-readiness-v10/private-separation-publication-readiness.json
 ```
 
 The current report has file SHA-256
-`b7fd7a9a3287b7d6b8ad7c6ba4270de999d58694253f2a0223647c4d95cf1020`
+`6650a67df2d45f32ac904c76c7fcb510bc7f2df39b545a37aef32ed2e8200ab8`
 and document SHA-256
-`f7194bdb934a6aae0d941f0ab6dbeedfe9d6376e70bb11378bc26f6e54c5e150`.
+`12c330dd80525dfb683b36e5a0c393608e506524a824c52594c4a004cf5c3a10`.
 It records three passed bounded-evidence milestones: source-bound cross-song
 downstream MIDI, source-bound cross-song human listening and a separate
 structured phrase-completeness judgement for every supplied window.
@@ -2006,13 +2008,36 @@ all ordered boundary ratings consistent with its recomputed summary. The
 predeclared duration/alignment minimum requires every generated complete-song
 role to be rated `useful` and every role at every chunk boundary to be rated
 `clean`. Notes are not copied into the ledger and never affect the assessment.
-Even a clean review cannot establish synchronized source-to-output alignment
-or accepted drift, so this review contract cannot close the gate, accept or
-select the separator. In the current `Be Alone` result all three complete
+The review alone cannot establish synchronized source-to-output alignment or
+accepted drift. The separate typed alignment input below can supply that
+narrow evidence, but the duration/alignment milestone closes only when the
+matching review minimum and alignment thresholds both pass. It still cannot
+accept or select the separator. In the current `Be Alone` result all three complete
 outputs were useful, exact duration was verified and all 17 boundaries were
 reviewed. Reconstruction had 17 clean boundaries, but vocals had audible joins
 at 11 and 12 and the instrumental had audible joins at 11 and 13. The gate
 therefore remains open.
+
+The optional `--full-song-alignment-result` input accepts only a self-hashed
+report bound to the same stitch, plan, execution and exact clock as the human
+review. `scripts/private-separation-full-song-alignment.py` compares the
+canonical source with the diagnostic vocals-plus-instrumental reconstruction
+in nine early-to-late windows. It uses gain-normalized log spectral-band energy
+to search a declared plus/minus 100 ms range. Every window must be active, the
+absolute lag and early-to-late lag spread must each be no more than 20 ms, and
+every normalized correlation must be at least 0.90. These measurements test
+synchronization only. They do not establish vocal or instrumental fidelity,
+bleed, artefacts, musical quality or separator accuracy.
+
+The current `Be Alone` alignment report has file SHA-256
+`c28a84e3a28f30d3d700dd137707d36ecd2e49480270efb56a4d7bd85f66c955`
+and document SHA-256
+`d04c15f58cb5365f405bf82432c3c102048d4f9e622f543df253b0d0d98ca738`.
+All nine windows were eligible, maximum absolute lag and lag spread were both
+0 ms, and the minimum normalized correlation was 1.0. The automated alignment
+contract passes. The combined duration/alignment milestone remains open only
+because the human review recorded the vocal and instrumental audible joins
+above. No separator or product route is enabled.
 
 The optional `--resource-benchmark-result` input accepts only a self-hashed,
 complete controlled full-song result with three to ten distinct serial
@@ -2111,6 +2136,8 @@ PYTHONPATH=src ./.venv/bin/python \
     /absolute/private-separation-full-song-resource-benchmark-result.json \
   --full-song-review-result \
     /absolute/private-separation-full-song-review-result.json \
+  --full-song-alignment-result \
+    /absolute/private-separation-full-song-alignment.json \
   --out /absolute/fresh/private-separation-publication-readiness.json
 ```
 
@@ -2339,6 +2366,23 @@ complete listening are therefore verified, while seamlessness and full-song
 duration/alignment acceptance remain open. There are no further current human
 review pages awaiting the owner; older full-song packages are superseded
 defect or provenance evidence.
+
+Measure the separate source-to-reconstruction timing evidence against that
+unchanged stitch root:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-full-song-alignment.py \
+  work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review \
+  --out \
+    work/separation-bakeoff/be-alone-full-song-source-reconstruction-alignment-v1/private-separation-full-song-alignment.json
+```
+
+The current result passes all nine declared timing windows at 0 ms measured
+lag and 1.0 minimum normalized correlation. This proves that the diagnostic
+reconstruction remains on the source clock for those windows. It does not
+prove that either separated role is accurate or sounds good, and the audible
+human-reviewed joins still keep the combined milestone open.
 
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:

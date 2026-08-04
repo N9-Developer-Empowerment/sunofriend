@@ -36,6 +36,13 @@ def main() -> int:
             "review completion cannot select or accept a separator"
         ),
     )
+    parser.add_argument(
+        "--full-song-alignment-result",
+        help=(
+            "optional verified source-to-reconstruction alignment and drift result; "
+            "it is synchronization evidence, not separator quality"
+        ),
+    )
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
     result = _project_private_separation_publication_readiness(
@@ -44,6 +51,7 @@ def main() -> int:
         separated_audio_quality_path=args.separated_audio_quality,
         resource_benchmark_result_path=args.resource_benchmark_result,
         full_song_review_result_path=args.full_song_review_result,
+        full_song_alignment_result_path=args.full_song_alignment_result,
         out=args.out,
     )
     print(
