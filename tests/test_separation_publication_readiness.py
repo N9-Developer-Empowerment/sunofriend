@@ -12,6 +12,10 @@ from sunofriend._separation_authorised_midi_comparison import (
 from sunofriend._separation_human_listening_coverage import (
     SCHEMA as HUMAN_LISTENING_SCHEMA,
 )
+from sunofriend._separation_audio_quality_review import (
+    POLICY_ID as AUDIO_QUALITY_POLICY_ID,
+    RESULT_SCHEMA as AUDIO_QUALITY_RESULT_SCHEMA,
+)
 from sunofriend._separation_normalized_midi_agreement import (
     SCHEMA as AGREEMENT_SCHEMA,
 )
@@ -128,6 +132,75 @@ def test_rejects_forged_coverage_counts(tmp_path: Path) -> None:
         )
 
 
+def test_closes_only_the_audio_gate_for_source_bound_minimum_usable_review(
+    tmp_path: Path,
+) -> None:
+    agreement = _agreement(tmp_path)
+    listening = _listening(tmp_path, agreement)
+    audio_quality = _audio_quality(tmp_path, agreement, minimum_usable=True)
+
+    result = _project_private_separation_publication_readiness(
+        agreement,
+        listening,
+        separated_audio_quality_path=audio_quality,
+        out=tmp_path / "readiness-with-audio.json",
+    )
+
+    gates = {gate["gate_id"]: gate["status"] for gate in result["gates"]}
+    assert gates["separator_audio_quality_cross_song"] == "passed"
+    assert gates["full_song_duration_and_alignment"] == "open"
+    assert gates["public_cli_tui_simple_studio_route"] == "open"
+    assert result["readiness"]["passed_gate_count"] == 4
+    assert result["readiness"]["open_gate_count"] == 7
+    assessment = result["separated_audio_quality_assessment"]
+    assert assessment["gate_passed"] is True
+    assert assessment["minimum_usable_track_count"] == 2
+    assert assessment["requirements"]["provider_preference_affects_gate"] is False
+    persisted = (tmp_path / "readiness-with-audio.json").read_text()
+    assert "Private listening note" not in persisted
+    assert all(value is False for value in result["permissions"].values())
+    assert all(value is False for value in result["effects"].values())
+
+
+def test_completed_audio_review_stays_open_when_one_kim_excerpt_is_partial(
+    tmp_path: Path,
+) -> None:
+    agreement = _agreement(tmp_path)
+    listening = _listening(tmp_path, agreement)
+    audio_quality = _audio_quality(tmp_path, agreement, minimum_usable=False)
+
+    result = _project_private_separation_publication_readiness(
+        agreement,
+        listening,
+        separated_audio_quality_path=audio_quality,
+        out=tmp_path / "readiness-audio-open.json",
+    )
+
+    gates = {gate["gate_id"]: gate["status"] for gate in result["gates"]}
+    assert gates["separator_audio_quality_cross_song"] == "open"
+    assert result["readiness"]["passed_gate_count"] == 3
+    assert result["separated_audio_quality_assessment"]["gate_passed"] is False
+
+
+def test_rejects_audio_review_bound_to_different_excerpt(tmp_path: Path) -> None:
+    agreement = _agreement(tmp_path)
+    listening = _listening(tmp_path, agreement)
+    audio_quality = _audio_quality(tmp_path, agreement, minimum_usable=True)
+    document = json.loads(audio_quality.read_text(encoding="utf-8"))
+    document["units"][0]["source_binding"][
+        "authorised_excerpt_sha256"
+    ] = "f" * 64
+    audio_quality = _write_hashed(tmp_path / "wrong-audio.json", document)
+
+    with pytest.raises(ValueError, match="source binding differs"):
+        _project_private_separation_publication_readiness(
+            agreement,
+            listening,
+            separated_audio_quality_path=audio_quality,
+            out=tmp_path / "rejected.json",
+        )
+
+
 def _agreement(root: Path) -> Path:
     document = {
         "schema": AGREEMENT_SCHEMA,
@@ -138,14 +211,34 @@ def _agreement(root: Path) -> Path:
             "method_ranking_permitted": False,
         },
         "cells": [
-            {"track_id": "track-a"},
-            {"track_id": "track-b"},
+            _agreement_cell("track-a", "source-a", "a", "b", "c", "d"),
+            _agreement_cell("track-b", "source-b", "e", "f", "0", "1"),
         ],
         "publication_gate": {"status": "open"},
         "permissions": _permissions(),
         "effects": _agreement_effects(),
     }
     return _write_hashed(root / "agreement.json", document)
+
+
+def _agreement_cell(
+    track_id: str,
+    source_track_id: str,
+    excerpt_file: str,
+    excerpt_document: str,
+    mapping_file: str,
+    mapping_document: str,
+) -> dict[str, object]:
+    return {
+        "track_id": track_id,
+        "source_track_id": source_track_id,
+        "source_binding": {
+            "authorised_excerpt_sha256": excerpt_file * 64,
+            "authorised_excerpt_document_sha256": excerpt_document * 64,
+            "role_mapping_sha256": mapping_file * 64,
+            "role_mapping_document_sha256": mapping_document * 64,
+        },
+    }
 
 
 def _listening(root: Path, agreement: Path) -> Path:
@@ -183,6 +276,74 @@ def _listening(root: Path, agreement: Path) -> Path:
         },
     }
     return _write_hashed(root / "listening.json", document)
+
+
+def _audio_quality(
+    root: Path,
+    agreement: Path,
+    *,
+    minimum_usable: bool,
+) -> Path:
+    agreement_document = json.loads(agreement.read_text(encoding="utf-8"))
+    units = []
+    for index, cell in enumerate(agreement_document["cells"]):
+        binding = dict(cell["source_binding"])
+        binding.update(
+            {
+                "track_id": cell["track_id"],
+                "source_track_id": cell["source_track_id"],
+                "provider_id": "moises",
+                "start_seconds": 10.0 + index,
+                "end_seconds": 10.5 + index,
+                "candidate_evaluation_sha256": "2" * 64,
+                "candidate_evaluation_document_sha256": "3" * 64,
+                "source_audio_sha256": "4" * 64,
+                "candidate_audio_sha256": "5" * 64,
+                "provider_audio_sha256": "6" * 64,
+            }
+        )
+        retention = (
+            "partially_complete"
+            if index == 1 and not minimum_usable
+            else "substantially_complete"
+        )
+        units.append(
+            {
+                "unit_id": f"0{index + 1}-{cell['track_id']}",
+                "track_id": cell["track_id"],
+                "source_track_id": cell["source_track_id"],
+                "source_seconds": [10.0 + index, 10.5 + index],
+                "source_binding": binding,
+                "candidate_a_method": "kim-vocal-2",
+                "candidate_b_method": "provider-moises-broad-vocals",
+                "ratings_by_method": {
+                    "kim-vocal-2": {
+                        "vocal_retention": retention,
+                        "non_vocal_bleed": "noticeable",
+                        "artefacts": "low",
+                    },
+                    "provider-moises-broad-vocals": {
+                        "vocal_retention": "substantially_complete",
+                        "non_vocal_bleed": "low",
+                        "artefacts": "noticeable",
+                    },
+                },
+                "preference": "candidate_b",
+                "resolved_preference": "provider-moises-broad-vocals",
+                "notes": "Private listening note",
+            }
+        )
+    document = {
+        "schema": AUDIO_QUALITY_RESULT_SCHEMA,
+        "status": "complete_review_no_activation",
+        "evidence_scope": "private_development_only",
+        "policy_id": AUDIO_QUALITY_POLICY_ID,
+        "unit_count": len(units),
+        "units": units,
+        "permissions": _permissions(),
+        "effects": {**_agreement_effects(), "separator_selected": False},
+    }
+    return _write_hashed(root / "audio-quality.json", document)
 
 
 def _permissions() -> dict[str, bool]:

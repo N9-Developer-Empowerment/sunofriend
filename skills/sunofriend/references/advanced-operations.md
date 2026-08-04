@@ -1851,6 +1851,13 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   product integration. Treat `publication_ready: false` as authoritative for
   this evidence scope. The command cannot accept a caller assertion, run a
   model, select a separator or enable Simple, Studio, CLI, TUI or source graph.
+  Its optional `--separated-audio-quality` input accepts only the resolved v2
+  blind result with the same complete track set and exact authorised-excerpt
+  and role-mapping hashes as the normalized agreement. The predeclared minimum
+  requires every Kim Vocal 2 excerpt to retain a substantially complete vocal
+  with no severe bleed or artefacts. Provider preference is ignored. A weaker
+  completed result leaves the gate open; a passing result closes only the
+  bounded separated-audio gate and never selects or enables the separator.
 - `scripts/private-separated-audio-quality-review.py` creates a fresh
   owner-only blind review from two or more exact source-bound vocal-separation
   cases. Each case must bind one authorised mixed excerpt, one unchanged Kim
@@ -1861,8 +1868,13 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   --package-dir PACKAGE --out RESULT` after the browser export. Resolution
   verifies the immutable page, audio manifest and blind key and remains
   `complete_review_no_activation`; never infer acceptance from package
-  creation or from one preferred candidate. The current two-song page is
-  unreviewed, so separated-audio quality remains an open publication gate.
+  creation or from one preferred candidate. The v2 result includes the exact
+  path-free source-binding projection needed by the ledger but carries no new
+  authority. The current two-song review is complete: Kim was preferred in
+  both blind comparisons, but its `Be Alone` vocal was rated only partially
+  complete while `I am a Alien mashup` was substantially complete. One of two
+  cells therefore meets the predeclared minimum. Keep separated-audio quality
+  open and do not turn preference into a default or model selection.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,

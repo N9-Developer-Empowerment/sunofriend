@@ -15,11 +15,19 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("normalized_midi_agreement")
     parser.add_argument("human_listening_coverage")
+    parser.add_argument(
+        "--separated-audio-quality",
+        help=(
+            "optional resolved, source-bound blind audio-quality result; "
+            "preference never selects a separator"
+        ),
+    )
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
     result = _project_private_separation_publication_readiness(
         args.normalized_midi_agreement,
         args.human_listening_coverage,
+        separated_audio_quality_path=args.separated_audio_quality,
         out=args.out,
     )
     print(

@@ -1968,9 +1968,9 @@ PYTHONPATH=src ./.venv/bin/python \
 ```
 
 The current report has file SHA-256
-`9773a9291b89e905aedf63d9b9eb2f4a89f471f085eab59470b081452c635632`
+`1fc548c9c1fb502c4793e92d3075e3cc4e285c59544c43529a82e3cf914a681b`
 and document SHA-256
-`f0e941108dbfb7172104d20dfa923f7b9841609df77390af8136d67214aa6f1d`.
+`0b67c015c7fa583ea4c3dd8c03ed4648fcd8a8472a1d7f55960e8251045967ff`.
 It records three passed bounded-evidence milestones: source-bound cross-song
 downstream MIDI, source-bound cross-song human listening and a separate
 structured phrase-completeness judgement for every supplied window.
@@ -1983,6 +1983,15 @@ report therefore says `publication_ready: false` and describes the current
 stage as `private_bounded_vocal_research`. It cannot accept a separator from
 caller flags, compute a quality percentage, copy listener notes or enable a
 product route. Future gates require new typed, hash-bound evidence.
+
+Version 2 of the ledger predeclares the bounded separated-audio minimum before
+the listening result is available. Every source-bound Kim Vocal 2 excerpt must
+be rated `substantially_complete`, with non-vocal bleed and distracting
+artefacts each no worse than `noticeable`. All reviewed songs must pass. The
+separate A/B preference is deliberately ignored by this gate, so preferring a
+provider cannot select or reject Kim. The current report includes the completed
+two-song result. One of two Kim excerpts meets the minimum, so the gate remains
+open.
 
 ### Cross-song separated-audio quality review
 
@@ -2021,11 +2030,24 @@ The unreviewed seed SHA-256 is
 the six-file audio manifest SHA-256 is
 `9233cdf8c938cadf968c8a824d44d41cd7ebe66f96e2787e1b97a480eedc5011`.
 All six files are 15-second, 44.1 kHz, stereo PCM24 and have been re-read and
-hash-verified. The review is still unreviewed, so this does **not** close the
+hash-verified. The review was completed on 4 August 2026. The browser export
+SHA-256 is
+`977c73edbd657440326d745218733a39c49acee8e4abdd6e73f8e109d41e4f0c`.
+Resolution produced file SHA-256
+`3a2891a4005b3bc955fc9289f9cda40ae447a9870f9b006965d2a5394fce72c6`
+and document SHA-256
+`adc2deabd517fc48f77c73cf33d4982e8b023c6f4cb825cdbf8b03b5c9fd8b75`.
+
+The listener rated the Kim and provider vocals partially complete with low
+bleed and low artefacts on `Be Alone`; Kim was preferred. On `I am a Alien
+mashup`, both were rated substantially complete with noticeable bleed and
+noticeable artefacts; Kim was again preferred. These are human judgements, not
+score truth. Preference changes no selection or default. Because Kim was only
+partially complete on one of the two songs, this does **not** close the
 separated-audio quality gate.
 
-After the browser exports a completed JSON file, resolve it without reopening
-the answer key manually:
+For another review package, resolve the completed browser export without
+reopening the answer key manually:
 
 ```bash
 PYTHONPATH=src ./.venv/bin/python \
@@ -2038,10 +2060,29 @@ PYTHONPATH=src ./.venv/bin/python \
 
 The resolver rejects incomplete ratings, changed audio, changed immutable
 review evidence, invalid blind assignments and duplicate answer-key units. A
-completed resolution remains `complete_review_no_activation`: it cannot select
-Kim or the provider, change a default, publish a separator or enable any
-product route. A later, separate ledger increment may consume that resolution
-only after the real human review is complete.
+completed resolution remains `complete_review_no_activation` and now carries
+the exact path-free authorised-excerpt, role-mapping and audio-hash binding for
+each reviewed song. It cannot select Kim or the provider, change a default,
+publish a separator or enable any product route.
+
+After resolution, create a fresh ledger with the third verified input:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-publication-readiness.py \
+  work/separation-bakeoff/cross-song-normalized-midi-agreement-v1/private-separation-normalized-midi-agreement.json \
+  work/separation-bakeoff/cross-song-human-listening-coverage-v6/private-separation-human-listening-coverage.json \
+  --separated-audio-quality \
+    /absolute/fresh/private-separated-audio-quality-result.json \
+  --out /absolute/fresh/private-separation-publication-readiness.json
+```
+
+The ledger rechecks exact track coverage and the authorised excerpt and role
+mapping hashes against the normalized MIDI evidence. It copies no private note
+and computes no score. If even one Kim rating is partial, cannot-tell or severe,
+the gate stays open. If the bounded minimum passes, only that one gate closes;
+full-song, broad-role, hidden-set, terms, offline, resource and public-route
+gates stay open.
 
 The optional review contract now asks that question explicitly with
 `--classify-focus-phrase-coverage`. For every playable candidate, the listener

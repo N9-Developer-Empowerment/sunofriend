@@ -239,6 +239,14 @@ def test_creates_blind_two_song_audio_review_and_resolves(tmp_path: Path) -> Non
     assert result["schema"] == RESULT_SCHEMA
     assert result["status"] == "complete_review_no_activation"
     assert result["unit_count"] == 2
+    assert all(
+        unit["source_binding"]["track_id"] == unit["track_id"]
+        and unit["source_binding"]["source_track_id"]
+        == unit["source_track_id"]
+        and unit["source_binding"]["authorised_excerpt_sha256"]
+        and unit["source_binding"]["role_mapping_sha256"]
+        for unit in result["units"]
+    )
     assert {unit["resolved_preference"] for unit in result["units"]} <= {
         "kim-vocal-2",
         "provider-moises-broad-vocals",

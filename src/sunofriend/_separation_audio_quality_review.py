@@ -52,7 +52,7 @@ from ._separation_melroformer_precision_review import (
 
 REVIEW_SCHEMA = "sunofriend.private-separated-audio-quality-review.v1"
 ANSWER_KEY_SCHEMA = "sunofriend.private-separated-audio-quality-answer-key.v1"
-RESULT_SCHEMA = "sunofriend.private-separated-audio-quality-result.v1"
+RESULT_SCHEMA = "sunofriend.private-separated-audio-quality-result.v2"
 AUDIO_MANIFEST_SCHEMA = "sunofriend.private-separated-audio-quality-manifest.v1"
 POLICY_ID = "private-separated-vocal-audio-quality-v1"
 SAMPLE_RATE = 44_100
@@ -388,10 +388,14 @@ def _resolve_private_separated_audio_quality_review(
     answer = _read_json(answer_path)
     _verify_answer_key(answer, seed)
     answer_by_unit = {unit["unit_id"]: unit for unit in answer["units"]}
+    contract_by_track = {
+        case["track_id"]: case for case in answer["package_contract"]["cases"]
+    }
     resolved_units = []
     for unit in units:
         answer_unit = answer_by_unit[str(unit["unit_id"])]
         mapping = answer_unit["mapping"]
+        source_binding = contract_by_track[str(unit["track_id"])]
         ratings = {
             mapping[slot]["method"]: dict(unit["ratings"][slot])
             for slot in ("candidate_a", "candidate_b")
@@ -408,6 +412,7 @@ def _resolve_private_separated_audio_quality_review(
                 "track_id": unit["track_id"],
                 "source_track_id": unit["source_track_id"],
                 "source_seconds": list(unit["source_seconds"]),
+                "source_binding": deepcopy(source_binding),
                 "candidate_a_method": mapping["candidate_a"]["method"],
                 "candidate_b_method": mapping["candidate_b"]["method"],
                 "ratings_by_method": ratings,
@@ -687,16 +692,45 @@ def _verify_review_audio(review: Mapping[str, Any], package: Path) -> None:
 
 
 def _verify_answer_key(answer: Mapping[str, Any], seed: Mapping[str, Any]) -> None:
+    package_contract = answer.get("package_contract")
     if (
         answer.get("schema") != ANSWER_KEY_SCHEMA
         or answer.get("status") != "complete"
         or answer.get("policy_id") != POLICY_ID
         or answer.get("package_commitment") != seed.get("package_commitment")
-        or answer.get("package_contract") is None
-        or _document_hash(answer["package_contract"])
+        or not isinstance(package_contract, Mapping)
+        or _document_hash(package_contract)
         != seed.get("package_commitment")
     ):
         raise ValueError("separated-audio answer key is incompatible")
+    contract_cases = package_contract.get("cases")
+    if (
+        package_contract.get("policy_id") != POLICY_ID
+        or not isinstance(contract_cases, list)
+        or len(contract_cases) != len(seed.get("units", []))
+        or not all(isinstance(case, Mapping) for case in contract_cases)
+    ):
+        raise ValueError("separated-audio package contract differs")
+    contract_by_track = {
+        case.get("track_id"): case for case in contract_cases
+    }
+    if (
+        len(contract_by_track) != len(contract_cases)
+        or set(contract_by_track)
+        != {unit.get("track_id") for unit in seed.get("units", [])}
+    ):
+        raise ValueError("separated-audio package contract differs")
+    for seed_unit in seed.get("units", []):
+        contract = contract_by_track.get(seed_unit.get("track_id")) or {}
+        if (
+            contract.get("source_track_id") != seed_unit.get("source_track_id")
+            or [contract.get("start_seconds"), contract.get("end_seconds")]
+            != seed_unit.get("source_seconds")
+            or contract.get("sample_rate") != seed_unit.get("sample_rate")
+            or contract.get("channels") != 2
+            or contract.get("frames") != seed_unit.get("frame_count")
+        ):
+            raise ValueError("separated-audio package contract differs")
     try:
         nonce = bytes.fromhex(str(answer.get("blind_nonce_hex", "")))
         commitment = str(seed.get("package_commitment", ""))

@@ -232,7 +232,11 @@ Checked: 4 August 2026 after the private four-stem HTDemucs run, synthetic
 ground-truth evaluation, three authorised provider comparisons, cross-song
 narrow-`other` evidence, the six-source challenger, the MelRoFormer vocal
 comparisons, its model-free macOS network-denial canary and creation of the
-two-song blind separated-audio quality review. That review remains unreviewed.
+two-song blind separated-audio quality review. That review is now complete.
+Kim was preferred in both comparisons, but only one of two Kim excerpts met
+the predeclared minimum because `Be Alone` was rated partially rather than
+substantially complete. The source-bound v2 readiness bridge therefore keeps
+the separated-audio quality gate open without selecting a separator.
 
 ## Contents
 
@@ -2406,9 +2410,18 @@ separator transport, source-lineage import and promotion are not implemented**
     candidates and requires independent vocal-retention, non-vocal-bleed and
     artefact ratings plus a separate preference. Its resolver fails closed on
     changed evidence and always emits no activation or product authority.
-  - [ ] Complete that two-song separated-audio review and bind the verified
-    resolution into a later publication-readiness ledger. Creating and testing
-    the unreviewed page is not human acceptance and does not close the gate.
+  - [x] Add the fail-closed resolved-review bridge to the readiness ledger.
+    The v2 result carries exact path-free excerpt, role-mapping and audio hashes;
+    the ledger requires the same complete song set as the normalized MIDI
+    evidence. The predeclared minimum is substantially complete Kim vocals on
+    every reviewed song, with neither bleed nor artefacts rated severe.
+    Provider preference is ignored, private notes are not copied and at most
+    this one bounded gate can close.
+  - [x] Complete that two-song separated-audio review and bind the verified
+    browser export into a fresh publication-readiness ledger. Kim was preferred
+    in both blind cells, but its `Be Alone` vocal was rated only partially
+    complete. One of two cells meets the predeclared minimum, so the gate stays
+    open. This is bounded human evidence, not separator acceptance.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
 - [x] Repeat the clean/estimate comparison through exact production
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation
