@@ -56,15 +56,36 @@ REPORT_NAME = "private-separation-candidate-full-song-review-package.json"
 TARGET_SAMPLE_RATE = 44_100
 _ROLES = ("source", "vocals", "instrumental", "reconstruction")
 _CANDIDATE_ROLES = ("vocals", "instrumental", "reconstruction")
-_FALSE_EFFECTS = {
+_PACKAGE_EFFECTS = {
     "candidate_accepted": False,
     "candidate_selected": False,
     "model_run": False,
+    "private_review_audio_copied": True,
     "product_contract_mutated": False,
     "publication_state_mutated": False,
     "source_audio_mutated": False,
     "source_graph_mutated": False,
 }
+_PACKAGE_READINESS = {
+    "targeted_v2_absolute_cleanliness_pass": True,
+    "candidate_full_song_review_package_complete": True,
+    "new_candidate_full_song_review_complete": False,
+    "new_candidate_alignment_complete": False,
+    "original_audible_joins_resolved": False,
+    "publication_ready": False,
+}
+_PACKAGE_INTERPRETATION = {
+    "targeted_pass_is_full_song_acceptance": False,
+    "full_song_and_all_boundaries_require_fresh_human_review": True,
+    "automatic_winner_selected": False,
+    "separator_accepted": False,
+}
+_LIMITATIONS = [
+    "The package copies verified source and v2 candidate PCM24 audio; it runs no model.",
+    "The targeted v2 pass did not establish full-song quality or alignment.",
+    "A clean boundary does not establish separator accuracy.",
+    "Completing this page cannot select, accept or publish a separator.",
+]
 
 
 def _build_private_candidate_full_song_review(
@@ -184,31 +205,11 @@ def _build_private_candidate_full_song_review(
             },
             "artifacts": copied,
             "boundary_review": boundary_review,
-            "readiness": {
-                "targeted_v2_absolute_cleanliness_pass": True,
-                "candidate_full_song_review_package_complete": True,
-                "new_candidate_full_song_review_complete": False,
-                "new_candidate_alignment_complete": False,
-                "original_audible_joins_resolved": False,
-                "publication_ready": False,
-            },
-            "interpretation": {
-                "targeted_pass_is_full_song_acceptance": False,
-                "full_song_and_all_boundaries_require_fresh_human_review": True,
-                "automatic_winner_selected": False,
-                "separator_accepted": False,
-            },
+            "readiness": dict(_PACKAGE_READINESS),
+            "interpretation": dict(_PACKAGE_INTERPRETATION),
             "permissions": dict(_FALSE_PERMISSIONS),
-            "effects": {
-                **dict(_FALSE_EFFECTS),
-                "private_review_audio_copied": True,
-            },
-            "limitations": [
-                "The package copies verified source and v2 candidate PCM24 audio; it runs no model.",
-                "The targeted v2 pass did not establish full-song quality or alignment.",
-                "A clean boundary does not establish separator accuracy.",
-                "Completing this page cannot select, accept or publish a separator.",
-            ],
+            "effects": dict(_PACKAGE_EFFECTS),
+            "limitations": list(_LIMITATIONS),
         }
         document["document_sha256"] = _document_sha256(document)
         _write_json_exclusive(destination / REPORT_NAME, document)

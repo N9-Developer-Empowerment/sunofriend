@@ -14,6 +14,11 @@ from sunofriend._separation_candidate_full_song_review import (
     STATUS,
     _build_private_candidate_full_song_review,
 )
+from sunofriend._separation_candidate_full_song_review_result import (
+    RESULT_STATUS as CANDIDATE_RESULT_STATUS,
+    _resolve_private_candidate_full_song_review,
+    _status_private_candidate_full_song_review,
+)
 from sunofriend._separation_full_song_join_remediation_executor_v2 import (
     _FALSE_PERMISSIONS,
     _read_pcm24_snapshot,
@@ -222,6 +227,76 @@ def _build_args(fixture: dict[str, object]) -> dict[str, object]:
     }
 
 
+def _completed_review_fixture(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> dict[str, object]:
+    fixture = _fixture(tmp_path, monkeypatch)
+    _build_private_candidate_full_song_review(
+        fixture["result_path"], **_build_args(fixture)
+    )
+    context = fixture["context"]
+    monkeypatch.setattr(
+        "sunofriend._separation_candidate_full_song_review_result._load_review_inputs",
+        lambda *args, **kwargs: context,
+    )
+    monkeypatch.setattr(
+        "sunofriend._separation_candidate_full_song_review_result._reverify_inputs",
+        lambda value: None,
+    )
+    seed_path = Path(fixture["out"]) / "BOUNDARY-REVIEW/separation_boundary_review.json"
+    review = json.loads(seed_path.read_text(encoding="utf-8"))
+    review["status"] = "reviewed"
+    review["full_song"]["heard_all"] = True
+    review["full_song"]["ratings"] = {
+        "vocals": "useful",
+        "instrumental": "useful",
+        "reconstruction": "useful",
+    }
+    review["full_song"]["notes"] = "Useful across the short fixture."
+    for unit in review["units"]:
+        unit["heard_all"] = True
+        unit["ratings"] = {
+            "vocals": "clean",
+            "instrumental": "clean",
+            "reconstruction": "clean",
+        }
+        unit["notes"] = "No audible join."
+    review["summary"] = {
+        "full_song_reviewed": True,
+        "reviewed_boundaries": len(review["units"]),
+        "boundary_count": len(review["units"]),
+    }
+    review_root = _private_dir(tmp_path / "candidate-review-export")
+    review_path = _json(review_root / "reviewed.json", review)
+    result_root = _private_dir(tmp_path / "candidate-review-result")
+    fixture.update(
+        {
+            "review": review,
+            "review_path": review_path,
+            "candidate_result_path": result_root / "result.json",
+        }
+    )
+    return fixture
+
+
+def _result_args(fixture: dict[str, object]) -> dict[str, object]:
+    build = _build_args(fixture)
+    return {
+        "review_package_dir": fixture["out"],
+        "v2_review_result_path": fixture["result_path"],
+        "v2_execution_dir": build["v2_execution_dir"],
+        "v2_plan_path": build["v2_plan_path"],
+        "v1_execution_dir": build["v1_execution_dir"],
+        "stitch_package_dir": build["stitch_package_dir"],
+        "full_song_review_result_path": build["full_song_review_result_path"],
+        "v1_plan_path": build["v1_plan_path"],
+        "resolved_join_review_result_path": build[
+            "resolved_join_review_result_path"
+        ],
+        "publication_readiness_path": build["publication_readiness_path"],
+    }
+
+
 def test_builds_fresh_candidate_bound_full_song_review(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -284,3 +359,83 @@ def test_refuses_existing_destination(
         _build_private_candidate_full_song_review(
             fixture["result_path"], **_build_args(fixture)
         )
+
+
+def test_status_verifies_complete_candidate_full_song_export_without_writing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fixture = _completed_review_fixture(tmp_path, monkeypatch)
+    status = _status_private_candidate_full_song_review(
+        fixture["review_path"], **_result_args(fixture)
+    )
+
+    assert status["status"] == "complete_review_verified_no_activation"
+    assert status["reviewed_boundaries"] == 1
+    assert status["rating_counts_by_role"]["vocals"]["clean"] == 1
+    assert status["effects"]["review_record_created"] is False
+    assert not Path(fixture["candidate_result_path"]).exists()
+
+
+def test_resolves_complete_candidate_review_without_activation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fixture = _completed_review_fixture(tmp_path, monkeypatch)
+    result = _resolve_private_candidate_full_song_review(
+        fixture["review_path"],
+        out=fixture["candidate_result_path"],
+        **_result_args(fixture),
+    )
+
+    assert result["status"] == CANDIDATE_RESULT_STATUS
+    assert result["boundary_summary"]["all_candidate_boundaries_clean"] is True
+    assert result["readiness_evidence"]["all_candidate_full_song_roles_useful"] is True
+    assert result["readiness_evidence"]["new_candidate_alignment_complete"] is False
+    assert result["readiness_evidence"]["original_audible_joins_resolved"] is False
+    assert result["permissions"] == _FALSE_PERMISSIONS
+    assert Path(fixture["candidate_result_path"]).is_file()
+
+
+def test_resolver_rejects_incomplete_candidate_review(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fixture = _completed_review_fixture(tmp_path, monkeypatch)
+    review = fixture["review"]
+    review["units"][0]["heard_all"] = False
+    _json(fixture["review_path"], review)
+
+    with pytest.raises(ValueError, match="ratings are incomplete"):
+        _status_private_candidate_full_song_review(
+            fixture["review_path"], **_result_args(fixture)
+        )
+
+
+def test_resolver_rejects_changed_candidate_audio(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fixture = _completed_review_fixture(tmp_path, monkeypatch)
+    audio = Path(fixture["out"]) / "STEMS/vocals.wav"
+    with audio.open("r+b") as stream:
+        stream.seek(-1, 2)
+        value = stream.read(1)
+        stream.seek(-1, 2)
+        stream.write(bytes([value[0] ^ 1]))
+
+    with pytest.raises(ValueError, match="audio binding differs"):
+        _status_private_candidate_full_song_review(
+            fixture["review_path"], **_result_args(fixture)
+        )
+
+
+def test_resolver_refuses_to_write_result_inside_review_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fixture = _completed_review_fixture(tmp_path, monkeypatch)
+    unsafe = Path(fixture["out"]) / "result.json"
+
+    with pytest.raises(ValueError, match="outside input evidence roots"):
+        _resolve_private_candidate_full_song_review(
+            fixture["review_path"],
+            out=unsafe,
+            **_result_args(fixture),
+        )
+    assert not unsafe.exists()

@@ -2154,6 +2154,16 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   selects, accepts, activates and publishes nothing. A separate resolver and
   fresh nine-window alignment package are still required; never run this
   builder by inventing or hand-editing a passing result.
+  After that page is genuinely completed, make the exported
+  `separation-boundary-and-full-song.reviewed.json` owner-only and use
+  `scripts/private-separation-candidate-full-song-review-result.py --status`
+  with the exact builder evidence roots first. Repeat with `--resolve` and a
+  fresh `--out` only after status succeeds. The resolver re-verifies the v2
+  pass, copied full-song audio, immutable seed, 17 boundary units and every
+  referenced clip. It records but does not reinterpret the listener's three
+  full-song and 51 role-boundary ratings. Resolution selects and accepts
+  nothing and keeps alignment, original-join resolution, readiness and
+  publication false. The fresh nine-window alignment review remains required.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic
   snapshot across the whole operation; status and result record this explicit

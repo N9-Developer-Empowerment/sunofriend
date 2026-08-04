@@ -2852,8 +2852,24 @@ The fixed completion marker is
 `BOUNDARY-REVIEW/separation_boundary_review.html`. Building or completing that
 page still cannot select or accept the candidate, prove alignment, resolve the
 original audible joins, change readiness or publish anything. A separate
-candidate-bound review resolver and the fresh nine-window alignment package
-remain later increments.
+fresh nine-window alignment package remains a later increment.
+
+The matching candidate-bound review resolver is implemented. After the
+listener completes all three full-song ratings and all three role ratings at
+every one of the 17 boundaries, secure the exported
+`separation-boundary-and-full-song.reviewed.json` with `chmod 600`. Run
+`scripts/private-separation-candidate-full-song-review-result.py --status`
+first with the exact package-builder evidence arguments plus
+`--review-package-dir` and `--v2-review-result`. Status writes nothing. If it
+succeeds, repeat those inputs with `--resolve REVIEWED --out FRESH`.
+
+The resolver re-verifies the v2 pass, the complete v1/v2 chain, all copied
+full-song PCM24 files, the immutable 17-boundary seed, every referenced review
+clip and the browser export. It records full-song usefulness and boundary
+cleanliness as human evidence, but keeps selection, acceptance, alignment,
+`original_audible_joins_resolved`, readiness and publication false. Even when
+all three complete-song roles are useful and all 51 role-boundary ratings are
+clean, a fresh candidate-bound alignment review is still required.
 
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
