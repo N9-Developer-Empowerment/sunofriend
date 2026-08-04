@@ -25,6 +25,10 @@ from sunofriend._separation_candidate_followup_full_song_alignment import (
     SCHEMA as FOLLOWUP_ALIGNMENT_SCHEMA,
     _measure_private_candidate_followup_full_song_alignment,
 )
+from sunofriend._separation_candidate_followup_readiness_reassessment import (
+    STATUS as FOLLOWUP_REASSESSMENT_STATUS,
+    _reassess_private_candidate_followup_readiness,
+)
 from sunofriend._separation_candidate_join_remediation_review_result import (
     _resolve_private_candidate_join_remediation_review,
 )
@@ -512,3 +516,106 @@ def test_alignment_rejects_a_self_hashed_but_changed_full_review_result(
             **_alignment_args(fixture, reviewed, out=output),
         )
     assert not output.exists()
+
+
+def _readiness_fixture(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[dict[str, object], Path, Path, Path, dict[str, object]]:
+    fixture, reviewed, review_result, context = _alignment_fixture(
+        tmp_path, monkeypatch
+    )
+    alignment_root = tmp_path / "alignment-result"
+    alignment_root.mkdir(mode=0o700)
+    alignment_path = alignment_root / "alignment.json"
+    alignment = _measure_private_candidate_followup_full_song_alignment(
+        review_result,
+        **_alignment_args(fixture, reviewed, out=alignment_path),
+    )
+    return fixture, reviewed, review_result, alignment_path, alignment
+
+
+def _readiness_args(
+    fixture: dict[str, object],
+    reviewed: Path,
+    alignment_path: Path,
+    *,
+    out: Path,
+) -> dict[str, object]:
+    return {
+        "alignment_result_path": alignment_path,
+        "full_song_review_export_path": reviewed,
+        "full_song_review_package_dir": fixture["out"],
+        "targeted_review_result_path": fixture["result_path"],
+        "targeted_reviewed_export_path": fixture["reviewed"],
+        "targeted_review_package_dir": fixture["review_package"],
+        "execution_dir": fixture["execution"],
+        "v2_execution_dir": fixture["v2"],
+        "stitch_package_dir": fixture["stitch"],
+        "out": out,
+    }
+
+
+def test_reassessment_retains_failed_alignment_as_non_activating_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fixture, reviewed, review_result, alignment_path, _ = _readiness_fixture(
+        tmp_path, monkeypatch
+    )
+    result_root = tmp_path / "readiness-result"
+    result_root.mkdir(mode=0o700)
+    result = _reassess_private_candidate_followup_readiness(
+        review_result,
+        **_readiness_args(
+            fixture,
+            reviewed,
+            alignment_path,
+            out=result_root / "result.json",
+        ),
+    )
+
+    assert result["status"] == FOLLOWUP_REASSESSMENT_STATUS
+    assert result["evidence"]["followup_alignment_complete"] is True
+    assert result["evidence"]["followup_alignment_gate_passed"] is False
+    assert result["readiness"]["final_human_acceptance_review_eligible"] is False
+    assert result["readiness"]["separator_accepted"] is False
+    assert result["next_action"] == "remediate_failed_followup_candidate_evidence"
+    assert result["permissions"] == _FALSE_PERMISSIONS
+
+
+def test_reassessment_can_only_make_final_human_review_eligible(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fixture, reviewed, review_result, alignment_path, alignment = _readiness_fixture(
+        tmp_path, monkeypatch
+    )
+    positive = {key: value for key, value in alignment.items() if key != "report"}
+    for key in (
+        "source_to_reconstruction_alignment_verified",
+        "drift_acceptance_complete",
+        "alignment_gate_passed",
+    ):
+        positive["readiness_evidence"][key] = True
+    positive["document_sha256"] = _document_sha256(positive)
+    _write(alignment_path, positive)
+    monkeypatch.setattr(
+        "sunofriend._separation_candidate_followup_readiness_reassessment._measure_private_candidate_followup_full_song_alignment",
+        lambda *args, **kwargs: {**positive, "report": str(kwargs["out"])},
+    )
+    result_root = tmp_path / "readiness-result"
+    result_root.mkdir(mode=0o700)
+    result = _reassess_private_candidate_followup_readiness(
+        review_result,
+        **_readiness_args(
+            fixture,
+            reviewed,
+            alignment_path,
+            out=result_root / "result.json",
+        ),
+    )
+
+    assert result["evidence"]["technical_and_listening_prerequisites_met"] is True
+    assert result["readiness"]["final_human_acceptance_review_eligible"] is True
+    assert result["readiness"]["final_human_acceptance_review_complete"] is False
+    assert result["readiness"]["separator_selected"] is False
+    assert result["readiness"]["publication_ready"] is False
+    assert result["next_action"] == "run_explicit_final_followup_candidate_acceptance_review"

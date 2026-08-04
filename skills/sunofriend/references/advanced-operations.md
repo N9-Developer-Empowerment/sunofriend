@@ -2283,6 +2283,15 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   only. Preserve a failing gate as evidence; do not turn synchronization into
   separator quality or acceptance. This command creates no audio and remains
   blocked until both upstream human review stages genuinely complete.
+  Combine the exact resolved full-song review and exact alignment result only
+  with
+  `scripts/private-separation-candidate-followup-readiness-reassessment.py`.
+  It re-runs and byte-compares the gated alignment evidence, then records
+  whether useful complete roles, clean original boundaries and a passing clock
+  gate coexist. A positive result permits only a separate explicit final human
+  acceptance review. It never resolves joins, selects a candidate, exposes a
+  product route or publishes separation. Retain any failed prerequisite and
+  return to bounded remediation.
   On macOS 26.5.1, an exact sealed/read-only `/usr/bin/sandbox-exec`
   `CSSMERR_TP_NOT_TRUSTED` result is recorded as
   `sealed_read_only_system_provider_cdhash_trust_unavailable` with

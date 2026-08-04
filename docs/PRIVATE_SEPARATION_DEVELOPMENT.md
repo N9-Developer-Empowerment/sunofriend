@@ -3100,6 +3100,21 @@ alignment command cannot run yet because its prerequisite targeted review and
 subsequent all-boundary review have not been completed. Selection, acceptance,
 product exposure and publication remain false.
 
+The evidence-combination stage is implemented as
+`scripts/private-separation-candidate-followup-readiness-reassessment.py`. It
+re-runs the gated alignment measurement into a temporary owner-only location
+and requires exact equality with the supplied alignment result. It then binds
+that deterministic result to the exact resolved full-song review. The
+reassessment adds no new listening evidence.
+
+Only when every role is useful over the complete song, every original boundary
+is clean and the alignment gate passes does it set
+`final_human_acceptance_review_eligible: true`. Even then, final acceptance,
+original-join resolution, selection, product exposure and publication remain
+false. Any failed prerequisite is retained and routes to bounded remediation.
+The real reassessment remains blocked by the two unfinished human-review
+stages, so no result has been generated for the current follow-up candidate.
+
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
 
