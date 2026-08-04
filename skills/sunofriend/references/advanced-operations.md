@@ -1919,6 +1919,15 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   tracks and then all 17 exact-boundary windows; both scopes must be rated.
   Never call exact input partitioning or exact output duration seamless or
   accepted separation.
+  Fresh native attempts now also retain one path-free worker-resource
+  projection inside the terminal receipt. It is self-hashed and bound to the
+  exact request, worker result and child result. It carries only device, input
+  frames, chunk count, worker model-call duration and peak MLX allocator bytes.
+  The full-song resource observer may summarize it only when those bindings
+  validate, and may call coverage complete only when every selected attempt has
+  one. Existing attempts without the projection remain valid but cannot be
+  backfilled. Never treat MLX allocator peak as process RSS, total unified
+  memory, a controlled benchmark or resource acceptance.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,

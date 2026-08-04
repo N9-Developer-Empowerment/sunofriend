@@ -14,6 +14,7 @@ model or authorised audio was opened.
 from __future__ import annotations
 
 import hashlib
+import math
 import os
 import platform
 import time
@@ -153,6 +154,7 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
     post_run_lease_observation: Mapping[str, Any] | None = None
     process_observation: Mapping[str, Any] | None = None
     terminal_projection: Mapping[str, Any] | None = None
+    resource_projection: Mapping[str, Any] | None = None
     session_terminal: Mapping[str, Any] | None = None
     lease_terminal: Mapping[str, Any] | None = None
     worker_released = False
@@ -321,6 +323,11 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
                     base_runtime_root=session_state.base_runtime_root,
                 )
             )
+            primary_stage = "worker_resource_projection"
+            resource_projection = _project_worker_resource_observation(
+                request=checked_request,
+                result=result,
+            )
             primary_stage = "checkpoint_remeasurement"
             post_run_lease_observation = (
                 _lease._recheck_private_melroformer_checkpoint_lease(
@@ -450,6 +457,7 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
             network_observation,
             native_image_evidence,
             staging_verification,
+            resource_projection,
             post_run_lease_observation,
             session_terminal,
             lease_terminal,
@@ -482,6 +490,7 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
         network_observation=network_observation,
         native_image_evidence=native_image_evidence,
         staging_verification=staging_verification,
+        resource_projection=resource_projection,
         post_run_lease_observation=post_run_lease_observation,
         session_terminal=session_terminal,
         lease_terminal=lease_terminal,
@@ -530,6 +539,7 @@ def _build_terminal_receipt(
     network_observation: Mapping[str, Any],
     native_image_evidence: Mapping[str, Any],
     staging_verification: Mapping[str, Any],
+    resource_projection: Mapping[str, Any],
     post_run_lease_observation: Mapping[str, Any],
     session_terminal: Mapping[str, Any],
     lease_terminal: Mapping[str, Any],
@@ -554,6 +564,7 @@ def _build_terminal_receipt(
             staging_verification,
             "staging verification",
         ),
+        "worker_resource_projection": _plain(resource_projection),
         "post_run_lease_observation_sha256": _evidence_digest(
             post_run_lease_observation,
             "post-run lease observation",
@@ -633,6 +644,122 @@ def _build_terminal_receipt(
     ):
         raise RuntimeError("private Kim coordinator receipt retained private data")
     return _freeze(document)
+
+
+def _project_worker_resource_observation(
+    *,
+    request: Mapping[str, Any],
+    result: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """Retain a bounded path-free projection of worker-reported resources."""
+
+    child = _plain(result.get("child_result"))
+    model = child.get("model") if isinstance(child, dict) else None
+    inference = model.get("inference") if isinstance(model, dict) else None
+    geometry = inference.get("geometry") if isinstance(inference, dict) else None
+    transport = inference.get("transport") if isinstance(inference, dict) else None
+    measurement = inference.get("measurement") if isinstance(inference, dict) else None
+    frames = geometry.get("frames") if isinstance(geometry, dict) else None
+    chunk_count = (
+        transport.get("chunk_count") if isinstance(transport, dict) else None
+    )
+    device = measurement.get("device") if isinstance(measurement, dict) else None
+    inference_seconds = (
+        measurement.get("inference_seconds")
+        if isinstance(measurement, dict)
+        else None
+    )
+    peak_memory_bytes = (
+        measurement.get("peak_memory_bytes")
+        if isinstance(measurement, dict)
+        else None
+    )
+    try:
+        observed_child_sha256 = hashlib.sha256(_canonical_json(child)).hexdigest()
+    except (TypeError, ValueError) as error:
+        raise ValueError(
+            "private Kim worker resource observation differs"
+        ) from error
+    if (
+        not isinstance(child, dict)
+        or result.get("child_result_sha256")
+        != observed_child_sha256
+        or child.get("schema")
+        != "sunofriend.private-melroformer-native-worker-child.v1"
+        or child.get("status")
+        != "real_worker_complete_parent_verification_required"
+        or not isinstance(model, dict)
+        or set(model) != {"authorisation", "bridge", "inference"}
+        or not isinstance(inference, dict)
+        or inference.get("status")
+        not in {
+            "private_real_single_chunk_validated_not_persisted",
+            "private_real_overlapped_excerpt_validated_not_persisted",
+        }
+        or not isinstance(geometry, dict)
+        or set(geometry)
+        != {
+            "sample_rate",
+            "channels",
+            "frames",
+            "duration_seconds",
+            "maximum_frames",
+        }
+        or geometry.get("sample_rate") != 44_100
+        or geometry.get("channels") != 2
+        or type(frames) is not int
+        or not 4_096 <= frames <= 661_500
+        or not isinstance(transport, dict)
+        or set(transport)
+        != {
+            "chunk_count",
+            "chunk_frames",
+            "hop_frames",
+            "overlap_frames",
+            "weighted_overlap_add",
+        }
+        or type(chunk_count) is not int
+        or not 1 <= chunk_count <= 3
+        or not isinstance(measurement, dict)
+        or set(measurement)
+        != {"device", "inference_seconds", "peak_memory_bytes"}
+        or device != request["execution"]["device"]
+        or isinstance(inference_seconds, bool)
+        or not isinstance(inference_seconds, (int, float))
+        or not math.isfinite(float(inference_seconds))
+        or not 0.0 < float(inference_seconds) <= 3_600.0
+        or type(peak_memory_bytes) is not int
+        or not 1 <= peak_memory_bytes <= 64 * 1024**3
+    ):
+        raise ValueError("private Kim worker resource observation differs")
+    payload = {
+        "schema": "sunofriend.private-melroformer-worker-resource-projection.v1",
+        "status": "worker_measurement_projected_not_benchmark",
+        "candidate_id": request["candidate_id"],
+        "bindings": {
+            "request_sha256": request["request_sha256"],
+            "worker_result_sha256": result["result_sha256"],
+            "child_result_sha256": result["child_result_sha256"],
+        },
+        "device": device,
+        "frames": frames,
+        "chunk_count": chunk_count,
+        "inference_seconds": round(float(inference_seconds), 6),
+        "peak_mlx_allocator_memory_bytes": peak_memory_bytes,
+        "semantics": {
+            "inference_time_scope": "worker_model_calls_only",
+            "memory_scope": "mlx_allocator_peak_not_process_rss",
+            "benchmark": False,
+        },
+    }
+    return _freeze(
+        {
+            **payload,
+            "projection_sha256": hashlib.sha256(
+                _canonical_json(payload)
+            ).hexdigest(),
+        }
+    )
 
 
 def _failure_receipt(

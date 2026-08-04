@@ -2311,6 +2311,18 @@ and thermal state were uncontrolled, and peak process RSS, accelerator memory,
 energy and concurrent load were not measured. The full-song resource envelope
 therefore remains unaccepted.
 
+Fresh native attempts now retain a separate path-free worker-resource
+projection in their terminal receipt. It is hash-bound to the exact request,
+worker result and child result and carries only the worker's already validated
+model-call duration, input frames, chunk count, device and peak MLX allocator
+bytes. The full-song resource observer accepts that projection only when its
+self-hash and all three bindings match the surrounding receipt. It reports
+coverage only when every selected attempt has one. Peak MLX allocator bytes are
+not peak process RSS, total unified-memory use, thermal evidence or an accepted
+resource envelope. Existing completed attempts predate the projection, so the
+measurements cannot be reconstructed from their retained receipts and the
+current 18-chunk report correctly remains unchanged.
+
 The optional review contract now asks that question explicitly with
 `--classify-focus-phrase-coverage`. For every playable candidate, the listener
 must separately choose `substantially_complete`, `partially_complete`,

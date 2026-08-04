@@ -2461,7 +2461,12 @@ separator transport, source-lineage import and promotion are not implemented**
     262.56 seconds of audio plus a 565,805,462-byte retained evidence snapshot.
     It correctly leaves acceptance open because peak process and accelerator
     memory, thermals, energy, controlled repeats and concurrent load were not
-    measured. Do not relabel this one uncontrolled observation as a benchmark.
+    measured. Fresh attempts now preserve model-call duration and peak MLX
+    allocator bytes in a path-free projection bound to the exact worker result;
+    the full-song observer can summarize those fields only when every selected
+    attempt carries them. This does not retroactively fill the current run and
+    is not process RSS or total unified-memory evidence. Do not relabel this
+    one uncontrolled observation as a benchmark.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
 - [x] Repeat the clean/estimate comparison through exact production
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation

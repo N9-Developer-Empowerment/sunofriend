@@ -228,11 +228,43 @@ def _install_fixed_substitutions(
         "_release_worker_ready_handshake",
         lambda value: calls.append("release"),
     )
+    child_result = {
+        "schema": "sunofriend.private-melroformer-native-worker-child.v1",
+        "status": "real_worker_complete_parent_verification_required",
+        "model": {
+            "authorisation": {"frames": 661_500},
+            "bridge": {"candidate_id": request["candidate_id"]},
+            "inference": {
+                "status": "private_real_single_chunk_validated_not_persisted",
+                "geometry": {
+                    "sample_rate": 44_100,
+                    "channels": 2,
+                    "frames": 661_500,
+                    "duration_seconds": 15.0,
+                    "maximum_frames": 661_500,
+                },
+                "transport": {
+                    "chunk_count": 1,
+                    "chunk_frames": 661_500,
+                    "hop_frames": 661_500,
+                    "overlap_frames": 0,
+                    "weighted_overlap_add": False,
+                },
+                "measurement": {
+                    "device": "cpu",
+                    "inference_seconds": 8.25,
+                    "peak_memory_bytes": 2_500_000_000,
+                },
+            },
+        },
+    }
     result = {
         "result_sha256": _digest("result"),
-        "child_result_sha256": _digest("child"),
+        "child_result_sha256": hashlib.sha256(
+            coordinator._canonical_json(child_result)
+        ).hexdigest(),
         "private_process_identity": {"pid": 101, "pgid": 101},
-        "child_result": {"child": True},
+        "child_result": child_result,
     }
     monkeypatch.setattr(
         coordinator,
@@ -410,6 +442,18 @@ def test_fixed_coordinator_composes_success_in_one_nonconfigurable_order(
         "signal_authority_exposed": False,
     }
     assert all(value is False for value in receipt["permissions"].values())
+    resources = receipt["worker_resource_projection"]
+    assert resources["device"] == "cpu"
+    assert resources["frames"] == 661_500
+    assert resources["chunk_count"] == 1
+    assert resources["inference_seconds"] == 8.25
+    assert resources["peak_mlx_allocator_memory_bytes"] == 2_500_000_000
+    assert resources["semantics"] == {
+        "inference_time_scope": "worker_model_calls_only",
+        "memory_scope": "mlx_allocator_peak_not_process_rss",
+        "benchmark": False,
+    }
+    assert resources["bindings"]["worker_result_sha256"] == _digest("result")
     assert calls.index("network_prepare") < calls.index("start")
     assert calls.index("release") < calls.index("read_result")
     assert calls.index("read_result") < calls.index("network_finish")
@@ -422,6 +466,70 @@ def test_fixed_coordinator_composes_success_in_one_nonconfigurable_order(
     assert calls.index("session_success") < calls.index("lease_released")
     assert calls.index("lease_released") < calls.index("lease_closed")
     assert str(tmp_path) not in repr(receipt)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("inference_seconds", 0.0),
+        ("inference_seconds", float("nan")),
+        ("peak_memory_bytes", 0),
+    ],
+)
+def test_worker_resource_projection_rejects_invalid_measurements(
+    tmp_path: Path,
+    field: str,
+    value: object,
+) -> None:
+    request = _request(tmp_path / "staging")
+    child = {
+        "schema": "sunofriend.private-melroformer-native-worker-child.v1",
+        "status": "real_worker_complete_parent_verification_required",
+        "model": {
+            "authorisation": {},
+            "bridge": {},
+            "inference": {
+                "status": "private_real_single_chunk_validated_not_persisted",
+                "geometry": {
+                    "sample_rate": 44_100,
+                    "channels": 2,
+                    "frames": 661_500,
+                    "duration_seconds": 15.0,
+                    "maximum_frames": 661_500,
+                },
+                "transport": {
+                    "chunk_count": 1,
+                    "chunk_frames": 661_500,
+                    "hop_frames": 661_500,
+                    "overlap_frames": 0,
+                    "weighted_overlap_add": False,
+                },
+                "measurement": {
+                    "device": "cpu",
+                    "inference_seconds": 8.25,
+                    "peak_memory_bytes": 2_500_000_000,
+                    field: value,
+                },
+            },
+        },
+    }
+    try:
+        child_sha256 = hashlib.sha256(
+            coordinator._canonical_json(child)
+        ).hexdigest()
+    except ValueError:
+        child_sha256 = _digest("non-json-child")
+    result = {
+        "result_sha256": _digest("result"),
+        "child_result_sha256": child_sha256,
+        "child_result": child,
+    }
+
+    with pytest.raises(ValueError, match="resource observation differs"):
+        coordinator._project_worker_resource_observation(
+            request=request,
+            result=result,
+        )
 
 
 def test_fixed_coordinator_exactly_cleans_a_pre_release_observer_failure(

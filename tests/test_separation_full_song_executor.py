@@ -34,6 +34,7 @@ from sunofriend._separation_full_song_resource import (
     SCHEMA as RESOURCE_SCHEMA,
     _observe_private_separation_full_song_resources,
     _timing_observation,
+    _worker_resource_observation,
 )
 from sunofriend._separation_melroformer_upstream_evidence import (
     CONVERSION_CHECKPOINT_BYTES,
@@ -136,7 +137,7 @@ def _write_pcm24(path: Path, frames: int) -> dict[str, Any]:
     }
 
 
-def _fake_runner(calls: list[int]):
+def _fake_runner(calls: list[int], *, include_worker_resources: bool = False):
     def run(**kwargs: Any) -> Mapping[str, Any]:
         report = json.loads(Path(kwargs["authorisation_report_path"]).read_text())
         frames = report["original"]["local_model_input"]["geometry"]["frames"]
@@ -148,18 +149,52 @@ def _fake_runner(calls: list[int]):
             claim = _write_pcm24(stems / f"{role}.wav", frames)
             outputs.append({"role": role, **claim})
         request_sha = hashlib.sha256(kwargs["run_nonce"].encode("ascii")).hexdigest()
-        receipt = _hash_document(
-            {
+        receipt_payload = {
                 "schema": "sunofriend.private-melroformer-native-coordinator.v1",
                 "status": "private_native_worker_complete_and_terminal",
                 "request_sha256": request_sha,
+                "worker_result_sha256": hashlib.sha256(
+                    f"worker:{request_sha}".encode("ascii")
+                ).hexdigest(),
+                "child_result_sha256": hashlib.sha256(
+                    f"child:{request_sha}".encode("ascii")
+                ).hexdigest(),
                 "permissions": {
                     "automatic_selection_permitted": False,
                     "product_route_permitted": False,
                 },
-            },
-            "receipt_sha256",
-        )
+            }
+        if include_worker_resources:
+            resource_payload = {
+                "schema": (
+                    "sunofriend.private-melroformer-worker-resource-projection.v1"
+                ),
+                "status": "worker_measurement_projected_not_benchmark",
+                "candidate_id": "mlx-melroformer-kim-vocal-2",
+                "bindings": {
+                    "request_sha256": request_sha,
+                    "worker_result_sha256": receipt_payload[
+                        "worker_result_sha256"
+                    ],
+                    "child_result_sha256": receipt_payload["child_result_sha256"],
+                },
+                "device": "gpu",
+                "frames": frames,
+                "chunk_count": 1,
+                "inference_seconds": 0.75 + len(calls) * 0.25,
+                "peak_mlx_allocator_memory_bytes": 2_500_000_000
+                + len(calls) * 100_000_000,
+                "semantics": {
+                    "inference_time_scope": "worker_model_calls_only",
+                    "memory_scope": "mlx_allocator_peak_not_process_rss",
+                    "benchmark": False,
+                },
+            }
+            receipt_payload["worker_resource_projection"] = _hash_document(
+                resource_payload,
+                "projection_sha256",
+            )
+        receipt = _hash_document(receipt_payload, "receipt_sha256")
         evidence = _hash_document(
             {
                 "schema": "sunofriend.private-kim-native-attempt-evidence.v1",
@@ -480,12 +515,87 @@ def test_full_song_resource_observation_is_coarse_and_non_accepting(
     assert result["execution_observation"]["selected_attempt_count"] == 2
     assert result["execution_observation"]["summed_observed_seconds"] == 3.0
     assert result["coverage"]["coarse_monotonic_timing_observed"] is True
+    assert result["coverage"]["worker_model_inference_time_observed"] is False
+    assert result["coverage"]["peak_mlx_allocator_memory_observed"] is False
     assert result["coverage"]["peak_process_rss_observed"] is False
     assert result["coverage"]["peak_accelerator_memory_observed"] is False
     assert result["readiness"]["resource_envelope_accepted"] is False
     assert all(value is False for value in result["permissions"].values())
     assert all(value is False for value in result["effects"].values())
     assert stat.S_IMODE((tmp_path / "resource.json").stat().st_mode) == 0o600
+
+
+def test_full_song_resource_observation_retains_worker_inference_and_mlx_memory(
+    tmp_path: Path,
+) -> None:
+    plan = _plan(tmp_path)
+    runtime = _runtime_arguments(tmp_path)
+    execution = tmp_path / "execution"
+    _execute_private_separation_full_song_queue(
+        plan,
+        out_dir=execution,
+        **runtime,
+        maximum_chunks=None,
+        attempt_runner=_fake_runner([], include_worker_resources=True),
+    )
+    stitch = tmp_path / "stitch"
+    _stitch_private_separation_full_song(
+        plan,
+        execution / REPORT_NAME,
+        out_dir=stitch,
+    )
+
+    result = _observe_private_separation_full_song_resources(
+        plan,
+        execution / REPORT_NAME,
+        stitch / "private-separation-full-song-stitch.json",
+        out=tmp_path / "resource.json",
+    )
+
+    resources = result["execution_observation"]["worker_resources"]
+    assert resources["complete_for_selected_attempts"] is True
+    assert resources["observed_attempt_count"] == 2
+    assert resources["missing_attempt_count"] == 0
+    assert resources["summed_inference_seconds"] == 1.75
+    assert resources["maximum_peak_mlx_allocator_memory_bytes"] == 2_600_000_000
+    assert resources["peak_process_rss_observed"] is False
+    assert result["coverage"]["worker_model_inference_time_observed"] is True
+    assert result["coverage"]["peak_mlx_allocator_memory_observed"] is True
+    assert result["coverage"]["peak_accelerator_memory_observed"] is False
+    assert result["coverage"]["peak_process_rss_observed"] is False
+    assert result["readiness"]["resource_envelope_accepted"] is False
+
+
+def test_worker_resource_observation_rejects_unbound_projection() -> None:
+    receipt = {
+        "request_sha256": "1" * 64,
+        "worker_result_sha256": "2" * 64,
+        "child_result_sha256": "3" * 64,
+    }
+    payload = {
+        "schema": "sunofriend.private-melroformer-worker-resource-projection.v1",
+        "status": "worker_measurement_projected_not_benchmark",
+        "candidate_id": "mlx-melroformer-kim-vocal-2",
+        "bindings": {
+            "request_sha256": "1" * 64,
+            "worker_result_sha256": "4" * 64,
+            "child_result_sha256": "3" * 64,
+        },
+        "device": "gpu",
+        "frames": 661_500,
+        "chunk_count": 1,
+        "inference_seconds": 8.0,
+        "peak_mlx_allocator_memory_bytes": 2_500_000_000,
+        "semantics": {
+            "inference_time_scope": "worker_model_calls_only",
+            "memory_scope": "mlx_allocator_peak_not_process_rss",
+            "benchmark": False,
+        },
+    }
+    projection = _hash_document(payload, "projection_sha256")
+
+    with pytest.raises(ValueError, match="resource projection differs"):
+        _worker_resource_observation(0, receipt, projection)
 
 
 def test_full_song_resource_observation_rejects_changed_timing_semantics(

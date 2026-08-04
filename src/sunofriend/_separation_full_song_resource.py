@@ -87,6 +87,8 @@ def _observe_private_separation_full_song_resources(
     _verify_stitch_audio(stitch_path.parent, stitch)
 
     observations = []
+    worker_resources = []
+    missing_worker_resources = 0
     preserved_incomplete = 0
     for chunk in execution["chunks"]:
         preserved_incomplete += sum(
@@ -107,6 +109,17 @@ def _observe_private_separation_full_song_resources(
             key="timing_sha256",
         )
         observations.append(_timing_observation(chunk["index"], timing))
+        receipt = _load_hashed_json(
+            attempt / "native-attempt-receipt.json",
+            key="receipt_sha256",
+        )
+        projected = receipt.get("worker_resource_projection")
+        if projected is None:
+            missing_worker_resources += 1
+        else:
+            worker_resources.append(
+                _worker_resource_observation(chunk["index"], receipt, projected)
+            )
 
     elapsed = [row["observed_total_seconds"] for row in observations]
     song_seconds = plan["canonical_clock"]["frames"] / 44_100
@@ -118,6 +131,14 @@ def _observe_private_separation_full_song_resources(
         name: _summary([row["stage_seconds"][name] for row in observations])
         for name in stage_names
     }
+    worker_resource_summary = _worker_resource_summary(
+        worker_resources,
+        selected_attempt_count=len(observations),
+        missing_count=missing_worker_resources,
+    )
+    complete_worker_resources = (
+        len(worker_resources) == len(observations) and missing_worker_resources == 0
+    )
 
     plan_tree = _tree_inventory(plan_path.parent, "private full-song plan tree")
     execution_tree = _tree_inventory(
@@ -160,6 +181,7 @@ def _observe_private_separation_full_song_resources(
             "p95_policy": "nearest-rank",
             "stage_seconds": stage_summary,
             "chunks": observations,
+            "worker_resources": worker_resource_summary,
         },
         "disk_snapshot": {
             "policy": "owner-only-regular-files-no-symbolic-links-v1",
@@ -177,6 +199,8 @@ def _observe_private_separation_full_song_resources(
             "stitched_audio_integrity_verified": True,
             "coarse_monotonic_timing_observed": True,
             "disk_snapshot_observed": True,
+            "worker_model_inference_time_observed": complete_worker_resources,
+            "peak_mlx_allocator_memory_observed": complete_worker_resources,
             "peak_process_rss_observed": False,
             "peak_accelerator_memory_observed": False,
             "thermal_state_observed": False,
@@ -193,7 +217,13 @@ def _observe_private_separation_full_song_resources(
         "limitations": [
             "These are coarse per-attempt monotonic timings, not a benchmark.",
             "The operating-system cache, scheduler and thermal state were uncontrolled.",
-            "Peak process memory and accelerator memory were not recorded.",
+            (
+                "Peak MLX allocator memory was retained for every selected worker, "
+                "but it is not peak process RSS or total unified-memory usage."
+                if complete_worker_resources
+                else "Peak process memory and accelerator memory were not retained "
+                "for every selected worker."
+            ),
             "Thermal behaviour, energy use and concurrent workloads were not measured.",
             "This report does not establish offline-network behaviour or product safety.",
         ],
@@ -276,6 +306,89 @@ def _timing_observation(chunk_index: int, timing: Mapping[str, Any]) -> dict[str
         "stage_order": list(order),
         "stage_seconds": {name: round(float(values[name]), 6) for name in order},
     }
+
+
+def _worker_resource_observation(
+    chunk_index: int,
+    receipt: Mapping[str, Any],
+    projection_value: object,
+) -> dict[str, Any]:
+    projection = dict(projection_value) if isinstance(projection_value, Mapping) else {}
+    payload = dict(projection)
+    projection_sha256 = payload.pop("projection_sha256", None)
+    bindings = projection.get("bindings")
+    semantics = projection.get("semantics")
+    inference_seconds = projection.get("inference_seconds")
+    peak_memory = projection.get("peak_mlx_allocator_memory_bytes")
+    if (
+        projection.get("schema")
+        != "sunofriend.private-melroformer-worker-resource-projection.v1"
+        or projection.get("status") != "worker_measurement_projected_not_benchmark"
+        or projection.get("candidate_id") != "mlx-melroformer-kim-vocal-2"
+        or projection_sha256 != _document_sha256(payload)
+        or not isinstance(bindings, Mapping)
+        or bindings.get("request_sha256") != receipt.get("request_sha256")
+        or bindings.get("worker_result_sha256")
+        != receipt.get("worker_result_sha256")
+        or bindings.get("child_result_sha256")
+        != receipt.get("child_result_sha256")
+        or projection.get("device") not in {"cpu", "gpu"}
+        or type(projection.get("frames")) is not int
+        or not 4_096 <= projection["frames"] <= 661_500
+        or type(projection.get("chunk_count")) is not int
+        or not 1 <= projection["chunk_count"] <= 3
+        or not _positive_number(inference_seconds)
+        or float(inference_seconds) > 3_600.0
+        or type(peak_memory) is not int
+        or not 1 <= peak_memory <= 64 * 1024**3
+        or semantics
+        != {
+            "inference_time_scope": "worker_model_calls_only",
+            "memory_scope": "mlx_allocator_peak_not_process_rss",
+            "benchmark": False,
+        }
+    ):
+        raise ValueError("private full-song worker resource projection differs")
+    return {
+        "chunk_index": chunk_index,
+        "device": projection["device"],
+        "frames": projection["frames"],
+        "chunk_count": projection["chunk_count"],
+        "inference_seconds": round(float(inference_seconds), 6),
+        "peak_mlx_allocator_memory_bytes": peak_memory,
+        "projection_sha256": projection_sha256,
+    }
+
+
+def _worker_resource_summary(
+    observations: list[dict[str, Any]],
+    *,
+    selected_attempt_count: int,
+    missing_count: int,
+) -> dict[str, Any]:
+    complete = len(observations) == selected_attempt_count and missing_count == 0
+    result: dict[str, Any] = {
+        "policy": "parent-bound-worker-resource-projection-v1",
+        "benchmark": False,
+        "complete_for_selected_attempts": complete,
+        "observed_attempt_count": len(observations),
+        "missing_attempt_count": missing_count,
+        "peak_process_rss_observed": False,
+        "memory_scope": "mlx_allocator_peak_not_process_rss",
+        "chunks": observations,
+    }
+    if observations:
+        inference = [item["inference_seconds"] for item in observations]
+        memory = [item["peak_mlx_allocator_memory_bytes"] for item in observations]
+        result.update(
+            {
+                "inference_seconds": _summary(inference),
+                "summed_inference_seconds": round(math.fsum(inference), 6),
+                "peak_mlx_allocator_memory_bytes": _summary(memory),
+                "maximum_peak_mlx_allocator_memory_bytes": max(memory),
+            }
+        )
+    return result
 
 
 def _summary(values: list[float]) -> dict[str, float]:
