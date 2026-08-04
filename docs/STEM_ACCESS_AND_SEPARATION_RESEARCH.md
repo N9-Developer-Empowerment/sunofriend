@@ -228,10 +228,11 @@ the copyright-safe demo, and a second private evaluator measures their effect
 on the existing MIDI transcribers. Public separation, source-graph import,
 hidden/cross-song acceptance and promotion are not implemented**
 
-Checked: 3 August 2026 after the private four-stem HTDemucs run, synthetic
+Checked: 4 August 2026 after the private four-stem HTDemucs run, synthetic
 ground-truth evaluation, three authorised provider comparisons, cross-song
 narrow-`other` evidence, the six-source challenger, the MelRoFormer vocal
-comparisons and its model-free macOS network-denial canary
+comparisons, its model-free macOS network-denial canary and creation of the
+two-song blind separated-audio quality review. That review remains unreviewed.
 
 ## Contents
 
@@ -2399,6 +2400,15 @@ separator transport, source-lineage import and promotion are not implemented**
     roles, hidden-set evaluation, checkpoint terms, offline execution, resource
     acceptance and a public product route. It cannot close a gate from a caller
     assertion, rank or select a separator, or enable CLI/TUI/Simple/Studio.
+  - [x] Add a source-bound, blind separated-audio quality review contract over
+    the exact 15-second `Be Alone` and `I am a Alien mashup` cells. It preserves
+    the mixed source separately, sample-RMS matches two anonymous vocal
+    candidates and requires independent vocal-retention, non-vocal-bleed and
+    artefact ratings plus a separate preference. Its resolver fails closed on
+    changed evidence and always emits no activation or product authority.
+  - [ ] Complete that two-song separated-audio review and bind the verified
+    resolution into a later publication-readiness ledger. Creating and testing
+    the unreviewed page is not human acceptance and does not close the gate.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
 - [x] Repeat the clean/estimate comparison through exact production
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation

@@ -1984,6 +1984,65 @@ stage as `private_bounded_vocal_research`. It cannot accept a separator from
 caller flags, compute a quality percentage, copy listener notes or enable a
 product route. Future gates require new typed, hash-bound evidence.
 
+### Cross-song separated-audio quality review
+
+The next gate now has a dedicated owner-only review contract rather than a
+free-text listening note. `scripts/private-separated-audio-quality-review.py`
+accepts two or more source-bound cases. Each case must bind one authorised
+excerpt, one unchanged Kim Vocal 2 worker result and one provider broad-vocal
+control from the exact same window. It copies the mixed source and two
+anonymous candidates into a fresh private package, sample-RMS matches only the
+candidate pair and asks the listener to rate vocal retention, non-vocal bleed
+and distracting artefacts independently before recording a separate overall
+preference.
+
+The current package uses the exact 191.00–206.00 second `Be Alone` and
+219.00–234.00 second `I am a Alien mashup` evidence chains:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separated-audio-quality-review.py --create \
+  --case be-alone \
+    work/separation-bakeoff/be-alone-authorised-191-206-v2/authorised-separation-excerpt.json \
+    work/separation-bakeoff/be-alone-kim-fixed-native-v3-timed-midi-191-206-v1/private-melroformer-vocal-midi-evaluation.json \
+    work/separation-bakeoff/be-alone-role-mapping-191-206-v1/authorised-role-mapping.json \
+    moises \
+  --case i-am-a-alien \
+    work/separation-bakeoff/i-am-a-alien-authorised-219-234-v1/authorised-separation-excerpt.json \
+    work/separation-bakeoff/i-am-a-alien-kim-fixed-native-midi-219-234-v1/private-melroformer-vocal-midi-evaluation.json \
+    work/separation-bakeoff/i-am-a-alien-role-mapping-219-234-v1/authorised-role-mapping.json \
+    moises \
+  --out-dir \
+    work/separation-bakeoff/cross-song-separated-audio-quality-review-v1
+```
+
+The unreviewed seed SHA-256 is
+`2c46910b86177fd01dddb2f09ab0409f0c751291b5291717226730ff7a62f63a`;
+the six-file audio manifest SHA-256 is
+`9233cdf8c938cadf968c8a824d44d41cd7ebe66f96e2787e1b97a480eedc5011`.
+All six files are 15-second, 44.1 kHz, stereo PCM24 and have been re-read and
+hash-verified. The review is still unreviewed, so this does **not** close the
+separated-audio quality gate.
+
+After the browser exports a completed JSON file, resolve it without reopening
+the answer key manually:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separated-audio-quality-review.py \
+  --resolve /absolute/separated-audio-quality.reviewed.json \
+  --package-dir \
+    work/separation-bakeoff/cross-song-separated-audio-quality-review-v1 \
+  --out /absolute/fresh/private-separated-audio-quality-result.json
+```
+
+The resolver rejects incomplete ratings, changed audio, changed immutable
+review evidence, invalid blind assignments and duplicate answer-key units. A
+completed resolution remains `complete_review_no_activation`: it cannot select
+Kim or the provider, change a default, publish a separator or enable any
+product route. A later, separate ledger increment may consume that resolution
+only after the real human review is complete.
+
 The optional review contract now asks that question explicitly with
 `--classify-focus-phrase-coverage`. For every playable candidate, the listener
 must separately choose `substantially_complete`, `partially_complete`,

@@ -1851,6 +1851,18 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   product integration. Treat `publication_ready: false` as authoritative for
   this evidence scope. The command cannot accept a caller assertion, run a
   model, select a separator or enable Simple, Studio, CLI, TUI or source graph.
+- `scripts/private-separated-audio-quality-review.py` creates a fresh
+  owner-only blind review from two or more exact source-bound vocal-separation
+  cases. Each case must bind one authorised mixed excerpt, one unchanged Kim
+  Vocal 2 worker result and one provider broad-vocal control for the same
+  window. The page keeps the source separate, sample-RMS matches only A and B,
+  and requires independent vocal-retention, non-vocal-bleed and artefact
+  ratings plus a separate preference. Use `--resolve REVIEWED_JSON
+  --package-dir PACKAGE --out RESULT` after the browser export. Resolution
+  verifies the immutable page, audio manifest and blind key and remains
+  `complete_review_no_activation`; never infer acceptance from package
+  creation or from one preferred candidate. The current two-song page is
+  unreviewed, so separated-audio quality remains an open publication gate.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,
