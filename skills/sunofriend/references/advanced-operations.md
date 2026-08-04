@@ -1903,10 +1903,20 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   `8eb63e00994482652059072d9c9f5ef034a1063478b2682e192723cd1004bc34`
   and document SHA-256
   `ee89785e095657c853427a6bc984248052cd1e28cf2e6893b294071ab5aca89d`.
-  Before any acceptance, run every chunk through the unchanged native owner,
-  verify and stitch exact canonical frames, measure full resource/failure
-  behavior and require separate boundary/full-song listening. Never call exact
-  input partitioning seamless separated audio.
+  Resume the sealed plan with
+  `scripts/private-separation-full-song-execute.py`. Run that coordinator under
+  core `.venv` Python and pass `.venv-ai/bin/python` as the isolated worker's
+  explicit `--runtime-launcher`; do not run the coordinator itself under the AI
+  environment. The executor defaults to one next chunk and `--all` runs all
+  remaining chunks. It preserves interrupted attempts and advances state only
+  after the exact authorisation, checkpoint, terminal receipt, timing, role,
+  hash and planned-frame checks pass. Then use
+  `scripts/private-separation-full-song-stitch.py` to re-verify and concatenate
+  the complete queue without crossfade, per-chunk gain or hidden repair.
+  The current `Be Alone` execution completed all 18 chunks and the exact stitch
+  produced 11,578,896-frame source, vocal, instrumental and reconstruction
+  PCM24 WAVs. Its 17-boundary browser review remains required. Never call exact
+  input partitioning or exact output duration seamless or accepted separation.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,

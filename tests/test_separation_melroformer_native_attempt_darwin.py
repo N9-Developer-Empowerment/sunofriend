@@ -258,6 +258,31 @@ def test_private_native_attempt_rejects_invalid_timing_values(value: object) -> 
         attempt_module._checked_timing_value(value)
 
 
+def test_private_native_attempt_accepts_bounded_equal_length_outputs(
+    tmp_path: Path,
+) -> None:
+    attempt = tmp_path / "attempt"
+    stems = attempt / "staging/quarantine/STEMS"
+    stems.mkdir(parents=True)
+    for directory in (attempt, attempt / "staging", stems.parent, stems):
+        directory.chmod(0o700)
+    _write_pcm24(stems / "instrumental.wav", frames=12_345)
+    _write_pcm24(stems / "vocals.wav", frames=12_345)
+
+    instrumental = attempt_module._inspect_attempt_pcm24(
+        attempt,
+        role="instrumental",
+    )
+    vocals = attempt_module._inspect_attempt_pcm24(
+        attempt,
+        role="vocals",
+        expected_frames=instrumental["geometry"]["frames"],
+    )
+
+    assert instrumental["geometry"]["frames"] == 12_345
+    assert vocals["geometry"]["frames"] == 12_345
+
+
 def test_private_native_attempt_requires_fresh_path_before_authority(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -361,10 +386,10 @@ def _run(fixture: dict[str, Any]):
     )
 
 
-def _write_pcm24(path: Path) -> None:
+def _write_pcm24(path: Path, *, frames: int = 661_500) -> None:
     with wave.open(str(path), "wb") as writer:
         writer.setnchannels(2)
         writer.setsampwidth(3)
         writer.setframerate(44_100)
-        writer.writeframes(b"\0" * 661_500 * 2 * 3)
+        writer.writeframes(b"\0" * frames * 2 * 3)
     path.chmod(0o600)

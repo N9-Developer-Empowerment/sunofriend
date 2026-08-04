@@ -2148,6 +2148,15 @@ cross-song publication gate: first use it to learn whether an already-supplied
 alternative retains the missing event, then design a new cross-song test only
 if that hypothesis survives human listening.
 
+That review is now complete. The verified result has document SHA-256
+`d325ff3584aa573ea919815cf33797443fbe2aaeb80d2da96ceb541d0436ac81`.
+Kim, Moises and Suno B were marked useful for the exact held-vocal focus; Suno
+A was not. Every candidate was rated only `partially_complete`. The listener
+heard the final vocal as badly cut off and noted that the sustained event stops
+sounding recognisably vocal in isolation even though song context makes it
+perceptually vocal. Preserve that as a target-specific diagnostic. It neither
+selects a model nor weakens the predeclared cross-song gate.
+
 ### Full-song bounded-worker queue
 
 The full-song duration/alignment gate now has a safe executable precursor.
@@ -2184,13 +2193,74 @@ and its document SHA-256 is
 `ee89785e095657c853427a6bc984248052cd1e28cf2e6893b294071ab5aca89d`.
 All retained paths are relative to the private 66 MiB plan tree.
 
-This closes no publication gate. The next increment must execute every chunk
-through the unchanged native owner, verify every output against its exact
-chunk authorisation, stitch vocals and accompaniment on the canonical frame
-clock, measure timing/resources/failure recovery and create a separate
-boundary-listening review. Independent inference can disagree at boundaries;
-exact input partitioning is not evidence that the separated audio is seamless
-or musically complete.
+`scripts/private-separation-full-song-execute.py` now resumes that sealed plan
+through the unchanged native owner. It defaults to one next chunk; `--all`
+runs every remaining chunk sequentially. Every successful attempt must bind
+the exact authorisation, checkpoint, terminal receipt, timing document, PCM24
+hashes and planned frame count before durable state advances. An interrupted
+or malformed attempt is preserved and retried under a fresh attempt number.
+It never trusts, deletes or overwrites partial output.
+
+The complete private run is at
+`work/separation-bakeoff/be-alone-full-song-kim-execution-v1`. Two pre-inference
+failures on chunk zero were intentionally retained: one used the wrong
+coordinator runtime and one used a non-canonical launcher name. The correct
+split-runtime invocation then completed all 18 chunks. Each successful native
+attempt took 9.294787–10.014054 seconds, with 170.139463 seconds of summed
+per-attempt terminal timing. The execution report file SHA-256 is
+`a9c01bcc38c68d23e170a6d3c56dfb894ba57d7d2143eae5a5b4610183c8cfdb`;
+its state SHA-256 is
+`c8802598451d96dbf6ee6d4c7484de8328eaca1d1de98482f168baa39582cd62`.
+This is failure-recovery and coarse runtime evidence, not a benchmark or a
+quality result.
+
+The coordinator must run under the core `.venv` Python while
+`--runtime-launcher` names `.venv-ai/bin/python`. This is intentional: the
+trusted owner and isolated MLX worker use separate pinned runtimes.
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-full-song-execute.py \
+  --plan \
+    work/separation-bakeoff/be-alone-full-song-kim-plan-v1/private-separation-full-song-plan.json \
+  --out-dir \
+    work/separation-bakeoff/be-alone-full-song-kim-execution-v1 \
+  --repository-root "$PWD" \
+  --runtime-launcher "$PWD/.venv-ai/bin/python" \
+  --source-root \
+    "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/mlx-audio-source" \
+  --checkpoint \
+    "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/model.safetensors" \
+  --companion-root \
+    "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/checkpoint-directory" \
+  --device gpu --all
+```
+
+`scripts/private-separation-full-song-stitch.py` re-verifies the complete
+execution before concatenating. It performs no crossfade, per-chunk gain or
+hidden repair. The source, vocal, instrumental and diagnostic reconstruction
+are all exactly 11,578,896 frames at 44.1 kHz stereo PCM24; the source integer
+sequence re-verifies the plan hash. The diagnostic sum needed no global
+attenuation. The stitch report document SHA-256 is
+`fce5dc6cf6d2fa3a22f5a7ed2e10d958f38d75e66ae3dcc937ce4ef35c893d51`.
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-full-song-stitch.py \
+  --plan \
+    work/separation-bakeoff/be-alone-full-song-kim-plan-v1/private-separation-full-song-plan.json \
+  --execution \
+    work/separation-bakeoff/be-alone-full-song-kim-execution-v1/private-separation-full-song-execution.json \
+  --out-dir \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v1
+```
+
+The remaining human gate is the 17-unit page at
+`be-alone-full-song-kim-stitch-v1/BOUNDARY-REVIEW/separation_boundary_review.html`.
+Each four-second unit centres one exact join and provides source, vocal,
+instrumental and reconstruction audio. Rate clicks, cut notes, level jumps or
+tone changes independently. Exact duration and reconstruction do not establish
+seamlessness, musical completeness or product readiness.
 
 The optional review contract now asks that question explicitly with
 `--classify-focus-phrase-coverage`. For every playable candidate, the listener

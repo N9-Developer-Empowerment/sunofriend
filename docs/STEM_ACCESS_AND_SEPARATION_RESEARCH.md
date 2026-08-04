@@ -2430,18 +2430,29 @@ separator transport, source-lineage import and promotion are not implemented**
     retention of the named event, bleed and artefacts. A frame-activity
     disagreement justified including the Suno challengers but is not musical
     proof. The unreviewed package cannot select or activate a separator and does
-    not count as cross-song publication evidence.
+    not count as cross-song publication evidence. The completed review found
+    Kim, Moises and Suno B useful for that focus and Suno A not useful, but all
+    four retained the event only partially. The listener identified the final
+    cut-off and the ambiguity of a sustained sound that is recognisably vocal
+    mainly in song context. This remains diagnostic evidence, not selection.
   - [x] Add a model-free full-song queue without weakening the audited Kim
     worker's 15-second ceiling. The first owned `Be Alone` plan converts the
     complete source once to an exact 44.1 kHz stereo clock and partitions all
     11,578,896 frames into 18 equal, contiguous worker-compatible authorisation
     packages. It proves zero input-clock gap, overlap and end error, runs no
     model and keeps every product permission false.
-  - [ ] Execute all 18 `Be Alone` chunks through the unchanged native owner,
+  - [x] Execute all 18 `Be Alone` chunks through the unchanged native owner,
     bind outputs and timings to the plan, stitch exact-length vocal and
     accompaniment outputs, test interruption/restart and hand off a separate
-    boundary/full-song review. Queue preparation alone does not close either
-    the duration/alignment or resource-envelope gate.
+    boundary/full-song review. The resumable owner retained two safe
+    pre-inference failures, then verified every chunk. Exact concatenation
+    produced 262.56-second source, vocal, instrumental and reconstruction WAVs
+    with no crossfade or hidden repair. Queue execution and exact stitching do
+    not close quality or publication gates.
+  - [ ] Complete all 17 boundary ratings and full-song listening on the exact
+    stitch, resolve the browser export, and decide whether a boundary repair
+    experiment is justified. Keep any repair as a separate derived challenger;
+    never replace the exact stitch.
 - [x] Measure initial synthetic downstream MIDI and Mac resource behaviour.
 - [x] Repeat the clean/estimate comparison through exact production
   `refine_stem`, rendering, variants and independent audio-to-MIDI evaluation

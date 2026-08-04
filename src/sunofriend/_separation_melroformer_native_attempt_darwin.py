@@ -26,6 +26,10 @@ from ._separation_checkpoint_canonical import (
     plain as _plain,
 )
 from ._separation_melroformer_artifacts import _inspect_companion_files
+from ._separation_melroformer_real_bridge import (
+    MAXIMUM_EXCERPT_FRAMES,
+    MINIMUM_PROBE_FRAMES,
+)
 from ._separation_melroformer_native_one_shot_darwin import (
     _run_reserved_private_melroformer_native_one_shot_darwin,
 )
@@ -528,10 +532,16 @@ def _write_attempt_evidence(
         )
     ):
         raise ValueError("private Kim native terminal receipt differs")
-    outputs = [
-        _inspect_attempt_pcm24(attempt, role=role)
-        for role in ("instrumental", "vocals")
-    ]
+    outputs: list[Mapping[str, Any]] = []
+    expected_frames: int | None = None
+    for role in ("instrumental", "vocals"):
+        output = _inspect_attempt_pcm24(
+            attempt,
+            role=role,
+            expected_frames=expected_frames,
+        )
+        outputs.append(output)
+        expected_frames = output["geometry"]["frames"]
     payload = {
         "schema": _EVIDENCE_SCHEMA,
         "status": "private_native_attempt_verified_not_selected",
@@ -575,7 +585,12 @@ def _write_attempt_evidence(
     return document
 
 
-def _inspect_attempt_pcm24(attempt: Path, *, role: str) -> Mapping[str, Any]:
+def _inspect_attempt_pcm24(
+    attempt: Path,
+    *,
+    role: str,
+    expected_frames: int | None = None,
+) -> Mapping[str, Any]:
     if role not in {"instrumental", "vocals"}:
         raise ValueError("private Kim native output role differs")
     path = attempt / "staging" / "quarantine" / "STEMS" / f"{role}.wav"
@@ -598,12 +613,14 @@ def _inspect_attempt_pcm24(attempt: Path, *, role: str) -> Mapping[str, Any]:
         }
         if reader.getcomptype() != "NONE":
             raise ValueError("private Kim native PCM24 compression differs")
-    if geometry != {
-        "sample_rate": 44_100,
-        "channels": 2,
-        "sample_width_bytes": 3,
-        "frames": 661_500,
-    }:
+    frames = geometry["frames"]
+    if (
+        geometry["sample_rate"] != 44_100
+        or geometry["channels"] != 2
+        or geometry["sample_width_bytes"] != 3
+        or not MINIMUM_PROBE_FRAMES <= frames <= MAXIMUM_EXCERPT_FRAMES
+        or (expected_frames is not None and frames != expected_frames)
+    ):
         raise ValueError("private Kim native PCM24 geometry differs")
     return {
         "role": role,
