@@ -2626,6 +2626,64 @@ package receive a fresh three-role, 17-boundary full-song review and fresh
 nine-window alignment review. No v1 review or alignment decision transfers to
 that future candidate.
 
+The sealed v2 candidate can now be assembled without another model run:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-full-song-join-remediation-execute-v2.py \
+  work/separation-bakeoff/be-alone-full-song-join-remediation-plan-v2/private-separation-full-song-join-remediation-plan-v2.json \
+  --package-dir \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review \
+  --full-song-review-result \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-review-result-v1/private-separation-full-song-review-result.json \
+  --v1-plan \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-plan-v1/private-separation-full-song-join-remediation-plan.json \
+  --v1-execution \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v1/private-separation-full-song-join-remediation-execution.json \
+  --v1-candidate \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v1/private-separation-full-song-join-remediation-candidates.json \
+  --resolved-join-review-result \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-review-result-v4/private-separation-full-song-join-remediation-review-result.json \
+  --publication-readiness \
+    work/separation-bakeoff/separation-publication-readiness-v12/private-separation-publication-readiness.json \
+  --out-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2
+```
+
+The completed execution report is
+`work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2/private-separation-full-song-join-remediation-execution-v2.json`.
+Its file SHA-256 is
+`a4f4231f70fdac4991243b31c87b7efbb0503d547cd6e3731e4dd13ac3ef1bce`
+and its document SHA-256 is
+`ba25d98198f47d8e957020efd69656442d290652a0ac43b25243c608e7aad906`.
+The three 44.1 kHz stereo PCM24 candidate WAV hashes are:
+
+- vocals:
+  `9818d546c64591a42dc9fa5593e88e0dd2e147295c3e00d6147a1a667f49db5e`;
+- instrumental:
+  `1f5c7a4b111832f87577325cfba4535075b6e903c4c53c1a683b0ef62869a5a9`;
+- diagnostic reconstruction:
+  `0755a13ef7313d900339673730725d83e644077681e3b67d0c59b4f3a6a9b5fd`.
+
+The executor re-derived the plan from the complete evidence chain, began from
+the verified v1 candidate rather than the raw stitch, and reused the exact
+sealed worker-local `[242550, 418950)` slice. It changed 194,026 PCM24 sample
+values in vocals `[6987792, 7164192)` and 194,028 in instrumental
+`[8274336, 8450736)`. Every PCM24 sample outside each role's target range is
+identical to the v1 candidate, including the preserved boundary 12 vocals and
+boundary 11 instrumental repairs. The diagnostic reconstruction was computed
+from the written v2 role WAVs; its pre-gain peak was 0.812045455 and its
+attenuation-only global gain was 1.0.
+
+The output root is fresh and owner-only, files are owner-only and single-link,
+staged WAVs use exclusive no-follow descriptor writes, inputs and published
+audio are rechecked before the completion report is written, and outputs are
+forbidden inside any bound evidence tree. The operation made zero model calls,
+used no network and did not mutate the stitch, v1 candidate, worker output,
+review evidence or readiness ledger. Candidate integrity is not audible repair
+or musical quality: every permission and readiness decision remains false,
+and the targeted v2 listening review described above is still required.
+
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
 

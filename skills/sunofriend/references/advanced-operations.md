@@ -2054,6 +2054,25 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   four patch-edge checks and, if those pass, a new candidate-bound three-role
   full-song review plus nine-window alignment review. Never transfer v1
   review or alignment decisions to the new candidate.
+  Assemble that candidate with
+  `scripts/private-separation-full-song-join-remediation-execute-v2.py`, the
+  exact v2 plan and the same bound stitch/review/v1/readiness evidence chain,
+  into a fresh `be-alone-full-song-join-remediation-execution-v2` root. The
+  fixed completion marker is
+  `private-separation-full-song-join-remediation-execution-v2.json`; its current
+  file SHA-256 is
+  `a4f4231f70fdac4991243b31c87b7efbb0503d547cd6e3731e4dd13ac3ef1bce`
+  and document SHA-256 is
+  `ba25d98198f47d8e957020efd69656442d290652a0ac43b25243c608e7aad906`.
+  The model-free executor starts from verified v1 candidate PCM24 audio,
+  repatches vocals `[6987792, 7164192)` and instrumental
+  `[8274336, 8450736)` from worker-local `[242550, 418950)`, preserves exact
+  v1 PCM24 samples everywhere else and reconstructs from the written role
+  WAVs. It invokes no model or network, publishes fresh private outputs without
+  overwrite and writes its report only after final input/output verification.
+  This proves assembly integrity only. Selection, acceptance, readiness and
+  publication remain false; the targeted two-pair/four-edge review and any
+  later fresh full-song review/alignment are still mandatory.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic
   snapshot across the whole operation; status and result record this explicit
