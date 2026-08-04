@@ -2143,6 +2143,17 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   or accept a separator, change readiness, publish anything or enable a
   product route. A pass permits only later fresh candidate-bound three-role,
   17-boundary full-song and nine-window alignment reviews.
+  The full-song package builder for that later gate now exists as
+  `scripts/private-separation-candidate-full-song-review.py`, but it is inert
+  without the exact resolved v2 result. It re-verifies the complete evidence
+  chain, requires the two v2 target joins and all four v2 edges to be `clean`,
+  then copies the unchanged source and exact v2 candidate roles into a fresh
+  private package with all 17 original boundary windows. The completion marker
+  is `private-separation-candidate-full-song-review-package.json` and the page
+  is `BOUNDARY-REVIEW/separation_boundary_review.html`. It runs no model and
+  selects, accepts, activates and publishes nothing. A separate resolver and
+  fresh nine-window alignment package are still required; never run this
+  builder by inventing or hand-editing a passing result.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic
   snapshot across the whole operation; status and result record this explicit

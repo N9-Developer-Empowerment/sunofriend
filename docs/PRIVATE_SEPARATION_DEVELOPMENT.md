@@ -2811,6 +2811,50 @@ units permits only the later creation of a fresh immutable candidate-bound
 three-role, 17-boundary full-song review and a fresh nine-window alignment
 review. Those later reviews must not inherit v1 decisions.
 
+The full-song half of that later gate is now implemented but remains inert
+until the targeted result exists and passes. The builder verifies the complete
+v1/v2 evidence chain again, requires both v2 target joins and all four v2 patch
+edges to be explicitly `clean`, copies the unchanged source plus the exact v2
+vocals, instrumental and reconstruction PCM24 files into a fresh private root,
+and recreates all 17 original boundary windows. It runs no model and writes its
+completion report last. A missing, changed, incomplete or non-passing targeted
+result is rejected before the output directory is created.
+
+After a passing result only, use:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-candidate-full-song-review.py \
+  --v2-review-result \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-review-result-v2/private-separation-full-song-join-remediation-review-result-v2.json \
+  --v2-execution-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2 \
+  --v2-plan \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-plan-v2/private-separation-full-song-join-remediation-plan-v2.json \
+  --v1-execution-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v1 \
+  --package-dir \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review \
+  --full-song-review-result \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-review-result-v1/private-separation-full-song-review-result.json \
+  --v1-plan \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-plan-v1/private-separation-full-song-join-remediation-plan.json \
+  --resolved-join-review-result \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-review-result-v4/private-separation-full-song-join-remediation-review-result.json \
+  --publication-readiness \
+    work/separation-bakeoff/separation-publication-readiness-v12/private-separation-publication-readiness.json \
+  --out-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-full-song-review-v1
+```
+
+The fixed completion marker is
+`private-separation-candidate-full-song-review-package.json`; the human page is
+`BOUNDARY-REVIEW/separation_boundary_review.html`. Building or completing that
+page still cannot select or accept the candidate, prove alignment, resolve the
+original audible joins, change readiness or publish anything. A separate
+candidate-bound review resolver and the fresh nine-window alignment package
+remain later increments.
+
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
 
