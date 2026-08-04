@@ -2265,6 +2265,16 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   review remains unexported. Even after a package is built, selection,
   acceptance, activation and publication remain false; a separate review
   resolver and fresh alignment still follow.
+  The corresponding non-activating verifier/resolver is
+  `scripts/private-separation-candidate-followup-full-song-review-result.py`.
+  Its `--status` path verifies the complete export, copied PCM24 roles, every
+  boundary clip and all upstream bindings without writing. Its `--resolve`
+  path writes one fresh owner-only result with complete-song usefulness,
+  per-role boundary counts and exact audible-join indices. Completion only
+  makes the next fresh alignment review eligible; original-join resolution,
+  selection, acceptance, product exposure and publication stay false. The
+  code is ready, but there is no real result until the targeted review has
+  passed and this all-boundary page has subsequently been heard and exported.
   On macOS 26.5.1, an exact sealed/read-only `/usr/bin/sandbox-exec`
   `CSSMERR_TP_NOT_TRUSTED` result is recorded as
   `sealed_read_only_system_provider_cdhash_trust_unavailable` with

@@ -14,6 +14,11 @@ from sunofriend._separation_candidate_followup_full_song_review import (
     _build_private_candidate_followup_full_song_review,
     _verified_passing_targeted_result,
 )
+from sunofriend._separation_candidate_followup_full_song_review_result import (
+    RESULT_STATUS,
+    _resolve_private_candidate_followup_full_song_review,
+    _status_private_candidate_followup_full_song_review,
+)
 from sunofriend._separation_candidate_join_remediation_review_result import (
     _resolve_private_candidate_join_remediation_review,
 )
@@ -245,6 +250,8 @@ def _builder_fixture(
         "reviewed": reviewed,
         "out": tmp_path / "full-review",
         "inputs": inputs,
+        "stitch_document": stitch,
+        "targeted_result": result,
     }
 
 
@@ -293,3 +300,129 @@ def test_gate_failure_or_existing_destination_never_claims_completion(
     with pytest.raises(FileExistsError):
         _build(fixture)
     assert not (Path(fixture["out"]) / REPORT_NAME).exists()
+
+
+def _completed_full_review(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[dict[str, object], Path]:
+    fixture = _builder_fixture(tmp_path, monkeypatch)
+    _build(fixture)
+    _patch_result_sources(fixture, monkeypatch)
+    seed = json.loads(
+        (Path(fixture["out"]) / "BOUNDARY-REVIEW/separation_boundary_review.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    seed["status"] = "reviewed"
+    seed["full_song"]["heard_all"] = True
+    seed["full_song"]["ratings"] = {
+        "vocals": "useful",
+        "instrumental": "useful",
+        "reconstruction": "useful",
+    }
+    seed["full_song"]["notes"] = "Useful complete fixture."
+    for unit in seed["units"]:
+        unit["heard_all"] = True
+        unit["ratings"] = {
+            "vocals": "clean",
+            "instrumental": "clean",
+            "reconstruction": "clean",
+        }
+        unit["notes"] = "No audible join."
+    seed["summary"] = {
+        "full_song_reviewed": True,
+        "reviewed_boundaries": len(seed["units"]),
+        "boundary_count": len(seed["units"]),
+    }
+    reviewed = _write(tmp_path / "full-export/reviewed.json", seed)
+    return fixture, reviewed
+
+
+def _patch_result_sources(
+    fixture: dict[str, object], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    prefix = (
+        "sunofriend._separation_candidate_followup_full_song_review_result"
+    )
+    monkeypatch.setattr(
+        f"{prefix}._load_verified_inputs",
+        lambda *args, **kwargs: fixture["inputs"],
+    )
+    monkeypatch.setattr(
+        f"{prefix}._verified_passing_targeted_result",
+        lambda *args, **kwargs: fixture["targeted_result"],
+    )
+    monkeypatch.setattr(
+        f"{prefix}._load_stitch_report",
+        lambda *args, **kwargs: fixture["stitch_document"],
+    )
+    monkeypatch.setattr(
+        f"{prefix}._verify_stitch_audio", lambda *args, **kwargs: None
+    )
+    monkeypatch.setattr(
+        f"{prefix}._verify_stitch_bound_to_v2", lambda *args, **kwargs: None
+    )
+
+
+def _result_args(fixture: dict[str, object]) -> dict[str, object]:
+    return {
+        "review_package_dir": fixture["out"],
+        "targeted_review_result_path": fixture["result_path"],
+        "targeted_reviewed_export_path": fixture["reviewed"],
+        "targeted_review_package_dir": fixture["review_package"],
+        "execution_dir": fixture["execution"],
+        "v2_execution_dir": fixture["v2"],
+        "stitch_package_dir": fixture["stitch"],
+    }
+
+
+def test_status_and_resolution_record_complete_review_without_activation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fixture, reviewed = _completed_full_review(tmp_path, monkeypatch)
+    arguments = _result_args(fixture)
+    status = _status_private_candidate_followup_full_song_review(
+        reviewed, **arguments
+    )
+
+    assert status["status"] == "complete_review_verified_no_activation"
+    assert status["reviewed_boundaries"] == 1
+    assert status["rating_counts_by_role"]["vocals"]["clean"] == 1
+    assert status["effects"]["review_record_created"] is False
+
+    result_root = tmp_path / "full-result"
+    result_root.mkdir(mode=0o700)
+    result = _resolve_private_candidate_followup_full_song_review(
+        reviewed,
+        out=result_root / "result.json",
+        **arguments,
+    )
+    assert result["status"] == RESULT_STATUS
+    assert result["boundary_summary"]["all_followup_boundaries_clean"] is True
+    assert result["readiness_evidence"]["all_followup_full_song_roles_useful"] is True
+    assert result["readiness_evidence"]["followup_alignment_complete"] is False
+    assert result["readiness_evidence"]["publication_ready"] is False
+    assert result["permissions"] == _FALSE_PERMISSIONS
+
+
+def test_resolver_rejects_incomplete_export_and_changed_audio(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fixture, reviewed = _completed_full_review(tmp_path, monkeypatch)
+    arguments = _result_args(fixture)
+    document = json.loads(reviewed.read_text(encoding="utf-8"))
+    document["units"][0]["heard_all"] = False
+    _write(reviewed, document)
+    with pytest.raises(ValueError, match="incomplete"):
+        _status_private_candidate_followup_full_song_review(reviewed, **arguments)
+
+    document["units"][0]["heard_all"] = True
+    _write(reviewed, document)
+    audio = Path(fixture["out"]) / "STEMS/vocals.wav"
+    with audio.open("r+b") as stream:
+        stream.seek(-1, 2)
+        value = stream.read(1)
+        stream.seek(-1, 2)
+        stream.write(bytes([value[0] ^ 1]))
+    with pytest.raises(ValueError, match="audio"):
+        _status_private_candidate_followup_full_song_review(reviewed, **arguments)

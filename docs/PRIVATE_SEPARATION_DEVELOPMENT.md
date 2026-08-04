@@ -3069,6 +3069,20 @@ the resulting full-song review, then a fresh alignment review, still precede
 any readiness reassessment. Selection, acceptance, product activation and
 publication remain false.
 
+The matching result verifier is implemented as
+`scripts/private-separation-candidate-followup-full-song-review-result.py`.
+Once that future page is fully reviewed and exported, use `--status` with the
+review package plus the same targeted-result, targeted-export, execution, v2
+and stitch evidence paths. Status rechecks the complete chain and every copied
+or review audio file without writing. A subsequent `--resolve REVIEWED_JSON
+--out FRESH_RESULT.json` records complete-song ratings and the rating for each
+role at every original boundary. It separately reports whether all boundaries
+were clean and whether all complete-song roles were useful. The result makes a
+fresh follow-up alignment review eligible but keeps alignment completion,
+original-join resolution, selection, acceptance, activation and publication
+false. The resolver is tested now; no real result exists because its input
+review package is still correctly gated by the outstanding targeted review.
+
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
 
