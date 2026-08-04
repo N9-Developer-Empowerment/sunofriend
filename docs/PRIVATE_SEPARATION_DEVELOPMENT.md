@@ -2882,9 +2882,32 @@ does not inherit the earlier candidate's alignment result and writes no audio.
 The result records whether the fixed lag, drift and correlation thresholds
 passed, while keeping separator accuracy, candidate selection and acceptance,
 full-song review, `original_audible_joins_resolved`, product readiness and
-publication false. The targeted v2 export is still outstanding, so neither the
-real candidate-bound full-song package nor real alignment result has been
-created yet.
+publication false.
+
+The final evidence-combination step is now implemented as
+`scripts/private-separation-candidate-readiness-reassessment.py`. Run it only
+after the targeted v2 result passes, the new candidate full-song review has
+been genuinely completed and resolved, and the fresh candidate alignment
+result exists. Bind those three exact result files plus the unchanged v1/v2
+evidence chain and write to a fresh owner-only `--out`. The command validates
+the internal boundary counts and ratings, recomputes all full-song review
+claims, reconstructs the fixed alignment summary from all nine windows and
+rejects changed or cross-candidate bindings.
+
+The reassessment may set
+`technical_and_listening_prerequisites_met: true` and make a separate final
+human-acceptance review eligible. It deliberately keeps
+`final_human_acceptance_review_complete`,
+`original_audible_joins_resolved`, selection, acceptance, product activation
+and publication false. Evidence combination is not new listening evidence and
+cannot silently convert a clean-boundary or alignment result into separator
+approval. If any full-song role is not useful, any candidate boundary is not
+clean, or the alignment gate fails, the next action remains bounded
+remediation instead.
+
+The targeted v2 export is still outstanding, so no real candidate-bound
+full-song package, candidate alignment result or reassessment has been created
+yet.
 
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:

@@ -2173,6 +2173,16 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   lag/drift/correlation outcome remains evidence only: selection, acceptance,
   full-song review, original-join resolution, readiness and publication stay
   false.
+  After all three exact results exist, use
+  `scripts/private-separation-candidate-readiness-reassessment.py` with
+  `--v2-review-result`, `--candidate-review-result`,
+  `--candidate-alignment-result`, the same complete v1/v2 evidence chain and a
+  fresh owner-only `--out`. It verifies cross-result identity, derives the
+  full-song cleanliness/usefulness claims again and reconstructs the fixed
+  nine-window alignment summary. Passing prerequisites only makes a separate
+  final human-acceptance review eligible. The reassessment does not add
+  listening evidence and keeps original-join resolution, selection,
+  acceptance, product activation and publication false.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic
   snapshot across the whole operation; status and result record this explicit
