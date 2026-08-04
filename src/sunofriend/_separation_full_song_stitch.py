@@ -350,6 +350,20 @@ def _write_boundary_review(
                 "notes": "",
             }
         )
+    full_song_paths = {
+        "source": "../SOURCE/source-44100.wav",
+        "vocals": "../STEMS/vocals.wav",
+        "instrumental": "../STEMS/instrumental.wav",
+        "reconstruction": "../STEMS/reconstruction.wav",
+    }
+    full_song_audio = {
+        role: {
+            "path": full_song_paths[role],
+            "sha256": _sha256(role_paths[role]),
+            "bytes": role_paths[role].stat().st_size,
+        }
+        for role in _ROLES
+    }
     contract = {
         "schema": REVIEW_SCHEMA,
         "status": "unreviewed",
@@ -362,9 +376,29 @@ def _write_boundary_review(
             "ratings": ["clean", "audible_join", "cannot_tell"],
             "review_every_boundary": True,
             "source_is_context_not_a_rated_separator_output": True,
+            "full_song_ratings": [
+                "useful",
+                "noticeable_problems",
+                "not_useful",
+                "cannot_tell",
+            ],
+        },
+        "full_song": {
+            "audio": full_song_audio,
+            "heard_all": False,
+            "ratings": {
+                "vocals": "unreviewed",
+                "instrumental": "unreviewed",
+                "reconstruction": "unreviewed",
+            },
+            "notes": "",
         },
         "units": units,
-        "summary": {"reviewed_boundaries": 0, "boundary_count": len(units)},
+        "summary": {
+            "full_song_reviewed": False,
+            "reviewed_boundaries": 0,
+            "boundary_count": len(units),
+        },
         "permissions": dict(_FALSE_PERMISSIONS),
     }
     immutable = _immutable_review(contract)
@@ -389,6 +423,9 @@ def _immutable_review(review: Mapping[str, Any]) -> dict[str, Any]:
     value.pop("status", None)
     value.pop("summary", None)
     value.pop("package_commitment", None)
+    value["full_song"].pop("heard_all", None)
+    value["full_song"].pop("ratings", None)
+    value["full_song"].pop("notes", None)
     for unit in value["units"]:
         unit.pop("heard_all", None)
         unit.pop("ratings", None)
@@ -404,12 +441,13 @@ def _boundary_review_html(seed: Mapping[str, Any]) -> str:
 <title>Sunofriend boundary review</title><style>
 body{{margin:0;background:#08111b;color:#e9f2fa;font:17px system-ui,sans-serif}}main{{max-width:1000px;margin:auto;padding:32px}}section{{background:#111f2c;border:1px solid #294256;border-radius:16px;padding:22px;margin:18px 0}}h1{{font-size:42px}}h2{{color:#66ddff}}audio{{width:100%}}label{{display:block;margin:8px 0}}select,textarea,button{{font:inherit;background:#17344a;color:white;border:1px solid #4e819f;border-radius:8px;padding:9px}}textarea{{width:96%}}button{{background:#17658b;cursor:pointer}}.warn{{border-left:5px solid #ffc542;padding-left:14px}}.done{{color:#8df0ac}}
 </style></head><body><main><h1>Full-song boundary review</h1><p>{safe_title}</p>
-<section><h2>What to listen for</h2><p class="warn">Each clip centres on one exact chunk join; the join time is shown for every boundary. Listen for a click, a cut-off note, a level jump, or a sudden change in tone. The source is context. Rate the three generated outputs independently. A clean join does not prove the separator is accurate.</p><p id="progress">0 of {len(seed['units'])} boundaries reviewed</p></section>
+<section><h2>What to listen for</h2><p class="warn">First hear the complete song outputs and judge whether each is useful despite any audible problems. Then review every exact chunk join. Listen for a click, a cut-off note, a level jump, or a sudden change in tone. The source is context. Rate the three generated outputs independently. A clean join does not prove the separator is accurate.</p><p id="progress">Full song not reviewed; 0 of {len(seed['units'])} boundaries reviewed</p></section>
+<section id="full"><h2>Complete song</h2><p>This is the broad musical check. It can reveal failures that four-second join windows miss.</p><div id="full-audio"></div><label><input type="checkbox" id="full-heard"> I heard all four complete-song tracks</label><div id="full-ratings"></div><label>Full-song notes<textarea id="full-notes"></textarea></label></section>
 <div id="units"></div><section><button id="complete">Mark review complete and export JSON</button> <span id="message"></span></section>
 <script>const review={encoded};const root=document.getElementById('units');
-function render(){{review.units.forEach((u,i)=>{{const s=document.createElement('section');s.innerHTML=`<h2>Boundary ${{u.boundary_index}} at ${{u.seconds.toFixed(3)}}s</h2><p>Join is at ${{u.join_at_window_seconds.toFixed(3)}}s within each clip.</p>`+['source','vocals','instrumental','reconstruction'].map(r=>`<label>${{r}}<audio controls preload="metadata" src="${{u.audio[r].path}}"></audio></label>`).join('')+`<label><input type="checkbox" data-heard="${{i}}"> I heard all four clips</label>`+['vocals','instrumental','reconstruction'].map(r=>`<label>${{r}} join <select data-unit="${{i}}" data-role="${{r}}"><option>unreviewed</option><option>clean</option><option>audible_join</option><option>cannot_tell</option></select></label>`).join('')+`<label>Notes<textarea data-notes="${{i}}"></textarea></label>`;root.appendChild(s)}})}}
-function sync(){{document.querySelectorAll('[data-heard]').forEach(x=>review.units[+x.dataset.heard].heard_all=x.checked);document.querySelectorAll('select[data-unit]').forEach(x=>review.units[+x.dataset.unit].ratings[x.dataset.role]=x.value);document.querySelectorAll('[data-notes]').forEach(x=>review.units[+x.dataset.notes].notes=x.value);const n=review.units.filter(u=>u.heard_all&&Object.values(u.ratings).every(v=>v!=='unreviewed')).length;review.summary.reviewed_boundaries=n;document.getElementById('progress').textContent=`${{n}} of ${{review.units.length}} boundaries reviewed`;return n}}
-document.addEventListener('change',sync);document.getElementById('complete').onclick=()=>{{const n=sync();if(n!==review.units.length){{document.getElementById('message').textContent='Please hear and rate every boundary first.';return}}review.status='reviewed';const blob=new Blob([JSON.stringify(review,null,2)+'\n'],{{type:'application/json'}}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='separation-boundary.reviewed.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);document.getElementById('message').className='done';document.getElementById('message').textContent='Reviewed JSON exported.'}};render();</script></main></body></html>"""
+function render(){{document.getElementById('full-audio').innerHTML=['source','vocals','instrumental','reconstruction'].map(r=>`<label>${{r}}<audio controls preload="metadata" src="${{review.full_song.audio[r].path}}"></audio></label>`).join('');document.getElementById('full-ratings').innerHTML=['vocals','instrumental','reconstruction'].map(r=>`<label>${{r}} overall <select data-full-role="${{r}}"><option>unreviewed</option><option>useful</option><option>noticeable_problems</option><option>not_useful</option><option>cannot_tell</option></select></label>`).join('');review.units.forEach((u,i)=>{{const s=document.createElement('section');s.innerHTML=`<h2>Boundary ${{u.boundary_index}} at ${{u.seconds.toFixed(3)}}s</h2><p>Join is at ${{u.join_at_window_seconds.toFixed(3)}}s within each clip.</p>`+['source','vocals','instrumental','reconstruction'].map(r=>`<label>${{r}}<audio controls preload="metadata" src="${{u.audio[r].path}}"></audio></label>`).join('')+`<label><input type="checkbox" data-heard="${{i}}"> I heard all four clips</label>`+['vocals','instrumental','reconstruction'].map(r=>`<label>${{r}} join <select data-unit="${{i}}" data-role="${{r}}"><option>unreviewed</option><option>clean</option><option>audible_join</option><option>cannot_tell</option></select></label>`).join('')+`<label>Notes<textarea data-notes="${{i}}"></textarea></label>`;root.appendChild(s)}})}}
+function sync(){{review.full_song.heard_all=document.getElementById('full-heard').checked;review.full_song.notes=document.getElementById('full-notes').value;document.querySelectorAll('[data-full-role]').forEach(x=>review.full_song.ratings[x.dataset.fullRole]=x.value);document.querySelectorAll('[data-heard]').forEach(x=>review.units[+x.dataset.heard].heard_all=x.checked);document.querySelectorAll('select[data-unit]').forEach(x=>review.units[+x.dataset.unit].ratings[x.dataset.role]=x.value);document.querySelectorAll('[data-notes]').forEach(x=>review.units[+x.dataset.notes].notes=x.value);const full=review.full_song.heard_all&&Object.values(review.full_song.ratings).every(v=>v!=='unreviewed');const n=review.units.filter(u=>u.heard_all&&Object.values(u.ratings).every(v=>v!=='unreviewed')).length;review.summary.full_song_reviewed=full;review.summary.reviewed_boundaries=n;document.getElementById('progress').textContent=`Full song ${{full?'reviewed':'not reviewed'}}; ${{n}} of ${{review.units.length}} boundaries reviewed`;return [full,n]}}
+document.addEventListener('change',sync);document.getElementById('complete').onclick=()=>{{const [full,n]=sync();if(!full||n!==review.units.length){{document.getElementById('message').textContent='Please hear and rate the full song and every boundary first.';return}}review.status='reviewed';const blob=new Blob([JSON.stringify(review,null,2)+'\n'],{{type:'application/json'}}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='separation-boundary-and-full-song.reviewed.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);document.getElementById('message').className='done';document.getElementById('message').textContent='Reviewed JSON exported.'}};render();</script></main></body></html>"""
 
 
 def _write_json(path: Path, value: Mapping[str, Any]) -> None:

@@ -2241,8 +2241,8 @@ execution before concatenating. It performs no crossfade, per-chunk gain or
 hidden repair. The source, vocal, instrumental and diagnostic reconstruction
 are all exactly 11,578,896 frames at 44.1 kHz stereo PCM24; the source integer
 sequence re-verifies the plan hash. The diagnostic sum needed no global
-attenuation. The stitch report document SHA-256 is
-`fce5dc6cf6d2fa3a22f5a7ed2e10d958f38d75e66ae3dcc937ce4ef35c893d51`.
+attenuation. The current stitch report document SHA-256 is
+`2b56a42854013c71778f081b5bd6e4d6a33682cd398014f4d52957e74bdd8de4`.
 
 ```bash
 PYTHONPATH=src ./.venv/bin/python \
@@ -2252,15 +2252,16 @@ PYTHONPATH=src ./.venv/bin/python \
   --execution \
     work/separation-bakeoff/be-alone-full-song-kim-execution-v1/private-separation-full-song-execution.json \
   --out-dir \
-    work/separation-bakeoff/be-alone-full-song-kim-stitch-v1
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v2-full-review
 ```
 
-The remaining human gate is the 17-unit page at
-`be-alone-full-song-kim-stitch-v1/BOUNDARY-REVIEW/separation_boundary_review.html`.
-Each four-second unit centres one exact join and provides source, vocal,
-instrumental and reconstruction audio. Rate clicks, cut notes, level jumps or
-tone changes independently. Exact duration and reconstruction do not establish
-seamlessness, musical completeness or product readiness.
+The remaining human gate is one page at
+`be-alone-full-song-kim-stitch-v2-full-review/BOUNDARY-REVIEW/separation_boundary_review.html`.
+It first presents all four complete-song tracks, then 17 four-second units
+centred on the exact joins. Rate the vocal, instrumental and reconstruction
+independently for overall usefulness and for clicks, cut notes, level jumps or
+tone changes. Exact duration and reconstruction do not establish seamlessness,
+musical completeness or product readiness.
 
 The optional review contract now asks that question explicitly with
 `--classify-focus-phrase-coverage`. For every playable candidate, the listener

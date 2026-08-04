@@ -316,4 +316,16 @@ def test_full_song_stitch_preserves_clock_and_prepares_review(tmp_path: Path) ->
     assert all(value is False for value in result["permissions"].values())
     review = tmp_path / "stitch/BOUNDARY-REVIEW" / REVIEW_HTML_NAME
     assert review.is_file()
-    assert "centres on one exact chunk join" in review.read_text(encoding="utf-8")
+    review_html = review.read_text(encoding="utf-8")
+    assert "complete song outputs" in review_html
+    assert "every exact chunk join" in review_html
+    review_seed = json.loads(
+        (tmp_path / "stitch/BOUNDARY-REVIEW/separation_boundary_review.json").read_text()
+    )
+    assert review_seed["full_song"]["heard_all"] is False
+    assert set(review_seed["full_song"]["audio"]) == {
+        "source",
+        "vocals",
+        "instrumental",
+        "reconstruction",
+    }

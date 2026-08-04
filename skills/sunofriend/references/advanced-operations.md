@@ -1915,8 +1915,10 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   the complete queue without crossfade, per-chunk gain or hidden repair.
   The current `Be Alone` execution completed all 18 chunks and the exact stitch
   produced 11,578,896-frame source, vocal, instrumental and reconstruction
-  PCM24 WAVs. Its 17-boundary browser review remains required. Never call exact
-  input partitioning or exact output duration seamless or accepted separation.
+  PCM24 WAVs. The current review page first presents all four complete-song
+  tracks and then all 17 exact-boundary windows; both scopes must be rated.
+  Never call exact input partitioning or exact output duration seamless or
+  accepted separation.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,
