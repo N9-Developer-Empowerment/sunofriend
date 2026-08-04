@@ -138,6 +138,10 @@ typedef struct {
     bool group_empty;
     bool ownership_released;
     bool ownership_lost;
+    bool resource_observation_ready;
+    uint64_t peak_resident_set_bytes;
+    uint64_t lifetime_max_phys_footprint_bytes;
+    uint64_t lifetime_max_neural_footprint_bytes;
 } SunofriendOwnedSpawnChild;
 
 static PyTypeObject SunofriendOwnedSpawnChildType;
@@ -617,6 +621,8 @@ sunofriend_poll_owned_terminal(
     int group_member_count;
     int observed_wait_status;
     pid_t waited;
+    struct rusage wait_usage;
+    struct rusage_info_v6 process_usage;
 
     *terminal = false;
     if (child->leader_reaped) {
@@ -679,8 +685,24 @@ sunofriend_poll_owned_terminal(
         return 0;
     }
 
+    memset(&process_usage, 0, sizeof(process_usage));
+    if (
+        proc_pid_rusage(
+            child->pid,
+            RUSAGE_INFO_V6,
+            (rusage_info_t *)&process_usage
+        ) != 0
+    ) {
+        return errno != 0 ? errno : EIO;
+    }
+    memset(&wait_usage, 0, sizeof(wait_usage));
     for (;;) {
-        waited = waitpid(child->pid, &observed_wait_status, WNOHANG);
+        waited = wait4(
+            child->pid,
+            &observed_wait_status,
+            WNOHANG,
+            &wait_usage
+        );
         if (waited < 0 && errno == EINTR) {
             continue;
         }
@@ -691,6 +713,12 @@ sunofriend_poll_owned_terminal(
         child->leader_reaped = true;
         child->group_empty = true;
         child->ownership_released = true;
+        child->resource_observation_ready = true;
+        child->peak_resident_set_bytes = (uint64_t)wait_usage.ru_maxrss;
+        child->lifetime_max_phys_footprint_bytes =
+            process_usage.ri_lifetime_max_phys_footprint;
+        child->lifetime_max_neural_footprint_bytes =
+            process_usage.ri_lifetime_max_neural_footprint;
         *terminal = true;
         return 0;
     }
@@ -702,6 +730,49 @@ sunofriend_poll_owned_terminal(
         return errno;
     }
     return EAGAIN;
+}
+
+static PyObject *
+sunofriend_owned_child_resource_observation(
+    SunofriendOwnedSpawnChild *child,
+    PyObject *ignored
+)
+{
+    PyObject *result;
+
+    (void)ignored;
+    if (
+        !child->spawned
+        || child->pid <= 0
+        || child->owner_pid != getpid()
+        || !child->leader_reaped
+        || !child->group_empty
+        || !child->ownership_released
+        || child->ownership_lost
+        || !child->resource_observation_ready
+        || child->peak_resident_set_bytes == 0
+        || child->lifetime_max_phys_footprint_bytes == 0
+    ) {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "native child resource observation is unavailable"
+        );
+        return NULL;
+    }
+    result = Py_BuildValue(
+        "{s:K,s:K,s:K,s:s,s:s}",
+        "peak_resident_set_bytes",
+        (unsigned long long)child->peak_resident_set_bytes,
+        "lifetime_max_phys_footprint_bytes",
+        (unsigned long long)child->lifetime_max_phys_footprint_bytes,
+        "lifetime_max_neural_footprint_bytes",
+        (unsigned long long)child->lifetime_max_neural_footprint_bytes,
+        "rss_source",
+        "wait4_ru_maxrss_darwin_bytes",
+        "unified_memory_source",
+        "proc_pid_rusage_v6_lifetime_max_phys_footprint"
+    );
+    return result;
 }
 
 static void
@@ -1454,6 +1525,15 @@ static PyMethodDef sunofriend_owned_child_methods[] = {
             "without exposing PID authority."
         ),
     },
+    {
+        "resource_observation",
+        (PyCFunction)sunofriend_owned_child_resource_observation,
+        METH_NOARGS,
+        PyDoc_STR(
+            "Return exact-reap Darwin RSS and physical-footprint evidence "
+            "without exposing PID authority."
+        ),
+    },
     {NULL, NULL, 0, NULL},
 };
 
@@ -1579,6 +1659,10 @@ sunofriend_spawn_bound_command(
     owned_child->group_empty = false;
     owned_child->ownership_released = false;
     owned_child->ownership_lost = false;
+    owned_child->resource_observation_ready = false;
+    owned_child->peak_resident_set_bytes = 0;
+    owned_child->lifetime_max_phys_footprint_bytes = 0;
+    owned_child->lifetime_max_neural_footprint_bytes = 0;
 
     status = posix_spawn_file_actions_init(&file_actions);
     if (status != 0) {

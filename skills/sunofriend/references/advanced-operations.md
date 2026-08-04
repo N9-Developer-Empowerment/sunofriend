@@ -1919,15 +1919,15 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   tracks and then all 17 exact-boundary windows; both scopes must be rated.
   Never call exact input partitioning or exact output duration seamless or
   accepted separation.
-  Fresh native attempts now also retain one path-free worker-resource
-  projection inside the terminal receipt. It is self-hashed and bound to the
-  exact request, worker result and child result. It carries only device, input
-  frames, chunk count, worker model-call duration and peak MLX allocator bytes.
-  The full-song resource observer may summarize it only when those bindings
-  validate, and may call coverage complete only when every selected attempt has
-  one. Existing attempts without the projection remain valid but cannot be
-  backfilled. Never treat MLX allocator peak as process RSS, total unified
-  memory, a controlled benchmark or resource acceptance.
+  Fresh native attempts now retain two path-free resource projections inside
+  the terminal receipt. The worker projection carries device, input frames,
+  chunk count, model-call duration and peak MLX allocator bytes. The native
+  owner separately captures Darwin `wait4` peak RSS and `proc_pid_rusage` V6
+  lifetime physical/neural footprints only after exact reap and retains no
+  PID. Each projection is self-hashed and request/result-bound. The full-song
+  observer may call a field complete only when every selected attempt has its
+  matching projection. Existing attempts remain valid but cannot be backfilled.
+  Keep allocator, RSS and physical-footprint meanings separate.
   Before any controlled repeats, use
   `scripts/private-separation-full-song-resource-benchmark-plan.py` to bind one
   exact sealed full-song plan, the exact checkpoint and resolved runtime
@@ -1939,9 +1939,21 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   unified memory, thermal state before/after and timeout/OOM outcome. All
   repeat slots begin `not_run`; the document is not a benchmark result and
   cannot accept or enable anything. A development Mac with more memory does
-  not substitute for the separately required 16 GiB acceptance class. The
-  bounded runner and result verifier remain the next implementation step; do
-  not manually fill slots or infer acceptance from the older coarse report.
+  not substitute for the separately required 16 GiB acceptance class.
+  Run exactly one fresh slot per process with
+  `scripts/private-separation-full-song-resource-benchmark-run.py`; use a new
+  owner-only output root for each slot and preserve failed roots rather than
+  reusing them. The runner re-verifies plan/runtime/checkpoint/machine identity,
+  captures thermal state before and after, and records the complete
+  execute/stitch/resource wall interval. After every frozen slot succeeds, pass
+  every exact report to
+  `scripts/private-separation-full-song-resource-benchmark-result.py`. The
+  verifier rejects missing or duplicate slots, nonce reuse, overlap, identity
+  drift, incomplete measurements and non-recomputable thresholds. A complete
+  result may describe the 36 GiB development machine but must keep resource
+  acceptance and all product/publication permissions false until the separate
+  16 GiB acceptance-class run also exists. Do not manually fill slots or infer
+  acceptance from the older coarse report.
 - `ai-transcribe-session` and `ai-session-benchmark` are execution diagnostics
   only. They must use the already accepted local MuScriptor checkpoint and must
   not download weights, accept or change licence terms, create a content cache,

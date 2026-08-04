@@ -110,6 +110,18 @@ class _Owner:
             "path_state": "matched_expected_process_image",
         }
 
+    def resource_observation(self):
+        self.calls.append("native_resources")
+        return {
+            "peak_resident_set_bytes": 3_100_000_000,
+            "lifetime_max_phys_footprint_bytes": 3_300_000_000,
+            "lifetime_max_neural_footprint_bytes": 0,
+            "rss_source": "wait4_ru_maxrss_darwin_bytes",
+            "unified_memory_source": (
+                "proc_pid_rusage_v6_lifetime_max_phys_footprint"
+            ),
+        }
+
 
 class _ReceiptError(RuntimeError):
     def __init__(self, receipt: Mapping[str, Any]) -> None:
@@ -454,10 +466,15 @@ def test_fixed_coordinator_composes_success_in_one_nonconfigurable_order(
         "benchmark": False,
     }
     assert resources["bindings"]["worker_result_sha256"] == _digest("result")
+    native_resources = receipt["native_process_resource_projection"]
+    assert native_resources["peak_process_rss_bytes"] == 3_100_000_000
+    assert native_resources["peak_total_unified_memory_bytes"] == 3_300_000_000
+    assert native_resources["semantics"]["pid_retained"] is False
     assert calls.index("network_prepare") < calls.index("start")
     assert calls.index("release") < calls.index("read_result")
     assert calls.index("read_result") < calls.index("network_finish")
     assert calls.index("network_finish") < calls.index("supervise")
+    assert calls.index("supervise") < calls.index("native_resources")
     assert calls.index("supervise") < calls.index("images_complete")
     assert calls.index("images_complete") < calls.index("staging_verified")
     assert calls.index("staging_verified") < calls.index("lease_rechecked")

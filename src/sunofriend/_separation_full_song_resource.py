@@ -88,7 +88,9 @@ def _observe_private_separation_full_song_resources(
 
     observations = []
     worker_resources = []
+    native_resources = []
     missing_worker_resources = 0
+    missing_native_resources = 0
     preserved_incomplete = 0
     for chunk in execution["chunks"]:
         preserved_incomplete += sum(
@@ -120,6 +122,15 @@ def _observe_private_separation_full_song_resources(
             worker_resources.append(
                 _worker_resource_observation(chunk["index"], receipt, projected)
             )
+        native_projected = receipt.get("native_process_resource_projection")
+        if native_projected is None:
+            missing_native_resources += 1
+        else:
+            native_resources.append(
+                _native_resource_observation(
+                    chunk["index"], receipt, native_projected
+                )
+            )
 
     elapsed = [row["observed_total_seconds"] for row in observations]
     song_seconds = plan["canonical_clock"]["frames"] / 44_100
@@ -138,6 +149,14 @@ def _observe_private_separation_full_song_resources(
     )
     complete_worker_resources = (
         len(worker_resources) == len(observations) and missing_worker_resources == 0
+    )
+    native_resource_summary = _native_resource_summary(
+        native_resources,
+        selected_attempt_count=len(observations),
+        missing_count=missing_native_resources,
+    )
+    complete_native_resources = (
+        len(native_resources) == len(observations) and missing_native_resources == 0
     )
 
     plan_tree = _tree_inventory(plan_path.parent, "private full-song plan tree")
@@ -182,6 +201,7 @@ def _observe_private_separation_full_song_resources(
             "stage_seconds": stage_summary,
             "chunks": observations,
             "worker_resources": worker_resource_summary,
+            "native_process_resources": native_resource_summary,
         },
         "disk_snapshot": {
             "policy": "owner-only-regular-files-no-symbolic-links-v1",
@@ -201,7 +221,8 @@ def _observe_private_separation_full_song_resources(
             "disk_snapshot_observed": True,
             "worker_model_inference_time_observed": complete_worker_resources,
             "peak_mlx_allocator_memory_observed": complete_worker_resources,
-            "peak_process_rss_observed": False,
+            "peak_process_rss_observed": complete_native_resources,
+            "peak_total_unified_memory_observed": complete_native_resources,
             "peak_accelerator_memory_observed": False,
             "thermal_state_observed": False,
             "energy_use_observed": False,
@@ -218,11 +239,11 @@ def _observe_private_separation_full_song_resources(
             "These are coarse per-attempt monotonic timings, not a benchmark.",
             "The operating-system cache, scheduler and thermal state were uncontrolled.",
             (
-                "Peak MLX allocator memory was retained for every selected worker, "
-                "but it is not peak process RSS or total unified-memory usage."
-                if complete_worker_resources
-                else "Peak process memory and accelerator memory were not retained "
-                "for every selected worker."
+                "Peak MLX allocator memory was retained for every selected worker; "
+                "it remains separate from Darwin RSS and physical-footprint evidence."
+                if complete_worker_resources and complete_native_resources
+                else "Complete MLX, process RSS and physical-footprint evidence was "
+                "not retained for every selected worker."
             ),
             "Thermal behaviour, energy use and concurrent workloads were not measured.",
             "This report does not establish offline-network behaviour or product safety.",
@@ -386,6 +407,95 @@ def _worker_resource_summary(
                 "summed_inference_seconds": round(math.fsum(inference), 6),
                 "peak_mlx_allocator_memory_bytes": _summary(memory),
                 "maximum_peak_mlx_allocator_memory_bytes": max(memory),
+            }
+        )
+    return result
+
+
+def _native_resource_observation(
+    chunk_index: int,
+    receipt: Mapping[str, Any],
+    projection_value: object,
+) -> dict[str, Any]:
+    projection = (
+        dict(projection_value) if isinstance(projection_value, Mapping) else {}
+    )
+    payload = dict(projection)
+    projection_sha256 = payload.pop("projection_sha256", None)
+    bindings = projection.get("bindings")
+    semantics = projection.get("semantics")
+    peak_rss = projection.get("peak_process_rss_bytes")
+    peak_unified = projection.get("peak_total_unified_memory_bytes")
+    peak_neural = projection.get("peak_neural_footprint_bytes")
+    if (
+        projection.get("schema")
+        != "sunofriend.private-melroformer-native-resource-projection.v1"
+        or projection.get("status")
+        != "exact_reap_process_resources_projected_not_benchmark"
+        or projection_sha256 != _document_sha256(payload)
+        or not isinstance(bindings, Mapping)
+        or bindings.get("request_sha256") != receipt.get("request_sha256")
+        or bindings.get("worker_result_sha256")
+        != receipt.get("worker_result_sha256")
+        or bindings.get("child_result_sha256")
+        != receipt.get("child_result_sha256")
+        or type(peak_rss) is not int
+        or not 1 <= peak_rss <= 128 * 1024**3
+        or type(peak_unified) is not int
+        or not 1 <= peak_unified <= 128 * 1024**3
+        or type(peak_neural) is not int
+        or not 0 <= peak_neural <= 128 * 1024**3
+        or semantics
+        != {
+            "process_rss": "wait4_ru_maxrss_darwin_bytes",
+            "total_unified_memory": (
+                "proc_pid_rusage_v6_lifetime_max_phys_footprint"
+            ),
+            "scope": "exact_owned_worker_process_lifetime",
+            "pid_retained": False,
+            "benchmark": False,
+        }
+    ):
+        raise ValueError("private full-song native resource projection differs")
+    return {
+        "chunk_index": chunk_index,
+        "peak_process_rss_bytes": peak_rss,
+        "peak_total_unified_memory_bytes": peak_unified,
+        "peak_neural_footprint_bytes": peak_neural,
+        "projection_sha256": projection_sha256,
+    }
+
+
+def _native_resource_summary(
+    observations: list[dict[str, Any]],
+    *,
+    selected_attempt_count: int,
+    missing_count: int,
+) -> dict[str, Any]:
+    complete = len(observations) == selected_attempt_count and missing_count == 0
+    result: dict[str, Any] = {
+        "policy": "exact-owned-worker-darwin-resource-projection-v1",
+        "benchmark": False,
+        "complete_for_selected_attempts": complete,
+        "observed_attempt_count": len(observations),
+        "missing_attempt_count": missing_count,
+        "pid_retained": False,
+        "chunks": observations,
+    }
+    if observations:
+        rss = [item["peak_process_rss_bytes"] for item in observations]
+        unified = [
+            item["peak_total_unified_memory_bytes"] for item in observations
+        ]
+        neural = [item["peak_neural_footprint_bytes"] for item in observations]
+        result.update(
+            {
+                "peak_process_rss_bytes": _summary(rss),
+                "maximum_peak_process_rss_bytes": max(rss),
+                "peak_total_unified_memory_bytes": _summary(unified),
+                "maximum_peak_total_unified_memory_bytes": max(unified),
+                "peak_neural_footprint_bytes": _summary(neural),
+                "maximum_peak_neural_footprint_bytes": max(neural),
             }
         )
     return result

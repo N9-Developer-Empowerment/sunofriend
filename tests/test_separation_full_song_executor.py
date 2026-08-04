@@ -32,6 +32,7 @@ from sunofriend._separation_full_song_review import (
 )
 from sunofriend._separation_full_song_resource import (
     SCHEMA as RESOURCE_SCHEMA,
+    _native_resource_observation,
     _observe_private_separation_full_song_resources,
     _timing_observation,
     _worker_resource_observation,
@@ -137,7 +138,12 @@ def _write_pcm24(path: Path, frames: int) -> dict[str, Any]:
     }
 
 
-def _fake_runner(calls: list[int], *, include_worker_resources: bool = False):
+def _fake_runner(
+    calls: list[int],
+    *,
+    include_worker_resources: bool = False,
+    include_native_resources: bool = False,
+):
     def run(**kwargs: Any) -> Mapping[str, Any]:
         report = json.loads(Path(kwargs["authorisation_report_path"]).read_text())
         frames = report["original"]["local_model_input"]["geometry"]["frames"]
@@ -192,6 +198,39 @@ def _fake_runner(calls: list[int], *, include_worker_resources: bool = False):
             }
             receipt_payload["worker_resource_projection"] = _hash_document(
                 resource_payload,
+                "projection_sha256",
+            )
+        if include_native_resources:
+            native_payload = {
+                "schema": (
+                    "sunofriend.private-melroformer-native-resource-projection.v1"
+                ),
+                "status": "exact_reap_process_resources_projected_not_benchmark",
+                "bindings": {
+                    "request_sha256": request_sha,
+                    "worker_result_sha256": receipt_payload[
+                        "worker_result_sha256"
+                    ],
+                    "child_result_sha256": receipt_payload["child_result_sha256"],
+                },
+                "peak_process_rss_bytes": 3_000_000_000
+                + len(calls) * 100_000_000,
+                "peak_total_unified_memory_bytes": 3_200_000_000
+                + len(calls) * 100_000_000,
+                "peak_neural_footprint_bytes": 200_000_000
+                + len(calls) * 10_000_000,
+                "semantics": {
+                    "process_rss": "wait4_ru_maxrss_darwin_bytes",
+                    "total_unified_memory": (
+                        "proc_pid_rusage_v6_lifetime_max_phys_footprint"
+                    ),
+                    "scope": "exact_owned_worker_process_lifetime",
+                    "pid_retained": False,
+                    "benchmark": False,
+                },
+            }
+            receipt_payload["native_process_resource_projection"] = _hash_document(
+                native_payload,
                 "projection_sha256",
             )
         receipt = _hash_document(receipt_payload, "receipt_sha256")
@@ -566,6 +605,50 @@ def test_full_song_resource_observation_retains_worker_inference_and_mlx_memory(
     assert result["readiness"]["resource_envelope_accepted"] is False
 
 
+def test_full_song_resource_observation_retains_exact_reap_process_memory(
+    tmp_path: Path,
+) -> None:
+    plan = _plan(tmp_path)
+    runtime = _runtime_arguments(tmp_path)
+    execution = tmp_path / "execution"
+    _execute_private_separation_full_song_queue(
+        plan,
+        out_dir=execution,
+        **runtime,
+        maximum_chunks=None,
+        attempt_runner=_fake_runner(
+            [],
+            include_worker_resources=True,
+            include_native_resources=True,
+        ),
+    )
+    stitch = tmp_path / "stitch"
+    _stitch_private_separation_full_song(
+        plan,
+        execution / REPORT_NAME,
+        out_dir=stitch,
+    )
+
+    result = _observe_private_separation_full_song_resources(
+        plan,
+        execution / REPORT_NAME,
+        stitch / "private-separation-full-song-stitch.json",
+        out=tmp_path / "resource.json",
+    )
+
+    resources = result["execution_observation"]["native_process_resources"]
+    assert resources["complete_for_selected_attempts"] is True
+    assert resources["observed_attempt_count"] == 2
+    assert resources["missing_attempt_count"] == 0
+    assert resources["maximum_peak_process_rss_bytes"] == 3_100_000_000
+    assert resources["maximum_peak_total_unified_memory_bytes"] == 3_300_000_000
+    assert resources["maximum_peak_neural_footprint_bytes"] == 210_000_000
+    assert resources["pid_retained"] is False
+    assert result["coverage"]["peak_process_rss_observed"] is True
+    assert result["coverage"]["peak_total_unified_memory_observed"] is True
+    assert result["readiness"]["resource_envelope_accepted"] is False
+
+
 def test_worker_resource_observation_rejects_unbound_projection() -> None:
     receipt = {
         "request_sha256": "1" * 64,
@@ -596,6 +679,39 @@ def test_worker_resource_observation_rejects_unbound_projection() -> None:
 
     with pytest.raises(ValueError, match="resource projection differs"):
         _worker_resource_observation(0, receipt, projection)
+
+
+def test_native_resource_observation_rejects_unbound_projection() -> None:
+    receipt = {
+        "request_sha256": "1" * 64,
+        "worker_result_sha256": "2" * 64,
+        "child_result_sha256": "3" * 64,
+    }
+    payload = {
+        "schema": "sunofriend.private-melroformer-native-resource-projection.v1",
+        "status": "exact_reap_process_resources_projected_not_benchmark",
+        "bindings": {
+            "request_sha256": "1" * 64,
+            "worker_result_sha256": "4" * 64,
+            "child_result_sha256": "3" * 64,
+        },
+        "peak_process_rss_bytes": 3_000_000_000,
+        "peak_total_unified_memory_bytes": 3_200_000_000,
+        "peak_neural_footprint_bytes": 200_000_000,
+        "semantics": {
+            "process_rss": "wait4_ru_maxrss_darwin_bytes",
+            "total_unified_memory": (
+                "proc_pid_rusage_v6_lifetime_max_phys_footprint"
+            ),
+            "scope": "exact_owned_worker_process_lifetime",
+            "pid_retained": False,
+            "benchmark": False,
+        },
+    }
+    projection = _hash_document(payload, "projection_sha256")
+
+    with pytest.raises(ValueError, match="native resource projection differs"):
+        _native_resource_observation(0, receipt, projection)
 
 
 def test_full_song_resource_observation_rejects_changed_timing_semantics(

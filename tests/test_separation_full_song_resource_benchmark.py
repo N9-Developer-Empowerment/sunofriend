@@ -10,6 +10,7 @@ import soundfile
 
 from sunofriend._separation_full_song_resource_benchmark import (
     SCHEMA,
+    _load_verified_resource_benchmark_plan,
     _prepare_private_full_song_resource_benchmark_plan,
 )
 from sunofriend._separation_full_song_plan import (
@@ -197,3 +198,40 @@ def test_resource_benchmark_plan_is_path_free(
     assert str(tmp_path) not in serialized
     assert "model.safetensors" not in serialized
     assert "python" not in json.loads(serialized)["bindings"]
+
+    path, verified, file_sha256 = _load_verified_resource_benchmark_plan(output)
+    assert path == output
+    assert verified["document_sha256"] == result_document_sha256(output)
+    assert len(file_sha256) == 64
+
+
+def result_document_sha256(path: Path) -> str:
+    return json.loads(path.read_text(encoding="utf-8"))["document_sha256"]
+
+
+def test_resource_benchmark_plan_loader_rejects_contract_drift(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, runtime, checkpoint = _inputs(tmp_path)
+    monkeypatch.setattr(
+        "sunofriend._separation_full_song_resource_benchmark._sha256",
+        lambda path: (
+            "312c38e5b698f8dfaa4d6064e8f79010744825828917871a9d22673a43eb7fe5"
+            if Path(path) == checkpoint
+            else "d" * 64
+        ),
+    )
+    output = tmp_path / "out.json"
+    _prepare_private_full_song_resource_benchmark_plan(
+        plan,
+        runtime_launcher_path=runtime,
+        checkpoint_path=checkpoint,
+        out=output,
+        command_runner=_probe,
+    )
+    changed = json.loads(output.read_text(encoding="utf-8"))
+    changed["benchmark_contract"]["concurrent_load_permitted"] = True
+    output.write_text(json.dumps(changed) + "\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="identity differs"):
+        _load_verified_resource_benchmark_plan(output)

@@ -2311,17 +2311,18 @@ and thermal state were uncontrolled, and peak process RSS, accelerator memory,
 energy and concurrent load were not measured. The full-song resource envelope
 therefore remains unaccepted.
 
-Fresh native attempts now retain a separate path-free worker-resource
-projection in their terminal receipt. It is hash-bound to the exact request,
-worker result and child result and carries only the worker's already validated
-model-call duration, input frames, chunk count, device and peak MLX allocator
-bytes. The full-song resource observer accepts that projection only when its
-self-hash and all three bindings match the surrounding receipt. It reports
-coverage only when every selected attempt has one. Peak MLX allocator bytes are
-not peak process RSS, total unified-memory use, thermal evidence or an accepted
-resource envelope. Existing completed attempts predate the projection, so the
-measurements cannot be reconstructed from their retained receipts and the
-current 18-chunk report correctly remains unchanged.
+Fresh native attempts now retain two separate path-free resource projections
+in their terminal receipt. The worker projection carries validated model-call
+duration, input frames, chunk count, device and peak MLX allocator bytes. The
+native owner separately captures Darwin `wait4` peak RSS and
+`proc_pid_rusage` V6 lifetime maximum physical and neural footprints only at
+exact reap, after the owned process group is empty; no PID is retained. Both
+projections are self-hashed and bound to the exact request, worker result and
+child result. The full-song observer reports a measurement as complete only
+when every selected attempt has its matching projection. These remain distinct
+allocator, RSS and physical-footprint quantities. Existing completed attempts
+predate the projections, so they cannot be backfilled and the current 18-chunk
+coarse report correctly remains unchanged.
 
 The next resource step is now frozen before any repeat is run:
 
@@ -2358,6 +2359,68 @@ CPython 3.12.10 and 36 GiB unified memory. That is useful development evidence
 but cannot satisfy the separately required 16 GiB acceptance class. All three
 slots remain `not_run`, resource acceptance remains false and no separator or
 product route is enabled.
+
+The bounded one-repetition runner and three-report verifier are now
+implemented. The runner re-verifies the inert plan, sealed song plan, runtime,
+checkpoint and current machine before starting, creates one fresh owner-only
+root, runs every chunk, stitches it, writes the resource observation, then
+rechecks the plan/runtime/checkpoint. It records parent wall time, worker model
+time, exact-reap RSS, MLX allocator peak, Darwin physical-footprint peak,
+thermal state before/after and explicit no-timeout/no-OOM outcomes. One script
+process can write only one repetition. A failed or interrupted root is evidence
+to preserve; rerun into a different fresh root.
+
+Run the three repetitions serially as three separate Python processes. This is
+the command shape; it has **not** been executed as part of implementing the
+runner:
+
+```bash
+set -e
+for repetition in 1 2 3; do
+  PYTHONPATH=src ./.venv/bin/python \
+    scripts/private-separation-full-song-resource-benchmark-run.py \
+    --benchmark-plan \
+      work/separation-bakeoff/be-alone-full-song-kim-resource-benchmark-plan-v1/private-separation-full-song-resource-benchmark-plan.json \
+    --plan \
+      work/separation-bakeoff/be-alone-full-song-kim-plan-v1/private-separation-full-song-plan.json \
+    --repetition "$repetition" \
+    --out-dir \
+      "work/separation-bakeoff/be-alone-full-song-kim-resource-run-$repetition" \
+    --repository-root "$PWD" \
+    --runtime-launcher "$PWD/.venv-ai/bin/python" \
+    --source-root \
+      "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/mlx-audio-source" \
+    --checkpoint \
+      "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/model.safetensors" \
+    --companion-root \
+      "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/checkpoint-directory"
+done
+```
+
+Only after all three commands succeed, verify the exact reports:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-full-song-resource-benchmark-result.py \
+  --benchmark-plan \
+    work/separation-bakeoff/be-alone-full-song-kim-resource-benchmark-plan-v1/private-separation-full-song-resource-benchmark-plan.json \
+  --repetition-report \
+    work/separation-bakeoff/be-alone-full-song-kim-resource-run-1/private-separation-full-song-resource-benchmark-repetition.json \
+  --repetition-report \
+    work/separation-bakeoff/be-alone-full-song-kim-resource-run-2/private-separation-full-song-resource-benchmark-repetition.json \
+  --repetition-report \
+    work/separation-bakeoff/be-alone-full-song-kim-resource-run-3/private-separation-full-song-resource-benchmark-repetition.json \
+  --out \
+    work/separation-bakeoff/be-alone-full-song-kim-resource-benchmark-result-v1.json
+```
+
+The verifier rejects missing/duplicate slots, reused nonces, overlapping wall
+intervals, identity drift, incomplete measurements, malformed thermal states,
+and threshold fields that do not recompute. It may report whether all three
+runs met the frozen ceilings on the 36 GiB development Mac. It must still keep
+`resource_envelope_accepted` false because this is not the separately required
+16 GiB acceptance class. Neither command selects a separator or enables a
+public route.
 
 The optional review contract now asks that question explicitly with
 `--classify-focus-phrase-coverage`. For every playable candidate, the listener

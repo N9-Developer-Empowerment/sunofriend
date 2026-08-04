@@ -376,7 +376,10 @@ def test_child_owner_exact_wait_signal_release_and_emergency_cleanup() -> None:
     assert "proc_listpgrppids(" in terminal
     assert "group_member_count != 1" in terminal
     assert "group_members[0] != child->pid" in terminal
-    assert terminal.index("proc_listpgrppids(") < terminal.index("waitpid(")
+    assert terminal.index("proc_listpgrppids(") < terminal.index("wait4(")
+    assert terminal.index("proc_pid_rusage(") < terminal.index("wait4(")
+    assert "RUSAGE_INFO_V6" in terminal
+    assert "wait_usage.ru_maxrss" in terminal
     assert "child->leader_exit_observed = true" in terminal
     assert "child->leader_reaped = true" in terminal
     assert "child->group_empty = true" in terminal
@@ -404,6 +407,26 @@ def test_child_owner_exact_wait_signal_release_and_emergency_cleanup() -> None:
     assert "child->owner_pid == getpid()" in source
     assert "owned_child->owner_pid = getpid()" in source
     assert source.count("child->owner_pid != getpid()") >= 3
+
+
+def test_child_owner_projects_resources_only_after_exact_reap() -> None:
+    source = _source()
+    observer = _function_body(
+        source,
+        "sunofriend_owned_child_resource_observation(",
+        "sunofriend_emergency_kill_and_reap(",
+    )
+
+    assert '"resource_observation"' in source
+    assert "child->leader_reaped" in observer
+    assert "child->group_empty" in observer
+    assert "child->ownership_released" in observer
+    assert "child->ownership_lost" in observer
+    assert "child->resource_observation_ready" in observer
+    assert '"peak_resident_set_bytes"' in observer
+    assert '"lifetime_max_phys_footprint_bytes"' in observer
+    assert '"lifetime_max_neural_footprint_bytes"' in observer
+    assert "PyLong_FromLong((long)child->pid)" not in observer
 
 
 def test_child_owner_observes_process_image_without_exporting_authority() -> None:

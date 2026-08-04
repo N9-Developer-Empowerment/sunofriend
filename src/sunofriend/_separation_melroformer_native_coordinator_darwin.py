@@ -155,6 +155,7 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
     process_observation: Mapping[str, Any] | None = None
     terminal_projection: Mapping[str, Any] | None = None
     resource_projection: Mapping[str, Any] | None = None
+    native_resource_projection: Mapping[str, Any] | None = None
     session_terminal: Mapping[str, Any] | None = None
     lease_terminal: Mapping[str, Any] | None = None
     worker_released = False
@@ -243,6 +244,12 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
         )
         primary_stage = "terminal_validation"
         _require_successful_terminal(terminal)
+        primary_stage = "native_resource_projection"
+        native_resource_projection = _project_native_process_resource_observation(
+            request=checked_request,
+            result=result,
+            observation=native_owner.resource_observation(),
+        )
     except _session._PrivateMelroformerNativeNoStart as error:
         no_start = True
         primary_stage = "native_no_start"
@@ -294,6 +301,7 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
                     network_observation,
                     observed_native_images,
                     process_observation,
+                    native_resource_projection,
                 )
             ):
                 raise RuntimeError("private Kim live evidence is incomplete")
@@ -341,6 +349,7 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
                 network_observation=network_observation,
                 native_image_evidence=native_image_evidence,
                 staging_verification=staging_verification,
+                native_resource_projection=native_resource_projection,
                 post_run_lease_observation=post_run_lease_observation,
             )
             private_identity = result["private_process_identity"]
@@ -458,6 +467,7 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
             native_image_evidence,
             staging_verification,
             resource_projection,
+            native_resource_projection,
             post_run_lease_observation,
             session_terminal,
             lease_terminal,
@@ -491,6 +501,7 @@ def _coordinate_reserved_private_melroformer_native_worker_darwin(
         native_image_evidence=native_image_evidence,
         staging_verification=staging_verification,
         resource_projection=resource_projection,
+        native_resource_projection=native_resource_projection,
         post_run_lease_observation=post_run_lease_observation,
         session_terminal=session_terminal,
         lease_terminal=lease_terminal,
@@ -505,6 +516,7 @@ def _execution_observation_sha256(
     network_observation: Mapping[str, Any],
     native_image_evidence: Mapping[str, Any],
     staging_verification: Mapping[str, Any],
+    native_resource_projection: Mapping[str, Any],
     post_run_lease_observation: Mapping[str, Any],
 ) -> str:
     payload = {
@@ -521,6 +533,10 @@ def _execution_observation_sha256(
         "staging_verification_sha256": _evidence_digest(
             staging_verification,
             "staging verification",
+        ),
+        "native_resource_projection_sha256": _evidence_digest(
+            native_resource_projection,
+            "native resource projection",
         ),
         "post_run_lease_observation_sha256": _evidence_digest(
             post_run_lease_observation,
@@ -540,6 +556,7 @@ def _build_terminal_receipt(
     native_image_evidence: Mapping[str, Any],
     staging_verification: Mapping[str, Any],
     resource_projection: Mapping[str, Any],
+    native_resource_projection: Mapping[str, Any],
     post_run_lease_observation: Mapping[str, Any],
     session_terminal: Mapping[str, Any],
     lease_terminal: Mapping[str, Any],
@@ -565,6 +582,9 @@ def _build_terminal_receipt(
             "staging verification",
         ),
         "worker_resource_projection": _plain(resource_projection),
+        "native_process_resource_projection": _plain(
+            native_resource_projection
+        ),
         "post_run_lease_observation_sha256": _evidence_digest(
             post_run_lease_observation,
             "post-run lease observation",
@@ -586,6 +606,7 @@ def _build_terminal_receipt(
             "fd4_drained_while_owner_live": True,
             "network_observer_finished_before_reap": True,
             "complete_group_exactly_reaped": True,
+            "native_resources_captured_at_exact_reap": True,
             "mapped_files_remeasured_after_reap": True,
             "staging_parent_verified_after_reap": True,
             "checkpoint_remeasured_after_run": True,
@@ -762,6 +783,69 @@ def _project_worker_resource_observation(
     )
 
 
+def _project_native_process_resource_observation(
+    *,
+    request: Mapping[str, Any],
+    result: Mapping[str, Any],
+    observation: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """Bind exact-reap Darwin RSS and physical-footprint evidence."""
+
+    value = _plain(observation)
+    if not isinstance(value, dict) or set(value) != {
+        "peak_resident_set_bytes",
+        "lifetime_max_phys_footprint_bytes",
+        "lifetime_max_neural_footprint_bytes",
+        "rss_source",
+        "unified_memory_source",
+    }:
+        raise ValueError("private Kim native resource observation differs")
+    peak_rss = value["peak_resident_set_bytes"]
+    peak_footprint = value["lifetime_max_phys_footprint_bytes"]
+    peak_neural = value["lifetime_max_neural_footprint_bytes"]
+    if (
+        type(peak_rss) is not int
+        or not 1 <= peak_rss <= 128 * 1024**3
+        or type(peak_footprint) is not int
+        or not 1 <= peak_footprint <= 128 * 1024**3
+        or type(peak_neural) is not int
+        or not 0 <= peak_neural <= 128 * 1024**3
+        or value["rss_source"] != "wait4_ru_maxrss_darwin_bytes"
+        or value["unified_memory_source"]
+        != "proc_pid_rusage_v6_lifetime_max_phys_footprint"
+    ):
+        raise ValueError("private Kim native resource observation differs")
+    payload = {
+        "schema": "sunofriend.private-melroformer-native-resource-projection.v1",
+        "status": "exact_reap_process_resources_projected_not_benchmark",
+        "bindings": {
+            "request_sha256": request["request_sha256"],
+            "worker_result_sha256": result["result_sha256"],
+            "child_result_sha256": result["child_result_sha256"],
+        },
+        "peak_process_rss_bytes": peak_rss,
+        "peak_total_unified_memory_bytes": peak_footprint,
+        "peak_neural_footprint_bytes": peak_neural,
+        "semantics": {
+            "process_rss": "wait4_ru_maxrss_darwin_bytes",
+            "total_unified_memory": (
+                "proc_pid_rusage_v6_lifetime_max_phys_footprint"
+            ),
+            "scope": "exact_owned_worker_process_lifetime",
+            "pid_retained": False,
+            "benchmark": False,
+        },
+    }
+    return _freeze(
+        {
+            **payload,
+            "projection_sha256": hashlib.sha256(
+                _canonical_json(payload)
+            ).hexdigest(),
+        }
+    )
+
+
 def _failure_receipt(
     *,
     request: Mapping[str, Any],
@@ -821,6 +905,7 @@ def _evidence_digest(value: Mapping[str, Any], label: str) -> str:
     for key in (
         "evidence_sha256",
         "observation_sha256",
+        "projection_sha256",
         "receipt_sha256",
     ):
         digest = value.get(key)
