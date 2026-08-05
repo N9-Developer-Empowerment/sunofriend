@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import pytest
 
 import sunofriend._separation_reviewed_output_import as reviewed_import
+import sunofriend._separation_reviewed_output_activation as reviewed_activation
 from sunofriend.derived_source_receipt import (
     DERIVED_SOURCE_RECEIPT_SCHEMA,
     validate_derived_source_receipt_files,
@@ -60,7 +61,7 @@ def test_imports_reviewed_stems_as_inactive_lineage_with_mix_rollback(
     assert all(asset["active"] is False for asset in result["reviewed_assets"])
     assert result["readiness"]["source_graph_activation_permitted"] is False
     assert result["readiness"]["midi_conversion_of_imported_stems_permitted"] is False
-    assert Path(result["report"]).stat().st_mode & 0o777 == 0o444
+    assert Path(result["report"]).stat().st_mode & 0o777 == 0o400
     assert not any(root.rglob("*reconstruction*.wav"))
     for asset in result["reviewed_assets"]:
         receipt_path = root / asset["receipt_path"]
@@ -143,10 +144,51 @@ def test_active_derived_receipt_must_match_parent_asset(
     receipt["parent"]["asset_id"] = f"sha256:{'0' * 64}"
     receipt_path.chmod(0o600)
     receipt_path.write_bytes(canonical_json_bytes(receipt))
-    receipt_path.chmod(0o444)
+    receipt_path.chmod(0o400)
 
     with pytest.raises(SourceGraphError, match="lineage does not match"):
         resolve_active_sources(activated, project_root=root)
+
+
+def test_explicit_activation_enables_only_bounded_private_validation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    context = _context(tmp_path, monkeypatch)
+    _run(context)
+    _patch_activation_evidence(context, monkeypatch)
+
+    result = _activate(context)
+
+    graph = load_source_graph(context["output"])
+    assert graph.revision == 3
+    assert {node.role for node in resolve_active_sources(graph, project_root=context["output"])} == {
+        "vocals",
+        "other",
+    }
+    assert result["readiness"]["bounded_private_midi_validation_permitted"] is True
+    assert result["readiness"]["simple_mode_available"] is False
+    assert result["effects"]["source_graph_activation_changed"] is True
+    assert result["rollback"]["retained_parent_role"] == "mix"
+
+    replay = _activate(context)
+    assert replay["graph_id"] == result["graph_id"]
+    assert replay["replayed"] is True
+    assert replay["effects"]["source_graph_activation_changed"] is False
+
+
+def test_activation_requires_explicit_usefulness_confirmation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    context = _context(tmp_path, monkeypatch)
+    _run(context)
+    _patch_activation_evidence(context, monkeypatch)
+
+    with pytest.raises(ValueError, match="explicit useful-stems confirmation"):
+        _activate(context, confirm=False)
+
+    assert load_source_graph(context["output"]).revision == 2
 
 
 def _run(context: dict[str, object]) -> dict[str, object]:
@@ -163,6 +205,38 @@ def _run(context: dict[str, object]) -> dict[str, object]:
         key="B minor",
         bpm=113,
         tuning_hz=440,
+    )
+
+
+def _activate(
+    context: dict[str, object],
+    *,
+    confirm: bool = True,
+) -> dict[str, object]:
+    return reviewed_activation._activate_reviewed_output(
+        context["output"],
+        assessment_path=context["assessment_path"],
+        equivalence_path=context["equivalence_path"],
+        reviewed_export_path=context["reviewed_export"],
+        reviewed_package_dir=context["reviewed_package"],
+        candidate_package_report_path=context["candidate_report"],
+        confirm_reviewed_stems_useful=confirm,
+    )
+
+
+def _patch_activation_evidence(
+    context: dict[str, object],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        reviewed_activation,
+        "_load_verified_reviewed_output_import_assessment",
+        lambda *_args, **_kwargs: deepcopy(context["assessment"]),
+    )
+    monkeypatch.setattr(
+        reviewed_activation,
+        "_load_candidate_package",
+        lambda *_args, **_kwargs: deepcopy(context["candidate"]),
     )
 
 

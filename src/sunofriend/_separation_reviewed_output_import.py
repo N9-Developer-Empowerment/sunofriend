@@ -286,8 +286,8 @@ def _append_inactive_reviewed_stems(
                 "active": False,
             }
         )
-        target.chmod(0o444)
-        receipt_path.chmod(0o444)
+        target.chmod(0o400)
+        receipt_path.chmod(0o400)
 
     group = build_source_refinement_group(
         parent_node_id=parent.node_id,
@@ -324,7 +324,7 @@ def _append_inactive_reviewed_stems(
     report = root / REPORT_RELATIVE_PATH
     report.parent.mkdir(parents=True, exist_ok=True)
     _write_json_exclusive(report, document)
-    report.chmod(0o444)
+    report.chmod(0o400)
     return document
 
 

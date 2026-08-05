@@ -4196,6 +4196,36 @@ The destination must not exist and its parent must already be owner-only. The
 whole enriched project is published atomically. A failure preserves the input
 evidence and does not replace any existing project.
 
+The separate activation boundary is now implemented by
+`scripts/private-separation-reviewed-output-activate.py`. It re-verifies the
+assessment, review-equivalence, candidate package, fixed import report,
+source-graph revision, both copied WAVs and both derived receipts. It requires
+the explicit `--confirm-reviewed-stems-useful` action and then activates both
+complete-coverage children together using source-graph mode `reviewed`. It
+writes no audio and mutates neither the minimal source-project manifest nor the
+import report. The content-addressed graph object and atomic current pointer
+are the activation record; an exact retry is verified and has zero effects.
+
+The real private project is now at source-graph revision 3,
+`sha256:8cfdaf7375118e29336b5bcbfa3ccaface586f7d2a2d96b328f7f4d0b16d2a8c`.
+Its active canonical roles are `vocals` and `other`, with declared roles
+`vocals` and `instrumental`. The original `mix` node remains immutable and can
+be restored through a later reviewed parent activation. This permits only the
+next bounded private MIDI and interpretation validation. Simple, Studio, TUI,
+public CLI, download and publication routes remain disabled for separation.
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
+  scripts/private-separation-reviewed-output-activate.py \
+  --project-root "$PREPARED_PRIVATE_PROJECT" \
+  --import-assessment "$IMPORT_ASSESSMENT_JSON" \
+  --review-equivalence "$REVIEW_EQUIVALENCE_JSON" \
+  --reviewed-export "$REVIEWED_BROWSER_EXPORT" \
+  --reviewed-package-dir "$REVIEWED_STITCH_ROOT" \
+  --candidate-package-report "$CANDIDATE_REVIEW_PACKAGE_JSON" \
+  --confirm-reviewed-stems-useful
+```
+
 The reusable assessment command is:
 
 ```bash

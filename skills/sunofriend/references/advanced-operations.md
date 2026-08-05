@@ -2632,6 +2632,17 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   separator acceptance or a Simple, Studio, TUI, public CLI, download or
   publication permission. A separate exact project/revision-bound reviewed
   activation must precede MIDI conversion of these derived stems.
+  Perform that activation only with
+  `scripts/private-separation-reviewed-output-activate.py` and the same full
+  evidence chain. Require the fixed project-local import report, exact current
+  imported graph revision and explicit `--confirm-reviewed-stems-useful` flag.
+  The command must activate all children in the complete reviewed group
+  together under source-graph mode `reviewed`, then re-attest their derived
+  receipts and audio. The original mix node remains immutable for a later
+  reviewed rollback. An exact retry must return the same graph ID with every
+  effect false. Activation permits only bounded private MIDI and interpretation
+  validation; it still does not enable a separation route in Simple, Studio,
+  TUI, public CLI, download or publication.
   Use the read-only bounded queue when review exports are difficult to track:
   `scripts/private-separation-song-disjoint-pilot-review-queue.py PIPELINE_ROOT
   --review-dir "$HOME/Downloads"`. Repeat the pipeline root, `--review` or
