@@ -2351,10 +2351,46 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   local PCM24 review windows are byte-identical. Zero, one or both variants may
   become eligible only for a fresh all-boundary review; selection, alignment,
   acceptance, join resolution and publication remain false.
+  The retained 36-unit review is now complete. Status verified all 36 units,
+  all 72 references, 69 unique private files and the exact package inventory
+  without opening the answer key. Resolution then found zero eligible
+  variants: boundary pairs were nine equivalent and one follow-up-control
+  preference; complete-song pairs were five equivalent and one follow-up-
+  control preference; patch-edge pairs were eleven equivalent and nine
+  neither. No unit preferred either new variant. The listener subsequently
+  clarified that the differences were generally not obvious and that every
+  sample, including the neither-rated samples, remained somewhat useful in
+  musical context. Preserve that as interpretation of review difficulty, not
+  as a rewritten browser choice or retroactive gate pass. `Neither` does not
+  mean unusable, and an isolated click or texture can be musically acceptable
+  in context. Future review design must ask separately whether an artifact is
+  audible, musically acceptable, useful in the song and large enough to
+  matter. The strict all-boundary builder remains closed.
+  A separate read-only statistics command is
+  `scripts/private-separation-candidate-followup-variant-review-statistics.py`.
+  It re-resolves and byte-compares the exact sealed review, then reports binary
+  outcome-indicator standard deviations, descriptive 95% Wilson intervals, a
+  chi-square table and an exact fixed-margin permutation result. The retained
+  36-unit review has chi-square 11.376 with four degrees of freedom, but six of
+  nine expected cells are below five, so the asymptotic result is not a gate.
+  Exact enumeration gives exploratory p=0.0266. All nine `neither` choices were
+  in the 20 patch-edge units, versus zero in the 16 other units; a post-hoc
+  Fisher test gives p=0.00191. This says the formal response pattern depends on
+  review-unit type, not that the audio was poor, the listener is unreliable or
+  the separator is accurate. Raw choices and musical quality are not assumed
+  normal. The report creates no audio and changes no review or product state.
+  A separate model-free fallback plan now binds this exact result at
+  `work/separation-bakeoff/be-alone-v2-candidate-followup-overlap-add-plan-v1`.
+  It describes 21 evenly distributed 15-second windows with about 2.622
+  seconds overlap and complementary constant-sum raised-cosine weighting. It
+  authorizes zero model calls and requires the contextual absolute review
+  questions before any expensive execution. It is a proposal, not evidence
+  that overlap-add is better.
   The downstream fail-closed builder is
   `scripts/private-separation-candidate-followup-variant-full-song-review.py`.
-  Run it only after the exact 36-unit browser export has passed status and has
-  been resolved into the exact supplied result. It re-runs that resolver,
+  Run it only after an exact 36-unit browser export has passed status, has
+  resolved at least one eligible variant and matches the supplied result. It
+  re-runs that resolver,
   requires at least one eligible variant and creates one independent
   complete-song plus every-original-boundary page for every eligible variant.
   Zero eligible variants produces no output; one produces one page and two

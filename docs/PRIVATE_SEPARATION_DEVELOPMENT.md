@@ -3264,10 +3264,93 @@ one or both variants may therefore be eligible. Eligibility is not selection,
 join resolution, alignment, acceptance or publication, and every such effect
 and permission remains false.
 
-The next fail-closed builder is already implemented, but it must not run until
-the exact 36-unit export has passed status and resolution above. It re-resolves
-that same export and includes **every** eligible variant in one owner-only
-parent package. Zero eligible variants is a hard failure; one produces one
+The real 36-unit export is now complete and owner-only. The key-unopened status
+path verified all 36 units, all 72 audio references, 69 unique package files
+and the exact private inventory. Resolution then opened the sealed mapping and
+found **zero** eligible variants. Boundary comparisons were nine equivalent
+and one follow-up-control preference. Complete-song comparisons were five
+equivalent and one follow-up-control preference. Patch-edge comparisons were
+eleven equivalent and nine neither. No comparison preferred either new
+variant. The resolved document is
+`work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-result-v1/private-separation-candidate-followup-variant-review-result.json`,
+with document SHA-256
+`475a62c1496ee4894591f4d708347278a9adc7a3baf693e36a18db85e4ff9b3a`.
+
+The listener then clarified an important product distinction: the differences
+were often too small to judge confidently, short clicks or textures can sound
+musical in context, and every sample, including those marked neither, remained
+somewhat useful. This does not rewrite the sealed choices or relax the strict
+eligibility rule after seeing the answer key. It does mean that `neither` must
+not be presented as “bad” or “unusable.” Future pages should ask four separate
+questions: whether an artifact is audible, whether it is musically acceptable,
+whether the candidate is useful in the song context, and whether the difference
+is large enough to matter.
+
+A read-only statistical diagnostic is sealed at
+`work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-statistics-v2/private-separation-candidate-followup-variant-review-statistics.json`,
+with document SHA-256
+`46295a7ae8561eb42946e10b7e1db596440787016f0e5c28d96f4e9c4b069825`.
+It does not assume that categorical choices or musical quality are normally
+distributed. For every outcome it reports the standard deviation of the binary
+outcome indicator, standard error and a descriptive 95% Wilson interval. Across
+all 36 units, `equivalent` was 69.4% with a 95% Wilson interval of 53.1% to
+82.0%, and `neither` was 25.0% with an interval of 13.8% to 41.1%.
+
+The 3-by-3 outcome-by-unit-kind table has Pearson chi-square 11.376 with four
+degrees of freedom. Six of nine expected cells are below five, so its
+asymptotic p-value must not be used as a decision. Exact enumeration of all 276
+fixed-margin permutation tables gives an exploratory p-value of 0.0266. The
+visible concentration is the nine `neither` choices among 20 patch-edge units
+versus zero among 16 other units. Their Wilson intervals are 25.8% to 65.8%
+and 0% to 19.4%, respectively. A post-hoc two-sided Fisher exact comparison is
+0.00191, but it was not pre-specified and has no multiple-comparison adjustment.
+This supports the narrow observation that response patterns differed by test
+type. It does not estimate listening skill, separator accuracy or audio quality,
+and it does not make `neither` mean unusable.
+
+Reproduce that owner-only report with:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-candidate-followup-variant-review-statistics.py \
+  --variant-review-result \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-result-v1/private-separation-candidate-followup-variant-review-result.json \
+  --reviewed-export "$TARGETED_VARIANT_REVIEWED_EXPORT" \
+  --variant-review-package-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-v1 \
+  --plan \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-plan-v3/private-separation-candidate-followup-remediation-plan.json \
+  --execution-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v1 \
+  --v2-execution-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2 \
+  --variant-execution-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v2 \
+  --out "$FRESH_PRIVATE_STATISTICS_ROOT/private-separation-candidate-followup-variant-review-statistics.json"
+```
+
+The command re-resolves and byte-compares the exact sealed review before doing
+any arithmetic. The output is no-overwrite and owner-only. It creates no audio,
+does not run a model, does not change the review, and cannot activate a product
+route. Repeated blinded sessions by the same listener, or genuinely independent
+listeners and songs, are required before reliability or wider confidence can be
+estimated.
+
+A model-free fallback plan is now sealed at
+`work/separation-bakeoff/be-alone-v2-candidate-followup-overlap-add-plan-v1/private-separation-candidate-followup-overlap-add-plan.json`.
+It binds the exact zero-eligible result and proposes 21 evenly distributed
+15-second full-song windows with 2.621995–2.622018 seconds overlap. Future
+assembly would use complementary raised-cosine weights that sum to one rather
+than isolated post-hoc role patches. The plan authorizes **zero** model calls,
+creates no audio and explicitly requires the contextual absolute review design
+before execution. Its document SHA-256 is
+`54dfa838cd4658b8f05f2ed4bb6dce9d4e338bced8d61ddc2045ec3c7941be99`.
+
+The next fail-closed builder is already implemented, but it must not run for
+the retained result because zero variants are eligible. For a future genuinely
+passing result it re-resolves that same export and includes **every** eligible
+variant in one owner-only parent package. Zero eligible variants is a hard
+failure; one produces one
 independent full-song/all-boundary page, and two produce two pages. The builder
 does not choose between them:
 
@@ -3358,9 +3441,9 @@ The result retains one independent full-song rating set, all original-boundary
 ratings and audible-join indices per eligible variant. It does not collapse
 the pages into a winner. Every reviewed variant remains unselected and
 unaccepted, and each still needs its own fresh source-clock alignment result.
-The resolver is ready, but it cannot run yet: the exact preceding 36-unit
-targeted browser export has not been produced, so there is no eligible-variant
-parent package or full-song review export to resolve.
+The resolver is ready, but it cannot run on the retained result because the
+completed targeted review produced zero eligible variants; therefore no
+eligible-variant parent package or full-song review export exists.
 
 The next alignment runner is also implemented and remains blocked behind that
 same genuine human evidence chain. It re-runs the complete multi-page resolver,
@@ -3457,8 +3540,9 @@ reviews. That list is not a rank, preference, winner or permission to omit an
 eligible variant. The reassessment adds no listening evidence, keeps original
 join resolution false and cannot select, accept, activate or publish a
 separator. It is implemented and tested but cannot run on the retained
-`Be Alone` evidence until the earlier exact 36-unit targeted review is exported
-and every intervening review and alignment gate genuinely completes.
+`Be Alone` evidence because the exact 36-unit targeted result retained zero
+eligible variants. It requires a later genuinely eligible result plus every
+intervening review and alignment gate.
 
 The next bounded package builder is now implemented as
 `scripts/private-separation-candidate-followup-variant-final-acceptance-review.py`.
@@ -3478,8 +3562,9 @@ candidate is suitable for a private Sunofriend pilot. `cannot_tell` and
 page so package order cannot become an implied preference.
 
 The builder and its separate verifier/resolver are contract-complete and
-tested, but no real package can be built yet because the exact 36-unit targeted
-variant browser export and every intervening human gate remain incomplete.
+tested, but no real package can be built from the retained zero-eligible
+36-unit result. A later eligible result and every intervening human gate would
+still be required.
 Package creation records no acceptance, selection or join resolution and
 enables no product or publication route. Do not hand-edit a reviewed export or
 infer acceptance from the presence of a page.
@@ -3579,8 +3664,9 @@ ready, the next engineering step is a separately designed private-pilot handoff
 that still cannot enable Simple, Studio, CLI, TUI or source-graph separation.
 
 The implementation and adversarial tests are complete. No real readiness
-projection exists yet because the exact 36-unit targeted review and all later
-human gates remain incomplete; do not manufacture those exports or results.
+projection exists because the exact 36-unit targeted review produced zero
+eligible variants, so the later human gates correctly did not run. Do not
+manufacture those exports or results.
 
 ### Private-pilot handoff plan
 
@@ -3638,8 +3724,8 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
 The fixed output name and owner-only, no-overwrite parent are part of the
 contract. The command rechecks the readiness, execution and candidate reports
 after publication and removes the new handoff plan if any of those inputs
-change. There is no real handoff plan yet because the 36-unit targeted review
-and every later human gate remain incomplete.
+change. There is no real handoff plan because the 36-unit targeted result has
+zero eligible variants and every later human gate is therefore closed.
 
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
