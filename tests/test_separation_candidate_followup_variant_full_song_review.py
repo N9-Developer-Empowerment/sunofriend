@@ -332,6 +332,8 @@ def _fixture(
         "result_path": result_path,
         "reviewed_export": reviewed_export,
         "result": result,
+        "context": context,
+        "stitch_document": stitch,
         "out": tmp_path / "eligible-full-song-reviews",
     }
 

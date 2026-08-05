@@ -2366,6 +2366,22 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   acceptance, original-join resolution, product activation and publication
   false. Every emitted page still needs genuine human completion, followed by
   a separate resolver and fresh alignment for that exact variant.
+  Resolve those pages only with
+  `scripts/private-separation-candidate-followup-variant-full-song-review-result.py`.
+  Supply every browser export through a repeated `--reviewed-export` argument;
+  one emitted page requires one export and two emitted pages require both.
+  Make every export owner-only first. Run `--status` with the exact parent,
+  targeted-variant result/export/package, plan, both earlier execution roots,
+  variant execution root and stitch root. The verifier maps exports by their
+  immutable package commitments rather than filename or caller order and
+  rejects missing, duplicate, foreign, incomplete or altered reviews. Only
+  after status reports `complete_review_set_verified_no_activation` may the
+  same complete argument set run under `--resolve` with one fresh owner-only
+  `--out`. The result preserves one independent full-song and all-boundary
+  listening record per eligible variant in canonical plan order. It never
+  selects between them. Every reviewed variant still requires a separate fresh
+  alignment result; original-join resolution, acceptance, product activation
+  and publication remain false.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic
   snapshot across the whole operation; status and result record this explicit

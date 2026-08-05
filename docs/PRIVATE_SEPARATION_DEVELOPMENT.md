@@ -3276,7 +3276,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
   scripts/private-separation-candidate-followup-variant-full-song-review.py \
   --variant-review-result \
     work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-result-v1/private-separation-candidate-followup-variant-review-result.json \
-  --reviewed-export "$HOME/Downloads/join_remediation_review.reviewed.json" \
+  --reviewed-export "$TARGETED_VARIANT_REVIEWED_EXPORT" \
   --variant-review-package-dir \
     work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-v1 \
   --plan \
@@ -3302,6 +3302,65 @@ order, not preference. Model execution, candidate selection, alignment,
 acceptance, product activation and publication all remain false. A separate
 resolver and a fresh alignment result are still required for each reviewed
 variant before any later readiness reassessment.
+
+That fail-closed multi-page resolver is now implemented as
+`scripts/private-separation-candidate-followup-variant-full-song-review-result.py`.
+It must receive every page exported by the parent package. The export filenames
+and caller order are not identities: the resolver maps each file through its
+immutable package commitment, restores canonical plan order and rejects a
+missing, duplicate, foreign, partially reviewed or altered page. Secure each
+browser download to owner-only mode before verification. If the parent emits
+only one page, supply one `--reviewed-export`; if it emits both pages, repeat
+the argument twice:
+
+```bash
+chmod 600 "$REVIEWED_VARIANT_01" "$REVIEWED_VARIANT_02"
+
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-candidate-followup-variant-full-song-review-result.py \
+  --status \
+  --reviewed-export "$REVIEWED_VARIANT_01" \
+  --reviewed-export "$REVIEWED_VARIANT_02" \
+  --review-package-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-eligible-full-song-review-v1 \
+  --variant-review-result \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-result-v1/private-separation-candidate-followup-variant-review-result.json \
+  --variant-reviewed-export "$TARGETED_VARIANT_REVIEWED_EXPORT" \
+  --variant-review-package-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-v1 \
+  --plan \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-plan-v3/private-separation-candidate-followup-remediation-plan.json \
+  --execution-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v1 \
+  --v2-execution-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2 \
+  --variant-execution-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v2 \
+  --stitch-package-dir \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review
+```
+
+Only after status reports `complete_review_set_verified_no_activation`, repeat
+the same evidence arguments with `--resolve` and one fresh owner-only `--out`:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-candidate-followup-variant-full-song-review-result.py \
+  --resolve \
+  --reviewed-export "$REVIEWED_VARIANT_01" \
+  --reviewed-export "$REVIEWED_VARIANT_02" \
+  ...the same exact evidence roots... \
+  --out \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-eligible-full-song-review-result-v1/private-separation-candidate-followup-variant-full-song-review-result.json
+```
+
+The result retains one independent full-song rating set, all original-boundary
+ratings and audible-join indices per eligible variant. It does not collapse
+the pages into a winner. Every reviewed variant remains unselected and
+unaccepted, and each still needs its own fresh source-clock alignment result.
+The resolver is ready, but it cannot run yet: the exact preceding 36-unit
+targeted browser export has not been produced, so there is no eligible-variant
+parent package or full-song review export to resolve.
 
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
