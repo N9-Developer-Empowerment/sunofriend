@@ -4072,17 +4072,48 @@ and
 `3c023315a1f13ae868b41146eb029178c36f2345091cf5c7008ba017c121ae7a`.
 Its immutable review commitment is
 `3b9027350fa1e0f29b8c477e2c282f59838a3cbce400a5b916e2486b6ebbdb25`.
-Human full-song and all 12-boundary review is now the only open step in this
-fresh exact chain. The playable page is:
+The fresh playable page is:
 
 ```text
 work/separation-bakeoff/tell-me-that-i-do-it-bitch-private-separation-developer-review-v2-py313/STITCH/BOUNDARY-REVIEW/separation_boundary_review.html
 ```
 
-Only after that review may a separate reviewed-output import contract be
-designed. The eventual user goal remains broader: an approachable local
-full-mix input that can produce useful stems and then enter Sunofriend's MIDI
-and interpretation workflow. The current candidate is still a private
+The completed human review of the earlier independently prepared package rated
+the complete vocals, instrumental and reconstruction useful. All 12 joins were
+reviewed. The listener's overall judgement was that the output passed and was
+acceptable. The resolver verified that export rather than trusting a filename
+or browser state.
+
+The automatic request-bound execution produced different file hashes because
+of floating-point render variation, so Sunofriend did not silently treat the
+files as identical. Instead,
+`scripts/private-separation-render-review-equivalence.py` now implements one
+narrow evidence-transfer policy. It requires the source bytes and complete
+audio clock to be exact and compares every generated stereo PCM24 sample. The
+prior review can remain applicable only when every sample differs by no more
+than one PCM24 least-significant bit. It records explicitly that the candidate
+bytes were not freshly auditioned and grants no import or product permission.
+
+The fresh render passed that policy. Across 16,436,952 sample values per role,
+the maximum difference was one PCM24 least-significant bit. The RMS differences
+were 0.130553 for vocals, 0.130672 for instrumental and 0.139536 for the
+reconstruction. The path-free equivalence record is at
+`tell-me-that-i-do-it-bitch-private-separation-developer-review-v2-py313/REVIEW-EQUIVALENCE/private-separation-render-review-equivalence.json`.
+Its file/document SHA-256 values are
+`8cb94e59473351a2e6106361bc1dc15783f48fc51b6721b550ade4cbde7b114f`
+and
+`e07cc5d04c79a0b3cc9709fc29f31c25000e0aeddf6fe5c84ef0c2da688baab1`.
+This closes the listening-evidence gap without asking the listener to repeat an
+inaudibly fine render comparison. It does not reinterpret any boundary rating,
+accept the separator globally or claim fresh audition of these exact bytes.
+
+The next stage is a separate reviewed-output import contract. It must preserve
+the original canonical source and the generated vocals and instrumental as
+distinct immutable lineage, expose no result to Simple, Studio or the TUI by
+default, and require another explicit private-development decision before any
+source graph changes. The eventual user goal remains broader: an approachable
+local full-mix input that can produce useful stems and then enter Sunofriend's
+MIDI and interpretation workflow. The current candidate is still a private
 two-stem vocal/instrumental route, not that published lay-user feature.
 
 The next fail-closed builder is already implemented, but it must not run for
