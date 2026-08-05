@@ -2408,6 +2408,24 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   public download or publication. Defer the overlap-add model run unless later
   normal-use evidence shows a material problem; do not spend more inference
   merely to satisfy a diagnostic that showed no replacement advantage.
+  The first source-bound, song-disjoint exercise now uses the owned
+  `In the way` original and the narrow
+  `stem_examples/private-pilot-corpus.json` authority manifest. Preserve the
+  main corpus's provider-horizon mismatch; this pilot does not use the old
+  provider stems as full-song truth. The fixed reusable policy is exact 44.1
+  kHz stereo canonicalisation, 16 contiguous independently authorised
+  sub-15-second Kim Vocal 2 calls and raw concatenation with no crossfade,
+  gain change or source-specific repair. The v2 execution completed all 16
+  chunks, and the raw stitch and review are at
+  `work/separation-bakeoff/in-the-way-full-song-kim-stitch-v1-private-pilot-review`.
+  Its independent alignment passed with zero measured lag and 0.999999 minimum
+  correlation. This is clock evidence only. Human complete-song and all
+  15-boundary listening remains required before drawing a cross-song quality
+  conclusion. Do not expose the result through Simple, Studio, TUI, public
+  download or publication. The earlier v1 pilot plan and attempts are retained
+  as diagnostic evidence: an incompatible creator `allowed_use` phrase passed
+  planning but failed inside the worker. Full-song planning now rejects that
+  mismatch before creating a plan.
   The downstream fail-closed builder is
   `scripts/private-separation-candidate-followup-variant-full-song-review.py`.
   Run it only after an exact 36-unit browser export has passed status, has

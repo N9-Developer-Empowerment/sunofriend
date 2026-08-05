@@ -163,6 +163,25 @@ def test_full_song_plan_is_gap_free_and_worker_compatible(tmp_path: Path) -> Non
     assert integer_digest == result["canonical_clock"]["pcm24_int32_sequence_sha256"]
 
 
+def test_full_song_plan_rejects_creator_permission_the_worker_cannot_use(
+    tmp_path: Path,
+) -> None:
+    manifest = _corpus(tmp_path)
+    document = json.loads(manifest.read_text(encoding="utf-8"))
+    document["permission"]["allowed_use"] = "local private evaluation only"
+    manifest.write_text(json.dumps(document) + "\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="full-song creator authority differs"):
+        _prepare_private_separation_full_song_plan(
+            manifest,
+            "example",
+            out_dir=tmp_path / "plan",
+            maximum_chunk_frames=9_000,
+        )
+
+    assert not (tmp_path / "plan").exists()
+
+
 def test_full_song_plan_duplicates_mono_without_running_model(tmp_path: Path) -> None:
     manifest = _corpus(tmp_path, channels=1, frames=12_000)
     result = _prepare_private_separation_full_song_plan(

@@ -268,7 +268,11 @@ def _rights_authority(corpus_evidence: Mapping[str, Any]) -> str:
     if not isinstance(permission, Mapping):
         raise ValueError("full-song corpus permission differs")
     if corpus_evidence.get("manifest_schema") == "sunofriend.authorised-separation-corpus.v1":
-        if permission.get("authority") != "creator_and_copyright_holder":
+        if (
+            permission.get("authority") != "creator_and_copyright_holder"
+            or permission.get("allowed_use")
+            != "download, study, transform and reuse"
+        ):
             raise ValueError("full-song creator authority differs")
         return "creator_and_copyright_holder"
     if (

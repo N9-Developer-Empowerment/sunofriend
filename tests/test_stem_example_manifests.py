@@ -111,3 +111,46 @@ def test_authorised_and_private_reference_manifests_are_disjoint() -> None:
     assert authorised_directories.isdisjoint(private_directories)
     assert authorised["permission"]["authority"] == "creator_and_copyright_holder"
     assert private["permission"]["status"] == "not_recorded_in_manifest"
+
+
+def test_in_the_way_private_pilot_manifest_is_narrow_and_owner_authorised() -> None:
+    document = _document("private-pilot-corpus.json")
+
+    assert document["schema"] == "sunofriend.authorised-separation-corpus.v1"
+    assert document["status"] == "local_audio_not_committed_private_pilot_only"
+    assert document["permission"] == {
+        "authority": "creator_and_copyright_holder",
+        "scope": (
+            "the named In the way original for a source-bound local private "
+            "separation pilot"
+        ),
+        "allowed_use": "download, study, transform and reuse",
+        "condition": (
+            "credit Ezzye and link to the artist profile if any derived result "
+            "is later shared under separate approval"
+        ),
+        "recorded_on": "2026-08-05",
+    }
+    assert document["pilot_scope"] == {
+        "purpose": (
+            "song-disjoint generalisation check after the Be Alone pragmatic "
+            "private-pilot gate"
+        ),
+        "provider_stems_used_as_ground_truth": False,
+        "historical_provider_horizon_mismatch_preserved_in": "corpus.json",
+        "public_product_activation": False,
+        "simple_mode_activation": False,
+        "studio_activation": False,
+    }
+    assert [track["id"] for track in document["tracks"]] == [
+        "in-the-way-private-pilot"
+    ]
+    track = document["tracks"][0]
+    assert track["evaluation_state"] == "ready_for_excerpt_selection"
+    assert track["original"] == {
+        "files": 1,
+        "sample_rate_hz": 44100,
+        "channels": 2,
+        "sample_format": "s24",
+        "duration_seconds": 225.880726,
+    }

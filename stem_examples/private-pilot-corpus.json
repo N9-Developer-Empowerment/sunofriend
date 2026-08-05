@@ -1,0 +1,42 @@
+{
+  "schema": "sunofriend.authorised-separation-corpus.v1",
+  "status": "local_audio_not_committed_private_pilot_only",
+  "checked_on": "2026-08-05",
+  "artist": {
+    "name": "Ezzye",
+    "soundcloud_profile": "https://soundcloud.com/ezzye-1"
+  },
+  "permission": {
+    "authority": "creator_and_copyright_holder",
+    "scope": "the named In the way original for a source-bound local private separation pilot",
+    "allowed_use": "download, study, transform and reuse",
+    "condition": "credit Ezzye and link to the artist profile if any derived result is later shared under separate approval",
+    "recorded_on": "2026-08-05"
+  },
+  "pilot_scope": {
+    "purpose": "song-disjoint generalisation check after the Be Alone pragmatic private-pilot gate",
+    "provider_stems_used_as_ground_truth": false,
+    "historical_provider_horizon_mismatch_preserved_in": "corpus.json",
+    "public_product_activation": false,
+    "simple_mode_activation": false,
+    "studio_activation": false
+  },
+  "tracks": [
+    {
+      "id": "in-the-way-private-pilot",
+      "directory": "In the way - 22_07_2026, 17.43-Bb minor-90bpm-440hz",
+      "title": "In the way",
+      "key": "Bb minor",
+      "bpm": 90,
+      "tuning_hz": 440,
+      "original": {
+        "files": 1,
+        "sample_rate_hz": 44100,
+        "channels": 2,
+        "sample_format": "s24",
+        "duration_seconds": 225.880726
+      },
+      "evaluation_state": "ready_for_excerpt_selection"
+    }
+  ]
+}

@@ -61,7 +61,7 @@ def _plan(tmp_path: Path) -> Path:
         "permission": {
             "authority": "creator_and_copyright_holder",
             "scope": "test fixture",
-            "allowed_use": "study",
+            "allowed_use": "download, study, transform and reuse",
             "condition": "credit Owner",
             "recorded_on": "2026-08-04",
         },

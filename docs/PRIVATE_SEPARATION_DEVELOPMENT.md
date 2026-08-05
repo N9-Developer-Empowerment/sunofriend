@@ -3409,6 +3409,56 @@ public downloads or publication. The next product increment may consume this
 exact authorization behind an explicit private-development flag, while public
 acceptance remains a separate multi-song gate.
 
+### First song-disjoint private pilot
+
+The pragmatic gate has now been exercised on a different owned song rather
+than on another repaired `Be Alone` variant. The source is `In the way`, bound
+through `stem_examples/private-pilot-corpus.json`. That narrow manifest records
+creator-and-copyright-holder authority for this local pilot only. It does not
+rewrite the main corpus's historical provider-horizon mismatch: the older
+Moises and Suno outputs remain unsuitable as full-song ground truth for this
+track.
+
+The reusable initial policy is intentionally plain: convert the source once to
+the exact 44.1 kHz stereo worker clock, divide it into contiguous independently
+authorised chunks no longer than 15 seconds, run the unchanged Kim Vocal 2
+worker once per chunk and concatenate the results with no crossfade, gain
+change or source-specific repair. The 59,846,068-byte PCM24 original has
+SHA-256 `32a7a4e28dc37d0a5459d41433c0ed5550eb5f8db2f9add9d8c2c551adb3f540`.
+The v2 plan covers all 9,961,340 frames in 16 chunks with zero gap, overlap or
+end-clock error. Its document SHA-256 is
+`d1fb9c4aae16b40c3961363fa37c6d5034dfa23e6a95298f10155a74c0d5dfe3`.
+
+The first v1 plan and two failed v1 attempts remain diagnostic evidence. The
+pilot manifest initially used a narrower prose value for `allowed_use`; the
+worker correctly rejected it, but planning had accepted it. Full-song planning
+now enforces the exact creator-rights phrase required by the worker, so this
+class of unusable authorization fails before chunk audio is created. The
+corrected v2 execution completed all 16 independently verified attempts. Its
+state SHA-256 is
+`81593c9d3d18d296351808e8bd92305ccedd3c089cae4c0242979da17aaea007`.
+
+The raw stitch is at
+`work/separation-bakeoff/in-the-way-full-song-kim-stitch-v1-private-pilot-review`.
+It contains source, vocals, instrumental and diagnostic reconstruction, all
+exactly 225.880726 seconds, plus 15 four-second boundary review groups. The
+stitch document SHA-256 is
+`91104ec2282b9c449aacc0ce95e43d9a9ef53e979fda18f221565c67baca4d04`.
+The independent alignment gate passed across nine early-to-late windows with
+0 ms maximum lag, 0 ms lag spread and 0.999999 minimum normalized correlation;
+its document SHA-256 is
+`69dd7d5ddd2f06599ab2e0db200f0749ac24c83f1e9221ca08bac131cfe6f39d`.
+That proves clock alignment, not separation accuracy.
+
+Fresh human listening is now the only current pilot review. First judge all
+four complete-song tracks for musical usefulness, then the 15 exact chunk
+joins. A cued headphone-detectable join may be recorded without automatically
+failing the pilot; the decisive separate questions are normal-listening
+noticeability, audio quality, role usefulness and whether any artifact is
+large enough to reduce use. Until that review is resolved, the output remains
+private, unselected and unavailable to Simple, Studio, the TUI, public
+downloads or publication.
+
 The next fail-closed builder is already implemented, but it must not run for
 the retained result because zero variants are eligible. For a future genuinely
 passing result it re-resolves that same export and includes **every** eligible
