@@ -125,6 +125,39 @@ def test_rejects_output_inside_backend_source_root(
         _build(context, output=context["source_root"] / adapter.REPORT_NAME)
 
 
+def test_loader_reconstructs_adapter_from_design_and_environment(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    context = _context(tmp_path, monkeypatch)
+    output = context["output_parent"] / adapter.REPORT_NAME
+    result = _build(context, output=output)
+    snapshot = {
+        "path": output,
+        "sha256": "9" * 64,
+        "document": {key: value for key, value in result.items() if key != "report"},
+    }
+    monkeypatch.setattr(
+        adapter,
+        "_load_private_json_snapshot",
+        lambda *_args, **_kwargs: deepcopy(snapshot),
+    )
+
+    loaded = adapter._load_verified_private_separation_backend_adapter_contract(
+        output,
+        design_report_path=context["design_path"],
+        coverage_report_path=context["coverage_path"],
+        repository_root=context["repository"],
+        runtime_launcher_path=context["runtime"],
+        source_root=context["source_root"],
+        checkpoint_path=context["checkpoint"],
+        companion_root=context["companion_root"],
+    )
+
+    assert loaded["document"]["status"] == adapter.STATUS
+    assert loaded["design"]["document"]["document_sha256"] == "b" * 64
+
+
 def _build(
     context: dict[str, object],
     *,

@@ -2593,6 +2593,18 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   running no model. Do not treat the adapter contract as an execution request
   or expose it through Simple, Studio, TUI, public CLI, source graph or a
   download pack.
+  The model-free request layer is
+  `scripts/private-separation-execution-request.py`. Give it the exact adapter,
+  design, coverage and one already verified authorised full-song plan, plus
+  the same local backend inputs and an explicit `gpu` or `cpu` device. It
+  reconstructs the chain twice and writes one fresh owner-only
+  `private-separation-execution-request.json`. The durable request binds the
+  source hash, canonical PCM24 identity, gap-free chunks, checkpoint and
+  device but stores no local paths, creates no audio and grants no model run.
+  It is not accepted input to any current executor. The next engineering slice
+  is a separate developer-only execution gate with a no-model preflight and a
+  fresh private output requirement; do not bypass that gate with the older
+  research pilot executor.
   Use the read-only bounded queue when review exports are difficult to track:
   `scripts/private-separation-song-disjoint-pilot-review-queue.py PIPELINE_ROOT
   --review-dir "$HOME/Downloads"`. Repeat the pipeline root, `--review` or

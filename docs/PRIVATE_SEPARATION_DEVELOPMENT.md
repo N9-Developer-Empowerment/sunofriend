@@ -3915,6 +3915,34 @@ authorised local source and one fresh owner-only output to this exact adapter,
 but still run no model. Only a separately reviewed later stage may make a
 developer-only execution available.
 
+The request builder is now implemented as
+`scripts/private-separation-execution-request.py`. It consumes an existing
+verified full-song plan, so it does not copy or regenerate its canonical chunk
+audio. It reconstructs the coverage, design and exact backend environment,
+then binds the authorised source hash, canonical PCM24 identity, gap-free plan,
+checkpoint and explicit device into a fresh path-free owner-only JSON request.
+That request deliberately does not name an execution output, permit model
+execution or become discoverable by any user-facing mode.
+
+The real model-free proof uses the already reviewed owned `Tell Me That I Do
+It Bitch` plan. Its request is at
+`work/separation-bakeoff/tell-me-that-i-do-it-bitch-private-separation-execution-request-v1/private-separation-execution-request.json`,
+with file/document SHA-256 values
+`5c9e1536277100efd16375f6a674150d91677a90647e2604cd70596ba92f496e`
+and
+`202afdf5f851bb22fe9f1f327a492dc6849c8489a4e51d4b9188501e7d8952c0`.
+It binds source SHA-256
+`9962cc03f077290b293ca3bf40dff7359e6166c34c12e74bc5919bd9b5aa811d`
+and canonical PCM24 SHA-256
+`d443e9da3b2b25c4ae8bcc8262e9634f06163d28a362866df3f613c11b47d2e7`
+over 8,218,476 frames and 13 chunks. Every permission remains false.
+
+The next bounded slice is a separate developer-only execution gate. It must
+reconstruct this request and all upstream evidence, require a fresh owner-only
+output root, freeze resource bounds and offline operation, and provide a
+preflight that runs no model. Implementing that gate will not itself execute a
+song or expose separation to Simple, Studio, TUI or public CLI.
+
 The next fail-closed builder is already implemented, but it must not run for
 the retained result because zero variants are eligible. For a future genuinely
 passing result it re-resolves that same export and includes **every** eligible

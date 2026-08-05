@@ -16,6 +16,7 @@ from typing import Any, Mapping
 from ._separation_authorised_excerpt import _document_sha256
 from ._separation_full_song_executor import _require_private_directory
 from ._separation_full_song_join_remediation_review_result import (
+    _load_private_json_snapshot,
     _write_json_exclusive,
 )
 from ._separation_full_song_plan import (
@@ -135,6 +136,44 @@ def _build_private_separation_backend_adapter_contract(
         raise ValueError("private separation backend adapter inputs changed")
     _write_json_exclusive(output, document)
     return {**document, "report": str(output)}
+
+
+def _load_verified_private_separation_backend_adapter_contract(
+    value: str | Path,
+    *,
+    design_report_path: str | Path,
+    coverage_report_path: str | Path,
+    repository_root: str | Path,
+    runtime_launcher_path: str | Path,
+    source_root: str | Path,
+    checkpoint_path: str | Path,
+    companion_root: str | Path,
+) -> dict[str, Any]:
+    """Reconstruct one adapter contract from its evidence and environment."""
+
+    snapshot = _load_private_json_snapshot(
+        value,
+        "private separation backend adapter contract",
+    )
+    design = _load_verified_private_separation_route_design(
+        design_report_path,
+        coverage_report_path=coverage_report_path,
+    )
+    measured = _measure_request_execution_environment(
+        repository_root=repository_root,
+        runtime_launcher_path=runtime_launcher_path,
+        source_root=source_root,
+        checkpoint_path=checkpoint_path,
+        companion_root=companion_root,
+    )
+    environment = measured.get("execution_environment") or (
+        _execution_environment_document(measured)
+    )
+    expected = _contract_document(design, environment=environment)
+    expected["document_sha256"] = _document_sha256(expected)
+    if snapshot["path"].name != REPORT_NAME or snapshot["document"] != expected:
+        raise ValueError("private separation backend adapter contract differs")
+    return {**snapshot, "design": design, "measured": measured}
 
 
 def _contract_document(
