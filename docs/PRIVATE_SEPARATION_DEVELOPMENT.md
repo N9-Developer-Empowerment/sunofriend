@@ -3987,10 +3987,53 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
   --device gpu --all
 ```
 
-The next safe increment is to add the new request-aware stitch, alignment and
-review-package coordinator around a completed gate execution. It must still
-stop before any source-graph import. Actual inference should be a separate,
-explicit private operation, not part of tests or documentation generation.
+The request-aware post-execution coordinator is now implemented as
+`scripts/private-separation-developer-review-package.py`. It accepts only a
+complete execution whose embedded request binding reconstructs against the
+same request, adapter, design, coverage, plan and local backend. It then
+creates the exact-clock stitch, measures nine-window source-to-reconstruction
+alignment and exposes the existing playable complete-song and exact-boundary
+review page. It is resumable: an already verified stitch or alignment is not
+run again. An incomplete queue, changed artifact, shared output directory or
+overlapping evidence path fails before a review package can be claimed.
+
+This coordinator never calls the model. Its persisted report keeps human
+review pending and reviewed-stem import, Simple, Studio, TUI, source graph,
+download and publication disabled. Use it only after a separate explicit
+`private-separation-developer-execute.py --execute` invocation has completed:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
+  scripts/private-separation-developer-review-package.py \
+  --request \
+    work/separation-bakeoff/tell-me-that-i-do-it-bitch-private-separation-execution-request-v1/private-separation-execution-request.json \
+  --adapter-report \
+    work/separation-bakeoff/private-separation-backend-adapter-contract-v1/private-separation-backend-adapter-contract.json \
+  --design-report \
+    work/separation-bakeoff/private-separation-route-design-v1/private-separation-route-design.json \
+  --coverage-report \
+    work/separation-bakeoff/multi-song-private-pilot-coverage-v3/private-separation-multi-song-private-pilot-coverage.json \
+  --plan-report \
+    work/separation-bakeoff/tell-me-that-i-do-it-bitch-song-disjoint-private-pilot-request-v5-py313/PLAN/private-separation-full-song-plan.json \
+  --repository-root "$PWD" \
+  --runtime-launcher "$PWD/.venv-ai/bin/python" \
+  --source-root \
+    "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/mlx-audio-source" \
+  --checkpoint \
+    "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/model.safetensors" \
+  --companion-root \
+    "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/checkpoint-directory" \
+  --execution-dir "$COMPLETE_PRIVATE_EXECUTION_ROOT" \
+  --out-dir "$FRESH_PRIVATE_REVIEW_PACKAGE_ROOT"
+```
+
+The next evidence step is one fresh full-song run through the new execution
+gate followed by this coordinator and its exact human review. Only after that
+review may a separate reviewed-output import contract be designed. The
+eventual user goal remains broader: an approachable local full-mix input that
+can produce useful stems and then enter Sunofriend's MIDI and interpretation
+workflow. The current candidate is still a private two-stem vocal/instrumental
+route, not that published lay-user feature.
 
 The next fail-closed builder is already implemented, but it must not run for
 the retained result because zero variants are eligible. For a future genuinely
