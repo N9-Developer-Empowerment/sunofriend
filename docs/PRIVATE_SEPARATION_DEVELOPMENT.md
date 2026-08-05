@@ -3346,6 +3346,69 @@ creates no audio and explicitly requires the contextual absolute review design
 before execution. Its document SHA-256 is
 `54dfa838cd4658b8f05f2ed4bb6dce9d4e338bced8d61ddc2045ec3c7941be99`.
 
+### Pragmatic private-pilot gate
+
+Microscopic edge review is no longer an absolute veto on a bounded private
+pilot. It remains diagnostic evidence and remains a strict gate for claims that
+the joins are resolved. A separate whole-song utility gate may advance an exact
+existing candidate when the listener explicitly reports all of the following:
+
+- overall audio quality is good or good enough;
+- listener-assessed separator accuracy is good or good enough;
+- joins are not generally noticeable in normal listening;
+- joins do not reduce the output's musical usefulness; and
+- no tested replacement showed an audible advantage over the stable control.
+
+Detection of a join under cued, concentrated headphone listening does not by
+itself fail this private-pilot gate. Nor does an ambiguous patch-edge judgement
+where the edge coincides with a beat. These facts remain limitations. This is a
+change in development policy, not a rewrite of the sealed blind choices.
+
+The first exact authorization is sealed at
+`work/separation-bakeoff/be-alone-pragmatic-private-pilot-v1/private-separation-pragmatic-private-pilot.json`.
+It retains the zero-eligible strict result, records the listener's absolute
+assessment separately, and advances the unchanged `followup_control` only for a
+bounded private pilot. The two later variants had zero preference evidence;
+the control was preferred twice. The 21-window overlap-add experiment is
+therefore deferred rather than run merely to satisfy the earlier microscopic
+gate. The authorization document SHA-256 is
+`d1a8ced826f48559172ea22c2a827e352671da164a9283ad992413df0a706e52`.
+
+Reproduce the owner-only authorization with:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-pragmatic-private-pilot.py \
+  --variant-review-result \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-result-v1/private-separation-candidate-followup-variant-review-result.json \
+  --reviewed-export "$TARGETED_VARIANT_REVIEWED_EXPORT" \
+  --variant-review-package-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-v1 \
+  --plan \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-plan-v3/private-separation-candidate-followup-remediation-plan.json \
+  --execution-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v1 \
+  --v2-execution-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2 \
+  --variant-execution-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v2 \
+  --overall-audio-quality good_or_good_enough \
+  --listener-assessed-separator-accuracy good_or_good_enough \
+  --joins-generally-noticeable no \
+  --joins-detectable-when-cued-with-concentrated-headphones yes \
+  --joins-reduce-musical-usefulness no \
+  --patch-edge-beat-ambiguity-present yes \
+  --out "$FRESH_PRIVATE_PILOT_ROOT/private-separation-pragmatic-private-pilot.json"
+```
+
+The command re-resolves the exact 36-unit evidence and requires a fresh,
+owner-only output. It does not run a model or copy audio. The path-free report
+binds the candidate artifacts by SHA-256; absolute audio paths appear only in
+the command result for local use. This gate does not enable Simple, Studio,
+public downloads or publication. The next product increment may consume this
+exact authorization behind an explicit private-development flag, while public
+acceptance remains a separate multi-song gate.
+
 The next fail-closed builder is already implemented, but it must not run for
 the retained result because zero variants are eligible. For a future genuinely
 passing result it re-resolves that same export and includes **every** eligible

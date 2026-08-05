@@ -2386,6 +2386,28 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   authorizes zero model calls and requires the contextual absolute review
   questions before any expensive execution. It is a proposal, not evidence
   that overlap-add is better.
+  A later explicit whole-song assessment changes the private-development
+  progression rule without changing the sealed review. The listener judged
+  both audio quality and separator accuracy good or good enough, said joins
+  were not generally noticeable and did not reduce musical usefulness, and
+  noted that a join required cued concentrated headphone listening to detect.
+  Beat-coincident patch edges were also considered ambiguous. Run
+  `scripts/private-separation-pragmatic-private-pilot.py` only with those
+  explicit absolute fields and the exact review chain. The command requires
+  zero replacement-variant preferences and at least one follow-up-control
+  preference. It then authorizes the unchanged `followup_control` for a
+  bounded private pilot, while preserving the strict zero-eligible result.
+  Its real report is
+  `work/separation-bakeoff/be-alone-pragmatic-private-pilot-v1/private-separation-pragmatic-private-pilot.json`,
+  document SHA-256
+  `d1a8ced826f48559172ea22c2a827e352671da164a9283ad992413df0a706e52`.
+  Treat listener-assessed separator accuracy as a holistic judgement, not
+  ground truth. Microscopic edge results remain diagnostics and unresolved
+  limitations, but they no longer veto this private pilot. The report does not
+  run a model, copy audio, mutate the source graph or enable Simple, Studio,
+  public download or publication. Defer the overlap-add model run unless later
+  normal-use evidence shows a material problem; do not spend more inference
+  merely to satisfy a diagnostic that showed no replacement advantage.
   The downstream fail-closed builder is
   `scripts/private-separation-candidate-followup-variant-full-song-review.py`.
   Run it only after an exact 36-unit browser export has passed status, has
