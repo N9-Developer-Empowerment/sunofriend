@@ -2453,6 +2453,21 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   evidence remain separate boundaries. A non-empty ready set permits only a
   later private-pilot handoff design; an empty set returns to bounded
   remediation.
+  Prepare that design record only with
+  `scripts/private-separation-candidate-followup-variant-private-pilot-handoff.py`.
+  It re-runs the complete final-readiness reassessment, demands exact equality
+  with the supplied report and binds every ready candidate in canonical order
+  to path-free PCM24 hashes, byte counts and clock geometry. It accepts no
+  subset or preferred order, copies no audio and runs no model or worker. Zero
+  ready candidates produce no output. One or two remain independent and
+  unranked. The resulting owner-only, no-overwrite handoff plan is reference
+  evidence only: no new source or track is bound, no reusable separator
+  strategy or pilot execution adapter is established, and every Simple,
+  Studio, CLI, TUI, source-graph, product and publication permission remains
+  false. Its only next action is design of a separately authorised,
+  source-bound, song-disjoint private-pilot request with fresh track-specific
+  listening. Do not describe the handoff plan as a working separator or run it
+  before a genuine non-empty final-readiness result exists.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution or reassessment. Their JSON and WAV descriptors are not held as
   one atomic snapshot across the whole operation; status and result record this

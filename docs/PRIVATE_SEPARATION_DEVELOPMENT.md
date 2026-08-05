@@ -3582,6 +3582,65 @@ The implementation and adversarial tests are complete. No real readiness
 projection exists yet because the exact 36-unit targeted review and all later
 human gates remain incomplete; do not manufacture those exports or results.
 
+### Private-pilot handoff plan
+
+The next fail-closed layer is now implemented as
+`scripts/private-separation-candidate-followup-variant-private-pilot-handoff.py`.
+It is an evidence-only handoff design record, not a separation command. It
+re-runs the complete final-readiness reassessment from the acceptance exports
+and immutable upstream chain, requires the supplied readiness report to match
+exactly, then binds every independently ready reference candidate in canonical
+plan order. The output contains path-free PCM24 file and integer-sample hashes,
+byte counts and clock geometry for vocals, instrumental and reconstruction. It
+copies no audio and accepts no candidate subset, preferred variant or caller
+ordering.
+
+The command fails without writing when zero candidates are ready. One or two
+ready candidates remain independent and unranked. A successful plan still says
+that no new source or track is bound, no reusable separator strategy has been
+established, no pilot request or execution adapter exists, no model or worker
+may run, and no Simple, Studio, CLI, TUI, source-graph or publication route is
+enabled. Its only next action is to design a separately authorised,
+source-bound, song-disjoint private-pilot request with a fresh output, exact
+runtime/checkpoint/machine binding, bounded resource and failure policy, and
+fresh track-specific human review.
+
+Run it only after a genuine non-empty final-readiness result exists:
+
+```bash
+mkdir -m 700 "$PRIVATE_PILOT_HANDOFF_DIR"
+
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-candidate-followup-variant-private-pilot-handoff.py \
+  --final-readiness-result "$FINAL_READINESS_RESULT" \
+  --final-acceptance-result "$FINAL_ACCEPTANCE_RESULT" \
+  --final-acceptance-reviewed-export "$FINAL_ACCEPTANCE_EXPORT_01" \
+  --final-acceptance-reviewed-export "$FINAL_ACCEPTANCE_EXPORT_02" \
+  --review-package-dir "$FINAL_ACCEPTANCE_PACKAGE" \
+  --readiness-result "$VARIANT_READINESS_RESULT" \
+  --full-song-review-result "$VARIANT_FULL_SONG_RESULT" \
+  --alignment-package-dir "$VARIANT_ALIGNMENT_PACKAGE" \
+  --full-song-reviewed-export "$REVIEWED_VARIANT_01" \
+  --full-song-reviewed-export "$REVIEWED_VARIANT_02" \
+  --full-song-review-package-dir "$VARIANT_FULL_SONG_PACKAGE" \
+  --variant-review-result "$TARGETED_VARIANT_RESULT" \
+  --variant-reviewed-export "$TARGETED_VARIANT_REVIEWED_EXPORT" \
+  --variant-review-package-dir "$TARGETED_VARIANT_PACKAGE" \
+  --plan "$VARIANT_PLAN" \
+  --execution-dir "$FIRST_FOLLOWUP_EXECUTION" \
+  --v2-execution-dir "$V2_EXECUTION" \
+  --variant-execution-dir "$VARIANT_EXECUTION" \
+  --stitch-package-dir "$STITCH_PACKAGE" \
+  --out \
+    "$PRIVATE_PILOT_HANDOFF_DIR/private-separation-candidate-followup-variant-private-pilot-handoff-plan.json"
+```
+
+The fixed output name and owner-only, no-overwrite parent are part of the
+contract. The command rechecks the readiness, execution and candidate reports
+after publication and removes the new handoff plan if any of those inputs
+change. There is no real handoff plan yet because the 36-unit targeted review
+and every later human gate remain incomplete.
+
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
 
