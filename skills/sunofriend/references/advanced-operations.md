@@ -2615,6 +2615,23 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   unstitched and unreviewed. Never import it directly. A new request-aware
   stitch, alignment and review coordinator is required before any later
   handoff assessment, and every product route remains disabled.
+  After an exact human review, PCM24-equivalence binding and the separate
+  import assessment all pass, the private-development importer is
+  `scripts/private-separation-reviewed-output-import.py`. It must receive the
+  complete original evidence chain, explicit local FFmpeg/FFprobe binaries and
+  one fresh destination whose existing parent is owner-only. It creates a
+  normal prepared project with the full mix as its sole active original source,
+  copies the reviewed vocals and instrumental assets byte for byte, writes a
+  derived-source receipt for each and appends one complete refinement group
+  with activation mode `unchanged`. Instrumental maps to canonical role
+  `other` while retaining declared role `instrumental`; reconstruction remains
+  diagnostic and is not imported. Confirm the final active frontier is still
+  exactly the original mix and that no copied asset depends on an external
+  path. The entire enriched project is published atomically without replacing
+  an existing destination. Import completion is not source activation,
+  separator acceptance or a Simple, Studio, TUI, public CLI, download or
+  publication permission. A separate exact project/revision-bound reviewed
+  activation must precede MIDI conversion of these derived stems.
   Use the read-only bounded queue when review exports are difficult to track:
   `scripts/private-separation-song-disjoint-pilot-review-queue.py PIPELINE_ROOT
   --review-dir "$HOME/Downloads"`. Repeat the pipeline root, `--review` or

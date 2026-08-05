@@ -11,11 +11,13 @@ from __future__ import annotations
 from copy import deepcopy
 import os
 from pathlib import Path
+import tempfile
 from typing import Any, Mapping
 
 from ._separation_authorised_excerpt import _document_sha256
 from ._separation_full_song_executor import _require_private_directory
 from ._separation_full_song_join_remediation_review_result import (
+    _load_private_json_snapshot,
     _write_json_exclusive,
 )
 from ._separation_private_developer_review_package import _FALSE_PERMISSIONS
@@ -80,6 +82,36 @@ def _assess_reviewed_output_import(
     )
     _write_json_exclusive(output, result)
     return {**result, "report": str(output)}
+
+
+def _load_verified_reviewed_output_import_assessment(
+    value: str | Path,
+    *,
+    equivalence_path: str | Path,
+    reviewed_export_path: str | Path,
+    reviewed_package_dir: str | Path,
+    candidate_package_report_path: str | Path,
+) -> dict[str, Any]:
+    """Rebuild one assessment and require exact persisted equality."""
+
+    snapshot = _load_private_json_snapshot(
+        value,
+        "reviewed-output import assessment",
+    )
+    with tempfile.TemporaryDirectory(prefix="sunofriend-verify-import-assessment-") as name:
+        temporary = Path(name)
+        temporary.chmod(0o700)
+        rebuilt = _assess_reviewed_output_import(
+            equivalence_path,
+            reviewed_export_path=reviewed_export_path,
+            reviewed_package_dir=reviewed_package_dir,
+            candidate_package_report_path=candidate_package_report_path,
+            out=temporary / REPORT_NAME,
+        )
+    expected = {key: item for key, item in rebuilt.items() if key != "report"}
+    if snapshot["document"] != expected:
+        raise ValueError("reviewed-output import assessment differs")
+    return snapshot
 
 
 def _verify_import_prerequisites(

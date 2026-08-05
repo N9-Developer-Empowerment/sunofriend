@@ -4145,6 +4145,57 @@ Its next action is
 `implement_separate_private_reviewed_output_importer`; import permission,
 source-graph activation and every product route remain false.
 
+That importer is now implemented by
+`scripts/private-separation-reviewed-output-import.py`. It rebuilds the exact
+assessment and its review-equivalence chain, creates one fresh owner-only
+prepared project from the unchanged full mix, copies the reviewed vocals and
+instrumental WAVs byte for byte, and writes a distinct derived-source receipt
+for each asset. The instrumental remainder becomes canonical role `other` with
+declared role `instrumental`; reconstruction remains diagnostic and is not
+copied as an independent source.
+
+The importer appends one complete-coverage refinement group but deliberately
+uses source-graph activation mode `unchanged`. The original mix remains the
+only active source and therefore the rollback. The two reviewed stems remain
+inactive, so they are not yet visible to MIDI conversion, Simple, Studio or the
+TUI. A separate project- and revision-bound reviewed activation is the next
+required engineering stage.
+
+The real private import is at
+`work/separation-bakeoff/tell-me-that-i-do-it-bitch-reviewed-stems-private-import-v1`.
+Its source graph moved from virtual revision 1 to stored revision 2 while
+retaining the original mix node as the complete active frontier. The imported
+vocal and instrumental node IDs are recorded in
+`PRIVATE-SEPARATION/private-separation-reviewed-output-import.json`; every
+copied WAV and receipt is immutable and has no external path dependency.
+The report file/document SHA-256 values are
+`fee11c2fd9ef4d6356e6c992e0c4a102055031256fdf6f29af528c9c0072ea3a`
+and
+`9eacbe9348b8105c06ef9eafccb5799be2d2dc068b0fda7f434d26a8f60bc0f0`.
+The active source-graph revision is
+`sha256:b836f1cdfff786310b3b62b4c7d33d9e58e70e327b96c5d27b00efed2169ed99`.
+
+The reusable private command is:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
+  scripts/private-separation-reviewed-output-import.py \
+  --import-assessment "$IMPORT_ASSESSMENT_JSON" \
+  --review-equivalence "$REVIEW_EQUIVALENCE_JSON" \
+  --reviewed-export "$REVIEWED_BROWSER_EXPORT" \
+  --reviewed-package-dir "$REVIEWED_STITCH_ROOT" \
+  --candidate-package-report "$CANDIDATE_REVIEW_PACKAGE_JSON" \
+  --ffmpeg "$(command -v ffmpeg)" \
+  --ffprobe "$(command -v ffprobe)" \
+  --out-dir "$FRESH_OWNER_ONLY_PREPARED_PROJECT" \
+  --rights-category authorised_private_use \
+  --title "$TITLE" --key "$KEY" --bpm "$BPM" --tuning-hz "$TUNING_HZ"
+```
+
+The destination must not exist and its parent must already be owner-only. The
+whole enriched project is published atomically. A failure preserves the input
+evidence and does not replace any existing project.
+
 The reusable assessment command is:
 
 ```bash

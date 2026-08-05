@@ -25,6 +25,10 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, Mapping, Sequence
 
 from .audio_formats import file_sha256
+from .derived_source_receipt import (
+    DERIVED_SOURCE_RECEIPT_SCHEMA,
+    validate_derived_source_receipt_document,
+)
 from .source_project import (
     SOURCE_PROJECT_RELATIVE_PATH,
     load_source_project,
@@ -1534,6 +1538,7 @@ def _validate_active_source_evidence(
     """Attest active source-import receipts and their immutable file hashes."""
 
     active = set(revision.active_node_ids)
+    nodes_by_id = {node.node_id: node for node in revision.nodes}
     for node in revision.nodes:
         if node.node_id not in active:
             continue
@@ -1568,15 +1573,22 @@ def _validate_active_source_evidence(
             raise SourceGraphError(
                 "active source receipt is not in canonical JSON form"
             )
-        if receipt.get("schema") != SOURCE_IMPORT_SCHEMA:
-            raise SourceGraphError(
-                "active source receipt uses an unsupported evidence schema"
-            )
+        schema = receipt.get("schema")
         try:
-            validate_source_receipt_document(receipt)
+            if schema == SOURCE_IMPORT_SCHEMA:
+                validate_source_receipt_document(receipt)
+            elif schema == DERIVED_SOURCE_RECEIPT_SCHEMA:
+                validate_derived_source_receipt_document(receipt)
+            else:
+                raise ValueError("unsupported active source receipt schema")
         except ValueError as exc:
             raise SourceGraphError("active source receipt is invalid") from exc
-        if receipt.get("source_id") != node.asset.asset_id:
+        identity = (
+            receipt.get("source_id")
+            if schema == SOURCE_IMPORT_SCHEMA
+            else receipt.get("asset_id")
+        )
+        if identity != node.asset.asset_id:
             raise SourceGraphError(
                 "active source receipt identity does not match its graph node"
             )
@@ -1593,6 +1605,20 @@ def _validate_active_source_evidence(
             raise SourceGraphError(
                 "active source canonical asset hash does not match its receipt"
             )
+        if schema == DERIVED_SOURCE_RECEIPT_SCHEMA:
+            parent = receipt["parent"]
+            parent_node = nodes_by_id.get(str(node.parent_node_id))
+            if (
+                parent.get("node_id") != node.parent_node_id
+                or parent_node is None
+                or parent.get("asset_id") != parent_node.asset.asset_id
+                or node.derivation is None
+                or receipt["derivation"] != node.derivation
+            ):
+                raise SourceGraphError(
+                    "active derived-source receipt lineage does not match its graph node"
+                )
+            continue
         original = receipt["original"]
         original_path = _project_path(
             root,
