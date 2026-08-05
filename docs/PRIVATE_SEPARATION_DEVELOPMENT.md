@@ -3450,6 +3450,60 @@ its document SHA-256 is
 `69dd7d5ddd2f06599ab2e0db200f0749ac24c83f1e9221ca08bac131cfe6f39d`.
 That proves clock alignment, not separation accuracy.
 
+Future song-disjoint pilots no longer need their preflight and plan command to
+be assembled by hand. The developer-only
+`scripts/private-separation-song-disjoint-pilot-request.py` command verifies
+the exact pragmatic authorization and its reference stitch, cryptographically
+distinguishes the new canonical PCM from that reference, measures the current
+virtual-environment launcher, Kim checkpoint, audited MLX source, companion
+files, tracked upstream evidence and coordinator code, and embeds a fresh
+gap-free full-song plan in one owner-only request directory. It then prints the
+single resumable executor command with the verified local paths. The persisted
+request is path-free. Preparation creates only canonical chunk audio; it runs
+no model and enables no product route.
+
+The command has been exercised without inference against the existing
+authorised `In the way` pilot at
+`work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-request-v2`.
+It reproduced the same 9,961,340-frame, 16-chunk canonical queue and verified a
+different canonical PCM identity from the `Be Alone` reference. The request
+file SHA-256 is
+`1f1ea47c6673337417948e763a8c8982d136b0391cef098f1e370c67a88599f0`;
+its document SHA-256 is
+`ad3492307b620bbed46d006b9f89e94cc43322044a6ef3de2b9a5adad47aa150`.
+This duplicate request is validation evidence only: the already completed v2
+execution and current outstanding human review remain authoritative.
+
+Use the command for a newly authorised corpus track like this:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-song-disjoint-pilot-request.py \
+  --pragmatic-authorization \
+    work/separation-bakeoff/be-alone-pragmatic-private-pilot-v1/private-separation-pragmatic-private-pilot.json \
+  --reference-v2-execution \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2/private-separation-full-song-join-remediation-execution-v2.json \
+  --reference-stitch-package-dir \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review \
+  --corpus "$PRIVATE_PILOT_CORPUS" \
+  --track-id "$PRIVATE_PILOT_TRACK_ID" \
+  --repository-root "$PWD" \
+  --runtime-launcher "$PWD/.venv-ai/bin/python" \
+  --source-root \
+    "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/mlx-audio-source" \
+  --checkpoint \
+    "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/model.safetensors" \
+  --companion-root \
+    "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/checkpoint-directory" \
+  --device gpu \
+  --out-dir "$FRESH_PRIVATE_PILOT_REQUEST_ROOT"
+```
+
+Review the printed source distinction, chunk count and readiness fields before
+running its `next_command`. The execution command must still use a fresh root.
+Runtime, checkpoint and audited source inputs are reverified by every worker;
+request preparation is not a substitute for execution-time isolation.
+
 The automatic chain is now sealed into one path-free, owner-only envelope at
 `work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-evidence-v1/private-separation-song-disjoint-pilot-evidence.json`.
 It re-verifies the pragmatic authorization, its exact Be Alone v2 reference

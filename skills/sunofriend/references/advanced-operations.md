@@ -2426,6 +2426,22 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   as diagnostic evidence: an incompatible creator `allowed_use` phrase passed
   planning but failed inside the worker. Full-song planning now rejects that
   mismatch before creating a plan.
+  For a future authorised song, use
+  `scripts/private-separation-song-disjoint-pilot-request.py` instead of
+  manually assembling the plan preflight. Supply the exact pragmatic
+  authorization, its bound v2 execution and reference stitch, one authorised
+  corpus/track, repository root, virtual-environment launcher, audited source
+  root, Kim checkpoint, companion root and a fresh output directory. The
+  command re-verifies those inputs, compares canonical PCM identities, embeds
+  the ordinary gap-free full-song plan and prints the exact resumable executor
+  command. Its owner-only persisted request is path-free and starts no worker
+  or model. `bounded_private_worker_execution_permitted: true` applies only to
+  the exact embedded request; Simple, Studio, TUI, source-graph, public download
+  and publication permissions stay false. Recheck the printed source
+  distinction and queue before running its `next_command` into another fresh
+  directory. The existing `In the way` request dry run is duplicate validation
+  evidence only and does not replace the completed v2 execution or its pending
+  human review.
   The automatic chain is also bound by
   `scripts/private-separation-song-disjoint-pilot-evidence.py`. It verifies the
   pragmatic authorization, the exact reference v2 execution bound by that
