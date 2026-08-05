@@ -3409,6 +3409,57 @@ variants, prove stem fidelity or musical quality, resolve audible joins,
 accept a separator, activate a product route or publish anything. A separate
 multi-variant readiness reassessment is still required afterward.
 
+That reassessment is now implemented as
+`scripts/private-separation-candidate-followup-variant-readiness-reassessment.py`.
+It re-runs the complete alignment package into a private temporary root,
+requires the supplied parent and every child alignment report to match exactly,
+then combines each variant's existing human and clock evidence. It cannot take
+a preferred subset and it retains failed variants rather than deleting them:
+
+```bash
+mkdir -m 700 \
+  work/separation-bakeoff/be-alone-v2-candidate-followup-eligible-readiness-v1
+
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-candidate-followup-variant-readiness-reassessment.py \
+  --full-song-review-result \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-eligible-full-song-review-result-v1/private-separation-candidate-followup-variant-full-song-review-result.json \
+  --alignment-package-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-eligible-full-song-alignment-v1 \
+  --full-song-reviewed-export "$REVIEWED_VARIANT_01" \
+  --full-song-reviewed-export "$REVIEWED_VARIANT_02" \
+  --full-song-review-package-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-eligible-full-song-review-v1 \
+  --variant-review-result \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-result-v1/private-separation-candidate-followup-variant-review-result.json \
+  --variant-reviewed-export "$TARGETED_VARIANT_REVIEWED_EXPORT" \
+  --variant-review-package-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-v1 \
+  --plan \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-plan-v3/private-separation-candidate-followup-remediation-plan.json \
+  --execution-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v1 \
+  --v2-execution-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2 \
+  --variant-execution-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v2 \
+  --stitch-package-dir \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review \
+  --out \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-eligible-readiness-v1/private-separation-candidate-followup-variant-readiness-reassessment.json
+```
+
+For each variant, the fixed prerequisite is the conjunction of useful ratings
+for all complete-song roles, clean ratings at every original boundary and a
+passing nine-window alignment gate. The result may list zero, one or both
+variant IDs as eligible for later **independent** final human acceptance
+reviews. That list is not a rank, preference, winner or permission to omit an
+eligible variant. The reassessment adds no listening evidence, keeps original
+join resolution false and cannot select, accept, activate or publish a
+separator. It is implemented and tested but cannot run on the retained
+`Be Alone` evidence until the earlier exact 36-unit targeted review is exported
+and every intervening review and alignment gate genuinely completes.
+
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
 

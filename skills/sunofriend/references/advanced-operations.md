@@ -2395,6 +2395,16 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   not stem fidelity, musical quality, join resolution, selection or acceptance.
   A separate multi-variant readiness reassessment still follows; every product
   and publication permission remains false.
+  Perform that combination only with
+  `scripts/private-separation-candidate-followup-variant-readiness-reassessment.py`.
+  It re-runs the complete alignment package, demands exact parent and child
+  equality and combines each variant's all-role usefulness, all-original-
+  boundary cleanliness and alignment gate independently. Zero, one or both
+  variants may become eligible for later independent final human acceptance
+  reviews. Eligibility is not preference, ranking, selection or permission to
+  omit another eligible variant. Failed variants remain visible; the result
+  adds no listening evidence and leaves original-join resolution, acceptance,
+  product activation and publication false.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic
   snapshot across the whole operation; status and result record this explicit
