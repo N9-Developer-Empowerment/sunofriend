@@ -4116,6 +4116,47 @@ local full-mix input that can produce useful stems and then enter Sunofriend's
 MIDI and interpretation workflow. The current candidate is still a private
 two-stem vocal/instrumental route, not that published lay-user feature.
 
+That stage-four assessment is now implemented by
+`scripts/private-separation-reviewed-output-import-assessment.py`. It rebuilds
+the review-equivalence result from the original reviewed export and both exact
+packages, verifies that every full-song role was useful, every boundary was
+reviewed, alignment passed and both primary assets still match the candidate
+stitch. It then writes only a path-free import design record. No audio, receipt,
+prepared project, source-graph node or activation is created.
+
+The real assessment is technically eligible for a separate importer. It maps
+the generated vocal leaf to canonical role `vocals`. Because `instrumental` is
+not a canonical prepared source role, it maps that broad remainder to `other`
+while preserving `instrumental` as the declared role. The reconstruction is
+excluded because it is a timing and sum diagnostic, not a third independent
+stem. Any importer must retain the original `mix`, copy the generated assets
+into an owner-controlled prepared project, write derived receipts, append an
+inactive complete-coverage refinement and require a separate reviewed
+activation. External-path dependencies, automatic activation and irreversible
+replacement are forbidden.
+
+The assessment is at
+`tell-me-that-i-do-it-bitch-private-separation-developer-review-v2-py313/IMPORT-ASSESSMENT/private-separation-reviewed-output-import-assessment.json`.
+Its file/document SHA-256 values are
+`f5559c637bcd552747d2fe5a6fcef67d7d934fe285a978a6137132a6b438cc29`
+and
+`f11a9cf586902f3804546486843fe0a720264220753b06069a9ebad746606c43`.
+Its next action is
+`implement_separate_private_reviewed_output_importer`; import permission,
+source-graph activation and every product route remain false.
+
+The reusable assessment command is:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
+  scripts/private-separation-reviewed-output-import-assessment.py \
+  --review-equivalence "$REVIEW_EQUIVALENCE_JSON" \
+  --reviewed-export "$REVIEWED_BROWSER_EXPORT" \
+  --reviewed-package-dir "$REVIEWED_STITCH_ROOT" \
+  --candidate-package-report "$CANDIDATE_REVIEW_PACKAGE_JSON" \
+  --out "$FRESH_OWNER_ONLY_ASSESSMENT_ROOT/private-separation-reviewed-output-import-assessment.json"
+```
+
 The next fail-closed builder is already implemented, but it must not run for
 the retained result because zero variants are eligible. For a future genuinely
 passing result it re-resolves that same export and includes **every** eligible

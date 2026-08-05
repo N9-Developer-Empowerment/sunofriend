@@ -136,6 +136,31 @@ def _bind_private_separation_render_review_equivalence(
     return {**document, "report": str(output)}
 
 
+def _load_verified_render_review_equivalence(
+    value: str | Path,
+    *,
+    reviewed_export_path: str | Path,
+    reviewed_package_dir: str | Path,
+    candidate_package_report_path: str | Path,
+) -> dict[str, Any]:
+    """Rebuild and verify one persisted equivalence record from its evidence."""
+
+    snapshot = _load_private_json_snapshot(value, "render review-equivalence record")
+    with tempfile.TemporaryDirectory(prefix="sunofriend-verify-equivalence-") as name:
+        temporary = Path(name)
+        temporary.chmod(0o700)
+        rebuilt = _bind_private_separation_render_review_equivalence(
+            reviewed_export_path,
+            reviewed_package_dir=reviewed_package_dir,
+            candidate_package_report_path=candidate_package_report_path,
+            out=temporary / REPORT_NAME,
+        )
+    expected = {key: item for key, item in rebuilt.items() if key != "report"}
+    if snapshot["document"] != expected:
+        raise ValueError("render review-equivalence record differs")
+    return snapshot
+
+
 def _load_candidate_package(value: str | Path) -> dict[str, Any]:
     snapshot = _load_private_json_snapshot(value, "developer review-package report")
     document = snapshot["document"]

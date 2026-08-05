@@ -77,6 +77,68 @@ def test_pcm24_comparator_counts_one_lsb_difference(tmp_path: Path) -> None:
     assert result["rms_pcm24_lsb_difference"] == 0.5
 
 
+def test_rebuilds_persisted_equivalence_before_reuse(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    document = {"schema": equivalence.SCHEMA, "document_sha256": "1" * 64}
+    monkeypatch.setattr(
+        equivalence,
+        "_load_private_json_snapshot",
+        lambda *_args: {
+            "path": tmp_path / equivalence.REPORT_NAME,
+            "sha256": "2" * 64,
+            "document": deepcopy(document),
+        },
+    )
+    monkeypatch.setattr(
+        equivalence,
+        "_bind_private_separation_render_review_equivalence",
+        lambda *_args, **_kwargs: {**deepcopy(document), "report": "temporary"},
+    )
+
+    result = equivalence._load_verified_render_review_equivalence(
+        tmp_path / equivalence.REPORT_NAME,
+        reviewed_export_path=tmp_path / "review.json",
+        reviewed_package_dir=tmp_path / "reviewed",
+        candidate_package_report_path=tmp_path / "candidate.json",
+    )
+
+    assert result["document"] == document
+
+
+def test_rejects_persisted_equivalence_that_rebuilds_differently(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        equivalence,
+        "_load_private_json_snapshot",
+        lambda *_args: {
+            "path": tmp_path / equivalence.REPORT_NAME,
+            "sha256": "2" * 64,
+            "document": {"schema": equivalence.SCHEMA},
+        },
+    )
+    monkeypatch.setattr(
+        equivalence,
+        "_bind_private_separation_render_review_equivalence",
+        lambda *_args, **_kwargs: {
+            "schema": equivalence.SCHEMA,
+            "document_sha256": "1" * 64,
+            "report": "temporary",
+        },
+    )
+
+    with pytest.raises(ValueError, match="record differs"):
+        equivalence._load_verified_render_review_equivalence(
+            tmp_path / equivalence.REPORT_NAME,
+            reviewed_export_path=tmp_path / "review.json",
+            reviewed_package_dir=tmp_path / "reviewed",
+            candidate_package_report_path=tmp_path / "candidate.json",
+        )
+
+
 def _run(context: dict[str, Path]) -> dict[str, object]:
     return equivalence._bind_private_separation_render_review_equivalence(
         context["reviewed_export"],
