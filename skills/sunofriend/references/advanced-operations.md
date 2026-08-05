@@ -2556,11 +2556,19 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   creator-authorized `Tell Me That I Do It Bitch` track under
   `work/separation-bakeoff/tell-me-that-i-do-it-bitch-song-disjoint-private-pilot-pipeline-v5-py313`.
   Its 13 request-bound chunks, exact PCM24 stitch and nine-window alignment gate
-  passed, but these are automatic timing and integrity checks only. Human review
-  of all three complete-song roles and 12 joins is pending at
-  `STITCH/BOUNDARY-REVIEW/separation_boundary_review.html`. Do not resolve a
-  result, build a handoff or add it to the cross-song ledger until the listener
-  exports a complete review. No product or publication route is enabled.
+  passed. Its exact human review is also complete: all three full-song roles
+  were useful; vocals had audible joins at boundaries 5 and 9, instrumental at
+  5, 7, 8, 9, 11 and 12, reconstruction was clean at every boundary and no
+  rating was uncertain. Preserve those eight audible joins as diagnostics.
+  The resolved result authorizes only this exact private output and the exact
+  handoff keeps byte-identical vocals/instrumental primary plus reconstruction
+  diagnostic, with no source copy. Coverage v3 now verifies both this pilot and
+  `In the way`: two song-disjoint pilots, three distinct sources including the
+  pragmatic reference, 27 boundaries and 81 role-boundary judgements (68
+  clean, 13 audible, zero uncertain). The separately bounded private-route
+  design checkpoint is met. This is not separator selection, general accuracy,
+  product integration or publication permission; every public route remains
+  disabled.
   Use the read-only bounded queue when review exports are difficult to track:
   `scripts/private-separation-song-disjoint-pilot-review-queue.py PIPELINE_ROOT
   --review-dir "$HOME/Downloads"`. Repeat the pipeline root, `--review` or

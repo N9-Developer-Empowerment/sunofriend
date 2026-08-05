@@ -3782,8 +3782,13 @@ correlation of `1.0`; that proves reconstruction timing only, not separator
 quality. The path-free automatic evidence has document SHA-256
 `497938094e056e9cdc62f58e7662a873c9d5e5c7aebfd7ed806c7e61ea5f71d2`.
 
-Human listening is intentionally still pending. Review the three complete-song
-outputs and all 12 joins at:
+Human listening is now complete. The exact owner-only export resolved with all
+three complete-song roles rated `useful`; vocals had audible joins at
+boundaries 5 and 9, instrumental at 5, 7, 8, 9, 11 and 12, reconstruction was
+clean at all 12 boundaries, and there were no `cannot_tell` ratings. The
+bounded private-pilot policy therefore authorizes only this exact reviewed
+output while retaining all eight audible joins as diagnostics. The immutable
+review page remains at:
 
 ```text
 work/separation-bakeoff/tell-me-that-i-do-it-bitch-song-disjoint-private-pilot-pipeline-v5-py313/STITCH/BOUNDARY-REVIEW/separation_boundary_review.html
@@ -3802,21 +3807,41 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
   --review-dir "$HOME/Downloads"
 ```
 
-The current result is `human_review_pending`: three reviewed exports were found
-in Downloads, but all bind to other package commitments. The queue does not
-reinterpret or complete a review. A matching export must be owner-only before
-it is verified, and a verified export remains unresolved until the separate
-review resolver is run deliberately. Use `--out` only with a fresh owner-only
-directory and the fixed filename
+The queue matched the completed export by package commitment, required it to
+be made owner-only and verified it before resolution. It does not reinterpret
+or complete a review. Use `--out` only with a fresh owner-only directory and
+the fixed filename
 `private-separation-song-disjoint-pilot-review-queue.json`; the persisted report
 is path-free, while local paths and suggested commands appear only in terminal
 output.
 
-Only a complete exported review may be resolved into the second private-pilot
-result and exact two-stem handoff. After that, rebuild the coverage ledger with
-both song-disjoint pilots. Until those steps pass, this pilot adds automatic
-engineering evidence only and enables no Simple, Studio, TUI, CLI, source-graph,
-download or publication route.
+The resolved review result has file/document SHA-256 values
+`c89c57dbfdb50fd805c7bb876d2be1eb12d18eb00f53a5c3cf446855966ff61e`
+and
+`921a476d4df7cc17c6749832b44ce0970ad9ed580a746ea4cbee326e6f02f14e`.
+The exact two-stem handoff is at
+`work/separation-bakeoff/tell-me-that-i-do-it-bitch-song-disjoint-private-pilot-handoff-v1`.
+Its vocals and instrumental are byte-identical primary PCM24 copies,
+reconstruction is diagnostic, and source audio is absent. The manifest has
+file/document SHA-256 values
+`a15f8221f2295040f5f9ee5ebb8e361c2595b71c1f92811b7bfa79aae9d03f71`
+and
+`98c10191c0fb1e9ac92415ee3688351032d2d8542c852fe49e0b027615e3b3f1`.
+
+Coverage v3 now verifies the pragmatic reference plus two complete
+song-disjoint pilots over three distinct source hashes. Both pilots have
+useful complete-song vocals, instrumental and reconstruction, exact two-stem
+handoffs, 27 reviewed boundaries and 81 role-boundary judgements: 68 clean,
+13 audible joins and zero uncertain ratings. The ledger is at
+`work/separation-bakeoff/multi-song-private-pilot-coverage-v3/private-separation-multi-song-private-pilot-coverage.json`,
+with file/document SHA-256 values
+`a8af0362ec9f769203b285857e644231c5758b76f0736f9b61c00672cab37212`
+and
+`3229085f903d3574fd329b979a0e6ba4abc5b638cb61f34ce410c77b151b298d`.
+The predeclared two-song checkpoint for assessing a separately bounded
+private-only integration design is met. It does not itself select or accept a
+separator, establish ground-truth accuracy, activate a source graph, or enable
+Simple, Studio, TUI, CLI, download or publication.
 
 The next fail-closed builder is already implemented, but it must not run for
 the retained result because zero variants are eligible. For a future genuinely
