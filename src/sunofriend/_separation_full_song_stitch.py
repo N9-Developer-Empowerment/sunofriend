@@ -71,8 +71,21 @@ def _stitch_private_separation_full_song(
         or execution.get("summary", {}).get("all_worker_runs_complete") is not True
     ):
         raise ValueError("private full-song execution is incomplete")
-    _verify_state_binding(execution, plan=plan, plan_sha256=plan_sha256)
-    _verify_completed_attempts(execution_path.parent, execution, plan)
+    request_binding = execution.get("bindings", {}).get("private_pilot_request")
+    if request_binding is not None and not isinstance(request_binding, Mapping):
+        raise ValueError("private full-song stitch request binding differs")
+    _verify_state_binding(
+        execution,
+        plan=plan,
+        plan_sha256=plan_sha256,
+        private_pilot_request_binding=request_binding,
+    )
+    _verify_completed_attempts(
+        execution_path.parent,
+        execution,
+        plan,
+        private_pilot_request_binding=request_binding,
+    )
 
     destination = Path(out_dir).expanduser().absolute()
     if os.path.lexists(destination):
@@ -143,6 +156,11 @@ def _stitch_private_separation_full_song(
                 "execution_report_sha256": execution_sha256,
                 "execution_state_sha256": execution["state_sha256"],
                 "canonical_pcm24_int32_sequence_sha256": plan["canonical_clock"]["pcm24_int32_sequence_sha256"],
+                **(
+                    {"private_pilot_request": dict(request_binding)}
+                    if request_binding is not None
+                    else {}
+                ),
             },
             "clock": {
                 "sample_rate": TARGET_SAMPLE_RATE,

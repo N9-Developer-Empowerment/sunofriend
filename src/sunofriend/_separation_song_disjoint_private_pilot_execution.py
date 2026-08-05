@@ -176,6 +176,66 @@ def _private_pilot_request_binding(
     }
 
 
+def _load_verified_song_disjoint_private_pilot_completion_binding(
+    value: str | Path,
+    *,
+    loaded_request: Mapping[str, Any],
+    execution_report_path: str | Path,
+) -> dict[str, Any]:
+    """Load one complete request-to-execution binding without replaying it."""
+
+    path = Path(value).expanduser().absolute()
+    _require_private_regular(path, "private pilot completion binding")
+    if path.name != REPORT_NAME:
+        raise ValueError("private pilot completion binding filename differs")
+    execution_report = Path(execution_report_path).expanduser().absolute()
+    _require_private_regular(
+        execution_report,
+        "request-bound private full-song execution report",
+    )
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+        execution_state = json.loads(execution_report.read_text(encoding="utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError("private pilot completion binding JSON differs") from error
+    expected_bindings = {
+        **_private_pilot_request_binding(loaded_request),
+        "plan_report_sha256": loaded_request["plan_sha256"],
+        "plan_document_sha256": loaded_request["plan"]["document_sha256"],
+        "execution_report_sha256": _sha256(execution_report),
+        "execution_state_sha256": execution_state.get("state_sha256"),
+    }
+    if (
+        not isinstance(document, dict)
+        or document.get("schema") != SCHEMA
+        or document.get("status") != STATUS
+        or document.get("evidence_scope") != "private_development_only"
+        or document.get("document_sha256") != _document_sha256(document)
+        or document.get("bindings") != expected_bindings
+        or document.get("summary") != execution_state.get("summary")
+        or document.get("summary", {}).get("all_worker_runs_complete") is not True
+        or document.get("summary", {}).get("remaining_chunks") != 0
+        or document.get("readiness")
+        != {
+            "request_bound_worker_runs_complete": True,
+            "stitch_complete": False,
+            "human_review_complete": False,
+            "separator_selected_or_accepted": False,
+            "publication_ready": False,
+        }
+        or document.get("permissions") != _FALSE_PERMISSIONS
+    ):
+        raise ValueError("private pilot completion binding differs")
+    return {
+        "path": path,
+        "sha256": _sha256(path),
+        "document": document,
+        "execution_path": execution_report,
+        "execution_sha256": _sha256(execution_report),
+        "execution_document": execution_state,
+    }
+
+
 def _write_or_verify_completion_binding(
     root: Path,
     *,

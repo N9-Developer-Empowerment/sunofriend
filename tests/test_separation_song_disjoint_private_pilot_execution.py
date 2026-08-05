@@ -52,8 +52,9 @@ def test_request_bound_execution_writes_completion_only_after_all_chunks(
 
     def partial(*args: Any, **kwargs: Any) -> Mapping[str, Any]:
         observed.append(kwargs["private_pilot_request_binding"])
-        _write_execution_report(out, "1" * 64)
-        return _state(complete=False)
+        state = _state(complete=False)
+        _write_execution_report(out, state)
+        return state
 
     first = execution._execute_song_disjoint_private_pilot_request(
         "request.json",
@@ -65,7 +66,7 @@ def test_request_bound_execution_writes_completion_only_after_all_chunks(
     assert not (out / execution.REPORT_NAME).exists()
 
     state = _state(complete=True)
-    _write_execution_report(out, state["state_sha256"])
+    _write_execution_report(out, state)
 
     def complete(*args: Any, **kwargs: Any) -> Mapping[str, Any]:
         observed.append(kwargs["private_pilot_request_binding"])
@@ -83,6 +84,14 @@ def test_request_bound_execution_writes_completion_only_after_all_chunks(
     assert report.is_file()
     assert json.loads(report.read_text(encoding="utf-8"))["status"] == execution.STATUS
     assert observed[0] == observed[1]
+    verified = (
+        execution._load_verified_song_disjoint_private_pilot_completion_binding(
+            report,
+            loaded_request=loaded,
+            execution_report_path=out / EXECUTION_REPORT_NAME,
+        )
+    )
+    assert verified["document"]["bindings"]["request_report_sha256"] == "1" * 64
 
     repeated = execution._execute_song_disjoint_private_pilot_request(
         "request.json",
@@ -222,10 +231,13 @@ def _state(*, complete: bool) -> dict[str, Any]:
     return state
 
 
-def _write_execution_report(root: Path, state_sha256: str) -> None:
+def _write_execution_report(root: Path, state: Mapping[str, Any]) -> None:
     root.mkdir(parents=True, exist_ok=True)
     root.chmod(0o700)
-    document = {"state_sha256": state_sha256}
+    document = {
+        "state_sha256": state["state_sha256"],
+        "summary": state["summary"],
+    }
     document["document_sha256"] = _document_sha256(document)
     path = root / EXECUTION_REPORT_NAME
     path.write_text(json.dumps(document) + "\n", encoding="utf-8")

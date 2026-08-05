@@ -28,8 +28,10 @@ def test_automatic_pilot_envelope_stays_pending_and_path_free(
     result = pilot._bind_song_disjoint_private_pilot_evidence(
         "authorization.json",
         reference_v2_execution_path="reference.json",
+        pilot_request_path="request.json",
         plan_report_path="plan.json",
         execution_report_path="execution.json",
+        request_completion_binding_path="completion.json",
         stitch_package_dir="stitch",
         alignment_result_path="alignment.json",
         out=output,
@@ -40,6 +42,7 @@ def test_automatic_pilot_envelope_stays_pending_and_path_free(
         "authorization_bound": True,
         "source_distinct_from_authorization_reference": True,
         "automatic_execution_chain_verified": True,
+        "request_bound_execution_verified": True,
         "exact_source_clock_verified": True,
         "alignment_gate_passed": True,
         "human_full_song_and_boundary_review_complete": False,
@@ -60,6 +63,56 @@ def test_automatic_pilot_envelope_stays_pending_and_path_free(
     loaded = pilot._load_verified_song_disjoint_private_pilot_evidence(output)
     assert loaded["sha256"]
     assert loaded["document"]["document_sha256"] == result["document_sha256"]
+
+
+def test_legacy_automatic_pilot_envelope_remains_readable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    os.chmod(tmp_path, 0o700)
+    context = _context(tmp_path)
+    monkeypatch.setattr(pilot, "_load_context", lambda *args, **kwargs: context)
+    monkeypatch.setattr(pilot, "_require_output_disjoint", lambda *args, **kwargs: None)
+    output = tmp_path / "result" / pilot.REPORT_NAME
+    pilot._bind_song_disjoint_private_pilot_evidence(
+        "authorization.json",
+        reference_v2_execution_path="reference.json",
+        pilot_request_path="request.json",
+        plan_report_path="plan.json",
+        execution_report_path="execution.json",
+        request_completion_binding_path="completion.json",
+        stitch_package_dir="stitch",
+        alignment_result_path="alignment.json",
+        out=output,
+    )
+    legacy = json.loads(output.read_text(encoding="utf-8"))
+    legacy["schema"] = pilot._LEGACY_SCHEMA
+    legacy["policy_id"] = pilot._LEGACY_POLICY_ID
+    for key in (
+        "pilot_request_sha256",
+        "pilot_request_document_sha256",
+        "pilot_completion_binding_sha256",
+        "pilot_completion_binding_document_sha256",
+    ):
+        legacy["bindings"].pop(key)
+    legacy["automatic_execution"].pop("request_bound_execution_verified")
+    legacy["automatic_execution"].pop("request_schema")
+    legacy["automatic_execution"].pop("request_policy_id")
+    legacy["readiness"].pop("request_bound_execution_verified")
+    legacy["limitations"] = [
+        item
+        for item in legacy["limitations"]
+        if not item.startswith("The request and completion binding")
+    ]
+    legacy["document_sha256"] = _document_sha256(legacy)
+    output.write_text(
+        json.dumps(legacy, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    loaded = pilot._load_verified_song_disjoint_private_pilot_evidence(output)
+
+    assert loaded["document"]["schema"] == pilot._LEGACY_SCHEMA
 
 
 def test_reference_execution_must_be_exactly_bound_by_authorization(
@@ -125,6 +178,12 @@ def _context(root: Path) -> dict[str, object]:
         "document_sha256": "d" * 64,
         "bindings": {"source_audio_sha256": reference_sha},
     }
+    request_document = {
+        "schema": "sunofriend.private-separation-song-disjoint-pilot-request.v2",
+        "policy_id": "source-bound-song-disjoint-private-pilot-request-v2",
+        "document_sha256": "7" * 64,
+    }
+    completion_document = {"document_sha256": "8" * 64}
     plan = {
         "document_sha256": "e" * 64,
         "policy_id": "contiguous-canonical-44100-worker-chunks-v1",
@@ -198,6 +257,11 @@ def _context(root: Path) -> dict[str, object]:
             "sha256": "3" * 64,
             "document": reference_document,
         },
+        "request": {
+            "path": root / "request.json",
+            "sha256": "4" * 64,
+            "document": request_document,
+        },
         "plan_path": root / "plan.json",
         "plan": plan,
         "plan_sha256": plan_sha,
@@ -205,6 +269,11 @@ def _context(root: Path) -> dict[str, object]:
             "path": root / "execution.json",
             "sha256": execution_sha,
             "document": execution_document,
+        },
+        "completion": {
+            "path": root / "completion.json",
+            "sha256": "0" * 64,
+            "document": completion_document,
         },
         "stitch_package": root / "stitch",
         "stitch_path": root / "stitch" / "private-separation-full-song-stitch.json",

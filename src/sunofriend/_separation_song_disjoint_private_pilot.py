@@ -57,11 +57,15 @@ from ._separation_pragmatic_private_pilot import (
 )
 
 
-SCHEMA = "sunofriend.private-separation-song-disjoint-pilot-evidence.v1"
+_LEGACY_SCHEMA = "sunofriend.private-separation-song-disjoint-pilot-evidence.v1"
+SCHEMA = "sunofriend.private-separation-song-disjoint-pilot-evidence.v2"
 STATUS = "automatic_pilot_evidence_complete_human_review_pending"
-POLICY_ID = "source-distinct-pragmatic-private-pilot-binding-v1"
+_LEGACY_POLICY_ID = "source-distinct-pragmatic-private-pilot-binding-v1"
+POLICY_ID = "request-bound-source-distinct-private-pilot-evidence-v2"
 REPORT_NAME = "private-separation-song-disjoint-pilot-evidence.json"
 _PLAN_POLICY_ID = "contiguous-canonical-44100-worker-chunks-v1"
+_REQUEST_SCHEMA = "sunofriend.private-separation-song-disjoint-pilot-request.v2"
+_REQUEST_POLICY_ID = "source-bound-song-disjoint-private-pilot-request-v2"
 _REFERENCE_FALSE_PERMISSIONS = {
     "accepted": False,
     "automatic_selection": False,
@@ -88,8 +92,10 @@ def _bind_song_disjoint_private_pilot_evidence(
     pragmatic_authorization_path: str | Path,
     *,
     reference_v2_execution_path: str | Path,
+    pilot_request_path: str | Path,
     plan_report_path: str | Path,
     execution_report_path: str | Path,
+    request_completion_binding_path: str | Path,
     stitch_package_dir: str | Path,
     alignment_result_path: str | Path,
     out: str | Path,
@@ -112,8 +118,10 @@ def _bind_song_disjoint_private_pilot_evidence(
     context = _load_context(
         pragmatic_authorization_path,
         reference_v2_execution_path=reference_v2_execution_path,
+        pilot_request_path=pilot_request_path,
         plan_report_path=plan_report_path,
         execution_report_path=execution_report_path,
+        request_completion_binding_path=request_completion_binding_path,
         stitch_package_dir=stitch_package_dir,
         alignment_result_path=alignment_result_path,
     )
@@ -144,10 +152,18 @@ def _bind_song_disjoint_private_pilot_evidence(
                 "document_sha256"
             ],
             "reference_source_audio_sha256": reference_source_sha256,
+            "pilot_request_sha256": context["request"]["sha256"],
+            "pilot_request_document_sha256": context["request"]["document"][
+                "document_sha256"
+            ],
             "pilot_plan_sha256": context["plan_sha256"],
             "pilot_plan_document_sha256": plan["document_sha256"],
             "pilot_execution_sha256": context["execution"]["sha256"],
             "pilot_execution_state_sha256": execution["state_sha256"],
+            "pilot_completion_binding_sha256": context["completion"]["sha256"],
+            "pilot_completion_binding_document_sha256": context["completion"][
+                "document"
+            ]["document_sha256"],
             "pilot_stitch_sha256": context["stitch_sha256"],
             "pilot_stitch_document_sha256": stitch["document_sha256"],
             "pilot_alignment_sha256": context["alignment"]["sha256"],
@@ -179,6 +195,9 @@ def _bind_song_disjoint_private_pilot_evidence(
             "musical_identity_inferred_from_hash": False,
         },
         "automatic_execution": {
+            "request_bound_execution_verified": True,
+            "request_schema": context["request"]["document"]["schema"],
+            "request_policy_id": context["request"]["document"]["policy_id"],
             "plan_policy_id": plan["policy_id"],
             "checkpoint_sha256": execution["bindings"]["checkpoint_sha256"],
             "chunk_count": len(plan["chunks"]),
@@ -205,6 +224,7 @@ def _bind_song_disjoint_private_pilot_evidence(
             "authorization_bound": True,
             "source_distinct_from_authorization_reference": True,
             "automatic_execution_chain_verified": True,
+            "request_bound_execution_verified": True,
             "exact_source_clock_verified": True,
             "alignment_gate_passed": True,
             "human_full_song_and_boundary_review_complete": False,
@@ -225,6 +245,7 @@ def _bind_song_disjoint_private_pilot_evidence(
             "The hash comparison proves different bound source bytes, not musical identity or quality.",
             "Alignment proves source-clock synchronization, not vocal retention, bleed, artefact level or musical usefulness.",
             "The existing complete-song and 15-boundary listening review remains required.",
+            "The request and completion binding prove execution provenance, not separator quality.",
             "This report does not enable Simple, Studio, TUI, CLI, source-graph, download or publication routes.",
             "Private evidence files are rechecked serially rather than held as one atomic filesystem snapshot.",
         ],
@@ -234,8 +255,10 @@ def _bind_song_disjoint_private_pilot_evidence(
     rechecked = _load_context(
         pragmatic_authorization_path,
         reference_v2_execution_path=reference_v2_execution_path,
+        pilot_request_path=pilot_request_path,
         plan_report_path=plan_report_path,
         execution_report_path=execution_report_path,
+        request_completion_binding_path=request_completion_binding_path,
         stitch_package_dir=stitch_package_dir,
         alignment_result_path=alignment_result_path,
     )
@@ -264,10 +287,15 @@ def _load_verified_song_disjoint_private_pilot_evidence(
     document = snapshot["document"]
     if (
         path.name != REPORT_NAME
-        or document.get("schema") != SCHEMA
+        or document.get("schema") not in {SCHEMA, _LEGACY_SCHEMA}
         or document.get("status") != STATUS
         or document.get("evidence_scope") != "private_development_only"
-        or document.get("policy_id") != POLICY_ID
+        or document.get("policy_id")
+        != (
+            POLICY_ID
+            if document.get("schema") == SCHEMA
+            else _LEGACY_POLICY_ID
+        )
         or document.get("document_sha256") != _document_sha256(document)
         or document.get("permissions") != _FALSE_PERMISSIONS
         or document.get("effects") != _EFFECTS
@@ -290,6 +318,7 @@ def _load_verified_song_disjoint_private_pilot_evidence(
     assert isinstance(automatic, Mapping)
     assert isinstance(distinction, Mapping)
 
+    schema = document.get("schema")
     required_hashes = {
         "pragmatic_authorization_sha256",
         "pragmatic_authorization_document_sha256",
@@ -308,6 +337,28 @@ def _load_verified_song_disjoint_private_pilot_evidence(
         "pilot_review_seed_sha256",
         "pilot_review_package_commitment",
     }
+    if schema == SCHEMA:
+        required_hashes.update(
+            {
+                "pilot_request_sha256",
+                "pilot_request_document_sha256",
+                "pilot_completion_binding_sha256",
+                "pilot_completion_binding_document_sha256",
+            }
+        )
+    expected_readiness = {
+        "authorization_bound": True,
+        "source_distinct_from_authorization_reference": True,
+        "automatic_execution_chain_verified": True,
+        "exact_source_clock_verified": True,
+        "alignment_gate_passed": True,
+        "human_full_song_and_boundary_review_complete": False,
+        "private_pilot_quality_conclusion_ready": False,
+        "public_product_acceptance_complete": False,
+        "publication_ready": False,
+    }
+    if schema == SCHEMA:
+        expected_readiness["request_bound_execution_verified"] = True
     clock = automatic.get("clock")
     if (
         set(bindings) != required_hashes
@@ -328,18 +379,7 @@ def _load_verified_song_disjoint_private_pilot_evidence(
         or human_review.get("full_song_quality_conclusion_available") is not False
         or human_review.get("boundary_acceptability_conclusion_available")
         is not False
-        or readiness
-        != {
-            "authorization_bound": True,
-            "source_distinct_from_authorization_reference": True,
-            "automatic_execution_chain_verified": True,
-            "exact_source_clock_verified": True,
-            "alignment_gate_passed": True,
-            "human_full_song_and_boundary_review_complete": False,
-            "private_pilot_quality_conclusion_ready": False,
-            "public_product_acceptance_complete": False,
-            "publication_ready": False,
-        }
+        or readiness != expected_readiness
         or not isinstance(clock, Mapping)
         or isinstance(clock.get("boundary_count"), bool)
         or not isinstance(clock.get("boundary_count"), int)
@@ -350,6 +390,25 @@ def _load_verified_song_disjoint_private_pilot_evidence(
         or automatic.get("stitch_complete") is not True
         or automatic.get("alignment_gate_passed") is not True
         or automatic.get("chunk_count") != clock.get("chunk_count")
+        or (
+            schema == SCHEMA
+            and (
+                automatic.get("request_bound_execution_verified") is not True
+                or automatic.get("request_schema") != _REQUEST_SCHEMA
+                or automatic.get("request_policy_id") != _REQUEST_POLICY_ID
+            )
+        )
+        or (
+            schema == _LEGACY_SCHEMA
+            and any(
+                key in automatic
+                for key in (
+                    "request_bound_execution_verified",
+                    "request_schema",
+                    "request_policy_id",
+                )
+            )
+        )
     ):
         raise ValueError("song-disjoint private pilot evidence differs")
     return snapshot
@@ -359,11 +418,23 @@ def _load_context(
     pragmatic_authorization_path: str | Path,
     *,
     reference_v2_execution_path: str | Path,
+    pilot_request_path: str | Path,
     plan_report_path: str | Path,
     execution_report_path: str | Path,
+    request_completion_binding_path: str | Path,
     stitch_package_dir: str | Path,
     alignment_result_path: str | Path,
 ) -> dict[str, Any]:
+    # Imported lazily because the request verifier reuses the reference loader
+    # in this module while the execution verifier consumes the request.
+    from ._separation_song_disjoint_private_pilot_execution import (
+        _load_verified_song_disjoint_private_pilot_completion_binding,
+        _private_pilot_request_binding,
+    )
+    from ._separation_song_disjoint_private_pilot_request import (
+        _load_verified_song_disjoint_private_pilot_request,
+    )
+
     authorization = _load_verified_pragmatic_private_pilot(
         pragmatic_authorization_path
     )
@@ -374,10 +445,25 @@ def _load_context(
     plan_path, plan, plan_sha256 = _load_verified_plan(plan_report_path)
     if plan.get("policy_id") != _PLAN_POLICY_ID:
         raise ValueError("song-disjoint pilot plan policy differs")
+    request = _load_verified_song_disjoint_private_pilot_request(
+        pilot_request_path
+    )
+    if (
+        request["plan_sha256"] != plan_sha256
+        or request["plan"]["document_sha256"] != plan["document_sha256"]
+    ):
+        raise ValueError("song-disjoint pilot request plan differs")
+    request_binding = _private_pilot_request_binding(request)
     execution = _load_verified_execution(
         execution_report_path,
         plan=plan,
         plan_sha256=plan_sha256,
+        request_binding=request_binding,
+    )
+    completion = _load_verified_song_disjoint_private_pilot_completion_binding(
+        request_completion_binding_path,
+        loaded_request=request,
+        execution_report_path=execution_report_path,
     )
     stitch_package = Path(stitch_package_dir).expanduser().absolute()
     _require_private_directory(stitch_package, "song-disjoint pilot stitch package")
@@ -390,6 +476,7 @@ def _load_context(
         plan_sha256=plan_sha256,
         execution=execution["document"],
         execution_sha256=execution["sha256"],
+        request_binding=request_binding,
     )
     alignment = _load_verified_alignment(
         alignment_result_path,
@@ -406,10 +493,12 @@ def _load_context(
     return {
         "authorization": authorization,
         "reference": reference,
+        "request": request,
         "plan_path": plan_path,
         "plan": plan,
         "plan_sha256": plan_sha256,
         "execution": execution,
+        "completion": completion,
         "stitch_package": stitch_package,
         "stitch_path": stitch_path,
         "stitch": stitch,
@@ -458,6 +547,7 @@ def _load_verified_execution(
     *,
     plan: Mapping[str, Any],
     plan_sha256: str,
+    request_binding: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     snapshot = _load_private_json_snapshot(value, "song-disjoint pilot execution")
     document = snapshot["document"]
@@ -472,8 +562,18 @@ def _load_verified_execution(
         or document.get("summary", {}).get("verified_chunks") != len(plan["chunks"])
     ):
         raise ValueError("song-disjoint pilot execution differs")
-    _verify_state_binding(document, plan=plan, plan_sha256=plan_sha256)
-    _verify_completed_attempts(snapshot["path"].parent, document, plan)
+    _verify_state_binding(
+        document,
+        plan=plan,
+        plan_sha256=plan_sha256,
+        private_pilot_request_binding=request_binding,
+    )
+    _verify_completed_attempts(
+        snapshot["path"].parent,
+        document,
+        plan,
+        private_pilot_request_binding=request_binding,
+    )
     return snapshot
 
 
@@ -484,6 +584,7 @@ def _verify_stitch_chain(
     plan_sha256: str,
     execution: Mapping[str, Any],
     execution_sha256: str,
+    request_binding: Mapping[str, Any] | None = None,
 ) -> None:
     bindings = stitch.get("bindings")
     clock = stitch.get("clock")
@@ -495,6 +596,7 @@ def _verify_stitch_chain(
         or bindings.get("execution_state_sha256") != execution["state_sha256"]
         or bindings.get("canonical_pcm24_int32_sequence_sha256")
         != plan["canonical_clock"]["pcm24_int32_sequence_sha256"]
+        or bindings.get("private_pilot_request") != request_binding
         or not isinstance(clock, Mapping)
         or clock.get("sample_rate") != plan["canonical_clock"]["sample_rate"]
         or clock.get("channels") != plan["canonical_clock"]["channels"]
@@ -588,8 +690,10 @@ def _context_identity(context: Mapping[str, Any]) -> tuple[str, ...]:
     return (
         context["authorization"]["sha256"],
         context["reference"]["sha256"],
+        context["request"]["sha256"],
         context["plan_sha256"],
         context["execution"]["sha256"],
+        context["completion"]["sha256"],
         context["stitch_sha256"],
         context["alignment"]["sha256"],
         context["review_seed_sha256"],
@@ -600,8 +704,10 @@ def _require_output_disjoint(output: Path, *, context: Mapping[str, Any]) -> Non
     inputs = (
         context["authorization"]["path"],
         context["reference"]["path"],
+        context["request"]["path"],
         context["plan_path"],
         context["execution"]["path"],
+        context["completion"]["path"],
         context["stitch_package"],
         context["alignment"]["path"],
     )

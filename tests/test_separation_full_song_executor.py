@@ -539,6 +539,33 @@ def test_full_song_stitch_preserves_clock_and_prepares_review(tmp_path: Path) ->
     }
 
 
+def test_full_song_stitch_preserves_request_bound_provenance(
+    tmp_path: Path,
+) -> None:
+    plan = _plan(tmp_path)
+    runtime = _runtime_arguments(tmp_path)
+    execution = tmp_path / "execution"
+    binding = _request_binding()
+    _execute_private_separation_full_song_queue(
+        plan,
+        out_dir=execution,
+        **runtime,
+        maximum_chunks=None,
+        private_pilot_request_binding=binding,
+        attempt_runner=_fake_runner([]),
+    )
+
+    result = _stitch_private_separation_full_song(
+        plan,
+        execution / REPORT_NAME,
+        out_dir=tmp_path / "stitch",
+    )
+
+    assert result["bindings"]["private_pilot_request"] == {
+        key: binding[key] for key in sorted(binding)
+    }
+
+
 def _completed_full_song_review(seed_path: Path, output: Path) -> Path:
     review = json.loads(seed_path.read_text(encoding="utf-8"))
     review["status"] = "reviewed"

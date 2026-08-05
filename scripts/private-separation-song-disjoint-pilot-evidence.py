@@ -15,8 +15,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pragmatic-authorization", required=True)
     parser.add_argument("--reference-v2-execution", required=True)
+    parser.add_argument("--pilot-request", required=True)
     parser.add_argument("--plan", required=True)
     parser.add_argument("--execution", required=True)
+    parser.add_argument("--request-completion-binding", required=True)
     parser.add_argument("--stitch-package-dir", required=True)
     parser.add_argument("--alignment-result", required=True)
     parser.add_argument("--out", required=True)
@@ -24,8 +26,10 @@ def main() -> int:
     result = _bind_song_disjoint_private_pilot_evidence(
         args.pragmatic_authorization,
         reference_v2_execution_path=args.reference_v2_execution,
+        pilot_request_path=args.pilot_request,
         plan_report_path=args.plan,
         execution_report_path=args.execution,
+        request_completion_binding_path=args.request_completion_binding,
         stitch_package_dir=args.stitch_package_dir,
         alignment_result_path=args.alignment_result,
         out=args.out,

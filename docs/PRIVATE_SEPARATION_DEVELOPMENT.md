@@ -3488,12 +3488,12 @@ the same checkpoint, source-manifest, companion-manifest and worker hashes.
 Only after all chunks verify does the adapter write a path-free completion
 binding; this is execution identity evidence, not separation acceptance.
 
-The no-inference v2 exercise is at
-`work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-request-v4-request-bound`.
+The current no-inference v2 exercise is at
+`work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-request-v5-request-bound`.
 It reproduced the same 9,961,340-frame, 16-chunk plan. Its request file SHA-256
-is `39b46ec2308084dec05ad3ffee9b66cfdf22f141dcd37de3ae88a8277013be75`
+is `e1a3ff3c5f0c5b79a466a5a882bee19a4ddb31a0ece17b2aad8dd4e7ae19a9a3`
 and its document SHA-256 is
-`2d9071f0e973dd4893cb1cb41a5781abb5b9359eb21e1aacdddf04f5bb31d5d1`.
+`03c9f1d21330298823b448a01cab3de63c9fda2a486787be60bf74506d5c34d5`.
 The request-aware `--preflight` passed against the exact local Kim environment,
 reported `execution_root_created: false` and `model_run: false`, and left the
 existing completed execution and pending human review untouched.
@@ -3530,6 +3530,13 @@ command with `--preflight`. The adapter re-verifies the sealed environment
 before a worker can start, and every worker independently verifies its runtime
 inputs; request preparation is not a substitute for execution-time isolation.
 
+The ordinary full-song stitcher now recognizes a verified request binding
+already sealed into execution state. It rechecks every completed attempt with
+that binding and carries the unchanged path-free request identity into the
+stitch report. An unbound historical execution still produces the byte-for-byte
+legacy binding shape. This permits one implementation to support both chains
+without weakening the guarded resume rule.
+
 The automatic chain is now sealed into one path-free, owner-only envelope at
 `work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-evidence-v1/private-separation-song-disjoint-pilot-evidence.json`.
 It re-verifies the pragmatic authorization, its exact Be Alone v2 reference
@@ -3544,11 +3551,18 @@ musical identity or quality. The report file SHA-256 is
 `7a5ef59bf133a828eb1ef8af6e9731984918dbbb1bb2694137c5b94e487ccce8`
 and its document SHA-256 is
 `56595ba6ba7cca094bbe20d09e11ad6e5f75e239df2b7e1414ffb338d17ec632`.
-Its authoritative status is
+Its authoritative v1 status is
 `automatic_pilot_evidence_complete_human_review_pending`: automatic evidence
-is complete, while quality acceptance and every public route remain false.
+is complete, while quality acceptance and every public route remain false. The
+v1 loader remains supported so the outstanding human review and its later
+resolver are not invalidated.
 
-Reproduce the envelope without running a model or changing the review:
+Future automatic envelopes use v2. They additionally require the sealed pilot
+request and the completion binding written only after every request-bound chunk
+verifies. They reject a generic or retrospectively labelled execution, require
+the stitch to carry the same request identity, and keep human review pending.
+Build a future envelope without running another model or changing its review
+after that guarded execution is complete:
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
@@ -3557,14 +3571,12 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
     work/separation-bakeoff/be-alone-pragmatic-private-pilot-v1/private-separation-pragmatic-private-pilot.json \
   --reference-v2-execution \
     work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2/private-separation-full-song-join-remediation-execution-v2.json \
-  --plan \
-    work/separation-bakeoff/in-the-way-full-song-kim-plan-v2/private-separation-full-song-plan.json \
-  --execution \
-    work/separation-bakeoff/in-the-way-full-song-kim-execution-v2/private-separation-full-song-execution.json \
-  --stitch-package-dir \
-    work/separation-bakeoff/in-the-way-full-song-kim-stitch-v1-private-pilot-review \
-  --alignment-result \
-    work/separation-bakeoff/in-the-way-full-song-kim-alignment-v1/private-separation-full-song-alignment.json \
+  --pilot-request "$PRIVATE_PILOT_REQUEST" \
+  --plan "$PRIVATE_PILOT_PLAN" \
+  --execution "$REQUEST_BOUND_EXECUTION" \
+  --request-completion-binding "$REQUEST_COMPLETION_BINDING" \
+  --stitch-package-dir "$REQUEST_BOUND_STITCH_PACKAGE" \
+  --alignment-result "$REQUEST_BOUND_ALIGNMENT" \
   --out \
     "$FRESH_PRIVATE_ROOT/private-separation-song-disjoint-pilot-evidence.json"
 ```

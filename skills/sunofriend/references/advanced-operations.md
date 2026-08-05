@@ -2453,8 +2453,11 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   existing `In the way` v1 request dry run is duplicate validation evidence
   only and does not replace the completed v2 execution or its pending human
   review. A later no-inference v2 request/preflight at
-  `work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-request-v4-request-bound`
+  `work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-request-v5-request-bound`
   verifies the request-aware path only; it also does not supersede that review.
+  The full-song stitcher recognizes the sealed request binding, re-verifies the
+  selected attempts against it and preserves it in the stitch report. Legacy
+  unbound stitch output remains readable and unchanged.
   The automatic chain is also bound by
   `scripts/private-separation-song-disjoint-pilot-evidence.py`. It verifies the
   pragmatic authorization, the exact reference v2 execution bound by that
@@ -2462,11 +2465,16 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   audio, the still-unreviewed page and the passing alignment. It requires the
   reference and pilot canonical source WAV hashes to differ and records that as
   source-content distinction only, not musical identity or quality. Its
-  current status is
+  retained v1 envelope and its current status are
   `automatic_pilot_evidence_complete_human_review_pending`; it runs no model,
   changes no review and enables no product route. A fresh alignment result
   directory must be owner-only; the alignment writer now creates a missing
   directory as mode `0700` and rejects an existing shared directory.
+  New envelopes use v2 and require `--pilot-request` plus
+  `--request-completion-binding`. The builder verifies that the plan, guarded
+  execution, completion binding and request-bearing stitch all share the exact
+  path-free request identity. The v1 loader stays available for the current
+  pending `In the way` review; do not relabel its historical unbound execution.
   After the listener exports the completed page, make that JSON owner-only and
   use `scripts/private-separation-song-disjoint-pilot-review.py --status` with
   the exact automatic envelope and stitch package. Status runs the generic
