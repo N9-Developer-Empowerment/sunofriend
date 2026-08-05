@@ -2297,9 +2297,12 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   `sealed_read_only_system_provider_cdhash_trust_unavailable` with
   `strict_code_signature_valid: false`; never report it as strict validation.
   The runtime launcher and observed process image still require strict validity
-  and matching static/kernel CDHashes. Use a private ignored Python 3.12 virtual
-  environment backed by a valid local runtime rather than changing the system
-  Python. The current 33-unit review is complete and resolved but failed its
+  and matching static/kernel CDHashes. Use a private ignored Python 3.12 or
+  3.13 virtual environment backed by a valid local runtime rather than changing
+  the system Python. Runtime-lock v2 binds the exact wheels for both Python
+  minors. If an existing runtime fails strict validation, use another exact
+  locked and strictly valid runtime; never bypass or weaken the signature gate.
+  The current 33-unit review is complete and resolved but failed its
   gate: six target boundaries preferred the follow-up, three were equivalent,
   boundary 10 vocals preferred v2, three patch-end pairs were neither, and all
   complete-song pairs passed. The all-boundary builder therefore remains
@@ -2549,6 +2552,15 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   even a separate private-route design may be assessed. The coverage report
   cannot authorize another run, select or accept a separator, or enable Simple,
   Studio, TUI, CLI, source graph, download or publication.
+  The second source-distinct automatic pilot is complete for the
+  creator-authorized `Tell Me That I Do It Bitch` track under
+  `work/separation-bakeoff/tell-me-that-i-do-it-bitch-song-disjoint-private-pilot-pipeline-v5-py313`.
+  Its 13 request-bound chunks, exact PCM24 stitch and nine-window alignment gate
+  passed, but these are automatic timing and integrity checks only. Human review
+  of all three complete-song roles and 12 joins is pending at
+  `STITCH/BOUNDARY-REVIEW/separation_boundary_review.html`. Do not resolve a
+  result, build a handoff or add it to the cross-song ledger until the listener
+  exports a complete review. No product or publication route is enabled.
   The downstream fail-closed builder is
   `scripts/private-separation-candidate-followup-variant-full-song-review.py`.
   Run it only after an exact 36-unit browser export has passed status, has

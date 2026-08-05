@@ -30,6 +30,9 @@ _MAXIMUM_RUNTIME_BYTES = 2_147_483_648
 _MAXIMUM_PYVENV_CONFIG_BYTES = 65_536
 _MAXIMUM_RUNTIME_PATH_BYTES = 4_096
 _PYTHON_VERSION_RE = re.compile(r"^3\.(?:9|10|11|12|13)(?:\.[0-9]+)?$")
+_VENV_LAUNCHER_NAME_RE = re.compile(
+    r"^python(?:3(?:\.[0-9]+)?)?(?:-private)?$"
+)
 
 
 def _measure_private_runtime_launcher(value: str | Path) -> Mapping[str, Any]:
@@ -48,7 +51,7 @@ def _measure_private_runtime_launcher(value: str | Path) -> Mapping[str, Any]:
         not launcher.is_absolute()
         or Path(os.path.normpath(raw_path)) != launcher
         or launcher.parent.name != "bin"
-        or not re.fullmatch(r"python(?:3(?:\.[0-9]+)?)?", launcher.name)
+        or not _VENV_LAUNCHER_NAME_RE.fullmatch(launcher.name)
     ):
         raise ValueError(
             "private Kim runtime launcher must be a canonical virtual-environment Python path"
@@ -126,9 +129,22 @@ def _measure_private_runtime_launcher(value: str | Path) -> Mapping[str, Any]:
         resolved_home = home.resolve(strict=True)
     except OSError as exc:
         raise ValueError("private Kim pyvenv home is unavailable") from exc
-    if resolved_runtime.parent != resolved_home:
-        raise ValueError("private Kim runtime target does not bind pyvenv home")
-    base_runtime_root = resolved_home.parent
+    if entry_kind == "symlink":
+        if not _symlink_runtime_binds_pyvenv_home(
+            resolved_runtime,
+            resolved_home=resolved_home,
+            python_version=config_values["version"],
+        ):
+            raise ValueError("private Kim runtime target does not bind pyvenv home")
+    elif resolved_runtime.parent != launcher.parent.resolve(strict=True):
+        raise ValueError(
+            "private Kim copied runtime must remain inside the virtual environment"
+        )
+    base_runtime_root = (
+        resolved_runtime.parent.parent
+        if entry_kind == "symlink"
+        else resolved_home.parent
+    )
     base_runtime = _measure_runtime_directory(
         base_runtime_root,
         label="private Kim base runtime",
@@ -155,6 +171,32 @@ def _measure_private_runtime_launcher(value: str | Path) -> Mapping[str, Any]:
         "runtime_bin": runtime_bin,
         "base_runtime": base_runtime,
     }
+
+
+def _symlink_runtime_binds_pyvenv_home(
+    runtime: Path,
+    *,
+    resolved_home: Path,
+    python_version: str,
+) -> bool:
+    """Accept Python.org and the exact Homebrew framework venv layout."""
+
+    if runtime.parent == resolved_home:
+        return True
+    major_minor = ".".join(python_version.split(".")[:2])
+    homebrew_framework_runtime = (
+        resolved_home.parent
+        / "Frameworks"
+        / "Python.framework"
+        / "Versions"
+        / major_minor
+        / "bin"
+        / f"python{major_minor}"
+    )
+    try:
+        return runtime == homebrew_framework_runtime.resolve(strict=True)
+    except OSError:
+        return False
 
 
 def _measure_runtime_config(path: Path) -> tuple[Mapping[str, Any], bytes]:

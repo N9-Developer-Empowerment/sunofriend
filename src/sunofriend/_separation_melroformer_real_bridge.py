@@ -64,6 +64,7 @@ _RUNTIME_VERSIONS = {
     "mlx-metal": "0.31.2",
     "numpy": "2.3.5",
 }
+_SUPPORTED_PYTHON_MINORS = frozenset({(3, 12), (3, 13)})
 _PACKAGE_PATHS = {
     "mlx_audio": "mlx_audio",
     "mlx_audio.sts": "mlx_audio/sts",
@@ -758,11 +759,13 @@ def _chunk_crossfade_weights(
 
 def _verify_runtime() -> dict[str, Any]:
     if (
-        sys.version_info[:2] != (3, 12)
+        sys.version_info[:2] not in _SUPPORTED_PYTHON_MINORS
         or platform.system() != "Darwin"
         or platform.machine() != "arm64"
     ):
-        raise RuntimeError("MelRoFormer bridge requires Python 3.12 on Apple silicon")
+        raise RuntimeError(
+            "MelRoFormer bridge requires Python 3.12 or 3.13 on Apple silicon"
+        )
     observed: dict[str, str] = {}
     for name, expected in _RUNTIME_VERSIONS.items():
         actual = importlib.metadata.version(name)

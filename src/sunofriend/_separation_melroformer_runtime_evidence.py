@@ -18,7 +18,7 @@ SOURCE_MANIFEST_SHA256 = (
 )
 RUNTIME_LOCK = "private-separation-melroformer-runtime-lock.json"
 RUNTIME_LOCK_SHA256 = (
-    "d7f3389954f3bc0c9f97eb13e82ab4c9589c7cad98fbb893a9eef51f131edbc9"
+    "e38e57b16233a0ffe16605b849aedbb79a83b0b4abd35f94af71ccfd6ee2d423"
 )
 SOURCE_REVISION = "41092c02db18efd5b9d8281b2fcc41d84801757a"
 MAX_SOURCE_FILE_BYTES = 65_536
@@ -190,8 +190,8 @@ def _validate_runtime_lock(value: object) -> None:
     if not isinstance(value, dict):
         raise ValueError("MelRoFormer runtime lock must be an object")
     if (
-        value.get("schema") != "sunofriend.private-melroformer-runtime-lock.v1"
-        or value.get("python") != "3.12"
+        value.get("schema") != "sunofriend.private-melroformer-runtime-lock.v2"
+        or value.get("python_minors") != ["3.12", "3.13"]
         or value.get("platform") != "macOS 14+ arm64"
         or value.get("installation_command") is not None
         or value.get("authorises_installation") is not False
@@ -211,12 +211,31 @@ def _validate_runtime_lock(value: object) -> None:
         if (
             not isinstance(item, dict)
             or not isinstance(item.get("version"), str)
-            or not isinstance(item.get("bytes"), int)
-            or isinstance(item.get("bytes"), bool)
-            or not isinstance(item.get("sha256"), str)
-            or not _SHA_RE.fullmatch(item["sha256"])
         ):
             raise ValueError("MelRoFormer runtime package identity is invalid")
+        wheels = item.get("wheels")
+        if (
+            not isinstance(wheels, list)
+            or [
+                wheel.get("python")
+                for wheel in wheels
+                if isinstance(wheel, dict)
+            ]
+            != ["3.12", "3.13"]
+        ):
+            raise ValueError("MelRoFormer runtime wheel profiles differ")
+        for wheel in wheels:
+            if (
+                not isinstance(wheel, dict)
+                or not isinstance(wheel.get("filename"), str)
+                or not wheel["filename"].endswith(".whl")
+                or not isinstance(wheel.get("bytes"), int)
+                or isinstance(wheel.get("bytes"), bool)
+                or wheel["bytes"] <= 0
+                or not isinstance(wheel.get("sha256"), str)
+                or not _SHA_RE.fullmatch(wheel["sha256"])
+            ):
+                raise ValueError("MelRoFormer runtime wheel identity is invalid")
     overlay = value.get("source_overlay")
     if (
         not isinstance(overlay, dict)

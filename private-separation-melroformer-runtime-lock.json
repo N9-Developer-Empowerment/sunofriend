@@ -1,37 +1,70 @@
 {
-  "schema": "sunofriend.private-melroformer-runtime-lock.v1",
+  "schema": "sunofriend.private-melroformer-runtime-lock.v2",
   "candidate_id": "mlx-melroformer-kim-vocal-2",
-  "python": "3.12",
+  "python_minors": ["3.12", "3.13"],
   "platform": "macOS 14+ arm64",
-  "audit_date": "2026-08-01",
-  "strategy": "hash-pinned minimal runtime for the exact audited source overlay; no mlx-audio convenience-loader dependency set",
+  "audit_date": "2026-08-05",
+  "strategy": "hash-pinned minimal CPython 3.12 or 3.13 runtime for the exact audited source overlay; no mlx-audio convenience-loader dependency set",
   "packages": [
     {
       "name": "mlx",
       "version": "0.31.2",
-      "filename": "mlx-0.31.2-cp312-cp312-macosx_14_0_arm64.whl",
-      "bytes": 584863,
-      "sha256": "e5067aaf2be1f3d7bba5be52348775804f111173c1ed04639618fd713b1a530f",
       "license": "MIT",
-      "requires": ["mlx-metal==0.31.2; platform_system == 'Darwin'"]
+      "requires": ["mlx-metal==0.31.2; platform_system == 'Darwin'"],
+      "wheels": [
+        {
+          "python": "3.12",
+          "filename": "mlx-0.31.2-cp312-cp312-macosx_14_0_arm64.whl",
+          "bytes": 584863,
+          "sha256": "e5067aaf2be1f3d7bba5be52348775804f111173c1ed04639618fd713b1a530f"
+        },
+        {
+          "python": "3.13",
+          "filename": "mlx-0.31.2-cp313-cp313-macosx_26_0_arm64.whl",
+          "bytes": 584795,
+          "sha256": "c05981684279a8935d58b0dde3ea5b02d210c3bad3319aa0e9934ec2df165752"
+        }
+      ]
     },
     {
       "name": "mlx-metal",
       "version": "0.31.2",
-      "filename": "mlx_metal-0.31.2-py3-none-macosx_14_0_arm64.whl",
-      "bytes": 40055588,
-      "sha256": "b25385bcee18fc194092255b8b53b9a3d8489eb650e59160f1b57aadd07aa2dc",
       "license": "MIT",
-      "requires": []
+      "requires": [],
+      "wheels": [
+        {
+          "python": "3.12",
+          "filename": "mlx_metal-0.31.2-py3-none-macosx_14_0_arm64.whl",
+          "bytes": 40055588,
+          "sha256": "b25385bcee18fc194092255b8b53b9a3d8489eb650e59160f1b57aadd07aa2dc"
+        },
+        {
+          "python": "3.13",
+          "filename": "mlx_metal-0.31.2-py3-none-macosx_26_0_arm64.whl",
+          "bytes": 55792151,
+          "sha256": "84ffb60ee503f03eb684f5fb168d5cff31e2a16b7f27c1731eaf7662bd6e9b46"
+        }
+      ]
     },
     {
       "name": "numpy",
       "version": "2.3.5",
-      "filename": "numpy-2.3.5-cp312-cp312-macosx_14_0_arm64.whl",
-      "bytes": 5088378,
-      "sha256": "612a95a17655e213502f60cfb9bf9408efdc9eb1d5f50535cc6eb365d11b42b5",
       "license": "BSD-3-Clause",
-      "requires": []
+      "requires": [],
+      "wheels": [
+        {
+          "python": "3.12",
+          "filename": "numpy-2.3.5-cp312-cp312-macosx_14_0_arm64.whl",
+          "bytes": 5088378,
+          "sha256": "612a95a17655e213502f60cfb9bf9408efdc9eb1d5f50535cc6eb365d11b42b5"
+        },
+        {
+          "python": "3.13",
+          "filename": "numpy-2.3.5-cp313-cp313-macosx_14_0_arm64.whl",
+          "bytes": 5083172,
+          "sha256": "ccc933afd4d20aad3c00bcef049cb40049f7f196e0397f1109dba6fed63267b0"
+        }
+      ]
     }
   ],
   "source_overlay": {
@@ -40,15 +73,28 @@
     "installed_as_mlx_audio_distribution": false,
     "upstream_convenience_loader_available": false
   },
-  "current_environment_observation": {
-    "environment": ".venv-ai",
-    "python": "3.12.10",
-    "mlx": "0.31.2",
-    "mlx-metal": "0.31.2",
-    "numpy": "2.3.5",
-    "mlx-audio": "not-installed",
-    "observation_is_installation_authority": false
-  },
+  "current_environment_observations": [
+    {
+      "environment": ".venv-ai",
+      "python": "3.12.10",
+      "runtime_signature_state": "invalid_on_2026-08-05",
+      "mlx": "0.31.2",
+      "mlx-metal": "0.31.2",
+      "numpy": "2.3.5",
+      "mlx-audio": "not-installed",
+      "observation_is_installation_authority": false
+    },
+    {
+      "environment": ".venv-ai313",
+      "python": "3.13.13",
+      "runtime_signature_state": "strictly_valid_on_2026-08-05",
+      "mlx": "0.31.2",
+      "mlx-metal": "0.31.2",
+      "numpy": "2.3.5",
+      "mlx-audio": "not-installed",
+      "observation_is_installation_authority": false
+    }
+  ],
   "installation_command": null,
   "installed_by_this_lock": false,
   "authorises_installation": false,

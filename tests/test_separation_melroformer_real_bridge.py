@@ -23,6 +23,7 @@ from sunofriend._separation_melroformer_real_bridge import (
     _plan_excerpt_chunks,
     _transform_checkpoint_keys,
     _validate_weight_inventory,
+    _verify_runtime,
     _verified_checkpoint_descriptor_stream,
 )
 from sunofriend.interface_contract import DIRECT_TUI_COMMANDS, PUBLIC_COMMANDS
@@ -117,6 +118,48 @@ def test_private_loader_rejects_unpinned_device_before_artifact_access() -> None
             companion_root="missing",
             device="auto",
         )
+
+
+@pytest.mark.parametrize("minor", (12, 13))
+def test_runtime_accepts_pinned_python_minors_on_apple_silicon(
+    monkeypatch: pytest.MonkeyPatch,
+    minor: int,
+) -> None:
+    import sunofriend._separation_melroformer_real_bridge as bridge
+
+    monkeypatch.setattr(bridge.sys, "version_info", (3, minor, 9, "final", 0))
+    monkeypatch.setattr(bridge.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(bridge.platform, "machine", lambda: "arm64")
+    monkeypatch.setattr(
+        bridge.platform,
+        "python_version",
+        lambda: f"3.{minor}.9",
+    )
+
+    def version(name: str) -> str:
+        if name == "mlx-audio":
+            raise bridge.importlib.metadata.PackageNotFoundError(name)
+        return bridge._RUNTIME_VERSIONS[name]
+
+    monkeypatch.setattr(bridge.importlib.metadata, "version", version)
+
+    observed = _verify_runtime()
+
+    assert observed["python"] == f"3.{minor}.9"
+    assert observed["packages"] == bridge._RUNTIME_VERSIONS
+
+
+def test_runtime_rejects_unbounded_python_minor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import sunofriend._separation_melroformer_real_bridge as bridge
+
+    monkeypatch.setattr(bridge.sys, "version_info", (3, 14, 0, "final", 0))
+    monkeypatch.setattr(bridge.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(bridge.platform, "machine", lambda: "arm64")
+
+    with pytest.raises(RuntimeError, match="Python 3.12 or 3.13"):
+        _verify_runtime()
 
 
 def test_descriptor_stream_hashes_and_yields_exact_bound_file(

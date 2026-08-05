@@ -1223,10 +1223,14 @@ resolves to source revision
 `41092c02db18efd5b9d8281b2fcc41d84801757a`; the five required source/runtime
 files plus licence and package metadata are individually size/hash pinned in
 `private-separation-melroformer-source-manifest.json`. The minimal Python 3.12
-macOS arm64 runtime is separately locked to `mlx==0.31.2`,
-`mlx-metal==0.31.2` and `numpy==2.3.5`, including exact wheel sizes, SHA-256
-values and permissive licence findings. It deliberately does not install the
-full `mlx-audio` distribution or its unrelated dependencies. The upstream
+or 3.13 macOS arm64 runtime is separately locked to `mlx==0.31.2`,
+`mlx-metal==0.31.2` and `numpy==2.3.5`, including exact per-Python wheel sizes,
+SHA-256 values and permissive licence findings. Runtime-lock v2 records both
+bounded profiles because the previously used local Python 3.12 image later
+failed strict macOS code-signature validation while the Homebrew Python 3.13
+image passed. This is an observed recovery path, not general dependency-install
+authority. The lock deliberately does not install the full `mlx-audio`
+distribution or its unrelated dependencies. The upstream
 `from_pretrained` convenience path is forbidden because it can convert a
 non-local string into a Hugging Face download. A future adapter must construct
 the fixed Kim Vocal 2 configuration and load only an already-open,
@@ -3766,6 +3770,30 @@ such song-disjoint pilots may a separate private-only integration design be
 assessed. Even then, separator selection, public acceptance, Simple, Studio,
 TUI, CLI, source graph, download and publication remain separate closed
 boundaries.
+
+The second song-disjoint automatic pilot is now complete for the
+creator-authorized track `Tell Me That I Do It Bitch`. It used the same fixed
+gap-free policy through a strictly valid ignored Homebrew Python 3.13 virtual
+environment after the older Python 3.12 runtime failed its signature gate. All
+13 request-bound chunks completed. The stitch contains 8,218,476 frames at
+44.1 kHz, stereo PCM24, with 12 boundaries, zero overlap and zero gap. Nine
+early/middle/late clock windows measured zero lag and a minimum normalized
+correlation of `1.0`; that proves reconstruction timing only, not separator
+quality. The path-free automatic evidence has document SHA-256
+`497938094e056e9cdc62f58e7662a873c9d5e5c7aebfd7ed806c7e61ea5f71d2`.
+
+Human listening is intentionally still pending. Review the three complete-song
+outputs and all 12 joins at:
+
+```text
+work/separation-bakeoff/tell-me-that-i-do-it-bitch-song-disjoint-private-pilot-pipeline-v5-py313/STITCH/BOUNDARY-REVIEW/separation_boundary_review.html
+```
+
+Only a complete exported review may be resolved into the second private-pilot
+result and exact two-stem handoff. After that, rebuild the coverage ledger with
+both song-disjoint pilots. Until those steps pass, this pilot adds automatic
+engineering evidence only and enables no Simple, Studio, TUI, CLI, source-graph,
+download or publication route.
 
 The next fail-closed builder is already implemented, but it must not run for
 the retained result because zero variants are eligible. For a future genuinely

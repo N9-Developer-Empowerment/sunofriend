@@ -54,7 +54,16 @@ def test_runtime_lock_is_minimal_hash_pinned_and_not_an_installer() -> None:
         "mlx-metal",
         "numpy",
     ]
-    assert all(len(item["sha256"]) == 64 for item in lock["packages"])
+    assert lock["python_minors"] == ["3.12", "3.13"]
+    assert all(
+        [wheel["python"] for wheel in item["wheels"]] == ["3.12", "3.13"]
+        for item in lock["packages"]
+    )
+    assert all(
+        len(wheel["sha256"]) == 64
+        for item in lock["packages"]
+        for wheel in item["wheels"]
+    )
     assert lock["source_overlay"]["manifest_sha256"] == (
         evidence.SOURCE_MANIFEST_SHA256
     )

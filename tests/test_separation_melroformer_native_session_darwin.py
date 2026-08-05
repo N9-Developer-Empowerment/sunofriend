@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import os
 import pickle
 import platform
@@ -1003,6 +1004,87 @@ def test_private_runtime_measurement_preserves_venv_launcher_and_hides_paths(
     assert measured["python_version"] == "3.12.10"
     assert public["system_site_packages_enabled"] is False
     assert str(tmp_path) not in repr(public)
+
+
+def test_private_runtime_measurement_accepts_bound_copied_venv_launcher(
+    tmp_path: Path,
+) -> None:
+    launcher, environment, base_root = _runtime_fixture(tmp_path)
+    launcher.unlink()
+    launcher = launcher.with_name("python3.12-private")
+    launcher.write_bytes(b"private-test-python-copy\n")
+    launcher.chmod(0o700)
+
+    measured = session._measure_private_runtime_launcher(launcher)
+    public = session._path_free_runtime_binding(measured)
+
+    assert measured["runtime_launcher_path"] == str(launcher)
+    assert measured["runtime_environment_root"] == str(environment)
+    assert measured["base_runtime_root"] == str(base_root)
+    assert measured["launcher_entry"]["kind"] == "regular_file"
+    assert measured["resolved_runtime"]["sha256"] == hashlib.sha256(
+        b"private-test-python-copy\n"
+    ).hexdigest()
+    assert public["launcher_entry_kind"] == "regular_file"
+    assert public["launcher_target_sha256"] is None
+    assert str(tmp_path) not in repr(public)
+
+
+def test_private_runtime_measurement_accepts_homebrew_framework_venv_layout(
+    tmp_path: Path,
+) -> None:
+    version_root = (tmp_path / "Cellar" / "python@3.13" / "3.13.13_1").resolve()
+    home = version_root / "bin"
+    home.mkdir(parents=True)
+    framework_bin = (
+        version_root
+        / "Frameworks"
+        / "Python.framework"
+        / "Versions"
+        / "3.13"
+        / "bin"
+    )
+    framework_bin.mkdir(parents=True)
+    native_python = framework_bin / "python3.13"
+    native_python.write_bytes(b"private-homebrew-python\n")
+    native_python.chmod(0o755)
+    environment = (tmp_path / "runtime-env").resolve()
+    runtime_bin = environment / "bin"
+    runtime_bin.mkdir(parents=True)
+    launcher = runtime_bin / "python"
+    launcher.symlink_to(native_python)
+    (environment / "pyvenv.cfg").write_text(
+        "\n".join(
+            (
+                f"home = {home}",
+                "implementation = CPython",
+                "version_info = 3.13.13",
+                "include-system-site-packages = false",
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    measured = session._measure_private_runtime_launcher(launcher)
+
+    assert measured["resolved_runtime"]["sha256"] == hashlib.sha256(
+        b"private-homebrew-python\n"
+    ).hexdigest()
+    assert measured["base_runtime_root"] == str(framework_bin.parent)
+    assert measured["launcher_entry"]["kind"] == "symlink"
+
+
+def test_private_runtime_measurement_rejects_unbounded_private_name(
+    tmp_path: Path,
+) -> None:
+    launcher, _environment, _base_root = _runtime_fixture(tmp_path)
+    unbounded = launcher.with_name("python3.12-private-copy")
+    unbounded.write_bytes(b"private-test-python-copy\n")
+    unbounded.chmod(0o700)
+
+    with pytest.raises(ValueError, match="canonical virtual-environment"):
+        session._measure_private_runtime_launcher(unbounded)
 
 
 def test_private_runtime_measurement_rejects_system_site_packages(
