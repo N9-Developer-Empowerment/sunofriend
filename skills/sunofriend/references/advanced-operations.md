@@ -2446,6 +2446,19 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   separator acceptance. Legacy v1 requests remain readable history but must be
   regenerated before starting a request-bound execution. The owner-only
   persisted request is path-free and starts no worker or model.
+  The developer-only
+  `scripts/private-separation-song-disjoint-pilot-pipeline.py` command now
+  composes that request-aware execution with exact stitching, the fixed
+  source-clock alignment measurement and the v2 automatic-evidence envelope.
+  Use `--preflight` first; it remeasures the sealed environment, writes nothing
+  and runs no model. A normal run uses fixed owner-only `EXECUTION`, `STITCH`,
+  `ALIGNMENT` and `EVIDENCE` children under one explicit output root. Repeating
+  the exact command resumes only missing chunks and reuses only fully verified
+  later stages. The coordinator always stops with the local complete-song and
+  every-boundary review pending. It never fills or resolves a review, selects
+  or accepts a separator, or enables Simple, Studio, TUI, source graph,
+  download or publication. Use `--all` only for an explicitly intended bounded
+  private model run; without it, one chunk advances per invocation.
   `bounded_private_worker_execution_permitted: true` applies only to the exact
   embedded request; Simple, Studio, TUI, source-graph, public download and
   publication permissions stay false. Recheck the printed source distinction

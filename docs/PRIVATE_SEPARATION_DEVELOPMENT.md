@@ -3498,6 +3498,43 @@ The request-aware `--preflight` passed against the exact local Kim environment,
 reported `execution_root_created: false` and `model_run: false`, and left the
 existing completed execution and pending human review untouched.
 
+The next operational increment removes the remaining manual hand-offs between
+automatic stages. Use
+`scripts/private-separation-song-disjoint-pilot-pipeline.py` with a sealed v2
+request. Its `--preflight` mode remeasures the exact request environment and
+writes nothing. A normal invocation uses fixed owner-only `EXECUTION/`,
+`STITCH/`, `ALIGNMENT/` and `EVIDENCE/` children under one explicit output
+root. It resumes only missing worker chunks, creates each later stage once,
+re-verifies the complete request-to-evidence chain and writes a path-free
+pipeline receipt. An interrupted run is resumed by repeating the exact command
+with the same output root. The command always stops at the existing local
+complete-song and boundary-review page; it does not fill, resolve or reinterpret
+the review and enables no Simple, Studio, TUI, source-graph, download or
+publication route.
+
+Run the zero-inference check first:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-song-disjoint-pilot-pipeline.py \
+  --request "$PRIVATE_PILOT_REQUEST" \
+  --pragmatic-authorization "$PRAGMATIC_AUTHORIZATION" \
+  --reference-v2-execution "$REFERENCE_V2_EXECUTION" \
+  --repository-root "$PWD" \
+  --runtime-launcher "$PWD/.venv-ai/bin/python" \
+  --source-root "$PRIVATE_KIM_SOURCE_ROOT" \
+  --checkpoint "$PRIVATE_KIM_CHECKPOINT" \
+  --companion-root "$PRIVATE_KIM_COMPANION_ROOT" \
+  --device gpu \
+  --preflight
+```
+
+After reviewing the preflight, repeat the same command with
+`--out-dir "$FRESH_PRIVATE_PIPELINE_ROOT" --all`. `--all` may run every
+remaining model chunk and therefore remains a deliberate private-development
+action. Omit `--all` to advance one chunk per invocation. Do not use this
+coordinator with legacy v1 requests or historical unbound execution roots.
+
 Use the command for a newly authorised corpus track like this:
 
 ```bash
