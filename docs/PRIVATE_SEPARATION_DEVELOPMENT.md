@@ -3473,7 +3473,7 @@ file SHA-256 is
 its document SHA-256 is
 `ad3492307b620bbed46d006b9f89e94cc43322044a6ef3de2b9a5adad47aa150`.
 This duplicate request is validation evidence only: the already completed v2
-execution and current outstanding human review remain authoritative.
+execution and now-completed human review remain authoritative.
 
 The original request envelope is retained as readable v1 history, but it may
 not start a new request-bound execution. New requests use
@@ -3623,20 +3623,20 @@ rejects an existing group- or world-accessible result directory. The retained
 `In the way` alignment directory was corrected to mode `0700`; its sealed JSON
 and musical evidence are unchanged.
 
-Fresh human listening is now the only current pilot review. First judge all
-four complete-song tracks for musical usefulness, then the 15 exact chunk
-joins. A cued headphone-detectable join may be recorded without automatically
-failing the pilot; the decisive separate questions are normal-listening
-noticeability, audio quality, role usefulness and whether any artifact is
-large enough to reduce use. Until that review is resolved, the output remains
-private, unselected and unavailable to Simple, Studio, the TUI, public
-downloads or publication.
+Fresh human listening is complete. All four complete-song tracks were heard,
+and vocals, instrumental and reconstruction were each rated `useful`. Across
+the 15 exact joins, vocals were rated `audible_join` at boundaries 10 and 12,
+instrumental at 8, 9 and 10, and reconstruction was clean at every boundary.
+There were no `cannot_tell` ratings. Those findings remain exact diagnostics;
+under the practical private-pilot policy they do not veto this otherwise
+useful whole-song result. The output remains private, unselected and
+unavailable to Simple, Studio, the TUI, public downloads or publication.
 
-The post-review resolver is now ready, but has not been run because the human
-export is still pending. It deliberately reuses the generic full-song review
-verifier, so a later policy decision cannot bypass the immutable seed, stitch
-hashes, all four complete-song files or any of the 60 boundary clips. First
-secure the browser download and verify it without writing a durable result:
+The post-review resolver has now completed. It deliberately reuses the generic
+full-song review verifier, so a later policy decision cannot bypass the
+immutable seed, stitch hashes, all four complete-song files or any of the 60
+boundary clips. First secure the browser download and verify it without writing
+a durable result:
 
 ```bash
 chmod 600 "$REVIEWED_EXPORT"
@@ -3676,8 +3676,8 @@ listener notes, changes no audio and does not infer separator accuracy. Simple,
 Studio, TUI, CLI, source-graph, download and publication permissions remain
 false regardless of the outcome.
 
-The exact-byte private two-stem handoff is also implemented, but it remains
-blocked until that result genuinely authorizes the reviewed output. It replays
+The exact-byte private two-stem handoff is implemented and has completed for
+this exact authorised review. It replays
 the resolver from the owner-only browser export, demands byte-for-byte equality
 with the supplied resolution, re-verifies the pilot envelope and complete
 stitch, then copies only the exact reviewed vocals and instrumental WAVs into
@@ -3709,6 +3709,20 @@ and publication routes remain disabled. A failed or non-authorizing review
 creates no handoff directory. A copy-time failure can leave a partial fresh
 directory as diagnostic evidence; retry at a different fresh path rather than
 overwriting it.
+
+The resolved result is at
+`work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-review-result-v1/private-separation-song-disjoint-pilot-review-result.json`.
+Its document SHA-256 is
+`ebfd305476d634f5859bb5477312528a8b597f19340c61606419c73ab75118de`.
+The exact private handoff is at
+`work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-handoff-v1`.
+Its manifest document SHA-256 is
+`e65c8f368c262ec897afdfa8935100e25e745cd047336d2d911972a1c7b853bd`.
+It contains byte-identical 44.1 kHz stereo PCM24 vocals and instrumental under
+`STEMS/`, byte-identical reconstruction under `DIAGNOSTIC/`, no source audio
+and no changed sample values. This closes the exact `In the way` private-pilot
+review and handoff increment only. It does not accept or select Kim Vocal 2 as
+a general separator and enables no product or publication route.
 
 The next fail-closed builder is already implemented, but it must not run for
 the retained result because zero variants are eligible. For a future genuinely

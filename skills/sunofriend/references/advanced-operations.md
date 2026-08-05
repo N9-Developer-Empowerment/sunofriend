@@ -2419,13 +2419,20 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   chunks, and the raw stitch and review are at
   `work/separation-bakeoff/in-the-way-full-song-kim-stitch-v1-private-pilot-review`.
   Its independent alignment passed with zero measured lag and 0.999999 minimum
-  correlation. This is clock evidence only. Human complete-song and all
-  15-boundary listening remains required before drawing a cross-song quality
-  conclusion. Do not expose the result through Simple, Studio, TUI, public
-  download or publication. The earlier v1 pilot plan and attempts are retained
-  as diagnostic evidence: an incompatible creator `allowed_use` phrase passed
-  planning but failed inside the worker. Full-song planning now rejects that
-  mismatch before creating a plan.
+  correlation. This is clock evidence only. The complete-song and all
+  15-boundary listening is now complete: vocals, instrumental and
+  reconstruction were each rated useful; vocals had audible joins at
+  boundaries 10 and 12, instrumental at 8, 9 and 10, and reconstruction was
+  clean at every join. The practical private-pilot policy therefore authorizes
+  only this exact reviewed output while retaining those joins as diagnostics.
+  The exact-byte owner-only handoff is at
+  `work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-handoff-v1`:
+  vocals and instrumental are primary PCM24 stems, reconstruction is
+  diagnostic and the source is deliberately absent. Do not expose the result
+  through Simple, Studio, TUI, public download or publication. The earlier v1
+  pilot plan and attempts are retained as diagnostic evidence: an incompatible
+  creator `allowed_use` phrase passed planning but failed inside the worker.
+  Full-song planning now rejects that mismatch before creating a plan.
   For a future authorised song, use
   `scripts/private-separation-song-disjoint-pilot-request.py` instead of
   manually assembling the plan preflight. Supply the exact pragmatic
@@ -2486,8 +2493,9 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   New envelopes use v2 and require `--pilot-request` plus
   `--request-completion-binding`. The builder verifies that the plan, guarded
   execution, completion binding and request-bearing stitch all share the exact
-  path-free request identity. The v1 loader stays available for the current
-  pending `In the way` review; do not relabel its historical unbound execution.
+  path-free request identity. The v1 loader stays available for the completed
+  `In the way` review and its exact resolver/handoff chain; do not relabel its
+  historical unbound execution.
   After the listener exports the completed page, make that JSON owner-only and
   use `scripts/private-separation-song-disjoint-pilot-review.py --status` with
   the exact automatic envelope and stitch package. Status runs the generic
@@ -2514,6 +2522,18 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   changed. A non-authorizing review creates no handoff. Separator selection,
   acceptance and every Simple, Studio, TUI, CLI, source-graph, download and
   publication permission remain false.
+  The completed `In the way` result is
+  `work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-review-result-v1/private-separation-song-disjoint-pilot-review-result.json`.
+  Its document SHA-256 is
+  `ebfd305476d634f5859bb5477312528a8b597f19340c61606419c73ab75118de`
+  and it authorizes only the exact reviewed private output. The resulting
+  handoff manifest is
+  `work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-handoff-v1/private-separation-song-disjoint-pilot-handoff.json`,
+  with document SHA-256
+  `e65c8f368c262ec897afdfa8935100e25e745cd047336d2d911972a1c7b853bd`.
+  All three copied PCM24 files are byte-identical to the reviewed stitch;
+  separator selection, acceptance, product integration and publication remain
+  false.
   The downstream fail-closed builder is
   `scripts/private-separation-candidate-followup-variant-full-song-review.py`.
   Run it only after an exact 36-unit browser export has passed status, has
