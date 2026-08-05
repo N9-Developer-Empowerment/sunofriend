@@ -5054,3 +5054,49 @@ listening to the current `Be Alone` six-source diagnostic page. That page is a
 static evidence browser with no export form, so no further action is required
 from it. Historical `be-alone-midi-listening-screen-v1` and earlier
 six-source-v1 pages are superseded diagnostics, not current acceptance gates.
+
+## Approachable local start command
+
+The accepted Kim Vocal 2 route now has one developer-only coordinator instead
+of requiring the owner to repeat the adapter, design, coverage, runtime,
+source-tree, checkpoint and companion paths for every stage. It is still an
+experimental **vocals plus instrumental** route, not a public multi-stem
+separator.
+
+First verify the fixed installed profile. This is read-only and does not load
+the model or write a result:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python scripts/private-separation-local.py doctor
+```
+
+Then prepare one authorised corpus track in a fresh owner-only output. This
+creates the sealed full-song chunk plan and execution request, then performs a
+no-model execution preflight:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python scripts/private-separation-local.py start \
+  --corpus /absolute/private-reference-corpus.json \
+  --track-id authorised-track-id \
+  --out-dir /absolute/fresh/private-separation-run
+```
+
+Model execution remains a separate explicit action. One chunk is the default,
+so the same command can be repeated safely after interruption. Use `--all`
+only when the complete remaining song should run in this invocation:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python scripts/private-separation-local.py start \
+  --corpus /absolute/private-reference-corpus.json \
+  --track-id authorised-track-id \
+  --out-dir /absolute/fresh/private-separation-run \
+  --execute --all
+```
+
+Once all chunks are complete, the command reuses the existing request-bound
+stitch and alignment services and reports `review_html`. That page requires
+listening to the complete source, vocals, instrumental and reconstruction plus
+every chunk boundary. The command does not mark that review complete, import
+or activate stems, create MIDI, render a song interpretation, build a ZIP,
+select the separator, or enable Simple, Studio, TUI, public CLI or publication
+routes. Those remain separate, evidence-bound steps.

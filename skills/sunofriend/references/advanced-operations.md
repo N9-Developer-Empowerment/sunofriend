@@ -2652,6 +2652,19 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   receipt. A partial output is diagnostic and must not be overwritten. This is
   not a public separation route and does not change Simple, Studio, TUI,
   source audio, source graph or human review state.
+  The same accepted owner-only route now has a shorter orchestration command:
+  `scripts/private-separation-local.py`. Run `doctor` first to reverify the
+  exact installed adapter, evidence, Python runtime and Kim Vocal 2 checkpoint
+  without writing or loading the model. Run `start --corpus ABSOLUTE_JSON
+  --track-id ID --out-dir FRESH_PRIVATE_DIR` to create or reuse the sealed plan
+  and request and perform a no-model preflight. Repeat that exact command with
+  `--execute` for one bounded remaining chunk, `--execute --maximum-chunks N`,
+  or `--execute --all`. A completed run reports the existing full-song and
+  every-boundary `review_html`; human listening is still required. The
+  coordinator grants no reviewed import, activation, MIDI, interpretation WAV,
+  ZIP, Simple, Studio, TUI, public CLI or publication permission. It is a
+  developer-only convenience wrapper around the verified services, not a new
+  separator or a beginner product route.
   Use the read-only bounded queue when review exports are difficult to track:
   `scripts/private-separation-song-disjoint-pilot-review-queue.py PIPELINE_ROOT
   --review-dir "$HOME/Downloads"`. Repeat the pipeline root, `--review` or
