@@ -2418,9 +2418,24 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   continuity/synchronisation and suitability for a private pilot. The pages
   are independent rather than comparative and expose no method identity.
   Package creation records no human answer, selection or acceptance. Every
-  page must be completed and exported by a listener, then verified by a
-  separate resolver that is not yet implemented. Even a later private-pilot
-  acceptance cannot by itself enable a product route or publication.
+  page must be completed and exported by a listener. Verify those exports only
+  with
+  `scripts/private-separation-candidate-followup-variant-final-acceptance-review-result.py`.
+  Supply every export through repeated `--reviewed-export` arguments, plus the
+  exact acceptance package, readiness result, complete earlier full-song
+  review/export set, alignment package and unchanged targeted-variant and
+  execution chain. Make every export owner-only first and run `--status`
+  before `--resolve`. Status maps exports by their immutable commitments,
+  accepts no subset and writes nothing. It rejects missing, duplicate,
+  foreign, incomplete, altered, overlarge, linked or non-owner-only exports.
+  Only after status reports `complete_review_set_verified_no_activation` may
+  the identical inputs run with `--resolve` and one fresh owner-only `--out`.
+  Resolution preserves negative and uncertain answers. It records private-
+  pilot acceptance for a variant only when all three workflow/continuity
+  answers are `yes` and the final answer is `accept_private_pilot`. Zero, one
+  or both variants may satisfy that rule independently; the result never ranks
+  or selects among them. Even private-pilot acceptance cannot by itself resolve
+  joins, enable a product route or permit publication.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic
   snapshot across the whole operation; status and result record this explicit

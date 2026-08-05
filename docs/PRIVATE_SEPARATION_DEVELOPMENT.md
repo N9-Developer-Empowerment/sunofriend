@@ -3477,13 +3477,57 @@ candidate is suitable for a private Sunofriend pilot. `cannot_tell` and
 `needs_more_work` remain valid evidence. Method identities are absent from the
 page so package order cannot become an implied preference.
 
-The builder is contract-complete and tested, but no real package can be built
-yet because the 36-unit targeted variant review and every intervening human
-gate remain incomplete. Package creation records no acceptance, selection or
-join resolution and enables no product or publication route. A separate
-verifier/resolver for the future browser exports is the next implementation
-increment; do not hand-edit a reviewed export or infer acceptance from the
-presence of a page.
+The builder and its separate verifier/resolver are contract-complete and
+tested, but no real package can be built yet because the exact 36-unit targeted
+variant browser export and every intervening human gate remain incomplete.
+Package creation records no acceptance, selection or join resolution and
+enables no product or publication route. Do not hand-edit a reviewed export or
+infer acceptance from the presence of a page.
+
+After every independently emitted page has genuinely been completed, make
+each browser export owner-only and run the status path first:
+
+```bash
+chmod 600 "$FINAL_ACCEPTANCE_EXPORT_01" "$FINAL_ACCEPTANCE_EXPORT_02"
+
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-candidate-followup-variant-final-acceptance-review-result.py \
+  --status \
+  --reviewed-export "$FINAL_ACCEPTANCE_EXPORT_01" \
+  --reviewed-export "$FINAL_ACCEPTANCE_EXPORT_02" \
+  --review-package-dir "$FINAL_ACCEPTANCE_PACKAGE" \
+  --readiness-result "$VARIANT_READINESS_RESULT" \
+  --full-song-review-result "$VARIANT_FULL_SONG_RESULT" \
+  --alignment-package-dir "$VARIANT_ALIGNMENT_PACKAGE" \
+  --full-song-reviewed-export "$REVIEWED_VARIANT_01" \
+  --full-song-reviewed-export "$REVIEWED_VARIANT_02" \
+  --full-song-review-package-dir "$VARIANT_FULL_SONG_PACKAGE" \
+  --variant-review-result "$TARGETED_VARIANT_RESULT" \
+  --variant-reviewed-export "$TARGETED_VARIANT_REVIEWED_EXPORT" \
+  --variant-review-package-dir "$TARGETED_VARIANT_PACKAGE" \
+  --plan "$VARIANT_PLAN" \
+  --execution-dir "$FIRST_FOLLOWUP_EXECUTION" \
+  --v2-execution-dir "$V2_EXECUTION" \
+  --variant-execution-dir "$VARIANT_EXECUTION" \
+  --stitch-package-dir "$STITCH_PACKAGE"
+```
+
+Supply exactly one `--reviewed-export` per emitted acceptance page and exactly
+one `--full-song-reviewed-export` per earlier eligible-variant page. If status
+reports `complete_review_set_verified_no_activation`, repeat the identical
+arguments with `--resolve` instead of `--status` and add one fresh owner-only
+`--out` path. The verifier maps renamed or reordered downloads by the sealed
+package commitment, not their filenames. It rejects missing, duplicated,
+foreign, incomplete, altered, overlarge, linked or non-owner-only exports.
+
+Resolution preserves every negative and `cannot_tell` answer. A variant is
+recorded as accepted for the private pilot only when all three workflow and
+continuity answers are `yes` and the final answer is
+`accept_private_pilot`. Zero, one or both variants may independently satisfy
+that exact rule. The result never chooses among them, keeps
+`variant_selected`, product activation, original-join resolution and
+publication false, and requires a later readiness reassessment before any
+further route can be considered.
 
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
