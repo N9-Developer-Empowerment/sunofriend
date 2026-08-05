@@ -70,6 +70,47 @@ def test_preflight_rejects_output_inside_plan_tree(
         _run(context)
 
 
+def test_preflight_rejects_runtime_before_creating_output_or_calling_executor(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    context = _context(tmp_path, monkeypatch)
+    called = False
+
+    def reject_runtime(_value: object) -> None:
+        raise ValueError("strict runtime validation failed")
+
+    def executor(*_args: object, **_kwargs: object) -> dict[str, object]:
+        nonlocal called
+        called = True
+        return {}
+
+    monkeypatch.setattr(execution, "_validate_runtime_launcher", reject_runtime)
+
+    with pytest.raises(ValueError, match="strict runtime validation failed"):
+        _run(context, execute=True, queue_executor=executor)
+
+    assert called is False
+    assert not context["output"].exists()
+
+
+def test_runtime_validator_translates_strict_code_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime = _private_file(tmp_path / "python")
+    monkeypatch.setattr(
+        execution,
+        "_static_code_identity",
+        lambda _value: (_ for _ in ()).throw(
+            execution._StaticCodeValidationError(-67050)
+        ),
+    )
+
+    with pytest.raises(ValueError, match="failed macOS strict code validation"):
+        execution._validate_runtime_launcher(runtime)
+
+
 def test_explicit_execute_passes_exact_request_binding_to_queue(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -235,6 +276,7 @@ def _context(
         "_load_verified_private_separation_execution_request",
         lambda *_args, **_kwargs: deepcopy(loaded),
     )
+    monkeypatch.setattr(execution, "_validate_runtime_launcher", lambda _value: None)
     return paths
 
 

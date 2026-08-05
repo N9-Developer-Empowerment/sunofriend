@@ -15,6 +15,10 @@ from typing import Any, Callable, Mapping
 from ._separation_full_song_executor import (
     _execute_private_separation_full_song_queue,
 )
+from ._separation_macos_process_image import (
+    _StaticCodeValidationError,
+    _static_code_identity,
+)
 from ._separation_private_execution_request import (
     _load_verified_private_separation_execution_request,
 )
@@ -78,6 +82,7 @@ def _run_private_separation_developer_execution(
         checkpoint_path=checkpoint_path,
         companion_root=companion_root,
     )
+    _validate_runtime_launcher(runtime_launcher_path)
     requested_device = loaded["document"]["request"]["device"]
     if device != requested_device:
         raise ValueError("private separation execution device differs from request")
@@ -87,6 +92,7 @@ def _run_private_separation_developer_execution(
     readiness = {
         "request_and_upstream_evidence_verified": True,
         "execution_environment_reverified": True,
+        "runtime_static_code_strict_validation_passed": True,
         "explicit_execution_action_received": execute,
         "model_run_started_this_invocation": False,
         "all_worker_runs_complete": False,
@@ -147,6 +153,25 @@ def _run_private_separation_developer_execution(
         "readiness": readiness,
         "permissions": dict(_ROUTE_PERMISSIONS),
     }
+
+
+def _validate_runtime_launcher(value: str | Path) -> None:
+    """Fail before execution unless the resolved worker runtime is trusted."""
+
+    launcher = Path(value).expanduser().absolute()
+    try:
+        identity = _static_code_identity(launcher.resolve(strict=True))
+    except _StaticCodeValidationError as error:
+        raise ValueError(
+            "private separation runtime failed macOS strict code validation"
+        ) from error
+    cdhash = identity.get("cdhash")
+    if (
+        not isinstance(cdhash, str)
+        or len(cdhash) != 40
+        or any(character not in "0123456789abcdef" for character in cdhash)
+    ):
+        raise ValueError("private separation runtime static-code identity differs")
 
 
 def _request_binding(loaded: Mapping[str, Any]) -> dict[str, Any]:

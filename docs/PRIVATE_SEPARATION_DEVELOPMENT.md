@@ -3889,6 +3889,18 @@ audited source tree, companions, coordinator code and exact checkpoint hash
 twice. It did not import the model library, observe checkpoint tensor values,
 accept song audio, run inference or grant any execution permission.
 
+That first contract measured the older `.venv-ai` Python 3.12 launcher but did
+not prove macOS strict code-signature validity. The first explicit execution
+therefore failed before inference and was preserved as diagnostic evidence at
+`tell-me-that-i-do-it-bitch-private-separation-developer-execution-v1`.
+The current adapter instead binds the previously verified Homebrew Python
+3.13 runtime at `work/private-runtime-python313/venv/bin/python`. Its record is
+`work/separation-bakeoff/private-separation-backend-adapter-contract-v2-py313/private-separation-backend-adapter-contract.json`,
+with file/document SHA-256 values
+`a5c2a2005568ab7b1ea8d405de0aca8d96ef5a1de5b410fe47e1c8b84124750a`
+and
+`9bccfb8da4c4ece2e2d6dc6ace5abeebf4dbeeec722778cdfb1fe097d0d052e7`.
+
 The reproducing command is:
 
 ```bash
@@ -3899,7 +3911,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
   --coverage-report \
     work/separation-bakeoff/multi-song-private-pilot-coverage-v3/private-separation-multi-song-private-pilot-coverage.json \
   --repository-root "$PWD" \
-  --runtime-launcher "$PWD/.venv-ai/bin/python" \
+  --runtime-launcher "$PWD/work/private-runtime-python313/venv/bin/python" \
   --source-root \
     "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/mlx-audio-source" \
   --checkpoint \
@@ -3907,7 +3919,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
   --companion-root \
     "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/checkpoint-directory" \
   --out \
-    work/separation-bakeoff/private-separation-backend-adapter-contract-v1/private-separation-backend-adapter-contract.json
+    work/separation-bakeoff/private-separation-backend-adapter-contract-v2-py313/private-separation-backend-adapter-contract.json
 ```
 
 The next stage is a private execution-request builder. It must bind one
@@ -3937,6 +3949,16 @@ and canonical PCM24 SHA-256
 `d443e9da3b2b25c4ae8bcc8262e9634f06163d28a362866df3f613c11b47d2e7`
 over 8,218,476 frames and 13 chunks. Every permission remains false.
 
+The current Python 3.13-bound request is at
+`work/separation-bakeoff/tell-me-that-i-do-it-bitch-private-separation-execution-request-v2-py313/private-separation-execution-request.json`,
+with file/document SHA-256 values
+`9753c2b5e81b29bdbbc1b2517bfcf240d9844417d5a3ce09e4402f13a4ed6f19`
+and
+`0260b3b9d73c044f320d98ba661a555b1cbed1bc1b6e9017b128eb2b77ffa46e`.
+It binds the same source, plan and checkpoint to the signed Python 3.13
+adapter; it supersedes the v1 request for future execution without deleting
+that historical evidence.
+
 The next bounded slice is a separate developer-only execution gate. It must
 reconstruct this request and all upstream evidence, require a fresh owner-only
 output root, freeze resource bounds and offline operation, and provide a
@@ -3948,9 +3970,11 @@ That gate is now implemented by
 read-only preflight; model execution is impossible unless the caller also
 supplies `--execute`. Preflight reconstructs the request, adapter, design,
 coverage, plan and exact local backend, checks the proposed output is fresh and
-disjoint from evidence, and returns the audited executor binding without
-creating the directory. The real `Tell Me That I Do It Bitch` preflight passed
-with the proposed output still absent afterwards.
+disjoint from evidence, strictly validates the resolved macOS runtime code
+signature, and returns the audited executor binding without creating the
+directory. The invalid Python 3.12 launcher now fails during preflight before
+an output root or worker attempt exists. The signed Python 3.13 preflight
+passed with the proposed output still absent afterwards.
 
 An explicit later execution may use one next chunk by default,
 `--maximum-chunks N`, or `--all`. The existing audited executor receives the
@@ -3966,9 +3990,9 @@ Use this shape for a no-model preflight. Omitting `--execute` is intentional:
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
   scripts/private-separation-developer-execute.py \
   --request \
-    work/separation-bakeoff/tell-me-that-i-do-it-bitch-private-separation-execution-request-v1/private-separation-execution-request.json \
+    work/separation-bakeoff/tell-me-that-i-do-it-bitch-private-separation-execution-request-v2-py313/private-separation-execution-request.json \
   --adapter-report \
-    work/separation-bakeoff/private-separation-backend-adapter-contract-v1/private-separation-backend-adapter-contract.json \
+    work/separation-bakeoff/private-separation-backend-adapter-contract-v2-py313/private-separation-backend-adapter-contract.json \
   --design-report \
     work/separation-bakeoff/private-separation-route-design-v1/private-separation-route-design.json \
   --coverage-report \
@@ -3976,7 +4000,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
   --plan-report \
     work/separation-bakeoff/tell-me-that-i-do-it-bitch-song-disjoint-private-pilot-request-v5-py313/PLAN/private-separation-full-song-plan.json \
   --repository-root "$PWD" \
-  --runtime-launcher "$PWD/.venv-ai/bin/python" \
+  --runtime-launcher "$PWD/work/private-runtime-python313/venv/bin/python" \
   --source-root \
     "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/mlx-audio-source" \
   --checkpoint \
@@ -4006,9 +4030,9 @@ download and publication disabled. Use it only after a separate explicit
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
   scripts/private-separation-developer-review-package.py \
   --request \
-    work/separation-bakeoff/tell-me-that-i-do-it-bitch-private-separation-execution-request-v1/private-separation-execution-request.json \
+    work/separation-bakeoff/tell-me-that-i-do-it-bitch-private-separation-execution-request-v2-py313/private-separation-execution-request.json \
   --adapter-report \
-    work/separation-bakeoff/private-separation-backend-adapter-contract-v1/private-separation-backend-adapter-contract.json \
+    work/separation-bakeoff/private-separation-backend-adapter-contract-v2-py313/private-separation-backend-adapter-contract.json \
   --design-report \
     work/separation-bakeoff/private-separation-route-design-v1/private-separation-route-design.json \
   --coverage-report \
@@ -4016,7 +4040,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
   --plan-report \
     work/separation-bakeoff/tell-me-that-i-do-it-bitch-song-disjoint-private-pilot-request-v5-py313/PLAN/private-separation-full-song-plan.json \
   --repository-root "$PWD" \
-  --runtime-launcher "$PWD/.venv-ai/bin/python" \
+  --runtime-launcher "$PWD/work/private-runtime-python313/venv/bin/python" \
   --source-root \
     "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/mlx-audio-source" \
   --checkpoint \
@@ -4027,13 +4051,39 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
   --out-dir "$FRESH_PRIVATE_REVIEW_PACKAGE_ROOT"
 ```
 
-The next evidence step is one fresh full-song run through the new execution
-gate followed by this coordinator and its exact human review. Only after that
-review may a separate reviewed-output import contract be designed. The
-eventual user goal remains broader: an approachable local full-mix input that
-can produce useful stems and then enter Sunofriend's MIDI and interpretation
-workflow. The current candidate is still a private two-stem vocal/instrumental
-route, not that published lay-user feature.
+That fresh automatic run is complete. All 13 request-bound chunks verified in
+`tell-me-that-i-do-it-bitch-private-separation-developer-execution-v2-py313`.
+The execution report file/state SHA-256 values are
+`c3beb574d88421c7f8732aa3ac23fae58092df322de4c1f222e261b6af1d6f7e`
+and
+`a27a412639041c06ed7fadd1fee50d6e15480bf9082e6503aca62854babb9028`.
+The first attempt was stopped before inference because the outer Codex sandbox
+prevented the macOS Sandbox observer from reporting readiness; the authorised
+out-of-sandbox retry then completed all chunks. Both attempts remain visible.
+
+The coordinator produced 52 non-empty referenced PCM24 WAV files. Source,
+vocals, instrumental and reconstruction each contain exactly 8,218,476 stereo
+frames at 44.1 kHz, or 186.36 seconds. All nine early/middle/late alignment
+windows were eligible, measured 0 ms maximum lag and lag spread, and had a
+minimum normalized correlation of 1.0. The review-package file/document
+SHA-256 values are
+`7c9b7935ca7f6398d947f6a58190039bd0dac5c0994f4595826c6ed34732a7e1`
+and
+`3c023315a1f13ae868b41146eb029178c36f2345091cf5c7008ba017c121ae7a`.
+Its immutable review commitment is
+`3b9027350fa1e0f29b8c477e2c282f59838a3cbce400a5b916e2486b6ebbdb25`.
+Human full-song and all 12-boundary review is now the only open step in this
+fresh exact chain. The playable page is:
+
+```text
+work/separation-bakeoff/tell-me-that-i-do-it-bitch-private-separation-developer-review-v2-py313/STITCH/BOUNDARY-REVIEW/separation_boundary_review.html
+```
+
+Only after that review may a separate reviewed-output import contract be
+designed. The eventual user goal remains broader: an approachable local
+full-mix input that can produce useful stems and then enter Sunofriend's MIDI
+and interpretation workflow. The current candidate is still a private
+two-stem vocal/instrumental route, not that published lay-user feature.
 
 The next fail-closed builder is already implemented, but it must not run for
 the retained result because zero variants are eligible. For a future genuinely
