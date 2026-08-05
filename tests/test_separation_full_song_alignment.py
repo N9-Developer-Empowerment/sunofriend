@@ -85,6 +85,28 @@ def test_alignment_report_rejects_changed_bound_audio(tmp_path: Path) -> None:
         )
 
 
+def test_alignment_report_creates_owner_only_fresh_parent(tmp_path: Path) -> None:
+    package = _package(tmp_path, shift_frames=0)
+    output = tmp_path / "private-alignment" / "alignment.json"
+
+    _measure_private_separation_full_song_alignment(package, out=output)
+
+    assert stat.S_IMODE(output.parent.stat().st_mode) == 0o700
+    assert stat.S_IMODE(output.stat().st_mode) == 0o600
+
+
+def test_alignment_report_rejects_existing_shared_parent(tmp_path: Path) -> None:
+    package = _package(tmp_path, shift_frames=0)
+    output_root = tmp_path / "shared-alignment"
+    output_root.mkdir(mode=0o755)
+
+    with pytest.raises(ValueError, match="not an owner-only directory"):
+        _measure_private_separation_full_song_alignment(
+            package,
+            out=output_root / "alignment.json",
+        )
+
+
 def _package(tmp_path: Path, *, shift_frames: int) -> Path:
     package = tmp_path / "stitch"
     source_dir = package / "SOURCE"

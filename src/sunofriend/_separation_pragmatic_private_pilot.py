@@ -266,6 +266,161 @@ def _authorize_pragmatic_private_pilot(
     }
 
 
+def _load_verified_pragmatic_private_pilot(
+    value: str | Path,
+) -> dict[str, Any]:
+    """Load the sealed pragmatic authorization without replaying its review.
+
+    The report is already bound to the complete reviewed evidence chain.  This
+    loader validates the fixed policy-bearing projection so a later private
+    pilot can cite it without copying listener notes or reopening a blind key.
+    """
+
+    snapshot = _load_private_json_snapshot(
+        value,
+        "private pragmatic pilot authorization",
+    )
+    path = snapshot["path"]
+    document = snapshot["document"]
+    if path.name != REPORT_NAME:
+        raise ValueError("private pragmatic pilot authorization filename differs")
+    if (
+        document.get("schema") != SCHEMA
+        or document.get("status") != STATUS
+        or document.get("evidence_scope") != "private_development_only"
+        or document.get("policy_id") != POLICY_ID
+        or document.get("document_sha256") != _document_sha256(document)
+        or document.get("permissions") != _PERMISSIONS
+        or document.get("effects") != _EFFECTS
+    ):
+        raise ValueError("private pragmatic pilot authorization differs")
+
+    assessment = _validated_absolute_assessment(
+        _required_mapping(
+            document.get("human_absolute_assessment"),
+            "private pragmatic pilot assessment",
+        )
+    )
+    review_summary = _validated_persisted_review_summary(
+        document.get("comparative_review_summary")
+    )
+    _require_pragmatic_gate(assessment, review_summary=review_summary)
+
+    gate = _required_mapping(
+        document.get("pragmatic_private_pilot_gate"),
+        "private pragmatic pilot gate",
+    )
+    readiness = _required_mapping(
+        document.get("readiness"),
+        "private pragmatic pilot readiness",
+    )
+    if (
+        gate.get("passed") is not True
+        or gate.get("selected_candidate_identity") != "followup_control"
+        or gate.get("selection_scope") != "bounded_private_pilot_only"
+        or gate.get("new_model_run_required") is not False
+        or readiness.get("bounded_private_pilot_ready") is not True
+        or readiness.get("whole_song_utility_gate_passed") is not True
+        or readiness.get("publication_ready") is not False
+        or readiness.get("public_product_acceptance_complete") is not False
+    ):
+        raise ValueError("private pragmatic pilot gate differs")
+
+    selected = _required_mapping(
+        document.get("selected_candidate"),
+        "private pragmatic pilot selected candidate",
+    )
+    artifacts = _required_mapping(
+        selected.get("artifacts"),
+        "private pragmatic pilot selected artifacts",
+    )
+    bindings = _required_mapping(
+        document.get("bindings"),
+        "private pragmatic pilot bindings",
+    )
+    if (
+        selected.get("identity") != "followup_control"
+        or set(artifacts) != set(_ROLES)
+        or selected.get("candidate_report_sha256")
+        != bindings.get("followup_control_report_sha256")
+        or not _is_sha256(selected.get("candidate_document_sha256"))
+        or not _is_sha256(selected.get("candidate_report_sha256"))
+        or not _is_sha256(bindings.get("v2_execution_report_sha256"))
+    ):
+        raise ValueError("private pragmatic pilot selected candidate differs")
+    normalized = {
+        role: _path_free_artifact_binding(artifacts[role], role=role)
+        for role in _ROLES
+    }
+    clocks = {
+        (
+            item["geometry"].get("sample_rate"),
+            item["geometry"].get("channels"),
+            item["geometry"].get("frames"),
+        )
+        for item in normalized.values()
+    }
+    if len(clocks) != 1:
+        raise ValueError("private pragmatic pilot candidate clock differs")
+    return snapshot
+
+
+def _validated_persisted_review_summary(raw: Any) -> dict[str, Any]:
+    summary = _required_mapping(raw, "private pragmatic pilot review summary")
+    counts = _required_mapping(
+        summary.get("choice_counts"),
+        "private pragmatic pilot choice counts",
+    )
+    if (
+        set(summary)
+        != {
+            "reviewed_unit_count",
+            "choice_counts",
+            "followup_control_preference_count",
+            "replacement_variant_preference_count",
+            "replacement_variant_showed_audible_advantage",
+        }
+        or not counts
+        or any(
+            not isinstance(key, str)
+            or isinstance(value, bool)
+            or not isinstance(value, int)
+            or value < 0
+            for key, value in counts.items()
+        )
+        or isinstance(summary.get("reviewed_unit_count"), bool)
+        or not isinstance(summary.get("reviewed_unit_count"), int)
+        or summary["reviewed_unit_count"] < 1
+        or sum(counts.values()) != summary["reviewed_unit_count"]
+        or summary.get("followup_control_preference_count")
+        != counts.get("followup_control_preferred", 0)
+        or summary.get("replacement_variant_preference_count")
+        != sum(
+            count
+            for choice, count in counts.items()
+            if choice not in {"equivalent", "neither", "followup_control_preferred"}
+        )
+        or summary.get("replacement_variant_showed_audible_advantage")
+        != (summary["replacement_variant_preference_count"] > 0)
+    ):
+        raise ValueError("private pragmatic pilot review summary differs")
+    return dict(summary)
+
+
+def _required_mapping(value: Any, label: str) -> Mapping[str, Any]:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{label} differs")
+    return value
+
+
+def _is_sha256(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
 def _validated_absolute_assessment(raw: Mapping[str, Any]) -> dict[str, Any]:
     expected = {
         "overall_audio_quality",

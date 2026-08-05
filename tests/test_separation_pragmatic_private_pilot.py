@@ -1,11 +1,24 @@
 from __future__ import annotations
 
+import json
+import os
+from pathlib import Path
+
 import pytest
 
+from sunofriend._separation_authorised_excerpt import _document_sha256
 from sunofriend._separation_pragmatic_private_pilot import (
+    POLICY_ID,
+    REPORT_NAME,
+    SCHEMA,
+    STATUS,
+    _EFFECTS,
+    _PERMISSIONS,
+    _load_verified_pragmatic_private_pilot,
     _path_free_artifact_binding,
     _require_pragmatic_gate,
     _validated_absolute_assessment,
+    _validated_persisted_review_summary,
     _validated_review_summary,
 )
 
@@ -78,6 +91,32 @@ def test_artifact_binding_excludes_source_path() -> None:
     assert "path" not in binding
 
 
+def test_sealed_pragmatic_authorization_can_be_reused_without_review_replay(
+    tmp_path: Path,
+) -> None:
+    os.chmod(tmp_path, 0o700)
+    report = tmp_path / REPORT_NAME
+    document = _authorization_document()
+    report.write_text(
+        json.dumps(document, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    report.chmod(0o600)
+
+    snapshot = _load_verified_pragmatic_private_pilot(report)
+
+    assert snapshot["document"]["readiness"]["bounded_private_pilot_ready"] is True
+    assert snapshot["document"]["permissions"]["publication_permitted"] is False
+
+
+def test_persisted_summary_rejects_inconsistent_count() -> None:
+    summary = _authorization_document()["comparative_review_summary"]
+    summary["reviewed_unit_count"] = 35
+
+    with pytest.raises(ValueError, match="review summary"):
+        _validated_persisted_review_summary(summary)
+
+
 def _assessment() -> dict[str, object]:
     return _validated_absolute_assessment(
         {
@@ -98,3 +137,69 @@ def _review_result() -> dict[str, object]:
         + ["neither"] * 9
     )
     return {"units": [{"resolved_choice": choice} for choice in choices]}
+
+
+def _authorization_document() -> dict[str, object]:
+    artifact = {
+        "role": "",
+        "sha256": "a" * 64,
+        "pcm24_int32_sequence_sha256": "b" * 64,
+        "bytes": 6_044,
+        "geometry": {
+            "channels": 2,
+            "frames": 1_000,
+            "sample_rate": 44_100,
+            "sample_width_bytes": 3,
+        },
+    }
+    artifacts = {}
+    for index, role in enumerate(("vocals", "instrumental", "reconstruction")):
+        item = dict(artifact)
+        item["role"] = role
+        item["sha256"] = f"{index + 1:064x}"
+        item["pcm24_int32_sequence_sha256"] = f"{index + 11:064x}"
+        artifacts[role] = item
+    document = {
+        "schema": SCHEMA,
+        "status": STATUS,
+        "evidence_scope": "private_development_only",
+        "policy_id": POLICY_ID,
+        "bindings": {
+            "followup_control_report_sha256": "1" * 64,
+            "v2_execution_report_sha256": "2" * 64,
+        },
+        "comparative_review_summary": {
+            "reviewed_unit_count": 36,
+            "choice_counts": {
+                "equivalent": 25,
+                "followup_control_preferred": 2,
+                "neither": 9,
+            },
+            "followup_control_preference_count": 2,
+            "replacement_variant_preference_count": 0,
+            "replacement_variant_showed_audible_advantage": False,
+        },
+        "human_absolute_assessment": _assessment(),
+        "pragmatic_private_pilot_gate": {
+            "passed": True,
+            "selected_candidate_identity": "followup_control",
+            "selection_scope": "bounded_private_pilot_only",
+            "new_model_run_required": False,
+        },
+        "readiness": {
+            "bounded_private_pilot_ready": True,
+            "whole_song_utility_gate_passed": True,
+            "public_product_acceptance_complete": False,
+            "publication_ready": False,
+        },
+        "selected_candidate": {
+            "identity": "followup_control",
+            "candidate_report_sha256": "1" * 64,
+            "candidate_document_sha256": "3" * 64,
+            "artifacts": artifacts,
+        },
+        "permissions": dict(_PERMISSIONS),
+        "effects": dict(_EFFECTS),
+    }
+    document["document_sha256"] = _document_sha256(document)
+    return document

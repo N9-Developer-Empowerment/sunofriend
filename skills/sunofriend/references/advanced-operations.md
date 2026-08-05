@@ -2426,6 +2426,18 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   as diagnostic evidence: an incompatible creator `allowed_use` phrase passed
   planning but failed inside the worker. Full-song planning now rejects that
   mismatch before creating a plan.
+  The automatic chain is also bound by
+  `scripts/private-separation-song-disjoint-pilot-evidence.py`. It verifies the
+  pragmatic authorization, the exact reference v2 execution bound by that
+  authorization, the fresh plan and every worker attempt, the stitch and its
+  audio, the still-unreviewed page and the passing alignment. It requires the
+  reference and pilot canonical source WAV hashes to differ and records that as
+  source-content distinction only, not musical identity or quality. Its
+  current status is
+  `automatic_pilot_evidence_complete_human_review_pending`; it runs no model,
+  changes no review and enables no product route. A fresh alignment result
+  directory must be owner-only; the alignment writer now creates a missing
+  directory as mode `0700` and rejects an existing shared directory.
   The downstream fail-closed builder is
   `scripts/private-separation-candidate-followup-variant-full-song-review.py`.
   Run it only after an exact 36-unit browser export has passed status, has

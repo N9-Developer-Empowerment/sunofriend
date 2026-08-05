@@ -3450,6 +3450,50 @@ its document SHA-256 is
 `69dd7d5ddd2f06599ab2e0db200f0749ac24c83f1e9221ca08bac131cfe6f39d`.
 That proves clock alignment, not separation accuracy.
 
+The automatic chain is now sealed into one path-free, owner-only envelope at
+`work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-evidence-v1/private-separation-song-disjoint-pilot-evidence.json`.
+It re-verifies the pragmatic authorization, its exact Be Alone v2 reference
+execution, the fresh plan, all 16 worker attempts, the raw stitch, every bound
+audio artifact, the unreviewed page and the independent alignment result. The
+reference source PCM24 WAV SHA-256 is
+`0671d08a9548cda76ee09bb51d9589fec45aa7a4ee07790eb61cffa52a5c9998`;
+the fresh pilot canonical source PCM24 WAV SHA-256 is
+`75743c1c6177d99e891c27009af822d59819cd2cbd0fc73738c2b964274bf316`,
+so the exact source content is distinct. This hash comparison does not infer
+musical identity or quality. The report file SHA-256 is
+`7a5ef59bf133a828eb1ef8af6e9731984918dbbb1bb2694137c5b94e487ccce8`
+and its document SHA-256 is
+`56595ba6ba7cca094bbe20d09e11ad6e5f75e239df2b7e1414ffb338d17ec632`.
+Its authoritative status is
+`automatic_pilot_evidence_complete_human_review_pending`: automatic evidence
+is complete, while quality acceptance and every public route remain false.
+
+Reproduce the envelope without running a model or changing the review:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-song-disjoint-pilot-evidence.py \
+  --pragmatic-authorization \
+    work/separation-bakeoff/be-alone-pragmatic-private-pilot-v1/private-separation-pragmatic-private-pilot.json \
+  --reference-v2-execution \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2/private-separation-full-song-join-remediation-execution-v2.json \
+  --plan \
+    work/separation-bakeoff/in-the-way-full-song-kim-plan-v2/private-separation-full-song-plan.json \
+  --execution \
+    work/separation-bakeoff/in-the-way-full-song-kim-execution-v2/private-separation-full-song-execution.json \
+  --stitch-package-dir \
+    work/separation-bakeoff/in-the-way-full-song-kim-stitch-v1-private-pilot-review \
+  --alignment-result \
+    work/separation-bakeoff/in-the-way-full-song-kim-alignment-v1/private-separation-full-song-alignment.json \
+  --out \
+    "$FRESH_PRIVATE_ROOT/private-separation-song-disjoint-pilot-evidence.json"
+```
+
+The alignment writer now creates a missing result directory as owner-only and
+rejects an existing group- or world-accessible result directory. The retained
+`In the way` alignment directory was corrected to mode `0700`; its sealed JSON
+and musical evidence are unchanged.
+
 Fresh human listening is now the only current pilot review. First judge all
 four complete-song tracks for musical usefulness, then the 15 exact chunk
 joins. A cued headphone-detectable join may be recorded without automatically

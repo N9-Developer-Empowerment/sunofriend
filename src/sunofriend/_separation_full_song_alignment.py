@@ -25,6 +25,7 @@ from ._separation_full_song_stitch import (
     REPORT_NAME as STITCH_REPORT_NAME,
     _FALSE_PERMISSIONS,
 )
+from ._separation_full_song_executor import _require_private_directory
 
 
 SCHEMA = "sunofriend.private-separation-full-song-alignment-result.v1"
@@ -70,6 +71,13 @@ def _measure_private_separation_full_song_alignment(
     output = Path(out).expanduser().absolute()
     if os.path.lexists(output):
         raise FileExistsError(f"private full-song alignment result exists: {output}")
+    if not os.path.lexists(output.parent):
+        output.parent.mkdir(parents=True, mode=0o700)
+        output.parent.chmod(0o700)
+    _require_private_directory(
+        output.parent,
+        "private full-song alignment result directory",
+    )
 
     source_path = _verify_audio_record(
         package,
