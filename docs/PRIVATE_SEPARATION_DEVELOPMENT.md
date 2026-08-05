@@ -3876,6 +3876,45 @@ request, use request-bound resumable chunks and preserve incomplete work as
 diagnostic-only. Reaching that later implementation stage will still not make
 separation a public Sunofriend feature.
 
+Stage 1 is now implemented and verified against the exact local Kim Vocal 2
+environment. The sealed record is at
+`work/separation-bakeoff/private-separation-backend-adapter-contract-v1/private-separation-backend-adapter-contract.json`,
+with file/document SHA-256 values
+`2aa4997fc7f5f53b208ec1de434b0a65944b21bcb2fce428a1917e37a55838db`
+and
+`e01063fb036bc32727d3f8c3eeede41d881429f570c5938c42d936c99a01ba04`.
+It reconstructed the design from coverage, measured the pinned runtime,
+audited source tree, companions, coordinator code and exact checkpoint hash
+`312c38e5b698f8dfaa4d6064e8f79010744825828917871a9d22673a43eb7fe5`
+twice. It did not import the model library, observe checkpoint tensor values,
+accept song audio, run inference or grant any execution permission.
+
+The reproducing command is:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
+  scripts/private-separation-backend-adapter-contract.py \
+  --design-report \
+    work/separation-bakeoff/private-separation-route-design-v1/private-separation-route-design.json \
+  --coverage-report \
+    work/separation-bakeoff/multi-song-private-pilot-coverage-v3/private-separation-multi-song-private-pilot-coverage.json \
+  --repository-root "$PWD" \
+  --runtime-launcher "$PWD/.venv-ai/bin/python" \
+  --source-root \
+    "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/mlx-audio-source" \
+  --checkpoint \
+    "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/model.safetensors" \
+  --companion-root \
+    "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/checkpoint-directory" \
+  --out \
+    work/separation-bakeoff/private-separation-backend-adapter-contract-v1/private-separation-backend-adapter-contract.json
+```
+
+The next stage is a private execution-request builder. It must bind one
+authorised local source and one fresh owner-only output to this exact adapter,
+but still run no model. Only a separately reviewed later stage may make a
+developer-only execution available.
+
 The next fail-closed builder is already implemented, but it must not run for
 the retained result because zero variants are eligible. For a future genuinely
 passing result it re-resolves that same export and includes **every** eligible

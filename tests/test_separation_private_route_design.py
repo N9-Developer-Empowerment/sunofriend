@@ -128,6 +128,37 @@ def test_requires_fresh_fixed_named_output(tmp_path: Path) -> None:
         )
 
 
+def test_loader_reconstructs_design_from_exact_coverage(tmp_path: Path) -> None:
+    context = _context(tmp_path)
+    output = context["output_parent"] / design.REPORT_NAME
+    design._build_private_separation_route_design(context["coverage"], out=output)
+
+    loaded = design._load_verified_private_separation_route_design(
+        output,
+        coverage_report_path=context["coverage"],
+    )
+
+    assert loaded["document"]["status"] == design.STATUS
+    assert loaded["coverage"]["document"]["status"] == COVERAGE_STATUS
+
+
+def test_loader_rejects_rewritten_design_even_with_valid_self_hash(
+    tmp_path: Path,
+) -> None:
+    context = _context(tmp_path)
+    output = context["output_parent"] / design.REPORT_NAME
+    design._build_private_separation_route_design(context["coverage"], out=output)
+    document = _read(output)
+    document["readiness"]["private_execution_available"] = True
+    _write_private_json(output, document)
+
+    with pytest.raises(ValueError, match="route design differs"):
+        design._load_verified_private_separation_route_design(
+            output,
+            coverage_report_path=context["coverage"],
+        )
+
+
 def _context(tmp_path: Path) -> dict[str, Path]:
     os.chmod(tmp_path, 0o700)
     coverage_path = tmp_path / "private-separation-multi-song-private-pilot-coverage.json"

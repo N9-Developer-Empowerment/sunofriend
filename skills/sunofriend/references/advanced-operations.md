@@ -2581,6 +2581,18 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   discovery stay false. The next permitted engineering slice is only a sealed
   backend-adapter request contract; it may validate hashes and configuration
   but must not execute a model or activate a product route.
+  Stage 1 is implemented by
+  `scripts/private-separation-backend-adapter-contract.py`. It reconstructs the
+  exact design from the exact coverage ledger, audits the pinned local runtime,
+  Kim checkpoint, audited source tree, companion files and coordinator code
+  twice, then writes a path-free owner-only contract. It accepts no song and
+  creates no audio. It must neither import the model nor observe checkpoint
+  tensor values, and every execution and product permission remains false.
+  The next bounded stage is an execution-request builder that binds one
+  authorised source and fresh private output to that exact adapter while still
+  running no model. Do not treat the adapter contract as an execution request
+  or expose it through Simple, Studio, TUI, public CLI, source graph or a
+  download pack.
   Use the read-only bounded queue when review exports are difficult to track:
   `scripts/private-separation-song-disjoint-pilot-review-queue.py PIPELINE_ROOT
   --review-dir "$HOME/Downloads"`. Repeat the pipeline root, `--review` or

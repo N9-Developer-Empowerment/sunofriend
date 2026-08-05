@@ -120,6 +120,25 @@ def _build_private_separation_route_design(
     return {**document, "report": str(output)}
 
 
+def _load_verified_private_separation_route_design(
+    value: str | Path,
+    *,
+    coverage_report_path: str | Path,
+) -> dict[str, Any]:
+    """Load one design and reconstruct it from its exact coverage evidence."""
+
+    snapshot = _load_private_json_snapshot(value, "private separation route design")
+    coverage = _load_verified_coverage(coverage_report_path)
+    expected = _design_document(coverage)
+    expected["document_sha256"] = _document_sha256(expected)
+    if (
+        snapshot["path"].name != REPORT_NAME
+        or snapshot["document"] != expected
+    ):
+        raise ValueError("private separation route design differs")
+    return {**snapshot, "coverage": coverage}
+
+
 def _load_verified_coverage(value: str | Path) -> dict[str, Any]:
     snapshot = _load_private_json_snapshot(
         value,
