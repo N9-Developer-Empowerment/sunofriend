@@ -3789,6 +3789,29 @@ outputs and all 12 joins at:
 work/separation-bakeoff/tell-me-that-i-do-it-bitch-song-disjoint-private-pilot-pipeline-v5-py313/STITCH/BOUNDARY-REVIEW/separation_boundary_review.html
 ```
 
+To check this pilot, or several explicit pilots, without guessing which browser
+export belongs to which package, use the bounded review queue. It indexes only
+the pipeline roots, review files and immediate review-directory children named
+on the command line, matches reviewed exports by immutable package commitment
+and never opens the answer key:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
+  scripts/private-separation-song-disjoint-pilot-review-queue.py \
+  work/separation-bakeoff/tell-me-that-i-do-it-bitch-song-disjoint-private-pilot-pipeline-v5-py313 \
+  --review-dir "$HOME/Downloads"
+```
+
+The current result is `human_review_pending`: three reviewed exports were found
+in Downloads, but all bind to other package commitments. The queue does not
+reinterpret or complete a review. A matching export must be owner-only before
+it is verified, and a verified export remains unresolved until the separate
+review resolver is run deliberately. Use `--out` only with a fresh owner-only
+directory and the fixed filename
+`private-separation-song-disjoint-pilot-review-queue.json`; the persisted report
+is path-free, while local paths and suggested commands appear only in terminal
+output.
+
 Only a complete exported review may be resolved into the second private-pilot
 result and exact two-stem handoff. After that, rebuild the coverage ledger with
 both song-disjoint pilots. Until those steps pass, this pilot adds automatic

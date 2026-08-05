@@ -2561,6 +2561,17 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   `STITCH/BOUNDARY-REVIEW/separation_boundary_review.html`. Do not resolve a
   result, build a handoff or add it to the cross-song ledger until the listener
   exports a complete review. No product or publication route is enabled.
+  Use the read-only bounded queue when review exports are difficult to track:
+  `scripts/private-separation-song-disjoint-pilot-review-queue.py PIPELINE_ROOT
+  --review-dir "$HOME/Downloads"`. Repeat the pipeline root, `--review` or
+  `--review-dir` only for explicitly intended inputs. Directory inspection is
+  non-recursive; reviewed exports are matched by immutable package commitment,
+  distinct matching content is reported as a conflict and a group- or
+  world-accessible export is never passed to the verifier. The queue opens no
+  answer key, fills no review and resolves nothing. An optional `--out` must
+  name a fresh owner-only
+  `private-separation-song-disjoint-pilot-review-queue.json`; its durable
+  document is path-free and retains every permission as false.
   The downstream fail-closed builder is
   `scripts/private-separation-candidate-followup-variant-full-song-review.py`.
   Run it only after an exact 36-unit browser export has passed status, has
