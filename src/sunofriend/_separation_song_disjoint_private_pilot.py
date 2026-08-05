@@ -251,6 +251,110 @@ def _bind_song_disjoint_private_pilot_evidence(
     }
 
 
+def _load_verified_song_disjoint_private_pilot_evidence(
+    value: str | Path,
+) -> dict[str, Any]:
+    """Load the sealed automatic pilot envelope without replaying workers."""
+
+    snapshot = _load_private_json_snapshot(
+        value,
+        "song-disjoint private pilot evidence",
+    )
+    path = snapshot["path"]
+    document = snapshot["document"]
+    if (
+        path.name != REPORT_NAME
+        or document.get("schema") != SCHEMA
+        or document.get("status") != STATUS
+        or document.get("evidence_scope") != "private_development_only"
+        or document.get("policy_id") != POLICY_ID
+        or document.get("document_sha256") != _document_sha256(document)
+        or document.get("permissions") != _FALSE_PERMISSIONS
+        or document.get("effects") != _EFFECTS
+    ):
+        raise ValueError("song-disjoint private pilot evidence differs")
+
+    bindings = document.get("bindings")
+    human_review = document.get("human_review")
+    readiness = document.get("readiness")
+    automatic = document.get("automatic_execution")
+    distinction = document.get("source_distinction")
+    if not all(
+        isinstance(item, Mapping)
+        for item in (bindings, human_review, readiness, automatic, distinction)
+    ):
+        raise ValueError("song-disjoint private pilot evidence differs")
+    assert isinstance(bindings, Mapping)
+    assert isinstance(human_review, Mapping)
+    assert isinstance(readiness, Mapping)
+    assert isinstance(automatic, Mapping)
+    assert isinstance(distinction, Mapping)
+
+    required_hashes = {
+        "pragmatic_authorization_sha256",
+        "pragmatic_authorization_document_sha256",
+        "reference_v2_execution_sha256",
+        "reference_v2_execution_document_sha256",
+        "reference_source_audio_sha256",
+        "pilot_plan_sha256",
+        "pilot_plan_document_sha256",
+        "pilot_execution_sha256",
+        "pilot_execution_state_sha256",
+        "pilot_stitch_sha256",
+        "pilot_stitch_document_sha256",
+        "pilot_alignment_sha256",
+        "pilot_alignment_document_sha256",
+        "pilot_source_audio_sha256",
+        "pilot_review_seed_sha256",
+        "pilot_review_package_commitment",
+    }
+    clock = automatic.get("clock")
+    if (
+        set(bindings) != required_hashes
+        or any(not _is_sha256(bindings.get(key)) for key in required_hashes)
+        or bindings["reference_source_audio_sha256"]
+        == bindings["pilot_source_audio_sha256"]
+        or distinction.get("reference_source_audio_sha256")
+        != bindings["reference_source_audio_sha256"]
+        or distinction.get("pilot_source_audio_sha256")
+        != bindings["pilot_source_audio_sha256"]
+        or distinction.get("byte_distinct") is not True
+        or distinction.get("song_disjoint_content_check_passed") is not True
+        or distinction.get("musical_identity_inferred_from_hash") is not False
+        or human_review.get("status") != "pending"
+        or human_review.get("review_seed_status") != "unreviewed"
+        or human_review.get("package_commitment")
+        != bindings["pilot_review_package_commitment"]
+        or human_review.get("full_song_quality_conclusion_available") is not False
+        or human_review.get("boundary_acceptability_conclusion_available")
+        is not False
+        or readiness
+        != {
+            "authorization_bound": True,
+            "source_distinct_from_authorization_reference": True,
+            "automatic_execution_chain_verified": True,
+            "exact_source_clock_verified": True,
+            "alignment_gate_passed": True,
+            "human_full_song_and_boundary_review_complete": False,
+            "private_pilot_quality_conclusion_ready": False,
+            "public_product_acceptance_complete": False,
+            "publication_ready": False,
+        }
+        or not isinstance(clock, Mapping)
+        or isinstance(clock.get("boundary_count"), bool)
+        or not isinstance(clock.get("boundary_count"), int)
+        or clock["boundary_count"] < 1
+        or human_review.get("boundary_count") != clock["boundary_count"]
+        or human_review.get("full_song_role_count") != 3
+        or automatic.get("worker_runs_complete") is not True
+        or automatic.get("stitch_complete") is not True
+        or automatic.get("alignment_gate_passed") is not True
+        or automatic.get("chunk_count") != clock.get("chunk_count")
+    ):
+        raise ValueError("song-disjoint private pilot evidence differs")
+    return snapshot
+
+
 def _load_context(
     pragmatic_authorization_path: str | Path,
     *,

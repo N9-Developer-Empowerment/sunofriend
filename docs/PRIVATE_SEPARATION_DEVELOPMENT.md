@@ -3503,6 +3503,50 @@ large enough to reduce use. Until that review is resolved, the output remains
 private, unselected and unavailable to Simple, Studio, the TUI, public
 downloads or publication.
 
+The post-review resolver is now ready, but has not been run because the human
+export is still pending. It deliberately reuses the generic full-song review
+verifier, so a later policy decision cannot bypass the immutable seed, stitch
+hashes, all four complete-song files or any of the 60 boundary clips. First
+secure the browser download and verify it without writing a durable result:
+
+```bash
+chmod 600 "$REVIEWED_EXPORT"
+
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-song-disjoint-pilot-review.py \
+  --status "$REVIEWED_EXPORT" \
+  --pilot-evidence \
+    work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-evidence-v1/private-separation-song-disjoint-pilot-evidence.json \
+  --package-dir \
+    work/separation-bakeoff/in-the-way-full-song-kim-stitch-v1-private-pilot-review
+```
+
+Only after that reports `complete_review_verified_no_activation`, resolve the
+same exact evidence into a fresh owner-only directory:
+
+```bash
+mkdir -m 700 "$FRESH_REVIEW_RESULT_ROOT"
+
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-song-disjoint-pilot-review.py \
+  --resolve "$REVIEWED_EXPORT" \
+  --pilot-evidence \
+    work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-evidence-v1/private-separation-song-disjoint-pilot-evidence.json \
+  --package-dir \
+    work/separation-bakeoff/in-the-way-full-song-kim-stitch-v1-private-pilot-review \
+  --out \
+    "$FRESH_REVIEW_RESULT_ROOT/private-separation-song-disjoint-pilot-review-result.json"
+```
+
+The fixed rule is intentionally practical. All three generated complete-song
+roles, vocals, instrumental and reconstruction, must be rated `useful` before
+the exact output is authorised for bounded private-pilot use. Audible and
+`cannot_tell` boundary ratings are retained by role and boundary number, but
+do not automatically veto a musically useful whole song. The result copies no
+listener notes, changes no audio and does not infer separator accuracy. Simple,
+Studio, TUI, CLI, source-graph, download and publication permissions remain
+false regardless of the outcome.
+
 The next fail-closed builder is already implemented, but it must not run for
 the retained result because zero variants are eligible. For a future genuinely
 passing result it re-resolves that same export and includes **every** eligible

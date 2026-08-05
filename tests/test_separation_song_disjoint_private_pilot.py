@@ -57,6 +57,9 @@ def test_automatic_pilot_envelope_stays_pending_and_path_free(
     assert str(tmp_path) not in persisted
     assert os.stat(output).st_mode & 0o777 == 0o600
     assert os.stat(output.parent).st_mode & 0o777 == 0o700
+    loaded = pilot._load_verified_song_disjoint_private_pilot_evidence(output)
+    assert loaded["sha256"]
+    assert loaded["document"]["document_sha256"] == result["document_sha256"]
 
 
 def test_reference_execution_must_be_exactly_bound_by_authorization(

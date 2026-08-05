@@ -2438,6 +2438,21 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   changes no review and enables no product route. A fresh alignment result
   directory must be owner-only; the alignment writer now creates a missing
   directory as mode `0700` and rejects an existing shared directory.
+  After the listener exports the completed page, make that JSON owner-only and
+  use `scripts/private-separation-song-disjoint-pilot-review.py --status` with
+  the exact automatic envelope and stitch package. Status runs the generic
+  full-song verifier in a disposable private directory, rechecks the immutable
+  browser export, stitch, seed and every audio reference, and writes nothing.
+  Only after status succeeds may the same inputs run with `--resolve` and a
+  fresh owner-only output named
+  `private-separation-song-disjoint-pilot-review-result.json`. The bounded
+  private-pilot rule requires vocals, instrumental and reconstruction each to
+  be rated `useful` as complete songs. Audible or `cannot_tell` boundary
+  ratings remain exact diagnostics but are not an automatic private-pilot
+  veto. A passing result permits use of only that exact reviewed private
+  output. A failing result remains useful diagnostic evidence. Neither result
+  accepts or selects a separator, mutates audio or review evidence, or enables
+  Simple, Studio, TUI, CLI, source graph, download or publication routes.
   The downstream fail-closed builder is
   `scripts/private-separation-candidate-followup-variant-full-song-review.py`.
   Run it only after an exact 36-unit browser export has passed status, has
