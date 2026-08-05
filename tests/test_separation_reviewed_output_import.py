@@ -11,6 +11,8 @@ import pytest
 
 import sunofriend._separation_reviewed_output_import as reviewed_import
 import sunofriend._separation_reviewed_output_activation as reviewed_activation
+import sunofriend._separation_reviewed_output_midi_validation as reviewed_validation
+from sunofriend.automatic_selection import AutomaticSelectionPlan
 from sunofriend.derived_source_receipt import (
     DERIVED_SOURCE_RECEIPT_SCHEMA,
     validate_derived_source_receipt_files,
@@ -33,6 +35,8 @@ from sunofriend.source_receipt import (
     canonical_json_bytes,
     write_source_receipt,
 )
+from sunofriend.simple_result import SimpleResult
+from sunofriend.tui_conversion_contract import FullConversionResult
 
 
 def test_imports_reviewed_stems_as_inactive_lineage_with_mix_rollback(
@@ -189,6 +193,151 @@ def test_activation_requires_explicit_usefulness_confirmation(
         _activate(context, confirm=False)
 
     assert load_source_graph(context["output"]).revision == 2
+
+
+def test_private_midi_validation_uses_active_frontier_without_product_route(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    context = _context(tmp_path, monkeypatch)
+    _run(context)
+    _patch_activation_evidence(context, monkeypatch)
+    _activate(context)
+    graph_id = load_source_graph(context["output"]).graph_id
+    validation_root = tmp_path / "private-midi-validation"
+
+    class FakeRunner:
+        async def run(self, request, *, on_progress, cancellation_requested=None):
+            request.output_dir.mkdir(mode=0o700)
+            summary = request.output_dir / "summary.json"
+            summary.write_text("{}\n", encoding="utf-8")
+            on_progress(
+                SimpleNamespace(
+                    completed=2,
+                    total=2,
+                    phase="complete",
+                    current_role=None,
+                )
+            )
+            return FullConversionResult(
+                status="complete",
+                output_dir=request.output_dir,
+                candidate_roots=(request.output_dir,),
+                converted_roles=("other", "vocals"),
+                skipped_roles=(),
+                failed_roles=(),
+                proxy_roles=("other",),
+                warnings=("other remains review-required",),
+                summary_paths=(summary,),
+                source_stem_count=2,
+                midi_ready_stem_count=2,
+                candidate_count=3,
+            )
+
+        def cancel(self) -> None:
+            return None
+
+    selection = AutomaticSelectionPlan(
+        selected=(
+            {
+                "selection_index": 1,
+                "stem_id": "stem-other",
+                "candidate_id": "candidate-other",
+                "role": "other",
+                "process": "synth",
+                "source": {"sha256": "1" * 64},
+                "midi": {"sha256": "2" * 64},
+            },
+        ),
+        omitted=({"role": "vocals", "reason": "review_recommended"},),
+        receipt={"selection_manifest_sha256": "3" * 64},
+    )
+
+    def fake_result(*_args, destination, **_kwargs) -> SimpleResult:
+        root = Path(destination)
+        midi = root / "MIDI/combined-gm-interpretation.mid"
+        wav = root / "AUDIO/balanced-midi-song-interpretation.wav"
+        archive = root / "sunofriend-automatic-midi-and-wav.zip"
+        manifest = root / "sunofriend-result.json"
+        midi.parent.mkdir(parents=True)
+        wav.parent.mkdir(parents=True)
+        midi.write_bytes(b"MThd-private-test")
+        wav.write_bytes(b"RIFF-private-test")
+        archive.write_bytes(b"PK-private-test")
+        manifest.write_text("{}\n", encoding="utf-8")
+        return SimpleResult(
+            root=root,
+            zip_path=archive,
+            combined_midi_path=midi,
+            balanced_wav_path=wav,
+            manifest_path=manifest,
+            selected_count=1,
+            omitted_count=1,
+            manifest_sha256="4" * 64,
+        )
+
+    monkeypatch.setattr(
+        reviewed_validation,
+        "create_full_conversion_runner",
+        FakeRunner,
+    )
+    monkeypatch.setattr(
+        reviewed_validation,
+        "load_tui_project",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            catalog={"project_id": "project-test", "stems": []}
+        ),
+    )
+    monkeypatch.setattr(
+        reviewed_validation,
+        "plan_automatic_selection",
+        lambda *_args, **_kwargs: selection,
+    )
+    monkeypatch.setattr(reviewed_validation, "build_simple_result", fake_result)
+
+    result = __import__("asyncio").run(
+        reviewed_validation._validate_reviewed_output_midi_and_interpretation(
+            context["output"],
+            assessment_path=context["assessment_path"],
+            equivalence_path=context["equivalence_path"],
+            reviewed_export_path=context["reviewed_export"],
+            reviewed_package_dir=context["reviewed_package"],
+            candidate_package_report_path=context["candidate_report"],
+            out_dir=validation_root,
+            confirm_reviewed_stems_useful=True,
+            confirm_private_midi_validation=True,
+        )
+    )
+
+    assert result["bindings"]["source_graph_id"] == graph_id
+    assert {item["role"] for item in result["active_source_frontier"]} == {
+        "vocals",
+        "other",
+    }
+    assert result["interpretation"]["review_status"] == "not_reviewed"
+    assert result["readiness"]["simple_mode_separation_available"] is False
+    assert result["effects"]["source_graph_mutated"] is False
+    assert load_source_graph(context["output"]).graph_id == graph_id
+    assert Path(result["report"]).stat().st_mode & 0o777 == 0o400
+
+
+def test_private_midi_validation_requires_separate_execution_confirmation(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(ValueError, match="explicit execution confirmation"):
+        __import__("asyncio").run(
+            reviewed_validation._validate_reviewed_output_midi_and_interpretation(
+                tmp_path,
+                assessment_path=tmp_path / "assessment.json",
+                equivalence_path=tmp_path / "equivalence.json",
+                reviewed_export_path=tmp_path / "reviewed.json",
+                reviewed_package_dir=tmp_path / "reviewed-package",
+                candidate_package_report_path=tmp_path / "candidate.json",
+                out_dir=tmp_path / "validation",
+                confirm_reviewed_stems_useful=True,
+                confirm_private_midi_validation=False,
+            )
+        )
 
 
 def _run(context: dict[str, object]) -> dict[str, object]:

@@ -833,7 +833,16 @@ class ProductionFullConversionRunner:
         job: PlannedVocalConversion,
         output_dir: Path,
     ) -> tuple[str, ...]:
-        return (
+        from .metadata import infer_project_metadata
+        from .source_project import load_prepared_project_context
+
+        prepared_context = load_prepared_project_context(request.project)
+        metadata = (
+            prepared_context.metadata
+            if prepared_context is not None
+            else infer_project_metadata(request.project)
+        )
+        command = [
             sys.executable,
             "-u",
             "-m",
@@ -844,7 +853,22 @@ class ProductionFullConversionRunner:
             job.cli_role,
             "--out-dir",
             str(output_dir),
-        )
+        ]
+        # A prepared active vocal can live under a content-addressed DERIVED
+        # path whose parent name contains no musical metadata.  Pass the
+        # project-bound values explicitly instead of asking vocal-melody to
+        # infer them from that implementation path.
+        if metadata.bpm is not None:
+            command.extend(("--bpm", str(float(metadata.bpm))))
+        if metadata.tuning_hz is not None:
+            command.extend(("--tuning-hz", str(float(metadata.tuning_hz))))
+        if metadata.key:
+            command.extend(("--key", metadata.key))
+        if prepared_context is not None and prepared_context.chord_document:
+            command.extend(
+                ("--chords-pdf", str(prepared_context.chord_document))
+            )
+        return tuple(command)
 
     def _is_cancelled(
         self,

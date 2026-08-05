@@ -2643,6 +2643,15 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   effect false. Activation permits only bounded private MIDI and interpretation
   validation; it still does not enable a separation route in Simple, Studio,
   TUI, public CLI, download or publication.
+  For the next private developer-only proof, use
+  `scripts/private-separation-reviewed-output-midi-validation.py` with the same
+  complete evidence chain, the activated prepared project, a fresh owner-only
+  output and both explicit confirmation flags. It resolves only the active
+  graph frontier, runs the production transcription components and creates an
+  automatic, unreviewed MIDI-derived WAV/MIDI/ZIP plus a bound validation
+  receipt. A partial output is diagnostic and must not be overwritten. This is
+  not a public separation route and does not change Simple, Studio, TUI,
+  source audio, source graph or human review state.
   Use the read-only bounded queue when review exports are difficult to track:
   `scripts/private-separation-song-disjoint-pilot-review-queue.py PIPELINE_ROOT
   --review-dir "$HOME/Downloads"`. Repeat the pipeline root, `--review` or

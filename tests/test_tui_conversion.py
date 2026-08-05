@@ -7,12 +7,15 @@ import os
 import stat
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from sunofriend.tui_conversion import (
     FullConversionRequest,
     FullConversionValidationError,
+    PlannedVocalConversion,
     ProductionFullConversionRunner,
     _CommandOutcome,
     _ReloadEvidence,
@@ -110,6 +113,16 @@ class _ScriptedRunner(ProductionFullConversionRunner):
     def assert_vocal_command(command: tuple[str, ...]) -> None:
         if "vocal-melody" not in command:
             raise AssertionError(f"unexpected command: {command!r}")
+        expected = {
+            "--bpm": "119.0",
+            "--tuning-hz": "440.0",
+            "--key": "B major",
+        }
+        for option, value in expected.items():
+            if option not in command or command[command.index(option) + 1] != value:
+                raise AssertionError(
+                    f"vocal command has no project-bound {option}: {command!r}"
+                )
 
     async def _reload_candidates(self, request, plan):
         self.reload_calls += 1
@@ -312,6 +325,54 @@ class FullConversionPlanTests(unittest.TestCase):
 
 
 class FullConversionRunnerTests(unittest.IsolatedAsyncioTestCase):
+    def test_vocal_command_binds_prepared_project_metadata_for_derived_audio(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "prepared-private-project"
+            project.mkdir()
+            derived = project / "DERIVED/reviewed-separation-v1/vocals.wav"
+            derived.parent.mkdir(parents=True)
+            derived.touch()
+            chords = project / "INPUT/chords.pdf"
+            chords.parent.mkdir()
+            chords.touch()
+            request = FullConversionRequest.create(project, root / "fresh-output")
+            job = PlannedVocalConversion(
+                source=derived,
+                source_role="vocals",
+                cli_role="lead",
+                output_token="lead",
+                progress_label="vocals",
+            )
+            prepared = SimpleNamespace(
+                metadata=SimpleNamespace(
+                    bpm=113.0,
+                    tuning_hz=442.0,
+                    key="B minor",
+                ),
+                chord_document=chords,
+            )
+
+            with patch(
+                "sunofriend.source_project.load_prepared_project_context",
+                return_value=prepared,
+            ):
+                command = ProductionFullConversionRunner()._vocal_command(
+                    request,
+                    job,
+                    root / "vocal-output",
+                )
+
+            self.assertEqual(command[command.index("--bpm") + 1], "113.0")
+            self.assertEqual(command[command.index("--tuning-hz") + 1], "442.0")
+            self.assertEqual(command[command.index("--key") + 1], "B minor")
+            self.assertEqual(
+                command[command.index("--chords-pdf") + 1],
+                str(chords),
+            )
+
     async def test_runs_full_instrumental_then_vocals_and_reloads(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

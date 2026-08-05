@@ -4226,6 +4226,56 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
   --confirm-reviewed-stems-useful
 ```
 
+The next private gate is now implemented by
+`scripts/private-separation-reviewed-output-midi-validation.py`. It first
+replays and verifies the exact reviewed activation, then resolves only the
+active `vocals` and `other` graph frontier. It runs the existing production
+instrumental and vocal transcription components, builds an automatic but
+explicitly unreviewed MIDI-derived interpretation and writes a path-free
+private validation receipt. It does not call the public Simple command or
+enable separation in Simple, Studio or the TUI.
+
+The first diagnostic run exposed that the full-conversion runner did not pass
+prepared-project BPM, tuning and key metadata into a nested derived vocal
+subprocess. That v1 result retained a valid instrumental interpretation but is
+partial and diagnostic only. The runner now supplies those project-bound
+values, including a prepared chord document when present, rather than asking a
+content-addressed derived filename to encode musical metadata.
+
+The fresh v3 validation completed for both active roles. It reloaded seven MIDI
+candidates and selected one automatic `other` primary plus one automatic vocal
+primary, with no omitted source roles. The generated outputs are at
+`work/separation-bakeoff/tell-me-that-i-do-it-bitch-reviewed-stems-private-midi-validation-v3/AUTOMATIC-SONG`.
+The balanced interpretation WAV SHA-256 is
+`72c0568bbf67d9cdf25e7f5764b023f108a56c9e39ce24529e7db64fb65739f0`;
+the combined MIDI SHA-256 is
+`6b92b9f0b5963e8beb0c242a615533e9ef558fb2a3508237c764f9a76a04ebab`.
+The validation document SHA-256 is
+`62a60f21d1c7dcc725c2b4ccc071d02fdc805621ebbd1c9593405c247abebba1`.
+The source graph remained revision 3 and unchanged. Human listening is still
+required because the broad instrumental remainder deliberately uses the
+conservative `other`-to-synth transcription proxy.
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
+  scripts/private-separation-reviewed-output-midi-validation.py \
+  --project-root "$PREPARED_PRIVATE_PROJECT" \
+  --import-assessment "$IMPORT_ASSESSMENT_JSON" \
+  --review-equivalence "$REVIEW_EQUIVALENCE_JSON" \
+  --reviewed-export "$REVIEWED_BROWSER_EXPORT" \
+  --reviewed-package-dir "$REVIEWED_STITCH_ROOT" \
+  --candidate-package-report "$CANDIDATE_REVIEW_PACKAGE_JSON" \
+  --out-dir "$FRESH_PRIVATE_MIDI_VALIDATION" \
+  --confirm-reviewed-stems-useful \
+  --confirm-private-midi-validation
+```
+
+The destination must not exist, must be outside the prepared source project
+and must have an owner-only parent. A failed run remains as a private partial
+diagnostic and is never overwritten; retry into another fresh destination.
+The created WAV contains MIDI rendering only, not the source or separated
+audio, and is not a release master.
+
 The reusable assessment command is:
 
 ```bash
