@@ -3529,6 +3529,59 @@ that exact rule. The result never chooses among them, keeps
 publication false, and requires a later readiness reassessment before any
 further route can be considered.
 
+That post-acceptance stage is now implemented as
+`scripts/private-separation-candidate-followup-variant-final-readiness-reassessment.py`.
+It accepts the exact resolved acceptance result, every final-acceptance browser
+export and the same complete upstream review/alignment/execution chain. It
+re-runs the resolver into a fresh private temporary location and requires the
+supplied result to match exactly before writing one owner-only, no-overwrite
+readiness projection.
+
+Run it only after the real acceptance pages have been completed, status has
+passed and the exact acceptance result has been resolved:
+
+```bash
+mkdir -m 700 "$FINAL_READINESS_DIR"
+
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-candidate-followup-variant-final-readiness-reassessment.py \
+  --final-acceptance-result "$FINAL_ACCEPTANCE_RESULT" \
+  --final-acceptance-reviewed-export "$FINAL_ACCEPTANCE_EXPORT_01" \
+  --final-acceptance-reviewed-export "$FINAL_ACCEPTANCE_EXPORT_02" \
+  --review-package-dir "$FINAL_ACCEPTANCE_PACKAGE" \
+  --readiness-result "$VARIANT_READINESS_RESULT" \
+  --full-song-review-result "$VARIANT_FULL_SONG_RESULT" \
+  --alignment-package-dir "$VARIANT_ALIGNMENT_PACKAGE" \
+  --full-song-reviewed-export "$REVIEWED_VARIANT_01" \
+  --full-song-reviewed-export "$REVIEWED_VARIANT_02" \
+  --full-song-review-package-dir "$VARIANT_FULL_SONG_PACKAGE" \
+  --variant-review-result "$TARGETED_VARIANT_RESULT" \
+  --variant-reviewed-export "$TARGETED_VARIANT_REVIEWED_EXPORT" \
+  --variant-review-package-dir "$TARGETED_VARIANT_PACKAGE" \
+  --plan "$VARIANT_PLAN" \
+  --execution-dir "$FIRST_FOLLOWUP_EXECUTION" \
+  --v2-execution-dir "$V2_EXECUTION" \
+  --variant-execution-dir "$VARIANT_EXECUTION" \
+  --stitch-package-dir "$STITCH_PACKAGE" \
+  --out \
+    "$FINAL_READINESS_DIR/private-separation-candidate-followup-variant-final-readiness-reassessment.json"
+```
+
+The report records zero, one or both exact candidates as ready only for a
+separately bounded private pilot. Negative and uncertain answers remain
+visible. It never ranks or selects a candidate, does not reinterpret readiness
+as original-join resolution, and does not recompute or close the global
+publication ledger. Cross-song separated-audio quality, broad roles, a hidden
+song-disjoint set, checkpoint terms, offline acceptance, a 16 GiB resource
+class and a public product route remain separate evidence boundaries. If no
+candidate is ready, the next action is bounded remediation. If one or more are
+ready, the next engineering step is a separately designed private-pilot handoff
+that still cannot enable Simple, Studio, CLI, TUI or source-graph separation.
+
+The implementation and adversarial tests are complete. No real readiness
+projection exists yet because the exact 36-unit targeted review and all later
+human gates remain incomplete; do not manufacture those exports or results.
+
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
 

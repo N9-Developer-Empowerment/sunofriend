@@ -2436,10 +2436,27 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   or both variants may satisfy that rule independently; the result never ranks
   or selects among them. Even private-pilot acceptance cannot by itself resolve
   joins, enable a product route or permit publication.
+  Reassess that exact result only with
+  `scripts/private-separation-candidate-followup-variant-final-readiness-reassessment.py`.
+  Supply the complete final-acceptance export set, exact acceptance result and
+  the same acceptance package, readiness, full-song review/export set,
+  alignment, targeted-variant review/export and execution/stitch chain. The
+  command re-runs the final-acceptance resolver in a private temporary root and
+  demands exact result equality before writing one fresh owner-only report.
+  It records zero, one or both independently accepted candidates as ready only
+  for a separately bounded private pilot. It retains every negative and
+  uncertain answer, accepts no subset or preferred ordering and never selects
+  a winner. It keeps global original-join resolution, separator-default
+  acceptance, product activation and publication false. It does not recompute
+  the global publication ledger; cross-song separated-audio quality, broad
+  roles, hidden-set, checkpoint-terms, offline, 16 GiB resource and public-route
+  evidence remain separate boundaries. A non-empty ready set permits only a
+  later private-pilot handoff design; an empty set returns to bounded
+  remediation.
   Keep the execution, candidate and stitch trees quiescent during status and
-  resolution. Their JSON and WAV descriptors are not held as one atomic
-  snapshot across the whole operation; status and result record this explicit
-  limitation.
+  resolution or reassessment. Their JSON and WAV descriptors are not held as
+  one atomic snapshot across the whole operation; status and result record this
+  explicit limitation.
   Never call exact input partitioning or exact output duration seamless or
   accepted separation.
   Fresh native attempts now retain two path-free resource projections inside
