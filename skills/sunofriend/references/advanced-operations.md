@@ -2534,6 +2534,21 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   All three copied PCM24 files are byte-identical to the reviewed stitch;
   separator selection, acceptance, product integration and publication remain
   false.
+  Summarize cross-song private progress only with
+  `scripts/private-separation-multi-song-private-pilot-coverage.py`. Supply the
+  exact pragmatic reference authorization and repeat `--pilot EVIDENCE
+  REVIEW_RESULT HANDOFF_DIR` for every complete source-distinct pilot. The
+  command verifies each sealed chain, requires distinct track IDs and source
+  hashes, re-hashes every handoff WAV and writes one path-free owner-only
+  coverage report. It runs no model and creates no audio. The current report
+  verifies the `Be Alone` reference plus the reviewed `In the way` pilot: two
+  distinct source hashes, 15 reviewed boundaries, 45 role-boundary judgements,
+  40 clean, five audible joins and zero uncertain judgements. Treat those as
+  descriptive single-listener counts, not a quality score or confidence
+  interval. One additional source-distinct reviewed pilot is required before
+  even a separate private-route design may be assessed. The coverage report
+  cannot authorize another run, select or accept a separator, or enable Simple,
+  Studio, TUI, CLI, source graph, download or publication.
   The downstream fail-closed builder is
   `scripts/private-separation-candidate-followup-variant-full-song-review.py`.
   Run it only after an exact 36-unit browser export has passed status, has

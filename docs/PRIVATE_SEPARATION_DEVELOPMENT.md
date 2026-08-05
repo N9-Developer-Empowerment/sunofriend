@@ -3724,6 +3724,49 @@ and no changed sample values. This closes the exact `In the way` private-pilot
 review and handoff increment only. It does not accept or select Kim Vocal 2 as
 a general separator and enables no product or publication route.
 
+The follow-on owner-only coverage ledger is now implemented as
+`scripts/private-separation-multi-song-private-pilot-coverage.py`. It verifies
+the sealed `Be Alone` pragmatic authorization plus one or more complete
+song-disjoint automatic-envelope, review-result and exact-handoff triples. It
+requires every source hash and track ID to be distinct, checks every copied WAV
+against the handoff manifest, preserves the per-role boundary diagnostics and
+writes no paths, listener notes or audio. Repeated `--pilot` arguments are
+canonicalized by track ID; they do not rank the tracks or separator.
+
+Build the current ledger without running a model:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
+  scripts/private-separation-multi-song-private-pilot-coverage.py \
+  --pragmatic-authorization \
+    work/separation-bakeoff/be-alone-pragmatic-private-pilot-v1/private-separation-pragmatic-private-pilot.json \
+  --pilot \
+    work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-evidence-v1/private-separation-song-disjoint-pilot-evidence.json \
+    work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-review-result-v1/private-separation-song-disjoint-pilot-review-result.json \
+    work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-handoff-v1 \
+  --out \
+    work/separation-bakeoff/multi-song-private-pilot-coverage-v2/private-separation-multi-song-private-pilot-coverage.json
+```
+
+The current v2 output of the v1 ledger contract has file SHA-256
+`1c0928957a597b332e9df41c35436fe1e917cf00fa44513a87d25596bb8501bd`
+and document SHA-256
+`eb8347b79f6e70eb4c86b9a3000dd8ab8b18d690eea1899fd3a030d6f3c79d34`.
+It verifies two distinct source hashes: one pragmatic reference and one
+reviewed song-disjoint pilot. The song-disjoint review contributes 15 exact
+boundaries and 45 role-boundary judgements: 40 clean, five audible joins and
+zero `cannot_tell`. All three complete-song roles were useful and the exact
+two-stem handoff passed. These are descriptive single-listener counts, not a
+normal sample, confidence interval or quality score.
+
+This completes the first two-source private-evidence checkpoint, not the
+private-route design checkpoint. The predeclared next step is at least one
+additional source-distinct, fully reviewed song-disjoint pilot. Only after two
+such song-disjoint pilots may a separate private-only integration design be
+assessed. Even then, separator selection, public acceptance, Simple, Studio,
+TUI, CLI, source graph, download and publication remain separate closed
+boundaries.
+
 The next fail-closed builder is already implemented, but it must not run for
 the retained result because zero variants are eligible. For a future genuinely
 passing result it re-resolves that same export and includes **every** eligible
