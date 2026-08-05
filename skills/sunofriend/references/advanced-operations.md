@@ -2405,6 +2405,22 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   omit another eligible variant. Failed variants remain visible; the result
   adds no listening evidence and leaves original-join resolution, acceptance,
   product activation and publication false.
+  Build the subsequent independent acceptance pages only with
+  `scripts/private-separation-candidate-followup-variant-final-acceptance-review.py`.
+  Supply the exact reassessment, alignment package, complete multi-page
+  full-song result and every corresponding browser export, plus the unchanged
+  targeted-variant and execution evidence chain. The builder re-runs the
+  reassessment, requires at least one eligible variant and accepts no caller
+  subset or preferred order. It creates one private whole-song page per
+  eligible variant in canonical order. Each page presents the exact source,
+  vocals, instrumental and reconstruction and asks separately about vocal
+  workflow usefulness, instrumental workflow usefulness, complete-song
+  continuity/synchronisation and suitability for a private pilot. The pages
+  are independent rather than comparative and expose no method identity.
+  Package creation records no human answer, selection or acceptance. Every
+  page must be completed and exported by a listener, then verified by a
+  separate resolver that is not yet implemented. Even a later private-pilot
+  acceptance cannot by itself enable a product route or publication.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic
   snapshot across the whole operation; status and result record this explicit

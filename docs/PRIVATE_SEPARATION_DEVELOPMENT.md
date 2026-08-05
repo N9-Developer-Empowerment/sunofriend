@@ -3460,6 +3460,31 @@ separator. It is implemented and tested but cannot run on the retained
 `Be Alone` evidence until the earlier exact 36-unit targeted review is exported
 and every intervening review and alignment gate genuinely completes.
 
+The next bounded package builder is now implemented as
+`scripts/private-separation-candidate-followup-variant-final-acceptance-review.py`.
+It takes the exact readiness reassessment plus the complete review, alignment
+and execution evidence chain, re-runs the reassessment and creates one
+independent complete-song acceptance page for every eligible variant in
+canonical plan order. It accepts no caller-selected subset and does not rank
+or choose between eligible variants.
+
+Each page copies the already verified private PCM24 source, vocals,
+instrumental and reconstruction, then requires the listener to hear all four
+complete tracks. The four explicit questions cover vocal usefulness for the
+melody/MIDI workflow, instrumental usefulness for the MIDI/instrument
+workflow, whole-song continuity and synchronisation, and whether that exact
+candidate is suitable for a private Sunofriend pilot. `cannot_tell` and
+`needs_more_work` remain valid evidence. Method identities are absent from the
+page so package order cannot become an implied preference.
+
+The builder is contract-complete and tested, but no real package can be built
+yet because the 36-unit targeted variant review and every intervening human
+gate remain incomplete. Package creation records no acceptance, selection or
+join resolution and enables no product or publication route. A separate
+verifier/resolver for the future browser exports is the next implementation
+increment; do not hand-edit a reviewed export or infer acceptance from the
+presence of a page.
+
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
 
