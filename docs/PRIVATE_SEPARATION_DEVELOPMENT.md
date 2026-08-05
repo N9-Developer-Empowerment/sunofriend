@@ -3843,6 +3843,39 @@ private-only integration design is met. It does not itself select or accept a
 separator, establish ground-truth accuracy, activate a source graph, or enable
 Simple, Studio, TUI, CLI, download or publication.
 
+That assessment is now sealed as the owner-only, path-free design record at
+`work/separation-bakeoff/private-separation-route-design-v1/private-separation-route-design.json`.
+Its file/document SHA-256 values are
+`5baca3546a08f55570afcfbee875a95bc09a581a3c024f6d7de59f8c95c57472`
+and
+`2d5f85d353e5ac35df01ebbd2fa34ffb5a271d137afa2db3d8dae2881a5710ee`.
+The design permits no execution or product route. It specifies a future
+explicit, offline, private-developer request over one locally authorised audio
+asset, producing fresh owner-only unreviewed `vocals` and `instrumental`
+staging audio plus diagnostic `reconstruction`. Complete-song and every-boundary
+listening remains mandatory before a separately assessed import. No existing
+Simple, Studio, TUI, public CLI, source-graph or download code can discover or
+use those results.
+
+Recreate the design record from the exact coverage evidence only with:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
+  scripts/private-separation-private-route-design.py \
+  --coverage-report \
+    work/separation-bakeoff/multi-song-private-pilot-coverage-v3/private-separation-multi-song-private-pilot-coverage.json \
+  --out \
+    work/separation-bakeoff/private-separation-route-design-v1/private-separation-route-design.json
+```
+
+The next bounded slice is stage 1: a sealed backend-adapter contract that may
+validate configuration and construct an exact execution request, but must not
+run a model or activate any user-facing route. Later private execution must
+bind the source and checkpoint hashes, make no implicit download or network
+request, use request-bound resumable chunks and preserve incomplete work as
+diagnostic-only. Reaching that later implementation stage will still not make
+separation a public Sunofriend feature.
+
 The next fail-closed builder is already implemented, but it must not run for
 the retained result because zero variants are eligible. For a future genuinely
 passing result it re-resolves that same export and includes **every** eligible

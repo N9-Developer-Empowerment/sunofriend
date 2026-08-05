@@ -2569,6 +2569,18 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   design checkpoint is met. This is not separator selection, general accuracy,
   product integration or publication permission; every public route remains
   disabled.
+  The checkpoint-backed route design is sealed by
+  `scripts/private-separation-private-route-design.py`. It accepts only the
+  exact owner-only multi-song coverage report and writes a fresh owner-only
+  `private-separation-route-design.json`. The design is non-activating: a
+  future route must be explicit, local, private-developer-only and offline
+  after a separately authorised installation; it may stage `vocals` and
+  `instrumental` as primary plus `reconstruction` as diagnostic. All staging
+  remains unreviewed until complete-song and boundary listening is bound to
+  the exact output. Simple, Studio, TUI, public CLI, source graph and download
+  discovery stay false. The next permitted engineering slice is only a sealed
+  backend-adapter request contract; it may validate hashes and configuration
+  but must not execute a model or activate a product route.
   Use the read-only bounded queue when review exports are difficult to track:
   `scripts/private-separation-song-disjoint-pilot-review-queue.py PIPELINE_ROOT
   --review-dir "$HOME/Downloads"`. Repeat the pipeline root, `--review` or
