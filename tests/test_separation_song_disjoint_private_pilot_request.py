@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -71,6 +72,53 @@ def test_private_pilot_request_prepares_path_free_owner_only_queue(
     )
     with pytest.raises(ValueError, match="source distinction"):
         request._load_verified_song_disjoint_private_pilot_request(report)
+
+
+def test_private_pilot_request_loader_preserves_sealed_v1_history(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    context = _context(tmp_path)
+    monkeypatch.setattr(request, "_load_request_inputs", lambda *a, **k: context)
+    monkeypatch.setattr(
+        request, "_require_output_disjoint_from_inputs", lambda *a, **k: None
+    )
+    output = tmp_path / "request"
+    request._prepare_song_disjoint_private_pilot_request(
+        "authorization.json",
+        reference_v2_execution_path="reference.json",
+        reference_stitch_package_dir="reference-stitch",
+        corpus_manifest_path=_corpus(tmp_path),
+        track_id="new-song",
+        repository_root="repository",
+        runtime_launcher_path="runtime",
+        source_root="source",
+        checkpoint_path="checkpoint",
+        companion_root="companions",
+        out_dir=output,
+    )
+    report = output / request.REPORT_NAME
+    legacy = json.loads(report.read_text(encoding="utf-8"))
+    legacy["schema"] = request._LEGACY_SCHEMA
+    legacy["policy_id"] = request._LEGACY_POLICY_ID
+    legacy["next_action"] = "execute_or_resume_the_exact_embedded_plan"
+    environment = legacy["execution_environment"]
+    environment.pop("worker_source")
+    environment.pop("companion_manifest_sha256")
+    environment["coordinator_code"] = {
+        key: value
+        for key, value in environment["coordinator_code"].items()
+        if key in request._CODE_FILES_V1
+    }
+    legacy["document_sha256"] = _document_sha256(legacy)
+    report.write_text(
+        json.dumps(legacy, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    verified = request._load_verified_song_disjoint_private_pilot_request(report)
+
+    assert verified["document"]["schema"] == request._LEGACY_SCHEMA
 
 
 def test_private_pilot_request_rejects_input_drift_and_removes_partial_output(
@@ -228,8 +276,11 @@ def _context(root: Path) -> dict[str, object]:
         "repository_root": root / "repository",
         "upstream": {"verification_sha256": "7" * 64},
         "code": {
-            item: {"bytes": 100, "sha256": format(index, "x") * 64}
-            for index, item in enumerate(request._CODE_FILES, start=8)
+            item: {
+                "bytes": 100,
+                "sha256": hashlib.sha256(item.encode("utf-8")).hexdigest(),
+            }
+            for item in request._CODE_FILES
         },
         "runtime_launcher_path": root / "runtime" / "bin" / "python",
         "runtime": _runtime(),

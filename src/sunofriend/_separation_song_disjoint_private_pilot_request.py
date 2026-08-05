@@ -21,6 +21,7 @@ import tempfile
 from typing import Any, Mapping
 
 from ._separation_authorised_excerpt import _document_sha256, _sha256
+from ._separation_checkpoint_canonical import canonical_json_bytes
 from ._separation_full_song_executor import (
     _load_verified_plan,
     _require_private_directory,
@@ -41,6 +42,7 @@ from ._separation_melroformer_native_runtime_darwin import (
     _measure_private_runtime_launcher,
     _path_free_runtime_binding,
 )
+from ._separation_melroformer_native_worker import WORKER_RELATIVE_PATH
 from ._separation_melroformer_runtime_evidence import (
     SOURCE_MANIFEST_SHA256,
     SOURCE_REVISION,
@@ -60,12 +62,14 @@ from ._separation_song_disjoint_private_pilot import (
 )
 
 
-SCHEMA = "sunofriend.private-separation-song-disjoint-pilot-request.v1"
+_LEGACY_SCHEMA = "sunofriend.private-separation-song-disjoint-pilot-request.v1"
+SCHEMA = "sunofriend.private-separation-song-disjoint-pilot-request.v2"
 STATUS = "private_pilot_request_prepared_no_model_run"
-POLICY_ID = "source-bound-song-disjoint-private-pilot-request-v1"
+_LEGACY_POLICY_ID = "source-bound-song-disjoint-private-pilot-request-v1"
+POLICY_ID = "source-bound-song-disjoint-private-pilot-request-v2"
 REPORT_NAME = "private-separation-song-disjoint-pilot-request.json"
 PLAN_DIRECTORY = "PLAN"
-_CODE_FILES = (
+_CODE_FILES_V1 = (
     "scripts/private-separation-song-disjoint-pilot-request.py",
     "src/sunofriend/_separation_song_disjoint_private_pilot_request.py",
     "scripts/private-separation-full-song-plan.py",
@@ -73,6 +77,13 @@ _CODE_FILES = (
     "scripts/private-separation-full-song-execute.py",
     "src/sunofriend/_separation_full_song_executor.py",
     "src/sunofriend/_separation_melroformer_native_attempt_darwin.py",
+)
+_CODE_FILES = (
+    *_CODE_FILES_V1,
+    "scripts/private-separation-song-disjoint-pilot-execute.py",
+    "src/sunofriend/_separation_song_disjoint_private_pilot_execution.py",
+    WORKER_RELATIVE_PATH,
+    "src/sunofriend/_separation_melroformer_native_worker.py",
 )
 _PERMISSIONS = {
     "bounded_private_worker_execution_permitted": True,
@@ -240,9 +251,14 @@ def _load_verified_song_disjoint_private_pilot_request(
         raise ValueError("private pilot request JSON differs") from error
     if (
         not isinstance(document, dict)
-        or document.get("schema") != SCHEMA
+        or document.get("schema") not in {SCHEMA, _LEGACY_SCHEMA}
         or document.get("status") != STATUS
-        or document.get("policy_id") != POLICY_ID
+        or document.get("policy_id")
+        != (
+            POLICY_ID
+            if document.get("schema") == SCHEMA
+            else _LEGACY_POLICY_ID
+        )
         or document.get("evidence_scope") != "private_development_only"
         or document.get("permissions") != _PERMISSIONS
         or document.get("effects") != _EFFECTS
@@ -332,6 +348,8 @@ def _validate_request_document(document: Mapping[str, Any]) -> None:
         }
     ):
         raise ValueError("private pilot request source distinction differs")
+    schema = document.get("schema")
+    expected_code_files = _CODE_FILES if schema == SCHEMA else _CODE_FILES_V1
     checkpoint = environment.get("checkpoint")
     audited_source = environment.get("audited_source")
     companions = environment.get("companions")
@@ -351,7 +369,7 @@ def _validate_request_document(document: Mapping[str, Any]) -> None:
         or not isinstance(companions, Mapping)
         or set(companions) != {"LICENSE", "config.json"}
         or not isinstance(code, Mapping)
-        or set(code) != set(_CODE_FILES)
+        or set(code) != set(expected_code_files)
         or environment.get("offline_environment_required") is not True
     ):
         raise ValueError("private pilot request execution environment differs")
@@ -364,6 +382,19 @@ def _validate_request_document(document: Mapping[str, Any]) -> None:
             or not _is_sha256(item.get("sha256"))
         ):
             raise ValueError("private pilot request artifact identity differs")
+    if schema == SCHEMA:
+        worker = environment.get("worker_source")
+        if (
+            not isinstance(worker, Mapping)
+            or worker != code.get(WORKER_RELATIVE_PATH)
+            or not _is_sha256(environment.get("companion_manifest_sha256"))
+        ):
+            raise ValueError("private pilot request worker binding differs")
+    elif (
+        "worker_source" in environment
+        or "companion_manifest_sha256" in environment
+    ):
+        raise ValueError("legacy private pilot request environment differs")
     if (
         plan.get("policy_id") != "contiguous-canonical-44100-worker-chunks-v1"
         or plan.get("sample_rate") != 44_100
@@ -394,7 +425,11 @@ def _validate_request_document(document: Mapping[str, Any]) -> None:
             "publication_ready": False,
         }
         or document.get("next_action")
-        != "execute_or_resume_the_exact_embedded_plan"
+        != (
+            "execute_or_resume_through_the_request_bound_adapter"
+            if schema == SCHEMA
+            else "execute_or_resume_the_exact_embedded_plan"
+        )
     ):
         raise ValueError("private pilot request readiness differs")
 
@@ -444,6 +479,34 @@ def _load_request_inputs(
     if not _is_sha256(reference_pcm):
         raise ValueError("reference stitch source PCM identity differs")
 
+    measured = _measure_request_execution_environment(
+        repository_root=repository_root,
+        runtime_launcher_path=runtime_launcher_path,
+        source_root=source_root,
+        checkpoint_path=checkpoint_path,
+        companion_root=companion_root,
+    )
+    return {
+        "authorization": authorization,
+        "reference_execution": reference,
+        "reference_stitch_package": stitch_package,
+        "reference_stitch_path": stitch_path,
+        "reference_stitch": stitch,
+        "reference_source_pcm24_sha256": reference_pcm,
+        **measured,
+    }
+
+
+def _measure_request_execution_environment(
+    *,
+    repository_root: str | Path,
+    runtime_launcher_path: str | Path,
+    source_root: str | Path,
+    checkpoint_path: str | Path,
+    companion_root: str | Path,
+) -> dict[str, Any]:
+    """Measure the exact path-free environment used by a v2 request."""
+
     repository = Path(repository_root).expanduser().absolute()
     if not repository.is_dir() or repository.is_symlink():
         raise ValueError("private pilot repository root must be a directory")
@@ -466,13 +529,7 @@ def _load_request_inputs(
         expected_bytes=CONVERSION_CHECKPOINT_BYTES,
         expected_sha256=CONVERSION_CHECKPOINT_SHA256,
     )
-    return {
-        "authorization": authorization,
-        "reference_execution": reference,
-        "reference_stitch_package": stitch_package,
-        "reference_stitch_path": stitch_path,
-        "reference_stitch": stitch,
-        "reference_source_pcm24_sha256": reference_pcm,
+    measured = {
         "repository_root": repository,
         "upstream": upstream,
         "code": code,
@@ -485,6 +542,8 @@ def _load_request_inputs(
         "companion_root": companions,
         "companion_observation": companion_observation,
     }
+    measured["execution_environment"] = _execution_environment_document(measured)
+    return measured
 
 
 def _request_document(
@@ -498,9 +557,6 @@ def _request_document(
     reference = inputs["reference_execution"]
     stitch = inputs["reference_stitch"]
     pilot_pcm = plan["canonical_clock"]["pcm24_int32_sequence_sha256"]
-    source_observation = inputs["source_observation"]
-    checkpoint = inputs["checkpoint_observation"]
-    companions = inputs["companion_observation"]
     document: dict[str, Any] = {
         "schema": SCHEMA,
         "status": STATUS,
@@ -538,51 +594,8 @@ def _request_document(
             "song_disjoint_content_check_passed": True,
             "musical_identity_inferred_from_hash": False,
         },
-        "execution_environment": {
-            "runtime": _path_free_runtime_binding(inputs["runtime"]),
-            "checkpoint": {
-                key: checkpoint[key]
-                for key in (
-                    "schema",
-                    "status",
-                    "bytes",
-                    "sha256",
-                    "container",
-                    "header_bytes",
-                    "data_bytes",
-                    "tensor_count",
-                    "tensor_names_sha256",
-                    "dtype_counts",
-                    "tensor_values_observed",
-                    "tensor_library_imported",
-                )
-            },
-            "audited_source": {
-                "status": source_observation["status"],
-                "revision": SOURCE_REVISION,
-                "manifest_sha256": SOURCE_MANIFEST_SHA256,
-                "files": [
-                    {
-                        "path": item["path"],
-                        "bytes": item["bytes"],
-                        "sha256": item["sha256"],
-                    }
-                    for item in source_observation["files"]
-                ],
-            },
-            "companions": {
-                name: {
-                    "bytes": item["bytes"],
-                    "sha256": item["sha256"],
-                }
-                for name, item in sorted(companions["files"].items())
-            },
-            "tracked_upstream_evidence_sha256": inputs["upstream"][
-                "verification_sha256"
-            ],
-            "coordinator_code": inputs["code"],
-            "offline_environment_required": True,
-        },
+        "execution_environment": inputs.get("execution_environment")
+        or _execution_environment_document(inputs),
         "plan": {
             "path": f"{PLAN_DIRECTORY}/{PLAN_REPORT_NAME}",
             "sha256": plan_sha256,
@@ -612,7 +625,7 @@ def _request_document(
         },
         "permissions": dict(_PERMISSIONS),
         "effects": dict(_EFFECTS),
-        "next_action": "execute_or_resume_the_exact_embedded_plan",
+        "next_action": "execute_or_resume_through_the_request_bound_adapter",
         "limitations": [
             "Preparation creates canonical chunk audio but runs no worker or model.",
             "Source-content distinction is a cryptographic PCM comparison, not musical identity or quality evidence.",
@@ -624,6 +637,70 @@ def _request_document(
     }
     document["document_sha256"] = _document_sha256(document)
     return document
+
+
+def _execution_environment_document(inputs: Mapping[str, Any]) -> dict[str, Any]:
+    source_observation = inputs["source_observation"]
+    checkpoint = inputs["checkpoint_observation"]
+    companions = inputs["companion_observation"]
+    companion_files = [
+        {
+            "name": name,
+            "bytes": item["bytes"],
+            "sha256": item["sha256"],
+        }
+        for name, item in sorted(companions["files"].items())
+    ]
+    code = inputs["code"]
+    return {
+        "runtime": _path_free_runtime_binding(inputs["runtime"]),
+        "checkpoint": {
+            key: checkpoint[key]
+            for key in (
+                "schema",
+                "status",
+                "bytes",
+                "sha256",
+                "container",
+                "header_bytes",
+                "data_bytes",
+                "tensor_count",
+                "tensor_names_sha256",
+                "dtype_counts",
+                "tensor_values_observed",
+                "tensor_library_imported",
+            )
+        },
+        "audited_source": {
+            "status": source_observation["status"],
+            "revision": SOURCE_REVISION,
+            "manifest_sha256": SOURCE_MANIFEST_SHA256,
+            "files": [
+                {
+                    "path": item["path"],
+                    "bytes": item["bytes"],
+                    "sha256": item["sha256"],
+                }
+                for item in source_observation["files"]
+            ],
+        },
+        "companions": {
+            item["name"]: {
+                "bytes": item["bytes"],
+                "sha256": item["sha256"],
+            }
+            for item in companion_files
+        },
+        "companion_manifest_sha256": hashlib.sha256(
+            canonical_json_bytes(companion_files)
+        ).hexdigest(),
+        "worker_source": code[WORKER_RELATIVE_PATH],
+        "tracked_upstream_evidence_sha256": inputs["upstream"][
+            "verification_sha256"
+        ],
+        "coordinator_code": code,
+        "offline_environment_required": True,
+    }
 
 
 def _require_source_distinction(

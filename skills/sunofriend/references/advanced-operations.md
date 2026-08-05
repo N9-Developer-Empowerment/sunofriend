@@ -2433,15 +2433,28 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   corpus/track, repository root, virtual-environment launcher, audited source
   root, Kim checkpoint, companion root and a fresh output directory. The
   command re-verifies those inputs, compares canonical PCM identities, embeds
-  the ordinary gap-free full-song plan and prints the exact resumable executor
-  command. Its owner-only persisted request is path-free and starts no worker
-  or model. `bounded_private_worker_execution_permitted: true` applies only to
-  the exact embedded request; Simple, Studio, TUI, source-graph, public download
-  and publication permissions stay false. Recheck the printed source
-  distinction and queue before running its `next_command` into another fresh
-  directory. The existing `In the way` request dry run is duplicate validation
-  evidence only and does not replace the completed v2 execution or its pending
-  human review.
+  the ordinary gap-free full-song plan and prints the exact resumable
+  request-aware executor command. New v2 requests bind that adapter, the native
+  worker source and companion manifest. Run
+  `scripts/private-separation-song-disjoint-pilot-execute.py`, not the generic
+  full-song executor, and use `--preflight` first for a zero-inference
+  environment check. Every resume remeasures the sealed environment, stores the
+  request identity in execution state and verifies the same environment hashes
+  in completed attempts. A generic resume of a guarded root and retroactive
+  binding of an old unbound root both fail. A path-free completion binding is
+  written only after every worker chunk verifies. It is identity evidence, not
+  separator acceptance. Legacy v1 requests remain readable history but must be
+  regenerated before starting a request-bound execution. The owner-only
+  persisted request is path-free and starts no worker or model.
+  `bounded_private_worker_execution_permitted: true` applies only to the exact
+  embedded request; Simple, Studio, TUI, source-graph, public download and
+  publication permissions stay false. Recheck the printed source distinction
+  and queue before running its `next_command` into another fresh directory. The
+  existing `In the way` v1 request dry run is duplicate validation evidence
+  only and does not replace the completed v2 execution or its pending human
+  review. A later no-inference v2 request/preflight at
+  `work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-request-v4-request-bound`
+  verifies the request-aware path only; it also does not supersede that review.
   The automatic chain is also bound by
   `scripts/private-separation-song-disjoint-pilot-evidence.py`. It verifies the
   pragmatic authorization, the exact reference v2 execution bound by that

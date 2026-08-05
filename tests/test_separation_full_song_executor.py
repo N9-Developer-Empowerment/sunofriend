@@ -41,6 +41,9 @@ from sunofriend._separation_melroformer_upstream_evidence import (
     CONVERSION_CHECKPOINT_BYTES,
     CONVERSION_CHECKPOINT_SHA256,
 )
+from sunofriend._separation_melroformer_runtime_evidence import (
+    SOURCE_MANIFEST_SHA256,
+)
 from sunofriend.interface_contract import DIRECT_TUI_COMMANDS, PUBLIC_COMMANDS
 
 
@@ -246,6 +249,9 @@ def _fake_runner(
                     ],
                     "checkpoint_sha256": CONVERSION_CHECKPOINT_SHA256,
                     "checkpoint_bytes": CONVERSION_CHECKPOINT_BYTES,
+                    "source_manifest_sha256": SOURCE_MANIFEST_SHA256,
+                    "companion_manifest_sha256": _digest("companions"),
+                    "worker_source_sha256": _digest("worker"),
                 },
                 "outputs": outputs,
                 "permissions": {"accepted": False, "product_route_permitted": False},
@@ -280,6 +286,23 @@ def _fake_runner(
         return receipt
 
     return run
+
+
+def _digest(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _request_binding() -> dict[str, str]:
+    return {
+        "request_schema": "sunofriend.private-separation-song-disjoint-pilot-request.v2",
+        "request_policy_id": "source-bound-song-disjoint-private-pilot-request-v2",
+        "request_report_sha256": _digest("request-report"),
+        "request_document_sha256": _digest("request-document"),
+        "checkpoint_sha256": CONVERSION_CHECKPOINT_SHA256,
+        "source_manifest_sha256": SOURCE_MANIFEST_SHA256,
+        "companion_manifest_sha256": _digest("companions"),
+        "worker_source_sha256": _digest("worker"),
+    }
 
 
 def test_full_song_executor_runs_one_then_resumes_all(tmp_path: Path) -> None:
@@ -317,6 +340,97 @@ def test_full_song_executor_runs_one_then_resumes_all(tmp_path: Path) -> None:
     persisted = json.loads((out / REPORT_NAME).read_text(encoding="utf-8"))
     assert persisted["state_sha256"]
     assert stat.S_IMODE((out / REPORT_NAME).stat().st_mode) == 0o600
+
+
+def test_full_song_executor_seals_request_binding_and_rejects_generic_resume(
+    tmp_path: Path,
+) -> None:
+    plan = _plan(tmp_path)
+    runtime = _runtime_arguments(tmp_path)
+    out = tmp_path / "execution"
+    binding = _request_binding()
+    _execute_private_separation_full_song_queue(
+        plan,
+        out_dir=out,
+        **runtime,
+        private_pilot_request_binding=binding,
+        attempt_runner=_fake_runner([]),
+    )
+    state = json.loads((out / REPORT_NAME).read_text(encoding="utf-8"))
+    assert state["bindings"]["private_pilot_request"] == {
+        key: binding[key] for key in sorted(binding)
+    }
+
+    with pytest.raises(ValueError, match="request binding differs"):
+        _execute_private_separation_full_song_queue(
+            plan,
+            out_dir=out,
+            **runtime,
+            attempt_runner=_fake_runner([]),
+        )
+
+
+def test_full_song_executor_cannot_retrofit_request_to_unbound_history(
+    tmp_path: Path,
+) -> None:
+    plan = _plan(tmp_path)
+    runtime = _runtime_arguments(tmp_path)
+    out = tmp_path / "execution"
+    _execute_private_separation_full_song_queue(
+        plan,
+        out_dir=out,
+        **runtime,
+        attempt_runner=_fake_runner([]),
+    )
+
+    with pytest.raises(ValueError, match="request binding differs"):
+        _execute_private_separation_full_song_queue(
+            plan,
+            out_dir=out,
+            **runtime,
+            private_pilot_request_binding=_request_binding(),
+            attempt_runner=_fake_runner([]),
+        )
+
+
+def test_full_song_executor_rejects_request_environment_drift(
+    tmp_path: Path,
+) -> None:
+    plan = _plan(tmp_path)
+    runtime = _runtime_arguments(tmp_path)
+    out = tmp_path / "execution"
+    binding = _request_binding()
+    _execute_private_separation_full_song_queue(
+        plan,
+        out_dir=out,
+        **runtime,
+        private_pilot_request_binding=binding,
+        attempt_runner=_fake_runner([]),
+    )
+    evidence_path = (
+        out
+        / "ATTEMPTS/chunk-0000-attempt-001/native-attempt-evidence.json"
+    )
+    evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    evidence["bindings"]["worker_source_sha256"] = _digest("changed-worker")
+    _hash_document(evidence, "evidence_sha256")
+    _write_json(evidence_path, evidence)
+    state_path = out / REPORT_NAME
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["chunks"][0]["attempts"][0]["evidence_sha256"] = evidence[
+        "evidence_sha256"
+    ]
+    _hash_document(state, "state_sha256")
+    _write_json(state_path, state)
+
+    with pytest.raises(ValueError, match="request environment differs"):
+        _execute_private_separation_full_song_queue(
+            plan,
+            out_dir=out,
+            **runtime,
+            private_pilot_request_binding=binding,
+            attempt_runner=_fake_runner([]),
+        )
 
 
 def test_full_song_executor_preserves_failed_attempt_and_retries(

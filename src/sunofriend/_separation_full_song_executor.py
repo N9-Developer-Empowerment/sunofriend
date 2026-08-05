@@ -74,6 +74,7 @@ def _execute_private_separation_full_song_queue(
     companion_root: str | Path,
     device: str = "gpu",
     maximum_chunks: int | None = 1,
+    private_pilot_request_binding: Mapping[str, Any] | None = None,
     attempt_runner: AttemptRunner = _run_private_melroformer_native_attempt_darwin,
 ) -> dict[str, Any]:
     """Run and verify the next bounded queue entries, resuming safely."""
@@ -89,9 +90,27 @@ def _execute_private_separation_full_song_queue(
 
     plan_path, plan, plan_sha256 = _load_verified_plan(plan_report_path)
     destination = Path(out_dir).expanduser().absolute()
-    state = _load_or_create_state(destination, plan=plan, plan_sha256=plan_sha256)
-    _verify_state_binding(state, plan=plan, plan_sha256=plan_sha256)
-    _verify_completed_attempts(destination, state, plan)
+    request_binding = _normalize_private_pilot_request_binding(
+        private_pilot_request_binding
+    )
+    state = _load_or_create_state(
+        destination,
+        plan=plan,
+        plan_sha256=plan_sha256,
+        private_pilot_request_binding=request_binding,
+    )
+    _verify_state_binding(
+        state,
+        plan=plan,
+        plan_sha256=plan_sha256,
+        private_pilot_request_binding=request_binding,
+    )
+    _verify_completed_attempts(
+        destination,
+        state,
+        plan,
+        private_pilot_request_binding=request_binding,
+    )
 
     executed = 0
     for chunk, chunk_state in zip(plan["chunks"], state["chunks"]):
@@ -134,6 +153,7 @@ def _execute_private_separation_full_song_queue(
                 attempt,
                 expected_frames=chunk["frames"],
                 expected_authorisation_sha256=chunk["authorisation_report"]["sha256"],
+                private_pilot_request_binding=request_binding,
             )
         except BaseException as error:
             if os.path.lexists(attempt):
@@ -257,25 +277,31 @@ def _load_or_create_state(
     *,
     plan: Mapping[str, Any],
     plan_sha256: str,
+    private_pilot_request_binding: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     report = destination / REPORT_NAME
     if not os.path.lexists(destination):
         destination.mkdir(parents=True, mode=0o700)
         destination.chmod(0o700)
         (destination / ATTEMPTS_DIRECTORY).mkdir(mode=0o700)
+        bindings: dict[str, Any] = {
+            "plan_report_sha256": plan_sha256,
+            "plan_document_sha256": plan["document_sha256"],
+            "checkpoint_sha256": CONVERSION_CHECKPOINT_SHA256,
+            "checkpoint_bytes": CONVERSION_CHECKPOINT_BYTES,
+            "canonical_frames": plan["canonical_clock"]["frames"],
+            "chunk_count": len(plan["chunks"]),
+        }
+        if private_pilot_request_binding is not None:
+            bindings["private_pilot_request"] = dict(
+                private_pilot_request_binding
+            )
         state: dict[str, Any] = {
             "schema": SCHEMA,
             "status": _INCOMPLETE_STATUS,
             "evidence_scope": "private_development_only",
             "execution_nonce": secrets.token_hex(32),
-            "bindings": {
-                "plan_report_sha256": plan_sha256,
-                "plan_document_sha256": plan["document_sha256"],
-                "checkpoint_sha256": CONVERSION_CHECKPOINT_SHA256,
-                "checkpoint_bytes": CONVERSION_CHECKPOINT_BYTES,
-                "canonical_frames": plan["canonical_clock"]["frames"],
-                "chunk_count": len(plan["chunks"]),
-            },
+            "bindings": bindings,
             "summary": {},
             "chunks": [
                 {
@@ -316,23 +342,32 @@ def _verify_state_binding(
     *,
     plan: Mapping[str, Any],
     plan_sha256: str,
+    private_pilot_request_binding: Mapping[str, Any] | None = None,
 ) -> None:
     bindings = state.get("bindings")
     chunks = state.get("chunks")
+    expected_bindings: dict[str, Any] = {
+        "plan_report_sha256": plan_sha256,
+        "plan_document_sha256": plan["document_sha256"],
+        "checkpoint_sha256": CONVERSION_CHECKPOINT_SHA256,
+        "checkpoint_bytes": CONVERSION_CHECKPOINT_BYTES,
+        "canonical_frames": plan["canonical_clock"]["frames"],
+        "chunk_count": len(plan["chunks"]),
+    }
+    if private_pilot_request_binding is not None:
+        expected_bindings["private_pilot_request"] = dict(
+            private_pilot_request_binding
+        )
+    if isinstance(bindings, Mapping) and bindings.get(
+        "private_pilot_request"
+    ) != expected_bindings.get("private_pilot_request"):
+        raise ValueError("private full-song execution request binding differs")
     if (
         state.get("schema") != SCHEMA
         or state.get("state_sha256") != _state_sha256(state)
         or state.get("permissions") != _FALSE_PERMISSIONS
         or not isinstance(bindings, Mapping)
-        or bindings
-        != {
-            "plan_report_sha256": plan_sha256,
-            "plan_document_sha256": plan["document_sha256"],
-            "checkpoint_sha256": CONVERSION_CHECKPOINT_SHA256,
-            "checkpoint_bytes": CONVERSION_CHECKPOINT_BYTES,
-            "canonical_frames": plan["canonical_clock"]["frames"],
-            "chunk_count": len(plan["chunks"]),
-        }
+        or bindings != expected_bindings
         or not isinstance(chunks, list)
         or len(chunks) != len(plan["chunks"])
         or not isinstance(state.get("execution_nonce"), str)
@@ -378,6 +413,7 @@ def _verify_completed_attempts(
     root: Path,
     state: Mapping[str, Any],
     plan: Mapping[str, Any],
+    private_pilot_request_binding: Mapping[str, Any] | None = None,
 ) -> None:
     for chunk_state, chunk in zip(state["chunks"], plan["chunks"]):
         if chunk_state["status"] != "verified_complete":
@@ -395,6 +431,7 @@ def _verify_completed_attempts(
             root / records[0]["path"],
             expected_frames=chunk["frames"],
             expected_authorisation_sha256=chunk["authorisation_report"]["sha256"],
+            private_pilot_request_binding=private_pilot_request_binding,
         )
         for key in _SHA256_KEYS:
             if records[0].get(key) != observed[key]:
@@ -406,6 +443,7 @@ def _verify_attempt(
     *,
     expected_frames: int,
     expected_authorisation_sha256: str,
+    private_pilot_request_binding: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     _require_private_directory(attempt, "private full-song attempt")
     evidence = _load_hashed_json(
@@ -421,6 +459,16 @@ def _verify_attempt(
         key="timing_sha256",
     )
     bindings = evidence.get("bindings", {})
+    if private_pilot_request_binding is not None and any(
+        bindings.get(evidence_key) != private_pilot_request_binding[binding_key]
+        for evidence_key, binding_key in (
+            ("checkpoint_sha256", "checkpoint_sha256"),
+            ("source_manifest_sha256", "source_manifest_sha256"),
+            ("companion_manifest_sha256", "companion_manifest_sha256"),
+            ("worker_source_sha256", "worker_source_sha256"),
+        )
+    ):
+        raise ValueError("private full-song attempt request environment differs")
     if (
         evidence.get("schema") != _EVIDENCE_SCHEMA
         or evidence.get("status") != "private_native_attempt_verified_not_selected"
@@ -490,6 +538,44 @@ def _verify_attempt(
         "timing_sha256": timing["timing_sha256"],
         "outputs": output_claims,
     }
+
+
+def _normalize_private_pilot_request_binding(
+    value: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    expected = {
+        "request_schema",
+        "request_policy_id",
+        "request_report_sha256",
+        "request_document_sha256",
+        "checkpoint_sha256",
+        "source_manifest_sha256",
+        "companion_manifest_sha256",
+        "worker_source_sha256",
+    }
+    if (
+        not isinstance(value, Mapping)
+        or set(value) != expected
+        or not isinstance(value.get("request_schema"), str)
+        or not isinstance(value.get("request_policy_id"), str)
+        or any(
+            not _is_sha256(value.get(key))
+            for key in expected
+            if key not in {"request_schema", "request_policy_id"}
+        )
+    ):
+        raise ValueError("private full-song request binding differs")
+    return {key: value[key] for key in sorted(expected)}
+
+
+def _is_sha256(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
 
 
 def _load_hashed_json(path: Path, *, key: str) -> dict[str, Any]:

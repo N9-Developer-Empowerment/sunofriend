@@ -52,9 +52,9 @@ def main() -> int:
     next_command = shlex.join(
         [
             "./.venv/bin/python",
-            "scripts/private-separation-full-song-execute.py",
-            "--plan",
-            result["plan_report"],
+            "scripts/private-separation-song-disjoint-pilot-execute.py",
+            "--request",
+            result["report"],
             "--out-dir",
             "$FRESH_PRIVATE_EXECUTION_ROOT",
             "--repository-root",

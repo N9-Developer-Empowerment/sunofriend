@@ -3457,10 +3457,11 @@ the exact pragmatic authorization and its reference stitch, cryptographically
 distinguishes the new canonical PCM from that reference, measures the current
 virtual-environment launcher, Kim checkpoint, audited MLX source, companion
 files, tracked upstream evidence and coordinator code, and embeds a fresh
-gap-free full-song plan in one owner-only request directory. It then prints the
-single resumable executor command with the verified local paths. The persisted
-request is path-free. Preparation creates only canonical chunk audio; it runs
-no model and enables no product route.
+gap-free full-song plan in one owner-only request directory. A v2 request also
+binds the request-aware executor, native worker source and companion manifest.
+It prints the single resumable request-aware executor command with the verified
+local paths. The persisted request is path-free. Preparation creates only
+canonical chunk audio; it runs no model and enables no product route.
 
 The command has been exercised without inference against the existing
 authorised `In the way` pilot at
@@ -3473,6 +3474,29 @@ its document SHA-256 is
 `ad3492307b620bbed46d006b9f89e94cc43322044a6ef3de2b9a5adad47aa150`.
 This duplicate request is validation evidence only: the already completed v2
 execution and current outstanding human review remain authoritative.
+
+The original request envelope is retained as readable v1 history, but it may
+not start a new request-bound execution. New requests use
+`sunofriend.private-separation-song-disjoint-pilot-request.v2` and must run via
+`scripts/private-separation-song-disjoint-pilot-execute.py`. That adapter
+re-verifies the exact runtime launcher, checkpoint, audited source, companion
+manifest, worker source and coordinator code on every preflight or resume. It
+stores the request binding in the full-song execution state. A generic executor
+cannot resume that guarded root, and an old unbound execution cannot be
+retroactively labelled request-bound. Every completed attempt must also carry
+the same checkpoint, source-manifest, companion-manifest and worker hashes.
+Only after all chunks verify does the adapter write a path-free completion
+binding; this is execution identity evidence, not separation acceptance.
+
+The no-inference v2 exercise is at
+`work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-request-v4-request-bound`.
+It reproduced the same 9,961,340-frame, 16-chunk plan. Its request file SHA-256
+is `39b46ec2308084dec05ad3ffee9b66cfdf22f141dcd37de3ae88a8277013be75`
+and its document SHA-256 is
+`2d9071f0e973dd4893cb1cb41a5781abb5b9359eb21e1aacdddf04f5bb31d5d1`.
+The request-aware `--preflight` passed against the exact local Kim environment,
+reported `execution_root_created: false` and `model_run: false`, and left the
+existing completed execution and pending human review untouched.
 
 Use the command for a newly authorised corpus track like this:
 
@@ -3501,8 +3525,10 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
 
 Review the printed source distinction, chunk count and readiness fields before
 running its `next_command`. The execution command must still use a fresh root.
-Runtime, checkpoint and audited source inputs are reverified by every worker;
-request preparation is not a substitute for execution-time isolation.
+For a zero-inference check first, replace `--out-dir ... --all` in the printed
+command with `--preflight`. The adapter re-verifies the sealed environment
+before a worker can start, and every worker independently verifies its runtime
+inputs; request preparation is not a substitute for execution-time isolation.
 
 The automatic chain is now sealed into one path-free, owner-only envelope at
 `work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-evidence-v1/private-separation-song-disjoint-pilot-evidence.json`.
