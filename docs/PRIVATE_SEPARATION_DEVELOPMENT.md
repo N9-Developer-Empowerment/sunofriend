@@ -3943,6 +3943,55 @@ output root, freeze resource bounds and offline operation, and provide a
 preflight that runs no model. Implementing that gate will not itself execute a
 song or expose separation to Simple, Studio, TUI or public CLI.
 
+That gate is now implemented by
+`scripts/private-separation-developer-execute.py`. Its default action is a
+read-only preflight; model execution is impossible unless the caller also
+supplies `--execute`. Preflight reconstructs the request, adapter, design,
+coverage, plan and exact local backend, checks the proposed output is fresh and
+disjoint from evidence, and returns the audited executor binding without
+creating the directory. The real `Tell Me That I Do It Bitch` preflight passed
+with the proposed output still absent afterwards.
+
+An explicit later execution may use one next chunk by default,
+`--maximum-chunks N`, or `--all`. The existing audited executor receives the
+new request hash, policy, document hash, checkpoint, audited-source manifest,
+companion manifest and worker-source hash. Interrupted attempts remain
+diagnostic and resumable. Even a complete chunk queue remains unstitched and
+unreviewed: the gate cannot import its output, select or accept the separator,
+or activate Simple, Studio, TUI, source graph, download or publication.
+
+Use this shape for a no-model preflight. Omitting `--execute` is intentional:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
+  scripts/private-separation-developer-execute.py \
+  --request \
+    work/separation-bakeoff/tell-me-that-i-do-it-bitch-private-separation-execution-request-v1/private-separation-execution-request.json \
+  --adapter-report \
+    work/separation-bakeoff/private-separation-backend-adapter-contract-v1/private-separation-backend-adapter-contract.json \
+  --design-report \
+    work/separation-bakeoff/private-separation-route-design-v1/private-separation-route-design.json \
+  --coverage-report \
+    work/separation-bakeoff/multi-song-private-pilot-coverage-v3/private-separation-multi-song-private-pilot-coverage.json \
+  --plan-report \
+    work/separation-bakeoff/tell-me-that-i-do-it-bitch-song-disjoint-private-pilot-request-v5-py313/PLAN/private-separation-full-song-plan.json \
+  --repository-root "$PWD" \
+  --runtime-launcher "$PWD/.venv-ai/bin/python" \
+  --source-root \
+    "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/mlx-audio-source" \
+  --checkpoint \
+    "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/model.safetensors" \
+  --companion-root \
+    "$HOME/.local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1/checkpoint-directory" \
+  --out-dir "$FRESH_PRIVATE_EXECUTION_ROOT" \
+  --device gpu --all
+```
+
+The next safe increment is to add the new request-aware stitch, alignment and
+review-package coordinator around a completed gate execution. It must still
+stop before any source-graph import. Actual inference should be a separate,
+explicit private operation, not part of tests or documentation generation.
+
 The next fail-closed builder is already implemented, but it must not run for
 the retained result because zero variants are eligible. For a future genuinely
 passing result it re-resolves that same export and includes **every** eligible

@@ -2605,6 +2605,16 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   is a separate developer-only execution gate with a no-model preflight and a
   fresh private output requirement; do not bypass that gate with the older
   research pilot executor.
+  The gate is `scripts/private-separation-developer-execute.py`. It defaults to
+  a read-only preflight and requires the extra `--execute` flag before it can
+  invoke the model. Preflight must reconstruct every upstream binding, verify
+  the exact local environment and prove the proposed output is fresh without
+  creating it. Explicit execution is resumable and may be bounded with one
+  chunk, `--maximum-chunks N` or `--all`; it passes the new request identity to
+  the existing audited chunk owner. Complete worker output is still
+  unstitched and unreviewed. Never import it directly. A new request-aware
+  stitch, alignment and review coordinator is required before any later
+  handoff assessment, and every product route remains disabled.
   Use the read-only bounded queue when review exports are difficult to track:
   `scripts/private-separation-song-disjoint-pilot-review-queue.py PIPELINE_ROOT
   --review-dir "$HOME/Downloads"`. Repeat the pipeline root, `--review` or

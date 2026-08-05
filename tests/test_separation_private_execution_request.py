@@ -158,6 +158,78 @@ def test_rejects_output_inside_plan_tree(
         _build(context, output=context["plan_path"].parent / request.REPORT_NAME)
 
 
+def test_loader_reconstructs_request_from_adapter_and_plan(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    context = _context(tmp_path, monkeypatch)
+    output = context["output_parent"] / request.REPORT_NAME
+    result = _build(context, output=output)
+    snapshot = {
+        "path": output,
+        "sha256": "d" * 64,
+        "document": {key: value for key, value in result.items() if key not in {"report", "plan_report"}},
+    }
+    monkeypatch.setattr(
+        request,
+        "_load_private_json_snapshot",
+        lambda *_args, **_kwargs: deepcopy(snapshot),
+    )
+
+    loaded = request._load_verified_private_separation_execution_request(
+        output,
+        adapter_report_path=context["adapter_path"],
+        design_report_path=context["design_path"],
+        coverage_report_path=context["coverage_path"],
+        plan_report_path=context["plan_path"],
+        repository_root=context["repository"],
+        runtime_launcher_path=context["runtime"],
+        source_root=context["source_root"],
+        checkpoint_path=context["checkpoint"],
+        companion_root=context["companion_root"],
+    )
+
+    assert loaded["document"]["status"] == request.STATUS
+    assert loaded["plan_sha256"] == "8" * 64
+
+
+def test_loader_rejects_rewritten_request_even_with_valid_self_hash(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    context = _context(tmp_path, monkeypatch)
+    output = context["output_parent"] / request.REPORT_NAME
+    result = _build(context, output=output)
+    document = {
+        key: value for key, value in result.items() if key not in {"report", "plan_report"}
+    }
+    document["readiness"]["private_model_execution_permitted"] = True
+    document["document_sha256"] = _document_sha256(document)
+    monkeypatch.setattr(
+        request,
+        "_load_private_json_snapshot",
+        lambda *_args, **_kwargs: {
+            "path": output,
+            "sha256": "d" * 64,
+            "document": document,
+        },
+    )
+
+    with pytest.raises(ValueError, match="request differs"):
+        request._load_verified_private_separation_execution_request(
+            output,
+            adapter_report_path=context["adapter_path"],
+            design_report_path=context["design_path"],
+            coverage_report_path=context["coverage_path"],
+            plan_report_path=context["plan_path"],
+            repository_root=context["repository"],
+            runtime_launcher_path=context["runtime"],
+            source_root=context["source_root"],
+            checkpoint_path=context["checkpoint"],
+            companion_root=context["companion_root"],
+        )
+
+
 def _build(
     context: dict[str, object],
     *,

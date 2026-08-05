@@ -19,6 +19,7 @@ from ._separation_full_song_executor import (
     _require_private_directory,
 )
 from ._separation_full_song_join_remediation_review_result import (
+    _load_private_json_snapshot,
     _write_json_exclusive,
 )
 from ._separation_full_song_plan import (
@@ -153,6 +154,55 @@ def _build_private_separation_execution_request(
         raise ValueError("private separation request inputs changed")
     _write_json_exclusive(output, document)
     return {**document, "report": str(output), "plan_report": str(plan_path)}
+
+
+def _load_verified_private_separation_execution_request(
+    value: str | Path,
+    *,
+    adapter_report_path: str | Path,
+    design_report_path: str | Path,
+    coverage_report_path: str | Path,
+    plan_report_path: str | Path,
+    repository_root: str | Path,
+    runtime_launcher_path: str | Path,
+    source_root: str | Path,
+    checkpoint_path: str | Path,
+    companion_root: str | Path,
+) -> dict[str, Any]:
+    """Reconstruct one request from its adapter, plan and local environment."""
+
+    snapshot = _load_private_json_snapshot(value, "private separation request")
+    adapter = _load_adapter(
+        adapter_report_path,
+        design_report_path=design_report_path,
+        coverage_report_path=coverage_report_path,
+        repository_root=repository_root,
+        runtime_launcher_path=runtime_launcher_path,
+        source_root=source_root,
+        checkpoint_path=checkpoint_path,
+        companion_root=companion_root,
+    )
+    plan_path, plan, plan_sha256 = _load_verified_plan(plan_report_path)
+    _validate_plan(plan)
+    device = snapshot["document"].get("request", {}).get("device")
+    if device not in {"gpu", "cpu"}:
+        raise ValueError("private separation request device differs")
+    expected = _request_document(
+        adapter,
+        plan=plan,
+        plan_sha256=plan_sha256,
+        device=device,
+    )
+    expected["document_sha256"] = _document_sha256(expected)
+    if snapshot["path"].name != REPORT_NAME or snapshot["document"] != expected:
+        raise ValueError("private separation request differs")
+    return {
+        **snapshot,
+        "adapter": adapter,
+        "plan_path": plan_path,
+        "plan": plan,
+        "plan_sha256": plan_sha256,
+    }
 
 
 def _load_adapter(
