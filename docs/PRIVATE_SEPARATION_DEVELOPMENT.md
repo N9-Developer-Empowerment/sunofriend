@@ -3547,6 +3547,40 @@ listener notes, changes no audio and does not infer separator accuracy. Simple,
 Studio, TUI, CLI, source-graph, download and publication permissions remain
 false regardless of the outcome.
 
+The exact-byte private two-stem handoff is also implemented, but it remains
+blocked until that result genuinely authorizes the reviewed output. It replays
+the resolver from the owner-only browser export, demands byte-for-byte equality
+with the supplied resolution, re-verifies the pilot envelope and complete
+stitch, then copies only the exact reviewed vocals and instrumental WAVs into
+`STEMS/`. The diagnostic reconstruction is retained separately under
+`DIAGNOSTIC/`; the source is not copied. No sample value, gain, boundary or
+duration is changed:
+
+```bash
+mkdir -m 700 "$FRESH_HANDOFF_PARENT"
+
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-song-disjoint-pilot-handoff.py \
+  --review-result \
+    "$FRESH_REVIEW_RESULT_ROOT/private-separation-song-disjoint-pilot-review-result.json" \
+  --reviewed-export "$REVIEWED_EXPORT" \
+  --pilot-evidence \
+    work/separation-bakeoff/in-the-way-song-disjoint-private-pilot-evidence-v1/private-separation-song-disjoint-pilot-evidence.json \
+  --package-dir \
+    work/separation-bakeoff/in-the-way-full-song-kim-stitch-v1-private-pilot-review \
+  --out-dir \
+    "$FRESH_HANDOFF_PARENT/in-the-way-private-two-stem-handoff"
+```
+
+The output is an owner-only private-pilot folder with exact PCM24 hashes and a
+path-free `private-separation-song-disjoint-pilot-handoff.json` manifest. It is
+not a public export pack or a general separator: separator selection and
+acceptance remain false, and Simple, Studio, TUI, CLI, source-graph, download
+and publication routes remain disabled. A failed or non-authorizing review
+creates no handoff directory. A copy-time failure can leave a partial fresh
+directory as diagnostic evidence; retry at a different fresh path rather than
+overwriting it.
+
 The next fail-closed builder is already implemented, but it must not run for
 the retained result because zero variants are eligible. For a future genuinely
 passing result it re-resolves that same export and includes **every** eligible

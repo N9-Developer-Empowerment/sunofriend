@@ -2453,6 +2453,17 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   output. A failing result remains useful diagnostic evidence. Neither result
   accepts or selects a separator, mutates audio or review evidence, or enables
   Simple, Studio, TUI, CLI, source graph, download or publication routes.
+  After and only after an exact result authorizes that reviewed output, use
+  `scripts/private-separation-song-disjoint-pilot-handoff.py` with the same
+  owner-only browser export, result, automatic envelope and stitch package.
+  The builder replays the review resolver and demands exact result equality,
+  re-verifies the stitch and copies the PCM24 vocals and instrumental byte for
+  byte into `STEMS/`. It retains reconstruction under `DIAGNOSTIC/` and does
+  not copy the source. The path-free manifest authorizes only that exact
+  private two-stem handoff; no sample value, gain, boundary or duration is
+  changed. A non-authorizing review creates no handoff. Separator selection,
+  acceptance and every Simple, Studio, TUI, CLI, source-graph, download and
+  publication permission remain false.
   The downstream fail-closed builder is
   `scripts/private-separation-candidate-followup-variant-full-song-review.py`.
   Run it only after an exact 36-unit browser export has passed status, has
