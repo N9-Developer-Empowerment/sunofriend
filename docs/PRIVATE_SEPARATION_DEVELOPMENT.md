@@ -5100,3 +5100,47 @@ every chunk boundary. The command does not mark that review complete, import
 or activate stems, create MIDI, render a song interpretation, build a ZIP,
 select the separator, or enable Simple, Studio, TUI, public CLI or publication
 routes. Those remain separate, evidence-bound steps.
+
+After the browser downloads a completed review JSON, run the finish command
+without confirmation flags first. It verifies that exact review against the
+stitched audio, writes the PCM24-equivalence and import-assessment evidence,
+and creates a prepared project whose original mix remains active while the two
+reviewed stems remain inactive:
+
+```bash
+chmod 600 /absolute/reviewed-export.json
+PYTHONPATH=src ./.venv/bin/python scripts/private-separation-local.py finish \
+  --start-root /absolute/private-separation-run \
+  --reviewed-export /absolute/reviewed-export.json
+```
+
+If and only if that exact listening review found the complete vocals,
+instrumental and reconstruction useful, repeat with the first confirmation.
+This activates the two imported primary stems together and retains the
+original mix as the reviewed rollback:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python scripts/private-separation-local.py finish \
+  --start-root /absolute/private-separation-run \
+  --reviewed-export /absolute/reviewed-export.json \
+  --confirm-reviewed-stems-useful
+```
+
+To explicitly run transcription and build the private automatic interpretation,
+repeat with both confirmations:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python scripts/private-separation-local.py finish \
+  --start-root /absolute/private-separation-run \
+  --reviewed-export /absolute/reviewed-export.json \
+  --confirm-reviewed-stems-useful \
+  --confirm-private-midi-validation
+```
+
+The final JSON reports `listen_first`, `combined_midi` and `starter_zip`.
+FFmpeg and FFprobe are discovered from `PATH`; exact executables can instead be
+supplied with `--ffmpeg` and `--ffprobe`. Optional metadata and rendering
+arguments include `--title`, `--key`, `--bpm`, `--tuning-hz`,
+`--chord-document`, `--soundfont` and `--max-iterations`. The interpretation
+is automatic and unreviewed, is not a release master, and still does not make
+separation available through Simple, Studio, TUI or the public CLI.

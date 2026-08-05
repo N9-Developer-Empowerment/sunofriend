@@ -2665,6 +2665,20 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   ZIP, Simple, Studio, TUI, public CLI or publication permission. It is a
   developer-only convenience wrapper around the verified services, not a new
   separator or a beginner product route.
+  Once the reported review page has been genuinely completed and its browser
+  JSON made owner-only, run `finish --start-root RUN --reviewed-export JSON`
+  with no confirmation flags. It binds the review to the exact PCM24 render,
+  assesses import and creates an inactive reviewed-stem project while the
+  original mix remains active. Repeat with
+  `--confirm-reviewed-stems-useful` only when the exact review found the full
+  vocals, instrumental and reconstruction useful; this activates both primary
+  stems as one reviewed group and retains the original-mix rollback. Repeat
+  with that flag plus `--confirm-private-midi-validation` to run production
+  transcription and create the private automatic interpretation WAV, combined
+  MIDI and starter ZIP. The returned keys are `listen_first`, `combined_midi`
+  and `starter_zip`. These results remain automatic, unreviewed and private;
+  they do not accept the separator, establish cross-song accuracy, produce a
+  release master or enable any public separation route.
   Use the read-only bounded queue when review exports are difficult to track:
   `scripts/private-separation-song-disjoint-pilot-review-queue.py PIPELINE_ROOT
   --review-dir "$HOME/Downloads"`. Repeat the pipeline root, `--review` or

@@ -12,7 +12,9 @@ from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
-from typing import Any, Callable, Mapping
+import shutil
+import stat
+from typing import Any, Awaitable, Callable, Mapping
 
 from ._separation_authorised_excerpt import _document_sha256, _sha256
 from ._separation_full_song_executor import (
@@ -33,12 +35,28 @@ from ._separation_private_developer_execution import (
 )
 from ._separation_private_developer_review_package import (
     REPORT_NAME as REVIEW_REPORT_NAME,
+    STITCH_DIRECTORY,
     _prepare_private_separation_developer_review_package,
 )
 from ._separation_private_execution_request import (
     REPORT_NAME as REQUEST_REPORT_NAME,
     _build_private_separation_execution_request,
     _load_verified_private_separation_execution_request,
+)
+from ._separation_private_render_review_equivalence import (
+    REPORT_NAME as EQUIVALENCE_REPORT_NAME,
+    _bind_private_separation_render_review_equivalence,
+    _load_verified_render_review_equivalence,
+)
+from ._separation_reviewed_output_activation import _activate_reviewed_output
+from ._separation_reviewed_output_import import _import_reviewed_output
+from ._separation_reviewed_output_import_assessment import (
+    REPORT_NAME as ASSESSMENT_REPORT_NAME,
+    _assess_reviewed_output_import,
+    _load_verified_reviewed_output_import_assessment,
+)
+from ._separation_reviewed_output_midi_validation import (
+    _validate_reviewed_output_midi_and_interpretation,
 )
 
 
@@ -52,6 +70,15 @@ PLAN_DIRECTORY = "PLAN"
 REQUEST_DIRECTORY = "REQUEST"
 EXECUTION_DIRECTORY = "EXECUTION"
 REVIEW_DIRECTORY = "REVIEW"
+FINISH_DIRECTORY = "FINISH"
+EQUIVALENCE_DIRECTORY = "EQUIVALENCE"
+ASSESSMENT_DIRECTORY = "ASSESSMENT"
+PROJECT_DIRECTORY = "PROJECT"
+VALIDATION_DIRECTORY = "MIDI-WAV-ZIP"
+IMPORTED_STATUS = "private_two_stem_stems_imported_inactive_confirmation_required"
+PRESENT_STATUS = "private_two_stem_project_present_activation_verification_required"
+ACTIVATED_STATUS = "private_two_stem_stems_active_midi_confirmation_required"
+VALIDATED_STATUS = "private_two_stem_midi_wav_zip_created_listening_required"
 
 _FALSE_PRODUCT_PERMISSIONS = {
     "automatic_selection": False,
@@ -84,6 +111,13 @@ RequestBuilder = Callable[..., Mapping[str, Any]]
 RequestLoader = Callable[..., Mapping[str, Any]]
 ExecutionRunner = Callable[..., Mapping[str, Any]]
 ReviewBuilder = Callable[..., Mapping[str, Any]]
+EquivalenceBuilder = Callable[..., Mapping[str, Any]]
+EquivalenceLoader = Callable[..., Mapping[str, Any]]
+AssessmentBuilder = Callable[..., Mapping[str, Any]]
+AssessmentLoader = Callable[..., Mapping[str, Any]]
+ReviewedOutputImporter = Callable[..., Mapping[str, Any]]
+ReviewedOutputActivator = Callable[..., Mapping[str, Any]]
+MidiValidator = Callable[..., Awaitable[Mapping[str, Any]]]
 
 
 def _resolve_private_separation_local_profile(
@@ -359,6 +393,288 @@ def _backend_kwargs(profile: PrivateSeparationLocalProfile) -> dict[str, Path]:
         "checkpoint_path": profile.checkpoint,
         "companion_root": profile.companion_root,
     }
+
+
+async def _finish_private_separation_local_workflow(
+    start_root: str | Path,
+    reviewed_export_path: str | Path,
+    *,
+    repository_root: str | Path,
+    project_out: str | Path | None = None,
+    validation_out: str | Path | None = None,
+    ffmpeg: str | Path | None = None,
+    ffprobe: str | Path | None = None,
+    soundfont_path: str | Path | None = None,
+    max_iterations: int = 8,
+    rights_category: str = "authorised_private_use",
+    title: str | None = None,
+    key: str | None = None,
+    bpm: float | None = None,
+    tuning_hz: float | None = None,
+    chord_document: str | Path | None = None,
+    confirm_reviewed_stems_useful: bool = False,
+    confirm_private_midi_validation: bool = False,
+    profile_checker: ProfileChecker = _check_private_separation_local_profile,
+    equivalence_builder: EquivalenceBuilder = (
+        _bind_private_separation_render_review_equivalence
+    ),
+    equivalence_loader: EquivalenceLoader = _load_verified_render_review_equivalence,
+    assessment_builder: AssessmentBuilder = _assess_reviewed_output_import,
+    assessment_loader: AssessmentLoader = (
+        _load_verified_reviewed_output_import_assessment
+    ),
+    importer: ReviewedOutputImporter = _import_reviewed_output,
+    activator: ReviewedOutputActivator = _activate_reviewed_output,
+    midi_validator: MidiValidator = (_validate_reviewed_output_midi_and_interpretation),
+) -> dict[str, Any]:
+    """Verify one completed review, then explicitly advance guarded outputs."""
+
+    if confirm_private_midi_validation and not confirm_reviewed_stems_useful:
+        raise ValueError(
+            "private MIDI validation also requires reviewed-stems confirmation"
+        )
+    if (
+        isinstance(max_iterations, bool)
+        or not isinstance(max_iterations, int)
+        or max_iterations < 1
+    ):
+        raise ValueError("private local separation max iterations must be positive")
+
+    profile = _resolve_private_separation_local_profile(repository_root)
+    doctor = dict(profile_checker(profile))
+    if doctor.get("status") != DOCTOR_STATUS:
+        raise ValueError("private local separation profile is not ready")
+
+    root = Path(start_root).expanduser().absolute()
+    _require_private_directory(root, "private local separation start root")
+    start = _load_start_document(root)
+    reviewed_export = Path(reviewed_export_path).expanduser().absolute()
+    _require_private_regular(reviewed_export, "private separation reviewed export")
+
+    review_root = root / REVIEW_DIRECTORY
+    candidate_report = review_root / REVIEW_REPORT_NAME
+    reviewed_package = review_root / STITCH_DIRECTORY
+    _require_private_regular(
+        candidate_report, "private separation review package report"
+    )
+    _require_private_directory(reviewed_package, "private separation stitch package")
+
+    finish_root = root / FINISH_DIRECTORY
+    _prepare_or_reuse_root(finish_root)
+    equivalence_path = finish_root / EQUIVALENCE_DIRECTORY / EQUIVALENCE_REPORT_NAME
+    assessment_path = finish_root / ASSESSMENT_DIRECTORY / ASSESSMENT_REPORT_NAME
+    project = (
+        Path(project_out).expanduser().absolute()
+        if project_out is not None
+        else finish_root / PROJECT_DIRECTORY
+    )
+    validation = (
+        Path(validation_out).expanduser().absolute()
+        if validation_out is not None
+        else finish_root / VALIDATION_DIRECTORY
+    )
+    created = {
+        "review_equivalence": False,
+        "import_assessment": False,
+        "inactive_project": False,
+        "source_graph_activation": False,
+        "midi_wav_zip": False,
+    }
+
+    evidence_kwargs = {
+        "reviewed_export_path": reviewed_export,
+        "reviewed_package_dir": reviewed_package,
+        "candidate_package_report_path": candidate_report,
+    }
+    if os.path.lexists(equivalence_path):
+        equivalence_loader(equivalence_path, **evidence_kwargs)
+    else:
+        equivalence_builder(
+            reviewed_export,
+            reviewed_package_dir=reviewed_package,
+            candidate_package_report_path=candidate_report,
+            out=equivalence_path,
+        )
+        created["review_equivalence"] = True
+
+    assessment_kwargs = {
+        "equivalence_path": equivalence_path,
+        **evidence_kwargs,
+    }
+    if os.path.lexists(assessment_path):
+        assessment_loader(assessment_path, **assessment_kwargs)
+    else:
+        assessment_path.parent.mkdir(parents=True, mode=0o700)
+        assessment_path.parent.chmod(0o700)
+        assessment_builder(
+            equivalence_path,
+            reviewed_export_path=reviewed_export,
+            reviewed_package_dir=reviewed_package,
+            candidate_package_report_path=candidate_report,
+            out=assessment_path,
+        )
+        created["import_assessment"] = True
+
+    project_existed = os.path.lexists(project)
+    if not project_existed:
+        resolved_ffmpeg = _resolve_executable(ffmpeg, "ffmpeg")
+        resolved_ffprobe = _resolve_executable(ffprobe, "ffprobe")
+        _prepare_private_parent(project.parent, "private reviewed project parent")
+        importer(
+            assessment_path,
+            equivalence_path=equivalence_path,
+            reviewed_export_path=reviewed_export,
+            reviewed_package_dir=reviewed_package,
+            candidate_package_report_path=candidate_report,
+            ffmpeg=resolved_ffmpeg,
+            ffprobe=resolved_ffprobe,
+            out_dir=project,
+            rights_category=rights_category,
+            title=title or start["track"]["track_title"],
+            key=key,
+            bpm=bpm,
+            tuning_hz=tuning_hz,
+            chord_document=chord_document,
+        )
+        created["inactive_project"] = True
+
+    common = {
+        "schema": SCHEMA,
+        "root": str(root),
+        "track": dict(start["track"]),
+        "reviewed_export": str(reviewed_export),
+        "review_equivalence": str(equivalence_path),
+        "import_assessment": str(assessment_path),
+        "project_root": str(project),
+        "validation_root": str(validation),
+        "created_this_invocation": created,
+        "permissions": dict(_FALSE_PRODUCT_PERMISSIONS),
+    }
+    if not confirm_reviewed_stems_useful:
+        return {
+            **common,
+            "status": PRESENT_STATUS if project_existed else IMPORTED_STATUS,
+            "next_action": "repeat_with_reviewed_stems_confirmation",
+            "readiness": {
+                "human_review_verified": True,
+                "reviewed_stems_imported_inactive": created["inactive_project"],
+                "existing_project_requires_activation_verification": project_existed,
+                "reviewed_stems_active": False,
+                "midi_wav_zip_created": False,
+            },
+        }
+
+    activation = dict(
+        activator(
+            project,
+            assessment_path=assessment_path,
+            equivalence_path=equivalence_path,
+            reviewed_export_path=reviewed_export,
+            reviewed_package_dir=reviewed_package,
+            candidate_package_report_path=candidate_report,
+            confirm_reviewed_stems_useful=True,
+        )
+    )
+    created["source_graph_activation"] = not activation.get("replayed", False)
+    if not confirm_private_midi_validation:
+        return {
+            **common,
+            "status": ACTIVATED_STATUS,
+            "activation": activation,
+            "next_action": "repeat_with_private_midi_validation_confirmation",
+            "readiness": {
+                "human_review_verified": True,
+                "reviewed_stems_imported_inactive": False,
+                "reviewed_stems_active": True,
+                "midi_wav_zip_created": False,
+            },
+        }
+
+    if os.path.lexists(validation):
+        raise FileExistsError(
+            f"private MIDI/WAV/ZIP validation output already exists: {validation}"
+        )
+    _prepare_private_parent(validation.parent, "private MIDI validation parent")
+    result = dict(
+        await midi_validator(
+            project,
+            assessment_path=assessment_path,
+            equivalence_path=equivalence_path,
+            reviewed_export_path=reviewed_export,
+            reviewed_package_dir=reviewed_package,
+            candidate_package_report_path=candidate_report,
+            out_dir=validation,
+            soundfont_path=soundfont_path,
+            max_iterations=max_iterations,
+            confirm_reviewed_stems_useful=True,
+            confirm_private_midi_validation=True,
+        )
+    )
+    created["midi_wav_zip"] = True
+    return {
+        **common,
+        "status": VALIDATED_STATUS,
+        "activation": activation,
+        "validation": result,
+        "listen_first": result["listen_first"],
+        "combined_midi": result["combined_midi"],
+        "starter_zip": result["starter_zip"],
+        "next_action": "listen_and_review_private_interpretation",
+        "readiness": {
+            "human_review_verified": True,
+            "reviewed_stems_imported_inactive": False,
+            "reviewed_stems_active": True,
+            "midi_wav_zip_created": True,
+            "private_listening_review_required": True,
+        },
+    }
+
+
+def _load_start_document(root: Path) -> dict[str, Any]:
+    report = root / REPORT_NAME
+    _require_private_regular(report, "private local separation start report")
+    try:
+        document = json.loads(report.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError("private local separation start report differs") from error
+    if (
+        not isinstance(document, dict)
+        or document.get("schema") != SCHEMA
+        or document.get("status") != REVIEW_STATUS
+        or document.get("document_sha256") != _document_sha256(document)
+        or document.get("permissions") != _FALSE_PRODUCT_PERMISSIONS
+        or document.get("stages", {}).get("human_review") != "pending"
+    ):
+        raise ValueError("private local separation start report differs")
+    return document
+
+
+def _resolve_executable(value: str | Path | None, command: str) -> Path:
+    candidate = Path(value).expanduser().absolute() if value is not None else None
+    if candidate is None:
+        found = shutil.which(command)
+        if found is None:
+            raise FileNotFoundError(
+                f"private local separation could not find {command}; pass --{command}"
+            )
+        candidate = Path(found).absolute()
+    try:
+        candidate = candidate.resolve(strict=True)
+        details = candidate.stat()
+    except OSError as error:
+        raise ValueError(f"private local separation {command} is missing") from error
+    if not stat.S_ISREG(details.st_mode):
+        raise ValueError(f"private local separation {command} must be a regular file")
+    if not os.access(candidate, os.X_OK):
+        raise ValueError(f"private local separation {command} is not executable")
+    return candidate
+
+
+def _prepare_private_parent(parent: Path, label: str) -> None:
+    if not os.path.lexists(parent):
+        parent.mkdir(parents=True, mode=0o700)
+        parent.chmod(0o700)
+    _require_private_directory(parent, label)
 
 
 def _prepare_or_reuse_root(root: Path) -> None:

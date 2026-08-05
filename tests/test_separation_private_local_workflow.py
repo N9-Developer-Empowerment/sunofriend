@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from copy import deepcopy
 import json
 import os
@@ -223,6 +224,109 @@ def test_resume_rejects_changed_corpus_or_track(
         _start(context)
 
 
+def test_finish_verifies_review_and_imports_stems_inactive_once(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    context = _finish_context(tmp_path, monkeypatch)
+    calls = {"equivalence": 0, "assessment": 0, "import": 0}
+
+    first = _finish(
+        context,
+        calls=calls,
+    )
+    second = _finish(
+        context,
+        calls=calls,
+    )
+
+    assert first["status"] == local.IMPORTED_STATUS
+    assert first["readiness"]["reviewed_stems_imported_inactive"] is True
+    assert first["next_action"] == "repeat_with_reviewed_stems_confirmation"
+    assert second["status"] == local.PRESENT_STATUS
+    assert calls == {"equivalence": 1, "assessment": 1, "import": 1}
+
+
+def test_finish_requires_reviewed_stem_confirmation_before_midi(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(ValueError, match="also requires reviewed-stems"):
+        asyncio.run(
+            local._finish_private_separation_local_workflow(
+                tmp_path / "missing",
+                tmp_path / "missing-review.json",
+                repository_root=tmp_path,
+                confirm_private_midi_validation=True,
+            )
+        )
+
+
+def test_finish_activates_only_after_explicit_confirmation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    context = _finish_context(tmp_path, monkeypatch)
+    calls = {"equivalence": 0, "assessment": 0, "import": 0}
+    _finish(context, calls=calls)
+    activations: list[dict[str, object]] = []
+
+    result = _finish(
+        context,
+        calls=calls,
+        confirm_reviewed_stems_useful=True,
+        activator=lambda _project, **kwargs: (
+            activations.append(kwargs)
+            or {
+                "status": "active",
+                "replayed": False,
+                "readiness": {"bounded_private_midi_validation_permitted": True},
+            }
+        ),
+    )
+
+    assert result["status"] == local.ACTIVATED_STATUS
+    assert result["readiness"]["reviewed_stems_active"] is True
+    assert result["created_this_invocation"]["source_graph_activation"] is True
+    assert activations[0]["confirm_reviewed_stems_useful"] is True
+
+
+def test_finish_creates_private_midi_wav_zip_only_after_both_confirmations(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    context = _finish_context(tmp_path, monkeypatch)
+    calls = {"equivalence": 0, "assessment": 0, "import": 0}
+    validation_calls: list[dict[str, object]] = []
+
+    async def midi_validator(_project: Path, **kwargs: object) -> dict[str, object]:
+        validation_calls.append(kwargs)
+        _private_dir(Path(kwargs["out_dir"]))
+        return {
+            "status": "created",
+            "listen_first": str(tmp_path / "balanced.wav"),
+            "combined_midi": str(tmp_path / "combined.mid"),
+            "starter_zip": str(tmp_path / "starter.zip"),
+        }
+
+    result = _finish(
+        context,
+        calls=calls,
+        confirm_reviewed_stems_useful=True,
+        confirm_private_midi_validation=True,
+        activator=lambda _project, **_kwargs: {
+            "status": "active",
+            "replayed": False,
+            "readiness": {"bounded_private_midi_validation_permitted": True},
+        },
+        midi_validator=midi_validator,
+    )
+
+    assert result["status"] == local.VALIDATED_STATUS
+    assert result["listen_first"].endswith("balanced.wav")
+    assert result["created_this_invocation"]["midi_wav_zip"] is True
+    assert validation_calls[0]["confirm_private_midi_validation"] is True
+
+
 def _start(
     context: dict[str, object],
     **kwargs: object,
@@ -248,6 +352,54 @@ def _start(
         repository_root=context["repository"],
         device="gpu",
         **defaults,
+    )
+
+
+def _finish(
+    context: dict[str, object],
+    *,
+    calls: dict[str, int],
+    **kwargs: object,
+) -> dict[str, object]:
+    def equivalence_builder(
+        _reviewed_export: Path, *, out: Path, **_kwargs: object
+    ) -> dict[str, object]:
+        calls["equivalence"] += 1
+        _private_file(out, b"equivalence\n")
+        return {"status": "equivalent"}
+
+    def assessment_builder(
+        _equivalence: Path, *, out: Path, **_kwargs: object
+    ) -> dict[str, object]:
+        calls["assessment"] += 1
+        _private_file(out, b"assessment\n")
+        return {"status": "assessed"}
+
+    def importer(
+        _assessment: Path, *, out_dir: Path, **_kwargs: object
+    ) -> dict[str, object]:
+        calls["import"] += 1
+        _private_dir(out_dir)
+        return {"status": "imported", "root": str(out_dir)}
+
+    defaults = {
+        "profile_checker": lambda _profile: deepcopy(context["doctor"]),
+        "equivalence_builder": equivalence_builder,
+        "equivalence_loader": lambda *_args, **_kwargs: {},
+        "assessment_builder": assessment_builder,
+        "assessment_loader": lambda *_args, **_kwargs: {},
+        "importer": importer,
+        "ffmpeg": context["ffmpeg"],
+        "ffprobe": context["ffprobe"],
+    }
+    defaults.update(kwargs)
+    return asyncio.run(
+        local._finish_private_separation_local_workflow(
+            context["root"],
+            context["reviewed_export"],
+            repository_root=context["repository"],
+            **defaults,
+        )
     )
 
 
@@ -294,6 +446,52 @@ def _context(
         "doctor": doctor,
         "plan": plan,
         "request": request,
+    }
+
+
+def _finish_context(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> dict[str, object]:
+    os.chmod(tmp_path, 0o700)
+    repository = _private_dir(tmp_path / "repo")
+    root = _private_dir(tmp_path / "start")
+    document = {
+        "schema": local.SCHEMA,
+        "status": local.REVIEW_STATUS,
+        "track": {"track_id": "owned-track", "track_title": "Owned track"},
+        "stages": {"human_review": "pending"},
+        "permissions": deepcopy(local._FALSE_PRODUCT_PERMISSIONS),
+    }
+    document["document_sha256"] = _document_sha256(document)
+    _private_file(
+        root / local.REPORT_NAME,
+        (json.dumps(document, sort_keys=True) + "\n").encode(),
+    )
+    review_root = _private_dir(root / local.REVIEW_DIRECTORY)
+    _private_file(review_root / local.REVIEW_REPORT_NAME)
+    _private_dir(review_root / local.STITCH_DIRECTORY)
+    reviewed_export = _private_file(tmp_path / "reviewed.json")
+    ffmpeg = _private_file(tmp_path / "ffmpeg")
+    ffprobe = _private_file(tmp_path / "ffprobe")
+    ffmpeg.chmod(0o700)
+    ffprobe.chmod(0o700)
+    doctor = {
+        "status": local.DOCTOR_STATUS,
+        "adapter": {"sha256": "1" * 64, "document_sha256": "2" * 64},
+    }
+    monkeypatch.setattr(
+        local,
+        "_resolve_private_separation_local_profile",
+        lambda _root: _profile(repository),
+    )
+    return {
+        "repository": repository,
+        "root": root,
+        "reviewed_export": reviewed_export,
+        "ffmpeg": ffmpeg,
+        "ffprobe": ffprobe,
+        "doctor": doctor,
     }
 
 
