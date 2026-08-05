@@ -3362,6 +3362,53 @@ The resolver is ready, but it cannot run yet: the exact preceding 36-unit
 targeted browser export has not been produced, so there is no eligible-variant
 parent package or full-song review export to resolve.
 
+The next alignment runner is also implemented and remains blocked behind that
+same genuine human evidence chain. It re-runs the complete multi-page resolver,
+requires the supplied resolved result to match exactly, and measures every
+reviewed eligible variant in canonical plan order. There is deliberately no
+preferred-variant or subset argument. One reviewed page yields one independent
+alignment result; two pages yield both results in one atomic owner-only parent:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src ./.venv/bin/python \
+  scripts/private-separation-candidate-followup-variant-full-song-alignment.py \
+  --full-song-review-result \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-eligible-full-song-review-result-v1/private-separation-candidate-followup-variant-full-song-review-result.json \
+  --full-song-reviewed-export "$REVIEWED_VARIANT_01" \
+  --full-song-reviewed-export "$REVIEWED_VARIANT_02" \
+  --full-song-review-package-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-eligible-full-song-review-v1 \
+  --variant-review-result \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-result-v1/private-separation-candidate-followup-variant-review-result.json \
+  --variant-reviewed-export "$TARGETED_VARIANT_REVIEWED_EXPORT" \
+  --variant-review-package-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-variant-review-v1 \
+  --plan \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-plan-v3/private-separation-candidate-followup-remediation-plan.json \
+  --execution-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v1 \
+  --v2-execution-dir \
+    work/separation-bakeoff/be-alone-full-song-join-remediation-execution-v2 \
+  --variant-execution-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-remediation-execution-v2 \
+  --stitch-package-dir \
+    work/separation-bakeoff/be-alone-full-song-kim-stitch-v3-playable-review \
+  --out-dir \
+    work/separation-bakeoff/be-alone-v2-candidate-followup-eligible-full-song-alignment-v1
+```
+
+If the parent contains one page, supply one
+`--full-song-reviewed-export`; if it contains two, both are mandatory and may
+be supplied in either order because package commitments restore canonical
+identity. The parent report is
+`private-separation-candidate-followup-variant-full-song-alignment.json`, with
+one child report under each `variant-NN/` directory. A failing lag, drift or
+correlation gate is retained as evidence rather than deleting the variant.
+Alignment remains source-clock evidence only: it does not select between
+variants, prove stem fidelity or musical quality, resolve audible joins,
+accept a separator, activate a product route or publish anything. A separate
+multi-variant readiness reassessment is still required afterward.
+
 The independent coarse resource observation can run before the listener
 finishes that page because it makes no musical judgement:
 

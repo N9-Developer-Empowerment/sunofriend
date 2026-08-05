@@ -2382,6 +2382,19 @@ sunofriend instrument-bundle "$STEM" "$ALIGNED_MIDI" \
   selects between them. Every reviewed variant still requires a separate fresh
   alignment result; original-join resolution, acceptance, product activation
   and publication remain false.
+  Run those alignments only with
+  `scripts/private-separation-candidate-followup-variant-full-song-alignment.py`.
+  Supply the exact resolved multi-page result plus every corresponding browser
+  export through repeated `--full-song-reviewed-export` arguments and the
+  unchanged targeted-variant, plan, execution and stitch roots. The runner
+  re-derives the complete review set and demands exact result equality before
+  measuring anything. It accepts no preferred variant or subset and writes one
+  independent nine-window source-to-reconstruction alignment result per
+  reviewed variant in canonical plan order, inside one atomic owner-only parent
+  package. A failing alignment is preserved as evidence. Clock agreement is
+  not stem fidelity, musical quality, join resolution, selection or acceptance.
+  A separate multi-variant readiness reassessment still follows; every product
+  and publication permission remains false.
   Keep the execution, candidate and stitch trees quiescent during status and
   resolution. Their JSON and WAV descriptors are not held as one atomic
   snapshot across the whole operation; status and result record this explicit
