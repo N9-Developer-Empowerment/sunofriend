@@ -37,8 +37,12 @@ to carry every technical detail:
 - `/llms.txt` is the concise text discovery document;
 - `/agent-capabilities.json` is the versioned machine-readable contract;
 - `/research/separation/` publishes the bounded private experiment status,
-  open gates and existing feedback routes without exposing audio or a product
-  separator;
+  development method, safe read-only inspection, open gates and existing
+  feedback routes without exposing audio or a product separator;
+- `../docs/SEPARATION_DEVELOPER_PREVIEW.md` is the concise public
+  architecture, usage, test and feedback guide; the much longer private
+  development record remains chronological evidence rather than newcomer
+  documentation;
 - `/demo` explains how to run the copyright-safe synthetic stem demo through
   the normal automatic MIDI/WAV/ZIP path and includes a listening/worked-output
   tour; and

@@ -3,6 +3,11 @@
 Sunofriend has started running a real local separator. This page describes the
 developer-only bake-off, not a finished-song feature.
 
+For a concise overview of the architecture, evidence loop, safe read-only
+inspection command, public goals and feedback routes, start with the
+[stem-separation developer preview](SEPARATION_DEVELOPER_PREVIEW.md). This file
+remains the detailed chronological research record.
+
 ## Current result
 
 The first real run completed on 31 July 2026 with the already-installed

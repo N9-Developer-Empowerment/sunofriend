@@ -302,10 +302,24 @@ export default function ForAgents() {
                 existing GitHub feedback forms for platform, workflow and
                 audible-result observations.
               </p>
+              <p>
+                Developers may run the documented read-only doctor to inspect
+                the boundary. A public checkout may correctly report that the
+                private evaluation profile is unavailable; that is not an
+                instruction to obtain a checkpoint.
+              </p>
               <div className="journey-links">
                 <Link className="text-link" href="/research/separation/">
                   Read the public research status →
                 </Link>
+                <a
+                  className="text-link"
+                  href={links.separationDeveloperGuide}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Read the developer preview ↗
+                </a>
               </div>
             </div>
           </div>

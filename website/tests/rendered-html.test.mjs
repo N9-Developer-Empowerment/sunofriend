@@ -210,6 +210,14 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /not individual bass, keys, drums or guitar/);
   assert.match(html, /three source-distinct private evidence chains/);
   assert.match(html, /Software checks evidence; people judge music/);
+  assert.match(html, /How the feature was developed/);
+  assert.match(html, /state one narrow musical or engineering question/);
+  assert.match(html, /What you can use and inspect today/);
+  assert.match(html, /READ-ONLY DEVELOPER CHECK/);
+  assert.match(html, /private evaluation profile is unavailable/);
+  assert.match(html, /One understandable path from audio to editable music/);
+  assert.match(html, /Reports guide the next bounded change/);
+  assert.match(html, /SEPARATION_DEVELOPER_PREVIEW\.md/);
   assert.match(html, /no separation button in Simple, Studio, the public/);
   assert.match(html, /Do not attach private audio/);
   assert.match(html, /Send a first-song report/);
@@ -390,6 +398,22 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.human_listening_required,
     true,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.read_only_doctor_loads_model,
+    false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.read_only_doctor_processes_audio,
+    false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.development_method.length,
+    5,
+  );
+  assert.match(
+    data.experiments.finished_mix_separation.developer_preview_url,
+    /SEPARATION_DEVELOPER_PREVIEW\.md/,
   );
   assert.equal(
     data.experiments.finished_mix_separation.feedback_accepts_private_audio,

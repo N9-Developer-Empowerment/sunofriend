@@ -34,6 +34,8 @@ export default function SeparationResearch() {
         </Link>
         <nav aria-label="Separation research navigation">
           <a href="#working">What works</a>
+          <a href="#development">How it was built</a>
+          <a href="#use">Try and inspect</a>
           <a href="#boundary">Current boundary</a>
           <a href="#feedback">Give feedback</a>
           <Link href="/stems/">Stem guide</Link>
@@ -97,6 +99,87 @@ export default function SeparationResearch() {
                 Playback activity never becomes a preference. A result advances
                 only after an explicit, result-bound listening review.
               </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="development">
+          <h2>How the feature was developed</h2>
+          <p className="lede">
+            Development follows an evidence loop rather than promoting the
+            first model that runs. The loop was shaped by real listening:
+            measurable joins could be musically unobtrusive, and different
+            candidates sometimes followed different useful vocal lines.
+          </p>
+          <div className="agent-grid">
+            {separationResearch.developmentLoop.map((step, index) => (
+              <div className="agent-card" key={step}>
+                <span className="card-number">
+                  STEP {String(index + 1).padStart(2, "0")}
+                </span>
+                <h3>{step}</h3>
+              </div>
+            ))}
+          </div>
+          <p className="guide-note">
+            The code keeps immutable policy and profile configuration separate
+            from orchestration and the command adapter. That makes permission
+            changes visible in review and keeps a successful experiment from
+            silently becoming a product feature. Read the complete{" "}
+            <ExternalLink href={links.separationDeveloperGuide}>
+              developer preview ↗
+            </ExternalLink>
+            .
+          </p>
+        </section>
+
+        <section id="use">
+          <h2>What you can use and inspect today</h2>
+          <div className="agent-grid">
+            <div className="agent-card">
+              <span className="card-number">PUBLIC MUSIC WORKFLOW</span>
+              <h3>Make a result without private separation</h3>
+              <p>
+                Run <code>sunofriend demo --out-dir FRESH</code> for the
+                copyright-safe example, or{" "}
+                <code>sunofriend create PROJECT --out-dir FRESH</code> with
+                authorised existing stems. Both produce automatic, unreviewed
+                MIDI, a balanced interpretation WAV and a starter ZIP.
+              </p>
+              <Link className="text-link" href="/demo/">
+                Try the public demo →
+              </Link>
+            </div>
+            <div className="agent-card">
+              <span className="card-number">READ-ONLY DEVELOPER CHECK</span>
+              <h3>Inspect the private boundary without processing audio</h3>
+              <p>
+                From a prepared development checkout, run{" "}
+                <code>{separationResearch.developerDoctorCommand}</code>. It
+                does not load a model or write a song result. A public checkout
+                may correctly report that the private evaluation profile is
+                unavailable.
+              </p>
+              <ExternalLink
+                className="text-link"
+                href={links.separationDeveloperGuide}
+              >
+                Read commands, architecture and tests ↗
+              </ExternalLink>
+            </div>
+            <div className="agent-card">
+              <span className="card-number">OVERALL GOAL</span>
+              <h3>One understandable path from audio to editable music</h3>
+              <p>
+                The aim is optional local separation, several inspectable MIDI
+                interpretations, a useful balanced listening WAV, suggested
+                instruments and an editable GarageBand or DAW handoff.
+              </p>
+            </div>
+            <div className="agent-card">
+              <span className="card-number">FEEDBACK EFFECT</span>
+              <h3>Reports guide the next bounded change</h3>
+              <p>{separationResearch.feedbackImpact}.</p>
             </div>
           </div>
         </section>

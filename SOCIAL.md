@@ -284,6 +284,223 @@ group chats.
 
 Use the landscape banner so the technical explanation remains readable.
 
+## Developer research update campaign
+
+Use these drafts for the public separation-research update. The feature being
+published is the **method, evidence, architecture and feedback loop**, not a
+finished-mix separation button. Keep that distinction in the post rather than
+leaving it to a later correction.
+
+Canonical links:
+
+- Research status and approachable explanation:
+  https://sunofriend.com/research/separation/
+- Developer architecture, commands and tests:
+  https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SEPARATION_DEVELOPER_PREVIEW.md
+- Existing compatibility and developer feedback:
+  https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml
+- Existing first-song feedback:
+  https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=beginner-first-song.yml
+
+### X thread
+
+Post 1:
+
+> I am developing local stem separation for Sunofriend in public. The goal is one clear path from authorised audio to useful stems, editable MIDI alternatives, a balanced listening WAV and a GarageBand or DAW handoff.
+>
+> Progress: https://sunofriend.com/research/separation/
+
+Post 2:
+
+> The method matters. Each increment asks one narrow question, seals the inputs, runs a bounded experiment, checks machine evidence, then binds human listening to that exact result. Useful, poor and inconclusive outcomes are all kept.
+
+Post 3:
+
+> This is a developer preview, not a separator launch. You can use Sunofriend today with the copyright-safe demo or existing stems. Developers can inspect the read-only boundary and tests.
+>
+> Guide and feedback: https://sunofriend.com/research/separation/
+
+Reply:
+
+> सुनो means “listen” in Hindi. Sunofriend is an independent Unsigned Media Ltd project and is not related to or affiliated with Suno Inc. Human listening remains the authority for musical quality.
+
+### Bluesky thread
+
+Post 1:
+
+> I have made Sunofriend's local stem-separation research public so musicians and developers can challenge how it is being built.
+>
+> Goal: authorised audio → useful stems → editable MIDI alternatives → balanced listening WAV → DAW.
+>
+> https://sunofriend.com/research/separation/
+
+Post 2:
+
+> Development uses a bounded evidence loop: one question, sealed inputs, machine integrity checks, exact-result listening, then an explicit decision about the next experiment. Inconclusive results stay visible instead of being rewritten as wins.
+
+Post 3:
+
+> It is not a public separator yet. Try the released demo or existing-stems workflow, inspect the developer guide, and tell me where the instructions, portability or musical result need work:
+> https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml
+
+### Threads
+
+> I have opened up the next stage of Sunofriend development: local
+> stem-separation research.
+>
+> The overall goal is not simply “run an AI model.” I want an understandable
+> route from music you are allowed to process, through useful estimated stems,
+> into several inspectable MIDI interpretations, a balanced instrumental WAV,
+> suggested sounds and an editable GarageBand or DAW project.
+>
+> The development method deliberately separates engineering evidence from
+> musical judgement. Each increment begins with one narrow question. Inputs
+> are sealed, one bounded experiment runs, and software checks integrity,
+> timing and reproducibility. Then a person listens to that exact result.
+> Useful, poor and inconclusive outcomes are preserved. A score or successful
+> process does not silently choose a model.
+>
+> The architecture has also been simplified so immutable permissions and
+> configuration are separate from workflow orchestration and the command
+> adapter. That should make future changes easier to review and maintain.
+>
+> This is a public developer preview, not a public separation button. You can
+> use Sunofriend today with its copyright-safe demo or with authorised stems
+> you already have. Developers can inspect the read-only boundary, commands
+> and tests here:
+> https://sunofriend.com/research/separation/
+>
+> I would value feedback on setup clarity, another Mac, Windows or Linux,
+> another coding agent, another DAW, and what musical evidence would make the
+> separator ready for a real public pilot.
+>
+> Sunofriend takes its name from Hindi **सुनो**, “listen.” It is independent
+> of Suno Inc.
+
+### Instagram
+
+> **How do you build an AI music feature without pretending the first result
+> is the answer?**
+>
+> I am developing local stem separation for Sunofriend in public. The goal is
+> a friendly path from authorised audio to useful stems, editable MIDI
+> alternatives, a balanced listening WAV and a GarageBand or DAW handoff.
+>
+> Every increment follows the same loop:
+>
+> 1. ask one narrow question;
+> 2. seal the exact inputs;
+> 3. run one bounded local experiment;
+> 4. check integrity, timing and reproducibility;
+> 5. listen to the exact result; and
+> 6. preserve useful, poor and inconclusive evidence.
+>
+> Human listening decides musical usefulness. Automated scores do not choose a
+> winner.
+>
+> This is a developer preview, not a public separator yet. The released
+> Sunofriend demo and existing-stems workflow are ready to try now. Read how
+> the research works and tell me what would make it useful to you:
+> https://sunofriend.com/research/separation/
+>
+> **सुनो = listen.** Sunofriend is independent of Suno Inc.
+>
+> #MusicProduction #MIDI #AIMusic #OpenSource #GarageBand
+
+Use the existing landscape listener banner. Put the research URL in the bio or
+use a Story link sticker.
+
+### Facebook
+
+> I have published a new developer preview for Sunofriend's local
+> stem-separation research.
+>
+> My overall goal is to make it much easier to move from a song into something
+> you can understand and change: useful estimated stems, several editable MIDI
+> interpretations, a balanced instrumental WAV, suggested instruments and a
+> practical GarageBand or DAW handoff.
+>
+> The work has been developed through small, bounded experiments rather than
+> one big “AI says this is correct” process. Each experiment has an exact
+> question and sealed inputs. Software checks identities, audio geometry,
+> timing and reproducibility. I then listen to the exact result. Good, poor and
+> inconclusive outcomes all remain part of the evidence.
+>
+> The code has also been refactored so policy and permissions are separate from
+> audio workflow orchestration. That makes it clearer which changes are
+> engineering experiments and which would be real product decisions.
+>
+> This is not a public finished-mix separator yet. The current public
+> Sunofriend alpha works with authorised existing stems, and the built-in demo
+> needs no personal music. The new page explains what works, how to try the
+> released workflow, how developers can inspect the read-only boundary and
+> what still blocks a public separation pilot:
+> https://sunofriend.com/research/separation/
+>
+> I would especially value feedback from musicians who are not software
+> developers, people using another DAW or coding agent, and anyone testing
+> another operating system.
+
+### WhatsApp
+
+Direct message:
+
+> I have published how I am developing local stem separation for Sunofriend.
+> The goal is authorised audio → useful stems → editable MIDI alternatives → a
+> balanced listening WAV → GarageBand or another DAW. Each experiment combines
+> machine checks with an exact human listening review, and inconclusive results
+> are kept rather than called successes.
+>
+> It is a developer preview, not a public separator yet, but the current demo
+> and existing-stems workflow are available. I would value your feedback:
+> https://sunofriend.com/research/separation/
+
+Status:
+
+> Building Sunofriend in public:
+> audio → stems → editable MIDI → listening WAV → DAW
+>
+> Human listening stays in the loop.
+> https://sunofriend.com/research/separation/
+
+### BBC Slack `#music-production-chat`
+
+> Hi all. I have published the next developer slice of Sunofriend, my
+> Apache-2.0 local tool for turning separated song parts into editable MIDI and
+> a balanced MIDI-derived listening mix.
+>
+> I am now researching an optional local stem-separation step. The overall goal
+> is one understandable route from authorised audio, through useful estimated
+> stems and several inspectable MIDI interpretations, into a listening WAV and
+> an editable GarageBand or DAW handoff.
+>
+> I have tried to make the development process itself inspectable. Each
+> increment asks one narrow question, seals the inputs, runs a bounded
+> experiment, checks machine evidence and then binds a human listening review
+> to the exact result. Useful, poor and inconclusive outcomes remain in the
+> record. Automated scores can test integrity and timing, but they do not
+> decide what sounds musically useful.
+>
+> The code has also been refactored so immutable permissions and profile
+> configuration are separate from workflow orchestration and the CLI adapter.
+> There is a concise architecture and test guide alongside the full research
+> history.
+>
+> This is a public developer preview, not a public separator launch. The
+> released demo and existing-stems workflow are available today; the private
+> separation route is still gated while I work through UX, broader stem roles,
+> cross-song evidence, portability and redistributable model terms.
+>
+> Research page: https://sunofriend.com/research/separation/
+>
+> I would value feedback on the overall direction, setup clarity, another DAW,
+> another coding agent, Windows or Linux, and what evidence you would need
+> before trusting a local separation feature:
+> https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml
+>
+> Sunofriend takes its name from Hindi **सुनो**, “listen.” It is an independent
+> Unsigned Media Ltd project and is not related to or affiliated with Suno Inc.
+
 ## SoundCloud copy
 
 ### Optional description for “Out of Place”

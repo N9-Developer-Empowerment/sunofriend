@@ -20,6 +20,7 @@ Sunofriend is an independent Unsigned Media Ltd project. Its name begins with th
 - Compatibility feedback: https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml
 - Structured capability document: https://sunofriend.com/agent-capabilities.json
 - Public separation-research status: https://sunofriend.com/research/separation/
+- Separation developer preview, architecture, safe doctor and feedback loop: https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SEPARATION_DEVELOPER_PREVIEW.md
 - Repository: https://github.com/N9-Developer-Empowerment/sunofriend
 - Beginner guide: https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/GETTING_STARTED.md
 
@@ -52,6 +53,9 @@ Sunofriend does not separate a mixed song, download streaming audio or infer pro
 - The public evidence scope is three source-distinct private chains. Automated checks cover integrity, timing and reproducibility; human listening remains the musical authority.
 - Reuse the existing compatibility report for workflow, platform and audible-result feedback. Do not attach stems, vocals, private music or review notes.
 - Canonical status and open gates: https://sunofriend.com/research/separation/
+- Development loop: state one narrow question, seal authorised inputs, run a bounded local experiment, check machine evidence, bind explicit human listening to the exact result, and preserve useful, poor and inconclusive outcomes.
+- From a prepared development checkout, the read-only boundary check is PYTHONPATH=src ./.venv/bin/python scripts/private-separation-local.py --repository-root "$PWD" doctor. It loads no model and processes no audio. A public checkout may correctly report that the private evaluation profile is unavailable.
+- Feedback may improve instructions, portability and the next experiment. It never selects a model or musical default automatically.
 
 ### Source preparation
 

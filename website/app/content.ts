@@ -13,6 +13,8 @@ export const links = {
     "https://raw.githubusercontent.com/N9-Developer-Empowerment/sunofriend/main/skills/sunofriend/references/interface-contract.md",
   gettingStarted:
     "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/GETTING_STARTED.md",
+  separationDeveloperGuide:
+    "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SEPARATION_DEVELOPER_PREVIEW.md",
   stemGuide:
     "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/STEMS.md",
   outOfPlace:
@@ -226,6 +228,17 @@ export const separationResearch = {
     "three source-distinct private evidence chains with complete-song and boundary listening",
   humanAuthority:
     "human listening decides whether each exact result is useful; automated checks cover integrity, timing and reproducibility only",
+  developmentLoop: [
+    "state one narrow musical or engineering question",
+    "seal authorised inputs and run one bounded local experiment",
+    "check machine evidence without treating a score as musical taste",
+    "bind an explicit human listening review to the exact result",
+    "preserve useful, poor and inconclusive evidence before proposing another change",
+  ],
+  developerDoctorCommand:
+    'PYTHONPATH=src ./.venv/bin/python scripts/private-separation-local.py --repository-root "$PWD" doctor',
+  feedbackImpact:
+    "reports can repair instructions, expose portability gaps and motivate the next bounded experiment; they never select a model or musical default automatically",
   openGates: [
     "a beginner-safe product journey and recovery UX",
     "broader stem roles beyond vocals and instrumental",
