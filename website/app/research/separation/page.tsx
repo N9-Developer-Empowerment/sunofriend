@@ -51,7 +51,7 @@ export default function SeparationResearch() {
             <span className="live-dot" aria-hidden="true" />
             PUBLIC EXPERIMENTAL PREVIEW · AUDIO STAYS LOCAL
           </div>
-          <h1>Try the useful slice. Help improve the next one.</h1>
+          <h1>Try two stems—or opt in to four.</h1>
           <p className="lede">
             Sunofriend defaults to broad vocals and complementary instrumental
             from one authorised finished song on an Apple-silicon Mac. The

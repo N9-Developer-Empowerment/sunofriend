@@ -207,14 +207,15 @@ comes first. Poor feedback keeps the last functioning baseline accessible,
 publishes a limitation and motivates one bounded challenger. It never silently
 selects a winner or becomes a universal musical default.
 
-The immediate expansion plan is:
+The immediate post-release plan is:
 
-1. make setup clearer across more Apple-silicon Macs;
-2. improve long-song joins and expose useful quality diagnostics;
-3. review and separately approve the now-pinned `demucs-infer` fallback
-   described in [the fallback audit](CORE_FOUR_FALLBACK_AUDIT.md);
-4. complete its one synthetic, three-song and three-repeat objective activation
-   record, then activate core vocals, drums, bass and grouped-other after those
-   objective gates pass, even when musical feedback is mixed;
+1. keep the working SCNet profile publicly accessible while collecting
+   scope/profile-bound usefulness feedback;
+2. verify the existing resource supervision on a real 16 GiB Apple-silicon
+   machine without making that evidence a new admission veto;
+3. review feedback after 30 days or 10 valid reports, whichever comes first,
+   and publish repeated musical limitations plainly;
+4. run at most one bounded Studio challenger when repeated poor feedback
+   justifies it; do not retry the exhausted MLX or `demucs-infer` profiles; and
 5. connect explicitly reviewed stems to the existing MIDI plus interpretation
-   WAV workflow with fewer manual steps.
+   WAV workflow with fewer manual steps, only after a separate user decision.

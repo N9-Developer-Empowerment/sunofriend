@@ -93,12 +93,12 @@ test("server-renders an approachable skill-first musician page", async () => {
   );
   assert.match(html, /Let your agent guide the setup/);
   assert.match(html, /Start with the skill/);
-  assert.match(html, /NEW · PUBLIC ALPHA/);
-  assert.match(html, /VOCALS \+ INSTRUMENTAL/);
-  assert.match(html, /LOCAL STEM SEPARATION/);
+  assert.match(html, /NEW · CORE-FOUR PREVIEW/);
+  assert.match(html, /VOCALS · DRUMS · BASS · OTHER/);
+  assert.match(html, /LOCAL OPT-IN SEPARATION/);
   assert.match(
     html,
-    /href="\/research\/separation\/"[^>]*aria-label="New public alpha: try local vocals and instrumental stem separation"/,
+    /href="\/research\/separation\/"[^>]*aria-label="New public opt-in preview: try local vocals, drums, bass and grouped-other stem separation"/,
   );
   assert.match(html, /ONE SKILL\. YOUR CHOICE OF AGENT/);
   assert.match(html, /plain-text Sunofriend skill tells a compatible local agent/);
@@ -205,6 +205,10 @@ test("publishes a canonical developer and agent integration page", async () => {
   assert.match(html, /Experimental separation status/);
   assert.match(html, /sunofriend-separate/);
   assert.match(html, /broad vocals/);
+  assert.match(html, /Offer two stems by default or four by explicit opt-in/);
+  assert.match(html, /core-four-stems-v1/);
+  assert.match(html, /estimates vocals, drums, bass and grouped other/);
+  assert.match(html, /Do not promise keys, guitars, narrower drum families/);
   assert.match(html, /\/research\/separation\//);
 });
 
@@ -214,7 +218,7 @@ test("publishes honest separation research and existing feedback routes", async 
   const html = await response.text();
 
   assert.match(html, /PUBLIC EXPERIMENTAL PREVIEW · AUDIO STAYS LOCAL/);
-  assert.match(html, /Try the useful slice/);
+  assert.match(html, /Try two stems—or opt in to four/);
   assert.match(html, /Finished mix to two broad stems/);
   assert.match(html, /not individual bass, keys, drums or guitar/);
   assert.match(html, /installed SCNet-large profile adds an explicit local vocals, drums, bass and grouped-other public opt-in preview/);

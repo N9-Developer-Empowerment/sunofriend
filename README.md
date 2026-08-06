@@ -73,6 +73,23 @@ reconstruction check and local listening page. Read [Experimental local stem sep
 before installing a separate pinned model/runtime or treating any estimate as
 useful.
 
+> **Core-four preview available:** after the separately approved SCNet setup,
+> Sunofriend can estimate `vocals.wav`, `drums.wav`, `bass.wav` and grouped
+> `other.wav`. Inspect the immutable profile first, then select the scope
+> explicitly:
+
+```bash
+.venv/bin/sunofriend-separate profiles
+.venv/bin/sunofriend-separate separate "/absolute/path/to/song.wav" \
+  --scope core-four-stems-v1 \
+  --out "/absolute/path/to/fresh-core-four-separation" \
+  --rights-category owned
+```
+
+The command above is a read-only plan until `--execute --confirm-rights` is
+added. It never starts MIDI/Create automatically, and grouped `other` is not a
+single instrument.
+
 Not sure what a stem is, why a drums stem contains several drums, or where to
 get authorised examples? Read
 [Stems: what they are and where to get them](docs/STEMS.md).

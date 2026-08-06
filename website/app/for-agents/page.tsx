@@ -294,23 +294,29 @@ export default function ForAgents() {
           <div className="agent-grid">
             <div className="agent-card">
               <span className="card-number">PUBLIC EXPERIMENTAL ROUTE</span>
-              <h3>Offer the narrow local alpha with its limits</h3>
+              <h3>Offer two stems by default or four by explicit opt-in</h3>
               <p>
                 <code>sunofriend-separate</code> can now produce broad vocals,
                 complementary instrumental and a reconstruction diagnostic from
                 one authorised finished mix on Apple-silicon macOS. It is a
                 separate public alpha entry point, not yet a Simple/TUI button.
+                When the installed SCNet profile reports <code>public_opt_in</code>,
+                the explicit <code>core-four-stems-v1</code> scope instead
+                estimates vocals, drums, bass and grouped other.
               </p>
               <p>
                 Plan setup and the song first. Ask separately before the pinned
-                MIT model/runtime download and before audio execution. Keep the
-                output unreviewed until the musician compares all four local
-                tracks. Never infer musical preference from automated checks.
+                model/runtime download and before audio execution. Keep every
+                output unreviewed until the musician compares the source, every
+                declared role and reconstruction. Never infer musical preference
+                from automated checks.
               </p>
               <p>
-                Do not promise separate drums, bass, keys or guitars. Do not
-                upload audio or feedback. Reuse the existing GitHub form for
-                text-only platform, workflow and audible-result observations.
+                Do not promise keys, guitars, narrower drum families or recovered
+                studio multitracks. Offer drums and bass only through the explicit
+                core-four scope after checking profile status. Do not upload audio
+                or feedback. Reuse the existing GitHub form for text-only platform,
+                workflow and audible-result observations.
               </p>
               <div className="journey-links">
                 <Link className="text-link" href="/research/separation/">

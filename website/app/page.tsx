@@ -112,11 +112,11 @@ export default function Home() {
           <Link
             className="alpha-sash"
             href="/research/separation/"
-            aria-label="New public alpha: try local vocals and instrumental stem separation"
+            aria-label="New public opt-in preview: try local vocals, drums, bass and grouped-other stem separation"
           >
-            <span>NEW · PUBLIC ALPHA</span>
-            <strong>VOCALS + INSTRUMENTAL</strong>
-            <b>LOCAL STEM SEPARATION →</b>
+            <span>NEW · CORE-FOUR PREVIEW</span>
+            <strong>VOCALS · DRUMS · BASS · OTHER</strong>
+            <b>LOCAL OPT-IN SEPARATION →</b>
           </Link>
           <Image
             src="/brand/sunofriend-listener-banner.png"
@@ -398,8 +398,9 @@ export default function Home() {
             MLX profile and its first PyTorch fallback are implemented but remain
             fail-closed after their bounded objective remediations failed. A
             hash-pinned SCNet-large release profile is now available as an
-            explicit public opt-in preview after its finite offline canaries and
-            catastrophic-output listening checks passed.
+            explicit public opt-in preview for vocals, drums, bass and grouped
+            other after its finite offline canaries and catastrophic-output
+            listening checks passed.
             Bring original or authorised parts when you
             need keys, guitars or narrower families. See the{" "}
             <Link className="inline-link" href="/stems/">
