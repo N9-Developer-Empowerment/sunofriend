@@ -204,6 +204,22 @@
       "developer_inspector": "read-only application-level inspector"
     }
   },
+  "experiments": {
+    "finished_mix_separation": {
+      "status": "private_developer_research",
+      "public_product_route_available": false,
+      "website_upload_available": false,
+      "public_model_download_available": false,
+      "working_private_scope": "one authorised finished mix to broad vocals, broad instrumental and diagnostic reconstruction",
+      "downstream_proof": "reviewed private stems can enter the existing automatic MIDI, interpretation WAV and starter ZIP validation workflow",
+      "evidence_scope": "three source-distinct private evidence chains with complete-song and boundary listening",
+      "human_listening_required": true,
+      "automated_checks_are_musical_preference": false,
+      "public_status_page": "https://sunofriend.com/research/separation/",
+      "feedback_url": "https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml",
+      "feedback_accepts_private_audio": false
+    }
+  },
   "boundaries": {
     "stem_separation": false,
     "streaming_download": false,
@@ -230,6 +246,7 @@
     "demo": "https://sunofriend.com/demo/",
     "stems": "https://sunofriend.com/stems/",
     "glossary": "https://sunofriend.com/glossary/",
+    "separation_research": "https://sunofriend.com/research/separation/",
     "contact": "https://sunofriend.com/contact/",
     "privacy": "https://sunofriend.com/privacy/",
     "getting_started": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/GETTING_STARTED.md"

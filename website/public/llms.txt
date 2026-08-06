@@ -19,6 +19,7 @@ Sunofriend is an independent Unsigned Media Ltd project. Its name begins with th
 - General private contact: hello@sunofriend.com
 - Compatibility feedback: https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml
 - Structured capability document: https://sunofriend.com/agent-capabilities.json
+- Public separation-research status: https://sunofriend.com/research/separation/
 - Repository: https://github.com/N9-Developer-Empowerment/sunofriend
 - Beginner guide: https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/GETTING_STARTED.md
 
@@ -43,6 +44,14 @@ Sunofriend is an independent Unsigned Media Ltd project. Its name begins with th
 - Music the user owns or is authorised to process.
 
 Sunofriend does not separate a mixed song, download streaming audio or infer processing permission from a public URL.
+
+## Experimental finished-mix separation
+
+- A private developer workflow now separates one authorised finished mix into broad vocals, broad instrumental and a diagnostic reconstruction, then binds complete-song and boundary listening before reviewed stems can enter the existing automatic MIDI/WAV/ZIP validation.
+- This is public research status, not a public separator. There is no separation route in Simple, Studio, the public CLI, the TUI, the website or the beginner skill journey, and the private model is not redistributed.
+- The public evidence scope is three source-distinct private chains. Automated checks cover integrity, timing and reproducibility; human listening remains the musical authority.
+- Reuse the existing compatibility report for workflow, platform and audible-result feedback. Do not attach stems, vocals, private music or review notes.
+- Canonical status and open gates: https://sunofriend.com/research/separation/
 
 ### Source preparation
 

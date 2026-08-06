@@ -53,6 +53,7 @@ export default function ForAgents() {
           <a href="#recognise">Recognise</a>
           <a href="#onboard">Onboard</a>
           <a href="#stems">Stem inputs</a>
+          <Link href="/research/separation/">Research</Link>
           <a href="#contract">Contract</a>
           <a href="#machine">Machine files</a>
         </nav>
@@ -282,6 +283,34 @@ export default function ForAgents() {
           </p>
         </section>
 
+        <section aria-labelledby="separation-research-title">
+          <h2 id="separation-research-title">Experimental separation status</h2>
+          <div className="agent-grid">
+            <div className="agent-card">
+              <span className="card-number">DISCOVERABLE, NOT ENABLED</span>
+              <h3>Explain the research without offering a product route</h3>
+              <p>
+                A private developer workflow can now produce broad vocals and
+                instrumental stems, bind full-song listening, and pass reviewed
+                stems into the existing automatic MIDI/WAV/ZIP validation. It
+                is not available in Simple, Studio, the public CLI, the TUI or
+                the beginner skill journey.
+              </p>
+              <p>
+                Do not upload user audio, redistribute the private model or
+                infer a musical preference from automated checks. Reuse the
+                existing GitHub feedback forms for platform, workflow and
+                audible-result observations.
+              </p>
+              <div className="journey-links">
+                <Link className="text-link" href="/research/separation/">
+                  Read the public research status →
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section id="contract">
           <h2>Human-facing mode contract</h2>
           <table className="contract-table">
@@ -382,6 +411,9 @@ export default function ForAgents() {
             </Link>
             <Link href="/glossary/">
               /glossary/ — shared human-readable terminology
+            </Link>
+            <Link href="/research/separation/">
+              /research/separation/ — public experiment status and feedback boundary
             </Link>
           </div>
         </section>

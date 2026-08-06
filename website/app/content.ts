@@ -215,6 +215,27 @@ export const stemBoundary = {
     "composite-role handling followed by a measured local-separation bake-off",
 } as const;
 
+export const separationResearch = {
+  status: "private developer research",
+  publicProductRouteAvailable: false,
+  workingPrivateScope:
+    "one authorised finished mix to broad vocals, broad instrumental and a diagnostic reconstruction",
+  downstreamProof:
+    "reviewed private stems can enter Sunofriend's existing MIDI, interpretation WAV and starter ZIP workflow",
+  evidenceScope:
+    "three source-distinct private evidence chains with complete-song and boundary listening",
+  humanAuthority:
+    "human listening decides whether each exact result is useful; automated checks cover integrity, timing and reproducibility only",
+  openGates: [
+    "a beginner-safe product journey and recovery UX",
+    "broader stem roles beyond vocals and instrumental",
+    "more machines, songs and hidden-set evaluation",
+    "redistributable dependency and checkpoint terms",
+  ],
+  feedbackBoundary:
+    "Report workflow, platform and audible-result observations through the existing GitHub forms. Do not attach private audio.",
+} as const;
+
 export const skillInstallPrompt = `Use $skill-installer to install the official Sunofriend skill from:
 https://github.com/N9-Developer-Empowerment/sunofriend/tree/main/skills/sunofriend
 

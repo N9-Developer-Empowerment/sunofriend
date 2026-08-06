@@ -66,6 +66,7 @@ export default function Home() {
           <a href="#agent">Start</a>
           <a href="#choose">Choose a route</a>
           <Link href="/stems/">What are stems?</Link>
+          <Link href="/research/separation/">Research</Link>
           <a href="#demo">Try the demo</a>
           <Link href="/for-agents">For AI agents</Link>
         </nav>
@@ -368,6 +369,15 @@ export default function Home() {
             .
           </p>
           <p>
+            <strong>The separation research is public, not the separator.</strong>{" "}
+            A private local two-stem prototype now feeds the existing MIDI and
+            interpretation workflow after explicit listening review. Read the{" "}
+            <Link className="inline-link" href="/research/separation/">
+              evidence, open questions and feedback boundary
+            </Link>
+            .
+          </p>
+          <p>
             <strong>It is not a perfect transcription.</strong> The WAV is a
             creative MIDI interpretation, not waveform reconstruction or a
             human-approved release master.
@@ -395,6 +405,9 @@ export default function Home() {
             <ExternalLink className="button button-ghost" href={links.compatibility}>
               Send compatibility feedback ↗
             </ExternalLink>
+            <Link className="text-link" href="/research/separation/">
+              Follow stem-separation research →
+            </Link>
           </div>
         </div>
       </section>
@@ -421,6 +434,7 @@ export default function Home() {
           <Link href="/glossary/">Glossary</Link>
           <Link href="/demo/">Demo</Link>
           <Link href="/for-agents">For AI agents</Link>
+          <Link href="/research/separation/">Separation research</Link>
           <a href="/llms.txt">llms.txt</a>
           <ExternalLink href={links.repo}>GitHub ↗</ExternalLink>
           <ExternalLink href={links.license}>Apache 2.0 ↗</ExternalLink>

@@ -36,6 +36,9 @@ to carry every technical detail:
 - `/for-agents` explains recognition, onboarding and the Simple/Studio boundary;
 - `/llms.txt` is the concise text discovery document;
 - `/agent-capabilities.json` is the versioned machine-readable contract;
+- `/research/separation/` publishes the bounded private experiment status,
+  open gates and existing feedback routes without exposing audio or a product
+  separator;
 - `/demo` explains how to run the copyright-safe synthetic stem demo through
   the normal automatic MIDI/WAV/ZIP path and includes a listening/worked-output
   tour; and
