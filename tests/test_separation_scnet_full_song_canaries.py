@@ -61,48 +61,8 @@ def _evidence(tmp_path: Path) -> tuple[Path, dict]:
     return root, run
 
 
-def test_canary_review_server_exposes_only_exact_local_audio(tmp_path: Path) -> None:
-    root, _ = _evidence(tmp_path)
-    server = build_canary_review_server(root, port=0)
-    thread = Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    base = f"http://127.0.0.1:{server.server_port}"
-    try:
-        with urlopen(base + "/", timeout=5) as response:
-            page = response.read().decode("utf-8")
-            assert response.headers["Cache-Control"] == "no-store"
-            assert "/audio/vocal_forward/vocals.wav" in page
-            assert "Nothing is uploaded" in page
-            assert "Copy listening JSON" in page
-            assert "Listening JSON fallback" in page
-        request = Request(
-            base + "/audio/acoustic_mixed/other.wav",
-            headers={"Range": "bytes=1-4"},
-        )
-        with urlopen(request, timeout=5) as response:
-            assert response.status == 206
-            assert response.read() == b"est-"
-        with pytest.raises(HTTPError) as missing:
-            urlopen(base + "/CANARY-RUN.json", timeout=5)
-        assert missing.value.code == 404
-        with pytest.raises(HTTPError) as posted:
-            urlopen(Request(base + "/", data=b"private"), timeout=5)
-        assert posted.value.code == 405
-    finally:
-        server.shutdown()
-        server.server_close()
-        thread.join(timeout=5)
-
-
-def test_canary_review_server_rejects_public_binding(tmp_path: Path) -> None:
-    root, _ = _evidence(tmp_path)
-    with pytest.raises(ValueError, match="localhost"):
-        build_canary_review_server(root, host="0.0.0.0", port=0)
-
-
-def test_complete_canary_listen_document_is_bound_and_valid(tmp_path: Path) -> None:
-    _, run = _evidence(tmp_path)
-    document = {
+def _complete_review(run: dict) -> dict:
+    return {
         "schema": LISTEN_SCHEMA,
         "run_schema": RUN_SCHEMA,
         "approval_id": "approval-test",
@@ -125,6 +85,103 @@ def test_complete_canary_listen_document_is_bound_and_valid(tmp_path: Path) -> N
         "telemetry_included": False,
         "exported_at": "2026-08-06T18:00:00Z",
     }
+
+
+def test_canary_review_server_exposes_only_exact_local_audio_and_saves_review(
+    tmp_path: Path,
+) -> None:
+    root, run = _evidence(tmp_path)
+    server = build_canary_review_server(root, port=0)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{server.server_port}"
+    try:
+        with urlopen(base + "/", timeout=5) as response:
+            page = response.read().decode("utf-8")
+            assert response.headers["Cache-Control"] == "no-store"
+            assert "/audio/vocal_forward/vocals.wav" in page
+            assert "Nothing is uploaded" in page
+            assert "Save locally + download JSON" in page
+            assert "Copy listening JSON" in page
+            assert "Listening JSON fallback" in page
+            assert "connect-src 'self'" in page
+            assert r"JSON.stringify(value,null,2)+'\n'" in page
+            assert "+'\n'" not in page
+        request = Request(
+            base + "/audio/acoustic_mixed/other.wav",
+            headers={"Range": "bytes=1-4"},
+        )
+        with urlopen(request, timeout=5) as response:
+            assert response.status == 206
+            assert response.read() == b"est-"
+        with pytest.raises(HTTPError) as missing:
+            urlopen(base + "/CANARY-RUN.json", timeout=5)
+        assert missing.value.code == 404
+        with pytest.raises(HTTPError) as posted:
+            urlopen(Request(base + "/", data=b"private"), timeout=5)
+        assert posted.value.code == 405
+        review = _complete_review(run)
+        request = Request(
+            base + "/review",
+            data=json.dumps(review).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+        )
+        with urlopen(request, timeout=5) as response:
+            receipt = json.loads(response.read())
+            assert response.status == 201
+            assert receipt["status"] == "recorded_and_validated"
+            assert receipt["path"] == "REVIEW/canary-listen-complete.json"
+            assert receipt["audio_included"] is False
+            assert receipt["telemetry_included"] is False
+        saved = json.loads(
+            (root / "REVIEW/canary-listen-complete.json").read_text(encoding="utf-8")
+        )
+        assert validate_canary_listen_document(saved, run=run) == review
+        with pytest.raises(HTTPError) as repeated:
+            urlopen(request, timeout=5)
+        assert repeated.value.code == 409
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def test_canary_review_server_rejects_public_binding(tmp_path: Path) -> None:
+    root, _ = _evidence(tmp_path)
+    with pytest.raises(ValueError, match="localhost"):
+        build_canary_review_server(root, host="0.0.0.0", port=0)
+
+
+def test_canary_review_server_does_not_persist_incomplete_review(
+    tmp_path: Path,
+) -> None:
+    root, run = _evidence(tmp_path)
+    server = build_canary_review_server(root, port=0)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    review = _complete_review(run)
+    review["status"] = "incomplete"
+    review["songs"][0]["complete"] = False
+    review["missing_fields"] = ["vocal_forward listen"]
+    request = Request(
+        f"http://127.0.0.1:{server.server_port}/review",
+        data=json.dumps(review).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        with pytest.raises(HTTPError) as rejected:
+            urlopen(request, timeout=5)
+        assert rejected.value.code == 422
+        assert not (root / "REVIEW/canary-listen-complete.json").exists()
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def test_complete_canary_listen_document_is_bound_and_valid(tmp_path: Path) -> None:
+    _, run = _evidence(tmp_path)
+    document = _complete_review(run)
     assert validate_canary_listen_document(document, run=run) == document
 
     document["songs"][0]["result"] = "catastrophic_defect_reported"

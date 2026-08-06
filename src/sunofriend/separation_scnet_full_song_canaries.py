@@ -40,6 +40,7 @@ from .separation_scnet_worker import (
 RUN_SCHEMA = "sunofriend.scnet-approved-full-song-canaries.v1"
 CANARY_SCHEMA = "sunofriend.scnet-approved-full-song-canary.v1"
 LISTEN_SCHEMA = "sunofriend.scnet-canary-catastrophic-listen.v1"
+MAXIMUM_LISTEN_DOCUMENT_BYTES = 64 * 1024
 OUTPUT_PATHS = {
     "source_reference": "SOURCE/source-reference.wav",
     "vocals": "STEMS/vocals.wav",
@@ -92,8 +93,113 @@ def build_canary_review_server(
         def do_HEAD(self) -> None:  # noqa: N802 - stdlib handler API
             self._serve(send_body=False)
 
-        def do_POST(self) -> None:  # noqa: N802 - explicit no-upload boundary
-            self.send_error(405, "This local review accepts no submissions")
+        def do_POST(self) -> None:  # noqa: N802 - stdlib handler API
+            route = self.path.partition("?")[0]
+            if route != "/review":
+                self.send_error(405, "This local review accepts no submission here")
+                return
+            self._save_review()
+
+        def _save_review(self) -> None:
+            if self.headers.get("Transfer-Encoding"):
+                self.send_error(400, "Chunked review documents are not accepted")
+                return
+            content_type = self.headers.get("Content-Type", "").partition(";")[0]
+            try:
+                content_length = int(self.headers.get("Content-Length", ""))
+            except ValueError:
+                content_length = -1
+            if content_type.strip().lower() != "application/json":
+                self.send_error(415, "Review document must be JSON")
+                return
+            if content_length < 2 or content_length > MAXIMUM_LISTEN_DOCUMENT_BYTES:
+                self.send_error(413, "Review document size is invalid")
+                return
+            raw = self.rfile.read(content_length)
+            if len(raw) != content_length:
+                self.send_error(400, "Review document is incomplete")
+                return
+            try:
+                document = json.loads(
+                    raw,
+                    parse_constant=lambda value: (_ for _ in ()).throw(
+                        ValueError(f"invalid JSON constant: {value}")
+                    ),
+                )
+                if not isinstance(document, Mapping):
+                    raise ValueError("review document must be an object")
+                validated = validate_canary_listen_document(document, run=run)
+            except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+                self._json_response(
+                    status=422,
+                    value={"status": "not_saved", "error": str(exc)},
+                )
+                return
+
+            target = evidence / "REVIEW" / "canary-listen-complete.json"
+            if os.path.lexists(target):
+                self._json_response(
+                    status=409,
+                    value={
+                        "status": "already_recorded",
+                        "path": "REVIEW/canary-listen-complete.json",
+                        "sha256": file_sha256(target) if target.is_file() else None,
+                    },
+                )
+                return
+            temporary = target.with_name(
+                f".{target.name}.browser-save-{os.getpid()}-{id(self)}"
+            )
+            try:
+                descriptor = os.open(
+                    temporary,
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                    0o600,
+                )
+                with os.fdopen(descriptor, "w", encoding="utf-8") as destination:
+                    json.dump(
+                        validated,
+                        destination,
+                        indent=2,
+                        sort_keys=True,
+                        allow_nan=False,
+                    )
+                    destination.write("\n")
+                    destination.flush()
+                    os.fsync(destination.fileno())
+                os.link(temporary, target)
+            except FileExistsError:
+                self._json_response(
+                    status=409,
+                    value={
+                        "status": "already_recorded",
+                        "path": "REVIEW/canary-listen-complete.json",
+                    },
+                )
+                return
+            finally:
+                temporary.unlink(missing_ok=True)
+            self._json_response(
+                status=201,
+                value={
+                    "status": "recorded_and_validated",
+                    "path": "REVIEW/canary-listen-complete.json",
+                    "sha256": file_sha256(target),
+                    "audio_included": False,
+                    "telemetry_included": False,
+                },
+            )
+
+        def _json_response(self, *, status: int, value: Mapping[str, Any]) -> None:
+            body = (json.dumps(value, sort_keys=True, allow_nan=False) + "\n").encode(
+                "utf-8"
+            )
+            self._headers(
+                status=status,
+                content_type="application/json; charset=utf-8",
+                content_length=len(body),
+            )
+            self.wfile.write(body)
 
         def _serve(self, *, send_body: bool) -> None:
             route = self.path.partition("?")[0]
@@ -150,7 +256,9 @@ def build_canary_review_server(
                 status=status,
                 content_type="audio/wav",
                 content_length=length,
-                content_range=(f"bytes {start}-{end}/{size}" if status == 206 else None),
+                content_range=(
+                    f"bytes {start}-{end}/{size}" if status == 206 else None
+                ),
             )
             if not send_body:
                 return
@@ -161,7 +269,10 @@ def build_canary_review_server(
                     chunk = source.read(min(64 * 1024, remaining))
                     if not chunk:
                         break
-                    self.wfile.write(chunk)
+                    try:
+                        self.wfile.write(chunk)
+                    except (BrokenPipeError, ConnectionResetError):
+                        return
                     remaining -= len(chunk)
 
         def _headers(
@@ -303,9 +414,7 @@ def record_no_failure_canary_listen(
         "path": str(target),
         "sha256": file_sha256(target),
         "reviewed_by": identity,
-        "results": {
-            item["coverage_id"]: item["result"] for item in validated["songs"]
-        },
+        "results": {item["coverage_id"]: item["result"] for item in validated["songs"]},
         "catastrophic_listens_complete": True,
         "subjective_usefulness_gate": None,
     }
@@ -343,8 +452,7 @@ def load_approved_full_song_plan(
     if len(hashes) != 3:
         raise ValueError("full-song canaries must be content-disjoint")
     projected_audio = sum(
-        math.ceil(row["duration_seconds"] * 44_100) * 6 * 6
-        for row in source_rows
+        math.ceil(row["duration_seconds"] * 44_100) * 6 * 6 for row in source_rows
     )
     required_free = (
         projected_audio
@@ -536,12 +644,10 @@ def execute_approved_full_song_canaries(
                     "peak_unified_memory_bytes": worker["resources"][
                         "peak_unified_memory_bytes"
                     ],
-                    "maximum_reconstruction_error_lsb": worker[
-                        "additive_accounting"
-                    ]["maximum_absolute_error_lsb"],
-                    "native_other_correction": worker[
-                        "native_other_correction"
+                    "maximum_reconstruction_error_lsb": worker["additive_accounting"][
+                        "maximum_absolute_error_lsb"
                     ],
+                    "native_other_correction": worker["native_other_correction"],
                 },
                 "profile_status_changed": False,
                 "public_access_changed": False,
@@ -621,7 +727,7 @@ def render_canary_listen_html(run: Mapping[str, Any]) -> str:
         coverage = str(canary["coverage_id"])
         label = html.escape(coverage.replace("_", " ").title())
         audio = "".join(
-            f'<article><h3>{html.escape(role.replace("_", " ").title())}</h3>'
+            f"<article><h3>{html.escape(role.replace('_', ' ').title())}</h3>"
             f'<audio controls preload="metadata" src="/audio/{coverage}/{role}.wav"></audio></article>'
             for role in OUTPUT_PATHS
         )
@@ -633,7 +739,7 @@ def render_canary_listen_html(run: Mapping[str, Any]) -> str:
             '<label>Catastrophic result<select class="result"><option value="">Choose…</option>'
             '<option value="no_catastrophic_defect">No catastrophic defect</option>'
             '<option value="catastrophic_defect_reported">Catastrophic defect found</option>'
-            '</select></label><label>Details (required only for a defect)'
+            "</select></label><label>Details (required only for a defect)"
             '<textarea class="details" maxlength="5000"></textarea></label></section>'
         )
     binding = json.dumps(
@@ -648,18 +754,19 @@ def render_canary_listen_html(run: Mapping[str, Any]) -> str:
         sort_keys=True,
         separators=(",", ":"),
     ).replace("<", "\\u003c")
-    return f'''<!doctype html><html lang="en"><head><meta charset="utf-8">
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; media-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'none'; img-src data:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; media-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; img-src data:">
 <title>SCNet full-song canary listen</title><style>
 :root{{--bg:#07101c;--panel:#101d2c;--line:#2b465f;--ink:#f6f8fb;--muted:#aeb9c8;--cyan:#4fe2ee}}*{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 system-ui}}main{{max-width:1180px;margin:auto;padding:32px 20px 80px}}h1{{font-size:clamp(2.4rem,7vw,5rem);line-height:1;margin:.2em 0}}.eyebrow{{color:var(--cyan);font-weight:800;letter-spacing:.12em}}.song{{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px;margin:20px 0}}.audio-grid{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}}article{{border:1px solid var(--line);border-radius:14px;padding:14px}}audio{{width:100%}}label{{display:block;margin:16px 0}}select,textarea{{display:block;width:100%;margin-top:7px;padding:10px}}textarea{{min-height:90px}}button{{background:var(--cyan);border:0;border-radius:999px;padding:13px 20px;font-weight:800}}.muted{{color:var(--muted)}}@media(max-width:720px){{.audio-grid{{grid-template-columns:1fr}}}}
-</style></head><body><main><div class="eyebrow">LOCAL · CATASTROPHIC CHECK ONLY</div><h1>Listen without creating a quality veto.</h1><p>Check only corruption, mislabelling, silence across all roles or gross timing. Bleed, artefacts or poor usefulness are feedback, not automatic preview blockers. Nothing is uploaded.</p>{''.join(cards)}<button id="save">Download listening JSON</button> <button id="copy">Copy listening JSON</button><p id="status" class="muted"></p><label>Listening JSON fallback<textarea id="json" readonly></textarea></label></main><script>
+</style></head><body><main><div class="eyebrow">LOCAL · CATASTROPHIC CHECK ONLY</div><h1>Listen without creating a quality veto.</h1><p>Check only corruption, mislabelling, silence across all roles or gross timing. Bleed, artefacts or poor usefulness are feedback, not automatic preview blockers. Nothing is uploaded.</p>{"".join(cards)}<button id="save">Save locally + download JSON</button> <button id="copy">Copy listening JSON</button><p id="status" class="muted"></p><label>Listening JSON fallback<textarea id="json" readonly></textarea></label></main><script>
 const binding={binding};
-function reviewValue(){{const songs=[];const missing=[];document.querySelectorAll('.song').forEach(section=>{{const coverage=section.dataset.coverage;const complete=section.querySelector('.listened').checked;const result=section.querySelector('.result').value;const details=section.querySelector('.details').value.trim();if(!complete)missing.push(coverage+' listen');if(!result)missing.push(coverage+' result');if(result==='catastrophic_defect_reported'&&!details)missing.push(coverage+' details');songs.push({{coverage_id:coverage,complete,result,details,minimum_usefulness_rating:null}})}});const value={{...binding,status:missing.length?'incomplete':'complete',songs,missing_fields:missing,audio_included:false,telemetry_included:false,exported_at:new Date().toISOString()}};document.getElementById('json').value=JSON.stringify(value,null,2)+'\n';return value;}}
-document.getElementById('save').addEventListener('click',()=>{{const value=reviewValue();const blob=new Blob([JSON.stringify(value,null,2)+'\n'],{{type:'application/json'}});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='sunofriend-scnet-full-song-listen-'+(value.missing_fields.length?'draft':'complete')+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);document.getElementById('status').textContent=value.missing_fields.length?value.missing_fields.join(', '):'Download requested. If no file appears, use Copy listening JSON.';}});
-document.getElementById('copy').addEventListener('click',async()=>{{const value=reviewValue();try{{await navigator.clipboard.writeText(JSON.stringify(value,null,2)+'\n');document.getElementById('status').textContent=value.missing_fields.length?'Draft JSON copied: '+value.missing_fields.join(', '):'Complete listening JSON copied.';}}catch(error){{document.getElementById('status').textContent='Clipboard access failed. Select and copy the JSON fallback text below.';}}}});
+function reviewValue(){{const songs=[];const missing=[];document.querySelectorAll('.song').forEach(section=>{{const coverage=section.dataset.coverage;const complete=section.querySelector('.listened').checked;const result=section.querySelector('.result').value;const details=section.querySelector('.details').value.trim();if(!complete)missing.push(coverage+' listen');if(!result)missing.push(coverage+' result');if(result==='catastrophic_defect_reported'&&!details)missing.push(coverage+' details');songs.push({{coverage_id:coverage,complete,result,details,minimum_usefulness_rating:null}})}});const value={{...binding,status:missing.length?'incomplete':'complete',songs,missing_fields:missing,audio_included:false,telemetry_included:false,exported_at:new Date().toISOString()}};document.getElementById('json').value=JSON.stringify(value,null,2)+'\\n';return value;}}
+function downloadValue(value){{const blob=new Blob([JSON.stringify(value,null,2)+'\\n'],{{type:'application/json'}});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='sunofriend-scnet-full-song-listen-'+(value.missing_fields.length?'draft':'complete')+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}}
+document.getElementById('save').addEventListener('click',async()=>{{const value=reviewValue();const status=document.getElementById('status');downloadValue(value);if(value.missing_fields.length){{status.textContent='Draft download requested; complete '+value.missing_fields.join(', ')+' before the local evidence record can be saved.';return;}}const button=document.getElementById('save');button.disabled=true;try{{const response=await fetch('/review',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(value)}});const receipt=await response.json();if(response.ok){{status.textContent='Saved and validated locally as '+receipt.path+'. A Downloads copy was also requested.';}}else if(response.status===409&&receipt.status==='already_recorded'){{status.textContent='A validated review is already saved as '+receipt.path+'; it was not overwritten. A Downloads copy was also requested.';}}else{{status.textContent='Local save failed: '+(receipt.error||response.status)+'. Use Copy listening JSON or the fallback text below.';}}}}catch(error){{status.textContent='Local save could not be reached. Use Copy listening JSON or the fallback text below.';}}finally{{button.disabled=false;}}}});
+document.getElementById('copy').addEventListener('click',async()=>{{const value=reviewValue();try{{await navigator.clipboard.writeText(JSON.stringify(value,null,2)+'\\n');document.getElementById('status').textContent=value.missing_fields.length?'Draft JSON copied: '+value.missing_fields.join(', '):'Complete listening JSON copied.';}}catch(error){{document.getElementById('status').textContent='Clipboard access failed. Select and copy the JSON fallback text below.';}}}});
 reviewValue();
-</script></body></html>'''
+</script></body></html>"""
 
 
 def _load_approval(path: str | Path) -> tuple[Path, dict[str, Any], str]:
@@ -673,7 +780,11 @@ def _load_approval(path: str | Path) -> tuple[Path, dict[str, Any], str]:
         raise ValueError("approval JSON is invalid") from exc
     if not isinstance(document, Mapping):
         raise ValueError("approval JSON must contain an object")
-    return approval, validate_core_four_approval_document(document), file_sha256(approval)
+    return (
+        approval,
+        validate_core_four_approval_document(document),
+        file_sha256(approval),
+    )
 
 
 def _probe_approved_source(path: Path, *, ffprobe: Path) -> dict[str, Any]:
@@ -700,13 +811,17 @@ def _probe_approved_source(path: Path, *, ffprobe: Path) -> dict[str, Any]:
         timeout=DEFAULT_AUDIO_IMPORT_LIMITS.probe_timeout_seconds,
     )
     if completed.returncode:
-        raise RuntimeError(f"ffprobe failed for approved source: {completed.stderr[:1000]}")
+        raise RuntimeError(
+            f"ffprobe failed for approved source: {completed.stderr[:1000]}"
+        )
     try:
         document = json.loads(completed.stdout)
     except json.JSONDecodeError as exc:
         raise ValueError("ffprobe returned invalid JSON") from exc
     streams = document.get("streams")
-    if not isinstance(streams, list) or any(not isinstance(row, Mapping) for row in streams):
+    if not isinstance(streams, list) or any(
+        not isinstance(row, Mapping) for row in streams
+    ):
         raise ValueError("ffprobe stream report is invalid")
     audio = [row for row in streams if row.get("codec_type") == "audio"]
     if len(audio) != 1:
@@ -920,7 +1035,9 @@ def _run_worker(
             env=environment,
         )
     except subprocess.TimeoutExpired as exc:
-        raise TimeoutError("SCNet full-song worker exceeded its runtime ceiling") from exc
+        raise TimeoutError(
+            "SCNet full-song worker exceeded its runtime ceiling"
+        ) from exc
     if completed.returncode:
         detail = (completed.stderr or completed.stdout).strip()
         raise RuntimeError(
@@ -1016,7 +1133,9 @@ def _verify_installed_profile(root: Path) -> None:
     if not root.is_dir() or not runtime.is_file() or not os.access(runtime, os.X_OK):
         raise FileNotFoundError("installed SCNet profile runtime is missing")
     installation = json.loads((root / "INSTALLATION.json").read_text(encoding="utf-8"))
-    compatibility = json.loads((root / "COMPATIBILITY.json").read_text(encoding="utf-8"))
+    compatibility = json.loads(
+        (root / "COMPATIBILITY.json").read_text(encoding="utf-8")
+    )
     if (
         installation.get("profile_id") != SCNET_RELEASE_PROFILE_ID
         or installation.get("model_terms_accepted") is not True
