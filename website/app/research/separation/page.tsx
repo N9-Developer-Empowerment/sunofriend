@@ -5,7 +5,7 @@ import { links, separationResearch } from "../../content";
 export const metadata: Metadata = {
   title: "Experimental local stem separation — Sunofriend",
   description:
-    "Try Sunofriend's public local two-stem alpha, understand its limits and share text-only feedback.",
+    "Try Sunofriend's public two-stem separator or explicit local SCNet core-four preview.",
   alternates: { canonical: "/research/separation/" },
 };
 
@@ -49,14 +49,14 @@ export default function SeparationResearch() {
         <header>
           <div className="eyebrow">
             <span className="live-dot" aria-hidden="true" />
-            PUBLIC EXPERIMENTAL ALPHA · AUDIO STAYS LOCAL
+            PUBLIC EXPERIMENTAL PREVIEW · AUDIO STAYS LOCAL
           </div>
-          <h1>Try the useful slice. Help improve the next one.</h1>
+          <h1>Try two stems—or opt in to four.</h1>
           <p className="lede">
-            Sunofriend can now estimate broad vocals and complementary
-            instrumental from one authorised finished song on an Apple-silicon
-            Mac. You hear the source, both stems and their reconstruction before
-            deciding whether anything is useful.
+            Sunofriend defaults to broad vocals and complementary instrumental
+            from one authorised finished song on an Apple-silicon Mac. The
+            installed SCNet-large profile adds an explicit local vocals, drums,
+            bass and grouped-other public opt-in preview.
           </p>
         </header>
 
@@ -73,12 +73,33 @@ export default function SeparationResearch() {
               </p>
             </div>
             <div className="agent-card">
-              <span className="card-number">LISTENING PACKAGE</span>
-              <h3>Four local tracks make the boundary audible</h3>
+              <span className="card-number">CORE-FOUR PUBLIC OPT-IN</span>
+              <h3>Four roles, one immutable profile, no hidden tuning loop</h3>
               <p>
-                The output includes a level-managed source reference, vocals,
-                instrumental and an additive reconstruction check, plus a local
-                page with review prompts and private JSON export.
+                The pinned Demucs MLX worker targets vocals, drums, bass and
+                grouped other with network denial and exact PCM24 reconstruction
+                accounting. Both permitted activation attempts failed before
+                publication. The revised PyTorch CPU fallback passed install and
+                doctor but rejected its native Fraction segment before inference,
+                so its retries are also disabled. The separately pinned SCNet
+                release profile now supplies the public opt-in execution path.
+              </p>
+              <p>
+                Official SCNet-large is the installed public opt-in profile. Its
+                four-role architecture and minimal
+                Apple-arm64 runtime are pinned. An approved evidence-only
+                download established the mutable Google Drive checkpoint&apos;s
+                exact 168,848,417-byte identity and SHA-256 under accepted
+                provisional terms evidence. Weights-only compatibility passed
+                after one transparent official-wrapper remediation. A
+                network-denied 60-second synthetic run then produced every role
+                in 69.97 seconds at 6.58 GB peak RSS with zero-LSB
+                reconstruction error. Very weak synthetic vocal output is a
+                recorded limitation, not a reason to restart tuning. Three
+                authorised full-song canaries passed, and complete listening
+                checks reported no catastrophic defect. A 36 GB M3 Max is the
+                first verified class; other Apple-silicon machines remain
+                accessible but unverified.
               </p>
             </div>
             <div className="agent-card">
@@ -110,9 +131,11 @@ export default function SeparationResearch() {
               <span className="card-number">01 · INSPECT SETUP</span>
               <h3>Plan before downloading</h3>
               <p>
-                Run <code>{separationResearch.setupPlanCommand}</code>. It
-                explains platform, model terms, size, network use and install
-                location without changing the Mac.
+                Run <code>{separationResearch.setupPlanCommand}</code> for the
+                default, or{" "}
+                <code>scripts/setup-separation-core-four-scnet-macos.sh --plan</code>{" "}
+                for core four. Each explains platform, model terms, size,
+                network use and install location without changing the Mac.
               </p>
             </div>
             <div className="agent-card">
@@ -156,11 +179,10 @@ export default function SeparationResearch() {
         <section id="development">
           <h2>How the feature was developed</h2>
           <p className="lede">
-            The first public slice follows a bounded evidence loop rather than
-            promoting the first model that ran. Private development covered
-            three source-distinct full-song chains and targeted join reviews;
-            the public route then passed an end-to-end generated-audio smoke
-            test with exact PCM24 geometry and reconstruction accounting.
+            Development now has a hard stopping rule: one baseline configuration,
+            one remediation cycle, then publish if objective gates pass or switch
+            backend if they do not. Musical ratings are preserved for limitations
+            and challengers, not used as an endless pre-release veto.
           </p>
           <div className="agent-grid">
             {separationResearch.developmentLoop.map((step, index) => (
@@ -173,8 +195,9 @@ export default function SeparationResearch() {
             ))}
           </div>
           <p className="guide-note">
-            Reports can expose a setup failure or motivate a new bounded test;
-            they never silently select a model or musical default.
+            Reports are reviewed after 30 days or 10 valid submissions, whichever
+            comes first. Poor feedback cannot disable the last objectively
+            functioning profile or silently select a model.
           </p>
         </section>
 
@@ -219,9 +242,9 @@ export default function SeparationResearch() {
               <span className="card-number">MUSICIANS</span>
               <h3>Tell us whether the stems helped</h3>
               <p>
-                Report whether vocals and instrumental were useful, partly
-                useful or poor, and describe bleed, missing sound, metallic
-                texture, level changes or joins. “Cannot tell” is useful too.
+                Report overall and per-role usefulness, bleed, missing content,
+                artefacts, timing, joins and whether downstream MIDI improved.
+                “Cannot tell” and “Not tested” are valid.
               </p>
               <ExternalLink className="text-link" href={links.firstSong}>
                 Send a first-song report ↗
@@ -232,8 +255,8 @@ export default function SeparationResearch() {
               <h3>Report the first confusing or failing step</h3>
               <p>
                 Include Mac model, macOS, source format, approximate duration,
-                coding agent and exact command. Do not attach private audio,
-                vocals, stems or review exports.
+                coding agent and exact command. Use Copy text-only feedback. Do
+                not attach private audio, stems, review JSON, filenames or metadata.
               </p>
               <ExternalLink className="text-link" href={links.compatibility}>
                 Send text-only compatibility feedback ↗

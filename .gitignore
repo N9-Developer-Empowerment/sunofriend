@@ -24,3 +24,13 @@ stem_examples/**/*.m4a
 stem_examples/**/*.ogg
 stem_examples/**/*.opus
 stem_examples/**/*.pdf
+
+# Local finished-song canaries are private evidence, never repository examples.
+examples/*.wav
+examples/*.aif
+examples/*.aiff
+examples/*.flac
+examples/*.mp3
+examples/*.m4a
+examples/*.ogg
+examples/*.opus

@@ -5,14 +5,19 @@ audio parts and wants editable MIDI plus a clean listening version of the
 song. Simple and Studio consume synchronized top-level WAV stems. If your
 existing separated parts are WAV, AIFF, FLAC, M4A, MP3 or Ogg, the folder
 importer can first preserve and prepare them as that canonical WAV project.
-The separate experimental alpha can estimate broad vocals and complementary
+The separate experimental alpha defaults to broad vocals and complementary
 instrumental from one authorised finished mix on supported Apple-silicon Macs.
-Neither route repairs musical alignment.
+The first two exact core-four backends remain blocked after bounded objective
+runtime failures. A separately installed SCNet-large profile passed its finite
+offline canaries and is available as an explicit public opt-in preview. Its
+first verified machine class is a 36 GB M3 Max; other Apple-silicon classes are
+accessible but unverified and resource-supervised. Neither route repairs
+musical alignment.
 
 If “stem” is unfamiliar, or you need legitimate ways to obtain examples, read
 [Stems: what they are and where to get them](STEMS.md) first. If you have only
 a finished mix, read [Experimental local stem separation](STEM_SEPARATION_ALPHA.md).
-It is an opt-in two-stem alpha, not exact multitrack recovery. The source-import
+It is opt-in experimental separation, not exact multitrack recovery. The source-import
 boundaries and wider research record are documented in
 [Stem access and separation research](STEM_ACCESS_AND_SEPARATION_RESEARCH.md).
 
@@ -66,6 +71,23 @@ After reviewing the setup, terms, rights and output path, follow the complete
 [alpha guide](STEM_SEPARATION_ALPHA.md). Listen to the source, both estimates
 and reconstruction check before deciding whether either result should enter a
 later MIDI workflow. The website never receives the audio.
+
+For the four-role preview, inspect the exact profile first:
+
+```bash
+.venv/bin/sunofriend-separate profiles
+.venv/bin/sunofriend-separate doctor --scope core-four-stems-v1
+.venv/bin/sunofriend-separate separate \
+  "/absolute/path/to/authorised-song.flac" \
+  --scope core-four-stems-v1 \
+  --out "/absolute/path/to/fresh-core-four-separation" \
+  --rights-category owned
+```
+
+The four persisted estimates reconstruct the level-managed reference, but
+that accounting does not prove that every sound was assigned to the right
+role. Execution still requires `--execute --confirm-rights` and does not start
+MIDI/Create automatically.
 
 ## Install Sunofriend manually
 

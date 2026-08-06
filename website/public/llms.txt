@@ -1,6 +1,6 @@
 # Sunofriend
 
-> Sunofriend is a local-first, MacBook-tested alpha. On Apple-silicon macOS its opt-in experimental separator estimates broad vocals and complementary instrumental from one authorised finished mix, with local listening before use. It also prepares existing stems, then turns useful canonical WAV parts into editable MIDI, a balanced MIDI-derived song-interpretation WAV and a starter ZIP. Its plain-text skill is designed for any coding agent that can read skills, inspect a local workspace and run approved commands. Automatic results remain explicitly unreviewed; Studio preserves multiple analytical and AI candidates for explicit listening and choice.
+> Sunofriend is a local-first, MacBook-tested alpha. On Apple-silicon macOS its opt-in experimental separator defaults to broad vocals and complementary instrumental. Its installed, hash-pinned SCNet-large profile now adds an explicit public opt-in vocals/drums/bass/grouped-other preview after finite offline canaries and catastrophic-output listening checks passed. The first verified class is a 36 GB M3 Max; other Apple-silicon classes remain accessible but unverified. It also prepares existing stems, then turns useful canonical WAV parts into editable MIDI, a balanced MIDI-derived song-interpretation WAV and a starter ZIP. Automatic results remain explicitly unreviewed; Studio preserves candidates for explicit listening and choice.
 
 Sunofriend is an independent Unsigned Media Ltd project. Its name begins with the Hindi सुनो ("listen"). It is not related to or affiliated with Suno Inc.
 
@@ -45,19 +45,22 @@ Sunofriend is an independent Unsigned Media Ltd project. Its name begins with th
 - Optional local chord PDF.
 - Music the user owns or is authorised to process.
 
-Sunofriend never downloads streaming audio or infers processing permission from a public URL. Its current separator is an experimental local two-stem estimate, not exact multitrack recovery.
+Sunofriend never downloads streaming audio or infers processing permission from a public URL. Its default separator is an experimental local two-stem estimate; the explicit SCNet core-four opt-in preview is also not exact multitrack recovery.
 
 ## Experimental finished-mix separation
 
-- The public local alpha estimates broad vocals, complementary instrumental and an additive reconstruction check from one authorised finished mix on Apple-silicon macOS.
-- It is a separate `sunofriend-separate` command, not yet a Simple/TUI button. It does not produce bass, drums, keys, guitar or other narrow families, and the website never receives audio.
+- The public local alpha defaults to broad vocals, complementary instrumental and an additive reconstruction check from one authorised finished mix on Apple-silicon macOS.
+- The immutable `demucs-mlx-htdemucs-v1` baseline implements vocals, drums, bass and grouped other but is `blocked`: its baseline and one permitted remediation failed before publication. Retries and new installs are disabled; no usefulness threshold caused the failure.
+- It is a separate `sunofriend-separate` command, not yet a Simple/TUI button, and the website never receives audio.
 - The pinned model/runtime is a separate explicit download. Plan without changes using `scripts/setup-separation-alpha-macos.sh --plan`; then accept the displayed model terms before installation.
 - `sunofriend-separate doctor` is read-only: it hashes the exact local profile without loading a model or processing audio.
+- `sunofriend-separate profiles --json` reports immutable profile identities and status. Both retained failed core-four profiles refuse new installs: the MLX baseline failed its runtime remediation, while the 20-wheel PyTorch fallback rejected the model's native `Fraction(39, 5)` segment before inference. The exact SCNet-large release profile is installed as `public_opt_in`. Its 168,848,417-byte checkpoint (SHA-256 `719e5abb8ed920305dad546ac3cd6fb0b1e9c3092d14ce21827bfc0423af3070`) passed weights-only strict compatibility after one official-wrapper remediation. A network-denied synthetic canary, three authorised song-disjoint canaries and three repeat resource runs passed the objective gates; the project owner reported no catastrophic defect after listening to every full-song result. Weak synthetic vocal usefulness remains a known limitation without disabling the preview or starting unlimited tuning.
 - Plan one song with `sunofriend-separate separate SONG --out FRESH --rights-category owned`. Add `--execute --confirm-rights --open-review` only after checking the plan.
 - Output contains source reference, vocals, instrumental, reconstruction check, technical report and a local listening page. Status is `complete_unreviewed`; useful stems enter MIDI only as a later explicit decision.
 - Automated checks cover file integrity, audio geometry, reconstruction accounting and reproducibility. Human listening decides usefulness, bleed, missing sound, texture and joins.
-- Reuse the existing compatibility report for workflow, platform and audible-result feedback. Do not attach stems, vocals, private music or review exports.
+- Reuse the existing compatibility report with Copy text-only feedback. Do not attach stems, vocals, private music, review JSON, filenames or metadata. Review happens after 30 days or 10 valid reports; poor musical feedback cannot disable the last functioning profile.
 - Canonical guide: https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/STEM_SEPARATION_ALPHA.md
+- Full-stem engineering plan: https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/FULL_STEM_SEPARATION_PLAN.md
 - Canonical status and open gates: https://sunofriend.com/research/separation/
 - Feedback may improve instructions, portability and the next bounded experiment. It never selects a model or musical default automatically.
 

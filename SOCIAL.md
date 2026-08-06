@@ -74,8 +74,9 @@ tools:
 > Want to try Sunofriend without learning its command line? Open the beginner
 > website and copy its two prompts into Codex. The `$sunofriend` skill
 > offers a built-in demo, your own stems, help finding stems, or experimental
-> local two-stem separation of one authorised song. It inspects first and uses
-> clear setup and model approvals:
+> local separation of one authorised song—broad vocals/instrumental by default,
+> or vocals/drums/bass/grouped-other through an explicit opt-in profile. It
+> inspects first and uses clear setup and model approvals:
 > https://sunofriend.com
 
 Use “Codex” only for a session with local file and terminal access. Do not
@@ -286,17 +287,18 @@ group chats.
 
 Use the landscape banner so the technical explanation remains readable.
 
-## New public separation alpha launch campaign — August 2026
+## Core-four public opt-in launch campaign — August 2026
 
-These are the recommended posts to use with the new homepage **NEW · PUBLIC
-ALPHA** sash. Broad vocal/instrumental separation is available now for public,
-local testing on Apple-silicon macOS. Keep the limits in every adaptation: one
-authorised finished mix, two broad stems, local processing, human listening, no
-perfect-separation claim and no automatic MIDI promotion.
+These are the current recommended launch posts. Sunofriend now offers local
+`vocals`, `drums`, `bass` and grouped `other` separation as an explicit public
+opt-in preview on Apple-silicon macOS. Broad vocals plus instrumental remains
+the default. Keep the boundaries in every adaptation: one authorised finished
+mix, separate model approval, local processing, human listening, no exact
+multitrack-recovery claim and no automatic MIDI promotion.
 
 Recommended graphic: use the landscape Sunofriend banner or a screenshot of
-the homepage sash. Link the image or first comment to the practical guide, not
-only to the repository.
+the homepage **NEW · CORE-FOUR PREVIEW** sash. Link the image or first comment
+to the practical guide, not only to the repository.
 
 Canonical links:
 
@@ -306,53 +308,55 @@ Canonical links:
 
 ### X
 
-> New in Sunofriend's public alpha: local vocal + instrumental stem separation.
+> Four local stems. One explicit opt-in. Your ears decide.
 >
-> One authorised song in. Two broad stems, a reconstruction check and a listening page out.
->
-> Apple-silicon Mac. No upload. Human listening required.
+> Sunofriend now estimates vocals, drums, bass + grouped other from one
+> authorised mix—locally on Apple-silicon Macs. No upload. Two-stem stays the
+> default.
 > https://sunofriend.com/research/separation/
 
 ### Bluesky
 
-> New in Sunofriend's public alpha: local vocal + instrumental stem separation.
+> Sunofriend now goes beyond vocals + instrumental.
 >
-> One authorised song in. Two broad stems, a reconstruction check and a listening page out.
->
-> Apple-silicon Mac. No upload. Human listening required.
+> Explicit opt-in: vocals, drums, bass and grouped other from one authorised
+> mix. Apple-silicon Mac. No audio upload. Reconstruction checks and local
+> listening. Musical quality stays yours to judge.
 > https://sunofriend.com/research/separation/
 
 ### Threads
 
-> Sunofriend now has a public experimental alpha for local vocal + instrumental
-> stem separation.
+> Sunofriend can now separate one authorised finished mix locally into four
+> broad roles: vocals, drums, bass and grouped other.
 >
-> Give it one finished song you own or may process. On an Apple-silicon Mac it
-> estimates broad vocals and complementary instrumental, creates a
-> reconstruction check, and opens a local listening page. Nothing is uploaded
-> and the stems remain unreviewed until you listen.
+> The working vocals/instrumental route stays the default. Core four is a
+> separate public opt-in backed by an immutable, hash-pinned SCNet profile. It
+> runs on Apple-silicon macOS, uploads nothing, verifies the output contract and
+> opens a local listening page.
 >
-> It does not yet make separate drums, bass, keys and guitars, and it is not a claim
-> of recovering the lost studio multitracks. I am releasing the useful narrow
-> slice now because real setup and listening feedback can improve the next one.
+> That does not make the estimates the lost studio multitracks. Bleed,
+> artefacts and missing content remain possible, and exact reconstruction does
+> not prove correct assignment. Poor or mixed musical feedback is recorded—it
+> does not trigger an endless pre-release tuning loop or remove the last working
+> profile.
 >
-> Try it, read the method and report what was clear, confusing, useful or poor:
+> Try it and tell me what was useful, poor, confusing or untested:
 > https://sunofriend.com/research/separation/
 
 ### Instagram
 
-> **NEW · PUBLIC ALPHA**
+> **NEW · CORE-FOUR PUBLIC PREVIEW**
 >
-> **LOCAL VOCAL + INSTRUMENTAL STEM SEPARATION**
+> **VOCALS · DRUMS · BASS · GROUPED OTHER**
 >
-> One authorised finished song in. Broad vocals + instrumental out. Then a
-> reconstruction check and a local listening page so your ears make the
-> decision.
+> One authorised finished song in. Four broad local estimates, a reconstruction
+> check and a private listening page out. Your ears—not an automated score—make
+> the musical decision.
 >
-> This first public alpha is for Apple-silicon Macs. It uploads nothing and it
-> does not pretend two estimated stems are the original studio tracks. The
-> next goal is better joins, easier setup and narrower drums/bass/keys roles,
-> shaped by real user feedback.
+> The two-stem route remains the default. Core four is explicit opt-in on
+> Apple-silicon Macs, uploads nothing and never starts MIDI conversion by
+> itself. It is experimental separation, not recovery of the original studio
+> tracks.
 >
 > https://sunofriend.com/research/separation/
 >
@@ -362,53 +366,62 @@ Canonical links:
 
 ### Facebook
 
-> New in the Sunofriend public experimental alpha: local vocal + instrumental
-> stem separation.
+> Sunofriend's public experimental separator now offers an explicit local
+> four-stem preview: vocals, drums, bass and grouped other.
 >
-> It accepts one finished song you own or are authorised to process and, on an
-> Apple-silicon Mac, estimates broad vocals and complementary instrumental. It
-> also creates a source reference, an additive reconstruction check and a
-> local review page. The output is deliberately labelled unreviewed: software
-> verifies files and timing, while a person decides whether the music is
-> useful.
+> It accepts one finished song you own or are authorised to process. On an
+> Apple-silicon Mac, the separately approved and hash-pinned profile runs
+> locally, produces four synchronized PCM24 estimates, verifies reconstruction
+> accounting and opens a local review page. Audio, filenames, review JSON and
+> private metadata are not uploaded automatically.
 >
-> This is a working narrow slice, not perfect multitrack recovery. Separate
-> drums, bass, keys and guitars are still future work. I am publishing now so
-> musicians and developers can improve setup, portability, audio quality and
-> the next model comparisons through real feedback.
+> Broad vocals plus instrumental remains the default. Core four is not perfect
+> multitrack recovery: grouped other can contain several instruments, and
+> reconstruction proves accounting rather than separation accuracy. Software
+> checks whether execution is safe and intact; people decide whether each role
+> is musically useful.
+>
+> The first verified machine class is a 36 GB M3 Max. Other Apple-silicon Macs
+> are accessible but still unverified and resource-supervised. Honest poor or
+> mixed reports are welcome and will guide one bounded next experiment.
 >
 > Guide: https://sunofriend.com/research/separation/
 
 ### WhatsApp
 
-> Sunofriend now has a public alpha for local vocal + instrumental stem
-> separation on Apple-silicon Macs: one authorised song → two broad stems → a
-> local listening and reconstruction check. No upload and no perfect-result
-> claim. I would value honest feedback:
+> Sunofriend now has an opt-in local four-stem preview on Apple-silicon Macs:
+> one authorised song → vocals + drums + bass + grouped other → local listening
+> and reconstruction check. No upload; two-stem remains the default. I would
+> value honest feedback:
 > https://sunofriend.com/research/separation/
 
 ### BBC Slack `#music-production-chat`
 
-> Hi all. I have opened Sunofriend's local vocal + instrumental stem separation
-> as a public experimental alpha.
+> Hi all. I have opened the next public Sunofriend separation slice: an
+> explicit local vocals, drums, bass and grouped-other preview.
 >
-> It runs locally on an Apple-silicon Mac and takes one finished song the user
-> is allowed to process. The first scope is deliberately narrow: broad vocals,
-> complementary instrumental, a level-managed source reference and an
-> additive reconstruction check. A local review page makes the listener compare
-> all four before treating either stem as useful. Audio and review notes are
-> not uploaded.
+> The existing broad vocals/instrumental route remains the default. Core four
+> is separately selectable for one finished mix the user is allowed to process
+> on Apple-silicon macOS. The immutable SCNet-large profile and runtime are
+> hash-pinned, inference is network-denied, and audio or review data is not
+> uploaded. It produces a source reference, all four synchronized estimates,
+> reconstruction evidence and a local listening page. It never enters MIDI or
+> Create without another explicit user decision.
 >
-> This came out of several source-distinct full-song experiments and a lot of
-> human listening around bleed, missing content and chunk joins. Machine checks
-> verify identity, geometry and reconstruction; they do not declare what sounds
-> musical. The result stays unreviewed and is not silently fed into MIDI.
+> Admission was deliberately finite: one synthetic run, three authorised
+> song-disjoint full-song canaries and three repeat resource runs. Machine
+> checks covered identity, roles, clocks, finite audio, resource ceilings and
+> PCM reconstruction. I then listened to every full-song source, role and
+> reconstruction check; no catastrophic defect was reported. That is an
+> execution gate, not a claim that the model always separates music well.
 >
-> It is not yet separate drums, bass, keys and guitars. I am publishing the
-> useful two-stem slice now because feedback from real machines, songs and ears
-> should help set the next bounded engineering work.
+> The crucial product decision is to avoid a feedback doom loop. Mixed or poor
+> musical feedback does not block access to the working preview. It records a
+> limitation and can trigger one bounded challenger. Only objective problems
+> such as a hash/licence contradiction, network access, corrupt roles, failed
+> accounting or a reproducible crash on a supported machine can pause it.
 >
-> Setup, architecture and limits: https://sunofriend.com/research/separation/
+> Setup, evidence and limits: https://sunofriend.com/research/separation/
 >
 > Text-only feedback: https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml
 >

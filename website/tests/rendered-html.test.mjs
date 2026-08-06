@@ -93,12 +93,12 @@ test("server-renders an approachable skill-first musician page", async () => {
   );
   assert.match(html, /Let your agent guide the setup/);
   assert.match(html, /Start with the skill/);
-  assert.match(html, /NEW · PUBLIC ALPHA/);
-  assert.match(html, /VOCALS \+ INSTRUMENTAL/);
-  assert.match(html, /LOCAL STEM SEPARATION/);
+  assert.match(html, /NEW · CORE-FOUR PREVIEW/);
+  assert.match(html, /VOCALS · DRUMS · BASS · OTHER/);
+  assert.match(html, /LOCAL OPT-IN SEPARATION/);
   assert.match(
     html,
-    /href="\/research\/separation\/"[^>]*aria-label="New public alpha: try local vocals and instrumental stem separation"/,
+    /href="\/research\/separation\/"[^>]*aria-label="New public opt-in preview: try local vocals, drums, bass and grouped-other stem separation"/,
   );
   assert.match(html, /ONE SKILL\. YOUR CHOICE OF AGENT/);
   assert.match(html, /plain-text Sunofriend skill tells a compatible local agent/);
@@ -205,6 +205,10 @@ test("publishes a canonical developer and agent integration page", async () => {
   assert.match(html, /Experimental separation status/);
   assert.match(html, /sunofriend-separate/);
   assert.match(html, /broad vocals/);
+  assert.match(html, /Offer two stems by default or four by explicit opt-in/);
+  assert.match(html, /core-four-stems-v1/);
+  assert.match(html, /estimates vocals, drums, bass and grouped other/);
+  assert.match(html, /Do not promise keys, guitars, narrower drum families/);
   assert.match(html, /\/research\/separation\//);
 });
 
@@ -213,18 +217,20 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.equal(response.status, 200);
   const html = await response.text();
 
-  assert.match(html, /PUBLIC EXPERIMENTAL ALPHA · AUDIO STAYS LOCAL/);
-  assert.match(html, /Try the useful slice/);
+  assert.match(html, /PUBLIC EXPERIMENTAL PREVIEW · AUDIO STAYS LOCAL/);
+  assert.match(html, /Try two stems—or opt in to four/);
   assert.match(html, /Finished mix to two broad stems/);
   assert.match(html, /not individual bass, keys, drums or guitar/);
-  assert.match(html, /three source-distinct full-song chains/);
+  assert.match(html, /installed SCNet-large profile adds an explicit local vocals, drums, bass and grouped-other public opt-in preview/);
+  assert.match(html, /complete listening checks reported no catastrophic defect/);
   assert.match(html, /Software checks evidence; people judge music/);
   assert.match(html, /How the feature was developed/);
   assert.match(html, /state one narrow musical or engineering question/);
   assert.match(html, /How to try the public alpha/);
   assert.match(html, /INSPECT SETUP/);
   assert.match(html, /sunofriend-separate doctor/);
-  assert.match(html, /Four local tracks make the boundary audible/);
+  assert.match(html, /Four roles, one immutable profile, no hidden tuning loop/);
+  assert.match(html, /30 days or 10 valid submissions/);
   assert.match(html, /Help improve the next public slice/);
   assert.match(html, /SEPARATION_DEVELOPER_PREVIEW\.md/);
   assert.match(html, /rather than a Simple\/TUI button/);
@@ -241,7 +247,7 @@ test("explains stems, neutral providers, privacy and the current boundary", asyn
 
   assert.match(html, /BEGINNER STEM GUIDE/);
   assert.match(html, /A stem is <strong>not necessarily one instrument/);
-  assert.match(html, /Bring separate parts, or try the local two-stem alpha/);
+  assert.match(html, /Bring separate parts, or try local experimental separation/);
   assert.match(html, /sunofriend source-doctor/);
   assert.match(
     html,
@@ -251,7 +257,7 @@ test("explains stems, neutral providers, privacy and the current boundary", asyn
   assert.match(html, /replans the current files/);
   assert.match(html, /accept-unconfirmed-origin/);
   assert.match(html, /Do not map an observed part to/);
-  assert.match(html, /can estimate broad vocals and complementary/);
+  assert.match(html, /defaults to broad vocals and complementary/);
   assert.match(html, /Neutral provider starting points/);
   assert.match(html, /No current affiliate links/);
   assert.match(html, /receives no commission/);
@@ -336,8 +342,11 @@ test("publishes concise llms.txt discovery guidance", async () => {
   assert.match(text, /copyright-safe synthetic stems/);
   assert.match(text, /not exact waveform reconstruction/);
   assert.match(text, /Experimental finished-mix separation/);
-  assert.match(text, /public local alpha estimates broad vocals/);
+  assert.match(text, /public local alpha defaults to broad vocals/);
   assert.match(text, /sunofriend-separate doctor/);
+  assert.match(text, /sunofriend-separate profiles --json/);
+  assert.match(text, /immutable `demucs-mlx-htdemucs-v1` baseline/);
+  assert.match(text, /FULL_STEM_SEPARATION_PLAN\.md/);
   assert.match(text, /Human listening decides usefulness/);
   assert.match(text, /A stem is a synchronized grouped submix/);
   assert.match(text, /no affiliate relationship/);
@@ -430,6 +439,86 @@ test("publishes a versioned machine-readable capability contract", async () => {
     false,
   );
   assert.equal(data.boundaries.rights_required, true);
+  assert.equal(
+    data.experiments.finished_mix_separation.core_four_stem_target.executable,
+    true,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.core_four_stem_target
+      .implementation_available,
+    true,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.core_four_stem_target.status,
+    "public_opt_in",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.core_four_stem_target
+      .activation_retry_enabled,
+    false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.core_four_stem_target.profile_id,
+    "scnet-large-musdb-release-v1",
+  );
+  assert.deepEqual(
+    data.experiments.finished_mix_separation.core_four_stem_target.roles,
+    ["vocals", "drums", "bass", "other"],
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.core_four_stem_target
+      .activation_requires.length,
+    4,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.core_four_stem_target
+      .minimum_usefulness_rating_for_activation,
+    null,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.core_four_stem_target
+      .checkpoint_bytes,
+    168848417,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.core_four_stem_target
+      .checkpoint_sha256,
+    "719e5abb8ed920305dad546ac3cd6fb0b1e9c3092d14ce21827bfc0423af3070",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.core_four_stem_target
+      .activation_requirements_complete,
+    true,
+  );
+  assert.deepEqual(
+    data.experiments.finished_mix_separation.core_four_stem_target
+      .remaining_activation_blockers,
+    [],
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.core_four_stem_target
+      .synthetic_canary.status,
+    "objective_pass",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.core_four_stem_target
+      .synthetic_canary.maximum_reconstruction_error_lsb,
+    0,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.core_four_stem_target
+      .full_song_canaries.catastrophic_defects_reported,
+    0,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.core_four_stem_target
+      .future_install_command_enabled,
+    true,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.review_schema,
+    "sunofriend.experimental-separation-review.v3",
+  );
   assert.equal(data.stem_inputs.built_in_full_mix_separation_available, true);
   assert.equal(
     data.stem_inputs.one_asset_multi_format_import_available,
@@ -521,7 +610,7 @@ test("keeps public discovery and the AWS boundary explicit", async () => {
   ]);
 
   assert.match(page, /This website never/);
-  assert.match(page, /public local alpha currently estimates broad vocals/);
+  assert.match(page, /public local alpha defaults to broad vocals/);
   assert.match(page, /not waveform reconstruction/);
   assert.match(page, /SoftwareApplication/);
   assert.match(layout, /publisher: "Unsigned Media Ltd"/);

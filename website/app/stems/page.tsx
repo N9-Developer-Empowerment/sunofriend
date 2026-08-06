@@ -65,7 +65,7 @@ export default function Stems() {
         <section className="status-panel" aria-labelledby="today-title">
           <span className="card-number">WHAT WORKS TODAY</span>
           <h2 id="today-title">
-            Bring separate parts, or try the local two-stem alpha.
+            Bring separate parts, or try local experimental separation.
           </h2>
           <p>
             The complete MIDI, listening-WAV, Simple and Studio workflows still
@@ -74,9 +74,11 @@ export default function Stems() {
             project containing {stemBoundary.sourceFolderImportOutput}.
           </p>
           <p>
-            The public local alpha can estimate broad vocals and complementary
+            The public local alpha defaults to broad vocals and complementary
             instrumental from one authorised finished song on supported
-            Apple-silicon macOS. It is not narrow multitrack recovery. The
+            Apple-silicon macOS. The installed SCNet-large profile adds an
+            explicit public opt-in vocals, drums, bass and grouped-other preview;
+            the earlier MLX profiles remain blocked. Neither route is multitrack recovery. The
             public website never receives audio. Folder preparation does not
             shift, pad, stretch, normalize or align parts, and it does not prove
             the musical downbeat.
@@ -119,7 +121,7 @@ export default function Stems() {
           </p>
           <p className="guide-note">
             Have only a finished mix? Read the public{" "}
-            <Link href="/research/separation/">two-stem alpha guide</Link>.
+            <Link href="/research/separation/">local separation guide</Link>.
             It uses a separately approved local model and keeps output
             unreviewed until you listen.
           </p>
@@ -181,9 +183,11 @@ export default function Stems() {
               <span className="card-number">3 / SEPARATE A MIX</span>
               <h3>Try Sunofriend alpha or an independent tool</h3>
               <p>
-                Sunofriend can estimate two broad local stems on supported
-                Macs. Another local application or cloud service may offer
-                narrower categories. Listen to every result before asking
+                Sunofriend defaults to two broad local stems on supported Macs;
+                its core-four MLX baseline and first PyTorch fallback are blocked
+                while the installed, hash-pinned SCNet-large release profile is
+                available as an explicit public opt-in after its finite canaries
+                passed. Listen to every result before asking
                 Sunofriend to transcribe it.
               </p>
               <small>Prefer lossless audio when it is available.</small>
