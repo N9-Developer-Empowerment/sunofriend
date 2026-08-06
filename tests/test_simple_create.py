@@ -56,6 +56,14 @@ class SimpleCreateRunnerTests(unittest.IsolatedAsyncioTestCase):
 
             self.assertTrue(result.succeeded)
             self.assertEqual(result.result_root, automatic_root)
+            self.assertEqual(
+                result.instrument_guide_path,
+                automatic_root / "SOUNDS" / "INSTRUMENTS-START-HERE.md",
+            )
+            self.assertEqual(
+                result.instrument_plan_path,
+                automatic_root / "SOUNDS" / "automatic-starter-instruments.json",
+            )
             self.assertEqual(conversion.request.conversion_mode, "repair")
             self.assertTrue(conversion.request.evaluate_variants)
             self.assertTrue(conversion.request.include_vocals)
@@ -182,6 +190,12 @@ def _simple_result(root: Path) -> SimpleResult:
         selected_count=1,
         omitted_count=0,
         manifest_sha256="a" * 64,
+        instrument_plan_path=(
+            root / "SOUNDS" / "automatic-starter-instruments.json"
+        ),
+        instrument_guide_path=(
+            root / "SOUNDS" / "INSTRUMENTS-START-HERE.md"
+        ),
     )
 
 

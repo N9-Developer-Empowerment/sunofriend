@@ -81,6 +81,9 @@ def test_contract_separates_simple_automatic_work_from_studio_review() -> None:
     assert simple["quality_status"] == "review_recommended"
     assert simple["human_decision_events"] == 0
     assert simple["feedback_recorded"] is False
+    assert simple["automatic_starter_instruments"] is True
+    assert simple["automatic_factory_patch_selection"] is False
+    assert simple["source_midi_mutated_for_sound_handoff"] is False
     assert simple["may_claim_human_review"] is False
     assert simple["result_schema"] == "sunofriend.simple-result.v1"
 

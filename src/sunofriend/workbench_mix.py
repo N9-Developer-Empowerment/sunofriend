@@ -408,50 +408,73 @@ def build_balanced_midi_audition(
 
     public_lanes = []
     for lane in prepared:
-        public_lanes.append(
-            {
-                "track_id": str(lane["track_id"]),
-                "stem_id": str(lane["stem_id"]),
-                "candidate_id": str(lane["candidate_id"]),
-                "role": str(lane["role"]),
-                "decision": str(lane["decision"]),
-                "selection_index": int(lane["selection_index"]),
-                "garageband_pack_archive_member": str(
-                    lane["garageband_pack_archive_member"]
-                ),
-                "source_sha256": str(lane["source_sha256"]),
-                "source_bytes": int(lane["source_bytes"]),
-                "source_midi_sha256": str(lane["source_midi_sha256"]),
-                "preview_sha256": str(lane["preview_sha256"]),
-                "preview_bytes": int(lane["preview_bytes"]),
-                "neutral_preview_cache_key": str(
-                    lane["neutral_preview_cache_key"]
-                ),
-                "source_metrics": _public_metrics(
-                    source_metrics[str(lane["source_sha256"])]
-                ),
-                "preview_metrics": _public_metrics(
-                    preview_metrics[str(lane["preview_sha256"])]
-                ),
-                "source_duplicate_count": int(lane["source_duplicate_count"]),
-                "provisional_source_match_gain_db": _rounded(
-                    lane["provisional_source_match_gain_db"]
-                ),
-                "source_group_calibration_gain_db": _rounded(
-                    lane["source_group_calibration_gain_db"]
-                ),
-                "raw_source_match_gain_db": _rounded(
-                    lane["raw_source_match_gain_db"]
-                ),
-                "source_match_gain_db": _rounded(lane["source_match_gain_db"]),
-                "source_match_clamped": bool(lane["source_match_clamped"]),
-                "fallback_reason": lane["fallback_reason"],
-                "drum_bus_gain_db": _rounded(lane["drum_bus_gain_db"]),
-                "garageband_track_trim_db": _rounded(
-                    lane["audition_lane_gain_db"]
-                ),
+        public_lane = {
+            "track_id": str(lane["track_id"]),
+            "stem_id": str(lane["stem_id"]),
+            "candidate_id": str(lane["candidate_id"]),
+            "role": str(lane["role"]),
+            "decision": str(lane["decision"]),
+            "selection_index": int(lane["selection_index"]),
+            "garageband_pack_archive_member": str(
+                lane["garageband_pack_archive_member"]
+            ),
+            "source_sha256": str(lane["source_sha256"]),
+            "source_bytes": int(lane["source_bytes"]),
+            "source_midi_sha256": str(lane["source_midi_sha256"]),
+            "preview_sha256": str(lane["preview_sha256"]),
+            "preview_bytes": int(lane["preview_bytes"]),
+            "neutral_preview_cache_key": str(
+                lane["neutral_preview_cache_key"]
+            ),
+            "source_metrics": _public_metrics(
+                source_metrics[str(lane["source_sha256"])]
+            ),
+            "preview_metrics": _public_metrics(
+                preview_metrics[str(lane["preview_sha256"])]
+            ),
+            "source_duplicate_count": int(lane["source_duplicate_count"]),
+            "provisional_source_match_gain_db": _rounded(
+                lane["provisional_source_match_gain_db"]
+            ),
+            "source_group_calibration_gain_db": _rounded(
+                lane["source_group_calibration_gain_db"]
+            ),
+            "raw_source_match_gain_db": _rounded(
+                lane["raw_source_match_gain_db"]
+            ),
+            "source_match_gain_db": _rounded(lane["source_match_gain_db"]),
+            "source_match_clamped": bool(lane["source_match_clamped"]),
+            "fallback_reason": lane["fallback_reason"],
+            "drum_bus_gain_db": _rounded(lane["drum_bus_gain_db"]),
+            "garageband_track_trim_db": _rounded(
+                lane["audition_lane_gain_db"]
+            ),
+        }
+        starter_sound = lane.get("starter_sound")
+        if isinstance(starter_sound, Mapping):
+            public_lane["starter_sound"] = {
+                key: starter_sound.get(key)
+                for key in (
+                    "family",
+                    "name",
+                    "program_zero_based",
+                    "general_midi_number",
+                    "midi_channel_one_based",
+                    "combined_midi_channel_one_based",
+                    "assignment_status",
+                    "selection_basis",
+                    "physical_instrument_claim",
+                    "factory_patch_selected",
+                    "native_garageband_patch_embedded",
+                )
             }
-        )
+            public_lane["starter_midi_archive_member"] = str(
+                lane.get("starter_midi_archive_member") or ""
+            )
+            public_lane["starter_preview_archive_member"] = str(
+                lane.get("starter_preview_archive_member") or ""
+            )
+        public_lanes.append(public_lane)
 
     result = {
         "schema": BALANCED_MIX_REPORT_SCHEMA,
@@ -1213,6 +1236,10 @@ def _public_overlap_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
 def garageband_mix_recipe(report: Mapping[str, Any]) -> str:
     """Return the deterministic GarageBand fader recipe for one mix report."""
 
+    has_starter_sounds = any(
+        isinstance(lane.get("starter_sound"), Mapping)
+        for lane in report["lanes"]
+    )
     lines = [
         "Sunofriend balanced selected-MIDI audition",
         "==========================================",
@@ -1222,17 +1249,41 @@ def garageband_mix_recipe(report: Mapping[str, Any]) -> str:
         "track trims in GarageBand. Different GarageBand patches can still need",
         "small ear-led adjustments because their loudness differs from the neutral",
         "SoundFont used for this audition.",
+        *(
+            [
+                "The automatic starter sounds below are embedded in separately",
+                "labelled MIDI proxies and remain editable, unreviewed choices.",
+            ]
+            if has_starter_sounds
+            else []
+        ),
         "",
         "Track trims",
         "-----------",
         "",
     ]
     for lane in report["lanes"]:
+        starter = lane.get("starter_sound")
+        starter_text = ""
+        if isinstance(starter, Mapping):
+            if starter.get("family") == "general-midi-drum-kit":
+                label = "Standard Drum Kit on MIDI channel 10"
+            else:
+                label = (
+                    f"GM {int(starter['general_midi_number'])} "
+                    f"{starter['name']}"
+                )
+            starter_text = (
+                f" · automatic starter {label} · "
+                f"`{lane['starter_midi_archive_member']}` · "
+                f"preview `{lane['starter_preview_archive_member']}`"
+            )
         lines.append(
             f"- Track {int(lane['selection_index']):02d} · "
             f"`{lane['garageband_pack_archive_member']}` · "
             f"{lane['role']} · candidate {lane['candidate_id']} · "
             f"{float(lane['garageband_track_trim_db']):+.2f} dB"
+            f"{starter_text}"
         )
     lines.extend(
         [

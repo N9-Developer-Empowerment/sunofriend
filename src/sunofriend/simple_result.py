@@ -13,6 +13,7 @@ from typing import Any, Mapping
 
 from .automatic_selection import AutomaticSelectionPlan
 from .midi import write_midi_file
+from .simple_instruments import build_simple_instrument_handoff
 from .workbench_artifacts import WorkbenchArtifacts, build_arrangement_tracks
 from .workbench_mix import BALANCED_MIX_POLICY, build_balanced_midi_audition
 
@@ -37,6 +38,8 @@ class SimpleResult:
     selected_count: int
     omitted_count: int
     manifest_sha256: str
+    instrument_plan_path: Path | None = None
+    instrument_guide_path: Path | None = None
 
 
 def build_simple_result(
@@ -146,6 +149,13 @@ def build_simple_result(
         tracks = build_arrangement_tracks(plan.selected)
         write_midi_file(combined_midi, tracks, bpm=bpm)
         combined_record = _relative_record(combined_midi, work)
+        instrument_handoff = build_simple_instrument_handoff(
+            plan.selected,
+            lanes,
+            tracks,
+            root=work,
+            bpm=bpm,
+        )
 
         balanced_wav = audio_root / "balanced-midi-song-interpretation.wav"
         balanced_report = technical_root / "balanced-mix-report.json"
@@ -169,6 +179,8 @@ def build_simple_result(
             "balanced_wav": _relative_record(balanced_wav, work),
             "mix_report": _relative_record(balanced_report, work),
             "garageband_mix_recipe": _relative_record(mix_recipe, work),
+            "instrument_plan": instrument_handoff["plan_record"],
+            "instrument_guide": instrument_handoff["guide_record"],
         }
         manifest_payload = {
             "schema": SIMPLE_RESULT_SCHEMA,
@@ -184,6 +196,17 @@ def build_simple_result(
             "selected_midi": selected_files,
             "omitted": list(plan.omitted),
             "outputs": output_records,
+            "instrument_handoff": {
+                "schema": instrument_handoff["plan"]["schema"],
+                "policy": instrument_handoff["plan"]["policy"],
+                "automatic": True,
+                "review_status": "not_reviewed",
+                "review_recommended": True,
+                "track_count": len(instrument_handoff["plan"]["tracks"]),
+                "factory_patch_selected": False,
+                "native_garageband_patch_embedded": False,
+                "source_midi_mutated": False,
+            },
             "mix": {
                 "policy": BALANCED_MIX_POLICY,
                 "report_schema": mix_report["schema"],
@@ -250,6 +273,12 @@ def build_simple_result(
         selected_count=len(plan.selected),
         omitted_count=len(plan.omitted),
         manifest_sha256=expected_manifest_sha256,
+        instrument_plan_path=(
+            target / "SOUNDS" / "automatic-starter-instruments.json"
+        ),
+        instrument_guide_path=(
+            target / "SOUNDS" / "INSTRUMENTS-START-HERE.md"
+        ),
     )
 
 
@@ -422,9 +451,13 @@ def _start_here_text(manifest: Mapping[str, Any]) -> str:
         "========================\n\n"
         "Open AUDIO/balanced-midi-song-interpretation.wav to hear the first-pass "
         "MIDI interpretation.\n"
-        "Drag the individual files in MIDI/ into GarageBand, set the project BPM "
-        f"to {manifest['project']['bpm']}, then choose the sounds you like.\n"
-        "MIDI/combined-gm-interpretation.mid is a convenient all-parts proxy.\n\n"
+        "For an automatic sound-aware GarageBand setup, set the project BPM "
+        f"to {manifest['project']['bpm']} and import "
+        "MIDI/combined-gm-interpretation.mid, or import the separate files under "
+        "SOUNDS/MIDI/.\n"
+        "Open SOUNDS/INSTRUMENTS-START-HERE.md for every named starter instrument "
+        "and its short audible preview. The original automatic-primary MIDI stays "
+        "unchanged under MIDI/.\n\n"
         f"Automatic primary parts included: {selected}\n"
         f"Source roles without an automatic primary: {omitted}\n\n"
         "Important: these are automatic defaults, not human-reviewed winners. "

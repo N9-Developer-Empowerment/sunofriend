@@ -137,10 +137,13 @@ output paths, then choose **Create MIDI + WAV**. The TUI:
 2. takes only the exact primary MIDI published by each completed production
    summary;
 3. omits and reports ambiguous, silent, missing or diagnostic-only roles;
-4. renders a combined General MIDI interpretation;
-5. uses the existing source-referenced balance policy to create a MIDI-only
+4. renders a combined General MIDI interpretation and separate named
+   starter-sound MIDI with short per-part previews;
+5. writes a GarageBand instrument guide while preserving the exact automatic
+   primary MIDI unchanged;
+6. uses the existing source-referenced balance policy to create a MIDI-only
    song-interpretation WAV; and
-6. publishes `AUTOMATIC-SONG/` with MIDI, WAV, receipt, recipe,
+7. publishes `AUTOMATIC-SONG/` with MIDI, sounds, previews, WAV, receipt, recipe,
    `START-HERE.txt` and a deterministic ZIP.
 
 This is automatic selection, not automatic ranking. It does not write a human

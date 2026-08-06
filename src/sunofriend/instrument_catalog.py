@@ -170,6 +170,54 @@ GM_PROGRAM_NAMES: tuple[str, ...] = (
 )
 
 
+# Stable role-level starter sounds shared by neutral previews, the combined
+# GM interpretation and Simple mode's GarageBand handoff. These are useful
+# automatic baselines, not claims about the physical instrument in a source.
+STARTER_ROLE_GM_PROGRAMS: dict[str, int] = {
+    "bass": 38,
+    "keys": 4,
+    "piano": 0,
+    "strings": 48,
+    "pads": 89,
+    "synth": 81,
+    "lead": 81,
+    "vocals": 73,
+    "vocal": 73,
+    "backing": 52,
+    "backing_vocals": 52,
+    "rhythm": 27,
+    "wind": 71,
+    "other": 0,
+}
+
+
+def starter_program_for_role(role: str) -> int:
+    """Return the deterministic zero-based GM starter program for ``role``."""
+
+    return STARTER_ROLE_GM_PROGRAMS.get(str(role).strip().lower(), 0)
+
+
+def starter_program_document(role: str, *, drum: bool = False) -> dict[str, Any]:
+    """Describe one starter sound without promoting it as patch identity."""
+
+    if drum:
+        return {
+            "family": "general-midi-drum-kit",
+            "name": "Standard Drum Kit",
+            "program_zero_based": None,
+            "general_midi_number": None,
+            "midi_channel_one_based": 10,
+        }
+    program = starter_program_for_role(role)
+    return {
+        "family": "general-midi-melodic-program",
+        "name": GM_PROGRAM_NAMES[program],
+        "program_zero_based": program,
+        "general_midi_number": program + 1,
+        "midi_channel_one_based": None,
+    }
+
+
 ROLE_GM_PROGRAMS: dict[str, tuple[int, ...]] = {
     "bass": tuple(range(32, 40)),
     # A generic separated keys stem can contain layered synthesis, but a keys
@@ -612,6 +660,7 @@ __all__ = [
     "GARAGEBAND_SAMPLER_INSTRUMENT_ROOT",
     "GARAGEBAND_SAMPLER_ROOT",
     "GM_PROGRAM_NAMES",
+    "STARTER_ROLE_GM_PROGRAMS",
     "InstrumentInventory",
     "LOGIC_DRUM_ROOT",
     "LOGIC_SAMPLER_INSTRUMENT_ROOT",
@@ -622,4 +671,6 @@ __all__ = [
     "list_audio_unit_instruments",
     "program_candidates",
     "role_name_fit",
+    "starter_program_document",
+    "starter_program_for_role",
 ]

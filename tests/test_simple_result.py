@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from sunofriend.automatic_selection import plan_automatic_selection
+from sunofriend.clip import read_midi_clips
 from sunofriend.midi import MidiTrack, write_midi_file
 from sunofriend.models import NoteEvent
 from sunofriend.simple_result import (
@@ -17,9 +18,41 @@ from sunofriend.simple_result import (
     SimpleResultError,
     build_simple_result,
 )
+from sunofriend.workbench_mix import garageband_mix_recipe
 
 
 class SimpleResultTests(unittest.TestCase):
+    def test_garageband_recipe_names_automatic_starter_sound_and_files(self) -> None:
+        recipe = garageband_mix_recipe(
+            {
+                "lanes": [
+                    {
+                        "selection_index": 1,
+                        "garageband_pack_archive_member": "MIDI/01-bass.mid",
+                        "role": "bass",
+                        "candidate_id": "candidate-bass",
+                        "garageband_track_trim_db": 1.25,
+                        "starter_sound": {
+                            "family": "general-midi-melodic-program",
+                            "name": "Synth Bass 1",
+                            "general_midi_number": 39,
+                        },
+                        "starter_midi_archive_member": (
+                            "SOUNDS/MIDI/01-bass-automatic-starter-sound.mid"
+                        ),
+                        "starter_preview_archive_member": (
+                            "SOUNDS/PREVIEWS/01-bass-automatic-starter-sound.wav"
+                        ),
+                    }
+                ],
+                "output": {"master_output_gain_db": -1.0},
+            }
+        )
+
+        self.assertIn("automatic starter GM 39 Synth Bass 1", recipe)
+        self.assertIn("01-bass-automatic-starter-sound.mid", recipe)
+        self.assertIn("01-bass-automatic-starter-sound.wav", recipe)
+
     def test_builds_exact_midi_balanced_wav_receipt_and_zip(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -79,7 +112,60 @@ class SimpleResultTests(unittest.TestCase):
             self.assertTrue(manifest["effects"]["automatic_selection"])
             self.assertFalse(manifest["mix"]["source_audio_mixed_into_wav"])
             self.assertFalse(manifest["mix"]["release_master"])
+            self.assertEqual(
+                manifest["instrument_handoff"]["track_count"],
+                1,
+            )
+            self.assertTrue(manifest["instrument_handoff"]["automatic"])
+            self.assertFalse(
+                manifest["instrument_handoff"]["factory_patch_selected"]
+            )
+            self.assertFalse(
+                manifest["instrument_handoff"]["source_midi_mutated"]
+            )
             self.assertNotIn(str(project), json.dumps(manifest))
+            instrument_plan_path = (
+                destination / "SOUNDS" / "automatic-starter-instruments.json"
+            )
+            instrument_guide_path = (
+                destination / "SOUNDS" / "INSTRUMENTS-START-HERE.md"
+            )
+            instrument_plan = json.loads(
+                instrument_plan_path.read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                instrument_plan["schema"],
+                "sunofriend.simple-instrument-plan.v1",
+            )
+            self.assertEqual(instrument_plan["review_status"], "not_reviewed")
+            starter = instrument_plan["tracks"][0]
+            self.assertEqual(starter["starter_sound"]["name"], "Synth Bass 1")
+            self.assertEqual(
+                starter["starter_sound"]["general_midi_number"],
+                39,
+            )
+            self.assertFalse(
+                starter["starter_sound"]["native_garageband_patch_embedded"]
+            )
+            starter_midi = destination / starter["starter_sound_midi"][
+                "archive_path"
+            ]
+            starter_preview = destination / starter["starter_sound_preview"][
+                "archive_path"
+            ]
+            self.assertTrue(starter_midi.is_file())
+            self.assertTrue(starter_preview.is_file())
+            self.assertEqual(
+                read_midi_clips(starter_midi)[0].instrument.program,
+                38,
+            )
+            guide = instrument_guide_path.read_text(encoding="utf-8")
+            self.assertIn("GM 39: Synth Bass 1", guide)
+            self.assertIn("cannot embed", guide)
+            self.assertIn(
+                "SOUNDS/INSTRUMENTS-START-HERE.md",
+                (destination / "START-HERE.txt").read_text(encoding="utf-8"),
+            )
             with zipfile.ZipFile(result.zip_path) as archive:
                 names = set(archive.namelist())
             self.assertIn("MIDI/01-bass-automatic-primary.mid", names)
@@ -88,6 +174,10 @@ class SimpleResultTests(unittest.TestCase):
                 names,
             )
             self.assertIn("sunofriend-result.json", names)
+            self.assertIn("SOUNDS/INSTRUMENTS-START-HERE.md", names)
+            self.assertIn("SOUNDS/automatic-starter-instruments.json", names)
+            self.assertIn(starter["starter_sound_midi"]["archive_path"], names)
+            self.assertIn(starter["starter_sound_preview"]["archive_path"], names)
 
     def test_existing_destination_is_never_overwritten(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -134,7 +134,8 @@ class ProductionSimpleCreateRunner:
                 on_progress,
                 3,
                 "render-midi",
-                f"Building {len(selection.selected)} exact MIDI parts and one GM proxy",
+                f"Building {len(selection.selected)} exact MIDI parts, named "
+                "starter sounds and one GM proxy",
             )
             state_root = request.state_dir or default_workbench_state_dir(
                 snapshot.catalog
@@ -157,7 +158,7 @@ class ProductionSimpleCreateRunner:
                 on_progress,
                 5,
                 "package",
-                "Verifying the MIDI, WAV, receipt and starter ZIP",
+                "Verifying the MIDI, sounds, previews, WAV, receipt and starter ZIP",
             )
             warnings = list(conversion.warnings)
             if selection.omitted:
@@ -175,7 +176,7 @@ class ProductionSimpleCreateRunner:
                 on_progress,
                 _PROGRESS_TOTAL,
                 "complete",
-                "Automatic MIDI and balanced WAV are ready",
+                "Automatic MIDI, named starter sounds and balanced WAV are ready",
             )
             return SimpleCreateResult(
                 status=status,
@@ -188,6 +189,8 @@ class ProductionSimpleCreateRunner:
                 selected_count=result.selected_count,
                 omitted_count=result.omitted_count,
                 warnings=tuple(dict.fromkeys(warnings)),
+                instrument_plan_path=result.instrument_plan_path,
+                instrument_guide_path=result.instrument_guide_path,
             )
         finally:
             self._running = False

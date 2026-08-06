@@ -25,6 +25,7 @@ from .garageband_pack_acceptance import (
     verify_garageband_pack_acceptance_artifacts,
     verify_garageband_pack_archive,
 )
+from .instrument_catalog import starter_program_for_role
 from .midi import MidiTrack, write_midi_file
 from .models import NoteEvent
 from .note_alignment import AlignmentEvent, align_events
@@ -131,25 +132,6 @@ _OVERLAP_ONSET_TOLERANCE_SECONDS = 0.080
 _SUBSTANTIAL_OVERLAP_MINIMUM_MATCHED_NOTES = 8
 _SUBSTANTIAL_OVERLAP_MINIMUM_RATIO = 0.80
 _MELODIC_CHANNELS = tuple(channel for channel in range(16) if channel != 9)
-_ROLE_PROGRAMS = {
-    # Bass transcription embeds GM Synth Bass 1 (zero-based program 38).
-    # Keeping the neutral audition on the same broad timbre family avoids
-    # presenting a continuous synth-bass line as a plucked finger bass.
-    "bass": 38,
-    "keys": 4,
-    "piano": 0,
-    "strings": 48,
-    "pads": 89,
-    "synth": 81,
-    "lead": 81,
-    "vocals": 73,
-    "vocal": 73,
-    "backing_vocals": 52,
-    "rhythm": 27,
-    "wind": 71,
-}
-
-
 class WorkbenchPackConflictError(ValueError):
     """The requested pack no longer describes the current Workbench state."""
 
@@ -7373,7 +7355,7 @@ def _preview_role(stem: Mapping[str, Any], role_override: str | None) -> str:
 
 
 def _program_for_role(role: str) -> int:
-    return _ROLE_PROGRAMS.get(role.lower(), 0)
+    return starter_program_for_role(role)
 
 
 def _program_label(role: str, program: int, channel: int) -> str:

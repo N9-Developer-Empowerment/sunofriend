@@ -18,7 +18,7 @@ from .workbench_balanced_contract import BALANCED_MIX_CONTRACT
 
 
 PRODUCT_CONTRACT_SCHEMA = "sunofriend.product-contract.v1"
-PRODUCT_CONTRACT_VERSION = "2026-07-27.3"
+PRODUCT_CONTRACT_VERSION = "2026-08-02.1"
 PRODUCT_OUTPUT_STATUS_SCHEMA = "sunofriend.product-output-status.v1"
 PRODUCT_SUMMARY = (
     "Create editable MIDI plus a balanced MIDI-derived song-interpretation "
@@ -109,10 +109,13 @@ class ProductContract:
                     "quality_status": "review_recommended",
                     "human_decision_events": 0,
                     "feedback_recorded": False,
+                    "automatic_starter_instruments": True,
+                    "automatic_factory_patch_selection": False,
+                    "source_midi_mutated_for_sound_handoff": False,
                     "result_schema": "sunofriend.simple-result.v1",
                     "result_kind": (
-                        "automatic editable MIDI, balanced MIDI-derived WAV "
-                        "and starter ZIP"
+                        "automatic editable MIDI, named starter sounds, balanced "
+                        "MIDI-derived WAV and starter ZIP"
                     ),
                     "may_claim_human_review": False,
                 },

@@ -70,6 +70,8 @@ class SimpleCreateResult:
     selected_count: int
     omitted_count: int
     warnings: tuple[str, ...] = ()
+    instrument_plan_path: Path | None = None
+    instrument_guide_path: Path | None = None
 
     @property
     def succeeded(self) -> bool:
@@ -119,13 +121,24 @@ def simple_create_result_document(
                 if result.manifest_path is not None
                 else None
             ),
+            "instrument_plan": (
+                str(result.instrument_plan_path)
+                if result.instrument_plan_path is not None
+                else None
+            ),
+            "instrument_guide": (
+                str(result.instrument_guide_path)
+                if result.instrument_guide_path is not None
+                else None
+            ),
         },
         "selected_midi_parts": result.selected_count,
         "omitted_source_roles": result.omitted_count,
         "warnings": list(result.warnings),
         "next_step": (
-            "Listen to outputs.listen_first, then open the individual MIDI "
-            "files in GarageBand. Use Studio only if you want to compare "
+            "Listen to outputs.listen_first, then follow "
+            "outputs.instrument_guide for the named automatic starter sounds "
+            "and GarageBand MIDI files. Use Studio only if you want to compare "
             "alternatives or record feedback."
             if result.succeeded
             else "The automatic result is incomplete; inspect the warnings and "
