@@ -55,6 +55,10 @@ from .separation_profiles import (
     profile_for_scope,
     separation_profile,
 )
+from .separation_other_refinement_demucs_mlx_run import (
+    execute_installed_other_refinement,
+    plan_installed_other_refinement,
+)
 from .separation_scopes import (
     DEFAULT_SCOPE_ID,
     FULL_STEM_SCOPE_ID,
@@ -1241,6 +1245,16 @@ def build_parser() -> argparse.ArgumentParser:
     separate.add_argument("--execute", action="store_true")
     separate.add_argument("--confirm-rights", action="store_true")
     separate.add_argument("--open-review", action="store_true")
+    refine = subparsers.add_parser(
+        "refine-other",
+        help="plan or run the installed Studio guitar/keys challenger",
+    )
+    refine.add_argument("parent_root")
+    refine.add_argument("--target", choices=("guitar", "keys"), required=True)
+    refine.add_argument("--out", required=True)
+    refine.add_argument("--execute", action="store_true")
+    refine.add_argument("--confirm-rights", action="store_true")
+    refine.add_argument("--open-review", action="store_true")
     return parser
 
 
@@ -1270,10 +1284,43 @@ def main(argv: Sequence[str] | None = None) -> int:
             print("Studio-only refinement contract")
             print(
                 f"- {refinement['scope_id']}: {refinement['status']} "
-                f"({targets}; executable: no)"
+                f"({targets}; executable: {'yes' if refinement['executable'] else 'no'})"
             )
             for blocker in refinement["blockers"]:
                 print(f"  blocker: {blocker}")
+        return 0
+    if args.command == "refine-other":
+        try:
+            plan = plan_installed_other_refinement(
+                args.parent_root,
+                target_id=args.target,
+                output=args.out,
+            )
+            if not args.execute:
+                print(json.dumps(plan, indent=2, sort_keys=True))
+                print(
+                    "\nPlan only. Repeat with --execute --confirm-rights to run "
+                    "the installed model offline."
+                )
+                return 0
+            print(
+                "Running the installed Studio challenger offline. This creates one "
+                "requested target and an exact residual; it activates neither."
+            )
+            result = execute_installed_other_refinement(
+                plan,
+                confirm_rights=args.confirm_rights,
+                model_root=args.model_root,
+                runtime_python=args.runtime_python,
+            )
+        except (FileNotFoundError, OSError, RuntimeError, ValueError) as exc:
+            print(f"sunofriend-separate: {exc}", file=sys.stderr)
+            return 2
+        print(f"Complete: {result['root']}")
+        print(f"Listen first: {result['review_html']}")
+        print("No source or MIDI was selected; no audio was uploaded.")
+        if args.open_review:
+            webbrowser.open(Path(result["review_html"]).as_uri())
         return 0
     selected_scope = args.scope if hasattr(args, "scope") else DEFAULT_SCOPE_ID
     profile = resolve_profile(

@@ -208,7 +208,8 @@ test("publishes a canonical developer and agent integration page", async () => {
   assert.match(html, /Offer two stems by default or four by explicit opt-in/);
   assert.match(html, /core-four-stems-v1/);
   assert.match(html, /estimates vocals, drums, bass and grouped other/);
-  assert.match(html, /Do not promise keys, guitars, narrower drum families/);
+  assert.match(html, /Do not promise recovered studio multitracks or clean instrument isolation/);
+  assert.match(html, /other-refinement-v1/);
   assert.match(html, /\/research\/separation\//);
 });
 
@@ -230,12 +231,12 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /INSPECT SETUP/);
   assert.match(html, /sunofriend-separate doctor/);
   assert.match(html, /Four roles, one immutable profile, no hidden tuning loop/);
-  assert.match(html, /STUDIO RESEARCH CONTRACT/);
+  assert.match(html, /OPT-IN STUDIO CHALLENGER/);
   assert.match(html, /other-refinement-v1/);
   assert.match(html, /One guitar or keys target, with the residual kept/);
   assert.match(html, /Apple-native htdemucs_6s MLX/);
-  assert.match(html, /It remains blocked and uninstalled/);
-  assert.match(html, /one in-memory fraction normalization/);
+  assert.match(html, /normalization passed under network denial/);
+  assert.match(html, /sunofriend-separate refine-other/);
   assert.match(html, /30 days or 10 valid submissions/);
   assert.match(html, /Help improve the next public slice/);
   assert.match(html, /SEPARATION_DEVELOPER_PREVIEW\.md/);
@@ -527,7 +528,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement.status,
-    "blocked",
+    "studio_challenger",
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement.release_tier,
@@ -535,7 +536,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement.executable,
-    false,
+    true,
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
@@ -544,7 +545,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement.candidate_status,
-    "blocked",
+    "studio_challenger",
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement

@@ -43,23 +43,23 @@ def _plan(*, target_id: str = "guitar") -> dict[str, object]:
     )
 
 
-def test_registry_is_studio_only_contract_and_not_an_execution_route() -> None:
+def test_registry_is_opt_in_studio_execution_route() -> None:
     registry = other_refinement_registry()
     capabilities = separation_capabilities()
 
     assert registry["schema"] == "sunofriend.other-refinement-registry.v1"
     assert registry["scope_id"] == OTHER_REFINEMENT_SCOPE_ID
     assert registry["profile_id"] == OTHER_REFINEMENT_PROFILE_ID
-    assert registry["status"] == "blocked"
+    assert registry["status"] == "studio_challenger"
     assert registry["release_tier"] == "studio_challenger"
     assert registry["registration_surface"] == "studio_only"
     assert registry["contract_available"] is True
-    assert registry["implementation_available"] is False
-    assert registry["executable"] is False
+    assert registry["implementation_available"] is True
+    assert registry["executable"] is True
     assert registry["candidate_profile_id"] == (
         "demucs-mlx-htdemucs-6s-other-refinement-v1"
     )
-    assert registry["candidate_status"] == "blocked"
+    assert registry["candidate_status"] == "studio_challenger"
     assert registry["candidate_setup_available"] is True
     assert registry["candidate_target_mapping"]["guitar"]["model_role"] == "guitar"
     assert registry["candidate_target_mapping"]["keys"] == {
@@ -80,14 +80,17 @@ def test_registry_is_studio_only_contract_and_not_an_execution_route() -> None:
     }
 
 
-def test_profiles_command_reports_blocked_studio_contract(
+def test_profiles_command_reports_executable_studio_challenger(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     assert separation_main(["profiles"]) == 0
     output = capsys.readouterr().out
 
     assert "Studio-only refinement contract" in output
-    assert "other-refinement-v1: blocked (guitar, keys; executable: no)" in output
+    assert (
+        "other-refinement-v1: studio_challenger "
+        "(guitar, keys; executable: yes)" in output
+    )
 
 
 @pytest.mark.parametrize(
@@ -147,11 +150,6 @@ def test_plan_identity_and_parent_binding_are_immutable() -> None:
     with pytest.raises(ValueError, match="document hash differs"):
         validate_other_refinement_plan(changed)
 
-    path_bearing = copy.deepcopy(plan)
-    path_bearing["blockers"][0] = "/Users/private/model"
-    _reidentify_plan(path_bearing)
-    with pytest.raises(ValueError, match="blockers differ"):
-        validate_other_refinement_plan(path_bearing)
     assert "/Users/" not in json.dumps(plan, sort_keys=True)
 
 

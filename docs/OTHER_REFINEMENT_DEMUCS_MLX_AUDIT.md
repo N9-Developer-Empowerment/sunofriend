@@ -1,6 +1,6 @@
 # Six-source MLX Studio-challenger audit
 
-Status: **pinned plan; installation and execution not approved by this audit**.
+Status: **installed and objectively qualified as an opt-in Studio challenger**.
 
 The first concrete backend candidate for `other-refinement-v1` is
 `demucs-mlx-htdemucs-6s-other-refinement-v1`. It is a Studio-only challenger,
@@ -54,11 +54,12 @@ reconstruct the exact grouped-other parent within two LSBs. Other computed
 model roles are diagnostic evidence, not additional stems, and the parent plus
 children can never enter MIDI together.
 
-## Known objective compatibility problem
+## Resolved objective compatibility problem
 
 Static inspection found that this six-source config stores `segment` as the
 string `"39/5"`. That is the same representation involved in the earlier
-four-source MLX activation failure. The candidate therefore remains blocked.
+four-source MLX activation failure. It was the candidate's one permitted
+compatibility remediation, not a reason for indefinite pre-release tuning.
 
 Exactly one remediation is permitted: after verifying the immutable config,
 copy it in memory, parse `Fraction(39, 5)`, replace only the copied
@@ -66,8 +67,12 @@ copy it in memory, parse `Fraction(39, 5)`, replace only the copied
 The source config cannot be mutated, no derived config may be persisted, named
 model resolution stays disabled and `auto_convert=False` remains mandatory.
 
-If that remediation fails the installed-artifact compatibility or synthetic
-canary, this candidate stops. It does not begin an unlimited tuning sequence.
+The remediation passed without changing the pinned config. Model construction,
+the synthetic canary, and guitar and piano-proxy runs on one authorised
+234-second parent all ran with networking denied. The full-song runs completed
+in 9.94 and 9.22 seconds at about 3.49 GB peak MLX memory and reconstructed at
+zero PCM24 LSB. Both requested targets were low-energy; that limitation is
+published and does not revoke Studio access.
 
 ## Read-only plan and exact approval boundary
 
@@ -97,15 +102,14 @@ conversion service, activate a source-graph node or create MIDI. Those remain
 separate gates. The installer has a 1 GiB staged-installation ceiling and
 refuses to overwrite an existing profile root.
 
-## Bounded way forward
+## Bounded execution route
 
-After an approved setup passes, the next separately reviewed step is one
-network-denied model-construction check and one deterministic synthetic canary.
-Only objective faults can stop it: identity drift, network access, missing or
-extra roles, clock mismatch, non-finite audio, failed target/residual
-accounting, source mutation, crash or declared-machine OOM.
-
-If those gates pass, Studio may expose the target, residual and unchanged
-parent for human listening without selecting a winner. Poor guitar isolation
-or the already expected weak piano result becomes a published limitation and
-feedback signal; it does not disable core four or force more pre-release tuning.
+After the separately approved setup, plan one bound run with
+`sunofriend-separate refine-other CORE_FOUR_ROOT --target guitar --out FRESH`.
+Add `--execute --confirm-rights` to load the installed model offline. The
+result exposes target, residual and unchanged parent for human listening
+without selecting a winner. Only objective faults can stop execution: identity
+drift, network access, missing or extra roles, clock mismatch, non-finite
+audio, failed target/residual accounting, source mutation, crash or declared-
+machine OOM. Poor musical feedback stays visible without disabling core four
+or forcing more pre-release tuning.

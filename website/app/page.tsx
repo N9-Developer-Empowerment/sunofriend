@@ -400,9 +400,12 @@ export default function Home() {
             hash-pinned SCNet-large release profile is now available as an
             explicit public opt-in preview for vocals, drums, bass and grouped
             other after its finite offline canaries and catastrophic-output
-            listening checks passed.
-            Bring original or authorised parts when you
-            need keys, guitars or narrower families. See the{" "}
+            listening checks passed. An additional installed Studio challenger
+            can refine that exact grouped other into one experimental guitar
+            target or disclosed piano-as-keys proxy plus the retained residual;
+            both first-song targets were low-energy and require listening.
+            Bring original or authorised parts when you need reliable keys,
+            guitars or narrower families. See the{" "}
             <Link className="inline-link" href="/stems/">
               neutral stems guide
             </Link>

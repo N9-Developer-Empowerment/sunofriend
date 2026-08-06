@@ -45,21 +45,20 @@ Planning remains read-only. Execution additionally requires
 
 ## Detailed separation after core four
 
-The first bounded follow-on is now implemented as a **contract**, not a model
-route. `other-refinement-v1` binds one exact grouped-`other` artifact to one
-requested guitar or keys target plus the exact residual. It is registered as a
-blocked `studio_challenger`, does not appear in the executable separation-scope
-choices and grants no install, checkpoint, inference, activation or MIDI
-permission. Its first contract accepts only an `other` parent produced by the
-verified `scnet-large-musdb-release-v1` profile.
+The first bounded follow-on is now an opt-in Studio route.
+`other-refinement-v1` binds one exact grouped-`other` artifact to one requested
+guitar or keys target plus the exact residual. It is registered as a
+`studio_challenger`, separate from the ordinary separation-scope choices. Its
+first contract accepts only an `other` parent produced by the verified
+`scnet-large-musdb-release-v1` profile and never activates output or MIDI.
 
 The first exact challenger plan is
 `demucs-mlx-htdemucs-6s-other-refinement-v1`: a pinned Apple-native six-source
 MLX model with guitar plus a disclosed piano-as-keys proxy. The 109,726,583-byte
-checkpoint and 1,946-byte config are hash-pinned, but neither is installed by
-registration. Static audit found the known `"39/5"` segment representation, so
-the profile stays blocked until its one allowed in-memory fraction remediation
-passes under network denial. See
+checkpoint and 1,946-byte config are hash-pinned and installed only through the
+separate approved setup. The one allowed in-memory `"39/5"` normalization
+passed under network denial, followed by a synthetic canary and both target
+mappings on an authorised full-song parent. See
 [Six-source MLX Studio-challenger audit](OTHER_REFINEMENT_DEMUCS_MLX_AUDIT.md).
 
 The deterministic PCM24 fixture proves the target/residual accounting without
@@ -70,11 +69,13 @@ downloading or running a model:
   --target guitar --out FRESH
 ```
 
-The existing source graph prevents the grouped parent and its refined children
-from being active together. The pinned backend must pass a separately approved,
-offline and bounded qualification before Studio can run it. Mixed or negative
-musical feedback will remain evidence and cannot disable the functioning
-public core-four profile. See [Refining grouped other in Studio](OTHER_STEM_REFINEMENT.md).
+Run a read-only plan with
+`sunofriend-separate refine-other CORE_FOUR_ROOT --target guitar --out FRESH`;
+execution additionally requires `--execute --confirm-rights`. The existing
+source graph prevents the grouped parent and its refined children from being
+active together. Mixed or negative musical feedback remains evidence and
+cannot disable the functioning public core-four profile. See
+[Refining grouped other in Studio](OTHER_STEM_REFINEMENT.md).
 
 ## Immutable baseline
 
