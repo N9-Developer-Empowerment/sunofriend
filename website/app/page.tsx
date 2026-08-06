@@ -273,7 +273,7 @@ export default function Home() {
             <p>
               A stem is a synchronized grouped part, not necessarily one
               instrument. The guide explains DAW exports and independent local
-              or cloud options when the two-stem alpha is not suitable.
+              or cloud options when the local experimental profiles are not suitable.
             </p>
             <div className="journey-links">
               <Link className="text-link" href="/stems/">
@@ -393,19 +393,25 @@ export default function Home() {
           </p>
           <p>
             <strong>It is not a one-click multitrack recovery service.</strong>{" "}
-            The public local alpha currently estimates broad vocals plus
-            complementary instrumental on a supported Apple-silicon Mac. Bring
-            narrower parts from your own project or another authorised service
-            when you need separate drums, bass, keys or guitars. See the{" "}
+            The public local alpha defaults to broad vocals plus complementary
+            instrumental on a supported Apple-silicon Mac. An exact core-four
+            MLX profile and its first PyTorch fallback are implemented but remain
+            fail-closed after their bounded objective remediations failed. A
+            hash-pinned SCNet-large release profile is now available as an
+            explicit public opt-in preview after its finite offline canaries and
+            catastrophic-output listening checks passed.
+            Bring original or authorised parts when you
+            need keys, guitars or narrower families. See the{" "}
             <Link className="inline-link" href="/stems/">
               neutral stems guide
             </Link>
             .
           </p>
           <p>
-            <strong>The working two-stem slice is now a public alpha.</strong>{" "}
-            It keeps setup, rights confirmation, local inference, listening and
-            later MIDI conversion as explicit separate steps. Read the{" "}
+            <strong>The working two-stem slice remains the public default.</strong>{" "}
+            Core four is explicit opt-in. Both keep setup, rights
+            confirmation, local inference, listening and later MIDI conversion
+            as separate steps. Read the{" "}
             <Link className="inline-link" href="/research/separation/">
               setup, limits, evidence and feedback guide
             </Link>

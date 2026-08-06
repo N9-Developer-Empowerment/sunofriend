@@ -1,157 +1,131 @@
 # Stem-separation developer preview
 
-Sunofriend now publishes its first opt-in local finished-mix separator as an
-**experimental alpha**. Musicians can use the current implementation while the
-project improves its setup, long-song handling, model comparisons and role
-coverage through open participation.
+Sunofriend has two distinct finished-mix lanes on Apple-silicon macOS:
 
-The public route is intentionally narrow and honest:
+- the existing public default, `broad-vocals-v1`, which estimates broad vocals
+  and complementary instrumental; and
+- the explicit `core-four-stems-v1` public opt-in preview, served by the
+  separately pinned SCNet-large profile for vocals, drums, bass and grouped
+  other.
 
-- one authorised finished mix in a supported audio format;
-- Apple-silicon macOS for the first verified platform;
-- one exact MIT Kim Vocal 2 MLX checkpoint and hash-pinned runtime;
-- broad `vocals.wav` plus complementary `instrumental.wav`;
-- a source reference and additive reconstruction diagnostic;
-- a local review page and private JSON review export; and
-- no upload, telemetry, silent MIDI conversion or automatic model promotion.
+The MLX baseline and first PyTorch fallback remain blocked after their bounded
+objective remediations failed. Further retries and installs of those immutable
+profiles are disabled. SCNet passed its finite synthetic, authorised-song,
+repeat-resource and catastrophic-listen gates and is admitted as
+`public_opt_in`. Registration, doctor and setup planning load no model and
+process no audio; the two-stem route remains the default.
 
-This is not ground-truth recovery of the lost studio multitracks. It does not
-yet split drums, bass, keys or guitars separately. Human listening remains the
-authority for whether a result is musically useful.
+## Architecture
 
-## Overall development goal
+- [`separation_profiles.py`](../src/sunofriend/separation_profiles.py) is the
+  immutable model/runtime/terms/status registry.
+- [`separation_scopes.py`](../src/sunofriend/separation_scopes.py) defines the
+  role contracts and keeps the two-stem scope as the default.
+- [`separation_alpha.py`](../src/sunofriend/separation_alpha.py) provides
+  read-only planning, rights confirmation, network-denied worker launch,
+  integrity verification and atomic publication.
+- [`separation_demucs_mlx_worker.py`](../src/sunofriend/separation_demucs_mlx_worker.py)
+  retains the failed fixed MLX baseline and exact PCM24 residual accounting.
+- [`separation_demucs_infer_worker.py`](../src/sunofriend/separation_demucs_infer_worker.py)
+  implements the pinned CPU fallback with one seeded shift, an explicit local
+  model repository and no segment override.
+- [`separation_scnet_worker.py`](../src/sunofriend/separation_scnet_worker.py)
+  loads only the pinned release source and local checkpoint, then applies one
+  seed-0 shift through fixed 11-second, overlap-0.25 sequential chunks.
+- [`separation_scnet_canary.py`](../src/sunofriend/separation_scnet_canary.py)
+  runs the copyright-safe 60-second fixture under network denial without
+  changing profile status or applying a subjective quality threshold.
+- [`separation_review.py`](../src/sunofriend/separation_review.py) exports a
+  scope/profile/report-bound private review and safe text-only summary.
+- [`separation_rollout.py`](../src/sunofriend/separation_rollout.py) encodes the
+  one-configuration, one-remediation objective admission rule and non-blocking
+  feedback policy.
+- [`setup-separation-core-four-macos.sh`](../scripts/setup-separation-core-four-macos.sh)
+  preserves the exact no-write historical plan and now refuses new installs of
+  the objectively failed baseline.
+- [`setup-separation-core-four-fallback-macos.sh`](../scripts/setup-separation-core-four-fallback-macos.sh)
+  shows the exact no-write PyTorch fallback plan and requires separate terms
+  approval before an atomic install.
+- [`setup-separation-core-four-scnet-macos.sh`](../scripts/setup-separation-core-four-scnet-macos.sh)
+  preserves the completed exact SCNet setup boundary and refuses to overwrite
+  the installed profile.
 
-The long-term goal is one understandable local journey:
-
-1. supply music you own or may process;
-2. obtain useful estimated stems when original multitracks are unavailable;
-3. compare analytical and optional local-AI MIDI interpretations;
-4. hear a balanced MIDI-derived song interpretation;
-5. edit MIDI and suggested instruments in GarageBand or another DAW; and
-6. use explicit observations to improve later bounded releases.
-
-Sunofriend should make useful musical evidence and interpretations, not hide
-uncertainty behind a single score or model.
-
-## Public alpha architecture
-
-The public slice is separate from the older private evidence harness:
-
-- [`separation_alpha.py`](../src/sunofriend/separation_alpha.py) owns the
-  read-only doctor, plan, rights confirmation, atomic output and review page;
-- [`separation_worker.py`](../src/sunofriend/separation_worker.py) loads the
-  exact audited model offline once and processes bounded contiguous chunks;
-- [`setup-separation-alpha-macos.sh`](../scripts/setup-separation-alpha-macos.sh)
-  explains and explicitly installs the pinned source, model and runtime; and
-- [`STEM_SEPARATION_ALPHA.md`](STEM_SEPARATION_ALPHA.md) is the musician-facing
-  setup, use, listening and feedback guide.
-
-The model worker reuses the already-audited loader and fixed model
-configuration. The public coordinator keeps installation, planning, execution,
-review and downstream MIDI conversion as separate explicit actions.
-
-## How it was developed
-
-Each increment followed a repeatable evidence loop:
-
-1. state one narrow musical or engineering question;
-2. bind authorised inputs and exact runtime identities;
-3. run one bounded experiment without activating the result;
-4. check geometry, finite audio, timing, hashes and additive accounting;
-5. bind a human listening review to that exact result; and
-6. preserve useful, poor and inconclusive observations before changing policy.
-
-Private evaluation covered three source-distinct full-song chains plus targeted
-join reviews. The listener judged the overall separation and audio quality good
-to good enough, while also noting that join artefacts could be subjective and
-hard to hear in context. That was sufficient to support an experimental public
-alpha, not a claim of universal accuracy.
-
-The new public smoke test exercises the complete route. All four output WAVs
-retain identical stereo 44.1 kHz PCM24 duration; the test reconstruction stayed
-within one PCM24 least-significant bit of its level-managed source reference;
-and the self-hashed report verified. Musical accuracy still requires listening.
-
-## Run the public route
-
-Inspect setup without changing the Mac:
+## Inspect without changing the Mac
 
 ```bash
-scripts/setup-separation-alpha-macos.sh --plan
+.venv/bin/sunofriend-separate profiles --json
+scripts/setup-separation-core-four-macos.sh --plan
+.venv/bin/sunofriend-separate doctor --scope core-four-stems-v1
 ```
 
-After reading and accepting the linked MIT model terms:
+The doctor verifies platform, exact packages, safetensors structure and hash,
+configuration roles/clock, retained MIT evidence, terms receipt and network
+denial availability without importing MLX or loading weights. An 8 GiB or
+otherwise unverified Apple-silicon class receives an advisory warning; it is
+not silently described as benchmarked.
+
+## Fixed worker behavior
+
+The coordinator canonicalizes one authorised source to stereo 44.1 kHz PCM24.
+The worker loads only `model/htdemucs.safetensors` and
+`model/htdemucs_config.json`, calls `load_mlx_model(..., auto_convert=False)`,
+and refuses a first-run conversion artifact. It uses one deterministic shift
+with seed `0`, overlap `0.25`, batch size `1` and one synchronous writer.
+The unchanged pinned config stores its native segment as `"39/5"`. The first
+run failed when the runtime repeated that string. The single bounded
+remediation parsed the fraction as `7.8` seconds at the apply-model boundary,
+but the second run failed inside HTDemucs `valid_length` because the model's
+own field was still the string. The budget is therefore exhausted.
+
+It preserves native vocals, drums and bass, adds the native reconstruction
+residual to grouped other, applies one shared attenuation and constructs the
+PCM24 other complement. Reports distinguish residual-correction RMS/peak from
+separation quality. Every role and diagnostic is re-hashed before atomic
+publication.
+
+## Admission and feedback policy
+
+`evaluate_preview_admission` requires exactly one synthetic demo, three
+authorised song-disjoint canaries, three repeat resource runs, one baseline
+configuration and at most one remediation. It reads objective gates and
+resource measurements; subjective usefulness fields cannot affect admission.
+An unresolved objective failure after remediation selects the fallback-backend
+decision.
+
+After activation, `feedback_rollout_action` triggers review at 30 days or 10
+valid reports. Poor feedback publishes limitations and starts one bounded
+challenger. It cannot demote the last functioning baseline. No code chooses a
+model winner or starts downstream MIDI automatically. The first SCNet
+technical run passed in 69.97 seconds at 6,581,846,016-byte peak RSS with
+exact clocks and zero-LSB persisted reconstruction error. Its mathematical
+vocal estimate was extremely quiet and vocal reference content remained mainly
+in grouped other; this is recorded without starting a remediation loop. The
+first verified machine class is the 36 GB M3 Max used for these runs. Other
+Apple-silicon classes, including 16 GiB machines, remain accessible but
+unverified and resource-supervised.
+
+## Focused verification
 
 ```bash
-scripts/setup-separation-alpha-macos.sh \
-  --install --accept-model-terms
-.venv/bin/sunofriend-separate doctor
+.venv/bin/pytest -q \
+  tests/test_separation_profiles.py \
+  tests/test_separation_rollout.py \
+  tests/test_separation_scopes.py \
+  tests/test_separation_alpha.py
 ```
 
-Plan a song without creating its output:
+These tests cover registry immutability, package/hash locks, read-only setup,
+explicit terms approval, offline launch, exact role mapping, residual
+accounting, report binding, review validation, objective rollout and atomic
+handoff. They use generated arrays and fake workers; they do not install or
+load the model.
 
-```bash
-.venv/bin/sunofriend-separate separate SONG \
-  --out FRESH \
-  --rights-category owned
-```
-
-Then run only after confirming the rights statement:
-
-```bash
-.venv/bin/sunofriend-separate separate SONG \
-  --out FRESH \
-  --rights-category owned \
-  --execute --confirm-rights --open-review
-```
-
-The other affirmative categories are `licensed`, `authorised_private_use` and
-`statutory_exception`. The output is always labelled `complete_unreviewed` and
-`human_listening_required`.
-
-## Reviewable code and tests
-
-The focused public contract tests are:
-
-```bash
-.venv/bin/python -m pytest \
-  tests/test_separation_alpha.py \
-  tests/test_interface_contract.py -q
-```
-
-The longer private research harness remains available for developers who need
-the evidence chain, independent chunk execution, boundary packages and
-historical experiments. It is no longer the beginner entry point and its older
-private-only product statements are historical.
-
-## Feedback that can improve the alpha
-
-The local review page asks whether the vocals and instrumental are useful,
-whether all tracks were heard and what bleed, missing sound, artefacts or join
-changes were audible. Exporting that JSON is local only.
-
-Public text feedback belongs in the existing
-[compatibility and developer report](https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml).
-Useful reports include:
-
-- Mac model and macOS version;
-- source format and approximate duration;
-- the first setup or command that was confusing or failed;
-- whether vocals and instrumental were useful, partly useful or unusable;
-- audible bleed, missing sound, metallic texture, level changes or joins; and
-- whether those stems improved the later MIDI interpretation.
-
-Do not attach private music, vocals, stems or review exports to a public issue.
-Feedback can repair instructions, expose a platform gap or motivate a bounded
-comparison. It never silently selects a model or musical default.
-
-## Next engineering increments
-
-1. improve installer recovery and progress on more Apple-silicon Macs;
-2. expose clearer long-song progress and join diagnostics;
-3. compare additional checkpoints with clear usable terms;
-4. add narrower instrument and drum-family roles;
-5. connect explicitly reviewed stems to MIDI plus WAV creation with fewer
-   manual steps; and
-6. broaden tests across songs, machines and listeners without uploading
-   private audio.
+No live MLX activation artifact exists: both attempts failed in private staging
+before publication, so no human listen or song canary was reached. The exact
+PyTorch fallback plan and offline CPU worker were then installed with the
+revised 20-wheel closure and passed doctor. Its synthetic worker failed before
+inference or publication because the loaded native segment is
+`Fraction(39, 5)`, which the pinned contract rejects. Retries are disabled; see
+[the fallback audit](CORE_FOUR_FALLBACK_AUDIT.md). Approval is followed by the same finite
+synthetic, song and resource sequence—not an unlimited search for unanimously
+positive listening feedback.

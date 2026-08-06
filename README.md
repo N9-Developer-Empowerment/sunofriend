@@ -63,11 +63,15 @@ It is the quickest way to decide whether Sunofriend is useful before processing
 personal music.
 
 Sunofriend also has an opt-in public **experimental local separator** for an
-authorised finished song on Apple-silicon macOS. It currently estimates only
-broad vocals and complementary instrumental, then gives you a reconstruction
-check and local listening page. Read [Experimental local stem separation](docs/STEM_SEPARATION_ALPHA.md)
-before installing the separate pinned model/runtime or treating either output
-as useful.
+authorised finished song on Apple-silicon macOS. Broad vocals plus complementary
+instrumental remains the default. The separately installed, immutable
+SCNet-large profile is now available as an explicit local
+vocals/drums/bass/grouped-other preview. Its objective offline canaries passed
+and its full-song outputs had no catastrophic defect reported; musical quality
+remains experimental. The working two-stem route produces a
+reconstruction check and local listening page. Read [Experimental local stem separation](docs/STEM_SEPARATION_ALPHA.md)
+before installing a separate pinned model/runtime or treating any estimate as
+useful.
 
 Not sure what a stem is, why a drums stem contains several drums, or where to
 get authorised examples? Read
@@ -82,8 +86,9 @@ For your own music, valid starting points include:
 
 Plans and export features change, so ask the agent to check the provider's
 current official help before you subscribe. Sunofriend does not download songs
-or grant permission to process music. Its local alpha is a broad two-stem
-estimate, not a replacement for every specialist separation service.
+or grant permission to process music. Its default alpha is a broad two-stem
+estimate, and even the core-four preview is not lost multitrack recovery or a
+replacement for every specialist separation service.
 
 Already have separate, synchronized parts as MP3, FLAC, M4A, AIFF, Ogg or
 WAV? The local `source-import-folder` command can check and prepare 2–64 files
@@ -149,6 +154,7 @@ and explore its compact [worked MIDI pack](examples/the-aisle-at-lidl/).
 | Let an agent guide my first session | [AI-assisted first song](docs/AI_ASSISTED_START.md) |
 | Understand or obtain stems | [Stems and provider guide](docs/STEMS.md) |
 | Try the public finished-mix separation alpha | [Experimental local stem separation](docs/STEM_SEPARATION_ALPHA.md) |
+| Inspect the vocals, drums, bass and other preview contract | [Public core-four stem preview](docs/FULL_STEM_SEPARATION_PLAN.md) |
 | Prepare a folder of existing separated parts | [Folder source import](docs/GETTING_STARTED.md#prepare-a-folder-of-existing-audio-parts) |
 | Prepare one local audio file safely | [Source import](docs/GETTING_STARTED.md#prepare-one-local-audio-asset) |
 | Install or troubleshoot manually | [Getting started](docs/GETTING_STARTED.md) |

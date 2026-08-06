@@ -71,7 +71,7 @@
     },
     {
       "id": "need_stems",
-      "action": "explain DAW export, independent authorised stem services or Sunofriend's experimental local two-stem alpha"
+      "action": "explain DAW export, independent authorised stem services or Sunofriend's experimental local separator; broad two-stem remains default and installed SCNet is an explicit public opt-in core-four preview"
     },
     {
       "id": "worked_demo",
@@ -84,7 +84,7 @@
     "stem_definition": "a grouped submix such as drums, bass, vocals or keys; not necessarily one isolated instrument",
     "ai_separated_stem_definition": "an estimate of a category from a finished mix, not the lost original studio track",
     "built_in_full_mix_separation_available": true,
-    "built_in_full_mix_separation_scope": "experimental Apple-silicon local command producing broad vocals, broad instrumental and a diagnostic reconstruction; not narrow instrument families",
+    "built_in_full_mix_separation_scope": "experimental Apple-silicon local command defaulting to broad vocals and instrumental; installed SCNet provides an explicit public opt-in vocals/drums/bass/grouped-other preview",
     "separation_doctor_command": "sunofriend-separate doctor",
     "separation_plan_command": "sunofriend-separate separate SONG --out FRESH --rights-category owned",
     "separation_execute_suffix": "--execute --confirm-rights --open-review",
@@ -234,11 +234,132 @@
         "preserve useful, poor and inconclusive evidence"
       ],
       "developer_preview_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SEPARATION_DEVELOPER_PREVIEW.md",
+      "profiles_command": ".venv/bin/sunofriend-separate profiles --json",
+      "core_four_stem_target": {
+        "status": "public_opt_in",
+        "profile_id": "scnet-large-musdb-release-v1",
+        "preserved_exploratory_profile_id": "scnet-large-musdb-candidate-v1",
+        "release_tier": "public_opt_in",
+        "implementation_available": true,
+        "executable": true,
+        "public_execution_enabled": true,
+        "general_song_execution_enabled": true,
+        "new_install_enabled": true,
+        "future_install_command_enabled": true,
+        "activation_retry_enabled": false,
+        "doctor_ready": true,
+        "architecture": "SCNet-large",
+        "roles": [
+          "vocals",
+          "drums",
+          "bass",
+          "other"
+        ],
+        "guitar_or_piano_in_core_target": false,
+        "sample_rate": 44100,
+        "channels": 2,
+        "source_revision": "6236f8c559778dc271e1aea9baa3993ae655e905",
+        "checkpoint_bytes": 168848417,
+        "checkpoint_sha256": "719e5abb8ed920305dad546ac3cd6fb0b1e9c3092d14ce21827bfc0423af3070",
+        "config_sha256": "629a4901184bf1d3a75b0b13904f35974785aa042cad3c010fd576248cdce3f0",
+        "checkpoint_terms_file": null,
+        "provisional_terms_evidence_accepted": true,
+        "contradictory_use_restriction_found": false,
+        "runtime": {
+          "pytorch_at_inference": true,
+          "torch": "2.8.0",
+          "resolved_wheel_count": 12,
+          "runtime_wheel_download_bytes": 95981536,
+          "model_plus_runtime_download_bytes": 264851903,
+          "device": "cpu",
+          "network_denial_required": true,
+          "explicit_local_checkpoint": true,
+          "compatibility_inspection": "torch.load(weights_only=True, map_location='cpu'); strict keys, shapes and dtypes; no forward pass or audio read",
+          "compatibility_remediation_cycles": 1,
+          "maximum_compatibility_remediation_cycles": 1
+        },
+        "setup_plan_command": "scripts/setup-separation-core-four-scnet-macos.sh --plan",
+        "install_command_after_explicit_approval": "scripts/setup-separation-core-four-scnet-macos.sh --install --accept-model-terms --accept-checkpoint-use",
+        "doctor_command": ".venv/bin/sunofriend-separate doctor --scope core-four-stems-v1",
+        "separation_plan_command": ".venv/bin/sunofriend-separate separate SONG --scope core-four-stems-v1 --out FRESH --rights-category owned",
+        "separation_execute_suffix": "--execute --confirm-rights --open-review",
+        "activation_requires": [
+          "one copyright-safe synthetic four-role demo",
+          "three authorised song-disjoint full-song canaries",
+          "three repeat resource runs on the approved first verified machine class",
+          "one complete catastrophic-output listen per canary"
+        ],
+        "activation_requirements_complete": true,
+        "remaining_activation_blockers": [],
+        "minimum_usefulness_rating_for_activation": null,
+        "pre_release_configuration_limit": 1,
+        "pre_release_remediation_cycle_limit": 1,
+        "resource_limits": {
+          "seconds_per_audio_minute": 120,
+          "seconds_per_song": 900,
+          "peak_unified_memory_bytes": 12884901888
+        },
+        "supported_machine": {
+          "first_verified_class": "Apple M3 Max with 36 GB unified memory",
+          "verified_16_gib_benchmark": false,
+          "other_apple_silicon_accessible_unverified": true,
+          "resource_supervision_required": true
+        },
+        "synthetic_canary": {
+          "status": "objective_pass",
+          "duration_seconds": 60.0,
+          "same_configuration_runs": 3,
+          "worker_elapsed_seconds": [69.96541137504391, 70.19936337508261, 71.18379291682504],
+          "peak_resident_set_bytes": [6581846016, 6719586304, 6588547072],
+          "all_persisted_audio_hashes_identical": true,
+          "roles_persisted": ["vocals", "drums", "bass", "other"],
+          "maximum_reconstruction_error_lsb": 0,
+          "network_denied": true
+        },
+        "full_song_canaries": {
+          "status": "objective_pass",
+          "song_disjoint_count": 3,
+          "coverage": ["vocal_forward", "dense_electronic", "acoustic_mixed"],
+          "catastrophic_listens_complete": true,
+          "catastrophic_defects_reported": 0,
+          "private_audio_or_filenames_published": false
+        },
+        "known_limitations": [
+          "The mathematical synthetic vocal estimate was extremely quiet and vocal reference content remained mainly in grouped other.",
+          "Exact reconstruction accounting does not prove accurate source assignment.",
+          "16 GiB and other Apple-silicon classes are accessible but unverified."
+        ],
+        "failed_profiles": [
+          {
+            "profile_id": "demucs-mlx-htdemucs-v1",
+            "status": "blocked_objective_remediation_exhausted",
+            "failure_id": "demucs-mlx-fractional-segment-runtime-v1",
+            "published_output": false,
+            "summary": "The pinned runtime retained 39/5 as a string inside HTDemucs valid_length after the one numeric apply-model remediation."
+          },
+          {
+            "profile_id": "demucs-infer-htdemucs-fallback-v1",
+            "status": "blocked_objective_remediation_exhausted",
+            "failure_id": "demucs-infer-native-fraction-segment-contract-v1",
+            "published_output": false,
+            "summary": "The exact install and doctor passed, but the worker rejected the model's native Fraction(39, 5) segment before inference."
+          }
+        ],
+        "challenger_profile_id": null,
+        "challenger_status": "bounded_experiment_not_yet_triggered",
+        "compare_command_available": false,
+        "plan_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/FULL_STEM_SEPARATION_PLAN.md",
+        "audit_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/CORE_FOUR_SCNET_AUDIT.md",
+        "approval_ledger_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/CORE_FOUR_MODEL_APPROVALS.md"
+      },
       "read_only_doctor_command": ".venv/bin/sunofriend-separate doctor",
       "read_only_doctor_loads_model": false,
       "read_only_doctor_processes_audio": false,
       "public_checkout_may_report_setup_required": true,
-      "feedback_effect": "Reports can repair instructions, expose portability gaps and motivate a bounded experiment; they do not automatically select a model or musical default.",
+      "feedback_effect": "Review after 30 days or 10 valid reports. Poor musical feedback keeps the last functioning baseline accessible, publishes limitations and motivates one bounded challenger; it never automatically selects a model or blocks objective preview admission.",
+      "review_schema": "sunofriend.experimental-separation-review.v3",
+      "review_copy_text_only_available": true,
+      "review_automatic_uploads": false,
       "public_status_page": "https://sunofriend.com/research/separation/",
       "feedback_url": "https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml",
       "feedback_accepts_private_audio": false
@@ -246,7 +367,7 @@
   },
   "boundaries": {
     "stem_separation": true,
-    "stem_separation_scope": "experimental broad vocals plus complementary instrumental only",
+    "stem_separation_scope": "experimental broad vocals plus complementary instrumental by default; installed SCNet provides an explicit public opt-in core vocals/drums/bass/grouped-other preview",
     "streaming_download": false,
     "exact_waveform_reconstruction": false,
     "guaranteed_perfect_transcription": false,

@@ -218,22 +218,23 @@ export const stemBoundary = {
 } as const;
 
 export const separationResearch = {
-  status: "public experimental local alpha",
+  status:
+    "public two-stem alpha with an explicit SCNet core-four public opt-in preview",
   publicProductRouteAvailable: true,
   workingPrivateScope:
-    "one authorised finished mix to broad vocals, broad instrumental and a diagnostic reconstruction on Apple-silicon macOS",
+    "one authorised finished mix to broad vocals, broad instrumental and a diagnostic reconstruction by default; the installed SCNet profile adds an explicit local vocals/drums/bass/grouped-other public opt-in preview",
   downstreamProof:
     "stems the musician finds useful can enter Sunofriend's existing MIDI, interpretation WAV and starter ZIP workflow as a later explicit step",
   evidenceScope:
     "three source-distinct private evidence chains with complete-song and boundary listening, plus a public end-to-end smoke test",
   humanAuthority:
-    "human listening decides whether each exact result is useful; automated checks cover integrity, timing and reproducibility only",
+    "human listening decides usefulness and later promotion; preview admission checks licensing, privacy, integrity, timing, resources and reconstruction only",
   developmentLoop: [
     "state one narrow musical or engineering question",
     "seal authorised inputs and run one bounded local experiment",
     "check machine evidence without treating a score as musical taste",
     "bind an explicit human listening review to the exact result",
-    "preserve useful, poor and inconclusive evidence before proposing another change",
+    "publish after objective gates while preserving useful, poor and inconclusive musical evidence",
   ],
   developerDoctorCommand: ".venv/bin/sunofriend-separate doctor",
   setupPlanCommand: "scripts/setup-separation-alpha-macos.sh --plan",
@@ -242,13 +243,13 @@ export const separationResearch = {
   feedbackImpact:
     "reports can repair instructions, expose portability gaps and motivate the next bounded experiment; they never select a model or musical default automatically",
   openGates: [
-    "clearer installer recovery and long-song progress",
-    "broader stem roles beyond vocals and instrumental",
-    "more Apple-silicon Macs, songs and independent listeners",
-    "additional models with clear usable terms",
+    "collect real-world usefulness feedback without disabling the functioning preview",
+    "review after 30 days or 10 valid reports, whichever occurs first",
+    "qualify one bounded Studio challenger when repeated poor feedback warrants it",
+    "keep 16 GiB and other Apple-silicon classes accessible but clearly unverified",
   ],
   feedbackBoundary:
-    "Report workflow, platform and audible-result observations through the existing GitHub forms. Do not attach private audio.",
+    "Copy text-only scope/profile-bound observations into the existing GitHub form. Do not attach private audio, stems, review JSON, filenames or metadata. Poor feedback records limitations; it does not disable the last functioning profile.",
 } as const;
 
 export const skillInstallPrompt = `Use $skill-installer to install the official Sunofriend skill from:
@@ -278,4 +279,4 @@ Choose a fresh output folder with me. Do not install optional AI models just for
 If you cannot access local files or run commands, do not pretend that you can. Give me manual guidance or tell me to continue in Codex with local workspace access.`;
 
 export const agentSummary =
-  "Sunofriend is a local-first, MacBook-tested alpha. On Apple-silicon macOS its opt-in experimental separator estimates broad vocals and complementary instrumental from one authorised finished mix, with local review before use. It also prepares existing stems, then turns useful canonical WAV parts into editable MIDI, a balanced MIDI-derived song-interpretation WAV and a starter ZIP. Its plain-text skill is designed for any coding agent that can read skills, inspect a local workspace and run approved commands. Automatic results stay explicitly unreviewed; Studio preserves multiple analytical and AI candidates for explicit listening and choice.";
+  "Sunofriend is a local-first, MacBook-tested alpha. On Apple-silicon macOS its opt-in experimental separator defaults to broad vocals and complementary instrumental. Its installed, hash-pinned SCNet-large profile now adds an explicit public opt-in vocals/drums/bass/grouped-other preview after finite offline canaries and catastrophic-output listening checks passed. The first verified class is a 36 GB M3 Max; other Apple-silicon classes remain accessible but unverified. It also prepares existing stems, then turns useful canonical WAV parts into editable MIDI, a balanced MIDI-derived song-interpretation WAV and a starter ZIP. Automatic results stay explicitly unreviewed; Studio preserves candidates for explicit listening and choice.";

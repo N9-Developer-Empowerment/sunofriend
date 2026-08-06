@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-06.1"
+INTERFACE_CONTRACT_VERSION = "2026-08-06.10"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -167,13 +167,24 @@ def render_skill_interface_reference() -> str:
         "song-interpretation WAV and a GarageBand handoff. Preparing a folder",
         "and converting it are separate actions.",
         "",
-        "The separate `sunofriend-separate` alpha entry point can estimate",
-        "broad vocals plus complementary instrumental from one authorised",
-        "finished mix on a supported Apple-silicon Mac. Its plan is read-only;",
-        "setup and execution require separate explicit approval. Results are",
-        "local, experimental and unreviewed, with a reconstruction diagnostic",
-        "and listening page. It does not yet split drums, bass or keys and does",
-        "not automatically activate its outputs for MIDI conversion.",
+        "The separate `sunofriend-separate` entry point estimates stems from",
+        "one authorised finished mix on a supported Apple-silicon Mac. Broad",
+        "vocals plus complementary instrumental remains the default. The",
+        "immutable SCNet-large profile is now a public opt-in preview for vocals,",
+        "drums, bass and grouped other. Its exact runtime, checkpoint and source",
+        "identity passed compatibility and inference checks under network denial.",
+        "A copyright-safe synthetic canary, three authorised song-disjoint canaries",
+        "and three repeat resource runs passed the objective gates; the project owner",
+        "reported no catastrophic defect after listening to every full-song output.",
+        "The first verified machine class is a 36 GB M3 Max. Other Apple-silicon",
+        "classes, including 16 GiB machines, remain accessible but unverified and",
+        "resource-supervised. The earlier MLX baseline and PyTorch fallback remain",
+        "blocked after their bounded objective remediations failed.",
+        "Results are local, experimental and unreviewed for musical usefulness.",
+        "No separated output enters MIDI conversion automatically.",
+        "`sunofriend-separate profiles` exposes exact status. Blocked profiles",
+        "cannot run. Poor musical feedback is valid",
+        "evidence, not an admission veto or an unlimited tuning trigger.",
         "No Sunofriend command downloads music.",
         "",
         "## Product outputs",

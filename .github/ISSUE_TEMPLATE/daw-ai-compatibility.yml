@@ -51,6 +51,12 @@ body:
       label: Sunofriend command
       description: Include the exact command and conversion mode, or enter `N/A — bundled example pack` when you imported the committed MIDI directly.
       render: shell
+  - type: input
+    id: separation_profile
+    attributes:
+      label: Separation scope and profile
+      description: Optional for non-separation reports. For separation, paste the scope and immutable profile ID from Copy text-only feedback.
+      placeholder: "core-four-stems-v1 / scnet-large-musdb-release-v1"
   - type: textarea
     id: settings
     attributes:
@@ -92,15 +98,36 @@ body:
       options:
         - label: Important vocal content is missing or placed in the instrumental stem.
         - label: Important instrumental content is missing or placed in the vocal stem.
+        - label: Important drum or percussion content is missing, softened or placed in another stem.
+        - label: Important bass content is missing or placed in another stem.
+        - label: Grouped other has important holes or misleading reconstruction correction.
         - label: Bleed or artefacts make a stem hard to use.
-        - label: Chunk joins, clicks or sudden tone or level changes are audible.
+        - label: Timing, joins, clicks or sudden tone or level changes are audible.
         - label: Reconstruction differs materially from the source.
         - label: Processing failed, stalled or used excessive time or memory.
+  - type: dropdown
+    id: downstream_midi
+    attributes:
+      label: Downstream MIDI outcome
+      description: Choose Not tested unless you explicitly made a separate MIDI/Create run from the reviewed stems.
+      options:
+        - Not tested
+        - Improved
+        - No change
+        - Worse
+        - Cannot tell
+    validations:
+      required: true
+  - type: textarea
+    id: text_only_separation_feedback
+    attributes:
+      label: Text-only separation feedback
+      description: Optional. Paste the review page's Copy text-only feedback here. Do not attach review JSON, filenames, private metadata, stems or source audio.
   - type: textarea
     id: evidence
     attributes:
       label: Evidence and authorised attachments
-      description: Add timing measurements, screenshots, small MIDI/JSON files or redacted logs only when you own them or have permission to share them. Do not upload private source audio; describe what you heard instead.
+      description: Add timing measurements, screenshots, small non-review MIDI/JSON files or redacted logs only when you own them or have permission to share them. Do not upload private source audio, stems, review JSON, filenames or metadata; describe what you heard instead.
   - type: checkboxes
     id: rights
     attributes:

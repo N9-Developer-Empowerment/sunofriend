@@ -1,9 +1,9 @@
 ---
 name: sunofriend
-description: Guide beginners and experts through local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental on a supported Apple-silicon Mac, or prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
+description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-06.1 -->
+<!-- sunofriend-interface-contract: 2026-08-06.10 -->
 
 # Sunofriend
 
@@ -44,10 +44,11 @@ on.
   them or attach them to a public issue.
 - Process only music the user owns or is authorised to process. Sunofriend
   never downloads songs or grants processing rights.
-- The opt-in public separation alpha accepts one local finished mix and
-  estimates broad `vocals` plus complementary `instrumental`. It is verified
-  on Apple-silicon macOS, is not ground truth, does not yet make narrow drums,
-  bass, keys or guitars, and never activates output for MIDI automatically.
+- The opt-in public separator accepts one local finished mix. Broad `vocals`
+  plus complementary `instrumental` remains the default. The separately
+  selectable core-four profile estimates `vocals`, `drums`, `bass` and grouped
+  `other` only when `sunofriend-separate profiles` reports it `public_opt_in`.
+  Neither route is ground truth or activates output for MIDI automatically.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.
@@ -68,6 +69,36 @@ commands, read the references only when relevant:
 - [Advanced operations and research history](references/advanced-operations.md)
 
 The active public separation guide is `docs/STEM_SEPARATION_ALPHA.md`.
+The exact four-stem implementation and bounded activation route is
+`docs/FULL_STEM_SEPARATION_PLAN.md`. `sunofriend-separate profiles` reports
+its immutable backend and current status. Do not bypass a `blocked` profile.
+The MLX baseline exhausted its one-remediation budget; do not reinstall or
+retry it. `docs/CORE_FOUR_FALLBACK_AUDIT.md` and
+`scripts/setup-separation-core-four-fallback-macos.sh --plan` describe the
+exact `demucs-infer` fallback. Its first approved setup failed safely at the
+hash lock; the revised 20-wheel install passed doctor, but the synthetic worker
+then rejected the native `Fraction(39, 5)` segment before publication. Its
+remediation is exhausted: do not reinstall, patch or rerun it.
+`docs/CORE_FOUR_SCNET_AUDIT.md` and
+`scripts/plan-separation-core-four-scnet.py` describe the installed public
+opt-in profile. An explicitly approved evidence-only download established a
+168,848,417-byte checkpoint with SHA-256
+`719e5abb8ed920305dad546ac3cd6fb0b1e9c3092d14ce21827bfc0423af3070`;
+the disclosed repository MIT metadata plus README link was accepted as
+sufficient provisional preview evidence. The approved 264,851,903-byte setup
+installed 12 hash-locked wheels and passed an offline weights-only strict
+compatibility inspection after the one allowed official `best_state` wrapper
+remediation. A real network-denied 60-second mathematical canary, three
+authorised song-disjoint canaries and three repeat resource runs passed the
+objective gates. Every full-song output received the required
+catastrophic-output listen with no defect reported. The first verified machine
+class is a 36 GB M3 Max; 16 GiB and other Apple-silicon machines remain
+accessible but unverified and resource-supervised. Poor musical quality is a
+limitation, not a preview veto. Do not reinstall or mutate the profile, use
+personal audio without rights confirmation or enter MIDI/Create automatically.
+Preview admission uses objective licensing, privacy, integrity, runtime and
+output gates; poor musical feedback is recorded and must not create an
+unlimited pre-release tuning loop.
 Historical statements in the advanced record do not override this contract.
 
 ## Inspect before installing
@@ -132,11 +163,75 @@ may process. Explain before setup:
 - Apple-silicon macOS is the first supported platform;
 - setup downloads about 500 MB of pinned MIT model/runtime material;
 - inference then stays local with offline model settings;
-- output is broad vocals and instrumental, not narrow instrument families;
+- broad vocals and instrumental is the default; core four is explicit opt-in
+  only when its profile is available, and grouped other is not one instrument;
 - full songs can take several minutes; and
 - output remains unreviewed until the musician listens.
 
-Read `docs/STEM_SEPARATION_ALPHA.md`. Resolve
+Read `docs/STEM_SEPARATION_ALPHA.md` and run
+`.venv/bin/sunofriend-separate profiles` before choosing a scope. If
+`demucs-mlx-htdemucs-v1` is `blocked`, do not attempt core-four execution or
+silently substitute a model. Its read-only setup plan is:
+
+```bash
+scripts/setup-separation-core-four-macos.sh --plan
+```
+
+That plan installs nothing and now refuses new installs because the MLX
+baseline exhausted its objective remediation budget. Do not retry the
+activation canary or patch the loaded segment again. The exact fallback plan is:
+
+```bash
+scripts/setup-separation-core-four-fallback-macos.sh --plan
+```
+
+It pins a PyTorch CPU runtime and discloses that the original checkpoint has no
+separate model-specific licence file. It now reports the objective synthetic
+failure and refuses new installs. A different backend needs a new reviewed plan
+and separate explicit approval; do not infer either from an ordinary request.
+
+The current read-only SCNet profile plan is:
+
+```bash
+.venv/bin/python scripts/plan-separation-core-four-scnet.py
+```
+
+It deliberately changes nothing. Compatibility, synthetic, authorised-song,
+resource and catastrophic-listen evidence are complete, and the immutable
+profile is admitted as `public_opt_in`.
+
+The completed private approval and canary records are local evidence and must
+not be attached to public issues. For a future profile, the local approval page
+remains available through `scripts/create-core-four-approval-page.py --out
+FRESH --synthetic-root SYNTHETIC --open`; validate its JSON with the same
+script's `--validate JSON` route before treating it as authority.
+
+The reviewed SCNet setup boundary is:
+
+```bash
+scripts/setup-separation-core-four-scnet-macos.sh --plan
+```
+
+It is read-only. A later approved install requires a fresh profile root and
+refuses to overwrite an existing profile. The setup selects the checkpoint
+publication revision as an immutable profile, preserves the earlier
+current-source candidate, permits no forward pass or audio read during
+compatibility inspection, and uses its single transparent wrapper remediation.
+
+After the user reviews the plan and explicitly accepts both the model terms and
+checkpoint use, the install command is:
+
+```bash
+scripts/setup-separation-core-four-scnet-macos.sh \
+  --install --accept-model-terms --accept-checkpoint-use
+```
+
+It now refuses to overwrite the existing profile. Local synthetic execution is
+separately bounded by
+`scripts/run-separation-core-four-scnet-synthetic.py`; do not use that route to
+bypass per-song rights confirmation or public status.
+
+For the default broad route, resolve
 `scripts/setup-separation-alpha-macos.sh` relative to the application checkout,
 not the current shell directory. Inspect setup first:
 
@@ -155,7 +250,7 @@ Do not infer model approval from a request to separate a song. Resolve the
 matching `sunofriend-separate` executable and run its read-only doctor:
 
 ```bash
-SUNOFRIEND-SEPARATE doctor
+.venv/bin/sunofriend-separate doctor
 ```
 
 Create a fresh output outside the source. Plan with the accurate rights
@@ -163,8 +258,19 @@ category (`owned`, `licensed`, `authorised_private_use` or
 `statutory_exception`):
 
 ```bash
-SUNOFRIEND-SEPARATE separate "/absolute/path/to/song.wav" \
+.venv/bin/sunofriend-separate separate "/absolute/path/to/song.wav" \
   --out "/absolute/path/to/fresh-separation" \
+  --rights-category owned
+```
+
+When and only when the profile reports `public_opt_in`, select core four
+explicitly and use its matching doctor/setup:
+
+```bash
+.venv/bin/sunofriend-separate doctor --scope core-four-stems-v1
+.venv/bin/sunofriend-separate separate "/absolute/path/to/song.wav" \
+  --scope core-four-stems-v1 \
+  --out "/absolute/path/to/fresh-core-four-separation" \
   --rights-category owned
 ```
 
@@ -172,16 +278,18 @@ Explain the source hash, duration, output, space requirement and limits. Ask
 for a separate rights confirmation before executing:
 
 ```bash
-SUNOFRIEND-SEPARATE separate "/absolute/path/to/song.wav" \
+.venv/bin/sunofriend-separate separate "/absolute/path/to/song.wav" \
   --out "/absolute/path/to/fresh-separation" \
   --rights-category owned \
   --execute --confirm-rights --open-review
 ```
 
 Open `REVIEW/separation_review.html`. Ask the musician to hear source, vocals,
-instrumental and reconstruction. A close reconstruction proves additive PCM
-accounting, not correct assignment. Public feedback must be text-only unless
-the musician separately chooses and is entitled to share audio.
+every declared stem role and reconstruction. A close reconstruction proves
+additive PCM accounting, not correct assignment. The review accepts poor,
+`cannot_tell` and `not_tested` results. Use Copy text-only feedback; never
+upload audio, review JSON, telemetry, filenames or private metadata
+automatically.
 
 If the stems are useful, copy them into a new folder and continue with Route
 C. Never silently start MIDI conversion, promote a model or generalise one
@@ -254,7 +362,7 @@ drums; `other` is a mixed residual; an AI-separated stem is an estimate, not
 the lost original studio track.
 
 Offer DAW exports, authorised stems/multitracks, an authorised independent
-separator, the Sunofriend two-stem alpha or the built-in demo. Provider plans,
+separator, an available Sunofriend experimental profile or the built-in demo. Provider plans,
 formats and terms change, so check current official help. Prefer WAV/FLAC when
 available; converting lossy audio to WAV restores no lost detail. Ask whether
 private or unreleased audio may be uploaded before suggesting a cloud service.

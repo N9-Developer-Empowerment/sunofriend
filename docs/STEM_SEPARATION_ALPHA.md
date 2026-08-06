@@ -1,9 +1,11 @@
 # Experimental local stem separation
 
-Sunofriend can now be tried on a finished song before separate stems already
-exist. This is a public **experimental alpha**, so the useful thing is not a
-claim of perfect separation. It is a reproducible local result that a musician
-can hear, keep or reject, then describe through the existing feedback route.
+Sunofriend can be tried on a finished song before separate stems already
+exist. The default public **experimental alpha** remains broad vocals plus
+complementary instrumental. The immutable SCNet-large profile is now available
+as an explicit **vocals/drums/bass/grouped-other public opt-in preview**. The
+earlier MLX baseline and first PyTorch fallback remain fail-closed after their
+bounded objective remediations failed.
 
 The first alpha produces:
 
@@ -13,10 +15,92 @@ The first alpha produces:
 - a reconstruction check made by adding the two persisted stems; and
 - a local listening page with a private JSON review export.
 
-It does **not** yet produce separate drums, bass, keys or guitars. Those are
-planned extensions. A reconstruction that sounds right proves that the two
-outputs still account for the source. It does not prove that every sound is in
-the correct stem.
+The default does **not** produce separate drums, bass, keys or guitars. A
+reconstruction that sounds right proves that outputs account for the source.
+It does not prove that every sound is in the correct stem.
+
+Inspect the executable default and immutable profiles at any time:
+
+```bash
+.venv/bin/sunofriend-separate profiles
+```
+
+The reviewed engineering sequence and promotion gates are in
+[Full stem separation: reviewed path forward](FULL_STEM_SEPARATION_PLAN.md).
+The selected backend is the installed SCNet-large release profile. Its exact
+checkpoint, source and 12-wheel runtime are hash-pinned. Weights-only strict
+compatibility passed after one transparent official-wrapper remediation. A
+network-denied synthetic canary, three authorised song-disjoint canaries and
+three repeat resource runs passed the objective gates, and the project owner
+reported no catastrophic defect after listening to every full-song output.
+See [the SCNet audit](CORE_FOUR_SCNET_AUDIT.md) and
+[approval ledger](CORE_FOUR_MODEL_APPROVALS.md).
+
+## Blocked core-four MLX baseline
+
+`demucs-mlx-htdemucs-v1` is pinned to `demucs-mlx==1.4.4`, source revision
+`b37e6ba3c5985af531f61c43564cf13c6ed349fd`, MLX Community model revision
+`d4519e24ddc2dd4a11d56a193092433d852c3961`, and exact wheel, weights and
+config SHA-256 identities. It is Apple-silicon-native and PyTorch-free at
+inference.
+
+Inspect its retained no-write setup record:
+
+```bash
+scripts/setup-separation-core-four-macos.sh --plan
+```
+
+New installs and activation retries for this failed profile are disabled because its
+objective remediation budget is exhausted. The plan command explains the
+failure and downloads nothing. The first separately approved PyTorch fallback
+also failed before publication and now refuses retries. The qualified SCNet
+profile now reports `public_opt_in`; select the core-four scope explicitly:
+
+Review the exact fallback without changing the Mac:
+
+```bash
+scripts/setup-separation-core-four-fallback-macos.sh --plan
+```
+
+It uses 20 hash-pinned Apple-arm64/Python 3.13 wheels, including PyTorch and
+`setuptools==83.0.0`, and discloses that the original checkpoint has no separate
+model-specific licence file. The revised approved install passed doctor, but
+the synthetic worker rejected the model's native `Fraction(39, 5)` segment
+before inference or publication. Its remediation budget is exhausted, so the
+plan now refuses new installs and activation retries.
+
+For the selected SCNet profile, inspect the separate setup plan:
+
+```bash
+scripts/setup-separation-core-four-scnet-macos.sh --plan
+```
+
+On a fresh Apple-silicon setup, install only after reviewing the exact source,
+checkpoint, hashes, terms evidence, download size and local path:
+
+```bash
+scripts/setup-separation-core-four-scnet-macos.sh \
+  --install --accept-model-terms --accept-checkpoint-use
+```
+
+The installer refuses to overwrite an existing profile. Verify it without
+loading the checkpoint or processing audio:
+
+```bash
+.venv/bin/sunofriend-separate doctor --scope core-four-stems-v1
+```
+
+```bash
+.venv/bin/sunofriend-separate separate SONG \
+  --scope core-four-stems-v1 \
+  --out FRESH \
+  --rights-category owned
+```
+
+The shared four-stem output contract preserves vocals, drums and bass, and transparently adds
+the model reconstruction residual to grouped other. The review reports the
+native-other correction RMS/peak so exact reconstruction cannot be mistaken
+for accurate separation.
 
 ## Requirements and boundaries
 
@@ -100,10 +184,13 @@ tracks. Listen for:
 - level or tone changes around chunk joins; and
 - whether each output is musically useful, even when it is not perfect.
 
-The page can export a private local review JSON. It also links to the existing
+The page can export a scope/profile/report-bound private local review JSON and
+copy a safe text-only summary. It asks for per-role usefulness, bleed, missing
+content, artefacts, timing, joins and downstream MIDI outcome; `cannot_tell`
+and `not_tested` are valid. It also links to the existing
 [compatibility and developer report](https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml).
-Share text observations only. Do not attach private audio, stems or vocals to a
-public issue.
+Share text observations only. Do not attach private audio, stems, vocals,
+review JSON, filenames or private metadata to a public issue.
 
 If the outputs are useful, copy `vocals.wav` and `instrumental.wav` into a new
 folder. That folder can then enter the normal Sunofriend `create`, TUI or Studio
@@ -113,15 +200,21 @@ automatically, because listening remains the musical decision boundary.
 ## What feedback changes
 
 Feedback can reveal setup failures, platform gaps, bleed, missing content,
-join problems and whether the broad stems are useful for MIDI. It will guide
-bounded tests and later releases. One review never silently changes a model,
+join problems and whether stems are useful for MIDI. Preview admission uses
+objective licensing, privacy, integrity, runtime and output gates—not a minimum
+usefulness score. Review occurs after 30 days or 10 valid reports, whichever
+comes first. Poor feedback keeps the last functioning baseline accessible,
+publishes a limitation and motivates one bounded challenger. It never silently
 selects a winner or becomes a universal musical default.
 
 The immediate expansion plan is:
 
 1. make setup clearer across more Apple-silicon Macs;
 2. improve long-song joins and expose useful quality diagnostics;
-3. compare additional permissively usable models;
-4. add narrower instrument and drum-family separation; and
+3. review and separately approve the now-pinned `demucs-infer` fallback
+   described in [the fallback audit](CORE_FOUR_FALLBACK_AUDIT.md);
+4. complete its one synthetic, three-song and three-repeat objective activation
+   record, then activate core vocals, drums, bass and grouped-other after those
+   objective gates pass, even when musical feedback is mixed;
 5. connect explicitly reviewed stems to the existing MIDI plus interpretation
    WAV workflow with fewer manual steps.

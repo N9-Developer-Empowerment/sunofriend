@@ -182,11 +182,11 @@ export default function ForAgents() {
               <span className="card-number">03 / CHOICE</span>
               <h3>Offer four human routes</h3>
               <p>
-                Ask whether the person wants to try the experimental local
-                two-stem separator, has authorised separated audio parts, needs
+                Ask whether the person wants to try experimental local
+                separation, has authorised separated audio parts, needs
                 help exporting or obtaining stems, or wants the built-in
-                copyright-safe synthetic demo. Never treat alpha output as
-                exact source recovery.
+                copyright-safe synthetic demo. Inspect profile status before
+                offering core four and never treat output as exact source recovery.
               </p>
             </div>
             <div className="agent-card">

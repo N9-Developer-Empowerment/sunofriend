@@ -10,8 +10,11 @@ Only process music you made or have permission or another lawful basis to use.
 The more formal term **authorised audio** is used elsewhere in the project for
 that boundary.
 
-If you have only a finished song, Sunofriend now has a public experimental
-local two-stem route. Read
+If you have only a finished song, Sunofriend has a public experimental local
+separator. Broad vocals plus instrumental remains the default; an exact
+core-four MLX baseline and first fallback are blocked after bounded objective
+failures. The installed SCNet release profile passed its bounded offline
+canaries and is available through the explicit core-four opt-in command. Read
 [Experimental local stem separation](STEM_SEPARATION_ALPHA.md) before using
 it. For the wider engineering record and expansion plan, see
 [Stem access and separation research](STEM_ACCESS_AND_SEPARATION_RESEARCH.md).
@@ -37,7 +40,10 @@ artefacts are normal.
 
 > **Today, Sunofriend can prepare an existing folder of separated parts and,
 > on supported Apple-silicon Macs, experimentally estimate broad vocals plus
-> complementary instrumental from one authorised finished song.**
+> complementary instrumental by default. The MLX baseline and first PyTorch
+> fallback remain fail-closed after exhausting their bounded objective
+> remediations. SCNet-large is now an explicit public opt-in preview after its
+> finite objective canaries and catastrophic-output listening checks passed.**
 
 `source-import-folder` accepts 2–64 top-level, already-separated PCM
 WAV/AIFF, FLAC, MP3, AAC/ALAC M4A or Vorbis/Opus Ogg assets and prepares one
@@ -56,25 +62,26 @@ produce viable MIDI; the broad result remains available for Studio review.
 
 The narrower `source-import` command remains useful for preserving exactly one
 standalone authorised asset. The `sunofriend-separate` alpha is a separate
-opt-in command with its own model/runtime approval. It creates two broad stems,
-a reconstruction check and a local listening page. It does not create separate
-drums, bass, keys or guitars, and it never starts MIDI conversion silently.
+opt-in command with its own model/runtime approval. The default creates two
+broad stems. The selected core-four profile targets vocals, drums, bass and
+grouped other. Both routes create reconstruction and local listening evidence,
+and neither starts MIDI conversion silently.
 
 ## Which route should I choose?
 
 | Your situation | Start with |
 | --- | --- |
 | No stems yet, or just want to try Sunofriend | Use Sunofriend's built-in demo |
-| You own or may process one finished song on Apple silicon | Try the [experimental local two-stem alpha](STEM_SEPARATION_ALPHA.md) |
+| You own or may process one finished song on Apple silicon | Inspect the [experimental local separation profiles](STEM_SEPARATION_ALPHA.md) |
 | You made the song in a DAW | Export the original synchronized tracks |
 | You want a simple cloud experiment | Try BandLab Splitter or Fadr after checking current plans and privacy terms |
 | You need narrow drum files | Check the current Moises or Fadr drum options |
 | You want local processing on a Mac | Consider Logic Pro, RipX, or LALAL.AI Desktop's Pro-only Lyra mode |
 | The song is already in Suno Studio | Use Suno's own stem export |
 
-Sunofriend's own first local separator is available as an experimental public
-CLI alpha. It stays outside Simple and the TUI while setup, progress and role
-coverage improve. If you need narrower instruments today, use original DAW
+Sunofriend's own local separator is an experimental public CLI alpha. It stays
+outside Simple and the TUI while setup and role coverage improve. If the SCNet
+profile is not installed or you need narrower instruments today, use original DAW
 exports or an established authorised service. Developers can inspect the
 [public architecture and evidence guide](SEPARATION_DEVELOPER_PREVIEW.md) and
 the longer [private development record](PRIVATE_SEPARATION_DEVELOPMENT.md).
