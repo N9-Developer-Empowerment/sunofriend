@@ -9,10 +9,10 @@ import json
 from pathlib import Path
 
 from sunofriend._separation_private_local_workflow import (
-    _check_private_separation_local_profile,
-    _finish_private_separation_local_workflow,
-    _resolve_private_separation_local_profile,
-    _start_private_separation_local_workflow,
+    check_private_separation_local_profile,
+    finish_private_separation_local_workflow,
+    resolve_private_separation_local_profile,
+    start_private_separation_local_workflow,
 )
 
 
@@ -79,11 +79,11 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.command == "doctor":
-        result = _check_private_separation_local_profile(
-            _resolve_private_separation_local_profile(args.repository_root)
+        result = check_private_separation_local_profile(
+            resolve_private_separation_local_profile(args.repository_root)
         )
     elif args.command == "start":
-        result = _start_private_separation_local_workflow(
+        result = start_private_separation_local_workflow(
             args.corpus,
             args.track_id,
             out_dir=args.out_dir,
@@ -94,7 +94,7 @@ def main() -> int:
         )
     else:
         result = asyncio.run(
-            _finish_private_separation_local_workflow(
+            finish_private_separation_local_workflow(
                 args.start_root,
                 args.reviewed_export,
                 repository_root=args.repository_root,

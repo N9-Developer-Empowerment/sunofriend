@@ -8,7 +8,6 @@ services without changing any of their safety or review boundaries.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
@@ -25,9 +24,6 @@ from ._separation_full_song_executor import (
 from ._separation_full_song_plan import (
     REPORT_NAME as PLAN_REPORT_NAME,
     _prepare_private_separation_full_song_plan,
-)
-from ._separation_private_backend_adapter_contract import (
-    _load_verified_private_separation_backend_adapter_contract,
 )
 from ._separation_private_developer_execution import (
     COMPLETE_STATUS as EXECUTION_COMPLETE_STATUS,
@@ -58,53 +54,35 @@ from ._separation_reviewed_output_import_assessment import (
 from ._separation_reviewed_output_midi_validation import (
     _validate_reviewed_output_midi_and_interpretation,
 )
+from ._separation_private_local_contract import (
+    ACTIVATED_STATUS,
+    ASSESSMENT_DIRECTORY,
+    DOCTOR_STATUS,
+    EQUIVALENCE_DIRECTORY,
+    EXECUTION_DIRECTORY,
+    FINISH_DIRECTORY,
+    IMPORTED_STATUS,
+    INCOMPLETE_STATUS,
+    PLAN_DIRECTORY,
+    PREPARED_STATUS,
+    PRESENT_STATUS,
+    PROJECT_DIRECTORY,
+    REPORT_NAME,
+    REQUEST_DIRECTORY,
+    REVIEW_DIRECTORY,
+    REVIEW_STATUS,
+    SCHEMA,
+    VALIDATED_STATUS,
+    VALIDATION_DIRECTORY,
+    PrivateSeparationLocalProfile,
+    ProfileChecker,
+    _FALSE_PRODUCT_PERMISSIONS,
+    _backend_kwargs,
+    _check_private_separation_local_profile,
+    _resolve_private_separation_local_profile,
+)
 
 
-SCHEMA = "sunofriend.private-separation-local-start.v1"
-DOCTOR_STATUS = "private_two_stem_local_profile_ready"
-PREPARED_STATUS = "private_two_stem_request_ready_explicit_execution_required"
-INCOMPLETE_STATUS = "private_two_stem_execution_incomplete_resume_required"
-REVIEW_STATUS = "private_two_stem_review_ready_human_listening_required"
-REPORT_NAME = "private-separation-local-start.json"
-PLAN_DIRECTORY = "PLAN"
-REQUEST_DIRECTORY = "REQUEST"
-EXECUTION_DIRECTORY = "EXECUTION"
-REVIEW_DIRECTORY = "REVIEW"
-FINISH_DIRECTORY = "FINISH"
-EQUIVALENCE_DIRECTORY = "EQUIVALENCE"
-ASSESSMENT_DIRECTORY = "ASSESSMENT"
-PROJECT_DIRECTORY = "PROJECT"
-VALIDATION_DIRECTORY = "MIDI-WAV-ZIP"
-IMPORTED_STATUS = "private_two_stem_stems_imported_inactive_confirmation_required"
-PRESENT_STATUS = "private_two_stem_project_present_activation_verification_required"
-ACTIVATED_STATUS = "private_two_stem_stems_active_midi_confirmation_required"
-VALIDATED_STATUS = "private_two_stem_midi_wav_zip_created_listening_required"
-
-_FALSE_PRODUCT_PERMISSIONS = {
-    "automatic_selection": False,
-    "private_output_import_permitted": False,
-    "product_route_permitted": False,
-    "publication_permitted": False,
-    "simple_mode_available": False,
-    "source_graph_activation": False,
-    "studio_import_available": False,
-    "tui_route_available": False,
-}
-
-
-@dataclass(frozen=True)
-class PrivateSeparationLocalProfile:
-    repository_root: Path
-    adapter_report: Path
-    design_report: Path
-    coverage_report: Path
-    runtime_launcher: Path
-    source_root: Path
-    checkpoint: Path
-    companion_root: Path
-
-
-ProfileChecker = Callable[[PrivateSeparationLocalProfile], Mapping[str, Any]]
 PlanBuilder = Callable[..., Mapping[str, Any]]
 PlanLoader = Callable[..., tuple[Path, dict[str, Any], str]]
 RequestBuilder = Callable[..., Mapping[str, Any]]
@@ -118,95 +96,6 @@ AssessmentLoader = Callable[..., Mapping[str, Any]]
 ReviewedOutputImporter = Callable[..., Mapping[str, Any]]
 ReviewedOutputActivator = Callable[..., Mapping[str, Any]]
 MidiValidator = Callable[..., Awaitable[Mapping[str, Any]]]
-
-
-def _resolve_private_separation_local_profile(
-    repository_root: str | Path,
-) -> PrivateSeparationLocalProfile:
-    """Resolve the one accepted local Kim profile without scanning the Mac."""
-
-    root = Path(repository_root).expanduser().absolute()
-    private_model = (
-        Path.home() / ".local/share/sunofriend/private-evaluation/kim-vocal-2-mlx-v1"
-    )
-    return PrivateSeparationLocalProfile(
-        repository_root=root,
-        adapter_report=(
-            root / "work/separation-bakeoff/"
-            "private-separation-backend-adapter-contract-v2-py313/"
-            "private-separation-backend-adapter-contract.json"
-        ),
-        design_report=(
-            root / "work/separation-bakeoff/private-separation-route-design-v1/"
-            "private-separation-route-design.json"
-        ),
-        coverage_report=(
-            root / "work/separation-bakeoff/multi-song-private-pilot-coverage-v3/"
-            "private-separation-multi-song-private-pilot-coverage.json"
-        ),
-        runtime_launcher=root / "work/private-runtime-python313/venv/bin/python",
-        source_root=private_model / "mlx-audio-source",
-        checkpoint=private_model / "model.safetensors",
-        companion_root=private_model / "checkpoint-directory",
-    )
-
-
-def _check_private_separation_local_profile(
-    profile: PrivateSeparationLocalProfile,
-    *,
-    adapter_loader: Callable[..., Mapping[str, Any]] = (
-        _load_verified_private_separation_backend_adapter_contract
-    ),
-) -> dict[str, Any]:
-    """Deeply reverify the installed backend profile without writing files."""
-
-    if not profile.repository_root.is_dir():
-        raise FileNotFoundError(
-            f"Sunofriend repository root is missing: {profile.repository_root}"
-        )
-    adapter = dict(
-        adapter_loader(
-            profile.adapter_report,
-            design_report_path=profile.design_report,
-            coverage_report_path=profile.coverage_report,
-            repository_root=profile.repository_root,
-            runtime_launcher_path=profile.runtime_launcher,
-            source_root=profile.source_root,
-            checkpoint_path=profile.checkpoint,
-            companion_root=profile.companion_root,
-        )
-    )
-    document = adapter["document"]
-    backend = document["backend"]
-    return {
-        "schema": SCHEMA,
-        "status": DOCTOR_STATUS,
-        "candidate_id": backend["candidate_id"],
-        "primary_roles": ["vocals", "instrumental"],
-        "diagnostic_roles": ["reconstruction"],
-        "adapter": {
-            "sha256": adapter["sha256"],
-            "document_sha256": document["document_sha256"],
-        },
-        "runtime": {
-            "python": str(profile.runtime_launcher),
-            "checkpoint": str(profile.checkpoint),
-            "device_options": ["gpu", "cpu"],
-        },
-        "readiness": {
-            "accepted_private_profile_verified": True,
-            "offline_after_installed_profile_verified": True,
-            "finished_mix_to_two_stem_execution_available": True,
-            "human_review_required_before_downstream_use": True,
-            "public_multi_stem_separator_available": False,
-        },
-        "permissions": dict(_FALSE_PRODUCT_PERMISSIONS),
-        "effects": {
-            "filesystem_write": False,
-            "model_run": False,
-            "product_contract_mutated": False,
-        },
-    }
 
 
 def _start_private_separation_local_workflow(
@@ -380,18 +269,6 @@ def _start_private_separation_local_workflow(
         "review_html": review["review_html"],
         "created_this_invocation": created,
         "next_action": "complete_full_song_and_every_boundary_review",
-    }
-
-
-def _backend_kwargs(profile: PrivateSeparationLocalProfile) -> dict[str, Path]:
-    return {
-        "design_report_path": profile.design_report,
-        "coverage_report_path": profile.coverage_report,
-        "repository_root": profile.repository_root,
-        "runtime_launcher_path": profile.runtime_launcher,
-        "source_root": profile.source_root,
-        "checkpoint_path": profile.checkpoint,
-        "companion_root": profile.companion_root,
     }
 
 
@@ -801,4 +678,18 @@ def _write_or_verify_start_report(
     return report
 
 
-__all__: tuple[str, ...] = ()
+# The module remains private to the package, but the developer script uses a
+# deliberate service surface rather than reaching for implementation helpers.
+resolve_private_separation_local_profile = _resolve_private_separation_local_profile
+check_private_separation_local_profile = _check_private_separation_local_profile
+start_private_separation_local_workflow = _start_private_separation_local_workflow
+finish_private_separation_local_workflow = _finish_private_separation_local_workflow
+
+
+__all__ = [
+    "PrivateSeparationLocalProfile",
+    "check_private_separation_local_profile",
+    "finish_private_separation_local_workflow",
+    "resolve_private_separation_local_profile",
+    "start_private_separation_local_workflow",
+]
