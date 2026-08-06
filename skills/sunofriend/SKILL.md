@@ -51,9 +51,12 @@ on.
   Neither route is ground truth or activates output for MIDI automatically.
 - `other-refinement-v1` is a Studio-only contract, not an executable route. It
   binds one exact grouped-`other` parent to either one guitar target or one keys
-  target plus the exact residual. It selects no backend, installs or runs no
-  model, and must remain blocked until a separately approved candidate passes
-  objective gates. Never put both the parent and its children into MIDI.
+  target plus the exact residual. Its first backend candidate is the pinned,
+  blocked `demucs-mlx-htdemucs-6s-other-refinement-v1`; `keys` is explicitly a
+  piano proxy, not general keyboard isolation. Registration installs or runs no
+  model, and the profile must remain blocked until its separately approved
+  setup and objective gates pass. Never put both the parent and its children
+  into MIDI.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.
@@ -117,6 +120,17 @@ output directory:
 This creates only deterministic oscillator PCM24 evidence. It is not approval
 to download, install or execute a target-separation model, and it does not
 activate a source-graph child or expose a public refinement command.
+
+The first challenger can be inspected without side effects using:
+
+```bash
+scripts/setup-separation-other-refinement-demucs-mlx-macos.sh --plan
+```
+
+Do not run its `--install` route until the user explicitly accepts both the
+displayed model terms and checkpoint use. Even an approved setup does not grant
+model construction, inference, private-audio processing, source activation or
+MIDI permission.
 
 ## Inspect before installing
 

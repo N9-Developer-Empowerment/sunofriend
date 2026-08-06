@@ -120,11 +120,13 @@ export default function SeparationResearch() {
                 PCM24 residual. The parent and children cannot both enter MIDI.
               </p>
               <p>
-                This is deliberately non-executable: no backend is selected, no
-                model or dependency is approved, and no public refinement command
-                exists. Deterministic model-free evidence proves only the contract
-                and reconstruction accounting while a bounded challenger audit is
-                prepared.
+                The first exact candidate is now pinned as{" "}
+                <code>Apple-native htdemucs_6s MLX</code>, with guitar direct and
+                keys honestly labelled as a piano proxy. It remains blocked and
+                uninstalled. Its config repeats the known <code>39/5</code> segment
+                issue, so one in-memory fraction normalization is the only allowed
+                remediation. The setup plan is read-only and no public refinement
+                command exists.
               </p>
             </div>
             <div className="agent-card">

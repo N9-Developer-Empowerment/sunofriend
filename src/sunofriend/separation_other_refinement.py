@@ -20,7 +20,11 @@ from typing import Any, Mapping
 import wave
 
 from .audio_formats import file_sha256
-from .separation_profiles import SCNET_RELEASE_PROFILE_ID
+from .separation_profiles import (
+    OTHER_REFINEMENT_DEMUCS_MLX_PROFILE_ID,
+    SCNET_RELEASE_PROFILE_ID,
+    separation_profile,
+)
 
 
 OTHER_REFINEMENT_SCOPE_ID = "other-refinement-v1"
@@ -124,8 +128,9 @@ _TARGETS: Mapping[str, Mapping[str, str]] = MappingProxyType(
     }
 )
 _BLOCKERS = (
-    "No target-separation backend, checkpoint or runtime has been selected or approved.",
-    "No candidate has passed offline integrity, resource and output-contract gates.",
+    "The first target-separation candidate is pinned, but dependency and checkpoint installation still require explicit approval.",
+    "The one allowed in-memory fractional-segment remediation has not passed installed-artifact compatibility under network denial.",
+    "No candidate has passed offline model construction, resource and output-contract gates.",
     "Studio can describe and compare future candidates, but no refinement runner is exposed.",
 )
 _LIMITATIONS = (
@@ -138,6 +143,7 @@ _LIMITATIONS = (
 def other_refinement_registry() -> dict[str, Any]:
     """Return the Studio-only, non-executable refinement registration."""
 
+    candidate = separation_profile(OTHER_REFINEMENT_DEMUCS_MLX_PROFILE_ID)
     return {
         "schema": OTHER_REFINEMENT_REGISTRY_SCHEMA,
         "scope_id": OTHER_REFINEMENT_SCOPE_ID,
@@ -148,6 +154,22 @@ def other_refinement_registry() -> dict[str, Any]:
         "contract_available": True,
         "implementation_available": False,
         "executable": False,
+        "candidate_profile_id": candidate.profile_id,
+        "candidate_status": candidate.status,
+        "candidate_setup_available": True,
+        "candidate_setup_script": candidate.setup_script,
+        "candidate_model_id": candidate.model_id,
+        "candidate_model_revision": candidate.model_revision,
+        "candidate_target_mapping": {
+            "guitar": {
+                "model_role": "guitar",
+                "semantic_status": "direct_experimental_role",
+            },
+            "keys": {
+                "model_role": "piano",
+                "semantic_status": "disclosed_piano_proxy_not_general_keys",
+            },
+        },
         "parent_scope_id": "core-four-stems-v1",
         "parent_profile_id": SCNET_RELEASE_PROFILE_ID,
         "parent_role": "other",

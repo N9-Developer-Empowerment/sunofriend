@@ -45,13 +45,34 @@ Use `--target keys` for the second contract variant. The command creates only
 mathematical oscillator audio, a path-free immutable plan and a verified result.
 It downloads nothing, installs nothing, opens no checkpoint and runs no model.
 
-## What is not implemented
+## First pinned challenger
 
-There is no public or Studio execution button, no selected backend, no approved
-checkpoint, no installer and no automatic import into the source graph. The
-registration status is `blocked`, with target release tier
-`studio_challenger`. It therefore cannot be selected by the finished-mix
-`separate` command.
+The first backend candidate is now pinned as
+`demucs-mlx-htdemucs-6s-other-refinement-v1`. It uses the Apple-native,
+PyTorch-free `demucs-mlx==1.4.4` runtime and the exact MLX Community
+`htdemucs_6s` checkpoint at revision
+`d4519e24ddc2dd4a11d56a193092433d852c3961`.
+
+This is an audit result, not installation or execution approval. The candidate
+remains `blocked`, no refinement runner exists and it cannot be selected by the
+finished-mix `separate` command. Inspect the no-write plan with:
+
+```bash
+scripts/setup-separation-other-refinement-demucs-mlx-macos.sh --plan
+```
+
+The exact gated installation command and the permissions it does and does not
+grant are documented in [Six-source MLX Studio-challenger audit](OTHER_REFINEMENT_DEMUCS_MLX_AUDIT.md).
+
+The model role `guitar` maps directly to the experimental guitar target. The
+contract's `keys` target is explicitly a `piano` proxy: it does not claim to
+separate synthesizers, organs or all keyboard sounds. Upstream warns that the
+piano estimate has substantial bleed and artefacts.
+
+Static inspection also found the same `"39/5"` segment string involved in the
+earlier MLX failure. The only allowed remediation is an exact in-memory
+`Fraction(39, 5)` normalization after verifying the source config, with no
+artifact mutation, first-run conversion or named/network model resolution.
 
 The first useful backend does not have to solve every instrument. A bounded
 candidate should answer one question: can it extract either guitar or keys
@@ -61,10 +82,9 @@ from the exact grouped-other parent while retaining a transparent residual?
 
 For the first backend candidate:
 
-1. audit and pin one exact runtime, source revision, checkpoint and terms
-   record without installing it;
-2. present a separate setup plan and request explicit approval before any
+1. inspect the pinned setup plan and obtain explicit approval before any
    dependency or checkpoint download;
+2. prove the one allowed fraction-normalized loader under network denial;
 3. run the deterministic fixture and one bounded authorised-song experiment
    under network denial;
 4. reject only objective failures such as missing roles, clock mismatch,

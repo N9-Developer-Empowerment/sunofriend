@@ -54,9 +54,11 @@ evidence, not an admission veto or an unlimited tuning trigger.
 A separate `other-refinement-v1` contract is registered for Studio-only
 research. It binds one exact grouped-other parent to one requested guitar
 or keys target plus an exact PCM24 residual. The parent and children are
-mutually exclusive for activation and MIDI. This contract currently selects
-no backend, installs or runs no model, exposes no refinement command and
-remains blocked until a separately approved candidate passes objective gates.
+mutually exclusive for activation and MIDI. Its first backend candidate is the
+exact blocked `demucs-mlx-htdemucs-6s-other-refinement-v1`; guitar maps to the
+model guitar role and keys is a disclosed piano proxy. Registration installs
+or runs no model, exposes no refinement command and remains blocked until the
+separately approved setup, fraction-normalized loader and objective gates pass.
 No Sunofriend command downloads music.
 
 ## Product outputs

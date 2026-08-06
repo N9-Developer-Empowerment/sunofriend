@@ -21,6 +21,9 @@ CORE_FOUR_FALLBACK_PROFILE_ID = "demucs-infer-htdemucs-fallback-v1"
 SCNET_CANDIDATE_PROFILE_ID = "scnet-large-musdb-candidate-v1"
 SCNET_RELEASE_PROFILE_ID = "scnet-large-musdb-release-v1"
 DEMUCS_INFER_CHALLENGER_ID = "demucs-infer-htdemucs-studio-v1"
+OTHER_REFINEMENT_DEMUCS_MLX_PROFILE_ID = (
+    "demucs-mlx-htdemucs-6s-other-refinement-v1"
+)
 
 
 @dataclass(frozen=True)
@@ -705,6 +708,131 @@ _PROFILES: Mapping[str, SeparationProfileSpec] = MappingProxyType(
                 ("checkpoint_local_only", True),
             ),
         ),
+        OTHER_REFINEMENT_DEMUCS_MLX_PROFILE_ID: SeparationProfileSpec(
+            profile_id=OTHER_REFINEMENT_DEMUCS_MLX_PROFILE_ID,
+            scope_id="other-refinement-v1",
+            backend="demucs-mlx",
+            status="blocked",
+            target_release_tier="studio_challenger",
+            selection_priority=0,
+            model_id="mlx-community/demucs-mlx:htdemucs_6s",
+            model_revision="d4519e24ddc2dd4a11d56a193092433d852c3961",
+            runtime_source_revision=(
+                "b37e6ba3c5985af531f61c43564cf13c6ed349fd"
+            ),
+            runtime_wheel_sha256=(
+                "dc40828b0a8591720082d2494696249790573d4ff6e5be72b16594e131b23e64"
+            ),
+            runtime_identity=(
+                PackageIdentity("demucs-mlx", "1.4.4"),
+                PackageIdentity("mlx", "0.31.2"),
+                PackageIdentity("mlx-metal", "0.31.2"),
+                PackageIdentity("mlx-audio-io", "1.3.11"),
+                PackageIdentity("mlx-spectro", "0.7.0"),
+                PackageIdentity("numpy", "2.3.5"),
+                PackageIdentity("packaging", "25.0"),
+                PackageIdentity("tqdm", "4.67.1"),
+                PackageIdentity("safetensors", "0.6.2"),
+            ),
+            artifacts=(
+                ArtifactIdentity(
+                    name="weights",
+                    relative_path="model/htdemucs_6s.safetensors",
+                    sha256=(
+                        "d298f7f746bf53c21baad44fb08e88807ef47feb551dd22f1601a546c85b8e02"
+                    ),
+                    bytes=109_726_583,
+                    source_url=f"{_CORE_MODEL_BASE}/htdemucs_6s.safetensors",
+                    purpose="pre-converted six-source MLX weights",
+                ),
+                ArtifactIdentity(
+                    name="config",
+                    relative_path="model/htdemucs_6s_config.json",
+                    sha256=(
+                        "97f8315891d8edc9aa6f59e56e0d352fbad5ebfb8a4faf46341ab2f1844596a9"
+                    ),
+                    bytes=1_946,
+                    source_url=f"{_CORE_MODEL_BASE}/htdemucs_6s_config.json",
+                    purpose="exact six-role model construction configuration",
+                ),
+                ArtifactIdentity(
+                    name="model_card",
+                    relative_path="TERMS/model-README.md",
+                    sha256=(
+                        "1f9e7231385b9a8356dbe443c9707e9ada483027277ef0fd4154143f516570ab"
+                    ),
+                    bytes=3_971,
+                    source_url=f"{_CORE_MODEL_BASE}/README.md",
+                    purpose="model provenance and MIT metadata evidence",
+                ),
+                ArtifactIdentity(
+                    name="runtime_license",
+                    relative_path="TERMS/demucs-mlx-LICENSE",
+                    sha256=(
+                        "15086279d32c0f00c577c0f52ff428daf98b8a1fec0264da1c717c88ad464f51"
+                    ),
+                    bytes=1_117,
+                    source_url=f"{_CORE_RUNTIME_BASE}/LICENSE",
+                    purpose="pinned runtime MIT terms evidence",
+                ),
+                ArtifactIdentity(
+                    name="runtime_pyproject",
+                    relative_path="TERMS/demucs-mlx-pyproject.toml",
+                    sha256=(
+                        "3758e87bc8b8d2755e27c764fc7c464def17cd6e2ccef58817689524534ffe36"
+                    ),
+                    bytes=1_672,
+                    source_url=f"{_CORE_RUNTIME_BASE}/pyproject.toml",
+                    purpose="pinned source dependency and provenance evidence",
+                ),
+            ),
+            supported_roles=(
+                "drums",
+                "bass",
+                "other",
+                "vocals",
+                "guitar",
+                "piano",
+            ),
+            terms_evidence=(
+                "The pinned demucs-mlx source revision declares MIT terms.",
+                "The pinned MLX Community model card declares MIT metadata and direct original-checkpoint conversion provenance.",
+                "The six-source checkpoint, config and model-card identities are bound by exact bytes, SHA-256 and revision.",
+                "No bespoke maintainer permission letter is required for a local user-installed Studio experiment unless contradictory evidence appears.",
+            ),
+            known_limitations=(
+                "The official Demucs documentation calls the six-source model experimental and warns that piano has substantial bleed and artefacts.",
+                "The keys target is a disclosed piano proxy; it does not claim to isolate synthesizers, organs or every keyboard sound.",
+                "Earlier private same-checkpoint evidence found low-energy MLX guitar and piano estimates could diverge from the PyTorch reference.",
+                "The pinned config stores segment as the string 39/5; the only allowed first remediation is an exact in-memory Fraction(39, 5) normalization without mutating the artifact.",
+                "A six-role model run will persist only the requested guitar or piano-proxy target plus the exact grouped-other residual.",
+            ),
+            blockers=(
+                "Dependency and checkpoint installation require separate explicit approval after reviewing the exact setup plan.",
+                "The fraction-normalized loader has not passed installed-artifact compatibility under network denial.",
+                "No network-denied synthetic target-plus-residual canary, resource evidence or Studio listening package exists yet.",
+                "No refinement inference worker or public execution route is enabled.",
+            ),
+            setup_script=(
+                "scripts/setup-separation-other-refinement-demucs-mlx-macos.sh"
+            ),
+            worker_script="not-available",
+            inference_settings=(
+                ("model", "htdemucs_6s"),
+                ("model_source_order", "drums,bass,other,vocals,guitar,piano"),
+                ("shifts", 1),
+                ("seed", 0),
+                ("overlap", 0.25),
+                ("batch_size", 1),
+                ("writer_count", 1),
+                ("segment_seconds", 7.8),
+                ("segment_source", "pinned_config_fraction_39_over_5"),
+                ("auto_convert", False),
+                ("device", "mlx-gpu"),
+                ("input_role", "other"),
+                ("persisted_output_contract", "one_target_plus_exact_residual"),
+            ),
+        ),
         DEMUCS_INFER_CHALLENGER_ID: SeparationProfileSpec(
             profile_id=DEMUCS_INFER_CHALLENGER_ID,
             scope_id="core-four-stems-v1",
@@ -781,6 +909,7 @@ __all__ = [
     "CORE_FOUR_FALLBACK_PROFILE_ID",
     "DEMUCS_INFER_CHALLENGER_ID",
     "KIM_VOCAL_PROFILE_ID",
+    "OTHER_REFINEMENT_DEMUCS_MLX_PROFILE_ID",
     "PROFILE_REGISTRY_SCHEMA",
     "PROFILE_STATUSES",
     "PackageIdentity",

@@ -233,7 +233,9 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /STUDIO RESEARCH CONTRACT/);
   assert.match(html, /other-refinement-v1/);
   assert.match(html, /One guitar or keys target, with the residual kept/);
-  assert.match(html, /deliberately non-executable/);
+  assert.match(html, /Apple-native htdemucs_6s MLX/);
+  assert.match(html, /It remains blocked and uninstalled/);
+  assert.match(html, /one in-memory fraction normalization/);
   assert.match(html, /30 days or 10 valid submissions/);
   assert.match(html, /Help improve the next public slice/);
   assert.match(html, /SEPARATION_DEVELOPER_PREVIEW\.md/);
@@ -533,6 +535,25 @@ test("publishes a versioned machine-readable capability contract", async () => {
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement.executable,
+    false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .candidate_profile_id,
+    "demucs-mlx-htdemucs-6s-other-refinement-v1",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement.candidate_status,
+    "blocked",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .candidate_setup_available,
+    true,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .candidate_install_authorizes_inference,
     false,
   );
   assert.equal(

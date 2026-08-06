@@ -92,9 +92,12 @@ single instrument.
 
 For deeper separation, Sunofriend now has a non-executable Studio contract for
 refining one exact grouped-`other` stem into either one guitar target or one
-keys target plus the transparent residual. It installs and runs no model yet;
-the first deterministic PCM24 proof and bounded backend-qualification path are
-documented in [Refining grouped other in Studio](docs/OTHER_STEM_REFINEMENT.md).
+keys target plus the transparent residual. Its first backend candidate is the
+exact, blocked Apple-native `htdemucs_6s` MLX profile; the keys lane is honestly
+labelled as a piano proxy. Nothing is installed or run without a separate
+approval. The deterministic PCM24 proof, no-write setup plan and bounded
+qualification path are documented in
+[Refining grouped other in Studio](docs/OTHER_STEM_REFINEMENT.md).
 
 Not sure what a stem is, why a drums stem contains several drums, or where to
 get authorised examples? Read

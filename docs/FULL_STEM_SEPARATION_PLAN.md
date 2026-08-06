@@ -53,6 +53,15 @@ choices and grants no install, checkpoint, inference, activation or MIDI
 permission. Its first contract accepts only an `other` parent produced by the
 verified `scnet-large-musdb-release-v1` profile.
 
+The first exact challenger plan is
+`demucs-mlx-htdemucs-6s-other-refinement-v1`: a pinned Apple-native six-source
+MLX model with guitar plus a disclosed piano-as-keys proxy. The 109,726,583-byte
+checkpoint and 1,946-byte config are hash-pinned, but neither is installed by
+registration. Static audit found the known `"39/5"` segment representation, so
+the profile stays blocked until its one allowed in-memory fraction remediation
+passes under network denial. See
+[Six-source MLX Studio-challenger audit](OTHER_REFINEMENT_DEMUCS_MLX_AUDIT.md).
+
 The deterministic PCM24 fixture proves the target/residual accounting without
 downloading or running a model:
 
@@ -62,7 +71,7 @@ downloading or running a model:
 ```
 
 The existing source graph prevents the grouped parent and its refined children
-from being active together. A later backend must pass a separately approved,
+from being active together. The pinned backend must pass a separately approved,
 offline and bounded qualification before Studio can run it. Mixed or negative
 musical feedback will remain evidence and cannot disable the functioning
 public core-four profile. See [Refining grouped other in Studio](OTHER_STEM_REFINEMENT.md).

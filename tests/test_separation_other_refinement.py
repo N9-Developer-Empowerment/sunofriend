@@ -56,6 +56,16 @@ def test_registry_is_studio_only_contract_and_not_an_execution_route() -> None:
     assert registry["contract_available"] is True
     assert registry["implementation_available"] is False
     assert registry["executable"] is False
+    assert registry["candidate_profile_id"] == (
+        "demucs-mlx-htdemucs-6s-other-refinement-v1"
+    )
+    assert registry["candidate_status"] == "blocked"
+    assert registry["candidate_setup_available"] is True
+    assert registry["candidate_target_mapping"]["guitar"]["model_role"] == "guitar"
+    assert registry["candidate_target_mapping"]["keys"] == {
+        "model_role": "piano",
+        "semantic_status": "disclosed_piano_proxy_not_general_keys",
+    }
     assert registry["parent_profile_id"] == "scnet-large-musdb-release-v1"
     assert [item["target_id"] for item in registry["supported_targets"]] == [
         "guitar",
