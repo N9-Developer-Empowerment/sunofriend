@@ -112,7 +112,7 @@ export default function SeparationResearch() {
               </p>
             </div>
             <div className="agent-card">
-              <span className="card-number">STUDIO RESEARCH CONTRACT</span>
+              <span className="card-number">OPT-IN STUDIO CHALLENGER</span>
               <h3>One guitar or keys target, with the residual kept</h3>
               <p>
                 <code>other-refinement-v1</code> now binds one exact grouped-other
@@ -122,11 +122,13 @@ export default function SeparationResearch() {
               <p>
                 The first exact candidate is now pinned as{" "}
                 <code>Apple-native htdemucs_6s MLX</code>, with guitar direct and
-                keys honestly labelled as a piano proxy. It remains blocked and
-                uninstalled. Its config repeats the known <code>39/5</code> segment
-                issue, so one in-memory fraction normalization is the only allowed
-                remediation. The setup plan is read-only and no public refinement
-                command exists.
+                keys honestly labelled as a piano proxy. Its one in-memory
+                <code> 39/5</code> normalization passed under network denial, as did
+                a synthetic canary and both full-song target mappings. The first
+                guitar and keys estimates were low-energy, so listening remains
+                decisive without blocking Studio access. Plan an installed run
+                with <code>sunofriend-separate refine-other</code>; execution is
+                explicit and activates neither source nor MIDI.
               </p>
             </div>
             <div className="agent-card">

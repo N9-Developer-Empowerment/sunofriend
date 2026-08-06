@@ -19,6 +19,14 @@ The default does **not** produce separate drums, bass, keys or guitars. A
 reconstruction that sounds right proves that outputs account for the source.
 It does not prove that every sound is in the correct stem.
 
+After an explicit SCNet core-four run, the separately installed Studio
+challenger can refine that exact grouped `other` into one experimental guitar
+target or one disclosed piano-as-keys proxy plus an exact residual. Use
+`sunofriend-separate refine-other CORE_FOUR_ROOT --target guitar --out FRESH`
+to plan it; add `--execute --confirm-rights` only after review. Both first-song
+targets were low-energy, and the command selects no source or MIDI. See
+[Refining grouped other in Studio](OTHER_STEM_REFINEMENT.md).
+
 Inspect the executable default and immutable profiles at any time:
 
 ```bash

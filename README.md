@@ -90,13 +90,25 @@ The command above is a read-only plan until `--execute --confirm-rights` is
 added. It never starts MIDI/Create automatically, and grouped `other` is not a
 single instrument.
 
-For deeper separation, Sunofriend now has a non-executable Studio contract for
-refining one exact grouped-`other` stem into either one guitar target or one
-keys target plus the transparent residual. Its first backend candidate is the
-exact, blocked Apple-native `htdemucs_6s` MLX profile; the keys lane is honestly
-labelled as a piano proxy. Nothing is installed or run without a separate
-approval. The deterministic PCM24 proof, no-write setup plan and bounded
-qualification path are documented in
+For deeper separation, Sunofriend now has an opt-in Studio challenger for
+refining one exact SCNet grouped-`other` stem into either one guitar target or
+one keys target plus the transparent residual. The Apple-native
+`htdemucs_6s` MLX profile is installed separately; the keys lane is honestly
+labelled as a piano proxy. Its fraction-normalized local loader, synthetic
+canary and both full-song target mappings passed the objective offline gates.
+The first song produced low-energy guitar and keys estimates, so listening is
+essential and poor usefulness does not disable access. Plan a run with:
+
+```bash
+.venv/bin/sunofriend-separate refine-other \
+  "/absolute/path/to/core-four-separation" \
+  --target guitar \
+  --out "/absolute/path/to/fresh-guitar-candidate"
+```
+
+Add `--execute --confirm-rights` only after reviewing the plan. The command
+never activates the target or starts MIDI automatically. The deterministic
+PCM24 proof, setup plan and bounded qualification evidence are documented in
 [Refining grouped other in Studio](docs/OTHER_STEM_REFINEMENT.md).
 
 Not sure what a stem is, why a drums stem contains several drums, or where to

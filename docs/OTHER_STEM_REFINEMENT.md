@@ -1,8 +1,8 @@
 # Refining grouped other in Studio
 
 Sunofriend's public core-four preview ends at `vocals`, `drums`, `bass` and
-grouped `other`. The next bounded research step is now registered as
-`other-refinement-v1`, but it is deliberately **not executable**.
+grouped `other`. The next bounded research step is available as the opt-in
+Studio challenger `other-refinement-v1`.
 
 The contract refines one exact `other.wav` into exactly two persisted parts:
 
@@ -24,7 +24,7 @@ clean, complete or musically useful.
   clock;
 - one target per run, currently `guitar` or `keys`;
 - an exact target-plus-residual output contract;
-- Studio-only, non-executable registration reported by
+- Studio-only, executable registration reported by
   `sunofriend-separate profiles --json`;
 - explicit false permissions for model execution, checkpoint download,
   dependency installation, public execution, source activation, MIDI
@@ -53,9 +53,8 @@ PyTorch-free `demucs-mlx==1.4.4` runtime and the exact MLX Community
 `htdemucs_6s` checkpoint at revision
 `d4519e24ddc2dd4a11d56a193092433d852c3961`.
 
-This is an audit result, not installation or execution approval. The candidate
-remains `blocked`, no refinement runner exists and it cannot be selected by the
-finished-mix `separate` command. Inspect the no-write plan with:
+The profile is now a `studio_challenger`; it does not replace either public
+finished-mix route. Inspect the no-write setup plan with:
 
 ```bash
 scripts/setup-separation-other-refinement-demucs-mlx-macos.sh --plan
@@ -74,13 +73,40 @@ earlier MLX failure. The only allowed remediation is an exact in-memory
 `Fraction(39, 5)` normalization after verifying the source config, with no
 artifact mutation, first-run conversion or named/network model resolution.
 
+That single remediation passed. The installed worker then passed a
+network-denied synthetic model canary and both advertised target mappings on
+one authorised 234-second SCNet parent. Guitar completed in 9.94 seconds and
+keys in 9.22 seconds; both used about 3.49 GB peak MLX memory and reconstructed
+the parent at zero PCM24 LSB. The first verified machine remains a 36 GB M3
+Max; 16 GiB and other Apple-silicon classes are accessible but unverified.
+Both first-song targets were low-energy, which is a published musical
+limitation rather than an admission failure.
+
+## Run the installed Studio challenger
+
+Use the complete core-four output directory, not a loose `other.wav`, so the
+command can bind the exact SCNet report, rights receipt, audio hash and clock:
+
+```bash
+.venv/bin/sunofriend-separate refine-other \
+  "/absolute/path/to/core-four-separation" \
+  --target guitar \
+  --out "/absolute/path/to/fresh-guitar-candidate"
+```
+
+Planning is read-only. Add `--execute --confirm-rights` after reviewing it.
+Use `--target keys` for the disclosed piano proxy. The result contains the
+unchanged grouped parent, one requested target, the exact residual, technical
+JSON and a local listening page. It selects no winner, mutates no source graph,
+creates no MIDI and uploads nothing.
+
 The first useful backend does not have to solve every instrument. A bounded
 candidate should answer one question: can it extract either guitar or keys
 from the exact grouped-other parent while retaining a transparent residual?
 
 ## Candidate qualification without another doom loop
 
-For the first backend candidate:
+The completed first-backend qualification used this bounded policy:
 
 1. inspect the pinned setup plan and obtain explicit approval before any
    dependency or checkpoint download;

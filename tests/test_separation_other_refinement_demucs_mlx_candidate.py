@@ -47,14 +47,14 @@ def _config() -> dict[str, object]:
     }
 
 
-def test_candidate_profile_is_exact_blocked_and_studio_only() -> None:
+def test_candidate_profile_is_exact_studio_challenger() -> None:
     profile = separation_profile(OTHER_REFINEMENT_DEMUCS_MLX_PROFILE_ID)
 
     assert profile.profile_id == "demucs-mlx-htdemucs-6s-other-refinement-v1"
     assert profile.scope_id == "other-refinement-v1"
-    assert profile.status == "blocked"
+    assert profile.status == "studio_challenger"
     assert profile.target_release_tier == "studio_challenger"
-    assert profile.executable is False
+    assert profile.executable is True
     assert profile.supported_roles == MODEL_SOURCE_ORDER
     assert profile.runtime_wheel_sha256 == (
         "dc40828b0a8591720082d2494696249790573d4ff6e5be72b16594e131b23e64"
@@ -67,7 +67,9 @@ def test_candidate_profile_is_exact_blocked_and_studio_only() -> None:
     assert profile.artifact("config").sha256 == (
         "97f8315891d8edc9aa6f59e56e0d352fbad5ebfb8a4faf46341ab2f1844596a9"
     )
-    assert profile.worker_script == "not-available"
+    assert profile.worker_script == (
+        "src/sunofriend/separation_other_refinement_demucs_mlx_worker.py"
+    )
 
 
 def test_candidate_plan_requests_setup_only_and_has_no_effects() -> None:
@@ -88,7 +90,14 @@ def test_candidate_plan_requests_setup_only_and_has_no_effects() -> None:
     assert remediation["same_string_representation_observed"] is True
     assert remediation["pinned_config_mutation_permitted"] is False
     assert remediation["maximum_remediation_cycles"] == 1
-    assert remediation["compatibility_passed"] is False
+    assert remediation["compatibility_passed"] is True
+    assert remediation["qualification_evidence"]["full_song_targets_passed"] == [
+        "guitar",
+        "keys",
+    ]
+    assert remediation["qualification_evidence"][
+        "maximum_reconstruction_error_lsb"
+    ] == 0
     setup = plan["setup_plan"]
     assert setup["schema"] == SETUP_PLAN_SCHEMA
     assert setup["runtime_lock"] == {

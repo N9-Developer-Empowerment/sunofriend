@@ -93,6 +93,35 @@ The primary campaign sequence is:
    listener has heard a useful result.
 5. **Respond:** ask one concrete beginner or DAW compatibility question.
 
+## Opt-in guitar and keys Studio-challenger post
+
+Use this after the core-four announcement, not as a claim of recovered studio
+multitracks.
+
+### Short public post
+
+> Sunofriend can now take its local vocals/drums/bass/grouped-other preview one
+> step further: an opt-in Studio challenger estimates either guitar or a
+> clearly labelled piano-as-keys proxy, while keeping the exact residual.
+> Everything stays on the musician's Apple-silicon Mac. The first full-song
+> estimates were low-energy, so we are opening the tool for listening and
+> feedback—not pretending software can judge musical usefulness. No stem or
+> MIDI is selected automatically. सुनो = listen · Independent of Suno Inc.
+> https://sunofriend.com/research/separation/
+
+### Engineering / BBC Slack version
+
+> A bounded Sunofriend separation experiment has moved from blocked contract to
+> opt-in Studio challenger. The pinned Apple-native `htdemucs_6s` MLX worker
+> loads only verified local safetensors under network denial. Its single
+> in-memory `Fraction(39, 5)` compatibility remediation, synthetic canary and
+> both guitar and piano-proxy mappings passed; the 234-second song ran in about
+> 10 seconds at 3.49 GB peak MLX memory with exact PCM24 target-plus-residual
+> accounting. The musical result was low-energy, which is published feedback,
+> not a reason to hide the executable tool or start an unlimited tuning loop.
+> Human listening still decides whether to keep the grouped parent or use both
+> refined children. https://sunofriend.com/research/separation/
+
 ## What the words mean
 
 - **Stems** are separate audio parts such as drums, bass, keys and vocals.

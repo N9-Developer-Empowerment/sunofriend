@@ -170,7 +170,16 @@ def demucs_mlx_other_refinement_candidate_plan() -> dict[str, Any]:
             "pinned_config_mutation_permitted": False,
             "automatic_conversion_permitted": False,
             "maximum_remediation_cycles": 1,
-            "compatibility_passed": False,
+            "compatibility_passed": True,
+            "qualification_evidence": {
+                "network_denied_synthetic_canary_passed": True,
+                "authorised_full_song_duration_seconds": 234.0,
+                "full_song_targets_passed": ["guitar", "keys"],
+                "elapsed_seconds": [9.939911500085145, 9.215111209079623],
+                "peak_unified_memory_bytes": [3_492_069_640, 3_492_069_624],
+                "maximum_reconstruction_error_lsb": 0,
+                "automatic_selection": False,
+            },
         },
         "setup_plan": {
             "schema": SETUP_PLAN_SCHEMA,
@@ -225,11 +234,10 @@ def demucs_mlx_other_refinement_candidate_plan() -> dict[str, Any]:
             "select_or_promote_model": True,
         },
         "objective_next_gates": [
-            "install only after the two explicit setup acceptances",
-            "prove the one allowed in-memory fraction normalization under network denial",
-            "run one deterministic model-free contract fixture and one separately approved synthetic model canary",
-            "enforce exact roles, clocks, finite samples, resource ceilings and target-plus-residual reconstruction",
-            "open the result in Studio for listening without selecting a winner",
+            "collect human listening feedback without a minimum usefulness rating",
+            "keep the parent and refined children mutually exclusive for activation",
+            "require a later explicit musical choice before source activation or MIDI",
+            "retain 16 GiB and other Apple-silicon classes as accessible but unverified",
         ],
         "subjective_policy": {
             "minimum_usefulness_rating": None,

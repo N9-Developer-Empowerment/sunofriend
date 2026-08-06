@@ -127,12 +127,7 @@ _TARGETS: Mapping[str, Mapping[str, str]] = MappingProxyType(
         ),
     }
 )
-_BLOCKERS = (
-    "The first target-separation candidate is pinned, but dependency and checkpoint installation still require explicit approval.",
-    "The one allowed in-memory fractional-segment remediation has not passed installed-artifact compatibility under network denial.",
-    "No candidate has passed offline model construction, resource and output-contract gates.",
-    "Studio can describe and compare future candidates, but no refinement runner is exposed.",
-)
+_BLOCKERS: tuple[str, ...] = ()
 _LIMITATIONS = (
     "Exact reconstruction proves accounting, not target isolation or musical usefulness.",
     "The requested target can contain bleed and the residual can retain target content.",
@@ -141,19 +136,19 @@ _LIMITATIONS = (
 
 
 def other_refinement_registry() -> dict[str, Any]:
-    """Return the Studio-only, non-executable refinement registration."""
+    """Return the opt-in Studio refinement registration."""
 
     candidate = separation_profile(OTHER_REFINEMENT_DEMUCS_MLX_PROFILE_ID)
     return {
         "schema": OTHER_REFINEMENT_REGISTRY_SCHEMA,
         "scope_id": OTHER_REFINEMENT_SCOPE_ID,
         "profile_id": OTHER_REFINEMENT_PROFILE_ID,
-        "status": "blocked",
+        "status": "studio_challenger",
         "release_tier": "studio_challenger",
         "registration_surface": "studio_only",
         "contract_available": True,
-        "implementation_available": False,
-        "executable": False,
+        "implementation_available": True,
+        "executable": True,
         "candidate_profile_id": candidate.profile_id,
         "candidate_status": candidate.status,
         "candidate_setup_available": True,

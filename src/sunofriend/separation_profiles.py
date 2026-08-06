@@ -712,7 +712,7 @@ _PROFILES: Mapping[str, SeparationProfileSpec] = MappingProxyType(
             profile_id=OTHER_REFINEMENT_DEMUCS_MLX_PROFILE_ID,
             scope_id="other-refinement-v1",
             backend="demucs-mlx",
-            status="blocked",
+            status="studio_challenger",
             target_release_tier="studio_challenger",
             selection_priority=0,
             model_id="mlx-community/demucs-mlx:htdemucs_6s",
@@ -806,17 +806,17 @@ _PROFILES: Mapping[str, SeparationProfileSpec] = MappingProxyType(
                 "Earlier private same-checkpoint evidence found low-energy MLX guitar and piano estimates could diverge from the PyTorch reference.",
                 "The pinned config stores segment as the string 39/5; the only allowed first remediation is an exact in-memory Fraction(39, 5) normalization without mutating the artifact.",
                 "A six-role model run will persist only the requested guitar or piano-proxy target plus the exact grouped-other residual.",
+                "On the first authorised 234-second full-song parent, both guitar and piano-proxy targets were low-energy (RMS 0.00135 and 0.00131); access remains available because this is a musical limitation rather than an objective failure.",
+                "The first full-song guitar and keys runs completed offline in 9.94 and 9.22 seconds at 3,492,069,640 and 3,492,069,624-byte peak MLX memory with zero-LSB reconstruction on a 36 GB M3 Max; 16 GiB and other classes remain accessible but unverified.",
             ),
-            blockers=(
-                "Dependency and checkpoint installation require separate explicit approval after reviewing the exact setup plan.",
-                "The fraction-normalized loader has not passed installed-artifact compatibility under network denial.",
-                "No network-denied synthetic target-plus-residual canary, resource evidence or Studio listening package exists yet.",
-                "No refinement inference worker or public execution route is enabled.",
-            ),
+            blockers=(),
             setup_script=(
                 "scripts/setup-separation-other-refinement-demucs-mlx-macos.sh"
             ),
-            worker_script="not-available",
+            worker_script=(
+                "src/sunofriend/"
+                "separation_other_refinement_demucs_mlx_worker.py"
+            ),
             inference_settings=(
                 ("model", "htdemucs_6s"),
                 ("model_source_order", "drums,bass,other,vocals,guitar,piano"),

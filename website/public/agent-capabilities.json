@@ -1,6 +1,6 @@
 {
   "schema": "sunofriend.agent-capabilities.v1",
-  "interface_contract_version": "2026-08-06.1",
+  "interface_contract_version": "2026-08-07.1",
   "product": {
     "name": "Sunofriend",
     "status": "alpha",
@@ -355,14 +355,14 @@
       "other_refinement": {
         "scope_id": "other-refinement-v1",
         "profile_id": "other-target-residual-contract-v1",
-        "status": "blocked",
+        "status": "studio_challenger",
         "release_tier": "studio_challenger",
         "registration_surface": "studio_only",
         "contract_available": true,
-        "implementation_available": false,
-        "executable": false,
+        "implementation_available": true,
+        "executable": true,
         "candidate_profile_id": "demucs-mlx-htdemucs-6s-other-refinement-v1",
-        "candidate_status": "blocked",
+        "candidate_status": "studio_challenger",
         "candidate_setup_available": true,
         "candidate_model_id": "mlx-community/demucs-mlx:htdemucs_6s",
         "candidate_model_revision": "d4519e24ddc2dd4a11d56a193092433d852c3961",
@@ -372,7 +372,7 @@
           "guitar": "direct experimental guitar role",
           "keys": "piano proxy; not general keys isolation"
         },
-        "candidate_known_objective_issue": "The pinned config repeats the 39/5 segment string; one exact in-memory Fraction normalization is the only allowed remediation.",
+        "candidate_known_objective_issue": "Resolved by the one allowed exact in-memory Fraction(39, 5) normalization; the pinned config remained byte-identical.",
         "candidate_plan_command": "scripts/setup-separation-other-refinement-demucs-mlx-macos.sh --plan",
         "candidate_install_requires_explicit_approval": true,
         "candidate_install_command": "scripts/setup-separation-other-refinement-demucs-mlx-macos.sh --install --accept-model-terms --accept-checkpoint-use",
@@ -389,10 +389,24 @@
         "automatic_candidate_selection": false,
         "automatic_model_promotion": false,
         "model_or_dependency_install_authorized": false,
-        "public_execution_available": false,
+        "public_execution_available": true,
+        "run_plan_command": ".venv/bin/sunofriend-separate refine-other CORE_FOUR_ROOT --target guitar --out FRESH",
+        "run_execute_flags": "--execute --confirm-rights",
+        "qualification": {
+          "network_denied": true,
+          "synthetic_canary_passed": true,
+          "full_song_duration_seconds": 234,
+          "full_song_targets_passed": ["guitar", "keys"],
+          "elapsed_seconds": [9.94, 9.22],
+          "peak_unified_memory_bytes": [3492069640, 3492069624],
+          "maximum_reconstruction_error_lsb": 0,
+          "known_musical_limitation": "The first guitar and piano-proxy targets were low-energy; human listening decides usefulness and poor feedback does not disable access.",
+          "first_verified_machine": "Apple M3 Max with 36 GB unified memory",
+          "other_apple_silicon_classes": "accessible but unverified"
+        },
         "synthetic_contract_command": ".venv/bin/python scripts/run-other-refinement-synthetic.py --target guitar --out FRESH",
         "guide_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/OTHER_STEM_REFINEMENT.md",
-        "next_gate": "obtain explicit approval for the exact static setup; then prove the one allowed fraction-normalized loader and one synthetic model canary under network denial"
+        "next_gate": "collect listening feedback; activate neither parent nor children until the musician explicitly chooses one mutually exclusive frontier"
       },
       "read_only_doctor_command": ".venv/bin/sunofriend-separate doctor",
       "read_only_doctor_loads_model": false,

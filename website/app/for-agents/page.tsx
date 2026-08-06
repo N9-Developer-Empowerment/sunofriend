@@ -312,11 +312,15 @@ export default function ForAgents() {
                 from automated checks.
               </p>
               <p>
-                Do not promise keys, guitars, narrower drum families or recovered
-                studio multitracks. Offer drums and bass only through the explicit
-                core-four scope after checking profile status. Do not upload audio
-                or feedback. Reuse the existing GitHub form for text-only platform,
-                workflow and audible-result observations.
+                Do not promise recovered studio multitracks or clean instrument
+                isolation. Offer drums and bass only through the explicit
+                core-four scope after checking profile status. The installed
+                <code> other-refinement-v1</code> Studio challenger may then
+                estimate one guitar target or disclosed piano-as-keys proxy from
+                that exact grouped other while retaining the residual. Plan first,
+                execute only with rights confirmation, and never select the parent
+                or children automatically. Do not upload audio or feedback. Reuse
+                the existing GitHub form for text-only observations.
               </p>
               <div className="journey-links">
                 <Link className="text-link" href="/research/separation/">
