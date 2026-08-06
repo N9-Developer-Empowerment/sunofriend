@@ -222,7 +222,7 @@
         "bind explicit human listening to the exact result",
         "preserve useful, poor and inconclusive evidence"
       ],
-      "developer_preview_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SEPARATION_DEVELOPER_PREVIEW.md",
+      "developer_preview_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/codex/agent-portability-website/docs/SEPARATION_DEVELOPER_PREVIEW.md",
       "read_only_doctor_command": "PYTHONPATH=src ./.venv/bin/python scripts/private-separation-local.py --repository-root \"$PWD\" doctor",
       "read_only_doctor_loads_model": false,
       "read_only_doctor_processes_audio": false,
@@ -260,7 +260,7 @@
     "stems": "https://sunofriend.com/stems/",
     "glossary": "https://sunofriend.com/glossary/",
     "separation_research": "https://sunofriend.com/research/separation/",
-    "separation_developer_preview": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SEPARATION_DEVELOPER_PREVIEW.md",
+    "separation_developer_preview": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/codex/agent-portability-website/docs/SEPARATION_DEVELOPER_PREVIEW.md",
     "contact": "https://sunofriend.com/contact/",
     "privacy": "https://sunofriend.com/privacy/",
     "getting_started": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/GETTING_STARTED.md"

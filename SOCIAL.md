@@ -296,7 +296,7 @@ Canonical links:
 - Research status and approachable explanation:
   https://sunofriend.com/research/separation/
 - Developer architecture, commands and tests:
-  https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SEPARATION_DEVELOPER_PREVIEW.md
+  https://github.com/N9-Developer-Empowerment/sunofriend/blob/codex/agent-portability-website/docs/SEPARATION_DEVELOPER_PREVIEW.md
 - Existing compatibility and developer feedback:
   https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml
 - Existing first-song feedback:

@@ -14,7 +14,7 @@ export const links = {
   gettingStarted:
     "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/GETTING_STARTED.md",
   separationDeveloperGuide:
-    "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SEPARATION_DEVELOPER_PREVIEW.md",
+    "https://github.com/N9-Developer-Empowerment/sunofriend/blob/codex/agent-portability-website/docs/SEPARATION_DEVELOPER_PREVIEW.md",
   stemGuide:
     "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/STEMS.md",
   outOfPlace:
