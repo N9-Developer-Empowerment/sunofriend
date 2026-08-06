@@ -11,6 +11,7 @@ from .separation_profiles import (
     profile_for_scope,
     separation_profile_registry,
 )
+from .separation_other_refinement import other_refinement_registry
 
 
 CAPABILITIES_SCHEMA = "sunofriend.experimental-separation-capabilities.v1"
@@ -205,6 +206,7 @@ def separation_capabilities() -> dict[str, Any]:
         "default_scope_id": DEFAULT_SCOPE_ID,
         "scopes": scopes,
         "profile_registry": separation_profile_registry(),
+        "refinement_registry": other_refinement_registry(),
         "policy": {
             "unavailable_scopes_fail_closed": True,
             "human_listening_required": True,
@@ -212,6 +214,8 @@ def separation_capabilities() -> dict[str, Any]:
             "automatic_model_promotion": False,
             "automatic_midi_activation": False,
             "guitar_or_piano_target_in_core_four_stems": False,
+            "detailed_other_refinement_is_public": False,
+            "detailed_other_refinement_is_studio_only": True,
             "feedback_review_trigger": "30 days or 10 valid reports, whichever occurs first",
             "pre_release_baseline_configurations": 1,
             "maximum_pre_release_remediation_cycles": 1,

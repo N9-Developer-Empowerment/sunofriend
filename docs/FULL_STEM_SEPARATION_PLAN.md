@@ -43,6 +43,30 @@ The public opt-in command is:
 Planning remains read-only. Execution additionally requires
 `--execute --confirm-rights`; it never starts MIDI conversion.
 
+## Detailed separation after core four
+
+The first bounded follow-on is now implemented as a **contract**, not a model
+route. `other-refinement-v1` binds one exact grouped-`other` artifact to one
+requested guitar or keys target plus the exact residual. It is registered as a
+blocked `studio_challenger`, does not appear in the executable separation-scope
+choices and grants no install, checkpoint, inference, activation or MIDI
+permission. Its first contract accepts only an `other` parent produced by the
+verified `scnet-large-musdb-release-v1` profile.
+
+The deterministic PCM24 fixture proves the target/residual accounting without
+downloading or running a model:
+
+```bash
+.venv/bin/python scripts/run-other-refinement-synthetic.py \
+  --target guitar --out FRESH
+```
+
+The existing source graph prevents the grouped parent and its refined children
+from being active together. A later backend must pass a separately approved,
+offline and bounded qualification before Studio can run it. Mixed or negative
+musical feedback will remain evidence and cannot disable the functioning
+public core-four profile. See [Refining grouped other in Studio](OTHER_STEM_REFINEMENT.md).
+
 ## Immutable baseline
 
 | Identity | Pinned value |
