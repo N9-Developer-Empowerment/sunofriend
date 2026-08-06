@@ -5,12 +5,15 @@ audio parts and wants editable MIDI plus a clean listening version of the
 song. Simple and Studio consume synchronized top-level WAV stems. If your
 existing separated parts are WAV, AIFF, FLAC, M4A, MP3 or Ogg, the folder
 importer can first preserve and prepare them as that canonical WAV project.
-It does not separate a finished mix or repair musical alignment.
+The separate experimental alpha can estimate broad vocals and complementary
+instrumental from one authorised finished mix on supported Apple-silicon Macs.
+Neither route repairs musical alignment.
 
 If “stem” is unfamiliar, or you need legitimate ways to obtain examples, read
-[Stems: what they are and where to get them](STEMS.md) first. Sunofriend does
-not yet separate a finished mix itself. The implemented source-import
-boundaries and the researched local-separation programme are documented in
+[Stems: what they are and where to get them](STEMS.md) first. If you have only
+a finished mix, read [Experimental local stem separation](STEM_SEPARATION_ALPHA.md).
+It is an opt-in two-stem alpha, not exact multitrack recovery. The source-import
+boundaries and wider research record are documented in
 [Stem access and separation research](STEM_ACCESS_AND_SEPARATION_RESEARCH.md).
 
 Sunofriend is currently an alpha macOS application presented in the terminal.
@@ -41,6 +44,28 @@ Python 3.11 is the recommended runtime. Sunofriend supports Python 3.9 through
 
 All current processing is local. The TUI does not upload your stems, MIDI,
 private notes or feedback.
+
+## Have one finished song instead of stems?
+
+On Apple-silicon macOS, Sunofriend can experimentally estimate broad
+`vocals.wav` and complementary `instrumental.wav`. The setup and model are a
+separate explicit choice; they are not installed by the normal demo.
+
+Start with read-only plans:
+
+```bash
+scripts/setup-separation-alpha-macos.sh --plan
+.venv/bin/sunofriend-separate doctor
+.venv/bin/sunofriend-separate separate \
+  "/absolute/path/to/authorised-song.flac" \
+  --out "/absolute/path/to/fresh-separation" \
+  --rights-category owned
+```
+
+After reviewing the setup, terms, rights and output path, follow the complete
+[alpha guide](STEM_SEPARATION_ALPHA.md). Listen to the source, both estimates
+and reconstruction check before deciding whether either result should enter a
+later MIDI workflow. The website never receives the audio.
 
 ## Install Sunofriend manually
 
@@ -403,6 +428,11 @@ AUTOMATIC-SONG/
 │   ├── 01-role-automatic-primary.mid
 │   ├── ...one file for each safely paired role...
 │   └── combined-gm-interpretation.mid
+├── SOUNDS/
+│   ├── INSTRUMENTS-START-HERE.md
+│   ├── automatic-starter-instruments.json
+│   ├── MIDI/...named automatic starter-sound parts...
+│   └── PREVIEWS/...short audible starter-sound excerpts...
 ├── AUDIO/
 │   └── balanced-midi-song-interpretation.wav
 ├── TECHNICAL/
@@ -416,8 +446,11 @@ Start with:
 
 1. `START-HERE.txt` for the BPM, included role count and important limits;
 2. the balanced WAV to hear the whole interpretation;
-3. the individual MIDI files for GarageBand; and
-4. the ZIP when you want one convenient copy of the bundle.
+3. `SOUNDS/INSTRUMENTS-START-HERE.md` for named starter instruments and the
+   sound-aware GarageBand MIDI files;
+4. the exact individual automatic-primary MIDI files when you want the
+   unchanged transcription evidence; and
+5. the ZIP when you want one convenient copy of the bundle.
 
 The result has `review_status: not_reviewed` and
 `quality_status: review_recommended`. That wording is deliberate. Simple mode
@@ -439,16 +472,21 @@ way to understand the song before choosing better sounds in a DAW.
 
 1. Create a GarageBand project and set its tempo to the exact BPM in
    `START-HERE.txt`.
-2. Drag the individual files from `AUTOMATIC-SONG/MIDI/` into the project.
+2. For an immediately assigned starting sound, drag the files from
+   `AUTOMATIC-SONG/SOUNDS/MIDI/` into the project, or import the combined MIDI.
+   Use the short matching files in `SOUNDS/PREVIEWS/` as the audible reference.
 3. Keep every MIDI region at the same recorded-zero project origin.
-4. Choose a GarageBand Library patch for each software-instrument track.
+4. Each file requests the named General MIDI starter in
+   `SOUNDS/INSTRUMENTS-START-HERE.md`. GarageBand may substitute a comparable
+   installed patch; replace it when you prefer another sound.
 5. Leave quantisation off for the first comparison so the source timing is not
    hidden by a new grid.
 6. Keep the balanced WAV on a reference track if it helps you compare the
    complete arrangement.
 
-The combined MIDI is a convenient all-parts General MIDI proxy. The individual
-files are usually easier to assign to separate GarageBand instruments.
+The combined MIDI and the separate files under `SOUNDS/MIDI/` use one shared
+automatic starter-sound policy. Files directly under `MIDI/` remain exact
+automatic-primary copies and may retain their process-specific program hints.
 
 MIDI describes notes, timing, velocity and basic performance information. It
 does not contain the continuous buzzing texture of a synth bass, a singer's

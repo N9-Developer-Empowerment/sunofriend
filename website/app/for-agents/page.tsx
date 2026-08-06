@@ -123,6 +123,10 @@ export default function ForAgents() {
               <span className="card-number">USE IT FOR</span>
               <h3>Editable musical interpretations</h3>
               <ul>
+                <li>
+                  experimental local broad vocals/instrumental separation on
+                  supported Apple-silicon macOS;
+                </li>
                 <li>authorised stems or vocals to MIDI;</li>
                 <li>a balanced MIDI-derived listening WAV;</li>
                 <li>GarageBand or another DAW handoff;</li>
@@ -135,7 +139,7 @@ export default function ForAgents() {
               <span className="card-number">DO NOT USE IT FOR</span>
               <h3>Tasks outside its boundary</h3>
               <ul>
-                <li>built-in full-mix stem separation today;</li>
+                <li>exact multitrack recovery or narrow instrument-family separation;</li>
                 <li>downloading music from a streaming link;</li>
                 <li>lyrics or full-song generation;</li>
                 <li>a guaranteed exact transcription;</li>
@@ -176,12 +180,13 @@ export default function ForAgents() {
             </div>
             <div className="agent-card">
               <span className="card-number">03 / CHOICE</span>
-              <h3>Offer three human routes</h3>
+              <h3>Offer four human routes</h3>
               <p>
-                Ask whether the person has authorised separated audio parts,
-                needs help exporting or obtaining stems, or wants the built-in
-                copyright-safe synthetic demo. Supported existing parts can be
-                prepared locally; Sunofriend itself is not a separator.
+                Ask whether the person wants to try the experimental local
+                two-stem separator, has authorised separated audio parts, needs
+                help exporting or obtaining stems, or wants the built-in
+                copyright-safe synthetic demo. Never treat alpha output as
+                exact source recovery.
               </p>
             </div>
             <div className="agent-card">
@@ -243,9 +248,10 @@ export default function ForAgents() {
               <span className="card-number">CURRENT CONTRACT</span>
               <h3>{stemBoundary.songProjectInputToday}</h3>
               <p>
-                Sunofriend has no accepted built-in separator yet and the
-                website accepts no audio. The stable create, Simple and Studio
-                song workflows still require synchronized top-level WAV stems.
+                The website accepts no audio. The stable create, Simple and
+                Studio song workflows still require synchronized top-level WAV
+                stems. The experimental separator is a separate opt-in command
+                that produces only broad vocals and complementary instrumental.
               </p>
               <p>
                 A separate CLI can inspect and prepare{" "}
@@ -287,26 +293,24 @@ export default function ForAgents() {
           <h2 id="separation-research-title">Experimental separation status</h2>
           <div className="agent-grid">
             <div className="agent-card">
-              <span className="card-number">DISCOVERABLE, NOT ENABLED</span>
-              <h3>Explain the research without offering a product route</h3>
+              <span className="card-number">PUBLIC EXPERIMENTAL ROUTE</span>
+              <h3>Offer the narrow local alpha with its limits</h3>
               <p>
-                A private developer workflow can now produce broad vocals and
-                instrumental stems, bind full-song listening, and pass reviewed
-                stems into the existing automatic MIDI/WAV/ZIP validation. It
-                is not available in Simple, Studio, the public CLI, the TUI or
-                the beginner skill journey.
+                <code>sunofriend-separate</code> can now produce broad vocals,
+                complementary instrumental and a reconstruction diagnostic from
+                one authorised finished mix on Apple-silicon macOS. It is a
+                separate public alpha entry point, not yet a Simple/TUI button.
               </p>
               <p>
-                Do not upload user audio, redistribute the private model or
-                infer a musical preference from automated checks. Reuse the
-                existing GitHub feedback forms for platform, workflow and
-                audible-result observations.
+                Plan setup and the song first. Ask separately before the pinned
+                MIT model/runtime download and before audio execution. Keep the
+                output unreviewed until the musician compares all four local
+                tracks. Never infer musical preference from automated checks.
               </p>
               <p>
-                Developers may run the documented read-only doctor to inspect
-                the boundary. A public checkout may correctly report that the
-                private evaluation profile is unavailable; that is not an
-                instruction to obtain a checkpoint.
+                Do not promise separate drums, bass, keys or guitars. Do not
+                upload audio or feedback. Reuse the existing GitHub form for
+                text-only platform, workflow and audible-result observations.
               </p>
               <div className="journey-links">
                 <Link className="text-link" href="/research/separation/">

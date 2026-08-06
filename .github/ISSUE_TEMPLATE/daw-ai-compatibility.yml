@@ -7,6 +7,7 @@ body:
     attributes:
       label: Test scope
       options:
+        - Experimental local stem separation
         - DAW MIDI import or playback
         - Software instrument or notation tool
         - Hardware MIDI instrument or sequencer
@@ -70,11 +71,36 @@ body:
       description: Include missing/extra notes, pitch or octave errors, track/channel mapping, first-note offset and end drift where relevant.
     validations:
       required: true
+  - type: dropdown
+    id: usefulness
+    attributes:
+      label: Musical usefulness
+      description: For stem separation, judge whether the result helps the next musical task after ordinary listening. Choose Not tested for other reports.
+      options:
+        - Not tested
+        - Useful
+        - Useful with limitations
+        - Not useful yet
+        - Cannot tell
+    validations:
+      required: true
+  - type: checkboxes
+    id: separation_observations
+    attributes:
+      label: Stem-separation observations
+      description: Optional. Select every plainly audible issue. A quiet imperfection that does not affect musical use does not need to be promoted to a failure.
+      options:
+        - label: Important vocal content is missing or placed in the instrumental stem.
+        - label: Important instrumental content is missing or placed in the vocal stem.
+        - label: Bleed or artefacts make a stem hard to use.
+        - label: Chunk joins, clicks or sudden tone or level changes are audible.
+        - label: Reconstruction differs materially from the source.
+        - label: Processing failed, stalled or used excessive time or memory.
   - type: textarea
     id: evidence
     attributes:
       label: Evidence and authorised attachments
-      description: Add timing measurements, screenshots, small MIDI/JSON files or logs only when you own them or have permission to share them.
+      description: Add timing measurements, screenshots, small MIDI/JSON files or redacted logs only when you own them or have permission to share them. Do not upload private source audio; describe what you heard instead.
   - type: checkboxes
     id: rights
     attributes:

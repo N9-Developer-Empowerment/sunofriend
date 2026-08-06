@@ -207,7 +207,7 @@ export const stemBoundary = {
     "sunofriend source-import-folder SOURCE_FOLDER --out-dir FRESH --rights-category CATEGORY --plan",
   sourceFolderImportExecCommand:
     "sunofriend source-import-folder SOURCE_FOLDER --out-dir FRESH --rights-category CATEGORY",
-  builtInSeparationToday: false,
+  builtInSeparationToday: true,
   websiteUploadToday: false,
   folderImportToday: true,
   crossFileOriginComparisonToday: true,
@@ -218,14 +218,14 @@ export const stemBoundary = {
 } as const;
 
 export const separationResearch = {
-  status: "private developer research",
-  publicProductRouteAvailable: false,
+  status: "public experimental local alpha",
+  publicProductRouteAvailable: true,
   workingPrivateScope:
-    "one authorised finished mix to broad vocals, broad instrumental and a diagnostic reconstruction",
+    "one authorised finished mix to broad vocals, broad instrumental and a diagnostic reconstruction on Apple-silicon macOS",
   downstreamProof:
-    "reviewed private stems can enter Sunofriend's existing MIDI, interpretation WAV and starter ZIP workflow",
+    "stems the musician finds useful can enter Sunofriend's existing MIDI, interpretation WAV and starter ZIP workflow as a later explicit step",
   evidenceScope:
-    "three source-distinct private evidence chains with complete-song and boundary listening",
+    "three source-distinct private evidence chains with complete-song and boundary listening, plus a public end-to-end smoke test",
   humanAuthority:
     "human listening decides whether each exact result is useful; automated checks cover integrity, timing and reproducibility only",
   developmentLoop: [
@@ -235,15 +235,17 @@ export const separationResearch = {
     "bind an explicit human listening review to the exact result",
     "preserve useful, poor and inconclusive evidence before proposing another change",
   ],
-  developerDoctorCommand:
-    'PYTHONPATH=src ./.venv/bin/python scripts/private-separation-local.py --repository-root "$PWD" doctor',
+  developerDoctorCommand: ".venv/bin/sunofriend-separate doctor",
+  setupPlanCommand: "scripts/setup-separation-alpha-macos.sh --plan",
+  separationPlanCommand:
+    ".venv/bin/sunofriend-separate separate SONG --out FRESH --rights-category owned",
   feedbackImpact:
     "reports can repair instructions, expose portability gaps and motivate the next bounded experiment; they never select a model or musical default automatically",
   openGates: [
-    "a beginner-safe product journey and recovery UX",
+    "clearer installer recovery and long-song progress",
     "broader stem roles beyond vocals and instrumental",
-    "more machines, songs and hidden-set evaluation",
-    "redistributable dependency and checkpoint terms",
+    "more Apple-silicon Macs, songs and independent listeners",
+    "additional models with clear usable terms",
   ],
   feedbackBoundary:
     "Report workflow, platform and audible-result observations through the existing GitHub forms. Do not attach private audio.",
@@ -256,10 +258,11 @@ Do not install the Sunofriend app or any audio dependencies yet. Tell me when th
 
 export const newcomerPrompt = `Use $sunofriend to help me try Sunofriend on this Mac.
 
-Use the installed skill, not a generic audio workflow. Start by inspecting what is already available and explain what you would need to change. If setup is needed, ask before preparing the source, show me the exact prepared commit, then ask again before installing that reviewed commit. Then offer me three routes:
-1. use my existing authorised separated audio parts, preparing supported formats locally when needed;
-2. help me obtain or export authorised stems (Sunofriend itself does not separate audio);
-3. run the built-in copyright-safe demo in a fresh folder, then show me what it made.
+Use the installed skill, not a generic audio workflow. Start by inspecting what is already available and explain what you would need to change. If setup is needed, ask before preparing the source, show me the exact prepared commit, then ask again before installing that reviewed commit. Then offer me four routes:
+1. experimentally separate one authorised finished song locally on a supported Apple-silicon Mac;
+2. use my existing authorised separated audio parts, preparing supported formats locally when needed;
+3. help me obtain or export authorised stems;
+4. run the built-in copyright-safe demo in a fresh folder, then show me what it made.
 
 For my first result, use the skill's beginner-safe route: the agent-oriented create command when I have stems, the demo command when I do not, or Simple / Make my song when I am operating the TUI myself. Keep my audio local. Label automatic output as unreviewed. Do not call the WAV an exact reconstruction or a release master.
 
@@ -275,4 +278,4 @@ Choose a fresh output folder with me. Do not install optional AI models just for
 If you cannot access local files or run commands, do not pretend that you can. Give me manual guidance or tell me to continue in Codex with local workspace access.`;
 
 export const agentSummary =
-  "Sunofriend is a local-first, MacBook-tested alpha that prepares authorised folders of already-separated supported audio parts, then turns canonical top-level WAV stems into editable MIDI, a balanced MIDI-derived song-interpretation WAV and a starter ZIP. Its plain-text skill is designed for any coding agent that can read skills, inspect a local workspace and run approved commands. It does not separate a finished mix. Its focused agent create command and TUI Simple mode make an automatic, explicitly unreviewed first result. Studio preserves multiple analytical and AI candidates for explicit listening and choice.";
+  "Sunofriend is a local-first, MacBook-tested alpha. On Apple-silicon macOS its opt-in experimental separator estimates broad vocals and complementary instrumental from one authorised finished mix, with local review before use. It also prepares existing stems, then turns useful canonical WAV parts into editable MIDI, a balanced MIDI-derived song-interpretation WAV and a starter ZIP. Its plain-text skill is designed for any coding agent that can read skills, inspect a local workspace and run approved commands. Automatic results stay explicitly unreviewed; Studio preserves multiple analytical and AI candidates for explicit listening and choice.";

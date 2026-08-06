@@ -65,7 +65,7 @@ export default function Stems() {
         <section className="status-panel" aria-labelledby="today-title">
           <span className="card-number">WHAT WORKS TODAY</span>
           <h2 id="today-title">
-            Bring separate audio parts. Prepare supported formats locally.
+            Bring separate parts, or try the local two-stem alpha.
           </h2>
           <p>
             The complete MIDI, listening-WAV, Simple and Studio workflows still
@@ -74,10 +74,12 @@ export default function Stems() {
             project containing {stemBoundary.sourceFolderImportOutput}.
           </p>
           <p>
-            Sunofriend does not yet separate one finished song into stems, and
-            the public website does not receive audio. Folder preparation does
-            not shift, pad, stretch, normalize or align parts, and it does not
-            prove the musical downbeat.
+            The public local alpha can estimate broad vocals and complementary
+            instrumental from one authorised finished song on supported
+            Apple-silicon macOS. It is not narrow multitrack recovery. The
+            public website never receives audio. Folder preparation does not
+            shift, pad, stretch, normalize or align parts, and it does not prove
+            the musical downbeat.
           </p>
           <div className="prompt-stack">
             <div className="prompt-box">
@@ -114,6 +116,12 @@ export default function Stems() {
           <p className="guide-note">
             For one standalone asset, <code>{stemBoundary.sourceImportCommand}</code>{" "}
             remains available. It does not make a complete song project.
+          </p>
+          <p className="guide-note">
+            Have only a finished mix? Read the public{" "}
+            <Link href="/research/separation/">two-stem alpha guide</Link>.
+            It uses a separately approved local model and keeps output
+            unreviewed until you listen.
           </p>
         </section>
 
@@ -171,11 +179,12 @@ export default function Stems() {
             </article>
             <article className="journey-card">
               <span className="card-number">3 / SEPARATE A MIX</span>
-              <h3>Use an independent tool</h3>
+              <h3>Try Sunofriend alpha or an independent tool</h3>
               <p>
-                A local application or cloud service can estimate stems from a
-                finished song you are authorised to process. Listen to every
-                result before asking Sunofriend to transcribe it.
+                Sunofriend can estimate two broad local stems on supported
+                Macs. Another local application or cloud service may offer
+                narrower categories. Listen to every result before asking
+                Sunofriend to transcribe it.
               </p>
               <small>Prefer lossless audio when it is available.</small>
             </article>

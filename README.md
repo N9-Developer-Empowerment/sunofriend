@@ -34,8 +34,9 @@ Then start a new message:
 ```text
 Use $sunofriend. I am new to music software. Help me choose between:
 1. trying the built-in demo,
-2. using stems I already have, or
-3. getting stems I am allowed to process.
+2. experimentally separating one finished song locally,
+3. using stems I already have, or
+4. getting stems I am allowed to process.
 Explain one thing at a time. Inspect my Mac and show me an installation plan
 before making system or network changes. Keep my audio local.
 ```
@@ -58,8 +59,15 @@ complete newcomer journey.
 
 Choose the built-in demo. It creates a small copyright-safe synthetic song and
 runs the same automatic MIDI, WAV and ZIP workflow used for a real project.
-It is the quickest way to decide whether Sunofriend is useful before paying
-for a stem-separation service.
+It is the quickest way to decide whether Sunofriend is useful before processing
+personal music.
+
+Sunofriend also has an opt-in public **experimental local separator** for an
+authorised finished song on Apple-silicon macOS. It currently estimates only
+broad vocals and complementary instrumental, then gives you a reconstruction
+check and local listening page. Read [Experimental local stem separation](docs/STEM_SEPARATION_ALPHA.md)
+before installing the separate pinned model/runtime or treating either output
+as useful.
 
 Not sure what a stem is, why a drums stem contains several drums, or where to
 get authorised examples? Read
@@ -73,8 +81,9 @@ For your own music, valid starting points include:
 - the built-in Sunofriend demo.
 
 Plans and export features change, so ask the agent to check the provider's
-current official help before you subscribe. Sunofriend does not download
-songs, separate a full mix itself or grant permission to process music.
+current official help before you subscribe. Sunofriend does not download songs
+or grant permission to process music. Its local alpha is a broad two-stem
+estimate, not a replacement for every specialist separation service.
 
 Already have separate, synchronized parts as MP3, FLAC, M4A, AIFF, Ogg or
 WAV? The local `source-import-folder` command can check and prepare 2–64 files
@@ -93,14 +102,17 @@ The automatic result contains:
 AUTOMATIC-SONG/
 ├── START-HERE.txt
 ├── MIDI/individual parts and combined-gm-interpretation.mid
+├── SOUNDS/named starter-sound MIDI, short previews and GarageBand guide
 ├── AUDIO/balanced-midi-song-interpretation.wav
 ├── garageband-mix-recipe.md
 └── sunofriend-automatic-midi-and-wav.zip
 ```
 
-Listen to the WAV first. Then import the individual MIDI files into
-GarageBand, set the project to the BPM in `START-HERE.txt`, and choose sounds
-you like.
+Listen to the WAV first. Then follow `SOUNDS/INSTRUMENTS-START-HERE.md` and
+import either the combined MIDI or the separate sound-aware MIDI files into
+GarageBand. Each one requests the same named General MIDI starter sound heard
+in the interpretation. The exact automatic-primary MIDI stays unchanged under
+`MIDI/`, and every starter sound remains an editable, unreviewed choice.
 
 The WAV contains rendered MIDI, not the original stems. It is a creative
 interpretation of notes, rhythm and structure, not an exact reconstruction or
@@ -136,6 +148,7 @@ and explore its compact [worked MIDI pack](examples/the-aisle-at-lidl/).
 | --- | --- |
 | Let an agent guide my first session | [AI-assisted first song](docs/AI_ASSISTED_START.md) |
 | Understand or obtain stems | [Stems and provider guide](docs/STEMS.md) |
+| Try the public finished-mix separation alpha | [Experimental local stem separation](docs/STEM_SEPARATION_ALPHA.md) |
 | Prepare a folder of existing separated parts | [Folder source import](docs/GETTING_STARTED.md#prepare-a-folder-of-existing-audio-parts) |
 | Prepare one local audio file safely | [Source import](docs/GETTING_STARTED.md#prepare-one-local-audio-asset) |
 | Install or troubleshoot manually | [Getting started](docs/GETTING_STARTED.md) |
@@ -149,7 +162,7 @@ and explore its compact [worked MIDI pack](examples/the-aisle-at-lidl/).
 | Review the architecture and code | [Technical tour](docs/TECHNICAL_TOUR.md) |
 | Use every expert command | Run `sunofriend --help` and read the [skill interface contract](skills/sunofriend/references/interface-contract.md) |
 | Share or promote the project | [Social media kit](SOCIAL.md) and [brand guide](BRAND.md) |
-| Follow the local separation plan | [Stem access and separation research](docs/STEM_ACCESS_AND_SEPARATION_RESEARCH.md) |
+| Inspect how separation was developed | [Developer preview](docs/SEPARATION_DEVELOPER_PREVIEW.md) and [research record](docs/STEM_ACCESS_AND_SEPARATION_RESEARCH.md) |
 
 ## Privacy, rights and limits
 
@@ -164,8 +177,8 @@ and explore its compact [worked MIDI pack](examples/the-aisle-at-lidl/).
 
 ## Contribute
 
-Reports from beginners, other DAWs, other operating systems, stem separators
-and AI tools are especially useful. Use the
+Reports from beginners, other Macs, other DAWs, separation results, operating
+systems and AI tools are especially useful. Use the
 [beginner first-song report](https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=beginner-first-song.yml),
 the
 [DAW / AI compatibility report](https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml),

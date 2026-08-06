@@ -1,6 +1,6 @@
 {
   "schema": "sunofriend.agent-capabilities.v1",
-  "interface_contract_version": "2026-07-29.3",
+  "interface_contract_version": "2026-08-06.1",
   "product": {
     "name": "Sunofriend",
     "status": "alpha",
@@ -42,7 +42,7 @@
     "standard_chat_boundary": "A standard ChatGPT conversation may guide but must not claim local execution.",
     "two_turn_start": [
       "Install and read the official skill using the agent's native skill mechanism; in Codex, use $skill-installer. Do not install the app or audio dependencies. Confirm availability, then stop.",
-      "Explicitly invoke the installed skill in a new turn; in Codex, use $sunofriend. Inspect first, explain changes, then offer the three newcomer routes."
+      "Explicitly invoke the installed skill in a new turn; in Codex, use $sunofriend. Inspect first, explain changes, then offer the four newcomer routes."
     ],
     "installation_protocol": {
       "stage_1": "Run the read-only plan. If source is absent, ask before preparing only the source checkout.",
@@ -60,13 +60,18 @@
   },
   "newcomer_routes": [
     {
+      "id": "finished_mix_alpha",
+      "input": "one authorised finished song on a supported Apple-silicon Mac",
+      "action": "plan and explicitly install the separate pinned alpha runtime, then use sunofriend-separate for local broad vocals and instrumental estimates; listen before any later MIDI step"
+    },
+    {
       "id": "have_stems",
       "input": "authorised already-separated synchronized audio parts",
       "action": "prepare supported non-WAV or mixed-format parts with source-import-folder, then use sunofriend create PROJECT --out-dir FRESH; prefer Simple / Make my song when the person operates the TUI"
     },
     {
       "id": "need_stems",
-      "action": "explain DAW export or independent authorised stem services; Sunofriend does not separate"
+      "action": "explain DAW export, independent authorised stem services or Sunofriend's experimental local two-stem alpha"
     },
     {
       "id": "worked_demo",
@@ -78,7 +83,12 @@
     "song_conversion_input_today": "synchronised top-level WAV stems",
     "stem_definition": "a grouped submix such as drums, bass, vocals or keys; not necessarily one isolated instrument",
     "ai_separated_stem_definition": "an estimate of a category from a finished mix, not the lost original studio track",
-    "built_in_full_mix_separation_available": false,
+    "built_in_full_mix_separation_available": true,
+    "built_in_full_mix_separation_scope": "experimental Apple-silicon local command producing broad vocals, broad instrumental and a diagnostic reconstruction; not narrow instrument families",
+    "separation_doctor_command": "sunofriend-separate doctor",
+    "separation_plan_command": "sunofriend-separate separate SONG --out FRESH --rights-category owned",
+    "separation_execute_suffix": "--execute --confirm-rights --open-review",
+    "separation_guide_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/codex/agent-portability-website/docs/STEM_SEPARATION_ALPHA.md",
     "website_accepts_audio": false,
     "one_asset_multi_format_import_available": true,
     "multi_format_song_project_import_available": true,
@@ -206,13 +216,14 @@
   },
   "experiments": {
     "finished_mix_separation": {
-      "status": "private_developer_research",
-      "public_product_route_available": false,
+      "status": "public_experimental_local_alpha",
+      "public_product_route_available": true,
       "website_upload_available": false,
-      "public_model_download_available": false,
-      "working_private_scope": "one authorised finished mix to broad vocals, broad instrumental and diagnostic reconstruction",
-      "downstream_proof": "reviewed private stems can enter the existing automatic MIDI, interpretation WAV and starter ZIP validation workflow",
-      "evidence_scope": "three source-distinct private evidence chains with complete-song and boundary listening",
+      "public_model_download_available": true,
+      "model_download_requires_explicit_approval": true,
+      "working_public_scope": "one authorised finished mix to broad vocals, broad instrumental and diagnostic reconstruction on Apple-silicon macOS",
+      "downstream_proof": "stems the musician finds useful can enter the existing automatic MIDI, interpretation WAV and starter ZIP workflow as a later explicit step",
+      "evidence_scope": "three source-distinct private evidence chains with complete-song and boundary listening, plus a public end-to-end generated-audio smoke test",
       "human_listening_required": true,
       "automated_checks_are_musical_preference": false,
       "development_method": [
@@ -223,10 +234,10 @@
         "preserve useful, poor and inconclusive evidence"
       ],
       "developer_preview_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/codex/agent-portability-website/docs/SEPARATION_DEVELOPER_PREVIEW.md",
-      "read_only_doctor_command": "PYTHONPATH=src ./.venv/bin/python scripts/private-separation-local.py --repository-root \"$PWD\" doctor",
+      "read_only_doctor_command": ".venv/bin/sunofriend-separate doctor",
       "read_only_doctor_loads_model": false,
       "read_only_doctor_processes_audio": false,
-      "public_checkout_may_report_private_profile_unavailable": true,
+      "public_checkout_may_report_setup_required": true,
       "feedback_effect": "Reports can repair instructions, expose portability gaps and motivate a bounded experiment; they do not automatically select a model or musical default.",
       "public_status_page": "https://sunofriend.com/research/separation/",
       "feedback_url": "https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml",
@@ -234,7 +245,8 @@
     }
   },
   "boundaries": {
-    "stem_separation": false,
+    "stem_separation": true,
+    "stem_separation_scope": "experimental broad vocals plus complementary instrumental only",
     "streaming_download": false,
     "exact_waveform_reconstruction": false,
     "guaranteed_perfect_transcription": false,

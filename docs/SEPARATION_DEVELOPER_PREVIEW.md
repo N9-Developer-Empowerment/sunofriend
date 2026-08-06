@@ -1,160 +1,157 @@
 # Stem-separation developer preview
 
-Sunofriend is developing an optional local step that can turn one authorised
-finished mix into estimated stems before the existing stems-to-MIDI workflow.
-The research is public so that musicians and developers can inspect the method,
-challenge its assumptions and influence what is built next.
+Sunofriend now publishes its first opt-in local finished-mix separator as an
+**experimental alpha**. Musicians can use the current implementation while the
+project improves its setup, long-song handling, model comparisons and role
+coverage through open participation.
 
-This is a **developer preview**, not a public separator. The current public
-product still begins with already-separated authorised audio parts. Private
-audio, model files and listening notes are not uploaded or redistributed.
+The public route is intentionally narrow and honest:
 
-## Overall development goals
+- one authorised finished mix in a supported audio format;
+- Apple-silicon macOS for the first verified platform;
+- one exact MIT Kim Vocal 2 MLX checkpoint and hash-pinned runtime;
+- broad `vocals.wav` plus complementary `instrumental.wav`;
+- a source reference and additive reconstruction diagnostic;
+- a local review page and private JSON review export; and
+- no upload, telemetry, silent MIDI conversion or automatic model promotion.
+
+This is not ground-truth recovery of the lost studio multitracks. It does not
+yet split drums, bass, keys or guitars separately. Human listening remains the
+authority for whether a result is musically useful.
+
+## Overall development goal
 
 The long-term goal is one understandable local journey:
 
-1. supply music you own or are authorised to process;
+1. supply music you own or may process;
 2. obtain useful estimated stems when original multitracks are unavailable;
-3. compare several analytical and optional local-AI MIDI interpretations;
+3. compare analytical and optional local-AI MIDI interpretations;
 4. hear a balanced MIDI-derived song interpretation;
-5. edit the MIDI and suggested instruments in GarageBand or another DAW; and
-6. feed explicit user observations back into better defaults, documentation
-   and future experiments.
+5. edit MIDI and suggested instruments in GarageBand or another DAW; and
+6. use explicit observations to improve later bounded releases.
 
-Sunofriend should make a useful musical interpretation, not pretend to recover
-the lost studio session. Human listening remains the authority for musical
-quality. Automated checks cover identities, geometry, timing, accounting and
-reproducibility.
+Sunofriend should make useful musical evidence and interpretations, not hide
+uncertainty behind a single score or model.
 
-## What is new
+## Public alpha architecture
 
-The private local separation surface now has three deliberately separate
-layers:
+The public slice is separate from the older private evidence harness:
 
-- [`_separation_private_local_contract.py`](../src/sunofriend/_separation_private_local_contract.py)
-  owns status vocabulary, immutable permissions, profile configuration and
-  backend argument construction;
-- [`_separation_private_local_workflow.py`](../src/sunofriend/_separation_private_local_workflow.py)
-  coordinates start, review and finish without redefining policy; and
-- [`private-separation-local.py`](../scripts/private-separation-local.py)
-  is the thin developer command adapter.
+- [`separation_alpha.py`](../src/sunofriend/separation_alpha.py) owns the
+  read-only doctor, plan, rights confirmation, atomic output and review page;
+- [`separation_worker.py`](../src/sunofriend/separation_worker.py) loads the
+  exact audited model offline once and processes bounded contiguous chunks;
+- [`setup-separation-alpha-macos.sh`](../scripts/setup-separation-alpha-macos.sh)
+  explains and explicitly installs the pinned source, model and runtime; and
+- [`STEM_SEPARATION_ALPHA.md`](STEM_SEPARATION_ALPHA.md) is the musician-facing
+  setup, use, listening and feedback guide.
 
-The separation contract keeps every public-product permission false. Moving
-policy out of orchestration makes the boundary easier to review, test and
-extend without hiding a product decision inside audio-processing code.
+The model worker reuses the already-audited loader and fixed model
+configuration. The public coordinator keeps installation, planning, execution,
+review and downstream MIDI conversion as separate explicit actions.
 
-The public research surface adds:
+## How it was developed
 
-- a plain-language [status page](https://sunofriend.com/research/separation/);
-- machine-readable status in
-  [`agent-capabilities.json`](https://sunofriend.com/agent-capabilities.json);
-- agent discovery in [`llms.txt`](https://sunofriend.com/llms.txt); and
-- the existing first-song and compatibility feedback routes.
+Each increment followed a repeatable evidence loop:
 
-## How the feature was developed
+1. state one narrow musical or engineering question;
+2. bind authorised inputs and exact runtime identities;
+3. run one bounded experiment without activating the result;
+4. check geometry, finite audio, timing, hashes and additive accounting;
+5. bind a human listening review to that exact result; and
+6. preserve useful, poor and inconclusive observations before changing policy.
 
-Each increment follows the same evidence loop:
+Private evaluation covered three source-distinct full-song chains plus targeted
+join reviews. The listener judged the overall separation and audio quality good
+to good enough, while also noting that join artefacts could be subjective and
+hard to hear in context. That was sufficient to support an experimental public
+alpha, not a claim of universal accuracy.
 
-1. **State one narrow question.** Examples include whether a whole song can be
-   processed in bounded chunks or whether a join remains useful in context.
-2. **Seal the inputs.** Authorised source audio, runtime components and result
-   files receive exact identities. Source files are not silently modified.
-3. **Run one bounded experiment.** New results remain inactive and cannot
-   become a product default merely because execution succeeded.
-4. **Check machine evidence.** Geometry, finite audio, reconstruction
-   accounting, boundaries, timing and reproducibility are checked separately
-   from musical judgement.
-5. **Listen explicitly.** A local review names the exact question and exact
-   result. Clean, poor and inconclusive outcomes are all preserved.
-6. **Promote nothing automatically.** Human feedback can motivate another
-   experiment, documentation repair or product proposal, but it cannot select
-   a model, merge a vocal line or enable a public route by itself.
+The new public smoke test exercises the complete route. All four output WAVs
+retain identical stereo 44.1 kHz PCM24 duration; the test reconstruction stayed
+within one PCM24 least-significant bit of its level-managed source reference;
+and the self-hashed report verified. Musical accuracy still requires listening.
 
-This approach came directly from practical listening. Some measurable joins
-were hard to hear in musical context, several candidates were useful for
-different vocal lines, and a technically valid result was not always the most
-musically helpful one. The code therefore keeps evidence, candidate identity
-and human decisions distinct.
+## Run the public route
 
-## What you can use today
-
-### Try the released public workflow
-
-The copyright-safe demo exercises the normal automatic MIDI, listening WAV and
-ZIP path without personal music:
+Inspect setup without changing the Mac:
 
 ```bash
-sunofriend demo --out-dir FRESH
+scripts/setup-separation-alpha-macos.sh --plan
 ```
 
-With an authorised folder of existing stems:
+After reading and accepting the linked MIT model terms:
 
 ```bash
-sunofriend create PROJECT --out-dir FRESH
+scripts/setup-separation-alpha-macos.sh \
+  --install --accept-model-terms
+.venv/bin/sunofriend-separate doctor
 ```
 
-Both routes produce automatic, unreviewed results. Start with the balanced WAV,
-then open the individual MIDI and starter instrument guidance.
-
-### Inspect the developer boundary
-
-From a prepared development checkout, the doctor is read-only. It does not
-load the separator, process audio or write a song result:
+Plan a song without creating its output:
 
 ```bash
-PYTHONPATH=src ./.venv/bin/python \
-  scripts/private-separation-local.py --repository-root "$PWD" doctor
+.venv/bin/sunofriend-separate separate SONG \
+  --out FRESH \
+  --rights-category owned
 ```
 
-On a normal public checkout it may report that the private evaluation profile
-is unavailable. That is an expected boundary, not an invitation to download a
-checkpoint. The complete owner-only workflow remains documented in
-[`PRIVATE_SEPARATION_DEVELOPMENT.md`](PRIVATE_SEPARATION_DEVELOPMENT.md#approachable-local-start-command)
-for code review and reproducibility.
-
-The focused contract tests are:
+Then run only after confirming the rights statement:
 
 ```bash
-./.venv/bin/python -m pytest \
-  tests/test_separation_private_local_workflow.py \
-  tests/test_separation_private_render_review_equivalence.py \
-  tests/test_separation_reviewed_output_import_assessment.py \
-  tests/test_separation_reviewed_output_import.py -q
+.venv/bin/sunofriend-separate separate SONG \
+  --out FRESH \
+  --rights-category owned \
+  --execute --confirm-rights --open-review
 ```
 
-## Give feedback that can be acted on
+The other affirmative categories are `licensed`, `authorised_private_use` and
+`statutory_exception`. The output is always labelled `complete_unreviewed` and
+`human_listening_required`.
 
-Use the existing routes rather than attaching music:
+## Reviewable code and tests
 
-- [first-song report](https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=beginner-first-song.yml)
-  for setup clarity, finding the result and whether the interpretation helped;
-- [compatibility and developer report](https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml)
-  for another Mac, operating system, coding agent, DAW, stem provider or exact
-  failing step.
+The focused public contract tests are:
 
-Useful feedback includes:
+```bash
+.venv/bin/python -m pytest \
+  tests/test_separation_alpha.py \
+  tests/test_interface_contract.py -q
+```
 
-- what you tried and what you expected;
-- operating system, hardware, agent and DAW;
-- whether the problem was installation, separation, MIDI, instrumentation,
-  mixing, export or explanation;
-- the smallest reproducible command or synthetic/demo case; and
-- what sounded useful, unhelpful or impossible to judge.
+The longer private research harness remains available for developers who need
+the evidence chain, independent chunk execution, boundary packages and
+historical experiments. It is no longer the beginner entry point and its older
+private-only product statements are historical.
 
-Do not attach private stems, vocals, unreleased songs, model files or private
-review exports. Feedback is evidence for the next bounded change. It is not an
-automatic vote that changes a model or musical default.
+## Feedback that can improve the alpha
 
-## What must happen before public separation
+The local review page asks whether the vocals and instrumental are useful,
+whether all tracks were heard and what bleed, missing sound, artefacts or join
+changes were audible. Exporting that JSON is local only.
 
-A public separator still needs:
+Public text feedback belongs in the existing
+[compatibility and developer report](https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml).
+Useful reports include:
 
-- a beginner-safe start, progress, recovery and removal journey;
-- useful roles beyond broad vocals and instrumental;
-- song-disjoint evaluation across more music, machines and listeners;
-- redistributable dependency and checkpoint terms;
-- bounded resource behaviour and safe failure recovery; and
-- an explicit product decision backed by both tests and human listening.
+- Mac model and macOS version;
+- source format and approximate duration;
+- the first setup or command that was confusing or failed;
+- whether vocals and instrumental were useful, partly useful or unusable;
+- audible bleed, missing sound, metallic texture, level changes or joins; and
+- whether those stems improved the later MIDI interpretation.
 
-Until those gates are met, the research remains inspectable and discussable,
-while actual separation stays private and developer-controlled.
+Do not attach private music, vocals, stems or review exports to a public issue.
+Feedback can repair instructions, expose a platform gap or motivate a bounded
+comparison. It never silently selects a model or musical default.
+
+## Next engineering increments
+
+1. improve installer recovery and progress on more Apple-silicon Macs;
+2. expose clearer long-song progress and join diagnostics;
+3. compare additional checkpoints with clear usable terms;
+4. add narrower instrument and drum-family roles;
+5. connect explicitly reviewed stems to MIDI plus WAV creation with fewer
+   manual steps; and
+6. broaden tests across songs, machines and listeners without uploading
+   private audio.

@@ -187,7 +187,10 @@ export default function Home() {
               </li>
               <li>
                 <strong>You choose your starting point.</strong>
-                <span>Existing stems, help finding stems or the worked demo.</span>
+                <span>
+                  Separate an authorised finished song experimentally, use
+                  existing stems, get help finding stems or run the demo.
+                </span>
               </li>
               <li>
                 <strong>The beginner route makes a first result.</strong>
@@ -211,12 +214,32 @@ export default function Home() {
           <h2 id="choose-title">Pick the sentence that sounds like you.</h2>
           <p>
             After installing and invoking the skill, your agent should offer
-            these same three routes one at a time.
+            these same four routes one at a time.
           </p>
         </div>
         <div className="journey-grid">
-          <article id="have-stems" className="journey-card journey-primary">
-            <span className="card-number">A / I HAVE STEMS</span>
+          <article id="separate-song" className="journey-card journey-primary">
+            <span className="card-number">A / I HAVE A FINISHED SONG</span>
+            <h3>I want Sunofriend to estimate stems locally.</h3>
+            <p>
+              On a supported Apple-silicon Mac, the opt-in public alpha can
+              estimate broad vocals and complementary instrumental from one
+              authorised song. You listen before deciding whether either stem
+              is useful.
+            </p>
+            <ul>
+              <li>Audio stays on your Mac</li>
+              <li>Separate model and runtime approval required</li>
+              <li>Two broad stems, not individual instrument families</li>
+              <li>Experimental output is unreviewed</li>
+            </ul>
+            <Link className="text-link" href="/research/separation/">
+              See setup, limits and feedback →
+            </Link>
+          </article>
+
+          <article id="have-stems" className="journey-card">
+            <span className="card-number">B / I HAVE STEMS</span>
             <h3>I already have separate audio files.</h3>
             <p>
               Give your agent the folder location. It will check the files and,
@@ -235,13 +258,12 @@ export default function Home() {
           </article>
 
           <article id="need-stems" className="journey-card">
-            <span className="card-number">B / I NEED STEMS</span>
-            <h3>I only have a finished song.</h3>
+            <span className="card-number">C / I NEED OTHER STEM OPTIONS</span>
+            <h3>I want a DAW export or an independent service.</h3>
             <p>
               A stem is a synchronized grouped part, not necessarily one
-              instrument. Sunofriend does not yet separate a mixed song, but
-              the guide explains DAW exports and independent local or cloud
-              options.
+              instrument. The guide explains DAW exports and independent local
+              or cloud options when the two-stem alpha is not suitable.
             </p>
             <div className="journey-links">
               <Link className="text-link" href="/stems/">
@@ -258,7 +280,7 @@ export default function Home() {
           </article>
 
           <article id="want-demo" className="journey-card">
-            <span className="card-number">C / I WANT THE DEMO</span>
+            <span className="card-number">D / I WANT THE DEMO</span>
             <h3>I want to try it without personal music or paid stems.</h3>
             <p>
               Let your agent run a copyright-safe synthetic stem project
@@ -360,20 +382,22 @@ export default function Home() {
             tested on a MacBook so far. Windows and Linux remain unverified.
           </p>
           <p>
-            <strong>It is not a stem separator.</strong> Bring already-separated
-            parts from your own project or an authorised third-party service.
-            Sunofriend can prepare supported formats as canonical WAV stems. See the{" "}
+            <strong>It is not a one-click multitrack recovery service.</strong>{" "}
+            The public local alpha currently estimates broad vocals plus
+            complementary instrumental on a supported Apple-silicon Mac. Bring
+            narrower parts from your own project or another authorised service
+            when you need separate drums, bass, keys or guitars. See the{" "}
             <Link className="inline-link" href="/stems/">
               neutral stems guide
             </Link>
             .
           </p>
           <p>
-            <strong>The separation research is public, not the separator.</strong>{" "}
-            A private local two-stem prototype now feeds the existing MIDI and
-            interpretation workflow after explicit listening review. Read the{" "}
+            <strong>The working two-stem slice is now a public alpha.</strong>{" "}
+            It keeps setup, rights confirmation, local inference, listening and
+            later MIDI conversion as explicit separate steps. Read the{" "}
             <Link className="inline-link" href="/research/separation/">
-              evidence, open questions and feedback boundary
+              setup, limits, evidence and feedback guide
             </Link>
             .
           </p>

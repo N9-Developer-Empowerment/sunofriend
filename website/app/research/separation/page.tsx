@@ -3,9 +3,9 @@ import Link from "next/link";
 import { links, separationResearch } from "../../content";
 
 export const metadata: Metadata = {
-  title: "Stem separation research — Sunofriend",
+  title: "Experimental local stem separation — Sunofriend",
   description:
-    "Public status and feedback boundary for Sunofriend's private local stem-separation research.",
+    "Try Sunofriend's public local two-stem alpha, understand its limits and share text-only feedback.",
   alternates: { canonical: "/research/separation/" },
 };
 
@@ -32,84 +32,135 @@ export default function SeparationResearch() {
           <span className="wordmark-mark">S</span>
           <span>SUNOFRIEND</span>
         </Link>
-        <nav aria-label="Separation research navigation">
+        <nav aria-label="Separation alpha navigation">
           <a href="#working">What works</a>
+          <a href="#try">How to try it</a>
           <a href="#development">How it was built</a>
-          <a href="#use">Try and inspect</a>
-          <a href="#boundary">Current boundary</a>
+          <a href="#limits">Limits</a>
           <a href="#feedback">Give feedback</a>
           <Link href="/stems/">Stem guide</Link>
         </nav>
-        <Link className="header-cta" href="/demo/">
-          Try the public demo
-        </Link>
+        <ExternalLink className="header-cta" href={links.repo}>
+          View the code ↗
+        </ExternalLink>
       </header>
 
       <article className="agent-page">
         <header>
           <div className="eyebrow">
             <span className="live-dot" aria-hidden="true" />
-            PUBLIC RESEARCH STATUS · PRIVATE AUDIO
+            PUBLIC EXPERIMENTAL ALPHA · AUDIO STAYS LOCAL
           </div>
-          <h1>We are testing local stem separation in the open.</h1>
+          <h1>Try the useful slice. Help improve the next one.</h1>
           <p className="lede">
-            The evidence, limits and next questions are public so musicians and
-            developers can challenge the direction. The audio, model files and
-            listening notes remain private on the tester&apos;s Mac.
+            Sunofriend can now estimate broad vocals and complementary
+            instrumental from one authorised finished song on an Apple-silicon
+            Mac. You hear the source, both stems and their reconstruction before
+            deciding whether anything is useful.
           </p>
         </header>
 
         <section id="working">
-          <h2>What now works in private development</h2>
+          <h2>What works now</h2>
           <div className="agent-grid">
             <div className="agent-card">
-              <span className="card-number">BOUNDED WORKING SCOPE</span>
+              <span className="card-number">PUBLIC WORKING SCOPE</span>
               <h3>Finished mix to two broad stems</h3>
               <p>{separationResearch.workingPrivateScope}.</p>
               <p>
-                The broad instrumental is not individual bass, keys, drums or
-                guitar. The reconstruction is a diagnostic integrity check, not
-                a stem for normal use.
+                The instrumental is the complement of the estimated vocals. It
+                is not individual bass, keys, drums or guitar.
               </p>
             </div>
             <div className="agent-card">
-              <span className="card-number">DOWNSTREAM PROOF</span>
-              <h3>Separation can feed the useful Sunofriend workflow</h3>
+              <span className="card-number">LISTENING PACKAGE</span>
+              <h3>Four local tracks make the boundary audible</h3>
+              <p>
+                The output includes a level-managed source reference, vocals,
+                instrumental and an additive reconstruction check, plus a local
+                page with review prompts and private JSON export.
+              </p>
+            </div>
+            <div className="agent-card">
+              <span className="card-number">DOWNSTREAM PATH</span>
+              <h3>Useful stems can continue to MIDI</h3>
               <p>{separationResearch.downstreamProof}.</p>
               <p>
-                That output is still automatic and unreviewed. It is a musical
-                interpretation, not an exact reconstruction or release master.
-              </p>
-            </div>
-            <div className="agent-card">
-              <span className="card-number">EVIDENCE</span>
-              <h3>Whole songs, joins and repeatable execution</h3>
-              <p>{separationResearch.evidenceScope}.</p>
-              <p>
-                Reviews preserve clean, audible and uncertain outcomes. A join
-                can be measurable yet musically acceptable, so microscopic
-                diagnostics do not automatically veto a useful private result.
+                The alpha never silently activates a stem or starts MIDI
+                conversion. The musician makes that later decision.
               </p>
             </div>
             <div className="agent-card">
               <span className="card-number">HUMAN BOUNDARY</span>
               <h3>Software checks evidence; people judge music</h3>
               <p>{separationResearch.humanAuthority}.</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="try">
+          <h2>How to try the public alpha</h2>
+          <p className="lede">
+            Start with the Sunofriend skill if you want an agent to guide the
+            setup. The separate model/runtime download is never part of the
+            ordinary demo and requires its own approval.
+          </p>
+          <div className="agent-grid">
+            <div className="agent-card">
+              <span className="card-number">01 · INSPECT SETUP</span>
+              <h3>Plan before downloading</h3>
               <p>
-                Playback activity never becomes a preference. A result advances
-                only after an explicit, result-bound listening review.
+                Run <code>{separationResearch.setupPlanCommand}</code>. It
+                explains platform, model terms, size, network use and install
+                location without changing the Mac.
+              </p>
+            </div>
+            <div className="agent-card">
+              <span className="card-number">02 · VERIFY</span>
+              <h3>Check the exact local profile</h3>
+              <p>
+                After explicit installation, run{" "}
+                <code>{separationResearch.developerDoctorCommand}</code>. The
+                doctor hashes the pinned files without loading the model or
+                processing audio.
+              </p>
+            </div>
+            <div className="agent-card">
+              <span className="card-number">03 · PLAN THE SONG</span>
+              <h3>Review rights, source and output first</h3>
+              <p>
+                Run <code>{separationResearch.separationPlanCommand}</code> with
+                an accurate rights category. Planning writes no song output.
+              </p>
+            </div>
+            <div className="agent-card">
+              <span className="card-number">04 · LISTEN</span>
+              <h3>Execute only after confirming authority</h3>
+              <p>
+                Add <code>--execute --confirm-rights --open-review</code>. The
+                model runs locally with offline settings. Judge usefulness,
+                bleed, missing content, texture and joins before using a stem.
               </p>
             </div>
           </div>
+          <p className="guide-note">
+            Read the complete{" "}
+            <ExternalLink href={links.separationDeveloperGuide}>
+              setup, architecture, commands and tests ↗
+            </ExternalLink>
+            . Sunofriend never downloads a song or supplies permission to
+            process it.
+          </p>
         </section>
 
         <section id="development">
           <h2>How the feature was developed</h2>
           <p className="lede">
-            Development follows an evidence loop rather than promoting the
-            first model that runs. The loop was shaped by real listening:
-            measurable joins could be musically unobtrusive, and different
-            candidates sometimes followed different useful vocal lines.
+            The first public slice follows a bounded evidence loop rather than
+            promoting the first model that ran. Private development covered
+            three source-distinct full-song chains and targeted join reviews;
+            the public route then passed an end-to-end generated-audio smoke
+            test with exact PCM24 geometry and reconstruction accounting.
           </p>
           <div className="agent-grid">
             {separationResearch.developmentLoop.map((step, index) => (
@@ -122,83 +173,35 @@ export default function SeparationResearch() {
             ))}
           </div>
           <p className="guide-note">
-            The code keeps immutable policy and profile configuration separate
-            from orchestration and the command adapter. That makes permission
-            changes visible in review and keeps a successful experiment from
-            silently becoming a product feature. Read the complete{" "}
-            <ExternalLink href={links.separationDeveloperGuide}>
-              developer preview ↗
-            </ExternalLink>
-            .
+            Reports can expose a setup failure or motivate a new bounded test;
+            they never silently select a model or musical default.
           </p>
         </section>
 
-        <section id="use">
-          <h2>What you can use and inspect today</h2>
-          <div className="agent-grid">
-            <div className="agent-card">
-              <span className="card-number">PUBLIC MUSIC WORKFLOW</span>
-              <h3>Make a result without private separation</h3>
-              <p>
-                Run <code>sunofriend demo --out-dir FRESH</code> for the
-                copyright-safe example, or{" "}
-                <code>sunofriend create PROJECT --out-dir FRESH</code> with
-                authorised existing stems. Both produce automatic, unreviewed
-                MIDI, a balanced interpretation WAV and a starter ZIP.
-              </p>
-              <Link className="text-link" href="/demo/">
-                Try the public demo →
-              </Link>
-            </div>
-            <div className="agent-card">
-              <span className="card-number">READ-ONLY DEVELOPER CHECK</span>
-              <h3>Inspect the private boundary without processing audio</h3>
-              <p>
-                From a prepared development checkout, run{" "}
-                <code>{separationResearch.developerDoctorCommand}</code>. It
-                does not load a model or write a song result. A public checkout
-                may correctly report that the private evaluation profile is
-                unavailable.
-              </p>
-              <ExternalLink
-                className="text-link"
-                href={links.separationDeveloperGuide}
-              >
-                Read commands, architecture and tests ↗
-              </ExternalLink>
-            </div>
-            <div className="agent-card">
-              <span className="card-number">OVERALL GOAL</span>
-              <h3>One understandable path from audio to editable music</h3>
-              <p>
-                The aim is optional local separation, several inspectable MIDI
-                interpretations, a useful balanced listening WAV, suggested
-                instruments and an editable GarageBand or DAW handoff.
-              </p>
-            </div>
-            <div className="agent-card">
-              <span className="card-number">FEEDBACK EFFECT</span>
-              <h3>Reports guide the next bounded change</h3>
-              <p>{separationResearch.feedbackImpact}.</p>
-            </div>
-          </div>
-        </section>
-
-        <section id="boundary">
-          <h2>Why it is not a public separator yet</h2>
+        <section id="limits">
+          <h2>What remains experimental</h2>
           <div className="agent-grid">
             <div className="agent-card">
               <span className="card-number">STATUS</span>
               <h3>{separationResearch.status}</h3>
               <p>
-                There is no separation button in Simple, Studio, the public
-                CLI, the website or the beginner skill journey. Sunofriend does
-                not upload audio and does not redistribute the private model.
+                It is a separate command rather than a Simple/TUI button. It is
+                verified on Apple-silicon macOS and needs roughly 500 MB for the
+                pinned model plus runtime and working space.
               </p>
             </div>
             <div className="agent-card">
-              <span className="card-number">OPEN GATES</span>
-              <h3>Useful research is not the same as a supported feature</h3>
+              <span className="card-number">NOT GROUND TRUTH</span>
+              <h3>Reconstruction is necessary, not sufficient</h3>
+              <p>
+                A close reconstruction proves additive accounting. Vocals can
+                still contain accompaniment and instrumental can still contain
+                vocals, holes or model artefacts.
+              </p>
+            </div>
+            <div className="agent-card">
+              <span className="card-number">NEXT WORK</span>
+              <h3>Public use should sharpen the roadmap</h3>
               <ul>
                 {separationResearch.openGates.map((gate) => (
                   <li key={gate}>{gate};</li>
@@ -206,11 +209,6 @@ export default function SeparationResearch() {
               </ul>
             </div>
           </div>
-          <p className="guide-note">
-            The current public Sunofriend route still starts with authorised,
-            already-separated parts. See the <Link href="/stems/">stem guide</Link>{" "}
-            or use the copyright-safe <Link href="/demo/">built-in demo</Link>.
-          </p>
         </section>
 
         <section id="feedback">
@@ -219,11 +217,11 @@ export default function SeparationResearch() {
           <div className="agent-grid">
             <div className="agent-card">
               <span className="card-number">MUSICIANS</span>
-              <h3>Try the current stems-to-MIDI product</h3>
+              <h3>Tell us whether the stems helped</h3>
               <p>
-                Tell us whether setup was understandable, which stem provider
-                you used, which MIDI parts were useful and whether the balanced
-                interpretation helped you hear the song differently.
+                Report whether vocals and instrumental were useful, partly
+                useful or poor, and describe bleed, missing sound, metallic
+                texture, level changes or joins. “Cannot tell” is useful too.
               </p>
               <ExternalLink className="text-link" href={links.firstSong}>
                 Send a first-song report ↗
@@ -231,15 +229,14 @@ export default function SeparationResearch() {
             </div>
             <div className="agent-card">
               <span className="card-number">DEVELOPERS AND TESTERS</span>
-              <h3>Challenge the feature boundary</h3>
+              <h3>Report the first confusing or failing step</h3>
               <p>
-                Report operating system, hardware, agent, DAW, separator,
-                source format, exact command and the first confusing or failing
-                step. Describe audible behaviour without uploading private
-                music.
+                Include Mac model, macOS, source format, approximate duration,
+                coding agent and exact command. Do not attach private audio,
+                vocals, stems or review exports.
               </p>
               <ExternalLink className="text-link" href={links.compatibility}>
-                Send compatibility feedback ↗
+                Send text-only compatibility feedback ↗
               </ExternalLink>
             </div>
           </div>

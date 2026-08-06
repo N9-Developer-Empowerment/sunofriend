@@ -73,7 +73,10 @@ Simple mode is the default `sunofriend tui` experience.
 - One fresh output folder outside the source project.
 
 Folder preparation is a distinct, explicit step. It does not separate a
-finished mix, repair alignment or run when the TUI merely loads a path.
+finished mix, repair alignment or run when the TUI merely loads a path. A
+separate opt-in `sunofriend-separate` public alpha can estimate broad vocals
+and complementary instrumental on supported Apple-silicon Macs; it is not yet
+a Simple/TUI action and never silently starts MIDI conversion.
 
 ### One-action journey
 
@@ -120,12 +123,20 @@ The `AUTOMATIC-SONG` result contains:
 
 - individual exact automatic-primary MIDI files;
 - one combined General MIDI interpretation;
+- separately labelled, sound-aware MIDI with one named automatic starter
+  instrument per part;
+- short per-part starter-sound previews and a GarageBand instrument guide;
 - one balanced MIDI-derived song-interpretation WAV;
 - a GarageBand fader recipe;
 - technical mix evidence;
 - a path-free result receipt;
 - `START-HERE.txt`; and
 - one deterministic ZIP.
+
+The automatic starter instruments use the same deterministic General MIDI
+policy as the combined interpretation. They are immediately usable proxies,
+not physical-instrument recognition, embedded Apple factory content or
+human-reviewed patch winners. Exact automatic-primary MIDI remains unchanged.
 
 The WAV contains rendered MIDI only. Source audio supplies timing, song
 horizon and relative-level evidence but is not mixed into it. The renderer

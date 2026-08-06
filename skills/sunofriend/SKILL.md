@@ -1,723 +1,205 @@
 ---
 name: sunofriend
-description: Guide beginners and experts through local Sunofriend setup and use. Prepare one authorised audio asset or a folder of 2–64 already-separated supported audio parts as immutable evidence plus canonical PCM24 WAV, then turn synchronized stems into editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not perform generic stem separation, music downloading, lyric writing, DAW GUI editing, human-approved release mastering or unapproved dependency/model installation.
+description: Guide beginners and experts through local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental on a supported Apple-silicon Mac, or prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-01.1 -->
+<!-- sunofriend-interface-contract: 2026-08-06.1 -->
 
 # Sunofriend
 
 **Listen deeper. Create further.**
 
-Sunofriend turns separated song parts into editable MIDI and a balanced
-MIDI-derived WAV. It keeps multiple analytical, repaired and optional local-AI
-interpretations available because a different method can work best for each
-instrument or phrase.
+Sunofriend turns useful separated song parts into editable MIDI, named starter
+sounds and a balanced MIDI-derived WAV. It preserves several analytical,
+repaired and optional local-AI interpretations because a different method can
+work best for each instrument or phrase.
 
 The name comes from Hindi **सुनो** (*suno*), “listen.” Sunofriend is an
 independent Unsigned Media Ltd project and is not related to or affiliated
 with Suno Inc.
 
-## Begin with the person, not the command line
+## Begin with the person
 
-When the user is new or does not provide a precise expert task:
+For a newcomer or imprecise request:
 
 1. Explain the outcome in one sentence: editable MIDI, a listening WAV and a
-   ZIP, all made locally.
+   ZIP, made locally after useful stems exist.
 2. Ask one question at a time.
-3. Offer exactly these first choices:
+3. Offer exactly four choices:
    - **Try the built-in demo**
+   - **Start with one finished song (experimental local separation)**
    - **Use separate audio parts (stems) I already have**
    - **Help me get stems I am allowed to process**
-4. If the user is unsure, recommend the built-in demo.
-5. Do not begin with Git, Python, Homebrew, FluidSynth, model names or the full
-   command catalogue.
-6. Do not claim an ordinary browser chat can control the Mac. Continue only in
-   an agent environment with local file and terminal access; otherwise point
-   the user to a Codex local session.
+4. Recommend the demo when the person is unsure.
+5. Do not begin with model names, Python, Homebrew or the full command list.
+6. Do not claim an ordinary browser chat can control the Mac. Hands-on work
+   requires a coding agent with local workspace and terminal access.
 
-Keep the first journey small. Explain the next action, perform or prepare it,
-report the result, then move on.
+Explain one next action, perform or prepare it, report the result, then move
+on.
 
 ## Preserve the product boundary
 
-- Work locally. Do not upload stems, vocals, MIDI, chord files, private notes
-  or feedback.
-- Use only music the user owns or is authorised to process.
-- Sunofriend does not download songs or separate a full mix into stems.
-- The backend-neutral S3 separation contracts, controlled-fake harness,
-  blocked-only checkpoint/admission records, private static checkpoint
-  inspector, trusted-inspection admission binding and parent-only live
-  checkpoint-descriptor lease, path-free request V2, exact lease reservation
-  and blocked launch-plan V2, plus fake-only request/launch/result records and
-  process-free framing/quarantine observation and native fake-launch V2
-  contract, are engineering groundwork, not a usable separator, model
-  installation or finished-song command. The
-  inspector and lease read, classify, retain and recheck exact local
-  checkpoint bytes without loading a model or exposing the raw descriptor.
-  The fake transport and native fake-launch V2 records permit no execution.
-  Native fake-launch V2 permanently remains `blocked`/`not_run`: it seals
-  caller-claimed artifact identities and requires child-only FD mapping,
-  Darwin close-all behaviour and supervised lifecycle rules, but the record
-  itself measures no artifact, invokes no native code, starts no child and
-  proves no descriptor closure. Existing V1 records remain historical and
-  non-authoritative.
-  An internal macOS-only builder can make a fresh owner-only,
-  provenance-bound launcher artifact with split object compilation and direct
-  linking. A test-only canary has imported a remeasured artifact and, for
-  every logical permutation of exact physical source FDs 3/4/5 plus a fixed
-  representative matrix of ordinary low, scratch-candidate collision, mixed
-  target-collision and near-limit layouts, observed only FDs 0–5 in the child
-  while preserving the
-  parent descriptor table. The native call preallocates a private exact-child
-  owner before spawn rather than returning a bare PID. That owner exposes no
-  raw PID, cannot be constructed/copied/pickled, caches exact wait, rejects
-  post-reap signals, kills and exact-reaps on last-reference loss, and poisons
-  itself after a stolen external reap. Its emergency destructor sends
-  `SIGKILL` and uses a bounded best-effort nonblocking reap; that fallback is
-  never terminal evidence. A later model-free matrix v3 creates a private
-  session and deliberately surviving descendant, observes leader exit without
-  reaping, drains the complete group and exact-reaps only after a leader-only
-  `libproc` census. It retains no PID/PGID and proves the native primitive, not
-  real-model integration. Model-free matrix v4 adds one bounded owner method
-  that uses `proc_pidpath` and `csops` internally to match the exact child
-  process image and kernel CDHash without exporting PID, PGID or paths. Wrong
-  path/CDHash canaries preserve ownership before a correct match and exact
-  reap. Model-free matrix v5 adds a factory-only single-use kernel-network
-  broker. It starts the bounded log stream before spawn, matches transient
-  kernel-event PIDs through the opaque owner, retains no PID/destination/raw
-  message and exact-reaps a fixed self-sandboxing worker after one loopback
-  denial. Model-free matrix v6 adds the third primitive: only after a fixed
-  PID-free worker-ready marker, the opaque owner supplies two stable executable-
-  region snapshots without exporting PID/PGID; mapped files are remeasured
-  after exact reap and final evidence retains no paths. Model-free matrix v7
-  combines all three primitives around one fixed self-sandboxing worker and
-  derives the terminal projection from that same exact owner after normal zero
-  exit, whole-group drain and exact reap. It retains no raw PID/PGID, path or
-  destination and opens no model, checkpoint or audio. Model-free matrix v8
-  adds a fixed five-descriptor entry point and proves the existing Kim ready/
-  release schema and release bytes through the same opaque-owner lifecycle,
-  again without a model, checkpoint or audio. These proofs are still not
-  attached to Kim. A pure bounded frame contract now fixes the future fd3/fd4
-  request/result values, including private request paths, exact checkpoint and
-  nonce binding, path-free results and private process identity for the opaque
-  owner match. Model-free matrix v9 now adds a fixed stdlib-only bootstrap
-  whose first effectful user-code action hardens descriptors 3–7. Two malformed
-  request frames are rejected before readiness with no result, then
-  group-drained and exact-reaped. The valid canary decodes fd3, completes the
-  existing ready/release lifecycle, writes the exact fd4 result, lets the
-  opaque owner match and discard its private PID/PGID, and retains no path or
-  process identifier. It does not open any request path, read fd5, import a
-  model, read audio or use a network. Frames remain values rather than spawn
-  authority. Model-free matrix v10 now also proves a separate fixed native Kim
-  sandbox launch shape: the native boundary accepts only
-  `/usr/bin/sandbox-exec`, constructs the staging-tree write allowlist and
-  supplies an offline environment; deliberate loopback, fork and outside-write
-  canaries return `EPERM` while the same opaque lifecycle succeeds. This still
-  opens no checkpoint, model or audio, and the bootstrap is not the real Kim
-  worker. The audited bridge can now inspect and tensor-load the accepted
-  checkpoint from an inherited non-inheritable read-only descriptor without
-  reopening its path. A fixed real native adapter now validates fd3, binds its
-  parent-selected worker and repository, supplies fd5 to that loader, retains
-  the fd6/fd7 observation gate, confines quarantine plus the private pathful
-  Python-closure claim to staging and can emit the path-free fd4 worker result.
-  Dependency-substituted tests only have exercised this wiring: the adapter
-  has not been launched by the opaque native owner and has opened no accepted
-  checkpoint, model or authorised audio. A fixed private parent verifier now
-  reopens the report-bound source, both real-worker PCM24 outputs, the private
-  Python-closure claim and every claimed module, repeats those mutable checks
-  and returns path-free evidence. It does not verify the checkpoint lease,
-  native session or live observers. The real-Kim live parent executor and
-  observer attachment to an accepted run remain absent. A
-  dependency-substituted parent lifecycle now fixes observation/release,
-  whole-group supervision, fd4 decoding, staging-verification and private
-  identity-consumption order, including cleanup after observer failure, but it
-  opens no native process, checkpoint, model, audio or staging path and is not
-  execution provenance. A fixed developer-only macOS adapter now applies that
-  order to the real sandbox method and opaque owner with the fixed stdlib
-  bootstrap. It bounds fd4, remeasures executable mappings and the transport
-  staging tree after exact reap, and exact-cleans a forced process-image
-  failure. It rejects checkpoint-sized fd5 inputs, opened no accepted
-  checkpoint, model or audio, and remains unavailable to every product route.
-  A separate guarded native-start boundary now validates
-  the exact prepared fd3–fd7 geometry and owner-only staging identity, consumes
-  one request-bound admission immediately before the sole fixed C-method call,
-  and retains only an exact started opaque owner after child-side descriptor
-  cleanup. A later lease bridge now supplies the reserved fd5 through that
-  exact start frame, and a one-use session transition now accepts only the exact
-  retained owner after normal zero exit, complete group drain, released
-  ownership and exact reap. A fixed private coordinator now composes the
-  concrete observers, bounded fd4 drain, exact reap, real staging verifier,
-  checkpoint recheck and reservation/session/lease terminalization. Its tests
-  substitute every effectful dependency and prove only fixed order plus
-  cleanup; they do not start a native process or open the accepted checkpoint,
-  model, source or audio. The private session now requires and repeatedly
-  measures the exact virtual-environment launcher separately from its resolved
-  process image, and the coordinator passes its independently bound environment
-  and base-runtime roots to post-run verification. This has portable and
-  trusted-local static-session evidence only. The coordinator now emits one
-  inert path-free receipt for an exact code-owned no-child start and a different
-  receipt only after a started owner is completely drained and exactly reaped.
-  Both preserve safe ordered cleanup stage codes without exception text;
-  unproven start/reap has no receipt. The active authorised Kim evaluation
-  route remains subprocess-based. This
-  evidence does not enable
-  native fake-launch V2, which remains
-  permanently
-  `blocked`/`not_run` and still contains only caller-claimed artifact
-  identities. A later model-free
-  canary matrix v2 observes its harness before local cleanup with only FDs 0–2
-  after the parent's `close_fds=True, pass_fds=()` launch. Every fixed child
-  reports an empty main-thread signal mask and selected handler dispositions
-  after CPython startup, while the exact native owner separately records normal
-  zero-status exit, no signal termination and exact reap. The v2 matrix retains
-  no raw PID, PGID or wait status. A later private live proof binds equivalent
-  facts to one exact deterministic transport-worker execution: the worker's
-  self-hashed Result V2 carries its post-CPython signal report, the native
-  terminal receipt binds normal zero exit and exact reap, and one self-hashed
-  outer report observed only FDs 0–2 before Sunofriend imports or execution
-  setup. It retains no PID or PGID and enables no public route. Neither proof
-  exhaustively covers arbitrary source-FD values, reconstructs the pre-exec
-  signal instant, binds those facts to a model, or eliminates extension-import,
-  runtime-exec or worker-script path TOCTOU. A separately
-  pinned stdlib-only deterministic worker and prepared launch V3/Result V2
-  contracts exist, but launch V3 is not serialized authority and retains
-  worker-start permission false. On Darwin, one private, synchronous test-only
-  executor can now mint a non-copyable admission only while holding the exact
-  live checkpoint lease/reservation lock. It remeasures the launcher, runtime,
-  worker and checkpoint, asks the audited native owner to start the pinned
-  fake-worker path, supervises the owned child to an exact successful reap,
-  validates Result V2 and treats its child checkpoint remeasurement as a
-  worker report rather than a parent-proven fact,
-  exclusively materializes owner-only fixtures, reopens and verifies them, and
-  requires an exact self-hashed materialization observation that cross-binds
-  Result V2, quarantine verification and every verified file identity before
-  issuing a self-hashed path-free terminal receipt after lease closure. The
-  isolated live proof uses bounded output and kills discovered child groups as
-  well as its helper on an outer timeout. This proves only the successful
-  fixture path. Exact-reap native failures and code-tagged native setup or
-  `posix_spawn` no-start outcomes now receive disjoint path-free whole-run
-  receipts binding terminal native and lease evidence, the primary stage and
-  every ordered cleanup stage. The no-start form claims no child, wait, signal
-  or worker result. Ordinary code-owned post-lease result/root revalidation,
-  quarantine/output creation, verification, observation sealing, descriptor
-  cleanup, root-close and terminal-receipt failures now receive a third
-  disjoint inert receipt. It requires exact successful native evidence,
-  V3/Result V2 binding, a healthy closed lease cross-bound to the worker
-  request and checkpoint evidence, stage-consistent progress and every ordered
-  cleanup event while keeping every publication permission false. The executor
-  preserves the first primary, closes writes before read reopen, closes reads
-  LIFO, then the quarantine directory and private root, snapshots exact
-  evidence before root cleanup and closes the root before building success
-  evidence. Known descriptor identities are rechecked before close so
-  FD-number reuse cannot close an unrelated object. One earlier boundary also
-  has a separate narrow receipt: immediately after exact worker reap, the
-  parent remeasures the same live lease-owned checkpoint descriptor under the
-  lease lock. Exactly one admitted identity, byte-count or hash mismatch can
-  seal a path-free inert post-core receipt that cross-binds the complete
-  request/launch/result chain, exact native success and exact failed lease,
-  while proving that materialization never started. Its authenticated root
-  cleanup is one-use and records either no cleanup event or one failed strict
-  root close; a close failure retains the exact armed owner. The child hash
-  remains a worker report: this mismatch does not prove which checkpoint bytes
-  were executed or deserialized, exclude transient mutation outside observed
-  windows or prove immutability after descriptor close. A second disjoint
-  receipt covers only the clean FD5 reservation-release window: the immediate
-  post-core check matched, bridge finish returned normally, and exactly one
-  admitted identity, byte-count or hash mutation was found during release. It
-  requires the lease-issued aggregate's sole exact release error and shared
-  terminal document, complete checkpoint descriptor cleanup, no
-  materialization and the same one-use root handling. It records that the
-  release check failed without locating the mutation or proving executed or
-  deserialized bytes. A third disjoint receipt covers the final clean
-  checkpoint-lease-close window after successful post-core and FD5-release
-  checks. It requires the lease-issued aggregate's sole exact close error and
-  shared terminal document, complete checkpoint descriptor cleanup and one
-  admitted mutation reason. The same prebuilt, one-use root handling clears
-  the owner only on strict-close success. It records that both earlier checks
-  matched and the final check did not, without locating the mutation or proving
-  executed/deserialized bytes. Pre-owner failures without exact identity,
-  evidence-snapshot failures, failure-seal catastrophes, mutation combined
-  with bridge-finish or release failure, clean remeasurement followed by
-  unconfirmed descriptor close, and checkpoint integrity combined with
-  checkpoint-lease descriptor cleanup or terminalization failure remain
-  receipt-less with safe owners/errors retained, so the non-bypassable fake
-  transport gate is not complete. Private failure
-  machinery keeps lease
-  cleanup stages in observed order, carries a validated lease terminal receipt
-  when available, authenticates receipt composition with a lease-issued
-  non-copyable one-use capability, snapshots the nested failure state and
-  revalidates the exact full fake request/launch chain. Before authenticated
-  cleanup or capability consumption, the composer captures the bound native
-  evidence and purely prebuilds the receipts for both possible root-close
-  results. It selects one afterward, so re-entrant mutation cannot change the
-  sealed evidence or burn authority during later validation. The final strict
-  root cleanup retry runs only after authenticating the exact bound owner, so
-  caller mutation cannot invent that event and an unissued failure cannot
-  trigger a supplied descriptor close. It
-  force-terminalizes an otherwise active lease after ordinary
-  reservation-release failure, pre-arms identity-checked ownership for every
-  transport descriptor before native start, and attempts every admitted
-  transport close in deterministic order. If strict close fails, the
-  aggregate retains the armed best-effort finalizer, which is not terminal
-  evidence.
-  Catastrophic terminalization remains
-  receipt-less and blocked. Native post-start failures receive a path-free
-  observation only after exact reap and ownership release are proven.
-  Code-tagged native no-start outcomes receive a disjoint observation with no
-  PID, wait, signal or numeric status, and a live missing-executable probe
-  verifies that parent descriptors stay unchanged. Successful spawn plus exit
-  127 remains post-start. Python exceptions, invalid owner tags and unproven
-  reap receive no terminal observation. The worker only
-  hashes FD 5; it never deserializes the checkpoint, reads source audio, imports
-  a model, performs inference or creates output files. A disjoint
-  private-development canary now runs the already-installed, hash-pinned
-  Demucs 4.0.1 `htdemucs` checkpoint on Sunofriend's copyright-safe
-  eight-second stereo fixture. One model application preserves bass, drums,
-  other and vocals estimates plus source-minus-sum accounting evidence; a
-  separate evaluator revalidates every hash and records synthetic-reference
-  SI-SDR, level, envelope lag/drift, silent-vocal false-positive energy and
-  resource observations. A second private canary runs the same existing
-  seed-transcription settings on each clean reference and matching estimate,
-  retaining inactive MIDI/note evidence and relative note, timing, pitch,
-  register, duration and drum-family observations. It does not yet run the
-  full render/listen/refine loop. Its result is always review-required,
-  production-ineligible and inactive. It does not use the fake receipt,
-  update source lineage, activate MIDI, accept, select or promote anything,
-  and it is imported by no CLI, TUI, Simple or Workbench path. The first run
-  is one synthetic observation, not an accepted separator. A separate exact
-  six-source private-development request/worker/result path evaluates the
-  experimental `htdemucs_6s` guitar/piano challenger. After explicit user
-  acceptance, the exact 54,996,327-byte checkpoint was downloaded privately,
-  full-hash verified and recognized by its exact bounded ZIP/pickle-opcode
-  profile before deserialisation. It then ran on two exact 15-second
-  authorised windows and produced all six estimates with exact persisted
-  sum-plus-residual accounting closure. An identically configured neutral
-  transcription/rendering comparison found very quiet or inconsistent
-  guitar/piano evidence while broad `other` retained the strongest
-  keyboard/synth match. This does not meet the activation gate: no CLI, TUI,
-  Simple, Studio, Workbench, source-graph or publication route is enabled.
-  Network
-  denial, connection-attempt observation, outside-write confinement and
-  complete descendant supervision remain unproven; the checkpoint stays under
-  the private-evaluation-only policy. Historical fake V1/V2 and checkpoint launch
-  V2 remain permanently blocked, the public lease execution flag and real
-  backend flag remain false, and no CLI/TUI separator, publication or
-  selection route is exposed. Because runtime-exec and worker-script path
-  TOCTOU remain open, this slice does not prove that the exact measured
-  runtime/worker bytes were the bytes executed. Mixed lifecycle failures,
-  broader descriptor ownership/inheritability/I/O/authority failures, full
-  native process-group/descendant supervision and possible failure of the
-  bounded emergency fallback to prove reap remain explicit limitations. Real
-  separation execution is still disabled.
-- One exact ZFTurbo BS-RoFormer `v1.0.12` private challenger is registered by a
-  read-only internal plan, but remains `blocked`/`not_run`: checkpoint-specific
-  terms and a published checkpoint SHA-256 are absent, and no installer,
-  downloader, worker or product route exists. Its narrowed 15-package
-  wheel/hash runtime has exact-version licence evidence for private local
-  evaluation. A bounded static-inspection contract is defined but has not been
-  applied. The official release/API/tag/licence evidence observed on 1 August
-  2026 is retained as an exact tracked snapshot with a separate read-only,
-  path-free verifier. It confirms that the tag resolves to the pinned source
-  revision while the checkpoint asset digest remains null and the release body
-  still supplies no checkpoint terms. The snapshot does not authorize the
-  checkpoint; its verifier itself uses no network. The separate non-executable
-  worker protocol is implemented and
-  tested: it accepts only one or two path-free canonical stereo 44.1 kHz PCM24
-  excerpt identities of at most 15 seconds, uses canonical sorted roles
-  `bass`, `drums`, `other`, `vocals`, and fixes output geometry and the generic
-  request/result binding. Every install, checkpoint, model, process,
-  publication and product-route permission remains false; the executable
-  adapter does not exist. Its future loader is
-  pinned to exact hashes for two model modules and must bypass the upstream
-  package initializer. A private read-only admission command can now bind an
-  exact source checkout to the five tracked source/runtime/upstream-evidence
-  artifacts and their package/licence relationships, but its result remains
-  path-free,
-  `blocked` and non-authorising. None of this approves installation or covers
-  the checkpoint. Do not offer or run it through this skill.
-- One exact MLX MelBand-RoFormer Kim Vocal 2 candidate is now registered as a
-  separate **vocal-only** private plan. Its author-hosted source checkpoint was
-  explicitly relicensed to MIT, and both the original checkpoint and the
-  pinned BF16 Safetensors conversion have published SHA-256 identities. Two
-  independent source-file records reproduce the original hash. A user-supplied
-  evidence pack was reviewed as a secondary lead only; its downloader was not
-  executed, and its hash-stable ViperX alternatives remain rejected because
-  their creator-authorised terms are unverified. The user explicitly approved
-  the exact Kim Vocal 2 checkpoint for private local evaluation on 1 August
-  2026. Its exact MLX-Audio `v0.4.3` source surface and minimal
-  MLX/MLX-Metal/NumPy runtime are now size/hash pinned and licence audited. The
-  network-capable upstream convenience loader is forbidden; a stale GPL
-  source comment is recorded but checkpoint terms remain bound to the owner's
-  later immutable MIT evidence. A bounded standard-library Safetensors header
-  inspector and a non-executable one-or-two-excerpt vocals/instrumental worker
-  protocol are implemented and tested. They do not deserialize tensors, import
-  a model or start a worker. A separate synthetic-only adapter contract now
-  validates stereo geometry, finite audio, complete post-sanitisation model-key
-  coverage and vocals-plus-instrumental accounting from precomputed fake data;
-  it cannot invoke an engine or persist outputs. The exact source, checkpoint,
-  config and licence now live in an owner-only non-repository cache and pass
-  their pinned identities. Header-only inspection found 708 BF16 tensors and
-  a non-canonical null metadata value, which is reported explicitly and treated
-  only as empty MLX metadata. A private real-model loader probe now binds its
-  708 raw keys to exactly 696 model parameters with no missing, unexpected or
-  shape-mismatched tensors while bypassing package initializers and the
-  upstream downloader. A bounded private inference adapter now passes measured
-  one-to-eight-second model calls and a three-chunk, 50%-overlapped 15-second
-  synthetic smoke with exact finite output, about 2.42 GB peak MLX memory and
-  additive residual accounting. The first self-hashed authorised `Be Alone`
-  excerpt also passed in memory over all 661,500 frames; it persisted no audio.
-  Its descriptive similarity was 0.995 to Moises, 0.974 to HTDemucs and about
-  0.92 to both Suno controls, with no ground-truth claim or winner. Explicit GPU
-  mode is fast but showed at most one PCM24-LSB repeat variation; explicit CPU
-  mode repeated byte-identically over 15 seconds but took about 23.4 seconds.
-  A separate model-free macOS canary now proves that the exact hashed
-  `sandbox-exec` provider returns `EPERM` for one deliberate IPv4 loopback
-  connection that is not permission-denied outside its `(deny network*)`
-  profile. A separate synthetic child has successfully combined
-  network, fork and outside-write `EPERM` canaries with the two-file PCM24
-  quarantine and an identical parent re-read. It loaded no model, checkpoint
-  or authorised audio. The fixed real worker has now passed one additional
-  private authorised observation: the same three deliberate attempts all
-  returned `EPERM` in the process that loaded the exact checkpoint and inferred
-  the sealed 15-second `Be Alone` excerpt. It wrote only the fixed vocals and
-  instrumental PCM24 files inside a fresh owner-only staging tree; the parent
-  independently reopened them, matched the child's evidence and observed at
-  most one PCM24 least-significant bit of additive reconstruction error. This
-  binds OS denial, outside-write confinement and PCM quarantine to one real
-  model run. The same isolated worker and unchanged downstream production
-  vocal-MIDI contract now also pass on the authorised `I am a Alien mashup`
-  excerpt at its own sealed 114 BPM. Those two inactive observations contain
-  14 and 23 notes, and both equal-level blind Kim-versus-Moises reviews are now
-  complete. `Be Alone` resolved to `equivalent`; `I am a Alien mashup`
-  resolved to `neither` because both candidate MIDIs followed the female
-  backing vocal rather than the male lead heard in the mixed source. A later
-  inactive evaluation keeps the unchanged primary and adds lowest, dominant,
-  top and full-stack register hypotheses without claiming that register
-  identifies a singer. The owner-only blind primary-versus-lowest review is
-  now complete. After the listener understood that the question focused on
-  the male lead, the corrected blind export preferred the 16-note
-  lowest-register hypothesis over the unchanged 23-note primary contour. It
-  is development evidence, not a singer-identity rule or normal skill route;
-  its answer key was opened only by the resolver after the complete matching
-  JSON export. A subsequent private activity-only diagnostic gives each of
-  four distinct provider groups one vote after unioning its broad and leaf
-  evidence. The lowest line adds 1.533801 seconds of two-provider-supported
-  activity missed by the primary, but the primary covers 4.392423 seconds
-  missed by the lowest and their union still misses 2.199476 seconds. This
-  supports keeping both available for audition; it does not rank, merge,
-  identify a singer or change a default. The song-disjoint `Be Alone` repeat
-  found only two lowest-line notes and 0.099299 seconds beyond the primary,
-  versus 1.533801 seconds on `I am a Alien mashup`. A useful lower-register
-  complement therefore does not generalise, and activity coverage alone does
-  not warrant another review, a merge or a rule. The private development
-  chain now also has a path-free candidate inventory for each of
-  those two excerpts. Each inventory retains 17 entries: the Kim primary,
-  four register hypotheses and twelve provider-leaf adapter primaries,
-  including zero-note observations. `I am a Alien mashup` has 16 auditionable
-  entries; `Be Alone` has 13. The private builder re-verifies the sealed
-  artifact identities but copies no MIDI or audio and has no public CLI, TUI,
-  Simple, Studio or source-graph route. A separate private loopback adapter can
-  now revalidate that complete chain and serve the original mixed excerpt or
-  exact provider vocal leaf beside each already-sealed dry MIDI render. It uses
-  opaque per-launch `127.0.0.1` media capabilities, copies no audio or MIDI,
-  records no playback behaviour and writes no server-side review. Its browser
-  export requires both heard confirmations plus one explicit useful, not-
-  useful or cannot-tell disposition for every playable candidate, permits
-  several useful candidates and retains zero-note evidence as unavailable.
-  The separate verifier requires the exact written focus and sealed inputs,
-  then writes a fresh owner-only path-free resolution with every activation,
-  winner, merge, repair and singer-identity effect false. Do not offer this in
-  the beginner journey or treat it as a normal product command. Use it only for
-  an explicit private-development listening question, and never use its output
-  to rank, merge, repair, identify, promote or select a singer. The
-  read-only public
-  `midi-ab-status` command may match an explicitly named export or one bounded,
-  non-recursive download directory without opening the answer key; it cannot
-  resolve or reveal A/B. The
-  resolver alone opened each answer key after the complete user export. Their
-  provider/local controls are estimates rather than ground truth, so they
-  select no winner and the second result is an explicit quality blocker. The
-  independently authorised private-reference repeat uses `Mauvais djo - Pilé`
-  seconds 33–48. Its additive residual exceeded PCM range, so an explicit
-  worker-only shared attenuation was applied equally to source, vocals and
-  instrumental before PCM24 quarantine; strict rejection remains the default.
-  Local HTDemucs, Moises and Kim Vocal 2 all produced zero primary vocal notes,
-  and Kim produced no register hypothesis. A follow-up private leaf evaluator
-  ran both unchanged adapters on both Moises vocal leaves without using labels
-  to choose an algorithm. The backing-vocal leaf yielded 25 backing-adapter
-  notes, while the vocal leaf yielded 15 lead-adapter and 23 backing-adapter
-  notes. The broad Moises sum still had zero. This is evidence that summing
-  separate vocal candidates before transcription can erase usable melody, not
-  proof that every leaf note or label is correct. Basic Pitch must be actually
-  available for this diagnostic; a missing runtime fails instead of silently
-  accepting a degraded comparison. The private evaluator accepts two
-  to four known controls only when local HTDemucs and at least one provider are
-  present. Two disjoint repeats found non-empty broad vocal MIDI: all six `I
-  am a Alien mashup` provider leaves and four of six `Be Alone` leaves
-  produced at least one non-empty primary candidate. Keep every generated
-  artifact inactive, preserve separate lead/backing candidates in future
-  separator design, and do not promote a separator, leaf rule, register rule
-  or lower production thresholds from these excerpts. The evaluator accepts
-  only the exact historical v1 and current v2 Kim MIDI evidence schemas. The
-  latest authorised `Be Alone` worker run also bound the complete post-inference
-  `sys.modules` Python import closure: 320 modules backed by 277 regular files
-  totalling 18,067,782 bytes, with zero unclassified modules. The child sealed
-  path-free file hashes and root manifests; the parent independently reopened
-  and rehashed every file. This covers Python imports for that exact run only.
-  It does not bind native libraries loaded outside `sys.modules` or make
-  mutable output files immutable. A
-  later authorised repeat added a bounded macOS kernel-Sandbox denial stream
-  that was ready before the worker, filtered its exact PID and verified the
-  final stream count. It saw the one deliberate `network-outbound` canary and
-  zero other worker denials; raw events, PID and destinations were discarded.
-  This records sandbox-denied acquisitions, not successful traffic or packet
-  capture. Cross-song downstream MIDI is complete. The exact
-  913,106,900-byte author-hosted source checkpoint has also been privately
-  re-hashed and loaded through restricted PyTorch `weights_only=True`; all 708
-  converted BF16 tensors, including 12 packed Q/K/V splits, match bit-for-bit.
-  The same authorised eight-second music frames then reached 117.70 dB SDR
-  between BF16-roundtrip PyTorch and BF16 MLX, verifying the converted runtime.
-  Original FP32 PyTorch versus BF16 MLX reached only 29.14 dB, with the same
-  delta inside PyTorch after BF16 rounding; retain this as a publication-
-  precision concern rather than hiding it behind the runtime-parity pass. The
-  upstream 66.08 dB result used unavailable test audio and is not independently
-  reproduced. The user's complete equal-level blind precision review resolved
-  to `equivalent`, so this one window does not justify a roughly doubled FP32
-  MLX artifact. A final authorised repeat executed the exact hashed worker
-  script from the same already-open, non-following descriptor supplied as
-  Python standard input. That closes the worker-script pathname race and is
-  bound to the complete import closure and network-denial observation. The
-  deprecated `sandbox-exec` provider and Python virtual-environment runtime
-  are still invoked by pathname. A model-free parent-PID canary first showed
-  that the python.org launcher becomes a distinct signed `Python.app` process
-  image. One later authorised `Be Alone` repeat now attaches that observation
-  to the exact model-worker PID: the image's kernel CDHash matched the parent's
-  strictly validated static identity, the exact `sandbox-exec` file remained
-  on a read-only filesystem, and provider, launcher and image full-file hashes
-  were rechecked after completion. This binds signed process-code identity,
-  not full executable bytes or dynamically loaded native libraries. A separate
-  model-free `libproc` canary now obtains two stable parent-owned snapshots of
-  13 file-backed executable mappings and rehashes all 13 files unchanged after
-  child exit; 12 pass strict code-signature validation. That deterministic
-  canary itself remains model-free. A separate opt-in worker layer now uses two
-  explicitly inherited, bounded pipes to pause the exact Kim worker after
-  inference and before PCM24 quarantine while the parent takes the same native
-  inventory, then releases it. Two fresh authorised `Be Alone` runs each
-  observed the same 33 file-backed executable regions, no unpathed executable
-  region and one exact main process image; all files were unchanged after exit
-  and 32 passed strict static-code validation. Their GPU float-output hashes
-  differed, so conversion repeatability is not claimed. The observation does
-  not enumerate individual dyld shared-cache constituents, exclude all
-  transient loads or prove mapped-memory byte identity. Native non-module
-  closure and post-observation image mutability remain explicit. One later
-  authorised Kim run binds its own outer FDs 0-2, expected post-CPython
-  selected signal state, synchronous exact-child wait and normal exit 0 in a
-  separate self-hashed v10 evidence layer. That layer does not reconstruct the
-  pre-exec signal instant or use the separately proven native
-  process-group/descendant owner, and no separator route is enabled. A
-  validation-only terminal projection now defines and rejects incomplete
-  future native claims. The fixed native adapter can emit the private
-  identity-bearing worker result. The dependency-substituted parent core can
-  consume that identity through an exact-shape opaque owner and derive the
-  projection. A fixed private macOS session now binds and remeasures the real
-  worker, runtime, sandbox provider, native method and owner type, and a
-  separate single-use admission binds its exact request/nonce/worker identity.
-  One trusted-local canary opened and rechecked that static session without
-  spawning. A guarded start adapter now validates the exact fd3 request, all
-  five non-inheritable descriptor roles, fixed checkpoint byte geometry and one
-  fresh owner-only staging identity, then consumes the single-use admission
-  immediately before the sole bound C-method call. It closes every transferred
-  child-side descriptor on every substituted outcome, leaves fd5 with its
-  separate lease owner and retains only the exact opaque native owner in a
-  running session. Dependency-substituted tests only have exercised this
-  boundary. A new private lease bridge now runs under the lease lock,
-  cross-binds the native request's checkpoint hash/bytes/path and fixed worker,
-  mints the one-use admission internally and passes the retained fd5 only into
-  that guarded start stack frame. It returns no descriptor and leaves the
-  reservation active for later supervision and close. This bridge also has
-  dependency-substituted evidence only: no native process or accepted
-  checkpoint, model or audio was opened. A fixed real-worker staging verifier
-  now reopens the authorised source, both PCM24 files and the Python closure,
-  while a separate one-use session transition records only normal-zero-exit
-  exact reap from the exact retained owner. A separate failed-run transition
-  can clear only a completely drained and exactly reaped nonzero/signalled
-  owner without claiming execution success. The fixed private coordinator now
-  owns the concrete live lease/start/observer, bounded fd4, post-run fd5,
-  staging and terminal-cleanup order, with dependency-substituted evidence
-  only; source shape alone is not execution provenance.
-  The private parent exercise now has a v2 two-phase order: prepare observers
-  before spawn; capture ready state and release; drain and validate fd4 while
-  the exact owner is live; consume live observers; exact-reap the whole group;
-  then seal deferred mapped-file evidence and verify staging. Its adversarial
-  lifecycle tests remain dependency-substituted. The fixed model-free macOS
-  adapter now proves the concrete observer/fd4/supervisor/staging order with a
-  small placeholder fd5 and one stdlib worker, including exact cleanup after a
-  wrong process-image claim. The fixed private coordinator now composes the
-  real staging verifier, session terminal transition, lease/start/observer
-  order, accepted-fd5 remeasurement and lease cleanup. It preserves and
-  remeasures the explicit virtual-environment launcher separately from the
-  resolved process image and base-runtime root. Its tests still substitute all
-  effectful dependencies, so this does not permit a Kim run or any CLI, TUI,
-  Simple, Studio or source-graph route.
-  The owner-bound process-image
-  primitive is proven only with a fixed model-free worker; the active Kim route
-  still uses its older PID-consuming observation path. The
-  checkpoint is not redistributed. Do not offer or run this challenger
-  through the skill.
-- `source-import` decodes exactly one local asset.
-- `source-import-folder` prepares 2–64 existing separated parts as one
-  canonical WAV project. It does not separate, shift, pad, stretch, normalize
-  or align audio, prove a downbeat, or run when the TUI merely loads a folder.
-- The WAV contains rendered MIDI. Source stems provide timing, horizon and
-  relative-level evidence but their audio is not mixed into the WAV.
+- Keep music, MIDI, chord files, reviews and private notes local. Never upload
+  them or attach them to a public issue.
+- Process only music the user owns or is authorised to process. Sunofriend
+  never downloads songs or grants processing rights.
+- The opt-in public separation alpha accepts one local finished mix and
+  estimates broad `vocals` plus complementary `instrumental`. It is verified
+  on Apple-silicon macOS, is not ground truth, does not yet make narrow drums,
+  bass, keys or guitars, and never activates output for MIDI automatically.
+- `source-import` prepares one local audio asset. `source-import-folder`
+  prepares 2–64 existing separated parts. Neither command separates, aligns,
+  pads, stretches or normalizes audio.
+- The balanced WAV contains rendered MIDI. The source stems provide timing,
+  horizon and relative-level evidence but are not mixed into it.
 - Call the WAV a **MIDI-derived song interpretation**, not an exact
   reconstruction or a human-approved release master.
 - Playback, metrics, scores and visible defaults never imply preference.
-- Use a fresh output outside the source folder. Never overwrite unless the
-  user explicitly requests it and the chosen command supports it safely.
-- Never download an optional model, checkpoint, plug-in or instrument without
-  explicit approval and the applicable licence check.
+- Use a fresh output outside the source folder. Do not overwrite unless the
+  user explicitly requests it and the command supports it safely.
+- Never install a dependency, checkpoint, plug-in or instrument without the
+  user's explicit approval and the applicable licence check.
+
+For historical separation experiments, optional AI methods and expert
+commands, read the references only when relevant:
+
+- [Public interface contract](references/interface-contract.md)
+- [Advanced operations and research history](references/advanced-operations.md)
+
+The active public separation guide is `docs/STEM_SEPARATION_ALPHA.md`.
+Historical statements in the advanced record do not override this contract.
 
 ## Inspect before installing
 
 Resolve the application in this order:
 
 1. `sunofriend` on `PATH`;
-2. `.venv/bin/sunofriend` in the current workspace or a repository path the
-   user already supplied;
+2. `.venv/bin/sunofriend` in the current workspace or a repository the user
+   supplied;
 3. `~/.local/share/sunofriend/app/.venv/bin/sunofriend`.
 
 Do not scan the whole home directory. Ask for the location if those bounded
-checks do not find a user-mentioned checkout.
+checks fail. Run `sunofriend --version`; do not replace an existing checkout
+just because another exists.
 
-Run `sunofriend --version` when found. Do not replace or update an existing
-checkout merely because another copy exists.
+If the app or core audio tools are missing, resolve
+`scripts/bootstrap-macos.sh` relative to this skill:
 
-If the application or required audio tools are missing:
+1. Run `--plan` without changing the Mac.
+2. Explain each network destination, package, disk estimate and licence.
+3. If source is absent, ask before `--prepare --yes`. This installs nothing.
+4. Run `--plan` again and show the exact 40-character commit.
+5. Ask separately before
+   `--apply --expected-revision COMMIT --yes`.
+6. Report a blocked prerequisite instead of improvising around it.
 
-1. Resolve `scripts/bootstrap-macos.sh` relative to this `SKILL.md`.
-2. Run it with `--plan`. This is read-only.
-3. Translate the plan into plain language. Name every known network
-   destination and machine-level package change; say when Homebrew or PyPI may
-   choose a mirror or CDN host that cannot be enumerated in advance.
-4. If no checkout exists, ask for permission to prepare only the source.
-5. After approval, run the helper with `--prepare --yes`. This clones the
-   public source but installs no package or audio asset.
-6. Run `--plan` again. Show the user the exact 40-character commit and explain
-   all remaining changes.
-7. Ask for a separate installation approval bound to that commit.
-8. Only after approval, run `--apply --expected-revision COMMIT --yes`.
-9. Report any blocked prerequisite precisely instead of improvising around it.
+Apply never fetches or switches the prepared checkout. The helper can install
+Python 3.11, FluidSynth, the constrained local app and the pinned GeneralUser
+GS SoundFont, but it does not install Homebrew or optional AI models. Explain
+that FluidSynth renders MIDI, the SoundFont supplies neutral preview sounds,
+and the SHA-256 check verifies the exact reviewed asset.
 
-The helper uses `~/.local/share/sunofriend/app` by default. It may use an
-existing Homebrew installation to install Python 3.11 and FluidSynth, create
-an isolated virtual environment, install the constrained Sunofriend audio
-stack, download the pinned hash-verified GeneralUser GS SoundFont and run the
-conversion/preview doctors.
-
-Use these newcomer translations:
-
-- **Python:** the private runtime Sunofriend needs.
-- **Virtual environment:** Sunofriend's own dependency folder, separate from
-  other Python projects.
-- **FluidSynth:** the local player that turns MIDI notes into a WAV.
-- **SoundFont:** the approximately 31 MB set of neutral instrument sounds used
-  by FluidSynth.
-- **SHA-256 check:** verification that the downloaded SoundFont is the exact
-  reviewed file.
-- **`.[all]` dependencies:** Sunofriend's full local application feature set;
-  it does not include optional AI checkpoints.
-
-Before approval, distinguish local music processing from setup network use.
-State that the tested environment occupies roughly 0.5 GB before Homebrew and
-download caches, recommend at least 1 GB free, and explain that setup time and
-download size vary by what is already installed. The helper does not use
-`sudo`, but a separate Homebrew installation may have its own prompts.
-
-Explain that GeneralUser GS supplies preview sounds under its own License
-v2.0. Link to the pinned licence and mention its sample-origin caveat when the
-user is deciding about commercial software distribution. The demo itself is
-generated mathematically by Sunofriend and contains no recorded samples.
-
-The helper deliberately does not install Homebrew, update or reset an existing
-checkout, replace a mismatched SoundFont, or install optional AI checkpoints.
-If Homebrew is missing, explain the official Homebrew prerequisite and ask
-before helping with that separate system change.
-
-FFmpeg and FFprobe are optional prerequisites for `source-import` and
-`source-import-folder`. Never install or upgrade them merely because an import
-was requested. Run the read-only `source-doctor` first; if either executable
-is missing, explain the separate setup change and request approval before
-performing it.
-
-The current alpha preparation resolves the public `main` branch once. Tell the
-user that a tagged end-user release is not available yet. The helper then
-stops, prints the exact local commit and requires that same 40-character
-commit in the separately approved apply command. Apply never fetches, pulls or
-switches the checkout.
-
-For cleanup, preserve evidence first. The isolated checkout can be removed
-later from `~/.local/share/sunofriend/app` and the SoundFont from
-`~/.local/share/sunofriend/soundfonts/GeneralUser-GS.sf2`. Do not remove shared
-Homebrew packages automatically. An interrupted install can be inspected and
-resumed; it is not rolled back silently.
-
-After setup, run:
+Run the resolved executable, shown below as `SUNOFRIEND`:
 
 ```bash
 SUNOFRIEND doctor --require convert
 SUNOFRIEND doctor --require preview
 ```
 
-Here and below, replace `SUNOFRIEND` with the resolved executable path. Do not
-ask a newcomer to perform that substitution manually.
+Do not ask a newcomer to substitute executable placeholders manually.
+FFmpeg/FFprobe are separate optional prerequisites for source import. Run
+`source-doctor` first and ask before installing or upgrading either tool.
 
 ## Route A: built-in demo
 
-Use this when the user has no stems, wants a quick proof, or is evaluating the
-installation.
-
-1. Choose a fresh, clearly named output such as
-   `~/Music/Sunofriend/demo-YYYYMMDD-HHMMSS`.
-2. Read `sunofriend demo --help`.
-3. Run:
+Use the demo when the person has no stems or wants a quick, copyright-safe
+proof. Read `demo --help`, choose a fresh output, then run:
 
 ```bash
 SUNOFRIEND demo --out-dir "/absolute/fresh/demo-output"
 ```
 
-The command creates copyright-safe synthetic stems beside the result and then
-uses the normal automatic production path. It must produce the normal
-automatic MIDI, balanced WAV and starter ZIP rather than a hand-built toy
-preview.
+The command creates synthetic stems and uses the normal production pipeline.
+Show the balanced WAV first, then `START-HERE.txt`, the individual MIDI and the
+ZIP. Explain that it proves the workflow, not accuracy on every real song.
 
-When it completes, show the user:
+## Route B: one finished song through the public alpha
 
-1. the balanced WAV;
-2. `START-HERE.txt`;
-3. the individual MIDI folder; and
-4. the ZIP.
+Use this only when the person wants to estimate stems from one local song they
+may process. Explain before setup:
 
-Open or reveal the WAV first when the environment supports it. Explain that
-the demo proves the workflow, not transcription accuracy on every real song.
+- Apple-silicon macOS is the first supported platform;
+- setup downloads about 500 MB of pinned MIT model/runtime material;
+- inference then stays local with offline model settings;
+- output is broad vocals and instrumental, not narrow instrument families;
+- full songs can take several minutes; and
+- output remains unreviewed until the musician listens.
 
-## Route B: stems the user already has
+Read `docs/STEM_SEPARATION_ALPHA.md`. Resolve
+`scripts/setup-separation-alpha-macos.sh` relative to the application checkout,
+not the current shell directory. Inspect setup first:
 
-Inventory the source folder read-only. Confirm:
+```bash
+scripts/setup-separation-alpha-macos.sh --plan
+```
 
-- 2–64 already-separated top-level audio files exist;
-- the key and BPM are known or parseable from the folder name;
-- useful role words are present, such as `kick`, `snare`, `hat`, `bass`,
-  `keys`, `strings`, `lead`, `vocals` or `backing vocals`;
-- any chord PDF or metronome is identified as optional evidence; and
+The plan writes nothing. Explain the pinned model terms and ask explicitly
+before:
+
+```bash
+scripts/setup-separation-alpha-macos.sh --install --accept-model-terms
+```
+
+Do not infer model approval from a request to separate a song. Resolve the
+matching `sunofriend-separate` executable and run its read-only doctor:
+
+```bash
+SUNOFRIEND-SEPARATE doctor
+```
+
+Create a fresh output outside the source. Plan with the accurate rights
+category (`owned`, `licensed`, `authorised_private_use` or
+`statutory_exception`):
+
+```bash
+SUNOFRIEND-SEPARATE separate "/absolute/path/to/song.wav" \
+  --out "/absolute/path/to/fresh-separation" \
+  --rights-category owned
+```
+
+Explain the source hash, duration, output, space requirement and limits. Ask
+for a separate rights confirmation before executing:
+
+```bash
+SUNOFRIEND-SEPARATE separate "/absolute/path/to/song.wav" \
+  --out "/absolute/path/to/fresh-separation" \
+  --rights-category owned \
+  --execute --confirm-rights --open-review
+```
+
+Open `REVIEW/separation_review.html`. Ask the musician to hear source, vocals,
+instrumental and reconstruction. A close reconstruction proves additive PCM
+accounting, not correct assignment. Public feedback must be text-only unless
+the musician separately chooses and is entitled to share audio.
+
+If the stems are useful, copy them into a new folder and continue with Route
+C. Never silently start MIDI conversion, promote a model or generalise one
+review into a default.
+
+## Route C: stems the user already has
+
+Inventory the folder read-only. Confirm:
+
+- 2–64 top-level audio parts exist;
+- key and BPM are known or parseable from the folder name;
+- useful role words exist, such as `kick`, `snare`, `hat`, `bass`, `keys`,
+  `strings`, `lead`, `vocals` or `backing vocals`;
+- chord PDF and metronome files are identified as optional evidence; and
 - the proposed output is fresh and outside the source.
 
-If it is already a compatible synchronized top-level WAV project, it can go
-directly to Create or TUI. Never re-import it merely to make the receipt.
-
-If several existing separated parts need preparation, read
-`source-doctor --help` and `source-import-folder --help`, then run:
+Use an already compatible synchronized top-level WAV project directly. If
+existing parts need preparation, read the command help, then run:
 
 ```bash
 SUNOFRIEND source-doctor
@@ -727,153 +209,91 @@ SUNOFRIEND source-import-folder "/absolute/path/to/source-parts" \
   --plan
 ```
 
-Doctor and plan are read-only. Explain the exact inferred roles, origin
-status, warnings and intended output. Require the user's authority before
-executing the same command without `--plan`. Execution replans current inputs;
-it does not replay a saved plan, so rerun `--plan` after any input, role-map
-or option change.
+Doctor and plan are read-only. Explain inferred roles, origin status, warnings
+and outputs. Ask before executing without `--plan`; execution replans current
+inputs, so plan again after any file, role map or option changes.
 
-Role inference is conservative. If required, create a flat JSON object whose
-keys are exact filenames and values are supported roles, then add
-`--role-map "/absolute/path/to/roles.json"` to both plan and execution. Do not
-guess through ambiguity. `hats` normalizes to `hat`, guitars to `rhythm`, and
-percussion to `other_kit`. Only `vocals` and `backing_vocals` may repeat.
-
-Do not use `pads`: production currently synthesizes pads from keys and has no
-observed-pads job. A genuinely string-like sustained part may be mapped to
+For ambiguous names, a role map is a flat JSON object keyed by exact filename.
+Do not guess. `hats` normalizes to `hat`, guitars to `rhythm`, and percussion
+to `other_kit`; only `vocals` and `backing_vocals` may repeat. Do not invent an
+observed `pads` role. Map only a genuinely string-like sustained part to
 `strings`; otherwise leave it unresolved.
 
-A composite `drums` part can now produce review-required MIDI through the
-mixed-kit family classifier. Explain that it assigns one dominant family per
-detected onset, so coincident layered hits can collapse, and that it creates
-no kick, snare, hat, tom or cymbal audio files. When viable explicit
-drum-family sources also exist, they take precedence in the automatic
-arrangement to avoid doubled hits; the broad candidate remains available for
-Studio review. Keep a metronome outside the import folder because it is timing
-evidence, not an accepted observed source role.
+If origin is `unconfirmed`, explain that the container lacks concrete origin
+evidence. Never silently add `--accept-unconfirmed-origin`; it acknowledges
+uncertainty but does not prove alignment. A concrete origin conflict blocks
+execution. Different endings are warnings and are not silently padded.
 
-If the plan reports `unconfirmed` origin, explain that one or more containers
-lack concrete recorded-origin evidence. Never silently add
-`--accept-unconfirmed-origin`; ask for explicit acknowledgement and make clear
-that it does not prove alignment. A concrete origin conflict blocks execution.
-Different end times are warnings only and are never silently padded or
-trimmed.
+A composite `drums` part can produce review-required MIDI through the mixed-kit
+family classifier, but layered hits can collapse and no child audio files are
+made. Explicit viable drum-family sources take automatic precedence to avoid
+doubled hits. Keep a metronome outside the import folder.
 
-Execution preserves original bytes and hashes, makes no network request,
-writes non-normalized canonical PCM24 WAV stems plus per-source and aggregate
-receipts, and publishes one fresh project atomically. It does not recurse,
-separate a finished mix, shift, pad, stretch, normalize or align audio.
-Afterward, use the fresh prepared project as the Create/TUI source.
+Folder execution preserves original bytes/hashes and publishes canonical
+PCM24 WAV parts plus receipts atomically. It makes no network request and does
+not recurse, separate, align or normalize. Use the prepared project as the
+Create/TUI source. For exactly one standalone asset, use the separate
+`source-import --plan` then execute flow; do not loop it over a folder.
 
-If the user supplies exactly one standalone non-WAV asset rather than a stem
-project, read `source-import --help` and use its `--plan` then execute flow.
-It does not make a complete Simple/Studio project. Never loop the one-file
-command over a folder now that the bounded folder importer exists.
-
-For an agent-led automatic result, read `sunofriend create --help` and run:
+For an agent-led automatic result, read `create --help`, then run:
 
 ```bash
 SUNOFRIEND create "/absolute/path/to/stems" \
   --out-dir "/absolute/path/to/fresh-result"
 ```
 
-If the installed application predates the `create` command, use
-`sunofriend tui "/absolute/path/to/stems"` and guide the user to the single
-**Create MIDI + WAV** action in Simple mode. Do not automate TUI keystrokes or
-reimplement the production runner.
+If `create` is unavailable, launch `sunofriend tui` and guide the user to
+**Create MIDI + WAV** in Simple mode. Do not automate TUI keystrokes or
+reimplement the production runner. Automatic output stays `not_reviewed` and
+`review_recommended` and records no human Workbench choice.
 
-The automatic route uses each production process's published primary result.
-It remains explicitly `not_reviewed` and `review_recommended`; it creates no
-human Workbench choice or feedback event.
+## Route D: help obtaining authorised stems
 
-## Route C: help obtaining authorised stems
+Explain that a stem is often a grouped submix. A drums stem may contain many
+drums; `other` is a mixed residual; an AI-separated stem is an estimate, not
+the lost original studio track.
 
-Explain that a stem is commonly a **grouped submix**, not necessarily one
-instrument. A drums stem may contain kick, snare, hats, toms, cymbals and
-percussion; `other` is usually a mixed residual. An AI-separated stem is an
-estimate, not the lost original studio track.
+Offer DAW exports, authorised stems/multitracks, an authorised independent
+separator, the Sunofriend two-stem alpha or the built-in demo. Provider plans,
+formats and terms change, so check current official help. Prefer WAV/FLAC when
+available; converting lossy audio to WAV restores no lost detail. Ask whether
+private or unreleased audio may be uploaded before suggesting a cloud service.
 
-Offer:
-
-- separate-track exports from GarageBand or another DAW;
-- stems or multitracks from a generator project the user may process;
-- estimated stems exported from an authorised local or cloud separator; or
-- the built-in demo.
-
-Provider features, subscriptions and export formats change. When the user
-wants current guidance, check the provider's official help rather than relying
-on remembered prices. Prefer WAV or FLAC where the user's plan supports it,
-and explain that converting lossy audio to WAV does not restore discarded
-detail. Ask whether unreleased or confidential audio may be uploaded before
-recommending a cloud provider.
-
-Useful official starting points include:
-
-- Suno Studio export and stem-separation help at `help.suno.com`;
-- Moises separated-track export help at `help.moises.ai`.
-- BandLab Splitter help at `help.bandlab.com`;
-- LALAL.AI's Stem Splitter, desktop and privacy pages at `lalal.ai`; explain
-  that its desktop app currently defaults to cloud processing and that
-  offline Lyra processing requires Pro; and
-- Apple's Logic Pro Stem Splitter guide for a local Apple-silicon option.
-
-The maintained beginner glossary and neutral provider guide is:
-`https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/STEMS.md`.
-Do not present any provider as best for MIDI until it has passed Sunofriend's
-downstream transcription bake-off. Do not use a tracked affiliate link unless
-the commercial relationship is verified and clearly disclosed beside it.
-
-Do not sign up, subscribe, upload music or accept provider terms on the user's
-behalf. Do not infer that a subscription grants rights to process or
-redistribute a particular song.
+Use `docs/STEMS.md` for the maintained neutral provider and privacy guide. Do
+not call any provider best for MIDI without a downstream bake-off. Do not use
+an affiliate link unless the relationship is verified and disclosed. Never
+sign up, subscribe, upload music or accept provider terms for the user.
 
 ## Hand off a first result
 
-The automatic bundle is under `AUTOMATIC-SONG/` and should include:
+The automatic bundle under `AUTOMATIC-SONG/` should include:
 
-- `START-HERE.txt`
-- `MIDI/` with individual roles and combined General MIDI
-- `AUDIO/balanced-midi-song-interpretation.wav`
-- `TECHNICAL/balanced-mix-report.json`
-- `garageband-mix-recipe.md`
-- `sunofriend-result.json`
-- `sunofriend-automatic-midi-and-wav.zip`
+- `START-HERE.txt`;
+- unchanged automatic-primary MIDI and combined General MIDI under `MIDI/`;
+- named starter sounds, sound-aware MIDI and previews under `SOUNDS/`;
+- `AUDIO/balanced-midi-song-interpretation.wav`;
+- `TECHNICAL/balanced-mix-report.json`;
+- `garageband-mix-recipe.md`, result receipt and ZIP.
 
-Check that the reported files exist and are non-empty. Report omitted,
-ambiguous, silent, proxy or failed roles honestly.
+Verify every reported file exists and is non-empty. Report omitted, ambiguous,
+silent, proxy or failed roles. Present in this order:
 
-Use plain language:
+1. **Listen:** balanced WAV.
+2. **Use sounds:** named starter instruments and sound-aware MIDI.
+3. **Edit evidence:** unchanged individual primary MIDI.
+4. **Move everything:** ZIP.
+5. **Set the DAW:** exact BPM from `START-HERE.txt`.
+6. **Choose the feeling:** keep or replace each starter sound after listening.
 
-- **Listen first:** the balanced WAV.
-- **Edit next:** individual MIDI files.
-- **Move everything:** the ZIP.
-- **Set the DAW:** use the exact BPM from `START-HERE.txt`.
-- **Choose the feeling:** replace the General MIDI proxy sounds with suitable
-  GarageBand or DAW instruments.
-
-Ask one useful feedback question after the user listens, such as:
-
-> Did the WAV help you hear the song's musical parts clearly?
-
-Do not record approval, a choice or review unless the user explicitly performs
-the labelled review action.
+Ask one useful question after listening. Do not record approval or a review
+unless the person explicitly performs the labelled action.
 
 ## Use Simple or Studio honestly
 
-Prefer **Simple** for a newcomer or an automatic first interpretation.
-
-Use **Studio** when the user wants to:
-
-- compare the source with several unchanged MIDI candidates;
-- see waveform and note timelines;
-- choose main, optional, needs-correction or rejected parts;
-- record explicit local feedback;
-- hear selected arrangements;
-- inspect developer state;
-- try instrument matches; or
-- create a reviewed GarageBand pack.
-
-Launch the detailed route with:
+Prefer **Simple** for a newcomer or automatic first interpretation. Use
+**Studio** for multiple candidate comparison, waveform/note timelines,
+explicit choices and feedback, selected arrangements, developer inspection,
+instrument matching or a reviewed GarageBand pack.
 
 ```bash
 SUNOFRIEND tui "/absolute/path/to/stems" \
@@ -881,65 +301,46 @@ SUNOFRIEND tui "/absolute/path/to/stems" \
   --candidate-root "/absolute/path/to/result"
 ```
 
-Use the loopback Workbench for graphical comparison. Treat zoom, playback,
-mute, solo, level, dwell time and audition count as temporary interaction, not
-feedback or preference.
+Playback, zoom, mute, solo, levels, dwell time and audition count are temporary
+interaction, not feedback or preference.
 
 ## Route advanced requests
 
-Before any advanced workflow, read both references completely:
+Read both references completely before an advanced workflow:
 
 - [Public interface contract](references/interface-contract.md)
 - [Advanced operations](references/advanced-operations.md)
 
-Use the interface contract to confirm the command exists in the installed
-version. Read the selected command's `--help` before constructing it.
-
-The advanced reference contains the exact contracts for:
-
-- whole-folder and vocal transcription;
-- tracker consensus, MuScriptor and other optional local-AI comparisons;
-- melody guides, phrase review and bounded correction;
-- Workbench catalogues, playback, feedback and GarageBand packs;
-- instrument inventory, matching, sample packs and instrument bundles;
-- MIDI preview, CoreMIDI playback, key, BPM, tuning, anchoring and alignment;
-- mashup preparation;
-- listening-master challengers and blind review; and
-- Clip v1 import, search, reuse, transformation and correction.
-
-Do not compress those workflows into an improvised command or silently choose
-a candidate. Keep raw, analytical, AI, repaired and reviewed artifacts
-distinct.
+The advanced reference covers transcription, optional AI comparisons, vocal
+melody, phrase review, bounded correction, Workbench, instruments, CoreMIDI,
+key/BPM/tuning/alignment, mashups, listening challengers and Clip v1 reuse.
+Read the selected command's `--help`. Never compress a workflow into an
+invented command or silently choose a candidate. Keep raw, analytical, AI,
+repaired and reviewed artifacts distinct.
 
 ## Validate and finish
 
-For every completed task:
+For completion:
 
-1. confirm the exact command and application version used;
+1. report the exact command and version;
 2. confirm source files were not modified;
-3. verify expected outputs exist and are non-empty;
+3. verify outputs exist and are non-empty;
 4. report key, BPM, tuning, role coverage and warnings;
-5. distinguish automatic output from human-reviewed output;
-6. distinguish the balanced interpretation from any separate listening-master
-   challenger;
-7. provide clickable absolute local paths when the client supports them; and
+5. distinguish automatic from human-reviewed output;
+6. distinguish the balanced interpretation from a listening-master challenger;
+7. provide clickable absolute local paths; and
 8. give one smallest useful next action.
 
-For failure:
-
-1. state the failed phase and exact missing component;
-2. preserve partial output for diagnosis;
-3. do not call it a completed song;
-4. do not retry a destructive or network action automatically; and
-5. propose the smallest safe recovery.
+For failure, state the exact failed phase, preserve partial evidence, do not
+call it complete, avoid automatic destructive/network retries, and propose the
+smallest safe recovery.
 
 ## Help install this skill elsewhere
 
-When the user asks to install Sunofriend on another Codex setup, use
-`$skill-installer` with:
+When asked to install Sunofriend in another Codex setup, use `$skill-installer`
+with:
 
 `https://github.com/N9-Developer-Empowerment/sunofriend/tree/main/skills/sunofriend`
 
-Install the skill first. Let the installed skill inspect and plan the
-application setup separately. If the new skill is not detected immediately,
-tell the user to restart Codex once.
+Install the skill first, then let it inspect and plan the application setup.
+If it is not detected immediately, tell the user to restart Codex once.

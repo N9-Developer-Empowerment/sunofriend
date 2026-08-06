@@ -2,8 +2,9 @@
 
 This is the public, serverless launch site for Sunofriend. Its main page is a
 plain-language route for musicians: install the official Sunofriend skill
-first, let a skills-aware local coding agent guide setup, then choose existing
-stems, help obtaining stems or the no-private-audio worked demo. Codex has the
+first, let a skills-aware local coding agent guide setup, then choose the local
+experimental two-stem alpha, existing stems, help obtaining stems or the
+no-private-audio worked demo. Codex has the
 copy-ready route, while Claude Code, Antigravity and other capable agents can
 use their native skill mechanism or read SKILL.md directly. It links to
 listening examples and asks every user for feedback.
@@ -36,9 +37,9 @@ to carry every technical detail:
 - `/for-agents` explains recognition, onboarding and the Simple/Studio boundary;
 - `/llms.txt` is the concise text discovery document;
 - `/agent-capabilities.json` is the versioned machine-readable contract;
-- `/research/separation/` publishes the bounded private experiment status,
-  development method, safe read-only inspection, open gates and existing
-  feedback routes without exposing audio or a product separator;
+- `/research/separation/` explains the public experimental local two-stem
+  alpha, its development evidence, read-only setup check, limits and existing
+  text-only feedback routes without accepting audio;
 - `../docs/SEPARATION_DEVELOPER_PREVIEW.md` is the concise public
   architecture, usage, test and feedback guide; the much longer private
   development record remains chronological evidence rather than newcomer
@@ -61,7 +62,10 @@ WAV stems remain the input to complete song conversion. The local
 supported audio parts as one fresh canonical WAV project for Create, Simple or
 Studio. It compares available recorded-origin evidence but does not separate,
 shift, pad, stretch, normalize or align audio, prove a downbeat or create MIDI.
-The narrower `source-import` command preserves one standalone asset.
+The narrower `source-import` command preserves one standalone asset. A separate
+opt-in `sunofriend-separate` alpha can estimate broad vocals and complementary
+instrumental on supported Apple-silicon Macs; it does not yet create narrow
+instrument families or start MIDI conversion automatically.
 
 The agent pages explicitly distinguish a coding agent with local workspace
 access from a standard ChatGPT conversation. They do not claim that a normal

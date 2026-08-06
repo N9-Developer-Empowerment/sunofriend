@@ -94,6 +94,7 @@ dev = [
 
 [project.scripts]
 sunofriend = "sunofriend.cli:main"
+sunofriend-separate = "sunofriend.separation_alpha:main"
 
 [build-system]
 requires = ["setuptools>=77,<81"]

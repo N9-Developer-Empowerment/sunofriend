@@ -112,7 +112,8 @@ test("server-renders an approachable skill-first musician page", async () => {
   assert.match(html, /Do not clone the repository first/);
   assert.match(html, /restart Codex once/);
   assert.match(html, /I HAVE STEMS/);
-  assert.match(html, /I NEED STEMS/);
+  assert.match(html, /I HAVE A FINISHED SONG/);
+  assert.match(html, /I NEED OTHER STEM OPTIONS/);
   assert.match(html, /What stems are and where to get them/);
   assert.match(html, /Open the glossary/);
   assert.match(html, /I WANT THE DEMO/);
@@ -173,7 +174,7 @@ test("publishes a canonical developer and agent integration page", async () => {
   assert.match(html, /\$skill-installer/);
   assert.match(html, /\$sunofriend/);
   assert.match(html, /standard ChatGPT conversation/i);
-  assert.match(html, /Offer three human routes/);
+  assert.match(html, /Offer four human routes/);
   assert.match(html, /Use the focused beginner command/);
   assert.match(html, /exact 40-character commit/);
   assert.match(html, /Apply never fetches or switches it/);
@@ -195,7 +196,8 @@ test("publishes a canonical developer and agent integration page", async () => {
   assert.match(html, /does not .*create\s+MIDI/s);
   assert.match(html, /not related to or affiliated/);
   assert.match(html, /Experimental separation status/);
-  assert.match(html, /private developer workflow can now produce broad vocals/);
+  assert.match(html, /sunofriend-separate/);
+  assert.match(html, /broad vocals/);
   assert.match(html, /\/research\/separation\//);
 });
 
@@ -204,24 +206,24 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.equal(response.status, 200);
   const html = await response.text();
 
-  assert.match(html, /PUBLIC RESEARCH STATUS · PRIVATE AUDIO/);
-  assert.match(html, /testing local stem separation in the open/);
+  assert.match(html, /PUBLIC EXPERIMENTAL ALPHA · AUDIO STAYS LOCAL/);
+  assert.match(html, /Try the useful slice/);
   assert.match(html, /Finished mix to two broad stems/);
   assert.match(html, /not individual bass, keys, drums or guitar/);
-  assert.match(html, /three source-distinct private evidence chains/);
+  assert.match(html, /three source-distinct full-song chains/);
   assert.match(html, /Software checks evidence; people judge music/);
   assert.match(html, /How the feature was developed/);
   assert.match(html, /state one narrow musical or engineering question/);
-  assert.match(html, /What you can use and inspect today/);
-  assert.match(html, /READ-ONLY DEVELOPER CHECK/);
-  assert.match(html, /private evaluation profile is unavailable/);
-  assert.match(html, /One understandable path from audio to editable music/);
-  assert.match(html, /Reports guide the next bounded change/);
+  assert.match(html, /How to try the public alpha/);
+  assert.match(html, /INSPECT SETUP/);
+  assert.match(html, /sunofriend-separate doctor/);
+  assert.match(html, /Four local tracks make the boundary audible/);
+  assert.match(html, /Help improve the next public slice/);
   assert.match(html, /SEPARATION_DEVELOPER_PREVIEW\.md/);
-  assert.match(html, /no separation button in Simple, Studio, the public/);
+  assert.match(html, /rather than a Simple\/TUI button/);
   assert.match(html, /Do not attach private audio/);
   assert.match(html, /Send a first-song report/);
-  assert.match(html, /Send compatibility feedback/);
+  assert.match(html, /Send text-only compatibility feedback/);
   assert.doesNotMatch(html, /model\.safetensors|separation-bakeoff|\/Users\//);
 });
 
@@ -232,7 +234,7 @@ test("explains stems, neutral providers, privacy and the current boundary", asyn
 
   assert.match(html, /BEGINNER STEM GUIDE/);
   assert.match(html, /A stem is <strong>not necessarily one instrument/);
-  assert.match(html, /Bring separate audio parts/);
+  assert.match(html, /Bring separate parts, or try the local two-stem alpha/);
   assert.match(html, /sunofriend source-doctor/);
   assert.match(
     html,
@@ -242,7 +244,7 @@ test("explains stems, neutral providers, privacy and the current boundary", asyn
   assert.match(html, /replans the current files/);
   assert.match(html, /accept-unconfirmed-origin/);
   assert.match(html, /Do not map an observed part to/);
-  assert.match(html, /does not yet separate one finished song into stems/);
+  assert.match(html, /can estimate broad vocals and complementary/);
   assert.match(html, /Neutral provider starting points/);
   assert.match(html, /No current affiliate links/);
   assert.match(html, /receives no commission/);
@@ -327,8 +329,9 @@ test("publishes concise llms.txt discovery guidance", async () => {
   assert.match(text, /copyright-safe synthetic stems/);
   assert.match(text, /not exact waveform reconstruction/);
   assert.match(text, /Experimental finished-mix separation/);
-  assert.match(text, /public research status, not a public separator/);
-  assert.match(text, /human listening remains the musical authority/);
+  assert.match(text, /public local alpha estimates broad vocals/);
+  assert.match(text, /sunofriend-separate doctor/);
+  assert.match(text, /Human listening decides usefulness/);
   assert.match(text, /A stem is a synchronized grouped submix/);
   assert.match(text, /no affiliate relationship/);
   assert.match(text, /sunofriend\.com\/stems/);
@@ -386,14 +389,14 @@ test("publishes a versioned machine-readable capability contract", async () => {
     "sunofriend create PROJECT --out-dir FRESH",
   );
   assert.equal(data.modes.demo.uses_normal_automatic_pipeline, true);
-  assert.equal(data.boundaries.stem_separation, false);
+  assert.equal(data.boundaries.stem_separation, true);
   assert.equal(
     data.experiments.finished_mix_separation.status,
-    "private_developer_research",
+    "public_experimental_local_alpha",
   );
   assert.equal(
     data.experiments.finished_mix_separation.public_product_route_available,
-    false,
+    true,
   );
   assert.equal(
     data.experiments.finished_mix_separation.human_listening_required,
@@ -420,7 +423,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
     false,
   );
   assert.equal(data.boundaries.rights_required, true);
-  assert.equal(data.stem_inputs.built_in_full_mix_separation_available, false);
+  assert.equal(data.stem_inputs.built_in_full_mix_separation_available, true);
   assert.equal(
     data.stem_inputs.one_asset_multi_format_import_available,
     true,
@@ -481,8 +484,9 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(data.canonical_pages.privacy, "https://sunofriend.com/privacy/");
   assert.equal(data.contact.email, "hello@sunofriend.com");
   assert.equal(data.contact.accepts_audio_attachments, false);
-  assert.equal(data.newcomer_routes.length, 3);
-  assert.match(data.newcomer_routes[0].action, /sunofriend create/);
+  assert.equal(data.newcomer_routes.length, 4);
+  assert.match(data.newcomer_routes[0].action, /sunofriend-separate/);
+  assert.match(data.newcomer_routes[1].action, /sunofriend create/);
   assert.equal(data.advanced_capabilities.length >= 6, true);
 });
 
@@ -510,7 +514,7 @@ test("keeps public discovery and the AWS boundary explicit", async () => {
   ]);
 
   assert.match(page, /This website never/);
-  assert.match(page, /does not (?:yet )?separate/);
+  assert.match(page, /public local alpha currently estimates broad vocals/);
   assert.match(page, /not waveform reconstruction/);
   assert.match(page, /SoftwareApplication/);
   assert.match(layout, /publisher: "Unsigned Media Ltd"/);

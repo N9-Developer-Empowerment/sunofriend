@@ -54,6 +54,24 @@ For a source-aligned test, compare the original stem and MIDI at the same
 timeline origin with quantisation and audio stretching disabled. Never upload
 music, stems, screenshots or project files unless you have permission.
 
+## Test the experimental local separator
+
+Apple-silicon Mac users can also test the opt-in broad vocal/instrumental
+alpha described in
+[Experimental local stem separation](docs/STEM_SEPARATION_ALPHA.md). Start with
+the read-only setup and separation plans, accept the pinned model terms only if
+you agree, and process only audio you may use.
+
+A useful report says whether the vocal and instrumental outputs helped the next
+musical task, then names any plainly audible missing content, bleed, artefacts,
+join changes, failure, runtime or memory problem. “Useful with limitations” is
+valid evidence; early participation is not a hunt for a perfect score.
+
+Keep audio and private review JSON local. Use the compatibility issue form for
+text observations, redacted logs and authorised screenshots only. Sunofriend
+does not upload a review, change the model or promote a musical default from
+one report.
+
 ## Raise an issue
 
 Use the

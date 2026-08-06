@@ -18,9 +18,10 @@ The simplest lay description is:
 > instrumental version you can listen to or continue in music software.
 
 This is a local alpha, not a finished online service. Results vary by song.
-It is currently tested most deeply on macOS with GarageBand. Sunofriend does
-not download or separate a SoundCloud track. A user supplies local stems that
-they own or are authorised to process.
+It is currently tested most deeply on macOS with GarageBand. Sunofriend never
+downloads a SoundCloud track. A user can supply local stems, or opt into an
+experimental Apple-silicon route that estimates broad vocals and instrumental
+from one local song they own or are authorised to process.
 
 ## The name and the independent project
 
@@ -72,8 +73,9 @@ tools:
 
 > Want to try Sunofriend without learning its command line? Open the beginner
 > website and copy its two prompts into Codex. The `$sunofriend` skill
-> offers a built-in demo, your own stems, or help finding stems you are allowed
-> to process. It inspects first and uses two clear setup approvals:
+> offers a built-in demo, your own stems, help finding stems, or experimental
+> local two-stem separation of one authorised song. It inspects first and uses
+> clear setup and model approvals:
 > https://sunofriend.com
 
 Use “Codex” only for a session with local file and terminal access. Do not
@@ -284,7 +286,130 @@ group chats.
 
 Use the landscape banner so the technical explanation remains readable.
 
-## Developer research update campaign
+## Public experimental separation alpha campaign
+
+Use these current drafts now that broad vocal/instrumental separation is
+available for public local testing on Apple-silicon macOS. Keep the limits in
+the post: one finished mix, two broad stems, local processing, human listening,
+no perfect-separation claim and no automatic MIDI promotion.
+
+Canonical links:
+
+- Setup, commands, listening and limits: https://sunofriend.com/research/separation/
+- Text-only feedback: https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml
+- Source: https://github.com/N9-Developer-Empowerment/sunofriend
+
+### X
+
+> Sunofriend can now separate one authorised finished song locally into broad vocals + instrumental, then give you a reconstruction check and a listening page before you decide whether the stems are useful.
+>
+> Public experimental alpha for Apple-silicon Macs. No upload. Honest limits. Feedback welcome.
+> https://sunofriend.com/research/separation/
+
+### Bluesky
+
+> I have opened Sunofriend's current local stem separator for public testing.
+>
+> It takes one authorised song and estimates broad vocals plus complementary instrumental. You hear the source, both stems and their reconstruction before using anything for MIDI.
+>
+> Apple-silicon Mac alpha, local-only, imperfect by design and improving in public:
+> https://sunofriend.com/research/separation/
+
+### Threads
+
+> The current Sunofriend stem separator is now public as an experimental local
+> alpha.
+>
+> Give it one finished song you own or may process. On an Apple-silicon Mac it
+> estimates broad vocals and complementary instrumental, creates a
+> reconstruction check, and opens a local listening page. Nothing is uploaded
+> and the stems remain unreviewed until you listen.
+>
+> It does not yet make separate drums, bass, keys and guitars, and it is not a claim
+> of recovering the lost studio multitracks. I am releasing the useful narrow
+> slice now because real setup and listening feedback can improve the next one.
+>
+> Try it, read the method and report what was clear, confusing, useful or poor:
+> https://sunofriend.com/research/separation/
+
+### Instagram
+
+> **LOCAL STEM SEPARATION IS NOW IN THE SUNOFRIEND ALPHA**
+>
+> One authorised finished song in. Broad vocals + instrumental out. Then a
+> reconstruction check and a local listening page so your ears make the
+> decision.
+>
+> This first public alpha is for Apple-silicon Macs. It uploads nothing and it
+> does not pretend two estimated stems are the original studio tracks. The
+> next goal is better joins, easier setup and narrower drums/bass/keys roles,
+> shaped by real user feedback.
+>
+> https://sunofriend.com/research/separation/
+>
+> **सुनो = listen.** Independent of Suno Inc.
+>
+> #MusicProduction #StemSeparation #MIDI #AIMusic #OpenSource #GarageBand
+
+### Facebook
+
+> I have made Sunofriend's current local stem-separation implementation
+> available as a public experimental alpha.
+>
+> It accepts one finished song you own or are authorised to process and, on an
+> Apple-silicon Mac, estimates broad vocals and complementary instrumental. It
+> also creates a source reference, an additive reconstruction check and a
+> local review page. The output is deliberately labelled unreviewed: software
+> verifies files and timing, while a person decides whether the music is
+> useful.
+>
+> This is a working narrow slice, not perfect multitrack recovery. Separate
+> drums, bass, keys and guitars are still future work. I am publishing now so
+> musicians and developers can improve setup, portability, audio quality and
+> the next model comparisons through real feedback.
+>
+> Guide: https://sunofriend.com/research/separation/
+
+### WhatsApp
+
+> Sunofriend's first local stem separator is ready for public alpha testing on
+> Apple-silicon Macs: one authorised song → broad vocals + instrumental → local
+> listening and reconstruction check. No upload and no perfect-result claim.
+> I would value honest feedback: https://sunofriend.com/research/separation/
+
+### BBC Slack `#music-production-chat`
+
+> Hi all. I have opened the current Sunofriend stem-separation implementation
+> as a public experimental alpha.
+>
+> It runs locally on an Apple-silicon Mac and takes one finished song the user
+> is allowed to process. The first scope is deliberately narrow: broad vocals,
+> complementary instrumental, a level-managed source reference and an
+> additive reconstruction check. A local review page makes the listener compare
+> all four before treating either stem as useful. Audio and review notes are
+> not uploaded.
+>
+> This came out of several source-distinct full-song experiments and a lot of
+> human listening around bleed, missing content and chunk joins. Machine checks
+> verify identity, geometry and reconstruction; they do not declare what sounds
+> musical. The result stays unreviewed and is not silently fed into MIDI.
+>
+> It is not yet separate drums, bass, keys and guitars. I am publishing the
+> useful two-stem slice now because feedback from real machines, songs and ears
+> should help set the next bounded engineering work.
+>
+> Setup, architecture and limits: https://sunofriend.com/research/separation/
+>
+> Text-only feedback: https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml
+>
+> Sunofriend is Apache-2.0, takes its name from Hindi **सुनो** (“listen”), and
+> is not related to or affiliated with Suno Inc.
+
+## Historical developer research update campaign
+
+The drafts below predate the public alpha and are retained only as a record.
+Do not post claims such as “not a public separator yet.” Use the current
+campaign above.
 
 Use these drafts for the public separation-research update. The feature being
 published is the **method, evidence, architecture and feedback loop**, not a

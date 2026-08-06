@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-01.1"
+INTERFACE_CONTRACT_VERSION = "2026-08-06.1"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -167,9 +167,14 @@ def render_skill_interface_reference() -> str:
         "song-interpretation WAV and a GarageBand handoff. Preparing a folder",
         "and converting it are separate actions.",
         "",
-        "Future source separation will estimate stems from one finished mix.",
-        "That workflow is not implemented. No source-preparation command",
-        "downloads music or installs a decoder or model.",
+        "The separate `sunofriend-separate` alpha entry point can estimate",
+        "broad vocals plus complementary instrumental from one authorised",
+        "finished mix on a supported Apple-silicon Mac. Its plan is read-only;",
+        "setup and execution require separate explicit approval. Results are",
+        "local, experimental and unreviewed, with a reconstruction diagnostic",
+        "and listening page. It does not yet split drums, bass or keys and does",
+        "not automatically activate its outputs for MIDI conversion.",
+        "No Sunofriend command downloads music.",
         "",
         "## Product outputs",
         "",
@@ -192,6 +197,9 @@ def render_skill_interface_reference() -> str:
             "  exact production-summary primaries, is marked automatic and",
             "  unreviewed, writes no human decision or feedback event, and",
             "  recommends Studio review.",
+            "  It also publishes separately labelled starter-sound MIDI, named",
+            "  General MIDI assignments, short per-part previews and a GarageBand",
+            "  instrument guide while leaving every automatic-primary MIDI exact.",
             f"- **Studio:** {studio['result_kind']}. Choices and feedback are",
             "  recorded only after an explicit human action.",
             "",
