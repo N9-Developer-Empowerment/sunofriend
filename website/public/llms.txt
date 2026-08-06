@@ -20,7 +20,7 @@ Sunofriend is an independent Unsigned Media Ltd project. Its name begins with th
 - Compatibility feedback: https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml
 - Structured capability document: https://sunofriend.com/agent-capabilities.json
 - Public separation-research status: https://sunofriend.com/research/separation/
-- Separation developer preview, architecture, safe doctor and feedback loop: https://github.com/N9-Developer-Empowerment/sunofriend/blob/codex/agent-portability-website/docs/SEPARATION_DEVELOPER_PREVIEW.md
+- Separation developer preview, architecture, safe doctor and feedback loop: https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SEPARATION_DEVELOPER_PREVIEW.md
 - Repository: https://github.com/N9-Developer-Empowerment/sunofriend
 - Beginner guide: https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/GETTING_STARTED.md
 
@@ -57,7 +57,7 @@ Sunofriend never downloads streaming audio or infers processing permission from 
 - Output contains source reference, vocals, instrumental, reconstruction check, technical report and a local listening page. Status is `complete_unreviewed`; useful stems enter MIDI only as a later explicit decision.
 - Automated checks cover file integrity, audio geometry, reconstruction accounting and reproducibility. Human listening decides usefulness, bleed, missing sound, texture and joins.
 - Reuse the existing compatibility report for workflow, platform and audible-result feedback. Do not attach stems, vocals, private music or review exports.
-- Canonical guide: https://github.com/N9-Developer-Empowerment/sunofriend/blob/codex/agent-portability-website/docs/STEM_SEPARATION_ALPHA.md
+- Canonical guide: https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/STEM_SEPARATION_ALPHA.md
 - Canonical status and open gates: https://sunofriend.com/research/separation/
 - Feedback may improve instructions, portability and the next bounded experiment. It never selects a model or musical default automatically.
 
