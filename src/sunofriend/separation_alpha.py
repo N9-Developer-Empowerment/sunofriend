@@ -251,8 +251,12 @@ def separation_doctor(profile: SeparationProfile) -> dict[str, Any]:
     spec = separation_profile(profile.profile_id)
     checks["runtime"] = _runtime_check(
         profile.runtime_python,
-        expected_packages=(spec.packages() if profile.profile_id in CORE_FOUR_PROFILE_IDS else None),
-        expected_pytorch=(spec.backend in {"demucs-infer", "scnet-official-release-adapter"}),
+        expected_packages=(
+            spec.packages() if profile.profile_id in CORE_FOUR_PROFILE_IDS else None
+        ),
+        expected_pytorch=(
+            spec.backend in {"demucs-infer", "scnet-official-release-adapter"}
+        ),
     )
     if profile.profile_id in CORE_FOUR_PROFILE_IDS:
         _add_core_four_checks(checks, profile=profile, spec=spec)
@@ -314,7 +318,9 @@ def plan_separation(
         scope = separation_scope(scope_id)
     else:
         scope = require_executable_scope(scope_id)
-    selected = profile or resolve_profile(profile_id=profile_for_scope(scope_id).profile_id)
+    selected = profile or resolve_profile(
+        profile_id=profile_for_scope(scope_id).profile_id
+    )
     runtime_device = str(
         dict(separation_profile(selected.profile_id).inference_settings).get(
             "device", "gpu"
@@ -465,9 +471,7 @@ def _run_worker(plan: SeparationPlan, staging: Path) -> Mapping[str, Any]:
         spec = separation_profile(plan.profile.profile_id)
         worker_command = [
             str(plan.profile.runtime_python),
-            str(
-                plan.profile.repository_root / spec.worker_script
-            ),
+            str(plan.profile.repository_root / spec.worker_script),
             "--source",
             str(staging / "TEMP/source-44100-stereo-pcm24.wav"),
             "--destination",
@@ -590,9 +594,7 @@ def _build_report(
         "quality_status": "human_listening_required",
         "experimental": True,
         "evidence_scope": (
-            "bounded_activation_canary"
-            if activation_canary
-            else "public_opt_in_result"
+            "bounded_activation_canary" if activation_canary else "public_opt_in_result"
         ),
         "local_only": True,
         "source": {
@@ -1261,6 +1263,17 @@ def main(argv: Sequence[str] | None = None) -> int:
                     f"- {item['profile_id']}: {item['status']} -> "
                     f"{item['target_release_tier']}"
                 )
+            refinement = result["refinement_registry"]
+            targets = ", ".join(
+                item["target_id"] for item in refinement["supported_targets"]
+            )
+            print("Studio-only refinement contract")
+            print(
+                f"- {refinement['scope_id']}: {refinement['status']} "
+                f"({targets}; executable: no)"
+            )
+            for blocker in refinement["blockers"]:
+                print(f"  blocker: {blocker}")
         return 0
     selected_scope = args.scope if hasattr(args, "scope") else DEFAULT_SCOPE_ID
     profile = resolve_profile(

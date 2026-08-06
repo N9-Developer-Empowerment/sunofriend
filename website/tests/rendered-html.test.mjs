@@ -230,6 +230,12 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /INSPECT SETUP/);
   assert.match(html, /sunofriend-separate doctor/);
   assert.match(html, /Four roles, one immutable profile, no hidden tuning loop/);
+  assert.match(html, /STUDIO RESEARCH CONTRACT/);
+  assert.match(html, /other-refinement-v1/);
+  assert.match(html, /One guitar or keys target, with the residual kept/);
+  assert.match(html, /Apple-native htdemucs_6s MLX/);
+  assert.match(html, /It remains blocked and uninstalled/);
+  assert.match(html, /one in-memory fraction normalization/);
   assert.match(html, /30 days or 10 valid submissions/);
   assert.match(html, /Help improve the next public slice/);
   assert.match(html, /SEPARATION_DEVELOPER_PREVIEW\.md/);
@@ -514,6 +520,59 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.experiments.finished_mix_separation.core_four_stem_target
       .future_install_command_enabled,
     true,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement.scope_id,
+    "other-refinement-v1",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement.status,
+    "blocked",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement.release_tier,
+    "studio_challenger",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement.executable,
+    false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .candidate_profile_id,
+    "demucs-mlx-htdemucs-6s-other-refinement-v1",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement.candidate_status,
+    "blocked",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .candidate_setup_available,
+    true,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .candidate_install_authorizes_inference,
+    false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement.parent_profile_id,
+    "scnet-large-musdb-release-v1",
+  );
+  assert.deepEqual(
+    data.experiments.finished_mix_separation.other_refinement.supported_targets,
+    ["guitar", "keys"],
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .parent_and_children_cannot_both_enter_midi,
+    true,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .model_or_dependency_install_authorized,
+    false,
   );
   assert.equal(
     data.experiments.finished_mix_separation.review_schema,

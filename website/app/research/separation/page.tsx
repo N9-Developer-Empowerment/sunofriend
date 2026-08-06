@@ -5,7 +5,7 @@ import { links, separationResearch } from "../../content";
 export const metadata: Metadata = {
   title: "Experimental local stem separation — Sunofriend",
   description:
-    "Try Sunofriend's public two-stem separator or explicit local SCNet core-four preview.",
+    "Try Sunofriend's public two-stem separator or explicit local SCNet core-four preview, and inspect the Studio-only grouped-other refinement contract.",
   alternates: { canonical: "/research/separation/" },
 };
 
@@ -109,6 +109,24 @@ export default function SeparationResearch() {
               <p>
                 The alpha never silently activates a stem or starts MIDI
                 conversion. The musician makes that later decision.
+              </p>
+            </div>
+            <div className="agent-card">
+              <span className="card-number">STUDIO RESEARCH CONTRACT</span>
+              <h3>One guitar or keys target, with the residual kept</h3>
+              <p>
+                <code>other-refinement-v1</code> now binds one exact grouped-other
+                parent to one requested guitar or keys target plus a transparent
+                PCM24 residual. The parent and children cannot both enter MIDI.
+              </p>
+              <p>
+                The first exact candidate is now pinned as{" "}
+                <code>Apple-native htdemucs_6s MLX</code>, with guitar direct and
+                keys honestly labelled as a piano proxy. It remains blocked and
+                uninstalled. Its config repeats the known <code>39/5</code> segment
+                issue, so one in-memory fraction normalization is the only allowed
+                remediation. The setup plan is read-only and no public refinement
+                command exists.
               </p>
             </div>
             <div className="agent-card">

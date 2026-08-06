@@ -90,6 +90,15 @@ The command above is a read-only plan until `--execute --confirm-rights` is
 added. It never starts MIDI/Create automatically, and grouped `other` is not a
 single instrument.
 
+For deeper separation, Sunofriend now has a non-executable Studio contract for
+refining one exact grouped-`other` stem into either one guitar target or one
+keys target plus the transparent residual. Its first backend candidate is the
+exact, blocked Apple-native `htdemucs_6s` MLX profile; the keys lane is honestly
+labelled as a piano proxy. Nothing is installed or run without a separate
+approval. The deterministic PCM24 proof, no-write setup plan and bounded
+qualification path are documented in
+[Refining grouped other in Studio](docs/OTHER_STEM_REFINEMENT.md).
+
 Not sure what a stem is, why a drums stem contains several drums, or where to
 get authorised examples? Read
 [Stems: what they are and where to get them](docs/STEMS.md).
@@ -172,6 +181,7 @@ and explore its compact [worked MIDI pack](examples/the-aisle-at-lidl/).
 | Understand or obtain stems | [Stems and provider guide](docs/STEMS.md) |
 | Try the public finished-mix separation alpha | [Experimental local stem separation](docs/STEM_SEPARATION_ALPHA.md) |
 | Inspect the vocals, drums, bass and other preview contract | [Public core-four stem preview](docs/FULL_STEM_SEPARATION_PLAN.md) |
+| Understand the Studio-only guitar/keys refinement path | [Refining grouped other in Studio](docs/OTHER_STEM_REFINEMENT.md) |
 | Prepare a folder of existing separated parts | [Folder source import](docs/GETTING_STARTED.md#prepare-a-folder-of-existing-audio-parts) |
 | Prepare one local audio file safely | [Source import](docs/GETTING_STARTED.md#prepare-one-local-audio-asset) |
 | Install or troubleshoot manually | [Getting started](docs/GETTING_STARTED.md) |

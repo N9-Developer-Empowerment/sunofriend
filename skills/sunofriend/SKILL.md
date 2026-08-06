@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-06.10 -->
+<!-- sunofriend-interface-contract: 2026-08-06.11 -->
 
 # Sunofriend
 
@@ -49,6 +49,14 @@ on.
   selectable core-four profile estimates `vocals`, `drums`, `bass` and grouped
   `other` only when `sunofriend-separate profiles` reports it `public_opt_in`.
   Neither route is ground truth or activates output for MIDI automatically.
+- `other-refinement-v1` is a Studio-only contract, not an executable route. It
+  binds one exact grouped-`other` parent to either one guitar target or one keys
+  target plus the exact residual. Its first backend candidate is the pinned,
+  blocked `demucs-mlx-htdemucs-6s-other-refinement-v1`; `keys` is explicitly a
+  piano proxy, not general keyboard isolation. Registration installs or runs no
+  model, and the profile must remain blocked until its separately approved
+  setup and objective gates pass. Never put both the parent and its children
+  into MIDI.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.
@@ -100,6 +108,29 @@ Preview admission uses objective licensing, privacy, integrity, runtime and
 output gates; poor musical feedback is recorded and must not create an
 unlimited pre-release tuning loop.
 Historical statements in the advanced record do not override this contract.
+
+The model-free synthetic contract can be checked by a developer with a fresh
+output directory:
+
+```bash
+.venv/bin/python scripts/run-other-refinement-synthetic.py \
+  --target guitar --out "/absolute/path/to/fresh-other-refinement-fixture"
+```
+
+This creates only deterministic oscillator PCM24 evidence. It is not approval
+to download, install or execute a target-separation model, and it does not
+activate a source-graph child or expose a public refinement command.
+
+The first challenger can be inspected without side effects using:
+
+```bash
+scripts/setup-separation-other-refinement-demucs-mlx-macos.sh --plan
+```
+
+Do not run its `--install` route until the user explicitly accepts both the
+displayed model terms and checkpoint use. Even an approved setup does not grant
+model construction, inference, private-audio processing, source activation or
+MIDI permission.
 
 ## Inspect before installing
 
