@@ -39,6 +39,7 @@ const softwareJsonLd = {
     name: "Unsigned Media Ltd",
   },
   featureList: [
+    "Experimental local separation into broad vocals and complementary instrumental",
     "Authorised separated audio parts to canonical WAV stems and editable MIDI",
     "Balanced MIDI-derived song-interpretation WAV",
     "Starter ZIP for a DAW handoff",
@@ -108,6 +109,15 @@ export default function Home() {
         </div>
 
         <div className="hero-visual">
+          <Link
+            className="alpha-sash"
+            href="/research/separation/"
+            aria-label="New public alpha: try local vocals and instrumental stem separation"
+          >
+            <span>NEW · PUBLIC ALPHA</span>
+            <strong>VOCALS + INSTRUMENTAL</strong>
+            <b>LOCAL STEM SEPARATION →</b>
+          </Link>
           <Image
             src="/brand/sunofriend-listener-banner.png"
             alt="A waveform becoming the Sunofriend mark and editable MIDI notes"

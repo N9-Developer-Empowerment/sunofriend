@@ -286,12 +286,17 @@ group chats.
 
 Use the landscape banner so the technical explanation remains readable.
 
-## Public experimental separation alpha campaign
+## New public separation alpha launch campaign — August 2026
 
-Use these current drafts now that broad vocal/instrumental separation is
-available for public local testing on Apple-silicon macOS. Keep the limits in
-the post: one finished mix, two broad stems, local processing, human listening,
-no perfect-separation claim and no automatic MIDI promotion.
+These are the recommended posts to use with the new homepage **NEW · PUBLIC
+ALPHA** sash. Broad vocal/instrumental separation is available now for public,
+local testing on Apple-silicon macOS. Keep the limits in every adaptation: one
+authorised finished mix, two broad stems, local processing, human listening, no
+perfect-separation claim and no automatic MIDI promotion.
+
+Recommended graphic: use the landscape Sunofriend banner or a screenshot of
+the homepage sash. Link the image or first comment to the practical guide, not
+only to the repository.
 
 Canonical links:
 
@@ -301,24 +306,26 @@ Canonical links:
 
 ### X
 
-> Sunofriend can now separate one authorised finished song locally into broad vocals + instrumental, then give you a reconstruction check and a listening page before you decide whether the stems are useful.
+> New in Sunofriend's public alpha: local vocal + instrumental stem separation.
 >
-> Public experimental alpha for Apple-silicon Macs. No upload. Honest limits. Feedback welcome.
+> One authorised song in. Two broad stems, a reconstruction check and a listening page out.
+>
+> Apple-silicon Mac. No upload. Human listening required.
 > https://sunofriend.com/research/separation/
 
 ### Bluesky
 
-> I have opened Sunofriend's current local stem separator for public testing.
+> New in Sunofriend's public alpha: local vocal + instrumental stem separation.
 >
-> It takes one authorised song and estimates broad vocals plus complementary instrumental. You hear the source, both stems and their reconstruction before using anything for MIDI.
+> One authorised song in. Two broad stems, a reconstruction check and a listening page out.
 >
-> Apple-silicon Mac alpha, local-only, imperfect by design and improving in public:
+> Apple-silicon Mac. No upload. Human listening required.
 > https://sunofriend.com/research/separation/
 
 ### Threads
 
-> The current Sunofriend stem separator is now public as an experimental local
-> alpha.
+> Sunofriend now has a public experimental alpha for local vocal + instrumental
+> stem separation.
 >
 > Give it one finished song you own or may process. On an Apple-silicon Mac it
 > estimates broad vocals and complementary instrumental, creates a
@@ -334,7 +341,9 @@ Canonical links:
 
 ### Instagram
 
-> **LOCAL STEM SEPARATION IS NOW IN THE SUNOFRIEND ALPHA**
+> **NEW · PUBLIC ALPHA**
+>
+> **LOCAL VOCAL + INSTRUMENTAL STEM SEPARATION**
 >
 > One authorised finished song in. Broad vocals + instrumental out. Then a
 > reconstruction check and a local listening page so your ears make the
@@ -353,8 +362,8 @@ Canonical links:
 
 ### Facebook
 
-> I have made Sunofriend's current local stem-separation implementation
-> available as a public experimental alpha.
+> New in the Sunofriend public experimental alpha: local vocal + instrumental
+> stem separation.
 >
 > It accepts one finished song you own or are authorised to process and, on an
 > Apple-silicon Mac, estimates broad vocals and complementary instrumental. It
@@ -372,14 +381,15 @@ Canonical links:
 
 ### WhatsApp
 
-> Sunofriend's first local stem separator is ready for public alpha testing on
-> Apple-silicon Macs: one authorised song → broad vocals + instrumental → local
-> listening and reconstruction check. No upload and no perfect-result claim.
-> I would value honest feedback: https://sunofriend.com/research/separation/
+> Sunofriend now has a public alpha for local vocal + instrumental stem
+> separation on Apple-silicon Macs: one authorised song → two broad stems → a
+> local listening and reconstruction check. No upload and no perfect-result
+> claim. I would value honest feedback:
+> https://sunofriend.com/research/separation/
 
 ### BBC Slack `#music-production-chat`
 
-> Hi all. I have opened the current Sunofriend stem-separation implementation
+> Hi all. I have opened Sunofriend's local vocal + instrumental stem separation
 > as a public experimental alpha.
 >
 > It runs locally on an Apple-silicon Mac and takes one finished song the user

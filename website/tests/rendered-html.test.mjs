@@ -93,6 +93,13 @@ test("server-renders an approachable skill-first musician page", async () => {
   );
   assert.match(html, /Let your agent guide the setup/);
   assert.match(html, /Start with the skill/);
+  assert.match(html, /NEW · PUBLIC ALPHA/);
+  assert.match(html, /VOCALS \+ INSTRUMENTAL/);
+  assert.match(html, /LOCAL STEM SEPARATION/);
+  assert.match(
+    html,
+    /href="\/research\/separation\/"[^>]*aria-label="New public alpha: try local vocals and instrumental stem separation"/,
+  );
   assert.match(html, /ONE SKILL\. YOUR CHOICE OF AGENT/);
   assert.match(html, /plain-text Sunofriend skill tells a compatible local agent/);
   assert.match(
