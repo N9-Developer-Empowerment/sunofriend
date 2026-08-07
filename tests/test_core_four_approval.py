@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import subprocess
+import sys
 from threading import Thread
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -142,7 +143,7 @@ def test_approval_page_write_is_fresh_and_plan_is_read_only(tmp_path: Path) -> N
     before = set(tmp_path.iterdir())
     result = subprocess.run(
         [
-            str(ROOT / ".venv/bin/python"),
+            sys.executable,
             str(ROOT / "scripts/create-core-four-approval-page.py"),
             "--plan",
         ],

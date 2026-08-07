@@ -111,6 +111,16 @@ never activates the target or starts MIDI automatically. The deterministic
 PCM24 proof, setup plan and bounded qualification evidence are documented in
 [Refining grouped other in Studio](docs/OTHER_STEM_REFINEMENT.md).
 
+After the local page exports your listening JSON, bind it to the exact result
+without selecting a source or starting MIDI:
+
+```bash
+.venv/bin/sunofriend-separate review-other \
+  "/absolute/path/to/refinement-result" \
+  "/absolute/path/to/sunofriend-other-refinement-listening.json" \
+  --out "/absolute/path/to/fresh-private-feedback.json"
+```
+
 Not sure what a stem is, why a drums stem contains several drums, or where to
 get authorised examples? Read
 [Stems: what they are and where to get them](docs/STEMS.md).

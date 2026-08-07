@@ -127,7 +127,21 @@ _TARGETS: Mapping[str, Mapping[str, str]] = MappingProxyType(
         ),
     }
 )
+_PRE_ACTIVATION_BLOCKERS = (
+    "The first target-separation candidate is pinned, but dependency and "
+    "checkpoint installation still require explicit approval.",
+    "The one allowed in-memory fractional-segment remediation has not passed "
+    "installed-artifact compatibility under network denial.",
+    "No candidate has passed offline model construction, resource and "
+    "output-contract gates.",
+    "Studio can describe and compare future candidates, but no refinement "
+    "runner is exposed.",
+)
 _BLOCKERS: tuple[str, ...] = ()
+_VALID_PLAN_BLOCKER_SNAPSHOTS = (
+    list(_BLOCKERS),
+    list(_PRE_ACTIVATION_BLOCKERS),
+)
 _LIMITATIONS = (
     "Exact reconstruction proves accounting, not target isolation or musical usefulness.",
     "The requested target can contain bleed and the residual can retain target content.",
@@ -333,8 +347,8 @@ def validate_other_refinement_plan(
         raise ValueError("other-refinement plan grants a permission")
     if value.get("effects") != dict(_PLAN_EFFECTS):
         raise ValueError("other-refinement plan effects differ")
-    if value.get("blockers") != list(_BLOCKERS):
-        raise ValueError("other-refinement plan blockers differ")
+    if value.get("blockers") not in _VALID_PLAN_BLOCKER_SNAPSHOTS:
+        raise ValueError("other-refinement plan blockers are not a known snapshot")
     _assert_no_private_absolute_path(value)
     return value
 

@@ -153,6 +153,26 @@ def test_plan_identity_and_parent_binding_are_immutable() -> None:
     assert "/Users/" not in json.dumps(plan, sort_keys=True)
 
 
+def test_validator_preserves_only_the_known_pre_activation_blocker_snapshot() -> None:
+    plan = _plan()
+    historical = copy.deepcopy(plan)
+    historical["blockers"] = [
+        "The first target-separation candidate is pinned, but dependency and checkpoint installation still require explicit approval.",
+        "The one allowed in-memory fractional-segment remediation has not passed installed-artifact compatibility under network denial.",
+        "No candidate has passed offline model construction, resource and output-contract gates.",
+        "Studio can describe and compare future candidates, but no refinement runner is exposed.",
+    ]
+    _reidentify_plan(historical)
+
+    assert validate_other_refinement_plan(historical) == historical
+
+    unknown = copy.deepcopy(historical)
+    unknown["blockers"] = ["caller supplied blocker"]
+    _reidentify_plan(unknown)
+    with pytest.raises(ValueError, match="not a known snapshot"):
+        validate_other_refinement_plan(unknown)
+
+
 @pytest.mark.parametrize("target_id", ["guitar", "keys"])
 def test_model_free_fixture_reconstructs_parent_exactly_and_repeats(
     tmp_path: Path,

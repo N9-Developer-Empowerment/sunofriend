@@ -10,6 +10,7 @@ from sunofriend.separation_demucs_mlx_worker import PCM24_SCALE
 from sunofriend.separation_other_refinement_demucs_mlx_run import (
     _document_sha256,
     _render_review,
+    execute_installed_other_refinement,
     plan_installed_other_refinement,
 )
 from sunofriend.separation_other_refinement import (
@@ -67,9 +68,9 @@ def test_installed_plan_binds_sealed_scnet_parent_without_execution(
 
     parent = tmp_path / "parent"
     other = parent / "STEMS/other.wav"
-    values = np.rint(
-        np.full((441, 2), 0.1, dtype=np.float64) * PCM24_SCALE
-    ).astype(np.int32)
+    values = np.rint(np.full((441, 2), 0.1, dtype=np.float64) * PCM24_SCALE).astype(
+        np.int32
+    )
     identity = write_pcm24_integers(other, values, np=np)
     report = {
         "schema": "sunofriend.experimental-separation-alpha.v1",
@@ -102,6 +103,34 @@ def test_installed_plan_binds_sealed_scnet_parent_without_execution(
     assert plan["contract"]["request"]["target_id"] == "keys"
     assert plan["contract"]["parent"]["audio_sha256"] == identity["sha256"]
     assert not any(plan["effects"].values())
+
+
+def test_execution_refuses_a_known_historically_blocked_plan(tmp_path: Path) -> None:
+    fixture = create_other_refinement_synthetic_fixture(tmp_path / "fixture")
+    contract = json.loads(Path(fixture["plan"]).read_text(encoding="utf-8"))
+    contract["blockers"] = [
+        "The first target-separation candidate is pinned, but dependency and checkpoint installation still require explicit approval.",
+        "The one allowed in-memory fractional-segment remediation has not passed installed-artifact compatibility under network denial.",
+        "No candidate has passed offline model construction, resource and output-contract gates.",
+        "Studio can describe and compare future candidates, but no refinement runner is exposed.",
+    ]
+    seed = dict(contract)
+    seed.pop("document_sha256")
+    seed.pop("plan_id")
+    contract["plan_id"] = "sha256:" + _document_sha256(seed)
+    contract["document_sha256"] = _document_sha256(contract)
+
+    with pytest.raises(RuntimeError, match="historically blocked plan"):
+        execute_installed_other_refinement(
+            {
+                "schema": "sunofriend.other-refinement-installed-run-plan.v1",
+                "contract": contract,
+                "output": str(tmp_path / "must-not-exist"),
+            },
+            confirm_rights=True,
+        )
+
+    assert not (tmp_path / "must-not-exist").exists()
 
 
 def test_review_uses_existing_relative_audio_and_private_feedback_fields(

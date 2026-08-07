@@ -59,6 +59,7 @@ from .separation_other_refinement_demucs_mlx_run import (
     execute_installed_other_refinement,
     plan_installed_other_refinement,
 )
+from .separation_other_refinement_review import record_other_refinement_review
 from .separation_scopes import (
     DEFAULT_SCOPE_ID,
     FULL_STEM_SCOPE_ID,
@@ -1255,6 +1256,13 @@ def build_parser() -> argparse.ArgumentParser:
     refine.add_argument("--execute", action="store_true")
     refine.add_argument("--confirm-rights", action="store_true")
     refine.add_argument("--open-review", action="store_true")
+    review_other = subparsers.add_parser(
+        "review-other",
+        help="validate and seal one explicit guitar/keys listening export",
+    )
+    review_other.add_argument("result_root")
+    review_other.add_argument("review_json")
+    review_other.add_argument("--out", required=True)
     return parser
 
 
@@ -1321,6 +1329,23 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("No source or MIDI was selected; no audio was uploaded.")
         if args.open_review:
             webbrowser.open(Path(result["review_html"]).as_uri())
+        return 0
+    if args.command == "review-other":
+        try:
+            result = record_other_refinement_review(
+                args.result_root,
+                args.review_json,
+                out=args.out,
+            )
+        except (FileNotFoundError, OSError, RuntimeError, ValueError) as exc:
+            print(f"sunofriend-separate: {exc}", file=sys.stderr)
+            return 2
+        print(f"Recorded review: {Path(args.out).expanduser().absolute()}")
+        print(
+            f"Target: {result['binding']['target_id']}; "
+            f"usefulness: {result['observations']['usefulness']}"
+        )
+        print("No candidate was selected; no source graph or MIDI was changed.")
         return 0
     selected_scope = args.scope if hasattr(args, "scope") else DEFAULT_SCOPE_ID
     profile = resolve_profile(

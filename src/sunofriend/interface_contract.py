@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-07.1"
+INTERFACE_CONTRACT_VERSION = "2026-08-07.2"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -193,6 +193,8 @@ def render_skill_interface_reference() -> str:
         "gates; guitar maps to the model guitar role and keys is a disclosed piano",
         "proxy. `sunofriend-separate refine-other` plans without effects, while",
         "execution requires `--execute --confirm-rights` and selects nothing.",
+        "`sunofriend-separate review-other` binds an explicit listening export",
+        "to the unchanged result and grants no selection, activation or promotion.",
         "No Sunofriend command downloads music.",
         "",
         "## Product outputs",

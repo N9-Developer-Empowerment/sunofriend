@@ -26,6 +26,9 @@ target or one disclosed piano-as-keys proxy plus an exact residual. Use
 to plan it; add `--execute --confirm-rights` only after review. Both first-song
 targets were low-energy, and the command selects no source or MIDI. See
 [Refining grouped other in Studio](OTHER_STEM_REFINEMENT.md).
+Use `sunofriend-separate review-other RESULT_ROOT REVIEW_JSON --out FRESH.json`
+to bind an explicit guitar/keys listening export without selecting or
+activating either frontier.
 
 Inspect the executable default and immutable profiles at any time:
 
