@@ -32,11 +32,17 @@ done
 
 if [ -n "${SUNOFRIEND_SCNET_PLAN_PYTHON:-}" ]; then
     PYTHON_BIN=$SUNOFRIEND_SCNET_PLAN_PYTHON
-else
+elif [ -x "$REPOSITORY_ROOT/.venv/bin/python" ]; then
     PYTHON_BIN="$REPOSITORY_ROOT/.venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN=$(command -v python3)
+elif command -v python >/dev/null 2>&1; then
+    PYTHON_BIN=$(command -v python)
+else
+    PYTHON_BIN=
 fi
-if [ ! -x "$PYTHON_BIN" ]; then
-    echo "The Sunofriend workspace Python is required to inspect this plan: $PYTHON_BIN" >&2
+if [ -z "$PYTHON_BIN" ] || [ ! -x "$PYTHON_BIN" ]; then
+    echo "A Python interpreter with Sunofriend installed is required to inspect this plan" >&2
     exit 2
 fi
 

@@ -33,11 +33,17 @@ done
 
 if [ -n "${SUNOFRIEND_OTHER_REFINEMENT_PLAN_PYTHON:-}" ]; then
     PLAN_PYTHON=$SUNOFRIEND_OTHER_REFINEMENT_PLAN_PYTHON
-else
+elif [ -x "$REPOSITORY_ROOT/.venv/bin/python" ]; then
     PLAN_PYTHON="$REPOSITORY_ROOT/.venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+    PLAN_PYTHON=$(command -v python3)
+elif command -v python >/dev/null 2>&1; then
+    PLAN_PYTHON=$(command -v python)
+else
+    PLAN_PYTHON=
 fi
-if [ ! -x "$PLAN_PYTHON" ]; then
-    echo "The Sunofriend workspace Python is required to inspect this plan: $PLAN_PYTHON" >&2
+if [ -z "$PLAN_PYTHON" ] || [ ! -x "$PLAN_PYTHON" ]; then
+    echo "A Python interpreter with Sunofriend installed is required to inspect this plan" >&2
     exit 2
 fi
 

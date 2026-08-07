@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 
 import pytest
 
@@ -154,7 +155,7 @@ def test_fraction_remediation_rejects_semantic_drift(mutation, message: str) -> 
 def test_plan_script_is_deterministic_and_writes_nothing(tmp_path: Path) -> None:
     before = set(tmp_path.iterdir())
     command = [
-        str(ROOT / ".venv/bin/python"),
+        sys.executable,
         str(ROOT / "scripts/plan-separation-other-refinement-demucs-mlx.py"),
     ]
     first = subprocess.run(
