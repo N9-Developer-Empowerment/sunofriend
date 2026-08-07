@@ -96,8 +96,10 @@ one keys target plus the transparent residual. The Apple-native
 `htdemucs_6s` MLX profile is installed separately; the keys lane is honestly
 labelled as a piano proxy. Its fraction-normalized local loader, synthetic
 canary and both full-song target mappings passed the objective offline gates.
-The first song produced low-energy guitar and keys estimates, so listening is
-essential and poor usefulness does not disable access. Plan a run with:
+The completed fixed five-song review found no demonstrated useful guitar
+extraction and no successful piano extraction. The technically valid profile
+remains reproducible in Studio, but it is not promoted, selected or fed to
+MIDI. Plan a run with:
 
 ```bash
 .venv/bin/sunofriend-separate refine-other \
@@ -110,6 +112,24 @@ Add `--execute --confirm-rights` only after reviewing the plan. The command
 never activates the target or starts MIDI automatically. The deterministic
 PCM24 proof, setup plan and bounded qualification evidence are documented in
 [Refining grouped other in Studio](docs/OTHER_STEM_REFINEMENT.md).
+
+The next bounded candidate changes the target from piano to the broader,
+modern `keyboard_synth` family: electric piano, organ, synth pad and synth
+lead. Banquet is being audited as a query-conditioned local research
+challenger alongside guitar, with one configuration and no post-feedback query
+hunt. Inspect the no-effects plan with:
+
+```bash
+.venv/bin/python \
+  scripts/plan-separation-other-refinement-query-challenger.py
+```
+
+It downloads or installs nothing. The approved private evidence-only checkpoint
+step has now established SHA-256
+`657295888781e62ef50593002720d2edb3858b9e5bbfabf0c54f715a0da4b9e2`
+and a network-denied, non-deserializing static structure report; dependency
+installation, loading and inference remain unapproved. See
+[Guitar and keyboard/synth query-challenger plan](docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).
 
 After the local page exports your listening JSON, bind it to the exact result
 without selecting a source or starting MIDI:

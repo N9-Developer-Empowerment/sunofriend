@@ -93,10 +93,13 @@ The primary campaign sequence is:
    listener has heard a useful result.
 5. **Respond:** ask one concrete beginner or DAW compatibility question.
 
-## Opt-in guitar and keys Studio-challenger post
+## Historical guitar and piano-proxy Studio-challenger draft
 
-Use this after the core-four announcement, not as a claim of recovered studio
-multitracks.
+Do not publish the original launch wording below as a current success claim.
+The completed ten-report corpus subsequently found no demonstrated useful
+guitar extraction and no successful piano extraction. The challenger remains
+available only as technically valid, negative Studio evidence while a broader
+keyboard/synth query-based experiment is prepared.
 
 ### Short public post
 
@@ -108,6 +111,16 @@ multitracks.
 > feedback—not pretending software can judge musical usefulness. No stem or
 > MIDI is selected automatically. सुनो = listen · Independent of Suno Inc.
 > https://sunofriend.com/research/separation/
+
+### Current factual follow-up
+
+> We tested Sunofriend's first extra-instrument Studio challenger across five
+> authorised songs and listened to all ten guitar/piano-proxy cases. The files
+> were technically sound, but the model did not demonstrate useful guitar or
+> piano extraction. We have recorded that result without hiding the tool or
+> entering an endless tuning loop. The next bounded question targets guitar
+> plus the broader modern keyboard/synth family—electric piano, organ, pads
+> and synth leads—with one query-conditioned candidate and fixed evaluation.
 
 ### Engineering / BBC Slack version
 

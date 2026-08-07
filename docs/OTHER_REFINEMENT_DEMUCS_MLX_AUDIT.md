@@ -74,6 +74,18 @@ in 9.94 and 9.22 seconds at about 3.49 GB peak MLX memory and reconstructed at
 zero PCM24 LSB. Both requested targets were low-energy; that limitation is
 published and does not revoke Studio access.
 
+The later fixed five-song, ten-report review provided the final musical result
+for this bounded candidate. Four guitar reports were `not_useful`; the fifth
+reported severe missing content. The only nominally useful piano-proxy report
+was correct near-silence where no piano existed, while one reviewed piano-like
+instrument was missed. The objective pass stands, but the candidate did not
+demonstrate useful guitar or successful piano extraction. It remains
+reproducible in Studio and is neither promoted nor selected for MIDI.
+
+This completes the candidate's feedback cycle. Do not tune or rerun it as a
+route to general keyboard separation. The separately reviewed next question
+targets guitar and broad `keyboard_synth` through a query-conditioned model.
+
 ## Read-only plan and exact approval boundary
 
 Inspect the complete JSON plan without changing the machine:

@@ -233,10 +233,12 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /Four roles, one immutable profile, no hidden tuning loop/);
   assert.match(html, /OPT-IN STUDIO CHALLENGER/);
   assert.match(html, /other-refinement-v1/);
-  assert.match(html, /One guitar or keys target, with the residual kept/);
+  assert.match(html, /Negative result retained; broader query next/);
   assert.match(html, /Apple-native htdemucs_6s MLX/);
   assert.match(html, /normalization passed under network denial/);
-  assert.match(html, /sunofriend-separate refine-other/);
+  assert.match(html, /five-song, ten-report review demonstrated neither/);
+  assert.match(html, /keyboard_synth/);
+  assert.match(html, /local noncommercial research/);
   assert.match(html, /30 days or 10 valid submissions/);
   assert.match(html, /Help improve the next public slice/);
   assert.match(html, /SEPARATION_DEVELOPER_PREVIEW\.md/);
@@ -564,6 +566,26 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.deepEqual(
     data.experiments.finished_mix_separation.other_refinement.supported_targets,
     ["guitar", "keys"],
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement.feedback_evidence
+      .valid_report_count,
+    10,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement.feedback_evidence
+      .conclusion,
+    "technically_valid_musically_unsuccessful",
+  );
+  assert.deepEqual(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.targets,
+    ["guitar", "keyboard_synth"],
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.executable,
+    false,
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
