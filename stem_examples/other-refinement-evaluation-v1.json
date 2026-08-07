@@ -1,0 +1,206 @@
+{
+  "schema": "sunofriend.other-refinement-evaluation-corpus.v1",
+  "status": "fixed_authorised_private_evaluation_no_selection",
+  "checked_on": "2026-08-07",
+  "policy": {
+    "configuration_count": 1,
+    "maximum_cases": 10,
+    "case_duration_seconds": 15.0,
+    "targets": [
+      "guitar",
+      "keys"
+    ],
+    "keys_semantics": "piano_proxy_not_general_keyboards",
+    "windows_frozen_before_inference": true,
+    "provider_stems_are_ground_truth": false,
+    "provider_labels_prove_instrument_presence": false,
+    "relative_activity_score_proves_instrument_presence": false,
+    "automatic_model_selection": false,
+    "automatic_source_activation": false,
+    "automatic_midi_activation": false,
+    "poor_or_mixed_feedback_blocks_access": false,
+    "retry_policy": "objective_execution_fault_only",
+    "review_trigger": "one bounded round of 10 valid reports"
+  },
+  "tracks": [
+    {
+      "track_id": "be-alone",
+      "display_name": "Be Alone",
+      "directory": "Be Alone - 16_07_2026, 22.45-G# minor-136bpm-440hz",
+      "corpus_manifest": "corpus.json",
+      "rights_category": "owned",
+      "common_provider_horizon_seconds": 262.36,
+      "cases": [
+        {
+          "case_id": "be-alone-guitar",
+          "target_id": "guitar",
+          "start_seconds": 53.0,
+          "end_seconds": 68.0,
+          "selection_score": 0.748635
+        },
+        {
+          "case_id": "be-alone-keys",
+          "target_id": "keys",
+          "start_seconds": 201.0,
+          "end_seconds": 216.0,
+          "selection_score": 1.052803
+        }
+      ]
+    },
+    {
+      "track_id": "i-am-a-alien-mashup",
+      "display_name": "I am a Alien mashup",
+      "directory": "I am a Alien - 18_07_2026, 17.02 x I am a Alien - 18_07_2026, 17.02 (Mashup)-Eb minor-114bpm-440hz",
+      "corpus_manifest": "corpus.json",
+      "rights_category": "owned",
+      "common_provider_horizon_seconds": 275.92,
+      "cases": [
+        {
+          "case_id": "i-am-a-alien-mashup-guitar",
+          "target_id": "guitar",
+          "start_seconds": 5.0,
+          "end_seconds": 20.0,
+          "selection_score": 0.403382
+        },
+        {
+          "case_id": "i-am-a-alien-mashup-keys",
+          "target_id": "keys",
+          "start_seconds": 210.0,
+          "end_seconds": 225.0,
+          "selection_score": 0.977039
+        }
+      ]
+    },
+    {
+      "track_id": "in-the-way",
+      "display_name": "In the way",
+      "directory": "In the way - 22_07_2026, 17.43-Bb minor-90bpm-440hz",
+      "corpus_manifest": "corpus.json",
+      "rights_category": "owned",
+      "common_provider_horizon_seconds": 160.52,
+      "known_geometry_limitation": "Provider packs end before the original; every selected window remains inside the measured common horizon.",
+      "cases": [
+        {
+          "case_id": "in-the-way-guitar",
+          "target_id": "guitar",
+          "start_seconds": 73.0,
+          "end_seconds": 88.0,
+          "selection_score": 0.747657
+        },
+        {
+          "case_id": "in-the-way-keys",
+          "target_id": "keys",
+          "start_seconds": 129.0,
+          "end_seconds": 144.0,
+          "selection_score": 0.893093
+        }
+      ]
+    },
+    {
+      "track_id": "tell-me-that-i-do-it-bitch",
+      "display_name": "Tell Me That I Do It Bitch",
+      "directory": "Tell Me That I Do It Bitch - 19_07_2026, 11.20-Cm-130bpm-441hz (1)-C# minor-129bpm-440hz",
+      "corpus_manifest": "corpus.json",
+      "rights_category": "owned",
+      "common_provider_horizon_seconds": 186.36,
+      "cases": [
+        {
+          "case_id": "tell-me-that-i-do-it-bitch-guitar",
+          "target_id": "guitar",
+          "start_seconds": 29.0,
+          "end_seconds": 44.0,
+          "selection_score": 0.746678
+        },
+        {
+          "case_id": "tell-me-that-i-do-it-bitch-keys",
+          "target_id": "keys",
+          "start_seconds": 135.0,
+          "end_seconds": 150.0,
+          "selection_score": 0.87884
+        }
+      ]
+    },
+    {
+      "track_id": "mauvais-djo-pile",
+      "display_name": "Mauvais djo - Pilé",
+      "directory": "Mauvais djo - 06. Pilé-Bb minor-130bpm-440hz",
+      "corpus_manifest": "private-reference-corpus.json",
+      "rights_category": "authorised_private_use",
+      "common_provider_horizon_seconds": 156.076916,
+      "private_scope": "private_local_evaluation_only",
+      "cases": [
+        {
+          "case_id": "mauvais-djo-pile-guitar",
+          "target_id": "guitar",
+          "start_seconds": 50.0,
+          "end_seconds": 65.0,
+          "selection_score": 0.725253
+        },
+        {
+          "case_id": "mauvais-djo-pile-keys",
+          "target_id": "keys",
+          "start_seconds": 122.0,
+          "end_seconds": 137.0,
+          "selection_score": 0.945183
+        }
+      ]
+    }
+  ],
+  "comparison_cues": {
+    "guitar": [
+      {
+        "provider": "Moises",
+        "glob": "MOISES/*-rhythm-*.wav",
+        "interpretation": "ambiguous_rhythm_proxy_not_guitar_truth",
+        "minimum_matches": 1,
+        "maximum_matches": 1
+      },
+      {
+        "provider": "Suno",
+        "glob": "SUNO/*/* Guitar.wav",
+        "interpretation": "independent_provider_guitar_estimate_not_truth",
+        "minimum_matches": 0,
+        "maximum_matches": 2
+      }
+    ],
+    "keys": [
+      {
+        "provider": "Moises",
+        "glob": "MOISES/*-piano-*.wav",
+        "interpretation": "piano_proxy_comparison_not_truth",
+        "minimum_matches": 1,
+        "maximum_matches": 1
+      },
+      {
+        "provider": "Moises",
+        "glob": "MOISES/*-keys-*.wav",
+        "interpretation": "broader_keys_context_not_target_truth",
+        "minimum_matches": 1,
+        "maximum_matches": 1
+      },
+      {
+        "provider": "Suno",
+        "glob": "SUNO/*/* Keyboard.wav",
+        "interpretation": "broader_keyboard_context_not_target_truth",
+        "minimum_matches": 0,
+        "maximum_matches": 2
+      },
+      {
+        "provider": "Suno",
+        "glob": "SUNO/*/* Synth.wav",
+        "interpretation": "synth_context_outside_piano_proxy",
+        "minimum_matches": 0,
+        "maximum_matches": 2
+      }
+    ]
+  },
+  "permissions": {
+    "audio_committed": false,
+    "provider_audio_redistributed": false,
+    "local_review_only": true,
+    "candidate_selected": false,
+    "profile_promoted": false,
+    "source_graph_mutated": false,
+    "midi_created": false
+  }
+}

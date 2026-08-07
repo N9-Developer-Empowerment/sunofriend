@@ -116,6 +116,37 @@ omitted problem fields as `not_recorded_by_legacy_page` rather than as passes.
 It runs no model and cannot select a candidate, activate a source graph, start
 MIDI, pause a profile or promote a model.
 
+## Fixed five-song development round
+
+One song is not enough to learn whether the guitar and piano roles generalise.
+The tracked
+[`other-refinement-evaluation-v1.json`](../stem_examples/other-refinement-evaluation-v1.json)
+therefore freezes five authorised songs and two target-aware 15-second windows
+per song before inference. The round has exactly ten cases, one model
+configuration and no musical-feedback tuning between cases.
+
+Provider material is deliberately asymmetric. Suno `Guitar` and Moises
+`rhythm` are independent guitar cues where present. Moises `piano` is the
+closest comparison for the model's piano output; Moises `keys` and Suno
+`Keyboard`/`Synth` show the broader keyboard material the current target does
+not claim to recover. Provider names, activity scores and similarities are
+observations—not instrument-presence proof or ground truth.
+
+Inspect the plan with no writes or model loads:
+
+```bash
+.venv/bin/python scripts/create-other-refinement-corpus-review.py --plan
+```
+
+After the fixed execution roots exist, `--prepare` verifies every immutable
+result, stages private PCM24 comparison excerpts and produces a self-contained
+review package. Use `--serve` to open it through localhost; the server exposes
+only the page, a health route and exact byte-range audio, and rejects uploads.
+The page can download one ordinary review or a completed ten-review bundle.
+`--record` revalidates every result and writes owner-only per-case feedback plus
+one sealed corpus index. No route selects a winner, activates a source, starts
+MIDI, uploads audio or changes profile status.
+
 The first useful backend does not have to solve every instrument. A bounded
 candidate should answer one question: can it extract either guitar or keys
 from the exact grouped-other parent while retaining a transparent residual?

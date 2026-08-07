@@ -161,6 +161,52 @@ This rules out automatic filename-based leaf activation. Every result remains
 private and inactive while a pinned six-source guitar/piano challenger is
 prepared.
 
+## Fixed guitar and piano-proxy corpus
+
+[`other-refinement-evaluation-v1.json`](other-refinement-evaluation-v1.json)
+freezes the next bounded round before inference: five authorised songs, one
+guitar window and one piano-proxy window per song, one installed configuration
+and ten reviews. The `In the way` windows remain inside its measured 160.52 s
+common provider horizon; this does not erase the shorter-provider limitation.
+
+The selection score is relative activity only. It does not prove that an
+instrument is present, and filenames do not become labels of truth. Moises
+`rhythm` is an ambiguous guitar cue; Moises `piano` is the direct cue for the
+model's disclosed piano proxy; Moises `keys` and Suno `Keyboard`/`Synth` are
+broader context. Missing provider labels and provider disagreement are useful
+negative evidence.
+
+The local review tool creates no model output itself. It verifies already
+completed refinement results, stages exact 15-second provider comparison
+excerpts, and serves a self-contained package with byte-range audio from
+localhost:
+
+```bash
+.venv/bin/python scripts/create-other-refinement-corpus-review.py --plan
+.venv/bin/python scripts/create-other-refinement-corpus-review.py \
+  --prepare \
+  --execution-root "/absolute/path/to/fixed-corpus-execution" \
+  --out "/absolute/path/to/fresh-corpus-review"
+.venv/bin/python scripts/create-other-refinement-corpus-review.py \
+  --serve --review-root "/absolute/path/to/fresh-corpus-review"
+```
+
+After all ten listens, the downloaded bundle can be split into strict
+per-result feedback plus a sealed corpus index:
+
+```bash
+.venv/bin/python scripts/create-other-refinement-corpus-review.py \
+  --record \
+  --execution-root "/absolute/path/to/fixed-corpus-execution" \
+  --review-root "/absolute/path/to/fresh-corpus-review" \
+  --bundle "/absolute/path/to/sunofriend-other-refinement-corpus-listening.json" \
+  --out "/absolute/path/to/fresh-corpus-feedback"
+```
+
+No audio, filenames or browser telemetry enters the listening JSON. Poor or
+mixed reports remain valid, the challenger stays accessible, and neither the
+review package nor the feedback index selects a model, source or MIDI route.
+
 ## Intended evaluation
 
 For each eligible track Sunofriend will:
