@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 
 from sunofriend.separation_scnet_candidate import (
     SCNET_CANDIDATE_PLAN_SCHEMA,
@@ -84,7 +85,7 @@ def test_scnet_plan_script_only_prints_the_no_write_record(tmp_path: Path) -> No
     before = set(tmp_path.iterdir())
     result = subprocess.run(
         [
-            str(ROOT / ".venv/bin/python"),
+            sys.executable,
             str(ROOT / "scripts/plan-separation-core-four-scnet.py"),
         ],
         cwd=tmp_path,
