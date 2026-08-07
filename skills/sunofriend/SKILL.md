@@ -157,6 +157,22 @@ The command accepts the original compact v1 page as legacy evidence, but marks
 its missing issue dimensions as not recorded rather than as passes. It must
 not infer a source or MIDI choice from usefulness or notes.
 
+For cross-song guitar/keys development, use the fixed definition in
+`stem_examples/other-refinement-evaluation-v1.json` and inspect the no-write
+plan first:
+
+```bash
+.venv/bin/python scripts/create-other-refinement-corpus-review.py --plan
+```
+
+It caps the first round at five authorised songs and ten frozen 15-second
+cases under one configuration. Moises and Suno stems are local comparison
+estimates, never truth; `keys` remains the model's piano proxy. Prepare and
+serve only after the ten execution roots exist, and use the bundle `--record`
+route only after all ten listens. Negative feedback is valid evidence and
+must not trigger configuration tuning, profile pause, source selection or
+MIDI activation.
+
 ## Inspect before installing
 
 Resolve the application in this order:

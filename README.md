@@ -121,6 +121,21 @@ without selecting a source or starting MIDI:
   --out "/absolute/path/to/fresh-private-feedback.json"
 ```
 
+For development across several songs, the fixed private corpus runner freezes
+five authorised songs, separate guitar and piano-proxy windows, one model
+configuration and exactly ten reviews. It places the Sunofriend estimates
+beside local Moises/Suno comparison excerpts without treating provider stems
+as ground truth or using feedback to tune between cases:
+
+```bash
+.venv/bin/python scripts/create-other-refinement-corpus-review.py --plan
+```
+
+The prepared package is served only on localhost so every audio control works
+reliably. Its ten-review bundle can be recorded as hash-bound evidence without
+selecting a source, promoting a model or starting MIDI. See
+[Refining grouped other in Studio](docs/OTHER_STEM_REFINEMENT.md).
+
 Not sure what a stem is, why a drums stem contains several drums, or where to
 get authorised examples? Read
 [Stems: what they are and where to get them](docs/STEMS.md).

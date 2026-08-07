@@ -1207,10 +1207,19 @@ The first authorised real-song corpus is indexed in
 [`stem_examples/corpus.json`](../stem_examples/corpus.json). Four Ezzye
 originals each have one Moises pack and two decoded-audio-distinct Suno packs.
 The audio remains local and ignored by Git. Three tracks have sufficiently
-close provider/source horizons for bounded excerpt work; `In the way` is held
-back pending investigation of its roughly 65-second horizon mismatch. These
-are development examples, not a hidden acceptance set or ground-truth
-multitracks.
+close provider/source horizons for unrestricted excerpt selection. `In the
+way` retains its roughly 65-second source/provider horizon mismatch, but fixed
+guitar and piano-proxy windows inside the measured 160.52-second common
+horizon are eligible without pretending the mismatch disappeared. These are
+development examples, not a hidden acceptance set or ground-truth multitracks.
+
+The next bounded guitar/piano-proxy round is frozen in
+[`other-refinement-evaluation-v1.json`](../stem_examples/other-refinement-evaluation-v1.json):
+five authorised songs, two target-aware 15-second windows per song, one
+installed configuration and exactly ten reviews. Moises/Suno leaves are shown
+as independent local comparisons; provider labels and relative activity do not
+prove instrument presence. Poor or mixed reports remain evidence and do not
+disable the challenger or start an empirical retuning loop.
 
 The first real observation now stages `Be Alone` 191–206 seconds. Provider
 pack sums all measured zero 10 ms envelope lag against the original. The
