@@ -100,6 +100,22 @@ unchanged grouped parent, one requested target, the exact residual, technical
 JSON and a local listening page. It selects no winner, mutates no source graph,
 creates no MIDI and uploads nothing.
 
+After completing that page and downloading its JSON, validate and seal the
+feedback separately from the immutable audio result:
+
+```bash
+.venv/bin/sunofriend-separate review-other \
+  "/absolute/path/to/refinement-result" \
+  "/absolute/path/to/sunofriend-other-refinement-listening.json" \
+  --out "/absolute/path/to/fresh-private-feedback.json"
+```
+
+The command re-hashes the exact plan, result, parent, target and residual,
+accepts the original compact v1 page as explicit legacy evidence, and records
+omitted problem fields as `not_recorded_by_legacy_page` rather than as passes.
+It runs no model and cannot select a candidate, activate a source graph, start
+MIDI, pause a profile or promote a model.
+
 The first useful backend does not have to solve every instrument. A bounded
 candidate should answer one question: can it extract either guitar or keys
 from the exact grouped-other parent while retaining a transparent residual?

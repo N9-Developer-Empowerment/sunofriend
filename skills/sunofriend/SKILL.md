@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-07.1 -->
+<!-- sunofriend-interface-contract: 2026-08-07.2 -->
 
 # Sunofriend
 
@@ -142,6 +142,20 @@ Only add `--execute --confirm-rights` when the user approves execution for that
 authorised parent. Present the local listening page afterward. Do not choose
 the parent or children, activate a source graph, or create MIDI until the
 musician makes that later musical choice.
+
+After the musician genuinely exports the page JSON, bind it without activating
+anything:
+
+```bash
+.venv/bin/sunofriend-separate review-other \
+  "/absolute/path/to/refinement-result" \
+  "/absolute/path/to/review-export.json" \
+  --out "/absolute/path/to/fresh-private-feedback.json"
+```
+
+The command accepts the original compact v1 page as legacy evidence, but marks
+its missing issue dimensions as not recorded rather than as passes. It must
+not infer a source or MIDI choice from usefulness or notes.
 
 ## Inspect before installing
 

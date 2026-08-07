@@ -77,6 +77,11 @@ active together. Mixed or negative musical feedback remains evidence and
 cannot disable the functioning public core-four profile. See
 [Refining grouped other in Studio](OTHER_STEM_REFINEMENT.md).
 
+Completed refinement feedback is sealed separately with
+`sunofriend-separate review-other RESULT_ROOT REVIEW_JSON --out FRESH.json`.
+That validator rechecks the immutable PCM24 result, preserves negative and
+legacy-page evidence honestly, and grants no activation or promotion.
+
 ## Immutable baseline
 
 | Identity | Pinned value |

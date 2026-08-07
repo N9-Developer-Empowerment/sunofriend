@@ -61,7 +61,9 @@ def plan_installed_other_refinement(
         or separator.get("profile_status") != "public_opt_in"
         or rights.get("confirmed_before_execution") is not True
     ):
-        raise ValueError("refinement requires an authorised verified SCNet core-four parent")
+        raise ValueError(
+            "refinement requires an authorised verified SCNet core-four parent"
+        )
     worker = separator.get("worker")
     outputs = worker.get("outputs") if isinstance(worker, Mapping) else None
     parent_claim = outputs.get("other") if isinstance(outputs, Mapping) else None
@@ -84,9 +86,14 @@ def plan_installed_other_refinement(
         "sample_width_bytes": parent_claim.get("sample_width_bytes"),
     }
     report_sha256 = file_sha256(report_path)
-    parent_node_id = "node:" + hashlib.sha256(
-        ("core-four-other-v1\0" + report_sha256 + "\0" + parent_sha256).encode("ascii")
-    ).hexdigest()
+    parent_node_id = (
+        "node:"
+        + hashlib.sha256(
+            ("core-four-other-v1\0" + report_sha256 + "\0" + parent_sha256).encode(
+                "ascii"
+            )
+        ).hexdigest()
+    )
     contract = build_other_refinement_plan(
         parent_profile_id=SCNET_RELEASE_PROFILE_ID,
         parent_report_sha256=report_sha256,
@@ -129,6 +136,8 @@ def execute_installed_other_refinement(
     if confirm_rights is not True:
         raise PermissionError("refinement execution requires --confirm-rights")
     contract = validate_other_refinement_plan(value.get("contract", {}))
+    if contract["blockers"]:
+        raise RuntimeError("refinement execution refuses a historically blocked plan")
     destination = Path(str(value["output"])).expanduser().absolute()
     if os.path.lexists(destination):
         raise FileExistsError(f"refinement output already exists: {destination}")
@@ -138,13 +147,21 @@ def execute_installed_other_refinement(
     failed = destination.with_name(f"{destination.name}.failed-{uuid.uuid4().hex[:8]}")
 
     spec = separation_profile(OTHER_REFINEMENT_DEMUCS_MLX_PROFILE_ID)
-    profile_root = Path(
-        model_root
-        or Path.home()
-        / ".local/share/sunofriend/separation"
-        / OTHER_REFINEMENT_DEMUCS_MLX_PROFILE_ID
-    ).expanduser().absolute()
-    python = Path(runtime_python or profile_root / "runtime/bin/python").expanduser().absolute()
+    profile_root = (
+        Path(
+            model_root
+            or Path.home()
+            / ".local/share/sunofriend/separation"
+            / OTHER_REFINEMENT_DEMUCS_MLX_PROFILE_ID
+        )
+        .expanduser()
+        .absolute()
+    )
+    python = (
+        Path(runtime_python or profile_root / "runtime/bin/python")
+        .expanduser()
+        .absolute()
+    )
     repository_root = Path(__file__).resolve().parents[2]
     worker_path = repository_root / spec.worker_script
     raw_result = staging / "worker-result.json"
@@ -218,7 +235,9 @@ def execute_installed_other_refinement(
             root=staging,
             parent_relative_path="PARENT/other.wav",
             target_relative_path=(
-                "STEMS/guitar.wav" if value["target_id"] == "guitar" else "STEMS/keys.wav"
+                "STEMS/guitar.wav"
+                if value["target_id"] == "guitar"
+                else "STEMS/keys.wav"
             ),
             residual_relative_path="STEMS/other-residual.wav",
             execution=execution,
@@ -304,7 +323,11 @@ def _validate_worker(
         or accounting.get("passed") is not True
         or accounting.get("maximum_absolute_error_lsb", 3) > 2
         or worker.get("activation")
-        != {"candidate_selected": False, "midi_created": False, "source_graph_mutated": False}
+        != {
+            "candidate_selected": False,
+            "midi_created": False,
+            "source_graph_mutated": False,
+        }
     ):
         raise RuntimeError("refinement worker objective evidence contract differs")
     peak_memory = resources.get("peak_unified_memory_bytes")
@@ -336,7 +359,7 @@ def _render_review(result: Mapping[str, Any]) -> str:
 <style>body{{font:18px system-ui;max-width:900px;margin:3rem auto;padding:0 1rem;background:#071321;color:#f4f7fb}}section{{border:1px solid #31506a;border-radius:18px;padding:1.25rem;margin:1rem 0}}audio{{width:100%}}button{{padding:.8rem 1.1rem}}</style>
 <h1>Listen before choosing</h1><p>This Studio challenger selected and activated nothing. Compare the grouped parent with the requested target and exact residual. Reconstruction proves accounting, not isolation quality.</p>
 <section><h2>Grouped other parent</h2><audio controls preload=\"metadata\" src=\"../PARENT/other.wav\"></audio></section>
-<section><h2>{target['declared_role'].title()} target</h2><audio controls preload=\"metadata\" src=\"{target_path}\"></audio></section>
+<section><h2>{target["declared_role"].title()} target</h2><audio controls preload=\"metadata\" src=\"{target_path}\"></audio></section>
 <section><h2>Grouped other residual</h2><audio controls preload=\"metadata\" src=\"../STEMS/other-residual.wav\"></audio></section>
 <label><input id=\"listened\" type=\"checkbox\"> I listened to the parent, target and residual.</label>
 <p><label>Usefulness <select id=\"usefulness\"><option>cannot_tell</option><option>useful</option><option>mixed</option><option>not_useful</option></select></label></p>
@@ -348,7 +371,7 @@ def _render_review(result: Mapping[str, Any]) -> str:
 <p><label>Notes<br><textarea id=\"notes\" rows=\"5\" style=\"width:100%\"></textarea></label></p>
 <button id=\"download\">Download listening JSON</button> <button id=\"copy\">Copy text-only feedback</button><p id=\"message\"></p>
 <p>No audio, filenames, review JSON or telemetry is uploaded automatically. Paste copied text only if you choose to use the <a href=\"https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml\">compatibility form</a>.</p>
-<script>const field=id=>document.getElementById(id).value;const data=()=>({{schema:'sunofriend.other-refinement-listening.v1',result_sha256:'{result['document_sha256']}',target_id:'{result['request']['target_id']}',listened:document.getElementById('listened').checked,usefulness:field('usefulness'),bleed:field('bleed'),missing_content:field('missing'),artefacts:field('artefacts'),timing_or_join_problems:field('timing'),downstream_midi:field('midi'),notes:field('notes'),activation_choice:'none'}});document.getElementById('download').onclick=()=>{{const blob=new Blob([JSON.stringify(data(),null,2)+'\\n'],{{type:'application/json'}});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='sunofriend-other-refinement-listening.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);document.getElementById('message').textContent='Download requested. If your browser blocks it, use its download menu.';}};document.getElementById('copy').onclick=async()=>{{const d=data();const text=`Sunofriend other refinement (${{d.target_id}}): usefulness=${{d.usefulness}}; bleed=${{d.bleed}}; missing=${{d.missing_content}}; artefacts=${{d.artefacts}}; timing/joins=${{d.timing_or_join_problems}}; downstream MIDI=${{d.downstream_midi}}; notes=${{d.notes||'none'}}`;await navigator.clipboard.writeText(text);document.getElementById('message').textContent='Text-only feedback copied. No audio or private metadata was included.';}};</script></html>"""
+<script>const field=id=>document.getElementById(id).value;const data=()=>({{schema:'sunofriend.other-refinement-listening.v1',result_sha256:'{result["document_sha256"]}',target_id:'{result["request"]["target_id"]}',listened:document.getElementById('listened').checked,usefulness:field('usefulness'),bleed:field('bleed'),missing_content:field('missing'),artefacts:field('artefacts'),timing_or_join_problems:field('timing'),downstream_midi:field('midi'),notes:field('notes'),activation_choice:'none',exported_at:new Date().toISOString()}});document.getElementById('download').onclick=()=>{{const blob=new Blob([JSON.stringify(data(),null,2)+'\\n'],{{type:'application/json'}});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='sunofriend-other-refinement-listening.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);document.getElementById('message').textContent='Download requested. If your browser blocks it, use its download menu.';}};document.getElementById('copy').onclick=async()=>{{const d=data();const text=`Sunofriend other refinement (${{d.target_id}}): usefulness=${{d.usefulness}}; bleed=${{d.bleed}}; missing=${{d.missing_content}}; artefacts=${{d.artefacts}}; timing/joins=${{d.timing_or_join_problems}}; downstream MIDI=${{d.downstream_midi}}; notes=${{d.notes||'none'}}`;await navigator.clipboard.writeText(text);document.getElementById('message').textContent='Text-only feedback copied. No audio or private metadata was included.';}};</script></html>"""
 
 
 def _runtime_identity_sha256(worker: Mapping[str, Any]) -> str:
