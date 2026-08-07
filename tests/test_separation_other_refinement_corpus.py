@@ -3,7 +3,9 @@ from __future__ import annotations
 import copy
 import json
 from pathlib import Path
+import shutil
 import stat
+import subprocess
 from threading import Thread
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -18,6 +20,7 @@ from sunofriend.separation_other_refinement_corpus import (
     CORPUS_LISTENING_SCHEMA,
     CORPUS_REVIEW_INDEX_SCHEMA,
     _document_sha256,
+    _render_review,
     build_other_refinement_corpus_review_server,
     load_other_refinement_corpus_definition,
     record_other_refinement_corpus_reviews,
@@ -79,6 +82,53 @@ def test_corpus_validator_rejects_ground_truth_and_tuning_drift(
         path.write_text(json.dumps(mutated) + "\n", encoding="utf-8")
         with pytest.raises(ValueError, match="policy differs"):
             load_other_refinement_corpus_definition(path)
+
+
+def test_rendered_review_javascript_parses_with_literal_newline_escapes() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is not installed")
+    cases = []
+    for index in range(10):
+        target_id = "guitar" if index % 2 == 0 else "keys"
+        cases.append(
+            {
+                "case_id": f"case-{index + 1:02d}-{target_id}",
+                "target_id": target_id,
+                "target_semantics": (
+                    "direct_experimental_guitar"
+                    if target_id == "guitar"
+                    else "piano_proxy_not_general_keyboards"
+                ),
+                "display_name": f"Case {index + 1}",
+                "window": {"start_seconds": 0.0, "end_seconds": 15.0},
+                "objective": {"target_to_parent_rms_ratio": 0.01},
+                "audio": [],
+                "result_document_sha256": f"{index:064x}",
+            }
+        )
+    index_document = {
+        "schema": CORPUS_REVIEW_INDEX_SCHEMA,
+        "cases": cases,
+        "document_sha256": "a" * 64,
+    }
+
+    html = _render_review(index_document)
+    script = html.split("<script>", 1)[1].split("</script>", 1)[0]
+    assert "JSON.stringify(value,null,2)+'\\n'" in script
+    assert "lines.join('\\n')" in script
+    completed = subprocess.run(
+        [
+            node,
+            "-e",
+            "new Function(require('fs').readFileSync(0,'utf8'))",
+        ],
+        input=script,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
 
 
 def test_local_review_server_supports_audio_ranges_and_rejects_uploads(
