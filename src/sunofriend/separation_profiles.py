@@ -807,6 +807,7 @@ _PROFILES: Mapping[str, SeparationProfileSpec] = MappingProxyType(
                 "The pinned config stores segment as the string 39/5; the only allowed first remediation is an exact in-memory Fraction(39, 5) normalization without mutating the artifact.",
                 "A six-role model run will persist only the requested guitar or piano-proxy target plus the exact grouped-other residual.",
                 "On the first authorised 234-second full-song parent, both guitar and piano-proxy targets were low-energy (RMS 0.00135 and 0.00131); access remains available because this is a musical limitation rather than an objective failure.",
+                "The completed fixed five-song, ten-report review found no demonstrated useful guitar extraction: four guitar reports were not useful and the fifth reported severe missing content. The only nominally useful piano-proxy report was a true negative on material without piano, while one piano-like instrument was missed. The profile remains Studio-only and reproducible but is not promoted or selected for MIDI.",
                 "The first full-song guitar and keys runs completed offline in 9.94 and 9.22 seconds at 3,492,069,640 and 3,492,069,624-byte peak MLX memory with zero-LSB reconstruction on a 36 GB M3 Max; 16 GiB and other classes remain accessible but unverified.",
             ),
             blockers=(),

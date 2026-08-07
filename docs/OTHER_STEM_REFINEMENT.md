@@ -82,6 +82,15 @@ Max; 16 GiB and other Apple-silicon classes are accessible but unverified.
 Both first-song targets were low-energy, which is a published musical
 limitation rather than an admission failure.
 
+The subsequent fixed five-song review produced stronger negative evidence.
+No reviewed case demonstrated useful guitar extraction: four guitar reports
+were `not_useful`, and the fifth reported severe missing content. The only
+nominally useful piano-proxy result was correct near-silence on a song without
+piano; the reviewed piano-like instrument was missed. The files and
+reconstruction accounting were technically valid, but the requested musical
+content was not usefully isolated. The candidate remains Studio-only and
+available for reproducibility; it is not promoted, selected or fed to MIDI.
+
 ## Run the installed Studio challenger
 
 Use the complete core-four output directory, not a loose `other.wav`, so the
@@ -147,9 +156,13 @@ The page can download one ordinary review or a completed ten-review bundle.
 one sealed corpus index. No route selects a winner, activates a source, starts
 MIDI, uploads audio or changes profile status.
 
-The first useful backend does not have to solve every instrument. A bounded
-candidate should answer one question: can it extract either guitar or keys
-from the exact grouped-other parent while retaining a transparent residual?
+The first useful backend does not have to solve every instrument. This first
+candidate answered the question negatively on the frozen corpus. The next
+question is broader and more musically relevant: can one query-conditioned
+candidate extract guitar and a `keyboard_synth` family covering electric
+piano, organ, synth pads and synth leads while retaining a transparent
+residual? See
+[Guitar and keyboard/synth query-challenger plan](OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).
 
 ## Candidate qualification without another doom loop
 
@@ -171,8 +184,9 @@ The completed first-backend qualification used this bounded policy:
 
 One baseline configuration and one remediation cycle are enough before either
 retaining the candidate for Studio feedback or switching to a different
-backend. Studio must not choose a winner from display order, reconstruction or
-automated metrics.
+backend. The completed negative round does not permit further tuning of the
+six-source candidate. Studio must not choose a winner from display order,
+reconstruction or automated metrics.
 
 ## Source and MIDI activation
 

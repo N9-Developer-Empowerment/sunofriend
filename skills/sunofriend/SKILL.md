@@ -57,6 +57,14 @@ on.
   not general keyboard isolation. Planning is read-only, execution requires
   `--execute --confirm-rights`, and neither result is selected automatically.
   Never put both the parent and its children into MIDI.
+  The completed fixed five-song, ten-report review demonstrated neither useful
+  guitar extraction nor successful piano extraction. Keep the technically
+  valid profile reproducible in Studio, but do not promote it, describe it as
+  a working guitar/keys capability or send it to MIDI. The next read-only
+  candidate plan is `docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md`; it
+  targets guitar plus broad `keyboard_synth`. Its approved evidence-only
+  checkpoint download and static inspection grant no dependency installation,
+  model load, inference or audio processing.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.
@@ -172,6 +180,19 @@ serve only after the ten execution roots exist, and use the bundle `--record`
 route only after all ten listens. Negative feedback is valid evidence and
 must not trigger configuration tuning, profile pause, source selection or
 MIDI activation.
+
+Inspect the next no-effects query-challenger plan with:
+
+```bash
+.venv/bin/python scripts/plan-separation-other-refinement-query-challenger.py
+```
+
+It proposes Banquet under a CC BY-NC-SA 4.0 local-noncommercial boundary. The
+approved capped evidence-only download established the exact checkpoint
+SHA-256 and a network-denied, non-deserializing opcode report. It did not
+authorize dependency installation, checkpoint loading, model inference,
+private-song processing, public activation, source selection or MIDI. Require
+a new reviewed plan and explicit approval before any of those actions.
 
 ## Inspect before installing
 

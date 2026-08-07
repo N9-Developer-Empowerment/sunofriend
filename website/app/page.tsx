@@ -403,7 +403,11 @@ export default function Home() {
             listening checks passed. An additional installed Studio challenger
             can refine that exact grouped other into one experimental guitar
             target or disclosed piano-as-keys proxy plus the retained residual;
-            both first-song targets were low-energy and require listening.
+            a completed five-song review demonstrated neither useful guitar nor
+            successful piano extraction. That negative result remains available
+            without promotion. A separate, currently non-executable research plan
+            now targets guitar plus broad keyboard/synth sounds rather than treating
+            piano as all keys.
             Bring original or authorised parts when you need reliable keys,
             guitars or narrower families. See the{" "}
             <Link className="inline-link" href="/stems/">

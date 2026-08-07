@@ -319,7 +319,11 @@ export default function ForAgents() {
                 estimate one guitar target or disclosed piano-as-keys proxy from
                 that exact grouped other while retaining the residual. Plan first,
                 execute only with rights confirmation, and never select the parent
-                or children automatically. Do not upload audio or feedback. Reuse
+                or children automatically. Its completed five-song review
+                demonstrated neither useful guitar nor successful piano extraction,
+                so do not present it as a working capability. The next read-only
+                plan targets guitar plus broad keyboard/synth sounds and remains
+                blocked and non-executable. Do not upload audio or feedback. Reuse
                 the existing GitHub form for text-only observations.
               </p>
               <div className="journey-links">

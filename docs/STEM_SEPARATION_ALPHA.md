@@ -23,12 +23,22 @@ After an explicit SCNet core-four run, the separately installed Studio
 challenger can refine that exact grouped `other` into one experimental guitar
 target or one disclosed piano-as-keys proxy plus an exact residual. Use
 `sunofriend-separate refine-other CORE_FOUR_ROOT --target guitar --out FRESH`
-to plan it; add `--execute --confirm-rights` only after review. Both first-song
-targets were low-energy, and the command selects no source or MIDI. See
+to plan it; add `--execute --confirm-rights` only after review. The completed
+five-song, ten-report review demonstrated neither useful guitar extraction nor
+successful piano extraction. The profile remains reproducible but is not
+promoted, selected or fed to MIDI. See
 [Refining grouped other in Studio](OTHER_STEM_REFINEMENT.md).
 Use `sunofriend-separate review-other RESULT_ROOT REVIEW_JSON --out FRESH.json`
 to bind an explicit guitar/keys listening export without selecting or
 activating either frontier.
+
+A separate no-effects plan now audits a query-conditioned candidate for
+guitar and broad `keyboard_synth`—electric piano, organ, synth pad and synth
+lead. Its approved evidence-only checkpoint download and network-denied
+static inspection did not deserialize or authorize loading. It remains
+blocked, unregistered and non-executable pending objective runtime
+qualification. See
+[Guitar and keyboard/synth query-challenger plan](OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).
 
 Inspect the executable default and immutable profiles at any time:
 

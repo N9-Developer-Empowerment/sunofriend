@@ -113,7 +113,7 @@ export default function SeparationResearch() {
             </div>
             <div className="agent-card">
               <span className="card-number">OPT-IN STUDIO CHALLENGER</span>
-              <h3>One guitar or keys target, with the residual kept</h3>
+              <h3>Negative result retained; broader query next</h3>
               <p>
                 <code>other-refinement-v1</code> now binds one exact grouped-other
                 parent to one requested guitar or keys target plus a transparent
@@ -125,10 +125,22 @@ export default function SeparationResearch() {
                 keys honestly labelled as a piano proxy. Its one in-memory
                 <code> 39/5</code> normalization passed under network denial, as did
                 a synthetic canary and both full-song target mappings. The first
-                guitar and keys estimates were low-energy, so listening remains
-                decisive without blocking Studio access. Plan an installed run
-                with <code>sunofriend-separate refine-other</code>; execution is
-                explicit and activates neither source nor MIDI.
+                completed five-song, ten-report review demonstrated neither
+                useful guitar extraction nor successful piano extraction. The
+                technically valid result stays reproducible without promotion,
+                source selection or MIDI.
+              </p>
+              <p>
+                The next no-effects plan audits the music-specific Banquet
+                query separator for guitar plus broad <code>keyboard_synth</code>:
+                electric piano, organ, synth pad and synth lead. Its approved
+                evidence-only checkpoint download matched the published MD5,
+                established an exact SHA-256 and passed network-denied static
+                opcode inspection without deserialization. It remains blocked,
+                unregistered and non-executable pending separately approved
+                runtime work and Apple-silicon qualification. Its
+                CC BY-NC-SA checkpoint limits this route to local noncommercial
+                research.
               </p>
             </div>
             <div className="agent-card">

@@ -61,6 +61,13 @@ proxy. `sunofriend-separate refine-other` plans without effects, while
 execution requires `--execute --confirm-rights` and selects nothing.
 `sunofriend-separate review-other` binds an explicit listening export
 to the unchanged result and grants no selection, activation or promotion.
+The completed five-song, ten-report round demonstrated neither useful guitar
+extraction nor successful piano extraction. The profile remains reproducible
+but is not a working guitar/keyboard claim. A separate read-only Banquet plan
+targets guitar and broad `keyboard_synth`; its approved evidence-only download
+and network-denied opcode inspection did not deserialize or authorize loading.
+It is not registered or executable, and its CC BY-NC-SA checkpoint permits no
+hosted or commercial-default claim.
 No Sunofriend command downloads music.
 
 ## Product outputs

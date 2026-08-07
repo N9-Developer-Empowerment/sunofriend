@@ -7,7 +7,9 @@ Sunofriend's full-stem baseline means four broad, synchronized estimates:
 - `bass.wav`; and
 - `other.wav`, a grouped remainder rather than a single instrument.
 
-Guitar, piano, keys and drum-family splitting remain later milestones.
+Guitar, broad keyboard/synth and drum-family splitting remain later
+milestones. Acoustic piano alone is not treated as a sufficient keyboard
+capability.
 
 ## Current state
 
@@ -76,6 +78,13 @@ source graph prevents the grouped parent and its refined children from being
 active together. Mixed or negative musical feedback remains evidence and
 cannot disable the functioning public core-four profile. See
 [Refining grouped other in Studio](OTHER_STEM_REFINEMENT.md).
+
+The completed five-song, ten-report round demonstrated neither useful guitar
+extraction nor successful piano extraction. That bounded result ends tuning of
+the six-source candidate. The next proposed Studio experiment is the
+unregistered, non-executable Banquet query challenger for guitar and broad
+`keyboard_synth`; see
+[Guitar and keyboard/synth query-challenger plan](OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).
 
 Completed refinement feedback is sealed separately with
 `sunofriend-separate review-other RESULT_ROOT REVIEW_JSON --out FRESH.json`.

@@ -71,6 +71,16 @@ def test_registry_is_opt_in_studio_execution_route() -> None:
         "guitar",
         "keys",
     ]
+    assert registry["feedback_evidence"] == {
+        "review_round": "fixed-five-song-ten-report-corpus-v1",
+        "valid_report_count": 10,
+        "guitar_useful_cases_demonstrated": 0,
+        "piano_proxy_successful_extractions_demonstrated": 0,
+        "conclusion": "technically_valid_musically_unsuccessful",
+        "profile_disabled": False,
+        "profile_promoted": False,
+        "midi_activated": False,
+    }
     assert registry["policy"]["parent_and_children_mutually_exclusive"] is True
     assert registry["policy"]["parent_and_children_cannot_both_enter_midi"] is True
     assert registry["policy"]["candidate_comparison_selects_no_winner"] is True
