@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-08.6"
+INTERFACE_CONTRACT_VERSION = "2026-08-08.7"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -230,11 +230,15 @@ def render_skill_interface_reference() -> str:
         "The next static challenger makes `synth` the first target, followed by",
         "guitar and wind. Acoustic piano is only an optional control and never a",
         "proxy for modern keys. The proposed MVSep Mega-53/BS-RoFormer MLX profile",
-        "is unregistered and non-executable. Its 1,368,919,887-byte checkpoint has",
-        "a declared identity but is not locally verified, and its terms remain",
-        "unreviewed. The no-effects plan forbids automatic and unrestricted loaders,",
-        "separates audible target presence from model usefulness, and grants no",
-        "download, loading, inference, activation, source-selection or MIDI authority.",
+        "is unregistered and non-executable. Its approved evidence-only gate locally",
+        "verified the 1,368,919,887-byte checkpoint and 4,184-byte configuration and",
+        "performed network-denied static inspection without deserialization or",
+        "`torch.load`. The evidence SHA-256 is",
+        "`d855138176807a7ca8738bd660141eb2b142676e41ccf56014be64e53f012a24`.",
+        "Its terms remain unreviewed under a provisional local-",
+        "noncommercial boundary. The download authority is consumed; dependency",
+        "installation, loading, inference, activation, source-selection and MIDI remain",
+        "unauthorized.",
         "No Sunofriend command downloads music.",
         "",
         "## Product outputs",

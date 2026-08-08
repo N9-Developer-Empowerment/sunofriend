@@ -197,9 +197,11 @@ keys. The no-effects plan audits the public MVSep Mega 53 Stems release and an
 exact Apple-native BS-RoFormer source revision. It writes only a future native
 `synth` candidate plus a transparent residual, separates audible target
 presence from model usefulness, and permits one configuration with no
-post-feedback tuning loop. The 1,368,919,887-byte checkpoint has a declared
-hash but has not been downloaded or locally verified, and its checkpoint terms
-remain unreviewed. Inspect the plan without effects:
+post-feedback tuning loop. The approved evidence-only gate locally verified the
+1,368,919,887-byte checkpoint and 4,184-byte configuration against their exact
+published SHA-256 values, then inspected the checkpoint under network denial
+without loading it. Its checkpoint terms remain unreviewed and the profile
+remains non-executable. Inspect the current plan without effects:
 
 ```bash
 .venv/bin/python \

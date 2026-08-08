@@ -75,13 +75,32 @@ The upstream registry declares:
 | `mvsep_mega_model_bs_roformer_53_stems_v1.ckpt` | 1,368,919,887 | `c62820893bbf86d4e734f966bd142d9157cfc8bb8e79e9d8f9ea553f3ff3519f` |
 | `mvsep_mega_model_bs_roformer_53_stems.yaml` | 4,184 | `7e198062a251587088adb91215a4f44ab59e67bd62fcc805cf54d6e7dfc51103` |
 
-Those identities are not yet locally verified. The source registry also labels
+Those identities were locally verified on 8 August 2026 by the separately
+approved evidence-only gate. The exact observed total was 1,368,924,071 bytes,
+and both SHA-256 values matched the registry. Network was denied before the
+inspector inventoried 13,599 checkpoint members and parsed 565,328 pickle
+opcodes. It did not deserialize the checkpoint, call `torch.load`, import or
+construct a model, run inference or read audio. The immutable static-evidence
+document SHA-256 is
+`d855138176807a7ca8738bd660141eb2b142676e41ccf56014be64e53f012a24`.
+
+Reproduce the already consumed evidence boundary only in a fresh evidence root
+and only with equivalent explicit approval:
+
+```bash
+scripts/setup-separation-other-refinement-next-challenger-macos.sh \
+  --evidence-only \
+  --accept-provisional-local-noncommercial-terms \
+  --accept-checkpoint-use
+```
+
+The source registry still labels
 the checkpoint licence `not-reviewed`. The public GitHub release is strong
 evidence that the maker intended the artifact to be shared, but it is not a
 licence grant for hosting, redistribution or a commercial default. The first
-gate is therefore a capped evidence-only download under an explicit
-provisional local-noncommercial acknowledgement. It does not wait for a
-bespoke email, and it grants nothing beyond static evidence collection.
+gate therefore used a capped evidence-only download under an explicit
+provisional local-noncommercial acknowledgement. It did not wait for a bespoke
+email, and grants nothing beyond the completed static evidence collection.
 
 The source's MLX backend currently reaches an unrestricted `torch.load`.
 Sunofriend will not use that loader. A future adapter must load one explicit
@@ -120,9 +139,9 @@ MIDI or remove the functioning core-four route.
 
 The remaining gates are deliberately one-way:
 
-1. evidence-only artifact download and exact hash verification;
-2. network-denied, non-loading and weights-only static inspection;
-3. a fully hash-locked macOS-arm64 dependency closure;
+1. **Complete:** evidence-only artifact download and exact hash verification;
+2. **Complete:** network-denied, non-loading static inspection;
+3. **Next, not yet approved:** a fully hash-locked macOS-arm64 dependency closure;
 4. isolated install and import verification;
 5. strict weights-only construction and load;
 6. one generated-tensor objective forward; and
