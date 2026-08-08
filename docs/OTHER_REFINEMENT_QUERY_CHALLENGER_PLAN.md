@@ -336,10 +336,27 @@ adapter-execution result, not evidence of musically useful separation.
 The wider incremental restructuring sequence is recorded in
 [Separation maintainability plan](SEPARATION_MAINTAINABILITY_PLAN.md).
 
-The one-attempt authority is consumed. The next gate is a separate,
-rights-bound reference-query canary plan for guitar and broad keyboard/synth.
-Further inference, reference or song audio processing, public activation,
-source selection and MIDI remain unapproved.
+The one-attempt synthetic authority is consumed. A later separate explicit
+approval authorised the immutable rights-bound reference-query canary for
+guitar and broad keyboard/synth. The worker loaded both exact models once and
+completed exactly nine song-disjoint CPU calls under network denial in
+64.00748 seconds at 3,259,236,352-byte peak RSS. It atomically published 36
+private stereo PCM24/44.1 kHz review files. Every artifact matched its retained
+hash, every target plus residual reconstructed the persisted reference with
+zero-LSB error, all six source hashes remained unchanged, and the guard recorded
+zero network, forbidden-audio or unapproved-checkpoint attempts. The objective
+report SHA-256 is
+`fd15e3ba9524a49ebd182f86fa5c50ea0f5b02e95cc776ee5943a09147206ea8`.
+
+This is not musical-quality evidence. The completed bound review listened to
+all nine targets, rated eight `not_useful` and one quiet keyboard result
+`partly_useful`, and described several guitar/synth targets as blank or paired
+with query hints unrelated to the mixture. Banquet is therefore technically
+valid but musically unsuccessful in this frozen canary. It remains
+unregistered, unselected and unavailable to MIDI. The nine-attempt authority
+is consumed. Poor feedback does not trigger a query hunt or disable the public
+core-four route. Further inference, public activation, source selection and
+MIDI require a new reviewed plan and explicit approval.
 
 Inspect that no-effects plan with:
 
@@ -348,11 +365,17 @@ Inspect that no-effects plan with:
   scripts/plan-separation-other-refinement-query-reference.py
 ```
 
-Its document SHA-256 is
+The now-consumed plan's document SHA-256 is
 `abfebe4f3eddfa3d891c8972edcbfd2dc62b968dc71e6c20dfb4311068059c76`.
 It freezes three ten-second guitar, keyboard and synth queries from one
 owner-authorised Ezzye song and applies each to three different authorised
 mixtures, for exactly nine song-disjoint attempts. Provider stems are query
 hints and comparison estimates, never truth. Poor feedback cannot start a
-query hunt. The command prints the exact rights-bound approval required before
-audio decoding, inference or private review artifacts.
+query hunt. The command remains a reproducible record of the authority that
+was granted; it is not permission to rerun the worker. Serve the completed
+local package for human listening with:
+
+```bash
+python3 scripts/serve-separation-other-refinement-query-reference-review.py \
+  "/absolute/path/to/query-bandit-reference-canary-v1"
+```

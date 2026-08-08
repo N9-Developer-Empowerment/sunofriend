@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-08.3 -->
+<!-- sunofriend-interface-contract: 2026-08-08.5 -->
 
 # Sunofriend
 
@@ -86,9 +86,15 @@ on.
   network or audio access. The separately approved, single-use synthetic
   forward then passed its objective tensor, resource and reconstruction gates
   with zero audio or network access. That one-attempt authority is consumed and
-  the very quiet target is not musical evidence. Do not process reference
-  audio, run further inference, activate a source or create MIDI without a new
-  rights-bound plan and explicit approval.
+  the very quiet target is not musical evidence. A later explicit rights-bound
+  approval completed the frozen reference-query canary: nine song-disjoint CPU
+  attempts finished under network denial in 64.01 seconds at 3.26 GB peak RSS.
+  All 36 private PCM24 artifacts matched their hashes and reconstructed within
+  zero LSB, with no forbidden audio, network or checkpoint access. Musical
+  listening remains pending, the approved authority is consumed, and the
+  profile remains unregistered, unselected and unavailable to MIDI. Do not run
+  further inference, activate a source or create MIDI without a new reviewed
+  plan and explicit approval.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.
@@ -240,13 +246,20 @@ checkpoint, establishing SHA-256
   fixed generated two-second mixture and ten-second query. It passed the shape,
   clock, finite-sample, reconstruction, time and memory gates with zero audio or
   network access. That proves adapter execution only: the very quiet synthetic
-  target does not establish guitar or keyboard/synth usefulness. The profile
-  remains unregistered and non-executable. The fifth command prints the pure
-  rights-bound plan for one frozen song-disjoint guitar, keyboard and synth
-  query bank against three owner-authorised mixtures. It permits no
-  feedback-driven query hunt. Require the exact approval printed by that plan
-  before any reference-query audio or further inference; public activation,
-  source selection and MIDI remain outside it.
+  target does not establish guitar or keyboard/synth usefulness. The fifth
+  command prints the immutable, now-consumed rights-bound plan for one frozen
+  song-disjoint guitar, keyboard and synth query bank against three
+  owner-authorised mixtures. Its later explicitly approved worker loaded the
+  models once, made exactly nine calls and atomically published 36 private
+  PCM24 review artifacts with zero-LSB reconstruction. It permits no
+  feedback-driven query hunt. Serve the completed private package with
+  `scripts/serve-separation-other-refinement-query-reference-review.py ROOT`.
+  The completed bound review listened to all nine targets, rated eight not
+  useful and one quiet keyboard result partly useful, and establishes this
+  frozen challenger as technically valid but musically unsuccessful. It
+  selects nothing. The profile remains unregistered and non-executable; public
+  activation, another inference run, source selection and MIDI require a new
+  reviewed plan and explicit approval.
 
 ## Inspect before installing
 

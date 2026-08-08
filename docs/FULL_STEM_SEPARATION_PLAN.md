@@ -84,8 +84,12 @@ extraction nor successful piano extraction. That bounded result ends tuning of
 the six-source candidate. The next proposed Studio experiment is the
 unregistered, non-executable Banquet query challenger for guitar and broad
 `keyboard_synth`. Its exact runtime, network-denied strict checkpoint load and
-single generated-tensor synthetic forward now pass. That objective gate does
-not establish musical usefulness or authorize reference audio; see
+single generated-tensor synthetic forward pass. A later explicitly approved
+nine-case, song-disjoint reference canary also passed its offline runtime,
+hash, resource and zero-LSB reconstruction gates. Its completed bound review
+rated eight targets not useful and one quiet keyboard target partly useful, so
+the challenger is technically valid but musically unsuccessful. It remains
+unregistered and selects no source or MIDI. See
 [Guitar and keyboard/synth query-challenger plan](OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).
 
 Completed refinement feedback is sealed separately with

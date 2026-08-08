@@ -34,7 +34,7 @@ def build_query_runtime_audit() -> dict[str, Any]:
     audit: dict[str, Any] = {
         "schema": QUERY_RUNTIME_AUDIT_SCHEMA,
         "document_sha256": "",
-        "status": "synthetic_objective_pass_one_attempt_consumed",
+        "status": "reference_objective_pass_human_listening_musically_unsuccessful",
         "checked_on": "2026-08-08",
         "scope_id": "other-query-refinement-v1",
         "proposed_profile_id": "query-bandit-ev-pre-aug-v1",
@@ -335,13 +335,49 @@ def build_query_runtime_audit() -> dict[str, Any]:
                 "source_selection_authorized": False,
                 "midi_authorized": False,
             },
+            "reference_query_evidence": {
+                "status": (
+                    "objective_execution_complete_listening_musically_"
+                    "unsuccessful_no_selection"
+                ),
+                "report_sha256": (
+                    "fd15e3ba9524a49ebd182f86fa5c50ea0f5b02e95cc776ee5943a09147206ea8"
+                ),
+                "plan_document_sha256": (
+                    "abfebe4f3eddfa3d891c8972edcbfd2dc62b968dc71e6c20dfb4311068059c76"
+                ),
+                "attempts_authorized": 9,
+                "attempts_consumed": 9,
+                "inference_completions": 9,
+                "elapsed_seconds": 64.00747604202479,
+                "peak_resident_set_bytes": 3_259_236_352,
+                "private_pcm24_artifact_count": 36,
+                "maximum_reconstruction_error_lsb": 0,
+                "network_attempts": 0,
+                "forbidden_audio_attempts": 0,
+                "unapproved_checkpoint_attempts": 0,
+                "all_six_source_hashes_unchanged": True,
+                "musical_usefulness_established": False,
+                "human_listening_pending": False,
+                "human_listening_complete": True,
+                "review_file_sha256": (
+                    "80b7d87b6cfa72cf24e565f4d40d2fcf84a765b04d9469da8bd99c807711dd6c"
+                ),
+                "valid_listening_cases": 9,
+                "not_useful_cases": 8,
+                "partly_useful_cases": 1,
+                "conclusion": "technically_valid_musically_unsuccessful",
+                "automatic_retry_authorized": False,
+                "public_activation_authorized": False,
+                "source_selection_authorized": False,
+                "midi_authorized": False,
+            },
         },
         "next_gate": {
-            "kind": "review_bounded_authorised_reference_query_plan",
+            "kind": "prepare_new_bounded_challenger_plan_after_musical_failure",
             "next_action": (
-                "design a separately approved, rights-bound reference-query canary "
-                "for guitar and broad keyboard/synth classes; the successful "
-                "synthetic gate grants no song-processing authority"
+                "publish the known limitation and prepare one static, bounded "
+                "challenger comparison without tuning or rerunning Banquet"
             ),
             "plan_command": (
                 "python3 scripts/plan-separation-other-refinement-query-reference.py"
@@ -358,6 +394,9 @@ def build_query_runtime_audit() -> dict[str, Any]:
             "model_loading": True,
             "model_construction": True,
             "synthetic_inference_complete": True,
+            "reference_inference_complete": True,
+            "reference_audio_processing_complete": True,
+            "human_listening_complete": True,
             "further_inference": False,
             "audio_processing": False,
             "public_activation": False,

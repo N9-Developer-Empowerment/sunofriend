@@ -417,7 +417,7 @@
         "next_query_challenger": {
           "scope_id": "other-query-refinement-v1",
           "proposed_profile_id": "query-bandit-ev-pre-aug-v1",
-          "status": "synthetic_objective_pass_one_attempt_consumed",
+          "status": "reference_objective_pass_human_listening_musically_unsuccessful",
           "registered": false,
           "executable": false,
           "targets": ["guitar", "keyboard_synth"],
@@ -520,6 +520,8 @@
           "inference_authorized": false,
           "inference_authorized_run_limit": 1,
           "inference_authorized_runs_consumed": 1,
+          "reference_inference_authorized_run_limit": 9,
+          "reference_inference_authorized_runs_consumed": 9,
           "private_audio_authorized": false,
           "plan_command": ".venv/bin/python scripts/plan-separation-other-refinement-query-runtime.py",
           "forward_contract_command": ".venv/bin/python scripts/plan-separation-other-refinement-query-forward.py",
@@ -566,7 +568,7 @@
             "midi_authorized": false
           },
           "reference_query_plan": {
-            "status": "blocked_pending_explicit_rights_bound_reference_inference_approval",
+            "status": "approved_execution_complete_authority_consumed",
             "command": ".venv/bin/python scripts/plan-separation-other-refinement-query-reference.py",
             "document_sha256": "abfebe4f3eddfa3d891c8972edcbfd2dc62b968dc71e6c20dfb4311068059c76",
             "rights_category": "owned",
@@ -582,11 +584,34 @@
             "source_selection_authorized": false,
             "midi_authorized": false
           },
+          "reference_query_result": {
+            "status": "objective_execution_complete_listening_musically_unsuccessful_no_selection",
+            "report_sha256": "fd15e3ba9524a49ebd182f86fa5c50ea0f5b02e95cc776ee5943a09147206ea8",
+            "inference_attempts": 9,
+            "elapsed_seconds": 64.00747604202479,
+            "peak_resident_set_bytes": 3259236352,
+            "private_pcm24_artifacts": 36,
+            "maximum_reconstruction_error_lsb": 0,
+            "network_attempts": 0,
+            "forbidden_audio_attempts": 0,
+            "unapproved_checkpoint_attempts": 0,
+            "human_listening_pending": false,
+            "valid_listening_cases": 9,
+            "not_useful_cases": 8,
+            "partly_useful_cases": 1,
+            "conclusion": "technically_valid_musically_unsuccessful",
+            "musical_usefulness_established": false,
+            "provider_stems_are_ground_truth": false,
+            "public_activation_authorized": false,
+            "source_selection_authorized": false,
+            "midi_authorized": false,
+            "automatic_retry_authorized": false
+          },
           "plan_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md"
         },
         "synthetic_contract_command": ".venv/bin/python scripts/run-other-refinement-synthetic.py --target guitar --out FRESH",
         "guide_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/OTHER_STEM_REFINEMENT.md",
-        "next_gate": "design a separately approved, rights-bound reference-query canary for guitar and broad keyboard/synth classes; the successful synthetic gate does not authorize further inference, audio processing, activation, source selection or MIDI"
+        "next_gate": "publish Banquet's known musical failure and prepare one static, bounded challenger comparison without tuning or rerunning Banquet; another inference run, public activation, source selection and MIDI require new explicit approval"
       },
       "read_only_doctor_command": ".venv/bin/sunofriend-separate doctor",
       "read_only_doctor_loads_model": false,

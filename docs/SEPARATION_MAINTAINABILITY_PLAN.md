@@ -76,6 +76,10 @@ the earlier import surface. This preserves the published contract identity.
 The approved one-shot runner now uses a separate single-use tensor adapter and
 the pure report-projection module. Its only attempt passed all objective gates
 and was retained without granting audio, activation, source-selection or MIDI
-authority. The next refactor increment is to make the reference-query canary a
-small rights contract plus bounded runner, reusing these guards and report
-layers instead of adding model logic to setup shells.
+authority. The reference-query increment is now split into an immutable six-
+input rights/identity contract, deterministic WAV/PCM24 accounting, a dedicated
+audio-aware effects guard, a nine-call tensor boundary, a strict objective
+report, and a localhost review/download server. The approved worker loaded the
+models once, completed exactly nine calls and atomically published its private
+package. Model math remains outside the audio and review layers; the setup
+shells still contain neither inference nor product activation.
